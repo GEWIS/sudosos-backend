@@ -1,0 +1,38 @@
+{
+  "name": "sudosos-back-end",
+  "version": "0.1.0",
+  "description": "Back-end API and database management for SudoSOS.",
+  "main": "out/index.js",
+  "scripts": {
+    "build": "tsc",
+    "watch": "ts-node-dev src/index.ts",
+    "serve": "node out/index.js",
+    "test": "mocha 'out/test/**/*.js'",
+    "coverage": "nyc mocha 'out/test/**/*.js'",
+    "lint": "eslint src/**/*.ts test/**/*.ts"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.17.1",
+    "log4js": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/chai": "4.1.7",
+    "@types/chai-as-promised": "7.1.0",
+    "@types/express": "^4.16.1",
+    "@types/mocha": "5.2.6",
+    "@types/node": "11.13.8",
+    "@typescript-eslint/eslint-plugin": "^2.20.0",
+    "chai": "^4.2.0",
+    "chai-as-promised": "^7.1.1",
+    "eslint": "^6.8.0",
+    "eslint-config-airbnb-typescript": "^7.0.0",
+    "eslint-plugin-import": "^2.20.1",
+    "express-swagger-generator": "^1.1.17",
+    "mocha": "^6.1.4",
+    "nyc": "^14.0.0",
+    "ts-node-dev": "^1.0.0-pre.44",
+    "typescript": "^3.8.2"
+  }
+}

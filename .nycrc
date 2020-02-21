@@ -1,0 +1,14 @@
+{
+  "extension": [
+    ".ts"
+  ],
+  "reporter": [
+    "text",
+    "html"
+  ],
+  "all": true,
+  "include": [
+    "out/**/*"
+  ],
+  "report-dir": "./reports/coverage"
+}
