@@ -1,9 +1,7 @@
-import * as express from 'express';
+import express from 'express';
+import Swagger from './swagger';
 
 const app = express();
+Swagger.initialize(app);
 
-app.get('/', (req: express.Request, res: express.Response) => {
-  res.send('Hello World');
-});
-
-app.listen(8080);
+app.listen(3000);
