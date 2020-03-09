@@ -1,17 +1,15 @@
 import * as express from 'express';
 import expressSwagger from 'express-swagger-generator';
 
-const pkg = require('../package.json');
-
 export default class Swagger {
   public static initialize(app: express.Application): void {
     const swagger = expressSwagger(app);
     const swaggerOptions = {
       swaggerDefinition: {
         info: {
-          title: pkg.name,
-          description: pkg.description,
-          version: pkg.version,
+          title: process.env.npm_package_name,
+          description: process.env.npm_package_description,
+          version: process.env.npm_package_version,
         },
         host: 'localhost:3000',
         basePath: '/v1',
