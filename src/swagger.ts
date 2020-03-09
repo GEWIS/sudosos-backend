@@ -1,9 +1,9 @@
 import * as express from 'express';
-import expressSwagger from 'express-swagger-generator';
+import generateSpecAndMount from 'express-swagger-generator';
 
 export default class Swagger {
-  public static initialize(app: express.Application): void {
-    const swagger = expressSwagger(app);
+  public static initialize(app: express.Application): object {
+    const swagger = generateSpecAndMount(app);
     const swaggerOptions = {
       swaggerDefinition: {
         info: {
@@ -30,6 +30,6 @@ export default class Swagger {
       files: ['./**/*.ts'], // Path to the API handle folder
     };
 
-    swagger(swaggerOptions);
+    return swagger(swaggerOptions);
   }
 }
