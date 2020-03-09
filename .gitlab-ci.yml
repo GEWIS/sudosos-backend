@@ -1,0 +1,34 @@
+image: node:12
+stages:
+- install
+- build
+- test
+
+cache:
+  paths:
+  - node_modules/
+
+install_dependencies:
+  stage: install
+  script: npm install
+  artifacts:
+    paths:
+    - node_modules/
+
+build:
+  stage: build
+  script: npm run build
+  artifacts:
+    paths:
+    - out/
+
+test:
+  stage: test
+  script: npm run coverage
+  artifacts:
+    paths:
+    - reports/coverage/
+
+lint:
+  stage: test
+  script: npm run lint
