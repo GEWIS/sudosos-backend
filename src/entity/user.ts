@@ -5,12 +5,9 @@ import {
 @Entity()
 /**
  * @typedef User
- * @property {integer} userId
+ * @property {integer} userId.required - The auto-generated user id.
  */
 export default class User {
   @PrimaryGeneratedColumn()
-  /**
-   * The auto-generated user id.
-   */
   public userId?: number;
 }
