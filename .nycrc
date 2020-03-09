@@ -8,7 +8,8 @@
   ],
   "all": true,
   "include": [
-    "out/**/*"
+    "out/**/*",
+    "src/**/*"
   ],
   "report-dir": "./reports/coverage"
 }
