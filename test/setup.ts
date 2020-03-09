@@ -6,3 +6,6 @@ import chaiAsPromised from 'chai-as-promised';
 use(chaiAsPromised);
 use(chaiHttp);
 use(chaiSwag);
+
+process.env.TYPEORM_CONNECTION = 'sqlite';
+process.env.TYPEORM_DATABASE = ':memory:';
