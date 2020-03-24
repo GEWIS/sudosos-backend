@@ -1,6 +1,8 @@
 import {
   Entity, PrimaryGeneratedColumn, Column,
 } from 'typeorm';
+import { Dinero } from 'dinero.js';
+import DineroTransformer from './transformer/dinero-transformer';
 
 @Entity()
 /**
@@ -20,9 +22,8 @@ export default class Product {
   public name: string;
 
   @Column({
-    type: 'decimal',
-    precision: 64,
-    scale: 2,
+    type: 'integer',
+    transformer: DineroTransformer.Instance,
   })
-  public price: number;
+  public price: Dinero;
 }

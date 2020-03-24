@@ -2,8 +2,10 @@
 import {
   Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany, BaseEntity,
 } from 'typeorm';
+import { Dinero } from 'dinero.js';
 import Subtransaction from './subtransaction';
 import User from './user';
+import DineroTransformer from './transformer/dinero-transformer';
 
 /**
  * @typedef Transaction
@@ -12,7 +14,8 @@ import User from './user';
  * @property {User} to.required - The user to which the transaction is added.
  * @property {User} createdBy - The user that created the transaction, if not same as 'from'.
  * @property {decimal} balance.required - The total balance processed in the transaction.
- * @property {Array.<Subtransaction>} subtransactions.required - The subtransactions belonging to this transaction.
+ * @property {Array.<Subtransaction>} subtransactions.required - The subtransactions belonging to
+ *    this transaction.
  */
 @Entity()
 export default class Transaction extends BaseEntity {
@@ -32,11 +35,10 @@ export default class Transaction extends BaseEntity {
   public createdBy?: User;
 
   @Column({
-    type: 'decimal',
-    precision: 64,
-    scale: 2,
+    type: 'integer',
+    transformer: DineroTransformer.Instance,
   })
-  public balance: number;
+  public balance: Dinero;
 
   @OneToMany(() => Subtransaction, (subtransaction) => subtransaction.transaction)
   public subtransactions: Subtransaction;

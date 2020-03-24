@@ -27,7 +27,7 @@ export default class Swagger {
         },
       },
       basedir: __dirname, // app absolute path
-      files: ['./**/*.ts'], // Path to the API handle folder
+      files: ['./entity/*.ts'], // Path to the API handle folder
     };
 
     return swagger(swaggerOptions);

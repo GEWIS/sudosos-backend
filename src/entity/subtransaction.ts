@@ -2,8 +2,10 @@
 import {
   Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn,
 } from 'typeorm';
+import { Dinero } from 'dinero.js';
 import Product from './product';
 import Transaction from './transaction';
+import DineroTransformer from './transformer/dinero-transformer';
 
 /**
  * @typedef Subtransaction
@@ -27,11 +29,10 @@ export default class Subtransaction {
   public amount: number;
 
   @Column({
-    type: 'decimal',
-    precision: 64,
-    scale: 2,
+    type: 'integer',
+    transformer: DineroTransformer.Instance,
   })
-  public price: number;
+  public price: Dinero;
 
   @ManyToOne(() => Transaction)
   @JoinColumn({ name: 'transaction' })
