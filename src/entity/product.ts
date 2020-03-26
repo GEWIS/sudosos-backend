@@ -1,20 +1,17 @@
 import {
-  Entity, PrimaryGeneratedColumn, Column,
+  Entity, Column,
 } from 'typeorm';
 import { Dinero } from 'dinero.js';
 import DineroTransformer from './transformer/dinero-transformer';
+import BaseEntity from './base-entity';
 
 @Entity()
 /**
- * @typedef Product
- * @property {integer} productId.required - The auto-generated product id.
+ * @typedef {BaseEntity} Product
  * @property {string} name.required - The unique name of the product.
  * @property {decimal} price.required - The price of each product.
  */
-export default class Product {
-  @PrimaryGeneratedColumn()
-  public productId?: number;
-
+export default class Product extends BaseEntity {
   @Column({
     unique: true,
     length: 64,

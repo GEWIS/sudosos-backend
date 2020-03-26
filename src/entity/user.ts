@@ -1,13 +1,11 @@
 import {
-  Entity, PrimaryGeneratedColumn,
+  Entity,
 } from 'typeorm';
+import BaseEntity from './base-entity';
 
 @Entity()
 /**
- * @typedef User
- * @property {integer} userId.required - The auto-generated user id.
+ * @typedef {BaseEntity} User
  */
-export default class User {
-  @PrimaryGeneratedColumn()
-  public userId?: number;
+export default class User extends BaseEntity {
 }

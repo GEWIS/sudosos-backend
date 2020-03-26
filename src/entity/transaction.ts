@@ -1,15 +1,15 @@
 /* eslint-disable import/no-cycle */
 import {
-  Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany, BaseEntity,
+  Entity, Column, ManyToOne, JoinColumn, OneToMany,
 } from 'typeorm';
 import { Dinero } from 'dinero.js';
 import Subtransaction from './subtransaction';
 import User from './user';
 import DineroTransformer from './transformer/dinero-transformer';
+import BaseEntity from './base-entity';
 
 /**
- * @typedef Transaction
- * @property {integer} transactionId.required - The auto-generated transaction id.
+ * @typedef {BaseEntity} Transaction
  * @property {User} from.required - The account from which the transaction is subtracted.
  * @property {User} to.required - The user to which the transaction is added.
  * @property {User} createdBy - The user that created the transaction, if not same as 'from'.
@@ -19,9 +19,6 @@ import DineroTransformer from './transformer/dinero-transformer';
  */
 @Entity()
 export default class Transaction extends BaseEntity {
-  @PrimaryGeneratedColumn()
-  public subtransactionId?: number;
-
   @ManyToOne(() => User)
   @JoinColumn({ name: 'from' })
   public from: User;
