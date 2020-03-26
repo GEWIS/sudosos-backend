@@ -1,9 +1,10 @@
 import {
-  Entity, Column,
+  Entity, Column, ManyToOne, JoinColumn,
 } from 'typeorm';
 import { Dinero } from 'dinero.js';
 import DineroTransformer from './transformer/dinero-transformer';
 import BaseEntity from './base-entity';
+import User from './user';
 
 @Entity()
 /**
@@ -23,4 +24,8 @@ export default class Product extends BaseEntity {
     transformer: DineroTransformer.Instance,
   })
   public price: Dinero;
+
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'owner' })
+  public owner: User;
 }
