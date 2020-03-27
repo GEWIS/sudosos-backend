@@ -5,18 +5,19 @@ module.exports = {
     mocha: true
   },
   plugins: [
-    "chai-friendly"
+    'chai-friendly'
   ],
   extends: [
-    "airbnb-typescript/base",
-    "plugin:chai-expect/recommended",
+    'airbnb-typescript/base',
+    'plugin:chai-expect/recommended',
   ],
   rules: {
     'no-console': process.env.NODE_ENV === 'production' ? 'error' : 'off',
     'no-debugger': process.env.NODE_ENV === 'production' ? 'error' : 'off',
     'linebreak-style': process.env.NODE_ENV === 'production' ? ['error', 'windows'] : ['off', 'windows'],
-    "@typescript-eslint/no-unused-expressions": 0,
-    "chai-friendly/no-unused-expressions": 2
+    '@typescript-eslint/no-empty-function': ['error', { allow: ['constructors'] }],
+    '@typescript-eslint/no-unused-expressions': 'off',
+    'chai-friendly/no-unused-expressions': 'error',
   },
   parserOptions: {
     project: './tsconfig.json',
