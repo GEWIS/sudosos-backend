@@ -10,7 +10,7 @@ import User from './user';
 /**
  * @typedef {BaseEntity} Product
  * @property {string} name.required - The unique name of the product.
- * @property {decimal} price.required - The price of each product.
+ * @property {Dinero.model} price.required - The price of each product.
  */
 export default class Product extends BaseEntity {
   @Column({

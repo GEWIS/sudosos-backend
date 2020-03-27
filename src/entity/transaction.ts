@@ -10,9 +10,9 @@ import BaseEntity from './base-entity';
 
 /**
  * @typedef {BaseEntity} Transaction
- * @property {User} from.required - The account from which the transaction is subtracted.
- * @property {User} to.required - The user to which the transaction is added.
- * @property {User} createdBy - The user that created the transaction, if not same as 'from'.
+ * @property {User.model} from.required - The account from which the transaction is subtracted.
+ * @property {User.model} to.required - The user to which the transaction is added.
+ * @property {User.model} createdBy - The user that created the transaction, if not same as 'from'.
  * @property {decimal} balance.required - The total balance processed in the transaction.
  * @property {Array.<Subtransaction>} subtransactions.required - The subtransactions belonging to
  *    this transaction.
