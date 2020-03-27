@@ -19,15 +19,15 @@ import BaseEntity from './base-entity';
  */
 @Entity()
 export default class Transaction extends BaseEntity {
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { nullable: false })
   @JoinColumn({ name: 'from' })
   public from: User;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { nullable: false })
   @JoinColumn({ name: 'to' })
   public to: User;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { nullable: true })
   @JoinColumn({ name: 'createdBy' })
   public createdBy?: User;
 

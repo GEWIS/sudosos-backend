@@ -25,7 +25,7 @@ export default class Product extends BaseEntity {
   })
   public price: Dinero;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { nullable: false })
   @JoinColumn({ name: 'owner' })
   public owner: User;
 }

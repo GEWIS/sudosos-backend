@@ -16,7 +16,7 @@ import BaseEntity from './base-entity';
  */
 @Entity()
 export default class Subtransaction extends BaseEntity {
-  @ManyToOne(() => Product)
+  @ManyToOne(() => Product, { nullable: false })
   @JoinColumn({ name: 'productId' })
   public product: Product;
 
@@ -31,7 +31,7 @@ export default class Subtransaction extends BaseEntity {
   })
   public price: Dinero;
 
-  @ManyToOne(() => Transaction)
+  @ManyToOne(() => Transaction, { nullable: false })
   @JoinColumn({ name: 'transaction' })
   public transaction: Transaction;
 }
