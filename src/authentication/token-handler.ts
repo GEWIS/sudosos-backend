@@ -1,3 +1,5 @@
+import assert from 'assert';
+import * as util from 'util';
 import * as jwt from 'jsonwebtoken';
 import JsonWebToken from './json-web-token';
 
@@ -46,15 +48,29 @@ export default class TokenHandler {
    * @param nonce - the cryptographically secure nonce to be used.
    */
   public async signToken(payload: JsonWebToken, nonce: string): Promise<string> {
-    throw new Error('Not implemented');
+    assert(payload.user, 'Payload has no user.');
+    assert(Number.isInteger(Number((payload.user.id))), 'Payload user has invalid id.');
+    assert(nonce, 'Nonce must be set.');
+
+    const noncedPayload = {
+      ...payload,
+      nonce,
+    };
+    return util.promisify(jwt.sign).bind(null, noncedPayload, this.options.privateKey, {
+      algorithm: this.options.algorithm,
+      expiresIn: this.options.expiry,
+      notBefore: 0,
+    })();
   }
 
   /**
    * Verifies if the supplied token string is signed by this handler.
    * @param token - the token string to be validated.
    */
-  public async verifyToken(token: string): Promise<boolean> {
-    throw new Error('Not implemented');
+  public async verifyToken(token: string): Promise<JsonWebToken> {
+    return util.promisify(jwt.verify).bind(null, token, this.options.publicKey, {
+      complete: false,
+    })();
   }
 
   /**
@@ -63,7 +79,12 @@ export default class TokenHandler {
    * @param nonce - the cryptographically secure nonce to be used.
    */
   public async refreshToken(token: string, nonce: string): Promise<string> {
-    throw new Error('Not implemented');
+    const payload = await this.verifyToken(token) as any;
+    delete payload.iat;
+    delete payload.exp;
+    delete payload.nbf;
+    delete payload.jti;
+    return this.signToken(payload, nonce);
   }
 
   /**
