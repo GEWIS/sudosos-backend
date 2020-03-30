@@ -43,8 +43,9 @@ export default class TokenHandler {
   /**
    * Creates a token string by signing the payload.
    * @param payload - the payload of the JWT.
+   * @param nonce - the cryptographically secure nonce to be used.
    */
-  public async signToken(payload: JsonWebToken): Promise<string> {
+  public async signToken(payload: JsonWebToken, nonce: string): Promise<string> {
     throw new Error('Not implemented');
   }
 
@@ -59,8 +60,9 @@ export default class TokenHandler {
   /**
    * Refreshes the given token to extend it's expiry time.
    * @param token the token string to be refreshed.
+   * @param nonce - the cryptographically secure nonce to be used.
    */
-  public async refreshToken(token: string): Promise<string> {
+  public async refreshToken(token: string, nonce: string): Promise<string> {
     throw new Error('Not implemented');
   }
 
