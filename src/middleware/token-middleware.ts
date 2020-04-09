@@ -56,7 +56,33 @@ export default class TokenMiddleware {
    * @param next - the express next function to continue processing of the request.
    */
   public async handle(req: RequestWithToken, res: Response, next: Function): Promise<void> {
-    res.status(500).end('Not implemented.');
+    // Check that a token exist in the request headers.
+    let tokenString = req.headers.authorization;
+    if (!tokenString || !tokenString.startsWith('Bearer ')) {
+      res.status(401).end('No token in Authorization header.');
+      return;
+    }
+
+    // Validate the request token.
+    try {
+      tokenString = tokenString.substr('Bearer '.length);
+      req.token = await this.options.tokenHandler.verifyToken(tokenString);
+    } catch {
+      res.status(403).end('Invalid token supplied.');
+      return;
+    }
+
+    // Refresh the token if needed.
+    // There is no need to check if now is after the expiry, as verification would've failed.
+    const now = Math.round(new Date().getTime() / 1000);
+    const { expiry } = this.options.tokenHandler.getOptions();
+    const refreshAfter = req.token.exp - expiry * (1.0 - this.options.refreshFactor);
+    if (now >= refreshAfter) {
+      const newToken = await this.options.tokenHandler.refreshToken(tokenString, '1');
+      res.header('Set-Authorization', newToken);
+    }
+
+    next();
   }
 
   /**

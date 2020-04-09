@@ -1,4 +1,6 @@
-import express, { Application } from 'express';
+import * as util from 'util';
+import jwt from 'jsonwebtoken';
+import express, { Application, Response } from 'express';
 import { expect, request } from 'chai';
 import TokenHandler from '../../../src/authentication/token-handler';
 import User from '../../../src/entity/user';
@@ -51,8 +53,9 @@ describe('TokenMiddleware', (): void => {
     ctx.tokenString = await ctx.handler.signToken(ctx.token, '1');
 
     ctx.app.use(ctx.middleware.getMiddleware());
-    ctx.app.use((req: RequestWithToken) => {
+    ctx.app.use((req: RequestWithToken, res: Response) => {
       ctx.req = req;
+      res.end('Success');
     });
   });
 
@@ -68,7 +71,10 @@ describe('TokenMiddleware', (): void => {
 
       expect(res.status).to.equal(200);
       expect(ctx.req).to.exist;
-      expect(ctx.req.token).to.equal(ctx.token);
+      expect(ctx.req.token).to.exist;
+
+      const parsedUser = JSON.parse(JSON.stringify(ctx.token.user));
+      expect(ctx.req.token.user).to.deep.equal(parsedUser);
     });
     it('should give an HTTP 401 when no token is present', async () => {
       const res = await request(ctx.app)
@@ -77,9 +83,14 @@ describe('TokenMiddleware', (): void => {
       expect(res.status).to.equal(401);
     });
     it('should give an HTTP 403 when token is invalid', async () => {
+      const tokenString = await await util.promisify(jwt.sign).bind(null, { user: ctx.user },
+        ctx.handler.getOptions().privateKey, {
+          algorithm: ctx.handler.getOptions().algorithm,
+          expiresIn: -1000,
+        })();
       const res = await request(ctx.app)
         .get('/')
-        .set('Authorization', `Bearer ${ctx.tokenString}`);
+        .set('Authorization', `Bearer ${tokenString}`);
 
       expect(res.status).to.equal(403);
     });
@@ -100,11 +111,11 @@ describe('TokenMiddleware', (): void => {
         .set('Authorization', `Bearer ${ctx.tokenString}`);
 
       expect(res.status).to.equal(200);
-      expect(res.header.Authorization).to.exist;
+      expect(res.header['set-authorization']).to.exist;
 
       // Verify the token in response header
-      const func = ctx.handler.verifyToken.bind(ctx.handler, res.header.Authorization);
-      expect(func).to.eventually.be.fulfilled;
+      const promise = ctx.handler.verifyToken.bind(ctx.handler, res.header['set-authorization'])();
+      expect(promise).to.eventually.be.fulfilled;
 
       // eslint-disable-next-line dot-notation
       ctx.middleware['options']['refreshFactor'] = 0.5;
