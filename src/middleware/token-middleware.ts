@@ -1,5 +1,6 @@
-import { RequestHandler } from 'express';
+import { RequestHandler, Request, Response } from 'express';
 import TokenHandler from '../authentication/token-handler';
+import JsonWebToken from '../authentication/json-web-token';
 
 /**
  * The configuration options for the token middleware.
@@ -15,6 +16,17 @@ export interface MiddlewareOptions {
    * refeshing, as tokens will expire before a possible refresh.
    */
   refreshFactor: number;
+}
+
+/**
+ * Extend the Express request interface with a token property, which will be filled by this
+ * middleware.
+ */
+export interface RequestWithToken extends Request {
+  /**
+   * The parsed JWT in the request header.
+   */
+  token: JsonWebToken;
 }
 
 /**
@@ -43,8 +55,8 @@ export default class TokenMiddleware {
    * @param res - the express response object.
    * @param next - the express next function to continue processing of the request.
    */
-  public async handle(req: Express.Request, res: Express.Response, next: Function): Promise<void> {
-    throw new Error('Not implemented.');
+  public async handle(req: RequestWithToken, res: Response, next: Function): Promise<void> {
+    res.status(500).end('Not implemented.');
   }
 
   /**

@@ -1,28 +1,11 @@
-import { generateKeyPair } from 'crypto';
 import * as util from 'util';
 import { expect } from 'chai';
 import * as jwt from 'jsonwebtoken';
 import TokenHandler from '../../../src/authentication/token-handler';
 import User from '../../../src/entity/user';
+import { generateKeys } from '../../setup';
 
 describe('TokenHandler', (): void => {
-  /**
-   * Generates a basic RSA keypair.
-   */
-  async function generateKeys(): Promise<{ publicKey: string, privateKey: string }> {
-    return util.promisify(generateKeyPair).bind(null, 'rsa', {
-      modulusLength: 2048,
-      publicKeyEncoding: {
-        type: 'spki',
-        format: 'pem',
-      },
-      privateKeyEncoding: {
-        type: 'pkcs8',
-        format: 'pem',
-      },
-    })();
-  }
-
   let ctx: {
     handler: TokenHandler,
     user: User
