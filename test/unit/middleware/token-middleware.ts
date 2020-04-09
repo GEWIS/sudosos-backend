@@ -64,7 +64,7 @@ describe('TokenMiddleware', (): void => {
     it('should place the parsed token in the request object', async () => {
       const res = await request(ctx.app)
         .get('/')
-        .set('Authorization', ctx.tokenString);
+        .set('Authorization', `Bearer ${ctx.tokenString}`);
 
       expect(res.status).to.equal(200);
       expect(ctx.req).to.exist;
@@ -79,14 +79,14 @@ describe('TokenMiddleware', (): void => {
     it('should give an HTTP 403 when token is invalid', async () => {
       const res = await request(ctx.app)
         .get('/')
-        .set('Authorization', ctx.tokenString);
+        .set('Authorization', `Bearer ${ctx.tokenString}`);
 
       expect(res.status).to.equal(403);
     });
     it('should not refresh token before refreshFactor expiry', async () => {
       const res = await request(ctx.app)
         .get('/')
-        .set('Authorization', ctx.tokenString);
+        .set('Authorization', `Bearer ${ctx.tokenString}`);
 
       expect(res.status).to.equal(200);
       expect(res.header.Authorization).to.not.exist;
@@ -97,7 +97,7 @@ describe('TokenMiddleware', (): void => {
 
       const res = await request(ctx.app)
         .get('/')
-        .set('Authorization', ctx.tokenString);
+        .set('Authorization', `Bearer ${ctx.tokenString}`);
 
       expect(res.status).to.equal(200);
       expect(res.header.Authorization).to.exist;
