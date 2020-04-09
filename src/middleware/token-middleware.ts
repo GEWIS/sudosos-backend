@@ -1,3 +1,4 @@
+import { v4 as uuid4 } from 'uuid';
 import { RequestHandler, Request, Response } from 'express';
 import TokenHandler from '../authentication/token-handler';
 import JsonWebToken from '../authentication/json-web-token';
@@ -78,7 +79,7 @@ export default class TokenMiddleware {
     const { expiry } = this.options.tokenHandler.getOptions();
     const refreshAfter = req.token.exp - expiry * (1.0 - this.options.refreshFactor);
     if (now >= refreshAfter) {
-      const newToken = await this.options.tokenHandler.refreshToken(tokenString, '1');
+      const newToken = await this.options.tokenHandler.refreshToken(tokenString, uuid4());
       res.header('Set-Authorization', newToken);
     }
 

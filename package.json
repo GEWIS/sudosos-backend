@@ -18,7 +18,8 @@
     "express": "^4.17.1",
     "jsonwebtoken": "^8.5.1",
     "log4js": "^4.1.0",
-    "typeorm": "^0.2.22"
+    "typeorm": "^0.2.22",
+    "uuid": "^7.0.3"
   },
   "devDependencies": {
     "@types/chai": "4.1.7",
@@ -28,6 +29,7 @@
     "@types/jsonwebtoken": "^8.3.8",
     "@types/mocha": "5.2.6",
     "@types/node": "11.13.8",
+    "@types/uuid": "^7.0.2",
     "@typescript-eslint/eslint-plugin": "^2.20.0",
     "chai": "^4.2.0",
     "chai-as-promised": "^7.1.1",
