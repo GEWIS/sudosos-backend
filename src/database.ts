@@ -5,6 +5,7 @@ import User from './entity/user';
 import Product from './entity/product';
 import Subtransaction from './entity/subtransaction';
 import Transaction from './entity/transaction';
+import ProductCategory from './entity/product-category';
 
 export default class Database {
   public static async initialize(): Promise<Connection> {
@@ -12,6 +13,7 @@ export default class Database {
       ...await getConnectionOptions(),
       entities: [
         Product,
+        ProductCategory,
         Subtransaction,
         Transaction,
         User,
