@@ -29,14 +29,14 @@ describe('ProductController', (): void => {
         .send(ctx.product);
       expect(res.status).to.equal(200);
     });
-    it('should give an HTTP 401 when request contains other owner', async () => {
+    it('should give an HTTP 403 when request contains other owner', async () => {
       const product = { ...ctx.product };
       delete product.owner;
 
       const res = await request(ctx.app)
         .post('/products')
         .send(product);
-      expect(res.status).to.equal(400);
+      expect(res.status).to.equal(403);
     });
     it('should give an HTTP 400 when request does not contain price', async () => {
       const product = { ...ctx.product };
