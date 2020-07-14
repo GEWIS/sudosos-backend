@@ -77,9 +77,11 @@ export default class Swagger {
 if (require.main === module) {
   // Only execute directly if this is the main execution file.
   const app = express();
-  Swagger.initialize(app).then((specification) => fs.writeFile(
-    path.join(process.cwd(), 'out/swagger.json'),
-    JSON.stringify(specification),
-    { encoding: 'utf-8' },
-  ));
+  fs.mkdir('out', { recursive: true })
+    .then(() => Swagger.initialize(app))
+    .then((specification) => fs.writeFile(
+      path.join(process.cwd(), 'out/swagger.json'),
+      JSON.stringify(specification),
+      { encoding: 'utf-8' },
+    ));
 }
