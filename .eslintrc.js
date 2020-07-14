@@ -5,7 +5,8 @@ module.exports = {
     mocha: true
   },
   plugins: [
-    'chai-friendly'
+    'chai-friendly',
+    'header',
   ],
   extends: [
     'airbnb-typescript/base',
@@ -18,6 +19,7 @@ module.exports = {
     '@typescript-eslint/no-empty-function': ['error', { allow: ['constructors'] }],
     '@typescript-eslint/no-unused-expressions': 'off',
     'chai-friendly/no-unused-expressions': 'error',
+    "header/header": [2, 'NOTICE']
   },
   parserOptions: {
     project: './tsconfig.json',
