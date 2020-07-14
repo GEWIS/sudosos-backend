@@ -30,3 +30,10 @@ export async function generateKeys(): Promise<{ publicKey: string, privateKey: s
     },
   })();
 }
+
+/**
+ * @returns The __filename converted to the TypeScript source file
+ */
+export function sourceFile(file: string) {
+  return file.replace('out/test/', 'test/').replace('.js', '.ts');
+}

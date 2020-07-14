@@ -1,6 +1,8 @@
 import 'reflect-metadata';
 import * as http from 'http';
 import * as util from 'util';
+import bodyParser from 'body-parser';
+import { SwaggerSpecification } from 'swagger-model-validator';
 import dinero, { Currency } from 'dinero.js';
 import express from 'express';
 import { Connection } from 'typeorm';
@@ -9,6 +11,8 @@ import Swagger from './swagger';
 
 export class Application {
   app: express.Express;
+
+  specification: SwaggerSpecification;
 
   server: http.Server;
 
@@ -29,7 +33,10 @@ export default async function createApp(): Promise<Application> {
   dinero.defaultPrecision = parseInt(process.env.CURRENCY_PRECISION, 10);
 
   application.app = express();
-  application.app.set('swagger-spec', Swagger.initialize(application.app));
+  application.specification = await Swagger.initialize(application.app);
+
+  application.app.use(bodyParser.json());
+
   application.server = application.app.listen(process.env.HTTP_PORT);
   return application;
 }

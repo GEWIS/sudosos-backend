@@ -32,7 +32,7 @@ export default class PolicyMiddleware {
       return;
     }
 
-    res.status(401).end('You have insufficient permissions for the requested action.');
+    res.status(403).end('You have insufficient permissions for the requested action.');
   }
 
   /**

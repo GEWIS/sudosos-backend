@@ -7,6 +7,25 @@ import { RequestWithToken } from '../middleware/token-middleware';
 export type Method = 'POST' | 'GET' | 'PATCH' | 'DELETE';
 
 /**
+ * The BodyValidator interface represents the Swagger model validation that is performed on the
+ * HTTP request body.
+ */
+export interface BodyValidator {
+  /**
+   * The name of the Swagger model against which validation will happen.
+   */
+  modelName: string,
+  /**
+   * Whether or not an empty body should pass the validation.
+   */
+  allowBlankTarget?: boolean,
+  /**
+   * Whether or not properties not defined in the original model are allowed in the body.
+   */
+  allowExtraProperties?: boolean,
+}
+
+/**
  * The PolicyImplementation interface represents a function that determines if the given request
  * is allowed to execute the handler. If this is not allowed, the function must return false.
  * This policy is wrappable in a PolicyMiddleware.
@@ -19,6 +38,10 @@ export interface PolicyImplementation {
  * The MethodPolicy interface represents a single HTTP method of a route
  */
 export interface MethodPolicy {
+  /**
+   * The body validator for this method.
+   */
+  body?: BodyValidator,
   /**
    * The policy which represents authorization for this method.
    */
