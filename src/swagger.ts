@@ -10,7 +10,7 @@ import generateSpecAndMount from 'express-swagger-generator';
 
 export default class Swagger {
   /**
-   * Generate Swagger specification on-demand.
+   * Generate Swagger specification on-demand and serve it.
    * @param app - The express application to mount on.
    * @param files - The files that need to be parsed.
    * @returns The Swagger specification with model validator.
@@ -50,6 +50,10 @@ export default class Swagger {
     return swaggerSpec;
   }
 
+  /**
+   * Imports a pre-generated Swagger specification file.
+   * @param file - The path to the Swagger JSON file.
+   */
   public static async importSpecification(file = 'out/swagger.json'): Promise<SwaggerSpecification> {
     const contents = await fs.readFile(file, 'utf-8');
     const swaggerSpec = JSON.parse(contents);
@@ -57,6 +61,12 @@ export default class Swagger {
     return swaggerSpec;
   }
 
+  /**
+   * Initializes the Swagger specification for the current environment and serve it.
+   * Depending on the NODE_ENV, it will be generated on-demand or import a pre-generated
+   * specification.
+   * @param app - The express application which will serve the specification.
+   */
   public static async initialize(app: express.Application): Promise<SwaggerSpecification> {
     if (process.env.NODE_ENV === 'production') {
       // Serve pre-generated Swagger specification in production environments.
