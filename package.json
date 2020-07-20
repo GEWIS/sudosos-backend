@@ -18,10 +18,12 @@
     "body-parser": "^1.19.0",
     "dinero.js": "^1.8.1",
     "express": "^4.17.1",
+    "express-swagger-generator": "^1.1.17",
     "express-swaggerize-ui": "^1.1.0",
     "jsonwebtoken": "^8.5.1",
     "log4js": "^4.1.0",
     "reflect-metadata": "^0.1.13",
+    "sqlite3": "^5.0.0",
     "swagger-model-validator": "^3.0.19",
     "typeorm": "^0.2.22",
     "uuid": "^7.0.3"
@@ -46,10 +48,8 @@
     "eslint-plugin-chai-expect": "^2.1.0",
     "eslint-plugin-chai-friendly": "^0.5.0",
     "eslint-plugin-import": "^2.20.1",
-    "express-swagger-generator": "^1.1.17",
     "mocha": "^7.2.0",
     "nyc": "^15.0.0",
-    "sqlite3": "^4.1.1",
     "ts-node-dev": "^1.0.0-pre.44",
     "typescript": "^3.8.2"
   }
