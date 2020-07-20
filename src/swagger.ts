@@ -4,8 +4,6 @@ import * as path from 'path';
 import express from 'express';
 import swaggerUi from 'express-swaggerize-ui';
 import Validator, { SwaggerSpecification } from 'swagger-model-validator';
-
-// eslint-disable-next-line import/no-extraneous-dependencies
 import generateSpecAndMount from 'express-swagger-generator';
 
 export default class Swagger {
