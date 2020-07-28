@@ -15,27 +15,8 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import {
-  createConnection, Connection, getConnectionOptions,
-} from 'typeorm';
-import User from './entity/user';
-import Product from './entity/product';
-import Subtransaction from './entity/subtransaction';
-import Transaction from './entity/transaction';
-import ProductCategory from './entity/product-category';
+declare module 'express-swaggerize-ui' {
+  import { RequestHandler } from 'express';
 
-export default class Database {
-  public static async initialize(): Promise<Connection> {
-    const options = {
-      ...await getConnectionOptions(),
-      entities: [
-        Product,
-        ProductCategory,
-        Subtransaction,
-        Transaction,
-        User,
-      ],
-    };
-    return createConnection(options);
-  }
+  export default function swaggerUi(): RequestHandler;
 }

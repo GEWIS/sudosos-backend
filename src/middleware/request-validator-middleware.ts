@@ -16,40 +16,60 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { RequestHandler, Response } from 'express';
-import { PolicyImplementation } from '../controller/policy';
+import { SwaggerSpecification } from 'swagger-model-validator';
 import { RequestWithToken } from './token-middleware';
+import { BodyValidator } from '../controller/policy';
 
 /**
  * This class is responsible for:
- * - enforcing a given policy implementation as middleware.
+ * - validating request models as middleware.
  */
-export default class PolicyMiddleware {
+export default class RequestValidatorMiddleware {
   /**
-   * A reference to the policy to be used by this middleware instance.
+   * A reference to the Swagger specification that needs to be validated against.
    */
-  private readonly policy: PolicyImplementation;
+  private readonly specification: SwaggerSpecification;
 
   /**
-   * Creates a new policy middleware instance.
-   * @param policy - the policy to be used by this middleware.
+   * The name of the Swagger model that needs to be validated against.
    */
-  public constructor(policy: PolicyImplementation) {
-    this.policy = policy;
+  private readonly validator: BodyValidator;
+
+  /**
+   * Creates a new request model validator middleware instance.
+   * @param validator - the validator properties.
+   */
+  public constructor(specification: SwaggerSpecification, validator: BodyValidator) {
+    this.specification = specification;
+    this.validator = validator;
+
+    if (!specification.definitions[validator.modelName]) {
+      throw new Error(`Model '${validator.modelName}' not defined.`);
+    }
   }
 
   /**
-   * Middleware handler for enforcing the policy.
+   * Middleware handler for validating request models.
    * @param req - the express request to handle.
    * @param res - the express response object.
    * @param next - the express next function to continue processing of the request.
    */
   public async handle(req: RequestWithToken, res: Response, next: Function): Promise<void> {
-    if (await this.policy(req)) {
+    const result = this.specification.validateModel(
+      this.validator.modelName,
+      req.body,
+      this.validator.allowBlankTarget,
+      !this.validator.allowExtraProperties,
+    );
+    if (result.valid) {
       next();
       return;
     }
 
-    res.status(403).end('You have insufficient permissions for the requested action.');
+    res.status(400).json({
+      valid: result.valid,
+      errors: result.GetErrorMessages(),
+    });
   }
 
   /**

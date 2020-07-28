@@ -15,27 +15,38 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import {
-  createConnection, Connection, getConnectionOptions,
-} from 'typeorm';
-import User from './entity/user';
-import Product from './entity/product';
-import Subtransaction from './entity/subtransaction';
-import Transaction from './entity/transaction';
-import ProductCategory from './entity/product-category';
+declare module 'swagger-model-validator' {
 
-export default class Database {
-  public static async initialize(): Promise<Connection> {
-    const options = {
-      ...await getConnectionOptions(),
-      entities: [
-        Product,
-        ProductCategory,
-        Subtransaction,
-        Transaction,
-        User,
-      ],
-    };
-    return createConnection(options);
+  export interface ValidationResult {
+    valid: boolean;
+    errorCount: number;
+    errors?: {
+      name: string;
+      message: string
+    }[],
+    GetErrorMessages: () => string[],
+    GetFormattedErrors: () => object[]
+  }
+
+  export interface SwaggerSpecification {
+    definitions: any;
+    validateModel(
+      modelName: string,
+      object: object,
+      allowBlankTarget?: boolean,
+      disallowExtraProperties?: boolean
+    ): ValidationResult;
+  }
+
+  export default class Validator {
+    constructor(swaggerSpec: object);
+
+    validate(
+      object: object,
+      swaggerModel: string,
+      swaggerModels: object,
+      allowBlankTarget?: boolean,
+      disallowExtraProperties?: boolean
+    ): ValidationResult;
   }
 }
