@@ -15,14 +15,4 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import Database from '../../src/database';
-
-describe('Database', (): void => {
-  describe('#initialize', () => {
-    it('should be able to synchronize schema', async () => {
-      const connection = await Database.initialize();
-      await connection.synchronize();
-      await connection.close();
-    });
-  });
-});
+ 
