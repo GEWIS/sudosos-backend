@@ -45,11 +45,11 @@ describe('PolicyMiddleware', (): void => {
   });
 
   describe('#handle', () => {
-    it('should give an HTTP 401 when policy implementation returns false', async () => {
+    it('should give an HTTP 403 when policy implementation returns false', async () => {
       const res = await request(ctx.app)
         .get('/');
 
-      expect(res.status).to.equal(401);
+      expect(res.status).to.equal(403);
     });
     it('should give an HTTP 200 when policy implementation returns true', async () => {
       ctx.value = true;

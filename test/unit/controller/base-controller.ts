@@ -17,8 +17,11 @@
  */
 import express, { Application, Request } from 'express';
 import { expect, request } from 'chai';
+import { SwaggerSpecification } from 'swagger-model-validator';
+import bodyParser from 'body-parser';
 import BaseController from '../../../src/controller/base-controller';
 import Policy from '../../../src/controller/policy';
+import { getSpecification } from '../entity/transformer/test-model';
 
 class TestController extends BaseController {
   // eslint-disable-next-line class-methods-use-this
@@ -54,6 +57,13 @@ class TestController extends BaseController {
           handler: (req, res) => res.json('test-4'),
         },
       },
+      '/model': {
+        POST: {
+          body: { modelName: 'TestModel' },
+          policy: async () => true,
+          handler: (req, res) => res.json('test-model'),
+        },
+      },
     };
   }
 }
@@ -61,6 +71,7 @@ class TestController extends BaseController {
 describe('BaseController', (): void => {
   let ctx: {
     app: Application,
+    specification: SwaggerSpecification,
     controller: BaseController,
   };
 
@@ -68,17 +79,21 @@ describe('BaseController', (): void => {
     // Initialize context
     ctx = {
       app: express(),
-      controller: new TestController(),
+      specification: undefined,
+      controller: undefined,
     };
+    ctx.specification = await getSpecification(ctx.app);
+    ctx.controller = new TestController(ctx.specification);
 
+    ctx.app.use(bodyParser.json());
     ctx.app.use(ctx.controller.getRouter());
   });
 
   describe('#handle', () => {
-    it('should give an HTTP 401 when policy implementation returns false', async () => {
+    it('should give an HTTP 403 when policy implementation returns false', async () => {
       const res = await request(ctx.app)
         .get('/get/2');
-      expect(res.status).to.equal(401);
+      expect(res.status).to.equal(403);
     });
     it('should give an HTTP 405 when requested method is not supported', async () => {
       const res = await request(ctx.app)
@@ -116,6 +131,24 @@ describe('BaseController', (): void => {
         .delete('/test');
       expect(resDelete.status).to.equal(200);
       expect(resDelete.body).to.equal('test-4');
+    });
+    it('should give an HTTP 400 when body model incorrect', async () => {
+      const res = await request(ctx.app)
+        .post('/model')
+        .send({
+          name: 'Test',
+          value: '123',
+        });
+      expect(res.status).to.equal(400);
+    });
+    it('should give an HTTP 200 when body model correct', async () => {
+      const res = await request(ctx.app)
+        .post('/model')
+        .send({
+          name: 'Test',
+          value: 123,
+        });
+      expect(res.status).to.equal(200);
     });
   });
 });
