@@ -92,7 +92,6 @@ describe('ProductController', (): void => {
         .post('/products')
         .set('Authorization', `Bearer ${ctx.token}`)
         .send(ctx.product);
-      console.log(res.body);
       expect(res.status).to.equal(200);
     });
     it('should give an HTTP 403 when request contains other owner', async () => {
