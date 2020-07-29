@@ -22,6 +22,7 @@ import bodyParser from 'body-parser';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import dinero, { Currency } from 'dinero.js';
 import express from 'express';
+import log4js from 'log4js';
 import { Connection } from 'typeorm';
 import Database from './database';
 import Swagger from './swagger';
@@ -44,6 +45,11 @@ export class Application {
 export default async function createApp(): Promise<Application> {
   const application = new Application();
   application.connection = await Database.initialize();
+
+  // Silent in-dependency logs unless really wanted by the environment.
+  const logger = log4js.getLogger('Console');
+  logger.level = process.env.LOG_LEVEL;
+  console.log = (message: any) => logger.debug(message);
 
   // Set up monetary value configuration
   dinero.defaultCurrency = process.env.CURRENCY_CODE as Currency;

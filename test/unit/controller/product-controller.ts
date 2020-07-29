@@ -17,47 +17,90 @@
  */
 import express, { Application } from 'express';
 import { expect, request } from 'chai';
-import dinero from 'dinero.js';
 import { SwaggerSpecification } from 'swagger-model-validator';
+import { Connection } from 'typeorm';
+import bodyParser from 'body-parser';
 import ProductController from '../../../src/controller/product-controller';
-import Product from '../../../src/entity/product';
-import { getSpecification } from '../entity/transformer/test-model';
+import User from '../../../src/entity/user';
+import TokenHandler from '../../../src/authentication/token-handler';
+import CreateProductRequest from '../../../src/controller/request/create-product-request';
+import ProductCategory from '../../../src/entity/product-category';
+import Database from '../../../src/database';
+import Swagger from '../../../src/swagger';
+import TokenMiddleware from '../../../src/middleware/token-middleware';
 
 describe('ProductController', (): void => {
   let ctx: {
+    connection: Connection,
     app: Application,
     specification: SwaggerSpecification,
     controller: ProductController,
-    product: Product,
+    token: string,
+    product: CreateProductRequest,
   };
 
   before(async () => {
     // Initialize context
     ctx = {
+      connection: await Database.initialize(),
       app: express(),
       specification: undefined,
       controller: undefined,
-      product: undefined,
+      token: undefined,
+      product: {
+        name: 'Pils',
+        price: {
+          currency: 'EUR',
+          amount: 70,
+          precision: 2,
+        },
+        owner: {
+          id: 1,
+        } as User,
+        alcoholPercentage: 5.0,
+        category: {
+          id: 1,
+          name: 'test',
+        } as ProductCategory,
+        picture: 'https://sudosos/image.jpg',
+      },
     };
-    ctx.specification = await getSpecification(ctx.app);
+
+    const tokenHandler = new TokenHandler({
+      algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
+    });
+    ctx.token = await tokenHandler.signToken({ user: ctx.product.owner }, '1');
+
+    await User.save({ ...ctx.product.owner } as User);
+    await ProductCategory.save({ ...ctx.product.category } as ProductCategory);
+
+    ctx.specification = await Swagger.initialize(ctx.app);
     ctx.controller = new ProductController(ctx.specification);
 
+    ctx.app.use(bodyParser.json());
+    ctx.app.use(new TokenMiddleware({ tokenHandler, refreshFactor: 0.5 }).getMiddleware());
     ctx.app.use('/products', ctx.controller.getRouter());
+  });
+
+  after(async () => {
+    await ctx.connection.close();
   });
 
   describe('POST /products', () => {
     it('should be able to create product entity', async () => {
       const res = await request(ctx.app)
         .post('/products')
+        .set('Authorization', `Bearer ${ctx.token}`)
         .send(ctx.product);
+      console.log(res.body);
       expect(res.status).to.equal(200);
     });
     it('should give an HTTP 403 when request contains other owner', async () => {
-      const product = { ...ctx.product };
-      delete product.owner;
+      const product = { ...ctx.product, owner: { id: 2 } as User };
 
       const res = await request(ctx.app)
         .post('/products')
+        .set('Authorization', `Bearer ${ctx.token}`)
         .send(product);
       expect(res.status).to.equal(403);
     });
@@ -67,22 +110,25 @@ describe('ProductController', (): void => {
 
       const res = await request(ctx.app)
         .post('/products')
+        .set('Authorization', `Bearer ${ctx.token}`)
         .send(product);
       expect(res.status).to.equal(400);
     });
     it('should give an HTTP 400 when request price is not default currency', async () => {
-      const product = { ...ctx.product, price: dinero({ amount: 1234, currency: 'HRK' }) };
+      const product = { ...ctx.product, price: { amount: 1234, currency: 'HRK' } };
 
       const res = await request(ctx.app)
         .post('/products')
+        .set('Authorization', `Bearer ${ctx.token}`)
         .send(product);
       expect(res.status).to.equal(400);
     });
     it('should give an HTTP 400 when request price is not default precision', async () => {
-      const product = { ...ctx.product, price: dinero({ amount: 1234, currency: 'EUR', precision: 1 }) };
+      const product = { ...ctx.product, price: { amount: 1234, currency: 'EUR', precision: 1 } };
 
       const res = await request(ctx.app)
         .post('/products')
+        .set('Authorization', `Bearer ${ctx.token}`)
         .send(product);
       expect(res.status).to.equal(400);
     });
@@ -92,14 +138,16 @@ describe('ProductController', (): void => {
 
       const res = await request(ctx.app)
         .post('/products')
+        .set('Authorization', `Bearer ${ctx.token}`)
         .send(product);
       expect(res.status).to.equal(400);
     });
     it('should give an HTTP 400 when request category does not exist', async () => {
-      const product = { ...ctx.product, category: { name: 'non-existant' } };
+      const product = { ...ctx.product, category: { id: 2, name: 'non-existant' } };
 
       const res = await request(ctx.app)
         .post('/products')
+        .set('Authorization', `Bearer ${ctx.token}`)
         .send(product);
       expect(res.status).to.equal(400);
     });
@@ -109,6 +157,7 @@ describe('ProductController', (): void => {
 
       const res = await request(ctx.app)
         .post('/products')
+        .set('Authorization', `Bearer ${ctx.token}`)
         .send(product);
       expect(res.status).to.equal(400);
     });
@@ -118,6 +167,7 @@ describe('ProductController', (): void => {
 
       const res = await request(ctx.app)
         .post('/products')
+        .set('Authorization', `Bearer ${ctx.token}`)
         .send(product);
       expect(res.status).to.equal(400);
     });
