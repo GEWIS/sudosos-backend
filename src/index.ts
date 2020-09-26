@@ -30,6 +30,7 @@ import Database from './database';
 import Swagger from './swagger';
 import TokenHandler from './authentication/token-handler';
 import TokenMiddleware from './middleware/token-middleware';
+import AuthenticationController from './controller/authentication-controller';
 
 export class Application {
   app: express.Express;
@@ -66,6 +67,12 @@ async function setupAuthentication(application: Application) {
     privateKey: jwtPrivate.export({ type: 'pkcs8', format: 'pem' }),
     expiry: 3600,
   });
+
+  // Define authentication controller and bind before middleware.
+  const controller = new AuthenticationController(application.specification, tokenHandler);
+  application.app.use('/v1/authentication', controller.getRouter());
+
+  // Define middleware to be used by any other route.
   const tokenMiddleware = new TokenMiddleware({ refreshFactor: 0.5, tokenHandler });
   application.app.use(tokenMiddleware.getMiddleware());
 }
