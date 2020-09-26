@@ -45,6 +45,10 @@ export default class ProductController extends BaseController {
           policy: this.canCreateProduct.bind(this),
           handler: this.createProduct.bind(this),
         },
+        GET: {
+          policy: async () => true,
+          handler: this.getProducts.bind(this),
+        },
       },
     };
   }
@@ -64,6 +68,7 @@ export default class ProductController extends BaseController {
    * @route POST /products
    * @group products - Operations of product controller
    * @param {CreateProductRequest.model} product.body.required - The new product.
+   * @security JWT
    * @returns {Product.model} 200 - The created product entity.
    * @returns {string} 400 - Validation error.
    */
@@ -93,6 +98,24 @@ export default class ProductController extends BaseController {
       res.json(product);
     } catch (error) {
       this.logger.error('Could not create product:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Gets all product entities.
+   * @route GET /products
+   * @group products - Operations of product controller
+   * @returns {Array<Product>} 200 - The collection of all products.
+   * @returns {string} 400 - Validation error.
+   */
+  public async getProducts(req: RequestWithToken, res: Response): Promise<void> {
+    this.logger.trace('Get all products by user', req.token.user);
+
+    try {
+      res.status(500).json('Not implemented.');
+    } catch (error) {
+      this.logger.error('Could not get all products:', error);
       res.status(500).json('Internal server error.');
     }
   }

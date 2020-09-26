@@ -20,7 +20,9 @@ import { expect, request } from 'chai';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { Connection } from 'typeorm';
 import bodyParser from 'body-parser';
+import dinero, { DineroObject } from 'dinero.js';
 import ProductController from '../../../src/controller/product-controller';
+import Product from '../../../src/entity/product';
 import User from '../../../src/entity/user';
 import TokenHandler from '../../../src/authentication/token-handler';
 import CreateProductRequest from '../../../src/controller/request/create-product-request';
@@ -29,7 +31,7 @@ import Database from '../../../src/database';
 import Swagger from '../../../src/swagger';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 
-describe('ProductController', (): void => {
+describe('ProductController', async (): Promise<void> => {
   let ctx: {
     connection: Connection,
     app: Application,
@@ -37,9 +39,10 @@ describe('ProductController', (): void => {
     controller: ProductController,
     token: string,
     product: CreateProductRequest,
+    products: Product[],
   };
 
-  before(async () => {
+  beforeEach(async () => {
     // Initialize context
     ctx = {
       connection: await Database.initialize(),
@@ -64,6 +67,7 @@ describe('ProductController', (): void => {
         } as ProductCategory,
         picture: 'https://sudosos/image.jpg',
       },
+      products: undefined,
     };
 
     const tokenHandler = new TokenHandler({
@@ -74,6 +78,43 @@ describe('ProductController', (): void => {
     await User.save({ ...ctx.product.owner } as User);
     await ProductCategory.save({ ...ctx.product.category } as ProductCategory);
 
+    ctx.products = [
+      await Product.save({
+        name: 'Test-1',
+        price: dinero({
+          currency: 'EUR',
+          amount: 70,
+          precision: 2,
+        }),
+        owner: {
+          id: 1,
+        } as User,
+        alcoholPercentage: 5.0,
+        category: {
+          id: 1,
+          name: 'test',
+        } as ProductCategory,
+        picture: 'https://sudosos/image.jpg',
+      } as any as Product),
+      await Product.save({
+        name: 'Test-2',
+        price: dinero({
+          currency: 'EUR',
+          amount: 71,
+          precision: 2,
+        }),
+        owner: {
+          id: 1,
+        } as User,
+        alcoholPercentage: 5.0,
+        category: {
+          id: 1,
+          name: 'test',
+        } as ProductCategory,
+        picture: 'https://sudosos/image2.jpg',
+      } as any as Product),
+    ];
+
     ctx.specification = await Swagger.initialize(ctx.app);
     ctx.controller = new ProductController(ctx.specification);
 
@@ -82,7 +123,7 @@ describe('ProductController', (): void => {
     ctx.app.use('/products', ctx.controller.getRouter());
   });
 
-  after(async () => {
+  afterEach(async () => {
     await ctx.connection.close();
   });
 
@@ -169,6 +210,29 @@ describe('ProductController', (): void => {
         .set('Authorization', `Bearer ${ctx.token}`)
         .send(product);
       expect(res.status).to.equal(400);
+    });
+  });
+
+  describe('GET /products', () => {
+    it('should be able to get all products', async () => {
+      const res = await request(ctx.app)
+        .get('/products')
+        .set('Authorization', `Bearer ${ctx.token}`)
+        .send();
+      const products = res.body as Product[];
+
+      const spec = await Swagger.importSpecification();
+      expect(products.length).to.equal(2);
+      products.forEach((product: Product) => {
+        const validation = spec.validateModel('Product', product, false, true);
+        expect(validation).to.equal({ valid: true });
+
+        const price = product.price as any as DineroObject;
+        expect(product.id).to.be.greaterThan(0);
+        expect(product.name).to.not.be.empty;
+        expect(price.amount).to.be.greaterThan(50);
+        expect(price.currency).to.equal('EUR');
+      });
     });
   });
 });
