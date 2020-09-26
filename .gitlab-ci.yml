@@ -57,6 +57,8 @@ dockerize:
 
 test:
   stage: test
+  before_script:
+    - openssl genrsa -out config/jwt.key 2048
   script: npm run coverage
   artifacts:
     paths:
