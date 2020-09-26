@@ -20,7 +20,9 @@ import log4js, { Logger } from 'log4js';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import BaseController from './base-controller';
 import Policy from './policy';
+import User from '../entity/user';
 import AuthenticationMockRequest from './request/authentication-mock-request';
+import JsonWebToken from '../authentication/json-web-token';
 import TokenHandler from '../authentication/token-handler';
 
 /**
@@ -71,6 +73,15 @@ export default class AuthenticationController extends BaseController {
    */
   // eslint-disable-next-line class-methods-use-this
   public async canPerformMock(req: Request): Promise<boolean> {
+    const body = req.body as AuthenticationMockRequest;
+
+    // Only allow in development setups
+    if (process.env.NODE_ENV !== 'development') return false;
+
+    // Check the existence of the user
+    const user = await User.findOne({ id: body.userId });
+    if (!user) return false;
+
     return true;
   }
 
@@ -87,7 +98,11 @@ export default class AuthenticationController extends BaseController {
     this.logger.trace('Mock authentication for user', body.userId);
 
     try {
-      res.status(500).json('Not implemented');
+      const contents: JsonWebToken = {
+        user: await User.findOne({ id: body.userId }),
+      };
+      const token = await this.tokenHandler.signToken(contents, body.nonce);
+      res.json(token);
     } catch (error) {
       this.logger.error('Could not create token:', error);
       res.status(500).json('Internal server error.');
