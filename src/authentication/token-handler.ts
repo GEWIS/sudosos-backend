@@ -31,11 +31,11 @@ export interface HandlerOptions {
   /**
    * The key to be used for verifying tokens.
    */
-  readonly publicKey: string;
+  readonly publicKey: string | Buffer;
   /**
    * The key to be used for signing tokens.
    */
-  readonly privateKey: string;
+  readonly privateKey: string | Buffer;
   /**
    * The expiry time for newly generated or refreshed tokens, expressed in seconds.
    */
