@@ -16,6 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
+  Column,
   Entity,
 } from 'typeorm';
 import BaseEntity from './base-entity';
@@ -23,6 +24,19 @@ import BaseEntity from './base-entity';
 @Entity()
 /**
  * @typedef {BaseEntity} User
+ * @property {string} name.required - The name of the user
+ * @property {boolean} active.required - Whether the user is active
  */
 export default class User extends BaseEntity {
+  @Column({
+    unique: true,
+    length: 64,
+  })
+  public name: string;
+
+  @Column({
+    type: 'boolean',
+    default: true,
+  })
+  public active: boolean;
 }
