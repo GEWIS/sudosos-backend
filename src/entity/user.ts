@@ -29,7 +29,6 @@ import BaseEntity from './base-entity';
  */
 export default class User extends BaseEntity {
   @Column({
-    unique: true,
     length: 64,
   })
   public name: string;
