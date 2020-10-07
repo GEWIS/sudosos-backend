@@ -106,6 +106,7 @@ export default class ProductController extends BaseController {
    * Gets all product entities.
    * @route GET /products
    * @group products - Operations of product controller
+   * @security JWT
    * @returns {Array<Product>} 200 - The collection of all products.
    * @returns {string} 400 - Validation error.
    */
@@ -113,7 +114,13 @@ export default class ProductController extends BaseController {
     this.logger.trace('Get all products by user', req.token.user);
 
     try {
-      res.status(500).json('Not implemented.');
+      const products = await Product.find({
+        relations: [
+          'owner',
+          'category',
+        ],
+      });
+      res.json(products);
     } catch (error) {
       this.logger.error('Could not get all products:', error);
       res.status(500).json('Internal server error.');

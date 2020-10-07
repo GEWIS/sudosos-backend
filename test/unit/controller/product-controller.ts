@@ -225,7 +225,7 @@ describe('ProductController', async (): Promise<void> => {
       expect(products.length).to.equal(2);
       products.forEach((product: Product) => {
         const validation = spec.validateModel('Product', product, false, true);
-        expect(validation).to.equal({ valid: true });
+        expect(validation.valid).to.be.true;
 
         const price = product.price as any as DineroObject;
         expect(product.id).to.be.greaterThan(0);
