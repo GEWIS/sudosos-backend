@@ -22,6 +22,7 @@ import BaseController from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import User from '../entity/user';
+import Product from '../entity/product';
 
 export default class UserController extends BaseController {
   private logger: Logger = log4js.getLogger('UserController');
@@ -38,37 +39,47 @@ export default class UserController extends BaseController {
     return {
       '/': {
         GET: {
-          policy: this.canGetAllUsers.bind(this),
+          policy: this.canRequestAdminInfo.bind(this),
           handler: this.getAllUsers.bind(this),
         },
       },
       '/:id': {
         GET: {
-          policy: this.canGetIndividualUser.bind(this),
+          policy: this.canGetItselfOrIsAdmin.bind(this),
           handler: this.getIndividualUser.bind(this),
+        },
+      },
+      '/:id/products': {
+        GET: {
+          policy: this.canGetItselfOrIsAdmin.bind(this),
+          handler: this.getUsersProducts.bind(this),
+        },
+      },
+      '/:id/transactions': {
+        GET: {
+          policy: this.canGetItselfOrIsAdmin.bind(this),
+          handler: this.getUsersTransactions.bind(this),
         },
       },
     };
   }
 
   /**
-   * Validates that the request is authorized by the policy.
-   * @param req - The incoming request.
+   * Validates that user requests itself, or that the user is an admin
    */
-
-  // eslint-disable-next-line class-methods-use-this, @typescript-eslint/no-unused-vars
-  public async canGetAllUsers(req: RequestWithToken): Promise<boolean> {
-    return true;
+  // eslint-disable-next-line class-methods-use-this
+  public async canGetItselfOrIsAdmin(req: RequestWithToken): Promise<boolean> {
+    return req.params.id === req.token.user.id.toString();
+    // TODO: implement user roles and thus admin verification
   }
 
   /**
-   * Validates that the request is authorized by the policy.
-   * @param req - The incoming request.
+   * Validates that the user is an admin
    */
-
-  // eslint-disable-next-line class-methods-use-this, @typescript-eslint/no-unused-vars
-  public async canGetIndividualUser(req: RequestWithToken): Promise<boolean> {
-    return req.params.id === req.token.user.id.toString();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars,class-methods-use-this
+  public async canRequestAdminInfo(req: RequestWithToken): Promise<boolean> {
+    // TODO: implement user roles and thus admin verification
+    return true;
   }
 
   /**
@@ -104,5 +115,41 @@ export default class UserController extends BaseController {
     }
 
     res.status(200).json(user);
+  }
+
+  /**
+   * Get an user's products
+   * @route GET /users/:id/products
+   * @group users - Operations of user controller
+   * @returns {[Product.model]} 200 - List of products.
+   */
+  public async getUsersProducts(req: RequestWithToken, res: Response): Promise<void> {
+    const parameters = req.params;
+    this.logger.trace("Get user's products", parameters, 'by user', req.token.user);
+
+    const owner = await User.findOne(parameters.id);
+    const products = await Product.find({
+      owner,
+    });
+
+    res.status(200).json(products);
+  }
+
+  /**
+   * Get an user's transactions (from, to or created)
+   * @route GET /users/:id/transactions
+   * @group users - Operations of user controller
+   * @returns {[Transaction.model]} 200 - List of transactions.
+   */
+  public async getUsersTransactions(req: RequestWithToken, res: Response): Promise<void> {
+    const parameters = req.params;
+    this.logger.trace("Get user's transactions", parameters, 'by user', req.token.user);
+
+    const user = await User.findOne(parameters.id);
+    const transactions = await Product.find(
+      { where: [{ to: user }, { from: user }, { createdBy: user }] },
+    );
+
+    res.status(200).json(transactions);
   }
 }

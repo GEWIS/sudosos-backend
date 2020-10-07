@@ -19,13 +19,17 @@ import express, { Application } from 'express';
 import { expect, request } from 'chai';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { Connection } from 'typeorm';
+import dinero, { DineroObject } from 'dinero.js';
 import bodyParser from 'body-parser';
 import UserController from '../../../src/controller/user-controller';
 import User from '../../../src/entity/user';
+import Product from '../../../src/entity/product';
+import Transaction from '../../../src/entity/transaction';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Database from '../../../src/database';
 import Swagger from '../../../src/swagger';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
+
 
 const fakeToken = 'asempwerze723aqsbln';
 
@@ -36,7 +40,9 @@ describe('UserController', (): void => {
     specification: SwaggerSpecification,
     controller: UserController,
     token: string,
-    users: Array<User> // TODO: write create user function
+    users: Array<User>, // TODO: write create user function
+    products: Array<Product>,
+    transactions: Array<Transaction>,
   };
 
   before(async () => {
@@ -53,7 +59,12 @@ describe('UserController', (): void => {
         {
           id: 1,
         } as User,
+        {
+          id: 2,
+        } as User,
       ],
+      products: undefined,
+      transactions: undefined,
     };
 
     const tokenHandler = new TokenHandler({
@@ -131,6 +142,228 @@ describe('UserController', (): void => {
     it('should give an HTTP 403 when invalid token', async () => {
       const res = await request(ctx.app)
         .get('/users/0')
+        .set('Authorization', `Bearer ${fakeToken}`);
+      expect(res.status).to.equal(403);
+    });
+  });
+
+  describe('GET /users/:id/products', () => {
+    before(async () => {
+      console.log(ctx.products);
+      ctx.products = [
+        {
+          name: 'Test-1',
+          price: dinero({
+            currency: 'EUR',
+            amount: 70,
+            precision: 2,
+          }),
+
+          owner: ctx.users[0],
+          alcoholPercentage: 5.0,
+          picture: 'https://sudosos/image.jpg',
+        } as any as Product,
+        {
+          name: 'Test-2',
+          price: dinero({
+            currency: 'EUR',
+            amount: 71,
+            precision: 2,
+          }),
+          owner: ctx.users[1],
+          alcoholPercentage: 5.0,
+          picture: 'https://sudosos/image2.jpg',
+        } as any as Product,
+      ];
+      console.log(ctx.products);
+
+      await Product.save({ ...ctx.products[0] } as Product);
+      await Product.save({ ...ctx.products[1] } as Product);
+    });
+
+    it('should give correct owned products for user', async () => {
+      const res = await request(ctx.app)
+        .get('/users/0/products')
+        .set('Authorization', `Bearer ${ctx.token}`);
+      expect(res.status).to.equal(200);
+      expect(res.body).to.deep.equal([{
+        name: 'Test-1',
+        price: dinero({
+          currency: 'EUR',
+          amount: 70,
+          precision: 2,
+        }),
+        owner: {
+          id: 0,
+        },
+        alcoholPercentage: 5.0,
+        picture: 'https://sudosos/image.jpg',
+      }]);
+    });
+    it('should give an HTTP 403 when user requests products (s)he does not own', async () => {
+      const res = await request(ctx.app)
+        .get('/users/1/products')
+        .set('Authorization', `Bearer ${ctx.token}`);
+      expect(res.status).to.equal(403);
+    });
+    it('should give an HTTP 403 when invalid token', async () => {
+      const res = await request(ctx.app)
+        .get('/users/0/products')
+        .set('Authorization', `Bearer ${fakeToken}`);
+      expect(res.status).to.equal(403);
+    });
+  });
+
+  describe('GET /users/:id/transactions', () => {
+    before(async () => {
+      await User.save({ ...ctx.users[2] } as User);
+      ctx.products = [
+        await Product.save({
+          name: 'Test-1',
+          price: dinero({
+            currency: 'EUR',
+            amount: 70,
+            precision: 2,
+          }),
+          owner: ctx.users[0],
+          alcoholPercentage: 5.0,
+          picture: 'https://sudosos/image.jpg',
+        } as any as Product),
+      ];
+      ctx.transactions = [
+        await Transaction.save({
+          from: ctx.users[0],
+          to: ctx.users[2],
+          createdBy: ctx.users[1],
+          balance: dinero({
+            currency: 'EUR',
+            amount: 70,
+            precision: 2,
+          }),
+          subtransactions: [{
+            product: ctx.products[0],
+            amount: 1,
+            price: dinero({
+              currency: 'EUR',
+              amount: 70,
+              precision: 2,
+            }),
+          }],
+        } as any as Transaction),
+        await Transaction.save({
+          from: ctx.users[1],
+          to: ctx.users[2],
+          createdBy: ctx.users[1],
+          balance: dinero({
+            currency: 'EUR',
+            amount: 70,
+            precision: 2,
+          }),
+          subtransactions: [{
+            product: ctx.products[0],
+            amount: 1,
+            price: dinero({
+              currency: 'EUR',
+              amount: 70,
+              precision: 2,
+            }),
+          }],
+        } as any as Transaction),
+        await Transaction.save({
+          from: ctx.users[1],
+          to: ctx.users[2],
+          createdBy: ctx.users[0],
+          balance: dinero({
+            currency: 'EUR',
+            amount: 70,
+            precision: 2,
+          }),
+          subtransactions: [{
+            product: ctx.products[0],
+            amount: 1,
+            price: dinero({
+              currency: 'EUR',
+              amount: 70,
+              precision: 2,
+            }),
+          }],
+        } as any as Transaction),
+        await Transaction.save({
+          from: ctx.users[0],
+          to: ctx.users[2],
+          createdBy: ctx.users[0],
+          balance: dinero({
+            currency: 'EUR',
+            amount: 70,
+            precision: 2,
+          }),
+          subtransactions: [{
+            product: ctx.products[0],
+            amount: 1,
+            price: dinero({
+              currency: 'EUR',
+              amount: 70,
+              precision: 2,
+            }),
+          }],
+        } as any as Transaction),
+        await Transaction.save({
+          from: ctx.users[1],
+          to: ctx.users[0],
+          createdBy: ctx.users[1],
+          balance: dinero({
+            currency: 'EUR',
+            amount: 70,
+            precision: 2,
+          }),
+          subtransactions: [{
+            product: ctx.products[0],
+            amount: 1,
+            price: dinero({
+              currency: 'EUR',
+              amount: 70,
+              precision: 2,
+            }),
+          }],
+        } as any as Transaction),
+        await Transaction.save({
+          from: ctx.users[2],
+          to: ctx.users[1],
+          createdBy: ctx.users[1],
+          balance: dinero({
+            currency: 'EUR',
+            amount: 70,
+            precision: 2,
+          }),
+          subtransactions: [{
+            product: ctx.products[0],
+            amount: 1,
+            price: dinero({
+              currency: 'EUR',
+              amount: 70,
+              precision: 2,
+            }),
+          }],
+        } as any as Transaction),
+      ];
+    });
+
+    it('should give correct transactions from/to user', async () => {
+      const res = await request(ctx.app)
+        .get('/users/0/transactions')
+        .set('Authorization', `Bearer ${ctx.token}`);
+      expect(res.status).to.equal(200);
+      expect(res.body).to.deep.equal([]);
+    });
+    it('should give an HTTP 403 when user requests transactions from someone else', async () => {
+      const res = await request(ctx.app)
+        .get('/users/1/transactions')
+        .set('Authorization', `Bearer ${ctx.token}`);
+      expect(res.status).to.equal(403);
+    });
+    it('should give an HTTP 403 when invalid token', async () => {
+      const res = await request(ctx.app)
+        .get('/users/0/products')
         .set('Authorization', `Bearer ${fakeToken}`);
       expect(res.status).to.equal(403);
     });
