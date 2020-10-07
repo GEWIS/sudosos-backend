@@ -32,7 +32,7 @@ import ProductCategory from './product-category';
  * @property {User.model} owner.required - The owner of this product entity.
  * @property {ProductCategory.model} category.required - The category this product belongs to.
  * @property {string} picture.required - The URL to the picture representing this product.
- * @property {decimal} alcoholPercentage.required - The percentage of alcohol in this product.
+ * @property {number} alcoholPercentage.required - The percentage of alcohol in this product.
  */
 export default class Product extends BaseEntity {
   @Column({

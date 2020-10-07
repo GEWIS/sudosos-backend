@@ -23,8 +23,8 @@ import {
 /**
  * @typedef BaseEntity
  * @property {integer} id - The auto-generated object id.
- * @property {Date} createdAt - The creation date of the object.
- * @property {Date} updatedAt - The last update date of the object.
+ * @property {string} createdAt - The creation date of the object.
+ * @property {string} updatedAt - The last update date of the object.
  * @property {integer} version - The current version of the object.
  */
 export default class BaseEntity extends OrmBaseEntity {
