@@ -23,6 +23,7 @@ import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import User from '../entity/user';
 import Product from '../entity/product';
+import Transaction from '../entity/transaction';
 
 export default class UserController extends BaseController {
   private logger: Logger = log4js.getLogger('UserController');
@@ -146,9 +147,10 @@ export default class UserController extends BaseController {
     this.logger.trace("Get user's transactions", parameters, 'by user', req.token.user);
 
     const user = await User.findOne(parameters.id);
-    const transactions = await Product.find(
-      { where: [{ to: user }, { from: user }, { createdBy: user }] },
-    );
+    const transactions = await Transaction.find({
+      where: [{ to: user }, { from: user }, { createdBy: user }],
+      order: { createdAt: 'DESC' },
+    });
 
     res.status(200).json(transactions);
   }

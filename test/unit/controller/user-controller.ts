@@ -19,7 +19,7 @@ import express, { Application } from 'express';
 import { expect, request } from 'chai';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { Connection } from 'typeorm';
-import dinero, { DineroObject } from 'dinero.js';
+import dinero from 'dinero.js';
 import bodyParser from 'body-parser';
 import UserController from '../../../src/controller/user-controller';
 import User from '../../../src/entity/user';
@@ -29,6 +29,7 @@ import TokenHandler from '../../../src/authentication/token-handler';
 import Database from '../../../src/database';
 import Swagger from '../../../src/swagger';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
+import ProductCategory from '../../../src/entity/product-category';
 
 
 const fakeToken = 'asempwerze723aqsbln';
@@ -55,17 +56,25 @@ describe('UserController', (): void => {
       users: [
         {
           id: 0,
+          name: 'Roy',
         } as User,
         {
           id: 1,
+          name: 'Kevin',
         } as User,
         {
           id: 2,
+          name: 'Ruben',
         } as User,
       ],
       products: undefined,
       transactions: undefined,
     };
+
+    const productCategory = {
+      id: 1,
+      name: 'test',
+    } as ProductCategory;
 
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
@@ -74,6 +83,46 @@ describe('UserController', (): void => {
 
     await User.save({ ...ctx.users[0] } as User);
     await User.save({ ...ctx.users[1] } as User);
+    await ProductCategory.save({ ...productCategory } as ProductCategory);
+
+    /* ctx.products = [
+      await Product.save({
+        name: 'Test-1',
+        price: dinero({
+          currency: 'EUR',
+          amount: 70,
+          precision: 2,
+        }),
+        owner: {
+          id: 1,
+        } as User,
+        alcoholPercentage: 5.0,
+        category: {
+          id: 1,
+          name: 'test',
+        } as ProductCategory,
+        categoryId: 1,
+        picture: 'https://sudosos/image.jpg',
+      } as any as Product),
+      await Product.save({
+        name: 'Test-2',
+        price: dinero({
+          currency: 'EUR',
+          amount: 71,
+          precision: 2,
+        }),
+        owner: {
+          id: 1,
+        } as User,
+        alcoholPercentage: 5.0,
+        category: {
+          id: 1,
+          name: 'test',
+        } as ProductCategory,
+        categoryId: 1,
+        picture: 'https://sudosos/image2.jpg',
+      } as any as Product),
+    ]; */
 
     ctx.specification = await Swagger.initialize(ctx.app);
     ctx.controller = new UserController(ctx.specification);
@@ -94,13 +143,17 @@ describe('UserController', (): void => {
         .set('Authorization', `Bearer ${ctx.token}`);
       expect(res.status).to.equal(200);
       expect(res.body).to.deep.equal([{
+        active: true,
         id: 0,
+        name: 'Roy',
         createdAt: res.body[0].createdAt,
         updatedAt: res.body[0].updatedAt,
         version: 1,
       },
       {
+        active: true,
         id: 1,
+        name: 'Kevin',
         createdAt: res.body[1].createdAt,
         updatedAt: res.body[1].updatedAt,
         version: 1,
@@ -121,7 +174,9 @@ describe('UserController', (): void => {
         .set('Authorization', `Bearer ${ctx.token}`);
       expect(res.status).to.equal(200);
       expect(res.body).to.deep.equal({
+        active: true,
         id: 0,
+        name: 'Roy',
         createdAt: res.body.createdAt,
         updatedAt: res.body.updatedAt,
         version: 1,
@@ -149,7 +204,6 @@ describe('UserController', (): void => {
 
   describe('GET /users/:id/products', () => {
     before(async () => {
-      console.log(ctx.products);
       ctx.products = [
         {
           name: 'Test-1',
@@ -158,7 +212,10 @@ describe('UserController', (): void => {
             amount: 70,
             precision: 2,
           }),
-
+          category: {
+            id: 1,
+            name: 'test',
+          } as ProductCategory,
           owner: ctx.users[0],
           alcoholPercentage: 5.0,
           picture: 'https://sudosos/image.jpg',
@@ -170,6 +227,10 @@ describe('UserController', (): void => {
             amount: 71,
             precision: 2,
           }),
+          category: {
+            id: 1,
+            name: 'test',
+          } as ProductCategory,
           owner: ctx.users[1],
           alcoholPercentage: 5.0,
           picture: 'https://sudosos/image2.jpg',
@@ -187,17 +248,14 @@ describe('UserController', (): void => {
         .set('Authorization', `Bearer ${ctx.token}`);
       expect(res.status).to.equal(200);
       expect(res.body).to.deep.equal([{
+        id: 1,
         name: 'Test-1',
-        price: dinero({
-          currency: 'EUR',
-          amount: 70,
-          precision: 2,
-        }),
-        owner: {
-          id: 0,
-        },
+        price: res.body[0].price,
         alcoholPercentage: 5.0,
         picture: 'https://sudosos/image.jpg',
+        createdAt: res.body[0].createdAt,
+        updatedAt: res.body[0].updatedAt,
+        version: 1,
       }]);
     });
     it('should give an HTTP 403 when user requests products (s)he does not own', async () => {
@@ -219,12 +277,16 @@ describe('UserController', (): void => {
       await User.save({ ...ctx.users[2] } as User);
       ctx.products = [
         await Product.save({
-          name: 'Test-1',
+          name: 'Test-3',
           price: dinero({
             currency: 'EUR',
             amount: 70,
             precision: 2,
           }),
+          category: {
+            id: 1,
+            name: 'test',
+          } as ProductCategory,
           owner: ctx.users[0],
           alcoholPercentage: 5.0,
           picture: 'https://sudosos/image.jpg',
@@ -237,7 +299,7 @@ describe('UserController', (): void => {
           createdBy: ctx.users[1],
           balance: dinero({
             currency: 'EUR',
-            amount: 70,
+            amount: 71,
             precision: 2,
           }),
           subtransactions: [{
@@ -245,7 +307,7 @@ describe('UserController', (): void => {
             amount: 1,
             price: dinero({
               currency: 'EUR',
-              amount: 70,
+              amount: 71,
               precision: 2,
             }),
           }],
@@ -256,7 +318,7 @@ describe('UserController', (): void => {
           createdBy: ctx.users[1],
           balance: dinero({
             currency: 'EUR',
-            amount: 70,
+            amount: 72,
             precision: 2,
           }),
           subtransactions: [{
@@ -264,7 +326,7 @@ describe('UserController', (): void => {
             amount: 1,
             price: dinero({
               currency: 'EUR',
-              amount: 70,
+              amount: 72,
               precision: 2,
             }),
           }],
@@ -275,7 +337,7 @@ describe('UserController', (): void => {
           createdBy: ctx.users[0],
           balance: dinero({
             currency: 'EUR',
-            amount: 70,
+            amount: 73,
             precision: 2,
           }),
           subtransactions: [{
@@ -283,7 +345,7 @@ describe('UserController', (): void => {
             amount: 1,
             price: dinero({
               currency: 'EUR',
-              amount: 70,
+              amount: 73,
               precision: 2,
             }),
           }],
@@ -294,7 +356,7 @@ describe('UserController', (): void => {
           createdBy: ctx.users[0],
           balance: dinero({
             currency: 'EUR',
-            amount: 70,
+            amount: 74,
             precision: 2,
           }),
           subtransactions: [{
@@ -302,7 +364,7 @@ describe('UserController', (): void => {
             amount: 1,
             price: dinero({
               currency: 'EUR',
-              amount: 70,
+              amount: 74,
               precision: 2,
             }),
           }],
@@ -313,7 +375,7 @@ describe('UserController', (): void => {
           createdBy: ctx.users[1],
           balance: dinero({
             currency: 'EUR',
-            amount: 70,
+            amount: 75,
             precision: 2,
           }),
           subtransactions: [{
@@ -321,7 +383,7 @@ describe('UserController', (): void => {
             amount: 1,
             price: dinero({
               currency: 'EUR',
-              amount: 70,
+              amount: 75,
               precision: 2,
             }),
           }],
@@ -332,7 +394,7 @@ describe('UserController', (): void => {
           createdBy: ctx.users[1],
           balance: dinero({
             currency: 'EUR',
-            amount: 70,
+            amount: 76,
             precision: 2,
           }),
           subtransactions: [{
@@ -340,7 +402,7 @@ describe('UserController', (): void => {
             amount: 1,
             price: dinero({
               currency: 'EUR',
-              amount: 70,
+              amount: 76,
               precision: 2,
             }),
           }],
@@ -353,7 +415,52 @@ describe('UserController', (): void => {
         .get('/users/0/transactions')
         .set('Authorization', `Bearer ${ctx.token}`);
       expect(res.status).to.equal(200);
-      expect(res.body).to.deep.equal([]);
+      expect(res.body).to.deep.equal([
+        {
+          balance: {
+            amount: 71,
+            currency: 'EUR',
+            precision: 2,
+          },
+          createdAt: res.body[0].createdAt,
+          id: 1,
+          updatedAt: res.body[0].updatedAt,
+          version: 1,
+        },
+        {
+          balance: {
+            amount: 73,
+            currency: 'EUR',
+            precision: 2,
+          },
+          createdAt: res.body[1].createdAt,
+          id: 3,
+          updatedAt: res.body[1].updatedAt,
+          version: 1,
+        },
+        {
+          balance: {
+            amount: 74,
+            currency: 'EUR',
+            precision: 2,
+          },
+          createdAt: res.body[2].createdAt,
+          id: 4,
+          updatedAt: res.body[2].updatedAt,
+          version: 1,
+        },
+        {
+          balance: {
+            amount: 75,
+            currency: 'EUR',
+            precision: 2,
+          },
+          createdAt: res.body[3].createdAt,
+          id: 5,
+          updatedAt: res.body[3].updatedAt,
+          version: 1,
+        },
+      ]);
     });
     it('should give an HTTP 403 when user requests transactions from someone else', async () => {
       const res = await request(ctx.app)

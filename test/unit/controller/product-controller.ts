@@ -59,6 +59,7 @@ describe('ProductController', async (): Promise<void> => {
         },
         owner: {
           id: 1,
+          name: 'Kevin',
         } as User,
         alcoholPercentage: 5.0,
         category: {
