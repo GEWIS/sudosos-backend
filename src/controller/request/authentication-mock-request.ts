@@ -15,27 +15,13 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import {
-  Column,
-  Entity,
-} from 'typeorm';
-import BaseEntity from './base-entity';
 
-@Entity()
 /**
- * @typedef {BaseEntity} User
- * @property {string} name.required - The name of the user
- * @property {boolean} active.required - Whether the user is active
+ * @typedef AuthenticationMockRequest
+ * @property {integer} userId.required
+ * @property {string} nonce.required
  */
-export default class User extends BaseEntity {
-  @Column({
-    length: 64,
-  })
-  public name: string;
-
-  @Column({
-    type: 'boolean',
-    default: true,
-  })
-  public active: boolean;
+export default interface AuthenticationMockRequest {
+  userId: number,
+  nonce: string,
 }

@@ -18,13 +18,19 @@
 import 'reflect-metadata';
 import * as http from 'http';
 import * as util from 'util';
+import * as crypto from 'crypto';
+import { promises as fs } from 'fs';
 import bodyParser from 'body-parser';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import dinero, { Currency } from 'dinero.js';
 import express from 'express';
+import log4js from 'log4js';
 import { Connection } from 'typeorm';
 import Database from './database';
 import Swagger from './swagger';
+import TokenHandler from './authentication/token-handler';
+import TokenMiddleware from './middleware/token-middleware';
+import AuthenticationController from './controller/authentication-controller';
 
 export class Application {
   app: express.Express;
@@ -41,19 +47,58 @@ export class Application {
   }
 }
 
+/**
+ * Sets up the token handling middleware and initializes the authentication
+ * controllers of the application.
+ * @param application - The application on which to bind the middleware
+ *                      and controller.
+ */
+async function setupAuthentication(application: Application) {
+  // Import JWT key
+  const jwtPath = process.env.JWT_KEY_PATH;
+  const jwtContent = await fs.readFile(jwtPath);
+  const jwtPrivate = crypto.createPrivateKey(jwtContent);
+  const jwtPublic = crypto.createPublicKey(jwtPrivate);
+
+  // Define middleware
+  const tokenHandler = new TokenHandler({
+    algorithm: 'RS512',
+    publicKey: jwtPublic.export({ type: 'spki', format: 'pem' }),
+    privateKey: jwtPrivate.export({ type: 'pkcs8', format: 'pem' }),
+    expiry: 3600,
+  });
+
+  // Define authentication controller and bind before middleware.
+  const controller = new AuthenticationController(application.specification, tokenHandler);
+  application.app.use('/v1/authentication', controller.getRouter());
+
+  // Define middleware to be used by any other route.
+  const tokenMiddleware = new TokenMiddleware({ refreshFactor: 0.5, tokenHandler });
+  application.app.use(tokenMiddleware.getMiddleware());
+}
+
 export default async function createApp(): Promise<Application> {
   const application = new Application();
   application.connection = await Database.initialize();
 
-  // Set up monetary value configuration
+  // Silent in-dependency logs unless really wanted by the environment.
+  const logger = log4js.getLogger('Console');
+  logger.level = process.env.LOG_LEVEL;
+  console.log = (message: any) => logger.debug(message);
+
+  // Set up monetary value configuration.
   dinero.defaultCurrency = process.env.CURRENCY_CODE as Currency;
   dinero.defaultPrecision = parseInt(process.env.CURRENCY_PRECISION, 10);
 
+  // Create express application.
   application.app = express();
   application.specification = await Swagger.initialize(application.app);
-
   application.app.use(bodyParser.json());
 
+  // Setup token handler and authentication controller.
+  await setupAuthentication(application);
+
+  // Start express application.
   application.server = application.app.listen(process.env.HTTP_PORT);
   return application;
 }
