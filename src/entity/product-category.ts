@@ -16,26 +16,19 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  createConnection, Connection, getConnectionOptions,
+  Entity, Column,
 } from 'typeorm';
-import User from './entity/user';
-import Product from './entity/product';
-import Subtransaction from './entity/subtransaction';
-import Transaction from './entity/transaction';
-import ProductCategory from './entity/product-category';
+import BaseEntity from './base-entity';
 
-export default class Database {
-  public static async initialize(): Promise<Connection> {
-    const options = {
-      ...await getConnectionOptions(),
-      entities: [
-        Product,
-        ProductCategory,
-        Subtransaction,
-        Transaction,
-        User,
-      ],
-    };
-    return createConnection(options);
-  }
+@Entity()
+/**
+ * @typedef {BaseEntity} ProductCategory
+ * @property {string} name.required - The unique name of the product category.
+ */
+export default class ProductCategory extends BaseEntity {
+  @Column({
+    unique: true,
+    length: 64,
+  })
+  public name: string;
 }

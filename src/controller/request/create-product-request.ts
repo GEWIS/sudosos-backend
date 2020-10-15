@@ -15,27 +15,24 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import {
-  createConnection, Connection, getConnectionOptions,
-} from 'typeorm';
-import User from './entity/user';
-import Product from './entity/product';
-import Subtransaction from './entity/subtransaction';
-import Transaction from './entity/transaction';
-import ProductCategory from './entity/product-category';
+import { DineroObject } from 'dinero.js';
+import User from '../../entity/user';
+import ProductCategory from '../../entity/product-category';
 
-export default class Database {
-  public static async initialize(): Promise<Connection> {
-    const options = {
-      ...await getConnectionOptions(),
-      entities: [
-        Product,
-        ProductCategory,
-        Subtransaction,
-        Transaction,
-        User,
-      ],
-    };
-    return createConnection(options);
-  }
+/**
+ * @typedef CreateProductRequest
+ * @property {string} name.required
+ * @property {Dinero.model} price.required
+ * @property {User.model} owner.required
+ * @property {ProductCategory.model} category.required
+ * @property {string} picture.required
+ * @property {number} alcoholPercentage.required
+ */
+export default interface CreateProductRequest {
+  name: string,
+  price: DineroObject,
+  owner: User,
+  category: ProductCategory,
+  picture: string,
+  alcoholPercentage: number,
 }
