@@ -85,45 +85,6 @@ describe('UserController', (): void => {
     await User.save({ ...ctx.users[1] } as User);
     await ProductCategory.save({ ...productCategory } as ProductCategory);
 
-    /* ctx.products = [
-      await Product.save({
-        name: 'Test-1',
-        price: dinero({
-          currency: 'EUR',
-          amount: 70,
-          precision: 2,
-        }),
-        owner: {
-          id: 1,
-        } as User,
-        alcoholPercentage: 5.0,
-        category: {
-          id: 1,
-          name: 'test',
-        } as ProductCategory,
-        categoryId: 1,
-        picture: 'https://sudosos/image.jpg',
-      } as any as Product),
-      await Product.save({
-        name: 'Test-2',
-        price: dinero({
-          currency: 'EUR',
-          amount: 71,
-          precision: 2,
-        }),
-        owner: {
-          id: 1,
-        } as User,
-        alcoholPercentage: 5.0,
-        category: {
-          id: 1,
-          name: 'test',
-        } as ProductCategory,
-        categoryId: 1,
-        picture: 'https://sudosos/image2.jpg',
-      } as any as Product),
-    ]; */
-
     ctx.specification = await Swagger.initialize(ctx.app);
     ctx.controller = new UserController(ctx.specification);
 
@@ -236,8 +197,6 @@ describe('UserController', (): void => {
           picture: 'https://sudosos/image2.jpg',
         } as any as Product,
       ];
-      console.log(ctx.products);
-
       await Product.save({ ...ctx.products[0] } as Product);
       await Product.save({ ...ctx.products[1] } as Product);
     });
