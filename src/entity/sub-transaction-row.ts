@@ -15,31 +15,30 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import {
-  Entity, ManyToOne, JoinColumn, OneToMany,
-} from 'typeorm';
+import {Column, Entity, JoinColumn, ManyToOne} from 'typeorm';
+import BaseEntity from './base-entity';
 // eslint-disable-next-line import/no-cycle
 import SubTransaction from './sub-transaction';
-import User from './user';
-import BaseEntity from './base-entity';
+import Product from './product/product';
 
 /**
- * @typedef {Transaction} Transaction
- * @property {User.model} from.required - The account from which the transaction is subtracted.
- * @property {User.model} createdBy - The user that created the transaction, if not same as 'from'.
- * @property {Array.<SubTransaction>} subtransactions.required - The subtransactions belonging
- *    to this transaction.
+ * @typedef {SubTransactionRow} SubTransactionRow
+ * @property {Product.model} product.required - The product that has been bought
+ * @property {integer} amount.required - The amount that has been bought
+ * @property {Array.<SubTransaction>} subTransactions
  */
 @Entity()
-export default class Transaction extends BaseEntity {
-  @ManyToOne(() => User, { nullable: false })
-  @JoinColumn({ name: 'from' })
-  public from: User;
+export default class SubTransactionRow extends BaseEntity {
+  @ManyToOne(() => Product, { nullable: false })
+  @JoinColumn({ name: 'product' })
+  public product: Product;
 
-  @ManyToOne(() => User, { nullable: true })
-  @JoinColumn({ name: 'createdBy' })
-  public createdBy?: User;
+  @Column({
+    type: 'integer',
+  })
+  public amount: number;
 
-  @OneToMany(() => SubTransaction, (subTransaction) => subTransaction.transaction)
-  public subTransactions: SubTransaction[];
+  @ManyToOne(() => SubTransaction, { nullable: false })
+  @JoinColumn({ name: 'subtransaction' })
+  public subTransaction: SubTransaction;
 }

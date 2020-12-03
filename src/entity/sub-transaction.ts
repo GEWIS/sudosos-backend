@@ -17,38 +17,37 @@
  */
 /* eslint-disable import/no-cycle */
 import {
-  Entity, Column, ManyToOne, JoinColumn,
+  Entity, ManyToOne, JoinColumn, OneToMany,
 } from 'typeorm';
-import { Dinero } from 'dinero.js';
-import BaseProduct from './product/product';
 import Transaction from './transaction';
-import DineroTransformer from './transformer/dinero-transformer';
 import BaseEntity from './base-entity';
+import User from './user';
+import Container from './container/container';
+import SubTransactionRow from './sub-transaction-row';
 
 /**
- * @typedef {BaseEntityWithoutId} Subtransaction
- * @property {BaseProduct.model} product.required - The product sold in the subtransaction.
- * @property {integer} amount.required - The amount of product involved in this subtransaction.
- * @property {Dinero.model} price.required - The price of each product in this subtransaction.
+ * @typedef {BaseEntityWithoutId} SubTransaction
+ * @property {User.model} to.required - The account that the transaction is added to.
+ * @property {Container.model} container.required - The container from which all products in the
+ *     SubTransactionRows are bought
+ * @property {Transaction.model} transaction.required - The parent transaction
+ * @property {Array.<SubTransactionRow>} subTransactionsRows.required - The rows of this
+ *     SubTransaction
  */
 @Entity()
-export default class Subtransaction extends BaseEntity {
-  @ManyToOne(() => BaseProduct, { nullable: false })
-  @JoinColumn({ name: 'productId' })
-  public product: BaseProduct;
+export default class SubTransaction extends BaseEntity {
+  @ManyToOne(() => User, { nullable: false })
+  @JoinColumn({ name: 'to' })
+  public to: User;
 
-  @Column({
-    type: 'integer',
-  })
-  public amount: number;
-
-  @Column({
-    type: 'integer',
-    transformer: DineroTransformer.Instance,
-  })
-  public price: Dinero;
+  @ManyToOne(() => Container, { nullable: false })
+  @JoinColumn({ name: 'container' })
+  public container: Container;
 
   @ManyToOne(() => Transaction, { nullable: false })
   @JoinColumn({ name: 'transaction' })
   public transaction: Transaction;
+
+  @OneToMany(() => SubTransactionRow, (subtransactionRow) => subtransactionRow.subTransaction)
+  public subTransactionRows: SubTransactionRow[];
 }

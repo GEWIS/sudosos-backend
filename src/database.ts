@@ -20,9 +20,12 @@ import {
 } from 'typeorm';
 import User from './entity/user';
 import Product from './entity/product/product';
-import Subtransaction from './entity/subtransaction';
+import SubTransaction from './entity/sub-transaction';
 import Transaction from './entity/transaction';
 import ProductCategory from './entity/product/product-category';
+import SubTransactionRow from './entity/sub-transaction-row';
+import PointOfSale from './entity/point-of-sale/point-of-sale';
+import Container from './entity/container/container';
 
 export default class Database {
   public static async initialize(): Promise<Connection> {
@@ -31,8 +34,11 @@ export default class Database {
       entities: [
         ProductCategory,
         Product,
-        Subtransaction,
+        Container,
+        PointOfSale,
         Transaction,
+        SubTransaction,
+        SubTransactionRow,
         User,
       ],
     };
