@@ -22,7 +22,7 @@ import BaseEntity from './base-entity';
 
 @Entity()
 /**
- * @typedef {BaseEntity} User
+ * @typedef {BaseEntityWithoutId} User
  */
 export default class User extends BaseEntity {
 }

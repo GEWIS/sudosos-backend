@@ -16,15 +16,15 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  PrimaryGeneratedColumn,
+  Entity, JoinColumn, OneToOne, PrimaryColumn,
 } from 'typeorm';
-import BaseEntityWithoutId from './base-entity-without-id';
+import BaseContainer from './base-container';
+import Container from './container';
 
-/**
- * @typedef  BaseEntity
- * @property {integer} id - The auto-generated object id.
- */
-export default class BaseEntity extends BaseEntityWithoutId {
-  @PrimaryGeneratedColumn()
-  public readonly id?: number;
+@Entity()
+export default class UpdatedContainer extends BaseContainer {
+  @PrimaryColumn()
+  @OneToOne(() => Container, { nullable: false })
+  @JoinColumn({ name: 'container', referencedColumnName: 'id' })
+  public container: Container[];
 }

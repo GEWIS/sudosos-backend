@@ -19,15 +19,17 @@ import {
   createConnection, Connection, getConnectionOptions,
 } from 'typeorm';
 import User from './entity/user';
-import Product from './entity/product';
+import Product from './entity/product/product';
 import Subtransaction from './entity/subtransaction';
 import Transaction from './entity/transaction';
+import ProductCategory from './entity/product/product-category';
 
 export default class Database {
   public static async initialize(): Promise<Connection> {
     const options = {
       ...await getConnectionOptions(),
       entities: [
+        ProductCategory,
         Product,
         Subtransaction,
         Transaction,

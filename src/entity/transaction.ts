@@ -26,7 +26,7 @@ import DineroTransformer from './transformer/dinero-transformer';
 import BaseEntity from './base-entity';
 
 /**
- * @typedef {BaseEntity} Transaction
+ * @typedef {BaseEntityWithoutId} Transaction
  * @property {User.model} from.required - The account from which the transaction is subtracted.
  * @property {User.model} to.required - The user to which the transaction is added.
  * @property {User.model} createdBy - The user that created the transaction, if not same as 'from'.

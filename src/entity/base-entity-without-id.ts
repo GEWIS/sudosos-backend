@@ -16,15 +16,22 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  PrimaryGeneratedColumn,
+  BaseEntity as OrmBaseEntity, CreateDateColumn, UpdateDateColumn, VersionColumn,
 } from 'typeorm';
-import BaseEntityWithoutId from './base-entity-without-id';
 
 /**
- * @typedef  BaseEntity
- * @property {integer} id - The auto-generated object id.
+ * @typedef BaseEntityWithoutId
+ * @property {Date} createdAt - The creation date of the object.
+ * @property {Date} updatedAt - The last update date of the object.
+ * @property {integer} version - The current version of the object.
  */
-export default class BaseEntity extends BaseEntityWithoutId {
-  @PrimaryGeneratedColumn()
-  public readonly id?: number;
+export default class BaseEntityWithoutId extends OrmBaseEntity {
+  @CreateDateColumn({ update: false })
+  public readonly createdAt: Date;
+
+  @UpdateDateColumn()
+  public readonly updatedAt: Date;
+
+  @VersionColumn()
+  public readonly version: number;
 }
