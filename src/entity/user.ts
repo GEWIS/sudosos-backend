@@ -22,12 +22,12 @@ import BaseEntity from './base-entity';
 // eslint-disable-next-line import/no-cycle
 import BorrelkaartGroup from './borrelkaart-group';
 
-interface UserType {
-  MEMBER: 'member',
-  ORGAN: 'organ',
-  BORRELKAART: 'borrelkaart',
-  LOCAL_USER: 'localUser',
-  LOCAL_ADMIN: 'localAdmin',
+export enum UserType {
+  MEMBER = 'member',
+  ORGAN = 'organ',
+  BORRELKAART = 'borrelkaart',
+  LOCAL_USER = 'localUser',
+  LOCAL_ADMIN = 'localAdmin',
 }
 
 /**
@@ -42,25 +42,34 @@ interface UserType {
 @Entity()
 export default class User extends BaseEntity {
   @Column({
-    unique: true,
     length: 64,
   })
   public firstName: string;
 
   @Column({
-    unique: true,
     length: 64,
   })
   public lastName?: string;
 
-  @Column()
+  @Column({
+    default: false,
+  })
   public active: boolean;
 
-  @Column()
+  @Column({
+    default: true,
+  })
   public deleted: boolean;
 
+  /* This snippet does unfortunately not work, because SQLite
+     does not support the "enum" column type. For now, use the workaround below.
+  @Column({
+    type: 'enum',
+    enum: UserType,
+  })
+  public type: UserType; */
   @Column()
-  public type: UserType;
+  public type: 'member' | 'organ' | 'borrelkaart' | 'localUser' | 'localAdmin';
 
   // If the user is a borrelkaart, we need to save its group
   @ManyToOne(() => BorrelkaartGroup)

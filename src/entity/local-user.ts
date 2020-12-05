@@ -19,7 +19,7 @@ import {BaseEntity, Column, Entity, JoinColumn, OneToOne} from 'typeorm';
 import User from './user';
 
 @Entity()
-export default class localUser extends BaseEntity {
+export default class LocalUser extends BaseEntity {
   @OneToOne(() => User, { primary: true, nullable: false })
   @JoinColumn({ name: 'user' })
   public user: User;
