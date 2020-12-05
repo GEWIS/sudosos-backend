@@ -22,6 +22,7 @@ import {
 import SubTransaction from './sub-transaction';
 import User from './user';
 import BaseEntity from './base-entity';
+import PointOfSale from './point-of-sale/point-of-sale';
 
 /**
  * @typedef {Transaction} Transaction
@@ -42,4 +43,8 @@ export default class Transaction extends BaseEntity {
 
   @OneToMany(() => SubTransaction, (subTransaction) => subTransaction.transaction)
   public subTransactions: SubTransaction[];
+
+  @ManyToOne(() => PointOfSale)
+  @JoinColumn({ name: 'pointOfSale' })
+  public pointOfSale: PointOfSale;
 }

@@ -26,6 +26,8 @@ import ProductCategory from './entity/product/product-category';
 import SubTransactionRow from './entity/sub-transaction-row';
 import PointOfSale from './entity/point-of-sale/point-of-sale';
 import Container from './entity/container/container';
+import FlaggedTransaction from './entity/flagged-transaction';
+import BorrelkaartGroup from './entity/borrelkaart-group';
 
 export default class Database {
   public static async initialize(): Promise<Connection> {
@@ -39,6 +41,8 @@ export default class Database {
         Transaction,
         SubTransaction,
         SubTransactionRow,
+        FlaggedTransaction,
+        BorrelkaartGroup,
         User,
       ],
     };

@@ -16,13 +16,54 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  Entity,
+  Column, Entity, JoinColumn, ManyToOne,
 } from 'typeorm';
 import BaseEntity from './base-entity';
+// eslint-disable-next-line import/no-cycle
+import BorrelkaartGroup from './borrelkaart-group';
 
-@Entity()
+interface UserType {
+  MEMBER: 'member',
+  ORGAN: 'organ',
+  BORRELKAART: 'borrelkaart',
+  LOCAL_USER: 'localUser',
+  LOCAL_ADMIN: 'localAdmin',
+}
+
 /**
  * @typedef {BaseEntityWithoutId} User
+ * @property {string} firstName.required - First name of the user
+ * @property {string} lastName - Last name of the user
+ * @property {boolean} active.required - Whether the user has accepted the TOS
+ * @property {UserType} type.required - The type of user
+ * @property {BorrelkaartGroup.model} borrelkaartGroup - Reference to the borrelkaart group,
+ *     if this user is of type borrelkaart
  */
+@Entity()
 export default class User extends BaseEntity {
+  @Column({
+    unique: true,
+    length: 64,
+  })
+  public firstName: string;
+
+  @Column({
+    unique: true,
+    length: 64,
+  })
+  public lastName?: string;
+
+  @Column()
+  public active: boolean;
+
+  @Column()
+  public deleted: boolean;
+
+  @Column()
+  public type: UserType;
+
+  // If the user is a borrelkaart, we need to save its group
+  @ManyToOne(() => BorrelkaartGroup)
+  @JoinColumn({ name: 'borrelkaartGroup' })
+  public borrelkaartGroup?: BorrelkaartGroup;
 }
