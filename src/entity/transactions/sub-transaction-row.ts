@@ -15,25 +15,30 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import {
-  Column, JoinColumn, ManyToMany, ManyToOne,
-} from 'typeorm';
-import BaseEntityWithoutId from '../base-entity-without-id';
-import User from '../user/user';
+import {Column, Entity, JoinColumn, ManyToOne} from 'typeorm';
+import BaseEntity from '../base-entity';
+// eslint-disable-next-line import/no-cycle
+import SubTransaction from './sub-transaction';
 import Product from '../product/product';
 
-export default class BaseContainer extends BaseEntityWithoutId {
+/**
+ * @typedef {SubTransactionRow} SubTransactionRow
+ * @property {Product.model} product.required - The product that has been bought
+ * @property {integer} amount.required - The amount that has been bought
+ * @property {Array.<SubTransaction>} subTransactions
+ */
+@Entity()
+export default class SubTransactionRow extends BaseEntity {
+  @ManyToOne(() => Product, { nullable: false })
+  @JoinColumn({ name: 'product' })
+  public product: Product;
+
   @Column({
-    unique: true,
-    length: 64,
+    type: 'integer',
   })
-  public name: string;
+  public amount: number;
 
-  @ManyToOne(() => User, { nullable: false })
-  @JoinColumn({ name: 'owner' })
-  public owner: User;
-
-  @ManyToMany(() => Product)
-  @JoinColumn({ name: 'products' })
-  public products: Product[];
+  @ManyToOne(() => SubTransaction, { nullable: false })
+  @JoinColumn({ name: 'subtransaction' })
+  public subTransaction: SubTransaction;
 }

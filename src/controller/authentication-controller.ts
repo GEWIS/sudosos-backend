@@ -20,7 +20,7 @@ import log4js, { Logger } from 'log4js';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import BaseController from './base-controller';
 import Policy from './policy';
-import User from '../entity/user';
+import User from '../entity/user/user';
 import AuthenticationMockRequest from './request/authentication-mock-request';
 import JsonWebToken from '../authentication/json-web-token';
 import TokenHandler from '../authentication/token-handler';

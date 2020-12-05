@@ -16,32 +16,23 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  Column, Entity, JoinColumn, OneToMany,
+  BaseEntity, Column, Entity, JoinColumn, OneToOne,
 } from 'typeorm';
-import BaseEntity from './base-entity';
-// eslint-disable-next-line import/no-cycle
 import User from './user';
 
-/**
- * @typedef {BorrelkaartGroup} BorrelkaartGroup
- * @property {string} name.required - Name of the group
- * @property {Date} activeStartDate.required - Date from which the included cards are active
- * @property {Date} activeEndDate - Date from which cards are no longer active
- * @property {Array.<User>} borrelkaarten.required - Cards included in this group
- */
 @Entity()
-export default class BorrelkaartGroup extends BaseEntity {
+export default class LocalUser extends BaseEntity {
+  @OneToOne(() => User, { primary: true, nullable: false })
+  @JoinColumn({ name: 'user' })
+  public user: User;
+
   @Column({
-    unique: true,
     length: 64,
   })
-  public name: string;
+  public email: string;
 
-  public activeStartDate: Date;
-
-  public activeEndDate?: Date;
-
-  @OneToMany(() => User, (user) => user.borrelkaartGroup)
-  @JoinColumn({ name: 'borrelkaarten' })
-  public borrelkaarten: User[];
+  @Column({
+    length: 128,
+  })
+  public password: string;
 }

@@ -18,7 +18,7 @@
 import {
   Column, Entity, JoinColumn, ManyToOne,
 } from 'typeorm';
-import BaseEntity from './base-entity';
+import BaseEntity from '../base-entity';
 // eslint-disable-next-line import/no-cycle
 import BorrelkaartGroup from './borrelkaart-group';
 
@@ -60,10 +60,6 @@ export default class User extends BaseEntity {
     default: true,
   })
   public deleted: boolean;
-
-  // TODO: Should we store for every type of user additional information?
-  //  e.g. membership number of members? Committee ID's for committees/fraternities?
-  //  what is the best way to store all this information?
 
   /* This snippet does unfortunately not work, because SQLite
      does not support the "enum" column type. For now, use the workaround below.

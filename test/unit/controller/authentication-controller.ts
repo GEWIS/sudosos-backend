@@ -20,7 +20,7 @@ import { expect, request } from 'chai';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { Connection } from 'typeorm';
 import bodyParser from 'body-parser';
-import User from '../../../src/entity/user';
+import User from '../../../src/entity/user/user';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Database from '../../../src/database';
 import Swagger from '../../../src/swagger';

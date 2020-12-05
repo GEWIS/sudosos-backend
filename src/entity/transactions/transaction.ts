@@ -20,9 +20,9 @@ import {
 } from 'typeorm';
 // eslint-disable-next-line import/no-cycle
 import SubTransaction from './sub-transaction';
-import User from './user';
-import BaseEntity from './base-entity';
-import PointOfSale from './point-of-sale/point-of-sale';
+import User from '../user/user';
+import BaseEntity from '../base-entity';
+import PointOfSale from '../point-of-sale/point-of-sale';
 
 /**
  * @typedef {Transaction} Transaction

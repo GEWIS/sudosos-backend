@@ -15,30 +15,33 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import {Column, Entity, JoinColumn, ManyToOne} from 'typeorm';
-import BaseEntity from './base-entity';
+import {
+  Column, Entity, JoinColumn, OneToMany,
+} from 'typeorm';
+import BaseEntity from '../base-entity';
 // eslint-disable-next-line import/no-cycle
-import SubTransaction from './sub-transaction';
-import Product from './product/product';
+import User from './user';
 
 /**
- * @typedef {SubTransactionRow} SubTransactionRow
- * @property {Product.model} product.required - The product that has been bought
- * @property {integer} amount.required - The amount that has been bought
- * @property {Array.<SubTransaction>} subTransactions
+ * @typedef {BorrelkaartGroup} BorrelkaartGroup
+ * @property {string} name.required - Name of the group
+ * @property {Date} activeStartDate.required - Date from which the included cards are active
+ * @property {Date} activeEndDate - Date from which cards are no longer active
+ * @property {Array.<User>} borrelkaarten.required - Cards included in this group
  */
 @Entity()
-export default class SubTransactionRow extends BaseEntity {
-  @ManyToOne(() => Product, { nullable: false })
-  @JoinColumn({ name: 'product' })
-  public product: Product;
-
+export default class BorrelkaartGroup extends BaseEntity {
   @Column({
-    type: 'integer',
+    unique: true,
+    length: 64,
   })
-  public amount: number;
+  public name: string;
 
-  @ManyToOne(() => SubTransaction, { nullable: false })
-  @JoinColumn({ name: 'subtransaction' })
-  public subTransaction: SubTransaction;
+  public activeStartDate: Date;
+
+  public activeEndDate?: Date;
+
+  @OneToMany(() => User, (user) => user.borrelkaartGroup)
+  @JoinColumn({ name: 'borrelkaarten' })
+  public borrelkaarten: User[];
 }

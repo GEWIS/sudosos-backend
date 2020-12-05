@@ -1,6 +1,6 @@
 import BaseEntityWithoutId from "../base-entity-without-id";
 import {Column, JoinColumn, ManyToMany, ManyToOne} from "typeorm";
-import User from "../user";
+import User from "../user/user";
 import Container from "../container/container";
 
 export default class BasePointOfSale extends BaseEntityWithoutId {

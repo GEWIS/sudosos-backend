@@ -21,7 +21,7 @@ import {
 import { Dinero } from 'dinero.js';
 import DineroTransformer from '../transformer/dinero-transformer';
 import BaseEntityWithoutId from '../base-entity-without-id';
-import User from '../user';
+import User from '../user/user';
 import ProductCategory from './product-category';
 
 /**

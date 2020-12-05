@@ -15,20 +15,20 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import {BaseEntity, Column, Entity, JoinColumn, OneToOne} from 'typeorm';
+import {
+  BaseEntity, Column, Entity, JoinColumn, OneToOne,
+} from 'typeorm';
 import User from './user';
 
 @Entity()
-export default class LocalUser extends BaseEntity {
+export default class GewisUser extends BaseEntity {
   @OneToOne(() => User, { primary: true, nullable: false })
   @JoinColumn({ name: 'user' })
   public user: User;
 
-  // TODO: How do local user log in? With their email address/username and password?
-  //  What else do we need to store then?
-
   @Column({
-    length: 128,
+    type: 'integer',
   })
-  public password: string;
+  // Can be both a Membership ID or a committee / fraternity ID
+  public gewisId: number;
 }

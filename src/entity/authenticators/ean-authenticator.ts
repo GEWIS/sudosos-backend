@@ -19,7 +19,7 @@ import {
   Column, Entity, JoinColumn, OneToOne,
 } from 'typeorm';
 import BaseEntityWithoutId from '../base-entity-without-id';
-import User from '../user';
+import User from '../user/user';
 
 @Entity()
 /**

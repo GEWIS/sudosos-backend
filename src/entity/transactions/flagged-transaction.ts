@@ -18,8 +18,8 @@
 import {
   Column, Entity, JoinColumn, ManyToOne,
 } from 'typeorm';
-import BaseEntity from './base-entity';
-import User from './user';
+import BaseEntity from '../base-entity';
+import User from '../user/user';
 import Transaction from './transaction';
 
 /**

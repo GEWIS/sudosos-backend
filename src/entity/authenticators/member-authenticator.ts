@@ -19,7 +19,7 @@ import {
   Entity, JoinColumn, ManyToOne
 } from 'typeorm';
 import BaseEntityWithoutId from '../base-entity-without-id';
-import User from '../user';
+import User from '../user/user';
 
 /**
  * @typedef {MemberAuthenticator} MemberAuthenticator

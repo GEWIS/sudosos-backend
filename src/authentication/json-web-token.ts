@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import User from '../entity/user';
+import User from '../entity/user/user';
 
 /**
  * The contents of the JWT used for user authentication.

@@ -18,18 +18,25 @@
 import {
   createConnection, Connection, getConnectionOptions,
 } from 'typeorm';
-import User from './entity/user';
+import User from './entity/user/user';
 import Product from './entity/product/product';
-import SubTransaction from './entity/sub-transaction';
-import Transaction from './entity/transaction';
+import SubTransaction from './entity/transactions/sub-transaction';
+import Transaction from './entity/transactions/transaction';
 import ProductCategory from './entity/product/product-category';
-import SubTransactionRow from './entity/sub-transaction-row';
+import SubTransactionRow from './entity/transactions/sub-transaction-row';
 import PointOfSale from './entity/point-of-sale/point-of-sale';
 import Container from './entity/container/container';
-import FlaggedTransaction from './entity/flagged-transaction';
-import BorrelkaartGroup from './entity/borrelkaart-group';
-import LocalUser from './entity/local-user';
-import UserBorrelkaartGroup from './entity/user-borrelkaart-group';
+import FlaggedTransaction from './entity/transactions/flagged-transaction';
+import BorrelkaartGroup from './entity/user/borrelkaart-group';
+import LocalUser from './entity/user/local-user';
+import GewisUser from './entity/user/gewis-user';
+import UserBorrelkaartGroup from './entity/user/user-borrelkaart-group';
+import EanAuthenticator from './entity/authenticators/ean-authenticator';
+import MemberAuthenticator from './entity/authenticators/member-authenticator';
+import NfcAuthenticator from './entity/authenticators/nfc-authenticator';
+import PinAuthenticator from './entity/authenticators/pin-authenticator';
+import Advertisement from './entity/advertisement';
+import Transfer from './entity/transactions/transfer';
 
 export default class Database {
   public static async initialize(): Promise<Connection> {
@@ -40,6 +47,7 @@ export default class Database {
         Product,
         Container,
         PointOfSale,
+        Transfer,
         Transaction,
         SubTransaction,
         SubTransactionRow,
@@ -47,7 +55,13 @@ export default class Database {
         BorrelkaartGroup,
         User,
         LocalUser,
+        GewisUser,
         UserBorrelkaartGroup,
+        EanAuthenticator,
+        MemberAuthenticator,
+        NfcAuthenticator,
+        PinAuthenticator,
+        Advertisement,
       ],
     };
     return createConnection(options);

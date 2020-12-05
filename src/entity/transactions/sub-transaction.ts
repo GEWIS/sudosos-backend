@@ -20,9 +20,9 @@ import {
   Entity, ManyToOne, JoinColumn, OneToMany,
 } from 'typeorm';
 import Transaction from './transaction';
-import BaseEntity from './base-entity';
-import User from './user';
-import Container from './container/container';
+import BaseEntity from '../base-entity';
+import User from '../user/user';
+import Container from '../container/container';
 import SubTransactionRow from './sub-transaction-row';
 
 /**
