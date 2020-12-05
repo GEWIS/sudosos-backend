@@ -61,6 +61,10 @@ export default class User extends BaseEntity {
   })
   public deleted: boolean;
 
+  // TODO: Should we store for every type of user additional information?
+  //  e.g. membership number of members? Committee ID's for committees/fraternities?
+  //  what is the best way to store all this information?
+
   /* This snippet does unfortunately not work, because SQLite
      does not support the "enum" column type. For now, use the workaround below.
   @Column({

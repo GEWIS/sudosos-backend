@@ -15,20 +15,24 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import {BaseEntity, Column, Entity, JoinColumn, OneToOne} from 'typeorm';
-import User from './user';
+import {
+  Entity, JoinColumn, ManyToOne
+} from 'typeorm';
+import BaseEntityWithoutId from '../base-entity-without-id';
+import User from '../user';
 
+/**
+ * @typedef {MemberAuthenticator} MemberAuthenticator
+ * @property {User.model} user - The user this authenticator is for
+ * @property {User.model} authenticateAs - The user entity this user wants to authenticate as
+ */
 @Entity()
-export default class LocalUser extends BaseEntity {
-  @OneToOne(() => User, { primary: true, nullable: false })
+export default class MemberAuthenticator extends BaseEntityWithoutId {
+  @ManyToOne(() => User, { primary: true, nullable: false })
   @JoinColumn({ name: 'user' })
   public user: User;
 
-  // TODO: How do local user log in? With their email address/username and password?
-  //  What else do we need to store then?
-
-  @Column({
-    length: 128,
-  })
-  public password: string;
+  @ManyToOne(() => User, { primary: true, nullable: false })
+  @JoinColumn({ name: 'authenticateAs' })
+  public authenticateAs: User;
 }

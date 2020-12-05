@@ -15,20 +15,26 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import {BaseEntity, Column, Entity, JoinColumn, OneToOne} from 'typeorm';
-import User from './user';
+import {
+  Column, Entity, JoinColumn, OneToOne,
+} from 'typeorm';
+import BaseEntityWithoutId from '../base-entity-without-id';
+import User from '../user';
 
+/**
+ * @typedef {NfcAuthenticator} NfcAuthenticator
+ * @property {User.model} user - The user this authenticator is for
+ * @property {string} uid - The 7-byte UID of the NFC chip
+ */
 @Entity()
-export default class LocalUser extends BaseEntity {
+export default class NfcAuthenticator extends BaseEntityWithoutId {
   @OneToOne(() => User, { primary: true, nullable: false })
   @JoinColumn({ name: 'user' })
   public user: User;
 
-  // TODO: How do local user log in? With their email address/username and password?
-  //  What else do we need to store then?
-
   @Column({
-    length: 128,
+    unique: true,
+    length: 8,
   })
-  public password: string;
+  public uid: string;
 }

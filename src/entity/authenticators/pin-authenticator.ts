@@ -15,20 +15,25 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import {BaseEntity, Column, Entity, JoinColumn, OneToOne} from 'typeorm';
-import User from './user';
+import {
+  Column, Entity, JoinColumn, OneToOne,
+} from 'typeorm';
+import BaseEntityWithoutId from '../base-entity-without-id';
+import User from '../user';
 
+/**
+ * @typedef {PinAuthenticator} PinAuthenticator
+ * @property {User.model} User - The user this authenticator is for
+ * @property {string} hashedPin - The PIN code of this user (hashed)
+ */
 @Entity()
-export default class LocalUser extends BaseEntity {
+export default class PinAuthenticator extends BaseEntityWithoutId {
   @OneToOne(() => User, { primary: true, nullable: false })
   @JoinColumn({ name: 'user' })
   public user: User;
 
-  // TODO: How do local user log in? With their email address/username and password?
-  //  What else do we need to store then?
-
   @Column({
     length: 128,
   })
-  public password: string;
+  public hashedPin: string;
 }

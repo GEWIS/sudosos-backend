@@ -15,20 +15,23 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import {BaseEntity, Column, Entity, JoinColumn, OneToOne} from 'typeorm';
-import User from './user';
+import {
+  Column, Entity, JoinColumn, OneToOne,
+} from 'typeorm';
+import BaseEntityWithoutId from '../base-entity-without-id';
+import User from '../user';
 
 @Entity()
-export default class LocalUser extends BaseEntity {
+/**
+ * @typedef {EanAuthenticator} EanAuthenticator
+ * @property {User.model} user.required - The user this authenticator is for
+ * @property {string} eanCode.required - The EAN code
+ */
+export default class EanAuthenticator extends BaseEntityWithoutId {
   @OneToOne(() => User, { primary: true, nullable: false })
   @JoinColumn({ name: 'user' })
   public user: User;
 
-  // TODO: How do local user log in? With their email address/username and password?
-  //  What else do we need to store then?
-
-  @Column({
-    length: 128,
-  })
-  public password: string;
+  @Column()
+  public eanCode: string;
 }
