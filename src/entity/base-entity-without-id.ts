@@ -15,24 +15,23 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import User from '../entity/user/user';
+import {
+  BaseEntity as OrmBaseEntity, CreateDateColumn, UpdateDateColumn, VersionColumn,
+} from 'typeorm';
 
 /**
- * The contents of the JWT used for user authentication.
+ * @typedef BaseEntityWithoutId
+ * @property {Date} createdAt - The creation date of the object.
+ * @property {Date} updatedAt - The last update date of the object.
+ * @property {integer} version - The current version of the object.
  */
-export default class JsonWebToken {
-  /**
-   * The token holds a reference to the user to which this token belongs.
-   */
-  public user: User;
+export default class BaseEntityWithoutId extends OrmBaseEntity {
+  @CreateDateColumn({ update: false })
+  public readonly createdAt: Date;
 
-  /**
-   * The JWT expiry field. Set automatically by signing the token.
-   */
-  public readonly exp?: number;
+  @UpdateDateColumn()
+  public readonly updatedAt: Date;
 
-  /**
-   * The JWT not-before field. Set automatically by signing the token.
-   */
-  public readonly nbf?: number;
+  @VersionColumn()
+  public readonly version: number;
 }

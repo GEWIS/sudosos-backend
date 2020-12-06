@@ -15,24 +15,16 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import User from '../entity/user/user';
+import {
+  Entity, JoinColumn, OneToOne, PrimaryColumn,
+} from 'typeorm';
+import BaseContainer from './base-container';
+import Container from './container';
 
-/**
- * The contents of the JWT used for user authentication.
- */
-export default class JsonWebToken {
-  /**
-   * The token holds a reference to the user to which this token belongs.
-   */
-  public user: User;
-
-  /**
-   * The JWT expiry field. Set automatically by signing the token.
-   */
-  public readonly exp?: number;
-
-  /**
-   * The JWT not-before field. Set automatically by signing the token.
-   */
-  public readonly nbf?: number;
+@Entity()
+export default class UpdatedContainer extends BaseContainer {
+  @PrimaryColumn()
+  @OneToOne(() => Container, { nullable: false })
+  @JoinColumn({ name: 'container', referencedColumnName: 'id' })
+  public container: Container[];
 }

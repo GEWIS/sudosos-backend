@@ -16,25 +16,20 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  Entity, Column, ManyToOne, JoinColumn,
+  Column, ManyToOne, JoinColumn,
 } from 'typeorm';
 import { Dinero } from 'dinero.js';
-import DineroTransformer from './transformer/dinero-transformer';
-import BaseEntity from './base-entity';
-import User from './user';
+import DineroTransformer from '../transformer/dinero-transformer';
+import BaseEntityWithoutId from '../base-entity-without-id';
+import User from '../user/user';
 import ProductCategory from './product-category';
 
-@Entity()
 /**
- * @typedef {BaseEntity} Product
+ * @typedef {BaseEntityWithoutId} BaseProduct
  * @property {string} name.required - The unique name of the product.
  * @property {Dinero.model} price.required - The price of each product.
- * @property {User.model} owner.required - The owner of this product entity.
- * @property {ProductCategory.model} category.required - The category this product belongs to.
- * @property {string} picture.required - The URL to the picture representing this product.
- * @property {number} alcoholPercentage.required - The percentage of alcohol in this product.
  */
-export default class Product extends BaseEntity {
+export default class BaseProduct extends BaseEntityWithoutId {
   @Column({
     unique: true,
     length: 64,
@@ -55,7 +50,7 @@ export default class Product extends BaseEntity {
   public category: ProductCategory;
 
   @Column()
-  public picture: String;
+  public picture: string;
 
   @Column({
     type: 'decimal',

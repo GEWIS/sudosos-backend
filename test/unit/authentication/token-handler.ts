@@ -19,7 +19,7 @@ import * as util from 'util';
 import { expect } from 'chai';
 import * as jwt from 'jsonwebtoken';
 import TokenHandler from '../../../src/authentication/token-handler';
-import User from '../../../src/entity/user';
+import User from '../../../src/entity/user/user';
 import { generateKeys } from '../../setup';
 
 describe('TokenHandler', (): void => {

@@ -15,24 +15,25 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import User from '../entity/user/user';
+import {
+  Column, Entity, JoinColumn, OneToOne,
+} from 'typeorm';
+import BaseEntityWithoutId from '../base-entity-without-id';
+import User from '../user/user';
 
 /**
- * The contents of the JWT used for user authentication.
+ * @typedef {PinAuthenticator} PinAuthenticator
+ * @property {User.model} User - The user this authenticator is for
+ * @property {string} hashedPin - The PIN code of this user (hashed)
  */
-export default class JsonWebToken {
-  /**
-   * The token holds a reference to the user to which this token belongs.
-   */
+@Entity()
+export default class PinAuthenticator extends BaseEntityWithoutId {
+  @OneToOne(() => User, { primary: true, nullable: false })
+  @JoinColumn({ name: 'user' })
   public user: User;
 
-  /**
-   * The JWT expiry field. Set automatically by signing the token.
-   */
-  public readonly exp?: number;
-
-  /**
-   * The JWT not-before field. Set automatically by signing the token.
-   */
-  public readonly nbf?: number;
+  @Column({
+    length: 128,
+  })
+  public hashedPin: string;
 }

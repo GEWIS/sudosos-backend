@@ -15,24 +15,21 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import User from '../entity/user/user';
+import {
+  BaseEntity, Entity, JoinColumn, ManyToOne, OneToOne,
+} from 'typeorm';
+// eslint-disable-next-line import/no-cycle
+import User from './user';
+// eslint-disable-next-line import/no-cycle
+import BorrelkaartGroup from './borrelkaart-group';
 
-/**
- * The contents of the JWT used for user authentication.
- */
-export default class JsonWebToken {
-  /**
-   * The token holds a reference to the user to which this token belongs.
-   */
+@Entity()
+export default class UserBorrelkaartGroup extends BaseEntity {
+  @OneToOne(() => User, { primary: true, nullable: false })
+  @JoinColumn({ name: 'user' })
   public user: User;
 
-  /**
-   * The JWT expiry field. Set automatically by signing the token.
-   */
-  public readonly exp?: number;
-
-  /**
-   * The JWT not-before field. Set automatically by signing the token.
-   */
-  public readonly nbf?: number;
+  @ManyToOne(() => BorrelkaartGroup, { nullable: false })
+  @JoinColumn({ name: 'borrelkaartGroup' })
+  public borrelkaartGroup: BorrelkaartGroup;
 }

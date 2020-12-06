@@ -15,24 +15,23 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import User from '../entity/user/user';
+import {
+  Column, Entity, JoinColumn, OneToOne,
+} from 'typeorm';
+import BaseEntityWithoutId from '../base-entity-without-id';
+import User from '../user/user';
 
+@Entity()
 /**
- * The contents of the JWT used for user authentication.
+ * @typedef {EanAuthenticator} EanAuthenticator
+ * @property {User.model} user.required - The user this authenticator is for
+ * @property {string} eanCode.required - The EAN code
  */
-export default class JsonWebToken {
-  /**
-   * The token holds a reference to the user to which this token belongs.
-   */
+export default class EanAuthenticator extends BaseEntityWithoutId {
+  @OneToOne(() => User, { primary: true, nullable: false })
+  @JoinColumn({ name: 'user' })
   public user: User;
 
-  /**
-   * The JWT expiry field. Set automatically by signing the token.
-   */
-  public readonly exp?: number;
-
-  /**
-   * The JWT not-before field. Set automatically by signing the token.
-   */
-  public readonly nbf?: number;
+  @Column()
+  public eanCode: string;
 }

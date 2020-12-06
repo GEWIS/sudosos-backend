@@ -15,40 +15,40 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-/* eslint-disable import/no-cycle */
 import {
-  Entity, Column, ManyToOne, JoinColumn,
+  Column, Entity, JoinColumn, ManyToOne,
 } from 'typeorm';
-import { Dinero } from 'dinero.js';
-import Product from './product';
+import BaseEntity from '../base-entity';
+import User from '../user/user';
 import Transaction from './transaction';
-import DineroTransformer from './transformer/dinero-transformer';
-import BaseEntity from './base-entity';
 
 /**
- * @typedef {BaseEntity} Subtransaction
- * @property {Product.model} product.required - The product sold in the subtransaction.
- * @property {integer} amount.required - The amount of product involved in this subtransaction.
- * @property {Dinero.model} price.required - The price of each product in this subtransaction.
+ * @typedef {FlaggedTransaction} Transaction
+ * @property {FlaggedTransactionStatus} status.required - The status of this flag
+ * @property {User.model} flaggedBy.required - The user created this flag
+ * @property {string} reason.required - The reason why this transaction should be changed
+ * @property {Transaction.model} transaction.required - The transaction that has been flagged
  */
 @Entity()
-export default class Subtransaction extends BaseEntity {
-  @ManyToOne(() => Product, { nullable: false })
-  @JoinColumn({ name: 'productId' })
-  public product: Product;
+export default class FlaggedTransaction extends BaseEntity {
+  public status: FlaggedTransactionStatus;
+
+  @ManyToOne(() => User, { nullable: false })
+  @JoinColumn({ name: 'flaggedBy' })
+  public flaggedBy: User;
 
   @Column({
-    type: 'integer',
+    length: 1024,
   })
-  public amount: number;
-
-  @Column({
-    type: 'integer',
-    transformer: DineroTransformer.Instance,
-  })
-  public price: Dinero;
+  public reason: string;
 
   @ManyToOne(() => Transaction, { nullable: false })
   @JoinColumn({ name: 'transaction' })
   public transaction: Transaction;
+}
+
+interface FlaggedTransactionStatus {
+  TODO: 'todo',
+  ACCEPTED: 'accepted',
+  REJECTED: 'rejected',
 }

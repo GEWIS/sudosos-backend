@@ -15,24 +15,21 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-/* eslint-disable import/no-cycle */
 import {
-  Entity, Column, ManyToOne, JoinColumn, OneToMany,
+  Entity, ManyToOne, JoinColumn, OneToMany,
 } from 'typeorm';
-import { Dinero } from 'dinero.js';
-import Subtransaction from './subtransaction';
-import User from './user';
-import DineroTransformer from './transformer/dinero-transformer';
-import BaseEntity from './base-entity';
+// eslint-disable-next-line import/no-cycle
+import SubTransaction from './sub-transaction';
+import User from '../user/user';
+import BaseEntity from '../base-entity';
+import PointOfSale from '../point-of-sale/point-of-sale';
 
 /**
- * @typedef {BaseEntity} Transaction
+ * @typedef {Transaction} Transaction
  * @property {User.model} from.required - The account from which the transaction is subtracted.
- * @property {User.model} to.required - The user to which the transaction is added.
  * @property {User.model} createdBy - The user that created the transaction, if not same as 'from'.
- * @property {decimal} balance.required - The total balance processed in the transaction.
- * @property {Array.<Subtransaction>} subtransactions.required - The subtransactions belonging to
- *    this transaction.
+ * @property {Array.<SubTransaction>} subtransactions.required - The subtransactions belonging
+ *    to this transaction.
  */
 @Entity()
 export default class Transaction extends BaseEntity {
@@ -40,20 +37,14 @@ export default class Transaction extends BaseEntity {
   @JoinColumn({ name: 'from' })
   public from: User;
 
-  @ManyToOne(() => User, { nullable: false })
-  @JoinColumn({ name: 'to' })
-  public to: User;
-
   @ManyToOne(() => User, { nullable: true })
   @JoinColumn({ name: 'createdBy' })
   public createdBy?: User;
 
-  @Column({
-    type: 'integer',
-    transformer: DineroTransformer.Instance,
-  })
-  public balance: Dinero;
+  @OneToMany(() => SubTransaction, (subTransaction) => subTransaction.transaction)
+  public subTransactions: SubTransaction[];
 
-  @OneToMany(() => Subtransaction, (subtransaction) => subtransaction.transaction)
-  public subtransactions: Subtransaction;
+  @ManyToOne(() => PointOfSale)
+  @JoinColumn({ name: 'pointOfSale' })
+  public pointOfSale: PointOfSale;
 }
