@@ -45,9 +45,14 @@ export default class Advertisement extends BaseEntity {
   })
   public active: boolean;
 
-  @Column()
-  public startDate: Date;
+  @Column({
+    type: 'datetime',
+    default: 'CURRENT_TIMESTAMP',
+  })
+  public startDate?: Date;
 
-  @Column()
+  @Column({
+    type: 'datetime',
+  })
   public endDate: Date;
 }

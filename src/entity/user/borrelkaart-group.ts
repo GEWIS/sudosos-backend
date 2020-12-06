@@ -20,7 +20,7 @@ import {
 } from 'typeorm';
 import BaseEntity from '../base-entity';
 // eslint-disable-next-line import/no-cycle
-import User from './user';
+import UserBorrelkaartGroup from './user-borrelkaart-group';
 
 /**
  * @typedef {BorrelkaartGroup} BorrelkaartGroup
@@ -37,11 +37,20 @@ export default class BorrelkaartGroup extends BaseEntity {
   })
   public name: string;
 
-  public activeStartDate: Date;
+  @Column({
+    type: 'datetime',
+    default: 'CURRENT_TIMESTAMP',
+  })
+  public activeStartDate?: Date;
 
+  @Column({
+    nullable: true,
+    type: 'datetime',
+  })
   public activeEndDate?: Date;
 
-  @OneToMany(() => User, (user) => user.borrelkaartGroup)
+  // TODO: How can we rewrite this to return users instead of entries in the one-to-many table?
+  @OneToMany(() => UserBorrelkaartGroup, (user) => user.borrelkaartGroup)
   @JoinColumn({ name: 'borrelkaarten' })
-  public borrelkaarten: User[];
+  public borrelkaarten: UserBorrelkaartGroup[];
 }

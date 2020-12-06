@@ -64,6 +64,8 @@ export default class Transfer extends BaseEntity {
   @Column()
   public type: 'deposit' | 'invoice' | 'custom';
 
-  @Column()
+  @Column({
+    nullable: true,
+  })
   public description?: string;
 }

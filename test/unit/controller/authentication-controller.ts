@@ -50,7 +50,11 @@ describe('AuthenticationController', async (): Promise<void> => {
       tokenHandler: new TokenHandler({
         algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
       }),
-      user: await User.save({} as User),
+      user: await User.save({
+        firstName: 'Roy',
+        type: 'localUser',
+        active: true,
+      } as User),
       request: {
         userId: 1,
         nonce: 'test',

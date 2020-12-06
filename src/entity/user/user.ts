@@ -48,18 +48,19 @@ export default class User extends BaseEntity {
 
   @Column({
     length: 64,
+    nullable: true,
   })
   public lastName?: string;
 
   @Column({
     default: false,
   })
-  public active: boolean;
+  public active?: boolean;
 
   @Column({
-    default: true,
+    default: false,
   })
-  public deleted: boolean;
+  public deleted?: boolean;
 
   /* This snippet does unfortunately not work, because SQLite
      does not support the "enum" column type. For now, use the workaround below.
@@ -70,9 +71,4 @@ export default class User extends BaseEntity {
   public type: UserType; */
   @Column()
   public type: 'member' | 'organ' | 'borrelkaart' | 'localUser' | 'localAdmin';
-
-  // If the user is a borrelkaart, we need to save its group
-  @ManyToOne(() => BorrelkaartGroup)
-  @JoinColumn({ name: 'borrelkaartGroup' })
-  public borrelkaartGroup?: BorrelkaartGroup;
 }

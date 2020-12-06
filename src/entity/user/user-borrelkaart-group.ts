@@ -18,7 +18,9 @@
 import {
   BaseEntity, Entity, JoinColumn, ManyToOne, OneToOne,
 } from 'typeorm';
+// eslint-disable-next-line import/no-cycle
 import User from './user';
+// eslint-disable-next-line import/no-cycle
 import BorrelkaartGroup from './borrelkaart-group';
 
 @Entity()
