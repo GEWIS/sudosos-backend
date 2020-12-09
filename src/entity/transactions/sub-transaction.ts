@@ -22,7 +22,7 @@ import {
 import Transaction from './transaction';
 import BaseEntity from '../base-entity';
 import User from '../user/user';
-import Container from '../container/container';
+import ContainerRevision from '../container/container-revision';
 import SubTransactionRow from './sub-transaction-row';
 
 /**
@@ -40,9 +40,9 @@ export default class SubTransaction extends BaseEntity {
   @JoinColumn({ name: 'to' })
   public to: User;
 
-  @ManyToOne(() => Container, { nullable: false })
-  @JoinColumn({ name: 'container' })
-  public container: Container;
+  @ManyToOne(() => ContainerRevision, { nullable: false })
+  @JoinColumn()
+  public container: ContainerRevision;
 
   @ManyToOne(() => Transaction, { nullable: false })
   @JoinColumn({ name: 'transaction' })
