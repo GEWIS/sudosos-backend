@@ -31,7 +31,8 @@ import Transaction from './transaction';
  */
 @Entity()
 export default class FlaggedTransaction extends BaseEntity {
-  public status: FlaggedTransactionStatus;
+  @Column()
+  public status: 'todo' | 'accepted' | 'rejected';
 
   @ManyToOne(() => User, { nullable: false })
   @JoinColumn({ name: 'flaggedBy' })
@@ -45,10 +46,4 @@ export default class FlaggedTransaction extends BaseEntity {
   @ManyToOne(() => Transaction, { nullable: false })
   @JoinColumn({ name: 'transaction' })
   public transaction: Transaction;
-}
-
-interface FlaggedTransactionStatus {
-  TODO: 'todo',
-  ACCEPTED: 'accepted',
-  REJECTED: 'rejected',
 }
