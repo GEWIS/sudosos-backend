@@ -16,11 +16,11 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  Column, JoinColumn, ManyToMany, ManyToOne,
+  Column, JoinColumn, JoinTable, ManyToMany, ManyToOne,
 } from 'typeorm';
 import BaseEntityWithoutId from '../base-entity-without-id';
 import User from '../user/user';
-import Product from '../product/product';
+import ProductRevision from '../product/product-revision';
 
 export default class BaseContainer extends BaseEntityWithoutId {
   @Column({
@@ -30,10 +30,10 @@ export default class BaseContainer extends BaseEntityWithoutId {
   public name: string;
 
   @ManyToOne(() => User, { nullable: false })
-  @JoinColumn({ name: 'owner' })
+  @JoinColumn()
   public owner: User;
 
-  @ManyToMany(() => Product)
-  @JoinColumn({ name: 'products' })
-  public products: Product[];
+  @ManyToMany(() => ProductRevision)
+  @JoinTable()
+  public products: ProductRevision[];
 }

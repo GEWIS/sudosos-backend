@@ -15,9 +15,36 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { Entity } from 'typeorm';
-import BaseEntity from '../base-entity';
+import {
+  Entity, ManyToOne, Column, SaveOptions,
+} from 'typeorm';
+import BasePointOfSale from './base-point-of-sale';
+import PointOfSale from './point-of-sale';
 
 @Entity()
-export default class PointOfSale extends BaseEntity {
+export default class PointOfSaleRevision extends BasePointOfSale {
+  @ManyToOne(() => PointOfSale, {
+    primary: true,
+    nullable: false,
+    eager: true,
+  })
+  public readonly pointOfSale: PointOfSale;
+
+  @Column({
+    primary: true,
+    default: 1,
+    nullable: false,
+  })
+  public revision: number;
+
+  /**
+   * Saving revisions should always occur using the save() method,
+   * using the Repository does not automatically increment the version number.
+   *
+   * @inheritdoc
+   */
+  public async save(options?: SaveOptions): Promise<this> {
+    this.revision += 1;
+    return super.save(options);
+  }
 }

@@ -16,16 +16,10 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  Entity, PrimaryColumn, PrimaryGeneratedColumn, VersionColumn,
+  Entity,
 } from 'typeorm';
-import BaseContainer from './base-container';
+import BaseEntity from '../base-entity';
 
 @Entity()
-export default class Container extends BaseContainer {
-  @PrimaryGeneratedColumn()
-  public readonly id?: number;
-
-  @PrimaryColumn()
-  @VersionColumn()
-  public readonly version: number;
+export default class Container extends BaseEntity {
 }

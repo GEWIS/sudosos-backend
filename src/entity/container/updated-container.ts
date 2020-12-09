@@ -16,15 +16,13 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  Entity, JoinColumn, OneToOne, PrimaryColumn,
+  Entity, OneToOne,
 } from 'typeorm';
 import BaseContainer from './base-container';
 import Container from './container';
 
 @Entity()
 export default class UpdatedContainer extends BaseContainer {
-  @PrimaryColumn()
-  @OneToOne(() => Container, { nullable: false })
-  @JoinColumn({ name: 'container', referencedColumnName: 'id' })
+  @OneToOne(() => Container, { nullable: false, primary: true })
   public container: Container[];
 }
