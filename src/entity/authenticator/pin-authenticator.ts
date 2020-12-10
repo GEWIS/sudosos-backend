@@ -29,7 +29,7 @@ import User from '../user/user';
 @Entity()
 export default class PinAuthenticator extends BaseEntityWithoutId {
   @OneToOne(() => User, { primary: true, nullable: false })
-  @JoinColumn({ name: 'user' })
+  @JoinColumn()
   public user: User;
 
   @Column({

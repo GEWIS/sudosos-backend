@@ -37,7 +37,7 @@ import SubTransactionRow from './sub-transaction-row';
 @Entity()
 export default class SubTransaction extends BaseEntity {
   @ManyToOne(() => User, { nullable: false })
-  @JoinColumn({ name: 'to' })
+  @JoinColumn()
   public to: User;
 
   @ManyToOne(() => ContainerRevision, { nullable: false })
@@ -45,7 +45,7 @@ export default class SubTransaction extends BaseEntity {
   public container: ContainerRevision;
 
   @ManyToOne(() => Transaction, { nullable: false })
-  @JoinColumn({ name: 'transaction' })
+  @JoinColumn()
   public transaction: Transaction;
 
   @OneToMany(() => SubTransactionRow, (subtransactionRow) => subtransactionRow.subTransaction)

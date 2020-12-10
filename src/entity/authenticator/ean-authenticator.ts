@@ -29,7 +29,7 @@ import User from '../user/user';
  */
 export default class EanAuthenticator extends BaseEntityWithoutId {
   @OneToOne(() => User, { primary: true, nullable: false })
-  @JoinColumn({ name: 'user' })
+  @JoinColumn()
   public user: User;
 
   @Column()

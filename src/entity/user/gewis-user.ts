@@ -23,7 +23,7 @@ import User from './user';
 @Entity()
 export default class GewisUser extends BaseEntity {
   @OneToOne(() => User, { primary: true, nullable: false })
-  @JoinColumn({ name: 'user' })
+  @JoinColumn()
   public user: User;
 
   @Column({

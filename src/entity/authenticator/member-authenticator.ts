@@ -29,10 +29,10 @@ import User from '../user/user';
 @Entity()
 export default class MemberAuthenticator extends BaseEntityWithoutId {
   @ManyToOne(() => User, { primary: true, nullable: false })
-  @JoinColumn({ name: 'user' })
+  @JoinColumn()
   public user: User;
 
   @ManyToOne(() => User, { primary: true, nullable: false })
-  @JoinColumn({ name: 'authenticateAs' })
+  @JoinColumn()
   public authenticateAs: User;
 }

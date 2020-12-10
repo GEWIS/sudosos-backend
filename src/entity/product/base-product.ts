@@ -43,7 +43,7 @@ export default class BaseProduct extends BaseEntityWithoutId {
   public price: Dinero;
 
   @ManyToOne(() => User, { nullable: false })
-  @JoinColumn({ name: 'owner' })
+  @JoinColumn()
   public owner: User;
 
   @ManyToOne(() => ProductCategory, { nullable: false })

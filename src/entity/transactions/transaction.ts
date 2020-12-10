@@ -34,17 +34,17 @@ import PointOfSaleRevision from '../point-of-sale/point-of-sale-revision';
 @Entity()
 export default class Transaction extends BaseEntity {
   @ManyToOne(() => User, { nullable: false })
-  @JoinColumn({ name: 'from' })
+  @JoinColumn()
   public from: User;
 
   @ManyToOne(() => User, { nullable: true })
-  @JoinColumn({ name: 'createdBy' })
+  @JoinColumn()
   public createdBy?: User;
 
   @OneToMany(() => SubTransaction, (subTransaction) => subTransaction.transaction)
   public subTransactions: SubTransaction[];
 
   @ManyToOne(() => PointOfSaleRevision)
-  @JoinColumn({ name: 'pointOfSale' })
+  @JoinColumn()
   public pointOfSale: PointOfSaleRevision;
 }

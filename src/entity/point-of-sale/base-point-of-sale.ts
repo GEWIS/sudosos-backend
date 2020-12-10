@@ -30,7 +30,7 @@ export default class BasePointOfSale extends BaseEntityWithoutId {
   public name: string;
 
   @ManyToOne(() => User, { nullable: false })
-  @JoinColumn({ name: 'owner' })
+  @JoinColumn()
   public owner: User;
 
   public startDate: Date;

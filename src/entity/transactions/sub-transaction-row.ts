@@ -41,6 +41,6 @@ export default class SubTransactionRow extends BaseEntity {
   public amount: number;
 
   @ManyToOne(() => SubTransaction, { nullable: false })
-  @JoinColumn({ name: 'subtransaction' })
+  @JoinColumn()
   public subTransaction: SubTransaction;
 }

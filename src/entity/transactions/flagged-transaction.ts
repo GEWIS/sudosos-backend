@@ -43,7 +43,7 @@ export default class FlaggedTransaction extends BaseEntity {
   public status: FlagStatus;
 
   @ManyToOne(() => User, { nullable: false })
-  @JoinColumn({ name: 'flaggedBy' })
+  @JoinColumn()
   public flaggedBy: User;
 
   @Column({
@@ -52,6 +52,6 @@ export default class FlaggedTransaction extends BaseEntity {
   public reason: string;
 
   @ManyToOne(() => Transaction, { nullable: false })
-  @JoinColumn({ name: 'transaction' })
+  @JoinColumn()
   public transaction: Transaction;
 }
