@@ -22,6 +22,12 @@ import BaseEntity from '../base-entity';
 import User from '../user/user';
 import Transaction from './transaction';
 
+export enum FlagStatus {
+  TODO = 1,
+  ACCEPTED = 2,
+  REJECTED = 3,
+}
+
 /**
  * @typedef {FlaggedTransaction} Transaction
  * @property {FlaggedTransactionStatus} status.required - The status of this flag
@@ -31,8 +37,10 @@ import Transaction from './transaction';
  */
 @Entity()
 export default class FlaggedTransaction extends BaseEntity {
-  @Column()
-  public status: 'todo' | 'accepted' | 'rejected';
+  @Column({
+    nullable: true,
+  })
+  public status: FlagStatus;
 
   @ManyToOne(() => User, { nullable: false })
   @JoinColumn({ name: 'flaggedBy' })

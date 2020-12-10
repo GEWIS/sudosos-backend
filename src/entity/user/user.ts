@@ -16,18 +16,16 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  Column, Entity, JoinColumn, ManyToOne,
+  Column, Entity,
 } from 'typeorm';
 import BaseEntity from '../base-entity';
-// eslint-disable-next-line import/no-cycle
-import BorrelkaartGroup from './borrelkaart-group';
 
 export enum UserType {
-  MEMBER = 'member',
-  ORGAN = 'organ',
-  BORRELKAART = 'borrelkaart',
-  LOCAL_USER = 'localUser',
-  LOCAL_ADMIN = 'localAdmin',
+  MEMBER = 1,
+  ORGAN = 2,
+  BORRELKAART = 3,
+  LOCAL_USER = 4,
+  LOCAL_ADMIN = 5,
 }
 
 /**
@@ -62,13 +60,8 @@ export default class User extends BaseEntity {
   })
   public deleted?: boolean;
 
-  /* This snippet does unfortunately not work, because SQLite
-     does not support the "enum" column type. For now, use the workaround below.
   @Column({
-    type: 'enum',
-    enum: UserType,
+    nullable: false,
   })
-  public type: UserType; */
-  @Column()
-  public type: 'member' | 'organ' | 'borrelkaart' | 'localUser' | 'localAdmin';
+  public type: UserType;
 }

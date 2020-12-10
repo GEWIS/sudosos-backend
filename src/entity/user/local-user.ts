@@ -34,5 +34,5 @@ export default class LocalUser extends BaseEntity {
   @Column({
     length: 128,
   })
-  public password: string;
+  public passwordHash: string;
 }
