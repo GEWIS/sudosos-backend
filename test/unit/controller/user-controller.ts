@@ -22,17 +22,65 @@ import { Connection } from 'typeorm';
 import dinero from 'dinero.js';
 import bodyParser from 'body-parser';
 import UserController from '../../../src/controller/user-controller';
-import User from '../../../src/entity/user';
-import Product from '../../../src/entity/product';
-import Transaction from '../../../src/entity/transaction';
+// eslint-disable-next-line import/no-duplicates
+import User from '../../../src/entity/user/user';
+// eslint-disable-next-line import/no-duplicates
+import { UserType } from '../../../src/entity/user/user';
+import Product from '../../../src/entity/product/product';
+import Transaction from '../../../src/entity/transactions/transaction';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Database from '../../../src/database';
 import Swagger from '../../../src/swagger';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
-import ProductCategory from '../../../src/entity/product-category';
+import ProductCategory from '../../../src/entity/product/product-category';
+import Container from '../../../src/entity/container/container';
+import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
+import SubTransactionRow from '../../../src/entity/transactions/sub-transaction-row';
+import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 
+function verifyUserEntity(spec: SwaggerSpecification, user: User): void {
+  const validation = spec.validateModel('User', user, false, true);
+  expect(validation.valid).to.be.true;
 
-const fakeToken = 'asempwerze723aqsbln';
+  expect(user.id).to.be.greaterThan(0);
+  expect(user.firstName).to.not.be.empty;
+  expect(user.active).to.not.be.empty;
+  expect(user.deleted).to.be.false;
+  expect(user.type).to.be.instanceOf(UserType);
+}
+
+function verifyProductEntity(spec: SwaggerSpecification, product: Product): void {
+  const validation = spec.validateModel('Product', product, false, true);
+  expect(validation.valid).to.be.true;
+
+  expect(product.id).to.be.greaterThan(0);
+  expect(product.name).to.not.be.empty;
+  expect(product.price.getAmount()).to.be.greaterThan(50);
+  expect(product.price.getCurrency()).to.equal('EUR');
+}
+
+function verifyContainerEntity(spec: SwaggerSpecification, container: Container): void {
+  const validation = spec.validateModel('Container', container, false, true);
+  expect(validation.valid).to.be.true;
+
+  expect(container.id).to.be.greaterThan(0);
+  expect(container.name).to.be.not.empty;
+  expect(container.owner).to.be.instanceOf(User);
+  expect(container.products).to.be.instanceOf(Array);
+}
+
+function verifyPOSEntity(spec: SwaggerSpecification, pointOfSale: PointOfSale): void {
+  const validation = spec.validateModel('PointOfSale', pointOfSale, false, true);
+  expect(validation.valid).to.be.true;
+
+  expect(pointOfSale.id).to.be.greaterThan(0);
+  expect(pointOfSale.name).to.be.not.empty;
+  expect(pointOfSale.owner).to.be.instanceOf(User);
+  expect(pointOfSale.startDate).to.be.instanceOf(Date);
+  expect(pointOfSale.endDate).to.be.instanceOf(Date);
+  expect(pointOfSale.endDate.getTime()).to.be.greaterThan(pointOfSale.startDate.getTime());
+  expect(pointOfSale.containers).to.be.instanceOf(Array);
+}
 
 describe('UserController', (): void => {
   let ctx: {
@@ -43,6 +91,8 @@ describe('UserController', (): void => {
     token: string,
     users: Array<User>, // TODO: write create user function
     products: Array<Product>,
+    containers: Array<Container>,
+    pointOfSales: Array<PointOfSale>,
     transactions: Array<Transaction>,
   };
 
@@ -56,18 +106,89 @@ describe('UserController', (): void => {
       users: [
         {
           id: 0,
-          name: 'Roy',
+          firstName: 'Roy',
+          type: 'localUser',
+          active: true,
         } as User,
         {
           id: 1,
-          name: 'Kevin',
+          firstName: 'Kevin',
+          type: 'member',
         } as User,
         {
           id: 2,
-          name: 'Ruben',
+          firstName: 'Ruben',
+          type: 'localAdmin',
+        } as User,
+        {
+          id: 3,
+          firstName: 'Wout',
+          type: 'localUser',
+          deleted: true,
         } as User,
       ],
-      products: undefined,
+      products: [
+        {
+          name: 'Test-1',
+          price: dinero({
+            currency: 'EUR',
+            amount: 70,
+            precision: 2,
+          }),
+          category: {
+            id: 1,
+            name: 'test',
+          } as ProductCategory,
+          owner: ctx.users[0],
+          alcoholPercentage: 5.0,
+          picture: 'https://sudosos/image.jpg',
+        } as Product,
+        {
+          name: 'Test-2',
+          price: dinero({
+            currency: 'EUR',
+            amount: 71,
+            precision: 2,
+          }),
+          category: {
+            id: 1,
+            name: 'test',
+          } as ProductCategory,
+          owner: ctx.users[1],
+          alcoholPercentage: 5.0,
+          picture: 'https://sudosos/image2.jpg',
+        } as Product,
+      ],
+      containers: [
+        {
+          name: 'container420',
+          owner: ctx.users[0],
+          products: [ctx.products[0]],
+        } as Container,
+        {
+          name: 'container69',
+          owner: ctx.users[1],
+          products: [ctx.products[1], ctx.products[0]],
+        } as Container,
+      ],
+      pointOfSales: [
+        {
+          name: 'pos1',
+          owner: ctx.users[0],
+          startDate: new Date(),
+          endDate: new Date(new Date().getTime() + 1000 * 60 * 60 * 24),
+          useAuthentication: false,
+          containers: [ctx.containers[1]],
+        } as PointOfSale,
+        {
+          name: 'pos69',
+          owner: ctx.users[1],
+          startDate: new Date(),
+          endDate: new Date(new Date().getTime() + 1000 * 60 * 60 * 24),
+          useAuthentication: false,
+          containers: [ctx.containers[1], ctx.containers[0]],
+        } as PointOfSale,
+      ],
       transactions: undefined,
     };
 
@@ -83,7 +204,10 @@ describe('UserController', (): void => {
 
     await User.save({ ...ctx.users[0] } as User);
     await User.save({ ...ctx.users[1] } as User);
+    await User.save({ ...ctx.users[2] } as User);
     await ProductCategory.save({ ...productCategory } as ProductCategory);
+    await Product.save({ ...ctx.products[0] } as Product);
+    await Product.save({ ...ctx.products[1] } as Product);
 
     ctx.specification = await Swagger.initialize(ctx.app);
     ctx.controller = new UserController(ctx.specification);
@@ -103,28 +227,13 @@ describe('UserController', (): void => {
         .get('/users')
         .set('Authorization', `Bearer ${ctx.token}`);
       expect(res.status).to.equal(200);
-      expect(res.body).to.deep.equal([{
-        active: true,
-        id: 0,
-        name: 'Roy',
-        createdAt: res.body[0].createdAt,
-        updatedAt: res.body[0].updatedAt,
-        version: 1,
-      },
-      {
-        active: true,
-        id: 1,
-        name: 'Kevin',
-        createdAt: res.body[1].createdAt,
-        updatedAt: res.body[1].updatedAt,
-        version: 1,
-      }]);
-    });
-    it('should give an HTTP 403 when invalid token', async () => {
-      const res = await request(ctx.app)
-        .get('/users')
-        .set('Authorization', `Bearer ${fakeToken}`);
-      expect(res.status).to.equal(403);
+
+      const users = res.body as User[];
+      const spec = await Swagger.importSpecification();
+      expect(users.length).to.equal(3);
+      users.forEach((user: User) => {
+        verifyUserEntity(spec, user);
+      });
     });
   });
 
@@ -134,14 +243,10 @@ describe('UserController', (): void => {
         .get('/users/0')
         .set('Authorization', `Bearer ${ctx.token}`);
       expect(res.status).to.equal(200);
-      expect(res.body).to.deep.equal({
-        active: true,
-        id: 0,
-        name: 'Roy',
-        createdAt: res.body.createdAt,
-        updatedAt: res.body.updatedAt,
-        version: 1,
-      });
+
+      const user = res.body as User;
+      const spec = await Swagger.importSpecification();
+      verifyUserEntity(spec, user);
     });
     it('should give an HTTP 403 when user does not exist', async () => {
       const res = await request(ctx.app)
@@ -155,67 +260,15 @@ describe('UserController', (): void => {
         .set('Authorization', `Bearer ${ctx.token}`);
       expect(res.status).to.equal(403);
     });
-    it('should give an HTTP 403 when invalid token', async () => {
-      const res = await request(ctx.app)
-        .get('/users/0')
-        .set('Authorization', `Bearer ${fakeToken}`);
-      expect(res.status).to.equal(403);
-    });
   });
 
   describe('GET /users/:id/products', () => {
-    before(async () => {
-      ctx.products = [
-        {
-          name: 'Test-1',
-          price: dinero({
-            currency: 'EUR',
-            amount: 70,
-            precision: 2,
-          }),
-          category: {
-            id: 1,
-            name: 'test',
-          } as ProductCategory,
-          owner: ctx.users[0],
-          alcoholPercentage: 5.0,
-          picture: 'https://sudosos/image.jpg',
-        } as any as Product,
-        {
-          name: 'Test-2',
-          price: dinero({
-            currency: 'EUR',
-            amount: 71,
-            precision: 2,
-          }),
-          category: {
-            id: 1,
-            name: 'test',
-          } as ProductCategory,
-          owner: ctx.users[1],
-          alcoholPercentage: 5.0,
-          picture: 'https://sudosos/image2.jpg',
-        } as any as Product,
-      ];
-      await Product.save({ ...ctx.products[0] } as Product);
-      await Product.save({ ...ctx.products[1] } as Product);
-    });
-
     it('should give correct owned products for user', async () => {
       const res = await request(ctx.app)
         .get('/users/0/products')
         .set('Authorization', `Bearer ${ctx.token}`);
       expect(res.status).to.equal(200);
-      expect(res.body).to.deep.equal([{
-        id: 1,
-        name: 'Test-1',
-        price: res.body[0].price,
-        alcoholPercentage: 5.0,
-        picture: 'https://sudosos/image.jpg',
-        createdAt: res.body[0].createdAt,
-        updatedAt: res.body[0].updatedAt,
-        version: 1,
-      }]);
+      expect(res.body).to.deep.equal([]);
     });
     it('should give an HTTP 403 when user requests products (s)he does not own', async () => {
       const res = await request(ctx.app)
@@ -223,148 +276,89 @@ describe('UserController', (): void => {
         .set('Authorization', `Bearer ${ctx.token}`);
       expect(res.status).to.equal(403);
     });
-    it('should give an HTTP 403 when invalid token', async () => {
+  });
+
+  describe('GET /users/:id/containers', () => {
+    it('should give correct owned containers for user', async () => {
       const res = await request(ctx.app)
-        .get('/users/0/products')
-        .set('Authorization', `Bearer ${fakeToken}`);
+        .get('/users/0/containers')
+        .set('Authorization', `Bearer ${ctx.token}`);
+      expect(res.status).to.equal(200);
+      expect(res.body).to.deep.equal([]);
+    });
+    it('should give an HTTP 403 when user requests containers (s)he does not own', async () => {
+      const res = await request(ctx.app)
+        .get('/users/1/containers')
+        .set('Authorization', `Bearer ${ctx.token}`);
       expect(res.status).to.equal(403);
     });
   });
 
   describe('GET /users/:id/transactions', () => {
     before(async () => {
-      await User.save({ ...ctx.users[2] } as User);
-      ctx.products = [
-        await Product.save({
-          name: 'Test-3',
-          price: dinero({
-            currency: 'EUR',
-            amount: 70,
-            precision: 2,
-          }),
-          category: {
-            id: 1,
-            name: 'test',
-          } as ProductCategory,
-          owner: ctx.users[0],
-          alcoholPercentage: 5.0,
-          picture: 'https://sudosos/image.jpg',
-        } as any as Product),
-      ];
       ctx.transactions = [
         await Transaction.save({
           from: ctx.users[0],
-          to: ctx.users[2],
           createdBy: ctx.users[1],
-          balance: dinero({
-            currency: 'EUR',
-            amount: 71,
-            precision: 2,
-          }),
-          subtransactions: [{
-            product: ctx.products[0],
-            amount: 1,
-            price: dinero({
-              currency: 'EUR',
-              amount: 71,
-              precision: 2,
-            }),
-          }],
+          pointOfSale: ctx.pointOfSales[0],
+          subTransactions: [{
+            to: ctx.users[2],
+            container: ctx.containers[0],
+            subTransactionRows: [{
+              product: ctx.products[0],
+              amount: 1,
+            } as SubTransactionRow],
+          } as SubTransaction],
         } as any as Transaction),
         await Transaction.save({
           from: ctx.users[1],
-          to: ctx.users[2],
-          createdBy: ctx.users[1],
-          balance: dinero({
-            currency: 'EUR',
-            amount: 72,
-            precision: 2,
-          }),
-          subtransactions: [{
-            product: ctx.products[0],
-            amount: 1,
-            price: dinero({
-              currency: 'EUR',
-              amount: 72,
-              precision: 2,
-            }),
-          }],
-        } as any as Transaction),
-        await Transaction.save({
-          from: ctx.users[1],
-          to: ctx.users[2],
-          createdBy: ctx.users[0],
-          balance: dinero({
-            currency: 'EUR',
-            amount: 73,
-            precision: 2,
-          }),
-          subtransactions: [{
-            product: ctx.products[0],
-            amount: 1,
-            price: dinero({
-              currency: 'EUR',
-              amount: 73,
-              precision: 2,
-            }),
-          }],
+          pointOfSale: ctx.pointOfSales[0],
+          subTransactions: [{
+            to: ctx.users[2],
+            container: ctx.containers[0],
+            subTransactionRows: [{
+              product: ctx.products[0],
+              amount: 1,
+            } as SubTransactionRow],
+          } as SubTransaction],
         } as any as Transaction),
         await Transaction.save({
           from: ctx.users[0],
-          to: ctx.users[2],
-          createdBy: ctx.users[0],
-          balance: dinero({
-            currency: 'EUR',
-            amount: 74,
-            precision: 2,
-          }),
-          subtransactions: [{
-            product: ctx.products[0],
-            amount: 1,
-            price: dinero({
-              currency: 'EUR',
-              amount: 74,
-              precision: 2,
-            }),
-          }],
-        } as any as Transaction),
-        await Transaction.save({
-          from: ctx.users[1],
-          to: ctx.users[0],
-          createdBy: ctx.users[1],
-          balance: dinero({
-            currency: 'EUR',
-            amount: 75,
-            precision: 2,
-          }),
-          subtransactions: [{
-            product: ctx.products[0],
-            amount: 1,
-            price: dinero({
-              currency: 'EUR',
-              amount: 75,
-              precision: 2,
-            }),
-          }],
+          pointOfSale: ctx.pointOfSales[0],
+          subTransactions: [{
+            to: ctx.users[1],
+            container: ctx.containers[0],
+            subTransactionRows: [{
+              product: ctx.products[0],
+              amount: 1,
+            } as SubTransactionRow],
+          } as SubTransaction],
         } as any as Transaction),
         await Transaction.save({
           from: ctx.users[2],
-          to: ctx.users[1],
           createdBy: ctx.users[1],
-          balance: dinero({
-            currency: 'EUR',
-            amount: 76,
-            precision: 2,
-          }),
-          subtransactions: [{
-            product: ctx.products[0],
-            amount: 1,
-            price: dinero({
-              currency: 'EUR',
-              amount: 76,
-              precision: 2,
-            }),
-          }],
+          pointOfSale: ctx.pointOfSales[0],
+          subTransactions: [{
+            to: ctx.users[0],
+            container: ctx.containers[0],
+            subTransactionRows: [{
+              product: ctx.products[0],
+              amount: 1,
+            } as SubTransactionRow],
+          } as SubTransaction],
+        } as any as Transaction),
+        await Transaction.save({
+          from: ctx.users[1],
+          createdBy: ctx.users[0],
+          pointOfSale: ctx.pointOfSales[0],
+          subTransactions: [{
+            to: ctx.users[2],
+            container: ctx.containers[0],
+            subTransactionRows: [{
+              product: ctx.products[0],
+              amount: 1,
+            } as SubTransactionRow],
+          } as SubTransaction],
         } as any as Transaction),
       ];
     });
@@ -374,63 +368,12 @@ describe('UserController', (): void => {
         .get('/users/0/transactions')
         .set('Authorization', `Bearer ${ctx.token}`);
       expect(res.status).to.equal(200);
-      expect(res.body).to.deep.equal([
-        {
-          balance: {
-            amount: 71,
-            currency: 'EUR',
-            precision: 2,
-          },
-          createdAt: res.body[0].createdAt,
-          id: 1,
-          updatedAt: res.body[0].updatedAt,
-          version: 1,
-        },
-        {
-          balance: {
-            amount: 73,
-            currency: 'EUR',
-            precision: 2,
-          },
-          createdAt: res.body[1].createdAt,
-          id: 3,
-          updatedAt: res.body[1].updatedAt,
-          version: 1,
-        },
-        {
-          balance: {
-            amount: 74,
-            currency: 'EUR',
-            precision: 2,
-          },
-          createdAt: res.body[2].createdAt,
-          id: 4,
-          updatedAt: res.body[2].updatedAt,
-          version: 1,
-        },
-        {
-          balance: {
-            amount: 75,
-            currency: 'EUR',
-            precision: 2,
-          },
-          createdAt: res.body[3].createdAt,
-          id: 5,
-          updatedAt: res.body[3].updatedAt,
-          version: 1,
-        },
-      ]);
+      expect(res.body).to.deep.equal([]);
     });
     it('should give an HTTP 403 when user requests transactions from someone else', async () => {
       const res = await request(ctx.app)
         .get('/users/1/transactions')
         .set('Authorization', `Bearer ${ctx.token}`);
-      expect(res.status).to.equal(403);
-    });
-    it('should give an HTTP 403 when invalid token', async () => {
-      const res = await request(ctx.app)
-        .get('/users/0/products')
-        .set('Authorization', `Bearer ${fakeToken}`);
       expect(res.status).to.equal(403);
     });
   });

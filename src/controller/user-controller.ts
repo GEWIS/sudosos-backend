@@ -21,9 +21,9 @@ import { SwaggerSpecification } from 'swagger-model-validator';
 import BaseController from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
-import User from '../entity/user';
-import Product from '../entity/product';
-import Transaction from '../entity/transaction';
+import User from '../entity/user/user';
+import Product from '../entity/product/product';
+import Transaction from '../entity/transactions/transaction';
 
 export default class UserController extends BaseController {
   private logger: Logger = log4js.getLogger('UserController');
