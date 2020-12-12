@@ -15,9 +15,24 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { Entity } from 'typeorm';
-import BaseEntity from '../base-entity';
+import {
+  Entity, JoinColumn, ManyToOne,
+} from 'typeorm';
+import BaseEntityWithoutId from '../base-entity-without-id';
+import User from '../user/user';
 
+/**
+ * @typedef {MemberAuthenticator} MemberAuthenticator
+ * @property {User.model} user - The user this authenticator is for
+ * @property {User.model} authenticateAs - The user entity this user wants to authenticate as
+ */
 @Entity()
-export default class PointOfSale extends BaseEntity {
+export default class MemberAuthenticator extends BaseEntityWithoutId {
+  @ManyToOne(() => User, { primary: true, nullable: false })
+  @JoinColumn()
+  public user: User;
+
+  @ManyToOne(() => User, { primary: true, nullable: false })
+  @JoinColumn()
+  public authenticateAs: User;
 }

@@ -24,9 +24,9 @@ import User from '../user/user';
 import DineroTransformer from '../transformer/dinero-transformer';
 
 export enum TransferType {
-  DEPOSIT = 'deposit',
-  INVOICE = 'invoice',
-  CUSTOM = 'custom',
+  DEPOSIT = 1,
+  INVOICE = 2,
+  CUSTOM = 3,
 }
 
 /**
@@ -41,11 +41,11 @@ export enum TransferType {
 @Entity()
 export default class Transfer extends BaseEntity {
   @ManyToOne(() => User, { nullable: false })
-  @JoinColumn({ name: 'from' })
+  @JoinColumn()
   public from: User;
 
   @ManyToOne(() => User, { nullable: false })
-  @JoinColumn({ name: 'to' })
+  @JoinColumn()
   public to: User;
 
   @Column({
@@ -54,15 +54,10 @@ export default class Transfer extends BaseEntity {
   })
   public amount: Dinero;
 
-  /* This snippet does unfortunately not work, because SQLite
-     does not support the "enum" column type. For now, use the workaround below.
   @Column({
-    type: 'enum',
-    enum: UserType,
+    nullable: false,
   })
-  public type: UserType; */
-  @Column()
-  public type: 'deposit' | 'invoice' | 'custom';
+  public type: TransferType;
 
   @Column({
     nullable: true,

@@ -22,19 +22,18 @@ import BaseEntityWithoutId from '../base-entity-without-id';
 import User from '../user/user';
 
 /**
- * @typedef {NfcAuthenticator} NfcAuthenticator
- * @property {User.model} user - The user this authenticator is for
- * @property {string} uid - The 7-byte UID of the NFC chip
+ * @typedef {PinAuthenticator} PinAuthenticator
+ * @property {User.model} User - The user this authenticator is for
+ * @property {string} hashedPin - The PIN code of this user (hashed)
  */
 @Entity()
-export default class NfcAuthenticator extends BaseEntityWithoutId {
+export default class PinAuthenticator extends BaseEntityWithoutId {
   @OneToOne(() => User, { primary: true, nullable: false })
-  @JoinColumn({ name: 'user' })
+  @JoinColumn()
   public user: User;
 
   @Column({
-    unique: true,
-    length: 8,
+    length: 128,
   })
-  public uid: string;
+  public hashedPin: string;
 }

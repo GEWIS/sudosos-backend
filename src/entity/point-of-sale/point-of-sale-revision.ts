@@ -16,23 +16,35 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  Entity, JoinColumn, ManyToOne
+  Entity, ManyToOne, Column, SaveOptions,
 } from 'typeorm';
-import BaseEntityWithoutId from '../base-entity-without-id';
-import User from '../user/user';
+import BasePointOfSale from './base-point-of-sale';
+import PointOfSale from './point-of-sale';
 
-/**
- * @typedef {MemberAuthenticator} MemberAuthenticator
- * @property {User.model} user - The user this authenticator is for
- * @property {User.model} authenticateAs - The user entity this user wants to authenticate as
- */
 @Entity()
-export default class MemberAuthenticator extends BaseEntityWithoutId {
-  @ManyToOne(() => User, { primary: true, nullable: false })
-  @JoinColumn({ name: 'user' })
-  public user: User;
+export default class PointOfSaleRevision extends BasePointOfSale {
+  @ManyToOne(() => PointOfSale, {
+    primary: true,
+    nullable: false,
+    eager: true,
+  })
+  public readonly pointOfSale: PointOfSale;
 
-  @ManyToOne(() => User, { primary: true, nullable: false })
-  @JoinColumn({ name: 'authenticateAs' })
-  public authenticateAs: User;
+  @Column({
+    primary: true,
+    default: 1,
+    nullable: false,
+  })
+  public revision: number;
+
+  /**
+   * Saving revisions should always occur using the save() method,
+   * using the Repository does not automatically increment the version number.
+   *
+   * @inheritdoc
+   */
+  public async save(options?: SaveOptions): Promise<this> {
+    this.revision += 1;
+    return super.save(options);
+  }
 }

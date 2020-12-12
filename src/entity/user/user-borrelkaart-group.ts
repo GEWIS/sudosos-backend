@@ -26,10 +26,10 @@ import BorrelkaartGroup from './borrelkaart-group';
 @Entity()
 export default class UserBorrelkaartGroup extends BaseEntity {
   @OneToOne(() => User, { primary: true, nullable: false })
-  @JoinColumn({ name: 'user' })
+  @JoinColumn()
   public user: User;
 
   @ManyToOne(() => BorrelkaartGroup, { nullable: false })
-  @JoinColumn({ name: 'borrelkaartGroup' })
+  @JoinColumn()
   public borrelkaartGroup: BorrelkaartGroup;
 }

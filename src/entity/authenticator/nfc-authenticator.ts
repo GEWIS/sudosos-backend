@@ -21,17 +21,20 @@ import {
 import BaseEntityWithoutId from '../base-entity-without-id';
 import User from '../user/user';
 
-@Entity()
 /**
- * @typedef {EanAuthenticator} EanAuthenticator
- * @property {User.model} user.required - The user this authenticator is for
- * @property {string} eanCode.required - The EAN code
+ * @typedef {NfcAuthenticator} NfcAuthenticator
+ * @property {User.model} user - The user this authenticator is for
+ * @property {string} uid - The hash of the UID of the NFC chip
  */
-export default class EanAuthenticator extends BaseEntityWithoutId {
+@Entity()
+export default class NfcAuthenticator extends BaseEntityWithoutId {
   @OneToOne(() => User, { primary: true, nullable: false })
-  @JoinColumn({ name: 'user' })
+  @JoinColumn()
   public user: User;
 
-  @Column()
-  public eanCode: string;
+  @Column({
+    unique: true,
+    length: 128,
+  })
+  public uidHash: string;
 }

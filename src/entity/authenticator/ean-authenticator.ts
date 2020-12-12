@@ -21,19 +21,17 @@ import {
 import BaseEntityWithoutId from '../base-entity-without-id';
 import User from '../user/user';
 
-/**
- * @typedef {PinAuthenticator} PinAuthenticator
- * @property {User.model} User - The user this authenticator is for
- * @property {string} hashedPin - The PIN code of this user (hashed)
- */
 @Entity()
-export default class PinAuthenticator extends BaseEntityWithoutId {
+/**
+ * @typedef {EanAuthenticator} EanAuthenticator
+ * @property {User.model} user.required - The user this authenticator is for
+ * @property {string} eanCode.required - The EAN code
+ */
+export default class EanAuthenticator extends BaseEntityWithoutId {
   @OneToOne(() => User, { primary: true, nullable: false })
-  @JoinColumn({ name: 'user' })
+  @JoinColumn()
   public user: User;
 
-  @Column({
-    length: 128,
-  })
-  public hashedPin: string;
+  @Column()
+  public eanCode: string;
 }

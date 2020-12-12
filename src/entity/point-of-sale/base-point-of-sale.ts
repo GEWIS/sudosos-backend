@@ -1,7 +1,26 @@
-import BaseEntityWithoutId from "../base-entity-without-id";
-import {Column, JoinColumn, ManyToMany, ManyToOne} from "typeorm";
-import User from "../user/user";
-import Container from "../container/container";
+/**
+ *  SudoSOS back-end API service.
+ *  Copyright (C) 2020  Study association GEWIS
+ *
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU Affero General Public License as published
+ *  by the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU Affero General Public License for more details.
+ *
+ *  You should have received a copy of the GNU Affero General Public License
+ *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+import {
+  Column, JoinColumn, JoinTable, ManyToMany, ManyToOne,
+} from 'typeorm';
+import BaseEntityWithoutId from '../base-entity-without-id';
+import User from '../user/user';
+import ContainerRevision from '../container/container-revision';
 
 export default class BasePointOfSale extends BaseEntityWithoutId {
   @Column({
@@ -11,7 +30,7 @@ export default class BasePointOfSale extends BaseEntityWithoutId {
   public name: string;
 
   @ManyToOne(() => User, { nullable: false })
-  @JoinColumn({ name: 'owner' })
+  @JoinColumn()
   public owner: User;
 
   public startDate: Date;
@@ -22,7 +41,7 @@ export default class BasePointOfSale extends BaseEntityWithoutId {
 
   public useAuthentication: boolean;
 
-  @ManyToMany(() => Container)
-  @JoinColumn({ name: 'containers' })
-  public containers: Container[];
+  @ManyToMany(() => ContainerRevision)
+  @JoinTable()
+  public containers: ContainerRevision[];
 }

@@ -10,7 +10,7 @@
     "swagger": "ts-node-dev src/swagger.ts",
     "test": "mocha 'out/test/**/*.js'",
     "coverage": "nyc mocha 'out/test/**/*.js'",
-    "lint": "eslint src/**/*.ts test/**/*.ts"
+    "lint": "eslint 'src/**/*.ts' 'test/**/*.ts'"
   },
   "author": "",
   "license": "AGPL-3.0-or-later",

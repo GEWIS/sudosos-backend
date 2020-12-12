@@ -51,6 +51,6 @@ export default class BorrelkaartGroup extends BaseEntity {
 
   // TODO: How can we rewrite this to return users instead of entries in the one-to-many table?
   @OneToMany(() => UserBorrelkaartGroup, (user) => user.borrelkaartGroup)
-  @JoinColumn({ name: 'borrelkaarten' })
+  @JoinColumn()
   public borrelkaarten: UserBorrelkaartGroup[];
 }

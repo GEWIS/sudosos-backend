@@ -15,11 +15,13 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import {Column, Entity, JoinColumn, ManyToOne} from 'typeorm';
+import {
+  Column, Entity, JoinColumn, ManyToOne,
+} from 'typeorm';
 import BaseEntity from '../base-entity';
 // eslint-disable-next-line import/no-cycle
 import SubTransaction from './sub-transaction';
-import Product from '../product/product';
+import ProductRevision from '../product/product-revision';
 
 /**
  * @typedef {SubTransactionRow} SubTransactionRow
@@ -29,9 +31,9 @@ import Product from '../product/product';
  */
 @Entity()
 export default class SubTransactionRow extends BaseEntity {
-  @ManyToOne(() => Product, { nullable: false })
-  @JoinColumn({ name: 'product' })
-  public product: Product;
+  @ManyToOne(() => ProductRevision, { nullable: false })
+  @JoinColumn()
+  public product: ProductRevision;
 
   @Column({
     type: 'integer',
@@ -39,6 +41,6 @@ export default class SubTransactionRow extends BaseEntity {
   public amount: number;
 
   @ManyToOne(() => SubTransaction, { nullable: false })
-  @JoinColumn({ name: 'subtransaction' })
+  @JoinColumn()
   public subTransaction: SubTransaction;
 }
