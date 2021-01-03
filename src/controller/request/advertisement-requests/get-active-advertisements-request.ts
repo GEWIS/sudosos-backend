@@ -15,11 +15,10 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { Column, Entity } from 'typeorm';
-import BaseEntity from './base-entity';
 
+// -- moet aanpassen naar een get all request (wss met alleen User) --
 /**
- * @typedef {Advertisement} Advertisement
+ * @typedef GetActiveAdvertisementsRequest
  * @property {string} name - Name/label of the advertisement
  * @property {string} picture - Location of the image
  * @property {integer} duration - How long the advertisement should be shown (in seconds)
@@ -27,32 +26,11 @@ import BaseEntity from './base-entity';
  * @property {Date} startDate - The starting date from which the adverisement should be shown
  * @property {Date} endDate - The end date from which the advertisement should no longer be shown
  */
-@Entity()
-export default class Advertisement extends BaseEntity {
-  @Column()
-  public name: string;
-
-  @Column()
-  public picture: string;
-
-  @Column({
-    type: 'integer',
-  })
-  public duration: number;
-
-  @Column({
-    default: false,
-  })
-  public active: boolean;
-
-  @Column({
-    type: 'datetime',
-    default: 'CURRENT_TIMESTAMP',
-  })
-  public startDate?: Date;
-
-  @Column({
-    type: 'datetime',
-  })
-  public endDate: Date;
+export default interface CreateTransactionRequest {
+  name: string,
+  picture: string,
+  duration: number,
+  active: boolean,
+  startDate: Date,
+  endDate: Date,
 }
