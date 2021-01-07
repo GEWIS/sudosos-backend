@@ -16,10 +16,22 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
+  Column,
   Entity,
+  JoinColumn,
+  ManyToOne,
 } from 'typeorm';
 import BaseEntity from '../base-entity';
+import User from '../user/user';
 
 @Entity()
 export default class Container extends BaseEntity {
+  @Column({
+    nullable: true,
+  })
+  public currentRevision: number;
+
+  @ManyToOne(() => User, { nullable: false })
+  @JoinColumn()
+  public owner: User;
 }
