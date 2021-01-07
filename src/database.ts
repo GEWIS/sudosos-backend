@@ -40,6 +40,7 @@ import Transfer from './entity/transactions/transfer';
 import ProductRevision from './entity/product/product-revision';
 import ContainerRevision from './entity/container/container-revision';
 import PointOfSaleRevision from './entity/point-of-sale/point-of-sale-revision';
+import ProductOrdering from './entity/point-of-sale/product-ordering';
 
 export default class Database {
   public static async initialize(): Promise<Connection> {
@@ -68,6 +69,7 @@ export default class Database {
         NfcAuthenticator,
         PinAuthenticator,
         Banner,
+        ProductOrdering,
       ],
     };
     return createConnection(options);
