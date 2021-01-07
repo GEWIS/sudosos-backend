@@ -19,16 +19,16 @@ import { Column, Entity } from 'typeorm';
 import BaseEntity from './base-entity';
 
 /**
- * @typedef {Advertisement} Advertisement
- * @property {string} name - Name/label of the advertisement
+ * @typedef {Banner} Banner
+ * @property {string} name - Name/label of the banner
  * @property {string} picture - Location of the image
- * @property {integer} duration - How long the advertisement should be shown (in seconds)
- * @property {active} boolean - Whether the advertisement is active. Overrides start and end date
- * @property {Date} startDate - The starting date from which the adverisement should be shown
- * @property {Date} endDate - The end date from which the advertisement should no longer be shown
+ * @property {integer} duration - How long the banner should be shown (in seconds)
+ * @property {active} boolean - Whether the banner is active. Overrides start and end date
+ * @property {Date} startDate - The starting date from which the banner should be shown
+ * @property {Date} endDate - The end date from which the banner should no longer be shown
  */
 @Entity()
-export default class Advertisement extends BaseEntity {
+export default class Banner extends BaseEntity {
   @Column()
   public name: string;
 
