@@ -30,5 +30,5 @@ export default class UpdatedPointOfSale extends BasePointOfSale {
     nullable: false,
   })
   @JoinColumn()
-  public pointOfSale: PointOfSale[];
+  public pointOfSale: PointOfSale;
 }
