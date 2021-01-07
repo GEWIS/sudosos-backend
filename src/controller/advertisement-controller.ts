@@ -20,13 +20,11 @@ import log4js, { Logger } from 'log4js';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import BaseController from './base-controller';
 import Policy from './policy';
-import GetAllAdvertisementsRequest from './request/advertisement-requests/get-all-advertisements-request';
 import CreateAdvertisementRequest from './request/advertisement-requests/create-advertisement-request';
-import GetSingleAdvertisementRequest from './request/advertisement-requests/get-single-advertisement-request';
 import UpdateAdvertisementRequest from './request/advertisement-requests/update-advertisement-request';
 import RemoveAdvertisementRequest from './request/advertisement-requests/remove-advertisement-request';
-import GetActiveAdvertisementsRequest from './request/advertisement-requests/get-active-advertisements-request';
 import { RequestWithToken } from '../middleware/token-middleware';
+import Advertisement from '../entity/advertisement';
 
 export default class AdvertisementController extends BaseController {
   private logger: Logger = log4js.getLogger('AdvertisementController');
@@ -43,19 +41,17 @@ export default class AdvertisementController extends BaseController {
     return {
       '/': {
         GET: {
-          body: { modelName: 'GetAllAdvertisementsRequest' },
           policy: this.canGetAllAdvertisements.bind(this),
           handler: this.returnAllAdvertisements.bind(this),
         },
         POST: {
-          body: { modelName: 'CreateAdvertiesementRequest' },
+          body: { modelName: 'CreateAdvertisementRequest' },
           policy: this.canCreateAdvertisement.bind(this),
           handler: this.createAdvertisement.bind(this),
         },
       },
       '/:id/': {
         GET: {
-          body: { modelName: 'GetSingleAdvertisementRequest' },
           policy: this.canGetSingleAdvertisement.bind(this),
           handler: this.returnSingleAdvertisement.bind(this),
         },
@@ -72,7 +68,6 @@ export default class AdvertisementController extends BaseController {
       },
       '/active/': {
         GET: {
-          body: { modelName: 'GetActiveAdvertisementsRequest' },
           policy: this.canGetActiveAdvertisements.bind(this),
           handler: this.canGetActiveAdvertisements.bind(this),
         },
@@ -86,8 +81,7 @@ export default class AdvertisementController extends BaseController {
    */
   // eslint-disable-next-line class-methods-use-this
   public async canGetAllAdvertisements(req: RequestWithToken): Promise<boolean> {
-    const body = req.body as GetAllAdvertisementsRequest;
-    return body.name === 'testje';
+    return true;
   }
 
   /**
@@ -95,17 +89,16 @@ export default class AdvertisementController extends BaseController {
    * @route GET /advertisements
    * @group advertisements - Operations of advertisement controller
    * @security JWT
-   * @returns {Advertisement.model} 200 - The created transaction entity. -- moet array zijn --
+   * @returns {Advertisement.model} 200 - All existing advertisements.
    * @returns {string} 400 - Validation error.
    */
   public async returnAllAdvertisements(req: RequestWithToken, res: Response): Promise<void> {
-    const body = req.body as GetAllAdvertisementsRequest;
+    const { body } = req;
     this.logger.trace('Get all advertisements', body, 'by user', req.token.user);
 
     // handle request
     try {
-      const allAdvertisements = {};
-      res.json(allAdvertisements);
+      res.json(Advertisement.findOne());
     } catch (error) {
       this.logger.error('Could not return all advertisements:', error);
       res.status(500).json('Internal server error.');
@@ -118,26 +111,36 @@ export default class AdvertisementController extends BaseController {
    */
   // eslint-disable-next-line class-methods-use-this
   public async canCreateAdvertisement(req: RequestWithToken): Promise<boolean> {
-    const body = req.body as GetAllAdvertisementsRequest;
-    return body.name === 'testje';
+    return true;
   }
 
   /**
    * Creates new advertisement.
    * @route POST /advertisements
    * @group advertisements - Operations of advertisement controller
+   * @param {CreateAdvertisementRequest.model} adverisement.body.required - The advertisement
    * @security JWT
-   * @returns {Advertisement.model} 200 - The created transaction entity. -- moet een OKAY zijn --
-   * @returns {string} 400 - Validation error.
+   * @returns {boolean} 200 - Creation succesful
+   * @returns {string} 400 - Validation error
    */
   public async createAdvertisement(req: RequestWithToken, res: Response): Promise<void> {
     const body = req.body as CreateAdvertisementRequest;
     this.logger.trace('Create advertisement', body, 'by user', req.token.user);
 
+    // Check whether duration is in whole seconds (integer)
+    if (!Number.isInteger(body.duration)) {
+      res.status(400).json('Duration is not an integer.');
+    }
+
     // handle request
     try {
-      const createSucces: boolean = false;
-      res.json(createSucces);
+      const adverisement: any = {
+        ...body,
+        startDate: new Date(Date.parse(body.startDate)),
+        endDate: new Date(Date.parse(body.endDate)),
+      };
+      await Advertisement.save(adverisement as Advertisement);
+      res.json(true);
     } catch (error) {
       this.logger.error('Could not create advertisement:', error);
       res.status(500).json('Internal server error.');
@@ -150,8 +153,7 @@ export default class AdvertisementController extends BaseController {
    */
   // eslint-disable-next-line class-methods-use-this
   public async canGetSingleAdvertisement(req: RequestWithToken): Promise<boolean> {
-    const body = req.body as GetSingleAdvertisementRequest;
-    return body.name === 'testje';
+    return true;
   }
 
   /**
@@ -163,13 +165,12 @@ export default class AdvertisementController extends BaseController {
    * @returns {string} 400 - Validation error.
    */
   public async returnSingleAdvertisement(req: RequestWithToken, res: Response): Promise<void> {
-    const body = req.body as GetSingleAdvertisementRequest;
+    const { body } = req;
     this.logger.trace('Get single advertisement', body, 'by user', req.token.user);
 
     // handle request
     try {
-      const advertisement = {};
-      res.json(advertisement);
+      res.json(Advertisement.findOne(body.id));
     } catch (error) {
       this.logger.error('Could not return advertisement:', error);
       res.status(500).json('Internal server error.');
@@ -246,8 +247,7 @@ export default class AdvertisementController extends BaseController {
    */
   // eslint-disable-next-line class-methods-use-this
   public async canGetActiveAdvertisements(req: RequestWithToken): Promise<boolean> {
-    const body = req.body as GetActiveAdvertisementsRequest;
-    return body.name === 'testje';
+    return true;
   }
 
   /**
@@ -259,7 +259,7 @@ export default class AdvertisementController extends BaseController {
    * @returns {string} 400 - Validation error.
    */
   public async returnActiveAdvertisements(req: RequestWithToken, res: Response): Promise<void> {
-    const body = req.body as GetActiveAdvertisementsRequest;
+    const { body } = req;
     this.logger.trace('Get active advertisements', body, 'by user', req.token.user);
 
     // handle request

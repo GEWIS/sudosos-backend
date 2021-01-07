@@ -31,6 +31,7 @@ import Swagger from './swagger';
 import TokenHandler from './authentication/token-handler';
 import TokenMiddleware from './middleware/token-middleware';
 import AuthenticationController from './controller/authentication-controller';
+import AdvertisementController from './controller/advertisement-controller';
 
 export class Application {
   app: express.Express;
@@ -97,6 +98,9 @@ export default async function createApp(): Promise<Application> {
 
   // Setup token handler and authentication controller.
   await setupAuthentication(application);
+
+  // REMOVE LATER, test for advertisement controller
+  application.app.use('/v1/advertisements', new AdvertisementController(application.specification).getRouter());
 
   // Start express application.
   application.server = application.app.listen(process.env.HTTP_PORT);

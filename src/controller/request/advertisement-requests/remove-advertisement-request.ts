@@ -26,7 +26,7 @@
  * @property {Date} startDate - The starting date from which the adverisement should be shown
  * @property {Date} endDate - The end date from which the advertisement should no longer be shown
  */
-export default interface CreateTransactionRequest {
+export default interface RemoveAdvertisementRequest {
   name: string,
   picture: string,
   duration: number,
