@@ -40,13 +40,13 @@ export enum TransferType {
  */
 @Entity()
 export default class Transfer extends BaseEntity {
-  @ManyToOne(() => User, { nullable: false })
+  @ManyToOne(() => User, { nullable: true })
   @JoinColumn()
-  public from: User;
+  public from?: User;
 
-  @ManyToOne(() => User, { nullable: false })
+  @ManyToOne(() => User, { nullable: true })
   @JoinColumn()
-  public to: User;
+  public to?: User;
 
   @Column({
     type: 'integer',
