@@ -47,7 +47,7 @@ export default class FlaggedTransaction extends BaseEntity {
   public flaggedBy: User;
 
   @Column({
-    length: 1024,
+    type: 'text',
   })
   public reason: string;
 
