@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  Column, Entity, JoinColumn, OneToMany,
+  Column, Entity, OneToMany,
 } from 'typeorm';
 import BaseEntity from '../base-entity';
 // eslint-disable-next-line import/no-cycle
@@ -49,8 +49,6 @@ export default class BorrelkaartGroup extends BaseEntity {
   })
   public activeEndDate?: Date;
 
-  // TODO: How can we rewrite this to return users instead of entries in the one-to-many table?
   @OneToMany(() => UserBorrelkaartGroup, (user) => user.borrelkaartGroup)
-  @JoinColumn()
   public borrelkaarten: UserBorrelkaartGroup[];
 }

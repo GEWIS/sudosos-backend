@@ -18,7 +18,6 @@
 import {
   Column,
   Entity,
-  JoinColumn,
   ManyToOne,
 } from 'typeorm';
 import BaseEntity from '../base-entity';
@@ -32,6 +31,5 @@ export default class Container extends BaseEntity {
   public currentRevision: number;
 
   @ManyToOne(() => User, { nullable: false })
-  @JoinColumn()
   public owner: User;
 }

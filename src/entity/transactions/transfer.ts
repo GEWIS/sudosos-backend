@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  Column, Entity, JoinColumn, ManyToOne,
+  Column, Entity, ManyToOne,
 } from 'typeorm';
 import { Dinero } from 'dinero.js';
 import BaseEntity from '../base-entity';
@@ -41,11 +41,9 @@ export enum TransferType {
 @Entity()
 export default class Transfer extends BaseEntity {
   @ManyToOne(() => User, { nullable: true })
-  @JoinColumn()
   public from?: User;
 
   @ManyToOne(() => User, { nullable: true })
-  @JoinColumn()
   public to?: User;
 
   @Column({

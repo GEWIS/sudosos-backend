@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  Column, Entity, JoinColumn, ManyToOne,
+  Column, Entity, ManyToOne,
 } from 'typeorm';
 import BaseEntity from '../base-entity';
 import User from '../user/user';
@@ -43,7 +43,6 @@ export default class FlaggedTransaction extends BaseEntity {
   public status: FlagStatus;
 
   @ManyToOne(() => User, { nullable: false })
-  @JoinColumn()
   public flaggedBy: User;
 
   @Column({
@@ -52,6 +51,5 @@ export default class FlaggedTransaction extends BaseEntity {
   public reason: string;
 
   @ManyToOne(() => Transaction, { nullable: false })
-  @JoinColumn()
   public transaction: Transaction;
 }
