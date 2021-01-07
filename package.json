@@ -10,13 +10,15 @@
     "swagger": "ts-node-dev src/swagger.ts",
     "test": "mocha 'out/test/**/*.js'",
     "coverage": "nyc mocha 'out/test/**/*.js'",
-    "lint": "eslint src/**/*.ts test/**/*.ts"
+    "lint": "eslint 'src/**/*.ts' 'test/**/*.ts'",
+    "typeorm": "node --require ts-node/register ./node_modules/typeorm/cli.js"
   },
   "author": "",
   "license": "AGPL-3.0-or-later",
   "dependencies": {
     "body-parser": "^1.19.0",
     "dinero.js": "^1.8.1",
+    "dotenv": "^8.2.0",
     "express": "^4.17.1",
     "express-swagger-generator": "^1.1.17",
     "express-swaggerize-ui": "^1.1.0",

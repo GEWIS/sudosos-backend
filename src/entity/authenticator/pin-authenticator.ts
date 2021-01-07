@@ -16,13 +16,24 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  Entity,
+  Column, Entity, JoinColumn, OneToOne,
 } from 'typeorm';
-import BaseEntity from './base-entity';
+import BaseEntityWithoutId from '../base-entity-without-id';
+import User from '../user/user';
 
-@Entity()
 /**
- * @typedef {BaseEntity} User
+ * @typedef {PinAuthenticator} PinAuthenticator
+ * @property {User.model} User - The user this authenticator is for
+ * @property {string} hashedPin - The PIN code of this user (hashed)
  */
-export default class User extends BaseEntity {
+@Entity()
+export default class PinAuthenticator extends BaseEntityWithoutId {
+  @OneToOne(() => User, { primary: true, nullable: false })
+  @JoinColumn()
+  public user: User;
+
+  @Column({
+    length: 128,
+  })
+  public hashedPin: string;
 }

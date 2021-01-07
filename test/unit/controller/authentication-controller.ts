@@ -20,7 +20,7 @@ import { expect, request } from 'chai';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { Connection } from 'typeorm';
 import bodyParser from 'body-parser';
-import User from '../../../src/entity/user';
+import User, { UserType } from '../../../src/entity/user/user';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Database from '../../../src/database';
 import Swagger from '../../../src/swagger';
@@ -50,7 +50,11 @@ describe('AuthenticationController', async (): Promise<void> => {
       tokenHandler: new TokenHandler({
         algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
       }),
-      user: await User.save({} as User),
+      user: await User.save({
+        firstName: 'Roy',
+        type: UserType.LOCAL_USER,
+        active: true,
+      } as User),
       request: {
         userId: 1,
         nonce: 'test',

@@ -16,15 +16,29 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  PrimaryGeneratedColumn,
+  Column, Entity, ManyToOne,
 } from 'typeorm';
-import BaseEntityWithoutId from './base-entity-without-id';
+import BaseEntity from '../base-entity';
+// eslint-disable-next-line import/no-cycle
+import SubTransaction from './sub-transaction';
+import ProductRevision from '../product/product-revision';
 
 /**
- * @typedef  BaseEntity
- * @property {integer} id - The auto-generated object id.
+ * @typedef {SubTransactionRow} SubTransactionRow
+ * @property {Product.model} product.required - The product that has been bought
+ * @property {integer} amount.required - The amount that has been bought
+ * @property {Array.<SubTransaction>} subTransactions
  */
-export default class BaseEntity extends BaseEntityWithoutId {
-  @PrimaryGeneratedColumn()
-  public readonly id?: number;
+@Entity()
+export default class SubTransactionRow extends BaseEntity {
+  @ManyToOne(() => ProductRevision, { nullable: false })
+  public product: ProductRevision;
+
+  @Column({
+    type: 'integer',
+  })
+  public amount: number;
+
+  @ManyToOne(() => SubTransaction, { nullable: false })
+  public subTransaction: SubTransaction;
 }

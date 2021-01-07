@@ -15,24 +15,34 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import User from '../entity/user/user';
+import {
+  Entity,
+  Column,
+  ManyToOne,
+  BeforeUpdate,
+} from 'typeorm';
+import BaseContainer from './base-container';
+import Container from './container';
 
-/**
- * The contents of the JWT used for user authentication.
- */
-export default class JsonWebToken {
-  /**
-   * The token holds a reference to the user to which this token belongs.
-   */
-  public user: User;
+@Entity()
+export default class ContainerRevision extends BaseContainer {
+  @ManyToOne(() => Container, {
+    primary: true,
+    nullable: false,
+    eager: true,
+  })
+  public readonly container: Container;
 
-  /**
-   * The JWT expiry field. Set automatically by signing the token.
-   */
-  public readonly exp?: number;
+  @Column({
+    primary: true,
+    default: 1,
+    nullable: false,
+  })
+  public revision: number;
 
-  /**
-   * The JWT not-before field. Set automatically by signing the token.
-   */
-  public readonly nbf?: number;
+  @BeforeUpdate()
+  // eslint-disable-next-line class-methods-use-this
+  denyUpdate() {
+    throw new Error('Immutable entities cannot be updated.');
+  }
 }

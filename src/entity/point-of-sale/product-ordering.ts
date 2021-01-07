@@ -15,24 +15,24 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import User from '../entity/user/user';
+import {
+  Column,
+  Entity,
+  ManyToOne,
+  Unique,
+} from 'typeorm';
+import Product from '../product/product';
+import PointOfSale from './point-of-sale';
 
-/**
- * The contents of the JWT used for user authentication.
- */
-export default class JsonWebToken {
-  /**
-   * The token holds a reference to the user to which this token belongs.
-   */
-  public user: User;
+@Entity()
+@Unique(['pos', 'product', 'order'])
+export default class ProductOrdering {
+  @ManyToOne(() => PointOfSale, { primary: true })
+  pos: PointOfSale;
 
-  /**
-   * The JWT expiry field. Set automatically by signing the token.
-   */
-  public readonly exp?: number;
+  @ManyToOne(() => Product, { primary: true })
+  product: Product;
 
-  /**
-   * The JWT not-before field. Set automatically by signing the token.
-   */
-  public readonly nbf?: number;
+  @Column()
+  order: number;
 }

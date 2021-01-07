@@ -15,32 +15,26 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-/* eslint-disable import/no-cycle */
 import {
-  Entity, Column, ManyToOne, JoinColumn,
+  Column,
+  ManyToOne,
 } from 'typeorm';
 import { Dinero } from 'dinero.js';
-import Product from './product';
-import Transaction from './transaction';
-import DineroTransformer from './transformer/dinero-transformer';
-import BaseEntity from './base-entity';
+import DineroTransformer from '../transformer/dinero-transformer';
+import BaseEntityWithoutId from '../base-entity-without-id';
+import ProductCategory from './product-category';
 
 /**
- * @typedef {BaseEntity} Subtransaction
- * @property {Product.model} product.required - The product sold in the subtransaction.
- * @property {integer} amount.required - The amount of product involved in this subtransaction.
- * @property {Dinero.model} price.required - The price of each product in this subtransaction.
+ * @typedef {BaseEntityWithoutId} BaseProduct
+ * @property {string} name.required - The unique name of the product.
+ * @property {Dinero.model} price.required - The price of each product.
  */
-@Entity()
-export default class Subtransaction extends BaseEntity {
-  @ManyToOne(() => Product, { nullable: false })
-  @JoinColumn({ name: 'productId' })
-  public product: Product;
-
+export default class BaseProduct extends BaseEntityWithoutId {
   @Column({
-    type: 'integer',
+    unique: true,
+    length: 64,
   })
-  public amount: number;
+  public name: string;
 
   @Column({
     type: 'integer',
@@ -48,7 +42,15 @@ export default class Subtransaction extends BaseEntity {
   })
   public price: Dinero;
 
-  @ManyToOne(() => Transaction, { nullable: false })
-  @JoinColumn({ name: 'transaction' })
-  public transaction: Transaction;
+  @ManyToOne(() => ProductCategory, { nullable: false })
+  public category: ProductCategory;
+
+  @Column()
+  public picture: string;
+
+  @Column({
+    type: 'decimal',
+    scale: 2,
+  })
+  public alcoholPercentage: number;
 }

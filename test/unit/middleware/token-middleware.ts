@@ -20,7 +20,7 @@ import jwt from 'jsonwebtoken';
 import express, { Application, Response } from 'express';
 import { expect, request } from 'chai';
 import TokenHandler from '../../../src/authentication/token-handler';
-import User from '../../../src/entity/user';
+import User from '../../../src/entity/user/user';
 import { generateKeys } from '../../setup';
 import TokenMiddleware, { RequestWithToken } from '../../../src/middleware/token-middleware';
 import JsonWebToken from '../../../src/authentication/json-web-token';
