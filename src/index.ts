@@ -85,7 +85,7 @@ export default async function createApp(): Promise<Application> {
   // Silent in-dependency logs unless really wanted by the environment.
   const logger = log4js.getLogger('Console');
   logger.level = process.env.LOG_LEVEL;
-  console.log = (message: any) => logger.debug(message);
+  // console.log = (message: any) => logger.debug(message);
 
   // Set up monetary value configuration.
   dinero.defaultCurrency = process.env.CURRENCY_CODE as Currency;
