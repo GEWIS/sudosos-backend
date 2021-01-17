@@ -16,21 +16,20 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-// -- moet aanpassen naar een get all request (wss met alleen User) --
 /**
- * @typedef RemoveAdvertisementRequest
- * @property {string} name - Name/label of the advertisement
+ * @typedef CreateBannerRequest
+ * @property {string} name - Name/label of the banner
  * @property {string} picture - Location of the image
- * @property {integer} duration - How long the advertisement should be shown (in seconds)
- * @property {boolean} active - Whether the advertisement is active. Overrides start and end date
- * @property {Date} startDate - The starting date from which the adverisement should be shown
- * @property {Date} endDate - The end date from which the advertisement should no longer be shown
+ * @property {number} duration - How long the banner should be shown (in seconds)
+ * @property {boolean} active - Whether the banner is active. Overrides start and end date
+ * @property {string} startDate - The starting date from which the adverisement should be shown
+ * @property {string} endDate - The end date from which the banner should no longer be shown
  */
-export default interface RemoveAdvertisementRequest {
+export default interface CreateBannerRequest {
   name: string,
   picture: string,
   duration: number,
   active: boolean,
-  startDate: Date,
-  endDate: Date,
+  startDate: string,
+  endDate: string,
 }

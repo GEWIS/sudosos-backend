@@ -16,12 +16,12 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  Column, ManyToOne, JoinColumn,
+  Column,
+  ManyToOne,
 } from 'typeorm';
 import { Dinero } from 'dinero.js';
 import DineroTransformer from '../transformer/dinero-transformer';
 import BaseEntityWithoutId from '../base-entity-without-id';
-import User from '../user/user';
 import ProductCategory from './product-category';
 
 /**
@@ -41,10 +41,6 @@ export default class BaseProduct extends BaseEntityWithoutId {
     transformer: DineroTransformer.Instance,
   })
   public price: Dinero;
-
-  @ManyToOne(() => User, { nullable: false })
-  @JoinColumn()
-  public owner: User;
 
   @ManyToOne(() => ProductCategory, { nullable: false })
   public category: ProductCategory;

@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  Entity, JoinColumn, ManyToOne,
+  Entity, ManyToOne,
 } from 'typeorm';
 import BaseEntityWithoutId from '../base-entity-without-id';
 import User from '../user/user';
@@ -29,10 +29,8 @@ import User from '../user/user';
 @Entity()
 export default class MemberAuthenticator extends BaseEntityWithoutId {
   @ManyToOne(() => User, { primary: true, nullable: false })
-  @JoinColumn()
   public user: User;
 
   @ManyToOne(() => User, { primary: true, nullable: false })
-  @JoinColumn()
   public authenticateAs: User;
 }

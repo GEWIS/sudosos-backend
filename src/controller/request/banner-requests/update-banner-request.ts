@@ -18,15 +18,15 @@
 
 // -- moet aanpassen naar een get all request (wss met alleen User) --
 /**
- * @typedef UpdateAdvertisementRequest
- * @property {string} name - Name/label of the advertisement
+ * @typedef UpdateBannerRequest
+ * @property {string} name - Name/label of the banner
  * @property {string} picture - Location of the image
- * @property {integer} duration - How long the advertisement should be shown (in seconds)
- * @property {boolean} active - Whether the advertisement is active. Overrides start and end date
+ * @property {integer} duration - How long the banner should be shown (in seconds)
+ * @property {boolean} active - Whether the banner is active. Overrides start and end date
  * @property {Date} startDate - The starting date from which the adverisement should be shown
- * @property {Date} endDate - The end date from which the advertisement should no longer be shown
+ * @property {Date} endDate - The end date from which the banner should no longer be shown
  */
-export default interface UpdateAdvertisementRequest {
+export default interface UpdateBannerRequest {
   name: string,
   picture: string,
   duration: number,

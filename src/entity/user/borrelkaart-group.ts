@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  Column, Entity, JoinColumn, OneToMany,
+  Column, Entity, OneToMany,
 } from 'typeorm';
 import BaseEntity from '../base-entity';
 // eslint-disable-next-line import/no-cycle
@@ -25,8 +25,8 @@ import UserBorrelkaartGroup from './user-borrelkaart-group';
 /**
  * @typedef {BorrelkaartGroup} BorrelkaartGroup
  * @property {string} name.required - Name of the group
- * @property {Date} activeStartDate.required - Date from which the included cards are active
- * @property {Date} activeEndDate - Date from which cards are no longer active
+ * @property {string} activeStartDate.required - Date from which the included cards are active
+ * @property {string} activeEndDate - Date from which cards are no longer active
  * @property {Array.<User>} borrelkaarten.required - Cards included in this group
  */
 @Entity()
@@ -49,8 +49,6 @@ export default class BorrelkaartGroup extends BaseEntity {
   })
   public activeEndDate?: Date;
 
-  // TODO: How can we rewrite this to return users instead of entries in the one-to-many table?
   @OneToMany(() => UserBorrelkaartGroup, (user) => user.borrelkaartGroup)
-  @JoinColumn()
   public borrelkaarten: UserBorrelkaartGroup[];
 }

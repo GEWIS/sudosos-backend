@@ -17,7 +17,7 @@
  */
 /* eslint-disable import/no-cycle */
 import {
-  Entity, ManyToOne, JoinColumn, OneToMany,
+  Entity, ManyToOne, OneToMany,
 } from 'typeorm';
 import Transaction from './transaction';
 import BaseEntity from '../base-entity';
@@ -37,15 +37,12 @@ import SubTransactionRow from './sub-transaction-row';
 @Entity()
 export default class SubTransaction extends BaseEntity {
   @ManyToOne(() => User, { nullable: false })
-  @JoinColumn()
   public to: User;
 
   @ManyToOne(() => ContainerRevision, { nullable: false })
-  @JoinColumn()
   public container: ContainerRevision;
 
   @ManyToOne(() => Transaction, { nullable: false })
-  @JoinColumn()
   public transaction: Transaction;
 
   @OneToMany(() => SubTransactionRow, (subtransactionRow) => subtransactionRow.subTransaction)
