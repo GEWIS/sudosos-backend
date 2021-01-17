@@ -55,6 +55,10 @@ export default class UserController extends BaseController {
           policy: this.canGetItselfOrIsAdmin.bind(this),
           handler: this.getIndividualUser.bind(this),
         },
+        DELETE: {
+          policy: this.isAdmin.bind(this),
+          handler: this.deleteUser.bind(this),
+        },
       },
       '/:id/products': {
         GET: {
@@ -100,7 +104,7 @@ export default class UserController extends BaseController {
   public async getAllUsers(req: RequestWithToken, res: Response): Promise<void> {
     this.logger.trace('Get all users', 'by user', req.token.user);
 
-    const users = await User.find();
+    const users = await User.find({ where: { deleted: false } });
     res.status(200).json(users);
   }
 
@@ -116,7 +120,7 @@ export default class UserController extends BaseController {
     this.logger.trace('Get individual user', parameters, 'by user', req.token.user);
 
     // Get the user object if it exists
-    const user = await User.findOne(parameters.id);
+    const user = await User.findOne(parameters.id, { where: { deleted: false } });
     // If it does not exist, return a 404 error
     if (user === undefined) {
       res.status(404).json('Unknown user ID.');
@@ -157,7 +161,41 @@ export default class UserController extends BaseController {
 
     try {
       const user = await User.save(body as User);
-      res.status(200).json(user);
+      res.status(201).json(user);
+    } catch (error) {
+      this.logger.error('Could not create product:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Delete a single user
+   * @route DELETE /users/:id
+   * @group users - Operations of user controller
+   * @returns {string} 204 - User successfully deleted
+   * @returns {string} 400 - Cannot delete yourself
+   */
+  public async deleteUser(req: RequestWithToken, res: Response): Promise<void> {
+    const parameters = req.params;
+    this.logger.trace('Delete individual user', parameters, 'by user', req.token.user);
+
+    if (req.token.user.id === parseInt(parameters.id, 10)) {
+      res.status(400).json('Cannot delete yourself');
+      return;
+    }
+
+    // Get the user object if it exists
+    const user = await User.findOne(parameters.id, { where: { deleted: false } });
+    // If it does not exist, return a 404 error
+    if (user === undefined) {
+      res.status(404).json('Unknown user ID.');
+      return;
+    }
+
+    try {
+      user.deleted = true;
+      await user.save();
+      res.status(204).json('User deleted');
     } catch (error) {
       this.logger.error('Could not create product:', error);
       res.status(500).json('Internal server error.');

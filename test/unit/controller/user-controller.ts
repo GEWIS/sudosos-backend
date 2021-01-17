@@ -104,7 +104,7 @@ describe('UserController', (): void => {
     transactions: Array<Transaction>,
   };
 
-  before(async () => {
+  beforeEach(async () => {
     ctx = {
       connection: await Database.initialize(),
       app: express(),
@@ -223,6 +223,7 @@ describe('UserController', (): void => {
     await User.save({ ...ctx.users[0] } as User);
     await User.save({ ...ctx.users[1] } as User);
     await User.save({ ...ctx.users[2] } as User);
+    await User.save({ ...ctx.users[3] } as User);
     // await ProductCategory.save({ ...productCategory } as ProductCategory);
     // await Product.save({ ...ctx.products[0] } as Product);
     // await Product.save({ ...ctx.products[1] } as Product);
@@ -235,7 +236,7 @@ describe('UserController', (): void => {
     ctx.app.use('/users', ctx.controller.getRouter());
   });
 
-  after(async () => {
+  afterEach(async () => {
     await ctx.connection.close();
   });
 
@@ -300,6 +301,12 @@ describe('UserController', (): void => {
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(404);
     });
+    it('should give an HTTP 404 when admin requests deleted user', async () => {
+      const res = await request(ctx.app)
+        .get('/users/3')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(404);
+    });
   });
 
   describe('POST /users', () => {
@@ -316,7 +323,7 @@ describe('UserController', (): void => {
         .post('/users')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(ctx.user);
-      expect(res.status).to.equal(200);
+      expect(res.status).to.equal(201);
 
       const user = res.body as User;
       const spec = await Swagger.importSpecification();
@@ -331,7 +338,7 @@ describe('UserController', (): void => {
         .post('/users')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(userObj);
-      expect(res.status).to.equal(200);
+      expect(res.status).to.equal(201);
 
       const user = res.body as User;
       const spec = await Swagger.importSpecification();
@@ -345,7 +352,7 @@ describe('UserController', (): void => {
         .post('/users')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(userObj);
-      expect(res.status).to.equal(200);
+      expect(res.status).to.equal(201);
 
       const user = res.body as User;
       const spec = await Swagger.importSpecification();
@@ -420,7 +427,7 @@ describe('UserController', (): void => {
         .post('/users')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(userObj);
-      expect(res.status).to.equal(200);
+      expect(res.status).to.equal(201);
 
       const user = res.body as User;
       const spec = await Swagger.importSpecification();
@@ -434,11 +441,59 @@ describe('UserController', (): void => {
         .post('/users')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(userObj);
-      expect(res.status).to.equal(200);
+      expect(res.status).to.equal(201);
 
       const user = res.body as User;
       const spec = await Swagger.importSpecification();
       verifyUserEntity(spec, user);
+    });
+  });
+
+  describe('DELETE /users/:id', () => {
+    it('should give HTTP 403 when user is not an admin', async () => {
+      const res = await request(ctx.app)
+        .delete('/users/1')
+        .set('Authorization', `Bearer ${ctx.token}`);
+      expect(res.status).to.equal(403);
+    });
+
+    it('should correctly delete user if requester is admin', async () => {
+      let res = await request(ctx.app)
+        .delete('/users/1')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(204);
+
+      // User does not exist anymore
+      res = await request(ctx.app)
+        .get('/users/1')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(404);
+    });
+
+    it('should give HTTP 404 if admin and user does not exist', async () => {
+      const res = await request(ctx.app)
+        .delete('/users/1234')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(404);
+    });
+
+    it('should give HTTP 400 if admin requests to delete itself', async () => {
+      const res = await request(ctx.app)
+        .delete('/users/2')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(400);
+    });
+
+    it('should give HTTP 404 if trying to delete user twice', async () => {
+      const res = await request(ctx.app)
+        .delete('/users/1')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(204);
+
+      const res2 = await request(ctx.app)
+        .delete('/users/1')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res2.status).to.equal(404);
     });
   });
 
