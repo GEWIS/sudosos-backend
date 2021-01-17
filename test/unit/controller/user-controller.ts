@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import express, { Application } from 'express';
-import { expect } from 'chai';
+import { expect, request } from 'chai';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { Connection } from 'typeorm';
 // import dinero from 'dinero.js';
@@ -41,16 +41,15 @@ import ProductRevision from '../../../src/entity/product/product-revision';
 import ContainerRevision from '../../../src/entity/container/container-revision';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function verifyUserEntity(spec: SwaggerSpecification, user: User): void {
   const validation = spec.validateModel('User', user, false, true);
   expect(validation.valid).to.be.true;
 
-  expect(user.id).to.be.greaterThan(0);
+  expect(user.id).to.be.greaterThan(-1);
   expect(user.firstName).to.not.be.empty;
-  expect(user.active).to.not.be.empty;
+  expect(user.active).to.not.be.null;
   expect(user.deleted).to.be.false;
-  expect(user.type).to.be.instanceOf(UserType);
+  expect(Object.values(UserType)).to.include(user.type);
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -58,7 +57,7 @@ function verifyProductEntity(spec: SwaggerSpecification, product: ProductRevisio
   const validation = spec.validateModel('Product', product, false, true);
   expect(validation.valid).to.be.true;
 
-  expect(product.product.id).to.be.greaterThan(0);
+  expect(product.product.id).to.be.greaterThan(-1);
   expect(product.name).to.not.be.empty;
   expect(product.price.getAmount()).to.be.greaterThan(50);
   expect(product.price.getCurrency()).to.equal('EUR');
@@ -69,7 +68,7 @@ function verifyContainerEntity(spec: SwaggerSpecification, container: ContainerR
   const validation = spec.validateModel('Container', container, false, true);
   expect(validation.valid).to.be.true;
 
-  expect(container.container.id).to.be.greaterThan(0);
+  expect(container.container.id).to.be.greaterThan(-1);
   expect(container.name).to.be.not.empty;
   expect(container.container.owner).to.be.instanceOf(User);
   expect(container.products).to.be.instanceOf(Array);
@@ -80,7 +79,7 @@ function verifyPOSEntity(spec: SwaggerSpecification, pointOfSale: PointOfSaleRev
   const validation = spec.validateModel('PointOfSale', pointOfSale, false, true);
   expect(validation.valid).to.be.true;
 
-  expect(pointOfSale.pointOfSale.id).to.be.greaterThan(0);
+  expect(pointOfSale.pointOfSale.id).to.be.greaterThan(-1);
   expect(pointOfSale.name).to.be.not.empty;
   expect(pointOfSale.pointOfSale.owner).to.be.instanceOf(User);
   expect(pointOfSale.startDate).to.be.instanceOf(Date);
@@ -96,6 +95,7 @@ describe('UserController', (): void => {
     specification: SwaggerSpecification,
     controller: UserController,
     token: string,
+    adminToken: string,
     users: Array<User>, // TODO: write create user function
     products: Array<Product>,
     // productRevisions: Array<Product>
@@ -111,27 +111,28 @@ describe('UserController', (): void => {
       specification: undefined,
       controller: undefined,
       token: undefined,
+      adminToken: undefined,
       users: [
         {
           id: 0,
           firstName: 'Roy',
-          type: 'localUser',
+          type: UserType.LOCAL_USER,
           active: true,
         } as any as User,
         {
           id: 1,
           firstName: 'Kevin',
-          type: 'member',
+          type: UserType.MEMBER,
         } as any as User,
         {
           id: 2,
           firstName: 'Ruben',
-          type: 'localAdmin',
+          type: UserType.LOCAL_ADMIN,
         } as any as User,
         {
           id: 3,
           firstName: 'Wout',
-          type: 'localUser',
+          type: UserType.LOCAL_USER,
           deleted: true,
         } as any as User,
       ],
@@ -203,22 +204,23 @@ describe('UserController', (): void => {
       transactions: undefined,
     };
 
-    const productCategory = {
-      id: 1,
-      name: 'test',
-    } as ProductCategory;
+    // const productCategory = {
+    //   id: 1,
+    //   name: 'test',
+    // } as ProductCategory;
 
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
     ctx.token = await tokenHandler.signToken({ user: ctx.users[0] }, '1');
+    ctx.adminToken = await tokenHandler.signToken({ user: ctx.users[2] }, '1');
 
     await User.save({ ...ctx.users[0] } as User);
     await User.save({ ...ctx.users[1] } as User);
     await User.save({ ...ctx.users[2] } as User);
-    await ProductCategory.save({ ...productCategory } as ProductCategory);
-    await Product.save({ ...ctx.products[0] } as Product);
-    await Product.save({ ...ctx.products[1] } as Product);
+    // await ProductCategory.save({ ...productCategory } as ProductCategory);
+    // await Product.save({ ...ctx.products[0] } as Product);
+    // await Product.save({ ...ctx.products[1] } as Product);
 
     ctx.specification = await Swagger.initialize(ctx.app);
     ctx.controller = new UserController(ctx.specification);
@@ -232,11 +234,11 @@ describe('UserController', (): void => {
     await ctx.connection.close();
   });
 
-  /* describe('GET /users', () => {
-    it('should return all users', async () => {
+  describe('GET /users', () => {
+    it('should return all users if admin', async () => {
       const res = await request(ctx.app)
         .get('/users')
-        .set('Authorization', `Bearer ${ctx.token}`);
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
 
       const users = res.body as User[];
@@ -246,10 +248,16 @@ describe('UserController', (): void => {
         verifyUserEntity(spec, user);
       });
     });
+    it('should give an HTTP 403 if not admin', async () => {
+      const res = await request(ctx.app)
+        .get('/users')
+        .set('Authorization', `Bearer ${ctx.token}`);
+      expect(res.status).to.equal(403);
+    });
   });
 
   describe('GET /users/:id', () => {
-    it('should return correct user', async () => {
+    it('should return correct user (myself)', async () => {
       const res = await request(ctx.app)
         .get('/users/0')
         .set('Authorization', `Bearer ${ctx.token}`);
@@ -259,19 +267,35 @@ describe('UserController', (): void => {
       const spec = await Swagger.importSpecification();
       verifyUserEntity(spec, user);
     });
-    it('should give an HTTP 403 when user does not exist', async () => {
-      const res = await request(ctx.app)
-        .get('/users/1234')
-        .set('Authorization', `Bearer ${ctx.token}`);
-      expect(res.status).to.equal(403);
-    });
-    it('should give an HTTP 403 when user requests different user', async () => {
+    it('should give an HTTP 403 when requesting different user', async () => {
       const res = await request(ctx.app)
         .get('/users/1')
         .set('Authorization', `Bearer ${ctx.token}`);
       expect(res.status).to.equal(403);
     });
-  }); */
+    it('should give an HTTP 403 when requesting different user that does not exist', async () => {
+      const res = await request(ctx.app)
+        .get('/users/1234')
+        .set('Authorization', `Bearer ${ctx.token}`);
+      expect(res.status).to.equal(403);
+    });
+    it('should return correct user when admin requests different user', async () => {
+      const res = await request(ctx.app)
+        .get('/users/1')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+
+      const user = res.body as User;
+      const spec = await Swagger.importSpecification();
+      verifyUserEntity(spec, user);
+    });
+    it('should give an HTTP 404 when admin requests different user that does not exist', async () => {
+      const res = await request(ctx.app)
+        .get('/users/1234')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(404);
+    });
+  });
 
   // describe('GET /users/:id/products', () => {
   //   it('should give correct owned products for user', async () => {

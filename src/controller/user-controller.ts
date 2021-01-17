@@ -21,7 +21,7 @@ import { SwaggerSpecification } from 'swagger-model-validator';
 import BaseController from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
-import User from '../entity/user/user';
+import User, { UserType } from '../entity/user/user';
 import Product from '../entity/product/product';
 import Transaction from '../entity/transactions/transaction';
 
@@ -70,7 +70,9 @@ export default class UserController extends BaseController {
    */
   // eslint-disable-next-line class-methods-use-this
   public async canGetItselfOrIsAdmin(req: RequestWithToken): Promise<boolean> {
-    return req.params.id === req.token.user.id.toString();
+    if (req.params.id === req.token.user.id.toString()) return true;
+    if (req.token.user.type === UserType.LOCAL_ADMIN) return true;
+    return false;
     // TODO: implement user roles and thus admin verification
   }
 
@@ -80,7 +82,7 @@ export default class UserController extends BaseController {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars,class-methods-use-this
   public async canRequestAdminInfo(req: RequestWithToken): Promise<boolean> {
     // TODO: implement user roles and thus admin verification
-    return true;
+    return req.token.user.type === UserType.LOCAL_ADMIN;
   }
 
   /**
