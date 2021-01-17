@@ -96,9 +96,9 @@ describe('UserController', (): void => {
     controller: UserController,
     token: string,
     adminToken: string,
-    users: Array<User>, // TODO: write create user function
+    user: User,
+    users: Array<User>,
     products: Array<Product>,
-    // productRevisions: Array<Product>
     containers: Array<Container>,
     pointOfSales: Array<PointOfSale>,
     transactions: Array<Transaction>,
@@ -112,6 +112,11 @@ describe('UserController', (): void => {
       controller: undefined,
       token: undefined,
       adminToken: undefined,
+      user: {
+        firstName: 'Rick',
+        lastName: 'Wouters',
+        type: UserType.MEMBER,
+      } as any as User,
       users: [
         {
           id: 0,
@@ -294,6 +299,146 @@ describe('UserController', (): void => {
         .get('/users/1234')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(404);
+    });
+  });
+
+  describe('POST /users', () => {
+    it('should give an HTTP 403 when not an admin', async () => {
+      const res = await request(ctx.app)
+        .post('/users')
+        .set('Authorization', `Bearer ${ctx.token}`)
+        .send(ctx.user);
+      expect(res.status).to.equal(403);
+    });
+
+    it('should give HTTP 200 when correctly creating user', async () => {
+      const res = await request(ctx.app)
+        .post('/users')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(ctx.user);
+      expect(res.status).to.equal(200);
+
+      const user = res.body as User;
+      const spec = await Swagger.importSpecification();
+      verifyUserEntity(spec, user);
+    });
+
+    it('should create user without lastName', async () => {
+      const userObj = { ...ctx.user };
+      delete userObj.lastName;
+
+      const res = await request(ctx.app)
+        .post('/users')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(userObj);
+      expect(res.status).to.equal(200);
+
+      const user = res.body as User;
+      const spec = await Swagger.importSpecification();
+      verifyUserEntity(spec, user);
+    });
+
+    it('should create user with empty lastName', async () => {
+      const userObj = { ...ctx.user, lastName: '' };
+
+      const res = await request(ctx.app)
+        .post('/users')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(userObj);
+      expect(res.status).to.equal(200);
+
+      const user = res.body as User;
+      const spec = await Swagger.importSpecification();
+      verifyUserEntity(spec, user);
+    });
+
+    it('should give HTTP 400 when too long lastName', async () => {
+      const userObj = { ...ctx.user, lastName: 'ThisIsAStringThatIsMuchTooLongToFitInASixtyFourCharacterStringBox' };
+
+      const res = await request(ctx.app)
+        .post('/users')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(userObj);
+      expect(res.status).to.equal(400);
+    });
+
+    it('should give HTTP 400 when no firstName', async () => {
+      const userObj = { ...ctx.user };
+      delete userObj.firstName;
+
+      const res = await request(ctx.app)
+        .post('/users')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(userObj);
+      expect(res.status).to.equal(400);
+    });
+
+    it('should give HTTP 400 when empty firstName', async () => {
+      const userObj = { ...ctx.user, firstName: '' };
+
+      const res = await request(ctx.app)
+        .post('/users')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(userObj);
+      expect(res.status).to.equal(400);
+    });
+
+    it('should give HTTP 400 when too long firstName', async () => {
+      const userObj = { ...ctx.user, firstName: 'ThisIsAStringThatIsMuchTooLongToFitInASixtyFourCharacterStringBox' };
+
+      const res = await request(ctx.app)
+        .post('/users')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(userObj);
+      expect(res.status).to.equal(400);
+    });
+
+    it('should give HTTP 400 when non-existing UserType', async () => {
+      const userObj = { ...ctx.user, type: 6969420 };
+
+      const res = await request(ctx.app)
+        .post('/users')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(userObj);
+      expect(res.status).to.equal(400);
+    });
+
+    it('should give HTTP 400 when new user is already deleted', async () => {
+      const userObj = { ...ctx.user, deleted: true };
+
+      const res = await request(ctx.app)
+        .post('/users')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(userObj);
+      expect(res.status).to.equal(400);
+    });
+
+    it('should create user when active is true', async () => {
+      const userObj = { ...ctx.user, active: true };
+
+      const res = await request(ctx.app)
+        .post('/users')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(userObj);
+      expect(res.status).to.equal(200);
+
+      const user = res.body as User;
+      const spec = await Swagger.importSpecification();
+      verifyUserEntity(spec, user);
+    });
+
+    it('should create user when active is false', async () => {
+      const userObj = { ...ctx.user, active: false };
+
+      const res = await request(ctx.app)
+        .post('/users')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(userObj);
+      expect(res.status).to.equal(200);
+
+      const user = res.body as User;
+      const spec = await Swagger.importSpecification();
+      verifyUserEntity(spec, user);
     });
   });
 

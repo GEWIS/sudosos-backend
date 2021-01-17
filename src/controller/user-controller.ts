@@ -24,6 +24,7 @@ import { RequestWithToken } from '../middleware/token-middleware';
 import User, { UserType } from '../entity/user/user';
 import Product from '../entity/product/product';
 import Transaction from '../entity/transactions/transaction';
+import CreateUserRequest from './request/create-user-request';
 
 export default class UserController extends BaseController {
   private logger: Logger = log4js.getLogger('UserController');
@@ -40,8 +41,13 @@ export default class UserController extends BaseController {
     return {
       '/': {
         GET: {
-          policy: this.canRequestAdminInfo.bind(this),
+          policy: this.isAdmin.bind(this),
           handler: this.getAllUsers.bind(this),
+        },
+        POST: {
+          body: { modelName: 'CreateUserRequest' },
+          policy: this.isAdmin.bind(this),
+          handler: this.createUser.bind(this),
         },
       },
       '/:id': {
@@ -80,7 +86,7 @@ export default class UserController extends BaseController {
    * Validates that the user is an admin
    */
   // eslint-disable-next-line @typescript-eslint/no-unused-vars,class-methods-use-this
-  public async canRequestAdminInfo(req: RequestWithToken): Promise<boolean> {
+  public async isAdmin(req: RequestWithToken): Promise<boolean> {
     // TODO: implement user roles and thus admin verification
     return req.token.user.type === UserType.LOCAL_ADMIN;
   }
@@ -118,6 +124,44 @@ export default class UserController extends BaseController {
     }
 
     res.status(200).json(user);
+  }
+
+  /**
+   * Create a new user
+   * @route POST /users
+   * @group users - Operations of user controller
+   * @returns {User.model} 200 - New user
+   * @returns {string} 400 - Bad request
+   */
+  // eslint-disable-next-line class-methods-use-this
+  public async createUser(req: RequestWithToken, res: Response): Promise<void> {
+    const body = req.body as CreateUserRequest;
+    this.logger.trace('Create user', body, 'by user', req.token.user);
+
+    if (body.firstName.length === 0) {
+      res.status(400).json('firstName cannot be empty');
+      return;
+    }
+    if (body.firstName.length > 64) {
+      res.status(400).json('firstName too long');
+      return;
+    }
+    if (body.lastName && body.lastName.length > 64) {
+      res.status(400).json('lastName too long');
+      return;
+    }
+    if (!Object.values(UserType).includes(body.type)) {
+      res.status(400).json('type is not a valid UserType');
+      return;
+    }
+
+    try {
+      const user = await User.save(body as User);
+      res.status(200).json(user);
+    } catch (error) {
+      this.logger.error('Could not create product:', error);
+      res.status(500).json('Internal server error.');
+    }
   }
 
   /**
