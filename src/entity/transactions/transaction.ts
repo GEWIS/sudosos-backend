@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  Entity, ManyToOne, JoinColumn, OneToMany,
+  Entity, ManyToOne, OneToMany,
 } from 'typeorm';
 // eslint-disable-next-line import/no-cycle
 import SubTransaction from './sub-transaction';
@@ -34,17 +34,14 @@ import PointOfSaleRevision from '../point-of-sale/point-of-sale-revision';
 @Entity()
 export default class Transaction extends BaseEntity {
   @ManyToOne(() => User, { nullable: false })
-  @JoinColumn()
   public from: User;
 
   @ManyToOne(() => User, { nullable: true })
-  @JoinColumn()
   public createdBy?: User;
 
   @OneToMany(() => SubTransaction, (subTransaction) => subTransaction.transaction)
   public subTransactions: SubTransaction[];
 
   @ManyToOne(() => PointOfSaleRevision)
-  @JoinColumn()
   public pointOfSale: PointOfSaleRevision;
 }

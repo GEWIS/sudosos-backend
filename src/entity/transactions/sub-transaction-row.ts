@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  Column, Entity, JoinColumn, ManyToOne,
+  Column, Entity, ManyToOne,
 } from 'typeorm';
 import BaseEntity from '../base-entity';
 // eslint-disable-next-line import/no-cycle
@@ -32,7 +32,6 @@ import ProductRevision from '../product/product-revision';
 @Entity()
 export default class SubTransactionRow extends BaseEntity {
   @ManyToOne(() => ProductRevision, { nullable: false })
-  @JoinColumn()
   public product: ProductRevision;
 
   @Column({
@@ -41,6 +40,5 @@ export default class SubTransactionRow extends BaseEntity {
   public amount: number;
 
   @ManyToOne(() => SubTransaction, { nullable: false })
-  @JoinColumn()
   public subTransaction: SubTransaction;
 }

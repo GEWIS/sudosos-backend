@@ -35,11 +35,12 @@ import EanAuthenticator from './entity/authenticator/ean-authenticator';
 import MemberAuthenticator from './entity/authenticator/member-authenticator';
 import NfcAuthenticator from './entity/authenticator/nfc-authenticator';
 import PinAuthenticator from './entity/authenticator/pin-authenticator';
-import Advertisement from './entity/advertisement';
+import Banner from './entity/banner';
 import Transfer from './entity/transactions/transfer';
 import ProductRevision from './entity/product/product-revision';
 import ContainerRevision from './entity/container/container-revision';
 import PointOfSaleRevision from './entity/point-of-sale/point-of-sale-revision';
+import ProductOrdering from './entity/point-of-sale/product-ordering';
 
 export default class Database {
   public static async initialize(): Promise<Connection> {
@@ -67,7 +68,8 @@ export default class Database {
         MemberAuthenticator,
         NfcAuthenticator,
         PinAuthenticator,
-        Advertisement,
+        Banner,
+        ProductOrdering,
       ],
     };
     return createConnection(options);

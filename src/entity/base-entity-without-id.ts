@@ -21,8 +21,8 @@ import {
 
 /**
  * @typedef BaseEntityWithoutId
- * @property {Date} createdAt - The creation date of the object.
- * @property {Date} updatedAt - The last update date of the object.
+ * @property {string} createdAt - The creation date of the object.
+ * @property {string} updatedAt - The last update date of the object.
  * @property {integer} version - The current version of the object.
  */
 export default class BaseEntityWithoutId extends OrmBaseEntity {

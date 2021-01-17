@@ -15,9 +15,21 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { Entity } from 'typeorm';
+import {
+  Column,
+  Entity,
+  ManyToOne,
+} from 'typeorm';
 import BaseEntity from '../base-entity';
+import User from '../user/user';
 
 @Entity()
 export default class PointOfSale extends BaseEntity {
+  @Column({
+    nullable: true,
+  })
+  public currentRevision: number;
+
+  @ManyToOne(() => User, { nullable: false })
+  public owner: User;
 }

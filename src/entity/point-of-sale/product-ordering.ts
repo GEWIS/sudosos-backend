@@ -16,19 +16,23 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  Column, JoinTable, ManyToMany,
+  Column,
+  Entity,
+  ManyToOne,
+  Unique,
 } from 'typeorm';
-import BaseEntityWithoutId from '../base-entity-without-id';
-import ProductRevision from '../product/product-revision';
+import Product from '../product/product';
+import PointOfSale from './point-of-sale';
 
-export default class BaseContainer extends BaseEntityWithoutId {
-  @Column({
-    unique: true,
-    length: 64,
-  })
-  public name: string;
+@Entity()
+@Unique(['pos', 'product', 'order'])
+export default class ProductOrdering {
+  @ManyToOne(() => PointOfSale, { primary: true })
+  pos: PointOfSale;
 
-  @ManyToMany(() => ProductRevision)
-  @JoinTable()
-  public products: ProductRevision[];
+  @ManyToOne(() => Product, { primary: true })
+  product: Product;
+
+  @Column()
+  order: number;
 }

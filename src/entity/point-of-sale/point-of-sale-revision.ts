@@ -16,7 +16,10 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  Entity, ManyToOne, Column, SaveOptions,
+  Entity,
+  ManyToOne,
+  Column,
+  BeforeUpdate,
 } from 'typeorm';
 import BasePointOfSale from './base-point-of-sale';
 import PointOfSale from './point-of-sale';
@@ -37,14 +40,9 @@ export default class PointOfSaleRevision extends BasePointOfSale {
   })
   public revision: number;
 
-  /**
-   * Saving revisions should always occur using the save() method,
-   * using the Repository does not automatically increment the version number.
-   *
-   * @inheritdoc
-   */
-  public async save(options?: SaveOptions): Promise<this> {
-    this.revision += 1;
-    return super.save(options);
+  @BeforeUpdate()
+  // eslint-disable-next-line class-methods-use-this
+  denyUpdate() {
+    throw new Error('Immutable entities cannot be updated.');
   }
 }

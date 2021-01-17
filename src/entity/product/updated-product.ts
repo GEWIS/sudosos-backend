@@ -16,15 +16,19 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  Entity, JoinColumn, OneToOne, PrimaryColumn,
+  Entity,
+  JoinColumn,
+  OneToOne,
 } from 'typeorm';
 import BaseProduct from './base-product';
 import Product from './product';
 
 @Entity()
 export default class UpdatedProduct extends BaseProduct {
-  @PrimaryColumn()
-  @OneToOne(() => Product, { nullable: false })
-  @JoinColumn({ name: 'product', referencedColumnName: 'id' })
-  public product: Product[];
+  @OneToOne(() => Product, {
+    primary: true,
+    nullable: false,
+  })
+  @JoinColumn()
+  public product: Product;
 }
