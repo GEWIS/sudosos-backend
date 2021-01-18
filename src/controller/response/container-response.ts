@@ -15,33 +15,29 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { DineroObject } from 'dinero.js';
 import User from '../../entity/user/user';
 import ProductCategory from '../../entity/product/product-category';
+import { ProductResponse, BaseProductResponse } from "./product-response";
 import BaseResponse from "./base-response";
 
+
+export default interface BaseContainerResponse extends BaseResponse {
+  revision: number,
+  name: string,
+  products: BaseProductResponse[] | ProductResponse[]
+}
 /**
- * @typedef {BaseEntity} ProductResponse
+ * @typedef {BaseResponse} ContainerResponse
+ * @property {number} id.required - The unique id of the product.
  * @property {string} name.required - The name of the product.
  * @property {Dinero.model} price.required - The price of the product.
- */
-export interface BaseProductResponse extends BaseResponse {
-  name: string,
-  price: DineroObject,
-}
-
-/**
- * @typedef {BaseProductResponse} ProductResponse
- * @property {number} revision - The revision of the product.
  * @property {User.model} owner.required - The owner of the product.
  * @property {ProductCategory.model} category.required - The category the product belongs to.
  * @property {string} picture.required - The URL to the picture representing this product.
  * @property {number} alcoholPercentage - The percentage of alcohol in this product.
  */
-export interface ProductResponse extends BaseProductResponse {
-  revision?: number,
-  owner: User,
-  category: ProductCategory,
-  picture: String,
-  alcoholPercentage: number,
+export default interface ContainerResponse extends BaseContainerResponse {
+  revision: number,
+  name: string,
+  products: BaseProductResponse[] | ProductResponse[]
 }

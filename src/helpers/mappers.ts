@@ -21,6 +21,8 @@ import ProductRevision from "../entity/product/product-revision";
 import User from "../entity/user/user";
 import UpdatedProduct from "../entity/product/updated-product";
 import ProductResponse from "../controller/response/product-response";
+import Container from "../entity/container/container";
+import ContainerRevision from "../entity/container/container-revision";
 
 export default class Mappers {
     public async getProducts(owner: User = null, returnUpdated: boolean = true): Promise<ProductResponse[]> {
@@ -32,6 +34,52 @@ export default class Mappers {
             'productrevision.name', 'productrevision.price', 'product.owner', 'productrevision.category',
             'productrevision.picture', 'productrevision.alcoholpercentage'
         ]);
+        if (owner !== null) {
+            builder.where("product.owner = :owner", {owner: owner.id});
+        }
+        if (!returnUpdated) {
+            builder.where(builder => {
+                const subQuery = builder.subQuery()
+                    .select("updatedproduct.product")
+                    .from(UpdatedProduct, "updatedproduct")
+                    .getQuery();
+                return `product.id NOT IN (:subQuery)`, {subQuery: subQuery};
+            });
+        }
+        return await builder.getMany() as ProductResponse[];
+    }
+
+    public async getUpdatedProducts(owner: User = null): Promise<ProductResponse[]> {
+        const builder= createQueryBuilder(Product)
+            .innerJoin(UpdatedProduct, "updatedproduct", "product.id = updatedproduct.product")
+            .select([
+                'product.id', 'product.createdAt', 'updatedproduct.updatedAt', 'updatedproduct.name',
+                'updatedproduct.price', 'product.owner', 'updatedproduct.category', 'updatedproduct.picture',
+                'updatedproduct.alcoholpercentage'
+            ]);
+        if (owner !== null) {
+            builder.where("product.owner = :owner", {owner: owner.id});
+        }
+        return await builder.getMany() as ProductResponse[];
+    }
+
+    public async getProductsWithUpdates(owner: User = null): Promise<ProductResponse[]> {
+        const products = await this.getProducts(owner);
+        const updatedProducts = await this.getUpdatedProducts(owner);
+
+        return products.concat(updatedProducts) as ProductResponse[];
+    }
+
+
+    public async getContainers(owner: User = null, returnUpdated: boolean = true): Promise<ProductResponse[]> {
+        const builder = createQueryBuilder(Container, "container")
+            .innerJoinAndSelect(ContainerRevision, "containerrevision", "container.id = containerrevision.product " +
+                "AND container.currentRevision = containerrevision.revision")
+            .select([
+                'container.id', 'container.createdAt', 'containerrevision.updatedAt', 'containerrevision.revision',
+                'containerrevision.name', 'containerrevision.price', 'container.owner', 'containerrevision.category',
+                'containerrevision.picture', 'containerrevision.alcoholpercentage'
+            ]);
         if (owner !== null) {
             builder.where("product.owner = :owner", {owner: owner.id});
         }
