@@ -18,10 +18,10 @@
 import { DineroObject } from 'dinero.js';
 import User from '../../entity/user/user';
 import ProductCategory from '../../entity/product/product-category';
-import BaseResponse from "./base-response";
+import BaseResponse from './base-response';
 
 /**
- * @typedef {BaseEntity} ProductResponse
+ * @typedef {BaseResponse} BaseProductResponse
  * @property {string} name.required - The name of the product.
  * @property {Dinero.model} price.required - The price of the product.
  */

@@ -15,25 +15,31 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { ProductResponse } from './product-response';
 import BaseResponse from './base-response';
 import User from '../../entity/user/user';
+import {BaseContainerResponse, ContainerResponse} from './container-response';
+import ProductOrdering from '../../entity/point-of-sale/product-ordering';
+import Container from '../../entity/container/container';
 
 /**
- * @typedef {BaseResponse} BaseContainerResponse
- * @property {string} name.required - The name of the container.
+ * @typedef {BaseResponse} BasePointOfSaleResponse
+ * @property {string} name.required - The name of the point-of-sale.
  */
-export interface BaseContainerResponse extends BaseResponse {
+export interface BasePointOfSaleResponse extends BaseResponse {
   name: string,
 }
 /**
- * @typedef {BaseContainerResponse} ContainerResponse
- * @property {number} revision - The revision of the container.
- * @property {User.model} owner.required - The owner of the container.
- * @property {BaseProductResponse} products.required - The products in the container.
+ * @typedef {BaseContainerResponse} PointOfSaleResponse
+ * @property {number} revision - The revision of the point-of-sale.
+ * @property {User.model} owner.required - The owner of the point-of-sale.
+ * @property {BaseProductResponse} products.required - The products in the point-of-sale.
  */
-export interface ContainerResponse extends BaseContainerResponse {
+export interface PointOfSaleResponse extends BasePointOfSaleResponse {
   revision: number,
   owner: User,
-  products: ProductResponse[],
+  startDate: Date,
+  endDate: Date,
+  products: BaseContainerResponse[] | ContainerResponse[],
+  productOrder?: ProductOrdering,
+  useAuthentication: boolean,
 }

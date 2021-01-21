@@ -17,7 +17,7 @@
  */
 import { DineroObject } from 'dinero.js';
 import User from '../../entity/user/user';
-import ProductCategory from '../../entity/product-category';
+import ProductCategory from '../../entity/product/product-category';
 
 /**
  * @typedef CreateProductRequest
