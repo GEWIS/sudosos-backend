@@ -89,7 +89,7 @@ export default class AuthenticationController extends BaseController {
    * Mock login and hand out token.
    * @route POST /authentication/mock
    * @group authenticate - Operations of authentication controller
-   * @param {AuthenticationMockRequest.model} request.body.required - The mock login.
+   * @param {AuthenticationMockRequest.model} req.body.required - The mock login.
    * @returns {string} 200 - The created json web token.
    * @returns {string} 400 - Validation error.
    */
