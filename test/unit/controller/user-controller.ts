@@ -449,6 +449,114 @@ describe('UserController', (): void => {
     });
   });
 
+  describe('PATCH /users/:id', () => {
+    it('should give HTTP 403 when user is not an admin', async () => {
+      const res = await request(ctx.app)
+        .patch('/users/1')
+        .set('Authorization', `Bearer ${ctx.token}`)
+        .send({ firstName: 'Ralf' });
+      expect(res.status).to.equal(403);
+    });
+    it('should correctly change firstName if requester is admin', async () => {
+      const firstName = 'Ralf';
+
+      const res = await request(ctx.app)
+        .patch('/users/1')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ firstName });
+      expect(res.status).to.equal(200);
+
+      const user = res.body as User;
+      const spec = await Swagger.importSpecification();
+      expect(user.firstName).to.deep.equal(firstName);
+      verifyUserEntity(spec, user);
+    });
+    it('should give HTTP 400 if firstName is emtpy', async () => {
+      const res = await request(ctx.app)
+        .patch('/users/1')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ firstName: '' });
+      expect(res.status).to.equal(400);
+    });
+    it('should give HTTP 400 if firstName is too long', async () => {
+      const res = await request(ctx.app)
+        .patch('/users/1')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ firstName: 'ThisIsAStringThatIsMuchTooLongToFitInASixtyFourCharacterStringBox' });
+      expect(res.status).to.equal(400);
+    });
+    it('should correctly change lastName if requester is admin', async () => {
+      const lastName = 'Eemers';
+
+      const res = await request(ctx.app)
+        .patch('/users/1')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ lastName });
+      expect(res.status).to.equal(200);
+
+      const user = res.body as User;
+      const spec = await Swagger.importSpecification();
+      expect(user.lastName).to.deep.equal(lastName);
+      verifyUserEntity(spec, user);
+    });
+    it('should correctly change lastName to empty string if requester is admin', async () => {
+      const lastName = '';
+
+      const res = await request(ctx.app)
+        .patch('/users/1')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ lastName });
+      expect(res.status).to.equal(200);
+
+      const user = res.body as User;
+      const spec = await Swagger.importSpecification();
+      expect(user.lastName).to.deep.equal(lastName);
+      verifyUserEntity(spec, user);
+    });
+    it('should give HTTP 400 if firstName is too long', async () => {
+      const res = await request(ctx.app)
+        .patch('/users/1')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ lastName: 'ThisIsAStringThatIsMuchTooLongToFitInASixtyFourCharacterStringBox' });
+      expect(res.status).to.equal(400);
+    });
+    it('should correctly set user inactive if requester is admin', async () => {
+      const active = false;
+
+      const res = await request(ctx.app)
+        .patch('/users/0')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ active });
+      expect(res.status).to.equal(200);
+
+      const user = res.body as User;
+      const spec = await Swagger.importSpecification();
+      expect(user.active).to.deep.equal(active);
+      verifyUserEntity(spec, user);
+    });
+    it('should correctly set user active if requester is admin', async () => {
+      const active = true;
+
+      const res = await request(ctx.app)
+        .patch('/users/1')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ active });
+      expect(res.status).to.equal(200);
+
+      const user = res.body as User;
+      const spec = await Swagger.importSpecification();
+      expect(user.active).to.deep.equal(active);
+      verifyUserEntity(spec, user);
+    });
+    it('should give HTTP 400 if active is undefined', async () => {
+      const res = await request(ctx.app)
+        .patch('/users/1')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ active: undefined });
+      expect(res.status).to.equal(400);
+    });
+  });
+
   describe('DELETE /users/:id', () => {
     it('should give HTTP 403 when user is not an admin', async () => {
       const res = await request(ctx.app)

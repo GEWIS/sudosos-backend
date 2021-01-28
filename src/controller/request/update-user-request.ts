@@ -15,16 +15,15 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { UserType } from '../../entity/user/user';
-import UpdateUserRequest from './update-user-request';
 
 /**
- * @typedef CreateUserRequest
- * @property {string} firstName.required
+ * @typedef UpdateUserRequest
+ * @property {string} firstName
  * @property {string} lastName
  * @property {boolean} active
- * @property {number} type.required
  */
-export default interface CreateUserRequest extends UpdateUserRequest {
-  type: UserType;
+export default interface UpdateUserRequest {
+  firstName?: string;
+  lastName?: string;
+  active?: boolean;
 }

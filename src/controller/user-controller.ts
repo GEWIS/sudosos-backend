@@ -25,6 +25,7 @@ import User, { UserType } from '../entity/user/user';
 import Product from '../entity/product/product';
 import Transaction from '../entity/transactions/transaction';
 import CreateUserRequest from './request/create-user-request';
+import UpdateUserRequest from './request/update-user-request';
 
 export default class UserController extends BaseController {
   private logger: Logger = log4js.getLogger('UserController');
@@ -58,6 +59,11 @@ export default class UserController extends BaseController {
         DELETE: {
           policy: this.isAdmin.bind(this),
           handler: this.deleteUser.bind(this),
+        },
+        PATCH: {
+          body: { modelName: 'UpdateUserRequest' },
+          policy: this.isAdmin.bind(this),
+          handler: this.updateUser.bind(this),
         },
       },
       '/:id/products': {
@@ -162,6 +168,48 @@ export default class UserController extends BaseController {
     try {
       const user = await User.save(body as User);
       res.status(201).json(user);
+    } catch (error) {
+      this.logger.error('Could not create product:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  public async updateUser(req: RequestWithToken, res: Response): Promise<void> {
+    const body = req.body as UpdateUserRequest;
+    console.log(body);
+    const parameters = req.params;
+    this.logger.trace('Update user', parameters.id, 'with', body, 'by user', req.token.user);
+
+    if (body.firstName !== undefined) console.log(body.firstName.length);
+    if (body.firstName !== undefined && body.firstName.length === 0) {
+      res.status(400).json('firstName cannot be empty');
+      return;
+    }
+    if (body.firstName !== undefined && body.firstName.length > 64) {
+      res.status(400).json('firstName too long');
+      return;
+    }
+    if (body.lastName !== undefined && body.lastName.length > 64) {
+      res.status(400).json('lastName too long');
+      return;
+    }
+
+    // Get the user object if it exists
+    let user = await User.findOne(parameters.id, { where: { deleted: false } });
+    // If it does not exist, return a 404 error
+    if (user === undefined) {
+      res.status(404).json('Unknown user ID.');
+      return;
+    }
+
+    try {
+      user = {
+        ...body,
+      } as User;
+      await User.update(parameters.id, user);
+      res.status(200).json(
+        await User.findOne(parameters.id, { where: { deleted: false } }),
+      );
     } catch (error) {
       this.logger.error('Could not create product:', error);
       res.status(500).json('Internal server error.');
