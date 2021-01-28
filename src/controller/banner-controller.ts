@@ -23,6 +23,7 @@ import Policy from './policy';
 import BannerRequest from './request/banner-request';
 import { RequestWithToken } from '../middleware/token-middleware';
 import Banner from '../entity/banner';
+import { UserType } from '../entity/user/user';
 
 export default class BannerController extends BaseController {
   private logger: Logger = log4js.getLogger('BannerController');
@@ -78,7 +79,7 @@ export default class BannerController extends BaseController {
    */
   // eslint-disable-next-line class-methods-use-this
   public async canGetAllBanners(req: RequestWithToken): Promise<boolean> {
-    return true;
+    return req.token.user.type === UserType.LOCAL_ADMIN;
   }
 
   /**
@@ -109,7 +110,7 @@ export default class BannerController extends BaseController {
    */
   // eslint-disable-next-line class-methods-use-this
   public async canCreateBanner(req: RequestWithToken): Promise<boolean> {
-    return true;
+    return req.token.user.type === UserType.LOCAL_ADMIN;
   }
 
   /**
@@ -151,7 +152,7 @@ export default class BannerController extends BaseController {
    */
   // eslint-disable-next-line class-methods-use-this
   public async canGetSingleBanner(req: RequestWithToken): Promise<boolean> {
-    return true;
+    return req.token.user.type === UserType.LOCAL_ADMIN;
   }
 
   /**
@@ -183,7 +184,7 @@ export default class BannerController extends BaseController {
    */
   // eslint-disable-next-line class-methods-use-this
   public async canUpdateBanner(req: RequestWithToken): Promise<boolean> {
-    return true;
+    return req.token.user.type === UserType.LOCAL_ADMIN;
   }
 
   /**
@@ -222,7 +223,7 @@ export default class BannerController extends BaseController {
    */
   // eslint-disable-next-line class-methods-use-this
   public async canRemoveBanner(req: RequestWithToken): Promise<boolean> {
-    return true;
+    return req.token.user.type === UserType.LOCAL_ADMIN;
   }
 
   /**
@@ -255,7 +256,7 @@ export default class BannerController extends BaseController {
    */
   // eslint-disable-next-line class-methods-use-this
   public async canGetActiveBanners(req: RequestWithToken): Promise<boolean> {
-    return true;
+    return req.token.user.type === UserType.LOCAL_ADMIN;
   }
 
   /**
