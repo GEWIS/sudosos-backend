@@ -99,7 +99,7 @@ export default async function createApp(): Promise<Application> {
   // Setup token handler and authentication controller.
   await setupAuthentication(application);
 
-  // REMOVE LATER, test for banner controller
+  // REMOVE LATER, banner controller development
   application.app.use('/v1/banners', new BannerController(application.specification).getRouter());
 
   // Start express application.

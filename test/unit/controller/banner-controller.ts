@@ -62,13 +62,13 @@ describe('BannerController', async (): Promise<void> => {
     // create dummy users
     const users = [
       {
-        id: 0,
+        id: 1,
         firstName: 'Admin',
         type: UserType.LOCAL_ADMIN,
         active: true,
       } as User,
       {
-        id: 1,
+        id: 2,
         firstName: 'User',
         type: UserType.LOCAL_USER,
         active: true,
@@ -84,10 +84,10 @@ describe('BannerController', async (): Promise<void> => {
 
     // create bearer tokens
     const tokenHandler = new TokenHandler({
-      algorithm: 'HS256', publicKey: 'pub', privateKey: 'priv', expiry: 60,
+      algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
-    const adminToken = await tokenHandler.signToken({ user: users[0] }, '1');
-    const token = await tokenHandler.signToken({ user: users[1] }, '1');
+    const adminToken = await tokenHandler.signToken({ user: users[0] }, 'nonce admin');
+    const token = await tokenHandler.signToken({ user: users[1] }, 'nonce');
 
     const app = express();
     const specification = await Swagger.initialize(app);
@@ -96,7 +96,7 @@ describe('BannerController', async (): Promise<void> => {
     app.use(new TokenMiddleware({ tokenHandler, refreshFactor: 0.5 }).getMiddleware());
     app.use('/banners', controller.getRouter());
 
-    // instantiate context
+    // initialize context
     ctx = {
       connection,
       app,
@@ -108,12 +108,11 @@ describe('BannerController', async (): Promise<void> => {
     };
   });
 
-  // remove database entries
+  // close database connection
   afterEach(async () => {
     await ctx.connection.close();
   });
 
-  // get banner test
   describe('GET /banners', () => {
     it('should return all banners if admin', async () => {
       const res = await request(ctx.app)
