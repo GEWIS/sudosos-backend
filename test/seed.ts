@@ -18,6 +18,8 @@
 import dinero from 'dinero.js';
 import Container from '../src/entity/container/container';
 import ContainerRevision from '../src/entity/container/container-revision';
+import PointOfSale from '../src/entity/point-of-sale/point-of-sale';
+import PointOfSaleRevision from '../src/entity/point-of-sale/point-of-sale-revision';
 import Product from '../src/entity/product/product';
 import ProductCategory from '../src/entity/product/product-category';
 import ProductRevision from '../src/entity/product/product-revision';
@@ -177,6 +179,8 @@ function defineContainers(
     container.currentRevision = 1 + (nr % 3);
     for (let rev = 1; rev <= container.currentRevision; rev += 1) {
       revisions.push(Object.assign(new ContainerRevision(), {
+        container,
+        revision: rev,
         name: `Container${start + nr}-${rev}`,
         products: candidates.filter((p) => p.revision === rev),
       }) as ContainerRevision);
@@ -188,7 +192,7 @@ function defineContainers(
  * Seeds a default dataset of containers, based on the supplied user and product revision dataset.
  * Every user of type local andmin and organ will get containers.
  *
- * @param users - The dataset of users to base the product dataset on.
+ * @param users - The dataset of users to base the container dataset on.
  * @param productRevisions - The dataset of product revisions to base the container dataset on.
  */
 async function seedContainers(
@@ -212,6 +216,69 @@ async function seedContainers(
   return { containers, containerRevisions };
 }
 
+/**
+ * Defines point of sale objects with revisions based on the parameters passed.
+ *
+ * @param pointsOfSale - The target array in which the point of sale objects are stored.
+ * @param revisions - The target array in which the revision objects are stored.
+ * @param count - The number of containers to generate.
+ * @param user - The user that is owner of the containers.
+ * @param containerRevisions - The container revisions which will be used in the points of sale.
+ */
+function definePointsOfSale(
+  pointsOfSale: PointOfSale[],
+  revisions: PointOfSaleRevision[],
+  count: number,
+  user: User,
+  containerRevisions: ContainerRevision[],
+) {
+  const start = pointsOfSale.length;
+  for (let nr = 0; nr < count; nr += 1) {
+    const pointOfSale = Object.assign(new PointOfSale(), {
+      owner: user,
+    }) as PointOfSale;
+    pointsOfSale.push(pointOfSale);
+
+    pointOfSale.currentRevision = 1 + (nr % 3);
+    for (let rev = 1; rev <= pointOfSale.currentRevision; rev += 1) {
+      revisions.push(Object.assign(new PointOfSaleRevision(), {
+        pointOfSale,
+        revision: rev,
+        name: `PointOfSale${start + nr}-${rev}`,
+        containers: containerRevisions.filter((c) => c.revision === rev),
+      }) as PointOfSaleRevision);
+    }
+  }
+}
+
+/**
+ * Seeds a default dataset of points of sale, based on the supplied user and container
+ * revision dataset. Every user of type local andmin and organ will get containers.
+ *
+ * @param users - The dataset of users to base the point of sale dataset on.
+ * @param containerRevisions - The dataset of container revisions to base the container dataset on.
+ */
+async function seedPointsOfSale(
+  users: User[],
+  containerRevisions: ContainerRevision[],
+): Promise<{
+    pointsOfSale: PointOfSale[],
+    pointOfSaleRevisions: PointOfSaleRevision[],
+  }> {
+  const pointsOfSale: PointOfSale[] = [];
+  const pointOfSaleRevisions: PointOfSaleRevision[] = [];
+
+  const sellers = users.filter((u) => [UserType.LOCAL_ADMIN, UserType.MEMBER].includes(u.type));
+  for (let i = 0; i < sellers.length; i += 1) {
+    definePointsOfSale(pointsOfSale, pointOfSaleRevisions, 3, sellers[i], containerRevisions);
+  }
+
+  await PointOfSale.save(pointsOfSale);
+  await PointOfSaleRevision.save(pointOfSaleRevisions);
+
+  return { pointsOfSale, pointOfSaleRevisions };
+}
+
 export interface DatabaseContent {
   users: User[],
   categories: ProductCategory[],
@@ -219,6 +286,8 @@ export interface DatabaseContent {
   productRevisions: ProductRevision[],
   containers: Container[],
   containerRevisions: ContainerRevision[],
+  pointsOfSale: PointOfSale[],
+  pointOfSaleRevisions: PointOfSaleRevision[],
 }
 
 export default async function seedDatabase(): Promise<DatabaseContent> {
@@ -226,6 +295,7 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
   const categories = await seedProductCategories();
   const { products, productRevisions } = await seedProducts(users, categories);
   const { containers, containerRevisions } = await seedContainers(users, productRevisions);
+  const { pointsOfSale, pointOfSaleRevisions } = await seedPointsOfSale(users, containerRevisions);
 
   return {
     users,
@@ -234,5 +304,7 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
     productRevisions,
     containers,
     containerRevisions,
+    pointsOfSale,
+    pointOfSaleRevisions,
   };
 }
