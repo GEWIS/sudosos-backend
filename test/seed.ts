@@ -73,6 +73,7 @@ async function seedUsers(): Promise<User[]> {
     promises.push(User.save(u));
     users = users.concat(u);
   }
+  await Promise.all(promises);
 
   return User.save(users);
 }
