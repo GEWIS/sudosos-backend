@@ -426,7 +426,26 @@ async function seedTransactions(
       : users[(i * 5 + pos.pointOfSale.id * 7 + pos.revision) % users.length];
     const trans = defineTransactions(transactions.length, 2, pos, from, createdBy);
 
-    promises.push(Transaction.save(trans));
+    // First, save all transactions.
+    const promise = Transaction.save(trans)
+      .then(async () => {
+        // Then, save all subtransactions for the transactions.
+        const subPromises: Promise<any>[] = [];
+        trans.forEach((t) => {
+          subPromises.push(SubTransaction.save(t.subTransactions));
+        });
+        await Promise.all(subPromises);
+      }).then(async () => {
+        // Then, save all subtransactions rows for the subtransactions.
+        const subPromises: Promise<any>[] = [];
+        trans.forEach((t) => {
+          t.subTransactions.forEach((s) => {
+            subPromises.push(SubTransactionRow.save(s.subTransactionRows));
+          });
+        });
+        await Promise.all(subPromises);
+      });
+    promises.push(promise);
 
     transactions = transactions.concat(trans);
   }
