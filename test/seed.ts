@@ -23,6 +23,9 @@ import PointOfSaleRevision from '../src/entity/point-of-sale/point-of-sale-revis
 import Product from '../src/entity/product/product';
 import ProductCategory from '../src/entity/product/product-category';
 import ProductRevision from '../src/entity/product/product-revision';
+import SubTransaction from '../src/entity/transactions/sub-transaction';
+import SubTransactionRow from '../src/entity/transactions/sub-transaction-row';
+import Transaction from '../src/entity/transactions/transaction';
 import User, { UserType } from '../src/entity/user/user';
 
 /**
@@ -253,10 +256,11 @@ function definePointsOfSale(
 
 /**
  * Seeds a default dataset of points of sale, based on the supplied user and container
- * revision dataset. Every user of type local andmin and organ will get containers.
+ * revision dataset. Every user of type local andmin and organ will get points of sale.
  *
  * @param users - The dataset of users to base the point of sale dataset on.
- * @param containerRevisions - The dataset of container revisions to base the container dataset on.
+ * @param containerRevisions
+ *  - The dataset of container revisions to base the point of sale dataset on.
  */
 async function seedPointsOfSale(
   users: User[],
@@ -279,6 +283,93 @@ async function seedPointsOfSale(
   return { pointsOfSale, pointOfSaleRevisions };
 }
 
+/**
+ * Defines transaction objects subtransactions and rows based on the parameters passed.
+ * A deterministic subset of the containers and products will be used for every transaction.
+ *
+ * @param transactions - The target array in which the transaction objects are stored.
+ * @param count - The number of containers to generate.
+ * @param pointOfSale - The point of sale for which to generate transactions.
+ * @param from - The user that buys stuff from the point of sale.
+ * @param createdBy - The user that has created the transaction for the 'from' user, or null.
+ */
+function defineTransactions(
+  transactions: Transaction[],
+  count: number,
+  pointOfSale: PointOfSaleRevision,
+  from: User,
+  createdBy: User,
+) {
+  const start = transactions.length;
+  for (let nr = 0; nr < count; nr += 1) {
+    const transaction = Object.assign(new Transaction(), {
+      from,
+      createdBy,
+      pointOfSale,
+      subTransactions: [],
+    }) as Transaction;
+    transactions.push(transaction);
+
+    for (let c = 0; c < pointOfSale.containers.length; c += 1) {
+      const container = pointOfSale.containers[c];
+
+      // Only define some of the containers.
+      if ((start + 5 * c + 13 * nr) % 3 === 0) {
+        const subTransaction = Object.assign(new SubTransaction(), {
+          to: pointOfSale.pointOfSale.owner,
+          transaction,
+          container,
+          subTransactionRows: [],
+        });
+        transaction.subTransactions.push(subTransaction);
+
+        for (let p = 0; p < container.products.length; p += 1) {
+          // Only define some of the products.
+          if ((3 * start + 7 * c + 17 * nr + p * 19) % 5 === 0) {
+            const row = Object.assign(new SubTransactionRow(), {
+              subTransaction,
+              product: container.products[p],
+              amount: ((start + c + p + nr) % 3) + 1,
+            });
+            subTransaction.subTransactionRows.push(row);
+          }
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Seeds a default dataset of transactions, based on the supplied user and point of sale
+ * revision dataset. Every point of sale revision will recevie transactions.
+ *
+ * @param users - The dataset of users to base the point of sale dataset on.
+ * @param pointOfSaleRevisions
+ *  - The dataset of point of sale revisions to base the transaction dataset on.
+ */
+async function seedTransactions(
+  users: User[],
+  pointOfSaleRevisions: PointOfSaleRevision[],
+): Promise<{
+    transactions: Transaction[],
+  }> {
+  const transactions: Transaction[] = [];
+
+  for (let i = 0; i < pointOfSaleRevisions.length; i += 1) {
+    const pos = pointOfSaleRevisions[i];
+
+    const from = users[(i + pos.pointOfSale.id * 5 + pos.revision * 7) % users.length];
+    const createdBy = (i + pos.revision) % 3 !== 0
+      ? undefined
+      : users[(i * 5 + pos.pointOfSale.id * 7 + pos.revision) % users.length];
+    defineTransactions(transactions, 3, pos, from, createdBy);
+  }
+
+  await Transaction.save(transactions);
+
+  return { transactions };
+}
+
 export interface DatabaseContent {
   users: User[],
   categories: ProductCategory[],
@@ -288,6 +379,7 @@ export interface DatabaseContent {
   containerRevisions: ContainerRevision[],
   pointsOfSale: PointOfSale[],
   pointOfSaleRevisions: PointOfSaleRevision[],
+  transactions: Transaction[],
 }
 
 export default async function seedDatabase(): Promise<DatabaseContent> {
@@ -296,6 +388,7 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
   const { products, productRevisions } = await seedProducts(users, categories);
   const { containers, containerRevisions } = await seedContainers(users, productRevisions);
   const { pointsOfSale, pointOfSaleRevisions } = await seedPointsOfSale(users, containerRevisions);
+  const { transactions } = await seedTransactions(users, pointOfSaleRevisions);
 
   return {
     users,
@@ -306,5 +399,6 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
     containerRevisions,
     pointsOfSale,
     pointOfSaleRevisions,
+    transactions,
   };
 }
