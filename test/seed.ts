@@ -36,8 +36,13 @@ import User, { UserType } from '../src/entity/user/user';
  * @param type - The type of users to define.
  * @param active - Active state of the defined uers.
  */
-function defineUsers(users: User[], count: number, type: UserType, active: boolean) {
-  const start = users.length;
+function defineUsers(
+  start: number,
+  count: number,
+  type: UserType,
+  active: boolean,
+): User[] {
+  const users: User[] = [];
   for (let nr = 0; nr < count; nr += 1) {
     users.push(Object.assign(new User(), {
       firstName: `Firstname${start + nr}`,
@@ -46,6 +51,7 @@ function defineUsers(users: User[], count: number, type: UserType, active: boole
       active,
     }) as User);
   }
+  return users;
 }
 
 /**
@@ -55,11 +61,17 @@ async function seedUsers(): Promise<User[]> {
   const types: UserType[] = [
     UserType.LOCAL_USER, UserType.LOCAL_ADMIN, UserType.MEMBER, UserType.ORGAN,
   ];
-  const users: User[] = [];
+  let users: User[] = [];
 
+  const promises: Promise<any>[] = [];
   for (let i = 0; i < types.length; i += 1) {
-    defineUsers(users, 4, types[i], true);
-    defineUsers(users, 2, types[i], false);
+    let u = defineUsers(users.length, 4, types[i], true);
+    promises.push(User.save(u));
+    users = users.concat(u);
+
+    u = defineUsers(users.length, 2, types[i], false);
+    promises.push(User.save(u));
+    users = users.concat(u);
   }
 
   return User.save(users);
@@ -94,13 +106,16 @@ async function seedProductCategories(): Promise<ProductCategory[]> {
  * @param category - The category generated products will belong to.
  */
 function defineProducts(
-  products: Product[],
-  revisions: ProductRevision[],
+  start: number,
   count: number,
   user: User,
   category: ProductCategory,
-) {
-  const start = products.length;
+): {
+    products: Product[],
+    revisions: ProductRevision[]
+  } {
+  const products: Product[] = [];
+  const revisions: ProductRevision[] = [];
   for (let nr = 0; nr < count; nr += 1) {
     const product = Object.assign(new Product(), {
       owner: user,
@@ -122,6 +137,8 @@ function defineProducts(
       }));
     }
   }
+
+  return { products, revisions };
 }
 
 /**
@@ -138,17 +155,28 @@ async function seedProducts(
     products: Product[],
     productRevisions: ProductRevision[]
   }> {
-  const products: Product[] = [];
-  const productRevisions: ProductRevision[] = [];
+  let products: Product[] = [];
+  let productRevisions: ProductRevision[] = [];
 
   const sellers = users.filter((u) => [UserType.LOCAL_ADMIN, UserType.MEMBER].includes(u.type));
+
+  const promises: Promise<any>[] = [];
   for (let i = 0; i < sellers.length; i += 1) {
     const category = categories[i % categories.length];
-    defineProducts(products, productRevisions, 3, sellers[i], category);
-  }
+    const { products: prod, revisions: rev } = defineProducts(
+      products.length,
+      3,
+      sellers[i],
+      category,
+    );
 
-  await Product.save(products);
-  await ProductRevision.save(productRevisions);
+    // Revisions can only be saved AFTER the products themselves.
+    promises.push(Product.save(prod).then(() => ProductRevision.save(rev)));
+
+    products = products.concat(prod);
+    productRevisions = productRevisions.concat(rev);
+  }
+  await Promise.all(promises);
 
   return { products, productRevisions };
 }
@@ -163,13 +191,16 @@ async function seedProducts(
  * @param productRevisions - The product revisions which will be used in the containers.
  */
 function defineContainers(
-  containers: Container[],
-  revisions: ContainerRevision[],
+  start: number,
   count: number,
   user: User,
   productRevisions: ProductRevision[],
-) {
-  const start = containers.length;
+): {
+    containers: Container[],
+    revisions: ContainerRevision[],
+  } {
+  const containers: Container[] = [];
+  const revisions: ContainerRevision[] = [];
   for (let nr = 0; nr < count; nr += 1) {
     const container = Object.assign(new Container(), {
       owner: user,
@@ -189,6 +220,8 @@ function defineContainers(
       }) as ContainerRevision);
     }
   }
+
+  return { containers, revisions };
 }
 
 /**
@@ -205,16 +238,27 @@ async function seedContainers(
     containers: Container[],
     containerRevisions: ContainerRevision[],
   }> {
-  const containers: Container[] = [];
-  const containerRevisions: ContainerRevision[] = [];
+  let containers: Container[] = [];
+  let containerRevisions: ContainerRevision[] = [];
 
   const sellers = users.filter((u) => [UserType.LOCAL_ADMIN, UserType.MEMBER].includes(u.type));
-  for (let i = 0; i < sellers.length; i += 1) {
-    defineContainers(containers, containerRevisions, 3, sellers[i], productRevisions);
-  }
 
-  await Container.save(containers);
-  await ContainerRevision.save(containerRevisions);
+  const promises: Promise<any>[] = [];
+  for (let i = 0; i < sellers.length; i += 1) {
+    const { containers: con, revisions: rev } = defineContainers(
+      containers.length,
+      3,
+      sellers[i],
+      productRevisions,
+    );
+
+    // Revisions can only be saved AFTER the containers themselves.
+    promises.push(Container.save(con).then(() => ContainerRevision.save(rev)));
+
+    containers = containers.concat(con);
+    containerRevisions = containerRevisions.concat(rev);
+  }
+  await Promise.all(promises);
 
   return { containers, containerRevisions };
 }
@@ -222,20 +266,21 @@ async function seedContainers(
 /**
  * Defines point of sale objects with revisions based on the parameters passed.
  *
- * @param pointsOfSale - The target array in which the point of sale objects are stored.
- * @param revisions - The target array in which the revision objects are stored.
  * @param count - The number of containers to generate.
  * @param user - The user that is owner of the containers.
  * @param containerRevisions - The container revisions which will be used in the points of sale.
  */
 function definePointsOfSale(
-  pointsOfSale: PointOfSale[],
-  revisions: PointOfSaleRevision[],
+  start: number,
   count: number,
   user: User,
   containerRevisions: ContainerRevision[],
-) {
-  const start = pointsOfSale.length;
+): {
+    pointsOfSale: PointOfSale[],
+    revisions: PointOfSaleRevision[],
+  } {
+  const pointsOfSale: PointOfSale[] = [];
+  const revisions: PointOfSaleRevision[] = [];
   for (let nr = 0; nr < count; nr += 1) {
     const pointOfSale = Object.assign(new PointOfSale(), {
       owner: user,
@@ -249,9 +294,13 @@ function definePointsOfSale(
         revision: rev,
         name: `PointOfSale${start + nr}-${rev}`,
         containers: containerRevisions.filter((c) => c.revision === rev),
+        startDate: new Date(),
+        endDate: new Date(),
       }) as PointOfSaleRevision);
     }
   }
+
+  return { pointsOfSale, revisions };
 }
 
 /**
@@ -269,16 +318,27 @@ async function seedPointsOfSale(
     pointsOfSale: PointOfSale[],
     pointOfSaleRevisions: PointOfSaleRevision[],
   }> {
-  const pointsOfSale: PointOfSale[] = [];
-  const pointOfSaleRevisions: PointOfSaleRevision[] = [];
+  let pointsOfSale: PointOfSale[] = [];
+  let pointOfSaleRevisions: PointOfSaleRevision[] = [];
 
   const sellers = users.filter((u) => [UserType.LOCAL_ADMIN, UserType.MEMBER].includes(u.type));
-  for (let i = 0; i < sellers.length; i += 1) {
-    definePointsOfSale(pointsOfSale, pointOfSaleRevisions, 3, sellers[i], containerRevisions);
-  }
 
-  await PointOfSale.save(pointsOfSale);
-  await PointOfSaleRevision.save(pointOfSaleRevisions);
+  const promises: Promise<any>[] = [];
+  for (let i = 0; i < sellers.length; i += 1) {
+    const { pointsOfSale: pos, revisions: rev } = definePointsOfSale(
+      pointsOfSale.length,
+      3,
+      sellers[i],
+      containerRevisions,
+    );
+
+    // Revisions can only be saved AFTER the points of sale themselves.
+    promises.push(PointOfSale.save(pos).then(() => PointOfSaleRevision.save(rev)));
+
+    pointsOfSale = pointsOfSale.concat(pos);
+    pointOfSaleRevisions = pointOfSaleRevisions.concat(rev);
+  }
+  await Promise.all(promises);
 
   return { pointsOfSale, pointOfSaleRevisions };
 }
@@ -287,20 +347,19 @@ async function seedPointsOfSale(
  * Defines transaction objects subtransactions and rows based on the parameters passed.
  * A deterministic subset of the containers and products will be used for every transaction.
  *
- * @param transactions - The target array in which the transaction objects are stored.
  * @param count - The number of containers to generate.
  * @param pointOfSale - The point of sale for which to generate transactions.
  * @param from - The user that buys stuff from the point of sale.
  * @param createdBy - The user that has created the transaction for the 'from' user, or null.
  */
 function defineTransactions(
-  transactions: Transaction[],
+  start: number,
   count: number,
   pointOfSale: PointOfSaleRevision,
   from: User,
   createdBy: User,
-) {
-  const start = transactions.length;
+): Transaction[] {
+  const transactions: Transaction[] = [];
   for (let nr = 0; nr < count; nr += 1) {
     const transaction = Object.assign(new Transaction(), {
       from,
@@ -337,6 +396,8 @@ function defineTransactions(
       }
     }
   }
+
+  return transactions;
 }
 
 /**
@@ -353,8 +414,9 @@ async function seedTransactions(
 ): Promise<{
     transactions: Transaction[],
   }> {
-  const transactions: Transaction[] = [];
+  let transactions: Transaction[] = [];
 
+  const promises: Promise<any>[] = [];
   for (let i = 0; i < pointOfSaleRevisions.length; i += 1) {
     const pos = pointOfSaleRevisions[i];
 
@@ -362,10 +424,13 @@ async function seedTransactions(
     const createdBy = (i + pos.revision) % 3 !== 0
       ? undefined
       : users[(i * 5 + pos.pointOfSale.id * 7 + pos.revision) % users.length];
-    defineTransactions(transactions, 3, pos, from, createdBy);
-  }
+    const trans = defineTransactions(transactions.length, 2, pos, from, createdBy);
 
-  await Transaction.save(transactions);
+    promises.push(Transaction.save(trans));
+
+    transactions = transactions.concat(trans);
+  }
+  await Promise.all(promises);
 
   return { transactions };
 }
