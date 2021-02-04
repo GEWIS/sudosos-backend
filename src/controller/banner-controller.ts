@@ -40,27 +40,27 @@ export default class BannerController extends BaseController {
     return {
       '/': {
         GET: {
-          policy: this.canGetAllBanners.bind(this),
+          policy: this.isAdmin.bind(this),
           handler: this.returnAllBanners.bind(this),
         },
         POST: {
           body: { modelName: 'BannerRequest' },
-          policy: this.canCreateBanner.bind(this),
+          policy: this.isAdmin.bind(this),
           handler: this.createBanner.bind(this),
         },
       },
       '/:id(\\d+)': {
         GET: {
-          policy: this.canGetSingleBanner.bind(this),
+          policy: this.isAdmin.bind(this),
           handler: this.returnSingleBanner.bind(this),
         },
         PATCH: {
           body: { modelName: 'BannerRequest' },
-          policy: this.canUpdateBanner.bind(this),
+          policy: this.isAdmin.bind(this),
           handler: this.updateBanner.bind(this),
         },
         DELETE: {
-          policy: this.canRemoveBanner.bind(this),
+          policy: this.isAdmin.bind(this),
           handler: this.removeBanner.bind(this),
         },
       },
@@ -78,7 +78,8 @@ export default class BannerController extends BaseController {
    * @param req - The incoming request.
    */
   // eslint-disable-next-line class-methods-use-this
-  public async canGetAllBanners(req: RequestWithToken): Promise<boolean> {
+  public async isAdmin(req: RequestWithToken): Promise<boolean> {
+    // TODO: check whether user is admin
     return req.token.user.type === UserType.LOCAL_ADMIN;
   }
 
@@ -102,15 +103,6 @@ export default class BannerController extends BaseController {
       this.logger.error('Could not return all banners:', error);
       res.status(500).json('Internal server error.');
     }
-  }
-
-  /**
-   * Validates that the request is authorized by the policy.
-   * @param req - The incoming request.
-   */
-  // eslint-disable-next-line class-methods-use-this
-  public async canCreateBanner(req: RequestWithToken): Promise<boolean> {
-    return req.token.user.type === UserType.LOCAL_ADMIN;
   }
 
   /**
@@ -147,15 +139,6 @@ export default class BannerController extends BaseController {
   }
 
   /**
-   * Validates that the request is authorized by the policy.
-   * @param req - The incoming request.
-   */
-  // eslint-disable-next-line class-methods-use-this
-  public async canGetSingleBanner(req: RequestWithToken): Promise<boolean> {
-    return req.token.user.type === UserType.LOCAL_ADMIN;
-  }
-
-  /**
    * Returns the requested banner
    * @route GET /banners/{id}
    * @group banners - Operations of banner controller
@@ -176,15 +159,6 @@ export default class BannerController extends BaseController {
       this.logger.error('Could not return banner:', error);
       res.status(500).json('Internal server error.');
     }
-  }
-
-  /**
-   * Validates that the request is authorized by the policy.
-   * @param req - The incoming request.
-   */
-  // eslint-disable-next-line class-methods-use-this
-  public async canUpdateBanner(req: RequestWithToken): Promise<boolean> {
-    return req.token.user.type === UserType.LOCAL_ADMIN;
   }
 
   /**
@@ -215,15 +189,6 @@ export default class BannerController extends BaseController {
       this.logger.error('Could not update banner:', error);
       res.status(500).json('Internal server error.');
     }
-  }
-
-  /**
-   * Validates that the request is authorized by the policy.
-   * @param req - The incoming request.
-   */
-  // eslint-disable-next-line class-methods-use-this
-  public async canRemoveBanner(req: RequestWithToken): Promise<boolean> {
-    return req.token.user.type === UserType.LOCAL_ADMIN;
   }
 
   /**

@@ -22,26 +22,12 @@ import { SwaggerSpecification } from 'swagger-model-validator';
 import { Connection } from 'typeorm';
 import TokenHandler from '../../../src/authentication/token-handler';
 import BannerController from '../../../src/controller/banner-controller';
+import BannerRequest from '../../../src/controller/request/banner-request';
 import Database from '../../../src/database';
 import Banner from '../../../src/entity/banner';
 import User, { UserType } from '../../../src/entity/user/user';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import Swagger from '../../../src/swagger';
-
-function verifyBanner(spec: SwaggerSpecification, banner: Banner) {
-  // validate if banner properties are present and correct type
-  const validation = spec.validateModel('Banner', banner, false, true);
-  expect(validation).to.be.true;
-
-  // validate values of banner properties
-  expect(banner.name).to.not.be.empty;
-  expect(banner.picture).to.not.be.empty;
-  expect(banner.duration).to.be.greaterThan(-1);
-  expect(banner.active).to.not.be.null;
-  expect(banner.startDate).to.not.be.empty;
-  expect(banner.endDate).to.not.be.empty;
-  return validation;
-}
 
 describe('BannerController', async (): Promise<void> => {
   let ctx: {
@@ -49,9 +35,12 @@ describe('BannerController', async (): Promise<void> => {
     app: Application,
     specification: SwaggerSpecification,
     controller: BannerController,
-    users: Array<User>,
+    adminUser: User,
+    localUser: User,
     adminToken: String,
     token: String,
+    validBannerReq: BannerRequest,
+    validBanner: Banner,
   };
 
   // initialize context
@@ -60,35 +49,50 @@ describe('BannerController', async (): Promise<void> => {
     const connection = await Database.initialize();
 
     // create dummy users
-    const users = [
-      {
-        id: 1,
-        firstName: 'Admin',
-        type: UserType.LOCAL_ADMIN,
-        active: true,
-      } as User,
-      {
-        id: 2,
-        firstName: 'User',
-        type: UserType.LOCAL_USER,
-        active: true,
-      } as User,
-    ];
+    const adminUser = {
+      id: 1,
+      firstName: 'Admin',
+      type: UserType.LOCAL_ADMIN,
+      active: true,
+    } as User;
 
-    // save users to database
-    // users.map(async (user) => {
-    //   await User.save(user);
-    // });
-    await User.save(users[0]);
-    await User.save(users[1]);
+    const localUser = {
+      id: 2,
+      firstName: 'User',
+      type: UserType.LOCAL_USER,
+      active: true,
+    } as User;
+
+    await User.save(adminUser);
+    await User.save(localUser);
 
     // create bearer tokens
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
-    const adminToken = await tokenHandler.signToken({ user: users[0] }, 'nonce admin');
-    const token = await tokenHandler.signToken({ user: users[1] }, 'nonce');
+    const adminToken = await tokenHandler.signToken({ user: adminUser }, 'nonce admin');
+    const token = await tokenHandler.signToken({ user: localUser }, 'nonce');
 
+    // test banners
+    const validBannerReq = {
+      name: 'valid banner',
+      picture: 'some picture link',
+      duration: 10,
+      active: true,
+      startDate: '2021-02-29T16:00:00Z',
+      endDate: '2021-02-30T16:00:00Z',
+    } as BannerRequest;
+
+    const validBanner = {
+      name: 'valid banner',
+      picture: 'some picture link',
+      duration: 10,
+      active: true,
+      startDate: new Date(Date.parse('2021-02-29T16:00:00Z')),
+      endDate: new Date(Date.parse('2021-02-30T16:00:00Z')),
+    } as Banner;
+
+    // start app
     const app = express();
     const specification = await Swagger.initialize(app);
     const controller = new BannerController(specification);
@@ -102,14 +106,19 @@ describe('BannerController', async (): Promise<void> => {
       app,
       specification,
       controller,
-      users,
+      adminUser,
+      localUser,
       adminToken,
       token,
+      validBannerReq,
+      validBanner,
     };
   });
 
   // close database connection
   afterEach(async () => {
+    await User.clear();
+    await Banner.clear();
     await ctx.connection.close();
   });
 
@@ -123,6 +132,47 @@ describe('BannerController', async (): Promise<void> => {
     it('should give an HTTP 403 if not admin', async () => {
       const res = await request(ctx.app)
         .get('/banners')
+        .set('Authorization', `Bearer ${ctx.token}`);
+      expect(res.status).to.equal(403);
+    });
+  });
+
+  describe('POST /banners', () => {
+    it('should be able to create a banner as admin', async () => {
+      const res = await request(ctx.app)
+        .post('/banners')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(ctx.validBannerReq);
+      expect(res.status).to.equal(200);
+    });
+    it('should give an HTTP 403 if not admin', async () => {
+      const res = await request(ctx.app)
+        .post('/banners')
+        .set('Authorization', `Bearer ${ctx.token}`)
+        .send(ctx.validBannerReq);
+      expect(res.status).to.equal(403);
+    });
+  });
+
+  describe('GET /banners/:id', () => {
+    it('should return the banner with corresponding id if admin', async () => {
+      await Banner.save(ctx.validBanner);
+      const res = await request(ctx.app)
+        .get('/banners/1')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+    });
+    it('should give an HTTP 400 if banner does not exist', async () => {
+      const res = await request(ctx.app)
+        .get('/banners/1')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      console.log(res.body);
+      expect(res.status).to.equal(200);
+    });
+    it('should give an HTTP 403 if not admin', async () => {
+      await Banner.save(ctx.validBanner);
+      const res = await request(ctx.app)
+        .get('/banners/1')
         .set('Authorization', `Bearer ${ctx.token}`);
       expect(res.status).to.equal(403);
     });
