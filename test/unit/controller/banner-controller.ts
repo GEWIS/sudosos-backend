@@ -29,6 +29,32 @@ import User, { UserType } from '../../../src/entity/user/user';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import Swagger from '../../../src/swagger';
 
+// verify whether the banner request translates to a valid banner object
+function verifyBanner(spec: SwaggerSpecification, bannerRequest: BannerRequest): void {
+  // validate specifications
+  // const validation = spec.validateModel('BannerRequest', bannerRequest, false, true);
+  // expect(validation).to.be.true;
+
+  // check types
+  expect(bannerRequest.name).to.be.a('string');
+  expect(bannerRequest.picture).to.be.a('string');
+  expect(bannerRequest.duration).to.be.a('number');
+  expect(bannerRequest.active).to.be.a('boolean');
+  expect(bannerRequest.startDate).to.be.a('string');
+  expect(bannerRequest.endDate).to.be.a('string');
+
+  expect(bannerRequest.name).to.not.be.empty;
+  expect(bannerRequest.picture).to.not.be.empty;
+  expect(bannerRequest.duration).to.be.above(0);
+  expect(bannerRequest.active).to.not.be.null;
+
+  const sDate = new Date(Date.parse(bannerRequest.startDate));
+  const eDate = new Date(Date.parse(bannerRequest.endDate));
+  expect(sDate).to.be.a('date');
+  expect(eDate).to.be.a('date');
+  expect(eDate).to.be.greaterThan(sDate);
+}
+
 describe('BannerController', async (): Promise<void> => {
   let ctx: {
     connection: Connection,
@@ -123,29 +149,54 @@ describe('BannerController', async (): Promise<void> => {
   });
 
   describe('GET /banners', () => {
-    it('should return all banners if admin', async () => {
+    it('should return an HTTP 200 and all banners in the database if admin', async () => {
       const res = await request(ctx.app)
         .get('/banners')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      // number of banners returned is number of banners in database
+      const banners = res.body as Banner[];
+      expect(banners.length).to.equal(await Banner.count());
+
+      // success code
       expect(res.status).to.equal(200);
     });
-    it('should give an HTTP 403 if not admin', async () => {
+    it('should return an HTTP 403 if not admin', async () => {
       const res = await request(ctx.app)
         .get('/banners')
         .set('Authorization', `Bearer ${ctx.token}`);
+
+      // forbidden code
       expect(res.status).to.equal(403);
     });
   });
 
   describe('POST /banners', () => {
-    it('should be able to create a banner as admin', async () => {
+    it('should store the given banner in the database and return an HTTP 200 and the banner if admin', async () => {
+      // number of banners in the database
+      const count = await Banner.count();
       const res = await request(ctx.app)
         .post('/banners')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(ctx.validBannerReq);
+
+      verifyBanner(ctx.specification, ctx.validBannerReq);
+
+      // check if number of banners in the database increased
+      expect(count + 1).to.equal(await Banner.count());
+
+      // check if posted banner is indeed in the database
+      const databaseBanner = await Banner.findOne(count + 1);
+      const check = {
+        ...databaseBanner,
+      } as Banner;
+      // expect(ctx.validBanner).to.equal(check);
+
+      // success code
       expect(res.status).to.equal(200);
     });
-    it('should give an HTTP 403 if not admin', async () => {
+    it('should return an HTTP 400 if the given banner is invalid');
+    it('should return an HTTP 403 if not admin', async () => {
       const res = await request(ctx.app)
         .post('/banners')
         .set('Authorization', `Bearer ${ctx.token}`)
@@ -155,24 +206,52 @@ describe('BannerController', async (): Promise<void> => {
   });
 
   describe('GET /banners/:id', () => {
-    it('should return the banner with corresponding id if admin', async () => {
+    it('should return an HTTP 200 and the banner with given id if admin', async () => {
       await Banner.save(ctx.validBanner);
       const res = await request(ctx.app)
         .get('/banners/1')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
     });
-    it('should give an HTTP 400 if banner does not exist', async () => {
+    it('should return an HTTP 404 if the banner with given id does not exist', async () => {
       const res = await request(ctx.app)
         .get('/banners/1')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       console.log(res.body);
-      expect(res.status).to.equal(200);
+      expect(res.status).to.equal(404);
     });
-    it('should give an HTTP 403 if not admin', async () => {
+    it('should return an HTTP 403 if not admin', async () => {
       await Banner.save(ctx.validBanner);
       const res = await request(ctx.app)
         .get('/banners/1')
+        .set('Authorization', `Bearer ${ctx.token}`);
+      expect(res.status).to.equal(403);
+    });
+  });
+
+  describe('PATCH /banners/:id', () => {
+    it('should update and return an HTTP 200 and the banner with given id if admin');
+    it('should return an HTTP 400 if given banner is invalid');
+    it('should return an HTTP 404 if the banner with given id does not exist');
+    it('should return an HTTP 403 if not admin');
+  });
+
+  describe('DELETE /banners/:id', () => {
+    it('should delete the banner from the database and return an HTTP 200 and the banner with given id if admin');
+    it('should return an HTTP 404 if the banner with given id does not exist');
+    it('should return an HTTP 403 if not admin');
+  });
+
+  describe('GET /banners/active', () => {
+    it('should return an HTTP 200 and all active banners in the database if admin', async () => {
+      const res = await request(ctx.app)
+        .get('/banners/active')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+    });
+    it('should return an HTTP 403 if not admin', async () => {
+      const res = await request(ctx.app)
+        .get('/banners/active')
         .set('Authorization', `Bearer ${ctx.token}`);
       expect(res.status).to.equal(403);
     });
