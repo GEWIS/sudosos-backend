@@ -76,7 +76,7 @@ async function seedUsers(): Promise<User[]> {
   }
   await Promise.all(promises);
 
-  return User.save(users);
+  return users;
 }
 
 /**
