@@ -31,7 +31,7 @@ import User, { UserType } from '../src/entity/user/user';
 /**
  * Defines user objects with the given parameters.
  *
- * @param users - The target array in which the objects are stored.
+ * @param start - The number of users that already exist.
  * @param count - The number of objects to define.
  * @param type - The type of users to define.
  * @param active - Active state of the defined uers.
@@ -43,8 +43,9 @@ function defineUsers(
   active: boolean,
 ): User[] {
   const users: User[] = [];
-  for (let nr = 0; nr < count; nr += 1) {
+  for (let nr = 1; nr <= count; nr += 1) {
     users.push(Object.assign(new User(), {
+      id: start + nr,
       firstName: `Firstname${start + nr}`,
       lastName: `Lastname${start + nr}`,
       type,
@@ -86,12 +87,15 @@ async function seedProductCategories(): Promise<ProductCategory[]> {
 
   return ProductCategory.save([
     category({
+      id: 1,
       name: 'Alcoholic',
     }),
     category({
+      id: 2,
       name: 'Non-alcoholic',
     }),
     category({
+      id: 3,
       name: 'Food',
     }),
   ]);
@@ -100,8 +104,7 @@ async function seedProductCategories(): Promise<ProductCategory[]> {
 /**
  * Defines product objects with revisions based on the parameters passed.
  *
- * @param products - The target array in which the product objects are stored.
- * @param revisions - The target array in which the revision objects are stored.
+ * @param start - The number of products that already exist.
  * @param count - The number of products to generate.
  * @param user - The user that is owner of the products.
  * @param category - The category generated products will belong to.
@@ -117,8 +120,9 @@ function defineProducts(
   } {
   const products: Product[] = [];
   const revisions: ProductRevision[] = [];
-  for (let nr = 0; nr < count; nr += 1) {
+  for (let nr = 1; nr <= count; nr += 1) {
     const product = Object.assign(new Product(), {
+      id: start + nr,
       owner: user,
     }) as Product;
     products.push(product);
@@ -185,8 +189,7 @@ async function seedProducts(
 /**
  * Defines container objects with revisions based on the parameters passed.
  *
- * @param containers - The target array in which the container objects are stored.
- * @param revisions - The target array in which the revision objects are stored.
+ * @param start - The number of containers that already exist.
  * @param count - The number of containers to generate.
  * @param user - The user that is owner of the containers.
  * @param productRevisions - The product revisions which will be used in the containers.
@@ -202,8 +205,9 @@ function defineContainers(
   } {
   const containers: Container[] = [];
   const revisions: ContainerRevision[] = [];
-  for (let nr = 0; nr < count; nr += 1) {
+  for (let nr = 1; nr <= count; nr += 1) {
     const container = Object.assign(new Container(), {
+      id: start + nr,
       owner: user,
     }) as Container;
     containers.push(container);
@@ -267,6 +271,7 @@ async function seedContainers(
 /**
  * Defines point of sale objects with revisions based on the parameters passed.
  *
+ * @param start - The number of points of sale that already exist.
  * @param count - The number of containers to generate.
  * @param user - The user that is owner of the containers.
  * @param containerRevisions - The container revisions which will be used in the points of sale.
@@ -282,8 +287,9 @@ function definePointsOfSale(
   } {
   const pointsOfSale: PointOfSale[] = [];
   const revisions: PointOfSaleRevision[] = [];
-  for (let nr = 0; nr < count; nr += 1) {
+  for (let nr = 1; nr <= count; nr += 1) {
     const pointOfSale = Object.assign(new PointOfSale(), {
+      id: start + nr,
       owner: user,
     }) as PointOfSale;
     pointsOfSale.push(pointOfSale);
@@ -348,21 +354,30 @@ async function seedPointsOfSale(
  * Defines transaction objects subtransactions and rows based on the parameters passed.
  * A deterministic subset of the containers and products will be used for every transaction.
  *
- * @param count - The number of containers to generate.
+ * @param start - The number of transactions that already exist.
+ * @param startSubTransaction - The number of subtransactions that already exist.
+ * @param startRow - The number of subtransaction rows that already exist.
+ * @param count - The number of transactions to generate.
  * @param pointOfSale - The point of sale for which to generate transactions.
  * @param from - The user that buys stuff from the point of sale.
  * @param createdBy - The user that has created the transaction for the 'from' user, or null.
  */
 function defineTransactions(
   start: number,
+  startSubTransaction: number,
+  startRow: number,
   count: number,
   pointOfSale: PointOfSaleRevision,
   from: User,
   createdBy: User,
 ): Transaction[] {
   const transactions: Transaction[] = [];
-  for (let nr = 0; nr < count; nr += 1) {
+  let subTransactionId = startSubTransaction;
+  let rowId = startRow;
+
+  for (let nr = 1; nr <= count; nr += 1) {
     const transaction = Object.assign(new Transaction(), {
+      id: start + nr,
       from,
       createdBy,
       pointOfSale,
@@ -375,7 +390,9 @@ function defineTransactions(
 
       // Only define some of the containers.
       if ((start + 5 * c + 13 * nr) % 3 === 0) {
+        subTransactionId += 1;
         const subTransaction = Object.assign(new SubTransaction(), {
+          id: subTransactionId,
           to: pointOfSale.pointOfSale.owner,
           transaction,
           container,
@@ -386,7 +403,9 @@ function defineTransactions(
         for (let p = 0; p < container.products.length; p += 1) {
           // Only define some of the products.
           if ((3 * start + 7 * c + 17 * nr + p * 19) % 5 === 0) {
+            rowId += 1;
             const row = Object.assign(new SubTransactionRow(), {
+              id: rowId,
               subTransaction,
               product: container.products[p],
               amount: ((start + c + p + nr) % 3) + 1,
@@ -416,6 +435,8 @@ async function seedTransactions(
     transactions: Transaction[],
   }> {
   let transactions: Transaction[] = [];
+  let startSubTransaction = 0;
+  let startRow = 0;
 
   const promises: Promise<any>[] = [];
   for (let i = 0; i < pointOfSaleRevisions.length; i += 1) {
@@ -425,7 +446,25 @@ async function seedTransactions(
     const createdBy = (i + pos.revision) % 3 !== 0
       ? undefined
       : users[(i * 5 + pos.pointOfSale.id * 7 + pos.revision) % users.length];
-    const trans = defineTransactions(transactions.length, 2, pos, from, createdBy);
+    const trans = defineTransactions(
+      transactions.length,
+      startSubTransaction,
+      startRow,
+      2,
+      pos,
+      from,
+      createdBy,
+    );
+
+    // Update the start id counters.
+    for (let a = 0; a < trans.length; a += 1) {
+      const t = trans[a];
+      startSubTransaction += t.subTransactions.length;
+      for (let b = 0; b < t.subTransactions.length; b += 1) {
+        const s = t.subTransactions[b];
+        startRow += s.subTransactionRows.length;
+      }
+    }
 
     // First, save all transactions.
     const promise = Transaction.save(trans)
