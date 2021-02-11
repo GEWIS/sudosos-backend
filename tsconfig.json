@@ -10,7 +10,11 @@
         "incremental": true,
         "emitDecoratorMetadata": true,
         "experimentalDecorators": true,
-        "esModuleInterop": true
+        "esModuleInterop": true,
+        "typeRoots": [
+            "./node_modules/@types",
+            "./src/declaration"
+        ]
     },
     "include": [
         "src/**/*",
@@ -18,5 +22,5 @@
     ],
     "exclude": [
         "node_modules"
-    ]
+    ],
 }
