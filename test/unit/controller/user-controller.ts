@@ -40,6 +40,7 @@ import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
 import ProductRevision from '../../../src/entity/product/product-revision';
 import ContainerRevision from '../../../src/entity/container/container-revision';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
+import seedDatabase from '../../seed';
 
 function verifyUserEntity(spec: SwaggerSpecification, user: User): void {
   const validation = spec.validateModel('User', user, false, true);
@@ -94,139 +95,56 @@ describe('UserController', (): void => {
     app: Application,
     specification: SwaggerSpecification,
     controller: UserController,
-    token: string,
+    userToken: string,
     adminToken: string,
     user: User,
-    users: Array<User>,
-    products: Array<Product>,
-    containers: Array<Container>,
-    pointOfSales: Array<PointOfSale>,
-    transactions: Array<Transaction>,
+    users: User[],
+    categories: ProductCategory[],
+    products: Product[],
+    productRevisions: ProductRevision[],
+    containers: Container[],
+    containerRevisions: ContainerRevision[],
+    pointsOfSale: PointOfSale[],
+    pointOfSaleRevisions: PointOfSaleRevision[],
+    transactions: Transaction[],
   };
 
-  beforeEach(async () => {
+  before(async function (): Promise<void> {
+    // @ts-ignore
+    this.timeout(10000);
+    const connection = await Database.initialize();
+    const app = express();
+    console.log('write database');
+    const database = await seedDatabase();
+    console.log('database written');
     ctx = {
-      connection: await Database.initialize(),
-      app: express(),
+      connection,
+      app,
       specification: undefined,
       controller: undefined,
-      token: undefined,
+      userToken: undefined,
       adminToken: undefined,
       user: {
-        firstName: 'Rick',
-        lastName: 'Wouters',
+        firstName: 'Roy',
+        lastName: 'Kakkenberg',
         type: UserType.MEMBER,
       } as any as User,
-      users: [
-        {
-          id: 0,
-          firstName: 'Roy',
-          type: UserType.LOCAL_USER,
-          active: true,
-        } as any as User,
-        {
-          id: 1,
-          firstName: 'Kevin',
-          type: UserType.MEMBER,
-        } as any as User,
-        {
-          id: 2,
-          firstName: 'Ruben',
-          type: UserType.LOCAL_ADMIN,
-        } as any as User,
-        {
-          id: 3,
-          firstName: 'Wout',
-          type: UserType.LOCAL_USER,
-          deleted: true,
-        } as any as User,
-      ],
-      products: undefined,
-      containers: undefined,
-      pointOfSales: undefined,
-      // products: [
-      //   {
-      //     name: 'Test-1',
-      //     price: dinero({
-      //       currency: 'EUR',
-      //       amount: 70,
-      //       precision: 2,
-      //     }),
-      //     category: {
-      //       id: 1,
-      //       name: 'test',
-      //     } as ProductCategory,
-      //     owner: ctx.users[0],
-      //     alcoholPercentage: 5.0,
-      //     picture: 'https://sudosos/image.jpg',
-      //   } as Product,
-      //   {
-      //     name: 'Test-2',
-      //     price: dinero({
-      //       currency: 'EUR',
-      //       amount: 71,
-      //       precision: 2,
-      //     }),
-      //     category: {
-      //       id: 1,
-      //       name: 'test',
-      //     } as ProductCategory,
-      //     owner: ctx.users[1],
-      //     alcoholPercentage: 5.0,
-      //     picture: 'https://sudosos/image2.jpg',
-      //   } as Product,
-      // ],
-      // containers: [
-      //   {
-      //     name: 'container420',
-      //     owner: ctx.users[0],
-      //     products: [ctx.products[0]],
-      //   } as Container,
-      //   {
-      //     name: 'container69',
-      //     owner: ctx.users[1],
-      //     products: [ctx.products[1], ctx.products[0]],
-      //   } as Container,
-      // ],
-      // pointOfSales: [
-      //   {
-      //     name: 'pos1',
-      //     owner: ctx.users[0],
-      //     startDate: new Date(),
-      //     endDate: new Date(new Date().getTime() + 1000 * 60 * 60 * 24),
-      //     useAuthentication: false,
-      //     containers: [ctx.containers[1]],
-      //   } as PointOfSale,
-      //   {
-      //     name: 'pos69',
-      //     owner: ctx.users[1],
-      //     startDate: new Date(),
-      //     endDate: new Date(new Date().getTime() + 1000 * 60 * 60 * 24),
-      //     useAuthentication: false,
-      //     containers: [ctx.containers[1], ctx.containers[0]],
-      //   } as PointOfSale,
-      // ],
-      transactions: undefined,
+      ...database,
     };
 
-    // const productCategory = {
-    //   id: 1,
-    //   name: 'test',
-    // } as ProductCategory;
+    ctx.users.push({
+      firstName: 'Kevin',
+      lastName: 'Jilessen',
+      type: UserType.MEMBER,
+      deleted: true,
+      active: true,
+    } as any as User);
 
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
-    ctx.token = await tokenHandler.signToken({ user: ctx.users[0] }, '1');
-    ctx.adminToken = await tokenHandler.signToken({ user: ctx.users[2] }, '1');
-
-    await User.save({ ...ctx.users[0] } as User);
-    await User.save({ ...ctx.users[1] } as User);
-    await User.save({ ...ctx.users[2] } as User);
-    await User.save({ ...ctx.users[3] } as User);
-    // await ProductCategory.save({ ...productCategory } as ProductCategory);
-    // await Product.save({ ...ctx.products[0] } as Product);
-    // await Product.save({ ...ctx.products[1] } as Product);
+    ctx.userToken = await tokenHandler.signToken({ user: ctx.users[0] }, '1');
+    ctx.adminToken = await tokenHandler.signToken({ user: ctx.users[6] }, '1');
 
     ctx.specification = await Swagger.initialize(ctx.app);
     ctx.controller = new UserController(ctx.specification);
@@ -236,7 +154,7 @@ describe('UserController', (): void => {
     ctx.app.use('/users', ctx.controller.getRouter());
   });
 
-  afterEach(async () => {
+  after(async () => {
     await ctx.connection.close();
   });
 
@@ -249,7 +167,7 @@ describe('UserController', (): void => {
 
       const users = res.body as User[];
       const spec = await Swagger.importSpecification();
-      expect(users.length).to.equal(3);
+      expect(users.length).to.equal(24);
       users.forEach((user: User) => {
         verifyUserEntity(spec, user);
       });
@@ -257,7 +175,7 @@ describe('UserController', (): void => {
     it('should give an HTTP 403 if not admin', async () => {
       const res = await request(ctx.app)
         .get('/users')
-        .set('Authorization', `Bearer ${ctx.token}`);
+        .set('Authorization', `Bearer ${ctx.userToken}`);
       expect(res.status).to.equal(403);
     });
   });
@@ -265,8 +183,8 @@ describe('UserController', (): void => {
   describe('GET /users/:id', () => {
     it('should return correct user (myself)', async () => {
       const res = await request(ctx.app)
-        .get('/users/0')
-        .set('Authorization', `Bearer ${ctx.token}`);
+        .get('/users/1')
+        .set('Authorization', `Bearer ${ctx.userToken}`);
       expect(res.status).to.equal(200);
 
       const user = res.body as User;
@@ -275,14 +193,14 @@ describe('UserController', (): void => {
     });
     it('should give an HTTP 403 when requesting different user', async () => {
       const res = await request(ctx.app)
-        .get('/users/1')
-        .set('Authorization', `Bearer ${ctx.token}`);
+        .get('/users/2')
+        .set('Authorization', `Bearer ${ctx.userToken}`);
       expect(res.status).to.equal(403);
     });
     it('should give an HTTP 403 when requesting different user that does not exist', async () => {
       const res = await request(ctx.app)
         .get('/users/1234')
-        .set('Authorization', `Bearer ${ctx.token}`);
+        .set('Authorization', `Bearer ${ctx.userToken}`);
       expect(res.status).to.equal(403);
     });
     it('should return correct user when admin requests different user', async () => {
@@ -303,7 +221,7 @@ describe('UserController', (): void => {
     });
     it('should give an HTTP 404 when admin requests deleted user', async () => {
       const res = await request(ctx.app)
-        .get('/users/3')
+        .get('/users/25')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(404);
     });
@@ -313,7 +231,7 @@ describe('UserController', (): void => {
     it('should give an HTTP 403 when not an admin', async () => {
       const res = await request(ctx.app)
         .post('/users')
-        .set('Authorization', `Bearer ${ctx.token}`)
+        .set('Authorization', `Bearer ${ctx.userToken}`)
         .send(ctx.user);
       expect(res.status).to.equal(403);
     });
@@ -453,7 +371,7 @@ describe('UserController', (): void => {
     it('should give HTTP 403 when user is not an admin', async () => {
       const res = await request(ctx.app)
         .patch('/users/1')
-        .set('Authorization', `Bearer ${ctx.token}`)
+        .set('Authorization', `Bearer ${ctx.userToken}`)
         .send({ firstName: 'Ralf' });
       expect(res.status).to.equal(403);
     });
@@ -524,7 +442,7 @@ describe('UserController', (): void => {
       const active = false;
 
       const res = await request(ctx.app)
-        .patch('/users/0')
+        .patch('/users/13')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send({ active });
       expect(res.status).to.equal(200);
@@ -538,7 +456,7 @@ describe('UserController', (): void => {
       const active = true;
 
       const res = await request(ctx.app)
-        .patch('/users/1')
+        .patch('/users/12')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send({ active });
       expect(res.status).to.equal(200);
@@ -560,20 +478,20 @@ describe('UserController', (): void => {
   describe('DELETE /users/:id', () => {
     it('should give HTTP 403 when user is not an admin', async () => {
       const res = await request(ctx.app)
-        .delete('/users/1')
-        .set('Authorization', `Bearer ${ctx.token}`);
+        .delete('/users/24')
+        .set('Authorization', `Bearer ${ctx.userToken}`);
       expect(res.status).to.equal(403);
     });
 
     it('should correctly delete user if requester is admin', async () => {
       let res = await request(ctx.app)
-        .delete('/users/1')
+        .delete('/users/24')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(204);
 
       // User does not exist anymore
       res = await request(ctx.app)
-        .get('/users/1')
+        .get('/users/24')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(404);
     });
@@ -587,19 +505,19 @@ describe('UserController', (): void => {
 
     it('should give HTTP 400 if admin requests to delete itself', async () => {
       const res = await request(ctx.app)
-        .delete('/users/2')
+        .delete('/users/7')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(400);
     });
 
     it('should give HTTP 404 if trying to delete user twice', async () => {
       const res = await request(ctx.app)
-        .delete('/users/1')
+        .delete('/users/4')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(204);
 
       const res2 = await request(ctx.app)
-        .delete('/users/1')
+        .delete('/users/4')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res2.status).to.equal(404);
     });
