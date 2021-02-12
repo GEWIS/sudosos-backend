@@ -19,13 +19,9 @@ import express, { Application } from 'express';
 import { expect, request } from 'chai';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { Connection } from 'typeorm';
-// import dinero from 'dinero.js';
 import bodyParser from 'body-parser';
 import UserController from '../../../src/controller/user-controller';
-// eslint-disable-next-line import/no-duplicates
-import User from '../../../src/entity/user/user';
-// eslint-disable-next-line import/no-duplicates
-import { UserType } from '../../../src/entity/user/user';
+import User, { UserType } from '../../../src/entity/user/user';
 import Product from '../../../src/entity/product/product';
 import Transaction from '../../../src/entity/transactions/transaction';
 import TokenHandler from '../../../src/authentication/token-handler';
@@ -35,59 +31,11 @@ import TokenMiddleware from '../../../src/middleware/token-middleware';
 import ProductCategory from '../../../src/entity/product/product-category';
 import Container from '../../../src/entity/container/container';
 import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
-// import SubTransactionRow from '../../../src/entity/transactions/sub-transaction-row';
-// import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import ProductRevision from '../../../src/entity/product/product-revision';
 import ContainerRevision from '../../../src/entity/container/container-revision';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
 import seedDatabase from '../../seed';
-
-function verifyUserEntity(spec: SwaggerSpecification, user: User): void {
-  const validation = spec.validateModel('User', user, false, true);
-  expect(validation.valid).to.be.true;
-
-  expect(user.id).to.be.greaterThan(-1);
-  expect(user.firstName).to.not.be.empty;
-  expect(user.active).to.not.be.null;
-  expect(user.deleted).to.be.false;
-  expect(Object.values(UserType)).to.include(user.type);
-}
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function verifyProductEntity(spec: SwaggerSpecification, product: ProductRevision): void {
-  const validation = spec.validateModel('Product', product, false, true);
-  expect(validation.valid).to.be.true;
-
-  expect(product.product.id).to.be.greaterThan(-1);
-  expect(product.name).to.not.be.empty;
-  expect(product.price.getAmount()).to.be.greaterThan(50);
-  expect(product.price.getCurrency()).to.equal('EUR');
-}
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function verifyContainerEntity(spec: SwaggerSpecification, container: ContainerRevision): void {
-  const validation = spec.validateModel('Container', container, false, true);
-  expect(validation.valid).to.be.true;
-
-  expect(container.container.id).to.be.greaterThan(-1);
-  expect(container.name).to.be.not.empty;
-  expect(container.container.owner).to.be.instanceOf(User);
-  expect(container.products).to.be.instanceOf(Array);
-}
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function verifyPOSEntity(spec: SwaggerSpecification, pointOfSale: PointOfSaleRevision): void {
-  const validation = spec.validateModel('PointOfSale', pointOfSale, false, true);
-  expect(validation.valid).to.be.true;
-
-  expect(pointOfSale.pointOfSale.id).to.be.greaterThan(-1);
-  expect(pointOfSale.name).to.be.not.empty;
-  expect(pointOfSale.pointOfSale.owner).to.be.instanceOf(User);
-  expect(pointOfSale.startDate).to.be.instanceOf(Date);
-  expect(pointOfSale.endDate).to.be.instanceOf(Date);
-  expect(pointOfSale.endDate.getTime()).to.be.greaterThan(pointOfSale.startDate.getTime());
-  expect(pointOfSale.containers).to.be.instanceOf(Array);
-}
+import { verifyUserEntity } from '../validators';
 
 describe('UserController', (): void => {
   let ctx: {
@@ -523,22 +471,43 @@ describe('UserController', (): void => {
     });
   });
 
-  // describe('GET /users/:id/products', () => {
-  //   it('should give correct owned products for user', async () => {
-  //     const res = await request(ctx.app)
-  //       .get('/users/0/products')
-  //       .set('Authorization', `Bearer ${ctx.token}`);
-  //     expect(res.status).to.equal(200);
-  //     expect(res.body).to.deep.equal([]);
-  //   });
-  //   it('should give an HTTP 403 when user requests products (s)he does not own', async () => {
-  //     const res = await request(ctx.app)
-  //       .get('/users/1/products')
-  //       .set('Authorization', `Bearer ${ctx.token}`);
-  //     expect(res.status).to.equal(403);
-  //   });
-  // });
-  //
+  describe('GET /users/:id/products', () => {
+    it('should give correct owned products for user', async () => {
+      const res = await request(ctx.app)
+        .get('/users/1/products')
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(200);
+
+      // TODO: test response validity
+    });
+    it('should give an HTTP 403 when user requests products (s)he does not own', async () => {
+      const res = await request(ctx.app)
+        .get('/users/2/products')
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(403);
+    });
+    it('should give an HTTP 403 when user requests products from unknown user', async () => {
+      const res = await request(ctx.app)
+        .get('/users/1234/products')
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(403);
+    });
+    it('should give correct owned products for admin', async () => {
+      const res = await request(ctx.app)
+        .get('/users/2/products')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+
+      // TODO: test response validity
+    });
+    it('should give an HTTP 404 when admin requests products from unknown user', async () => {
+      const res = await request(ctx.app)
+        .get('/users/1234/products')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(403);
+    });
+  });
+
   // describe('GET /users/:id/containers', () => {
   //   it('should give correct owned containers for user', async () => {
   //     const res = await request(ctx.app)
@@ -556,74 +525,6 @@ describe('UserController', (): void => {
   // });
   //
   // describe('GET /users/:id/transactions', () => {
-  //   before(async () => {
-  //     ctx.transactions = [
-  //       await Transaction.save({
-  //         from: ctx.users[0],
-  //         createdBy: ctx.users[1],
-  //         pointOfSale: ctx.pointOfSales[0],
-  //         subTransactions: [{
-  //           to: ctx.users[2],
-  //           container: ctx.containers[0],
-  //           subTransactionRows: [{
-  //             product: ctx.products[0],
-  //             amount: 1,
-  //           } as SubTransactionRow],
-  //         } as SubTransaction],
-  //       } as any as Transaction),
-  //       await Transaction.save({
-  //         from: ctx.users[1],
-  //         pointOfSale: ctx.pointOfSales[0],
-  //         subTransactions: [{
-  //           to: ctx.users[2],
-  //           container: ctx.containers[0],
-  //           subTransactionRows: [{
-  //             product: ctx.products[0],
-  //             amount: 1,
-  //           } as SubTransactionRow],
-  //         } as SubTransaction],
-  //       } as any as Transaction),
-  //       await Transaction.save({
-  //         from: ctx.users[0],
-  //         pointOfSale: ctx.pointOfSales[0],
-  //         subTransactions: [{
-  //           to: ctx.users[1],
-  //           container: ctx.containers[0],
-  //           subTransactionRows: [{
-  //             product: ctx.products[0],
-  //             amount: 1,
-  //           } as SubTransactionRow],
-  //         } as SubTransaction],
-  //       } as any as Transaction),
-  //       await Transaction.save({
-  //         from: ctx.users[2],
-  //         createdBy: ctx.users[1],
-  //         pointOfSale: ctx.pointOfSales[0],
-  //         subTransactions: [{
-  //           to: ctx.users[0],
-  //           container: ctx.containers[0],
-  //           subTransactionRows: [{
-  //             product: ctx.products[0],
-  //             amount: 1,
-  //           } as SubTransactionRow],
-  //         } as SubTransaction],
-  //       } as any as Transaction),
-  //       await Transaction.save({
-  //         from: ctx.users[1],
-  //         createdBy: ctx.users[0],
-  //         pointOfSale: ctx.pointOfSales[0],
-  //         subTransactions: [{
-  //           to: ctx.users[2],
-  //           container: ctx.containers[0],
-  //           subTransactionRows: [{
-  //             product: ctx.products[0],
-  //             amount: 1,
-  //           } as SubTransactionRow],
-  //         } as SubTransaction],
-  //       } as any as Transaction),
-  //     ];
-  //   });
-  //
   //   it('should give correct transactions from/to user', async () => {
   //     const res = await request(ctx.app)
   //       .get('/users/0/transactions')
