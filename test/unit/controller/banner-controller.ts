@@ -55,6 +55,42 @@ function verifyBanner(spec: SwaggerSpecification, bannerRequest: BannerRequest):
   expect(eDate).to.be.greaterThan(sDate);
 }
 
+function bannerEq(a: Banner, b: Banner): Boolean {
+  const aEmpty = a === {} as Banner || a === undefined;
+  const bEmpty = b === {} as Banner || b === undefined;
+  if (aEmpty === bEmpty) {
+    return true;
+  }
+  if (aEmpty ? !bEmpty : bEmpty) {
+    return false;
+  }
+
+  let aStartDate = a.startDate;
+  let bStartDate = b.startDate;
+  let aEndDate = a.endDate;
+  let bEndDate = b.endDate;
+
+  if (typeof aStartDate === 'string') {
+    aStartDate = new Date(Date.parse(aStartDate));
+  }
+  if (typeof bStartDate === 'string') {
+    bStartDate = new Date(Date.parse(bStartDate));
+  }
+  if (typeof aEndDate === 'string') {
+    aEndDate = new Date(Date.parse(aEndDate));
+  }
+  if (typeof bEndDate === 'string') {
+    bEndDate = new Date(Date.parse(bEndDate));
+  }
+
+  return a.name === b.name
+    && a.picture === b.picture
+    && a.duration === b.duration
+    && a.active === b.active
+    && aStartDate.getTime() === bStartDate.getTime()
+    && aEndDate.getTime() === bEndDate.getTime();
+}
+
 describe('BannerController', async (): Promise<void> => {
   let ctx: {
     connection: Connection,
@@ -67,6 +103,7 @@ describe('BannerController', async (): Promise<void> => {
     token: String,
     validBannerReq: BannerRequest,
     validBanner: Banner,
+    invalidBannerReq: BannerRequest,
   };
 
   // initialize context
@@ -110,13 +147,15 @@ describe('BannerController', async (): Promise<void> => {
     } as BannerRequest;
 
     const validBanner = {
-      name: 'valid banner',
-      picture: 'some picture link',
-      duration: 10,
-      active: true,
+      ...validBannerReq,
       startDate: new Date(Date.parse('2021-02-29T16:00:00Z')),
       endDate: new Date(Date.parse('2021-02-30T16:00:00Z')),
     } as Banner;
+
+    const invalidBannerReq = {
+      ...validBannerReq,
+      name: '',
+    } as BannerRequest;
 
     // start app
     const app = express();
@@ -138,6 +177,7 @@ describe('BannerController', async (): Promise<void> => {
       token,
       validBannerReq,
       validBanner,
+      invalidBannerReq,
     };
   });
 
@@ -180,44 +220,74 @@ describe('BannerController', async (): Promise<void> => {
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(ctx.validBannerReq);
 
-      verifyBanner(ctx.specification, ctx.validBannerReq);
-
       // check if number of banners in the database increased
       expect(count + 1).to.equal(await Banner.count());
 
       // check if posted banner is indeed in the database
       const databaseBanner = await Banner.findOne(count + 1);
-      const check = {
-        ...databaseBanner,
-      } as Banner;
-      // expect(ctx.validBanner).to.equal(check);
+      expect(bannerEq(ctx.validBanner, databaseBanner)).to.be.true;
 
       // success code
       expect(res.status).to.equal(200);
     });
-    it('should return an HTTP 400 if the given banner is invalid');
+    it('should return an HTTP 400 if the given banner is invalid', async () => {
+      // number of banners in the database
+      const count = await Banner.count();
+      const res = await request(ctx.app)
+        .post('/banners')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(ctx.invalidBannerReq);
+
+      // check if number of banners in the database hasn't increased
+      expect(count).to.equal(await Banner.count());
+
+      // invalid code
+      expect(res.status).to.equal(400);
+    });
     it('should return an HTTP 403 if not admin', async () => {
+      // number of banners in the database
+      const count = await Banner.count();
       const res = await request(ctx.app)
         .post('/banners')
         .set('Authorization', `Bearer ${ctx.token}`)
         .send(ctx.validBannerReq);
+
+      // check if number of banners in the database hasn't increased
+      expect(count).to.equal(await Banner.count());
+
+      // forbidden code
       expect(res.status).to.equal(403);
     });
   });
 
   describe('GET /banners/:id', () => {
     it('should return an HTTP 200 and the banner with given id if admin', async () => {
+      // save banner with id 1
       await Banner.save(ctx.validBanner);
       const res = await request(ctx.app)
         .get('/banners/1')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
+      const resBanner = res.body as Banner;
+      const databaseBanner = await Banner.findOne(1);
+
+      // check if returned banner is indeed the one in the database
+      expect(bannerEq(resBanner, databaseBanner)).to.be.true;
+
+      // success code
       expect(res.status).to.equal(200);
     });
     it('should return an HTTP 404 if the banner with given id does not exist', async () => {
       const res = await request(ctx.app)
         .get('/banners/1')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
-      console.log(res.body);
+      const resBanner = res.body as Banner;
+      const databaseBanner = await Banner.findOne(1);
+
+      // check if banner is not returned
+      expect(resBanner).to.be.empty;
+      expect(databaseBanner).to.equal(undefined);
+
+      // not found code
       expect(res.status).to.equal(404);
     });
     it('should return an HTTP 403 if not admin', async () => {
@@ -225,6 +295,14 @@ describe('BannerController', async (): Promise<void> => {
       const res = await request(ctx.app)
         .get('/banners/1')
         .set('Authorization', `Bearer ${ctx.token}`);
+      const resBanner = res.body as Banner;
+      const databaseBanner = await Banner.findOne(1);
+
+      // check if banner is not returned
+      expect(resBanner).to.be.empty;
+      expect(bannerEq(resBanner, databaseBanner)).to.be.false;
+
+      // forbidden code
       expect(res.status).to.equal(403);
     });
   });
