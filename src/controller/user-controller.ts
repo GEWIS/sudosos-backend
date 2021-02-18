@@ -26,6 +26,7 @@ import Product from '../entity/product/product';
 import Transaction from '../entity/transactions/transaction';
 import CreateUserRequest from './request/create-user-request';
 import UpdateUserRequest from './request/update-user-request';
+import addPagination from '../helpers/pagination';
 
 export default class UserController extends BaseController {
   private logger: Logger = log4js.getLogger('UserController');
@@ -105,12 +106,14 @@ export default class UserController extends BaseController {
    * Get a list of all users
    * @route GET /users
    * @group users - Operations of user controller
+   * @param {integer} take.query - How many users the endpoint should return
+   * @param {integer} skip.query - How many users should be skipped (for pagination)
    * @returns {[User.model]} 200 - A list of all users
    */
   public async getAllUsers(req: RequestWithToken, res: Response): Promise<void> {
     this.logger.trace('Get all users', 'by user', req.token.user);
 
-    const users = await User.find({ where: { deleted: false } });
+    const users = await User.find({ where: { deleted: false }, ...addPagination(req) });
     res.status(200).json(users);
   }
 
