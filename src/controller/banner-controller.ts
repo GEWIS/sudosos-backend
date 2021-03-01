@@ -74,11 +74,49 @@ export default class BannerController extends BaseController {
   }
 
   /**
+   * Verifies whether the banner request translates to a valid banner object
+   * @param br
+   */
+  // eslint-disable-next-line class-methods-use-this
+  private verifyBanner(br: BannerRequest): boolean {
+    const typeCheck: boolean = typeof br.name === 'string'
+      && typeof br.picture === 'string'
+      && typeof br.duration === 'number'
+      && typeof br.active === 'boolean'
+      && typeof br.startDate === 'string'
+      && typeof br.endDate === 'string';
+
+    if (!typeCheck) return false;
+
+    const sDate = Date.parse(br.startDate);
+    const eDate = Date.parse(br.endDate);
+
+    const valueCheck: boolean = br.name !== ''
+      && br.picture !== ''
+      // duration must be integer greater than 0
+      && br.duration > 0
+      && Number.isInteger(br.duration)
+      && br.active !== null
+      // eslint-disable-next-line no-restricted-globals
+      && !isNaN(sDate)
+      // eslint-disable-next-line no-restricted-globals
+      && !isNaN(eDate)
+      // end date cannot be in the past
+      && eDate > new Date().getTime()
+      // end date must be later than start date
+      && eDate > sDate;
+
+    if (!valueCheck) return false;
+
+    return true;
+  }
+
+  /**
    * Validates that the request is authorized by the policy.
    * @param req - The incoming request.
    */
   // eslint-disable-next-line class-methods-use-this
-  public async isAdmin(req: RequestWithToken): Promise<boolean> {
+  private async isAdmin(req: RequestWithToken): Promise<boolean> {
     // TODO: check whether user is admin
     return req.token.user.type === UserType.LOCAL_ADMIN;
   }
@@ -118,23 +156,22 @@ export default class BannerController extends BaseController {
     const body = req.body as BannerRequest;
     this.logger.trace('Create banner', body, 'by user', req.token.user);
 
-    // Check whether duration is in whole seconds (integer)
-    if (!Number.isInteger(body.duration)) {
-      res.status(400).json('Duration is not an integer.');
-    }
-
     // handle request
-    try {
-      const banner: any = {
-        ...body,
-        startDate: new Date(Date.parse(body.startDate)),
-        endDate: new Date(Date.parse(body.endDate)),
-      } as Banner;
-      await Banner.save(banner);
-      res.json(banner);
-    } catch (error) {
-      this.logger.error('Could not create banner:', error);
-      res.status(500).json('Internal server error.');
+    if (this.verifyBanner(body)) {
+      try {
+        const banner: any = {
+          ...body,
+          startDate: new Date(Date.parse(body.startDate)),
+          endDate: new Date(Date.parse(body.endDate)),
+        } as Banner;
+        await Banner.save(banner);
+        res.json(banner);
+      } catch (error) {
+        this.logger.error('Could not create banner:', error);
+        res.status(500).json('Internal server error.');
+      }
+    } else {
+      res.status(400).json('Invalid banner.');
     }
   }
 
@@ -153,8 +190,13 @@ export default class BannerController extends BaseController {
 
     // handle request
     try {
+      // check if banner in database
       const banner = await Banner.findOne(id);
-      res.json(banner);
+      if (banner) {
+        res.json(banner);
+      } else {
+        res.status(404).json('Banner not found.');
+      }
     } catch (error) {
       this.logger.error('Could not return banner:', error);
       res.status(500).json('Internal server error.');
@@ -177,17 +219,26 @@ export default class BannerController extends BaseController {
     this.logger.trace('Update banner', id, 'by user', req.token.user);
 
     // handle request
-    try {
-      const banner: any = {
-        ...body,
-        startDate: new Date(Date.parse(body.startDate)),
-        endDate: new Date(Date.parse(body.endDate)),
-      } as Banner;
-      await Banner.update(id, banner);
-      res.json(banner);
-    } catch (error) {
-      this.logger.error('Could not update banner:', error);
-      res.status(500).json('Internal server error.');
+    if (this.verifyBanner(body)) {
+      try {
+        // check if banner in database
+        if (await Banner.findOne(id)) {
+          const banner: any = {
+            ...body,
+            startDate: new Date(Date.parse(body.startDate)),
+            endDate: new Date(Date.parse(body.endDate)),
+          } as Banner;
+          await Banner.update(id, banner);
+          res.json(banner);
+        } else {
+          res.status(404).json('Banner not found.');
+        }
+      } catch (error) {
+        this.logger.error('Could not update banner:', error);
+        res.status(500).json('Internal server error.');
+      }
+    } else {
+      res.status(400).json('Invalid banner.');
     }
   }
 
@@ -206,9 +257,14 @@ export default class BannerController extends BaseController {
 
     // handle request
     try {
+      // check if banner in database
       const banner = await Banner.findOne(id);
-      await Banner.delete(id);
-      res.json(banner);
+      if (banner) {
+        await Banner.delete(id);
+        res.json(banner);
+      } else {
+        res.status(404).json('Banner not found.');
+      }
     } catch (error) {
       this.logger.error('Could not remove banner:', error);
       res.status(500).json('Internal server error.');

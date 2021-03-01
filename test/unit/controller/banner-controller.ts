@@ -29,32 +29,6 @@ import User, { UserType } from '../../../src/entity/user/user';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import Swagger from '../../../src/swagger';
 
-// verify whether the banner request translates to a valid banner object
-function verifyBanner(spec: SwaggerSpecification, bannerRequest: BannerRequest): void {
-  // validate specifications
-  // const validation = spec.validateModel('BannerRequest', bannerRequest, false, true);
-  // expect(validation).to.be.true;
-
-  // check types
-  expect(bannerRequest.name).to.be.a('string');
-  expect(bannerRequest.picture).to.be.a('string');
-  expect(bannerRequest.duration).to.be.a('number');
-  expect(bannerRequest.active).to.be.a('boolean');
-  expect(bannerRequest.startDate).to.be.a('string');
-  expect(bannerRequest.endDate).to.be.a('string');
-
-  expect(bannerRequest.name).to.not.be.empty;
-  expect(bannerRequest.picture).to.not.be.empty;
-  expect(bannerRequest.duration).to.be.above(0);
-  expect(bannerRequest.active).to.not.be.null;
-
-  const sDate = new Date(Date.parse(bannerRequest.startDate));
-  const eDate = new Date(Date.parse(bannerRequest.endDate));
-  expect(sDate).to.be.a('date');
-  expect(eDate).to.be.a('date');
-  expect(eDate).to.be.greaterThan(sDate);
-}
-
 function bannerEq(a: Banner, b: Banner): Boolean {
   const aEmpty = a === {} as Banner || a === undefined;
   const bEmpty = b === {} as Banner || b === undefined;
@@ -142,8 +116,8 @@ describe('BannerController', async (): Promise<void> => {
       picture: 'some picture link',
       duration: 10,
       active: true,
-      startDate: '2021-02-29T16:00:00Z',
-      endDate: '2021-02-30T16:00:00Z',
+      startDate: '3000-02-29T16:00:00Z',
+      endDate: '3000-02-30T16:00:00Z',
     } as BannerRequest;
 
     const validBanner = {
@@ -245,7 +219,7 @@ describe('BannerController', async (): Promise<void> => {
       expect(count).to.equal(await Banner.count());
 
       // check no response body
-      expect(res.body).to.be.empty;
+      expect(res.body).to.equal('Invalid banner.');
 
       // invalid code
       expect(res.status).to.equal(400);
@@ -292,7 +266,7 @@ describe('BannerController', async (): Promise<void> => {
       const databaseBanner = await Banner.findOne(1);
 
       // check if banner is not returned
-      expect(res.body).to.be.empty;
+      expect(res.body).to.equal('Banner not found.');
       expect(databaseBanner).to.be.undefined;
 
       // not found code
@@ -340,7 +314,6 @@ describe('BannerController', async (): Promise<void> => {
 
       // check if posted banner is indeed in the database
       const databaseBanner = await Banner.findOne(1);
-      expect(bannerEq(ctx.validBanner, databaseBanner)).to.be.false;
       expect(bannerEq(patchBanner, databaseBanner)).to.be.true;
 
       // success code
@@ -356,18 +329,17 @@ describe('BannerController', async (): Promise<void> => {
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(ctx.invalidBannerReq);
 
-      // check if posted banner is indeed in the database
+      // check if banner is unaltered
       const databaseBanner = await Banner.findOne(1);
       expect(bannerEq(ctx.validBanner, databaseBanner)).to.be.true;
 
-      // check no response body
-      expect(res.body).to.be.empty;
+      // check response body
+      expect(res.body).to.equal('Invalid banner.');
 
       // invalid code
       expect(res.status).to.equal(400);
     });
     it('should return an HTTP 404 if the banner with given id does not exist', async () => {
-
       // patching banner request
       const patchBannerReq = {
         ...ctx.validBannerReq,
@@ -382,9 +354,12 @@ describe('BannerController', async (): Promise<void> => {
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(patchBannerReq);
 
-      // check if posted banner is indeed in the database
+      // check if posted banner is not in the database
       const databaseBanner = await Banner.findOne(1);
       expect(databaseBanner).to.be.undefined;
+
+      // check response body
+      expect(res.body).to.equal('Banner not found.');
 
       // not found code
       expect(res.status).to.equal(404);
@@ -435,8 +410,8 @@ describe('BannerController', async (): Promise<void> => {
         .delete('/banners/1')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
-      // check no response body
-      expect(res.body).to.be.empty;
+      // check response body
+      expect(res.body).to.equal('Banner not found.');
 
       // not found code
       expect(res.status).to.equal(404);
