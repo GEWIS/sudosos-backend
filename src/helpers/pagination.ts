@@ -16,8 +16,28 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { FindManyOptions } from 'typeorm';
+import { FindManyOptions, SelectQueryBuilder } from 'typeorm';
 import { RequestWithToken } from '../middleware/token-middleware';
+
+function parseReqSkipTake(req: RequestWithToken): { take?: number, skip?: number } {
+  let take;
+  let skip;
+  const urlParams = req.query;
+
+  // Parse and validate the take URL parameter
+  if (urlParams.take != null) {
+    const parsedTake = parseInt(urlParams.take, 10);
+    if (!Number.isNaN(parsedTake)) take = parsedTake;
+  }
+
+  // Parse and validate the take URL parameter
+  if (urlParams.skip != null) {
+    const parsedSkip = parseInt(urlParams.skip, 10);
+    if (!Number.isNaN(parsedSkip)) skip = parsedSkip;
+  }
+
+  return { take, skip };
+}
 
 /**
  * Get a FindManyOptions object that includes pagination parameters,
@@ -31,10 +51,9 @@ import { RequestWithToken } from '../middleware/token-middleware';
  * @returns FindManyOptions skip and take parameters for the findoptions for TypeORM.
  *  This should be concatenated with the rest of the parameters
  */
-export default function addPagination(req: RequestWithToken): FindManyOptions {
+export function addPaginationForFindOptions(req: RequestWithToken): FindManyOptions {
   const maxTake = parseInt(process.env.PAGINATION_MAX, 10) ?? 500;
 
-  const urlParams = req.query;
   // Set the default take and skip to the values set in the environment variables.
   // If these are not set, choose 25 and 0 respectively
   let [take, skip] = [
@@ -42,21 +61,53 @@ export default function addPagination(req: RequestWithToken): FindManyOptions {
     0,
   ];
 
-  // Parse and validate the take URL parameter
-  if (urlParams.take != null) {
-    const parsedTake = parseInt(urlParams.take, 10);
-    if (!Number.isNaN(parsedTake)) {
-      // If more entries than the maximum have been requested, set the take to the maximum
-      // Otherwise, we can just return the requested take
-      take = parsedTake < maxTake ? parsedTake : maxTake;
-    }
+  // Parse the values in the URL parameters
+  const parsed = parseReqSkipTake(req);
+
+  // If no value has been given by the user, we simply keep using the default
+  if (parsed.take !== undefined) {
+    take = parsed.take < maxTake ? parsed.take : maxTake;
   }
 
-  // Parse and validate the skip URL parameter
-  if (urlParams.skip != null) {
-    const parsedSkip = parseInt(urlParams.skip, 10);
-    if (!Number.isNaN(parsedSkip)) skip = parsedSkip;
-  }
+  // If no value has been given by the user, we simply keep using the default
+  if (parsed.skip !== undefined) skip = parsed.skip;
 
   return { skip, take } as any as FindManyOptions;
+}
+
+/**
+ * Add pagination to a QueryBuilder object
+ * @param req RequestWithToken object, as received in the controller
+ * @param query QueryBuilder object the pagination needs to be applied to
+ * @returns The same QueryBuilder object as before,
+ * but now with pagination added
+ */
+export function addPaginationToQueryBuilder<T>(
+  req: RequestWithToken, query: SelectQueryBuilder<T>,
+) {
+  const maxTake = parseInt(process.env.PAGINATION_MAX, 10) ?? 500;
+
+  // Set the default take and skip to the values set in the environment variables.
+  // If these are not set, choose 25 and 0 respectively
+  const [take, skip] = [
+    parseInt(process.env.PAGINATION_DEFAULT, 10) ?? 25,
+    0,
+  ];
+
+  // Parse the values in the URL parameters
+  const parsed = parseReqSkipTake(req);
+
+  // We have to do two comparisons here. first, we need to check if a pagination
+  // value has been given. If this is not the case, we pick the default. Then, we
+  // have a maximum take value, so if the parsed value is larger, we return the max.
+  if (parsed.take !== undefined) {
+    query.take(parsed.take < maxTake ? parsed.take : maxTake);
+  } else {
+    query.take(take);
+  }
+
+  // This could be done in one line, so why not?
+  query.skip(parsed.skip === undefined ? skip : parsed.skip);
+
+  return query;
 }
