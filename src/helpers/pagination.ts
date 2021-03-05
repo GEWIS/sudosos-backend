@@ -32,18 +32,24 @@ import { RequestWithToken } from '../middleware/token-middleware';
  *  This should be concatenated with the rest of the parameters
  */
 export default function addPagination(req: RequestWithToken): FindManyOptions {
+  const maxTake = parseInt(process.env.PAGINATION_MAX, 10) ?? 500;
+
   const urlParams = req.query;
   // Set the default take and skip to the values set in the environment variables.
   // If these are not set, choose 25 and 0 respectively
   let [take, skip] = [
-    parseInt(process.env.DEFAULT_PAGINATION, 10) ?? 25,
+    parseInt(process.env.PAGINATION_DEFAULT, 10) ?? 25,
     0,
   ];
 
   // Parse and validate the take URL parameter
   if (urlParams.take != null) {
     const parsedTake = parseInt(urlParams.take, 10);
-    if (!Number.isNaN(parsedTake)) take = parsedTake;
+    if (!Number.isNaN(parsedTake)) {
+      // If more entries than the maximum have been requested, set the take to the maximum
+      // Otherwise, we can just return the requested take
+      take = parsedTake < maxTake ? parsedTake : maxTake;
+    }
   }
 
   // Parse and validate the skip URL parameter
