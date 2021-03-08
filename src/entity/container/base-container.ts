@@ -16,10 +16,9 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  Column, JoinTable, ManyToMany,
+  Column,
 } from 'typeorm';
 import BaseEntityWithoutId from '../base-entity-without-id';
-import ProductRevision from '../product/product-revision';
 
 export default class BaseContainer extends BaseEntityWithoutId {
   @Column({
@@ -27,8 +26,4 @@ export default class BaseContainer extends BaseEntityWithoutId {
     length: 64,
   })
   public name: string;
-
-  @ManyToMany(() => ProductRevision)
-  @JoinTable()
-  public products: ProductRevision[];
 }
