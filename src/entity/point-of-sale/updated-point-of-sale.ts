@@ -17,11 +17,12 @@
  */
 import {
   Entity,
-  JoinColumn,
+  JoinColumn, JoinTable, ManyToMany,
   OneToOne,
 } from 'typeorm';
 import BasePointOfSale from './base-point-of-sale';
 import PointOfSale from './point-of-sale';
+import Container from '../container/container';
 
 @Entity()
 export default class UpdatedPointOfSale extends BasePointOfSale {
@@ -31,4 +32,8 @@ export default class UpdatedPointOfSale extends BasePointOfSale {
   })
   @JoinColumn()
   public pointOfSale: PointOfSale;
+
+  @ManyToMany(() => Container)
+  @JoinTable()
+  public containers: Container[];
 }
