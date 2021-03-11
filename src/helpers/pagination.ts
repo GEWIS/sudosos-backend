@@ -52,12 +52,12 @@ function parseReqSkipTake(req: RequestWithToken): { take?: number, skip?: number
  *  This should be concatenated with the rest of the parameters
  */
 export function addPaginationForFindOptions(req: RequestWithToken): FindManyOptions {
-  const maxTake = parseInt(process.env.PAGINATION_MAX, 10) ?? 500;
+  const maxTake = parseInt(process.env.PAGINATION_MAX, 10) || 500;
 
   // Set the default take and skip to the values set in the environment variables.
   // If these are not set, choose 25 and 0 respectively
   let [take, skip] = [
-    parseInt(process.env.PAGINATION_DEFAULT, 10) ?? 25,
+    parseInt(process.env.PAGINATION_DEFAULT, 10) || 25,
     0,
   ];
 
@@ -72,7 +72,7 @@ export function addPaginationForFindOptions(req: RequestWithToken): FindManyOpti
   // If no value has been given by the user, we simply keep using the default
   if (parsed.skip !== undefined) skip = parsed.skip;
 
-  return { skip, take } as any as FindManyOptions;
+  return { skip, take };
 }
 
 /**
@@ -85,12 +85,12 @@ export function addPaginationForFindOptions(req: RequestWithToken): FindManyOpti
 export function addPaginationToQueryBuilder<T>(
   req: RequestWithToken, query: SelectQueryBuilder<T>,
 ) {
-  const maxTake = parseInt(process.env.PAGINATION_MAX, 10) ?? 500;
+  const maxTake = parseInt(process.env.PAGINATION_MAX, 10) || 500;
 
   // Set the default take and skip to the values set in the environment variables.
   // If these are not set, choose 25 and 0 respectively
   const [take, skip] = [
-    parseInt(process.env.PAGINATION_DEFAULT, 10) ?? 25,
+    parseInt(process.env.PAGINATION_DEFAULT, 10) || 25,
     0,
   ];
 
