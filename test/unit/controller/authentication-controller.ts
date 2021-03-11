@@ -20,6 +20,7 @@ import { expect, request } from 'chai';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { Connection } from 'typeorm';
 import bodyParser from 'body-parser';
+import log4js from 'log4js';
 import User, { UserType } from '../../../src/entity/user/user';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Database from '../../../src/database';
@@ -61,6 +62,11 @@ describe('AuthenticationController', async (): Promise<void> => {
       },
     };
     process.env.NODE_ENV = 'development';
+
+    // Silent in-dependency logs unless really wanted by the environment.
+    const logger = log4js.getLogger('Console');
+    logger.level = process.env.LOG_LEVEL;
+    console.log = (message: any) => logger.debug(message);
 
     ctx.specification = await Swagger.initialize(ctx.app);
     ctx.controller = new AuthenticationController(ctx.specification, ctx.tokenHandler);
