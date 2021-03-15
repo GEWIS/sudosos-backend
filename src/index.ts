@@ -31,11 +31,14 @@ import Swagger from './swagger';
 import TokenHandler from './authentication/token-handler';
 import TokenMiddleware from './middleware/token-middleware';
 import AuthenticationController from './controller/authentication-controller';
+import RoleManager from './rbac/role-manager';
 
 export class Application {
   app: express.Express;
 
   specification: SwaggerSpecification;
+
+  roleManager: RoleManager;
 
   server: http.Server;
 
@@ -97,6 +100,9 @@ export default async function createApp(): Promise<Application> {
 
   // Setup token handler and authentication controller.
   await setupAuthentication(application);
+
+  // Setup RBAC
+  application.roleManager = new RoleManager();
 
   // Start express application.
   application.server = application.app.listen(process.env.HTTP_PORT);
