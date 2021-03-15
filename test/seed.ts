@@ -61,7 +61,7 @@ function defineUsers(
 /**
  * Seeds a default dataset of users, and stores them in the database.
  */
-async function seedUsers(): Promise<User[]> {
+export async function seedUsers(): Promise<User[]> {
   const types: UserType[] = [
     UserType.LOCAL_USER, UserType.LOCAL_ADMIN, UserType.MEMBER, UserType.ORGAN,
   ];
@@ -85,7 +85,7 @@ async function seedUsers(): Promise<User[]> {
 /**
  * Seeds a default dataset of product categories, and stores them in the database.
  */
-async function seedProductCategories(): Promise<ProductCategory[]> {
+export async function seedProductCategories(): Promise<ProductCategory[]> {
   const category = (data: object) => Object.assign(new ProductCategory(), data) as ProductCategory;
 
   return ProductCategory.save([
@@ -197,7 +197,7 @@ function defineUpdatedProducts(
  * @param users - The dataset of users to base the product dataset on.
  * @param categories - The dataset of product categories to base the product dataset on.
  */
-async function seedProducts(
+export async function seedProducts(
   users: User[],
   categories: ProductCategory[],
 ): Promise<{
@@ -247,7 +247,7 @@ async function seedProducts(
  * @param users - The dataset of users to base the product dataset on.
  * @param categories - The dataset of product categories to base the product dataset on.
  */
-async function seedUpdatedProducts(
+export async function seedUpdatedProducts(
   users: User[],
   categories: ProductCategory[],
 ): Promise<{
@@ -311,7 +311,7 @@ async function seedUpdatedProducts(
  * @param users - The dataset of users to base the product dataset on.
  * @param categories - The dataset of product categories to base the product dataset on.
  */
-async function seedAllProducts(
+export async function seedAllProducts(
   users: User[],
   categories: ProductCategory[],
 ): Promise<{
@@ -461,7 +461,7 @@ function defineUpdatedContainers(
  * @param users - The dataset of users to base the container dataset on.
  * @param productRevisions - The dataset of product revisions to base the container dataset on.
  */
-async function seedContainers(
+export async function seedContainers(
   users: User[],
   productRevisions: ProductRevision[],
 ): Promise<{
@@ -511,7 +511,7 @@ async function seedContainers(
  * @param productRevisions - The dataset of product revisions to base the container dataset on.
  * @param products - The dataset of products to base the container dataset on.
  */
-async function seedUpdatedContainers(
+export async function seedUpdatedContainers(
   users: User[],
   productRevisions: ProductRevision[],
   products: Product[],
@@ -575,7 +575,7 @@ async function seedUpdatedContainers(
  * @param productRevisions - The dataset of product revisions to base the container dataset on.
  * @param products - The dataset of products to base the container dataset on.
  */
-async function seedAllContainers(
+export async function seedAllContainers(
   users: User[],
   productRevisions: ProductRevision[],
   products: Product[],
@@ -725,7 +725,7 @@ function defineUpdatedPointOfSales(
  * @param containerRevisions - The dataset of container revisions to base
  * the pointofsales dataset on.
  */
-async function seedPointsOfSales(
+export async function seedPointsOfSales(
   users: User[],
   containerRevisions: ContainerRevision[],
 ): Promise<{
@@ -776,7 +776,7 @@ async function seedPointsOfSales(
  * the pointofsales dataset on.
  * @param containers - The dataset of containers to base the pointofsales dataset on.
  */
-async function seedUpdatedPointsOfSales(
+export async function seedUpdatedPointsOfSales(
   users: User[],
   containerRevisions: ContainerRevision[],
   containers: Container[],
@@ -841,7 +841,7 @@ async function seedUpdatedPointsOfSales(
  * the pointofsales dataset on.
  * @param containers - The dataset of containers to base the pointofsales dataset on.
  */
-async function seedAllPointsOfSales(
+export async function seedAllPointsOfSales(
   users: User[],
   containerRevisions: ContainerRevision[],
   containers: Container[],
@@ -983,7 +983,7 @@ function defineTransactions(
  * @param pointOfSaleRevisions
  *  - The dataset of point of sale revisions to base the transaction dataset on.
  */
-async function seedTransactions(
+export async function seedTransactions(
   users: User[],
   pointOfSaleRevisions: PointOfSaleRevision[],
 ): Promise<{
