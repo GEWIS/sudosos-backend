@@ -126,7 +126,16 @@ export default class RoleManager {
   public static processAttributes(
     allowedAttributes: Set<AllowedAttribute>, unsatisfied: Set<AllowedAttribute>,
   ) {
-    throw new Error('Not Implemented');
+    // If this relation has a wildcard, all attributes are allowed.
+    if (allowedAttributes.has('*')) {
+      unsatisfied.clear();
+      return;
+    }
+
+    // Remove all allowed attributes from the unsatisfied attribute list.
+    allowedAttributes.forEach((attr) => {
+      unsatisfied.delete(attr);
+    });
   }
 
   /**
@@ -139,7 +148,14 @@ export default class RoleManager {
   public static processRelations(
     actionDefinition: ActionDefinition, relations: string[], unsatisfied: Set<AllowedAttribute>,
   ): void {
-    throw new Error('Not Implemented');
+    // Use every, such that we can break early if all attributes are satisfied.
+    relations.every((relation): boolean => {
+      const allowedAttributes = actionDefinition[relation];
+      if (!allowedAttributes) return true;
+
+      RoleManager.processAttributes(allowedAttributes, unsatisfied);
+      return unsatisfied.size > 0;
+    });
   }
 
   /**
@@ -159,6 +175,40 @@ export default class RoleManager {
     entity: string,
     attributes: AllowedAttribute[],
   ): boolean {
-    throw new Error('Not Implemented');
+    // Convert roles to array if a single role is given.
+    let rolesArray: string[];
+    if (typeof roles === 'string') {
+      rolesArray = [roles];
+    } else {
+      rolesArray = roles;
+    }
+
+    // Keep track of currently unsatisfied attributes.
+    const unsatisfied = new Set<AllowedAttribute>(attributes);
+
+    // For every role, remove the attributes that are satisfied by the role.
+    // Use every, such that we can break early if all attributes are satisfied.
+    rolesArray.every((role): boolean => {
+      const roleDefinition: RoleDefinition = this.roles[role];
+      if (!roleDefinition) return true;
+
+      const entityDefinition: EntityDefinition = roleDefinition.permissions[entity];
+      if (!entityDefinition) return true;
+
+      const actionDefinition: ActionDefinition = entityDefinition[action];
+      if (!actionDefinition) return true;
+
+      // Also consider the 'all' relation if not specified.
+      const relations = [relation];
+      if (relation !== 'all') relations.push('all');
+
+      RoleManager.processRelations(
+        actionDefinition, relations, unsatisfied,
+      );
+      return unsatisfied.size > 0;
+    });
+
+    // Action is allowed if all attributes are satisfied.
+    return unsatisfied.size === 0;
   }
 }
