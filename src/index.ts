@@ -87,7 +87,7 @@ export default async function createApp(): Promise<Application> {
   // Silent in-dependency logs unless really wanted by the environment.
   const logger = log4js.getLogger('Console');
   logger.level = process.env.LOG_LEVEL;
-  console.log = (message: any) => logger.debug(message);
+  console.log = (message: any, ...additional: any[]) => logger.debug(message, ...additional);
 
   // Set up monetary value configuration.
   dinero.defaultCurrency = process.env.CURRENCY_CODE as Currency;
@@ -105,11 +105,15 @@ export default async function createApp(): Promise<Application> {
   application.roleManager = new RoleManager();
 
   // Start express application.
+  logger.info(`Server listening on port ${process.env.HTTP_PORT}.`);
   application.server = application.app.listen(process.env.HTTP_PORT);
   return application;
 }
 
 if (require.main === module) {
   // Only execute the application directly if this is the main execution file.
-  createApp();
+  createApp().catch((e) => {
+    const logger = log4js.getLogger('index');
+    logger.fatal(e);
+  });
 }
