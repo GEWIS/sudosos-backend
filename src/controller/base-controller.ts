@@ -21,7 +21,6 @@ import Policy, { MethodPolicy } from './policy';
 import PolicyMiddleware from '../middleware/policy-middleware';
 import RequestValidatorMiddleware from '../middleware/request-validator-middleware';
 
-
 /**
  * The BaseController class is responsible for:
  * - Storing route definitions.
