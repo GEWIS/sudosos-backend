@@ -32,6 +32,7 @@ import TokenHandler from './authentication/token-handler';
 import TokenMiddleware from './middleware/token-middleware';
 import AuthenticationController from './controller/authentication-controller';
 import RoleManager from './rbac/role-manager';
+import Gewis from './gewis/gewis';
 
 export class Application {
   app: express.Express;
@@ -101,8 +102,12 @@ export default async function createApp(): Promise<Application> {
   // Setup token handler and authentication controller.
   await setupAuthentication(application);
 
-  // Setup RBAC
+  // Setup RBAC.
   application.roleManager = new RoleManager();
+
+  // Setup GEWIS-specific module.
+  const gewis = new Gewis(application.roleManager);
+  await gewis.registerRoles();
 
   // Start express application.
   logger.info(`Server listening on port ${process.env.HTTP_PORT}.`);
