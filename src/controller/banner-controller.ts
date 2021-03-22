@@ -66,7 +66,7 @@ export default class BannerController extends BaseController {
       },
       '/active': {
         GET: {
-          policy: this.canGetActiveBanners.bind(this),
+          policy: async () => true,
           handler: this.returnActiveBanners.bind(this),
         },
       },
@@ -93,14 +93,18 @@ export default class BannerController extends BaseController {
 
     const valueCheck: boolean = br.name !== ''
       && br.picture !== ''
+
       // duration must be integer greater than 0
       && br.duration > 0
+
       && Number.isInteger(br.duration)
       && br.active !== null
       && Number.isNaN(sDate)
       && Number.isNaN(eDate)
+
       // end date cannot be in the past
       && eDate > new Date().getTime()
+
       // end date must be later than start date
       && eDate > sDate;
 
@@ -153,21 +157,21 @@ export default class BannerController extends BaseController {
     this.logger.trace('Create banner', body, 'by user', req.token.user);
 
     // handle request
-    if (this.verifyBanner(body)) {
-      try {
+    try {
+      if (this.verifyBanner(body)) {
         const banner: any = {
           ...body,
-          startDate: new Date(Date.parse(body.startDate)),
-          endDate: new Date(Date.parse(body.endDate)),
+          startDate: new Date(body.startDate),
+          endDate: new Date(body.endDate),
         } as Banner;
         await Banner.save(banner);
         res.json(banner);
-      } catch (error) {
-        this.logger.error('Could not create banner:', error);
-        res.status(500).json('Internal server error.');
+      } else {
+        res.status(400).json('Invalid banner.');
       }
-    } else {
-      res.status(400).json('Invalid banner.');
+    } catch (error) {
+      this.logger.error('Could not create banner:', error);
+      res.status(500).json('Internal server error.');
     }
   }
 
@@ -215,26 +219,26 @@ export default class BannerController extends BaseController {
     this.logger.trace('Update banner', id, 'by user', req.token.user);
 
     // handle request
-    if (this.verifyBanner(body)) {
-      try {
+    try {
+      if (this.verifyBanner(body)) {
         // check if banner in database
         if (await Banner.findOne(id)) {
           const banner: any = {
             ...body,
-            startDate: new Date(Date.parse(body.startDate)),
-            endDate: new Date(Date.parse(body.endDate)),
+            startDate: new Date(body.startDate),
+            endDate: new Date(body.endDate),
           } as Banner;
           await Banner.update(id, banner);
           res.json(banner);
         } else {
           res.status(404).json('Banner not found.');
         }
-      } catch (error) {
-        this.logger.error('Could not update banner:', error);
-        res.status(500).json('Internal server error.');
+      } else {
+        res.status(400).json('Invalid banner.');
       }
-    } else {
-      res.status(400).json('Invalid banner.');
+    } catch (error) {
+      this.logger.error('Could not update banner:', error);
+      res.status(500).json('Internal server error.');
     }
   }
 
@@ -265,15 +269,6 @@ export default class BannerController extends BaseController {
       this.logger.error('Could not remove banner:', error);
       res.status(500).json('Internal server error.');
     }
-  }
-
-  /**
-   * Validates that the request is authorized by the policy.
-   * @param req - The incoming request.
-   */
-  // eslint-disable-next-line class-methods-use-this
-  public async canGetActiveBanners(req: RequestWithToken): Promise<boolean> {
-    return req.token.user.type === UserType.LOCAL_ADMIN;
   }
 
   /**

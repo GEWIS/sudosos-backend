@@ -45,16 +45,16 @@ function bannerEq(a: Banner, b: Banner): Boolean {
   let bEndDate = b.endDate;
 
   if (typeof aStartDate === 'string') {
-    aStartDate = new Date(Date.parse(aStartDate));
+    aStartDate = new Date(aStartDate);
   }
   if (typeof bStartDate === 'string') {
-    bStartDate = new Date(Date.parse(bStartDate));
+    bStartDate = new Date(bStartDate);
   }
   if (typeof aEndDate === 'string') {
-    aEndDate = new Date(Date.parse(aEndDate));
+    aEndDate = new Date(aEndDate);
   }
   if (typeof bEndDate === 'string') {
-    bEndDate = new Date(Date.parse(bEndDate));
+    bEndDate = new Date(bEndDate);
   }
 
   return a.name === b.name
@@ -122,8 +122,8 @@ describe('BannerController', async (): Promise<void> => {
 
     const validBanner = {
       ...validBannerReq,
-      startDate: new Date(Date.parse(validBannerReq.startDate)),
-      endDate: new Date(Date.parse(validBannerReq.endDate)),
+      startDate: new Date(validBannerReq.startDate),
+      endDate: new Date(validBannerReq.endDate),
     } as Banner;
 
     const invalidBannerReq = {
@@ -299,8 +299,8 @@ describe('BannerController', async (): Promise<void> => {
       // patched banner in database
       const patchBanner = {
         ...patchBannerReq,
-        startDate: new Date(Date.parse(patchBannerReq.startDate)),
-        endDate: new Date(Date.parse(patchBannerReq.endDate)),
+        startDate: new Date(patchBannerReq.startDate),
+        endDate: new Date(patchBannerReq.endDate),
       } as Banner;
 
       // save valid banner with id 1
