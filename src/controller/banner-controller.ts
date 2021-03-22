@@ -79,15 +79,6 @@ export default class BannerController extends BaseController {
    */
   // eslint-disable-next-line class-methods-use-this
   private verifyBanner(br: BannerRequest): boolean {
-    const typeCheck: boolean = typeof br.name === 'string'
-      && typeof br.picture === 'string'
-      && typeof br.duration === 'number'
-      && typeof br.active === 'boolean'
-      && typeof br.startDate === 'string'
-      && typeof br.endDate === 'string';
-
-    if (!typeCheck) return false;
-
     const sDate = Date.parse(br.startDate);
     const eDate = Date.parse(br.endDate);
 
@@ -126,8 +117,8 @@ export default class BannerController extends BaseController {
    * @route GET /banners
    * @group banners - Operations of banner controller
    * @security JWT
-   * @returns {Banner.model} 200 - All existing banners
-   * @returns {string} 400 - Validation error
+   * @returns {Array<Banner>} 200 - All existing banners
+   * @returns {string} 500 - Internal server error
    */
   public async returnAllBanners(req: RequestWithToken, res: Response): Promise<void> {
     const { body } = req;
@@ -151,6 +142,7 @@ export default class BannerController extends BaseController {
    * @security JWT
    * @returns {Banner.model} 200 - The created banner entity
    * @returns {string} 400 - Validation error
+   * @returns {string} 500 - Internal server error
    */
   public async createBanner(req: RequestWithToken, res: Response): Promise<void> {
     const body = req.body as BannerRequest;
@@ -182,7 +174,8 @@ export default class BannerController extends BaseController {
    * @param {integer} id.path.required - The id of the banner which should be returned
    * @security JWT
    * @returns {Banner.model} 200 - The requested banner entity
-   * @returns {string} 400 - Validation error
+   * @returns {string} 404 - Not found error
+   * @returns {string} 500 - Internal server error
    */
   public async returnSingleBanner(req: RequestWithToken, res: Response): Promise<void> {
     const { id } = req.params;
@@ -212,6 +205,8 @@ export default class BannerController extends BaseController {
    * @security JWT
    * @returns {Banner.model} 200 - The requested banner entity
    * @returns {string} 400 - Validation error
+   * @returns {string} 404 - Not found error
+   * @returns {string} 500 - Internal server error
    */
   public async updateBanner(req: RequestWithToken, res: Response): Promise<void> {
     const body = req.body as BannerRequest;
@@ -249,7 +244,7 @@ export default class BannerController extends BaseController {
    * @param {integer} id.path.required - The id of the banner which should be deleted
    * @security JWT
    * @returns {Banner.model} 200 - The deleted banner entity
-   * @returns {string} 400 - Validation error
+   * @returns {string} 404 - Not found error
    */
   public async removeBanner(req: RequestWithToken, res: Response): Promise<void> {
     const { id } = req.params;
@@ -276,7 +271,7 @@ export default class BannerController extends BaseController {
    * @route GET /banners/active
    * @group banners - Operations of banner controller
    * @security JWT
-   * @returns {Banner.model} 200 - All active banners
+   * @returns {Array<Banner>} 200 - All active banners
    * @returns {string} 400 - Validation error
    */
   public async returnActiveBanners(req: RequestWithToken, res: Response): Promise<void> {

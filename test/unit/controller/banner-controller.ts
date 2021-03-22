@@ -482,5 +482,3 @@ describe('BannerController', async (): Promise<void> => {
     });
   });
 });
-
-// https://stackabuse.com/testing-node-js-code-with-mocha-and-chai/

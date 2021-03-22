@@ -19,7 +19,7 @@ import { Column, Entity } from 'typeorm';
 import BaseEntity from './base-entity';
 
 /**
- * @typedef {Banner} Banner
+ * @typedef {BaseEntity} Banner
  * @property {string} name - Name/label of the banner
  * @property {string} picture - Location of the image
  * @property {integer} duration - How long the banner should be shown (in seconds)
