@@ -16,6 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import dinero from 'dinero.js';
+import { addDays } from 'date-fns';
 import Container from '../src/entity/container/container';
 import ContainerRevision from '../src/entity/container/container-revision';
 import PointOfSale from '../src/entity/point-of-sale/point-of-sale';
@@ -131,13 +132,11 @@ function defineProducts(
 /**
  * Defines product revision objects based on the parameters passed.
  *
- * @param start - The number of product revisions that already exist.
  * @param count - The number of product revisions to generate.
  * @param product - The product that the product revisions belong to.
  * @param category - The category generated product revisions will belong to.
  */
 function defineProductRevisions(
-  start: number,
   count: number,
   product: Product,
   category: ProductCategory,
@@ -221,7 +220,6 @@ export async function seedProducts(
       const category = categories[o % categories.length];
       prod[o].currentRevision = (prod[o].id % 3) + 1;
       rev = rev.concat(defineProductRevisions(
-        productRevisions.length,
         prod[o].currentRevision,
         prod[o],
         category,
@@ -277,7 +275,6 @@ export async function seedUpdatedProducts(
       if (currentRevision > 0) {
         prod[o].currentRevision = currentRevision;
         rev = rev.concat(defineProductRevisions(
-          productRevisions.length,
           prod[o].currentRevision,
           prod[o],
           category,
@@ -337,7 +334,6 @@ export async function seedAllProducts(
       const category = categories[o % categories.length];
       prod[o].currentRevision = (prod[o].id % 3) + 1;
       rev = rev.concat(defineProductRevisions(
-        productRevisions.length,
         prod[o].currentRevision,
         prod[o],
         category,
@@ -351,7 +347,6 @@ export async function seedAllProducts(
       if (currentRevision > 0) {
         prod[o].currentRevision = currentRevision;
         rev = rev.concat(defineProductRevisions(
-          productRevisions.length,
           prod[o].currentRevision,
           prod[o],
           category,
@@ -651,15 +646,15 @@ function definePointOfSales(
   count: number,
   user: User,
 ): PointOfSale[] {
-  const pointsOfSales: PointOfSale[] = [];
+  const pointsOfSale: PointOfSale[] = [];
   for (let nr = 1; nr <= count; nr += 1) {
     const container = Object.assign(new Container(), {
       id: start + nr,
       owner: user,
     });
-    pointsOfSales.push(container);
+    pointsOfSale.push(container);
   }
-  return pointsOfSales;
+  return pointsOfSale;
 }
 
 /**
@@ -667,26 +662,32 @@ function definePointOfSales(
  *
  * @param start - The number of pointofsales revisions that already exist.
  * @param count - The number of pointofsales revisions to generate.
- * @param pointOfSales - The pointofsales that the pointofsales revisions belong to.
+ * @param dateOffset - The date offset from 2000-1-1, where 0 is before, 1 is during, 2 is after.
+ * @param pointOfSale - The pointofsales that the pointofsales revisions belong to.
  * @param containerRevisions - The container revisions that will be added to
  * the pointofsales revisions.
  */
 function definePointOfSaleRevisions(
   start: number,
   count: number,
-  pointOfSales: PointOfSale,
+  dateOffset: number,
+  pointOfSale: PointOfSale,
   containerRevisions: ContainerRevision[],
 ): PointOfSaleRevision[] {
   const revisions: PointOfSaleRevision[] = [];
   // Only allow products with same owner in container.
-  const candidates = containerRevisions.filter((c) => c.container.owner === pointOfSales.owner);
+  const candidates = containerRevisions.filter((c) => c.container.owner === pointOfSale.owner);
+  const startDate = addDays(new Date(2020, 0, 1), 2 - (dateOffset * 2));
+  const endDate = addDays(new Date(2020, 0, 1), 3 - (dateOffset * 2));
 
   for (let rev = 1; rev <= count; rev += 1) {
     revisions.push(Object.assign(new PointOfSaleRevision(), {
-      pointofsale: pointOfSales,
+      pointOfSale,
       revision: rev,
-      name: `PointOfSale${pointOfSales.id}-${rev}`,
+      name: `PointOfSale${pointOfSale.id}-${rev}`,
       containers: candidates.filter((c) => c.revision === rev),
+      startDate,
+      endDate,
     }));
   }
   return revisions;
@@ -696,21 +697,27 @@ function definePointOfSaleRevisions(
  * Defines updated pointofsales based on the parameters passed.
  *
  * @param start - The number of updated pointofsales that already exist.
- * @param pointOfSales - The pointofsales that the updated pointofsales belong to.
+ * @param dateOffset - The date offset from 2000-1-1, where 0 is before, 1 is during, 2 is after.
+ * @param pointOfSale - The pointofsales that the updated pointofsales belong to.
  * @param containers - The containers that will be added to the updated pointofsales.
  */
-function defineUpdatedPointOfSales(
+function defineUpdatedPointOfSale(
   start: number,
-  pointOfSales: PointOfSale,
+  dateOffset: number,
+  pointOfSale: PointOfSale,
   containers: Container[],
 ): UpdatedPointOfSale[] {
   const updates: UpdatedPointOfSale[] = [];
-  const candidates = containers.filter((c) => c.owner === pointOfSales.owner);
+  const candidates = containers.filter((c) => c.owner === pointOfSale.owner);
+  const startDate = addDays(new Date(2000, 0, 1), 2 - (dateOffset * 2));
+  const endDate = addDays(new Date(2000, 0, 1), 3 - (dateOffset * 2));
 
   updates.push(Object.assign(new UpdatedPointOfSale(), {
-    pointofsale: pointOfSales,
-    name: `PointOfSale${pointOfSales.id}-update`,
+    pointOfSale,
+    name: `PointOfSale${pointOfSale.id}-update`,
     containers: candidates,
+    startDate,
+    endDate,
   }));
 
   return updates;
@@ -725,7 +732,7 @@ function defineUpdatedPointOfSales(
  * @param containerRevisions - The dataset of container revisions to base
  * the pointofsales dataset on.
  */
-export async function seedPointsOfSales(
+export async function seedPointsOfSale(
   users: User[],
   containerRevisions: ContainerRevision[],
 ): Promise<{
@@ -750,6 +757,7 @@ export async function seedPointsOfSales(
       rev = rev.concat(definePointOfSaleRevisions(
         pointOfSalesRevisions.length,
         pos[o].currentRevision,
+        pos[o].currentRevision - 1,
         pos[o],
         containerRevisions,
       ));
@@ -776,7 +784,7 @@ export async function seedPointsOfSales(
  * the pointofsales dataset on.
  * @param containers - The dataset of containers to base the pointofsales dataset on.
  */
-export async function seedUpdatedPointsOfSales(
+export async function seedUpdatedPointsOfSale(
   users: User[],
   containerRevisions: ContainerRevision[],
   containers: Container[],
@@ -807,12 +815,14 @@ export async function seedUpdatedPointsOfSales(
         rev = rev.concat(definePointOfSaleRevisions(
           pointOfSalesRevisions.length,
           pos[o].currentRevision,
+          currentRevision,
           pos[o],
           containerRevisions,
         ));
       }
-      upd = upd.concat(defineUpdatedPointOfSales(
+      upd = upd.concat(defineUpdatedPointOfSale(
         updatedPointsOfSales.length,
+        currentRevision,
         pos[o],
         containers,
       ));
@@ -841,25 +851,25 @@ export async function seedUpdatedPointsOfSales(
  * the pointofsales dataset on.
  * @param containers - The dataset of containers to base the pointofsales dataset on.
  */
-export async function seedAllPointsOfSales(
+export async function seedAllPointsOfSale(
   users: User[],
   containerRevisions: ContainerRevision[],
   containers: Container[],
 ): Promise<{
-    pointsOfSales: PointOfSale[],
-    pointOfSalesRevisions: PointOfSaleRevision[],
-    updatedPointsOfSales: UpdatedPointOfSale[],
+    pointsOfSale: PointOfSale[],
+    pointOfSaleRevisions: PointOfSaleRevision[],
+    updatedPointsOfSale: UpdatedPointOfSale[],
   }> {
-  let pointsOfSales: PointOfSale[] = [];
-  let pointOfSalesRevisions: PointOfSaleRevision[] = [];
-  let updatedPointsOfSales: UpdatedPointOfSale[] = [];
+  let pointsOfSale: PointOfSale[] = [];
+  let pointOfSaleRevisions: PointOfSaleRevision[] = [];
+  let updatedPointsOfSale: UpdatedPointOfSale[] = [];
 
   const sellers = users.filter((u) => [UserType.LOCAL_ADMIN, UserType.MEMBER].includes(u.type));
 
   const promises: Promise<any>[] = [];
   for (let i = 0; i < sellers.length; i += 1) {
     const pos = definePointOfSales(
-      pointsOfSales.length,
+      pointsOfSale.length,
       6,
       sellers[i],
     );
@@ -868,8 +878,9 @@ export async function seedAllPointsOfSales(
     for (let o = 0; o < pos.length / 2; o += 1) {
       pos[o].currentRevision = (pos[o].id % 3) + 1;
       rev = rev.concat(definePointOfSaleRevisions(
-        pointOfSalesRevisions.length,
+        pointOfSaleRevisions.length,
         pos[o].currentRevision,
+        pos[o].currentRevision - 1,
         pos[o],
         containerRevisions,
       ));
@@ -879,14 +890,16 @@ export async function seedAllPointsOfSales(
       if (currentRevision > 1) {
         pos[o].currentRevision = currentRevision;
         rev = rev.concat(definePointOfSaleRevisions(
-          pointOfSalesRevisions.length,
+          pointOfSaleRevisions.length,
           pos[o].currentRevision,
+          currentRevision,
           pos[o],
           containerRevisions,
         ));
       }
-      upd = upd.concat(defineUpdatedPointOfSales(
-        updatedPointsOfSales.length,
+      upd = upd.concat(defineUpdatedPointOfSale(
+        updatedPointsOfSale.length,
+        currentRevision,
         pos[o],
         containers,
       ));
@@ -896,13 +909,13 @@ export async function seedAllPointsOfSales(
     promises.push(PointOfSale.save(pos).then(() => PointOfSaleRevision.save(rev))
       .then(() => UpdatedPointOfSale.save(upd)));
 
-    pointsOfSales = pointsOfSales.concat(pos);
-    pointOfSalesRevisions = pointOfSalesRevisions.concat(rev);
-    updatedPointsOfSales = updatedPointsOfSales.concat(upd);
+    pointsOfSale = pointsOfSale.concat(pos);
+    pointOfSaleRevisions = pointOfSaleRevisions.concat(rev);
+    updatedPointsOfSale = updatedPointsOfSale.concat(upd);
   }
   await Promise.all(promises);
 
-  return { pointsOfSales, pointOfSalesRevisions, updatedPointsOfSales };
+  return { pointsOfSale, pointOfSaleRevisions, updatedPointsOfSale };
 }
 
 /**
@@ -1058,9 +1071,9 @@ export interface DatabaseContent {
   containers: Container[],
   containerRevisions: ContainerRevision[],
   updatedContainers: UpdatedContainer[],
-  pointsOfSales: PointOfSale[],
-  pointOfSalesRevisions: PointOfSaleRevision[],
-  updatedPointsOfSales: UpdatedPointOfSale[],
+  pointsOfSale: PointOfSale[],
+  pointOfSaleRevisions: PointOfSaleRevision[],
+  updatedPointsOfSale: UpdatedPointOfSale[],
   transactions: Transaction[],
 }
 
@@ -1071,10 +1084,10 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
   const { containers, containerRevisions, updatedContainers } = await seedAllContainers(
     users, productRevisions, products,
   );
-  const { pointsOfSales, pointOfSalesRevisions, updatedPointsOfSales } = await seedAllPointsOfSales(
+  const { pointsOfSale, pointOfSaleRevisions, updatedPointsOfSale } = await seedAllPointsOfSale(
     users, containerRevisions, containers,
   );
-  const { transactions } = await seedTransactions(users, pointOfSalesRevisions);
+  const { transactions } = await seedTransactions(users, pointOfSaleRevisions);
 
   return {
     users,
@@ -1085,9 +1098,9 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
     containers,
     containerRevisions,
     updatedContainers,
-    pointsOfSales,
-    pointOfSalesRevisions,
-    updatedPointsOfSales,
+    pointsOfSale,
+    pointOfSaleRevisions,
+    updatedPointsOfSale,
     transactions,
   };
 }

@@ -41,6 +41,9 @@ import ProductRevision from './entity/product/product-revision';
 import ContainerRevision from './entity/container/container-revision';
 import PointOfSaleRevision from './entity/point-of-sale/point-of-sale-revision';
 import ProductOrdering from './entity/point-of-sale/product-ordering';
+import UpdatedProduct from './entity/product/updated-product';
+import UpdatedContainer from './entity/container/updated-container';
+import UpdatedPointOfSale from './entity/point-of-sale/updated-point-of-sale';
 
 export default class Database {
   public static async initialize(): Promise<Connection> {
@@ -50,10 +53,13 @@ export default class Database {
         ProductCategory,
         Product,
         ProductRevision,
+        UpdatedProduct,
         Container,
         ContainerRevision,
+        UpdatedContainer,
         PointOfSale,
         PointOfSaleRevision,
+        UpdatedPointOfSale,
         Transfer,
         Transaction,
         SubTransaction,
