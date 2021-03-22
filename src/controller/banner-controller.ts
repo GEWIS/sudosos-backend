@@ -97,18 +97,14 @@ export default class BannerController extends BaseController {
       && br.duration > 0
       && Number.isInteger(br.duration)
       && br.active !== null
-      // eslint-disable-next-line no-restricted-globals
-      && !isNaN(sDate)
-      // eslint-disable-next-line no-restricted-globals
-      && !isNaN(eDate)
+      && Number.isNaN(sDate)
+      && Number.isNaN(eDate)
       // end date cannot be in the past
       && eDate > new Date().getTime()
       // end date must be later than start date
       && eDate > sDate;
 
-    if (!valueCheck) return false;
-
-    return true;
+    return valueCheck;
   }
 
   /**
