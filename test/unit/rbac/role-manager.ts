@@ -16,6 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { expect } from 'chai';
+import User from '../../../src/entity/user/user';
 import RoleManager, { ActionDefinition, AllowedAttribute } from '../../../src/rbac/role-manager';
 
 describe('RoleManager', (): void => {
@@ -31,7 +32,7 @@ describe('RoleManager', (): void => {
     manager: RoleManager,
   };
 
-  before(async () => {
+  beforeEach(async () => {
     // Initialize context
     ctx = {
       wildcard: new Set(['*']),
@@ -160,6 +161,34 @@ describe('RoleManager', (): void => {
     it('should ignore undefined action', () => {
       const r = ctx.manager.can(['Role1'], 'undefined', 'own', 'Entity1', [...ctx.attrTwo]);
       expect(r).to.be.false;
+    });
+  });
+
+  describe('#getRoles', () => {
+    it('should return list of role names', async () => {
+      const user = new User();
+      ctx.manager.registerRole({
+        name: 'Everybody',
+        permissions: {},
+        assignmentCheck: async () => true,
+      });
+      const roles = await ctx.manager.getRoles(user);
+      expect(roles.length).to.equal(3);
+      expect(roles).to.contain('Role1');
+      expect(roles).to.contain('Role2');
+      expect(roles).to.contain('Everybody');
+    });
+    it('should not return role which fails assignment check', async () => {
+      const user = new User();
+      ctx.manager.registerRole({
+        name: 'Nobody',
+        permissions: {},
+        assignmentCheck: async () => false,
+      });
+      const roles = await ctx.manager.getRoles(user);
+      expect(roles.length).to.equal(2);
+      expect(roles).to.contain('Role1');
+      expect(roles).to.contain('Role2');
     });
   });
 });

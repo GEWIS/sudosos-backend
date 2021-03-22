@@ -211,4 +211,17 @@ export default class RoleManager {
     // Action is allowed if all attributes are satisfied.
     return unsatisfied.size === 0;
   }
+
+  /**
+   * Get all role names for which the given user passes the assignment check.
+   * @param user - The user for which role checking is performed.
+   * @returns a list of role names.
+   */
+  public async getRoles(user: User): Promise<string[]> {
+    const roles = Object.keys(this.roles);
+    const results = await Promise.all(
+      roles.map((name): Promise<boolean> => this.roles[name].assignmentCheck(user)),
+    );
+    return roles.filter((_: string, index: number): boolean => results[index]);
+  }
 }
