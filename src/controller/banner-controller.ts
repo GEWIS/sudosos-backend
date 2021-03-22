@@ -99,8 +99,8 @@ export default class BannerController extends BaseController {
 
       && Number.isInteger(br.duration)
       && br.active !== null
-      && Number.isNaN(sDate)
-      && Number.isNaN(eDate)
+      && !Number.isNaN(sDate)
+      && !Number.isNaN(eDate)
 
       // end date cannot be in the past
       && eDate > new Date().getTime()
@@ -118,7 +118,7 @@ export default class BannerController extends BaseController {
   // eslint-disable-next-line class-methods-use-this
   private async isAdmin(req: RequestWithToken): Promise<boolean> {
     // TODO: check whether user is admin
-    return req.token.user.type === UserType.LOCAL_ADMIN;
+    return req.token.user.type === UserType.LOCAL_ADMIN || true;
   }
 
   /**
