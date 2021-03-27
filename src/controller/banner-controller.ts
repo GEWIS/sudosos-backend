@@ -24,6 +24,7 @@ import BannerRequest from './request/banner-request';
 import { RequestWithToken } from '../middleware/token-middleware';
 import Banner from '../entity/banner';
 import { UserType } from '../entity/user/user';
+import { addPaginationForFindOptions } from '../helpers/pagination';
 
 export default class BannerController extends BaseController {
   private logger: Logger = log4js.getLogger('BannerController');
@@ -126,7 +127,7 @@ export default class BannerController extends BaseController {
 
     // handle request
     try {
-      const banners = await Banner.find();
+      const banners = await Banner.find({ ...addPaginationForFindOptions(req) });
       res.json(banners);
     } catch (error) {
       this.logger.error('Could not return all banners:', error);
@@ -280,7 +281,7 @@ export default class BannerController extends BaseController {
 
     // handle request
     try {
-      const banners = await Banner.find({ where: { active: '1' } });
+      const banners = await Banner.find({ where: { active: '1' }, ...addPaginationForFindOptions(req) });
       res.json(banners);
     } catch (error) {
       this.logger.error('Could not return active banners:', error);
