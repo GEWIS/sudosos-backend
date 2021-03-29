@@ -635,13 +635,13 @@ export async function seedAllContainers(
 }
 
 /**
- * Defines pointofsales objects based on the parameters passed.
+ * Defines pointsofsale objects based on the parameters passed.
  *
- * @param start - The number of pointofsales that already exist.
- * @param count - The number of pointofsales to generate.
- * @param user - The user that is owner of the pointofsales.
+ * @param start - The number of pointsofsale that already exist.
+ * @param count - The number of pointsofsale to generate.
+ * @param user - The user that is owner of the pointsofsale.
  */
-function definePointOfSales(
+function definePointsOfSale(
   start: number,
   count: number,
   user: User,
@@ -658,14 +658,14 @@ function definePointOfSales(
 }
 
 /**
- * Defines pointofsales revisions based on the parameters passed.
+ * Defines pointsofsale revisions based on the parameters passed.
  *
- * @param start - The number of pointofsales revisions that already exist.
- * @param count - The number of pointofsales revisions to generate.
+ * @param start - The number of pointsofsale revisions that already exist.
+ * @param count - The number of pointsofsale revisions to generate.
  * @param dateOffset - The date offset from 2000-1-1, where 0 is before, 1 is during, 2 is after.
- * @param pointOfSale - The pointofsales that the pointofsales revisions belong to.
+ * @param pointOfSale - The pointsofsale that the pointsofsale revisions belong to.
  * @param containerRevisions - The container revisions that will be added to
- * the pointofsales revisions.
+ * the pointsofsale revisions.
  */
 function definePointOfSaleRevisions(
   start: number,
@@ -694,12 +694,12 @@ function definePointOfSaleRevisions(
 }
 
 /**
- * Defines updated pointofsales based on the parameters passed.
+ * Defines updated pointsofsale based on the parameters passed.
  *
- * @param start - The number of updated pointofsales that already exist.
+ * @param start - The number of updated pointsofsale that already exist.
  * @param dateOffset - The date offset from 2000-1-1, where 0 is before, 1 is during, 2 is after.
- * @param pointOfSale - The pointofsales that the updated pointofsales belong to.
- * @param containers - The containers that will be added to the updated pointofsales.
+ * @param pointOfSale - The pointsofsale that the updated pointsofsale belong to.
+ * @param containers - The containers that will be added to the updated pointsofsale.
  */
 function defineUpdatedPointOfSale(
   start: number,
@@ -724,30 +724,30 @@ function defineUpdatedPointOfSale(
 }
 
 /**
- * Seeds a default dataset of pointofsales revisions,
+ * Seeds a default dataset of pointsofsale revisions,
  * based on the supplied user and container revision dataset.
  * Every user of type local admin and organ will get containers.
  *
- * @param users - The dataset of users to base the pointofsales dataset on.
+ * @param users - The dataset of users to base the pointsofsale dataset on.
  * @param containerRevisions - The dataset of container revisions to base
- * the pointofsales dataset on.
+ * the pointsofsale dataset on.
  */
 export async function seedPointsOfSale(
   users: User[],
   containerRevisions: ContainerRevision[],
 ): Promise<{
-    pointsOfSales: PointOfSale[],
-    pointOfSalesRevisions: PointOfSaleRevision[],
+    pointsOfSale: PointOfSale[],
+    pointOfSaleRevisions: PointOfSaleRevision[],
   }> {
-  let pointsOfSales: PointOfSale[] = [];
-  let pointOfSalesRevisions: PointOfSaleRevision[] = [];
+  let pointsOfSale: PointOfSale[] = [];
+  let pointOfSaleRevisions: PointOfSaleRevision[] = [];
 
   const sellers = users.filter((u) => [UserType.LOCAL_ADMIN, UserType.MEMBER].includes(u.type));
 
   const promises: Promise<any>[] = [];
   for (let i = 0; i < sellers.length; i += 1) {
-    const pos = definePointOfSales(
-      pointsOfSales.length,
+    const pos = definePointsOfSale(
+      pointsOfSale.length,
       3,
       sellers[i],
     );
@@ -755,7 +755,7 @@ export async function seedPointsOfSale(
     for (let o = 0; o < pos.length; o += 1) {
       pos[o].currentRevision = (pos[o].id % 3) + 1;
       rev = rev.concat(definePointOfSaleRevisions(
-        pointOfSalesRevisions.length,
+        pointOfSaleRevisions.length,
         pos[o].currentRevision,
         pos[o].currentRevision - 1,
         pos[o],
@@ -766,43 +766,43 @@ export async function seedPointsOfSale(
     // Revisions can only be saved AFTER the containers themselves.
     promises.push(PointOfSale.save(pos).then(() => PointOfSaleRevision.save(rev)));
 
-    pointsOfSales = pointsOfSales.concat(pos);
-    pointOfSalesRevisions = pointOfSalesRevisions.concat(rev);
+    pointsOfSale = pointsOfSale.concat(pos);
+    pointOfSaleRevisions = pointOfSaleRevisions.concat(rev);
   }
   await Promise.all(promises);
 
-  return { pointsOfSales, pointOfSalesRevisions };
+  return { pointsOfSale, pointOfSaleRevisions };
 }
 
 /**
- * Seeds a default dataset of updated pointofsales,
+ * Seeds a default dataset of updated pointsofsale,
  * based on the supplied user and container revision dataset.
  * Every user of type local admin and organ will get containers.
  *
- * @param users - The dataset of users to base the pointofsales dataset on.
+ * @param users - The dataset of users to base the pointsofsale dataset on.
  * @param containerRevisions - The dataset of container revisions to base
- * the pointofsales dataset on.
- * @param containers - The dataset of containers to base the pointofsales dataset on.
+ * the pointsofsale dataset on.
+ * @param containers - The dataset of containers to base the pointsofsale dataset on.
  */
 export async function seedUpdatedPointsOfSale(
   users: User[],
   containerRevisions: ContainerRevision[],
   containers: Container[],
 ): Promise<{
-    pointsOfSales: PointOfSale[],
-    pointOfSalesRevisions: PointOfSaleRevision[],
-    updatedPointsOfSales: UpdatedPointOfSale[],
+    pointsOfSale: PointOfSale[],
+    pointOfSaleRevisions: PointOfSaleRevision[],
+    updatedPointsOfSale: UpdatedPointOfSale[],
   }> {
-  let pointsOfSales: PointOfSale[] = [];
-  let pointOfSalesRevisions: PointOfSaleRevision[] = [];
-  let updatedPointsOfSales: UpdatedPointOfSale[] = [];
+  let pointsOfSale: PointOfSale[] = [];
+  let pointOfSaleRevisions: PointOfSaleRevision[] = [];
+  let updatedPointsOfSale: UpdatedPointOfSale[] = [];
 
   const sellers = users.filter((u) => [UserType.LOCAL_ADMIN, UserType.MEMBER].includes(u.type));
 
   const promises: Promise<any>[] = [];
   for (let i = 0; i < sellers.length; i += 1) {
-    const pos = definePointOfSales(
-      pointsOfSales.length,
+    const pos = definePointsOfSale(
+      pointsOfSale.length,
       3,
       sellers[i],
     );
@@ -813,7 +813,7 @@ export async function seedUpdatedPointsOfSale(
       if (currentRevision > 1) {
         pos[o].currentRevision = currentRevision;
         rev = rev.concat(definePointOfSaleRevisions(
-          pointOfSalesRevisions.length,
+          pointOfSaleRevisions.length,
           pos[o].currentRevision,
           currentRevision,
           pos[o],
@@ -821,7 +821,7 @@ export async function seedUpdatedPointsOfSale(
         ));
       }
       upd = upd.concat(defineUpdatedPointOfSale(
-        updatedPointsOfSales.length,
+        updatedPointsOfSale.length,
         currentRevision,
         pos[o],
         containers,
@@ -832,24 +832,24 @@ export async function seedUpdatedPointsOfSale(
     promises.push(PointOfSale.save(pos).then(() => PointOfSaleRevision.save(rev))
       .then(() => UpdatedPointOfSale.save(upd)));
 
-    pointsOfSales = pointsOfSales.concat(pos);
-    pointOfSalesRevisions = pointOfSalesRevisions.concat(rev);
-    updatedPointsOfSales = updatedPointsOfSales.concat(upd);
+    pointsOfSale = pointsOfSale.concat(pos);
+    pointOfSaleRevisions = pointOfSaleRevisions.concat(rev);
+    updatedPointsOfSale = updatedPointsOfSale.concat(upd);
   }
   await Promise.all(promises);
 
-  return { pointsOfSales, pointOfSalesRevisions, updatedPointsOfSales };
+  return { pointsOfSale, pointOfSaleRevisions, updatedPointsOfSale };
 }
 
 /**
- * Seeds a default dataset of pointofsales revisions and updated pointofsales,
+ * Seeds a default dataset of pointsofsale revisions and updated pointsofsale,
  * based on the supplied user and container dataset.
  * Every user of type local admin and organ will get containers.
  *
- * @param users - The dataset of users to base the pointofsales dataset on.
+ * @param users - The dataset of users to base the pointsofsale dataset on.
  * @param containerRevisions - The dataset of container revisions to base
- * the pointofsales dataset on.
- * @param containers - The dataset of containers to base the pointofsales dataset on.
+ * the pointsofsale dataset on.
+ * @param containers - The dataset of containers to base the pointsofsale dataset on.
  */
 export async function seedAllPointsOfSale(
   users: User[],
@@ -868,7 +868,7 @@ export async function seedAllPointsOfSale(
 
   const promises: Promise<any>[] = [];
   for (let i = 0; i < sellers.length; i += 1) {
-    const pos = definePointOfSales(
+    const pos = definePointsOfSale(
       pointsOfSale.length,
       6,
       sellers[i],
