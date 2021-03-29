@@ -459,26 +459,5 @@ describe('BannerController', async (): Promise<void> => {
 
       expect(res.status).to.equal(200);
     });
-    it('should return an HTTP 403 if not admin', async () => {
-      // inactive banner
-      const inactiveBanner = {
-        ...ctx.validBanner,
-        active: false,
-      } as Banner;
-
-      // save banners
-      await Banner.save(ctx.validBanner);
-      await Banner.save(inactiveBanner);
-
-      const res = await request(ctx.app)
-        .get('/banners/active')
-        .set('Authorization', `Bearer ${ctx.token}`);
-
-      // check no response body
-      expect(res.body).to.be.empty;
-
-      // forbidden code
-      expect(res.status).to.equal(403);
-    });
   });
 });
