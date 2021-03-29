@@ -32,6 +32,7 @@ import TokenHandler from './authentication/token-handler';
 import TokenMiddleware from './middleware/token-middleware';
 import AuthenticationController from './controller/authentication-controller';
 import BannerController from './controller/banner-controller';
+import BorrelkaartGroupController from './controller/borrelkaart-controller';
 
 export class Application {
   app: express.Express;
@@ -85,7 +86,7 @@ export default async function createApp(): Promise<Application> {
   // Silent in-dependency logs unless really wanted by the environment.
   const logger = log4js.getLogger('Console');
   logger.level = process.env.LOG_LEVEL;
-  console.log = (message: any) => logger.debug(message);
+  // console.log = (message: any) => logger.debug(message);
 
   // Set up monetary value configuration.
   dinero.defaultCurrency = process.env.CURRENCY_CODE as Currency;
@@ -99,8 +100,9 @@ export default async function createApp(): Promise<Application> {
   // Setup token handler and authentication controller.
   await setupAuthentication(application);
 
-  // REMOVE LATER, banner controller development
+  // REMOVE LATER, controller development
   application.app.use('/v1/banners', new BannerController(application.specification).getRouter());
+  application.app.use('/v1/borrelkaartgroups', new BorrelkaartGroupController(application.specification).getRouter());
 
   // Start express application.
   application.server = application.app.listen(process.env.HTTP_PORT);
