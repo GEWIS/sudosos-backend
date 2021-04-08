@@ -25,7 +25,6 @@ import { RequestWithToken } from '../middleware/token-middleware';
 import BorrelkaartGroup from '../entity/user/borrelkaart-group';
 import User, { UserType } from '../entity/user/user';
 import { addPaginationForFindOptions } from '../helpers/pagination';
-import { brotliDecompress } from 'zlib';
 import UserBorrelkaartGroup from '../entity/user/user-borrelkaart-group';
 
 export default class BorrelkaartGroupController extends BaseController {
@@ -158,7 +157,7 @@ export default class BorrelkaartGroupController extends BaseController {
         await BorrelkaartGroup.save(borrelkaartGroup);
 
         // link users to BorrelkaartGroup
-        const bkg = await (await BorrelkaartGroup.findOne({ name: body.name }));
+        const bkg = await BorrelkaartGroup.findOne({ name: body.name });
         const userBorrelkaartGroup: UserBorrelkaartGroup[] = [];
         await Promise.all(body.borrelkaarten.map(async (usr) => {
           const user = await User.findOne({ ...usr });
@@ -195,6 +194,7 @@ export default class BorrelkaartGroupController extends BaseController {
       // check if BorrelkaartGroup in database
       const borrelkaartGroup = await BorrelkaartGroup.findOne(id);
       if (borrelkaartGroup) {
+        // TODO: return users as well
         res.json(borrelkaartGroup);
       } else {
         res.status(404).json('BorrelkaartGroup not found.');
@@ -228,12 +228,15 @@ export default class BorrelkaartGroupController extends BaseController {
       if (this.verifyBorrelkaartGroup(body)) {
         // check if BorrelkaartGroup in database
         if (await BorrelkaartGroup.findOne(id)) {
+          // update BorrelkaartGroup
           const borrelkaartGroup: any = {
             name: body.name,
             activeStartDate: new Date(body.activeStartDate),
             activeEndDate: new Date(body.activeEndDate),
           } as BorrelkaartGroup;
           await BorrelkaartGroup.update(id, borrelkaartGroup);
+
+          // TODO: update users
           res.json(borrelkaartGroup);
         } else {
           res.status(404).json('BorrelkaartGroup not found.');
@@ -266,6 +269,8 @@ export default class BorrelkaartGroupController extends BaseController {
       const borrelkaartGroup = await BorrelkaartGroup.findOne(id);
       if (borrelkaartGroup) {
         await BorrelkaartGroup.delete(id);
+
+        // TODO: remove users
         res.json(borrelkaartGroup);
       } else {
         res.status(404).json('BorrelkaartGroup not found.');
