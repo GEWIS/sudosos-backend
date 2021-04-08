@@ -32,7 +32,7 @@ import TokenHandler from './authentication/token-handler';
 import TokenMiddleware from './middleware/token-middleware';
 import AuthenticationController from './controller/authentication-controller';
 import BannerController from './controller/banner-controller';
-import BorrelkaartGroupController from './controller/borrelkaart-controller';
+import BorrelkaartGroupController from './controller/borrelkaart-group-controller';
 
 export class Application {
   app: express.Express;
