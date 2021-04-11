@@ -84,11 +84,10 @@ describe('AuthenticationController', async (): Promise<void> => {
     console.log = (message: any) => logger.debug(message);
 
     ctx.specification = await Swagger.initialize(ctx.app);
-    ctx.controller = new AuthenticationController(
-      ctx.specification,
-      ctx.tokenHandler,
-      ctx.roleManager,
-    );
+    ctx.controller = new AuthenticationController({
+      specification: ctx.specification,
+      roleManager: ctx.roleManager,
+    }, ctx.tokenHandler);
 
     ctx.app.use(bodyParser.json());
     ctx.app.use('/authentication', ctx.controller.getRouter());

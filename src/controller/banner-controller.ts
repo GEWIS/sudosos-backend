@@ -17,8 +17,7 @@
  */
 import { Response } from 'express';
 import log4js, { Logger } from 'log4js';
-import { SwaggerSpecification } from 'swagger-model-validator';
-import BaseController from './base-controller';
+import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import BannerRequest from './request/banner-request';
 import { RequestWithToken } from '../middleware/token-middleware';
@@ -29,8 +28,12 @@ import { addPaginationForFindOptions } from '../helpers/pagination';
 export default class BannerController extends BaseController {
   private logger: Logger = log4js.getLogger('BannerController');
 
-  public constructor(spec: SwaggerSpecification) {
-    super(spec);
+  /**
+   * Creates a new banner controller instance.
+   * @param options - The options passed to the base controller.
+   */
+  public constructor(options: BaseControllerOptions) {
+    super(options);
     this.logger.level = process.env.LOG_LEVEL;
   }
 

@@ -27,6 +27,7 @@ import Database from '../../../src/database';
 import Banner from '../../../src/entity/banner';
 import User, { UserType } from '../../../src/entity/user/user';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
+import RoleManager from '../../../src/rbac/role-manager';
 import Swagger from '../../../src/swagger';
 
 function bannerEq(a: Banner, b: Banner): Boolean {
@@ -134,7 +135,7 @@ describe('BannerController', async (): Promise<void> => {
     // start app
     const app = express();
     const specification = await Swagger.initialize(app);
-    const controller = new BannerController(specification);
+    const controller = new BannerController({ specification, roleManager: new RoleManager() });
     app.use(bodyParser.json());
     app.use(new TokenMiddleware({ tokenHandler, refreshFactor: 0.5 }).getMiddleware());
     app.use('/banners', controller.getRouter());

@@ -35,6 +35,7 @@ import AuthenticationController from './controller/authentication-controller';
 import RoleManager from './rbac/role-manager';
 import Gewis from './gewis/gewis';
 import BannerController from './controller/banner-controller';
+import { BaseControllerOptions } from './controller/base-controller';
 
 export class Application {
   app: express.Express;
@@ -80,9 +81,11 @@ async function setupAuthentication(application: Application) {
 
   // Define authentication controller and bind before middleware.
   const controller = new AuthenticationController(
-    application.specification,
+    {
+      specification: application.specification,
+      roleManager: application.roleManager,
+    },
     tokenHandler,
-    application.roleManager,
   );
   application.app.use('/v1/authentication', controller.getRouter());
 
@@ -122,8 +125,13 @@ export default async function createApp(): Promise<Application> {
   // Setup GEWIS-specific module.
   const gewis = new Gewis(application.roleManager);
   await gewis.registerRoles();
+
   // REMOVE LATER, banner controller development
-  application.app.use('/v1/banners', new BannerController(application.specification).getRouter());
+  const options: BaseControllerOptions = {
+    specification: application.specification,
+    roleManager: application.roleManager,
+  };
+  application.app.use('/v1/banners', new BannerController(options).getRouter());
 
   // Start express application.
   logger.info(`Server listening on port ${process.env.HTTP_PORT}.`);

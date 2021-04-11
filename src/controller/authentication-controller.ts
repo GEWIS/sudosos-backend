@@ -17,14 +17,12 @@
  */
 import { Request, Response } from 'express';
 import log4js, { Logger } from 'log4js';
-import { SwaggerSpecification } from 'swagger-model-validator';
-import BaseController from './base-controller';
+import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import User from '../entity/user/user';
 import AuthenticationMockRequest from './request/authentication-mock-request';
 import JsonWebToken from '../authentication/json-web-token';
 import TokenHandler from '../authentication/token-handler';
-import RoleManager from '../rbac/role-manager';
 
 /**
  * The authentication controller is responsible for:
@@ -43,25 +41,17 @@ export default class AuthenticationController extends BaseController {
   private tokenHandler: TokenHandler;
 
   /**
-   * Reference to the role manager of the application.
-   */
-  private roleManager: RoleManager;
-
-  /**
    * Creates a new authentication controller instance.
-   * @param spec - The Swagger specification used for model validation.
+   * @param options - The options passed to the base controller.
    * @param tokenHandler - The token handler for creating signed tokens.
-   * @param roleManager - The role mananager used for querying user roles.
    */
   public constructor(
-    spec: SwaggerSpecification,
+    options: BaseControllerOptions,
     tokenHandler: TokenHandler,
-    roleManager: RoleManager,
   ) {
-    super(spec);
+    super(options);
     this.logger.level = process.env.LOG_LEVEL;
     this.tokenHandler = tokenHandler;
-    this.roleManager = roleManager;
   }
 
   /**
