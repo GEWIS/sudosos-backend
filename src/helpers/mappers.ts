@@ -21,6 +21,7 @@ import ProductRevision from '../entity/product/product-revision';
 import User from '../entity/user/user';
 import UpdatedProduct from '../entity/product/updated-product';
 import { ProductResponse } from '../controller/response/product-response';
+import DineroTransformer from '../entity/transformer/dinero-transformer';
 
 
 export async function getProducts(owner: User = null, returnUpdated: boolean = true)
@@ -30,11 +31,12 @@ export async function getProducts(owner: User = null, returnUpdated: boolean = t
     .innerJoinAndSelect(ProductRevision, 'productrevision',
       'product.id = productrevision.product '
         + 'AND product.currentRevision = productrevision.revision')
+    .innerJoinAndSelect('product.owner', 'owner')
+    .innerJoinAndSelect('productrevision.category', 'category')
     .select([
-      'product.id', 'product.createdAt', 'productrevision.updatedAt',
-      'productrevision.revision', 'productrevision.name', 'productrevision.price',
-      'product.owner', 'productrevision.category', 'productrevision.picture',
-      'productrevision.alcoholpercentage',
+      'product.id', 'product.createdAt', 'productrevision.updatedAt', 'productrevision.revision',
+      'productrevision.name', 'productrevision.price', 'owner.id', 'owner.firstName', 'owner.lastName', 'category.id',
+      'category.name', 'productrevision.picture', 'productrevision.alcoholpercentage',
     ]);
   if (owner !== null) {
     builder.where('product.owner = :owner', { owner: owner.id });
@@ -48,7 +50,33 @@ export async function getProducts(owner: User = null, returnUpdated: boolean = t
       return `product.id NOT IN (${subQuery})`;
     });
   }
-  return await builder.getRawMany() as ProductResponse[];
+  // return builder.getRawMany();
+
+  const rawProducts = await builder.getRawMany();
+
+  console.debug(rawProducts);
+  return rawProducts.map((rawProduct) => {
+    const product: ProductResponse = {
+      id: rawProduct.product_id,
+      alcoholPercentage: rawProduct.alcoholPercentage,
+      category: {
+        id: rawProduct.category_id,
+        name: rawProduct.category_name,
+      },
+      createdAt: rawProduct.product_createdAt,
+      name: rawProduct.productrevision_name,
+      owner: {
+        id: rawProduct.owner_id,
+        firstName: rawProduct.owner_firstName,
+        lastName: rawProduct.owner_lastName,
+      },
+      picture: rawProduct.productrevision_picture,
+      price: DineroTransformer.Instance.from(rawProduct.productrevision_price),
+      revision: rawProduct.productrevision_revision,
+      updatedAt: rawProduct.productrevision_updatedAt,
+    };
+    return product;
+  });
 }
 
 export async function getUpdatedProducts(owner: User = null): Promise<ProductResponse[]> {

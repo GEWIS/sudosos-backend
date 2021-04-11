@@ -15,15 +15,12 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+import BaseResponse from './base-response';
 
 /**
- * @typedef BaseResponse
- * @property {number} id.required - The unique id of the entity.
- * @property {string} createdAt.required - The creation Date of the entity.
- * @property {string} updatedAt.required - The last update Date of the entity.
+ * @typedef {ProductCategoryResponse} ProductCategoryResponse
+ * @property {string} name.required - The name of the productCategory.
  */
-export default interface BaseResponse {
-  id: number,
-  createdAt?: Date,
-  updatedAt?: Date,
+export interface ProductCategoryResponse extends BaseResponse {
+  name: string,
 }
