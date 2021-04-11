@@ -19,10 +19,11 @@ import {
   Entity,
   Column,
   ManyToOne,
-  BeforeUpdate,
+  BeforeUpdate, ManyToMany, JoinTable,
 } from 'typeorm';
 import BaseContainer from './base-container';
 import Container from './container';
+import ProductRevision from '../product/product-revision';
 
 @Entity()
 export default class ContainerRevision extends BaseContainer {
@@ -39,6 +40,10 @@ export default class ContainerRevision extends BaseContainer {
     nullable: false,
   })
   public revision: number;
+
+  @ManyToMany(() => ProductRevision)
+  @JoinTable()
+  public products: ProductRevision[];
 
   @BeforeUpdate()
   // eslint-disable-next-line class-methods-use-this
