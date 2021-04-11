@@ -26,7 +26,7 @@ import Product from '../entity/product/product';
 import Transaction from '../entity/transactions/transaction';
 import CreateUserRequest from './request/create-user-request';
 import UpdateUserRequest from './request/update-user-request';
-import addPagination from '../helpers/pagination';
+import { addPaginationForFindOptions } from '../helpers/pagination';
 
 export default class UserController extends BaseController {
   private logger: Logger = log4js.getLogger('UserController');
@@ -113,7 +113,7 @@ export default class UserController extends BaseController {
   public async getAllUsers(req: RequestWithToken, res: Response): Promise<void> {
     this.logger.trace('Get all users', 'by user', req.token.user);
 
-    const users = await User.find({ where: { deleted: false }, ...addPagination(req) });
+    const users = await User.find({ where: { deleted: false }, ...addPaginationForFindOptions(req) });
     res.status(200).json(users);
   }
 
@@ -264,6 +264,10 @@ export default class UserController extends BaseController {
     this.logger.trace("Get user's products", parameters, 'by user', req.token.user);
 
     const owner = await User.findOne(parameters.id);
+    if (owner == null) {
+      res.status(404).json({});
+      return;
+    }
     const products = await Product.find({
       owner,
     });
@@ -282,6 +286,10 @@ export default class UserController extends BaseController {
     this.logger.trace("Get user's transactions", parameters, 'by user', req.token.user);
 
     const user = await User.findOne(parameters.id);
+    if (user == null) {
+      res.status(404).json({});
+      return;
+    }
     const transactions = await Transaction.find({
       where: [{ to: user }, { from: user }, { createdBy: user }],
       order: { createdAt: 'DESC' },

@@ -504,7 +504,7 @@ describe('UserController', (): void => {
       const res = await request(ctx.app)
         .get('/users/1234/products')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
-      expect(res.status).to.equal(403);
+      expect(res.status).to.equal(404);
     });
   });
 
@@ -528,15 +528,22 @@ describe('UserController', (): void => {
   //   it('should give correct transactions from/to user', async () => {
   //     const res = await request(ctx.app)
   //       .get('/users/0/transactions')
-  //       .set('Authorization', `Bearer ${ctx.token}`);
+  //       .set('Authorization', `Bearer ${ctx.adminToken}`);
   //     expect(res.status).to.equal(200);
   //     expect(res.body).to.deep.equal([]);
   //   });
   //   it('should give an HTTP 403 when user requests transactions from someone else', async () => {
   //     const res = await request(ctx.app)
   //       .get('/users/1/transactions')
-  //       .set('Authorization', `Bearer ${ctx.token}`);
+  //       .set('Authorization', `Bearer ${ctx.adminToken}`);
   //     expect(res.status).to.equal(403);
   //   });
+  //   it('should give an HTTP 404 when admin requests transactions from unknown user', async () => {
+  //     const res = await request(ctx.app)
+  //       .get('/users/1234/transactions')
+  //       .set('Authorization', `Bearer ${ctx.adminToken}`);
+  //     expect(res.status).to.equal(404);
+  //   });
   // });
+  // TODO: Check validity of returned transactions
 });
