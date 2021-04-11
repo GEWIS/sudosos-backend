@@ -108,7 +108,7 @@ describe('BannerController', async (): Promise<void> => {
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
-    const adminToken = await tokenHandler.signToken({ user: adminUser, roles: [] }, 'nonce admin');
+    const adminToken = await tokenHandler.signToken({ user: adminUser, roles: ['Admin'] }, 'nonce admin');
     const token = await tokenHandler.signToken({ user: localUser, roles: [] }, 'nonce');
 
     // test banners
@@ -135,7 +135,23 @@ describe('BannerController', async (): Promise<void> => {
     // start app
     const app = express();
     const specification = await Swagger.initialize(app);
-    const controller = new BannerController({ specification, roleManager: new RoleManager() });
+
+    const all = { all: new Set<string>(['*']) };
+    const roleManager = new RoleManager();
+    roleManager.registerRole({
+      name: 'Admin',
+      permissions: {
+        Banner: {
+          create: all,
+          get: all,
+          update: all,
+          delete: all,
+        },
+      },
+      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
+    });
+
+    const controller = new BannerController({ specification, roleManager });
     app.use(bodyParser.json());
     app.use(new TokenMiddleware({ tokenHandler, refreshFactor: 0.5 }).getMiddleware());
     app.use('/banners', controller.getRouter());
@@ -172,9 +188,6 @@ describe('BannerController', async (): Promise<void> => {
       // number of banners returned is number of banners in database
       const banners = res.body as Banner[];
       expect(banners.length).to.equal(await Banner.count());
-
-      // success code
-      expect(res.status).to.equal(200);
     });
     it('should return an HTTP 403 if not admin', async () => {
       const res = await request(ctx.app)

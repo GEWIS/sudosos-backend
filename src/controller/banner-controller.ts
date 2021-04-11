@@ -22,7 +22,6 @@ import Policy from './policy';
 import BannerRequest from './request/banner-request';
 import { RequestWithToken } from '../middleware/token-middleware';
 import Banner from '../entity/banner';
-import { UserType } from '../entity/user/user';
 import { addPaginationForFindOptions } from '../helpers/pagination';
 
 export default class BannerController extends BaseController {
@@ -44,27 +43,27 @@ export default class BannerController extends BaseController {
     return {
       '/': {
         GET: {
-          policy: this.isAdmin.bind(this),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Banner', ['*']),
           handler: this.returnAllBanners.bind(this),
         },
         POST: {
           body: { modelName: 'BannerRequest' },
-          policy: this.isAdmin.bind(this),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'create', 'all', 'Banner', ['*']),
           handler: this.createBanner.bind(this),
         },
       },
       '/:id(\\d+)': {
         GET: {
-          policy: this.isAdmin.bind(this),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Banner', ['*']),
           handler: this.returnSingleBanner.bind(this),
         },
         PATCH: {
           body: { modelName: 'BannerRequest' },
-          policy: this.isAdmin.bind(this),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'update', 'all', 'Banner', ['*']),
           handler: this.updateBanner.bind(this),
         },
         DELETE: {
-          policy: this.isAdmin.bind(this),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'delete', 'all', 'Banner', ['*']),
           handler: this.removeBanner.bind(this),
         },
       },
@@ -104,16 +103,6 @@ export default class BannerController extends BaseController {
       && eDate > sDate;
 
     return valueCheck;
-  }
-
-  /**
-   * Validates that the request is authorized by the policy.
-   * @param req - The incoming request.
-   */
-  // eslint-disable-next-line class-methods-use-this
-  private async isAdmin(req: RequestWithToken): Promise<boolean> {
-    // TODO: check whether user is admin
-    return req.token.user.type === UserType.LOCAL_ADMIN;
   }
 
   /**
