@@ -22,7 +22,7 @@ import { RequestWithToken } from '../middleware/token-middleware';
 function parseReqSkipTake(req: RequestWithToken): { take?: number, skip?: number } {
   let take;
   let skip;
-  const urlParams = req.query;
+  const urlParams = req.query || {};
 
   // Parse and validate the take URL parameter
   if (urlParams.take != null) {

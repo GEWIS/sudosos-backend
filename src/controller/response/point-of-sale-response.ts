@@ -36,10 +36,10 @@ export interface BasePointOfSaleResponse extends BaseResponse {
  */
 export interface PointOfSaleResponse extends BasePointOfSaleResponse {
   revision: number,
-  owner: User,
+  owner?: User,
   startDate: Date,
   endDate: Date,
-  products: BaseContainerResponse[] | ContainerResponse[],
+  products?: BaseContainerResponse[] | ContainerResponse[],
   productOrder?: ProductOrdering,
   useAuthentication: boolean,
 }
