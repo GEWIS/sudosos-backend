@@ -22,6 +22,7 @@ import BaseController from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import { getTransactions } from '../helpers/mappers';
+import { parseGetTransactionsFilters } from '../helpers/filter-parameters';
 
 export default class TransactionController extends BaseController {
   private logger: Logger = log4js.getLogger('TransactionController');
@@ -54,14 +55,40 @@ export default class TransactionController extends BaseController {
    * @route GET /transactions
    * @group transactions - Operations of the transaction controller
    * @security JWT
+   * @param {integer} fromId.query - From-user for selected transactions
+   * @param {integer} createdById.query - User that created selected transaction
+   * @param {integer} toId.query - To-user for selected transactions
+   * @param {integer} pointOfSaleId.query - Point of Sale ID for selected transactions
+   * @param {integer} pointOfSaleRevision.query - Point of Sale Revision for selected
+   * transactions. Requires PointOfSaleId
+   * @param {integer} containerId.query - Container ID for selected transactions
+   * @param {integer} containerRevision.query - Container Revision for selected
+   * transactions. Requires ContainerId
+   * @param {integer} productId.query - Product ID for selected transactions
+   * @param {integer} productRevision.query - Product Revision for selected
+   * transactions. Requires ProductID
+   * @param {string} fromDate.query - Start date for selected transactions (inclusive)
+   * @param {string} tillDate.query - End date for selected transactions (exclusive)
+   * @param {integer} take.query - How many users the endpoint should return
+   * @param {integer} skip.query - How many users should be skipped (for pagination)
    * @returns {[TransactionResponse]} 200 - A list of all transactions
    */
   // eslint-disable-next-line class-methods-use-this
   public async getAllTransactions(req: RequestWithToken, res: Response): Promise<void> {
     this.logger.trace('Get all transactions', 'by user', req.token.user);
 
+    // Parse the filters given in the query parameters. If there are any issues,
+    // the parse method will throw an exception. We will then return a 400 error.
+    let filters;
     try {
-      const transactions = await getTransactions(req);
+      filters = parseGetTransactionsFilters(req);
+    } catch (e) {
+      res.status(400).json(e.message);
+      return;
+    }
+
+    try {
+      const transactions = await getTransactions(req, filters);
       res.status(200).json(transactions);
     } catch (e) {
       res.status(500).send();

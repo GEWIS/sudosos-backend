@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { createQueryBuilder } from 'typeorm';
+import { createQueryBuilder, SelectQueryBuilder } from 'typeorm';
 import Product from '../entity/product/product';
 import ProductRevision from '../entity/product/product-revision';
 import User from '../entity/user/user';
@@ -79,23 +79,87 @@ export async function getProductsWithUpdates(owner: User = null): Promise<Produc
   return products.concat(updatedProducts) as ProductResponse[];
 }
 
-export async function getTransactions(req: RequestWithToken): Promise<BaseTransactionResponse[]> {
+export interface TransactionFilters {
+  fromId?: number,
+  createdById?: number,
+  toId?: number,
+  pointOfSale?: {
+    id: number,
+    revision?: number,
+  }
+  container?: {
+    id: number,
+    revision?: number,
+  },
+  product?: {
+    id: number,
+    revision?: number,
+  }
+  fromDate?: Date,
+  tillDate?: Date,
+}
+
+export async function getTransactions(
+  req: RequestWithToken, filters: TransactionFilters,
+): Promise<BaseTransactionResponse[]> {
+  function applySubTransactionFilters(query: SelectQueryBuilder<any>): SelectQueryBuilder<any> {
+    if (filters.toId) {
+      query.andWhere('"subTransaction"."toId" = :toId', { toId: filters.toId });
+    }
+
+    if (filters.pointOfSale) {
+      query.andWhere('"transaction"."pointOfSalePointOfSale" = :pointOfSaleId', { pointOfSaleId: filters.pointOfSale.id });
+      if (filters.pointOfSale.revision) {
+        query.andWhere('"transaction"."pointOfSaleRevision" = :pointOfSaleRevision', { pointOfSaleRevision: filters.pointOfSale.revision });
+      }
+    }
+
+    if (filters.container) {
+      query.andWhere('"subTransaction"."containerContainer" = :containerId', { containerId: filters.container.id });
+      if (filters.container.revision) {
+        query.andWhere('"subTransaction"."containerRevision" = :containerRevision', { containerRevision: filters.container.revision });
+      }
+    }
+
+    if (filters.product) {
+      query.andWhere('"subTransactionRow"."productProduct" = :productId', { productId: filters.product.id });
+      if (filters.product.revision) {
+        query.andWhere('"subTransactionRow"."productRevision" = :productRevision', { productRevision: filters.product.revision });
+      }
+    }
+
+    return query;
+  }
+
+  console.log(filters);
+
   let query = createQueryBuilder(Transaction, 'transaction')
-    .addSelect((qb) => qb.subQuery()
-      .select('sum(subTransactionRow.amount * product.price) as value')
-      .from(SubTransaction, 'subTransaction')
-      .leftJoin('subTransaction.subTransactionRows', 'subTransactionRow')
-      .innerJoin('subTransactionRow.product', 'product')
-      .where('subTransaction.transactionId = transaction.id'), 'value')
+    .addSelect((qb) => {
+      const subquery = qb.subQuery()
+        .select('sum(subTransactionRow.amount * product.price) as value')
+        .from(SubTransaction, 'subTransaction')
+        .innerJoin('subTransaction.subTransactionRows', 'subTransactionRow')
+        .leftJoin('subTransactionRow.product', 'product')
+        .where('subTransaction.transactionId = transaction.id');
+
+      return applySubTransactionFilters(subquery);
+    }, 'value')
     .leftJoinAndSelect('transaction.from', 'from')
     .leftJoinAndSelect('transaction.createdBy', 'createdBy')
     .leftJoinAndSelect('transaction.pointOfSale', 'pointOfSaleRev')
-    .leftJoinAndSelect('pointOfSaleRev.pointOfSale', 'pointOfSale');
+    .leftJoinAndSelect('pointOfSaleRev.pointOfSale', 'pointOfSale')
+    .innerJoin('transaction.subTransactions', 'subTransaction')
+    .innerJoin('subTransaction.subTransactionRows', 'subTransactionRow');
 
+  if (filters.fromId) query.andWhere('"transaction"."fromId" = :fromId', { fromId: filters.fromId });
+  if (filters.createdById) query.andWhere('"transaction"."createdById" = :createdById', { createdById: filters.createdById });
+  if (filters.fromDate) query.andWhere('"transaction"."createdAt" >= :fromDate', { fromDate: filters.fromDate });
+  if (filters.tillDate) query.andWhere('"transaction"."createdAt" < :tillDate', { tillDate: filters.tillDate });
+
+  query = applySubTransactionFilters(query);
   query = addPaginationToQueryBuilder(req, query);
 
   const rawTransactions = await query.getRawMany();
-  // return query.getRawMany();
 
   return rawTransactions.map((o) => {
     const v: BaseTransactionResponse = {
@@ -138,6 +202,8 @@ export async function getTransactions(req: RequestWithToken): Promise<BaseTransa
     };
     return v;
   });
+
+  // Might be necessary later for a single transaction query
 
   // const transactions = await getRepository(Transaction).find({
   //   relations: [
