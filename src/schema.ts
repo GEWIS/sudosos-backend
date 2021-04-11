@@ -18,12 +18,8 @@
 import { config } from 'dotenv';
 import log4js from 'log4js';
 import dinero, { Currency } from 'dinero.js';
-import express from 'express';
-import bodyParser from 'body-parser';
-import Swagger from './swagger';
 import Database from './database';
 import { Application } from './index';
-import seedDatabase from '../test/seed';
 
 export default async function createApp() {
   const application = new Application();
@@ -42,10 +38,6 @@ export default async function createApp() {
   dinero.defaultCurrency = process.env.CURRENCY_CODE as Currency;
   dinero.defaultPrecision = parseInt(process.env.CURRENCY_PRECISION, 10);
 
-  // Create express application.
-  application.app = express();
-  application.specification = await Swagger.initialize(application.app);
-  application.app.use(bodyParser.json());
   try {
     await application.connection.synchronize();
     application.logger.info('Schema synchronized successfully');

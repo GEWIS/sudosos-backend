@@ -1,5 +1,5 @@
 # Welcome to SudoSOS
-Hi welcome to SudoSOS. To get yu quickly started follow the install steps below.
+Hi welcome to SudoSOS. To get you quickly started follow the install steps below.
 
 ## Quick start
 This quick start first states what software needs to be installed to be able to work with the project and then explains how to get the project started.
@@ -31,7 +31,7 @@ Running:
 
 
 - Run `npm run watch` to start the application in development mode
-- Check that localhost:3000/api-docs shows a swagger ui
+- Check that http://localhost:3000/api-docs shows a swagger ui
 - You can get a JWT key by using `/authentication/mock` using a valid userId
 
 ## Intellij hints
