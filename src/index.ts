@@ -73,7 +73,11 @@ async function setupAuthentication(application: Application) {
   });
 
   // Define authentication controller and bind before middleware.
-  const controller = new AuthenticationController(application.specification, tokenHandler);
+  const controller = new AuthenticationController(
+    application.specification,
+    tokenHandler,
+    application.roleManager,
+  );
   application.app.use('/v1/authentication', controller.getRouter());
 
   // Define middleware to be used by any other route.

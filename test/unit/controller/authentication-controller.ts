@@ -27,6 +27,7 @@ import Database from '../../../src/database';
 import Swagger from '../../../src/swagger';
 import AuthenticationController from '../../../src/controller/authentication-controller';
 import AuthenticationMockRequest from '../../../src/controller/request/authentication-mock-request';
+import RoleManager from '../../../src/rbac/role-manager';
 
 describe('AuthenticationController', async (): Promise<void> => {
   let ctx: {
@@ -34,9 +35,11 @@ describe('AuthenticationController', async (): Promise<void> => {
     connection: Connection,
     app: Application,
     tokenHandler: TokenHandler,
+    roleManager: RoleManager,
     specification: SwaggerSpecification,
     controller: AuthenticationController,
     user: User,
+    user2: User,
     request: AuthenticationMockRequest,
   };
 
@@ -51,9 +54,15 @@ describe('AuthenticationController', async (): Promise<void> => {
       tokenHandler: new TokenHandler({
         algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
       }),
+      roleManager: new RoleManager(),
       user: await User.save({
         firstName: 'Roy',
         type: UserType.LOCAL_USER,
+        active: true,
+      } as User),
+      user2: await User.save({
+        firstName: 'Roy Clone',
+        type: UserType.LOCAL_ADMIN,
         active: true,
       } as User),
       request: {
@@ -63,13 +72,23 @@ describe('AuthenticationController', async (): Promise<void> => {
     };
     process.env.NODE_ENV = 'development';
 
+    ctx.roleManager.registerRole({
+      name: 'Role',
+      permissions: {},
+      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
+    });
+
     // Silent in-dependency logs unless really wanted by the environment.
     const logger = log4js.getLogger('Console');
     logger.level = process.env.LOG_LEVEL;
     console.log = (message: any) => logger.debug(message);
 
     ctx.specification = await Swagger.initialize(ctx.app);
-    ctx.controller = new AuthenticationController(ctx.specification, ctx.tokenHandler);
+    ctx.controller = new AuthenticationController(
+      ctx.specification,
+      ctx.tokenHandler,
+      ctx.roleManager,
+    );
 
     ctx.app.use(bodyParser.json());
     ctx.app.use('/authentication', ctx.controller.getRouter());
@@ -86,7 +105,31 @@ describe('AuthenticationController', async (): Promise<void> => {
         .post('/authentication/mock')
         .send(ctx.request);
       expect(res.status).to.equal(200);
-      expect(ctx.tokenHandler.verifyToken(res.body)).to.eventually.be.fulfilled;
+
+      const promise = ctx.tokenHandler.verifyToken(res.body);
+      expect(promise).to.eventually.be.fulfilled;
+
+      const token = await promise;
+      expect(token.roles).to.be.empty;
+    });
+    it('should contain the correct roles', async () => {
+      let res = await request(ctx.app)
+        .post('/authentication/mock')
+        .send(ctx.request);
+      expect(res.status).to.equal(200);
+      let token = await ctx.tokenHandler.verifyToken(res.body);
+      expect(token.roles).to.be.empty;
+
+      const req = {
+        ...ctx.request,
+        userId: 2,
+      };
+      res = await request(ctx.app)
+        .post('/authentication/mock')
+        .send(req);
+      expect(res.status).to.equal(200);
+      token = await ctx.tokenHandler.verifyToken(res.body);
+      expect(token.roles).to.deep.equal(['Role']);
     });
     it('should give an HTTP 403 when not in development environment', async () => {
       process.env.NODE_ENV = 'production';

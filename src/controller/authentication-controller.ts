@@ -24,6 +24,7 @@ import User from '../entity/user/user';
 import AuthenticationMockRequest from './request/authentication-mock-request';
 import JsonWebToken from '../authentication/json-web-token';
 import TokenHandler from '../authentication/token-handler';
+import RoleManager from '../rbac/role-manager';
 
 /**
  * The authentication controller is responsible for:
@@ -42,14 +43,25 @@ export default class AuthenticationController extends BaseController {
   private tokenHandler: TokenHandler;
 
   /**
+   * Reference to the role manager of the application.
+   */
+  private roleManager: RoleManager;
+
+  /**
    * Creates a new authentication controller instance.
    * @param spec - The Swagger specification used for model validation.
    * @param tokenHandler - The token handler for creating signed tokens.
+   * @param roleManager - The role mananager used for querying user roles.
    */
-  public constructor(spec: SwaggerSpecification, tokenHandler: TokenHandler) {
+  public constructor(
+    spec: SwaggerSpecification,
+    tokenHandler: TokenHandler,
+    roleManager: RoleManager,
+  ) {
     super(spec);
     this.logger.level = process.env.LOG_LEVEL;
     this.tokenHandler = tokenHandler;
+    this.roleManager = roleManager;
   }
 
   /**
@@ -98,8 +110,10 @@ export default class AuthenticationController extends BaseController {
     this.logger.trace('Mock authentication for user', body.userId);
 
     try {
+      const user = await User.findOne({ id: body.userId });
       const contents: JsonWebToken = {
-        user: await User.findOne({ id: body.userId }),
+        user,
+        roles: await this.roleManager.getRoles(user),
       };
       const token = await this.tokenHandler.signToken(contents, body.nonce);
       res.json(token);
