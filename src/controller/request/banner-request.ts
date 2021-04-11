@@ -15,25 +15,21 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import {
-  Entity,
-  JoinColumn, JoinTable, ManyToMany,
-  OneToOne,
-} from 'typeorm';
-import BaseContainer from './base-container';
-import Container from './container';
-import Product from '../product/product';
 
-@Entity()
-export default class UpdatedContainer extends BaseContainer {
-  @OneToOne(() => Container, {
-    primary: true,
-    nullable: false,
-  })
-  @JoinColumn()
-  public container: Container;
-
-  @ManyToMany(() => Product)
-  @JoinTable()
-  public products: Product[];
+/**
+ * @typedef BannerRequest
+ * @property {string} name - Name/label of the banner
+ * @property {string} picture - Location of the image
+ * @property {number} duration - How long the banner should be shown (in seconds)
+ * @property {boolean} active - Whether the banner is active. Overrides start and end date
+ * @property {string} startDate - The starting date from which the adverisement should be shown
+ * @property {string} endDate - The end date from which the banner should no longer be shown
+ */
+export default interface BannerRequest {
+  name: string,
+  picture: string,
+  duration: number,
+  active: boolean,
+  startDate: string,
+  endDate: string,
 }
