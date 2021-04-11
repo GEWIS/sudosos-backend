@@ -16,18 +16,15 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import BorrelkaartGroup from '../../entity/user/borrelkaart-group';
 import User from '../../entity/user/user';
 
 /**
- * @typedef BorrelkaartGroupRequest
- * @property {string} name.required - Name of the group
- * @property {string} activeStartDate.required - Date from which the included cards are active
- * @property {string} activeEndDate - Date from which cards are no longer active
- * @property {Array.<User>} users.required - Users to be assigned to the borrelkaart group
- */
-export default interface BorrelkaartGroupRequest {
-  name: string,
-  activeStartDate: string,
-  activeEndDate: string,
+  * @typedef BorrelkaartGroupResponse
+  * @property {BorrelkaartGroup.model} borrelkaartGroup.required - The borrelkaart group
+  * @property {Array.<User>} users.required - Users in the borrelkaart group
+  */
+export default interface BorrelkaartGroupResponse {
+  borrelkaartGroup: BorrelkaartGroup,
   users: Array<User>,
 }
