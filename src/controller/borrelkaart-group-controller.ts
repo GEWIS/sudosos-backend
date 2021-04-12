@@ -150,12 +150,16 @@ export default class BorrelkaartGroupController extends BaseController {
         });
         await UserBorrelkaartGroup.save(userLinks);
 
+        // find fails, count works
+        console.log(await UserBorrelkaartGroup.findAndCount());
+
         // return created BorrelkaartGroup with users
         const bkgResp = {
           borrelkaartGroup: bkg,
           users: body.users,
         } as BorrelkaartGroupResponse;
 
+        // ASK: return full users from DB or users in request
         res.json(bkgResp);
       } else {
         res.status(400).json('Invalid BorrelkaartGroup.');

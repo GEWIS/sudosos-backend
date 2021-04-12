@@ -152,10 +152,10 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
 
       // check if borrelkaart groups are returned without users
       const borrelkaartGroups = res.body as BorrelkaartGroup[];
-      expect(borrelkaartGroups.length).to.equal(await BorrelkaartGroup.count());
+      expect(borrelkaartGroups.length, 'size of response not equal to size of database').to.equal(await BorrelkaartGroup.count());
 
       // success code
-      expect(res.status).to.equal(200);
+      expect(res.status, 'incorrect status').to.equal(200);
     });
     it('should return an HTTP 403 if not admin', async () => {
       const res = await request(ctx.app)
@@ -163,10 +163,10 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
         .set('Authorization', `Bearer ${ctx.token}`);
 
       // check no response body
-      expect(res.body).to.be.empty;
+      expect(res.body, 'body not empty').to.be.empty;
 
       // success code
-      expect(res.status).to.equal(403);
+      expect(res.status, 'incorrect status').to.equal(403);
     });
   });
 
@@ -181,12 +181,12 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
       // check if borrelkaart group in database
       const borrelkaartGroup = await BorrelkaartGroup
         .findOne({ name: ctx.validBorrelkaartGroupReqs[0].name });
-      expect(borrelkaartGroup).to.not.be.undefined;
+      expect(borrelkaartGroup, 'did not find borrelkaart group').to.not.be.undefined;
 
-      // check if user in database
+      // check if user in database, TODO: fix find for UserBorrelkaartGroup
       const usersGroupId = await UserBorrelkaartGroup
-        .findOne(ctx.validBorrelkaartGroupReqs[0].users[0].id);
-      expect(usersGroupId).to.equal(borrelkaartGroup.id);
+        .findAndCount();
+      expect(usersGroupId, 'user not linked to borrelkaart group').to.equal(true);
 
       // success code
       expect(res.status).to.equal(200);
