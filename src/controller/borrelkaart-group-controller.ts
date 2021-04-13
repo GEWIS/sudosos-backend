@@ -23,7 +23,7 @@ import Policy from './policy';
 import BorrelkaartGroupRequest from './request/borrelkaart-group-request';
 import { RequestWithToken } from '../middleware/token-middleware';
 import BorrelkaartGroup from '../entity/user/borrelkaart-group';
-import { UserType } from '../entity/user/user';
+import User, { UserType } from '../entity/user/user';
 import { addPaginationForFindOptions } from '../helpers/pagination';
 import UserBorrelkaartGroup from '../entity/user/user-borrelkaart-group';
 import BorrelkaartGroupResponse from './response/borrelkaart-group-response';
@@ -75,9 +75,41 @@ export default class BorrelkaartGroupController extends BaseController {
    * @param br
    */
   // eslint-disable-next-line class-methods-use-this
-  private verifyBorrelkaartGroup(bkgr: BorrelkaartGroupRequest): boolean {
-    // TODO: verify borrelkaart group
-    return bkgr.name !== '';
+  public async verifyBorrelkaartGroup(bkgr: BorrelkaartGroupRequest): Promise<boolean> {
+    const sDate = Date.parse(bkgr.activeStartDate);
+    const eDate = Date.parse(bkgr.activeEndDate);
+
+    const bkgrCheck: boolean = bkgr.name !== ''
+      && !Number.isNaN(sDate)
+      && !Number.isNaN(eDate)
+
+      // end date connot be in the past
+      && eDate > new Date().getTime()
+
+      // end date must be later than start date
+      && eDate > sDate
+
+      // borrelkaart group must contain users
+      && bkgr.users.length > 0;
+
+    if (!bkgrCheck) {
+      return false;
+    }
+
+    // check if distinct user id's
+    const ids: number[] = [];
+    bkgr.users.forEach((user) => {
+      if (user.id && !ids.includes(user.id)) {
+        ids.push(user.id);
+      }
+    });
+    if (bkgr.users.length > ids.length) {
+      return false;
+    }
+
+    // check if all users in user database
+    const users = await Promise.all(bkgr.users.map((user) => User.findOne(user)));
+    return !users.includes(undefined);
   }
 
   /**
@@ -130,7 +162,7 @@ export default class BorrelkaartGroupController extends BaseController {
 
     // handle request
     try {
-      if (this.verifyBorrelkaartGroup(body)) {
+      if (await this.verifyBorrelkaartGroup(body)) {
         // create new BorrelkaartGroup
         const bkgReq = {
           name: body.name,
@@ -141,25 +173,15 @@ export default class BorrelkaartGroupController extends BaseController {
 
         // link users to BorrelkaartGroup
         const bkg = await BorrelkaartGroup.findOne({ name: body.name });
-        const userLinks: UserBorrelkaartGroup[] = [];
-        body.users.forEach((user) => {
-          userLinks.push({
-            user,
-            borrelkaartGroup: bkg,
-          } as UserBorrelkaartGroup);
-        });
+        const users = await Promise.all(body.users.map((user) => User.findOne(user)));
+        const userLinks: UserBorrelkaartGroup[] = users
+          .map((user) => ({ user, borrelkaartGroup: bkg } as UserBorrelkaartGroup));
         await UserBorrelkaartGroup.save(userLinks);
 
-        // find fails, count works
-        console.log(await UserBorrelkaartGroup.findAndCount());
+        // return created borrelkaart group with users
+        const bkgResp = { borrelkaartGroup: bkg, users } as BorrelkaartGroupResponse;
 
-        // return created BorrelkaartGroup with users
-        const bkgResp = {
-          borrelkaartGroup: bkg,
-          users: body.users,
-        } as BorrelkaartGroupResponse;
-
-        // ASK: return full users from DB or users in request
+        // AKS: save borrelkaart group as new user, fields in request body?
         res.json(bkgResp);
       } else {
         res.status(400).json('Invalid BorrelkaartGroup.');
@@ -220,7 +242,7 @@ export default class BorrelkaartGroupController extends BaseController {
 
     // handle request
     try {
-      if (this.verifyBorrelkaartGroup(body)) {
+      if (await this.verifyBorrelkaartGroup(body)) {
         // check if BorrelkaartGroup in database
         if (await BorrelkaartGroup.findOne(id)) {
           // update BorrelkaartGroup

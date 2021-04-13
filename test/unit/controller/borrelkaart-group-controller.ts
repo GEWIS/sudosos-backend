@@ -23,6 +23,7 @@ import { Connection } from 'typeorm';
 import TokenHandler from '../../../src/authentication/token-handler';
 import BorrelkaartGroupController from '../../../src/controller/borrelkaart-group-controller';
 import BorrelkaartGroupRequest from '../../../src/controller/request/borrelkaart-group-request';
+import BorrelkaartGroupResponse from '../../../src/controller/response/borrelkaart-group-response';
 import Database from '../../../src/database';
 import BorrelkaartGroup from '../../../src/entity/user/borrelkaart-group';
 import User, { UserType } from '../../../src/entity/user/user';
@@ -135,6 +136,83 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
     await ctx.connection.close();
   });
 
+  describe('verify borrelkaart group', () => {
+    it('should return true when the borrelkaart is valid', async () => {
+      expect(await ctx.controller.verifyBorrelkaartGroup(ctx.validBorrelkaartGroupReqs[0]), 'valid borrelkaart group incorrectly asserted as false').to.be.true;
+    });
+    it('should return false when the borrelkaart is invalid', async () => {
+      // empty name
+      expect(await ctx.controller.verifyBorrelkaartGroup(ctx.invalidBorrelkaartGroupReq), 'empty name').to.be.false;
+
+      // invalid date
+      ctx.invalidBorrelkaartGroupReq = {
+        ...ctx.validBorrelkaartGroupReqs[0],
+        activeStartDate: 'geen date format',
+      } as BorrelkaartGroupRequest;
+      expect(await ctx.controller.verifyBorrelkaartGroup(ctx.invalidBorrelkaartGroupReq), 'invalid date').to.be.false;
+
+      // end date in past
+      ctx.invalidBorrelkaartGroupReq = {
+        ...ctx.validBorrelkaartGroupReqs[0],
+        activeEndDate: '2000-01-01T21:00:00Z',
+      } as BorrelkaartGroupRequest;
+      expect(await ctx.controller.verifyBorrelkaartGroup(ctx.invalidBorrelkaartGroupReq), 'end date in past').to.be.false;
+
+      // end date <= start date
+      ctx.invalidBorrelkaartGroupReq = {
+        ...ctx.validBorrelkaartGroupReqs[0],
+        activeStartDate: '2000-01-01T21:00:00Z',
+        activeEndDate: '2000-01-01T21:00:00Z',
+      } as BorrelkaartGroupRequest;
+      expect(await ctx.controller.verifyBorrelkaartGroup(ctx.invalidBorrelkaartGroupReq), 'end date <= start date').to.be.false;
+
+      // no users given
+      ctx.invalidBorrelkaartGroupReq = {
+        ...ctx.validBorrelkaartGroupReqs[0],
+        users: [],
+      } as BorrelkaartGroupRequest;
+      expect(await ctx.controller.verifyBorrelkaartGroup(ctx.invalidBorrelkaartGroupReq), 'no users given').to.be.false;
+
+      // distinct user id's
+      ctx.invalidBorrelkaartGroupReq = {
+        ...ctx.validBorrelkaartGroupReqs[0],
+        users: [
+          ctx.adminUser,
+          ctx.localUser,
+          {
+            id: 3,
+            firstName: 'fail user',
+            type: UserType.LOCAL_USER,
+            active: true,
+          },
+          {
+            id: 3,
+            firstName: 'fail user 2',
+            type: UserType.LOCAL_USER,
+            active: true,
+          },
+        ],
+      } as BorrelkaartGroupRequest;
+      expect(await ctx.controller.verifyBorrelkaartGroup(ctx.invalidBorrelkaartGroupReq), 'user ids not distinct').to.be.false;
+
+      // a user not in database
+      ctx.invalidBorrelkaartGroupReq = {
+        ...ctx.validBorrelkaartGroupReqs[0],
+        users: [
+          ctx.adminUser,
+          ctx.localUser,
+          {
+            id: 3,
+            firstName: 'fail user',
+            type: UserType.LOCAL_USER,
+            active: true,
+          },
+        ],
+      } as BorrelkaartGroupRequest;
+      expect(await ctx.controller.verifyBorrelkaartGroup(ctx.invalidBorrelkaartGroupReq), 'user not in database').to.be.false;
+    });
+  });
+
   describe('GET /borrelkaartgroups', () => {
     it('should return an HTTP 200 and all borrelkaart groups without users in the database if admin', async () => {
       // save borrelkaart group
@@ -155,7 +233,7 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
       expect(borrelkaartGroups.length, 'size of response not equal to size of database').to.equal(await BorrelkaartGroup.count());
 
       // success code
-      expect(res.status, 'incorrect status').to.equal(200);
+      expect(res.status, 'incorrect status on get').to.equal(200);
     });
     it('should return an HTTP 403 if not admin', async () => {
       const res = await request(ctx.app)
@@ -165,31 +243,32 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
       // check no response body
       expect(res.body, 'body not empty').to.be.empty;
 
-      // success code
-      expect(res.status, 'incorrect status').to.equal(403);
+      // forbidden code
+      expect(res.status, 'incorrect status on forbidden get').to.equal(403);
     });
   });
 
   describe('POST /borrelkaartgroups', () => {
     it('should store the given borrelkaart group and its users in the database and return an HTTP 200 and the borrelkaart group with users if admin', async () => {
-      // post first borrelkaart group
+      // post borrelkaart group
       const res = await request(ctx.app)
         .post('/borrelkaartgroups')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(ctx.validBorrelkaartGroupReqs[0]);
 
+      // check if response correct
+      const bkgRes = res.body as BorrelkaartGroupResponse;
+
       // check if borrelkaart group in database
-      const borrelkaartGroup = await BorrelkaartGroup
-        .findOne({ name: ctx.validBorrelkaartGroupReqs[0].name });
+      const borrelkaartGroup = await BorrelkaartGroup.findOne(bkgRes.borrelkaartGroup.id);
       expect(borrelkaartGroup, 'did not find borrelkaart group').to.not.be.undefined;
 
       // check if user in database, TODO: fix find for UserBorrelkaartGroup
-      const usersGroupId = await UserBorrelkaartGroup
-        .findAndCount();
-      expect(usersGroupId, 'user not linked to borrelkaart group').to.equal(true);
+      const usersGroupId = await UserBorrelkaartGroup.findOne(bkgRes.users[0]);
+      expect(usersGroupId, 'user not linked to borrelkaart group').to.equal(bkgRes.borrelkaartGroup.id);
 
       // success code
-      expect(res.status).to.equal(200);
+      expect(res.status, 'status incorrect on valid post').to.equal(200);
     });
     it('should return an HTTP 400 if the given borrelkaart group is invalid', async () => {
       // post invalid borrelkaart group
@@ -198,13 +277,16 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(ctx.invalidBorrelkaartGroupReq);
 
+      // empty response
+      expect(res.body, 'body not empty on invalid post').to.be.empty;
+
       // check if banner not in database
       const borrelkaartGroup = await BorrelkaartGroup
         .findOne({ name: ctx.invalidBorrelkaartGroupReq.name });
-      expect(borrelkaartGroup).to.be.undefined;
+      expect(borrelkaartGroup, 'borrelkaart group in databse on invalid post').to.be.undefined;
 
-      // success code
-      expect(res.status).to.equal(400);
+      // invalid code
+      expect(res.status, 'status incorrect on invalid post').to.equal(400);
     });
     it('should return an HTTP 403 if not admin', async () => {
       // post borrelkaart group
@@ -214,10 +296,10 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
         .send(ctx.validBorrelkaartGroupReqs[0]);
 
       // check no response body
-      expect(res.body).to.be.empty;
+      expect(res.body, 'body not empty on forbidden post').to.be.empty;
 
-      // success code
-      expect(res.status).to.equal(403);
+      // forbidden code
+      expect(res.status, 'status incorrect on forbidden post').to.equal(403);
     });
   });
 
