@@ -31,6 +31,39 @@ import UserBorrelkaartGroup from '../../../src/entity/user/user-borrelkaart-grou
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import Swagger from '../../../src/swagger';
 
+function bkgEq(req: BorrelkaartGroupRequest, res: BorrelkaartGroupResponse): Boolean {
+  // check if non user fields are equal
+  if (!(req.name === res.borrelkaartGroup.name
+    && new Date(req.activeStartDate) === res.borrelkaartGroup.activeStartDate
+    && new Date(req.activeEndDate) === res.borrelkaartGroup.activeEndDate)) {
+    return false;
+  }
+
+  let usersOk = true;
+  const reqIds = req.users.map((user) => user.id);
+  const resIds = res.users.map((user) => user.id);
+
+  // check if requested users in response users
+  reqIds.forEach((id) => {
+    if (!resIds.includes(id)) {
+      usersOk = false;
+    }
+  });
+
+  if (!usersOk) {
+    return false;
+  }
+
+  // check if response users in requested users
+  resIds.forEach((id) => {
+    if (!reqIds.includes(id)) {
+      usersOk = false;
+    }
+  });
+
+  return usersOk;
+}
+
 describe('BorrelkaartGroupController', async (): Promise<void> => {
   let ctx: {
     connection: Connection,
@@ -130,9 +163,9 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
 
   // close database connection
   afterEach(async () => {
+    await UserBorrelkaartGroup.clear();
     await User.clear();
     await BorrelkaartGroup.clear();
-    await UserBorrelkaartGroup.clear();
     await ctx.connection.close();
   });
 
@@ -264,7 +297,7 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
       expect(borrelkaartGroup, 'did not find borrelkaart group').to.not.be.undefined;
 
       // check if user in database, TODO: fix find for UserBorrelkaartGroup
-      const usersGroupId = await UserBorrelkaartGroup.findOne(bkgRes.users[0]);
+      const usersGroupId = await UserBorrelkaartGroup.findOne(bkgRes.users[0].id);
       expect(usersGroupId, 'user not linked to borrelkaart group').to.equal(bkgRes.borrelkaartGroup.id);
 
       // success code
@@ -277,8 +310,8 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(ctx.invalidBorrelkaartGroupReq);
 
-      // empty response
-      expect(res.body, 'body not empty on invalid post').to.be.empty;
+      // invalid borrelkaart group response response
+      expect(res.body, 'borrelkaart group not invalidated').to.equal('Invalid borrelkaart group.');
 
       // check if banner not in database
       const borrelkaartGroup = await BorrelkaartGroup
@@ -304,9 +337,83 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
   });
 
   describe('GET /borrelkaartgroups/:id', () => {
-    it('should return an HTTP 200 and the borrelkaart group and users with given id if admin');
-    it('should return an HTTP 404 if the borrelkaart group with given id does not exist');
-    it('should return an HTTP 403 if not admin');
+    it('should return an HTTP 200 and the borrelkaart group and users with given id if admin', async () => {
+      // save borrelkaart group
+      const bkg = {
+        name: ctx.validBorrelkaartGroupReqs[0].name,
+        activeStartDate: new Date(ctx.validBorrelkaartGroupReqs[0].activeStartDate),
+        activeEndDate: new Date(ctx.validBorrelkaartGroupReqs[0].activeEndDate),
+      } as BorrelkaartGroup;
+      await BorrelkaartGroup.save(bkg);
+
+      // save user links to borrelkaart group
+      const userLinks: UserBorrelkaartGroup[] = ctx.validBorrelkaartGroupReqs[0].users
+        .map((user) => ({ user, borrelkaartGroup: bkg } as UserBorrelkaartGroup));
+      await UserBorrelkaartGroup.save(userLinks);
+
+      // get borrelkaart group by id
+      const res = await request(ctx.app)
+        .get('/borrelkaartgroups/1')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      const bkgRes = res.body as BorrelkaartGroupResponse;
+
+      expect(bkgRes, 'borrelkaart group not found').to.not.be.empty;
+      expect(bkgEq(ctx.validBorrelkaartGroupReqs[0], bkgRes), 'returned borrelkaart group not correct').to.be.true;
+
+      // success code
+      expect(res.status).to.equal(200);
+    });
+    it('should return an HTTP 404 if the borrelkaart group with given id does not exist', async () => {
+      // save borrelkaart group
+      const bkg = {
+        name: ctx.validBorrelkaartGroupReqs[0].name,
+        activeStartDate: new Date(ctx.validBorrelkaartGroupReqs[0].activeStartDate),
+        activeEndDate: new Date(ctx.validBorrelkaartGroupReqs[0].activeEndDate),
+      } as BorrelkaartGroup;
+      await BorrelkaartGroup.save(bkg);
+
+      // save user links to borrelkaart group
+      const userLinks: UserBorrelkaartGroup[] = ctx.validBorrelkaartGroupReqs[0].users
+        .map((user) => ({ user, borrelkaartGroup: bkg } as UserBorrelkaartGroup));
+      await UserBorrelkaartGroup.save(userLinks);
+
+      // get borrelkaart group by id
+      const res = await request(ctx.app)
+        .get('/borrelkaartgroups/2')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.body, 'borrelkaart group found while id not in database').to.equal('Borrelkaart group not found.');
+
+      // not found code
+      expect(res.status).to.equal(404);
+    });
+    it('should return an HTTP 403 if not admin', async () => {
+      // save borrelkaart group
+      const bkg = {
+        name: ctx.validBorrelkaartGroupReqs[0].name,
+        activeStartDate: new Date(ctx.validBorrelkaartGroupReqs[0].activeStartDate),
+        activeEndDate: new Date(ctx.validBorrelkaartGroupReqs[0].activeEndDate),
+      } as BorrelkaartGroup;
+      await BorrelkaartGroup.save(bkg);
+
+      // save user links to borrelkaart group
+      const userLinks: UserBorrelkaartGroup[] = ctx.validBorrelkaartGroupReqs[0].users
+        .map((user) => ({ user, borrelkaartGroup: bkg } as UserBorrelkaartGroup));
+      await UserBorrelkaartGroup.save(userLinks);
+
+      // get borrelkaart group by id
+      const res = await request(ctx.app)
+        .get('/borrelkaartgroups/1')
+        .set('Authorization', `Bearer ${ctx.token}`);
+
+      const bkgRes = res.body as BorrelkaartGroupResponse;
+
+      expect(bkgRes, 'borrelkaart group returned').to.be.empty;
+
+      // forbidden code
+      expect(res.status).to.equal(403);
+    });
   });
 
   describe('PATCH /borrelkaartgroups/:id', () => {

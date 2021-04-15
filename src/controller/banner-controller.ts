@@ -110,7 +110,7 @@ export default class BannerController extends BaseController {
   // eslint-disable-next-line class-methods-use-this
   private async isAdmin(req: RequestWithToken): Promise<boolean> {
     // TODO: check whether user is admin
-    return req.token.user.type === UserType.LOCAL_ADMIN || true;
+    return req.token.user.type === UserType.LOCAL_ADMIN || false;
   }
 
   /**
