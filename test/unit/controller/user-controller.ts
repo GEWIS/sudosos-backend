@@ -92,13 +92,46 @@ describe('UserController', (): void => {
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
-    ctx.userToken = await tokenHandler.signToken({ user: ctx.users[0], roles: [] }, '1');
-    ctx.adminToken = await tokenHandler.signToken({ user: ctx.users[6], roles: [] }, '1');
+    ctx.userToken = await tokenHandler.signToken({ user: ctx.users[0], roles: ['User'] }, '1');
+    ctx.adminToken = await tokenHandler.signToken({ user: ctx.users[6], roles: ['User', 'Admin'] }, '1');
+
+    const all = { all: new Set<string>(['*']) };
+    const own = { own: new Set<string>(['*']) };
+    const roleManager = new RoleManager();
+    roleManager.registerRole({
+      name: 'Admin',
+      permissions: {
+        User: {
+          create: all,
+          get: all,
+          update: all,
+          delete: all,
+        },
+        Product: {
+          get: all,
+          update: all,
+        },
+      },
+      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
+    });
+    roleManager.registerRole({
+      name: 'User',
+      permissions: {
+        User: {
+          get: own,
+        },
+        Product: {
+          get: own,
+          update: own,
+        },
+      },
+      assignmentCheck: async () => true,
+    });
 
     ctx.specification = await Swagger.initialize(ctx.app);
     ctx.controller = new UserController({
       specification: ctx.specification,
-      roleManager: new RoleManager(),
+      roleManager,
     });
 
     ctx.app.use(bodyParser.json());
