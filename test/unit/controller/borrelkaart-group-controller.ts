@@ -24,12 +24,13 @@ import TokenHandler from '../../../src/authentication/token-handler';
 import BorrelkaartGroupController from '../../../src/controller/borrelkaart-group-controller';
 import BorrelkaartGroupRequest from '../../../src/controller/request/borrelkaart-group-request';
 import BorrelkaartGroupResponse from '../../../src/controller/response/borrelkaart-group-response';
-import Database from '../../../src/database';
+import Database from '../../../src/database/database';
 import BorrelkaartGroup from '../../../src/entity/user/borrelkaart-group';
 import User, { UserType } from '../../../src/entity/user/user';
 import UserBorrelkaartGroup from '../../../src/entity/user/user-borrelkaart-group';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
-import Swagger from '../../../src/swagger';
+import BorrelkaartGroupService from '../../../src/services/BorrelkaartGroupService';
+import Swagger from '../../../src/start/swagger';
 
 function bkgEq(req: BorrelkaartGroupRequest, res: BorrelkaartGroupResponse): Boolean {
   // check if non user fields are equal
@@ -171,25 +172,25 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
 
   describe('verify borrelkaart group', () => {
     it('should return true when the borrelkaart is valid', async () => {
-      expect(await ctx.controller.verifyBorrelkaartGroup(ctx.validBorrelkaartGroupReqs[0]), 'valid borrelkaart group incorrectly asserted as false').to.be.true;
+      expect(await BorrelkaartGroupService.verifyBorrelkaartGroup(ctx.validBorrelkaartGroupReqs[0]), 'valid borrelkaart group incorrectly asserted as false').to.be.true;
     });
     it('should return false when the borrelkaart is invalid', async () => {
       // empty name
-      expect(await ctx.controller.verifyBorrelkaartGroup(ctx.invalidBorrelkaartGroupReq), 'empty name').to.be.false;
+      expect(await BorrelkaartGroupService.verifyBorrelkaartGroup(ctx.invalidBorrelkaartGroupReq), 'empty name').to.be.false;
 
       // invalid date
       ctx.invalidBorrelkaartGroupReq = {
         ...ctx.validBorrelkaartGroupReqs[0],
         activeStartDate: 'geen date format',
       } as BorrelkaartGroupRequest;
-      expect(await ctx.controller.verifyBorrelkaartGroup(ctx.invalidBorrelkaartGroupReq), 'invalid date').to.be.false;
+      expect(await BorrelkaartGroupService.verifyBorrelkaartGroup(ctx.invalidBorrelkaartGroupReq), 'invalid date').to.be.false;
 
       // end date in past
       ctx.invalidBorrelkaartGroupReq = {
         ...ctx.validBorrelkaartGroupReqs[0],
         activeEndDate: '2000-01-01T21:00:00Z',
       } as BorrelkaartGroupRequest;
-      expect(await ctx.controller.verifyBorrelkaartGroup(ctx.invalidBorrelkaartGroupReq), 'end date in past').to.be.false;
+      expect(await BorrelkaartGroupService.verifyBorrelkaartGroup(ctx.invalidBorrelkaartGroupReq), 'end date in past').to.be.false;
 
       // end date <= start date
       ctx.invalidBorrelkaartGroupReq = {
@@ -197,14 +198,14 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
         activeStartDate: '2000-01-01T21:00:00Z',
         activeEndDate: '2000-01-01T21:00:00Z',
       } as BorrelkaartGroupRequest;
-      expect(await ctx.controller.verifyBorrelkaartGroup(ctx.invalidBorrelkaartGroupReq), 'end date <= start date').to.be.false;
+      expect(await BorrelkaartGroupService.verifyBorrelkaartGroup(ctx.invalidBorrelkaartGroupReq), 'end date <= start date').to.be.false;
 
       // no users given
       ctx.invalidBorrelkaartGroupReq = {
         ...ctx.validBorrelkaartGroupReqs[0],
         users: [],
       } as BorrelkaartGroupRequest;
-      expect(await ctx.controller.verifyBorrelkaartGroup(ctx.invalidBorrelkaartGroupReq), 'no users given').to.be.false;
+      expect(await BorrelkaartGroupService.verifyBorrelkaartGroup(ctx.invalidBorrelkaartGroupReq), 'no users given').to.be.false;
 
       // distinct user id's
       ctx.invalidBorrelkaartGroupReq = {
@@ -226,7 +227,7 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
           },
         ],
       } as BorrelkaartGroupRequest;
-      expect(await ctx.controller.verifyBorrelkaartGroup(ctx.invalidBorrelkaartGroupReq), 'user ids not distinct').to.be.false;
+      expect(await BorrelkaartGroupService.verifyBorrelkaartGroup(ctx.invalidBorrelkaartGroupReq), 'user ids not distinct').to.be.false;
 
       // a user not in database
       ctx.invalidBorrelkaartGroupReq = {
@@ -242,7 +243,7 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
           },
         ],
       } as BorrelkaartGroupRequest;
-      expect(await ctx.controller.verifyBorrelkaartGroup(ctx.invalidBorrelkaartGroupReq), 'user not in database').to.be.false;
+      expect(await BorrelkaartGroupService.verifyBorrelkaartGroup(ctx.invalidBorrelkaartGroupReq), 'user not in database').to.be.false;
     });
   });
 

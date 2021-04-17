@@ -17,6 +17,7 @@
  */
 import { FindManyOptions } from 'typeorm';
 import BannerRequest from '../controller/request/banner-request';
+import BannerResponse from '../controller/response/banner-response';
 import Banner from '../entity/banner';
 
 export default class BannerService {
@@ -25,7 +26,8 @@ export default class BannerService {
    * @param options
    */
   public static async getAllActiveBanners(options?: FindManyOptions) {
-    return Banner.find({ where: { active: '1' }, ...options });
+    const banners = await Banner.find({ where: { active: '1' }, ...options });
+    return banners.map((banner) => (this.asBannerResponse(banner)));
   }
 
   /**
@@ -53,5 +55,15 @@ export default class BannerService {
 
         // end date must be later than start date
         && eDate > sDate;
+  }
+
+  public static asBannerResponse(banner: Banner): BannerResponse {
+    return {
+      ...banner,
+      createdAt: banner.createdAt.toISOString(),
+      updatedAt: banner.updatedAt.toISOString(),
+      startDate: banner.startDate.toISOString(),
+      endDate: banner.endDate.toISOString(),
+    } as BannerResponse;
   }
 }

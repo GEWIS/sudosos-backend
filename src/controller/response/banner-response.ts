@@ -16,24 +16,26 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import User from '../../entity/user/user';
-
 /**
-  * @typedef BorrelkaartGroupResponse
-  * @property {string} createdAt.required - Date of creation
-  * @property {string} updateAt.required - Date of last update
-  * @property {number} id.required - Id of the borrelkaart group
-  * @property {string} name.required - Name of the borrelkaart group
-  * @property {string} activeStartDate - Start date of the borrelkaart group
-  * @property {string} activeEndDate.required - End date of the borrelkaart group
-  * @property {Array.<User>} users.required - Users in the borrelkaart group
-  */
-export default interface BorrelkaartGroupResponse {
+ * @typedef BannerResponse
+ * @property {string} createdAt.required - Date of creation
+ * @property {string} updateAt.required - Date of last update
+ * @property {number} id.required - Id of the borrelkaart group
+ * @property {string} name - Name/label of the banner
+ * @property {string} picture - Location of the image
+ * @property {number} duration - How long the banner should be shown (in seconds)
+ * @property {boolean} active - Whether the banner is active. Overrides start and end date
+ * @property {string} startDate - The starting date from which the banner should be shown
+ * @property {string} endDate - The end date from which the banner should no longer be shown
+ */
+export default interface BannerResponse {
   createdAt: string,
   updatedAt: string,
   id: number,
   name: string,
-  activeStartDate?: string,
-  activeEndDate: string,
-  users: Array<User>,
+  picture: string,
+  duration: number,
+  active: boolean,
+  startDate: string,
+  endDate: string,
 }

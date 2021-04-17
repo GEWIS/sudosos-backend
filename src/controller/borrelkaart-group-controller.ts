@@ -23,10 +23,12 @@ import Policy from './policy';
 import BorrelkaartGroupRequest from './request/borrelkaart-group-request';
 import { RequestWithToken } from '../middleware/token-middleware';
 import BorrelkaartGroup from '../entity/user/borrelkaart-group';
-import User, { UserType } from '../entity/user/user';
+import User from '../entity/user/user';
 import { addPaginationForFindOptions } from '../helpers/pagination';
 import UserBorrelkaartGroup from '../entity/user/user-borrelkaart-group';
 import BorrelkaartGroupResponse from './response/borrelkaart-group-response';
+import AuthService from '../services/AuthService';
+import BorrelkaartGroupService from '../services/BorrelkaartGroupService';
 
 export default class BorrelkaartGroupController extends BaseController {
   private logger: Logger = log4js.getLogger('BorrelkaartGroupController');
@@ -43,82 +45,31 @@ export default class BorrelkaartGroupController extends BaseController {
     return {
       '/': {
         GET: {
-          policy: this.isAdmin.bind(this),
+          policy: AuthService.isAdmin.bind(this),
           handler: this.returnAllBorrelkaartGroups.bind(this),
         },
         POST: {
           body: { modelName: 'BorrelkaartGroupRequest' },
-          policy: this.isAdmin.bind(this),
+          policy: AuthService.isAdmin.bind(this),
           handler: this.createBorrelkaartGroup.bind(this),
         },
       },
       '/:id(\\d+)': {
         GET: {
-          policy: this.isAdmin.bind(this),
+          policy: AuthService.isAdmin.bind(this),
           handler: this.returnSingleBorrelkaartGroup.bind(this),
         },
         PATCH: {
           body: { modelName: 'BorrelkaartGroupRequest' },
-          policy: this.isAdmin.bind(this),
+          policy: AuthService.isAdmin.bind(this),
           handler: this.updateBorrelkaartGroup.bind(this),
         },
         DELETE: {
-          policy: this.isAdmin.bind(this),
+          policy: AuthService.isAdmin.bind(this),
           handler: this.removeBorrelkaartGroup.bind(this),
         },
       },
     };
-  }
-
-  /**
-   * Verifies whether the banner request translates to a valid banner object
-   * @param bkgr
-   */
-  // eslint-disable-next-line class-methods-use-this
-  public async verifyBorrelkaartGroup(bkgr: BorrelkaartGroupRequest): Promise<boolean> {
-    const sDate = Date.parse(bkgr.activeStartDate);
-    const eDate = Date.parse(bkgr.activeEndDate);
-
-    const bkgrCheck: boolean = bkgr.name !== ''
-      && !Number.isNaN(sDate)
-      && !Number.isNaN(eDate)
-
-      // end date connot be in the past
-      && eDate > new Date().getTime()
-
-      // end date must be later than start date
-      && eDate > sDate
-
-      // borrelkaart group must contain users
-      && bkgr.users.length > 0;
-
-    if (!bkgrCheck) {
-      return false;
-    }
-
-    // check if distinct user id's
-    const ids: number[] = [];
-    for (let i = 0; i < bkgr.users.length; i += 1) {
-      if (bkgr.users[i] && !ids.includes(bkgr.users[i].id)) {
-        ids.push(bkgr.users[i].id);
-      } else {
-        return false;
-      }
-    }
-
-    // check if all users in user database
-    const users = await Promise.all(bkgr.users.map((user) => User.findOne(user.id)));
-    return !users.includes(undefined);
-  }
-
-  /**
-   * Validates that the request is authorized by the policy.
-   * @param req - The incoming request.
-   */
-  // eslint-disable-next-line class-methods-use-this
-  private async isAdmin(req: RequestWithToken): Promise<boolean> {
-    // TODO: check whether user is admin
-    return req.token.user.type === UserType.LOCAL_ADMIN || false;
   }
 
   /**
@@ -161,7 +112,7 @@ export default class BorrelkaartGroupController extends BaseController {
 
     // handle request
     try {
-      if (await this.verifyBorrelkaartGroup(body)) {
+      if (await BorrelkaartGroupService.verifyBorrelkaartGroup(body)) {
         // create new borrelkaart group
         const bkgReq = {
           name: body.name,
@@ -225,7 +176,7 @@ export default class BorrelkaartGroupController extends BaseController {
         // get users related to borrelkaart group
         const userBorrelkaartGroups = await UserBorrelkaartGroup.find({
           relations: ['user'],
-          where: { bkg },
+          where: { borrelkaartGroup: bkg },
         });
         const users = userBorrelkaartGroups.map((ubkg) => ubkg.user);
 
@@ -269,7 +220,7 @@ export default class BorrelkaartGroupController extends BaseController {
 
     // handle request
     try {
-      if (await this.verifyBorrelkaartGroup(body)) {
+      if (await BorrelkaartGroupService.verifyBorrelkaartGroup(body)) {
         // check if borrelkaart group in database
         if (await BorrelkaartGroup.findOne(id)) {
           // create update borrelkaart group
