@@ -33,6 +33,7 @@ import TokenHandler from './authentication/token-handler';
 import TokenMiddleware from './middleware/token-middleware';
 import AuthenticationController from './controller/authentication-controller';
 import BannerController from './controller/banner-controller';
+import TransactionController from './controller/transaction-controller';
 
 export class Application {
   app: express.Express;
@@ -110,6 +111,7 @@ export default async function createApp(): Promise<Application> {
 
   // REMOVE LATER, banner controller development
   application.app.use('/v1/banners', new BannerController(application.specification).getRouter());
+  application.app.use('/v1/transactions', new TransactionController(application.specification).getRouter());
 
   // Start express application.
   application.server = application.app.listen(process.env.HTTP_PORT);

@@ -120,12 +120,7 @@ export default class TransactionService {
     query = applySubTransactionFilters(query);
     query = addPaginationToQueryBuilder(req, query);
 
-    console.log(filters);
-    console.log(query.getSql());
-
     const rawTransactions = await query.getRawMany();
-
-    console.log(rawTransactions.length);
 
     return rawTransactions.map((o) => {
       const v: BaseTransactionResponse = {

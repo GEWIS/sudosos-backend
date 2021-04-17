@@ -62,9 +62,7 @@ describe('UserController', (): void => {
     this.timeout(10000);
     const connection = await Database.initialize();
     const app = express();
-    console.log('write database');
     const database = await seedDatabase();
-    console.log('database written');
     ctx = {
       connection,
       app,
