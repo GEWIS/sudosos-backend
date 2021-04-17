@@ -169,7 +169,9 @@ export default class RoleManager {
    * @param action - The action on the entity to check access for.
    *    Commonly used actions are 'get', 'update', and 'delete'.
    * @param relation - The ownership relation towards the object.
-   *    Commonly used ownership relations are 'own' and 'all'.
+   *    The ownership relation describes the status of the user related to the object:
+   *    the user can be the owner, creator, editor, or not related at all.
+   *    Commonly used ownership relations are 'own', 'created' and 'all'.
    * @param entity - The entity type name of the object. Most ofthen this is a
    *    database entity, but it could also be a computed entity such as 'balance'.
    * @param attributes - The list of attributes to access. The wildcard '*' can be
