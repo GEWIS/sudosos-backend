@@ -538,12 +538,15 @@ describe('UserController', (): void => {
   //       .set('Authorization', `Bearer ${ctx.adminToken}`);
   //     expect(res.status).to.equal(403);
   //   });
-  //   it('should give an HTTP 404 when admin requests transactions from unknown user', async () => {
-  //     const res = await request(ctx.app)
-  //       .get('/users/1234/transactions')
-  //       .set('Authorization', `Bearer ${ctx.adminToken}`);
-  //     expect(res.status).to.equal(404);
-  //   });
+  //   it(
+  //     'should give an HTTP 404 when admin requests transactions from unknown user',
+  //     async () => {
+  //       const res = await request(ctx.app)
+  //         .get('/users/1234/transactions')
+  //         .set('Authorization', `Bearer ${ctx.adminToken}`);
+  //       expect(res.status).to.equal(404);
+  //     },
+  //   );
   // });
   // TODO: Check validity of returned transactions
 });
