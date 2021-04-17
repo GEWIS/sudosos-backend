@@ -23,10 +23,7 @@ import Policy from './policy';
 import BorrelkaartGroupRequest from './request/borrelkaart-group-request';
 import { RequestWithToken } from '../middleware/token-middleware';
 import BorrelkaartGroup from '../entity/user/borrelkaart-group';
-import User from '../entity/user/user';
 import { addPaginationForFindOptions } from '../helpers/pagination';
-import UserBorrelkaartGroup from '../entity/user/user-borrelkaart-group';
-import BorrelkaartGroupResponse from './response/borrelkaart-group-response';
 import AuthService from '../services/AuthService';
 import BorrelkaartGroupService from '../services/BorrelkaartGroupService';
 
@@ -77,7 +74,7 @@ export default class BorrelkaartGroupController extends BaseController {
    * @route GET /borrelkaartgroups
    * @group borrelkaartgroups - Operations of borrelkaart group controller
    * @security JWT
-   * @returns {Array<BorrelkaartGroup>} 200 - All existingborrelkaart groups without users
+   * @returns {Array<BorrelkaartGroupResponse>} 200 - All existingborrelkaart groups without users
    * @returns {string} 500 - Internal server error
    */
   public async returnAllBorrelkaartGroups(req: RequestWithToken, res: Response): Promise<void> {
@@ -86,9 +83,8 @@ export default class BorrelkaartGroupController extends BaseController {
 
     // handle request
     try {
-      // return borrelkaart groups without users
-      const bkgs = await BorrelkaartGroup.find({ ...addPaginationForFindOptions(req) });
-      res.json(bkgs);
+      res.json(await BorrelkaartGroupService
+        .getAllBorrelkaartGroups(addPaginationForFindOptions(req)));
     } catch (error) {
       this.logger.error('Could not return all borrelkaart groups:', error);
       res.status(500).json('Internal server error.');
@@ -113,38 +109,7 @@ export default class BorrelkaartGroupController extends BaseController {
     // handle request
     try {
       if (await BorrelkaartGroupService.verifyBorrelkaartGroup(body)) {
-        // create new borrelkaart group
-        const bkgReq = {
-          name: body.name,
-          activeStartDate: new Date(body.activeStartDate),
-          activeEndDate: new Date(body.activeEndDate),
-        } as BorrelkaartGroup;
-        await BorrelkaartGroup.save(bkgReq);
-
-        // find borrelkaart group as put in database
-        const bkg = await BorrelkaartGroup.findOne({ name: body.name });
-
-        // get all users in the request from the database
-        const users = await Promise.all(body.users.map((user) => User.findOne(user.id)));
-
-        // create links between user and borrelkaart group
-        const userLinks: UserBorrelkaartGroup[] = users
-          .map((user) => ({ user, borrelkaartGroup: bkg } as UserBorrelkaartGroup));
-
-        // save user borrelkaart group link
-        await UserBorrelkaartGroup.save(userLinks);
-
-        // return created borrelkaart group with users
-        const bkgResp = {
-          ...bkg,
-          createdAt: bkg.createdAt.toISOString(),
-          updatedAt: bkg.updatedAt.toISOString(),
-          activeStartDate: bkg.activeStartDate.toISOString(),
-          activeEndDate: bkg.activeEndDate.toISOString(),
-          users,
-        } as BorrelkaartGroupResponse;
-
-        res.json(bkgResp);
+        res.json(await BorrelkaartGroupService.createBorrelkaartGroup(body));
       } else {
         res.status(400).json('Invalid borrelkaart group.');
       }
@@ -171,26 +136,10 @@ export default class BorrelkaartGroupController extends BaseController {
     // handle request
     try {
       // check if borrelkaart group in database
-      const bkg = await BorrelkaartGroup.findOne(id);
+      const bkg = await BorrelkaartGroupService
+        .getBorrelkaartGroupById(Number.parseInt(id, 10));
       if (bkg) {
-        // get users related to borrelkaart group
-        const userBorrelkaartGroups = await UserBorrelkaartGroup.find({
-          relations: ['user'],
-          where: { borrelkaartGroup: bkg },
-        });
-        const users = userBorrelkaartGroups.map((ubkg) => ubkg.user);
-
-        // return requested borrelkaart group and users
-        const bkgResp = {
-          ...bkg,
-          createdAt: bkg.createdAt.toISOString(),
-          updatedAt: bkg.updatedAt.toISOString(),
-          activeStartDate: bkg.activeStartDate.toISOString(),
-          activeEndDate: bkg.activeEndDate.toISOString(),
-          users,
-        } as BorrelkaartGroupResponse;
-
-        res.json(bkgResp);
+        res.json(bkg);
       } else {
         res.status(404).json('Borrelkaart group not found.');
       }
