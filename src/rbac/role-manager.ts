@@ -160,12 +160,20 @@ export default class RoleManager {
 
   /**
    * Performs an access check for the given parameters.
+   * This method can be used to verify if a user with the given role(s)
+   * is permitted to perform the given action (eg. get, update, delete) on the given
+   * properties of the given data entity, to which the user has the given relation.
    *
    * @param roles - The role name or list of role namess to perform the check for.
+   *    If a single role is supplied as string, it is converted to a list.
    * @param action - The action on the entity to check access for.
+   *    Commonly used actions are 'get', 'update', and 'delete'.
    * @param relation - The ownership relation towards the object.
-   * @param entity - The entity type name of the object.
-   * @param attributes - The list of attributes to access, possibly with wildcard.
+   *    Commonly used ownership relations are 'own' and 'all'.
+   * @param entity - The entity type name of the object. Most ofthen this is a
+   *    database entity, but it could also be a computed entity such as 'balance'.
+   * @param attributes - The list of attributes to access. The wildcard '*' can be
+   *    used to verify that the user is allowed to access all properties.
    * @returns {boolean} - True if access is allowed, false otherwise.
    */
   public can(
