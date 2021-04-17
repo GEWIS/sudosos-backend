@@ -7,6 +7,8 @@
     "build": "tsc",
     "watch": "ts-node-dev src/index.ts",
     "serve": "node out/src/index.js",
+    "schema": "ts-node-dev src/schema.ts",
+    "seed": "ts-node-dev src/seed.ts",
     "swagger": "ts-node-dev src/swagger.ts",
     "test": "mocha -r ts-node/register 'test/**/*.ts'",
     "coverage": "nyc npm run test",
@@ -29,7 +31,7 @@
     "reflect-metadata": "^0.1.13",
     "sqlite3": "^5.0.0",
     "swagger-model-validator": "^3.0.19",
-    "typeorm": "^0.2.22",
+    "typeorm": "^0.2.32",
     "uuid": "^7.0.3"
   },
   "devDependencies": {
