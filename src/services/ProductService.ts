@@ -21,7 +21,7 @@ import { ProductResponse } from '../controller/response/product-response';
 import Product from '../entity/product/product';
 import ProductRevision from '../entity/product/product-revision';
 import UpdatedProduct from '../entity/product/updated-product';
-import DineroTransformer from "../entity/transformer/dinero-transformer";
+import DineroTransformer from '../entity/transformer/dinero-transformer';
 
 /**
  * Wrapper for all Product related logic.
@@ -33,28 +33,28 @@ export default class ProductService {
    * @param returnUpdated
    */
   public static async getProducts(owner: User = null, returnUpdated: boolean = true)
-      : Promise<ProductResponse[]> {
+    : Promise<ProductResponse[]> {
     const builder = createQueryBuilder()
-        .from(Product, 'product')
-        .innerJoinAndSelect(ProductRevision, 'productrevision',
-            'product.id = productrevision.product '
+      .from(Product, 'product')
+      .innerJoinAndSelect(ProductRevision, 'productrevision',
+        'product.id = productrevision.product '
             + 'AND product.currentRevision = productrevision.revision')
-        .innerJoinAndSelect('product.owner', 'owner')
-        .innerJoinAndSelect('productrevision.category', 'category')
-        .select([
-          'product.id', 'product.createdAt', 'productrevision.updatedAt', 'productrevision.revision',
-          'productrevision.name', 'productrevision.price', 'owner.id', 'owner.firstName', 'owner.lastName', 'category.id',
-          'category.name', 'productrevision.picture', 'productrevision.alcoholpercentage',
-        ]);
+      .innerJoinAndSelect('product.owner', 'owner')
+      .innerJoinAndSelect('productrevision.category', 'category')
+      .select([
+        'product.id', 'product.createdAt', 'productrevision.updatedAt', 'productrevision.revision',
+        'productrevision.name', 'productrevision.price', 'owner.id', 'owner.firstName', 'owner.lastName', 'category.id',
+        'category.name', 'productrevision.picture', 'productrevision.alcoholpercentage',
+      ]);
     if (owner !== null) {
       builder.where('product.owner = :owner', { owner: owner.id });
     }
     if (!returnUpdated) {
       builder.where((qb) => {
         const subQuery = qb.subQuery()
-            .select('updatedproduct.product')
-            .from(UpdatedProduct, 'updatedproduct')
-            .getQuery();
+          .select('updatedproduct.product')
+          .from(UpdatedProduct, 'updatedproduct')
+          .getQuery();
         return `product.id NOT IN (${subQuery})`;
       });
     }
