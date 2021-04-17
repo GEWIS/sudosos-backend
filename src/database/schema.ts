@@ -19,7 +19,7 @@ import { config } from 'dotenv';
 import log4js from 'log4js';
 import dinero, { Currency } from 'dinero.js';
 import Database from './database';
-import { Application } from '../start';
+import { Application } from '..';
 
 export default async function createApp() {
   const application = new Application();

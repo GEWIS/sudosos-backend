@@ -33,8 +33,6 @@ import TokenHandler from './authentication/token-handler';
 import TokenMiddleware from './middleware/token-middleware';
 import AuthenticationController from './controller/authentication-controller';
 import BannerController from './controller/banner-controller';
-import TransactionController from './controller/transaction-controller';
-import seedDatabase from '../test/seed';
 
 export class Application {
   app: express.Express;
@@ -83,10 +81,6 @@ async function setupAuthentication(application: Application) {
   // Define middleware to be used by any other route.
   const tokenMiddleware = new TokenMiddleware({ refreshFactor: 0.5, tokenHandler });
   application.app.use(tokenMiddleware.getMiddleware());
-
-  // Define authentication controller and bind before middleware.
-  const transactionController = new TransactionController(application.specification);
-  application.app.use('/v1/transactions', transactionController.getRouter());
 }
 
 export default async function createApp(): Promise<Application> {
@@ -116,8 +110,6 @@ export default async function createApp(): Promise<Application> {
 
   // REMOVE LATER, banner controller development
   application.app.use('/v1/banners', new BannerController(application.specification).getRouter());
-
-  await seedDatabase();
 
   // Start express application.
   application.server = application.app.listen(process.env.HTTP_PORT);
