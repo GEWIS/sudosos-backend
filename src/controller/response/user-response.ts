@@ -19,6 +19,15 @@ import BaseResponse from './base-response';
 import { UserType } from '../../entity/user/user';
 
 /**
+ * @typedef {BaseUserResponse} BaseProductResponse
+ * @property {string} name.required - The name of the user.
+ */
+export interface BaseUserResponse extends BaseResponse {
+  firstName: string,
+  lastName: string
+}
+
+/**
  * @typedef {UserResponse} UserResponse
  * @property {string} firstName.required - The first name of the user
  * @property {string} lastName - The last name of the user
@@ -26,9 +35,8 @@ import { UserType } from '../../entity/user/user';
  * @property {boolean} deleted.required - Whether the user is deleted
  * @property {UserType.model} type.required - The type of user
  */
-export interface UserResponse extends BaseResponse {
-  firstName: string;
-  lastName?: string;
+
+export interface UserResponse extends BaseUserResponse {
   active: boolean;
   deleted: boolean;
   type: UserType;

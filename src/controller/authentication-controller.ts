@@ -24,6 +24,7 @@ import User from '../entity/user/user';
 import AuthenticationMockRequest from './request/authentication-mock-request';
 import JsonWebToken from '../authentication/json-web-token';
 import TokenHandler from '../authentication/token-handler';
+import AuthService from '../services/AuthService';
 
 /**
  * The authentication controller is responsible for:
@@ -60,29 +61,11 @@ export default class AuthenticationController extends BaseController {
       '/mock': {
         POST: {
           body: { modelName: 'AuthenticationMockRequest' },
-          policy: this.canPerformMock.bind(this),
+          policy: AuthService.canPerformMock.bind(this),
           handler: this.mockLogin.bind(this),
         },
       },
     };
-  }
-
-  /**
-   * Validates that the request is authorized by the policy.
-   * @param req - The incoming request.
-   */
-  // eslint-disable-next-line class-methods-use-this
-  public async canPerformMock(req: Request): Promise<boolean> {
-    const body = req.body as AuthenticationMockRequest;
-
-    // Only allow in development setups
-    if (process.env.NODE_ENV !== 'development') return false;
-
-    // Check the existence of the user
-    const user = await User.findOne({ id: body.userId });
-    if (!user) return false;
-
-    return true;
   }
 
   /**

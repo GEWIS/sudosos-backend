@@ -15,10 +15,10 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { DineroObject } from 'dinero.js';
-import User from '../../entity/user/user';
-import ProductCategory from '../../entity/product/product-category';
+import { Dinero } from 'dinero.js';
 import BaseResponse from './base-response';
+import { BaseUserResponse } from './user-response';
+import { ProductCategoryResponse } from './product-category-response';
 
 /**
  * @typedef {BaseResponse} BaseProductResponse
@@ -27,7 +27,7 @@ import BaseResponse from './base-response';
  */
 export interface BaseProductResponse extends BaseResponse {
   name: string,
-  price: DineroObject,
+  price: Dinero,
 }
 
 /**
@@ -40,8 +40,8 @@ export interface BaseProductResponse extends BaseResponse {
  */
 export interface ProductResponse extends BaseProductResponse {
   revision?: number,
-  owner: User,
-  category: ProductCategory,
+  owner: BaseUserResponse,
+  category: ProductCategoryResponse,
   picture: String,
   alcoholPercentage: number,
 }
