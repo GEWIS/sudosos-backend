@@ -23,7 +23,6 @@ import User from '../entity/user/user';
 import AuthenticationMockRequest from './request/authentication-mock-request';
 import JsonWebToken from '../authentication/json-web-token';
 import TokenHandler from '../authentication/token-handler';
-import AuthService from '../services/auth-service';
 
 /**
  * The authentication controller is responsible for:
@@ -63,7 +62,7 @@ export default class AuthenticationController extends BaseController {
       '/mock': {
         POST: {
           body: { modelName: 'AuthenticationMockRequest' },
-          policy: AuthService.canPerformMock.bind(this),
+          policy: this.canPerformMock.bind(this),
           handler: this.mockLogin.bind(this),
         },
       },
@@ -71,11 +70,29 @@ export default class AuthenticationController extends BaseController {
   }
 
   /**
+   * Validates that the request is authorized by the policy.
+   * @param req - The incoming request.
+   */
+  // eslint-disable-next-line class-methods-use-this
+  public async canPerformMock(req: Request): Promise<boolean> {
+    const body = req.body as AuthenticationMockRequest;
+
+    // Only allow in development setups
+    if (process.env.NODE_ENV !== 'development') return false;
+
+    // Check the existence of the user
+    const user = await User.findOne({ id: body.userId });
+    if (!user) return false;
+
+    return true;
+  }
+
+  /**
    * Mock login and hand out token.
    * @route POST /authentication/mock
    * @group authenticate - Operations of authentication controller
    * @param {AuthenticationMockRequest.model} req.body.required - The mock login.
-   * @returns {string} 200 - The created json web token.g
+   * @returns {string} 200 - The created json web token.
    * @returns {string} 400 - Validation error.
    */
   public async mockLogin(req: Request, res: Response): Promise<void> {
