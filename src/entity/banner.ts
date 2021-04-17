@@ -19,11 +19,11 @@ import { Column, Entity } from 'typeorm';
 import BaseEntity from './base-entity';
 
 /**
- * @typedef {Banner} Banner
+ * @typedef {BaseEntity} Banner
  * @property {string} name - Name/label of the banner
  * @property {string} picture - Location of the image
  * @property {integer} duration - How long the banner should be shown (in seconds)
- * @property {active} boolean - Whether the banner is active. Overrides start and end date
+ * @property {boolean} active - Whether the banner is active. Overrides start and end date
  * @property {string} startDate - The starting date from which the banner should be shown
  * @property {string} endDate - The end date from which the banner should no longer be shown
  */

@@ -101,12 +101,15 @@ export function addPaginationToQueryBuilder<T>(
   // value has been given. If this is not the case, we pick the default. Then, we
   // have a maximum take value, so if the parsed value is larger, we return the max.
   if (parsed.take !== undefined) {
+    query.limit(parsed.take < maxTake ? parsed.take : maxTake);
     query.take(parsed.take < maxTake ? parsed.take : maxTake);
   } else {
+    query.limit(take);
     query.take(take);
   }
 
   // This could be done in one line, so why not?
+  query.offset(parsed.skip === undefined ? skip : parsed.skip);
   query.skip(parsed.skip === undefined ? skip : parsed.skip);
 
   return query;

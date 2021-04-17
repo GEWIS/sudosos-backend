@@ -18,7 +18,7 @@
 import { expect, request } from 'chai';
 import express from 'express';
 import createApp, { Application } from '../../src';
-import Swagger from '../../src/swagger';
+import Swagger from '../../src/start/swagger';
 
 describe('Swagger', (): void => {
   let ctx: {

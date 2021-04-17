@@ -46,7 +46,7 @@ export default class User extends BaseEntity {
 
   @Column({
     length: 64,
-    nullable: true,
+    default: '',
   })
   public lastName?: string;
 

@@ -5,9 +5,11 @@
   "main": "out/index.js",
   "scripts": {
     "build": "tsc",
-    "watch": "ts-node-dev src/index.ts",
+    "watch": "ts-node-dev --poll src/index.ts",
     "serve": "node out/src/index.js",
-    "swagger": "ts-node-dev src/swagger.ts",
+    "schema": "ts-node-dev --poll src/database/schema.ts",
+    "seed": "ts-node-dev --poll src/database/seed.ts",
+    "swagger": "ts-node-dev --poll src/start/swagger.ts",
     "test": "mocha -r ts-node/register 'test/**/*.ts'",
     "coverage": "nyc mocha -r ts-node/register 'test/**/*.ts'",
     "lint": "eslint 'src/**/*.ts' 'test/**/*.ts'",
@@ -18,6 +20,7 @@
   "license": "AGPL-3.0-or-later",
   "dependencies": {
     "body-parser": "^1.19.0",
+    "date-fns": "^2.19.0",
     "dinero.js": "^1.8.1",
     "dotenv": "^8.2.0",
     "express": "^4.17.1",

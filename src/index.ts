@@ -23,27 +23,38 @@ import { promises as fs } from 'fs';
 import bodyParser from 'body-parser';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import dinero, { Currency } from 'dinero.js';
+import { config } from 'dotenv';
 import express from 'express';
-import log4js from 'log4js';
+import log4js, { Logger } from 'log4js';
 import { Connection } from 'typeorm';
-import Database from './database';
-import Swagger from './swagger';
+import Database from './database/database';
+import Swagger from './start/swagger';
 import TokenHandler from './authentication/token-handler';
 import TokenMiddleware from './middleware/token-middleware';
 import AuthenticationController from './controller/authentication-controller';
+import RoleManager from './rbac/role-manager';
+import Gewis from './gewis/gewis';
+import BannerController from './controller/banner-controller';
+import { BaseControllerOptions } from './controller/base-controller';
 
 export class Application {
   app: express.Express;
 
   specification: SwaggerSpecification;
 
+  roleManager: RoleManager;
+
   server: http.Server;
 
   connection: Connection;
 
+  logger: Logger;
+
   public async stop(): Promise<void> {
+    this.logger.info('Stopping application instance...');
     await util.promisify(this.server.close).bind(this.server)();
     await this.connection.close();
+    this.logger.info('Application stopped.');
   }
 }
 
@@ -69,7 +80,13 @@ async function setupAuthentication(application: Application) {
   });
 
   // Define authentication controller and bind before middleware.
-  const controller = new AuthenticationController(application.specification, tokenHandler);
+  const controller = new AuthenticationController(
+    {
+      specification: application.specification,
+      roleManager: application.roleManager,
+    },
+    tokenHandler,
+  );
   application.app.use('/v1/authentication', controller.getRouter());
 
   // Define middleware to be used by any other route.
@@ -79,12 +96,16 @@ async function setupAuthentication(application: Application) {
 
 export default async function createApp(): Promise<Application> {
   const application = new Application();
+  application.logger = log4js.getLogger('Application');
+  application.logger.level = process.env.LOG_LEVEL;
+  application.logger.info('Starting application instance...');
+
   application.connection = await Database.initialize();
 
   // Silent in-dependency logs unless really wanted by the environment.
   const logger = log4js.getLogger('Console');
   logger.level = process.env.LOG_LEVEL;
-  console.log = (message: any) => logger.debug(message);
+  console.log = (message: any, ...additional: any[]) => logger.debug(message, ...additional);
 
   // Set up monetary value configuration.
   dinero.defaultCurrency = process.env.CURRENCY_CODE as Currency;
@@ -98,12 +119,32 @@ export default async function createApp(): Promise<Application> {
   // Setup token handler and authentication controller.
   await setupAuthentication(application);
 
+  // Setup RBAC.
+  application.roleManager = new RoleManager();
+
+  // Setup GEWIS-specific module.
+  const gewis = new Gewis(application.roleManager);
+  await gewis.registerRoles();
+
+  // REMOVE LATER, banner controller development
+  const options: BaseControllerOptions = {
+    specification: application.specification,
+    roleManager: application.roleManager,
+  };
+  application.app.use('/v1/banners', new BannerController(options).getRouter());
+
   // Start express application.
+  logger.info(`Server listening on port ${process.env.HTTP_PORT}.`);
   application.server = application.app.listen(process.env.HTTP_PORT);
+  application.logger.info('Application started.');
   return application;
 }
 
 if (require.main === module) {
   // Only execute the application directly if this is the main execution file.
-  createApp();
+  config();
+  createApp().catch((e) => {
+    const logger = log4js.getLogger('index');
+    logger.fatal(e);
+  });
 }
