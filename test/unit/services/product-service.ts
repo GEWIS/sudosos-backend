@@ -48,38 +48,12 @@ describe('ProductService', async (): Promise<void> => {
     connection: Connection,
     app: Application,
     specification: SwaggerSpecification,
-    adminUser: User,
-    localUser: User,
-    adminToken: String,
-    token: String,
     users: User[],
     allProducts: Product[],
   };
 
   beforeEach(async () => {
     const connection = await Database.initialize();
-
-    // create dummy users
-    const adminUser = {
-      id: 1,
-      firstName: 'Admin',
-      type: UserType.LOCAL_ADMIN,
-      active: true,
-    } as User;
-
-    const localUser = {
-      id: 2,
-      firstName: 'User',
-      type: UserType.LOCAL_USER,
-      active: true,
-    } as User;
-
-    // create bearer tokens
-    const tokenHandler = new TokenHandler({
-      algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
-    });
-    const adminToken = await tokenHandler.signToken({ user: adminUser }, 'nonce admin');
-    const token = await tokenHandler.signToken({ user: localUser }, 'nonce');
 
     const users = await seedUsers();
     const categories = await seedProductCategories();
@@ -89,7 +63,6 @@ describe('ProductService', async (): Promise<void> => {
     const app = express();
     const specification = await Swagger.initialize(app);
     app.use(bodyParser.json());
-    app.use(new TokenMiddleware({ tokenHandler, refreshFactor: 0.5 }).getMiddleware());
 
     //  Load all products from the database.
     const allProducts: Product[] = await Product.find({ relations: ['owner'] });
@@ -99,10 +72,6 @@ describe('ProductService', async (): Promise<void> => {
       connection,
       app,
       specification,
-      adminUser,
-      localUser,
-      adminToken,
-      token,
       users,
       allProducts,
     };

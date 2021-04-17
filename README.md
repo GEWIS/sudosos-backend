@@ -33,6 +33,7 @@ Running:
 - Run `npm run watch` to start the application in development mode
 - Check that http://localhost:3000/api-docs shows a swagger ui
 - You can get a JWT key by using `/authentication/mock` using a valid userId
+- **IN SWAGGER UI USE `Bearer <token>` TO GET THINGS TO WORK!!**
 
 ## Intellij hints
 ### Easy ESLint intergration

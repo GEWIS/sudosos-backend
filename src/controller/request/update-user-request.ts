@@ -15,19 +15,15 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import {
-  PrimaryGeneratedColumn,
-} from 'typeorm';
-import BaseEntityWithoutId from './base-entity-without-id';
 
 /**
- * @typedef  BaseEntity
- * @property {integer} id - The auto-generated object id.
- * @property {string} createdAt - The creation date of the object.
- * @property {string} updatedAt - The last update date of the object.
- * @property {integer} version - The current version of the object.
+ * @typedef UpdateUserRequest
+ * @property {string} firstName
+ * @property {string} lastName
+ * @property {boolean} active
  */
-export default class BaseEntity extends BaseEntityWithoutId {
-  @PrimaryGeneratedColumn()
-  public readonly id?: number;
+export default interface UpdateUserRequest {
+  firstName?: string;
+  lastName?: string;
+  active?: boolean;
 }

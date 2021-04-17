@@ -27,6 +27,11 @@ export default class JsonWebToken {
   public user: User;
 
   /**
+   * The roles that are assigned to the specific user.
+   */
+  public roles: string[];
+
+  /**
    * The JWT expiry field. Set automatically by signing the token.
    */
   public readonly exp?: number;

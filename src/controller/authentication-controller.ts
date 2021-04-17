@@ -17,8 +17,7 @@
  */
 import { Request, Response } from 'express';
 import log4js, { Logger } from 'log4js';
-import { SwaggerSpecification } from 'swagger-model-validator';
-import BaseController from './base-controller';
+import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import User from '../entity/user/user';
 import AuthenticationMockRequest from './request/authentication-mock-request';
@@ -44,11 +43,14 @@ export default class AuthenticationController extends BaseController {
 
   /**
    * Creates a new authentication controller instance.
-   * @param spec - The Swagger specification used for model validation.
+   * @param options - The options passed to the base controller.
    * @param tokenHandler - The token handler for creating signed tokens.
    */
-  public constructor(spec: SwaggerSpecification, tokenHandler: TokenHandler) {
-    super(spec);
+  public constructor(
+    options: BaseControllerOptions,
+    tokenHandler: TokenHandler,
+  ) {
+    super(options);
     this.logger.level = process.env.LOG_LEVEL;
     this.tokenHandler = tokenHandler;
   }
@@ -73,7 +75,7 @@ export default class AuthenticationController extends BaseController {
    * @route POST /authentication/mock
    * @group authenticate - Operations of authentication controller
    * @param {AuthenticationMockRequest.model} req.body.required - The mock login.
-   * @returns {string} 200 - The created json web token.
+   * @returns {string} 200 - The created json web token.g
    * @returns {string} 400 - Validation error.
    */
   public async mockLogin(req: Request, res: Response): Promise<void> {
@@ -81,8 +83,10 @@ export default class AuthenticationController extends BaseController {
     this.logger.trace('Mock authentication for user', body.userId);
 
     try {
+      const user = await User.findOne({ id: body.userId });
       const contents: JsonWebToken = {
-        user: await User.findOne({ id: body.userId }),
+        user,
+        roles: await this.roleManager.getRoles(user),
       };
       const token = await this.tokenHandler.signToken(contents, body.nonce);
       res.json(token);
