@@ -21,6 +21,7 @@ import { ProductResponse } from '../controller/response/product-response';
 import Product from '../entity/product/product';
 import ProductRevision from '../entity/product/product-revision';
 import UpdatedProduct from '../entity/product/updated-product';
+import DineroTransformer from "../entity/transformer/dinero-transformer";
 
 /**
  * Wrapper for all Product related logic.
@@ -32,31 +33,58 @@ export default class ProductService {
    * @param returnUpdated
    */
   public static async getProducts(owner: User = null, returnUpdated: boolean = true)
-    : Promise<ProductResponse[]> {
+      : Promise<ProductResponse[]> {
     const builder = createQueryBuilder()
-      .from(Product, 'product')
-      .innerJoinAndSelect(ProductRevision, 'productrevision',
-        'product.id = productrevision.product '
+        .from(Product, 'product')
+        .innerJoinAndSelect(ProductRevision, 'productrevision',
+            'product.id = productrevision.product '
             + 'AND product.currentRevision = productrevision.revision')
-      .select([
-        'product.id', 'product.createdAt', 'productrevision.updatedAt',
-        'productrevision.revision', 'productrevision.name', 'productrevision.price',
-        'product.owner', 'productrevision.category', 'productrevision.picture',
-        'productrevision.alcoholpercentage',
-      ]);
+        .innerJoinAndSelect('product.owner', 'owner')
+        .innerJoinAndSelect('productrevision.category', 'category')
+        .select([
+          'product.id', 'product.createdAt', 'productrevision.updatedAt', 'productrevision.revision',
+          'productrevision.name', 'productrevision.price', 'owner.id', 'owner.firstName', 'owner.lastName', 'category.id',
+          'category.name', 'productrevision.picture', 'productrevision.alcoholpercentage',
+        ]);
     if (owner !== null) {
       builder.where('product.owner = :owner', { owner: owner.id });
     }
     if (!returnUpdated) {
       builder.where((qb) => {
         const subQuery = qb.subQuery()
-          .select('updatedproduct.product')
-          .from(UpdatedProduct, 'updatedproduct')
-          .getQuery();
+            .select('updatedproduct.product')
+            .from(UpdatedProduct, 'updatedproduct')
+            .getQuery();
         return `product.id NOT IN (${subQuery})`;
       });
     }
-    return await builder.getRawMany() as ProductResponse[];
+    // return builder.getRawMany();
+
+    const rawProducts = await builder.getRawMany();
+
+    console.debug(rawProducts);
+    return rawProducts.map((rawProduct) => {
+      const product: ProductResponse = {
+        id: rawProduct.product_id,
+        alcoholPercentage: rawProduct.alcoholPercentage,
+        category: {
+          id: rawProduct.category_id,
+          name: rawProduct.category_name,
+        },
+        createdAt: rawProduct.product_createdAt,
+        name: rawProduct.productrevision_name,
+        owner: {
+          id: rawProduct.owner_id,
+          firstName: rawProduct.owner_firstName,
+          lastName: rawProduct.owner_lastName,
+        },
+        picture: rawProduct.productrevision_picture,
+        price: DineroTransformer.Instance.from(rawProduct.productrevision_price),
+        revision: rawProduct.productrevision_revision,
+        updatedAt: rawProduct.productrevision_updatedAt,
+      };
+      return product;
+    });
   }
 
   /**
