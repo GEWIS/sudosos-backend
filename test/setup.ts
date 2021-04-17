@@ -22,6 +22,8 @@ import { use } from 'chai';
 import chaiSwag from 'chai-swag';
 import chaiHttp from 'chai-http';
 import chaiAsPromised from 'chai-as-promised';
+import dinero from 'dinero.js';
+import log4js from 'log4js';
 
 use(chaiAsPromised);
 use(chaiHttp);
@@ -31,6 +33,14 @@ process.env.HTTP_PORT = '3001';
 process.env.TYPEORM_CONNECTION = 'sqlite';
 process.env.TYPEORM_DATABASE = ':memory:';
 process.env.TYPEORM_SYNCHRONIZE = 'true';
+
+dinero.defaultCurrency = 'EUR';
+dinero.defaultPrecision = 2;
+
+// Silent in-dependency logs, unless really wanted by the environment.
+const logger = log4js.getLogger('Console');
+logger.level = process.env.LOG_LEVEL;
+console.log = (message: any) => logger.debug(message);
 
 /**
  * Generates a basic RSA keypair.
