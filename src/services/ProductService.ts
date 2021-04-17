@@ -27,6 +27,33 @@ import DineroTransformer from '../entity/transformer/dinero-transformer';
  * Wrapper for all Product related logic.
  */
 export default class ProductService {
+
+  /**
+   * Transforms a raw product response from the query to a ProductResponse.
+   * @param rawProduct - Query response to parse.
+   */
+  public static parseRawProduct(rawProduct: any): ProductResponse {
+    return {
+      id: rawProduct.product_id,
+      alcoholPercentage: rawProduct.alcoholPercentage,
+      category: {
+        id: rawProduct.category_id,
+        name: rawProduct.category_name,
+      },
+      createdAt: rawProduct.product_createdAt,
+      name: rawProduct.productrevision_name,
+      owner: {
+        id: rawProduct.owner_id,
+        firstName: rawProduct.owner_firstName,
+        lastName: rawProduct.owner_lastName,
+      },
+      picture: rawProduct.productrevision_picture,
+      price: DineroTransformer.Instance.from(rawProduct.productrevision_price),
+      revision: rawProduct.productrevision_revision,
+      updatedAt: rawProduct.productrevision_updatedAt,
+    } as ProductResponse;
+  }
+
   /**
    * Query for getting all products based on user.
    * @param owner
@@ -64,26 +91,7 @@ export default class ProductService {
 
     console.debug(rawProducts);
     return rawProducts.map((rawProduct) => {
-      const product: ProductResponse = {
-        id: rawProduct.product_id,
-        alcoholPercentage: rawProduct.alcoholPercentage,
-        category: {
-          id: rawProduct.category_id,
-          name: rawProduct.category_name,
-        },
-        createdAt: rawProduct.product_createdAt,
-        name: rawProduct.productrevision_name,
-        owner: {
-          id: rawProduct.owner_id,
-          firstName: rawProduct.owner_firstName,
-          lastName: rawProduct.owner_lastName,
-        },
-        picture: rawProduct.productrevision_picture,
-        price: DineroTransformer.Instance.from(rawProduct.productrevision_price),
-        revision: rawProduct.productrevision_revision,
-        updatedAt: rawProduct.productrevision_updatedAt,
-      };
-      return product;
+      return this.parseRawProduct(rawProduct);
     });
   }
 
@@ -103,7 +111,33 @@ export default class ProductService {
     if (owner !== null) {
       builder.where('product.owner = :owner', { owner: owner.id });
     }
-    return await builder.getRawMany() as ProductResponse[];
+
+    const rawProducts = await builder.getRawMany();
+    return rawProducts.map((rawProduct) => {
+      return this.parseRawProduct(rawProduct);
+    });
+  }
+
+  /**
+   * Get a product by its ID
+   * @param productID - The ID of the product to get.
+   */
+  public static async getProductByID(productID: number): Promise<ProductResponse> {
+    const builder = createQueryBuilder()
+        .from(Product, 'product')
+        .innerJoinAndSelect(ProductRevision, 'productrevision',
+            'product.id = productrevision.product '
+            + 'AND product.currentRevision = productrevision.revision')
+        .innerJoinAndSelect('product.owner', 'owner')
+        .innerJoinAndSelect('productrevision.category', 'category')
+        .select([
+          'product.id', 'product.createdAt', 'productrevision.updatedAt', 'productrevision.revision',
+          'productrevision.name', 'productrevision.price', 'owner.id', 'owner.firstName', 'owner.lastName', 'category.id',
+          'category.name', 'productrevision.picture', 'productrevision.alcoholpercentage',
+        ])
+        .where('product.id = :productId', {productId: productID });
+
+    return this.parseRawProduct(await builder.getRawOne()) as ProductResponse;
   }
 
   /**
