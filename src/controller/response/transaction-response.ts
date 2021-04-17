@@ -17,22 +17,34 @@
  */
 import { Dinero } from 'dinero.js';
 import BaseResponse from './base-response';
-import {BasePointOfSaleResponse, PointOfSaleResponse} from './point-of-sale-response';
+import { BasePointOfSaleResponse } from './point-of-sale-response';
 import { BaseContainerResponse } from './container-response';
 import { BaseProductResponse } from './product-response';
 import { UserResponse } from './user-response';
 
+/**
+ * @typedef {BaseTransactionResponse} BaseTransactionResponse
+ * @property {UserResponse.model} from.required - The account from which the transaction
+ * is subtracted.
+ * @property {UserResponse.model} createdBy - The user that created the transaction, if not
+ * same as 'from'..
+ * @property {BasePointOfSaleResponse.model} pointOfSale - The POS at which this transaction
+ * has been created
+ * @property {Dinero.model} value - Total sum of subtransactions
+ */
 export interface BaseTransactionResponse extends BaseResponse {
   from: UserResponse,
   createdBy?: UserResponse,
-  pointOfSale: PointOfSaleResponse,
+  pointOfSale: BasePointOfSaleResponse,
   value: Dinero,
 }
 
 /**
  * @typedef {TransactionResponse} TransactionResponse
- * @property {User.model} from.required - The account from which the transaction is subtracted.
- * @property {User.model} createdBy - The user that created the transaction, if not same as 'from'.
+ * @property {UserResponse.model} from.required - The account from which the transaction
+ * is subtracted.
+ * @property {UserResponse.model} createdBy - The user that created the transaction, if not
+ * same as 'from'.
  * @property {Array.<SubTransactionResponse>} subtransactions.required - The subtransactions
  * belonging to this transaction.
  * @property {BasePointOfSaleResponse.model} pointOfSale - The POS at which this transaction

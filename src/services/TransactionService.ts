@@ -99,7 +99,7 @@ export default class TransactionService {
         const subquery = qb.subQuery()
           .select('sum(subTransactionRow.amount * product.price) as value')
           .from(SubTransaction, 'subTransaction')
-          .innerJoin('subTransaction.subTransactionRows', 'subTransactionRow')
+          .leftJoin('subTransaction.subTransactionRows', 'subTransactionRow')
           .leftJoin('subTransactionRow.product', 'product')
           .where('subTransaction.transactionId = transaction.id');
 
@@ -109,55 +109,54 @@ export default class TransactionService {
       .leftJoinAndSelect('transaction.createdBy', 'createdBy')
       .leftJoinAndSelect('transaction.pointOfSale', 'pointOfSaleRev')
       .leftJoinAndSelect('pointOfSaleRev.pointOfSale', 'pointOfSale')
-      .innerJoin('transaction.subTransactions', 'subTransaction')
-      .innerJoin('subTransaction.subTransactionRows', 'subTransactionRow');
+      .leftJoin('transaction.subTransactions', 'subTransaction')
+      .leftJoin('subTransaction.subTransactionRows', 'subTransactionRow');
 
     if (filters.fromId) query.andWhere('"transaction"."fromId" = :fromId', { fromId: filters.fromId });
     if (filters.createdById) query.andWhere('"transaction"."createdById" = :createdById', { createdById: filters.createdById });
-    if (filters.fromDate) query.andWhere('"transaction"."createdAt" >= :fromDate', { fromDate: filters.fromDate });
-    if (filters.tillDate) query.andWhere('"transaction"."createdAt" < :tillDate', { tillDate: filters.tillDate });
+    if (filters.fromDate) query.andWhere('"transaction"."createdAt" >= :fromDate', { fromDate: filters.fromDate.toISOString() });
+    if (filters.tillDate) query.andWhere('"transaction"."createdAt" < :tillDate', { tillDate: filters.tillDate.toISOString() });
 
     query = applySubTransactionFilters(query);
     query = addPaginationToQueryBuilder(req, query);
 
+    console.log(filters);
+    console.log(query.getSql());
+
     const rawTransactions = await query.getRawMany();
+
+    console.log(rawTransactions.length);
 
     return rawTransactions.map((o) => {
       const v: BaseTransactionResponse = {
         id: o.transaction_id,
-        createdAt: o.transaction_createdAt,
-        updatedAt: o.transaction_updatedAt,
+        createdAt: new Date(o.transaction_createdAt),
+        updatedAt: new Date(o.transaction_updatedAt),
         from: {
           id: o.from_id,
-          createdAt: o.from_createdAt,
-          updatedAt: o.from_updatedAt,
+          createdAt: new Date(o.from_createdAt),
+          updatedAt: new Date(o.from_updatedAt),
           firstName: o.from_firstName,
           lastName: o.from_lastName,
-          active: o.from_active,
-          deleted: o.from_deleted,
+          active: o.from_active === 1,
+          deleted: o.from_deleted === 1,
           type: o.from_type,
         },
         createdBy: o.createdBy_id ? {
           id: o.createdBy_id,
-          createdAt: o.createdBy_createdAt,
-          updatedAt: o.createdBy_updatedAt,
+          createdAt: new Date(o.createdBy_createdAt),
+          updatedAt: new Date(o.createdBy_updatedAt),
           firstName: o.createdBy_firstName,
           lastName: o.createdBy_lastName,
-          active: o.createdBy_active,
-          deleted: o.createdBy_deleted,
+          active: o.from_active === 1,
+          deleted: o.from_deleted === 1,
           type: o.createdBy_type,
         } : undefined,
         pointOfSale: {
           id: o.pointOfSale_id,
-          createdAt: o.pointOfSale_createdAt,
-          updatedAt: o.pointOfSaleRev_updatedAt,
+          createdAt: new Date(o.pointOfSale_createdAt),
+          updatedAt: new Date(o.pointOfSaleRev_updatedAt),
           name: o.pointOfSaleRev_name,
-          revision: o.pointOfSale_revision,
-          owner: undefined,
-          startDate: o.pointOfSaleRev_startDate,
-          endDate: o.pointOfSaleRev_endDate,
-          products: undefined,
-          useAuthentication: o.pointOfSaleRev_useAuthentication,
         },
         value: DineroTransformer.Instance.from(o.value || 0),
       };
