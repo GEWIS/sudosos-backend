@@ -23,11 +23,11 @@ import { Connection } from 'typeorm';
 import TokenHandler from '../../../src/authentication/token-handler';
 import BannerController from '../../../src/controller/banner-controller';
 import BannerRequest from '../../../src/controller/request/banner-request';
-import Database from '../../../src/database';
+import Database from '../../../src/database/database';
 import Banner from '../../../src/entity/banner';
 import User, { UserType } from '../../../src/entity/user/user';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
-import Swagger from '../../../src/swagger';
+import Swagger from '../../../src/start/swagger';
 
 function bannerEq(a: Banner, b: Banner): Boolean {
   const aEmpty = a === {} as Banner || a === undefined;
