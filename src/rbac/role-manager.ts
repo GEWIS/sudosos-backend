@@ -164,7 +164,7 @@ export default class RoleManager {
    * is permitted to perform the given action (eg. get, update, delete) on the given
    * properties of the given data entity, to which the user has the given relation.
    *
-   * @param roles - The role name or list of role namess to perform the check for.
+   * @param roles - The role name or list of role names to perform the check for.
    *    If a single role is supplied as string, it is converted to a list.
    * @param action - The action on the entity to check access for.
    *    Commonly used actions are 'get', 'update', and 'delete'.
