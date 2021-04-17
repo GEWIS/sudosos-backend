@@ -15,8 +15,10 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+import { Request } from 'express';
 import { RequestWithToken } from '../middleware/token-middleware';
-import { UserType } from '../entity/user/user';
+import User, { UserType } from '../entity/user/user';
+import AuthenticationMockRequest from '../controller/request/authentication-mock-request';
 
 export default class AuthService {
   /**
@@ -27,5 +29,23 @@ export default class AuthService {
   public static async isAdmin(req: RequestWithToken): Promise<boolean> {
     // TODO: check whether user is admin
     return req.token.user.type === UserType.LOCAL_ADMIN;
+  }
+
+  /**
+   * Validates that the request is authorized by the policy.
+   * @param req - The incoming request.
+   */
+  // eslint-disable-next-line class-methods-use-this
+  public static async canPerformMock(req: Request): Promise<boolean> {
+    const body = req.body as AuthenticationMockRequest;
+
+    // Only allow in development setups
+    if (process.env.NODE_ENV !== 'development') return false;
+
+    // Check the existence of the user
+    const user = await User.findOne({ id: body.userId });
+    if (!user) return false;
+
+    return true;
   }
 }

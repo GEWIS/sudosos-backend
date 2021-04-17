@@ -17,9 +17,8 @@
  */
 import BaseResponse from './base-response';
 import User from '../../entity/user/user';
-import {BaseContainerResponse, ContainerResponse} from './container-response';
+import { BaseContainerResponse, ContainerResponse } from './container-response';
 import ProductOrdering from '../../entity/point-of-sale/product-ordering';
-import Container from '../../entity/container/container';
 
 /**
  * @typedef {BaseResponse} BasePointOfSaleResponse
