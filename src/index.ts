@@ -32,12 +32,17 @@ import Swagger from './start/swagger';
 import TokenHandler from './authentication/token-handler';
 import TokenMiddleware from './middleware/token-middleware';
 import AuthenticationController from './controller/authentication-controller';
+import RoleManager from './rbac/role-manager';
+import Gewis from './gewis/gewis';
 import BannerController from './controller/banner-controller';
+import { BaseControllerOptions } from './controller/base-controller';
 
 export class Application {
   app: express.Express;
 
   specification: SwaggerSpecification;
+
+  roleManager: RoleManager;
 
   server: http.Server;
 
@@ -75,7 +80,13 @@ async function setupAuthentication(application: Application) {
   });
 
   // Define authentication controller and bind before middleware.
-  const controller = new AuthenticationController(application.specification, tokenHandler);
+  const controller = new AuthenticationController(
+    {
+      specification: application.specification,
+      roleManager: application.roleManager,
+    },
+    tokenHandler,
+  );
   application.app.use('/v1/authentication', controller.getRouter());
 
   // Define middleware to be used by any other route.
@@ -94,7 +105,7 @@ export default async function createApp(): Promise<Application> {
   // Silent in-dependency logs unless really wanted by the environment.
   const logger = log4js.getLogger('Console');
   logger.level = process.env.LOG_LEVEL;
-  console.log = (message: any) => logger.debug(message);
+  console.log = (message: any, ...additional: any[]) => logger.debug(message, ...additional);
 
   // Set up monetary value configuration.
   dinero.defaultCurrency = process.env.CURRENCY_CODE as Currency;
@@ -108,10 +119,22 @@ export default async function createApp(): Promise<Application> {
   // Setup token handler and authentication controller.
   await setupAuthentication(application);
 
+  // Setup RBAC.
+  application.roleManager = new RoleManager();
+
+  // Setup GEWIS-specific module.
+  const gewis = new Gewis(application.roleManager);
+  await gewis.registerRoles();
+
   // REMOVE LATER, banner controller development
-  application.app.use('/v1/banners', new BannerController(application.specification).getRouter());
+  const options: BaseControllerOptions = {
+    specification: application.specification,
+    roleManager: application.roleManager,
+  };
+  application.app.use('/v1/banners', new BannerController(options).getRouter());
 
   // Start express application.
+  logger.info(`Server listening on port ${process.env.HTTP_PORT}.`);
   application.server = application.app.listen(process.env.HTTP_PORT);
   application.logger.info('Application started.');
   return application;
@@ -120,5 +143,8 @@ export default async function createApp(): Promise<Application> {
 if (require.main === module) {
   // Only execute the application directly if this is the main execution file.
   config();
-  createApp();
+  createApp().catch((e) => {
+    const logger = log4js.getLogger('index');
+    logger.fatal(e);
+  });
 }

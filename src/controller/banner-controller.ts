@@ -17,21 +17,23 @@
  */
 import { Response } from 'express';
 import log4js, { Logger } from 'log4js';
-import { SwaggerSpecification } from 'swagger-model-validator';
-import BaseController from './base-controller';
+import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import BannerRequest from './request/banner-request';
 import { RequestWithToken } from '../middleware/token-middleware';
 import Banner from '../entity/banner';
 import { addPaginationForFindOptions } from '../helpers/pagination';
-import AuthService from '../services/AuthService';
 import BannerService from '../services/BannerService';
 
 export default class BannerController extends BaseController {
   private logger: Logger = log4js.getLogger('BannerController');
 
-  public constructor(spec: SwaggerSpecification) {
-    super(spec);
+  /**
+   * Creates a new banner controller instance.
+   * @param options - The options passed to the base controller.
+   */
+  public constructor(options: BaseControllerOptions) {
+    super(options);
     this.logger.level = process.env.LOG_LEVEL;
   }
 
@@ -42,27 +44,27 @@ export default class BannerController extends BaseController {
     return {
       '/': {
         GET: {
-          policy: AuthService.isAdmin.bind(this),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Banner', ['*']),
           handler: this.returnAllBanners.bind(this),
         },
         POST: {
           body: { modelName: 'BannerRequest' },
-          policy: AuthService.isAdmin.bind(this),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'create', 'all', 'Banner', ['*']),
           handler: this.createBanner.bind(this),
         },
       },
       '/:id(\\d+)': {
         GET: {
-          policy: AuthService.isAdmin.bind(this),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Banner', ['*']),
           handler: this.returnSingleBanner.bind(this),
         },
         PATCH: {
           body: { modelName: 'BannerRequest' },
-          policy: AuthService.isAdmin.bind(this),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'update', 'all', 'Banner', ['*']),
           handler: this.updateBanner.bind(this),
         },
         DELETE: {
-          policy: AuthService.isAdmin.bind(this),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'delete', 'all', 'Banner', ['*']),
           handler: this.removeBanner.bind(this),
         },
       },

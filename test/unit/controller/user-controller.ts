@@ -36,6 +36,7 @@ import ContainerRevision from '../../../src/entity/container/container-revision'
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
 import seedDatabase from '../../seed';
 import { verifyUserEntity } from '../validators';
+import RoleManager from '../../../src/rbac/role-manager';
 
 describe('UserController', (): void => {
   let ctx: {
@@ -91,11 +92,47 @@ describe('UserController', (): void => {
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
-    ctx.userToken = await tokenHandler.signToken({ user: ctx.users[0] }, '1');
-    ctx.adminToken = await tokenHandler.signToken({ user: ctx.users[6] }, '1');
+    ctx.userToken = await tokenHandler.signToken({ user: ctx.users[0], roles: ['User'] }, '1');
+    ctx.adminToken = await tokenHandler.signToken({ user: ctx.users[6], roles: ['User', 'Admin'] }, '1');
+
+    const all = { all: new Set<string>(['*']) };
+    const own = { own: new Set<string>(['*']) };
+    const roleManager = new RoleManager();
+    roleManager.registerRole({
+      name: 'Admin',
+      permissions: {
+        User: {
+          create: all,
+          get: all,
+          update: all,
+          delete: all,
+        },
+        Product: {
+          get: all,
+          update: all,
+        },
+      },
+      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
+    });
+    roleManager.registerRole({
+      name: 'User',
+      permissions: {
+        User: {
+          get: own,
+        },
+        Product: {
+          get: own,
+          update: own,
+        },
+      },
+      assignmentCheck: async () => true,
+    });
 
     ctx.specification = await Swagger.initialize(ctx.app);
-    ctx.controller = new UserController(ctx.specification);
+    ctx.controller = new UserController({
+      specification: ctx.specification,
+      roleManager,
+    });
 
     ctx.app.use(bodyParser.json());
     ctx.app.use(new TokenMiddleware({ tokenHandler, refreshFactor: 0.5 }).getMiddleware());

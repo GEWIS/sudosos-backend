@@ -53,6 +53,7 @@ describe('TokenHandler', (): void => {
     it('should be able to sign valid payload', async () => {
       const token = await ctx.handler.signToken({
         user: ctx.user,
+        roles: [],
       }, '1');
 
       // Verify that the token is signed properly
@@ -64,6 +65,7 @@ describe('TokenHandler', (): void => {
     it('should fail to sign if payload does not contain user', async () => {
       const promise = ctx.handler.signToken({
         user: undefined,
+        roles: [],
       }, '1');
       await expect(promise).to.eventually.be.rejectedWith('Payload has no user.');
     });
@@ -74,6 +76,7 @@ describe('TokenHandler', (): void => {
           id: 'test' as any as number,
           createdAt: new Date(),
         } as User,
+        roles: [],
       }, '1');
       await expect(promise).to.eventually.be.rejectedWith('Payload user has invalid id.');
     });
@@ -83,6 +86,7 @@ describe('TokenHandler', (): void => {
     it('should be able to verify valid token', async () => {
       const token = await ctx.handler.signToken({
         user: ctx.user,
+        roles: [],
       }, '1');
       const promise = ctx.handler.verifyToken(token);
       await expect(promise).to.eventually.be.fulfilled;
@@ -97,6 +101,7 @@ describe('TokenHandler', (): void => {
       });
       const token = await otherHandler.signToken({
         user: ctx.user,
+        roles: [],
       }, '1');
       const promise = ctx.handler.verifyToken(token);
       await expect(promise).to.eventually.be.rejectedWith(jwt.JsonWebTokenError);
@@ -118,6 +123,7 @@ describe('TokenHandler', (): void => {
       // Should be able to refresh
       const token1 = await ctx.handler.signToken({
         user: ctx.user,
+        roles: [],
       }, '1');
       const promise1 = ctx.handler.refreshToken(token1, '2');
       await expect(promise1).to.eventually.be.fulfilled;
@@ -140,6 +146,7 @@ describe('TokenHandler', (): void => {
       });
       const token = await otherHandler.signToken({
         user: ctx.user,
+        roles: [],
       }, '1');
       const promise = ctx.handler.refreshToken(token, '2');
       await expect(promise).to.eventually.be.rejectedWith(jwt.JsonWebTokenError);

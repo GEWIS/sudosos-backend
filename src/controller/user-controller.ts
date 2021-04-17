@@ -17,8 +17,7 @@
  */
 import { Response } from 'express';
 import log4js, { Logger } from 'log4js';
-import { SwaggerSpecification } from 'swagger-model-validator';
-import BaseController from './base-controller';
+import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import User, { UserType } from '../entity/user/user';
@@ -31,8 +30,12 @@ import { addPaginationForFindOptions } from '../helpers/pagination';
 export default class UserController extends BaseController {
   private logger: Logger = log4js.getLogger('UserController');
 
-  public constructor(spec: SwaggerSpecification) {
-    super(spec);
+  /**
+  * Create a new user controller instance.
+  * @param options - The options passed to the base controller.
+  */
+  public constructor(options: BaseControllerOptions) {
+    super(options);
     this.logger.level = process.env.LOG_LEVEL;
   }
 
@@ -43,63 +46,61 @@ export default class UserController extends BaseController {
     return {
       '/': {
         GET: {
-          policy: this.isAdmin.bind(this),
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'get', 'all', 'User', ['*'],
+          ),
           handler: this.getAllUsers.bind(this),
         },
         POST: {
           body: { modelName: 'CreateUserRequest' },
-          policy: this.isAdmin.bind(this),
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'create', 'all', 'User', ['*'],
+          ),
           handler: this.createUser.bind(this),
         },
       },
       '/:id': {
         GET: {
-          policy: this.canGetItselfOrIsAdmin.bind(this),
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'get', UserController.getRelation(req), 'User', ['*'],
+          ),
           handler: this.getIndividualUser.bind(this),
         },
         DELETE: {
-          policy: this.isAdmin.bind(this),
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'delete', UserController.getRelation(req), 'User', ['*'],
+          ),
           handler: this.deleteUser.bind(this),
         },
         PATCH: {
           body: { modelName: 'UpdateUserRequest' },
-          policy: this.isAdmin.bind(this),
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'update', UserController.getRelation(req), 'User', ['*'],
+          ),
           handler: this.updateUser.bind(this),
         },
       },
       '/:id/products': {
         GET: {
-          policy: this.canGetItselfOrIsAdmin.bind(this),
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'get', UserController.getRelation(req), 'Product', ['*'],
+          ),
           handler: this.getUsersProducts.bind(this),
         },
       },
       '/:id/transactions': {
         GET: {
-          policy: this.canGetItselfOrIsAdmin.bind(this),
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'get', UserController.getRelation(req), 'Transaction', ['*'],
+          ),
           handler: this.getUsersTransactions.bind(this),
         },
       },
     };
   }
 
-  /**
-   * Validates that user requests itself, or that the user is an admin
-   */
-  // eslint-disable-next-line class-methods-use-this
-  public async canGetItselfOrIsAdmin(req: RequestWithToken): Promise<boolean> {
-    if (req.params.id === req.token.user.id.toString()) return true;
-    if (req.token.user.type === UserType.LOCAL_ADMIN) return true;
-    return false;
-    // TODO: implement user roles and thus admin verification
-  }
-
-  /**
-   * Validates that the user is an admin
-   */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars,class-methods-use-this
-  public async isAdmin(req: RequestWithToken): Promise<boolean> {
-    // TODO: implement user roles and thus admin verification
-    return req.token.user.type === UserType.LOCAL_ADMIN;
+  static getRelation(req: RequestWithToken): string {
+    return req.params.id === req.token.user.id.toString() ? 'own' : 'all';
   }
 
   /**
