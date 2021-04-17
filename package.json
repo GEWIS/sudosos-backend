@@ -5,7 +5,7 @@
   "main": "out/index.js",
   "scripts": {
     "build": "tsc",
-    "watch": "ts-node-dev --poll src/start/index.ts",
+    "watch": "ts-node-dev --poll src/index.ts",
     "serve": "node out/src/index.js",
     "schema": "ts-node-dev --poll src/database/schema.ts",
     "seed": "ts-node-dev --poll src/database/seed.ts",

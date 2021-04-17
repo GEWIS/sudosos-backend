@@ -27,7 +27,6 @@ import DineroTransformer from '../entity/transformer/dinero-transformer';
  * Wrapper for all Product related logic.
  */
 export default class ProductService {
-
   /**
    * Transforms a raw product response from the query to a ProductResponse.
    * @param rawProduct - Query response to parse.
@@ -60,7 +59,8 @@ export default class ProductService {
    * @param returnUpdated
    * @param productId
    */
-  public static async getProducts(owner: User = null, returnUpdated: boolean = true, productId: number = null)
+  public static async getProducts(owner: User = null, returnUpdated: boolean = true,
+    productId: number = null)
     : Promise<ProductResponse[]> {
     const builder = createQueryBuilder()
       .from(Product, 'product')
@@ -80,7 +80,7 @@ export default class ProductService {
     }
 
     if (productId !== null) {
-      builder.where('product.id = :productId', { productId: productId })
+      builder.where('product.id = :productId', { productId });
     }
 
     if (!returnUpdated) {
@@ -96,10 +96,7 @@ export default class ProductService {
 
     const rawProducts = await builder.getRawMany();
 
-    console.debug(rawProducts);
-    return rawProducts.map((rawProduct) => {
-      return this.parseRawProduct(rawProduct);
-    });
+    return rawProducts.map((rawProduct) => this.parseRawProduct(rawProduct));
   }
 
   /**
@@ -120,9 +117,7 @@ export default class ProductService {
     }
 
     const rawProducts = await builder.getRawMany();
-    return rawProducts.map((rawProduct) => {
-      return this.parseRawProduct(rawProduct);
-    });
+    return rawProducts.map((rawProduct) => this.parseRawProduct(rawProduct));
   }
 
   /**
