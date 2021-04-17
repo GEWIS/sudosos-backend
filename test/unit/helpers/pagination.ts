@@ -106,7 +106,9 @@ describe('Pagination', (): void => {
     it('should apply environment pagination', () => {
       const query = addPaginationToQueryBuilder(ctx.req, createQueryBuilder());
 
+      expect(query.expressionMap.limit).to.equal(23);
       expect(query.expressionMap.take).to.equal(23);
+      expect(query.expressionMap.offset).to.equal(2);
       expect(query.expressionMap.skip).to.equal(2);
     });
 
@@ -114,7 +116,9 @@ describe('Pagination', (): void => {
       ctx.req.query = {};
       const query = addPaginationToQueryBuilder(ctx.req, createQueryBuilder());
 
+      expect(query.expressionMap.limit).to.equal(parseInt(process.env.PAGINATION_DEFAULT, 10));
       expect(query.expressionMap.take).to.equal(parseInt(process.env.PAGINATION_DEFAULT, 10));
+      expect(query.expressionMap.offset).to.equal(0);
       expect(query.expressionMap.skip).to.equal(0);
     });
 
@@ -123,7 +127,9 @@ describe('Pagination', (): void => {
       ctx.req.query.skip = 'StringsAreNotIntegers';
       const query = addPaginationToQueryBuilder(ctx.req, createQueryBuilder());
 
+      expect(query.expressionMap.limit).to.equal(parseInt(process.env.PAGINATION_DEFAULT, 10));
       expect(query.expressionMap.take).to.equal(parseInt(process.env.PAGINATION_DEFAULT, 10));
+      expect(query.expressionMap.offset).to.equal(0);
       expect(query.expressionMap.skip).to.equal(0);
     });
 
@@ -133,7 +139,9 @@ describe('Pagination', (): void => {
       process.env.PAGINATION_DEFAULT = null;
       const query = addPaginationToQueryBuilder(ctx.req, createQueryBuilder());
 
+      expect(query.expressionMap.limit).to.equal(25);
       expect(query.expressionMap.take).to.equal(25);
+      expect(query.expressionMap.offset).to.equal(0);
       expect(query.expressionMap.skip).to.equal(0);
 
       process.env.PAGINATION_DEFAULT = defaultPagination;
@@ -143,7 +151,9 @@ describe('Pagination', (): void => {
       ctx.req.query.take = process.env.PAGINATION_MAX + 100;
       const query = addPaginationToQueryBuilder(ctx.req, createQueryBuilder());
 
+      expect(query.expressionMap.limit).to.equal(parseInt(process.env.PAGINATION_MAX, 10));
       expect(query.expressionMap.take).to.equal(parseInt(process.env.PAGINATION_MAX, 10));
+      expect(query.expressionMap.offset).to.equal(2);
       expect(query.expressionMap.skip).to.equal(2);
     });
 
@@ -153,7 +163,9 @@ describe('Pagination', (): void => {
       process.env.PAGINATION_MAX = null;
       const query = addPaginationToQueryBuilder(ctx.req, createQueryBuilder());
 
+      expect(query.expressionMap.limit).to.equal(500);
       expect(query.expressionMap.take).to.equal(500);
+      expect(query.expressionMap.offset).to.equal(2);
       expect(query.expressionMap.skip).to.equal(2);
 
       process.env.PAGINATION_MAX = maxPagination;

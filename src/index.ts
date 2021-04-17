@@ -23,11 +23,12 @@ import { promises as fs } from 'fs';
 import bodyParser from 'body-parser';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import dinero, { Currency } from 'dinero.js';
+import { config } from 'dotenv';
 import express from 'express';
-import log4js from 'log4js';
+import log4js, { Logger } from 'log4js';
 import { Connection } from 'typeorm';
-import Database from './database';
-import Swagger from './swagger';
+import Database from './database/database';
+import Swagger from './start/swagger';
 import TokenHandler from './authentication/token-handler';
 import TokenMiddleware from './middleware/token-middleware';
 import AuthenticationController from './controller/authentication-controller';
@@ -43,9 +44,13 @@ export class Application {
 
   connection: Connection;
 
+  logger: Logger;
+
   public async stop(): Promise<void> {
+    this.logger.info('Stopping application instance...');
     await util.promisify(this.server.close).bind(this.server)();
     await this.connection.close();
+    this.logger.info('Application stopped.');
   }
 }
 
@@ -81,6 +86,10 @@ async function setupAuthentication(application: Application) {
 
 export default async function createApp(): Promise<Application> {
   const application = new Application();
+  application.logger = log4js.getLogger('Application');
+  application.logger.level = process.env.LOG_LEVEL;
+  application.logger.info('Starting application instance...');
+
   application.connection = await Database.initialize();
 
   // Silent in-dependency logs unless really wanted by the environment.
@@ -106,10 +115,12 @@ export default async function createApp(): Promise<Application> {
 
   // Start express application.
   application.server = application.app.listen(process.env.HTTP_PORT);
+  application.logger.info('Application started.');
   return application;
 }
 
 if (require.main === module) {
   // Only execute the application directly if this is the main execution file.
+  config();
   createApp();
 }
