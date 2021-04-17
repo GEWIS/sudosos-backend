@@ -33,9 +33,9 @@ import Swagger from '../../../src/swagger';
 
 function bkgEq(req: BorrelkaartGroupRequest, res: BorrelkaartGroupResponse): Boolean {
   // check if non user fields are equal
-  if (!(req.name === res.borrelkaartGroup.name
-    && new Date(req.activeStartDate) === res.borrelkaartGroup.activeStartDate
-    && new Date(req.activeEndDate) === res.borrelkaartGroup.activeEndDate)) {
+  if (!(req.name === res.name
+    && Date.parse(req.activeStartDate) === Date.parse(res.activeStartDate)
+    && Date.parse(req.activeEndDate) === Date.parse(res.activeEndDate))) {
     return false;
   }
 
@@ -293,12 +293,12 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
       const bkgRes = res.body as BorrelkaartGroupResponse;
 
       // check if borrelkaart group in database
-      const borrelkaartGroup = await BorrelkaartGroup.findOne(bkgRes.borrelkaartGroup.id);
+      const borrelkaartGroup = await BorrelkaartGroup.findOne(bkgRes.id);
       expect(borrelkaartGroup, 'did not find borrelkaart group').to.not.be.undefined;
 
-      // check if user in database, TODO: fix find for UserBorrelkaartGroup
-      const usersGroupId = await UserBorrelkaartGroup.findOne(bkgRes.users[0].id);
-      expect(usersGroupId, 'user not linked to borrelkaart group').to.equal(bkgRes.borrelkaartGroup.id);
+      // check if user in database
+      const bkgRelation = await UserBorrelkaartGroup.findOne(bkgRes.users[0].id, { relations: ['borrelkaartGroup'] });
+      expect(bkgRelation.borrelkaartGroup.id, 'user not linked to borrelkaart group').to.equal(bkgRes.id);
 
       // success code
       expect(res.status, 'status incorrect on valid post').to.equal(200);

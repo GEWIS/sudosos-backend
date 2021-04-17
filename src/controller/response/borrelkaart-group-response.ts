@@ -16,15 +16,26 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import BorrelkaartGroup from '../../entity/user/borrelkaart-group';
 import User from '../../entity/user/user';
 
 /**
   * @typedef BorrelkaartGroupResponse
-  * @property {BorrelkaartGroup.model} borrelkaartGroup.required - The borrelkaart group
+  * @property {string} createdAt.required - Date of creation
+  * @property {string} updateAt.required - Date of last update
+  * @property {number} version.required - Version of the borrelkaart group
+  * @property {number} id.required - Id of the borrelkaart group
+  * @property {string} name.required - Name of the borrelkaart group
+  * @property {string} activeStartDate - Start date of the borrelkaart group
+  * @property {string} activeEndDate.required - End date of the borrelkaart group
   * @property {Array.<User>} users.required - Users in the borrelkaart group
   */
 export default interface BorrelkaartGroupResponse {
-  borrelkaartGroup: BorrelkaartGroup,
+  createdAt: string,
+  updatedAt: string,
+  version: number,
+  id: number,
+  name: string,
+  activeStartDate?: string,
+  activeEndDate: string,
   users: Array<User>,
 }

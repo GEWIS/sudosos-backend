@@ -184,7 +184,14 @@ export default class BorrelkaartGroupController extends BaseController {
         await UserBorrelkaartGroup.save(userLinks);
 
         // return created borrelkaart group with users
-        const bkgResp = { borrelkaartGroup: bkg, users } as BorrelkaartGroupResponse;
+        const bkgResp = {
+          ...bkg,
+          createdAt: bkg.createdAt.toISOString(),
+          updatedAt: bkg.updatedAt.toISOString(),
+          activeStartDate: bkg.activeStartDate.toISOString(),
+          activeEndDate: bkg.activeEndDate.toISOString(),
+          users,
+        } as BorrelkaartGroupResponse;
 
         res.json(bkgResp);
       } else {
@@ -213,14 +220,24 @@ export default class BorrelkaartGroupController extends BaseController {
     // handle request
     try {
       // check if borrelkaart group in database
-      const borrelkaartGroup = await BorrelkaartGroup.findOne(id);
-      if (borrelkaartGroup) {
-        // get users, TODO: fix UserBorrelkaartGroup find
-        const userIds = await UserBorrelkaartGroup.find({ borrelkaartGroup });
-        const users = await User.findByIds(userIds);
+      const bkg = await BorrelkaartGroup.findOne(id);
+      if (bkg) {
+        // get users related to borrelkaart group
+        const userBorrelkaartGroups = await UserBorrelkaartGroup.find({
+          relations: ['user'],
+          where: { bkg },
+        });
+        const users = userBorrelkaartGroups.map((ubkg) => ubkg.user);
 
         // return requested borrelkaart group and users
-        const bkgResp = { borrelkaartGroup, users } as BorrelkaartGroupResponse;
+        const bkgResp = {
+          ...bkg,
+          createdAt: bkg.createdAt.toISOString(),
+          updatedAt: bkg.updatedAt.toISOString(),
+          activeStartDate: bkg.activeStartDate.toISOString(),
+          activeEndDate: bkg.activeEndDate.toISOString(),
+          users,
+        } as BorrelkaartGroupResponse;
 
         res.json(bkgResp);
       } else {
