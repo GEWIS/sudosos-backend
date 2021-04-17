@@ -22,7 +22,6 @@ import BaseController from './base-controller';
 import Policy from './policy';
 import BannerRequest from './request/banner-request';
 import { RequestWithToken } from '../middleware/token-middleware';
-import Banner from '../entity/banner';
 import { addPaginationForFindOptions } from '../helpers/pagination';
 import AuthService from '../services/AuthService';
 import BannerService from '../services/BannerService';
@@ -89,7 +88,7 @@ export default class BannerController extends BaseController {
 
     // handle request
     try {
-      res.json(BannerService.getAllBanners(addPaginationForFindOptions(req)));
+      res.json(await BannerService.getAllBanners(addPaginationForFindOptions(req)));
     } catch (error) {
       this.logger.error('Could not return all banners:', error);
       res.status(500).json('Internal server error.');
@@ -140,9 +139,9 @@ export default class BannerController extends BaseController {
     // handle request
     try {
       // check if banner in database
-      const banner = await Banner.findOne(id);
+      const banner = await BannerService.getBannerByID(Number.parseInt(id, 10));
       if (banner) {
-        res.json(BannerService.asBannerResponse(banner));
+        res.json(banner);
       } else {
         res.status(404).json('Banner not found.');
       }
@@ -169,22 +168,13 @@ export default class BannerController extends BaseController {
     const { id } = req.params;
     this.logger.trace('Update banner', id, 'by user', req.token.user);
 
-    // Get banner from request.
-    let banner: any = {
-      ...body,
-      startDate: new Date(body.startDate),
-      endDate: new Date(body.endDate),
-    } as Banner;
-
     // handle request
     try {
       if (BannerService.verifyBanner(body)) {
-        // check if banner in database
-        if (await Banner.findOne(id)) {
-          await Banner.update(id, banner);
-
-          banner = await Banner.findOne(id);
-          res.json(BannerService.asBannerResponse(banner));
+        // try patching the banner
+        const banner = await BannerService.updateBanner(Number.parseInt(id, 10), body);
+        if (banner) {
+          res.json(banner);
         } else {
           res.status(404).json('Banner not found.');
         }
@@ -213,10 +203,9 @@ export default class BannerController extends BaseController {
     // handle request
     try {
       // check if banner in database
-      const banner = await Banner.findOne(id);
+      const banner = await BannerService.deleteBanner(Number.parseInt(id, 10));
       if (banner) {
-        await Banner.delete(id);
-        res.json(BannerService.asBannerResponse(banner));
+        res.json(banner);
       } else {
         res.status(404).json('Banner not found.');
       }

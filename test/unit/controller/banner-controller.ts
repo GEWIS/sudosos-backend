@@ -148,7 +148,15 @@ describe('BannerController', async (): Promise<void> => {
 
   describe('GET /banners', () => {
     it('should return an HTTP 200 and all banners in the database if admin', async () => {
-      const res = await request(ctx.app)
+      let res = await request(ctx.app)
+        .get('/banners')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect((res.body as Banner[]).length, 'no empty array returned').to.equal(0);
+
+      // save a banner
+      await Banner.save(ctx.validBanner);
+      res = await request(ctx.app)
         .get('/banners')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
