@@ -22,10 +22,29 @@ import Banner from '../entity/banner';
 
 export default class BannerService {
   /**
+   * Returns all banners with pagination.
+   * @param options
+   */
+  public static async getAllBanners(options?: FindManyOptions): Promise<BannerResponse[]> {
+    const banners = await Banner.find({ ...options });
+    return banners.map((banner) => (this.asBannerResponse(banner)));
+  }
+
+  /**
+   * Saves a banner to the database.
+   * @param options
+   */
+  public static async createBanner(bannerReq: BannerRequest): Promise<BannerResponse> {
+    const banner = this.asBanner(bannerReq);
+    await Banner.save(banner);
+    return this.asBannerResponse(banner);
+  }
+
+  /**
    * Returns all active banners with pagination.
    * @param options
    */
-  public static async getAllActiveBanners(options?: FindManyOptions) {
+  public static async getAllActiveBanners(options?: FindManyOptions): Promise<BannerResponse[]> {
     const banners = await Banner.find({ where: { active: '1' }, ...options });
     return banners.map((banner) => (this.asBannerResponse(banner)));
   }
@@ -55,6 +74,14 @@ export default class BannerService {
 
         // end date must be later than start date
         && eDate > sDate;
+  }
+
+  public static asBanner(bannerReq: BannerRequest) {
+    return {
+      ...bannerReq,
+      startDate: new Date(bannerReq.startDate),
+      endDate: new Date(bannerReq.endDate),
+    } as Banner;
   }
 
   public static asBannerResponse(banner: Banner): BannerResponse {

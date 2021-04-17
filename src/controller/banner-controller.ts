@@ -89,10 +89,7 @@ export default class BannerController extends BaseController {
 
     // handle request
     try {
-      const banners = await Banner.find({ ...addPaginationForFindOptions(req) }) as Banner[];
-
-      const bannerRes = banners.map((banner) => (BannerService.asBannerResponse(banner)));
-      res.json(bannerRes);
+      res.json(BannerService.getAllBanners(addPaginationForFindOptions(req)));
     } catch (error) {
       this.logger.error('Could not return all banners:', error);
       res.status(500).json('Internal server error.');
@@ -100,7 +97,7 @@ export default class BannerController extends BaseController {
   }
 
   /**
-   * Creates a new banner
+   * Saves a banner to the database
    * @route POST /banners
    * @group banners - Operations of banner controller
    * @param {BannerRequest.model} banner.body.required - The banner which should be created
@@ -113,18 +110,10 @@ export default class BannerController extends BaseController {
     const body = req.body as BannerRequest;
     this.logger.trace('Create banner', body, 'by user', req.token.user);
 
-    // Get banner from request
-    const banner: Banner = {
-      ...body,
-      startDate: new Date(body.startDate),
-      endDate: new Date(body.endDate),
-    } as Banner;
-
     // handle request
     try {
       if (BannerService.verifyBanner(body)) {
-        await Banner.save(banner);
-        res.json(BannerService.asBannerResponse(banner));
+        res.json(await BannerService.createBanner(body));
       } else {
         res.status(400).json('Invalid banner.');
       }
