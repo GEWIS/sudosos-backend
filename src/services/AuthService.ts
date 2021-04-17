@@ -15,22 +15,17 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import * as express from 'express';
-import { SwaggerSpecification } from 'swagger-model-validator';
-import Swagger from '../../../../src/start/swagger';
-import { sourceFile } from '../../../setup';
+import { RequestWithToken } from '../middleware/token-middleware';
+import { UserType } from '../entity/user/user';
 
-/**
- * @typedef TestModel
- * @property {string} name.required - The name of the model.
- * @property {number} value.required - A test value.
- */
-export class TestModel {
-  name: string;
-
-  value: number;
-}
-
-export async function getSpecification(app: express.Application): Promise<SwaggerSpecification> {
-  return Swagger.generateSpecification(app, sourceFile(__filename));
+export default class AuthService {
+  /**
+   * Validates that the request is authorized by the policy.
+   * @param req - The incoming request.
+   */
+  // eslint-disable-next-line class-methods-use-this
+  public static async isAdmin(req: RequestWithToken): Promise<boolean> {
+    // TODO: check whether user is admin
+    return req.token.user.type === UserType.LOCAL_ADMIN;
+  }
 }

@@ -23,6 +23,7 @@ import BannerRequest from './request/banner-request';
 import { RequestWithToken } from '../middleware/token-middleware';
 import Banner from '../entity/banner';
 import { addPaginationForFindOptions } from '../helpers/pagination';
+import BannerService from '../services/BannerService';
 
 export default class BannerController extends BaseController {
   private logger: Logger = log4js.getLogger('BannerController');
@@ -77,35 +78,6 @@ export default class BannerController extends BaseController {
   }
 
   /**
-   * Verifies whether the banner request translates to a valid banner object
-   * @param br
-   */
-  // eslint-disable-next-line class-methods-use-this
-  private verifyBanner(br: BannerRequest): boolean {
-    const sDate = Date.parse(br.startDate);
-    const eDate = Date.parse(br.endDate);
-
-    const valueCheck: boolean = br.name !== ''
-      && br.picture !== ''
-
-      // duration must be integer greater than 0
-      && br.duration > 0
-
-      && Number.isInteger(br.duration)
-      && br.active !== null
-      && !Number.isNaN(sDate)
-      && !Number.isNaN(eDate)
-
-      // end date cannot be in the past
-      && eDate > new Date().getTime()
-
-      // end date must be later than start date
-      && eDate > sDate;
-
-    return valueCheck;
-  }
-
-  /**
    * Returns all existing banners
    * @route GET /banners
    * @group banners - Operations of banner controller
@@ -141,14 +113,16 @@ export default class BannerController extends BaseController {
     const body = req.body as BannerRequest;
     this.logger.trace('Create banner', body, 'by user', req.token.user);
 
+    // Get banner from request.
+    const banner: Banner = {
+      ...body,
+      startDate: new Date(body.startDate),
+      endDate: new Date(body.endDate),
+    } as Banner;
+
     // handle request
     try {
-      if (this.verifyBanner(body)) {
-        const banner: any = {
-          ...body,
-          startDate: new Date(body.startDate),
-          endDate: new Date(body.endDate),
-        } as Banner;
+      if (BannerService.verifyBanner(body)) {
         await Banner.save(banner);
         res.json(banner);
       } else {
@@ -206,16 +180,18 @@ export default class BannerController extends BaseController {
     const { id } = req.params;
     this.logger.trace('Update banner', id, 'by user', req.token.user);
 
+    // Get banner from request.
+    const banner: any = {
+      ...body,
+      startDate: new Date(body.startDate),
+      endDate: new Date(body.endDate),
+    } as Banner;
+
     // handle request
     try {
-      if (this.verifyBanner(body)) {
+      if (BannerService.verifyBanner(body)) {
         // check if banner in database
         if (await Banner.findOne(id)) {
-          const banner: any = {
-            ...body,
-            startDate: new Date(body.startDate),
-            endDate: new Date(body.endDate),
-          } as Banner;
           await Banner.update(id, banner);
           res.json(banner);
         } else {
@@ -273,8 +249,7 @@ export default class BannerController extends BaseController {
 
     // handle request
     try {
-      const banners = await Banner.find({ where: { active: '1' }, ...addPaginationForFindOptions(req) });
-      res.json(banners);
+      res.json(await BannerService.getAllActiveBanners(addPaginationForFindOptions(req)));
     } catch (error) {
       this.logger.error('Could not return active banners:', error);
       res.status(500).json('Internal server error.');
