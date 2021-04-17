@@ -24,7 +24,7 @@ import User from '../entity/user/user';
 import AuthenticationMockRequest from './request/authentication-mock-request';
 import JsonWebToken from '../authentication/json-web-token';
 import TokenHandler from '../authentication/token-handler';
-import AuthService from '../services/AuthService';
+import AuthService from '../services/auth-service';
 
 /**
  * The authentication controller is responsible for:

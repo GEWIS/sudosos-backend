@@ -24,8 +24,8 @@ import BannerRequest from './request/banner-request';
 import { RequestWithToken } from '../middleware/token-middleware';
 import Banner from '../entity/banner';
 import { addPaginationForFindOptions } from '../helpers/pagination';
-import AuthService from '../services/AuthService';
-import BannerService from '../services/BannerService';
+import AuthService from '../services/auth-service';
+import BannerService from '../services/banner-service';
 
 export default class BannerController extends BaseController {
   private logger: Logger = log4js.getLogger('BannerController');
