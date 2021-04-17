@@ -27,13 +27,14 @@ import { config } from 'dotenv';
 import express from 'express';
 import log4js, { Logger } from 'log4js';
 import { Connection } from 'typeorm';
-import Database from './database';
-import Swagger from './swagger';
+import Database from './database/database';
+import Swagger from './start/swagger';
 import TokenHandler from './authentication/token-handler';
 import TokenMiddleware from './middleware/token-middleware';
 import AuthenticationController from './controller/authentication-controller';
 import BannerController from './controller/banner-controller';
 import TransactionController from './controller/transaction-controller';
+import seedDatabase from '../test/seed';
 
 export class Application {
   app: express.Express;
@@ -115,6 +116,8 @@ export default async function createApp(): Promise<Application> {
 
   // REMOVE LATER, banner controller development
   application.app.use('/v1/banners', new BannerController(application.specification).getRouter());
+
+  await seedDatabase();
 
   // Start express application.
   application.server = application.app.listen(process.env.HTTP_PORT);

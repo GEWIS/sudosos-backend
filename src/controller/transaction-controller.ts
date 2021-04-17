@@ -21,8 +21,35 @@ import { SwaggerSpecification } from 'swagger-model-validator';
 import BaseController from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
-import { getTransactions } from '../helpers/mappers';
-import { parseGetTransactionsFilters } from '../helpers/filter-parameters';
+import TransactionService, { TransactionFilters } from '../services/TransactionService';
+
+function parseGetTransactionsFilters(req: RequestWithToken): TransactionFilters {
+  if ((req.query.pointOfSaleRevision && !req.query.pointOfSaleId)
+    || (req.query.containerRevision && !req.query.containerId)
+    || (req.query.productRevision && !req.query.productId)) {
+    throw new Error('Cannot filter on a revision, when there is no id given');
+  }
+
+  return {
+    fromId: req.query.fromId,
+    createdById: req.query.createdById,
+    toId: req.query.toId,
+    pointOfSale: req.query.pointOfSaleId ? {
+      id: req.query.pointOfSaleId,
+      revision: req.query.pointOfSaleRevision,
+    } : undefined,
+    container: req.query.containerId ? {
+      id: req.query.containerId,
+      revision: req.query.containerRevision,
+    } : undefined,
+    product: req.query.productId ? {
+      id: req.query.productId,
+      revision: req.query.productRevision,
+    } : undefined,
+    fromDate: req.query.fromDate,
+    tillDate: req.query.tillDate,
+  };
+}
 
 export default class TransactionController extends BaseController {
   private logger: Logger = log4js.getLogger('TransactionController');
@@ -88,7 +115,7 @@ export default class TransactionController extends BaseController {
     }
 
     try {
-      const transactions = await getTransactions(req, filters);
+      const transactions = await TransactionService.getTransactions(req, filters);
       res.status(200).json(transactions);
     } catch (e) {
       res.status(500).send();
