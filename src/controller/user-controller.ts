@@ -111,9 +111,14 @@ export default class UserController extends BaseController {
    * @returns {[User.model]} 200 - A list of all users
    */
   public async getAllUsers(req: RequestWithToken, res: Response): Promise<void> {
-    this.logger.trace('Get all users', 'by user', req.token.user);
+    this.logger.trace('Get all users by user', req.token.user);
 
-    const users = await User.find({ where: { deleted: false }, ...addPaginationForFindOptions(req) });
+    const users = await User.find(
+      {
+        where: { deleted: false },
+        ...addPaginationForFindOptions(req),
+      },
+    );
     res.status(200).json(users);
   }
 
