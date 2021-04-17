@@ -58,8 +58,9 @@ export default class ProductService {
    * Query for getting all products based on user.
    * @param owner
    * @param returnUpdated
+   * @param productId
    */
-  public static async getProducts(owner: User = null, returnUpdated: boolean = true)
+  public static async getProducts(owner: User = null, returnUpdated: boolean = true, productId: number = null)
     : Promise<ProductResponse[]> {
     const builder = createQueryBuilder()
       .from(Product, 'product')
@@ -73,9 +74,15 @@ export default class ProductService {
         'productrevision.name', 'productrevision.price', 'owner.id', 'owner.firstName', 'owner.lastName', 'category.id',
         'category.name', 'productrevision.picture', 'productrevision.alcoholpercentage',
       ]);
+
     if (owner !== null) {
       builder.where('product.owner = :owner', { owner: owner.id });
     }
+
+    if (productId !== null) {
+      builder.where('product.id = :productId', { productId: productId })
+    }
+
     if (!returnUpdated) {
       builder.where((qb) => {
         const subQuery = qb.subQuery()
@@ -116,28 +123,6 @@ export default class ProductService {
     return rawProducts.map((rawProduct) => {
       return this.parseRawProduct(rawProduct);
     });
-  }
-
-  /**
-   * Get a product by its ID
-   * @param productID - The ID of the product to get.
-   */
-  public static async getProductByID(productID: number): Promise<ProductResponse> {
-    const builder = createQueryBuilder()
-        .from(Product, 'product')
-        .innerJoinAndSelect(ProductRevision, 'productrevision',
-            'product.id = productrevision.product '
-            + 'AND product.currentRevision = productrevision.revision')
-        .innerJoinAndSelect('product.owner', 'owner')
-        .innerJoinAndSelect('productrevision.category', 'category')
-        .select([
-          'product.id', 'product.createdAt', 'productrevision.updatedAt', 'productrevision.revision',
-          'productrevision.name', 'productrevision.price', 'owner.id', 'owner.firstName', 'owner.lastName', 'category.id',
-          'category.name', 'productrevision.picture', 'productrevision.alcoholpercentage',
-        ])
-        .where('product.id = :productId', {productId: productID });
-
-    return this.parseRawProduct(await builder.getRawOne()) as ProductResponse;
   }
 
   /**
