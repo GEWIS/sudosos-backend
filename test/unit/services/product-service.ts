@@ -86,6 +86,11 @@ describe('ProductService', async (): Promise<void> => {
 
       expect(productSuperset(res, ctx.allProducts)).to.be.true;
     });
+    it('should return all updated products', async () => {
+      const updatedProducts: ProductResponse[] = await ProductService.getUpdatedProducts();
+
+      expect(productSuperset(updatedProducts, ctx.allProducts)).to.be.true;
+    });
     it('should return product with the owner specified', async () => {
       const res: ProductResponse[] = await ProductService.getProducts(ctx.allProducts[0].owner);
 
@@ -98,10 +103,16 @@ describe('ProductService', async (): Promise<void> => {
     });
     it('should return a single product if productId is specified', async () => {
       const res: ProductResponse[] = await ProductService
-        .getProducts(null, true, ctx.allProducts[0].id);
+        .getProducts(null, ctx.allProducts[0].id);
 
       expect(res).to.be.length(1);
       expect(res[0].id).to.be.equal(ctx.allProducts[0].id);
     });
+    it('should return no products if the userId and productId dont match', async () => {
+      const res: ProductResponse[] = await ProductService
+          .getProducts(ctx.allProducts[10].owner,  ctx.allProducts[0].id);
+
+      expect(res).to.be.length(0);
+    })
   });
 });

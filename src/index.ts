@@ -36,6 +36,7 @@ import RoleManager from './rbac/role-manager';
 import Gewis from './gewis/gewis';
 import BannerController from './controller/banner-controller';
 import { BaseControllerOptions } from './controller/base-controller';
+import seedDatabase from "../test/seed";
 
 export class Application {
   app: express.Express;
@@ -125,6 +126,7 @@ export default async function createApp(): Promise<Application> {
   // Setup GEWIS-specific module.
   const gewis = new Gewis(application.roleManager);
   await gewis.registerRoles();
+
 
   // REMOVE LATER, banner controller development
   const options: BaseControllerOptions = {
