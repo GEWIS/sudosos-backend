@@ -110,9 +110,9 @@ describe('ProductService', async (): Promise<void> => {
     });
     it('should return no products if the userId and productId dont match', async () => {
       const res: ProductResponse[] = await ProductService
-          .getProducts(ctx.allProducts[10].owner,  ctx.allProducts[0].id);
+        .getProducts(ctx.allProducts[10].owner, ctx.allProducts[0].id);
 
       expect(res).to.be.length(0);
-    })
+    });
   });
 });
