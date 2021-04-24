@@ -27,12 +27,8 @@ import DineroTransformer from '../entity/transformer/dinero-transformer';
  * Wrapper for all Product related logic.
  */
 export default class ProductService {
-
-
   /**
-   * Function for mapping the raw getMany response product.
-   * This is only the base, since the rest depends of if the innerJoin was on either UpdatedProducts or
-   * ProductRevisions.
+   * Helper function for the base mapping the raw getMany response product.
    * @param rawProduct - the raw response to parse.
    */
   public static getDefaultMapping(rawProduct: any) {
@@ -48,8 +44,8 @@ export default class ProductService {
         id: rawProduct.owner_id,
         firstName: rawProduct.owner_firstName,
         lastName: rawProduct.owner_lastName,
-      }
-    }
+      },
+    };
   }
 
   /**
@@ -81,17 +77,17 @@ export default class ProductService {
 
     const rawProducts = await builder.getRawMany();
 
-    const mapping = (rawProduct: any) => {
-      return {
-        name: rawProduct.productrevision_name,
-        picture: rawProduct.productrevision_picture,
-        price: DineroTransformer.Instance.from(rawProduct.productrevision_price),
-        revision: rawProduct.productrevision_revision,
-        updatedAt: rawProduct.productrevision_updatedAt,
-      }
-    }
+    const mapping = (rawProduct: any) => ({
+      name: rawProduct.productrevision_name,
+      picture: rawProduct.productrevision_picture,
+      price: DineroTransformer.Instance.from(rawProduct.productrevision_price),
+      revision: rawProduct.productrevision_revision,
+      updatedAt: rawProduct.productrevision_updatedAt,
+    });
 
-    return rawProducts.map((rawProduct) => { return { ...this.getDefaultMapping(rawProduct), ...mapping(rawProduct)} as ProductResponse});
+    return rawProducts.map((rawProduct) => (
+      ({ ...this.getDefaultMapping(rawProduct), ...mapping(rawProduct) } as ProductResponse)
+    ));
   }
 
   /**
@@ -100,11 +96,11 @@ export default class ProductService {
    */
   public static async getUpdatedProducts(owner: User = null): Promise<ProductResponse[]> {
     const builder = createQueryBuilder()
-        .from(Product, 'product')
+      .from(Product, 'product')
       .innerJoinAndSelect(UpdatedProduct, 'updatedproduct',
         'product.id = updatedproduct.product')
-        .innerJoinAndSelect('product.owner', 'owner')
-        .innerJoinAndSelect('updatedproduct.category', 'category')
+      .innerJoinAndSelect('product.owner', 'owner')
+      .innerJoinAndSelect('updatedproduct.category', 'category')
       .select([
         'product.id', 'product.createdAt', 'updatedproduct.updatedAt', 'product.currentRevision',
         'updatedproduct.name', 'updatedproduct.price', 'owner.id', 'owner.firstName', 'owner.lastName', 'category.id',
@@ -116,16 +112,15 @@ export default class ProductService {
 
     const rawProducts = await builder.getRawMany();
 
-    const mapping = (rawProduct: any) => {
-      return {
-        name: rawProduct.updatedproduct_name,
-        picture: rawProduct.updatedproduct_picture,
-        price: DineroTransformer.Instance.from(rawProduct.updatedproduct_price),
-        revision: rawProduct.product_currentRevision,
-        updatedAt: rawProduct.updatedproduct_updatedAt,
-      }
-    }
+    const mapping = (rawProduct: any) => ({
+      name: rawProduct.updatedproduct_name,
+      picture: rawProduct.updatedproduct_picture,
+      price: DineroTransformer.Instance.from(rawProduct.updatedproduct_price),
+      revision: rawProduct.product_currentRevision,
+      updatedAt: rawProduct.updatedproduct_updatedAt,
+    });
 
-    return rawProducts.map((rawProduct) => { return { ...this.getDefaultMapping(rawProduct), ...mapping(rawProduct)} as ProductResponse});
+    return rawProducts.map((rawProduct) => (
+      ({ ...this.getDefaultMapping(rawProduct), ...mapping(rawProduct) } as ProductResponse)));
   }
 }
