@@ -58,9 +58,7 @@ describe('UserController', (): void => {
     transactions: Transaction[],
   };
 
-  before(async function (): Promise<void> {
-    // @ts-ignore
-    this.timeout(10000);
+  before(async () : Promise<void> => {
     const connection = await Database.initialize();
     const app = express();
     console.log('write database');

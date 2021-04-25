@@ -126,6 +126,7 @@ export default async function createApp(): Promise<Application> {
   const gewis = new Gewis(application.roleManager);
   await gewis.registerRoles();
 
+
   // REMOVE LATER, banner controller development
   const options: BaseControllerOptions = {
     specification: application.specification,
