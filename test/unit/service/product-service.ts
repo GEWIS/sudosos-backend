@@ -23,7 +23,7 @@ import { expect } from 'chai';
 import User from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
-import ProductService from '../../../src/services/product-service';
+import ProductService from '../../../src/service/product-service';
 import { seedAllProducts, seedProductCategories, seedUsers } from '../../seed';
 import Product from '../../../src/entity/product/product';
 import { ProductResponse } from '../../../src/controller/response/product-response';
