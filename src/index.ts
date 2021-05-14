@@ -20,7 +20,7 @@ import * as http from 'http';
 import * as util from 'util';
 import * as crypto from 'crypto';
 import { promises as fs } from 'fs';
-import bodyParser from 'body-parser';
+import { json } from 'body-parser';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import dinero, { Currency } from 'dinero.js';
 import { config } from 'dotenv';
@@ -114,7 +114,7 @@ export default async function createApp(): Promise<Application> {
   // Create express application.
   application.app = express();
   application.specification = await Swagger.initialize(application.app);
-  application.app.use(bodyParser.json());
+  application.app.use(json());
 
   // Setup token handler and authentication controller.
   await setupAuthentication(application);
