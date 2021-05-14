@@ -116,11 +116,11 @@ export default async function createApp(): Promise<Application> {
   application.specification = await Swagger.initialize(application.app);
   application.app.use(json());
 
-  // Setup token handler and authentication controller.
-  await setupAuthentication(application);
-
   // Setup RBAC.
   application.roleManager = new RoleManager();
+
+  // Setup token handler and authentication controller.
+  await setupAuthentication(application);
 
   // Setup GEWIS-specific module.
   const gewis = new Gewis(application.roleManager);
