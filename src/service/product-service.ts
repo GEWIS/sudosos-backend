@@ -57,15 +57,28 @@ export default class ProductService {
     : Promise<ProductResponse[]> {
     const builder = createQueryBuilder()
       .from(Product, 'product')
-      .innerJoinAndSelect(ProductRevision, 'productrevision',
-        'product.id = productrevision.product '
-            + 'AND product.currentRevision = productrevision.revision')
+      .innerJoinAndSelect(
+        ProductRevision,
+        'productrevision',
+        `product.id = productrevision.product
+         AND product.currentRevision = productrevision.revision`,
+      )
       .innerJoinAndSelect('product.owner', 'owner')
       .innerJoinAndSelect('productrevision.category', 'category')
       .select([
-        'product.id', 'product.createdAt', 'productrevision.updatedAt', 'productrevision.revision',
-        'productrevision.name', 'productrevision.price', 'owner.id', 'owner.firstName', 'owner.lastName', 'category.id',
-        'category.name', 'productrevision.picture', 'productrevision.alcoholpercentage',
+        'product.id',
+        'product.createdAt',
+        'productrevision.updatedAt',
+        'productrevision.revision',
+        'productrevision.name',
+        'productrevision.price',
+        'owner.id',
+        'owner.firstName',
+        'owner.lastName',
+        'category.id',
+        'category.name',
+        'productrevision.picture',
+        'productrevision.alcoholpercentage',
       ]);
 
     if (owner !== null) {
@@ -97,14 +110,27 @@ export default class ProductService {
   public static async getUpdatedProducts(owner: User = null): Promise<ProductResponse[]> {
     const builder = createQueryBuilder()
       .from(Product, 'product')
-      .innerJoinAndSelect(UpdatedProduct, 'updatedproduct',
-        'product.id = updatedproduct.product')
+      .innerJoinAndSelect(
+        UpdatedProduct,
+        'updatedproduct',
+        'product.id = updatedproduct.product',
+      )
       .innerJoinAndSelect('product.owner', 'owner')
       .innerJoinAndSelect('updatedproduct.category', 'category')
       .select([
-        'product.id', 'product.createdAt', 'updatedproduct.updatedAt', 'product.currentRevision',
-        'updatedproduct.name', 'updatedproduct.price', 'owner.id', 'owner.firstName', 'owner.lastName', 'category.id',
-        'category.name', 'updatedproduct.picture', 'updatedproduct.alcoholpercentage',
+        'product.id',
+        'product.createdAt',
+        'updatedproduct.updatedAt',
+        'product.currentRevision',
+        'updatedproduct.name',
+        'updatedproduct.price',
+        'owner.id',
+        'owner.firstName',
+        'owner.lastName',
+        'category.id',
+        'category.name',
+        'updatedproduct.picture',
+        'updatedproduct.alcoholpercentage',
       ]);
     if (owner !== null) {
       builder.where('product.owner = :owner', { owner: owner.id });
