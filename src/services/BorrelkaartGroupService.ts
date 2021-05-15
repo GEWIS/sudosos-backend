@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { FindManyOptions } from 'typeorm';
+import { FindManyOptions, Raw } from 'typeorm';
 import BorrelkaartGroupRequest from '../controller/request/borrelkaart-group-request';
 import BorrelkaartGroupResponse from '../controller/response/borrelkaart-group-response';
 import BorrelkaartGroup from '../entity/user/borrelkaart-group';
@@ -25,15 +25,15 @@ import UserBorrelkaartGroup from '../entity/user/user-borrelkaart-group';
 export default class BorrelkaartGroupService {
   /**
    * Verifies whether the borrelkaart group request translates to a valid object
-   * @param {BorrelkaartGroupRequest.model} bkgr - The borrelkaart group request
-   * @returns {boolean} - whether the borrelkaart group is ok
+   * @param {BorrelkaartGroupRequest.model} bkgReq - The borrelkaart group request
+   * @returns {boolean} - Whether the borrelkaart group is ok
    */
   // eslint-disable-next-line class-methods-use-this
-  public static async verifyBorrelkaartGroup(bkgr: BorrelkaartGroupRequest): Promise<boolean> {
-    const sDate = Date.parse(bkgr.activeStartDate);
-    const eDate = Date.parse(bkgr.activeEndDate);
+  public static async verifyBorrelkaartGroup(bkgReq: BorrelkaartGroupRequest): Promise<boolean> {
+    const sDate = Date.parse(bkgReq.activeStartDate);
+    const eDate = Date.parse(bkgReq.activeEndDate);
 
-    const bkgrCheck: boolean = bkgr.name !== ''
+    const bkgReqCheck: boolean = bkgReq.name !== ''
       && !Number.isNaN(sDate)
       && !Number.isNaN(eDate)
 
@@ -44,25 +44,55 @@ export default class BorrelkaartGroupService {
       && eDate > sDate
 
       // borrelkaart group must contain users
-      && bkgr.users.length > 0;
+      && bkgReq.users.length > 0;
 
-    if (!bkgrCheck) {
+    if (!bkgReqCheck) {
       return false;
     }
 
     // check if distinct user id's
     const ids: number[] = [];
-    for (let i = 0; i < bkgr.users.length; i += 1) {
-      if (bkgr.users[i] && !ids.includes(bkgr.users[i].id)) {
-        ids.push(bkgr.users[i].id);
+    for (let i = 0; i < bkgReq.users.length; i += 1) {
+      if (bkgReq.users[i] && !ids.includes(bkgReq.users[i].id)) {
+        ids.push(bkgReq.users[i].id);
       } else {
         return false;
       }
     }
 
     // check if all users in user database
-    const users = await Promise.all(bkgr.users.map((user) => User.findOne(user.id)));
-    return !users.includes(undefined);
+    const users = await User.find({ id: Raw((userId) => `${userId} IN (:...ids)`, { ids }) });
+    console.log('db users');
+    console.log(users);
+    return ids.length === users.length;
+  }
+
+  /**
+   * Verifies whether the borrelkaart group request holds user conflicts
+   * @param {BorrelkaartGroupRequest.model} bkgReq - The borrelkaart group request
+   * @param {number} ignoreGroup - Ignore users in this group when updating a borrelkaart group
+   * @returns {boolean} - Whether the borrelkaart group is ok
+   */
+  public static async checkUserConflicts(
+    bkgReq: BorrelkaartGroupRequest, ignoreGroup?: number,
+  ): Promise<boolean> {
+    // all conflicting borrelkaart groups related to requested users
+    const conflictingEntries = await UserBorrelkaartGroup.find({
+      relations: ['borrelkaartGroup'],
+      where: {
+        user: Raw((id) => `${id} IN (:...ids)`, { ids: bkgReq.users.map((user) => user.id) }),
+      },
+    });
+
+    // return value
+    let ret = conflictingEntries.length === 0;
+
+    // check if users are only in the patched borrelkaart group
+    if (ignoreGroup && !ret) {
+      ret = !conflictingEntries.some((entry) => entry.borrelkaartGroup.id !== ignoreGroup);
+    }
+
+    return ret;
   }
 
   /**
@@ -83,7 +113,7 @@ export default class BorrelkaartGroupService {
 
   /**
    * Creates a borrelkaart group from the request
-   * @param {BorrelkaartGroup.model} bkgReq - borrelkaart group
+   * @param {BorrelkaartGroup.model} bkg - borrelkaart group
    * @param {Array<User>} users - users in the borrelkaart group
    * @returns {BorrelkaartGroupResponse.model} - a borrelkaart group response
    */
@@ -104,7 +134,7 @@ export default class BorrelkaartGroupService {
 
   /**
    * Returns all borrelkaart groups without users
-   * @param options - find options
+   * @param {FindManyOptions.model} options - find options
    * @returns {Array<BorrelkaartGroupResponse>} - borrelkaart groups without users
    */
   public static async getAllBorrelkaartGroups(options?: FindManyOptions):
@@ -115,7 +145,7 @@ export default class BorrelkaartGroupService {
 
   /**
    * Saves a borrelkaart group and its user relations to the database
-   * @param bkgReq - borrelkaart group request
+   * @param {BorrelkaartGroupRequest.model} bkgReq - borrelkaart group request
    * @returns {BorrelkaartGroupResponse.model} - saved borrelkaart group
    */
   public static async createBorrelkaartGroup(bkgReq: BorrelkaartGroupRequest):
@@ -138,10 +168,10 @@ export default class BorrelkaartGroupService {
 
   /**
    * Returns a borrelkaart group with given id
-   * @param id - requested borrelkaart group id
+   * @param {string} id - requested borrelkaart group id
    * @returns {BorrelkaartGroupResponse.model} - requested borrelkaart group
    */
-  public static async getBorrelkaartGroupById(id: number): Promise<BorrelkaartGroupResponse> {
+  public static async getBorrelkaartGroupById(id: string): Promise<BorrelkaartGroupResponse> {
     // find requested borrelkaart group
     const bkg = await BorrelkaartGroup.findOne(id);
     if (!bkg) {
@@ -149,12 +179,42 @@ export default class BorrelkaartGroupService {
     }
 
     // get users related to the borrelkaart group
-    const userBorrelkaartGroups = await UserBorrelkaartGroup.find({
+    const users = (await UserBorrelkaartGroup.find({
       relations: ['user'],
       where: { borrelkaartGroup: bkg },
-    });
-    const users = userBorrelkaartGroups.map((ubkg) => ubkg.user);
+    })).map((ubkg) => ubkg.user);
 
     return this.asBorrelkaartGroupResponse(bkg, users);
+  }
+
+  /**
+   * Updates a borrelkaart group and its user relations in the database
+   * @param {string} id - requested borrelkaart group id
+   * @param {BorrelkaartGroupRequest.model} bkgReq - new borrelkaart group request
+   * @returns {BorrelkaartGroupResponse.model} - updated borrelkaart group
+   */
+  public static async updateBorrelkaartGroup(id: string, bkgReq: BorrelkaartGroupRequest):
+  Promise<BorrelkaartGroupResponse> {
+    // create update borrelkaart group
+    // patch users to borrelkaart group
+    // return created borrelkaart group with users
+    return null;
+  }
+
+  /**
+   * Deletes a borrelkaart group and its user relations in the database
+   * @param {string} id - requested borrelkaart group id
+   * @returns {BorrelkaartGroupResponse.model} - deleted borrelkaart group
+   */
+  public static async deleteBorrelkaartGroup(id: string):
+  Promise<BorrelkaartGroupResponse> {
+    // get borrelkaart group to return
+    const bkgRes = await this.getBorrelkaartGroupById(id);
+
+    // delete borrelkaart group
+
+    // remove users
+    // return deleted borrelkaart group
+    return bkgRes;
   }
 }

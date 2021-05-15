@@ -19,7 +19,7 @@ import bodyParser from 'body-parser';
 import { expect, request } from 'chai';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
-import { Connection } from 'typeorm';
+import { Connection, Raw } from 'typeorm';
 import TokenHandler from '../../../src/authentication/token-handler';
 import BorrelkaartGroupController from '../../../src/controller/borrelkaart-group-controller';
 import BorrelkaartGroupRequest from '../../../src/controller/request/borrelkaart-group-request';
@@ -113,8 +113,16 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
       active: true,
     } as User;
 
+    const localUser2 = {
+      id: 3,
+      firstName: 'User 2',
+      type: UserType.LOCAL_USER,
+      active: true,
+    } as User;
+
     await User.save(adminUser);
     await User.save(localUser);
+    await User.save(localUser2);
 
     // create bearer tokens
     const tokenHandler = new TokenHandler({
@@ -140,12 +148,16 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
       activeEndDate: '2100-02-01T21:00:00Z',
       users: [
         adminUser,
+        localUser2,
       ],
     } as BorrelkaartGroupRequest;
 
     const invalidBorrelkaartGroupReq = {
       ...validBorrelkaartGroupReq,
       name: '',
+      users: [
+        localUser2,
+      ],
     } as BorrelkaartGroupRequest;
 
     // start app
@@ -246,7 +258,7 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
           ctx.adminUser,
           ctx.localUser,
           {
-            id: 3,
+            id: 4,
             firstName: 'fail user',
             type: UserType.LOCAL_USER,
             active: true,
@@ -359,6 +371,9 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
       // check if request denied and borrelkaart group not posted
       expect(await BorrelkaartGroup.findOne({ name: ctx.conflictingBorrelkaartGroupReq.name }), 'conflicting group was saved').to.be.undefined;
 
+      // check correct message
+      expect(res.body, 'incorrect return body').to.equal('Conflicting user posted.');
+
       // conflict code
       expect(res.status, 'status incorrect on conflicting post').to.equal(409);
     });
@@ -383,12 +398,9 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
       expect(res.status).to.equal(200);
     });
     it('should return an HTTP 404 if the borrelkaart group with given id does not exist', async () => {
-      // save borrelkaart group
-      await saveBKG(ctx.validBorrelkaartGroupReq);
-
       // get borrelkaart group by id
       const res = await request(ctx.app)
-        .get('/borrelkaartgroups/2')
+        .get('/borrelkaartgroups/1')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
       expect(res.body, 'borrelkaart group found while id not in database').to.equal('Borrelkaart group not found.');
@@ -415,11 +427,103 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
   });
 
   describe('PATCH /borrelkaartgroups/:id', () => {
-    it('should update and return an HTTP 200 and the borrelkaart group and users with given id if admin');
-    it('should return an HTTP 400 if given borrelkaart group is invalid');
-    it('should return an HTTP 404 if the borrelkaart group with given id does not exist');
-    it('should return an HTTP 403 if not admin');
-    it('should return an HTTP 409 if a user in the request is already assigned to a borrelkaart group');
+    it('should update and return an HTTP 200 and the borrelkaart group and users with given id if admin', async () => {
+      await saveBKG(ctx.validBorrelkaartGroupReq);
+
+      // update borrelkaart group by id
+      const res = await request(ctx.app)
+        .patch('/borrelkaartgroups/1')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(ctx.conflictingBorrelkaartGroupReq);
+
+      // check returned borrelkaart group
+      expect(bkgEq(ctx.conflictingBorrelkaartGroupReq, res.body as BorrelkaartGroupResponse), 'returned borrelkaart group incorrect').to.be.true;
+
+      // check database
+      const bkgUpdated = await BorrelkaartGroup.findOne(1);
+      const users = await Promise.all(
+        ctx.conflictingBorrelkaartGroupReq.users.map((user) => User.findOne(user.id)),
+      );
+      expect(bkgUpdated.name, 'updated borrelkaart group not found in database').to.equal(ctx.conflictingBorrelkaartGroupReq.name);
+      expect(users.includes(undefined), 'users not updated correctly').to.be.false;
+
+      // success code
+      expect(res.status).to.equal(200);
+    });
+    it('should return an HTTP 400 if given borrelkaart group is invalid', async () => {
+      await saveBKG(ctx.validBorrelkaartGroupReq);
+
+      // update borrelkaart group by id
+      const res = await request(ctx.app)
+        .patch('/borrelkaartgroups/1')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(ctx.invalidBorrelkaartGroupReq);
+
+      // check empty body
+      expect(res.body, 'returned a borrelkaart group').to.be.empty;
+
+      // check database
+      const bkgDb = await BorrelkaartGroup.findOne(1);
+      const users = await Promise.all(
+        ctx.invalidBorrelkaartGroupReq.users.map((user) => User.findOne(user.id)),
+      );
+      expect(bkgDb.name, 'invalid borrelkaart group found in database').to.not.equal(ctx.invalidBorrelkaartGroupReq.name);
+      expect(users.includes(undefined), 'users found in database').to.be.true;
+
+      // invalid code
+      expect(res.status).to.equal(400);
+    });
+    it('should return an HTTP 404 if the borrelkaart group with given id does not exist', async () => {
+      // patch borrelkaart by id
+      const res = await request(ctx.app)
+        .patch('/borrelkaartgroups/1')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(ctx.validBorrelkaartGroupReq);
+
+      expect(res.body, 'borrelkaart group found while id not in database').to.equal('Borrelkaart group not found.');
+
+      // not found code
+      expect(res.status).to.equal(404);
+    });
+    it('should return an HTTP 403 if not admin', async () => {
+      await saveBKG(ctx.validBorrelkaartGroupReq);
+
+      // update borrelkaart group by id
+      const res = await request(ctx.app)
+        .patch('/borrelkaartgroups/1')
+        .set('Authorization', `Bearer ${ctx.token}`)
+        .send(ctx.conflictingBorrelkaartGroupReq);
+
+      // check empty body
+      expect(res.body, 'returned a borrelkaart group').to.be.empty;
+
+      // check database
+      const bkgDb = await BorrelkaartGroup.findOne(1);
+      const users = await Promise.all(
+        ctx.conflictingBorrelkaartGroupReq.users.map((user) => User.findOne(user.id)),
+      );
+      expect(bkgDb.name, 'invalid borrelkaart group found in database').to.not.equal(ctx.conflictingBorrelkaartGroupReq.name);
+      expect(users.includes(undefined), 'users found in database').to.be.true;
+
+      // forbidden code
+      expect(res.status).to.equal(403);
+    });
+    it('should return an HTTP 409 if a user in the request is already assigned to a borrelkaart group', async () => {
+      await saveBKG(ctx.validBorrelkaartGroupReq);
+      await saveBKG(ctx.invalidBorrelkaartGroupReq);
+
+      // patch conflicting borrelkaart group
+      const res = await request(ctx.app)
+        .patch('/borrelkaartgroups/1')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(ctx.conflictingBorrelkaartGroupReq);
+
+      // check if request denied and borrelkaart group not patched
+      expect(await BorrelkaartGroup.findOne({ name: ctx.conflictingBorrelkaartGroupReq.name }), 'conflicting group was saved').to.be.undefined;
+
+      // conflict code
+      expect(res.status, 'status incorrect on conflicting post').to.equal(409);
+    });
   });
 
   describe('DELETE /borrelkaartgroups/:id', () => {
@@ -433,8 +537,23 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
       // test deletion
-      expect(res.body as BorrelkaartGroupResponse).to.equal(bkgDel);
-      expect(await BorrelkaartGroup.findOne(1)).to.be.undefined;
+      expect(res.body as BorrelkaartGroupResponse, 'returned borrelkaart group incorrect').to.equal(bkgDel);
+      expect(await BorrelkaartGroup.findOne(1), 'borrelkaart group not deleted').to.be.undefined;
+
+      // test relation deletion
+      expect((await UserBorrelkaartGroup.find({
+        relations: ['borrelkaartGroup'],
+        where: {
+          borrelkaartGroup: bkgDel.id,
+        },
+      })).length, 'borrelkaart group relations not deleted').to.equal(0);
+
+      expect((await UserBorrelkaartGroup.find({
+        relations: ['user'],
+        where: {
+          user: Raw((id) => `${id} IN (:...ids)`, { ids: bkgDel.users.map((user) => user.id) }),
+        },
+      })).length, 'user relations not deleted').to.equal(0);
 
       // success code
       expect(res.status).to.equal(200);
@@ -446,7 +565,7 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
       // check response body
-      expect(res.body).to.equal('Borrelkaart group not found.');
+      expect(res.body, 'something returned').to.equal('Borrelkaart group not found.');
 
       // not found code
       expect(res.status).to.equal(404);
