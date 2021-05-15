@@ -107,6 +107,7 @@ export default class UserController extends BaseController {
    * Get a list of all users
    * @route GET /users
    * @group users - Operations of user controller
+   * @security JWT
    * @param {integer} take.query - How many users the endpoint should return
    * @param {integer} skip.query - How many users should be skipped (for pagination)
    * @returns {[User.model]} 200 - A list of all users
@@ -127,6 +128,7 @@ export default class UserController extends BaseController {
    * Get an individual user
    * @route GET /users/:id
    * @group users - Operations of user controller
+   * @security JWT
    * @returns {User.model} 200 - Individual user
    * @returns {string} 404 - Nonexistent user id
    */
@@ -149,6 +151,7 @@ export default class UserController extends BaseController {
    * Create a new user
    * @route POST /users
    * @group users - Operations of user controller
+   * @security JWT
    * @returns {User.model} 200 - New user
    * @returns {string} 400 - Bad request
    */
@@ -229,6 +232,7 @@ export default class UserController extends BaseController {
    * Delete a single user
    * @route DELETE /users/:id
    * @group users - Operations of user controller
+   * @security JWT
    * @returns {string} 204 - User successfully deleted
    * @returns {string} 400 - Cannot delete yourself
    */
@@ -263,6 +267,7 @@ export default class UserController extends BaseController {
    * Get an user's products
    * @route GET /users/:id/products
    * @group users - Operations of user controller
+   * @security JWT
    * @returns {[Product.model]} 200 - List of products.
    */
   public async getUsersProducts(req: RequestWithToken, res: Response): Promise<void> {
@@ -285,6 +290,7 @@ export default class UserController extends BaseController {
    * Get an user's transactions (from, to or created)
    * @route GET /users/:id/transactions
    * @group users - Operations of user controller
+   * @security JWT
    * @returns {[Transaction.model]} 200 - List of transactions.
    */
   public async getUsersTransactions(req: RequestWithToken, res: Response): Promise<void> {
