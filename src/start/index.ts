@@ -25,6 +25,7 @@ import { SwaggerSpecification } from 'swagger-model-validator';
 import dinero, { Currency } from 'dinero.js';
 import { config } from 'dotenv';
 import express from 'express';
+import cron from 'node-cron';
 import log4js, { Logger } from 'log4js';
 import { Connection } from 'typeorm';
 import Database from '../database/database';
@@ -33,6 +34,8 @@ import TokenHandler from '../authentication/token-handler';
 import TokenMiddleware from '../middleware/token-middleware';
 import AuthenticationController from '../controller/authentication-controller';
 import BannerController from '../controller/banner-controller';
+import BalanceController from '../controller/balance-controller';
+import BalanceService from '../services/BalanceService';
 
 export class Application {
   app: express.Express;
@@ -110,10 +113,22 @@ export default async function createApp(): Promise<Application> {
 
   // REMOVE LATER, banner controller development
   application.app.use('/v1/banners', new BannerController(application.specification).getRouter());
+  application.app.use('/v1/balance', new BalanceController(application.specification).getRouter());
 
   // Start express application.
+  await BalanceService.updateBalances();
+  cron.schedule('*/10 * * * *', () => {
+    application.logger.debug('Syncing balances.');
+    // BalanceService.updateBalances();
+    application.logger.debug('Synced balances.');
+  });
+
+  application.logger.info(await BalanceService.getBalance(1));
+
   application.server = application.app.listen(process.env.HTTP_PORT);
   application.logger.info('Application started.');
+
+
   return application;
 }
 

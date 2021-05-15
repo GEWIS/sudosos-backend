@@ -19,6 +19,7 @@
   "author": "",
   "license": "AGPL-3.0-or-later",
   "dependencies": {
+    "@types/node-cron": "^2.0.3",
     "body-parser": "^1.19.0",
     "date-fns": "^2.19.0",
     "dinero.js": "^1.8.1",
@@ -28,6 +29,7 @@
     "express-swaggerize-ui": "^1.1.0",
     "jsonwebtoken": "^8.5.1",
     "log4js": "^4.1.0",
+    "node-cron": "^3.0.0",
     "reflect-metadata": "^0.1.13",
     "sqlite3": "^5.0.0",
     "swagger-model-validator": "^3.0.19",
