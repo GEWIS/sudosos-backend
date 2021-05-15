@@ -21,13 +21,11 @@ import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import User, { UserType } from '../entity/user/user';
-import Product from '../entity/product/product';
 import Transaction from '../entity/transactions/transaction';
 import CreateUserRequest from './request/create-user-request';
 import UpdateUserRequest from './request/update-user-request';
 import { addPaginationForFindOptions } from '../helpers/pagination';
-import ProductService from "../service/product-service";
-import {FilterOptions} from "../helpers/query-filter";
+import ProductService from '../service/product-service';
 
 export default class UserController extends BaseController {
   private logger: Logger = log4js.getLogger('UserController');
@@ -93,7 +91,7 @@ export default class UserController extends BaseController {
       '/:id/products/updated': {
         GET: {
           policy: async (req) => this.roleManager.can(
-              req.token.roles, 'get', UserController.getRelation(req), 'Product', ['*'],
+            req.token.roles, 'get', UserController.getRelation(req), 'Product', ['*'],
           ),
           handler: this.getUsersUpdatedProducts.bind(this),
         },
@@ -295,7 +293,7 @@ export default class UserController extends BaseController {
 
     // Handle request
     try {
-      const products = await ProductService.getProducts({variable: 'product.owner', argument: parameters.id});
+      const products = await ProductService.getProducts({ variable: 'product.owner', argument: parameters.id });
       res.json(products);
     } catch (error) {
       this.logger.error('Could not return all products:', error);
@@ -323,7 +321,7 @@ export default class UserController extends BaseController {
 
     // Handle request
     try {
-      const products = await ProductService.getProducts({variable: 'product.owner', argument: parameters.id});
+      const products = await ProductService.getProducts({ variable: 'product.owner', argument: parameters.id });
       res.json(products);
     } catch (error) {
       this.logger.error('Could not return all products:', error);

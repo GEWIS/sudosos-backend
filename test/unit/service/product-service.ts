@@ -27,7 +27,7 @@ import ProductService from '../../../src/service/product-service';
 import { seedAllProducts, seedProductCategories, seedUsers } from '../../seed';
 import Product from '../../../src/entity/product/product';
 import { ProductResponse } from '../../../src/controller/response/product-response';
-import {FilterOptions} from "../../../src/helpers/query-filter";
+import { FilterOptions } from '../../../src/helpers/query-filter';
 
 /**
  * Test if all the product responses are part of the product set array.
@@ -93,7 +93,7 @@ describe('ProductService', async (): Promise<void> => {
       expect(productSuperset(updatedProducts, ctx.allProducts)).to.be.true;
     });
     it('should return product with the owner specified', async () => {
-      const filterOptions: FilterOptions = {variable: 'product.owner', argument: ctx.allProducts[0].owner.id};
+      const filterOptions: FilterOptions = { variable: 'product.owner', argument: ctx.allProducts[0].owner.id };
       const res: ProductResponse[] = await ProductService.getProducts(filterOptions);
 
       expect(productSuperset(res, ctx.allProducts)).to.be.true;
@@ -104,7 +104,7 @@ describe('ProductService', async (): Promise<void> => {
       expect(belongsToOwner).to.be.true;
     });
     it('should return a single product if productId is specified', async () => {
-      const filterOptions: FilterOptions = {variable: 'product.id', argument: ctx.allProducts[0].id};
+      const filterOptions: FilterOptions = { variable: 'product.id', argument: ctx.allProducts[0].id };
       const res: ProductResponse[] = await ProductService.getProducts(filterOptions);
 
       expect(res).to.be.length(1);
@@ -112,13 +112,23 @@ describe('ProductService', async (): Promise<void> => {
     });
     it('should return no products if the userId and productId dont match', async () => {
       const filterOptions: FilterOptions = [
-        {variable: 'product.owner', argument: ctx.allProducts[0].owner.id + 1},
-        {variable: 'product.id', argument: ctx.allProducts[0].id},
+        { variable: 'product.owner', argument: ctx.allProducts[0].owner.id + 1 },
+        { variable: 'product.id', argument: ctx.allProducts[0].id },
       ];
       const res: ProductResponse[] = await ProductService
         .getProducts(filterOptions);
 
       expect(res).to.be.length(0);
+    });
+    it('should return the products belonging to a container', async () => {
+      const res: ProductResponse[] = await ProductService
+        .getProducts({ variable: 'containerId', argument: 3, meta: true });
+      expect(res).to.be.length(5);
+    });
+    it('should return the updated products belonging to a container', async () => {
+      const res: ProductResponse[] = await ProductService
+        .getUpdatedProducts({ variable: 'containerId', argument: 3, meta: true });
+      expect(res).to.be.length(2);
     });
   });
 });
