@@ -145,7 +145,11 @@ describe('ContainerService', async (): Promise<void> => {
     it('should return all updated containers with no input specification', async () => {
       const res: ContainerResponse[] = await ContainerService.getUpdatedContainers();
 
-      // expect(containerSuperset(res, ctx.allUpdated)).to.be.true;
+      expect(
+        res.every(
+          (c1: ContainerResponse) => ctx.allUpdated.some((c2) => c1.id === c2.container.id),
+        ),
+      ).to.be.true;
       expect(res.every(
         (c: ContainerResponse) => ctx.specification.validateModel('ContainerResponse', c, false, true).valid,
       )).to.be.true;
@@ -155,7 +159,11 @@ describe('ContainerService', async (): Promise<void> => {
         ctx.allContainers[0].owner,
       );
 
-      // expect(containerSuperset(res, ctx.allUpdated)).to.be.true;
+      expect(
+        res.every(
+          (c1: ContainerResponse) => ctx.allUpdated.some((c2) => c1.id === c2.container.id),
+        ),
+      ).to.be.true;
 
       const belongsToOwner = res.every((container: ContainerResponse) => (
         container.owner.id === ctx.allContainers[0].owner.id));
