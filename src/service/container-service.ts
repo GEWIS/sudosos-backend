@@ -114,17 +114,20 @@ export default class ContainerService {
   /**
    * Query to return all updated containers.
    * @param owner - If specified it will only return containers who has the owner Owner.
+   * @param containerId - If specified, only return the container with id containerId.
    */
-  public static async getUpdatedContainers(owner: User = null): Promise<ContainerResponse[]> {
+  public static async getUpdatedContainers(
+    owner: User = null,
+    containerId: number = null,
+  ): Promise<ContainerResponse[]> {
     const builder = createQueryBuilder()
       .from(Container, 'container')
       .innerJoinAndSelect(
         UpdatedContainer,
         'updatedcontainer',
-        'container.id = updatedcontainer.container',
+        'container.id = updatedcontainer.containerId',
       )
       .innerJoinAndSelect('container.owner', 'owner')
-      .innerJoinAndSelect('updatedcontainer.category', 'category')
       .select([
         'container.id',
         'container.createdAt',
@@ -136,7 +139,10 @@ export default class ContainerService {
         'owner.lastName',
       ]);
     if (owner !== null) {
-      builder.where('container.owner = :owner', { owner: owner.id });
+      builder.andWhere('container.owner = :owner', { owner: owner.id });
+    }
+    if (containerId !== null) {
+      builder.andWhere('container.id = :containerId', { containerId });
     }
 
     const rawContainers = await builder.getRawMany();
