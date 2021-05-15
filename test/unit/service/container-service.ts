@@ -24,11 +24,11 @@ import User from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
 import ContainerService from '../../../src/service/container-service';
-import {
-  seedAllContainers, seedAllProducts, seedProductCategories, seedUsers,
-} from '../../seed';
+import seedDatabase from '../../seed';
 import Container from '../../../src/entity/container/container';
 import { ContainerResponse } from '../../../src/controller/response/container-response';
+import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
+import ContainerRevision from '../../../src/entity/container/container-revision';
 
 /**
   * Test if all the container responses are part of the container set array.
@@ -56,10 +56,7 @@ describe('ContainerService', async (): Promise<void> => {
   beforeEach(async () => {
     const connection = await Database.initialize();
 
-    const users = await seedUsers();
-    const categories = await seedProductCategories();
-    const products = await seedAllProducts(users, categories);
-    await seedAllContainers(users, products.productRevisions, products.products);
+    await seedDatabase();
 
     // start app
     const app = express();
@@ -74,7 +71,7 @@ describe('ContainerService', async (): Promise<void> => {
       connection,
       app,
       specification,
-      users,
+      users: await User.find(),
       allContainers,
     };
   });
@@ -99,7 +96,7 @@ describe('ContainerService', async (): Promise<void> => {
 
       // expect(containerSuperset(updatedContainers, ctx.allContainers)).to.be.true;
     });
-    it('should return container with the owner specified', async () => {
+    it('should return containers with the owner specified', async () => {
       const res: ContainerResponse[] = await ContainerService.getContainers(
         ctx.allContainers[0].owner,
       );
@@ -110,6 +107,24 @@ describe('ContainerService', async (): Promise<void> => {
         container.owner.id === ctx.allContainers[0].owner.id));
 
       expect(belongsToOwner).to.be.true;
+    });
+    it('should return containers of the point of sale specified', async () => {
+      const pos: PointOfSaleRevision = await PointOfSaleRevision.findOne({
+        relations: ['containers'],
+      });
+      const res: ContainerResponse[] = await ContainerService.getContainers(
+        null, null, pos,
+      );
+
+      expect(containerSuperset(res, ctx.allContainers)).to.be.true;
+
+      const belongsToPos = res.every(
+        (c1: ContainerResponse) => pos.containers.some(
+          (c2: ContainerRevision) => c2.container.id === c1.id && c2.revision === c1.revision,
+        ),
+      );
+      expect(belongsToPos).to.be.true;
+      expect(pos.containers).to.be.length(res.length);
     });
     it('should return a single container if containerId is specified', async () => {
       const res: ContainerResponse[] = await ContainerService
