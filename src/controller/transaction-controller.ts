@@ -17,14 +17,14 @@
  */
 import { Response } from 'express';
 import log4js, { Logger } from 'log4js';
-import { SwaggerSpecification } from 'swagger-model-validator';
-import BaseController from './base-controller';
+import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
-import TransactionService, { TransactionFilters } from '../services/TransactionService';
+import TransactionService, { TransactionFilters } from '../service/TransactionService';
 import { TransactionResponse } from './response/transaction-response';
 import { UserType } from '../entity/user/user';
 import { isDate, isNumber } from '../helpers/validators';
+import { validatePaginationQueryParams } from '../helpers/pagination';
 
 function parseGetTransactionsFilters(req: RequestWithToken): TransactionFilters {
   if ((req.query.pointOfSaleRevision && !req.query.pointOfSaleId)
@@ -84,8 +84,12 @@ function parseGetTransactionsFilters(req: RequestWithToken): TransactionFilters 
 export default class TransactionController extends BaseController {
   private logger: Logger = log4js.getLogger('TransactionController');
 
-  public constructor(spec: SwaggerSpecification) {
-    super(spec);
+  /**
+   * Creates a new transaction controller instance.
+   * @param options - The options passed to the base controller.
+   */
+  public constructor(options: BaseControllerOptions) {
+    super(options);
     this.logger.level = process.env.LOG_LEVEL;
   }
 
@@ -137,7 +141,7 @@ export default class TransactionController extends BaseController {
    */
   // eslint-disable-next-line class-methods-use-this
   public async getAllTransactions(req: RequestWithToken, res: Response): Promise<void> {
-    // this.logger.trace('Get all transactions by user', req.token.user);
+    this.logger.trace('Get all transactions by user', req.token.user);
 
     // Parse the filters given in the query parameters. If there are any issues,
     // the parse method will throw an exception. We will then return a 400 error.
@@ -146,6 +150,11 @@ export default class TransactionController extends BaseController {
       filters = parseGetTransactionsFilters(req);
     } catch (e) {
       res.status(400).json(e.message);
+      return;
+    }
+
+    if (!validatePaginationQueryParams(req)) {
+      res.status(400).json('The pagination skip and/or take are invalid');
       return;
     }
 

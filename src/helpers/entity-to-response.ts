@@ -18,6 +18,7 @@
 import User from '../entity/user/user';
 import { BaseUserResponse } from '../controller/response/user-response';
 
+// eslint-disable-next-line import/prefer-default-export
 export function parseUserToBaseResponse(user: User, timestamps: boolean): BaseUserResponse {
   return {
     id: user.id,

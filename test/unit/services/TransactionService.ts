@@ -24,7 +24,7 @@ import Transaction from '../../../src/entity/transactions/transaction';
 import Database from '../../../src/database/database';
 import seedDatabase from '../../seed';
 import { RequestWithToken } from '../../../src/middleware/token-middleware';
-import TransactionService from '../../../src/services/TransactionService';
+import TransactionService from '../../../src/service/TransactionService';
 import { verifyBaseTransactionEntity } from '../validators';
 import Swagger from '../../../src/start/swagger';
 
@@ -47,7 +47,7 @@ describe('TransactionService', (): void => {
       token: '',
       query: {
         take: 23,
-        skip: 2,
+        skip: 0,
       },
     } as any as RequestWithToken;
     ctx = {
@@ -67,7 +67,7 @@ describe('TransactionService', (): void => {
     it('should return a paginated list', async () => {
       const transactions = await TransactionService.getTransactions(ctx.req, {});
 
-      expect(transactions.length).to.equal(224);
+      expect(transactions.length).to.equal(23);
       transactions.map((t) => verifyBaseTransactionEntity(ctx.spec, t));
     });
 
@@ -212,7 +212,7 @@ describe('TransactionService', (): void => {
         fromDate,
       });
 
-      expect(transactions.length).to.equal(224);
+      expect(transactions.length).to.equal(23);
       transactions.map((t) => {
         verifyBaseTransactionEntity(ctx.spec, t);
         expect(new Date(t.createdAt)).to.be.greaterThan(fromDate);
@@ -234,7 +234,7 @@ describe('TransactionService', (): void => {
         tillDate,
       });
 
-      expect(transactions.length).to.equal(224);
+      expect(transactions.length).to.equal(23);
       transactions.map((t) => {
         verifyBaseTransactionEntity(ctx.spec, t);
         expect(new Date(t.createdAt)).to.be.lessThan(tillDate);

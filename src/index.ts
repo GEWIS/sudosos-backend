@@ -138,7 +138,7 @@ export default async function createApp(): Promise<Application> {
   application.app.use('/v1/banners', new BannerController(options).getRouter());
   application.app.use('/v1/users', new UserController(options).getRouter());
   application.app.use('/v1/products', new ProductController(options).getRouter());
-  application.app.use('/v1/transactions', new TransactionController(application.specification).getRouter());
+  application.app.use('/v1/transactions', new TransactionController(options).getRouter());
 
   // Start express application.
   logger.info(`Server listening on port ${process.env.HTTP_PORT}.`);
