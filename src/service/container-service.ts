@@ -47,13 +47,22 @@ export default class ContainerService {
     : Promise<ContainerResponse[]> {
     const builder = createQueryBuilder()
       .from(Container, 'container')
-      .innerJoinAndSelect(ContainerRevision, 'containerrevision',
-        'container.id = containerrevision.container '
-            + 'AND container.currentRevision = containerrevision.revision')
+      .innerJoinAndSelect(
+        ContainerRevision,
+        'containerrevision',
+        `container.id = containerrevision.container
+         AND container.currentRevision = containerrevision.revision`,
+      )
       .innerJoinAndSelect('container.owner', 'owner')
       .select([
-        'container.id', 'container.createdAt', 'containerrevision.updatedAt', 'containerrevision.revision',
-        'containerrevision.name', 'owner.id', 'owner.firstName', 'owner.lastName',
+        'container.id',
+        'container.createdAt',
+        'containerrevision.updatedAt',
+        'containerrevision.revision',
+        'containerrevision.name',
+        'owner.id',
+        'owner.firstName',
+        'owner.lastName',
       ]);
 
     if (owner !== null) {
