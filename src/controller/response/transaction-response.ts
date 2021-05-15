@@ -15,15 +15,15 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { Dinero } from 'dinero.js';
+import { DineroObject } from 'dinero.js';
 import BaseResponse from './base-response';
 import { BasePointOfSaleResponse } from './point-of-sale-response';
 import { BaseContainerResponse } from './container-response';
 import { BaseProductResponse } from './product-response';
-import { UserResponse } from './user-response';
+import { BaseUserResponse, UserResponse } from './user-response';
 
 /**
- * @typedef {BaseTransactionResponse} BaseTransactionResponse
+ * @typedef {BaseResponse} BaseTransactionResponse
  * @property {UserResponse.model} from.required - The account from which the transaction
  * is subtracted.
  * @property {UserResponse.model} createdBy - The user that created the transaction, if not
@@ -36,7 +36,7 @@ export interface BaseTransactionResponse extends BaseResponse {
   from: UserResponse,
   createdBy?: UserResponse,
   pointOfSale: BasePointOfSaleResponse,
-  value: Dinero,
+  value: DineroObject,
 }
 
 /**
@@ -51,8 +51,8 @@ export interface BaseTransactionResponse extends BaseResponse {
  * has been created
  */
 export interface TransactionResponse extends BaseResponse {
-  from: UserResponse,
-  createdBy?: UserResponse,
+  from: BaseUserResponse,
+  createdBy?: BaseUserResponse,
   subTransactions: SubTransactionResponse[],
   pointOfSale: BasePointOfSaleResponse,
 }
@@ -66,7 +66,7 @@ export interface TransactionResponse extends BaseResponse {
  *     SubTransaction
  */
 interface SubTransactionResponse extends BaseResponse {
-  to: UserResponse,
+  to: BaseUserResponse,
   container: BaseContainerResponse,
   subTransactionRows: SubTransactionRowResponse[],
 }

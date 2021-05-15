@@ -39,17 +39,21 @@ export function verifyUserEntity(
 }
 
 export function verifyUserResponse(
-  spec: SwaggerSpecification, userResponse: UserResponse,
+  spec: SwaggerSpecification, userResponse: UserResponse, canBeDeleted?: boolean,
 ): void {
   const validation = spec.validateModel('UserResponse', userResponse, false, true);
   expect(validation.valid).to.be.true;
 
   expect(userResponse.id).to.be.at.least(0);
-  expect(userResponse.firstName).to.not.be.empty;
+  expect(userResponse.firstName).to.be.not.empty;
   expect(userResponse.lastName).to.be.not.undefined;
   expect(userResponse.lastName).to.be.not.null;
   expect(userResponse.active).to.not.be.null;
-  expect(userResponse.deleted).to.be.false;
+  if (canBeDeleted) {
+    expect(userResponse.deleted).to.be.a('boolean');
+  } else {
+    expect(userResponse.deleted).to.be.false;
+  }
 }
 
 export function verifyProductEntity(
@@ -108,10 +112,10 @@ export function verifyBaseTransactionEntity(
   expect(validation.valid).to.be.true;
 
   expect(baseTransaction.id).to.be.greaterThan(-1);
-  expect(baseTransaction.value.getAmount()).to.be.at.least(0);
+  expect(baseTransaction.value.amount).to.be.at.least(0);
   expect(baseTransaction.createdAt).to.be.not.undefined;
   expect(baseTransaction.createdAt).to.be.not.null;
-  // verifyUserResponse(spec, baseTransaction.from);
-  // verifyUserResponse(spec, baseTransaction.createdBy);
-  // verifyBasePOSResponse(spec, baseTransaction.pointOfSale);
+  verifyUserResponse(spec, baseTransaction.from, true);
+  verifyUserResponse(spec, baseTransaction.createdBy, true);
+  verifyBasePOSResponse(spec, baseTransaction.pointOfSale);
 }

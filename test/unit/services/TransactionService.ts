@@ -215,7 +215,7 @@ describe('TransactionService', (): void => {
       expect(transactions.length).to.equal(224);
       transactions.map((t) => {
         verifyBaseTransactionEntity(ctx.spec, t);
-        expect(t.createdAt.getTime()).to.be.greaterThan(fromDate.getTime());
+        expect(new Date(t.createdAt)).to.be.greaterThan(fromDate);
         return undefined;
       });
 
@@ -237,7 +237,7 @@ describe('TransactionService', (): void => {
       expect(transactions.length).to.equal(224);
       transactions.map((t) => {
         verifyBaseTransactionEntity(ctx.spec, t);
-        expect(t.createdAt.getTime()).to.be.lessThan(tillDate.getTime());
+        expect(new Date(t.createdAt)).to.be.lessThan(tillDate);
         return undefined;
       });
 

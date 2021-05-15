@@ -17,11 +17,17 @@
  */
 import { createQueryBuilder, SelectQueryBuilder } from 'typeorm';
 import { RequestWithToken } from '../middleware/token-middleware';
-import { BaseTransactionResponse } from '../controller/response/transaction-response';
+import { BaseTransactionResponse, TransactionResponse } from '../controller/response/transaction-response';
 import Transaction from '../entity/transactions/transaction';
 import SubTransaction from '../entity/transactions/sub-transaction';
 import { addPaginationToQueryBuilder } from '../helpers/pagination';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
+import { parseUserToBaseResponse } from '../helpers/entity-to-response';
+import {
+  parseContainerToBaseResponse,
+  parsePOSToBasePOS,
+  parseProductToBaseResponse,
+} from '../helpers/revision-to-response';
 
 /**
  *  SudoSOS back-end API service.
@@ -123,14 +129,15 @@ export default class TransactionService {
     const rawTransactions = await query.getRawMany();
 
     return rawTransactions.map((o) => {
+      const value = DineroTransformer.Instance.from(o.value || 0);
       const v: BaseTransactionResponse = {
         id: o.transaction_id,
-        createdAt: new Date(o.transaction_createdAt),
-        updatedAt: new Date(o.transaction_updatedAt),
+        createdAt: new Date(o.transaction_createdAt).toISOString(),
+        updatedAt: new Date(o.transaction_updatedAt).toISOString(),
         from: {
           id: o.from_id,
-          createdAt: new Date(o.from_createdAt),
-          updatedAt: new Date(o.from_updatedAt),
+          createdAt: new Date(o.from_createdAt).toISOString(),
+          updatedAt: new Date(o.from_updatedAt).toISOString(),
           firstName: o.from_firstName,
           lastName: o.from_lastName,
           active: o.from_active === 1,
@@ -139,8 +146,8 @@ export default class TransactionService {
         },
         createdBy: o.createdBy_id ? {
           id: o.createdBy_id,
-          createdAt: new Date(o.createdBy_createdAt),
-          updatedAt: new Date(o.createdBy_updatedAt),
+          createdAt: new Date(o.createdBy_createdAt).toISOString(),
+          updatedAt: new Date(o.createdBy_updatedAt).toISOString(),
           firstName: o.createdBy_firstName,
           lastName: o.createdBy_lastName,
           active: o.from_active === 1,
@@ -149,13 +156,48 @@ export default class TransactionService {
         } : undefined,
         pointOfSale: {
           id: o.pointOfSale_id,
-          createdAt: new Date(o.pointOfSale_createdAt),
-          updatedAt: new Date(o.pointOfSaleRev_updatedAt),
+          createdAt: new Date(o.pointOfSale_createdAt).toISOString(),
+          updatedAt: new Date(o.pointOfSaleRev_updatedAt).toISOString(),
           name: o.pointOfSaleRev_name,
         },
-        value: DineroTransformer.Instance.from(o.value || 0),
+        value: value.toObject(),
       };
       return v;
     });
+  }
+
+  public static async getSingleTransaction(id: number): Promise<TransactionResponse | undefined> {
+    const transaction = await Transaction.findOne(id, {
+      relations: [
+        'from', 'createdAt', 'updatedAt', 'createdBy', 'subTransactions', 'subTransactions.to', 'subTransactions.subTransactionRows',
+        // We query a lot here, but we will parse this later to a very simple BaseResponse
+        'pointOfSale', 'pointOfSale.pointOfSale',
+        'subTransactions.container', 'subTransactions.container.container',
+        'subTransactions.subTransactionRows.product', 'subTransactions.subTransactionRows.product.product',
+      ],
+    });
+
+    if (transaction === undefined) return undefined;
+
+    return {
+      id: transaction.id,
+      from: parseUserToBaseResponse(transaction.from, false),
+      createdBy: transaction.createdBy
+        ? parseUserToBaseResponse(transaction.createdBy, false)
+        : undefined,
+      createdAt: transaction.createdAt.toISOString(),
+      updatedAt: transaction.updatedAt.toISOString(),
+      pointOfSale: parsePOSToBasePOS(transaction.pointOfSale, false),
+      subTransactions: transaction.subTransactions.map((s) => ({
+        id: s.id,
+        to: parseUserToBaseResponse(s.to, false),
+        container: parseContainerToBaseResponse(s.container, false),
+        subTransactionRows: s.subTransactionRows.map((r) => ({
+          id: r.id,
+          amount: r.amount,
+          product: parseProductToBaseResponse(r.product, false),
+        })),
+      })),
+    } as TransactionResponse;
   }
 }

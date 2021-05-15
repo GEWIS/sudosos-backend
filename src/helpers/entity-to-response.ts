@@ -15,15 +15,15 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+import User from '../entity/user/user';
+import { BaseUserResponse } from '../controller/response/user-response';
 
-/**
- * @typedef BaseResponse
- * @property {number} id.required - The unique id of the entity.
- * @property {string} createdAt.required - The creation Date of the entity.
- * @property {string} updatedAt.required - The last update Date of the entity.
- */
-export default interface BaseResponse {
-  id: number,
-  createdAt?: string,
-  updatedAt?: string,
+export function parseUserToBaseResponse(user: User, timestamps: boolean): BaseUserResponse {
+  return {
+    id: user.id,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    createdAt: timestamps ? user.createdAt.toISOString() : undefined,
+    updatedAt: timestamps ? user.updatedAt.toISOString() : undefined,
+  } as BaseUserResponse;
 }

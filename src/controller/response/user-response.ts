@@ -19,8 +19,9 @@ import BaseResponse from './base-response';
 import { UserType } from '../../entity/user/user';
 
 /**
- * @typedef {BaseUserResponse} BaseProductResponse
- * @property {string} name.required - The name of the user.
+ * @typedef {BaseResponse} BaseUserResponse
+ * @property {string} firstName.required - The name of the user.
+ * @property {string} lastName - The last name of the user
  */
 export interface BaseUserResponse extends BaseResponse {
   firstName: string,
@@ -28,12 +29,10 @@ export interface BaseUserResponse extends BaseResponse {
 }
 
 /**
- * @typedef {UserResponse} UserResponse
- * @property {string} firstName.required - The first name of the user
- * @property {string} lastName - The last name of the user
+ * @typedef {BaseUserResponse} UserResponse
  * @property {boolean} active.required - Whether the user activated
  * @property {boolean} deleted.required - Whether the user is deleted
- * @property {UserType.model} type.required - The type of user
+ * @property {integer} type.required - The type of user
  */
 
 export interface UserResponse extends BaseUserResponse {
