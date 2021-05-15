@@ -22,6 +22,7 @@ import Product from '../entity/product/product';
 import ProductRevision from '../entity/product/product-revision';
 import UpdatedProduct from '../entity/product/updated-product';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
+import QueryFilter, {FilterOptions} from "../helpers/query-filter";
 
 /**
  * Wrapper for all Product related logic.
@@ -50,10 +51,9 @@ export default class ProductService {
 
   /**
    * Query for getting all products based on user.
-   * @param owner - If specified only return products belonging to this owner.
-   * @param productId - If specified only return the product with id productId.
+   * @param filterOptions
    */
-  public static async getProducts(owner: User = null, productId: number = null)
+  public static async getProducts(filterOptions?: FilterOptions)
     : Promise<ProductResponse[]> {
     const builder = createQueryBuilder()
       .from(Product, 'product')
@@ -80,13 +80,7 @@ export default class ProductService {
         'productrevision.picture',
         'productrevision.alcoholpercentage',
       ]);
-
-    if (owner !== null) {
-      builder.andWhere('product.owner = :owner', { owner: owner.id });
-    }
-    if (productId !== null) {
-      builder.andWhere('product.id = :productId', { productId });
-    }
+    if (filterOptions) QueryFilter.applyFilter(builder, filterOptions);
 
     const rawProducts = await builder.getRawMany();
 
@@ -105,9 +99,9 @@ export default class ProductService {
 
   /**
    * Query to return all updated products.
-   * @param owner - If specified it will only return products who has the owner Owner.
+   * @param filterOptions
    */
-  public static async getUpdatedProducts(owner: User = null): Promise<ProductResponse[]> {
+  public static async getUpdatedProducts(filterOptions?: FilterOptions): Promise<ProductResponse[]> {
     const builder = createQueryBuilder()
       .from(Product, 'product')
       .innerJoinAndSelect(
@@ -132,9 +126,8 @@ export default class ProductService {
         'updatedproduct.picture',
         'updatedproduct.alcoholpercentage',
       ]);
-    if (owner !== null) {
-      builder.where('product.owner = :owner', { owner: owner.id });
-    }
+
+    if (filterOptions) QueryFilter.applyFilter(builder, filterOptions);
 
     const rawProducts = await builder.getRawMany();
 

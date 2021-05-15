@@ -37,6 +37,7 @@ import Gewis from './gewis/gewis';
 import BannerController from './controller/banner-controller';
 import { BaseControllerOptions } from './controller/base-controller';
 import UserController from './controller/user-controller';
+import ProductController from "./controller/product-controller";
 
 export class Application {
   app: express.Express;
@@ -135,6 +136,7 @@ export default async function createApp(): Promise<Application> {
   };
   application.app.use('/v1/banners', new BannerController(options).getRouter());
   application.app.use('/v1/users', new UserController(options).getRouter());
+  application.app.use('/v1/products', new ProductController(options).getRouter());
 
   // Start express application.
   logger.info(`Server listening on port ${process.env.HTTP_PORT}.`);
