@@ -20,7 +20,16 @@ import { SwaggerSpecification } from 'swagger-model-validator';
 import Policy, { MethodPolicy } from './policy';
 import PolicyMiddleware from '../middleware/policy-middleware';
 import RequestValidatorMiddleware from '../middleware/request-validator-middleware';
+import RoleManager from '../rbac/role-manager';
 
+/**
+ * This interface is a wrapper around all the parameters of the BaseController,
+ * such that changes are easily reflected in all other controllers.
+ */
+export interface BaseControllerOptions {
+  specification: SwaggerSpecification,
+  roleManager: RoleManager,
+}
 
 /**
  * The BaseController class is responsible for:
@@ -32,6 +41,16 @@ export default abstract class BaseController {
    * The express router used by this controller.
    */
   private router: Router;
+
+  /**
+   * A reference to the swagger specification passed in the base controller options.
+   */
+  protected specification: SwaggerSpecification;
+
+  /**
+   * A reference to the role manager passed in the base controller options.
+   */
+  protected roleManager: RoleManager;
 
   /**
    * Defines a new route on the router. Private helper function to reduce code duplication.
@@ -60,10 +79,14 @@ export default abstract class BaseController {
 
   /**
    * Creates a new controller instance, and generates the router based on its defined policy.
-   * @spec - The Swagger specification that validator middleware will validate against.
+   * @options - The options from which to extract parameters.
    */
-  public constructor(spec: SwaggerSpecification) {
+  public constructor(options: BaseControllerOptions) {
     this.router = express.Router({ strict: true });
+    this.specification = options.specification;
+    this.roleManager = options.roleManager;
+
+    const spec = options.specification;
 
     // Generate routes based on the policy
     const policy = this.getPolicy();

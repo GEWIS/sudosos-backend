@@ -64,8 +64,8 @@ describe('TransactionController', (): void => {
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
-    ctx.userToken = await tokenHandler.signToken({ user: ctx.users[0] }, '39');
-    ctx.adminToken = await tokenHandler.signToken({ user: ctx.users[6] }, '39');
+    ctx.userToken = await tokenHandler.signToken({ user: ctx.users[0], roles: ['User'] }, '39');
+    ctx.adminToken = await tokenHandler.signToken({ user: ctx.users[6], roles: ['User', 'Admin'] }, '39');
 
     ctx.specification = await Swagger.initialize(ctx.app);
     ctx.controller = new TransactionController(ctx.specification);
