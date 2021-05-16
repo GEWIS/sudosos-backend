@@ -140,16 +140,14 @@ export default class BorrelkaartGroupController extends BaseController {
 
     // handle request
     try {
-      // check if borrelkaart group in database
-      const bkg = await BorrelkaartGroupService
-        .getBorrelkaartGroupById(id);
+      const bkg = await BorrelkaartGroupService.getBorrelkaartGroupById(id);
       if (bkg) {
         res.json(bkg);
       } else {
         res.status(404).json('Borrelkaart group not found.');
       }
     } catch (error) {
-      this.logger.error('Could not return borrelkaart group:', error);
+      this.logger.error('Could not get borrelkaart group:', error);
       res.status(500).json('Internal server error.');
     }
   }
@@ -175,9 +173,12 @@ export default class BorrelkaartGroupController extends BaseController {
     // handle request
     try {
       if (await BorrelkaartGroupService.verifyBorrelkaartGroup(body)) {
-        // check if borrelkaart group in database
         if (await BorrelkaartGroup.findOne(id)) {
-          res.status(200).json('Joe');
+          if (await BorrelkaartGroupService.checkUserConflicts(body, id)) {
+            res.status(200).json(await BorrelkaartGroupService.updateBorrelkaartGroup(id, body));
+          } else {
+            res.status(409).json('Conflicting user posted.');
+          }
         } else {
           res.status(404).json('Borrelkaart group not found.');
         }
@@ -205,15 +206,13 @@ export default class BorrelkaartGroupController extends BaseController {
 
     // handle request
     try {
-      // check if borrelkaart group in database
       if (await BorrelkaartGroup.findOne(id)) {
-        const bkg = await BorrelkaartGroupService.deleteBorrelkaartGroup(id);
-        res.status(200).json(bkg);
+        res.status(200).json(await BorrelkaartGroupService.deleteBorrelkaartGroup(id));
       } else {
         res.status(404).json('Borrelkaart group not found.');
       }
     } catch (error) {
-      this.logger.error('Could not remove borrelkaart group:', error);
+      this.logger.error('Could not delete borrelkaart group:', error);
       res.status(500).json('Internal server error.');
     }
   }
