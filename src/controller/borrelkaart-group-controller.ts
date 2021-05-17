@@ -17,21 +17,19 @@
  */
 import { Response } from 'express';
 import log4js, { Logger } from 'log4js';
-import { SwaggerSpecification } from 'swagger-model-validator';
-import BaseController from './base-controller';
+import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import BorrelkaartGroupRequest from './request/borrelkaart-group-request';
 import { RequestWithToken } from '../middleware/token-middleware';
 import BorrelkaartGroup from '../entity/user/borrelkaart-group';
 import { addPaginationForFindOptions } from '../helpers/pagination';
-import AuthService from '../services/AuthService';
-import BorrelkaartGroupService from '../services/BorrelkaartGroupService';
+import BorrelkaartGroupService from '../service/borrelkaart-group-service';
 
 export default class BorrelkaartGroupController extends BaseController {
   private logger: Logger = log4js.getLogger('BorrelkaartGroupController');
 
-  public constructor(spec: SwaggerSpecification) {
-    super(spec);
+  public constructor(options: BaseControllerOptions) {
+    super(options);
     this.logger.level = process.env.LOG_LEVEL;
   }
 
@@ -42,27 +40,27 @@ export default class BorrelkaartGroupController extends BaseController {
     return {
       '/': {
         GET: {
-          policy: AuthService.isAdmin.bind(this),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'BorrelkaartGroup', ['*']),
           handler: this.getAllBorrelkaartGroups.bind(this),
         },
         POST: {
           body: { modelName: 'BorrelkaartGroupRequest' },
-          policy: AuthService.isAdmin.bind(this),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'create', 'all', 'BorrelkaartGroup', ['*']),
           handler: this.createBorrelkaartGroup.bind(this),
         },
       },
       '/:id(\\d+)': {
         GET: {
-          policy: AuthService.isAdmin.bind(this),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'BorrelkaartGroup', ['*']),
           handler: this.getBorrelkaartGroupById.bind(this),
         },
         PATCH: {
           body: { modelName: 'BorrelkaartGroupRequest' },
-          policy: AuthService.isAdmin.bind(this),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'update', 'all', 'BorrelkaartGroup', ['*']),
           handler: this.updateBorrelkaartGroup.bind(this),
         },
         DELETE: {
-          policy: AuthService.isAdmin.bind(this),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'delete', 'all', 'BorrelkaartGroup', ['*']),
           handler: this.deleteBorrelkaartGroup.bind(this),
         },
       },

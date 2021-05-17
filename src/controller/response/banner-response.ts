@@ -16,11 +16,10 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import BaseResponse from './base-response';
+
 /**
- * @typedef BannerResponse
- * @property {string} createdAt.required - Date of creation
- * @property {string} updateAt.required - Date of last update
- * @property {number} id.required - Id of the borrelkaart group
+ * @typedef {BaseResponse} BannerResponse
  * @property {string} name - Name/label of the banner
  * @property {string} picture - Location of the image
  * @property {number} duration - How long the banner should be shown (in seconds)
@@ -28,10 +27,7 @@
  * @property {string} startDate - The starting date from which the banner should be shown
  * @property {string} endDate - The end date from which the banner should no longer be shown
  */
-export default interface BannerResponse {
-  createdAt: string,
-  updatedAt: string,
-  id: number,
+export default interface BannerResponse extends BaseResponse {
   name: string,
   picture: string,
   duration: number,

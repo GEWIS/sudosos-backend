@@ -18,6 +18,7 @@
 import { FindManyOptions } from 'typeorm';
 import BorrelkaartGroupRequest from '../controller/request/borrelkaart-group-request';
 import BorrelkaartGroupResponse from '../controller/response/borrelkaart-group-response';
+import { UserResponse } from '../controller/response/user-response';
 import BorrelkaartGroup from '../entity/user/borrelkaart-group';
 import User from '../entity/user/user';
 import UserBorrelkaartGroup from '../entity/user/user-borrelkaart-group';
@@ -116,29 +117,32 @@ export default class BorrelkaartGroupService {
    */
   public static asBorrelkaartGroupResponse(bkg: BorrelkaartGroup, users: User[]):
   BorrelkaartGroupResponse | undefined {
-    // TODO: ASK ABOUT USER RESPONSE
     if (!bkg) {
       return undefined;
     }
-    // let users: User[] = null;
-    // if (usersReq) {
-    //   users = [];
-    //   usersReq.forEach((userReq) => {
-    //     const user = {
-    //       ...userReq,
-    //       createdAt: userReq.createdAt.toISOString(),
-    //       updatedAt: userReq.updatedAt.toISOString(),
-    //     } as UserResponse;
-    //     users.push(user);
-    //   });
-    // }
+
+    // parse users to user responses if users in request
+    let userResponses: UserResponse[] = null;
+    if (users) {
+      userResponses = [];
+      users.forEach((user) => {
+        const userRes = {
+          ...user,
+          createdAt: user.createdAt.toISOString(),
+          updatedAt: user.updatedAt.toISOString(),
+        } as UserResponse;
+        userResponses.push(userRes);
+      });
+    }
+
+    // return as borrelkaart group response
     return {
       ...bkg,
       createdAt: bkg.createdAt.toISOString(),
       updatedAt: bkg.updatedAt.toISOString(),
       activeStartDate: bkg.activeStartDate.toISOString(),
       activeEndDate: bkg.activeEndDate.toISOString(),
-      users,
+      users: userResponses,
     } as BorrelkaartGroupResponse;
   }
 

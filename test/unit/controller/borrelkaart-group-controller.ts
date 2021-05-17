@@ -19,7 +19,7 @@ import bodyParser from 'body-parser';
 import { expect, request } from 'chai';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
-import { Connection, Raw } from 'typeorm';
+import { Connection } from 'typeorm';
 import TokenHandler from '../../../src/authentication/token-handler';
 import BorrelkaartGroupController from '../../../src/controller/borrelkaart-group-controller';
 import BorrelkaartGroupRequest from '../../../src/controller/request/borrelkaart-group-request';
@@ -29,7 +29,8 @@ import BorrelkaartGroup from '../../../src/entity/user/borrelkaart-group';
 import User, { UserType } from '../../../src/entity/user/user';
 import UserBorrelkaartGroup from '../../../src/entity/user/user-borrelkaart-group';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
-import BorrelkaartGroupService from '../../../src/services/BorrelkaartGroupService';
+import RoleManager from '../../../src/rbac/role-manager';
+import BorrelkaartGroupService from '../../../src/service/borrelkaart-group-service';
 import Swagger from '../../../src/start/swagger';
 
 function bkgEq(req: BorrelkaartGroupRequest, res: BorrelkaartGroupResponse): Boolean {
@@ -75,8 +76,6 @@ async function saveBKG(bkgReq: BorrelkaartGroupRequest): Promise<BorrelkaartGrou
     .map((user) => ({ user, borrelkaartGroup: bkg } as UserBorrelkaartGroup));
   await UserBorrelkaartGroup.save(userLinks);
 
-  console.log('pre return');
-  console.log(bkg);
   return BorrelkaartGroupService.asBorrelkaartGroupResponse(bkg, bkgReq.users);
 }
 
@@ -130,8 +129,8 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
-    const adminToken = await tokenHandler.signToken({ user: adminUser }, 'nonce admin');
-    const token = await tokenHandler.signToken({ user: localUser }, 'nonce');
+    const adminToken = await tokenHandler.signToken({ user: adminUser, roles: ['Admin'] }, 'nonce admin');
+    const token = await tokenHandler.signToken({ user: localUser, roles: [] }, 'nonce');
 
     // test borrelkaart groups
     const validBorrelkaartGroupReq = {
@@ -165,7 +164,23 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
     // start app
     const app = express();
     const specification = await Swagger.initialize(app);
-    const controller = new BorrelkaartGroupController(specification);
+
+    const all = { all: new Set<string>(['*']) };
+    const roleManager = new RoleManager();
+    roleManager.registerRole({
+      name: 'Admin',
+      permissions: {
+        BorrelkaartGroup: {
+          create: all,
+          get: all,
+          update: all,
+          delete: all,
+        },
+      },
+      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
+    });
+
+    const controller = new BorrelkaartGroupController({ specification, roleManager });
     app.use(bodyParser.json());
     app.use(new TokenMiddleware({ tokenHandler, refreshFactor: 0.5 }).getMiddleware());
     app.use('/borrelkaartgroups', controller.getRouter());
@@ -538,8 +553,6 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
     it('should delete the borrelkaart group and user links from the database and return an HTTP 200 and the borrelkaart group with given id if admin', async () => {
       // save valid borrelkaart group with id 1
       const bkgDel = await saveBKG(ctx.validBorrelkaartGroupReq);
-      console.log('post return');
-      console.log(bkgDel);
 
       // delete the borrelkaart group
       const res = await request(ctx.app)
@@ -547,7 +560,7 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
       // test deletion
-      expect(res.body as BorrelkaartGroupResponse, 'returned borrelkaart group incorrect').to.equal(bkgDel);
+      expect(res.body as BorrelkaartGroupResponse, 'returned borrelkaart group incorrect').to.eql(bkgDel);
       expect(await BorrelkaartGroup.findOne(1), 'borrelkaart group not deleted').to.be.undefined;
 
       // test relation deletion

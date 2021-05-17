@@ -15,25 +15,19 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-
-import User from '../../entity/user/user';
+import BaseResponse from './base-response';
+import { UserResponse } from './user-response';
 
 /**
-  * @typedef BorrelkaartGroupResponse
-  * @property {string} createdAt.required - Date of creation
-  * @property {string} updateAt.required - Date of last update
-  * @property {number} id.required - Id of the borrelkaart group
+  * @typedef {BaseResponse} BorrelkaartGroupResponse
   * @property {string} name.required - Name of the borrelkaart group
   * @property {string} activeStartDate - Start date of the borrelkaart group
   * @property {string} activeEndDate.required - End date of the borrelkaart group
-  * @property {Array.<User>} users.required - Users in the borrelkaart group
+  * @property {Array.<UserResponse>} users.required - Users in the borrelkaart group
   */
-export default interface BorrelkaartGroupResponse {
-  createdAt: string,
-  updatedAt: string,
-  id: number,
+export default interface BorrelkaartGroupResponse extends BaseResponse {
   name: string,
   activeStartDate?: string,
   activeEndDate: string,
-  users: Array<User>,
+  users: Array<UserResponse>,
 }

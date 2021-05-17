@@ -109,7 +109,7 @@ export default async function createApp(): Promise<Application> {
   // Silent in-dependency logs unless really wanted by the environment.
   const logger = log4js.getLogger('Console');
   logger.level = process.env.LOG_LEVEL;
-  // console.log = (message: any) => logger.debug(message);
+  console.log = (message: any) => logger.debug(message);
 
   // Set up monetary value configuration.
   dinero.defaultCurrency = process.env.CURRENCY_CODE as Currency;
@@ -131,7 +131,7 @@ export default async function createApp(): Promise<Application> {
   await gewis.registerRoles();
 
 
-  // REMOVE LATER, banner controller development
+  // REMOVE LATER
   const options: BaseControllerOptions = {
     specification: application.specification,
     roleManager: application.roleManager,
@@ -140,7 +140,7 @@ export default async function createApp(): Promise<Application> {
   application.app.use('/v1/users', new UserController(options).getRouter());
   application.app.use('/v1/products', new ProductController(options).getRouter());
   application.app.use('/v1/transactions', new TransactionController(options).getRouter());
-  application.app.use('/v1/borrelkaartgroups', new BorrelkaartGroupController(options.specification).getRouter());
+  application.app.use('/v1/borrelkaartgroups', new BorrelkaartGroupController(options).getRouter());
 
   // Start express application.
   logger.info(`Server listening on port ${process.env.HTTP_PORT}.`);
