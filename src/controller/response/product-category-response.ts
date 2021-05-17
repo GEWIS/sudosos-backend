@@ -15,29 +15,12 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import User from '../entity/user/user';
+import BaseResponse from './base-response';
 
 /**
- * The contents of the JWT used for user authentication.
+ * @typedef {ProductCategoryResponse} ProductCategoryResponse
+ * @property {string} name.required - The name of the productCategory.
  */
-export default class JsonWebToken {
-  /**
-   * The token holds a reference to the user to which this token belongs.
-   */
-  public user: User;
-
-  /**
-   * The roles that are assigned to the specific user.
-   */
-  public roles: string[];
-
-  /**
-   * The JWT expiry field. Set automatically by signing the token.
-   */
-  public readonly exp?: number;
-
-  /**
-   * The JWT not-before field. Set automatically by signing the token.
-   */
-  public readonly nbf?: number;
+export interface ProductCategoryResponse extends BaseResponse {
+  name: string,
 }

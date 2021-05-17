@@ -15,29 +15,30 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import User from '../entity/user/user';
+import { SelectQueryBuilder } from 'typeorm';
 
-/**
- * The contents of the JWT used for user authentication.
- */
-export default class JsonWebToken {
-  /**
-   * The token holds a reference to the user to which this token belongs.
-   */
-  public user: User;
+export interface FilterOption {
+  variable: string,
+  argument: string | number,
+}
 
-  /**
-   * The roles that are assigned to the specific user.
-   */
-  public roles: string[];
+export type FilterOptions = FilterOption[] | FilterOption;
 
-  /**
-   * The JWT expiry field. Set automatically by signing the token.
-   */
-  public readonly exp?: number;
+export default class QueryFilter {
+  public static applyFilter(
+    query: SelectQueryBuilder<any>, filterOptions: FilterOptions,
+  ): SelectQueryBuilder<any> {
+    let options: FilterOption[];
 
-  /**
-   * The JWT not-before field. Set automatically by signing the token.
-   */
-  public readonly nbf?: number;
+    if (Array.isArray(filterOptions)) {
+      options = filterOptions as FilterOption[];
+    } else {
+      options = [filterOptions];
+    }
+
+    options.forEach((filterOption) => {
+      query.andWhere(`${filterOption.variable} = ${filterOption.argument}`);
+    });
+    return query;
+  }
 }

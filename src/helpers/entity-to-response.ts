@@ -16,28 +16,15 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import User from '../entity/user/user';
+import { BaseUserResponse } from '../controller/response/user-response';
 
-/**
- * The contents of the JWT used for user authentication.
- */
-export default class JsonWebToken {
-  /**
-   * The token holds a reference to the user to which this token belongs.
-   */
-  public user: User;
-
-  /**
-   * The roles that are assigned to the specific user.
-   */
-  public roles: string[];
-
-  /**
-   * The JWT expiry field. Set automatically by signing the token.
-   */
-  public readonly exp?: number;
-
-  /**
-   * The JWT not-before field. Set automatically by signing the token.
-   */
-  public readonly nbf?: number;
+// eslint-disable-next-line import/prefer-default-export
+export function parseUserToBaseResponse(user: User, timestamps: boolean): BaseUserResponse {
+  return {
+    id: user.id,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    createdAt: timestamps ? user.createdAt.toISOString() : undefined,
+    updatedAt: timestamps ? user.updatedAt.toISOString() : undefined,
+  } as BaseUserResponse;
 }

@@ -15,29 +15,26 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import User from '../entity/user/user';
+import { DineroObject } from 'dinero.js';
+import User from '../../entity/user/user';
+import ProductCategory from '../../entity/product/product-category';
 
 /**
- * The contents of the JWT used for user authentication.
+ * @typedef UpdateProductRequest
+ * @property {integer} id.required
+ * @property {string} name.required
+ * @property {Dinero.model} price.required
+ * @property {User.model} owner.required
+ * @property {ProductCategory.model} category.required
+ * @property {string} picture.required
+ * @property {number} alcoholPercentage
  */
-export default class JsonWebToken {
-  /**
-   * The token holds a reference to the user to which this token belongs.
-   */
-  public user: User;
-
-  /**
-   * The roles that are assigned to the specific user.
-   */
-  public roles: string[];
-
-  /**
-   * The JWT expiry field. Set automatically by signing the token.
-   */
-  public readonly exp?: number;
-
-  /**
-   * The JWT not-before field. Set automatically by signing the token.
-   */
-  public readonly nbf?: number;
+export default interface UpdateProductRequest {
+  id: number,
+  name: string,
+  price: DineroObject,
+  owner: User,
+  category: ProductCategory,
+  picture: string,
+  alcoholPercentage?: number,
 }

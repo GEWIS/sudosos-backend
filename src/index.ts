@@ -20,7 +20,7 @@ import * as http from 'http';
 import * as util from 'util';
 import * as crypto from 'crypto';
 import { promises as fs } from 'fs';
-import bodyParser from 'body-parser';
+import { json } from 'body-parser';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import dinero, { Currency } from 'dinero.js';
 import { config } from 'dotenv';
@@ -32,13 +32,21 @@ import Swagger from './start/swagger';
 import TokenHandler from './authentication/token-handler';
 import TokenMiddleware from './middleware/token-middleware';
 import AuthenticationController from './controller/authentication-controller';
+import RoleManager from './rbac/role-manager';
+import Gewis from './gewis/gewis';
 import BannerController from './controller/banner-controller';
+import { BaseControllerOptions } from './controller/base-controller';
+import UserController from './controller/user-controller';
+import ProductController from './controller/product-controller';
+import TransactionController from './controller/transaction-controller';
 import BorrelkaartGroupController from './controller/borrelkaart-group-controller';
 
 export class Application {
   app: express.Express;
 
   specification: SwaggerSpecification;
+
+  roleManager: RoleManager;
 
   server: http.Server;
 
@@ -76,7 +84,13 @@ async function setupAuthentication(application: Application) {
   });
 
   // Define authentication controller and bind before middleware.
-  const controller = new AuthenticationController(application.specification, tokenHandler);
+  const controller = new AuthenticationController(
+    {
+      specification: application.specification,
+      roleManager: application.roleManager,
+    },
+    tokenHandler,
+  );
   application.app.use('/v1/authentication', controller.getRouter());
 
   // Define middleware to be used by any other route.
@@ -104,16 +118,32 @@ export default async function createApp(): Promise<Application> {
   // Create express application.
   application.app = express();
   application.specification = await Swagger.initialize(application.app);
-  application.app.use(bodyParser.json());
+  application.app.use(json());
+
+  // Setup RBAC.
+  application.roleManager = new RoleManager();
 
   // Setup token handler and authentication controller.
   await setupAuthentication(application);
 
-  // REMOVE LATER, controller development
-  application.app.use('/v1/banners', new BannerController(application.specification).getRouter());
-  application.app.use('/v1/borrelkaartgroups', new BorrelkaartGroupController(application.specification).getRouter());
+  // Setup GEWIS-specific module.
+  const gewis = new Gewis(application.roleManager);
+  await gewis.registerRoles();
+
+
+  // REMOVE LATER, banner controller development
+  const options: BaseControllerOptions = {
+    specification: application.specification,
+    roleManager: application.roleManager,
+  };
+  application.app.use('/v1/banners', new BannerController(options).getRouter());
+  application.app.use('/v1/users', new UserController(options).getRouter());
+  application.app.use('/v1/products', new ProductController(options).getRouter());
+  application.app.use('/v1/transactions', new TransactionController(options).getRouter());
+  application.app.use('/v1/borrelkaartgroups', new BorrelkaartGroupController(options.specification).getRouter());
 
   // Start express application.
+  logger.info(`Server listening on port ${process.env.HTTP_PORT}.`);
   application.server = application.app.listen(process.env.HTTP_PORT);
   application.logger.info('Application started.');
   return application;
@@ -122,5 +152,8 @@ export default async function createApp(): Promise<Application> {
 if (require.main === module) {
   // Only execute the application directly if this is the main execution file.
   config();
-  createApp();
+  createApp().catch((e) => {
+    const logger = log4js.getLogger('index');
+    logger.fatal(e);
+  });
 }

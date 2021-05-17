@@ -15,29 +15,10 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import User from '../entity/user/user';
 
 /**
- * The contents of the JWT used for user authentication.
+ * @typedef Dinero
+ * @property {integer} amount.required - The amount of money as integer in the given precision.
+ * @property {integer} precision.required - The precision of the amount, in decimal places.
+ * @property {string} currency.required - The ISO 4217 currency code.
  */
-export default class JsonWebToken {
-  /**
-   * The token holds a reference to the user to which this token belongs.
-   */
-  public user: User;
-
-  /**
-   * The roles that are assigned to the specific user.
-   */
-  public roles: string[];
-
-  /**
-   * The JWT expiry field. Set automatically by signing the token.
-   */
-  public readonly exp?: number;
-
-  /**
-   * The JWT not-before field. Set automatically by signing the token.
-   */
-  public readonly nbf?: number;
-}
