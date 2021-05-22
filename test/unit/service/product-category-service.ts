@@ -86,6 +86,14 @@ describe('ProductCategoryService', async (): Promise<void> => {
       const res: ProductCategoryResponse[] = await ProductCategoryService.getProductCategories();
 
       expect(productCategoryEqualset(res, ctx.categories)).to.be.true;
+      expect(res.every(
+        (c: ProductCategoryResponse) => ctx.specification.validateModel(
+          'ProductCategoryResponse',
+          c,
+          false,
+          true,
+        ).valid,
+      )).to.be.true;
     });
     it('should return a single productCategory if id is specified', async () => {
       const res: ProductCategoryResponse[] = await ProductCategoryService
