@@ -50,8 +50,8 @@ export default class ProductCategoryService {
     return {
       id: productCategory.id,
       name: productCategory.name,
-      createdAt: productCategory.createdAt,
-      updatedAt: productCategory.updatedAt,
+      createdAt: productCategory.createdAt.toISOString(),
+      updatedAt: productCategory.updatedAt.toISOString(),
     };
   }
 
