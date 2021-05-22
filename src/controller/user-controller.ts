@@ -116,8 +116,8 @@ export default class UserController extends BaseController {
    * @route GET /users
    * @group users - Operations of user controller
    * @security JWT
-   * @param {integer} take.query - How many users the endpoint should return
-   * @param {integer} skip.query - How many users should be skipped (for pagination)
+   * @param {number} take.query - How many users the endpoint should return
+   * @param {number} skip.query - How many users should be skipped (for pagination)
    * @returns {[User.model]} 200 - A list of all users
    */
   public async getAllUsers(req: RequestWithToken, res: Response): Promise<void> {
@@ -136,7 +136,7 @@ export default class UserController extends BaseController {
    * Get an individual user
    * @route GET /users/{id}
    * @group users - Operations of user controller
-   * @param {integer} id.path.required - The id of the user
+   * @param {number} id.path.required - The id of the user
    * @security JWT
    * @returns {User.model} 200 - Individual user
    * @returns {string} 404 - Nonexistent user id
@@ -241,7 +241,7 @@ export default class UserController extends BaseController {
    * Delete a single user
    * @route DELETE /users/{id}
    * @group users - Operations of user controller
-   * @param {integer} id.path.required - The id of the user
+   * @param {number} id.path.required - The id of the user
    * @security JWT
    * @returns {string} 204 - User successfully deleted
    * @returns {string} 400 - Cannot delete yourself
@@ -277,7 +277,7 @@ export default class UserController extends BaseController {
    * Get an user's products
    * @route GET /users/{id}/products
    * @group users - Operations of user controller
-   * @param {integer} id.path.required - The id of the user
+   * @param {number} id.path.required - The id of the user
    * @security JWT
    * @returns {[Product.model]} 200 - List of products.
    */
@@ -305,7 +305,7 @@ export default class UserController extends BaseController {
    * Get an user's updated products
    * @route GET /users/{id}/products/updated
    * @group users - Operations of user controller
-   * @param {integer} id.path.required - The id of the user
+   * @param {number} id.path.required - The id of the user
    * @security JWT
    * @returns {[Product.model]} 200 - List of products.
    */
@@ -333,7 +333,7 @@ export default class UserController extends BaseController {
    * Get an user's transactions (from, to or created)
    * @route GET /users/{id}/transactions
    * @group users - Operations of user controller
-   * @param {integer} id.path.required - The id of the user
+   * @param {number} id.path.required - The id of the user
    * @security JWT
    * @returns {[Transaction.model]} 200 - List of transactions.
    */

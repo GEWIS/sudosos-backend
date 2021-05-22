@@ -59,8 +59,8 @@ function parseReqSkipTake(req: RequestWithToken): { take?: number, skip?: number
  * based on pagination parameters in the request URL
  *
  * To make pagination appear in Swagger, add the following two lines to your function definition:
- * // @param {integer} take.query - How many users the endpoint should return
- * // @param {integer} skip.query - How many users should be skipped (for pagination)
+ * // @param {number} take.query - How many users the endpoint should return
+ * // @param {number} skip.query - How many users should be skipped (for pagination)
  *
  * @param req RequestWithToken object, as received in the controller
  * @returns FindManyOptions skip and take parameters for the findoptions for TypeORM.

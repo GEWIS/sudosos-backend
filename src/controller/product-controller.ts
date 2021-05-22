@@ -92,7 +92,7 @@ export default class ProductController extends BaseController {
    * Returns the requested product
    * @route GET /products/{id}
    * @group products - Operations of products controller
-   * @param {integer} id.path.required - The id of the product which should be returned
+   * @param {Number} id.path.required - The id of the product which should be returned
    * @security JWT
    * @returns {Product.model} 200 - The requested product entity
    * @returns {string} 404 - Not found error
@@ -143,7 +143,7 @@ export default class ProductController extends BaseController {
    * Returns the requested updated product
    * @route GET /products/updated/{id}
    * @group products - Operations of products controller
-   * @param {integer} id.path.required - The id of the product which should be returned
+   * @param {number} id.path.required - The id of the product which should be returned
    * @security JWT
    * @returns {Product.model} 200 - The requested updated product entity
    * @returns {string} 404 - Not found error

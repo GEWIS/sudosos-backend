@@ -23,7 +23,7 @@ import {
  * @typedef BaseEntityWithoutId
  * @property {string} createdAt - The creation date of the object.
  * @property {string} updatedAt - The last update date of the object.
- * @property {integer} version - The current version of the object.
+ * @property {number} version - The current version of the object.
  */
 export default class BaseEntityWithoutId extends OrmBaseEntity {
   @CreateDateColumn({ update: false })

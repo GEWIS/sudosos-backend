@@ -21,7 +21,7 @@ import ProductCategory from '../../entity/product/product-category';
 
 /**
  * @typedef UpdateProductRequest
- * @property {integer} id.required
+ * @property {number} id.required
  * @property {string} name.required
  * @property {Dinero.model} price.required
  * @property {User.model} owner.required

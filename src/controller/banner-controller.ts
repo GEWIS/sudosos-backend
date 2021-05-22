@@ -128,7 +128,7 @@ export default class BannerController extends BaseController {
    * Returns the requested banner
    * @route GET /banners/{id}
    * @group banners - Operations of banner controller
-   * @param {integer} id.path.required - The id of the banner which should be returned
+   * @param {number} id.path.required - The id of the banner which should be returned
    * @security JWT
    * @returns {BannerResponse.model} 200 - The requested banner entity
    * @returns {string} 404 - Not found error
@@ -157,7 +157,7 @@ export default class BannerController extends BaseController {
    * Updates the requested banner
    * @route PATCH /banners/{id}
    * @group banners - Operations of banner controller
-   * @param {integer} id.path.required - The id of the banner which should be updated
+   * @param {number} id.path.required - The id of the banner which should be updated
    * @param {BannerRequest.model} banner.body.required - The updated banner
    * @security JWT
    * @returns {BannerResponse.model} 200 - The requested banner entity
@@ -193,7 +193,7 @@ export default class BannerController extends BaseController {
    * Deletes the requested banner
    * @route DELETE /banners/{id}
    * @group banners - Operations of banner controller
-   * @param {integer} id.path.required - The id of the banner which should be deleted
+   * @param {number} id.path.required - The id of the banner which should be deleted
    * @security JWT
    * @returns {BannerResponse.model} 200 - The deleted banner entity
    * @returns {string} 404 - Not found error
