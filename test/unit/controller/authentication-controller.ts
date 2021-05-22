@@ -81,7 +81,7 @@ describe('AuthenticationController', async (): Promise<void> => {
     // Silent in-dependency logs unless really wanted by the environment.
     const logger = log4js.getLogger('Console');
     logger.level = process.env.LOG_LEVEL;
-    console.log = (message: any) => logger.debug(message);
+    console.log = (message: any, ...additional: any[]) => logger.debug(message, ...additional);
 
     ctx.specification = await Swagger.initialize(ctx.app);
     ctx.controller = new AuthenticationController({
