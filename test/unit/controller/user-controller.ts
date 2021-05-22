@@ -148,7 +148,8 @@ describe('UserController', (): void => {
 
       const users = res.body as User[];
       const spec = await Swagger.importSpecification();
-      expect(users.length).to.equal(24);
+      const pagination = parseInt(process.env.PAGINATION_DEFAULT, 10);
+      expect(users.length).to.equal(pagination);
       users.forEach((user: User) => {
         verifyUserEntity(spec, user);
       });

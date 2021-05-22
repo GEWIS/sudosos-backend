@@ -126,7 +126,8 @@ describe('TransactionController', (): void => {
 
       const transactions = res.body as BaseTransactionResponse[];
       const spec = await Swagger.importSpecification();
-      expect(transactions.length).to.equal(24);
+      const pagination = parseInt(process.env.PAGINATION_DEFAULT, 10);
+      expect(transactions.length).to.equal(pagination);
       transactions.forEach((transaction: BaseTransactionResponse) => {
         verifyBaseTransactionEntity(spec, transaction);
       });
@@ -220,7 +221,8 @@ describe('TransactionController', (): void => {
 
       let transactions = res.body as BaseTransactionResponse[];
       const spec = await Swagger.importSpecification();
-      expect(transactions.length).to.equal(24);
+      const pagination = parseInt(process.env.PAGINATION_DEFAULT, 10);
+      expect(transactions.length).to.equal(pagination);
       transactions.map((t) => {
         verifyBaseTransactionEntity(spec, t);
         expect(new Date(t.createdAt)).to.be.greaterThan(fromDate);
@@ -256,7 +258,8 @@ describe('TransactionController', (): void => {
 
       let transactions = res.body as BaseTransactionResponse[];
       const spec = await Swagger.importSpecification();
-      expect(transactions.length).to.equal(24);
+      const pagination = parseInt(process.env.PAGINATION_DEFAULT, 10);
+      expect(transactions.length).to.equal(pagination);
       transactions.map((t) => {
         verifyBaseTransactionEntity(spec, t);
         expect(new Date(t.createdAt)).to.be.lessThan(tillDate);
