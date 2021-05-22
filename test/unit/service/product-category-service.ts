@@ -56,8 +56,8 @@ describe('ProductCategoryService', async (): Promise<void> => {
     specification: SwaggerSpecification,
     categories: ProductCategory[],
   };
-  describe('Get', async (): Promise<void> => {
-    beforeEach(async () => {
+  describe('getProductCategories function', async (): Promise<void> => {
+    before(async () => {
       const connection = await Database.initialize();
 
       const categories = await seedProductCategories();
@@ -75,14 +75,12 @@ describe('ProductCategoryService', async (): Promise<void> => {
         categories,
       };
     });
-  });
 
-  // close database connection
-  afterEach(async () => {
-    await ctx.connection.close();
-  });
+    // close database connection
+    after(async () => {
+      await ctx.connection.close();
+    });
 
-  describe('getProductCategories function', () => {
     it('should return all productCategories', async () => {
       const res: ProductCategoryResponse[] = await ProductCategoryService.getProductCategories();
 
@@ -93,12 +91,12 @@ describe('ProductCategoryService', async (): Promise<void> => {
         .getProductCategoryById(ctx.categories[0].id);
 
       expect(res).to.be.not.null;
-      expect(res.id).to.be.equal(ctx.categories[0].id);
-      expect(res.name).to.be.equal(ctx.categories[0].name);
+      expect(res.id).to.equal(ctx.categories[0].id);
+      expect(res.name).to.equal(ctx.categories[0].name);
     });
     it('should return nothing if a wrong id is specified', async () => {
       const res: ProductCategoryResponse = await ProductCategoryService
-        .getProductCategoryById(ctx.categories.length);
+        .getProductCategoryById(ctx.categories.length + 1);
 
       expect(res).to.be.null;
     });

@@ -46,7 +46,7 @@ export default class ProductCategoryService {
   public static async getProductCategoryById(id: number): Promise<ProductCategoryResponse> {
     const productCategory = await ProductCategory.findOne(id);
     if (!productCategory) {
-      return undefined;
+      return null;
     }
     return this.asProductCategoryResponse(productCategory);
   }
@@ -81,7 +81,7 @@ export default class ProductCategoryService {
     : Promise<ProductCategoryResponse> {
     const productCategoryToUpdate = await ProductCategory.findOne(id);
     if (!productCategoryToUpdate) {
-      return undefined;
+      return null;
     }
     const productCategory = Object.assign(productCategoryToUpdate, request);
     return ProductCategory.save(productCategory)
@@ -95,7 +95,7 @@ export default class ProductCategoryService {
   public static async deleteProductCategory(id: number): Promise<ProductCategoryResponse> {
     const productCategory = await ProductCategory.findOne(id);
     if (!productCategory) {
-      return undefined;
+      return null;
     }
     return ProductCategory.delete(id).then(() => this.asProductCategoryResponse(productCategory));
   }
