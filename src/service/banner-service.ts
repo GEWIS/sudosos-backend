@@ -23,6 +23,7 @@ import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 
 export interface BannerFilterParameters {
   bannerId?: number,
+  active?: boolean,
 }
 
 export default class BannerService {
@@ -98,6 +99,7 @@ export default class BannerService {
     : Promise<BannerResponse[]> {
     const mapping: FilterMapping = {
       bannerId: 'id',
+      active: 'active',
     };
     const banners = await Banner.find({
       where: QueryFilter.createFilterWhereClause(mapping, params),
@@ -155,16 +157,5 @@ export default class BannerService {
     // delete banner if found
     await Banner.delete(id);
     return this.asBannerResponse(banner);
-  }
-
-  /**
-   * Returns all active banners with options.
-   * @param options - find options
-   * @returns {Array<BannerResponse>} - active banners
-   */
-  public static async getAllActiveBanners(options?: FindManyOptions): Promise<BannerResponse[]> {
-    // find and return active banners or empty array
-    const banners = await Banner.find({ where: { active: '1' }, ...options });
-    return banners.map((banner) => this.asBannerResponse(banner));
   }
 }

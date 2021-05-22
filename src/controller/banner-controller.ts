@@ -231,7 +231,7 @@ export default class BannerController extends BaseController {
 
     // handle request
     try {
-      res.json(await BannerService.getAllActiveBanners(addPaginationForFindOptions(req)));
+      res.json(await BannerService.getBanners({ active: true }, addPaginationForFindOptions(req)));
     } catch (error) {
       this.logger.error('Could not return active banners:', error);
       res.status(500).json('Internal server error.');
