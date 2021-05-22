@@ -1012,7 +1012,7 @@ export async function seedTransactions(
 
     const from = users[(i + pos.pointOfSale.id * 5 + pos.revision * 7) % users.length];
     const createdBy = (i + pos.revision) % 3 !== 0
-      ? undefined
+      ? from
       : users[(i * 5 + pos.pointOfSale.id * 7 + pos.revision) % users.length];
     const trans = defineTransactions(
       transactions.length,

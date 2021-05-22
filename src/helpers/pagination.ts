@@ -19,10 +19,25 @@
 import { FindManyOptions, SelectQueryBuilder } from 'typeorm';
 import { RequestWithToken } from '../middleware/token-middleware';
 
+export function validatePaginationQueryParams(req: RequestWithToken): boolean {
+  const urlParams = req.query || {};
+
+  if (urlParams.take) {
+    const t = parseInt(urlParams.take, 10);
+    if (Number.isNaN(t) || t.toString().length !== urlParams.take.length) return false;
+  }
+  if (urlParams.skip) {
+    const s = parseInt(urlParams.skip, 10);
+    if (Number.isNaN(s) || s.toString().length !== urlParams.skip.length) return false;
+  }
+
+  return true;
+}
+
 function parseReqSkipTake(req: RequestWithToken): { take?: number, skip?: number } {
   let take;
   let skip;
-  const urlParams = req.query;
+  const urlParams = req.query || {};
 
   // Parse and validate the take URL parameter
   if (urlParams.take != null) {
@@ -51,6 +66,7 @@ function parseReqSkipTake(req: RequestWithToken): { take?: number, skip?: number
  * @returns FindManyOptions skip and take parameters for the findoptions for TypeORM.
  *  This should be concatenated with the rest of the parameters
  */
+
 export function addPaginationForFindOptions(req: RequestWithToken): FindManyOptions {
   const maxTake = parseInt(process.env.PAGINATION_MAX, 10) || 500;
 

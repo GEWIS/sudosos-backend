@@ -36,8 +36,8 @@ export default class Transaction extends BaseEntity {
   @ManyToOne(() => User, { nullable: false })
   public from: User;
 
-  @ManyToOne(() => User, { nullable: true })
-  public createdBy?: User;
+  @ManyToOne(() => User, { nullable: false })
+  public createdBy: User;
 
   @OneToMany(() => SubTransaction, (subTransaction) => subTransaction.transaction)
   public subTransactions: SubTransaction[];
