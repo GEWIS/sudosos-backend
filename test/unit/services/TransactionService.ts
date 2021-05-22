@@ -24,7 +24,7 @@ import Transaction from '../../../src/entity/transactions/transaction';
 import Database from '../../../src/database/database';
 import seedDatabase from '../../seed';
 import { RequestWithToken } from '../../../src/middleware/token-middleware';
-import TransactionService from '../../../src/service/TransactionService';
+import TransactionService from '../../../src/service/transaction-service';
 import { verifyBaseTransactionEntity } from '../validators';
 import Swagger from '../../../src/start/swagger';
 

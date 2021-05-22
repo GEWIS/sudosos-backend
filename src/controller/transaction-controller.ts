@@ -20,7 +20,7 @@ import log4js, { Logger } from 'log4js';
 import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
-import TransactionService, { TransactionFilterParameters } from '../service/TransactionService';
+import TransactionService, { TransactionFilterParameters } from '../service/transaction-service';
 import { TransactionResponse } from './response/transaction-response';
 import { UserType } from '../entity/user/user';
 import { isDate, isNumber } from '../helpers/validators';
