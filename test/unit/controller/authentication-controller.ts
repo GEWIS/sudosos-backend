@@ -19,7 +19,7 @@ import express, { Application } from 'express';
 import { expect, request } from 'chai';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { Connection } from 'typeorm';
-import bodyParser from 'body-parser';
+import { json } from 'body-parser';
 import log4js from 'log4js';
 import User, { UserType } from '../../../src/entity/user/user';
 import TokenHandler from '../../../src/authentication/token-handler';
@@ -89,7 +89,7 @@ describe('AuthenticationController', async (): Promise<void> => {
       roleManager: ctx.roleManager,
     }, ctx.tokenHandler);
 
-    ctx.app.use(bodyParser.json());
+    ctx.app.use(json());
     ctx.app.use('/authentication', ctx.controller.getRouter());
   });
 

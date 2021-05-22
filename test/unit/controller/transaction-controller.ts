@@ -19,7 +19,7 @@ import { Connection } from 'typeorm';
 import express, { Application } from 'express';
 import { expect, request } from 'chai';
 import { SwaggerSpecification } from 'swagger-model-validator';
-import bodyParser from 'body-parser';
+import { json } from 'body-parser';
 import TransactionController from '../../../src/controller/transaction-controller';
 import Transaction from '../../../src/entity/transactions/transaction';
 import Database from '../../../src/database/database';
@@ -88,7 +88,7 @@ describe('TransactionController', (): void => {
       roleManager,
     });
 
-    ctx.app.use(bodyParser.json());
+    ctx.app.use(json());
     ctx.app.use(new TokenMiddleware({ tokenHandler, refreshFactor: 0.5 }).getMiddleware());
     ctx.app.use('/transactions', ctx.controller.getRouter());
   });

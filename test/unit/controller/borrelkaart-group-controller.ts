@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import bodyParser from 'body-parser';
+import { json } from 'body-parser';
 import { expect, request } from 'chai';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
@@ -181,7 +181,7 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
     });
 
     const controller = new BorrelkaartGroupController({ specification, roleManager });
-    app.use(bodyParser.json());
+    app.use(json());
     app.use(new TokenMiddleware({ tokenHandler, refreshFactor: 0.5 }).getMiddleware());
     app.use('/borrelkaartgroups', controller.getRouter());
 
