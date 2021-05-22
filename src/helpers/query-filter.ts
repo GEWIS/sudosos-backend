@@ -15,29 +15,69 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { SelectQueryBuilder } from 'typeorm';
+import {
+  ObjectLiteral, SelectQueryBuilder,
+} from 'typeorm';
 
-export interface FilterOption {
-  variable: string,
-  argument: string | number,
+/**
+ * Defines the mapping from properties on the parameter object, to
+ * the respective identifiers in queries.
+ */
+export interface FilterMapping {
+  [key: string]: string;
 }
 
-export type FilterOptions = FilterOption[] | FilterOption;
+/**
+ * Defines the filtering parameters to which can be mapped.
+ */
+export interface FilterParameters {
+  [key: string]: any;
+}
 
 export default class QueryFilter {
-  public static applyFilter(query: SelectQueryBuilder<any>, filterOptions: FilterOptions)
-    : SelectQueryBuilder<any> {
-    let options: FilterOption[];
-
-    if (Array.isArray(filterOptions)) {
-      options = filterOptions as FilterOption[];
-    } else {
-      options = [filterOptions];
-    }
-
-    options.forEach((filterOption) => {
-      query.andWhere(`${filterOption.variable} = ${filterOption.argument}`);
+  /**
+   * Applies the specified query filtering onto the given query builder.
+   * @param query - The query builder to which to add where clauses.
+   * @param mapping - The mapping of property names on the parameters object to
+   *  property names in the query.
+   * @param params - The object containing the actual parameter values.
+   * @returns The resulting query bulider.
+   */
+  public static applyFilter(
+    query: SelectQueryBuilder<any>,
+    mapping: FilterMapping,
+    params: FilterParameters,
+  ): SelectQueryBuilder<any> {
+    Object.keys(mapping).forEach((param: string) => {
+      const value = params[param];
+      if (value !== undefined) {
+        query.andWhere(`${mapping[param]} = :${param}`);
+      }
     });
-    return query;
+    return query.setParameters(params);
+  }
+
+  /**
+   * Creates a FindManyOptions object containing the conditions needed to apply the given filter.
+   * @param mapping - The mapping of property names on the parameters object to
+   *  property names in the query.
+   * @param params - The object containing the actual parameter values.
+   * @returns The where clause which can be used in a FindManyOptions object.
+   */
+  public static createFilterWhereClause(
+    mapping: FilterMapping,
+    params: FilterParameters,
+  ): ObjectLiteral {
+    const where: ObjectLiteral = {};
+
+    Object.keys(mapping).forEach((param: string) => {
+      const value = params[param];
+      if (value !== undefined) {
+        const property: string = mapping[param];
+        where[property] = value;
+      }
+    });
+
+    return where;
   }
 }
