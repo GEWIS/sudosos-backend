@@ -172,14 +172,6 @@ export default class TransactionController extends BaseController {
       return;
     }
 
-    // If the user is not in the to, from or createdBy field, return a forbidden.
-    if (transaction.from.id !== req.token.user.id
-      || transaction.createdBy.id !== req.token.user.id
-      || !transaction.subTransactions.some((s) => s.to.id === req.token.user.id)
-    ) {
-      res.status(401).json('Forbidden: you are not in the to, from or createdBy field');
-    }
-
     res.status(200).json(transaction);
   }
 }
