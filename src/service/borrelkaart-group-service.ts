@@ -69,11 +69,11 @@ export default class BorrelkaartGroupService {
   /**
    * Verifies whether the borrelkaart group request holds user conflicts
    * @param {BorrelkaartGroupRequest.model} bkgReq - The borrelkaart group request
-   * @param {number} ignoreGroup - Ignore users in this group when updating a borrelkaart group
+   * @param {number} ignoreGroupId - Ignore users in the group with given id when updating.
    * @returns {boolean} whether the borrelkaart group is ok
    */
   public static async checkUserConflicts(
-    bkgReq: BorrelkaartGroupRequest, ignoreGroup?: string,
+    bkgReq: BorrelkaartGroupRequest, ignoreGroupId?: number,
   ): Promise<boolean> {
     // all conflicting borrelkaart groups related to requested users
     const conflictingEntries = await UserBorrelkaartGroup.findByIds(
@@ -83,14 +83,14 @@ export default class BorrelkaartGroupService {
     );
 
     // return value
-    let ret = conflictingEntries.length === 0;
+    if (conflictingEntries.length === 0) return true;
 
     // check if users are only in the patched borrelkaart group
-    if (ignoreGroup && !ret) {
-      ret = !conflictingEntries.some((entry) => entry.borrelkaartGroup.id !== +ignoreGroup);
+    if (ignoreGroupId !== undefined) {
+      return !conflictingEntries.some((entry) => entry.borrelkaartGroup.id !== ignoreGroupId);
     }
 
-    return ret;
+    return false;
   }
 
   /**

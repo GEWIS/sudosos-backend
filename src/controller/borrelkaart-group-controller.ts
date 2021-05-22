@@ -172,7 +172,7 @@ export default class BorrelkaartGroupController extends BaseController {
     try {
       if (await BorrelkaartGroupService.verifyBorrelkaartGroup(body)) {
         if (await BorrelkaartGroup.findOne(id)) {
-          if (await BorrelkaartGroupService.checkUserConflicts(body, id)) {
+          if (await BorrelkaartGroupService.checkUserConflicts(body, parseInt(id, 10))) {
             res.status(200).json(await BorrelkaartGroupService.updateBorrelkaartGroup(id, body));
           } else {
             res.status(409).json('Conflicting user posted.');
