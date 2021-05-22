@@ -18,13 +18,15 @@
 import { Connection } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
-import { json } from 'body-parser';
+import bodyParser from 'body-parser';
 import { expect } from 'chai';
 import User from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
 import ProductService, { ProductParameters } from '../../../src/service/product-service';
-import { seedAllProducts, seedProductCategories, seedUsers } from '../../seed';
+import {
+  seedAllProducts, seedContainers, seedProductCategories, seedUsers,
+} from '../../seed';
 import Product from '../../../src/entity/product/product';
 import { ProductResponse } from '../../../src/controller/response/product-response';
 
@@ -50,20 +52,22 @@ describe('ProductService', async (): Promise<void> => {
     allProducts: Product[],
   };
 
-  beforeEach(async () => {
+  before(async () => {
     const connection = await Database.initialize();
 
-    const users = await seedUsers();
     const categories = await seedProductCategories();
-    await seedAllProducts(users, categories);
+    const users = await seedUsers();
+
+    let allProducts;
+    await seedAllProducts(users, categories).then(async (res) => {
+      allProducts = res.products;
+      await seedContainers(users, res.productRevisions);
+    });
 
     // start app
     const app = express();
     const specification = await Swagger.initialize(app);
-    app.use(json());
-
-    //  Load all products from the database.
-    const allProducts: Product[] = await Product.find({ relations: ['owner'] });
+    app.use(bodyParser.json());
 
     // initialize context
     ctx = {
@@ -76,7 +80,7 @@ describe('ProductService', async (): Promise<void> => {
   });
 
   // close database connection
-  afterEach(async () => {
+  after(async () => {
     await ctx.connection.close();
   });
 
@@ -124,7 +128,7 @@ describe('ProductService', async (): Promise<void> => {
       };
       const res: ProductResponse[] = await ProductService
         .getProducts(params);
-      expect(res).to.be.length(0);
+      expect(res).to.be.length(5);
     });
     it('should return the updated products belonging to a container', async () => {
       const params: ProductParameters = {
@@ -132,7 +136,7 @@ describe('ProductService', async (): Promise<void> => {
       };
       const res: ProductResponse[] = await ProductService
         .getUpdatedProducts(params);
-      expect(res).to.be.length(0);
+      expect(res).to.be.length(2);
     });
   });
 });
