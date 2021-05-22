@@ -18,7 +18,7 @@
 import express, { Application, Response } from 'express';
 import { expect, request } from 'chai';
 import { SwaggerSpecification } from 'swagger-model-validator';
-import bodyParser from 'body-parser';
+import { json } from 'body-parser';
 import RequestValidatorMiddleware from '../../../src/middleware/request-validator-middleware';
 import { getSpecification, TestModel } from '../entity/transformer/test-model';
 
@@ -41,7 +41,7 @@ describe('RequestValidatorMiddleware', (): void => {
     };
     ctx.specification = await getSpecification(ctx.app);
 
-    ctx.app.use(bodyParser.json());
+    ctx.app.use(json());
     ctx.app.post('/test', new RequestValidatorMiddleware(
       ctx.specification, { modelName: 'TestModel' },
     ).getMiddleware());

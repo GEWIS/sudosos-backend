@@ -23,7 +23,7 @@ import BaseEntity from '../base-entity';
 import UserBorrelkaartGroup from './user-borrelkaart-group';
 
 /**
- * @typedef {BorrelkaartGroup} BorrelkaartGroup
+ * @typedef {BaseEntity} BorrelkaartGroup
  * @property {string} name.required - Name of the group
  * @property {string} activeStartDate.required - Date from which the included cards are active
  * @property {string} activeEndDate - Date from which cards are no longer active

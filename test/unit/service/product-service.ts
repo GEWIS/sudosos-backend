@@ -18,16 +18,15 @@
 import { Connection } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
-import bodyParser from 'body-parser';
+import { json } from 'body-parser';
 import { expect } from 'chai';
 import User from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
-import ProductService from '../../../src/service/product-service';
+import ProductService, { ProductParameters } from '../../../src/service/product-service';
 import { seedAllProducts, seedProductCategories, seedUsers } from '../../seed';
 import Product from '../../../src/entity/product/product';
 import { ProductResponse } from '../../../src/controller/response/product-response';
-import { FilterOptions } from '../../../src/helpers/query-filter';
 
 /**
  * Test if all the product responses are part of the product set array.
@@ -61,7 +60,7 @@ describe('ProductService', async (): Promise<void> => {
     // start app
     const app = express();
     const specification = await Swagger.initialize(app);
-    app.use(bodyParser.json());
+    app.use(json());
 
     //  Load all products from the database.
     const allProducts: Product[] = await Product.find({ relations: ['owner'] });
@@ -93,8 +92,8 @@ describe('ProductService', async (): Promise<void> => {
       expect(productSuperset(updatedProducts, ctx.allProducts)).to.be.true;
     });
     it('should return product with the owner specified', async () => {
-      const filterOptions: FilterOptions = { variable: 'product.owner', argument: ctx.allProducts[0].owner.id };
-      const res: ProductResponse[] = await ProductService.getProducts(filterOptions);
+      const params: ProductParameters = { ownerId: ctx.allProducts[0].owner.id };
+      const res: ProductResponse[] = await ProductService.getProducts(params);
 
       expect(productSuperset(res, ctx.allProducts)).to.be.true;
 
@@ -104,19 +103,18 @@ describe('ProductService', async (): Promise<void> => {
       expect(belongsToOwner).to.be.true;
     });
     it('should return a single product if productId is specified', async () => {
-      const filterOptions: FilterOptions = { variable: 'product.id', argument: ctx.allProducts[0].id };
-      const res: ProductResponse[] = await ProductService.getProducts(filterOptions);
+      const params: ProductParameters = { productId: ctx.allProducts[0].id };
+      const res: ProductResponse[] = await ProductService.getProducts(params);
 
       expect(res).to.be.length(1);
       expect(res[0].id).to.be.equal(ctx.allProducts[0].id);
     });
     it('should return no products if the userId and productId dont match', async () => {
-      const filterOptions: FilterOptions = [
-        { variable: 'product.owner', argument: ctx.allProducts[0].owner.id + 1 },
-        { variable: 'product.id', argument: ctx.allProducts[0].id },
-      ];
-      const res: ProductResponse[] = await ProductService
-        .getProducts(filterOptions);
+      const params: ProductParameters = {
+        ownerId: ctx.allProducts[0].owner.id + 1,
+        productId: ctx.allProducts[0].id,
+      };
+      const res: ProductResponse[] = await ProductService.getProducts(params);
 
       expect(res).to.be.length(0);
     });

@@ -19,7 +19,7 @@ import express, { Application } from 'express';
 import { expect, request } from 'chai';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { Connection } from 'typeorm';
-import bodyParser from 'body-parser';
+import { json } from 'body-parser';
 import UserController from '../../../src/controller/user-controller';
 import User, { UserType } from '../../../src/entity/user/user';
 import Product from '../../../src/entity/product/product';
@@ -61,9 +61,7 @@ describe('UserController', (): void => {
   before(async () : Promise<void> => {
     const connection = await Database.initialize();
     const app = express();
-    console.log('write database');
     const database = await seedDatabase();
-    console.log('database written');
     ctx = {
       connection,
       app,
@@ -132,7 +130,7 @@ describe('UserController', (): void => {
       roleManager,
     });
 
-    ctx.app.use(bodyParser.json());
+    ctx.app.use(json());
     ctx.app.use(new TokenMiddleware({ tokenHandler, refreshFactor: 0.5 }).getMiddleware());
     ctx.app.use('/users', ctx.controller.getRouter());
   });
@@ -150,7 +148,8 @@ describe('UserController', (): void => {
 
       const users = res.body as User[];
       const spec = await Swagger.importSpecification();
-      expect(users.length).to.equal(24);
+      const pagination = parseInt(process.env.PAGINATION_DEFAULT, 10);
+      expect(users.length).to.equal(pagination);
       users.forEach((user: User) => {
         verifyUserEntity(spec, user);
       });

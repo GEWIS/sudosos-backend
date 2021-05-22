@@ -293,7 +293,7 @@ export default class UserController extends BaseController {
 
     // Handle request
     try {
-      const products = await ProductService.getProducts({ variable: 'product.owner', argument: parameters.id });
+      const products = await ProductService.getProducts({ ownerId: parseInt(parameters.id, 10) });
       res.json(products);
     } catch (error) {
       this.logger.error('Could not return all products:', error);
@@ -321,7 +321,7 @@ export default class UserController extends BaseController {
 
     // Handle request
     try {
-      const products = await ProductService.getProducts({ variable: 'product.owner', argument: parameters.id });
+      const products = await ProductService.getProducts({ productId: parseInt(parameters.id, 10) });
       res.json(products);
     } catch (error) {
       this.logger.error('Could not return all products:', error);
