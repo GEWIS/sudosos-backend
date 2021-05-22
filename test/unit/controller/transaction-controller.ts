@@ -26,7 +26,7 @@ import Database from '../../../src/database/database';
 import seedDatabase from '../../seed';
 import Swagger from '../../../src/start/swagger';
 import TokenHandler from '../../../src/authentication/token-handler';
-import User from '../../../src/entity/user/user';
+import User, { UserType } from '../../../src/entity/user/user';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import { BaseTransactionResponse } from '../../../src/controller/response/transaction-response';
 import { verifyBaseTransactionEntity } from '../validators';
@@ -68,39 +68,19 @@ describe('TransactionController', (): void => {
     ctx.userToken = await tokenHandler.signToken({ user: ctx.users[0], roles: ['User'] }, '39');
     ctx.adminToken = await tokenHandler.signToken({ user: ctx.users[6], roles: ['User', 'Admin'] }, '39');
 
-    // const all = { all: new Set<string>(['*']) };
-    // const own = { own: new Set<string>(['*']) };
+    const all = { all: new Set<string>(['*']) };
     const roleManager = new RoleManager();
-    // roleManager.registerRole({
-    //   name: 'Admin',
-    //   permissions: {
-    //     User: {
-    //       create: all,
-    //       get: all,
-    //       update: all,
-    //       delete: all,
-    //     },
-    //     Product: {
-    //       get: all,
-    //       update: all,
-    //     },
-    //
-    //   },
-    //   assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
-    // });
-    // roleManager.registerRole({
-    //   name: 'User',
-    //   permissions: {
-    //     User: {
-    //       get: own,
-    //     },
-    //     Product: {
-    //       get: own,
-    //       update: own,
-    //     },
-    //   },
-    //   assignmentCheck: async () => true,
-    // });
+    roleManager.registerRole({
+      name: 'Admin',
+      permissions: {
+        Transaction: {
+          get: all,
+          update: all,
+        },
+
+      },
+      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
+    });
 
     ctx.specification = await Swagger.initialize(ctx.app);
     ctx.controller = new TransactionController({

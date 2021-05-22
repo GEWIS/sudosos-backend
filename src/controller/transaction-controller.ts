@@ -22,7 +22,6 @@ import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import TransactionService, { TransactionFilterParameters } from '../service/transaction-service';
 import { TransactionResponse } from './response/transaction-response';
-import { UserType } from '../entity/user/user';
 import { isDate, isNumber } from '../helpers/validators';
 import { validatePaginationQueryParams } from '../helpers/pagination';
 
@@ -88,25 +87,17 @@ export default class TransactionController extends BaseController {
     return {
       '/': {
         GET: {
-          policy: TransactionController.isAdmin,
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Transaction', ['*']),
           handler: this.getAllTransactions.bind(this),
         },
       },
       '/:id': {
         GET: {
-          policy: TransactionController.isTrue,
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Transaction', ['*']),
           handler: this.getTransaction.bind(this),
         },
       },
     };
-  }
-
-  public static async isAdmin(req: RequestWithToken): Promise<boolean> {
-    return req.token.user.type === UserType.LOCAL_ADMIN;
-  }
-
-  public static async isTrue() {
-    return true;
   }
 
   /**
