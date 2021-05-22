@@ -119,13 +119,19 @@ describe('ProductService', async (): Promise<void> => {
       expect(res).to.be.length(0);
     });
     it('should return the products belonging to a container', async () => {
+      const params: ProductParameters = {
+        containerId: 3,
+      };
       const res: ProductResponse[] = await ProductService
-        .getProducts({ variable: 'containerId', argument: 3, meta: true });
+        .getProducts(params);
       expect(res).to.be.length(0);
     });
     it('should return the updated products belonging to a container', async () => {
+      const params: ProductParameters = {
+        containerId: 3,
+      };
       const res: ProductResponse[] = await ProductService
-        .getUpdatedProducts({ variable: 'containerId', argument: 3, meta: true });
+        .getUpdatedProducts(params);
       expect(res).to.be.length(0);
     });
   });

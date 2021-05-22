@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { createQueryBuilder } from 'typeorm';
+import { createQueryBuilder, SelectQueryBuilder } from 'typeorm';
 import { ProductResponse } from '../controller/response/product-response';
 import Product from '../entity/product/product';
 import ProductRevision from '../entity/product/product-revision';
@@ -37,6 +37,10 @@ export interface ProductParameters {
    * Filter based on product owner.
    */
   ownerId?: number;
+  /**
+   * Filter based on container id.
+   */
+  containerId?: number;
 }
 
 /**
@@ -47,7 +51,7 @@ export default class ProductService {
    * Helper function for the base mapping the raw getMany response product.
    * @param rawProduct - the raw response to parse.
    */
-  public static asProductResponse(rawProduct: any): ProductResponse {
+  private static asProductResponse(rawProduct: any): ProductResponse {
     return {
       id: rawProduct.id,
       alcoholPercentage: rawProduct.alcoholPercentage,
@@ -68,6 +72,30 @@ export default class ProductService {
   }
 
   /**
+   * Filter the products on container ID.
+   * @param builder
+   * @param containerId
+   * @private
+   */
+  private static addContainerFilter(builder: SelectQueryBuilder<Product>,
+    containerId: number): void {
+    builder.andWhere((qb: SelectQueryBuilder<Product>) => {
+      const subQuery = qb.subQuery()
+        .from(Container, 'container')
+        .innerJoinAndSelect(
+          ContainerRevision,
+          'containerrevision',
+          `container.id = containerrevision.containerId
+                AND container.currentRevision = containerrevision.revision`,
+        )
+        .innerJoinAndSelect('containerrevision.products', 'product')
+        .where('container.id = :id', { id: containerId })
+        .select('productId');
+      return `product.id IN ${subQuery.getQuery()}`;
+    });
+  }
+
+  /**
    * Query for getting all products based on user.
    * @param params
    */
@@ -80,25 +108,11 @@ export default class ProductService {
         'productrevision',
         `product.id = productrevision.product
          AND product.currentRevision = productrevision.revision`,
-      )
-      .andWhere((qb) => {
-        const filter: FilterOption = QueryFilter.getFilter(filterOptions, 'containerId');
-        if (filter) {
-          const subQuery = qb.subQuery()
-            .from(Container, 'container')
-            .innerJoinAndSelect(
-              ContainerRevision,
-              'containerrevision',
-              `container.id = containerrevision.containerId
-                AND container.currentRevision = containerrevision.revision`,
-            )
-            .innerJoinAndSelect('containerrevision.products', 'product')
-            .where('container.id = :id', { id: filter.argument })
-            .select('productId');
-          return `product.id IN ${subQuery.getQuery()}`;
-        }
-        return 'TRUE';
-      })
+      );
+
+    if (params?.containerId) this.addContainerFilter(builder, params.containerId);
+
+    builder
       .innerJoinAndSelect('product.owner', 'owner')
       .innerJoinAndSelect('productrevision.category', 'category')
       .select([
@@ -124,7 +138,7 @@ export default class ProductService {
 
     const rawProducts = await builder.getRawMany();
 
-    return rawProducts.map((rawProduct) => this.asProductResponse(rawProduct));
+    return rawProducts.map((rawProduct: any) => this.asProductResponse(rawProduct));
   }
 
   /**
@@ -139,27 +153,13 @@ export default class ProductService {
         UpdatedProduct,
         'updatedproduct',
         'product.id = updatedproduct.product',
-      )
+      );
+
+    if (params?.containerId) this.addContainerFilter(builder, params.containerId);
+
+    builder
       .innerJoinAndSelect('product.owner', 'owner')
       .innerJoinAndSelect('updatedproduct.category', 'category')
-      .andWhere((qb) => {
-        const filter: FilterOption = QueryFilter.getFilter(filterOptions, 'containerId');
-        if (filter) {
-          const subQuery = qb.subQuery()
-            .from(Container, 'container')
-            .innerJoinAndSelect(
-              ContainerRevision,
-              'containerrevision',
-              `container.id = containerrevision.containerId
-                  AND container.currentRevision = containerrevision.revision`,
-            )
-            .innerJoinAndSelect('containerrevision.products', 'product')
-            .where('container.id = :id', { id: filter.argument })
-            .select('productId');
-          return `product.id IN ${subQuery.getQuery()}`;
-        }
-        return '';
-      })
       .select([
         'product.id AS id',
         'product.createdAt AS createdAt',
@@ -182,6 +182,6 @@ export default class ProductService {
 
     const rawProducts = await builder.getRawMany();
 
-    return rawProducts.map((rawProduct) => this.asProductResponse(rawProduct));
+    return rawProducts.map((rawProduct: any) => this.asProductResponse(rawProduct));
   }
 }

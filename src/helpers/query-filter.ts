@@ -44,9 +44,9 @@ export default class QueryFilter {
    * @returns The resulting query bulider.
    */
   public static applyFilter(
-      query: SelectQueryBuilder<any>,
-      mapping: FilterMapping,
-      params: FilterParameters,
+    query: SelectQueryBuilder<any>,
+    mapping: FilterMapping,
+    params: FilterParameters,
   ): SelectQueryBuilder<any> {
     Object.keys(mapping).forEach((param: string) => {
       const value = params[param];
@@ -65,8 +65,8 @@ export default class QueryFilter {
    * @returns The where clause which can be used in a FindManyOptions object.
    */
   public static createFilterWhereClause(
-      mapping: FilterMapping,
-      params: FilterParameters,
+    mapping: FilterMapping,
+    params: FilterParameters,
   ): ObjectLiteral {
     const where: ObjectLiteral = {};
 
