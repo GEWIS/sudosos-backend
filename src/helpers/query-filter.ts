@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  FindManyOptions, ObjectLiteral, SelectQueryBuilder,
+  ObjectLiteral, SelectQueryBuilder,
 } from 'typeorm';
 
 /**
@@ -62,12 +62,12 @@ export default class QueryFilter {
    * @param mapping - The mapping of property names on the parameters object to
    *  property names in the query.
    * @param params - The object containing the actual parameter values.
-   * @returns
+   * @returns The where clause which can be used in a FindManyOptions object.
    */
-  public static createFilter(
+  public static createFilterWhereClause(
     mapping: FilterMapping,
     params: FilterParameters,
-  ): FindManyOptions {
+  ): ObjectLiteral {
     const where: ObjectLiteral = {};
 
     Object.keys(mapping).forEach((param: string) => {
@@ -78,6 +78,6 @@ export default class QueryFilter {
       }
     });
 
-    return { where };
+    return where;
   }
 }
