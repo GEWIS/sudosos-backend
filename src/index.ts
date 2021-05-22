@@ -37,7 +37,7 @@ import Gewis from './gewis/gewis';
 import BannerController from './controller/banner-controller';
 import { BaseControllerOptions } from './controller/base-controller';
 import UserController from './controller/user-controller';
-import ProductController from "./controller/product-controller";
+import ProductController from './controller/product-controller';
 
 export class Application {
   app: express.Express;

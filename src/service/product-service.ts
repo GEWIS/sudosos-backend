@@ -16,13 +16,12 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { createQueryBuilder } from 'typeorm';
-import User from '../entity/user/user';
 import { ProductResponse } from '../controller/response/product-response';
 import Product from '../entity/product/product';
 import ProductRevision from '../entity/product/product-revision';
 import UpdatedProduct from '../entity/product/updated-product';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
-import QueryFilter, {FilterOptions} from "../helpers/query-filter";
+import QueryFilter, { FilterOptions } from '../helpers/query-filter';
 
 /**
  * Wrapper for all Product related logic.
@@ -101,7 +100,8 @@ export default class ProductService {
    * Query to return all updated products.
    * @param filterOptions
    */
-  public static async getUpdatedProducts(filterOptions?: FilterOptions): Promise<ProductResponse[]> {
+  public static async getUpdatedProducts(filterOptions?: FilterOptions)
+    : Promise<ProductResponse[]> {
     const builder = createQueryBuilder()
       .from(Product, 'product')
       .innerJoinAndSelect(
