@@ -26,6 +26,7 @@ import { seedProductCategories } from '../../seed';
 import ProductCategory from '../../../src/entity/product/product-category';
 import { ProductCategoryResponse } from '../../../src/controller/response/product-category-response';
 import ProductCategoryService from '../../../src/service/product-category-service';
+import ProductCategoryRequest from '../../../src/controller/request/product-category-request';
 
 /**
  * Test if the set of productCategory responses is equal to the full set of productCategories.
@@ -76,8 +77,8 @@ describe('ProductCategoryService', async (): Promise<void> => {
       };
     });
 
-    // close database connection
     after(async () => {
+      // close database connection
       await ctx.connection.close();
     });
 
@@ -87,16 +88,172 @@ describe('ProductCategoryService', async (): Promise<void> => {
       expect(productCategoryEqualset(res, ctx.categories)).to.be.true;
     });
     it('should return a single productCategory if id is specified', async () => {
-      const res: ProductCategoryResponse = await ProductCategoryService
-        .getProductCategoryById(ctx.categories[0].id);
+      const res: ProductCategoryResponse[] = await ProductCategoryService
+        .getProductCategories({ id: ctx.categories[0].id });
 
-      expect(res).to.be.not.null;
+      expect(res.length).to.equal(1);
+      expect(res[0].id).to.equal(ctx.categories[0].id);
+      expect(res[0].name).to.equal(ctx.categories[0].name);
+    });
+    it('should return nothing if a wrong id is specified', async () => {
+      const res: ProductCategoryResponse[] = await ProductCategoryService
+        .getProductCategories({ id: ctx.categories.length + 1 });
+
+      expect(res).to.be.empty;
+    });
+    it('should return a single productCategory if name is specified', async () => {
+      const res: ProductCategoryResponse[] = await ProductCategoryService
+        .getProductCategories({ name: ctx.categories[0].name });
+
+      expect(res.length).to.equal(1);
+      expect(res[0].id).to.equal(ctx.categories[0].id);
+      expect(res[0].name).to.equal(ctx.categories[0].name);
+    });
+    it('should return nothing if a wrong name is specified', async () => {
+      const res: ProductCategoryResponse[] = await ProductCategoryService
+        .getProductCategories({ name: 'non-existing' });
+
+      expect(res).to.be.empty;
+    });
+  });
+  describe('postProductCategory function', () => {
+    beforeEach(async () => {
+      const connection = await Database.initialize();
+      const categories: ProductCategory[] = [];
+
+      // start app
+      const app = express();
+      const specification = await Swagger.initialize(app);
+      app.use(bodyParser.json());
+
+      // initialize context
+      ctx = {
+        connection,
+        app,
+        specification,
+        categories,
+      };
+    });
+
+    afterEach(async () => {
+      // close database connection
+      await ctx.connection.close();
+    });
+
+    it('should be able to post a new productCategory', async () => {
+      const c1: ProductCategoryRequest = { name: 'test' };
+      const c2 = await ProductCategoryService.postProductCategory(c1);
+      expect(c2).to.not.be.null;
+      expect(c2.name).to.equal(c1.name);
+
+      const c3: ProductCategoryResponse[] = await ProductCategoryService
+        .getProductCategories({ id: 1 });
+
+      expect(c3.length).to.equal(1);
+      expect(c3[0].name).to.equal(c1.name);
+    });
+    it('should not be able to post an invalid productCategory', async () => {
+      const c1: ProductCategoryRequest = { name: null };
+      const promise = ProductCategoryService.postProductCategory(c1);
+      await expect(promise).to.eventually.be.rejected;
+
+      const res: ProductCategoryResponse[] = await ProductCategoryService
+        .getProductCategories({ id: 1 });
+      expect(res).to.be.empty;
+    });
+  });
+  describe('patchProductCategory function', async (): Promise<void> => {
+    beforeEach(async () => {
+      const connection = await Database.initialize();
+
+      const categories = await seedProductCategories();
+
+      // start app
+      const app = express();
+      const specification = await Swagger.initialize(app);
+      app.use(bodyParser.json());
+
+      // initialize context
+      ctx = {
+        connection,
+        app,
+        specification,
+        categories,
+      };
+    });
+
+    afterEach(async () => {
+      // close database connection
+      await ctx.connection.close();
+    });
+
+    it('should be able to patch a productCategory', async () => {
+      const c1: ProductCategoryRequest = { name: 'test' };
+      const c2: ProductCategoryResponse = await ProductCategoryService
+        .patchProductCategory(ctx.categories[0].id, c1);
+      expect(c2).to.not.be.null;
+      expect(c2.name).to.equal(c1.name);
+
+      const c3: ProductCategoryResponse[] = await ProductCategoryService
+        .getProductCategories({ id: ctx.categories[0].id });
+
+      expect(c3).to.not.be.null;
+      expect(c3[0].name).to.equal(c1.name);
+    });
+    it('should not be able to patch an invalid productCategory id', async () => {
+      const c1: ProductCategoryRequest = { name: 'test' };
+      const c2: ProductCategoryResponse = await ProductCategoryService
+        .patchProductCategory(ctx.categories.length + 1, c1);
+      expect(c2).to.be.null;
+    });
+    it('should not be able to patch an invalid productCategory', async () => {
+      const c1: ProductCategoryRequest = { name: null };
+      const promise = ProductCategoryService.patchProductCategory(ctx.categories[0].id, c1);
+      await expect(promise).to.eventually.be.rejected;
+      const res: ProductCategoryResponse[] = await ProductCategoryService
+        .getProductCategories({ id: ctx.categories[0].id });
+
+      expect(res.length).to.equal(1);
+      expect(res[0].id).to.equal(ctx.categories[0].id);
+      expect(res[0].name).to.equal(ctx.categories[0].name);
+    });
+  });
+  describe('deleteProductCategory function', async (): Promise<void> => {
+    beforeEach(async () => {
+      const connection = await Database.initialize();
+
+      const categories = await seedProductCategories();
+
+      // start app
+      const app = express();
+      const specification = await Swagger.initialize(app);
+      app.use(bodyParser.json());
+
+      // initialize context
+      ctx = {
+        connection,
+        app,
+        specification,
+        categories,
+      };
+    });
+
+    afterEach(async () => {
+      // close database connection
+      await ctx.connection.close();
+    });
+
+    it('should be able to delete a productCategory', async () => {
+      const res: ProductCategoryResponse = await ProductCategoryService
+        .deleteProductCategory(ctx.categories[0].id);
+
+      expect(res).to.not.be.null;
       expect(res.id).to.equal(ctx.categories[0].id);
       expect(res.name).to.equal(ctx.categories[0].name);
     });
-    it('should return nothing if a wrong id is specified', async () => {
+    it('should not be able to delete an invalid productCategory id', async () => {
       const res: ProductCategoryResponse = await ProductCategoryService
-        .getProductCategoryById(ctx.categories.length + 1);
+        .deleteProductCategory(ctx.categories.length + 1);
 
       expect(res).to.be.null;
     });

@@ -15,9 +15,25 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+import { FindManyOptions } from 'typeorm';
 import ProductCategory from '../entity/product/product-category';
 import { ProductCategoryResponse } from '../controller/response/product-category-response';
 import ProductCategoryRequest from '../controller/request/product-category-request';
+import QueryFilter, { FilterMapping } from '../helpers/query-filter';
+
+/**
+ * Define productCategory filtering parameters used to filter query results.
+ */
+export interface ProductCategoryFilterParameters {
+  /**
+   * Filter based on product id.
+   */
+  id?: number;
+  /**
+   * Filter based on product owner.
+   */
+  name?: string;
+}
 
 /**
  * Wrapper for all Product related logic.
@@ -40,22 +56,18 @@ export default class ProductCategoryService {
   }
 
   /**
-   * Query for getting the productCategory by id.
-   * @param id - The id of the productCategory.
-   */
-  public static async getProductCategoryById(id: number): Promise<ProductCategoryResponse> {
-    const productCategory = await ProductCategory.findOne(id);
-    if (!productCategory) {
-      return null;
-    }
-    return this.asProductCategoryResponse(productCategory);
-  }
-
-  /**
    * Query for getting the productCategories.
    */
-  public static async getProductCategories(): Promise<ProductCategoryResponse[]> {
-    const productCategories = await ProductCategory.find();
+  public static async getProductCategories(params: ProductCategoryFilterParameters = {})
+    : Promise<ProductCategoryResponse[]> {
+    const filterMapping: FilterMapping = {
+      id: 'id',
+      name: 'name',
+    };
+    const options: FindManyOptions = {
+      where: QueryFilter.createFilterWhereClause(filterMapping, params),
+    };
+    const productCategories = await ProductCategory.find(options);
     return productCategories.map(
       (productCategory) => (this.asProductCategoryResponse(productCategory)),
     );
