@@ -28,58 +28,41 @@ import {
   parsePOSToBasePOS,
   parseProductToBaseResponse,
 } from '../helpers/revision-to-response';
+import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 
-export interface TransactionFilters {
+export interface TransactionFilterParameters {
   fromId?: number,
   createdById?: number,
   toId?: number,
-  pointOfSale?: {
-    id: number,
-    revision?: number,
-  }
-  container?: {
-    id: number,
-    revision?: number,
-  },
-  product?: {
-    id: number,
-    revision?: number,
-  }
+  pointOfSaleId?: number,
+  pointOfSaleRevision?: number,
+  containerId?: number,
+  containerRevision?: number,
+  productId?: number,
+  productRevision?: number,
   fromDate?: Date,
   tillDate?: Date,
 }
 
 export default class TransactionService {
   public static async getTransactions(
-    req: RequestWithToken, filters: TransactionFilters,
+    req: RequestWithToken, params: TransactionFilterParameters,
   ): Promise<BaseTransactionResponse[]> {
+    // Extract fromDate and tillDate, as they cannot be directly passed to QueryFilter.
+    const { fromDate, tillDate, ...p } = params;
+
     function applySubTransactionFilters(query: SelectQueryBuilder<any>): SelectQueryBuilder<any> {
-      if (filters.toId) {
-        query.andWhere('"subTransaction"."toId" = :toId', { toId: filters.toId });
-      }
+      const mapping: FilterMapping = {
+        toId: 'subTransaction.toId',
+        pointOfSaleId: 'transaction.pointOfSalePointOfSale',
+        pointOfSaleRevision: 'transaction.pointOfSaleRevision',
+        containerId: 'subTransaction.containerContainer',
+        containerRevision: 'subTransaction.containerRevision',
+        productId: 'subTransactionRow.productProduct',
+        productRevision: 'subTransactionRow.productRevision',
+      };
 
-      if (filters.pointOfSale) {
-        query.andWhere('"transaction"."pointOfSalePointOfSale" = :pointOfSaleId', { pointOfSaleId: filters.pointOfSale.id });
-        if (filters.pointOfSale.revision) {
-          query.andWhere('"transaction"."pointOfSaleRevision" = :pointOfSaleRevision', { pointOfSaleRevision: filters.pointOfSale.revision });
-        }
-      }
-
-      if (filters.container) {
-        query.andWhere('"subTransaction"."containerContainer" = :containerId', { containerId: filters.container.id });
-        if (filters.container.revision) {
-          query.andWhere('"subTransaction"."containerRevision" = :containerRevision', { containerRevision: filters.container.revision });
-        }
-      }
-
-      if (filters.product) {
-        query.andWhere('"subTransactionRow"."productProduct" = :productId', { productId: filters.product.id });
-        if (filters.product.revision) {
-          query.andWhere('"subTransactionRow"."productRevision" = :productRevision', { productRevision: filters.product.revision });
-        }
-      }
-
-      return query;
+      return QueryFilter.applyFilter(query, mapping, p);
     }
 
     let query = createQueryBuilder(Transaction, 'transaction')
@@ -100,10 +83,13 @@ export default class TransactionService {
       .leftJoin('transaction.subTransactions', 'subTransaction')
       .leftJoin('subTransaction.subTransactionRows', 'subTransactionRow');
 
-    if (filters.fromId) query.andWhere('"transaction"."fromId" = :fromId', { fromId: filters.fromId });
-    if (filters.createdById) query.andWhere('"transaction"."createdById" = :createdById', { createdById: filters.createdById });
-    if (filters.fromDate) query.andWhere('"transaction"."createdAt" >= :fromDate', { fromDate: filters.fromDate.toISOString() });
-    if (filters.tillDate) query.andWhere('"transaction"."createdAt" < :tillDate', { tillDate: filters.tillDate.toISOString() });
+    if (fromDate) query.andWhere('"transaction"."createdAt" >= :fromDate', { fromDate: fromDate.toISOString() });
+    if (tillDate) query.andWhere('"transaction"."createdAt" < :tillDate', { tillDate: tillDate.toISOString() });
+    const mapping = {
+      fromId: 'transaction.fromId',
+      createdById: 'transaction.createdById',
+    };
+    QueryFilter.applyFilter(query, mapping, p);
 
     query = applySubTransactionFilters(query);
     query = addPaginationToQueryBuilder(req, query);

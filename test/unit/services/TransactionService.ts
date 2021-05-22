@@ -113,7 +113,7 @@ describe('TransactionService', (): void => {
     it('should filter on point of sale', async () => {
       const pointOfSale = { id: 14 };
       const transactions = await TransactionService.getTransactions(ctx.req, {
-        pointOfSale,
+        pointOfSaleId: pointOfSale.id,
       });
 
       expect(transactions.length).to.equal(6);
@@ -124,7 +124,8 @@ describe('TransactionService', (): void => {
     it('should filter on point of sale with revision', async () => {
       const pointOfSale = { id: 14, revision: 2 };
       const transactions = await TransactionService.getTransactions(ctx.req, {
-        pointOfSale,
+        pointOfSaleId: pointOfSale.id,
+        pointOfSaleRevision: pointOfSale.revision,
       });
 
       expect(transactions.length).to.equal(2);
@@ -135,7 +136,7 @@ describe('TransactionService', (): void => {
     it('should filter on container', async () => {
       const container = { id: 11 };
       const transactions = await TransactionService.getTransactions(ctx.req, {
-        container,
+        containerId: container.id,
       });
       const transactionIds = ctx.transactions.map((t) => {
         if (t.subTransactions.some((s) => s.container.container.id === container.id)) {
@@ -152,7 +153,8 @@ describe('TransactionService', (): void => {
     it('should filter on container with revision', async () => {
       const container = { id: 11, revision: 2 };
       const transactions = await TransactionService.getTransactions(ctx.req, {
-        container,
+        containerId: container.id,
+        containerRevision: container.revision,
       });
       const transactionIds = ctx.transactions.map((t) => {
         if (t.subTransactions.some((s) => s.container.container.id === container.id
@@ -170,7 +172,7 @@ describe('TransactionService', (): void => {
     it('should filter on product', async () => {
       const product = { id: 44 };
       const transactions = await TransactionService.getTransactions(ctx.req, {
-        product,
+        productId: product.id,
       });
       const transactionIds = ctx.transactions.map((t) => {
         if (t.subTransactions.some((s) => s.subTransactionRows
@@ -189,7 +191,8 @@ describe('TransactionService', (): void => {
     it('should filter on product with revision', async () => {
       const product = { id: 44, revision: 2 };
       const transactions = await TransactionService.getTransactions(ctx.req, {
-        product,
+        productId: product.id,
+        productRevision: product.revision,
       });
       const transactionIds = ctx.transactions.map((t) => {
         if (t.subTransactions.some((s) => s.subTransactionRows

@@ -20,35 +20,29 @@ import log4js, { Logger } from 'log4js';
 import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
-import TransactionService, { TransactionFilters } from '../service/TransactionService';
+import TransactionService, { TransactionFilterParameters } from '../service/TransactionService';
 import { TransactionResponse } from './response/transaction-response';
 import { UserType } from '../entity/user/user';
 import { isDate, isNumber } from '../helpers/validators';
 import { validatePaginationQueryParams } from '../helpers/pagination';
 
-function parseGetTransactionsFilters(req: RequestWithToken): TransactionFilters {
+function parseGetTransactionsFilters(req: RequestWithToken): TransactionFilterParameters {
   if ((req.query.pointOfSaleRevision && !req.query.pointOfSaleId)
     || (req.query.containerRevision && !req.query.containerId)
     || (req.query.productRevision && !req.query.productId)) {
     throw new Error('Cannot filter on a revision, when there is no id given');
   }
 
-  const filters = {
+  const filters: TransactionFilterParameters = {
     fromId: req.query.fromId,
     createdById: req.query.createdById,
     toId: req.query.toId,
-    pointOfSale: req.query.pointOfSaleId ? {
-      id: req.query.pointOfSaleId,
-      revision: req.query.pointOfSaleRevision,
-    } : undefined,
-    container: req.query.containerId ? {
-      id: req.query.containerId,
-      revision: req.query.containerRevision,
-    } : undefined,
-    product: req.query.productId ? {
-      id: req.query.productId,
-      revision: req.query.productRevision,
-    } : undefined,
+    pointOfSaleId: req.query.pointOfSaleId,
+    pointOfSaleRevision: req.query.pointOfSaleRevision,
+    containerId: req.query.containerId,
+    containerRevision: req.query.containerRevision,
+    productId: req.query.productId,
+    productRevision: req.query.productRevision,
     fromDate: req.query.fromDate,
     tillDate: req.query.tillDate,
   };
@@ -63,18 +57,12 @@ function parseGetTransactionsFilters(req: RequestWithToken): TransactionFilters 
   if (!isNumber(filters.fromId, true)) throw new TypeError('filters.fromId is not a number');
   if (!isNumber(filters.createdById, true)) throw new TypeError('filters.createdById is not a number');
   if (!isNumber(filters.toId, true)) throw new TypeError('filters.toId is not a number');
-  if (filters.pointOfSale) {
-    if (!isNumber(filters.pointOfSale.id, false)) throw new TypeError('filters.pointOfSale.id is not a number');
-    if (!isNumber(filters.pointOfSale.revision, true)) throw new TypeError('filters.pointOfSale.revision is not a number');
-  }
-  if (filters.container) {
-    if (!isNumber(filters.container.id, false)) throw new TypeError('filters.container.id is not a number');
-    if (!isNumber(filters.container.revision, true)) throw new TypeError('filters.container.revision is not a number');
-  }
-  if (filters.product) {
-    if (!isNumber(filters.product.id, false)) throw new TypeError('filters.product.id is not a number');
-    if (!isNumber(filters.product.revision, true)) throw new TypeError('filters.product.revision is not a number');
-  }
+  if (!isNumber(filters.pointOfSaleId, true)) throw new TypeError('filters.pointOfSaleId is not a number');
+  if (!isNumber(filters.pointOfSaleRevision, true)) throw new TypeError('filters.pointOfSaleRevision is not a number');
+  if (!isNumber(filters.containerId, true)) throw new TypeError('filters.containerId is not a number');
+  if (!isNumber(filters.containerRevision, true)) throw new TypeError('filters.containerRevision is not a number');
+  if (!isNumber(filters.productId, true)) throw new TypeError('filters.productId is not a number');
+  if (!isNumber(filters.productRevision, true)) throw new TypeError('filters.productRevision is not a number');
   if (!isDate(filters.fromDate, true)) throw new TypeError('filters.fromDate is not a date');
   if (!isDate(filters.tillDate, true)) throw new TypeError('filters.tillDate is not a date');
 
