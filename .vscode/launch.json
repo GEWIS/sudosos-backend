@@ -28,5 +28,20 @@
       "sourceMaps": true,
       "smartStep": true,
     },
+    {
+      "type": "node",
+      "name": "Mocha Test File",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+      "args": [
+        "-r",
+        "ts-node/register",
+        "--no-timeouts",
+        "${relativeFile}"
+      ],
+      "sourceMaps": true,
+      "smartStep": true,
+    },
   ]
 }

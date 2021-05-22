@@ -23,7 +23,7 @@ import { expect } from 'chai';
 import User from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
-import ProductService from '../../../src/service/product-service';
+import ProductService, { ProductParameters } from '../../../src/service/product-service';
 import { seedAllProducts, seedProductCategories, seedUsers } from '../../seed';
 import Product from '../../../src/entity/product/product';
 import { ProductResponse } from '../../../src/controller/response/product-response';
@@ -92,7 +92,8 @@ describe('ProductService', async (): Promise<void> => {
       expect(productSuperset(updatedProducts, ctx.allProducts)).to.be.true;
     });
     it('should return product with the owner specified', async () => {
-      const res: ProductResponse[] = await ProductService.getProducts(ctx.allProducts[0].owner);
+      const params: ProductParameters = { ownerId: ctx.allProducts[0].owner.id };
+      const res: ProductResponse[] = await ProductService.getProducts(params);
 
       expect(productSuperset(res, ctx.allProducts)).to.be.true;
 
@@ -102,15 +103,18 @@ describe('ProductService', async (): Promise<void> => {
       expect(belongsToOwner).to.be.true;
     });
     it('should return a single product if productId is specified', async () => {
-      const res: ProductResponse[] = await ProductService
-        .getProducts(null, ctx.allProducts[0].id);
+      const params: ProductParameters = { productId: ctx.allProducts[0].id };
+      const res: ProductResponse[] = await ProductService.getProducts(params);
 
       expect(res).to.be.length(1);
       expect(res[0].id).to.be.equal(ctx.allProducts[0].id);
     });
     it('should return no products if the userId and productId dont match', async () => {
-      const res: ProductResponse[] = await ProductService
-        .getProducts(ctx.allProducts[10].owner, ctx.allProducts[0].id);
+      const params: ProductParameters = {
+        ownerId: ctx.allProducts[0].owner.id + 1,
+        productId: ctx.allProducts[0].id,
+      };
+      const res: ProductResponse[] = await ProductService.getProducts(params);
 
       expect(res).to.be.length(0);
     });

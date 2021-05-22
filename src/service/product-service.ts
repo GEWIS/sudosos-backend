@@ -16,12 +16,26 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { createQueryBuilder } from 'typeorm';
-import User from '../entity/user/user';
 import { ProductResponse } from '../controller/response/product-response';
 import Product from '../entity/product/product';
 import ProductRevision from '../entity/product/product-revision';
 import UpdatedProduct from '../entity/product/updated-product';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
+import QueryFilter, { FilterMapping } from '../helpers/query-filter';
+
+/**
+ * Define product filtering parameters used to filter query results.
+ */
+export interface ProductParameters {
+  /**
+   * Filter based on product id.
+   */
+  productId?: number;
+  /**
+   * Filter based on product owner.
+   */
+  ownerId?: number;
+}
 
 /**
  * Wrapper for all Product related logic.
@@ -31,96 +45,105 @@ export default class ProductService {
    * Helper function for the base mapping the raw getMany response product.
    * @param rawProduct - the raw response to parse.
    */
-  public static getDefaultMapping(rawProduct: any) {
+  public static asProductResponse(rawProduct: any): ProductResponse {
     return {
-      id: rawProduct.product_id,
+      id: rawProduct.id,
       alcoholPercentage: rawProduct.alcoholPercentage,
       category: {
         id: rawProduct.category_id,
         name: rawProduct.category_name,
       },
-      createdAt: rawProduct.product_createdAt,
+      createdAt: rawProduct.createdAt,
       owner: {
         id: rawProduct.owner_id,
         firstName: rawProduct.owner_firstName,
         lastName: rawProduct.owner_lastName,
       },
+      picture: rawProduct.picture,
+      name: rawProduct.name,
+      price: DineroTransformer.Instance.from(rawProduct.price),
     };
   }
 
   /**
    * Query for getting all products based on user.
-   * @param owner - If specified only return products belonging to this owner.
-   * @param productId - If specified only return the product with id productId.
+   * @param params
    */
-  public static async getProducts(owner: User = null, productId: number = null)
+  public static async getProducts(params?: ProductParameters)
     : Promise<ProductResponse[]> {
     const builder = createQueryBuilder()
       .from(Product, 'product')
-      .innerJoinAndSelect(ProductRevision, 'productrevision',
-        'product.id = productrevision.product '
-            + 'AND product.currentRevision = productrevision.revision')
+      .innerJoinAndSelect(
+        ProductRevision,
+        'productrevision',
+        `product.id = productrevision.product
+         AND product.currentRevision = productrevision.revision`,
+      )
       .innerJoinAndSelect('product.owner', 'owner')
       .innerJoinAndSelect('productrevision.category', 'category')
       .select([
-        'product.id', 'product.createdAt', 'productrevision.updatedAt', 'productrevision.revision',
-        'productrevision.name', 'productrevision.price', 'owner.id', 'owner.firstName', 'owner.lastName', 'category.id',
-        'category.name', 'productrevision.picture', 'productrevision.alcoholpercentage',
+        'product.id AS id',
+        'product.createdAt AS createdAt',
+        'productrevision.updatedAt AS updatedAt',
+        'productrevision.name AS name',
+        'productrevision.price AS price',
+        'owner.id AS owner_id',
+        'owner.firstName AS owner_firstName',
+        'owner.lastName AS owner_lastName',
+        'category.id AS category_id',
+        'category.name AS category_name',
+        'productrevision.picture AS picture',
+        'productrevision.alcoholpercentage AS alcoholpercentage',
       ]);
 
-    if (owner !== null) {
-      builder.andWhere('product.owner = :owner', { owner: owner.id });
-    }
-    if (productId !== null) {
-      builder.andWhere('product.id = :productId', { productId });
-    }
+    const filterMapping: FilterMapping = {
+      productId: 'product.id',
+      ownerId: 'owner.id',
+    };
+    if (params) QueryFilter.applyFilter(builder, filterMapping, params);
 
     const rawProducts = await builder.getRawMany();
 
-    const mapping = (rawProduct: any) => ({
-      name: rawProduct.productrevision_name,
-      picture: rawProduct.productrevision_picture,
-      price: DineroTransformer.Instance.from(rawProduct.productrevision_price),
-      revision: rawProduct.productrevision_revision,
-      updatedAt: rawProduct.productrevision_updatedAt,
-    });
-
-    return rawProducts.map((rawProduct) => (
-      ({ ...this.getDefaultMapping(rawProduct), ...mapping(rawProduct) } as ProductResponse)
-    ));
+    return rawProducts.map((rawProduct) => this.asProductResponse(rawProduct));
   }
 
   /**
    * Query to return all updated products.
-   * @param owner - If specified it will only return products who has the owner Owner.
+   * @param params
    */
-  public static async getUpdatedProducts(owner: User = null): Promise<ProductResponse[]> {
+  public static async getUpdatedProducts(params?: ProductParameters)
+    : Promise<ProductResponse[]> {
     const builder = createQueryBuilder()
       .from(Product, 'product')
-      .innerJoinAndSelect(UpdatedProduct, 'updatedproduct',
-        'product.id = updatedproduct.product')
+      .innerJoinAndSelect(
+        UpdatedProduct,
+        'updatedproduct',
+        'product.id = updatedproduct.product',
+      )
       .innerJoinAndSelect('product.owner', 'owner')
       .innerJoinAndSelect('updatedproduct.category', 'category')
       .select([
-        'product.id', 'product.createdAt', 'updatedproduct.updatedAt', 'product.currentRevision',
-        'updatedproduct.name', 'updatedproduct.price', 'owner.id', 'owner.firstName', 'owner.lastName', 'category.id',
-        'category.name', 'updatedproduct.picture', 'updatedproduct.alcoholpercentage',
+        'product.id AS id',
+        'product.createdAt AS createdAt',
+        'updatedproduct.updatedAt AS updatedAt',
+        'updatedproduct.name AS name',
+        'updatedproduct.price AS price',
+        'owner.id AS owner_id',
+        'owner.firstName AS owner_firstName',
+        'owner.lastName AS owner_lastName',
+        'category.id AS category_id',
+        'category.name AS category_name',
+        'updatedproduct.picture AS picture',
+        'updatedproduct.alcoholpercentage AS alcoholpercentage',
       ]);
-    if (owner !== null) {
-      builder.where('product.owner = :owner', { owner: owner.id });
-    }
+
+    const filterMapping: FilterMapping = {
+      productId: 'product.id',
+    };
+    if (params) QueryFilter.applyFilter(builder, filterMapping, params);
 
     const rawProducts = await builder.getRawMany();
 
-    const mapping = (rawProduct: any) => ({
-      name: rawProduct.updatedproduct_name,
-      picture: rawProduct.updatedproduct_picture,
-      price: DineroTransformer.Instance.from(rawProduct.updatedproduct_price),
-      revision: rawProduct.product_currentRevision,
-      updatedAt: rawProduct.updatedproduct_updatedAt,
-    });
-
-    return rawProducts.map((rawProduct) => (
-      ({ ...this.getDefaultMapping(rawProduct), ...mapping(rawProduct) } as ProductResponse)));
+    return rawProducts.map((rawProduct) => this.asProductResponse(rawProduct));
   }
 }
