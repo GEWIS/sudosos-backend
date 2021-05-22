@@ -29,5 +29,5 @@ export default interface BorrelkaartGroupRequest {
   name: string,
   activeStartDate: string,
   activeEndDate: string,
-  users: Array<User>,
+  users: User[],
 }

@@ -29,5 +29,5 @@ export default interface BorrelkaartGroupResponse extends BaseResponse {
   name: string,
   activeStartDate?: string,
   activeEndDate: string,
-  users: Array<UserResponse>,
+  users: UserResponse[],
 }
