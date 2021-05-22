@@ -17,27 +17,33 @@
  */
 import { SelectQueryBuilder } from 'typeorm';
 
-export interface FilterOption {
-  variable: string,
-  argument: string | number,
+/**
+ * Defines the mapping from properties on the parameter object, to
+ * the respective identifiers in queries.
+ */
+export interface FilterMapping {
+  [key: string]: string;
 }
 
-export type FilterOptions = FilterOption[] | FilterOption;
+/**
+ * Defines the filtering parameters to which can be mapped.
+ */
+export interface FilterParameters {
+  [key: string]: any;
+}
 
 export default class QueryFilter {
-  public static applyFilter(query: SelectQueryBuilder<any>, filterOptions: FilterOptions)
-    : SelectQueryBuilder<any> {
-    let options: FilterOption[];
-
-    if (Array.isArray(filterOptions)) {
-      options = filterOptions as FilterOption[];
-    } else {
-      options = [filterOptions];
-    }
-
-    options.forEach((filterOption) => {
-      query.andWhere(`${filterOption.variable} = ${filterOption.argument}`);
+  public static applyFilter(
+    query: SelectQueryBuilder<any>,
+    mapping: FilterMapping,
+    params: FilterParameters,
+  ): SelectQueryBuilder<any> {
+    Object.keys(mapping).forEach((param: string) => {
+      const value = params[param];
+      if (value !== undefined) {
+        query.andWhere(`${mapping[param]} = :${param}`);
+      }
     });
-    return query;
+    return query.setParameters(params);
   }
 }

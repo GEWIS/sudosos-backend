@@ -21,7 +21,6 @@ import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import ProductService from '../service/product-service';
-import { FilterOptions } from '../helpers/query-filter';
 
 export default class ProductController extends BaseController {
   private logger: Logger = log4js.getLogger('ProductController');
@@ -106,7 +105,7 @@ export default class ProductController extends BaseController {
     // handle request
     try {
       // check if product in database
-      const product = await ProductService.getProducts({ variable: 'product.id', argument: id } as FilterOptions);
+      const product = await ProductService.getProducts({ productId: parseInt(id, 10) });
       if (product) {
         res.json(product);
       } else {
@@ -157,7 +156,7 @@ export default class ProductController extends BaseController {
     // handle request
     try {
       // check if product in database
-      const product = await ProductService.getUpdatedProducts({ variable: 'product.id', argument: id } as FilterOptions);
+      const product = await ProductService.getUpdatedProducts({ productId: parseInt(id, 10) });
       if (product) {
         res.json(product);
       } else {

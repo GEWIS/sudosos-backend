@@ -21,7 +21,21 @@ import Product from '../entity/product/product';
 import ProductRevision from '../entity/product/product-revision';
 import UpdatedProduct from '../entity/product/updated-product';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
-import QueryFilter, { FilterOptions } from '../helpers/query-filter';
+import QueryFilter, { FilterMapping } from '../helpers/query-filter';
+
+/**
+ * Define product filtering parameters used to filter query results.
+ */
+export interface ProductParameters {
+  /**
+   * Filter based on product id.
+   */
+  productId?: number;
+  /**
+   * Filter based on product owner.
+   */
+  ownerId?: number;
+}
 
 /**
  * Wrapper for all Product related logic.
@@ -50,9 +64,9 @@ export default class ProductService {
 
   /**
    * Query for getting all products based on user.
-   * @param filterOptions
+   * @param params
    */
-  public static async getProducts(filterOptions?: FilterOptions)
+  public static async getProducts(params?: ProductParameters)
     : Promise<ProductResponse[]> {
     const builder = createQueryBuilder()
       .from(Product, 'product')
@@ -79,7 +93,12 @@ export default class ProductService {
         'productrevision.picture',
         'productrevision.alcoholpercentage',
       ]);
-    if (filterOptions) QueryFilter.applyFilter(builder, filterOptions);
+
+    const filterMapping: FilterMapping = {
+      productId: 'product.id',
+      ownerId: 'owner.id',
+    };
+    if (params) QueryFilter.applyFilter(builder, filterMapping, params);
 
     const rawProducts = await builder.getRawMany();
 
@@ -100,7 +119,7 @@ export default class ProductService {
    * Query to return all updated products.
    * @param filterOptions
    */
-  public static async getUpdatedProducts(filterOptions?: FilterOptions)
+  public static async getUpdatedProducts(params?: ProductParameters)
     : Promise<ProductResponse[]> {
     const builder = createQueryBuilder()
       .from(Product, 'product')
@@ -127,7 +146,10 @@ export default class ProductService {
         'updatedproduct.alcoholpercentage',
       ]);
 
-    if (filterOptions) QueryFilter.applyFilter(builder, filterOptions);
+    const filterMapping: FilterMapping = {
+      productId: 'product.id',
+    };
+    if (params) QueryFilter.applyFilter(builder, filterMapping, params);
 
     const rawProducts = await builder.getRawMany();
 
