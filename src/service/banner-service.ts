@@ -19,6 +19,11 @@ import { FindManyOptions } from 'typeorm';
 import BannerRequest from '../controller/request/banner-request';
 import BannerResponse from '../controller/response/banner-response';
 import Banner from '../entity/banner';
+import QueryFilter, { FilterMapping } from '../helpers/query-filter';
+
+export interface BannerFilterParameters {
+  bannerId?: number,
+}
 
 export default class BannerService {
   /**
@@ -85,12 +90,19 @@ export default class BannerService {
 
   /**
    * Returns all banners with options.
-   * @param options - find options
+   * @param params - The filtering parameters.
+   * @param options - The pagination options.
    * @returns {Array<BannerResponse>} - all banners
    */
-  public static async getAllBanners(options?: FindManyOptions): Promise<BannerResponse[]> {
-    // find and return banners or empty array
-    const banners = await Banner.find({ ...options });
+  public static async getBanners(params: BannerFilterParameters, options?: FindManyOptions)
+    : Promise<BannerResponse[]> {
+    const mapping: FilterMapping = {
+      bannerId: 'id',
+    };
+    const banners = await Banner.find({
+      where: QueryFilter.createFilterWhereClause(mapping, params),
+      ...options,
+    });
     return banners.map((banner) => this.asBannerResponse(banner));
   }
 
@@ -103,20 +115,6 @@ export default class BannerService {
     // save and return banner
     const banner = this.asBanner(bannerReq);
     await Banner.save(banner);
-    return this.asBannerResponse(banner);
-  }
-
-  /**
-   * Returns banner with given id.
-   * @param id - requested banner id
-   * @returns {BannerResponse.model} - requested banner
-   */
-  public static async getBannerByID(id: number): Promise<BannerResponse> {
-    // find and return single banner
-    const banner = await Banner.findOne(id);
-    if (!banner) {
-      return undefined;
-    }
     return this.asBannerResponse(banner);
   }
 

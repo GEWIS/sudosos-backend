@@ -90,7 +90,7 @@ export default class BannerController extends BaseController {
 
     // handle request
     try {
-      res.json(await BannerService.getAllBanners(addPaginationForFindOptions(req)));
+      res.json(await BannerService.getBanners({}, addPaginationForFindOptions(req)));
     } catch (error) {
       this.logger.error('Could not return all banners:', error);
       res.status(500).json('Internal server error.');
@@ -141,9 +141,9 @@ export default class BannerController extends BaseController {
     // handle request
     try {
       // check if banner in database
-      const banner = await BannerService.getBannerByID(Number.parseInt(id, 10));
-      if (banner) {
-        res.json(banner);
+      const banner = await BannerService.getBanners({ bannerId: Number.parseInt(id, 10) });
+      if (banner.length > 0) {
+        res.json(banner[0]);
       } else {
         res.status(404).json('Banner not found.');
       }
