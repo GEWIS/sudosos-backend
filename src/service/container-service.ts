@@ -16,22 +16,52 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { createQueryBuilder, SelectQueryBuilder } from 'typeorm';
-import { ContainerResponse } from '../controller/response/container-response';
+import { ContainerResponse, ContainerWithProductsResponse } from '../controller/response/container-response';
 import Container from '../entity/container/container';
 import ContainerRevision from '../entity/container/container-revision';
 import UpdatedContainer from '../entity/container/updated-container';
 import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision';
 import User from '../entity/user/user';
+import QueryFilter, { FilterMapping } from '../helpers/query-filter';
+import ProductService from './product-service';
+import PointOfSale from '../entity/point-of-sale/point-of-sale';
+
+/**
+ * Define product filtering parameters used to filter query results.
+ */
+export interface ContainerParameters {
+  /**
+   * Filter based on container id.
+   */
+  containerId?: number;
+  /**
+   * Filter based on container revision.
+   */
+  containerRevision?: number;
+  /**
+   * Filter based on container owner.
+   */
+  ownerId?: number;
+  /**
+   * Filter based on pointOfSale id.
+   */
+  posId?: number;
+  /**
+   * Filter based on pointOfSale revision.
+   */
+  posRevision?: number;
+}
 
 export default class ContainerService {
   /**
    * Helper function for the base mapping the raw getMany response container.
    * @param rawContainer - the raw response to parse.
    */
-  public static getDefaultMapping(rawContainer: any) {
+  private static asContainerResponse(rawContainer: any): ContainerResponse {
     return {
-      id: rawContainer.container_id,
-      createdAt: rawContainer.container_createdAt,
+      id: rawContainer.id,
+      name: rawContainer.name,
+      updatedAt: rawContainer.updatedAt,
       owner: {
         id: rawContainer.owner_id,
         firstName: rawContainer.owner_firstName,
@@ -41,17 +71,31 @@ export default class ContainerService {
   }
 
   /**
-   * Query for getting all containers based on user.
-   * @param owner - If specified, only return containers belonging to this owner.
-   * @param containerId - If specified, only return the container with id containerId.
-   * @param pos - If specified, only return the containers belonging to the point of sale.
+   * Helper function for the base mapping the raw getMany response container.
+   * @param rawContainer - the raw response to parse.
    */
-  public static async getContainers(
-    owner: User = null,
-    containerId: number = null,
-    pos: PointOfSaleRevision = null,
-  ) : Promise<ContainerResponse[]> {
-    let onlyCurrent = true;
+  private static asContainerWithProductsResponse(rawContainer: any): ContainerWithProductsResponse {
+    return {
+      id: rawContainer.id,
+      name: rawContainer.name,
+      updatedAt: rawContainer.updatedAt,
+      owner: {
+        id: rawContainer.owner_id,
+        firstName: rawContainer.owner_firstName,
+        lastName: rawContainer.owner_lastName,
+      },
+      products: rawContainer.products.map(
+        (product: any) => ProductService.asProductResponse(product),
+      ),
+    };
+  }
+
+  /**
+   * Query for getting all containers based on user.
+   * @param params
+   */
+  public static async getContainers(params: ContainerParameters = {})
+    : Promise<ContainerResponse[]> {
     const builder = createQueryBuilder()
       .from(Container, 'container')
       .innerJoin(
@@ -61,24 +105,18 @@ export default class ContainerService {
       )
       .innerJoin('container.owner', 'owner')
       .select([
-        'container.id',
-        'container.createdAt',
-        'containerrevision.updatedAt',
-        'containerrevision.revision',
-        'containerrevision.name',
-        'owner.id',
-        'owner.firstName',
-        'owner.lastName',
+        'container.id AS id',
+        'container.createdAt AS createdAt',
+        'containerrevision.updatedAt AS updatedAt',
+        'containerrevision.name AS name',
+        'owner.id AS owner_id',
+        'owner.firstName AS owner_firstName',
+        'owner.lastName AS owner_lastName',
       ]);
 
-    if (owner !== null) {
-      builder.andWhere('container.owner = :owner', { owner: owner.id });
-    }
-    if (containerId !== null) {
-      builder.andWhere('container.id = :containerId', { containerId });
-    }
-    if (pos !== null) {
-      onlyCurrent = false;
+    const { posId, posRevision, ...p } = params;
+
+    if (posId !== null) {
       builder.innerJoin(
         (qb: SelectQueryBuilder<any>) => qb.from(PointOfSaleRevision, 'pos_revision')
           .innerJoin(
@@ -87,28 +125,33 @@ export default class ContainerService {
           )
           .where(
             'pos_revision.pointOfSaleId = :id AND pos_revision.revision = :revision',
-            { id: pos.pointOfSale.id, revision: pos.revision },
+            {
+              id: posId,
+              revision: posRevision ?? qb.subQuery()
+                .from(PointOfSale, 'pos')
+                .select('pos.currentRevision')
+                .where('pos.id = :id', { posId }),
+            },
           )
           .select(['cc.containerId AS id', 'cc.revision AS revision']),
         'pos_container',
         'pos_container.id = container.id AND pos_container.revision = containerrevision.revision',
       );
     }
-    if (onlyCurrent) {
+
+    const filterMapping: FilterMapping = {
+      containerId: 'container.id',
+      containerRevision: 'containerrevision.revision',
+      ownerId: 'owner.id',
+    };
+    QueryFilter.applyFilter(builder, filterMapping, p);
+    if (!(posId || p.containerRevision)) {
       builder.andWhere('container.currentRevision = containerrevision.revision');
     }
 
     const rawContainers = await builder.getRawMany();
 
-    const mapping = (rawContainer: any) => ({
-      name: rawContainer.containerrevision_name,
-      revision: rawContainer.containerrevision_revision,
-      updatedAt: rawContainer.containerrevision_updatedAt,
-    });
-
-    return rawContainers.map((rawContainer) => (
-      ({ ...this.getDefaultMapping(rawContainer), ...mapping(rawContainer) } as ContainerResponse)
-    ));
+    return rawContainers.map((rawContainer) => this.asContainerResponse(rawContainer));
   }
 
   /**
@@ -147,14 +190,6 @@ export default class ContainerService {
 
     const rawContainers = await builder.getRawMany();
 
-    const mapping = (rawContainer: any) => ({
-      name: rawContainer.updatedcontainer_name,
-      revision: rawContainer.container_currentRevision,
-      updatedAt: rawContainer.updatedcontainer_updatedAt,
-    });
-
-    return rawContainers.map((rawContainer) => (
-      ({ ...this.getDefaultMapping(rawContainer), ...mapping(rawContainer) } as ContainerResponse)
-    ));
+    return rawContainers.map((rawContainer) => (this.asContainerResponse(rawContainer)));
   }
 }

@@ -17,7 +17,7 @@
  */
 import { Dinero } from 'dinero.js';
 import BaseResponse from './base-response';
-import { BaseUserResponse } from './user-response';
+import { UserResponse } from './user-response';
 import { ProductCategoryResponse } from './product-category-response';
 
 /**
@@ -39,8 +39,7 @@ export interface BaseProductResponse extends BaseResponse {
  * @property {number} alcoholPercentage - The percentage of alcohol in this product.
  */
 export interface ProductResponse extends BaseProductResponse {
-  revision?: number,
-  owner: BaseUserResponse,
+  owner: UserResponse,
   category: ProductCategoryResponse,
   picture: String,
   alcoholPercentage: number,

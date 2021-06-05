@@ -24,7 +24,9 @@ import User from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
 import ContainerService from '../../../src/service/container-service';
-import seedDatabase from '../../seed';
+import {
+  seedAllContainers, seedAllProducts, seedProductCategories, seedUsers,
+} from '../../seed';
 import Container from '../../../src/entity/container/container';
 import { ContainerResponse } from '../../../src/controller/response/container-response';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
@@ -51,34 +53,43 @@ describe('ContainerService', async (): Promise<void> => {
     app: Application,
     specification: SwaggerSpecification,
     users: User[],
-    allContainers: Container[],
-    allUpdated: UpdatedContainer[]
+    containers: Container[],
+    updatedContainers: UpdatedContainer[]
   };
 
   before(async () => {
     const connection = await Database.initialize();
 
-    await seedDatabase();
+    const users = await seedUsers();
+    const categories = await seedProductCategories();
+    const {
+      products,
+      productRevisions,
+    } = await seedAllProducts(users, categories);
+    const {
+      containers,
+      updatedContainers,
+    } = await seedAllContainers(users, productRevisions, products);
 
     // start app
     const app = express();
     const specification = await Swagger.initialize(app);
     app.use(json());
 
-    //  Load all containers from the database.
-    const allContainers: Container[] = await Container.find({ relations: ['owner'] });
-    const allUpdated: UpdatedContainer[] = await UpdatedContainer.find(
-      { relations: ['container', 'container.owner'] },
-    );
+    // //  Load all containers from the database.
+    // const allContainers: Container[] = await Container.find({ relations: ['owner'] });
+    // const allUpdated: UpdatedContainer[] = await UpdatedContainer.find(
+    //   { relations: ['container', 'container.owner'] },
+    // );
 
     // initialize context
     ctx = {
       connection,
       app,
       specification,
-      users: await User.find(),
-      allContainers,
-      allUpdated,
+      users,
+      containers,
+      updatedContainers,
     };
   });
 
@@ -91,7 +102,7 @@ describe('ContainerService', async (): Promise<void> => {
     it('should return all containers with no input specification', async () => {
       const res: ContainerResponse[] = await ContainerService.getContainers();
 
-      expect(containerSuperset(res, ctx.allContainers)).to.be.true;
+      expect(containerSuperset(res, ctx.containers)).to.be.true;
       expect(res.every(
         (c: ContainerResponse) => ctx.specification.validateModel('ContainerResponse', c, false, true).valid,
       )).to.be.true;

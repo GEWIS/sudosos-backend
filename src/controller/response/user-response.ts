@@ -18,10 +18,10 @@
 import BaseResponse from './base-response';
 
 /**
- * @typedef {BaseUserResponse} BaseProductResponse
- * @property {string} name.required - The name of the user.
+ * @typedef {UserResponse} ProductResponse
+ * @property {string} firstName.required - The name of the user.
  */
-export interface BaseUserResponse extends BaseResponse {
+export interface UserResponse extends BaseResponse {
   firstName: string,
   lastName: string
 }
