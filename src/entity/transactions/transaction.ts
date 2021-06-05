@@ -30,6 +30,7 @@ import PointOfSaleRevision from '../point-of-sale/point-of-sale-revision';
  * @property {User.model} createdBy - The user that created the transaction, if not same as 'from'.
  * @property {Array.<SubTransaction>} subtransactions.required - The subtransactions belonging
  *    to this transaction.
+ * @property {PointOfSaleRevision.model} pointOfSale.required - The point of sale
  */
 @Entity()
 export default class Transaction extends BaseEntity {
