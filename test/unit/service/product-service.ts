@@ -25,12 +25,13 @@ import Database from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
 import ProductService, { ProductParameters } from '../../../src/service/product-service';
 import {
-  seedAllProducts, seedContainers, seedProductCategories, seedUsers,
+  seedAllProducts, seedContainers, seedProductCategories, seedUpdatedContainers, seedUsers,
 } from '../../seed';
 import Product from '../../../src/entity/product/product';
 import { ProductResponse } from '../../../src/controller/response/product-response';
 import ProductRevision from '../../../src/entity/product/product-revision';
 import UpdatedProduct from '../../../src/entity/product/updated-product';
+import UpdatedContainer from '../../../src/entity/container/updated-container';
 
 /**
  * Test if all the product responses are part of the product set array.
@@ -54,6 +55,7 @@ describe('ProductService', async (): Promise<void> => {
     allProducts: Product[],
     productsRevisions: ProductRevision[],
     updatedProducts: UpdatedProduct[],
+    updatedContainers: UpdatedContainer[],
   };
 
   before(async () => {
@@ -64,11 +66,15 @@ describe('ProductService', async (): Promise<void> => {
 
     let allProducts; let productsRevisions; let
       updatedProducts;
+    let updatedContainers;
     await seedAllProducts(users, categories).then(async (res) => {
       allProducts = res.products;
       productsRevisions = res.productRevisions;
       updatedProducts = res.updatedProducts;
       await seedContainers(users, res.productRevisions);
+      await seedUpdatedContainers(users, productsRevisions, allProducts).then((rs) => {
+        updatedContainers = rs.updatedContainers;
+      });
     });
 
     // start app
@@ -85,6 +91,7 @@ describe('ProductService', async (): Promise<void> => {
       allProducts,
       productsRevisions,
       updatedProducts,
+      updatedContainers,
     };
   });
 
@@ -195,7 +202,7 @@ describe('ProductService', async (): Promise<void> => {
     });
     it('should return an updated container', async () => {
       const res: ProductResponse[] = await ProductService
-        .getUpdatedContainer(4);
+        .getUpdatedContainer(1);
 
       const products = [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }, { id: 5 }, { id: 6 }];
       products.forEach((product) => {
