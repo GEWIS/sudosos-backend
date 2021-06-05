@@ -15,17 +15,15 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { RequestWithToken } from '../middleware/token-middleware';
-import { UserType } from '../entity/user/user';
 
-export default class AuthService {
-  /**
-   * Validates that the request is authorized by the policy.
-   * @param req - The incoming request.
-   */
-  // eslint-disable-next-line class-methods-use-this
-  public static async isAdmin(req: RequestWithToken): Promise<boolean> {
-    // TODO: check whether user is admin
-    return req.token.user.type === UserType.LOCAL_ADMIN;
-  }
+/**
+ * @typedef BaseResponse
+ * @property {number} id.required - The unique id of the entity.
+ * @property {string} createdAt.required - The creation Date of the entity.
+ * @property {string} updatedAt.required - The last update Date of the entity.
+ */
+export default interface BaseResponse {
+  id: number,
+  createdAt?: string,
+  updatedAt?: string,
 }

@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import bodyParser from 'body-parser';
+import { json } from 'body-parser';
 import { expect, request } from 'chai';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
@@ -23,15 +23,18 @@ import { Connection } from 'typeorm';
 import TokenHandler from '../../../src/authentication/token-handler';
 import BannerController from '../../../src/controller/banner-controller';
 import BannerRequest from '../../../src/controller/request/banner-request';
+import BannerResponse from '../../../src/controller/response/banner-response';
 import Database from '../../../src/database/database';
 import Banner from '../../../src/entity/banner';
 import User, { UserType } from '../../../src/entity/user/user';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
+import RoleManager from '../../../src/rbac/role-manager';
+import BannerService from '../../../src/service/banner-service';
 import Swagger from '../../../src/start/swagger';
 
-function bannerEq(a: Banner, b: Banner): Boolean {
+function bannerEq(a: Banner, b: BannerResponse): Boolean {
   const aEmpty = a === {} as Banner || a === undefined;
-  const bEmpty = b === {} as Banner || b === undefined;
+  const bEmpty = b === {} as BannerResponse || b === undefined;
   if (aEmpty === bEmpty) {
     return true;
   }
@@ -39,30 +42,12 @@ function bannerEq(a: Banner, b: Banner): Boolean {
     return false;
   }
 
-  let aStartDate = a.startDate;
-  let bStartDate = b.startDate;
-  let aEndDate = a.endDate;
-  let bEndDate = b.endDate;
-
-  if (typeof aStartDate === 'string') {
-    aStartDate = new Date(aStartDate);
-  }
-  if (typeof bStartDate === 'string') {
-    bStartDate = new Date(bStartDate);
-  }
-  if (typeof aEndDate === 'string') {
-    aEndDate = new Date(aEndDate);
-  }
-  if (typeof bEndDate === 'string') {
-    bEndDate = new Date(bEndDate);
-  }
-
   return a.name === b.name
     && a.picture === b.picture
     && a.duration === b.duration
     && a.active === b.active
-    && aStartDate.getTime() === bStartDate.getTime()
-    && aEndDate.getTime() === bEndDate.getTime();
+    && a.startDate.getTime() === new Date(b.startDate).getTime()
+    && a.endDate.getTime() === new Date(b.endDate).getTime();
 }
 
 describe('BannerController', async (): Promise<void> => {
@@ -107,8 +92,8 @@ describe('BannerController', async (): Promise<void> => {
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
-    const adminToken = await tokenHandler.signToken({ user: adminUser }, 'nonce admin');
-    const token = await tokenHandler.signToken({ user: localUser }, 'nonce');
+    const adminToken = await tokenHandler.signToken({ user: adminUser, roles: ['Admin'] }, 'nonce admin');
+    const token = await tokenHandler.signToken({ user: localUser, roles: [] }, 'nonce');
 
     // test banners
     const validBannerReq = {
@@ -134,8 +119,24 @@ describe('BannerController', async (): Promise<void> => {
     // start app
     const app = express();
     const specification = await Swagger.initialize(app);
-    const controller = new BannerController(specification);
-    app.use(bodyParser.json());
+
+    const all = { all: new Set<string>(['*']) };
+    const roleManager = new RoleManager();
+    roleManager.registerRole({
+      name: 'Admin',
+      permissions: {
+        Banner: {
+          create: all,
+          get: all,
+          update: all,
+          delete: all,
+        },
+      },
+      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
+    });
+
+    const controller = new BannerController({ specification, roleManager });
+    app.use(json());
     app.use(new TokenMiddleware({ tokenHandler, refreshFactor: 0.5 }).getMiddleware());
     app.use('/banners', controller.getRouter());
 
@@ -164,16 +165,21 @@ describe('BannerController', async (): Promise<void> => {
 
   describe('GET /banners', () => {
     it('should return an HTTP 200 and all banners in the database if admin', async () => {
-      const res = await request(ctx.app)
+      let res = await request(ctx.app)
+        .get('/banners')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect((res.body as Banner[]).length, 'no empty array returned').to.equal(0);
+
+      // save a banner
+      await Banner.save(ctx.validBanner);
+      res = await request(ctx.app)
         .get('/banners')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
       // number of banners returned is number of banners in database
       const banners = res.body as Banner[];
       expect(banners.length).to.equal(await Banner.count());
-
-      // success code
-      expect(res.status).to.equal(200);
     });
     it('should return an HTTP 403 if not admin', async () => {
       const res = await request(ctx.app)
@@ -202,7 +208,7 @@ describe('BannerController', async (): Promise<void> => {
 
       // check if posted banner is indeed in the database
       const databaseBanner = await Banner.findOne(count + 1);
-      expect(bannerEq(ctx.validBanner, databaseBanner)).to.be.true;
+      expect(bannerEq(databaseBanner, res.body as BannerResponse)).to.be.true;
 
       // success code
       expect(res.status).to.equal(200);
@@ -250,11 +256,10 @@ describe('BannerController', async (): Promise<void> => {
       const res = await request(ctx.app)
         .get('/banners/1')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
-      const resBanner = res.body as Banner;
-      const databaseBanner = await Banner.findOne(1);
 
       // check if returned banner is indeed the one in the database
-      expect(bannerEq(resBanner, databaseBanner)).to.be.true;
+      const databaseBanner = await Banner.findOne(1);
+      expect(bannerEq(databaseBanner, res.body as BannerResponse)).to.be.true;
 
       // success code
       expect(res.status).to.equal(200);
@@ -296,13 +301,6 @@ describe('BannerController', async (): Promise<void> => {
         duration: 5,
       } as BannerRequest;
 
-      // patched banner in database
-      const patchBanner = {
-        ...patchBannerReq,
-        startDate: new Date(patchBannerReq.startDate),
-        endDate: new Date(patchBannerReq.endDate),
-      } as Banner;
-
       // save valid banner with id 1
       await Banner.save(ctx.validBanner);
 
@@ -314,7 +312,7 @@ describe('BannerController', async (): Promise<void> => {
 
       // check if posted banner is indeed in the database
       const databaseBanner = await Banner.findOne(1);
-      expect(bannerEq(patchBanner, databaseBanner)).to.be.true;
+      expect(bannerEq(databaseBanner, res.body as BannerResponse)).to.be.true;
 
       // success code
       expect(res.status).to.equal(200);
@@ -331,7 +329,7 @@ describe('BannerController', async (): Promise<void> => {
 
       // check if banner is unaltered
       const databaseBanner = await Banner.findOne(1);
-      expect(bannerEq(ctx.validBanner, databaseBanner)).to.be.true;
+      expect(bannerEq(databaseBanner, res.body as BannerResponse)).to.be.true;
 
       // check response body
       expect(res.body).to.equal('Invalid banner.');
@@ -398,7 +396,7 @@ describe('BannerController', async (): Promise<void> => {
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
       // test deletion
-      expect(bannerEq(res.body as Banner, ctx.validBanner)).to.be.true;
+      expect(bannerEq(ctx.validBanner, res.body as BannerResponse)).to.be.true;
       expect(await Banner.findOne(1)).to.be.undefined;
 
       // success code
@@ -429,7 +427,8 @@ describe('BannerController', async (): Promise<void> => {
       expect(res.body).to.be.empty;
 
       // check if banner with id 1 is not deleted
-      expect(bannerEq(await Banner.findOne(1), ctx.validBanner)).to.be.true;
+      expect(bannerEq(await Banner.findOne(1),
+        BannerService.asBannerResponse(ctx.validBanner as Banner))).to.be.true;
 
       // forbidden code
       expect(res.status).to.equal(403);
@@ -455,7 +454,8 @@ describe('BannerController', async (): Promise<void> => {
 
       // test if returned banners are active
       expect(res.body.length).to.equal(1);
-      expect(bannerEq((res.body as Banner[])[0], ctx.validBanner)).to.be.true;
+      expect(bannerEq((res.body as Banner[])[0],
+        BannerService.asBannerResponse(ctx.validBanner as Banner))).to.be.true;
 
       expect(res.status).to.equal(200);
     });

@@ -18,10 +18,11 @@
 import express, { Application, Request } from 'express';
 import { expect, request } from 'chai';
 import { SwaggerSpecification } from 'swagger-model-validator';
-import bodyParser from 'body-parser';
+import { json } from 'body-parser';
 import BaseController from '../../../src/controller/base-controller';
 import Policy from '../../../src/controller/policy';
 import { getSpecification } from '../entity/transformer/test-model';
+import RoleManager from '../../../src/rbac/role-manager';
 
 class TestController extends BaseController {
   // eslint-disable-next-line class-methods-use-this
@@ -83,9 +84,12 @@ describe('BaseController', (): void => {
       controller: undefined,
     };
     ctx.specification = await getSpecification(ctx.app);
-    ctx.controller = new TestController(ctx.specification);
+    ctx.controller = new TestController({
+      specification: ctx.specification,
+      roleManager: new RoleManager(),
+    });
 
-    ctx.app.use(bodyParser.json());
+    ctx.app.use(json());
     ctx.app.use(ctx.controller.getRouter());
   });
 

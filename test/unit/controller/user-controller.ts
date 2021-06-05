@@ -19,14 +19,14 @@ import express, { Application } from 'express';
 import { expect, request } from 'chai';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { Connection } from 'typeorm';
-import bodyParser from 'body-parser';
+import { json } from 'body-parser';
 import UserController from '../../../src/controller/user-controller';
 import User, { UserType } from '../../../src/entity/user/user';
 import Product from '../../../src/entity/product/product';
 import Transaction from '../../../src/entity/transactions/transaction';
 import TokenHandler from '../../../src/authentication/token-handler';
-import Database from '../../../src/database';
-import Swagger from '../../../src/swagger';
+import Database from '../../../src/database/database';
+import Swagger from '../../../src/start/swagger';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import ProductCategory from '../../../src/entity/product/product-category';
 import Container from '../../../src/entity/container/container';
@@ -36,6 +36,7 @@ import ContainerRevision from '../../../src/entity/container/container-revision'
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
 import seedDatabase from '../../seed';
 import { verifyUserEntity } from '../validators';
+import RoleManager from '../../../src/rbac/role-manager';
 
 describe('UserController', (): void => {
   let ctx: {
@@ -57,14 +58,10 @@ describe('UserController', (): void => {
     transactions: Transaction[],
   };
 
-  before(async function (): Promise<void> {
-    // @ts-ignore
-    this.timeout(10000);
+  before(async () : Promise<void> => {
     const connection = await Database.initialize();
     const app = express();
-    console.log('write database');
     const database = await seedDatabase();
-    console.log('database written');
     ctx = {
       connection,
       app,
@@ -91,13 +88,49 @@ describe('UserController', (): void => {
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
-    ctx.userToken = await tokenHandler.signToken({ user: ctx.users[0] }, '1');
-    ctx.adminToken = await tokenHandler.signToken({ user: ctx.users[6] }, '1');
+    ctx.userToken = await tokenHandler.signToken({ user: ctx.users[0], roles: ['User'] }, '1');
+    ctx.adminToken = await tokenHandler.signToken({ user: ctx.users[6], roles: ['User', 'Admin'] }, '1');
+
+    const all = { all: new Set<string>(['*']) };
+    const own = { own: new Set<string>(['*']) };
+    const roleManager = new RoleManager();
+    roleManager.registerRole({
+      name: 'Admin',
+      permissions: {
+        User: {
+          create: all,
+          get: all,
+          update: all,
+          delete: all,
+        },
+        Product: {
+          get: all,
+          update: all,
+        },
+      },
+      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
+    });
+    roleManager.registerRole({
+      name: 'User',
+      permissions: {
+        User: {
+          get: own,
+        },
+        Product: {
+          get: own,
+          update: own,
+        },
+      },
+      assignmentCheck: async () => true,
+    });
 
     ctx.specification = await Swagger.initialize(ctx.app);
-    ctx.controller = new UserController(ctx.specification);
+    ctx.controller = new UserController({
+      specification: ctx.specification,
+      roleManager,
+    });
 
-    ctx.app.use(bodyParser.json());
+    ctx.app.use(json());
     ctx.app.use(new TokenMiddleware({ tokenHandler, refreshFactor: 0.5 }).getMiddleware());
     ctx.app.use('/users', ctx.controller.getRouter());
   });
@@ -115,7 +148,8 @@ describe('UserController', (): void => {
 
       const users = res.body as User[];
       const spec = await Swagger.importSpecification();
-      expect(users.length).to.equal(24);
+      const pagination = parseInt(process.env.PAGINATION_DEFAULT, 10);
+      expect(users.length).to.equal(pagination);
       users.forEach((user: User) => {
         verifyUserEntity(spec, user);
       });
