@@ -17,13 +17,9 @@
  */
 
 /**
- * @typedef BaseResponse
- * @property {number} id.required - The unique id of the entity.
- * @property {string} createdAt.required - The creation Date of the entity.
- * @property {string} updatedAt.required - The last update Date of the entity.
+ * @typedef ProductCategoryRequest
+ * @property {string} name - Name/label of the productCategory
  */
-export default interface BaseResponse {
-  id: number,
-  createdAt?: string,
-  updatedAt?: string,
+export default interface ProductCategoryRequest {
+  name: string,
 }

@@ -16,14 +16,18 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import User from '../../entity/user/user';
+
 /**
- * @typedef BaseResponse
- * @property {number} id.required - The unique id of the entity.
- * @property {string} createdAt.required - The creation Date of the entity.
- * @property {string} updatedAt.required - The last update Date of the entity.
+ * @typedef BorrelkaartGroupRequest
+ * @property {string} name.required - Name of the group
+ * @property {string} activeStartDate.required - Date from which the included cards are active
+ * @property {string} activeEndDate - Date from which cards are no longer active
+ * @property {Array.<User>} users.required - Users to be assigned to the borrelkaart group
  */
-export default interface BaseResponse {
-  id: number,
-  createdAt?: string,
-  updatedAt?: string,
+export default interface BorrelkaartGroupRequest {
+  name: string,
+  activeStartDate: string,
+  activeEndDate: string,
+  users: User[],
 }

@@ -18,7 +18,7 @@
 import BaseResponse from './base-response';
 
 /**
- * @typedef {ProductCategoryResponse} ProductCategoryResponse
+ * @typedef {BaseResponse} ProductCategoryResponse
  * @property {string} name.required - The name of the productCategory.
  */
 export interface ProductCategoryResponse extends BaseResponse {

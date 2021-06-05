@@ -19,7 +19,7 @@ import express, { Application } from 'express';
 import { expect, request } from 'chai';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { Connection } from 'typeorm';
-import bodyParser from 'body-parser';
+import { json } from 'body-parser';
 import log4js from 'log4js';
 import User, { UserType } from '../../../src/entity/user/user';
 import TokenHandler from '../../../src/authentication/token-handler';
@@ -81,7 +81,7 @@ describe('AuthenticationController', async (): Promise<void> => {
     // Silent in-dependency logs unless really wanted by the environment.
     const logger = log4js.getLogger('Console');
     logger.level = process.env.LOG_LEVEL;
-    console.log = (message: any) => logger.debug(message);
+    console.log = (message: any, ...additional: any[]) => logger.debug(message, ...additional);
 
     ctx.specification = await Swagger.initialize(ctx.app);
     ctx.controller = new AuthenticationController({
@@ -89,7 +89,7 @@ describe('AuthenticationController', async (): Promise<void> => {
       roleManager: ctx.roleManager,
     }, ctx.tokenHandler);
 
-    ctx.app.use(bodyParser.json());
+    ctx.app.use(json());
     ctx.app.use('/authentication', ctx.controller.getRouter());
   });
 
