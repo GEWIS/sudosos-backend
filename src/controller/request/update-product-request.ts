@@ -21,13 +21,13 @@ import ProductCategory from '../../entity/product/product-category';
 
 /**
  * @typedef UpdateProductRequest
- * @property {number} id.required
+ * @property {integer} id.required
  * @property {string} name.required
  * @property {Dinero.model} price.required
  * @property {User.model} owner.required
  * @property {ProductCategory.model} category.required
  * @property {string} picture.required
- * @property {number} alcoholPercentage
+ * @property {integer} alcoholPercentage
  */
 export default interface UpdateProductRequest {
   id: number,

@@ -22,10 +22,10 @@ import BaseEntityWithoutId from './base-entity-without-id';
 
 /**
  * @typedef  BaseEntity
- * @property {number} id - The auto-generated object id.
+ * @property {integer} id - The auto-generated object id.
  * @property {string} createdAt - The creation date of the object.
  * @property {string} updatedAt - The last update date of the object.
- * @property {number} version - The current version of the object.
+ * @property {integer} version - The current version of the object.
  */
 export default class BaseEntity extends BaseEntityWithoutId {
   @PrimaryGeneratedColumn()

@@ -29,6 +29,8 @@ import {
 } from '../../seed';
 import Product from '../../../src/entity/product/product';
 import { ProductResponse } from '../../../src/controller/response/product-response';
+import ProductRevision from '../../../src/entity/product/product-revision';
+import UpdatedProduct from '../../../src/entity/product/updated-product';
 
 /**
  * Test if all the product responses are part of the product set array.
@@ -50,6 +52,8 @@ describe('ProductService', async (): Promise<void> => {
     specification: SwaggerSpecification,
     users: User[],
     allProducts: Product[],
+    productsRevisions: ProductRevision[],
+    updatedProducts: UpdatedProduct[],
   };
 
   before(async () => {
@@ -58,9 +62,12 @@ describe('ProductService', async (): Promise<void> => {
     const categories = await seedProductCategories();
     const users = await seedUsers();
 
-    let allProducts;
+    let allProducts; let productsRevisions; let
+      updatedProducts;
     await seedAllProducts(users, categories).then(async (res) => {
       allProducts = res.products;
+      productsRevisions = res.productRevisions;
+      updatedProducts = res.updatedProducts;
       await seedContainers(users, res.productRevisions);
     });
 
@@ -76,6 +83,8 @@ describe('ProductService', async (): Promise<void> => {
       specification,
       users,
       allProducts,
+      productsRevisions,
+      updatedProducts,
     };
   });
 
@@ -87,12 +96,30 @@ describe('ProductService', async (): Promise<void> => {
   describe('getProducts function', () => {
     it('should return all products with no input specification', async () => {
       const res: ProductResponse[] = await ProductService.getProducts();
+      const productSet: {[key:string]: any} = {};
 
+      ctx.productsRevisions.forEach((product) => {
+        if (productSet[product.product.id] === undefined) {
+          productSet[product.product.id] = product;
+        }
+      });
+
+      const containsAll = ctx.productsRevisions.every((product) => res.find(
+        (prod) => product.product.id === prod.id,
+      ) !== undefined);
+
+      expect(containsAll).to.be.true;
+      expect(res.length).to.be.equal(Object.keys(productSet).length);
       expect(productSuperset(res, ctx.allProducts)).to.be.true;
     });
     it('should return all updated products', async () => {
       const updatedProducts: ProductResponse[] = await ProductService.getUpdatedProducts();
 
+      const containsAll = ctx.updatedProducts.every((product) => updatedProducts.find(
+        (prod) => product.product.id === prod.id,
+      ) !== undefined);
+
+      expect(containsAll).to.be.true;
       expect(productSuperset(updatedProducts, ctx.allProducts)).to.be.true;
     });
     it('should return product with the owner specified', async () => {
@@ -128,15 +155,54 @@ describe('ProductService', async (): Promise<void> => {
       };
       const res: ProductResponse[] = await ProductService
         .getProducts(params);
+
+      const products = [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }, { id: 5 }];
+
+      products.forEach((product) => {
+        expect(res.find((pr) => pr.id === product.id)).to.not.be.undefined;
+      });
+
       expect(res).to.be.length(5);
     });
     it('should return the updated products belonging to a container', async () => {
       const params: ProductParameters = {
-        containerId: 3,
+        containerId: 4,
       };
       const res: ProductResponse[] = await ProductService
         .getUpdatedProducts(params);
-      expect(res).to.be.length(2);
+
+      const products = [{ id: 11 }];
+      products.forEach((product) => {
+        expect(res.find((pr) => pr.id === product.id)).to.not.be.undefined;
+      });
+
+      expect(res).to.be.length(1);
+    });
+    it('should return the products belonging to a container revision that is not current', async () => {
+      const params: ProductParameters = {
+        containerId: 1,
+        containerRevision: 2,
+      };
+
+      const res: ProductResponse[] = await ProductService
+        .getProducts(params);
+
+      const products = [{ id: 1 }, { id: 2 }, { id: 5 }];
+      products.forEach((product) => {
+        expect(res.find((pr) => pr.id === product.id)).to.not.be.undefined;
+      });
+      expect(res).to.be.length(3);
+    });
+    it('should return an updated container', async () => {
+      const res: ProductResponse[] = await ProductService
+        .getUpdatedContainer(4);
+
+      const products = [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }, { id: 5 }, { id: 6 }];
+      products.forEach((product) => {
+        expect(res.find((pr) => pr.id === product.id)).to.not.be.undefined;
+      });
+
+      expect(res).to.be.length(6);
     });
   });
 });
