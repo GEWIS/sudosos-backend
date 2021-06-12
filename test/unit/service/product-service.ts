@@ -20,6 +20,7 @@ import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import bodyParser from 'body-parser';
 import { expect } from 'chai';
+import dinero from 'dinero.js';
 import User from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
@@ -32,6 +33,7 @@ import { ProductResponse } from '../../../src/controller/response/product-respon
 import ProductRevision from '../../../src/entity/product/product-revision';
 import UpdatedProduct from '../../../src/entity/product/updated-product';
 import UpdatedContainer from '../../../src/entity/container/updated-container';
+import BaseProduct from '../../../src/entity/product/base-product';
 
 /**
  * Test if all the product responses are part of the product set array.
@@ -210,6 +212,28 @@ describe('ProductService', async (): Promise<void> => {
       });
 
       expect(res).to.be.length(6);
+    });
+    it('should update a product by ID', async () => {
+      const updateParams: {[key:string]: any} & Partial<BaseProduct> = {
+        alcoholPercentage: 8,
+        name: 'Product2-update',
+        picture: 'https://sudosos/product2-update.png',
+        price: dinero({
+          amount: 69,
+        }),
+      };
+
+      const res: ProductResponse = await ProductService.updateProduct(2, updateParams);
+
+      Object.keys(updateParams).forEach((key: keyof ProductResponse) => {
+        if (key === 'price') {
+          expect(updateParams.price.getAmount()).to.be.equal(69);
+        } else {
+          expect((updateParams[key] as any)).to.be.equal((res[key]));
+        }
+      });
+
+      expect(res).to.exist;
     });
   });
 });

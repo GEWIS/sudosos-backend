@@ -25,6 +25,7 @@ import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import ContainerRevision from '../entity/container/container-revision';
 import Container from '../entity/container/container';
 import UpdatedContainer from '../entity/container/updated-container';
+import BaseProduct from '../entity/product/base-product';
 
 /**
  * Define product filtering parameters used to filter query results.
@@ -49,7 +50,7 @@ export interface ProductParameters {
   /**
    * Filter based on if the updated container should be used.
    */
-  updatedContainer? :boolean;
+  updatedContainer?: boolean;
 }
 
 /**
@@ -63,7 +64,7 @@ export default class ProductService {
   private static asProductResponse(rawProduct: any): ProductResponse {
     return {
       id: rawProduct.id,
-      alcoholPercentage: rawProduct.alcoholPercentage,
+      alcoholPercentage: rawProduct.alcoholpercentage,
       category: {
         id: rawProduct.category_id,
         name: rawProduct.category_name,
@@ -179,7 +180,6 @@ export default class ProductService {
     QueryFilter.applyFilter(builder, filterMapping, params);
 
     const rawProducts = await builder.getRawMany();
-
     return rawProducts.map((rawProduct: any) => this.asProductResponse(rawProduct));
   }
 
@@ -266,5 +266,41 @@ export default class ProductService {
 
     // Return the products.
     return containerProducts.concat(updatedProducts);
+  }
+
+  /**
+   * Creates a product update.
+   * @param productId - The ID of the product to update.
+   * @param update - The variables to update.
+   *  If undefined it uses the params from the latest revision.
+   */
+  public static async updateProduct(productId: number, update: Partial<BaseProduct>)
+    : Promise<ProductResponse> {
+    // Get the base product.
+    const base: Product = await Product.findOne(productId);
+
+    // return undefined if not found or request is invalid
+    if (!base) {
+      return undefined;
+    }
+
+    // Get the latest available of this product.
+    const latest: ProductResponse = (await this.getProducts({ productId }))[0];
+
+    // Create the product.
+    const updatedProduct: UpdatedProduct = UpdatedProduct.create();
+
+    // Set base product, then the oldest settings and then the newest.
+    Object.assign(updatedProduct, {
+      product: base,
+      ...latest,
+      ...update,
+    });
+
+    // Save the product.
+    await updatedProduct.save();
+
+    // Pull the just created product from the database to fix the formatting.
+    return (await this.getUpdatedProducts({ productId }))[0];
   }
 }
