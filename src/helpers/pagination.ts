@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { FindManyOptions, SelectQueryBuilder } from 'typeorm';
+import { FindManyOptions, QueryBuilder, SelectQueryBuilder } from 'typeorm';
 import { RequestWithToken } from '../middleware/token-middleware';
 
 export function validatePaginationQueryParams(req: RequestWithToken): boolean {
@@ -34,10 +34,24 @@ export function validatePaginationQueryParams(req: RequestWithToken): boolean {
   return true;
 }
 
-function parseReqSkipTake(req: RequestWithToken): { take?: number, skip?: number } {
+/**
+ * Parses the request and returns pagination elements when present.
+ * @param req Http request which was made
+ * @returns {skip, take} skip and take parameters when present in response otherwise default values
+ */
+export function parseRequestPagination(req: RequestWithToken): { take?: number, skip?: number } {
   let take;
   let skip;
   const urlParams = req.query || {};
+
+  const maxTake = parseInt(process.env.PAGINATION_MAX, 10) || 500;
+
+  // Set the default take and skip to the values set in the environment variables.
+  // If these are not set, choose 25 and 0 respectively
+  const [defaultTake, defaultSkip] = [
+    parseInt(process.env.PAGINATION_DEFAULT, 10) || 25,
+    0,
+  ];
 
   // Parse and validate the take URL parameter
   if (urlParams.take != null) {
@@ -50,6 +64,14 @@ function parseReqSkipTake(req: RequestWithToken): { take?: number, skip?: number
     const parsedSkip = parseInt(urlParams.skip, 10);
     if (!Number.isNaN(parsedSkip)) skip = parsedSkip;
   }
+
+  if (take !== undefined) {
+    take = take < maxTake ? take : maxTake;
+  } else {
+    take = defaultTake;
+  }
+
+  skip = skip === undefined ? defaultSkip : skip;
 
   return { take, skip };
 }
@@ -78,7 +100,7 @@ export function addPaginationForFindOptions(req: RequestWithToken): FindManyOpti
   ];
 
   // Parse the values in the URL parameters
-  const parsed = parseReqSkipTake(req);
+  const parsed = parseRequestPagination(req);
 
   // If no value has been given by the user, we simply keep using the default
   if (parsed.take !== undefined) {
@@ -92,6 +114,45 @@ export function addPaginationForFindOptions(req: RequestWithToken): FindManyOpti
 }
 
 /**
+ * Add specific pagination to a QueryBuilder object
+ * @param query SelectQueryBuilder object, pagination gets added to this object
+ * @param take Optional number, amount of records to retrieve, will be filled with default if not
+ * provided
+ * @param skip Optional number, amount of records to skip, will be filled with default if not
+ * provided
+ * @returns The same QueryBuilder object as  but now with pagination added
+ */
+export function addPaginationToQueryBuilderRaw<T>(query: SelectQueryBuilder<T>,
+  take?: number,
+  skip?: number) {
+  const maxTake = parseInt(process.env.PAGINATION_MAX, 10) || 500;
+
+  // Set the default take and skip to the values set in the environment variables.
+  // If these are not set, choose 25 and 0 respectively
+  const [defaultTake, defaultSkip] = [
+    parseInt(process.env.PAGINATION_DEFAULT, 10) || 25,
+    0,
+  ];
+
+  // We have to do two comparisons here. first, we need to check if a pagination
+  // value has been given. If this is not the case, we pick the default. Then, we
+  // have a maximum take value, so if the parsed value is larger, we return the max.
+  if (take !== undefined) {
+    query.limit(take < maxTake ? take : maxTake);
+    query.take(take < maxTake ? take : maxTake);
+  } else {
+    query.limit(defaultTake);
+    query.take(defaultTake);
+  }
+
+  // This could be done in one line, so why not?
+  query.offset(skip === undefined ? defaultSkip : skip);
+  query.skip(skip === undefined ? defaultSkip : skip);
+
+  return query;
+}
+
+/**
  * Add pagination to a QueryBuilder object
  * @param req RequestWithToken object, as received in the controller
  * @param query QueryBuilder object the pagination needs to be applied to
@@ -101,32 +162,7 @@ export function addPaginationForFindOptions(req: RequestWithToken): FindManyOpti
 export function addPaginationToQueryBuilder<T>(
   req: RequestWithToken, query: SelectQueryBuilder<T>,
 ) {
-  const maxTake = parseInt(process.env.PAGINATION_MAX, 10) || 500;
-
-  // Set the default take and skip to the values set in the environment variables.
-  // If these are not set, choose 25 and 0 respectively
-  const [take, skip] = [
-    parseInt(process.env.PAGINATION_DEFAULT, 10) || 25,
-    0,
-  ];
-
   // Parse the values in the URL parameters
-  const parsed = parseReqSkipTake(req);
-
-  // We have to do two comparisons here. first, we need to check if a pagination
-  // value has been given. If this is not the case, we pick the default. Then, we
-  // have a maximum take value, so if the parsed value is larger, we return the max.
-  if (parsed.take !== undefined) {
-    query.limit(parsed.take < maxTake ? parsed.take : maxTake);
-    query.take(parsed.take < maxTake ? parsed.take : maxTake);
-  } else {
-    query.limit(take);
-    query.take(take);
-  }
-
-  // This could be done in one line, so why not?
-  query.offset(parsed.skip === undefined ? skip : parsed.skip);
-  query.skip(parsed.skip === undefined ? skip : parsed.skip);
-
-  return query;
+  const parsed = parseRequestPagination(req);
+  return addPaginationToQueryBuilderRaw(query, parsed.take, parsed.skip);
 }

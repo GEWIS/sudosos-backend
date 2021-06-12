@@ -20,14 +20,11 @@ import { RequestWithToken } from '../middleware/token-middleware';
 import { BaseTransactionResponse, TransactionResponse } from '../controller/response/transaction-response';
 import Transaction from '../entity/transactions/transaction';
 import SubTransaction from '../entity/transactions/sub-transaction';
-import { addPaginationToQueryBuilder } from '../helpers/pagination';
-import DineroTransformer from '../entity/transformer/dinero-transformer';
-import { parseUserToBaseResponse } from '../helpers/entity-to-response';
 import {
-  parseContainerToBaseResponse,
-  parsePOSToBasePOS,
-  parseProductToBaseResponse,
-} from '../helpers/revision-to-response';
+  addPaginationToQueryBuilderRaw,
+  parseRequestPagination,
+} from '../helpers/pagination';
+import DineroTransformer from '../entity/transformer/dinero-transformer';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import { TransactionRequest } from '../controller/request/transaction-request';
 
@@ -60,6 +57,18 @@ export default class TransactionService {
 
   public static async getTransactions(
     req: RequestWithToken, params: TransactionFilterParameters,
+  ): Promise<BaseTransactionResponse[]> {
+    const pagination = parseRequestPagination(req);
+    return this.getTransactionsRaw(params, pagination.take, pagination.skip);
+  }
+
+  // Method is multi functional for retrieval of either one or multiple transactions
+  // Choice was made because of complex logic in the function and avoidance of code duplication
+  private static async getTransactionsRaw(
+    params: TransactionFilterParameters,
+    take?: number,
+    skip?: number,
+    id?: number,
   ): Promise<BaseTransactionResponse[]> {
     // Extract fromDate and tillDate, as they cannot be directly passed to QueryFilter.
     const { fromDate, tillDate, ...p } = params;
@@ -98,6 +107,7 @@ export default class TransactionService {
 
     if (fromDate) query.andWhere('"transaction"."createdAt" >= :fromDate', { fromDate: fromDate.toISOString() });
     if (tillDate) query.andWhere('"transaction"."createdAt" < :tillDate', { tillDate: tillDate.toISOString() });
+    if (id) query.andWhere('"transaction"."id" = :id', { id });
     const mapping = {
       fromId: 'transaction.fromId',
       createdById: 'transaction.createdById',
@@ -105,7 +115,7 @@ export default class TransactionService {
     QueryFilter.applyFilter(query, mapping, p);
 
     query = applySubTransactionFilters(query);
-    query = addPaginationToQueryBuilder(req, query);
+    query = addPaginationToQueryBuilderRaw(query, take, skip);
 
     const rawTransactions = await query.getRawMany();
 
@@ -151,38 +161,11 @@ export default class TransactionService {
     return {} as TransactionResponse;
   }
 
-  public static async getSingleTransaction(id: number): Promise<TransactionResponse | undefined> {
-    const transaction = await Transaction.findOne(id, {
-      relations: [
-        'from', 'createdAt', 'updatedAt', 'createdBy', 'subTransactions', 'subTransactions.to', 'subTransactions.subTransactionRows',
-        // We query a lot here, but we will parse this later to a very simple BaseResponse
-        'pointOfSale', 'pointOfSale.pointOfSale',
-        'subTransactions.container', 'subTransactions.container.container',
-        'subTransactions.subTransactionRows.product', 'subTransactions.subTransactionRows.product.product',
-      ],
-    });
-
-    if (transaction === undefined) return undefined;
-
-    return {
-      id: transaction.id,
-      from: parseUserToBaseResponse(transaction.from, false),
-      createdBy: transaction.createdBy
-        ? parseUserToBaseResponse(transaction.createdBy, false)
-        : undefined,
-      createdAt: transaction.createdAt.toISOString(),
-      updatedAt: transaction.updatedAt.toISOString(),
-      pointOfSale: parsePOSToBasePOS(transaction.pointOfSale, false),
-      subTransactions: transaction.subTransactions.map((s) => ({
-        id: s.id,
-        to: parseUserToBaseResponse(s.to, false),
-        container: parseContainerToBaseResponse(s.container, false),
-        subTransactionRows: s.subTransactionRows.map((r) => ({
-          id: r.id,
-          amount: r.amount,
-          product: parseProductToBaseResponse(r.product, false),
-        })),
-      })),
-    } as TransactionResponse;
+  public static async getSingleTransaction(
+    id: number,
+  ): Promise<BaseTransactionResponse | undefined> {
+    return this.getTransactionsRaw({}, 1, 0, id).then(
+      (result) => (result && result.length > 0 ? result[0] : undefined),
+    );
   }
 }
