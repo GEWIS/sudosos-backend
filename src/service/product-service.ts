@@ -15,13 +15,16 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { createQueryBuilder } from 'typeorm';
+import { createQueryBuilder, SelectQueryBuilder } from 'typeorm';
 import { ProductResponse } from '../controller/response/product-response';
 import Product from '../entity/product/product';
 import ProductRevision from '../entity/product/product-revision';
 import UpdatedProduct from '../entity/product/updated-product';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
+import ContainerRevision from '../entity/container/container-revision';
+import Container from '../entity/container/container';
+import UpdatedContainer from '../entity/container/updated-container';
 
 /**
  * Define product filtering parameters used to filter query results.
@@ -35,6 +38,18 @@ export interface ProductParameters {
    * Filter based on product owner.
    */
   ownerId?: number;
+  /**
+   * Filter based on container id.
+   */
+  containerId?: number;
+  /**
+   * Filter based on a specific container revision.
+   */
+  containerRevision?: number;
+  /**
+   * Filter based on if the updated container should be used.
+   */
+  updatedContainer? :boolean;
 }
 
 /**
@@ -45,7 +60,7 @@ export default class ProductService {
    * Helper function for the base mapping the raw getMany response product.
    * @param rawProduct - the raw response to parse.
    */
-  public static asProductResponse(rawProduct: any): ProductResponse {
+  private static asProductResponse(rawProduct: any): ProductResponse {
     return {
       id: rawProduct.id,
       alcoholPercentage: rawProduct.alcoholPercentage,
@@ -66,19 +81,79 @@ export default class ProductService {
   }
 
   /**
+   * Filter the products on container ID.
+   * @param builder - The query builder being used.
+   * @param containerId - The ID of the container.
+   * @param isUpdatedProduct - If we are getting updated products.
+   * @param isUpdatedContainer - If the container is an updated container.
+   * @param containerRevision - If we are getting a specific container revision.
+   * @private
+   */
+  private static addContainerFilter(builder: SelectQueryBuilder<Product>,
+    containerId: number, isUpdatedProduct: boolean, isUpdatedContainer: boolean, containerRevision: number | string = 'currentRevision'): void {
+    // Case distinction for the inner join condition.
+    function condition() {
+      if (isUpdatedProduct) return 'updatedproduct.product = containerproducts.productId';
+      if (isUpdatedContainer) {
+        return 'productrevision.product = containerproducts.productId';
+      }
+      return 'productrevision.product = containerproducts.productId AND productrevision.revision = containerproducts.productRevision';
+    }
+
+    // Case distinction for the inner join.
+    function innerJoin() {
+      if (isUpdatedContainer) return 'container.id = containeralias.containerId';
+      if (containerRevision === 'currentRevision') {
+        return 'container.id = containeralias.containerId AND container.currentRevision = containeralias.revision';
+      }
+      return `container.id = containeralias.containerId AND ${containerRevision} = containeralias.revision`;
+    }
+
+    // Filter on products in the container.
+    builder
+      .innerJoinAndSelect((qb) => qb
+        .from(Container, 'container')
+        .innerJoinAndSelect(
+          isUpdatedContainer ? UpdatedContainer : ContainerRevision,
+          'containeralias',
+          innerJoin(),
+        )
+        .innerJoinAndSelect('containeralias.products', 'product')
+        .where('container.id = :id', { id: containerId })
+        .select(isUpdatedContainer
+          ? ['productId']
+          : ['product.productId AS productId', 'product.revision as productRevision']),
+      'containerproducts', condition());
+  }
+
+  /**
    * Query for getting all products based on user.
    * @param params
+   * @param isUpdatedContainer
    */
-  public static async getProducts(params?: ProductParameters)
+  public static async getProducts(params: ProductParameters = {})
     : Promise<ProductResponse[]> {
+    const filter = params.containerId;
     const builder = createQueryBuilder()
       .from(Product, 'product')
       .innerJoinAndSelect(
         ProductRevision,
         'productrevision',
-        `product.id = productrevision.product
-         AND product.currentRevision = productrevision.revision`,
-      )
+        // If we are getting updatedContainers or products,
+        // we only want the last revision, otherwise all revisions.
+        // This is needed since containers can contain older revisions,
+        // Whilst updatedContainer contain the oldest revisions.
+        params.updatedContainer || !params.containerId
+          ? 'product.id = productrevision.product AND product.currentRevision = productrevision.revision'
+          : 'product.id = productrevision.product',
+      );
+
+    if (filter) {
+      this.addContainerFilter(builder, filter, false,
+        params.updatedContainer, params.containerRevision);
+    }
+
+    builder
       .innerJoinAndSelect('product.owner', 'owner')
       .innerJoinAndSelect('productrevision.category', 'category')
       .select([
@@ -100,18 +175,19 @@ export default class ProductService {
       productId: 'product.id',
       ownerId: 'owner.id',
     };
-    if (params) QueryFilter.applyFilter(builder, filterMapping, params);
+
+    QueryFilter.applyFilter(builder, filterMapping, params);
 
     const rawProducts = await builder.getRawMany();
 
-    return rawProducts.map((rawProduct) => this.asProductResponse(rawProduct));
+    return rawProducts.map((rawProduct: any) => this.asProductResponse(rawProduct));
   }
 
   /**
    * Query to return all updated products.
    * @param params
    */
-  public static async getUpdatedProducts(params?: ProductParameters)
+  public static async getUpdatedProducts(params: ProductParameters = {})
     : Promise<ProductResponse[]> {
     const builder = createQueryBuilder()
       .from(Product, 'product')
@@ -119,7 +195,13 @@ export default class ProductService {
         UpdatedProduct,
         'updatedproduct',
         'product.id = updatedproduct.product',
-      )
+      );
+
+    if (params.containerId) {
+      this.addContainerFilter(builder, params.containerId, true, params.updatedContainer);
+    }
+
+    builder
       .innerJoinAndSelect('product.owner', 'owner')
       .innerJoinAndSelect('updatedproduct.category', 'category')
       .select([
@@ -140,10 +222,49 @@ export default class ProductService {
     const filterMapping: FilterMapping = {
       productId: 'product.id',
     };
-    if (params) QueryFilter.applyFilter(builder, filterMapping, params);
+
+    QueryFilter.applyFilter(builder, filterMapping, params);
 
     const rawProducts = await builder.getRawMany();
 
-    return rawProducts.map((rawProduct) => this.asProductResponse(rawProduct));
+    return rawProducts.map((rawProduct: any) => this.asProductResponse(rawProduct));
+  }
+
+  /**
+   * Function that returns all the products in an updated container,
+   * @param containerId - The ID of the updated container to use.
+   */
+  public static async getUpdatedContainer(containerId: number) {
+    // We get the products by
+    // first getting the updated products and then merge them with the normal products.
+    const updatedProducts: ProductResponse[] = await this.getUpdatedProducts({
+      containerId,
+      updatedContainer: true,
+    });
+
+    // Keep track of which IDs belong to updated products.
+    const updatedId: {[key:string]: any} = {};
+    updatedProducts.forEach((product) => {
+      updatedId[product.id] = true;
+    });
+
+    // Get the remaining products.
+    const products: ProductResponse[] = (await this.getProducts({
+      containerId,
+      updatedContainer: true,
+    }));
+
+    // Store the results.
+    const containerProducts: ProductResponse[] = [];
+
+    // Only add the remaining product if there is no updated counterpart.
+    products.forEach((product) => {
+      if (updatedId[product.id] === undefined) {
+        containerProducts.push(product);
+      }
+    });
+
+    // Return the products.
+    return containerProducts.concat(updatedProducts);
   }
 }
