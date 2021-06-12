@@ -47,7 +47,7 @@ describe('TransactionController', (): void => {
 
   before(async (): Promise<void> => {
     // @ts-ignore
-    // this.timeout(10000);
+    this.timeout(10000);
     const connection = await Database.initialize();
     const app = express();
     const database = await seedDatabase();
