@@ -32,4 +32,6 @@ export default class Container extends BaseEntity {
 
   @ManyToOne(() => User, { nullable: false })
   public owner: User;
+
+  public name: string;
 }

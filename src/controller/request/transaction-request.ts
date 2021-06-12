@@ -28,17 +28,17 @@ import RevisionRequest from './revision-request';
 export interface TransactionRequest {
   from: number,
   createdBy: number,
-  subtransactions: SubtransactionRequest[],
+  subtransactions: SubTransactionRequest[],
   pointOfSale: RevisionRequest,
 }
 
 /**
- * @typedef SubtransactionRequest
+ * @typedef SubTransactionRequest
  * @property {integer} to.required - to user id
  * @property {RevisionRequest.model} container.required - container
  * @property {Array.<SubTransactionsRowRequest>} subTransactionsRows.required - subtransactions
  */
-export interface SubtransactionRequest {
+export interface SubTransactionRequest {
   to: number,
   container: RevisionRequest,
   subTransactionsRows: SubTransactionsRowRequest[],

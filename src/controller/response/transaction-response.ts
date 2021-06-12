@@ -65,7 +65,7 @@ export interface TransactionResponse extends BaseResponse {
  * @property {Array.<SubTransactionRowResponse>} subTransactionsRows.required - The rows of this
  *     SubTransaction
  */
-interface SubTransactionResponse extends BaseResponse {
+export interface SubTransactionResponse extends BaseResponse {
   to: BaseUserResponse,
   container: BaseContainerResponse,
   subTransactionRows: SubTransactionRowResponse[],
@@ -76,7 +76,7 @@ interface SubTransactionResponse extends BaseResponse {
  * @property {BaseProductResponse} product.required - The product that has been bought
  * @property {integer} amount.required - The amount that has been bought
  */
-interface SubTransactionRowResponse extends BaseResponse {
+export interface SubTransactionRowResponse extends BaseResponse {
   product: BaseProductResponse,
   amount: number,
 }

@@ -17,7 +17,12 @@
  */
 import { createQueryBuilder, SelectQueryBuilder } from 'typeorm';
 import { RequestWithToken } from '../middleware/token-middleware';
-import { BaseTransactionResponse, TransactionResponse } from '../controller/response/transaction-response';
+import {
+  BaseTransactionResponse,
+  TransactionResponse,
+  SubTransactionResponse,
+  SubTransactionRowResponse,
+} from '../controller/response/transaction-response';
 import Transaction from '../entity/transactions/transaction';
 import SubTransaction from '../entity/transactions/sub-transaction';
 import { addPaginationToQueryBuilder } from '../helpers/pagination';
@@ -29,7 +34,13 @@ import {
   parseProductToBaseResponse,
 } from '../helpers/revision-to-response';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
-import { TransactionRequest } from '../controller/request/transaction-request';
+import { SubTransactionRequest, SubTransactionsRowRequest, TransactionRequest } from '../controller/request/transaction-request';
+import User from '../entity/user/user';
+import ContainerRevision from '../entity/container/container-revision';
+import SubTransactionRow from '../entity/transactions/sub-transaction-row';
+import ProductRevision from '../entity/product/product-revision';
+import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision';
+import { BaseUserResponse } from '../controller/response/user-response';
 
 export interface TransactionFilterParameters {
   fromId?: number,
@@ -50,12 +61,114 @@ export default class TransactionService {
     return true;
   }
 
-  public static asTransaction(req: TransactionRequest): Transaction {
-    return null;
+  public static async asTransaction(req: TransactionRequest): Promise<Transaction | undefined> {
+    if (!req) {
+      return undefined;
+    }
+
+    // transaction
+    const transaction = {} as Transaction;
+
+    // get users
+    transaction.from = await User.findOne(req.from);
+    transaction.createdBy = await User.findOne(req.createdBy);
+
+    // set subtransactions
+    transaction.subTransactions = await Promise.all(req.subtransactions.map(
+      async (subTransaction) => this.asSubTransaction(subTransaction),
+    ));
+
+    // get point of sale
+    transaction.pointOfSale = await PointOfSaleRevision.findOne({
+      where: [{ revision: req.pointOfSale.revision }, { pointOfSale: req.pointOfSale.id }],
+    });
+
+    return transaction;
   }
 
-  public static asTransactionResponse(transaction: Transaction): TransactionResponse {
-    return null;
+  public static asTransactionResponse(transaction: Transaction): TransactionResponse | undefined {
+    if (!transaction) {
+      return undefined;
+    }
+
+    return {
+      id: transaction.id,
+      createdAt: transaction.createdAt.toISOString(),
+      updatedAt: transaction.updatedAt.toISOString(),
+      from: {
+        ...transaction.from,
+        createdAt: transaction.from.createdAt.toISOString(),
+        updatedAt: transaction.from.updatedAt.toISOString(),
+      } as BaseUserResponse,
+      createdBy: {
+        ...transaction.createdBy,
+        createdAt: transaction.createdBy.createdAt.toISOString(),
+        updatedAt: transaction.createdBy.updatedAt.toISOString(),
+      } as BaseUserResponse,
+      subTransactions: transaction.subTransactions.map(
+        (subTransaction) => this.asSubTransactionResponse(subTransaction),
+      ),
+      pointOfSale: parsePOSToBasePOS(transaction.pointOfSale, false),
+    } as TransactionResponse;
+  }
+
+  public static async asSubTransaction(req: SubTransactionRequest):
+  Promise<SubTransaction | undefined> {
+    if (!req) {
+      return undefined;
+    }
+
+    // the subtransaction
+    const subTransaction = {} as SubTransaction;
+
+    // get user
+    subTransaction.to = await User.findOne(req.to);
+
+    // get container revision
+    subTransaction.container = await ContainerRevision.findOne({
+      where: [{ revision: req.container.revision }, { container: req.container.id }],
+    });
+
+    // sub transaction rows
+    subTransaction.subTransactionRows = await Promise.all(req.subTransactionsRows.map(
+      async (row) => this.asSubTransactionRow(row, subTransaction),
+    ));
+
+    return subTransaction;
+  }
+
+  public static asSubTransactionResponse(subTransaction: SubTransaction):
+  SubTransactionResponse | undefined {
+    if (!SubTransaction) {
+      return undefined;
+    }
+    return {
+      id: subTransaction.id,
+      createdAt: subTransaction.createdAt.toISOString(),
+      updatedAt: subTransaction.updatedAt.toISOString(),
+      to: {
+        ...subTransaction.to,
+        createdAt: subTransaction.to.createdAt.toISOString(),
+        updatedAt: subTransaction.to.updatedAt.toISOString(),
+      } as BaseUserResponse,
+      container: parseContainerToBaseResponse(subTransaction.container, false),
+      subTransactionRows: subTransaction.subTransactionRows.map((row) => ({
+        product: parseProductToBaseResponse(row.product, false),
+        amount: row.amount,
+      } as SubTransactionRowResponse)),
+    } as SubTransactionResponse;
+  }
+
+  public static async asSubTransactionRow(
+    req: SubTransactionsRowRequest, subTransaction: SubTransaction,
+  ): Promise<SubTransactionRow | undefined> {
+    if (!req) {
+      return undefined;
+    }
+    const product = await ProductRevision.findOne({
+      where: [{ revision: req.product.revision }, { product: req.product.id }],
+    });
+    return { product, amount: req.amount, subTransaction } as SubTransactionRow;
   }
 
   public static async getTransactions(
@@ -148,7 +261,11 @@ export default class TransactionService {
   }
 
   public static async createTransaction(req: TransactionRequest): Promise<TransactionResponse> {
-    return {} as TransactionResponse;
+    const transaction = await this.asTransaction(req);
+
+    // save transaction
+    await Transaction.save(transaction);
+    return this.asTransactionResponse(transaction);
   }
 
   public static async getSingleTransaction(id: number): Promise<TransactionResponse | undefined> {
