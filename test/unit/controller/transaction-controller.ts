@@ -103,9 +103,8 @@ describe('TransactionController', (): void => {
         .get('/transactions')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
-      console.error(res.body);
-
       const transactions = res.body as BaseTransactionResponse[];
+      console.warn(transactions.length);
       const spec = await Swagger.importSpecification();
       const pagination = parseInt(process.env.PAGINATION_DEFAULT, 10);
       expect(transactions.length).to.equal(pagination);
