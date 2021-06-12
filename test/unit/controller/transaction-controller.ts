@@ -45,9 +45,9 @@ describe('TransactionController', (): void => {
     transactions: Transaction[],
   };
 
-  before((async (): Promise<void> => {
+  before(async function () {
     // @ts-ignore
-    timeout(10000);
+    this.timeout(10000);
     const connection = await Database.initialize();
     const app = express();
     const database = await seedDatabase();
@@ -91,7 +91,7 @@ describe('TransactionController', (): void => {
     ctx.app.use(json());
     ctx.app.use(new TokenMiddleware({ tokenHandler, refreshFactor: 0.5 }).getMiddleware());
     ctx.app.use('/transactions', ctx.controller.getRouter());
-  }));
+  });
 
   after(async () => {
     await ctx.connection.close();
