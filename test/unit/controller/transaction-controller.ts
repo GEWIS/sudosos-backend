@@ -43,6 +43,7 @@ describe('TransactionController', (): void => {
     transaction: Transaction,
     users: User[],
     transactions: Transaction[],
+    swaggerspec: SwaggerSpecification,
   };
 
   before(async function () {
@@ -54,6 +55,7 @@ describe('TransactionController', (): void => {
     ctx = {
       connection,
       app,
+      swaggerspec: undefined,
       specification: undefined,
       controller: undefined,
       userToken: undefined,
@@ -83,6 +85,7 @@ describe('TransactionController', (): void => {
     });
 
     ctx.specification = await Swagger.initialize(ctx.app);
+    ctx.swaggerspec = await Swagger.importSpecification();
     ctx.controller = new TransactionController({
       specification: ctx.specification,
       roleManager,
@@ -104,12 +107,10 @@ describe('TransactionController', (): void => {
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
       const transactions = res.body as BaseTransactionResponse[];
-      const spec = await Swagger.importSpecification();
       const pagination = parseInt(process.env.PAGINATION_DEFAULT, 10);
       expect(transactions.length).to.equal(pagination);
       transactions.forEach((transaction: BaseTransactionResponse) => {
-        console.warn(transaction);
-        verifyBaseTransactionEntity(spec, transaction);
+        verifyBaseTransactionEntity(ctx.swaggerspec, transaction);
       });
     });
 

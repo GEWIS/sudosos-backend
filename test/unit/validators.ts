@@ -42,7 +42,7 @@ export function verifyUserResponse(
   spec: SwaggerSpecification, userResponse: UserResponse, canBeDeleted?: boolean,
 ): void {
   const validation = spec.validateModel('UserResponse', userResponse, false, true);
-  console.warn(validation.valid);
+
   expect(validation.valid).to.be.true;
   expect(userResponse.id).to.be.at.least(0);
   expect(userResponse.firstName).to.be.not.empty;
