@@ -37,8 +37,8 @@ describe('TransactionService', (): void => {
     spec: SwaggerSpecification,
   };
 
+  // eslint-disable-next-line func-names
   before(async function (): Promise<void> {
-    // @ts-ignore
     this.timeout(5000);
     const connection = await Database.initialize();
     const app = express();

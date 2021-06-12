@@ -29,6 +29,7 @@ import {
   parseProductToBaseResponse,
 } from '../helpers/revision-to-response';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
+import { TransactionRequest } from '../controller/request/transaction-request';
 
 export interface TransactionFilterParameters {
   fromId?: number,
@@ -45,6 +46,18 @@ export interface TransactionFilterParameters {
 }
 
 export default class TransactionService {
+  public static async verifyTransaction(req: TransactionRequest): Promise<boolean> {
+    return true;
+  }
+
+  public static asTransaction(req: TransactionRequest): Transaction {
+    return null;
+  }
+
+  public static asTransactionResponse(transaction: Transaction): TransactionResponse {
+    return null;
+  }
+
   public static async getTransactions(
     req: RequestWithToken, params: TransactionFilterParameters,
   ): Promise<BaseTransactionResponse[]> {
@@ -132,6 +145,10 @@ export default class TransactionService {
       };
       return v;
     });
+  }
+
+  public static async createTransaction(req: TransactionRequest): Promise<TransactionResponse> {
+    return {} as TransactionResponse;
   }
 
   public static async getSingleTransaction(id: number): Promise<TransactionResponse | undefined> {
