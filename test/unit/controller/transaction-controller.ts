@@ -103,6 +103,7 @@ describe('TransactionController', (): void => {
         .get('/transactions')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
+      console.error(res.body);
 
       const transactions = res.body as BaseTransactionResponse[];
       const spec = await Swagger.importSpecification();
