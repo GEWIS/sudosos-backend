@@ -28,7 +28,7 @@ export interface BaseContainerResponse extends BaseResponse {
 }
 /**
  * @typedef {BaseContainerResponse} ContainerResponse
- * @property {integer} revision - The revision of the container.
+ * @property {number} revision - The revision of the container.
  * @property {User.model} owner.required - The owner of the container.
  * @property {BaseProductResponse} products.required - The products in the container.
  */

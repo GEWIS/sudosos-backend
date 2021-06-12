@@ -105,17 +105,17 @@ export default class TransactionController extends BaseController {
    * @route GET /transactions
    * @group transactions - Operations of the transaction controller
    * @security JWT
-   * @param {number} fromId.query - From-user for selected transactions
-   * @param {number} createdById.query - User that created selected transaction
-   * @param {number} toId.query - To-user for selected transactions
+   * @param {integer} fromId.query - From-user for selected transactions
+   * @param {integer} createdById.query - User that created selected transaction
+   * @param {integer} toId.query - To-user for selected transactions
    * transactions. Requires ContainerId
-   * @param {number} productId.query - Product ID for selected transactions
-   * @param {number} productRevision.query - Product Revision for selected
+   * @param {integer} productId.query - Product ID for selected transactions
+   * @param {integer} productRevision.query - Product Revision for selected
    * transactions. Requires ProductID
    * @param {string} fromDate.query - Start date for selected transactions (inclusive)
    * @param {string} tillDate.query - End date for selected transactions (exclusive)
-   * @param {number} take.query - How many users the endpoint should return
-   * @param {number} skip.query - How many users should be skipped (for pagination)
+   * @param {integer} take.query - How many users the endpoint should return
+   * @param {integer} skip.query - How many users should be skipped (for pagination)
    * @returns {[TransactionResponse]} 200 - A list of all transactions
    */
   // eslint-disable-next-line class-methods-use-this

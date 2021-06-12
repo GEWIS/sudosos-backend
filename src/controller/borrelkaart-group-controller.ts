@@ -126,7 +126,7 @@ export default class BorrelkaartGroupController extends BaseController {
    * Returns the requested borrelkaart group
    * @route GET /borrelkaartgroups/{id}
    * @group borrelkaartgroups - Operations of borrelkaart group controller
-   * @param {number} id.path.required - The id of the borrelkaart group which should be returned
+   * @param {integer} id.path.required - The id of the borrelkaart group which should be returned
    * @security JWT
    * @returns {BorrelkaartGroupResponse.model} 200 - The requested borrelkaart group entity
    * @returns {string} 404 - Not found error
@@ -154,7 +154,7 @@ export default class BorrelkaartGroupController extends BaseController {
    * Updates the requested borrelkaart group
    * @route PATCH /borrelkaartgroups/{id}
    * @group borrelkaartgroups - Operations of borrelkaart group controller
-   * @param {number} id.path.required - The id of the borrelkaart group which should be updated
+   * @param {integer} id.path.required - The id of the borrelkaart group which should be updated
    * @param {BorrelkaartGroupRequest.model} borrelkaartgroup.body.required -
    * The updated borrelkaart group
    * @security JWT
@@ -193,7 +193,7 @@ export default class BorrelkaartGroupController extends BaseController {
    * Deletes the requested borrelkaart group
    * @route DELETE /borrelkaartgroups/{id}
    * @group borrelkaartgroups - Operations of borrelkaart group controller
-   * @param {number} id.path.required - The id of the borrelkaart group which should be deleted
+   * @param {integer} id.path.required - The id of the borrelkaart group which should be deleted
    * @security JWT
    * @returns {BorrelkaartGroupResponse.model} 200 - The deleted borrelkaart group entity
    * @returns {string} 404 - Not found error
