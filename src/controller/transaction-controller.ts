@@ -166,7 +166,7 @@ export default class TransactionController extends BaseController {
   // eslint-disable-next-line class-methods-use-this
   public async createTransaction(req: RequestWithToken, res: Response): Promise<void> {
     const body = req.body as TransactionRequest;
-    this.logger.trace('Create banner', body, 'by user', req.token.user);
+    this.logger.trace('Create transaction', body, 'by user', req.token.user);
 
     // handle request
     try {

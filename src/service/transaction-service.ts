@@ -265,7 +265,9 @@ export default class TransactionService {
 
     // save transaction
     await Transaction.save(transaction);
-    return this.asTransactionResponse(transaction);
+
+    // return response
+    return this.asTransactionResponse({} as Transaction);
   }
 
   public static async getSingleTransaction(id: number): Promise<TransactionResponse | undefined> {
