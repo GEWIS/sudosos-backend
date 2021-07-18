@@ -236,4 +236,13 @@ export default class RoleManager {
     );
     return roles.filter((_: string, index: number): boolean => results[index]);
   }
+
+  /**
+   * Get all registered roles in the system.
+   * Warning: changes to the returned content are reflected in the role manager.
+   * @returns a list of all roles.
+   */
+  public getRegisteredRoles(): RoleDefinitions {
+    return this.roles;
+  }
 }
