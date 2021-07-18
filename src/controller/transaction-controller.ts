@@ -200,6 +200,7 @@ export default class TransactionController extends BaseController {
     } catch (e) {
       res.status(500).send();
       this.logger.error(e);
+      return;
     }
 
     // If the transaction is undefined, there does not exist a transaction with the given ID

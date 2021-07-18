@@ -66,7 +66,7 @@ export default class TransactionService {
       return undefined;
     }
 
-    // transaction
+    // init transaction
     const transaction = {} as Transaction;
 
     // get users
@@ -260,20 +260,21 @@ export default class TransactionService {
     });
   }
 
-  public static async createTransaction(req: TransactionRequest): Promise<TransactionResponse> {
+  public static async createTransaction(req: TransactionRequest):
+  Promise<TransactionResponse | undefined> {
     const transaction = await this.asTransaction(req);
 
     // save transaction
     await Transaction.save(transaction);
 
     // return response
-    return this.asTransactionResponse({} as Transaction);
+    return this.asTransactionResponse(undefined);
   }
 
   public static async getSingleTransaction(id: number): Promise<TransactionResponse | undefined> {
     const transaction = await Transaction.findOne(id, {
       relations: [
-        'from', 'createdAt', 'updatedAt', 'createdBy', 'subTransactions', 'subTransactions.to', 'subTransactions.subTransactionRows',
+        'from', 'createdBy', 'subTransactions', 'subTransactions.to', 'subTransactions.subTransactionRows',
         // We query a lot here, but we will parse this later to a very simple BaseResponse
         'pointOfSale', 'pointOfSale.pointOfSale',
         'subTransactions.container', 'subTransactions.container.container',
