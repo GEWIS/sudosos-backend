@@ -33,15 +33,15 @@ function parseGetTransactionsFilters(req: RequestWithToken): TransactionFilterPa
   }
 
   const filters: TransactionFilterParameters = {
-    fromId: parseInt(req.query.fromId as string, 10),
-    createdById: parseInt(req.query.createdById as string, 10),
-    toId: parseInt(req.query.toId as string, 10),
-    pointOfSaleId: parseInt(req.query.pointOfSaleId as string, 10),
-    pointOfSaleRevision: parseInt(req.query.pointOfSaleRevision as string, 10),
-    containerId: parseInt(req.query.containerId as string, 10),
-    containerRevision: parseInt(req.query.containerRevision as string, 10),
-    productId: parseInt(req.query.productId as string, 10),
-    productRevision: parseInt(req.query.productRevision as string, 10),
+    fromId: req.query.fromId as number,
+    createdById: req.query.createdById as number,
+    toId: req.query.toId as number,
+    pointOfSaleId: req.query.pointOfSaleId as number,
+    pointOfSaleRevision: req.query.pointOfSaleRevision as number,
+    containerId: req.query.containerId as number,
+    containerRevision: req.query.containerRevision as number,
+    productId: req.query.productId as number,
+    productRevision: req.query.productRevision as number,
     fromDate: req.query.fromDate,
     tillDate: req.query.tillDate,
   };
