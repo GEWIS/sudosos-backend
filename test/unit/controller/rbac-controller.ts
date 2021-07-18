@@ -20,7 +20,7 @@ import { expect, request } from 'chai';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import RbacController from '../../../src/controller/rbac-controller';
-import { RoleResponse } from '../../../src/controller/response/role-response';
+import RoleResponse from '../../../src/controller/response/rbac/role-response';
 import User, { UserType } from '../../../src/entity/user/user';
 import RoleManager, { RoleDefinition } from '../../../src/rbac/role-manager';
 import Swagger from '../../../src/start/swagger';

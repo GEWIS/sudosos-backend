@@ -19,9 +19,10 @@ import { Request, Response } from 'express';
 import log4js, { Logger } from 'log4js';
 import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
-import {
-  ActionResponse, EntityResponse, RelationResponse, RoleResponse,
-} from './response/role-response';
+import ActionResponse from './response/rbac/action-response';
+import EntityResponse from './response/rbac/entity-response';
+import RelationResponse from './response/rbac/relation-response';
+import RoleResponse from './response/rbac/role-response';
 
 export default class RbacController extends BaseController {
   private logger: Logger = log4js.getLogger('RbacController');
