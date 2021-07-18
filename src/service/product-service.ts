@@ -16,6 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { createQueryBuilder, SelectQueryBuilder } from 'typeorm';
+import { start } from 'repl';
 import { ProductResponse } from '../controller/response/product-response';
 import Product from '../entity/product/product';
 import ProductRevision from '../entity/product/product-revision';
@@ -26,6 +27,7 @@ import ContainerRevision from '../entity/container/container-revision';
 import Container from '../entity/container/container';
 import UpdatedContainer from '../entity/container/updated-container';
 import BaseProduct from '../entity/product/base-product';
+import User from '../entity/user/user';
 
 /**
  * Define product filtering parameters used to filter query results.
@@ -302,5 +304,38 @@ export default class ProductService {
 
     // Pull the just created product from the database to fix the formatting.
     return (await this.getUpdatedProducts({ productId }))[0];
+  }
+
+
+  public static async createProduct(owner: User, product: Partial<BaseProduct>)
+    : Promise<ProductResponse> {
+    const base: Product = Product.create();
+
+    Object.assign(base, {
+      owner,
+    });
+
+    // Save the product.
+    await base.save();
+
+    // Create the product.
+    const updatedProduct: UpdatedProduct = UpdatedProduct.create();
+
+    // Set base product, then the oldest settings and then the newest.
+    Object.assign(updatedProduct, {
+      product: await Product.findOne(base.id),
+      ...product,
+    });
+
+    await updatedProduct.save();
+
+    return (await this.getUpdatedProducts({ productId: base.id }))[0];
+  }
+
+  public static async confirmProductUpdate(productId: number)
+    : Promise<ProductResponse> {
+    const base: Product = await Product.findOne(productId);
+    console.log(base);
+    return (await this.getProducts({ productId }))[0];
   }
 }

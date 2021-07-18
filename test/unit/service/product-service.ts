@@ -34,6 +34,7 @@ import ProductRevision from '../../../src/entity/product/product-revision';
 import UpdatedProduct from '../../../src/entity/product/updated-product';
 import UpdatedContainer from '../../../src/entity/container/updated-container';
 import BaseProduct from '../../../src/entity/product/base-product';
+import ProductCategory from '../../../src/entity/product/product-category';
 
 /**
  * Test if all the product responses are part of the product set array.
@@ -213,8 +214,11 @@ describe('ProductService', async (): Promise<void> => {
 
       expect(res).to.be.length(6);
     });
+  });
+
+  describe('updateProducts function', () => {
     it('should update a product by ID', async () => {
-      const updateParams: {[key:string]: any} & Partial<BaseProduct> = {
+      const updateParams: { [key: string]: any } & Partial<BaseProduct> = {
         alcoholPercentage: 8,
         name: 'Product2-update',
         picture: 'https://sudosos/product2-update.png',
@@ -234,6 +238,37 @@ describe('ProductService', async (): Promise<void> => {
       });
 
       expect(res).to.exist;
+    });
+
+    it('should create a new product', async () => {
+      const price = 77;
+
+      const productParams: {[key:string]: any} & Partial<BaseProduct> = {
+        alcoholPercentage: 9,
+        name: 'Product77-update',
+        picture: 'https://sudosos/product77-update.png',
+        price: dinero({
+          amount: price,
+        }),
+        category: await ProductCategory.findOne(1),
+      };
+
+      const res: ProductResponse = await ProductService.createProduct(ctx.users[0], productParams);
+
+      Object.keys(productParams).forEach((key: keyof ProductResponse) => {
+        if (key === 'price') {
+          expect(productParams.price.getAmount()).to.be.equal(price);
+        } else if (typeof productParams[key] !== 'object') {
+          expect((productParams[key] as any)).to.be.equal((res[key]));
+        }
+      });
+
+      expect(res).to.exist;
+    });
+
+    it('should confirm an updated product', async () => {
+      const product = await ProductService.confirmProductUpdate(73);
+      console.warn(product);
     });
   });
 });
