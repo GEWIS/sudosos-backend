@@ -20,7 +20,7 @@ import * as http from 'http';
 import * as util from 'util';
 import * as crypto from 'crypto';
 import { promises as fs } from 'fs';
-import bodyParser from 'body-parser';
+import { json } from 'body-parser';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import dinero, { Currency } from 'dinero.js';
 import { config } from 'dotenv';
@@ -36,6 +36,10 @@ import RoleManager from './rbac/role-manager';
 import Gewis from './gewis/gewis';
 import BannerController from './controller/banner-controller';
 import { BaseControllerOptions } from './controller/base-controller';
+import UserController from './controller/user-controller';
+import ProductController from './controller/product-controller';
+import TransactionController from './controller/transaction-controller';
+import BorrelkaartGroupController from './controller/borrelkaart-group-controller';
 
 export class Application {
   app: express.Express;
@@ -114,24 +118,29 @@ export default async function createApp(): Promise<Application> {
   // Create express application.
   application.app = express();
   application.specification = await Swagger.initialize(application.app);
-  application.app.use(bodyParser.json());
-
-  // Setup token handler and authentication controller.
-  await setupAuthentication(application);
+  application.app.use(json());
 
   // Setup RBAC.
   application.roleManager = new RoleManager();
+
+  // Setup token handler and authentication controller.
+  await setupAuthentication(application);
 
   // Setup GEWIS-specific module.
   const gewis = new Gewis(application.roleManager);
   await gewis.registerRoles();
 
-  // REMOVE LATER, banner controller development
+
+  // REMOVE LATER
   const options: BaseControllerOptions = {
     specification: application.specification,
     roleManager: application.roleManager,
   };
   application.app.use('/v1/banners', new BannerController(options).getRouter());
+  application.app.use('/v1/users', new UserController(options).getRouter());
+  application.app.use('/v1/products', new ProductController(options).getRouter());
+  application.app.use('/v1/transactions', new TransactionController(options).getRouter());
+  application.app.use('/v1/borrelkaartgroups', new BorrelkaartGroupController(options).getRouter());
 
   // Start express application.
   logger.info(`Server listening on port ${process.env.HTTP_PORT}.`);

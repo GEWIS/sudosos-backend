@@ -40,7 +40,7 @@ dinero.defaultPrecision = 2;
 // Silent in-dependency logs, unless really wanted by the environment.
 const logger = log4js.getLogger('Console');
 logger.level = process.env.LOG_LEVEL;
-console.log = (message: any) => logger.debug(message);
+console.log = (message: any, ...additional: any[]) => logger.debug(message, ...additional);
 
 /**
  * Generates a basic RSA keypair.

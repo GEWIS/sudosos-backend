@@ -15,40 +15,19 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import {
-  Column, Entity, OneToMany,
-} from 'typeorm';
-import BaseEntity from '../base-entity';
-// eslint-disable-next-line import/no-cycle
-import UserBorrelkaartGroup from './user-borrelkaart-group';
+
+import User from '../../entity/user/user';
 
 /**
- * @typedef {BaseEntity} BorrelkaartGroup
+ * @typedef BorrelkaartGroupRequest
  * @property {string} name.required - Name of the group
  * @property {string} activeStartDate.required - Date from which the included cards are active
  * @property {string} activeEndDate - Date from which cards are no longer active
- * @property {Array.<User>} borrelkaarten.required - Cards included in this group
+ * @property {Array.<User>} users.required - Users to be assigned to the borrelkaart group
  */
-@Entity()
-export default class BorrelkaartGroup extends BaseEntity {
-  @Column({
-    unique: true,
-    length: 64,
-  })
-  public name: string;
-
-  @Column({
-    type: 'datetime',
-    default: 'CURRENT_TIMESTAMP',
-  })
-  public activeStartDate?: Date;
-
-  @Column({
-    nullable: true,
-    type: 'datetime',
-  })
-  public activeEndDate?: Date;
-
-  @OneToMany(() => UserBorrelkaartGroup, (user) => user.borrelkaartGroup)
-  public borrelkaarten: UserBorrelkaartGroup[];
+export default interface BorrelkaartGroupRequest {
+  name: string,
+  activeStartDate: string,
+  activeEndDate: string,
+  users: User[],
 }

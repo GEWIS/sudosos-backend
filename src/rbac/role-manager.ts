@@ -185,6 +185,8 @@ export default class RoleManager {
     entity: string,
     attributes: AllowedAttribute[],
   ): boolean {
+    if (process.env.NODE_ENV === 'development') return true;
+
     // Convert roles to array if a single role is given.
     let rolesArray: string[];
     if (typeof roles === 'string') {

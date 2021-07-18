@@ -19,7 +19,7 @@ import { config } from 'dotenv';
 import log4js from 'log4js';
 import dinero, { Currency } from 'dinero.js';
 import Database from './database';
-import { Application } from '..';
+import { Application } from '../index';
 
 export default async function createApp() {
   const application = new Application();
@@ -32,7 +32,7 @@ export default async function createApp() {
   // Silent in-dependency logs unless really wanted by the environment.
   const logger = log4js.getLogger('Console');
   logger.level = process.env.LOG_LEVEL;
-  console.log = (message: any) => logger.debug(message);
+  console.log = (message: any, ...additional: any[]) => logger.debug(message, ...additional);
 
   // Set up monetary value configuration.
   dinero.defaultCurrency = process.env.CURRENCY_CODE as Currency;

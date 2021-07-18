@@ -21,11 +21,11 @@ import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import User, { UserType } from '../entity/user/user';
-import Product from '../entity/product/product';
 import Transaction from '../entity/transactions/transaction';
 import CreateUserRequest from './request/create-user-request';
 import UpdateUserRequest from './request/update-user-request';
 import { addPaginationForFindOptions } from '../helpers/pagination';
+import ProductService from '../service/product-service';
 
 export default class UserController extends BaseController {
   private logger: Logger = log4js.getLogger('UserController');
@@ -88,6 +88,14 @@ export default class UserController extends BaseController {
           handler: this.getUsersProducts.bind(this),
         },
       },
+      '/:id/products/updated': {
+        GET: {
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'get', UserController.getRelation(req), 'Product', ['*'],
+          ),
+          handler: this.getUsersUpdatedProducts.bind(this),
+        },
+      },
       '/:id/transactions': {
         GET: {
           policy: async (req) => this.roleManager.can(
@@ -107,6 +115,7 @@ export default class UserController extends BaseController {
    * Get a list of all users
    * @route GET /users
    * @group users - Operations of user controller
+   * @security JWT
    * @param {integer} take.query - How many users the endpoint should return
    * @param {integer} skip.query - How many users should be skipped (for pagination)
    * @returns {[User.model]} 200 - A list of all users
@@ -125,8 +134,10 @@ export default class UserController extends BaseController {
 
   /**
    * Get an individual user
-   * @route GET /users/:id
+   * @route GET /users/{id}
    * @group users - Operations of user controller
+   * @param {integer} id.path.required - The id of the user
+   * @security JWT
    * @returns {User.model} 200 - Individual user
    * @returns {string} 404 - Nonexistent user id
    */
@@ -149,6 +160,7 @@ export default class UserController extends BaseController {
    * Create a new user
    * @route POST /users
    * @group users - Operations of user controller
+   * @security JWT
    * @returns {User.model} 200 - New user
    * @returns {string} 400 - Bad request
    */
@@ -227,8 +239,10 @@ export default class UserController extends BaseController {
 
   /**
    * Delete a single user
-   * @route DELETE /users/:id
+   * @route DELETE /users/{id}
    * @group users - Operations of user controller
+   * @param {integer} id.path.required - The id of the user
+   * @security JWT
    * @returns {string} 204 - User successfully deleted
    * @returns {string} 400 - Cannot delete yourself
    */
@@ -261,8 +275,10 @@ export default class UserController extends BaseController {
 
   /**
    * Get an user's products
-   * @route GET /users/:id/products
+   * @route GET /users/{id}/products
    * @group users - Operations of user controller
+   * @param {integer} id.path.required - The id of the user
+   * @security JWT
    * @returns {[Product.model]} 200 - List of products.
    */
   public async getUsersProducts(req: RequestWithToken, res: Response): Promise<void> {
@@ -274,17 +290,51 @@ export default class UserController extends BaseController {
       res.status(404).json({});
       return;
     }
-    const products = await Product.find({
-      owner,
-    });
 
-    res.status(200).json(products);
+    // Handle request
+    try {
+      const products = await ProductService.getProducts({ ownerId: parseInt(parameters.id, 10) });
+      res.json(products);
+    } catch (error) {
+      this.logger.error('Could not return all products:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Get an user's updated products
+   * @route GET /users/{id}/products/updated
+   * @group users - Operations of user controller
+   * @param {integer} id.path.required - The id of the user
+   * @security JWT
+   * @returns {[Product.model]} 200 - List of products.
+   */
+  public async getUsersUpdatedProducts(req: RequestWithToken, res: Response): Promise<void> {
+    const parameters = req.params;
+    this.logger.trace("Get user's updated products", parameters, 'by user', req.token.user);
+
+    const owner = await User.findOne(parameters.id);
+    if (owner == null) {
+      res.status(404).json({});
+      return;
+    }
+
+    // Handle request
+    try {
+      const products = await ProductService.getProducts({ productId: parseInt(parameters.id, 10) });
+      res.json(products);
+    } catch (error) {
+      this.logger.error('Could not return all products:', error);
+      res.status(500).json('Internal server error.');
+    }
   }
 
   /**
    * Get an user's transactions (from, to or created)
-   * @route GET /users/:id/transactions
+   * @route GET /users/{id}/transactions
    * @group users - Operations of user controller
+   * @param {integer} id.path.required - The id of the user
+   * @security JWT
    * @returns {[Transaction.model]} 200 - List of transactions.
    */
   public async getUsersTransactions(req: RequestWithToken, res: Response): Promise<void> {
