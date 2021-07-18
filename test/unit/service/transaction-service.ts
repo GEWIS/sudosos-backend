@@ -16,6 +16,8 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+// TODO: Add test case to check that balance cache are invalidated after altering existing transaction
+
 import express, { Application } from 'express';
 import { expect } from 'chai';
 import { Connection } from 'typeorm';

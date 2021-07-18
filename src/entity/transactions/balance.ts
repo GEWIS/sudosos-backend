@@ -17,7 +17,13 @@
  */
 import {
   Column,
-  Entity, JoinColumn, ManyToOne, PrimaryColumn, UpdateDateColumn,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  PrimaryColumn,
+  UpdateDateColumn,
+  BaseEntity,
+  VersionColumn,
 } from 'typeorm';
 // eslint-disable-next-line import/no-cycle
 import User from '../user/user';
@@ -30,7 +36,7 @@ import User from '../user/user';
  *    to this transaction.
  */
 @Entity()
-export default class Balance {
+export default class Balance extends BaseEntity {
   @PrimaryColumn({ type: 'integer' })
   public readonly user_id: number;
 

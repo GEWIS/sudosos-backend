@@ -16,38 +16,74 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { getManager } from 'typeorm';
-import log4js from 'log4js';
-import BannerRequest from '../controller/request/banner-request';
 import Balance from '../entity/transactions/balance';
 
 export default class BalanceService {
   /**
-   * Returns all active banners with pagination.
-   * @param options
+   * Update the balance cache with active values
+   * Note: insafe query! safety leveraged by typesafety
    */
-  public static async updateBalances() {
+  public static async updateBalances(ids?: number|number[]) {
     const entityManager = getManager();
-    await entityManager.query('REPLACE INTO balance select id, sum(amount), max(stamp) from ( '
-        + 'select t.fromId as `id`, str.amount * pr.price * -1 as `amount`, str.updatedAt as `stamp` from `transaction` as `t` '
-          + 'inner join sub_transaction st on t.id=st.transactionId '
-          + 'inner join sub_transaction_row str on st.id=str.subTransactionId '
-          + 'inner join product_revision pr on str.productRevision=pr.revision and str.productProduct=pr.productId '
-        + 'UNION ALL '
-        + 'select st2.toId as `id`, str2.amount * pr2.price as `amount`, str2.updatedAt as `stamp` from sub_transaction st2 '
-          + 'inner join sub_transaction_row str2 on st2.id=str2.subTransactionId '
-          + 'inner join product_revision pr2 on str2.productRevision=pr2.version and str2.productProduct=pr2.productId '
-        + 'UNION ALL '
-        + 'select t2.fromId as `id`, amount*-1 as `amount`, t2.updatedAt as `stamp` from transfer t2 where fromId is not NULL '
-        + 'UNION ALL '
-        + 'select t2.toId as `id`, amount as `amount`, updatedAt as `stamp` from transfer t2 where toId is not NULL) as moneys '
-      + 'group by moneys.id');
+    if (ids) {
+      const idStr = typeof ids === 'number' ? `(${ids})` : `(${ids.join(',')})`;
+      // eslint-disable-next-line prefer-template
+      await entityManager.query('REPLACE INTO balance select id, sum(amount), max(stamp) from ( '
+          + 'select t.fromId as `id`, str.amount * pr.price * -1 as `amount`, str.updatedAt as `stamp` from `transaction` as `t` '
+            + 'inner join sub_transaction st on t.id=st.transactionId '
+            + 'inner join sub_transaction_row str on st.id=str.subTransactionId '
+            + 'inner join product_revision pr on str.productRevision=pr.revision and str.productProduct=pr.productId '
+            + 'where t.fromId in ' + idStr
+          + 'UNION ALL '
+          + 'select st2.toId as `id`, str2.amount * pr2.price as `amount`, str2.updatedAt as `stamp` from sub_transaction st2 '
+            + 'inner join sub_transaction_row str2 on st2.id=str2.subTransactionId '
+            + 'inner join product_revision pr2 on str2.productRevision=pr2.version and str2.productProduct=pr2.productId '
+            + 'where st2.toId in ' + idStr
+          + 'UNION ALL '
+          + 'select t2.fromId as `id`, amount*-1 as `amount`, t2.updatedAt as `stamp` from transfer t2 where fromId in ' + idStr
+          + 'UNION ALL '
+          + 'select t2.toId as `id`, amount as `amount`, updatedAt as `stamp` from transfer t2 where toId in ' + idStr + ') as moneys '
+        + 'group by moneys.id');
+    } else {
+      await entityManager.query('REPLACE INTO balance select id, sum(amount), max(stamp) from ( '
+          + 'select t.fromId as `id`, str.amount * pr.price * -1 as `amount`, str.updatedAt as `stamp` from `transaction` as `t` '
+            + 'inner join sub_transaction st on t.id=st.transactionId '
+            + 'inner join sub_transaction_row str on st.id=str.subTransactionId '
+            + 'inner join product_revision pr on str.productRevision=pr.revision and str.productProduct=pr.productId '
+          + 'UNION ALL '
+          + 'select st2.toId as `id`, str2.amount * pr2.price as `amount`, str2.updatedAt as `stamp` from sub_transaction st2 '
+            + 'inner join sub_transaction_row str2 on st2.id=str2.subTransactionId '
+            + 'inner join product_revision pr2 on str2.productRevision=pr2.version and str2.productProduct=pr2.productId '
+          + 'UNION ALL '
+          + 'select t2.fromId as `id`, amount*-1 as `amount`, t2.updatedAt as `stamp` from transfer t2 where fromId is not NULL '
+          + 'UNION ALL '
+          + 'select t2.toId as `id`, amount as `amount`, updatedAt as `stamp` from transfer t2 where toId is not NULL) as moneys '
+        + 'group by moneys.id');
+    }
   }
 
-  public static async getBalance(id: Number): Promise<Number> {
+  /**
+   * Clear balance cache
+   */
+  public static async clearBalanceCache(ids?: number|number[]) {
+    if (ids) {
+      Balance.delete(ids);
+    } else {
+      const entityManager = getManager();
+      await entityManager.query('DELETE from balance where 1=1;');
+    }
+  }
+
+  /**
+   * Get current balance of a user
+   * @param id id of user to get balance of
+   * @returns the current balance of a user
+   */
+  public static async getBalance(id: number): Promise<number> {
     const entityManager = getManager();
     const balanceArray = await entityManager.query('SELECT amount, updatedAt FROM balance where user_id=?', [id]);
 
-    let balance: Number = 0;
+    let balance: number = 0;
     let time: String = '1993-11-09 00:00'; // Random constant in the past
 
     if (balanceArray.length > 0) {

@@ -26,7 +26,7 @@ import dinero, { Currency } from 'dinero.js';
 import { config } from 'dotenv';
 import express from 'express';
 import log4js, { Logger } from 'log4js';
-import { Connection } from 'typeorm';
+import { Connection, FindConditions, getManager } from 'typeorm';
 import cron from 'node-cron';
 import Database from './database/database';
 import Swagger from './start/swagger';
@@ -41,7 +41,13 @@ import UserController from './controller/user-controller';
 import ProductController from './controller/product-controller';
 import TransactionController from './controller/transaction-controller';
 import BorrelkaartGroupController from './controller/borrelkaart-group-controller';
-import BalanceService from './services/BalanceService';
+import BalanceService from './service/balance-service';
+import { defineTransactions } from '../test/seed';
+import PointOfSaleRevision from './entity/point-of-sale/point-of-sale-revision';
+import User from './entity/user/user';
+import Transaction from './entity/transactions/transaction';
+import PointOfSale from './entity/point-of-sale/point-of-sale';
+import TransactionService from './service/transaction-service';
 
 export class Application {
   app: express.Express;
@@ -132,15 +138,35 @@ export default async function createApp(): Promise<Application> {
   const gewis = new Gewis(application.roleManager);
   await gewis.registerRoles();
 
+
   // Setup Balance caching
   await BalanceService.updateBalances();
   cron.schedule('*/10 * * * *', () => {
-    application.logger.debug('Syncing balances.');
-    // BalanceService.updateBalances();
-    application.logger.debug('Synced balances.');
+    logger.debug('Syncing balances.');
+    BalanceService.updateBalances();
+    logger.debug('Synced balances.');
   });
 
-  application.logger.info(await BalanceService.getBalance(1));
+  // application.logger.info(`Balance ${await BalanceService.getBalance(1)}`);
+  // const entityManager = getManager();
+  // const lastTransaction = (await entityManager.query('SELECT MAX(id) as id from `transaction`'))[0].id ?? 0;
+  // const lastSubTransaction = (await entityManager.query('SELECT MAX(id) as id from `sub_transaction`'))[0].id ?? 0;
+  // const lastRowTransaction = (await entityManager.query('SELECT MAX(id) as id from `sub_transaction_row`'))[0].id ?? 0;
+
+  // const users = await User.findByIds([1, 2]);
+  // logger.info('Got users?!');
+  // const pointOfSale = await PointOfSale.findOne(1);
+  // const pointOfSaleRevision = await PointOfSaleRevision.findOne({ pointOfSale, revision: pointOfSale.currentRevision }, { relations: ['pointOfSale', 'pointOfSale.owner', 'containers', 'containers.products', 'containers.products.product'] });
+  // logger.info('Got POS');
+
+  // const transactions = defineTransactions(lastTransaction, lastSubTransaction, lastRowTransaction, 1, pointOfSaleRevision, users[0], users[1]);
+  // logger.info('Transaction defined');
+  // await Transaction.save(transactions[0]);
+  // logger.info('Saved?!');
+  // const transactionWithValue = await TransactionService.getSingleTransaction(transactions[0].id);
+  // logger.info(transactionWithValue.value);
+
+  // application.logger.info(`Balance ${await BalanceService.getBalance(1)}`);
 
 
   // REMOVE LATER
