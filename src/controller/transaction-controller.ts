@@ -42,8 +42,8 @@ function parseGetTransactionsFilters(req: RequestWithToken): TransactionFilterPa
     containerRevision: parseInt(req.query.containerRevision as string, 10),
     productId: parseInt(req.query.productId as string, 10),
     productRevision: parseInt(req.query.productRevision as string, 10),
-    fromDate: new Date(req.query.fromDate as string),
-    tillDate: new Date(req.query.tillDate as string),
+    fromDate: req.query.fromDate,
+    tillDate: req.query.tillDate,
   };
 
   if (filters.fromDate && typeof filters.fromDate !== 'object') {
