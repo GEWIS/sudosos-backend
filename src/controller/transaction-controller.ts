@@ -33,17 +33,17 @@ function parseGetTransactionsFilters(req: RequestWithToken): TransactionFilterPa
   }
 
   const filters: TransactionFilterParameters = {
-    fromId: req.query.fromId,
-    createdById: req.query.createdById,
-    toId: req.query.toId,
-    pointOfSaleId: req.query.pointOfSaleId,
-    pointOfSaleRevision: req.query.pointOfSaleRevision,
-    containerId: req.query.containerId,
-    containerRevision: req.query.containerRevision,
-    productId: req.query.productId,
-    productRevision: req.query.productRevision,
-    fromDate: req.query.fromDate,
-    tillDate: req.query.tillDate,
+    fromId: parseInt(req.query.fromId as string, 10),
+    createdById: parseInt(req.query.createdById as string, 10),
+    toId: parseInt(req.query.toId as string, 10),
+    pointOfSaleId: parseInt(req.query.pointOfSaleId as string, 10),
+    pointOfSaleRevision: parseInt(req.query.pointOfSaleRevision as string, 10),
+    containerId: parseInt(req.query.containerId as string, 10),
+    containerRevision: parseInt(req.query.containerRevision as string, 10),
+    productId: parseInt(req.query.productId as string, 10),
+    productRevision: parseInt(req.query.productRevision as string, 10),
+    fromDate: new Date(req.query.fromDate as string),
+    tillDate: new Date(req.query.tillDate as string),
   };
 
   if (filters.fromDate && typeof filters.fromDate !== 'object') {

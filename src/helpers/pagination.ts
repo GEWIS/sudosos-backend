@@ -23,11 +23,11 @@ export function validatePaginationQueryParams(req: RequestWithToken): boolean {
   const urlParams = req.query || {};
 
   if (urlParams.take) {
-    const t = parseInt(urlParams.take, 10);
+    const t = parseInt(urlParams.take as string, 10);
     if (Number.isNaN(t) || t.toString().length !== urlParams.take.length) return false;
   }
   if (urlParams.skip) {
-    const s = parseInt(urlParams.skip, 10);
+    const s = parseInt(urlParams.skip as string, 10);
     if (Number.isNaN(s) || s.toString().length !== urlParams.skip.length) return false;
   }
 
