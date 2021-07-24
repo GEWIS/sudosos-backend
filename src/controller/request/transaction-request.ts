@@ -36,20 +36,20 @@ export interface TransactionRequest {
  * @typedef SubTransactionRequest
  * @property {integer} to.required - to user id
  * @property {RevisionRequest.model} container.required - container
- * @property {Array.<SubTransactionsRowRequest>} subTransactionsRows.required - subtransactions
+ * @property {Array.<SubTransactionRowRequest>} subTransactionRows.required - subtransaction rows
  */
 export interface SubTransactionRequest {
   to: number,
   container: RevisionRequest,
-  subTransactionsRows: SubTransactionsRowRequest[],
+  subTransactionRows: SubTransactionRowRequest[],
 }
 
 /**
- * @typedef SubTransactionsRowRequest
+ * @typedef SubTransactionRowRequest
  * @property {RevisionRequest.model} product - product
  * @property {integer} amount - amount of this product in transaction
  */
-export interface SubTransactionsRowRequest {
+export interface SubTransactionRowRequest {
   product: RevisionRequest,
   amount: number,
 }

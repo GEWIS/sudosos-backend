@@ -171,7 +171,11 @@ export default class TransactionController extends BaseController {
     // handle request
     try {
       if (await TransactionService.verifyTransaction(body)) {
-        res.json(await TransactionService.createTransaction(body));
+        if (await TransactionService.verifyBalance(body)) {
+          res.json(await TransactionService.createTransaction(body));
+        } else {
+          res.status(402).json('Insufficient balance.');
+        }
       } else {
         res.status(400).json('Invalid transaction.');
       }

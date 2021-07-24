@@ -34,13 +34,12 @@ import {
   parseProductToBaseResponse,
 } from '../helpers/revision-to-response';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
-import { SubTransactionRequest, SubTransactionsRowRequest, TransactionRequest } from '../controller/request/transaction-request';
+import { SubTransactionRequest, SubTransactionRowRequest, TransactionRequest } from '../controller/request/transaction-request';
 import User from '../entity/user/user';
 import ContainerRevision from '../entity/container/container-revision';
 import SubTransactionRow from '../entity/transactions/sub-transaction-row';
 import ProductRevision from '../entity/product/product-revision';
 import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision';
-import { BaseUserResponse } from '../controller/response/user-response';
 
 export interface TransactionFilterParameters {
   fromId?: number,
@@ -57,8 +56,89 @@ export interface TransactionFilterParameters {
 }
 
 export default class TransactionService {
+  public static async verifyBalance(req: TransactionRequest): Promise<boolean> {
+    // check whether from user has sufficient balance
+    let totalCost: number = 0;
+
+    // sum costs
+    await Promise.all(req.subtransactions.map(async (subTransaction) => {
+      await Promise.all(subTransaction.subTransactionRows.map(async (row) => {
+        const product = await ProductRevision.findOne({
+          revision: row.product.revision,
+          product: {
+            id: row.product.id,
+          },
+        });
+        totalCost += DineroTransformer.Instance.to(product.price) * row.amount;
+      }));
+    }));
+
+    // TODO: get user balance and compare
+    return totalCost > 0;
+  }
+
+  public static async verifySubTransactionRow(req: SubTransactionRowRequest): Promise<boolean> {
+    // check if product exists in database and correct current revision is provided
+    if (!await ProductRevision.findOne({
+      revision: req.product.revision,
+      product: {
+        id: req.product.id,
+      },
+    })) {
+      return false;
+    }
+
+    // check whether amount is correct
+    return req.amount > 0;
+  }
+
+  public static async verifySubTransaction(req: SubTransactionRequest): Promise<boolean> {
+    // check if container exists in database and correct current revision is provided
+    if (!await ContainerRevision.findOne({
+      revision: req.container.revision,
+      container: {
+        id: req.container.id,
+      },
+    })) {
+      return false;
+    }
+
+    // check if to user exists in database
+    if (!await User.findOne(req.to)) {
+      return false;
+    }
+
+    // verify subtransaction rows
+    return req.subTransactionRows.every((row) => this.verifySubTransactionRow(row));
+  }
+
   public static async verifyTransaction(req: TransactionRequest): Promise<boolean> {
-    return true;
+    // check if point of sale exists in database and correct current revision is provided
+    if (!await PointOfSaleRevision.findOne({
+      revision: req.pointOfSale.revision,
+      pointOfSale: {
+        id: req.pointOfSale.id,
+      },
+    })) {
+      return false;
+    }
+
+    // check if top level users exist in database
+    const ids: number[] = [req.from];
+    if (req.createdBy !== req.from) {
+      ids.push(req.createdBy);
+    }
+
+    if (req.createdBy !== req.from) {
+      if ((await User.findByIds([req.from, req.createdBy])).length !== 2) {
+        return false;
+      }
+    } else if (!await User.findOne(req.from)) {
+      return false;
+    }
+
+    // verify subtransactions
+    return req.subtransactions.every((subtransaction) => this.verifySubTransaction(subtransaction));
   }
 
   public static async asTransaction(req: TransactionRequest): Promise<Transaction | undefined> {
@@ -95,16 +175,8 @@ export default class TransactionService {
       id: transaction.id,
       createdAt: transaction.createdAt.toISOString(),
       updatedAt: transaction.updatedAt.toISOString(),
-      from: {
-        ...transaction.from,
-        createdAt: transaction.from.createdAt.toISOString(),
-        updatedAt: transaction.from.updatedAt.toISOString(),
-      } as BaseUserResponse,
-      createdBy: {
-        ...transaction.createdBy,
-        createdAt: transaction.createdBy.createdAt.toISOString(),
-        updatedAt: transaction.createdBy.updatedAt.toISOString(),
-      } as BaseUserResponse,
+      from: parseUserToBaseResponse(transaction.from, false),
+      createdBy: parseUserToBaseResponse(transaction.createdBy, false),
       subTransactions: transaction.subTransactions.map(
         (subTransaction) => this.asSubTransactionResponse(subTransaction),
       ),
@@ -130,7 +202,7 @@ export default class TransactionService {
     });
 
     // sub transaction rows
-    subTransaction.subTransactionRows = await Promise.all(req.subTransactionsRows.map(
+    subTransaction.subTransactionRows = await Promise.all(req.subTransactionRows.map(
       async (row) => this.asSubTransactionRow(row, subTransaction),
     ));
 
@@ -144,15 +216,10 @@ export default class TransactionService {
     }
     return {
       id: subTransaction.id,
-      createdAt: subTransaction.createdAt.toISOString(),
-      updatedAt: subTransaction.updatedAt.toISOString(),
-      to: {
-        ...subTransaction.to,
-        createdAt: subTransaction.to.createdAt.toISOString(),
-        updatedAt: subTransaction.to.updatedAt.toISOString(),
-      } as BaseUserResponse,
+      to: parseUserToBaseResponse(subTransaction.to, false),
       container: parseContainerToBaseResponse(subTransaction.container, false),
       subTransactionRows: subTransaction.subTransactionRows.map((row) => ({
+        id: row.id,
         product: parseProductToBaseResponse(row.product, false),
         amount: row.amount,
       } as SubTransactionRowResponse)),
@@ -160,7 +227,7 @@ export default class TransactionService {
   }
 
   public static async asSubTransactionRow(
-    req: SubTransactionsRowRequest, subTransaction: SubTransaction,
+    req: SubTransactionRowRequest, subTransaction: SubTransaction,
   ): Promise<SubTransactionRow | undefined> {
     if (!req) {
       return undefined;
@@ -264,11 +331,8 @@ export default class TransactionService {
   Promise<TransactionResponse | undefined> {
     const transaction = await this.asTransaction(req);
 
-    // save transaction
-    await Transaction.save(transaction);
-
-    // return response
-    return this.asTransactionResponse(undefined);
+    // save transaction and return response
+    return this.asTransactionResponse(await Transaction.save(transaction));
   }
 
   public static async getSingleTransaction(id: number): Promise<TransactionResponse | undefined> {
@@ -282,27 +346,6 @@ export default class TransactionService {
       ],
     });
 
-    if (transaction === undefined) return undefined;
-
-    return {
-      id: transaction.id,
-      from: parseUserToBaseResponse(transaction.from, false),
-      createdBy: transaction.createdBy
-        ? parseUserToBaseResponse(transaction.createdBy, false)
-        : undefined,
-      createdAt: transaction.createdAt.toISOString(),
-      updatedAt: transaction.updatedAt.toISOString(),
-      pointOfSale: parsePOSToBasePOS(transaction.pointOfSale, false),
-      subTransactions: transaction.subTransactions.map((s) => ({
-        id: s.id,
-        to: parseUserToBaseResponse(s.to, false),
-        container: parseContainerToBaseResponse(s.container, false),
-        subTransactionRows: s.subTransactionRows.map((r) => ({
-          id: r.id,
-          amount: r.amount,
-          product: parseProductToBaseResponse(r.product, false),
-        })),
-      })),
-    } as TransactionResponse;
+    return this.asTransactionResponse(transaction);
   }
 }
