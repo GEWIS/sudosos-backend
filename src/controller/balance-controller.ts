@@ -16,20 +16,25 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import log4js, { Logger } from 'log4js';
-import { SwaggerSpecification } from 'swagger-model-validator';
 import { Response } from 'express';
-import BaseController from './base-controller';
+import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import { UserType } from '../entity/user/user';
+import BalanceService from '../service/balance-service';
 
 export default class BalanceController extends BaseController {
   private logger: Logger = log4js.getLogger('BannerController');
 
-  public constructor(spec: SwaggerSpecification) {
-    super(spec);
+  /**
+   * Creates a new banner controller instance.
+   * @param options - The options passed to the base controller.
+   */
+  public constructor(options: BaseControllerOptions) {
+    super(options);
     this.logger.level = process.env.LOG_LEVEL;
   }
+
 
   /**
      * @inheritdoc
@@ -38,8 +43,8 @@ export default class BalanceController extends BaseController {
     return {
       '/': {
         GET: {
-          policy: this.isAdmin.bind(this),
-          handler: this.getBalances.bind(this),
+          policy: this.canAccess.bind(this),
+          handler: this.getOwnBalance.bind(this),
         },
       },
       '/:id(\\d+)': {
@@ -52,10 +57,25 @@ export default class BalanceController extends BaseController {
   }
 
   /**
-   * Updates the requested banner
-   * @route get /balance/{id}
+   * Get balance of the current user
+   * @route get /balances
    * @group balance - Operations of balance controller
-   * @param {integer} id.path.required - The id of the user for which the saldo is requested
+   * @security JWT
+   * @returns {Number} 200 - The requested user's balance
+   * @returns {string} 400 - Validation error
+   * @returns {string} 404 - Not found error
+   * @returns {string} 500 - Internal server error
+   */
+  // eslint-disable-next-line class-methods-use-this
+  private async getOwnBalance(req: RequestWithToken, res: Response): Promise<void> {
+    return this.getBalance(req, res);
+  }
+
+  /**
+   * Retrieves the requested balance
+   * @route get /balances/{id}
+   * @group balance - Operations of balance controller
+   * @param {integer} id.path.optional - The id of the user for which the saldo is requested
    * @security JWT
    * @returns {Number} 200 - The requested user's balance
    * @returns {string} 400 - Validation error
@@ -64,14 +84,16 @@ export default class BalanceController extends BaseController {
    */
   // eslint-disable-next-line class-methods-use-this
   private async getBalance(req: RequestWithToken, res: Response): Promise<void> {
-    const { id } = req.params;
-    this.logger.info(id);
-    res.json(+id);
+    if (req?.params?.id === undefined) {
+      res.json(await BalanceService.getBalance(req.token.user.id));
+    } else {
+      res.json(await BalanceService.getBalance(+req.params.id));
+    }
   }
 
   // eslint-disable-next-line class-methods-use-this
-  private async getBalances(): Promise<Number> {
-    return 5;
+  private async getBalances(): Promise<void> {
+    // TODO: Make dependent on user service
   }
 
   /**
@@ -79,12 +101,12 @@ export default class BalanceController extends BaseController {
      * @param req - The incoming request.
      */
   // eslint-disable-next-line class-methods-use-this
-  private async isAdmin(req: RequestWithToken): Promise<boolean> {
-    // TODO: check whether user is admin
+  private isAdmin(req: RequestWithToken): boolean {
     return req.token.user.type === UserType.LOCAL_ADMIN;
   }
 
-  private async canAccess(req: RequestWithToken) {
-    return (req?.params?.id && +req.params.id === req.token.user.id) || this.isAdmin(req);
+  private canAccess(req: RequestWithToken): boolean {
+    return (req?.params?.id && +req.params.id === req.token.user.id)
+     || this.isAdmin(req) || req?.params?.id === undefined;
   }
 }

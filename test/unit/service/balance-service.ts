@@ -78,6 +78,20 @@ describe('BalanceService', (): void => {
         expect(balance).to.equal(ctx.balances[element.id]);
       });
     });
+    it('balance can be cleared for specific users', async () => {
+      BalanceService.clearBalanceCache([1, 2]);
+      const balance = await BalanceService.getBalance(1);
+      expect(balance).to.equal(ctx.balances[1]);
+      const balance2 = await BalanceService.getBalance(2);
+      expect(balance2).to.equal(ctx.balances[2]);
+    });
+    it('balance can be cached for specific users', async () => {
+      BalanceService.updateBalances([1, 2]);
+      const balance = await BalanceService.getBalance(1);
+      expect(balance).to.equal(ctx.balances[1]);
+      const balance2 = await BalanceService.getBalance(2);
+      expect(balance2).to.equal(ctx.balances[2]);
+    });
 
     it('balance is stable after transaction insert', async () => {
       const entityManager = getManager();
@@ -108,12 +122,12 @@ describe('BalanceService', (): void => {
       const newBalance = await BalanceService.getBalance(1);
 
       // check new balance is old balance minus transaction value
-      expect(newBalance).to.equal(ctx.balances[1] - transactionWithValue.value.amount);
+      expect(newBalance).to.equal(ctx.balances[ctx.users[0].id] - transactionWithValue.value.amount);
 
       let newTotalBalance = 0;
-      ctx.users.forEach(async (element) => {
-        newTotalBalance += await BalanceService.getBalance(element.id);
-      });
+      const answers = await Promise.all(ctx.users.map(async (user) => BalanceService.getBalance(user.id)));
+      newTotalBalance = answers.reduce((a, b) => a + b, 0);
+
       expect(newTotalBalance).to.equal(ctx.balances.reduce((a, b) => a + b, 0));
     });
 

@@ -37,7 +37,7 @@ export default class BalanceService {
           + 'UNION ALL '
           + 'select st2.toId as `id`, str2.amount * pr2.price as `amount`, str2.updatedAt as `stamp` from sub_transaction st2 '
             + 'inner join sub_transaction_row str2 on st2.id=str2.subTransactionId '
-            + 'inner join product_revision pr2 on str2.productRevision=pr2.version and str2.productProduct=pr2.productId '
+            + 'inner join product_revision pr2 on str2.productRevision=pr2.revision and str2.productProduct=pr2.productId '
             + 'where st2.toId in ' + idStr
           + 'UNION ALL '
           + 'select t2.fromId as `id`, amount*-1 as `amount`, t2.updatedAt as `stamp` from transfer t2 where fromId in ' + idStr
@@ -53,7 +53,7 @@ export default class BalanceService {
           + 'UNION ALL '
           + 'select st2.toId as `id`, str2.amount * pr2.price as `amount`, str2.updatedAt as `stamp` from sub_transaction st2 '
             + 'inner join sub_transaction_row str2 on st2.id=str2.subTransactionId '
-            + 'inner join product_revision pr2 on str2.productRevision=pr2.version and str2.productProduct=pr2.productId '
+            + 'inner join product_revision pr2 on str2.productRevision=pr2.revision and str2.productProduct=pr2.productId '
           + 'UNION ALL '
           + 'select t2.fromId as `id`, amount*-1 as `amount`, t2.updatedAt as `stamp` from transfer t2 where fromId is not NULL '
           + 'UNION ALL '
@@ -100,7 +100,7 @@ export default class BalanceService {
       + 'UNION ALL '
       + 'select st2.toId as `id`, str2.amount * pr2.price as `amount`, str2.updatedAt as `stamp` from sub_transaction st2 '
       + 'inner join sub_transaction_row str2 on st2.id=str2.subTransactionId '
-      + 'inner join product_revision pr2 on str2.productRevision=pr2.version and str2.productProduct=pr2.productId '
+      + 'inner join product_revision pr2 on str2.productRevision=pr2.revision and str2.productProduct=pr2.productId '
       + 'where st2.toId = ? and str2.updatedAt > ? '
       + 'UNION ALL '
       + 'select t2.fromId as `id`, amount*-1 as `amount`, t2.updatedAt as `stamp` from transfer t2 where fromId=? and t2.updatedAt>? '

@@ -48,6 +48,7 @@ import User from './entity/user/user';
 import Transaction from './entity/transactions/transaction';
 import PointOfSale from './entity/point-of-sale/point-of-sale';
 import TransactionService from './service/transaction-service';
+import BalanceController from './controller/balance-controller';
 
 export class Application {
   app: express.Express;
@@ -147,33 +148,12 @@ export default async function createApp(): Promise<Application> {
     logger.debug('Synced balances.');
   });
 
-  // application.logger.info(`Balance ${await BalanceService.getBalance(1)}`);
-  // const entityManager = getManager();
-  // const lastTransaction = (await entityManager.query('SELECT MAX(id) as id from `transaction`'))[0].id ?? 0;
-  // const lastSubTransaction = (await entityManager.query('SELECT MAX(id) as id from `sub_transaction`'))[0].id ?? 0;
-  // const lastRowTransaction = (await entityManager.query('SELECT MAX(id) as id from `sub_transaction_row`'))[0].id ?? 0;
-
-  // const users = await User.findByIds([1, 2]);
-  // logger.info('Got users?!');
-  // const pointOfSale = await PointOfSale.findOne(1);
-  // const pointOfSaleRevision = await PointOfSaleRevision.findOne({ pointOfSale, revision: pointOfSale.currentRevision }, { relations: ['pointOfSale', 'pointOfSale.owner', 'containers', 'containers.products', 'containers.products.product'] });
-  // logger.info('Got POS');
-
-  // const transactions = defineTransactions(lastTransaction, lastSubTransaction, lastRowTransaction, 1, pointOfSaleRevision, users[0], users[1]);
-  // logger.info('Transaction defined');
-  // await Transaction.save(transactions[0]);
-  // logger.info('Saved?!');
-  // const transactionWithValue = await TransactionService.getSingleTransaction(transactions[0].id);
-  // logger.info(transactionWithValue.value);
-
-  // application.logger.info(`Balance ${await BalanceService.getBalance(1)}`);
-
-
   // REMOVE LATER
   const options: BaseControllerOptions = {
     specification: application.specification,
     roleManager: application.roleManager,
   };
+  application.app.use('/v1/balances', new BalanceController(options).getRouter());
   application.app.use('/v1/banners', new BannerController(options).getRouter());
   application.app.use('/v1/users', new UserController(options).getRouter());
   application.app.use('/v1/products', new ProductController(options).getRouter());
