@@ -243,7 +243,7 @@ export default class ProductService {
     });
 
     // Keep track of which IDs belong to updated products.
-    const updatedId: {[key:string]: any} = {};
+    const updatedId: { [key:string]: any } = {};
     updatedProducts.forEach((product) => {
       updatedId[product.id] = true;
     });
