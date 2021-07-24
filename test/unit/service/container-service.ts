@@ -166,9 +166,9 @@ describe('ContainerService', async (): Promise<void> => {
       )).to.be.true;
     });
     it('should return updated containers with the owner specified', async () => {
-      const res: ContainerResponse[] = await ContainerService.getUpdatedContainers(
-        ctx.containers[0].owner,
-      );
+      const res: ContainerResponse[] = await ContainerService.getUpdatedContainers({
+        ownerId: ctx.containers[0].owner.id,
+      });
 
       expect(
         res.every(
@@ -182,19 +182,18 @@ describe('ContainerService', async (): Promise<void> => {
       expect(belongsToOwner).to.be.true;
     });
     it('should return a single updated container if containerId is specified', async () => {
-      const res: ContainerResponse[] = await ContainerService.getUpdatedContainers(
-        null,
-        ctx.updatedContainers[0].container.id,
-      );
+      const res: ContainerResponse[] = await ContainerService.getUpdatedContainers({
+        containerId: ctx.updatedContainers[0].container.id,
+      });
 
       expect(res).to.be.length(1);
       expect(res[0].id).to.be.equal(ctx.updatedContainers[0].container.id);
     });
     it('should return no containers if the userId and containerId dont match', async () => {
-      const res: ContainerResponse[] = await ContainerService.getUpdatedContainers(
-        ctx.updatedContainers[10].container.owner,
-        ctx.updatedContainers[0].container.id,
-      );
+      const res: ContainerResponse[] = await ContainerService.getUpdatedContainers({
+        ownerId: ctx.updatedContainers[10].container.owner.id,
+        containerId: ctx.updatedContainers[0].container.id,
+      });
 
       expect(res).to.be.length(0);
     });

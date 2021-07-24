@@ -21,7 +21,6 @@ import Container from '../entity/container/container';
 import ContainerRevision from '../entity/container/container-revision';
 import UpdatedContainer from '../entity/container/updated-container';
 import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision';
-import User from '../entity/user/user';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import ProductService from './product-service';
 import PointOfSale from '../entity/point-of-sale/point-of-sale';
@@ -29,7 +28,7 @@ import PointOfSale from '../entity/point-of-sale/point-of-sale';
 /**
  * Define product filtering parameters used to filter query results.
  */
-export interface ContainerParameters {
+export interface UpdatedContainerParameters {
   /**
    * Filter based on container id.
    */
@@ -42,6 +41,12 @@ export interface ContainerParameters {
    * Filter based on container owner.
    */
   ownerId?: number;
+}
+
+/**
+ * Define product filtering parameters used to filter query results.
+ */
+export interface ContainerParameters extends UpdatedContainerParameters {
   /**
    * Filter based on pointOfSale id.
    */
@@ -165,8 +170,7 @@ export default class ContainerService {
    * @param containerId - If specified, only return the container with id containerId.
    */
   public static async getUpdatedContainers(
-    owner: User = null,
-    containerId: number = null,
+    params: UpdatedContainerParameters = {},
   ): Promise<ContainerResponse[]> {
     const builder = createQueryBuilder()
       .from(Container, 'container')
@@ -185,12 +189,13 @@ export default class ContainerService {
         'owner.firstName AS owner_firstName',
         'owner.lastName AS owner_lastName',
       ]);
-    if (owner !== null) {
-      builder.andWhere('container.owner = :owner', { owner: owner.id });
-    }
-    if (containerId !== null) {
-      builder.andWhere('container.id = :containerId', { containerId });
-    }
+
+    const filterMapping: FilterMapping = {
+      containerId: 'container.id',
+      containerRevision: 'containerrevision.revision',
+      ownerId: 'owner.id',
+    };
+    QueryFilter.applyFilter(builder, filterMapping, params);
 
     const rawContainers = await builder.getRawMany();
 
