@@ -22,7 +22,7 @@ import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import TransactionService, { TransactionFilterParameters } from '../service/transaction-service';
 import { TransactionResponse } from './response/transaction-response';
-import { isDate, isNumber } from '../helpers/validators';
+import { asDate, asNumber } from '../helpers/validators';
 import { validatePaginationQueryParams } from '../helpers/pagination';
 
 function parseGetTransactionsFilters(req: RequestWithToken): TransactionFilterParameters {
@@ -32,35 +32,19 @@ function parseGetTransactionsFilters(req: RequestWithToken): TransactionFilterPa
     throw new Error('Cannot filter on a revision, when there is no id given');
   }
 
-  const asInt = (input: any): number => {
-    if (!isNumber(input, true)) throw new TypeError(`Input '${input}' is not a number.`);
-    const parsed = (input ? parseInt(input, 10) : undefined);
-    return parsed;
-  };
-  const asDate = (input: any): Date => {
-    if (!isDate(input, true)) throw new TypeError(`Input '${input}' is not a date.`);
-    return new Date(input);
-  };
   const filters: TransactionFilterParameters = {
-    fromId: asInt(req.query.fromId),
-    createdById: asInt(req.query.createdById),
-    toId: asInt(req.query.toId),
-    pointOfSaleId: asInt(req.query.pointOfSaleId),
-    pointOfSaleRevision: asInt(req.query.pointOfSaleRevision),
-    containerId: asInt(req.query.containerId),
-    containerRevision: asInt(req.query.containerRevision),
-    productId: asInt(req.query.productId),
-    productRevision: asInt(req.query.productRevision),
+    fromId: asNumber(req.query.fromId),
+    createdById: asNumber(req.query.createdById),
+    toId: asNumber(req.query.toId),
+    pointOfSaleId: asNumber(req.query.pointOfSaleId),
+    pointOfSaleRevision: asNumber(req.query.pointOfSaleRevision),
+    containerId: asNumber(req.query.containerId),
+    containerRevision: asNumber(req.query.containerRevision),
+    productId: asNumber(req.query.productId),
+    productRevision: asNumber(req.query.productRevision),
     fromDate: asDate(req.query.fromDate),
     tillDate: asDate(req.query.tillDate),
   };
-
-  if (filters.fromDate && typeof filters.fromDate !== 'object') {
-    filters.fromDate = new Date(filters.fromDate);
-  }
-  if (filters.tillDate && typeof filters.tillDate !== 'object') {
-    filters.tillDate = new Date(filters.tillDate);
-  }
 
   return filters;
 }
