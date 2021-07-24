@@ -32,16 +32,21 @@ function parseGetTransactionsFilters(req: RequestWithToken): TransactionFilterPa
     throw new Error('Cannot filter on a revision, when there is no id given');
   }
 
+  const asInt = (input: any): number => {
+    if (!isNumber(input, true)) throw new TypeError(`Input '${input}' is not a number.`);
+    const parsed = (input ? parseInt(input, 10) : undefined);
+    return parsed;
+  };
   const filters: TransactionFilterParameters = {
-    fromId: req.query.fromId as number,
-    createdById: req.query.createdById as number,
-    toId: req.query.toId as number,
-    pointOfSaleId: req.query.pointOfSaleId as number,
-    pointOfSaleRevision: req.query.pointOfSaleRevision as number,
-    containerId: req.query.containerId as number,
-    containerRevision: req.query.containerRevision as number,
-    productId: req.query.productId as number,
-    productRevision: req.query.productRevision as number,
+    fromId: asInt(req.query.fromId),
+    createdById: asInt(req.query.createdById),
+    toId: asInt(req.query.toId),
+    pointOfSaleId: asInt(req.query.pointOfSaleId),
+    pointOfSaleRevision: asInt(req.query.pointOfSaleRevision),
+    containerId: asInt(req.query.containerId),
+    containerRevision: asInt(req.query.containerRevision),
+    productId: asInt(req.query.productId),
+    productRevision: asInt(req.query.productRevision),
     fromDate: req.query.fromDate,
     tillDate: req.query.tillDate,
   };
@@ -53,15 +58,6 @@ function parseGetTransactionsFilters(req: RequestWithToken): TransactionFilterPa
     filters.tillDate = new Date(filters.tillDate);
   }
 
-  if (!isNumber(filters.fromId, true)) throw new TypeError('filters.fromId is not a number');
-  if (!isNumber(filters.createdById, true)) throw new TypeError('filters.createdById is not a number');
-  if (!isNumber(filters.toId, true)) throw new TypeError('filters.toId is not a number');
-  if (!isNumber(filters.pointOfSaleId, true)) throw new TypeError('filters.pointOfSaleId is not a number');
-  if (!isNumber(filters.pointOfSaleRevision, true)) throw new TypeError('filters.pointOfSaleRevision is not a number');
-  if (!isNumber(filters.containerId, true)) throw new TypeError('filters.containerId is not a number');
-  if (!isNumber(filters.containerRevision, true)) throw new TypeError('filters.containerRevision is not a number');
-  if (!isNumber(filters.productId, true)) throw new TypeError('filters.productId is not a number');
-  if (!isNumber(filters.productRevision, true)) throw new TypeError('filters.productRevision is not a number');
   if (!isDate(filters.fromDate, true)) throw new TypeError('filters.fromDate is not a date');
   if (!isDate(filters.tillDate, true)) throw new TypeError('filters.tillDate is not a date');
 
