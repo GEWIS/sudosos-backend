@@ -18,15 +18,20 @@
 import { Connection } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
-import { json } from 'body-parser';
+import bodyParser from 'body-parser';
 import { expect } from 'chai';
 import User from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
 import ProductService, { ProductParameters } from '../../../src/service/product-service';
-import { seedAllProducts, seedProductCategories, seedUsers } from '../../seed';
+import {
+  seedAllProducts, seedContainers, seedProductCategories, seedUpdatedContainers, seedUsers,
+} from '../../seed';
 import Product from '../../../src/entity/product/product';
 import { ProductResponse } from '../../../src/controller/response/product-response';
+import ProductRevision from '../../../src/entity/product/product-revision';
+import UpdatedProduct from '../../../src/entity/product/updated-product';
+import UpdatedContainer from '../../../src/entity/container/updated-container';
 
 /**
  * Test if all the product responses are part of the product set array.
@@ -48,22 +53,34 @@ describe('ProductService', async (): Promise<void> => {
     specification: SwaggerSpecification,
     users: User[],
     allProducts: Product[],
+    productsRevisions: ProductRevision[],
+    updatedProducts: UpdatedProduct[],
+    updatedContainers: UpdatedContainer[],
   };
 
-  beforeEach(async () => {
+  before(async () => {
     const connection = await Database.initialize();
 
-    const users = await seedUsers();
     const categories = await seedProductCategories();
-    await seedAllProducts(users, categories);
+    const users = await seedUsers();
+
+    let allProducts; let productsRevisions; let
+      updatedProducts;
+    let updatedContainers;
+    await seedAllProducts(users, categories).then(async (res) => {
+      allProducts = res.products;
+      productsRevisions = res.productRevisions;
+      updatedProducts = res.updatedProducts;
+      await seedContainers(users, res.productRevisions);
+      await seedUpdatedContainers(users, productsRevisions, allProducts).then((rs) => {
+        updatedContainers = rs.updatedContainers;
+      });
+    });
 
     // start app
     const app = express();
     const specification = await Swagger.initialize(app);
-    app.use(json());
-
-    //  Load all products from the database.
-    const allProducts: Product[] = await Product.find({ relations: ['owner'] });
+    app.use(bodyParser.json());
 
     // initialize context
     ctx = {
@@ -72,23 +89,44 @@ describe('ProductService', async (): Promise<void> => {
       specification,
       users,
       allProducts,
+      productsRevisions,
+      updatedProducts,
+      updatedContainers,
     };
   });
 
   // close database connection
-  afterEach(async () => {
+  after(async () => {
     await ctx.connection.close();
   });
 
   describe('getProducts function', () => {
     it('should return all products with no input specification', async () => {
       const res: ProductResponse[] = await ProductService.getProducts();
+      const productSet: { [key:string]: any } = {};
 
+      ctx.productsRevisions.forEach((product) => {
+        if (productSet[product.product.id] === undefined) {
+          productSet[product.product.id] = product;
+        }
+      });
+
+      const containsAll = ctx.productsRevisions.every((product) => res.find(
+        (prod) => product.product.id === prod.id,
+      ) !== undefined);
+
+      expect(containsAll).to.be.true;
+      expect(res.length).to.be.equal(Object.keys(productSet).length);
       expect(productSuperset(res, ctx.allProducts)).to.be.true;
     });
     it('should return all updated products', async () => {
       const updatedProducts: ProductResponse[] = await ProductService.getUpdatedProducts();
 
+      const containsAll = ctx.updatedProducts.every((product) => updatedProducts.find(
+        (prod) => product.product.id === prod.id,
+      ) !== undefined);
+
+      expect(containsAll).to.be.true;
       expect(productSuperset(updatedProducts, ctx.allProducts)).to.be.true;
     });
     it('should return product with the owner specified', async () => {
@@ -117,6 +155,61 @@ describe('ProductService', async (): Promise<void> => {
       const res: ProductResponse[] = await ProductService.getProducts(params);
 
       expect(res).to.be.length(0);
+    });
+    it('should return the products belonging to a container', async () => {
+      const params: ProductParameters = {
+        containerId: 3,
+      };
+      const res: ProductResponse[] = await ProductService
+        .getProducts(params);
+
+      const products = [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }, { id: 5 }];
+
+      products.forEach((product) => {
+        expect(res.find((pr) => pr.id === product.id)).to.not.be.undefined;
+      });
+
+      expect(res).to.be.length(5);
+    });
+    it('should return the updated products belonging to a container', async () => {
+      const params: ProductParameters = {
+        containerId: 4,
+      };
+      const res: ProductResponse[] = await ProductService
+        .getUpdatedProducts(params);
+
+      const products = [{ id: 11 }];
+      products.forEach((product) => {
+        expect(res.find((pr) => pr.id === product.id)).to.not.be.undefined;
+      });
+
+      expect(res).to.be.length(1);
+    });
+    it('should return the products belonging to a container revision that is not current', async () => {
+      const params: ProductParameters = {
+        containerId: 1,
+        containerRevision: 2,
+      };
+
+      const res: ProductResponse[] = await ProductService
+        .getProducts(params);
+
+      const products = [{ id: 1 }, { id: 2 }, { id: 5 }];
+      products.forEach((product) => {
+        expect(res.find((pr) => pr.id === product.id)).to.not.be.undefined;
+      });
+      expect(res).to.be.length(3);
+    });
+    it('should return an updated container', async () => {
+      const res: ProductResponse[] = await ProductService
+        .getUpdatedContainer(1);
+
+      const products = [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }, { id: 5 }, { id: 6 }];
+      products.forEach((product) => {
+        expect(res.find((pr) => pr.id === product.id)).to.not.be.undefined;
+      });
+
+      expect(res).to.be.length(6);
     });
   });
 });

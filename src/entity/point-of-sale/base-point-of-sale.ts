@@ -22,7 +22,6 @@ import BaseEntityWithoutId from '../base-entity-without-id';
 
 export default class BasePointOfSale extends BaseEntityWithoutId {
   @Column({
-    unique: true,
     length: 64,
   })
   public name: string;

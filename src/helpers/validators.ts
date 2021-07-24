@@ -45,3 +45,27 @@ export function isDate(date: any, canBeUndefined?: boolean): boolean {
   if (canBeUndefined && date === undefined) return true;
   return !Number.isNaN(new Date(date).getTime());
 }
+
+/**
+ * Converts the input to a number.
+ * @param input - The input which should be converted.
+ * @returns The parsed integer.
+ * @throws TypeError - If the input is not a valid integer.
+ */
+export function asNumber(input: any): number {
+  if (!isNumber(input, true)) throw new TypeError(`Input '${input}' is not a number.`);
+  const parsed = (input ? Number(input) : undefined);
+  return parsed;
+}
+
+/**
+ * Converts the input to a Date object.
+ * @param input - The input which should be converted.
+ * @returns The parsed Date object.
+ * @throws TypeError - If the input is not a valid date.
+ */
+export function asDate(input: any): Date {
+  if (!isDate(input, true)) throw new TypeError(`Input '${input}' is not a date.`);
+  const parsed = (input ? new Date(input) : undefined);
+  return parsed;
+}
