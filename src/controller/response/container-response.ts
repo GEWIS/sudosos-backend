@@ -17,28 +17,28 @@
  */
 import { ProductResponse } from './product-response';
 import BaseResponse from './base-response';
-import { UserResponse } from './user-response';
+import { BaseUserResponse } from './user-response';
 
 /**
  * @typedef {BaseResponse} BaseContainerResponse
  * @property {string} name.required - The name of the container.
+ * @property {number} revision - The container revision.
  */
 export interface BaseContainerResponse extends BaseResponse {
   name: string,
+  revision?: number,
 }
 
 /**
  * @typedef {BaseContainerResponse} ContainerResponse
- * @property {User.model} owner.required - The owner of the container.
- * @property {ProductResponse} products.required - The products in the container.
+ * @property {BaseUserResponse.model} owner.required - The owner of the container.
  */
 export interface ContainerResponse extends BaseContainerResponse {
-  owner: UserResponse,
+  owner: BaseUserResponse,
 }
 
 /**
- * @typedef {BaseContainerResponse} ContainerResponse
- * @property {User.model} owner.required - The owner of the container.
+ * @typedef {ContainerResponse} ContainerWithProductsResponse
  * @property {ProductResponse} products.required - The products in the container.
  */
 export interface ContainerWithProductsResponse extends ContainerResponse {

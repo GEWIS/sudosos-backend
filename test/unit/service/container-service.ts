@@ -25,7 +25,7 @@ import Database from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
 import ContainerService from '../../../src/service/container-service';
 import {
-  seedAllContainers, seedAllProducts, seedProductCategories, seedUsers,
+  seedAllContainers, seedAllProducts, seedPointsOfSale, seedProductCategories, seedUsers,
 } from '../../seed';
 import Container from '../../../src/entity/container/container';
 import { ContainerResponse } from '../../../src/controller/response/container-response';
@@ -68,19 +68,15 @@ describe('ContainerService', async (): Promise<void> => {
     } = await seedAllProducts(users, categories);
     const {
       containers,
+      containerRevisions,
       updatedContainers,
     } = await seedAllContainers(users, productRevisions, products);
+    await seedPointsOfSale(users, containerRevisions);
 
     // start app
     const app = express();
     const specification = await Swagger.initialize(app);
     app.use(json());
-
-    // //  Load all containers from the database.
-    // const allContainers: Container[] = await Container.find({ relations: ['owner'] });
-    // const allUpdated: UpdatedContainer[] = await UpdatedContainer.find(
-    //   { relations: ['container', 'container.owner'] },
-    // );
 
     // initialize context
     ctx = {
@@ -102,32 +98,35 @@ describe('ContainerService', async (): Promise<void> => {
     it('should return all containers with no input specification', async () => {
       const res: ContainerResponse[] = await ContainerService.getContainers();
 
+      const withRevisions = ctx.containers.filter((c) => c.currentRevision > 0);
+      expect(res).to.be.length(withRevisions.length);
       expect(containerSuperset(res, ctx.containers)).to.be.true;
       expect(res.every(
         (c: ContainerResponse) => ctx.specification.validateModel('ContainerResponse', c, false, true).valid,
       )).to.be.true;
     });
     it('should return containers with the owner specified', async () => {
-      const res: ContainerResponse[] = await ContainerService.getContainers(
-        ctx.allContainers[0].owner,
-      );
+      const res: ContainerResponse[] = await ContainerService.getContainers({
+        ownerId: ctx.containers[0].owner.id,
+      });
 
-      expect(containerSuperset(res, ctx.allContainers)).to.be.true;
+      expect(containerSuperset(res, ctx.containers)).to.be.true;
 
       const belongsToOwner = res.every((container: ContainerResponse) => (
-        container.owner.id === ctx.allContainers[0].owner.id));
+        container.owner.id === ctx.containers[0].owner.id));
 
       expect(belongsToOwner).to.be.true;
     });
     it('should return containers of the point of sale specified', async () => {
       const pos: PointOfSaleRevision = await PointOfSaleRevision.findOne({
-        relations: ['containers'],
+        relations: ['pointOfSale', 'containers'],
       });
-      const res: ContainerResponse[] = await ContainerService.getContainers(
-        null, null, pos,
-      );
+      const res: ContainerResponse[] = await ContainerService.getContainers({
+        posId: pos.pointOfSale.id,
+        posRevision: pos.revision
+      });
 
-      expect(containerSuperset(res, ctx.allContainers)).to.be.true;
+      expect(containerSuperset(res, ctx.containers)).to.be.true;
 
       const belongsToPos = res.every(
         (c1: ContainerResponse) => pos.containers.some(
@@ -138,15 +137,18 @@ describe('ContainerService', async (): Promise<void> => {
       expect(pos.containers).to.be.length(res.length);
     });
     it('should return a single container if containerId is specified', async () => {
-      const res: ContainerResponse[] = await ContainerService
-        .getContainers(null, ctx.allContainers[0].id);
+      const res: ContainerResponse[] = await ContainerService.getContainers({
+          containerId: ctx.containers[0].id,
+        });
 
       expect(res).to.be.length(1);
-      expect(res[0].id).to.be.equal(ctx.allContainers[0].id);
+      expect(res[0].id).to.be.equal(ctx.containers[0].id);
     });
     it('should return no containers if the userId and containerId dont match', async () => {
-      const res: ContainerResponse[] = await ContainerService
-        .getContainers(ctx.allContainers[10].owner, ctx.allContainers[0].id);
+      const res: ContainerResponse[] = await ContainerService.getContainers({
+          ownerId: ctx.containers[10].owner.id,
+          containerId: ctx.containers[0].id,
+        });
 
       expect(res).to.be.length(0);
     });
@@ -158,7 +160,7 @@ describe('ContainerService', async (): Promise<void> => {
 
       expect(
         res.every(
-          (c1: ContainerResponse) => ctx.allUpdated.some((c2) => c1.id === c2.container.id),
+          (c1: ContainerResponse) => ctx.updatedContainers.some((c2) => c1.id === c2.container.id),
         ),
       ).to.be.true;
       expect(res.every(
@@ -167,30 +169,30 @@ describe('ContainerService', async (): Promise<void> => {
     });
     it('should return updated containers with the owner specified', async () => {
       const res: ContainerResponse[] = await ContainerService.getUpdatedContainers(
-        ctx.allContainers[0].owner,
+        ctx.containers[0].owner,
       );
 
       expect(
         res.every(
-          (c1: ContainerResponse) => ctx.allUpdated.some((c2) => c1.id === c2.container.id),
+          (c1: ContainerResponse) => ctx.updatedContainers.some((c2) => c1.id === c2.container.id),
         ),
       ).to.be.true;
 
       const belongsToOwner = res.every((container: ContainerResponse) => (
-        container.owner.id === ctx.allContainers[0].owner.id));
+        container.owner.id === ctx.containers[0].owner.id));
 
       expect(belongsToOwner).to.be.true;
     });
     it('should return a single updated container if containerId is specified', async () => {
       const res: ContainerResponse[] = await ContainerService
-        .getUpdatedContainers(null, ctx.allUpdated[0].container.id);
+        .getUpdatedContainers(null, ctx.updatedContainers[0].container.id);
 
       expect(res).to.be.length(1);
-      expect(res[0].id).to.be.equal(ctx.allUpdated[0].container.id);
+      expect(res[0].id).to.be.equal(ctx.updatedContainers[0].container.id);
     });
     it('should return no containers if the userId and containerId dont match', async () => {
       const res: ContainerResponse[] = await ContainerService
-        .getUpdatedContainers(ctx.allUpdated[10].container.owner, ctx.allUpdated[0].container.id);
+        .getUpdatedContainers(ctx.updatedContainers[10].container.owner, ctx.updatedContainers[0].container.id);
 
       expect(res).to.be.length(0);
     });

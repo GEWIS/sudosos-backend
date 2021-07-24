@@ -60,7 +60,7 @@ export default class ProductService {
    * Helper function for the base mapping the raw getMany response product.
    * @param rawProduct - the raw response to parse.
    */
-  private static asProductResponse(rawProduct: any): ProductResponse {
+  public static asProductResponse(rawProduct: any): ProductResponse {
     return {
       id: rawProduct.id,
       alcoholPercentage: rawProduct.alcoholPercentage,

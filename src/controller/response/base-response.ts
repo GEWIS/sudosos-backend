@@ -19,8 +19,8 @@
 /**
  * @typedef BaseResponse
  * @property {integer} id.required - The unique id of the entity.
- * @property {string} createdAt.required - The creation Date of the entity.
- * @property {string} updatedAt.required - The last update Date of the entity.
+ * @property {string} createdAt - The creation Date of the entity.
+ * @property {string} updatedAt - The last update Date of the entity.
  */
 export default interface BaseResponse {
   id: number,

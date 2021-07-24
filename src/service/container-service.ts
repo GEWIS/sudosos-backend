@@ -60,7 +60,9 @@ export default class ContainerService {
   private static asContainerResponse(rawContainer: any): ContainerResponse {
     return {
       id: rawContainer.id,
+      revision: rawContainer.revision,
       name: rawContainer.name,
+      createdAt: rawContainer.createdAt,
       updatedAt: rawContainer.updatedAt,
       owner: {
         id: rawContainer.owner_id,
@@ -78,6 +80,7 @@ export default class ContainerService {
     return {
       id: rawContainer.id,
       name: rawContainer.name,
+      createdAt: rawContainer.createdAt,
       updatedAt: rawContainer.updatedAt,
       owner: {
         id: rawContainer.owner_id,
@@ -107,6 +110,7 @@ export default class ContainerService {
       .select([
         'container.id AS id',
         'container.createdAt AS createdAt',
+        'containerrevision.revision AS revision',
         'containerrevision.updatedAt AS updatedAt',
         'containerrevision.name AS name',
         'owner.id AS owner_id',
@@ -116,7 +120,7 @@ export default class ContainerService {
 
     const { posId, posRevision, ...p } = params;
 
-    if (posId !== null) {
+    if (posId !== undefined) {
       builder.innerJoin(
         (qb: SelectQueryBuilder<any>) => qb.from(PointOfSaleRevision, 'pos_revision')
           .innerJoin(
@@ -130,7 +134,8 @@ export default class ContainerService {
               revision: posRevision ?? qb.subQuery()
                 .from(PointOfSale, 'pos')
                 .select('pos.currentRevision')
-                .where('pos.id = :id', { posId }),
+                .where('pos.id = :id', { posId })
+                .getQuery(),
             },
           )
           .select(['cc.containerId AS id', 'cc.revision AS revision']),
@@ -172,14 +177,13 @@ export default class ContainerService {
       )
       .innerJoinAndSelect('container.owner', 'owner')
       .select([
-        'container.id',
-        'container.createdAt',
-        'updatedcontainer.updatedAt',
-        'container.currentRevision',
-        'updatedcontainer.name',
-        'owner.id',
-        'owner.firstName',
-        'owner.lastName',
+        'container.id AS id',
+        'container.createdAt AS createdAt',
+        'updatedcontainer.updatedAt AS updatedAt',
+        'updatedcontainer.name AS name',
+        'owner.id AS owner_id',
+        'owner.firstName AS owner_firstName',
+        'owner.lastName AS owner_lastName',
       ]);
     if (owner !== null) {
       builder.andWhere('container.owner = :owner', { owner: owner.id });

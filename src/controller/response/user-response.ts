@@ -23,7 +23,7 @@ import { UserType } from '../../entity/user/user';
  * @property {string} firstName.required - The name of the user.
  * @property {string} lastName - The last name of the user
  */
-export interface UserResponse extends BaseResponse {
+export interface BaseUserResponse extends BaseResponse {
   firstName: string,
   lastName: string
 }
