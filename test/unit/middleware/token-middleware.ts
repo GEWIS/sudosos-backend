@@ -121,7 +121,7 @@ describe('TokenMiddleware', (): void => {
       expect(res.header.Authorization).to.not.exist;
     });
     it('should place new token in Set-Authorization response header', async () => {
-      // eslint-disable-next-line @typescript-eslint/dot-notation
+      // eslint-disable-next-line dot-notation
       ctx.middleware['options']['refreshFactor'] = 0;
 
       const res = await request(ctx.app)
@@ -135,7 +135,7 @@ describe('TokenMiddleware', (): void => {
       const promise = ctx.handler.verifyToken.bind(ctx.handler, res.header['set-authorization'])();
       expect(promise).to.eventually.be.fulfilled;
 
-      // eslint-disable-next-line @typescript-eslint/dot-notation
+      // eslint-disable-next-line dot-notation
       ctx.middleware['options']['refreshFactor'] = 0.5;
     });
   });
