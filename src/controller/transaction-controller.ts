@@ -37,6 +37,10 @@ function parseGetTransactionsFilters(req: RequestWithToken): TransactionFilterPa
     const parsed = (input ? parseInt(input, 10) : undefined);
     return parsed;
   };
+  const asDate = (input: any): Date => {
+    if (!isDate(input, true)) throw new TypeError(`Input '${input}' is not a date.`);
+    return new Date(input);
+  };
   const filters: TransactionFilterParameters = {
     fromId: asInt(req.query.fromId),
     createdById: asInt(req.query.createdById),
@@ -47,8 +51,8 @@ function parseGetTransactionsFilters(req: RequestWithToken): TransactionFilterPa
     containerRevision: asInt(req.query.containerRevision),
     productId: asInt(req.query.productId),
     productRevision: asInt(req.query.productRevision),
-    fromDate: req.query.fromDate,
-    tillDate: req.query.tillDate,
+    fromDate: asDate(req.query.fromDate),
+    tillDate: asDate(req.query.tillDate),
   };
 
   if (filters.fromDate && typeof filters.fromDate !== 'object') {
@@ -57,9 +61,6 @@ function parseGetTransactionsFilters(req: RequestWithToken): TransactionFilterPa
   if (filters.tillDate && typeof filters.tillDate !== 'object') {
     filters.tillDate = new Date(filters.tillDate);
   }
-
-  if (!isDate(filters.fromDate, true)) throw new TypeError('filters.fromDate is not a date');
-  if (!isDate(filters.tillDate, true)) throw new TypeError('filters.tillDate is not a date');
 
   return filters;
 }
