@@ -27,7 +27,7 @@ import ProductCategory from '../../entity/product/product-category';
  * @property {User.model} owner.required
  * @property {ProductCategory.model} category.required
  * @property {string} picture.required
- * @property {number} alcoholPercentage
+ * @property {integer} alcoholPercentage
  */
 export default interface UpdateProductRequest {
   id: number,

@@ -23,7 +23,7 @@ import { sourceFile } from '../../../setup';
 /**
  * @typedef TestModel
  * @property {string} name.required - The name of the model.
- * @property {number} value.required - A test value.
+ * @property {integer} value.required - A test value.
  */
 export class TestModel {
   name: string;

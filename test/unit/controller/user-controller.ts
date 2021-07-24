@@ -58,9 +58,10 @@ describe('UserController', (): void => {
     transactions: Transaction[],
   };
 
-  before(async () : Promise<void> => {
+  before(async function () {
     const connection = await Database.initialize();
     const app = express();
+    this.timeout(10000);
     const database = await seedDatabase();
     ctx = {
       connection,
