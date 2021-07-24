@@ -114,6 +114,9 @@ export default class TransactionService {
 
   public static async verifyTransaction(req: TransactionRequest): Promise<boolean> {
     // check if point of sale exists in database and correct current revision is provided
+    if (!req.pointOfSale) {
+      return false;
+    }
     if (!await PointOfSaleRevision.findOne({
       revision: req.pointOfSale.revision,
       pointOfSale: {

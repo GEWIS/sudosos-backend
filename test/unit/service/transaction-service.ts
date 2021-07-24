@@ -27,6 +27,7 @@ import { RequestWithToken } from '../../../src/middleware/token-middleware';
 import TransactionService from '../../../src/service/transaction-service';
 import { verifyBaseTransactionEntity } from '../validators';
 import Swagger from '../../../src/start/swagger';
+import { TransactionRequest } from '../../../src/controller/request/transaction-request';
 
 describe('TransactionService', (): void => {
   let ctx: {
@@ -61,6 +62,68 @@ describe('TransactionService', (): void => {
 
   after(async () => {
     await ctx.connection.close();
+  });
+
+  describe('verify transaction', () => {
+    const req = {
+      from: 0,
+      createdBy: 0,
+      subtransactions: [
+        {
+          to: 1,
+          container: {
+            id: 0,
+            revision: 0,
+          },
+          subTransactionRows: [
+            {
+              product: {
+                id: 0,
+                revision: 0,
+              },
+              amount: 3,
+            },
+          ],
+        },
+      ],
+      pointOfSale: {
+        id: 0,
+        revision: 0,
+      },
+    } as TransactionRequest;
+    it('should return true if the transaction request is valid', async () => {
+      expect(await TransactionService.verifyTransaction(req)).to.equal(true);
+    });
+    it('should return false if the point of sale does not exist', async () => {
+      // undefined pos
+      req.pointOfSale = undefined;
+      expect(await TransactionService.verifyTransaction(req)).to.equal(false);
+
+      // non existent pos
+      req.pointOfSale = {
+        revision: 0,
+        id: 12345,
+      };
+      expect(await TransactionService.verifyTransaction(req)).to.equal(false);
+    });
+    it('should return false if a specified user does not exist');
+  });
+
+  describe('verifiy sub transaction', () => {
+    it('should return true if the sub transaction request is valid');
+    it('should return false if the container does not exist');
+    it('should return false if the to user does not exist');
+  });
+
+  describe('verifiy sub transaction row', () => {
+    it('should return true if the sub transaction row request is valid');
+    it('should return false if the product does not exist');
+    it('should return false if the specified amount of products is not greater than 0');
+  });
+
+  describe('verifiy balance', () => {
+    it('should return true if the balance is sufficient');
+    it('should return false if the balance is insuficient');
   });
 
   describe('Get all transactions', () => {
