@@ -39,7 +39,6 @@ export interface BaseProductResponse extends BaseResponse {
  * @property {integer} alcoholPercentage - The percentage of alcohol in this product.
  */
 export interface ProductResponse extends BaseProductResponse {
-  revision?: number,
   owner: BaseUserResponse,
   category: ProductCategoryResponse,
   picture: String,
