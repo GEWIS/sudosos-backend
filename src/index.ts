@@ -130,7 +130,6 @@ export default async function createApp(): Promise<Application> {
   const gewis = new Gewis(application.roleManager);
   await gewis.registerRoles();
 
-
   // REMOVE LATER
   const options: BaseControllerOptions = {
     specification: application.specification,
