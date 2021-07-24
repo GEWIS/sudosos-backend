@@ -26,7 +26,7 @@ import ProductService from './product-service';
 import PointOfSale from '../entity/point-of-sale/point-of-sale';
 
 /**
- * Define product filtering parameters used to filter query results.
+ * Define updated container filtering parameters used to filter query results.
  */
 export interface UpdatedContainerParameters {
   /**
@@ -44,7 +44,7 @@ export interface UpdatedContainerParameters {
 }
 
 /**
- * Define product filtering parameters used to filter query results.
+ * Define container filtering parameters used to filter query results.
  */
 export interface ContainerParameters extends UpdatedContainerParameters {
   /**
