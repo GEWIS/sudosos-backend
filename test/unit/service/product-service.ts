@@ -103,7 +103,7 @@ describe('ProductService', async (): Promise<void> => {
   describe('getProducts function', () => {
     it('should return all products with no input specification', async () => {
       const res: ProductResponse[] = await ProductService.getProducts();
-      const productSet: {[key:string]: any} = {};
+      const productSet: { [key:string]: any } = {};
 
       ctx.productsRevisions.forEach((product) => {
         if (productSet[product.product.id] === undefined) {
