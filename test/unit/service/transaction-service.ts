@@ -16,8 +16,6 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-// TODO: Add test case to check that balance cache are invalidated after altering existing transaction
-
 import express, { Application } from 'express';
 import { expect } from 'chai';
 import { Connection } from 'typeorm';
@@ -39,8 +37,8 @@ describe('TransactionService', (): void => {
     spec: SwaggerSpecification,
   };
 
-  // eslint-disable-next-line func-names
-  before(async function (): Promise<void> {
+  before(async function () {
+    // @ts-ignore
     this.timeout(5000);
     const connection = await Database.initialize();
     const app = express();

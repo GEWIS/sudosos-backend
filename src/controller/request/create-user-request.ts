@@ -23,7 +23,7 @@ import UpdateUserRequest from './update-user-request';
  * @property {string} firstName.required
  * @property {string} lastName
  * @property {boolean} active
- * @property {number} type.required
+ * @property {integer} type.required
  */
 export default interface CreateUserRequest extends UpdateUserRequest {
   type: UserType;
