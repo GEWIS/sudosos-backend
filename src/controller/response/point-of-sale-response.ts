@@ -29,7 +29,7 @@ export interface BasePointOfSaleResponse extends BaseResponse {
 }
 /**
  * @typedef {BaseContainerResponse} PointOfSaleResponse
- * @property {number} revision - The revision of the point-of-sale.
+ * @property {integer} revision - The revision of the point-of-sale.
  * @property {User.model} owner.required - The owner of the point-of-sale.
  * @property {BaseProductResponse} products.required - The products in the point-of-sale.
  */

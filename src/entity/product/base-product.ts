@@ -31,7 +31,6 @@ import ProductCategory from './product-category';
  */
 export default class BaseProduct extends BaseEntityWithoutId {
   @Column({
-    unique: true,
     length: 64,
   })
   public name: string;
