@@ -7,7 +7,7 @@
     "build": "tsc",
     "watch": "ts-node-dev --poll src/index.ts",
     "serve": "node out/src/index.js",
-    "schema": "ts-node-dev --poll src/database/schema.ts",
+    "schema": "node out/src/database/schema.js",
     "seed": "ts-node-dev --poll src/database/seed.ts",
     "swagger": "ts-node-dev --poll src/start/swagger.ts",
     "test": "mocha -r ts-node/register 'test/**/*.ts'",
