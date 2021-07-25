@@ -209,7 +209,6 @@ export default class RoleManager {
       relationsArray.push('all');
     }
 
-
     // Keep track of currently unsatisfied attributes.
     const unsatisfied = new Set<AllowedAttribute>(attributes);
 
