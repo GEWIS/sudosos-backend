@@ -27,7 +27,7 @@ import { RequestWithToken } from '../../../src/middleware/token-middleware';
 import TransactionService from '../../../src/service/transaction-service';
 import { verifyBaseTransactionEntity } from '../validators';
 import Swagger from '../../../src/start/swagger';
-import { TransactionRequest } from '../../../src/controller/request/transaction-request';
+import { SubTransactionRequest, SubTransactionRowRequest, TransactionRequest } from '../../../src/controller/request/transaction-request';
 
 describe('TransactionService', (): void => {
   let ctx: {
@@ -35,6 +35,7 @@ describe('TransactionService', (): void => {
     app: Application,
     transactions: Transaction[],
     req: RequestWithToken,
+    validTransReq: TransactionRequest
     spec: SwaggerSpecification,
   };
 
@@ -51,10 +52,37 @@ describe('TransactionService', (): void => {
         skip: 0,
       },
     } as any as RequestWithToken;
+    const validTransReq = {
+      from: 1,
+      createdBy: 1,
+      subtransactions: [
+        {
+          to: 2,
+          container: {
+            id: 1,
+            revision: 2,
+          },
+          subTransactionRows: [
+            {
+              product: {
+                id: 1,
+                revision: 2,
+              },
+              amount: 1,
+            },
+          ],
+        },
+      ],
+      pointOfSale: {
+        id: 1,
+        revision: 2,
+      },
+    } as TransactionRequest;
     ctx = {
       connection,
       app,
       req,
+      validTransReq,
       transactions,
       spec: await Swagger.importSpecification(),
     };
@@ -65,60 +93,144 @@ describe('TransactionService', (): void => {
   });
 
   describe('verify transaction', () => {
-    const req = {
-      from: 0,
-      createdBy: 0,
-      subtransactions: [
-        {
-          to: 1,
-          container: {
-            id: 0,
-            revision: 0,
-          },
-          subTransactionRows: [
-            {
-              product: {
-                id: 0,
-                revision: 0,
-              },
-              amount: 3,
-            },
-          ],
-        },
-      ],
-      pointOfSale: {
-        id: 0,
-        revision: 0,
-      },
-    } as TransactionRequest;
     it('should return true if the transaction request is valid', async () => {
-      expect(await TransactionService.verifyTransaction(req)).to.equal(true);
+      expect(await TransactionService.verifyTransaction(ctx.validTransReq)).to.be.true;
     });
-    it('should return false if the point of sale does not exist', async () => {
+    it('should return false if the point of sale is invalid', async () => {
       // undefined pos
-      req.pointOfSale = undefined;
-      expect(await TransactionService.verifyTransaction(req)).to.equal(false);
+      const badPOSReq = {
+        ...ctx.validTransReq,
+        pointOfSale: undefined,
+      } as TransactionRequest;
+      expect(await TransactionService.verifyTransaction(badPOSReq), 'undefined accepted').to.be.false;
 
       // non existent pos
-      req.pointOfSale = {
-        revision: 0,
+      badPOSReq.pointOfSale = {
+        revision: 1,
         id: 12345,
       };
-      expect(await TransactionService.verifyTransaction(req)).to.equal(false);
+      expect(await TransactionService.verifyTransaction(badPOSReq), 'non existent accepted').to.be.false;
+
+      // incorrect revision
+      badPOSReq.pointOfSale = {
+        revision: 1,
+        id: 1,
+      };
+      expect(await TransactionService.verifyTransaction(badPOSReq), 'incorrect current revision accepted').to.be.false;
     });
-    it('should return false if a specified user does not exist');
+    it('should return false if a specified top level user is invalid', async () => {
+      // undefined from
+      const badFromReq = {
+        ...ctx.validTransReq,
+        from: undefined,
+      } as TransactionRequest;
+      expect(await TransactionService.verifyTransaction(badFromReq), 'undefined from accepted').to.be.false;
+
+      // non existent from user
+      badFromReq.from = 0;
+      expect(await TransactionService.verifyTransaction(badFromReq), 'non existent from accepted').to.be.false;
+
+      // undefined createdBy
+      const badCreatedByReq = {
+        ...ctx.validTransReq,
+        createdBy: undefined,
+      } as TransactionRequest;
+      expect(await TransactionService.verifyTransaction(badCreatedByReq), 'undefined createdBy accepted').to.be.false;
+
+      // non existent createdBy user
+      badCreatedByReq.createdBy = 0;
+      expect(await TransactionService.verifyTransaction(badCreatedByReq), 'nonexistent createdBy accepted').to.be.false;
+    });
   });
 
   describe('verifiy sub transaction', () => {
-    it('should return true if the sub transaction request is valid');
-    it('should return false if the container does not exist');
-    it('should return false if the to user does not exist');
+    it('should return true if the sub transaction request is valid', async () => {
+      expect(await TransactionService.verifySubTransaction(ctx.validTransReq.subtransactions[0]))
+        .to.be.true;
+    });
+    it('should return false if the container is invalid', async () => {
+      // undefined container
+      const badContainerReq = {
+        ...ctx.validTransReq.subtransactions[0],
+        container: undefined,
+      } as SubTransactionRequest;
+      expect(await TransactionService.verifySubTransaction(badContainerReq), 'undefined accepted')
+        .to.be.false;
+
+      // non existent container
+      badContainerReq.container = {
+        revision: 1,
+        id: 12345,
+      };
+      expect(await TransactionService.verifySubTransaction(badContainerReq), 'non existent accepted')
+        .to.be.false;
+
+      // incorrect revision
+      badContainerReq.container = {
+        revision: 1,
+        id: 1,
+      };
+      expect(await TransactionService.verifySubTransaction(badContainerReq), 'incorrect current revision accepted')
+        .to.be.false;
+    });
+    it('should return false if the to user is invalid', async () => {
+      // undefined to
+      const badToReq = {
+        ...ctx.validTransReq.subtransactions[0],
+        to: undefined,
+      } as SubTransactionRequest;
+      expect(await TransactionService.verifySubTransaction(badToReq), 'undefined to accepted').to.be.false;
+
+      // non existent to user
+      badToReq.to = 0;
+      expect(await TransactionService.verifySubTransaction(badToReq), 'non existent to accepted').to.be.false;
+    });
   });
 
   describe('verifiy sub transaction row', () => {
-    it('should return true if the sub transaction row request is valid');
-    it('should return false if the product does not exist');
-    it('should return false if the specified amount of products is not greater than 0');
+    it('should return true if the sub transaction row request is valid', async () => {
+      expect(await TransactionService.verifySubTransactionRow(
+        ctx.validTransReq.subtransactions[0].subTransactionRows[0],
+      )).to.be.true;
+    });
+    it('should return false if the product is invalid', async () => {
+      // undefined product
+      const badProductReq = {
+        ...ctx.validTransReq.subtransactions[0].subTransactionRows[0],
+        product: undefined,
+      } as SubTransactionRowRequest;
+      expect(await TransactionService.verifySubTransactionRow(badProductReq), 'undefined product accepted').to.be.false;
+
+      // non existent product
+      badProductReq.product = {
+        revision: 1,
+        id: 12345,
+      };
+      expect(await TransactionService.verifySubTransactionRow(badProductReq), 'non existent product accepted').to.be.false;
+
+      // incorrect revision
+      badProductReq.product = {
+        revision: 1,
+        id: 1,
+      };
+      expect(await TransactionService.verifySubTransactionRow(badProductReq), 'incorrect current revision accepted').to.be.false;
+    });
+    it('should return false if the specified amount of products is invalid', async () => {
+      // undefined amount
+      const badAmountReq = {
+        ...ctx.validTransReq.subtransactions[0].subTransactionRows[0],
+        amount: undefined,
+      } as SubTransactionRowRequest;
+      expect(await TransactionService.verifySubTransactionRow(badAmountReq), 'undefined amount accepted').to.be.false;
+
+      // amount not greater than 0
+      badAmountReq.amount = 0;
+      expect(await TransactionService.verifySubTransactionRow(badAmountReq), 'amount not greater than 0 accepted').to.be.false;
+
+      // amount not an integer
+      badAmountReq.amount = 1.1;
+      expect(await TransactionService.verifySubTransactionRow(badAmountReq), 'non integer amount accepted').to.be.false;
+    });
   });
 
   describe('verifiy balance', () => {

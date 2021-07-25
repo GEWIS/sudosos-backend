@@ -40,6 +40,9 @@ import ContainerRevision from '../entity/container/container-revision';
 import SubTransactionRow from '../entity/transactions/sub-transaction-row';
 import ProductRevision from '../entity/product/product-revision';
 import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision';
+import PointOfSale from '../entity/point-of-sale/point-of-sale';
+import Container from '../entity/container/container';
+import Product from '../entity/product/product';
 
 export interface TransactionFilterParameters {
   fromId?: number,
@@ -79,31 +82,32 @@ export default class TransactionService {
 
   public static async verifySubTransactionRow(req: SubTransactionRowRequest): Promise<boolean> {
     // check if product exists in database and correct current revision is provided
-    if (!await ProductRevision.findOne({
-      revision: req.product.revision,
-      product: {
-        id: req.product.id,
-      },
-    })) {
+    if (!req.product) {
+      return false;
+    }
+    const product = await Product.findOne(req.product.id);
+    if (!product || product.currentRevision !== req.product.revision) {
       return false;
     }
 
     // check whether amount is correct
-    return req.amount > 0;
+    return req.amount > 0 && Number.isInteger(req.amount);
   }
 
   public static async verifySubTransaction(req: SubTransactionRequest): Promise<boolean> {
     // check if container exists in database and correct current revision is provided
-    if (!await ContainerRevision.findOne({
-      revision: req.container.revision,
-      container: {
-        id: req.container.id,
-      },
-    })) {
+    if (!req.container) {
+      return false;
+    }
+    const container = await Container.findOne(req.container.id);
+    if (!container || container.currentRevision !== req.container.revision) {
       return false;
     }
 
     // check if to user exists in database
+    if (!req.to) {
+      return false;
+    }
     if (!await User.findOne(req.to)) {
       return false;
     }
@@ -117,16 +121,15 @@ export default class TransactionService {
     if (!req.pointOfSale) {
       return false;
     }
-    if (!await PointOfSaleRevision.findOne({
-      revision: req.pointOfSale.revision,
-      pointOfSale: {
-        id: req.pointOfSale.id,
-      },
-    })) {
+    const pointOfSale = await PointOfSale.findOne(req.pointOfSale.id);
+    if (!pointOfSale || pointOfSale.currentRevision !== req.pointOfSale.revision) {
       return false;
     }
 
     // check if top level users exist in database
+    if (!req.from || !req.createdBy) {
+      return false;
+    }
     const ids: number[] = [req.from];
     if (req.createdBy !== req.from) {
       ids.push(req.createdBy);
