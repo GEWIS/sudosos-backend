@@ -53,11 +53,11 @@ describe('TransactionService', (): void => {
       },
     } as any as RequestWithToken;
     const validTransReq = {
-      from: 1,
-      createdBy: 1,
+      from: 7,
+      createdBy: 7,
       subtransactions: [
         {
-          to: 2,
+          to: 8,
           container: {
             id: 1,
             revision: 2,
@@ -92,7 +92,8 @@ describe('TransactionService', (): void => {
     await ctx.connection.close();
   });
 
-  describe('verify transaction', () => {
+  // TODO: active users tests
+  describe('Verify transaction', () => {
     it('should return true if the transaction request is valid', async () => {
       expect(await TransactionService.verifyTransaction(ctx.validTransReq)).to.be.true;
     });
@@ -143,7 +144,7 @@ describe('TransactionService', (): void => {
     });
   });
 
-  describe('verifiy sub transaction', () => {
+  describe('Verifiy sub transaction', () => {
     it('should return true if the sub transaction request is valid', async () => {
       expect(await TransactionService.verifySubTransaction(ctx.validTransReq.subtransactions[0]))
         .to.be.true;
@@ -187,7 +188,7 @@ describe('TransactionService', (): void => {
     });
   });
 
-  describe('verifiy sub transaction row', () => {
+  describe('Verifiy sub transaction row', () => {
     it('should return true if the sub transaction row request is valid', async () => {
       expect(await TransactionService.verifySubTransactionRow(
         ctx.validTransReq.subtransactions[0].subTransactionRows[0],
@@ -233,7 +234,7 @@ describe('TransactionService', (): void => {
     });
   });
 
-  describe('verifiy balance', () => {
+  describe('Verifiy balance', () => {
     it('should return true if the balance is sufficient');
     it('should return false if the balance is insuficient');
   });
@@ -425,6 +426,12 @@ describe('TransactionService', (): void => {
       });
 
       expect(transactions.length).to.equal(0);
+    });
+  });
+
+  describe('Create a transaction', () => {
+    it('return an instance of a newly created transaction corresponding to the transaction request when the request is valid', async () => {
+      expect(ctx.validTransReq).to.be.true;
     });
   });
 });

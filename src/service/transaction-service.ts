@@ -146,6 +146,7 @@ export default class TransactionService {
       return false;
     }
 
+    // TODO: active users check
     // check if top level users exist in database
     if (!req.from || !req.createdBy) {
       return false;
