@@ -27,7 +27,7 @@ export type AssignmentCheck = (user: User) => Promise<boolean>;
 
 /**
  * The allowed attribute is a string defining what attributes/properties of the
- * object are allowed to be accessed.
+ * entity are allowed to be accessed.
  *
  * Using the '*' wildcard is possible.
  */
@@ -64,7 +64,7 @@ export interface PermissionDefinition {
 
 /**
  * A role definition contains a unique name, permission definitions, and
- * an assignment perdicate which determines if a supplied user has the role.
+ * an assignment predicate which determines if a supplied user has the role.
  */
 export interface RoleDefinition {
   /**
@@ -76,7 +76,7 @@ export interface RoleDefinition {
    */
   permissions: PermissionDefinition;
   /**
-   * The assignemnt check predicate for this role.
+   * The assignment check predicate for this role.
    */
   assignmentCheck: AssignmentCheck
 }
@@ -151,9 +151,12 @@ export default class RoleManager {
     // Use every, such that we can break early if all attributes are satisfied.
     relations.every((relation): boolean => {
       const allowedAttributes = actionDefinition[relation];
+      // If there are no attributes to process, continue with the next iteration
       if (!allowedAttributes) return true;
 
       RoleManager.processAttributes(allowedAttributes, unsatisfied);
+      // If unsatisfied is empty, return false and break from the every loop,
+      // otherwise continue with the next iteration.
       return unsatisfied.size > 0;
     });
   }
@@ -161,18 +164,18 @@ export default class RoleManager {
   /**
    * Performs an access check for the given parameters.
    * This method can be used to verify if a user with the given role(s)
-   * is permitted to perform the given action (eg. get, update, delete) on the given
-   * properties of the given data entity, to which the user has the given relation.
+   * is permitted to perform the given action (eg. create, read, update, delete) on the given
+   * properties of the given data entity, to which the user has the given relations.
    *
    * @param roles - The role name or list of role names to perform the check for.
    *    If a single role is supplied as string, it is converted to a list.
    * @param action - The action on the entity to check access for.
-   *    Commonly used actions are 'get', 'update', and 'delete'.
-   * @param relation - The ownership relation towards the object.
-   *    The ownership relation describes the status of the user related to the object:
+   *    Commonly used actions are 'create', 'read', 'update', and 'delete'.
+   * @param relations - The ownership relations towards the object.
+   *    The ownership relations describes the status of the user related to the object:
    *    the user can be the owner, creator, editor, or not related at all.
    *    Commonly used ownership relations are 'own', 'created' and 'all'.
-   * @param entity - The entity type name of the object. Most ofthen this is a
+   * @param entity - The entity type name of the object. Most often this is a
    *    database entity, but it could also be a computed entity such as 'balance'.
    * @param attributes - The list of attributes to access. The wildcard '*' can be
    *    used to verify that the user is allowed to access all properties.
@@ -181,7 +184,7 @@ export default class RoleManager {
   public can(
     roles: string | string[],
     action: string,
-    relation: string,
+    relations: string | string[],
     entity: string,
     attributes: AllowedAttribute[],
   ): boolean {
@@ -195,6 +198,18 @@ export default class RoleManager {
       rolesArray = roles;
     }
 
+    // Convert relations to array if a single relation is given.
+    let relationsArray: string[];
+    if (typeof relations === 'string') {
+      relationsArray = [relations];
+    } else {
+      relationsArray = relations;
+    }
+    if (relationsArray.indexOf('all') === -1) {
+      relationsArray.push('all');
+    }
+
+
     // Keep track of currently unsatisfied attributes.
     const unsatisfied = new Set<AllowedAttribute>(attributes);
 
@@ -202,21 +217,22 @@ export default class RoleManager {
     // Use every, such that we can break early if all attributes are satisfied.
     rolesArray.every((role): boolean => {
       const roleDefinition: RoleDefinition = this.roles[role];
+      // If there are no roles to process, continue with the next iteration.
       if (!roleDefinition) return true;
 
       const entityDefinition: EntityDefinition = roleDefinition.permissions[entity];
+      // If there are no entities to process, continue with the next iteration.
       if (!entityDefinition) return true;
 
       const actionDefinition: ActionDefinition = entityDefinition[action];
+      // If there are no actions to process, continue with the next iteration.
       if (!actionDefinition) return true;
 
-      // Also consider the 'all' relation if not specified.
-      const relations = [relation];
-      if (relation !== 'all') relations.push('all');
-
       RoleManager.processRelations(
-        actionDefinition, relations, unsatisfied,
+        actionDefinition, relationsArray, unsatisfied,
       );
+      // If unsatisfied is empty, return false and break from the every loop,
+      // otherwise continue with the next iteration.
       return unsatisfied.size > 0;
     });
 
