@@ -23,6 +23,8 @@ import User from '../entity/user/user';
 import AuthenticationMockRequest from './request/authentication-mock-request';
 import JsonWebToken from '../authentication/json-web-token';
 import TokenHandler from '../authentication/token-handler';
+import AuthenticationResponse from './response/authentication-response';
+import { UserResponse } from './response/user-response';
 
 /**
  * The authentication controller is responsible for:
@@ -92,7 +94,7 @@ export default class AuthenticationController extends BaseController {
    * @route POST /authentication/mock
    * @group authenticate - Operations of authentication controller
    * @param {AuthenticationMockRequest.model} req.body.required - The mock login.
-   * @returns {string} 200 - The created json web token.
+   * @returns {AuthenticationResponse.model} 200 - The created json web token.
    * @returns {string} 400 - Validation error.
    */
   public async mockLogin(req: Request, res: Response): Promise<void> {
@@ -101,12 +103,21 @@ export default class AuthenticationController extends BaseController {
 
     try {
       const user = await User.findOne({ id: body.userId });
+      const roles = await this.roleManager.getRoles(user);
+
       const contents: JsonWebToken = {
         user,
-        roles: await this.roleManager.getRoles(user),
+        roles,
       };
       const token = await this.tokenHandler.signToken(contents, body.nonce);
-      res.json(token);
+
+      const userResponse = { ...user } as unknown as UserResponse;
+      const response: AuthenticationResponse = {
+        user: userResponse,
+        roles,
+        token,
+      };
+      res.json(response);
     } catch (error) {
       this.logger.error('Could not create token:', error);
       res.status(500).json('Internal server error.');
