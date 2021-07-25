@@ -28,6 +28,7 @@ import Swagger from '../../../src/start/swagger';
 import AuthenticationController from '../../../src/controller/authentication-controller';
 import AuthenticationMockRequest from '../../../src/controller/request/authentication-mock-request';
 import RoleManager from '../../../src/rbac/role-manager';
+import AuthenticationResponse from '../../../src/controller/response/authentication-response';
 
 describe('AuthenticationController', async (): Promise<void> => {
   let ctx: {
@@ -104,8 +105,15 @@ describe('AuthenticationController', async (): Promise<void> => {
         .post('/authentication/mock')
         .send(ctx.request);
       expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'AuthenticationResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
 
-      const promise = ctx.tokenHandler.verifyToken(res.body);
+      const auth = res.body as AuthenticationResponse;
+      const promise = ctx.tokenHandler.verifyToken(auth.token);
       expect(promise).to.eventually.be.fulfilled;
 
       const token = await promise;
@@ -116,7 +124,9 @@ describe('AuthenticationController', async (): Promise<void> => {
         .post('/authentication/mock')
         .send(ctx.request);
       expect(res.status).to.equal(200);
-      let token = await ctx.tokenHandler.verifyToken(res.body);
+
+      let auth = res.body as AuthenticationResponse;
+      let token = await ctx.tokenHandler.verifyToken(auth.token);
       expect(token.roles).to.be.empty;
 
       const req = {
@@ -127,7 +137,9 @@ describe('AuthenticationController', async (): Promise<void> => {
         .post('/authentication/mock')
         .send(req);
       expect(res.status).to.equal(200);
-      token = await ctx.tokenHandler.verifyToken(res.body);
+
+      auth = res.body as AuthenticationResponse;
+      token = await ctx.tokenHandler.verifyToken(auth.token);
       expect(token.roles).to.deep.equal(['Role']);
     });
     it('should give an HTTP 403 when not in development environment', async () => {
