@@ -24,7 +24,6 @@ import AuthenticationMockRequest from './request/authentication-mock-request';
 import JsonWebToken from '../authentication/json-web-token';
 import TokenHandler from '../authentication/token-handler';
 import AuthenticationResponse from './response/authentication-response';
-import { UserResponse } from './response/user-response';
 
 /**
  * The authentication controller is responsible for:
@@ -111,9 +110,17 @@ export default class AuthenticationController extends BaseController {
       };
       const token = await this.tokenHandler.signToken(contents, body.nonce);
 
-      const userResponse = { ...user } as unknown as UserResponse;
       const response: AuthenticationResponse = {
-        user: userResponse,
+        user: {
+          id: user.id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          active: user.active,
+          deleted: user.deleted,
+          type: user.type,
+          createdAt: user.createdAt.toISOString(),
+          updatedAt: user.updatedAt.toISOString(),
+        },
         roles,
         token,
       };
