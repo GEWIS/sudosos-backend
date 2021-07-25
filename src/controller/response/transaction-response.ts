@@ -40,10 +40,10 @@ export interface BaseTransactionResponse extends BaseResponse {
 }
 
 /**
- * @typedef {TransactionResponse} TransactionResponse
- * @property {UserResponse.model} from.required - The account from which the transaction
+ * @typedef {BaseResponse} TransactionResponse
+ * @property {BaseUserResponse.model} from.required - The account from which the transaction
  * is subtracted.
- * @property {UserResponse.model} createdBy - The user that created the transaction, if not
+ * @property {BaseUserResponse.model} createdBy - The user that created the transaction, if not
  * same as 'from'.
  * @property {Array<SubTransactionResponse>} subtransactions.required - The subtransactions
  * belonging to this transaction.
@@ -58,8 +58,8 @@ export interface TransactionResponse extends BaseResponse {
 }
 
 /**
- * @typedef {SubTransactionResponse} SubTransactionResponse
- * @property {User.model} to.required - The account that the transaction is added to.
+ * @typedef {BaseResponse} SubTransactionResponse
+ * @property {BaseUserResponse.model} to.required - The account that the transaction is added to.
  * @property {BaseContainerResponse} container.required - The container from which all
  * products in the SubTransactionRows are bought
  * @property {Array<SubTransactionRowResponse>} subTransactionsRows.required - The rows of this

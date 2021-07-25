@@ -23,11 +23,11 @@ export function validatePaginationQueryParams(req: RequestWithToken): boolean {
   const urlParams = req.query || {};
 
   if (urlParams.take) {
-    const t = parseInt(urlParams.take, 10);
+    const t = parseInt(urlParams.take as string, 10);
     if (Number.isNaN(t) || t.toString().length !== urlParams.take.length) return false;
   }
   if (urlParams.skip) {
-    const s = parseInt(urlParams.skip, 10);
+    const s = parseInt(urlParams.skip as string, 10);
     if (Number.isNaN(s) || s.toString().length !== urlParams.skip.length) return false;
   }
 
@@ -40,13 +40,13 @@ function parseReqSkipTake(req: RequestWithToken): { take?: number, skip?: number
   const urlParams = req.query || {};
 
   // Parse and validate the take URL parameter
-  if (urlParams.take != null) {
+  if (urlParams.take != null && typeof urlParams.take !== 'object') {
     const parsedTake = parseInt(urlParams.take, 10);
     if (!Number.isNaN(parsedTake)) take = parsedTake;
   }
 
   // Parse and validate the take URL parameter
-  if (urlParams.skip != null) {
+  if (urlParams.skip != null && typeof urlParams.skip !== 'object') {
     const parsedSkip = parseInt(urlParams.skip, 10);
     if (!Number.isNaN(parsedSkip)) skip = parsedSkip;
   }
