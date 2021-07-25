@@ -27,7 +27,7 @@ import UserBorrelkaartGroup from './user-borrelkaart-group';
  * @property {string} name.required - Name of the group
  * @property {string} activeStartDate.required - Date from which the included cards are active
  * @property {string} activeEndDate - Date from which cards are no longer active
- * @property {Array.<User>} borrelkaarten.required - Cards included in this group
+ * @property {Array<User>} borrelkaarten.required - Cards included in this group
  */
 @Entity()
 export default class BorrelkaartGroup extends BaseEntity {

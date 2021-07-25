@@ -22,7 +22,7 @@ import RevisionRequest from './revision-request';
  * @typedef TransactionRequest
  * @property {integer} from.required - from user id
  * @property {integer} createdBy - createdBy user id
- * @property {Array.<SubtransactionRequest>} subtransactions.required - subtransactions
+ * @property {Array<SubtransactionRequest>} subtransactions.required - subtransactions
  * @property {RevisionRequest.model} pointOfSale.required - point of sale
  */
 export interface TransactionRequest {
@@ -36,7 +36,7 @@ export interface TransactionRequest {
  * @typedef SubTransactionRequest
  * @property {integer} to.required - to user id
  * @property {RevisionRequest.model} container.required - container
- * @property {Array.<SubTransactionRowRequest>} subTransactionRows.required - subtransaction rows
+ * @property {Array<SubTransactionRowRequest>} subTransactionRows.required - subtransaction rows
  */
 export interface SubTransactionRequest {
   to: number,

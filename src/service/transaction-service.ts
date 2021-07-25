@@ -59,11 +59,16 @@ export interface TransactionFilterParameters {
 }
 
 export default class TransactionService {
+  /**
+   * Verifies whether a user has a sufficient balance to complete the transaction
+   * @param {TransactionRequest.model} req - the transaction request to verify
+   * @returns {boolean} - whether user's balance is ok or not
+   */
   public static async verifyBalance(req: TransactionRequest): Promise<boolean> {
     // check whether from user has sufficient balance
     let totalCost: number = 0;
 
-    // sum costs
+    // sum costs of the transaction
     await Promise.all(req.subtransactions.map(async (subTransaction) => {
       await Promise.all(subTransaction.subTransactionRows.map(async (row) => {
         const product = await ProductRevision.findOne({
@@ -80,6 +85,11 @@ export default class TransactionService {
     return totalCost > 0;
   }
 
+  /**
+   * Verifies whether a sub transaction row within a sub transaction is valid
+   * @param {SubTransactionRowRequest.model} req - the sub transaction row request to verify
+   * @returns {boolean} - whether sub transaction row is ok or not
+   */
   public static async verifySubTransactionRow(req: SubTransactionRowRequest): Promise<boolean> {
     // check if product exists in database and correct current revision is provided
     if (!req.product) {
@@ -94,6 +104,11 @@ export default class TransactionService {
     return req.amount > 0 && Number.isInteger(req.amount);
   }
 
+  /**
+   * Verifies whether a sub transaction within a transaction is valid
+   * @param {SubTransactionRequest.model} req - the sub transaction request to verify
+   * @returns {boolean} - whether sub transaction is ok or not
+   */
   public static async verifySubTransaction(req: SubTransactionRequest): Promise<boolean> {
     // check if container exists in database and correct current revision is provided
     if (!req.container) {
@@ -116,6 +131,11 @@ export default class TransactionService {
     return req.subTransactionRows.every((row) => this.verifySubTransactionRow(row));
   }
 
+  /**
+   * Verifies whether a transaction is valid
+   * @param {TransactionRequest.model} req - the transaction request to verify
+   * @returns {boolean} - whether transaction is ok or not
+   */
   public static async verifyTransaction(req: TransactionRequest): Promise<boolean> {
     // check if point of sale exists in database and correct current revision is provided
     if (!req.pointOfSale) {
@@ -147,6 +167,11 @@ export default class TransactionService {
     return req.subtransactions.every((subtransaction) => this.verifySubTransaction(subtransaction));
   }
 
+  /**
+   * Creates a transaction from a transaction request
+   * @param {TransactionRequest.model} req - the transaction request to cast
+   * @returns {Transaction.model} - the transaction
+   */
   public static async asTransaction(req: TransactionRequest): Promise<Transaction | undefined> {
     if (!req) {
       return undefined;
@@ -172,6 +197,11 @@ export default class TransactionService {
     return transaction;
   }
 
+  /**
+   * Creates a transaction response from a transaction
+   * @param {Transaction.model} req - the transaction to cast
+   * @returns {TransactionResponse.model} - the transaction response
+   */
   public static asTransactionResponse(transaction: Transaction): TransactionResponse | undefined {
     if (!transaction) {
       return undefined;
@@ -190,6 +220,11 @@ export default class TransactionService {
     } as TransactionResponse;
   }
 
+  /**
+   * Creates a sub transaction from a sub transaction request
+   * @param {SubTransactionRequest.model} req - the sub transaction request to cast
+   * @returns {SubTransaction.model} - the sub transaction
+   */
   public static async asSubTransaction(req: SubTransactionRequest):
   Promise<SubTransaction | undefined> {
     if (!req) {
@@ -215,6 +250,11 @@ export default class TransactionService {
     return subTransaction;
   }
 
+  /**
+   * Creates a sub transaction response from a sub transaction
+   * @param {SubTransaction.model} req - the sub transaction to cast
+   * @returns {SubTransactionResponse.model} - the sub transaction response
+   */
   public static asSubTransactionResponse(subTransaction: SubTransaction):
   SubTransactionResponse | undefined {
     if (!SubTransaction) {
@@ -232,6 +272,12 @@ export default class TransactionService {
     } as SubTransactionResponse;
   }
 
+  /**
+   * Creates a sub transaction row from a sub transaction row request
+   * @param {SubTransactionRowRequest.model} req - the sub transaction row request to cast
+   * @param {SubTransaction.model} subTransaction - the sub transaction to connect
+   * @returns {SubTransactionRow.model} - the sub transaction row
+   */
   public static async asSubTransactionRow(
     req: SubTransactionRowRequest, subTransaction: SubTransaction,
   ): Promise<SubTransactionRow | undefined> {
@@ -244,6 +290,12 @@ export default class TransactionService {
     return { product, amount: req.amount, subTransaction } as SubTransactionRow;
   }
 
+  /**
+   * Returns all transactions requested with the filter
+   * @param {RequestWithToken.model} req - the request with token
+   * @param {TransactionFilterParameters.model} params - the filter parameters
+   * @returns {BaseTransactionResponse[]} - the transactions without sub transactions
+   */
   public static async getTransactions(
     req: RequestWithToken, params: TransactionFilterParameters,
   ): Promise<BaseTransactionResponse[]> {
@@ -333,6 +385,11 @@ export default class TransactionService {
     });
   }
 
+  /**
+   * Saves a transaction to the database
+   * @param {TransactionRequest.model} req - the transaction request to save
+   * @returns {Transaction.model} - the saved transaction
+   */
   public static async createTransaction(req: TransactionRequest):
   Promise<TransactionResponse | undefined> {
     const transaction = await this.asTransaction(req);
@@ -341,6 +398,11 @@ export default class TransactionService {
     return this.asTransactionResponse(await Transaction.save(transaction));
   }
 
+  /**
+   * Gets a single transaction from the database by id
+   * @param {integer} id - the id of the requested transaction
+   * @returns {Transaction.model} - the requested transaction transaction
+   */
   public static async getSingleTransaction(id: number): Promise<TransactionResponse | undefined> {
     const transaction = await Transaction.findOne(id, {
       relations: [

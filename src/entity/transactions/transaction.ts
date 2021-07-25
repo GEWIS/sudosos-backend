@@ -28,7 +28,7 @@ import PointOfSaleRevision from '../point-of-sale/point-of-sale-revision';
  * @typedef {Transaction} Transaction
  * @property {User.model} from.required - The account from which the transaction is subtracted.
  * @property {User.model} createdBy - The user that created the transaction, if not same as 'from'.
- * @property {Array.<SubTransaction>} subtransactions.required - The subtransactions belonging
+ * @property {Array<SubTransaction>} subtransactions.required - The subtransactions belonging
  *    to this transaction.
  * @property {PointOfSaleRevision.model} pointOfSale.required - The point of sale
  */
