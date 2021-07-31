@@ -21,7 +21,6 @@ import { SwaggerSpecification } from 'swagger-model-validator';
 import bodyParser from 'body-parser';
 import chai, { expect } from 'chai';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
-import dinero from 'dinero.js';
 import User from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
@@ -34,8 +33,6 @@ import { ProductResponse } from '../../../src/controller/response/product-respon
 import ProductRevision from '../../../src/entity/product/product-revision';
 import UpdatedProduct from '../../../src/entity/product/updated-product';
 import UpdatedContainer from '../../../src/entity/container/updated-container';
-import BaseProduct from '../../../src/entity/product/base-product';
-import ProductCategory from '../../../src/entity/product/product-category';
 import Container from '../../../src/entity/container/container';
 import ContainerRevision from '../../../src/entity/container/container-revision';
 import ProductRequest, { ProductUpdateRequest } from '../../../src/controller/request/product-request';
@@ -262,10 +259,8 @@ describe('ProductService', async (): Promise<void> => {
         alcoholPercentage: 9,
         name: 'Product77-update',
         picture: 'https://sudosos/product77-update.png',
-        price: dinero({
-          amount: price,
-        }),
-        category: await ProductCategory.findOne(1),
+        price,
+        category: 1,
       };
 
       const res: ProductResponse = await ProductService.createProduct(ctx.users[0], productParams);

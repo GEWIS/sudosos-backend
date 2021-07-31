@@ -22,7 +22,6 @@ import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import ProductService from '../service/product-service';
 import ProductRequest, { ProductUpdateRequest } from './request/product-request';
-import UpdatedProduct from '../entity/product/updated-product';
 
 export default class ProductController extends BaseController {
   private logger: Logger = log4js.getLogger('ProductController');

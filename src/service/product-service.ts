@@ -26,9 +26,8 @@ import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import ContainerRevision from '../entity/container/container-revision';
 import Container from '../entity/container/container';
 import UpdatedContainer from '../entity/container/updated-container';
-import BaseProduct from '../entity/product/base-product';
 import User from '../entity/user/user';
-import ProductRequest, {ProductUpdateRequest} from '../controller/request/product-request';
+import ProductRequest, { ProductUpdateRequest } from '../controller/request/product-request';
 import ProductCategory from '../entity/product/product-category';
 
 /**
@@ -240,8 +239,10 @@ export default class ProductService {
   }
 
   /**
-   * Function that returns all the products in an updated container,
-   * @param containerId - The ID of the updated container to use.
+   * Function that returns all the products based on parameters.
+   * This is used for POS or containers which are not solely
+   * the latest revision products.
+   * @param params - The product parameters to adhere to.
    */
   public static async getAllProducts(params: ProductParameters = {}) {
     // We get the products by first getting the updated products and then merge them with the
