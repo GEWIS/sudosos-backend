@@ -94,8 +94,13 @@ export default class ProductService {
    * @param containerRevision - If we are getting a specific container revision.
    * @private
    */
-  private static addContainerFilter(builder: SelectQueryBuilder<Product>,
-    containerId: number, isUpdatedProduct: boolean, isUpdatedContainer: boolean, containerRevision: number | string = 'currentRevision'): void {
+  private static addContainerFilter(
+    builder: SelectQueryBuilder<Product>,
+    containerId: number,
+    isUpdatedProduct?: boolean,
+    isUpdatedContainer?: boolean,
+    containerRevision?: number,
+  ): void {
     // Case distinction for the inner join condition.
     function condition() {
       if (isUpdatedProduct) return 'updatedproduct.product = containerproducts.productId';
@@ -108,10 +113,10 @@ export default class ProductService {
     // Case distinction for the inner join.
     function innerJoin() {
       if (isUpdatedContainer) return 'container.id = containeralias.containerId';
-      if (containerRevision === 'currentRevision') {
-        return 'container.id = containeralias.containerId AND container.currentRevision = containeralias.revision';
+      if (containerRevision) {
+        return `container.id = containeralias.containerId AND ${containerRevision} = containeralias.revision`;
       }
-      return `container.id = containeralias.containerId AND ${containerRevision} = containeralias.revision`;
+      return 'container.id = containeralias.containerId AND container.currentRevision = containeralias.revision';
     }
 
     // Filter on products in the container.
@@ -201,7 +206,8 @@ export default class ProductService {
       );
 
     if (params.containerId) {
-      this.addContainerFilter(builder, params.containerId, true, params.updatedContainer);
+      this.addContainerFilter(builder, params.containerId, true,
+        params.updatedContainer);
     }
 
     builder
@@ -237,45 +243,29 @@ export default class ProductService {
    * Function that returns all the products in an updated container,
    * @param containerId - The ID of the updated container to use.
    */
-  public static async getUpdatedContainer(containerId: number) {
-    // We get the products by
-    // first getting the updated products and then merge them with the normal products.
-    const updatedProducts: ProductResponse[] = await this.getUpdatedProducts({
-      containerId,
-      updatedContainer: true,
-    });
+  public static async getAllProducts(params: ProductParameters = {}) {
+    // We get the products by first getting the updated products and then merge them with the
+    // normal products.
+    const updatedProducts: ProductResponse[] = await this.getUpdatedProducts(params);
 
-    // Keep track of which IDs belong to updated products.
-    const updatedId: { [key:string]: any } = {};
-    updatedProducts.forEach((product) => {
-      updatedId[product.id] = true;
-    });
+    const updatedProductIds = updatedProducts.map((prod) => prod.id);
 
     // Get the remaining products.
-    const products: ProductResponse[] = (await this.getProducts({
-      containerId,
-      updatedContainer: true,
-    }));
+    const products: ProductResponse[] = (await this.getProducts(params));
 
-    // Store the results.
-    const containerProducts: ProductResponse[] = [];
-
-    // Only add the remaining product if there is no updated counterpart.
-    products.forEach((product) => {
-      if (updatedId[product.id] === undefined) {
-        containerProducts.push(product);
-      }
-    });
+    const filteredProducts = products.filter(
+      (prod) => !updatedProductIds.includes(prod.id),
+    );
 
     // Return the products.
-    return containerProducts.concat(updatedProducts);
+    return filteredProducts.concat(updatedProducts);
   }
 
   /**
    * Creates a product update.
    * @param productId - The ID of the product to update.
-   * @param update - The variables to update.
-   *  If undefined it uses the params from the latest revision.
+   * @param update - The variables to update. If undefined it uses the params from the latest
+   * revision.
    */
   public static async updateProduct(productId: number, update: ProductUpdateRequest)
     : Promise<ProductResponse> {
