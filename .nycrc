@@ -4,6 +4,7 @@
   ],
   "reporter": [
     "text",
+    "cobertura",
     "html"
   ],
   "all": true,
