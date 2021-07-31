@@ -63,7 +63,7 @@ export default class ProductService {
    * Helper function for the base mapping the raw getMany response product.
    * @param rawProduct - the raw response to parse.
    */
-  private static asProductResponse(rawProduct: any): ProductResponse {
+  public static asProductResponse(rawProduct: any): ProductResponse {
     return {
       id: rawProduct.id,
       alcoholPercentage: rawProduct.alcoholpercentage,
@@ -245,7 +245,7 @@ export default class ProductService {
     });
 
     // Keep track of which IDs belong to updated products.
-    const updatedId: {[key:string]: any} = {};
+    const updatedId: { [key:string]: any } = {};
     updatedProducts.forEach((product) => {
       updatedId[product.id] = true;
     });

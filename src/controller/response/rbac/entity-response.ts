@@ -15,14 +15,16 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import {
-  Column,
-} from 'typeorm';
-import BaseEntityWithoutId from '../base-entity-without-id';
 
-export default class BaseContainer extends BaseEntityWithoutId {
-  @Column({
-    length: 64,
-  })
-  public name: string;
+import ActionResponse from './action-response';
+
+/**
+ * @typedef EntityResponse -
+ * The entity contains a name and a list of permissions per action.
+ * @property {string} entity - The name of the entity for which the permissions are.
+ * @property {Array<ActionResponse>} actions - The permissions per action.
+ */
+export default interface EntityResponse {
+  entity: string;
+  actions: ActionResponse[];
 }

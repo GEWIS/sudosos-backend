@@ -15,14 +15,18 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import {
-  Column,
-} from 'typeorm';
-import BaseEntityWithoutId from '../base-entity-without-id';
 
-export default class BaseContainer extends BaseEntityWithoutId {
-  @Column({
-    length: 64,
-  })
-  public name: string;
+import { AllowedAttribute } from '../../../rbac/role-manager';
+
+/**
+ * @typedef RelationResponse -
+ * The relation response contains the name of the ownership relation towards the entity,
+ * and the list of attributes for which the role gives access.
+ * Typical ownership relations are 'own', 'created', and 'all'.
+ * @property {string} relation - The the ownership relation towards the entity.
+ * @property {Array<string>} attributes - The attributes of the entity for which there is access.
+ */
+export default interface RelationResponse {
+  relation: string;
+  attributes: AllowedAttribute[];
 }

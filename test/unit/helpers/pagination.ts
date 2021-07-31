@@ -90,7 +90,7 @@ describe('Pagination', (): void => {
     });
 
     it('should use maximum pagination with hardcoded max', () => {
-      ctx.req.query.take = 10000;
+      ctx.req.query.take = '10000';
       const maxPagination = process.env.PAGINATION_MAX;
       process.env.PAGINATION_MAX = null;
       const options = addPaginationForFindOptions(ctx.req);
@@ -158,7 +158,7 @@ describe('Pagination', (): void => {
     });
 
     it('should use maximum pagination with hardcoded max', () => {
-      ctx.req.query.take = 10000;
+      ctx.req.query.take = '10000';
       const maxPagination = process.env.PAGINATION_MAX;
       process.env.PAGINATION_MAX = null;
       const query = addPaginationToQueryBuilder(ctx.req, createQueryBuilder());

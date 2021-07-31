@@ -32,14 +32,14 @@ export interface BaseProductResponse extends BaseResponse {
 
 /**
  * @typedef {BaseProductResponse} ProductResponse
- * @property {number} revision - The revision of the product.
- * @property {User.model} owner.required - The owner of the product.
- * @property {ProductCategory.model} category.required - The category the product belongs to.
+ * @property {integer} revision - The revision of the product.
+ * @property {BaseUserResponse.model} owner.required - The owner of the product.
+ * @property {ProductCategoryResponse.model} category.required
+ *  - The category the product belongs to.
  * @property {string} picture.required - The URL to the picture representing this product.
- * @property {number} alcoholPercentage - The percentage of alcohol in this product.
+ * @property {integer} alcoholPercentage - The percentage of alcohol in this product.
  */
 export interface ProductResponse extends BaseProductResponse {
-  revision?: number,
   owner: BaseUserResponse,
   category: ProductCategoryResponse,
   picture: String,
