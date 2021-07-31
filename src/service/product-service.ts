@@ -129,9 +129,8 @@ export default class ProductService {
   }
 
   /**
-   * Query for getting all products based on user.
-   * @param params
-   * @param isUpdatedContainer
+   * Query for getting all products following the ProductParameters.
+   * @param params - The product query parameters.
    */
   public static async getProducts(params: ProductParameters = {})
     : Promise<ProductResponse[]> {
@@ -185,8 +184,8 @@ export default class ProductService {
   }
 
   /**
-   * Query to return all updated products.
-   * @param params
+   * Query for getting all updated products following the ProductParameters.
+   * @param params - The product query parameters.
    */
   public static async getUpdatedProducts(params: ProductParameters = {})
     : Promise<ProductResponse[]> {
