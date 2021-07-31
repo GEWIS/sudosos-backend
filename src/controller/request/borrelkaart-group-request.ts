@@ -23,7 +23,7 @@ import User from '../../entity/user/user';
  * @property {string} name.required - Name of the group
  * @property {string} activeStartDate.required - Date from which the included cards are active
  * @property {string} activeEndDate - Date from which cards are no longer active
- * @property {Array<User>} users.required - Users to be assigned to the borrelkaart group
+ * @property {Array.<User>} users.required - Users to be assigned to the borrelkaart group
  */
 export default interface BorrelkaartGroupRequest {
   name: string,

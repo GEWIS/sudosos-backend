@@ -31,7 +31,7 @@ import SubTransactionRow from './sub-transaction-row';
  * @property {Container.model} container.required - The container from which all products in the
  *     SubTransactionRows are bought
  * @property {Transaction.model} transaction.required - The parent transaction
- * @property {Array<SubTransactionRow>} subTransactionsRows.required - The rows of this
+ * @property {Array.<SubTransactionRow>} subTransactionsRows.required - The rows of this
  *     SubTransaction
  */
 @Entity()

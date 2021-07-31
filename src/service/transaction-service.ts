@@ -418,4 +418,23 @@ export default class TransactionService {
 
     return this.asTransactionResponse(transaction);
   }
+
+  /**
+   * Deletes a transaction
+   * @param {string} id - the id of the requested transaction
+   * @returns {TransactionResponse.model} - the deleted transaction
+   */
+  public static async deleteTransaction(id: number): Promise<TransactionResponse | undefined> {
+    // TODO: make cascading instead of wonky manual work
+    const transaction = await this.getSingleTransaction(id);
+    await Promise.all(transaction.subTransactions.map(async (sub) => {
+      await Promise.all(sub.subTransactionRows.map(async (row) => {
+        await SubTransactionRow.delete(row.id);
+      }));
+      await SubTransaction.delete(sub.id);
+    }));
+    await Transaction.delete(id);
+    console.log(transaction);
+    return transaction;
+  }
 }

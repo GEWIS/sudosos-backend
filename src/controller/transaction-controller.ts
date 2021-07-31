@@ -83,6 +83,10 @@ export default class TransactionController extends BaseController {
           policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Transaction', ['*']),
           handler: this.getTransaction.bind(this),
         },
+        DELETE: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'delete', 'all', 'Transaction', ['*']),
+          handler: this.deleteTransaction.bind(this),
+        },
       },
     };
   }
@@ -194,6 +198,21 @@ export default class TransactionController extends BaseController {
       return;
     }
 
+    res.status(200).json(transaction);
+  }
+
+  /**
+   * Deletes a transaction
+   * @route DELETE /transactions/{id}
+   * @group transactions - Operations of the transaction controller
+   * @param {integer} id.path.required - The id of the transaction which should be deleted
+   * @security JWT
+   * @returns {TransactionResponse.model} 200 - The deleted transaction
+   * @returns {string} 404 - Nonexistent transaction id
+   */
+  // eslint-disable-next-line class-methods-use-this
+  public async deleteTransaction(req: RequestWithToken, res: Response): Promise<void> {
+    const transaction = await TransactionService.deleteTransaction(parseInt(req.params.id, 10));
     res.status(200).json(transaction);
   }
 }

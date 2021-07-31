@@ -45,7 +45,7 @@ export interface BaseTransactionResponse extends BaseResponse {
  * is subtracted.
  * @property {BaseUserResponse.model} createdBy - The user that created the transaction, if not
  * same as 'from'.
- * @property {Array<SubTransactionResponse>} subtransactions.required - The subtransactions
+ * @property {Array.<SubTransactionResponse>} subtransactions.required - The subtransactions
  * belonging to this transaction.
  * @property {BasePointOfSaleResponse.model} pointOfSale - The POS at which this transaction
  * has been created
@@ -62,7 +62,7 @@ export interface TransactionResponse extends BaseResponse {
  * @property {BaseUserResponse.model} to.required - The account that the transaction is added to.
  * @property {BaseContainerResponse} container.required - The container from which all
  * products in the SubTransactionRows are bought
- * @property {Array<SubTransactionRowResponse>} subTransactionsRows.required - The rows of this
+ * @property {Array.<SubTransactionRowResponse>} subTransactionsRows.required - The rows of this
  *     SubTransaction
  */
 export interface SubTransactionResponse extends BaseResponse {

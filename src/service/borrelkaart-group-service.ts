@@ -112,7 +112,7 @@ export default class BorrelkaartGroupService {
   /**
    * Creates a borrelkaart group from the request
    * @param {BorrelkaartGroup.model} bkg - borrelkaart group
-   * @param {Array<User>} users - users in the borrelkaart group
+   * @param {Array.<User>} users - users in the borrelkaart group
    * @returns {BorrelkaartGroupResponse.model} a borrelkaart group response
    */
   public static asBorrelkaartGroupResponse(bkg: BorrelkaartGroup, users: User[]):
@@ -149,7 +149,7 @@ export default class BorrelkaartGroupService {
   /**
    * Returns all borrelkaart groups without users
    * @param {FindManyOptions.model} options - find options
-   * @returns {Array<BorrelkaartGroupResponse>} borrelkaart groups without users
+   * @returns {Array.<BorrelkaartGroupResponse>} borrelkaart groups without users
    */
   public static async getAllBorrelkaartGroups(options?: FindManyOptions):
   Promise<BorrelkaartGroupResponse[]> {
