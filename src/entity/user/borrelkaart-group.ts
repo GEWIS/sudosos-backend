@@ -24,10 +24,10 @@ import UserBorrelkaartGroup from './user-borrelkaart-group';
 
 /**
  * @typedef {BaseEntity} BorrelkaartGroup
- * @property {string} name.required - Name of the group
- * @property {string} activeStartDate.required - Date from which the included cards are active
- * @property {string} activeEndDate - Date from which cards are no longer active
- * @property {Array.<User>} borrelkaarten.required - Cards included in this group
+ * @property {string} name.required - Name of the group.
+ * @property {string} activeStartDate.required - Date after which the included cards are active.
+ * @property {string} activeEndDate - Date after which cards are no longer active.
+ * @property {Array.<User>} borrelkaarten.required - Cards included in this group.
  */
 @Entity()
 export default class BorrelkaartGroup extends BaseEntity {
@@ -41,7 +41,7 @@ export default class BorrelkaartGroup extends BaseEntity {
     type: 'datetime',
     default: 'CURRENT_TIMESTAMP',
   })
-  public activeStartDate?: Date;
+  public activeStartDate: Date;
 
   @Column({
     nullable: true,

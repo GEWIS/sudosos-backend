@@ -23,8 +23,9 @@ import User from '../user/user';
 
 /**
  * @typedef {MemberAuthenticator} MemberAuthenticator
- * @property {User.model} user - The user this authenticator is for
- * @property {User.model} authenticateAs - The user entity this user wants to authenticate as
+ * @property {User.model} user.required - The user this authenticator is for
+ * @property {User.model} authenticateAs.required - The user entity this user wants to
+ * authenticate as.
  */
 @Entity()
 export default class MemberAuthenticator extends BaseEntityWithoutId {

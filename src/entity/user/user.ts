@@ -29,13 +29,12 @@ export enum UserType {
 }
 
 /**
- * @typedef {BaseEntityWithoutId} User
- * @property {string} firstName.required - First name of the user
- * @property {string} lastName - Last name of the user
- * @property {boolean} active.required - Whether the user has accepted the TOS
- * @property {UserType} type.required - The type of user
- * @property {BorrelkaartGroup.model} borrelkaartGroup - Reference to the borrelkaart group,
- *     if this user is of type borrelkaart
+ * @typedef {BaseEntity} User
+ * @property {string} firstName.required - First name of the user.
+ * @property {string} lastName - Last name of the user.
+ * @property {boolean} active - Whether the user has accepted the TOS. Defaults to false.
+ * @property {boolean} deleted - Whether the user was deleted. Defaults to false.
+ * @property {enum} type.required - The type of user.
  */
 @Entity()
 export default class User extends BaseEntity {
@@ -48,17 +47,17 @@ export default class User extends BaseEntity {
     length: 64,
     default: '',
   })
-  public lastName?: string;
+  public lastName: string;
 
   @Column({
     default: false,
   })
-  public active?: boolean;
+  public active: boolean;
 
   @Column({
     default: false,
   })
-  public deleted?: boolean;
+  public deleted: boolean;
 
   @Column({
     nullable: false,

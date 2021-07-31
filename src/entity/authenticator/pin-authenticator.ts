@@ -23,8 +23,8 @@ import User from '../user/user';
 
 /**
  * @typedef {PinAuthenticator} PinAuthenticator
- * @property {User.model} User - The user this authenticator is for
- * @property {string} hashedPin - The PIN code of this user (hashed)
+ * @property {User.model} User.required - The user this authenticator is for
+ * @property {string} hashedPin.required - The PIN code of this user (hashed)
  */
 @Entity()
 export default class PinAuthenticator extends BaseEntityWithoutId {

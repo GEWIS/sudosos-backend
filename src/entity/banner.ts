@@ -20,12 +20,12 @@ import BaseEntity from './base-entity';
 
 /**
  * @typedef {BaseEntity} Banner
- * @property {string} name - Name/label of the banner
- * @property {string} picture - Location of the image
- * @property {integer} duration - How long the banner should be shown (in seconds)
- * @property {boolean} active - Whether the banner is active. Overrides start and end date
- * @property {string} startDate - The starting date from which the banner should be shown
- * @property {string} endDate - The end date from which the banner should no longer be shown
+ * @property {string} name - Name/label of the banner.
+ * @property {string} picture - Location of the image.
+ * @property {integer} duration - How long the banner should be shown (in seconds).
+ * @property {boolean} active - Whether the banner is active. Overrides start and end date.
+ * @property {string} startDate - The starting date from which the banner should be shown.
+ * @property {string} endDate - The end date from which the banner should no longer be shown.
  */
 @Entity()
 export default class Banner extends BaseEntity {
@@ -49,7 +49,7 @@ export default class Banner extends BaseEntity {
     type: 'datetime',
     default: 'CURRENT_TIMESTAMP',
   })
-  public startDate?: Date;
+  public startDate: Date;
 
   @Column({
     type: 'datetime',

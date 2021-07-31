@@ -20,6 +20,15 @@ import {
 } from 'typeorm';
 import BaseEntityWithoutId from '../base-entity-without-id';
 
+/**
+ * @typedef {BaseEntityWithoutId} BasePointOfSale
+ * @property {string} name.required - The unique name of the pointOfSale.
+ * @property {string} startDate.required -
+ * The date after which the pointOfSale should become available.
+ * @property {string} endDate - The date after which the pointOfSale should become unavailable.
+ * @property {boolean} useAuthentication -
+ * Whether the pointOfSale can be logged into by normal members. Defaults to false.
+ */
 export default class BasePointOfSale extends BaseEntityWithoutId {
   @Column({
     length: 64,
@@ -29,7 +38,9 @@ export default class BasePointOfSale extends BaseEntityWithoutId {
   @Column()
   public startDate: Date;
 
-  @Column()
+  @Column({
+    nullable: true,
+  })
   public endDate: Date;
 
   @Column()

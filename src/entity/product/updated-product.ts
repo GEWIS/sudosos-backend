@@ -23,6 +23,10 @@ import {
 import BaseProduct from './base-product';
 import Product from './product';
 
+/**
+ * @typedef {BaseProduct} UpdatedProduct
+ * @property {Product.model} product.required - The product the revision belongs to.
+ */
 @Entity()
 export default class UpdatedProduct extends BaseProduct {
   @OneToOne(() => Product, {

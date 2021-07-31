@@ -24,6 +24,12 @@ import BaseContainer from './base-container';
 import Container from './container';
 import Product from '../product/product';
 
+/**
+ * @typedef {BaseContainer} UpdatedContainer
+ * @property {Container.model} container.required - The container the revision belongs to.
+ * @property {Array.<Product>} products.required - The products that should be contained in the
+ * container.
+ */
 @Entity()
 export default class UpdatedContainer extends BaseContainer {
   @OneToOne(() => Container, {

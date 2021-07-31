@@ -23,6 +23,12 @@ import {
 import BaseEntity from '../base-entity';
 import User from '../user/user';
 
+/**
+ * @typedef {BaseEntity} Container
+ * @property {integer} currentRevision - The current revision of the container. Can be null if no
+ * revision exists.
+ * @property {User.model} owner.required - The owner of the container.
+ */
 @Entity()
 export default class Container extends BaseEntity {
   @Column({
