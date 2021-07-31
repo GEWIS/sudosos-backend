@@ -16,7 +16,6 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { createQueryBuilder, SelectQueryBuilder } from 'typeorm';
-import { start } from 'repl';
 import { ProductResponse } from '../controller/response/product-response';
 import Product from '../entity/product/product';
 import ProductRevision from '../entity/product/product-revision';
@@ -306,7 +305,16 @@ export default class ProductService {
     return (await this.getUpdatedProducts({ productId }))[0];
   }
 
-
+  /**
+   * Creates a new product.
+   *
+   * The newly created product resides in the Product table and has no revision,
+   * but it does have an updated product.
+   * To confirm the product the updated product has to be confirmed and a revision will be created.
+   *
+   * @param owner - The user that created the product.
+   * @param product - The product to be created.
+   */
   public static async createProduct(owner: User, product: Partial<BaseProduct>)
     : Promise<ProductResponse> {
     const base: Product = Product.create();
@@ -332,10 +340,38 @@ export default class ProductService {
     return (await this.getUpdatedProducts({ productId: base.id }))[0];
   }
 
+  /**
+   * Confirms an product update and creates a product revision.
+   * @param productId - The product update to confirm.
+   */
   public static async confirmProductUpdate(productId: number)
     : Promise<ProductResponse> {
     const base: Product = await Product.findOne(productId);
-    console.log(base);
+
+    // return undefined if not found or request is invalid
+    if (!base) {
+      return undefined;
+    }
+
+    // Create the product.
+    const productRevision: ProductRevision = ProductRevision.create();
+
+    // Set base product, then the oldest settings and then the newest.
+    Object.assign(productRevision, {
+      product: base,
+      // Apply the update.
+      ...(await this.getUpdatedProducts({ productId }))[0],
+      // Increment revision.
+      revision: base.currentRevision ? 1 : base.currentRevision + 1,
+    });
+
+    // First save the revision.
+    await productRevision.save();
+    // Increment current revision.
+    base.currentRevision = base.currentRevision ? 1 : base.currentRevision + 1;
+    await base.save();
+
+    // Return the new product.
     return (await this.getProducts({ productId }))[0];
   }
 }

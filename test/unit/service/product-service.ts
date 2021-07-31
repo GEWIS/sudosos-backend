@@ -243,7 +243,7 @@ describe('ProductService', async (): Promise<void> => {
     it('should create a new product', async () => {
       const price = 77;
 
-      const productParams: {[key:string]: any} & Partial<BaseProduct> = {
+      const productParams: { [key:string]: any } & Partial<BaseProduct> = {
         alcoholPercentage: 9,
         name: 'Product77-update',
         picture: 'https://sudosos/product77-update.png',
@@ -264,11 +264,50 @@ describe('ProductService', async (): Promise<void> => {
       });
 
       expect(res).to.exist;
+
+      // Hard Clean up
+      await UpdatedProduct.delete(res.id);
+      await Product.delete(res.id);
     });
 
     it('should confirm an updated product', async () => {
-      const product = await ProductService.confirmProductUpdate(73);
-      console.warn(product);
+      // Create a new product.
+      const price = 77;
+
+      const productParams: { [key:string]: any } & Partial<BaseProduct> = {
+        alcoholPercentage: 9,
+        name: 'Product77-update',
+        picture: 'https://sudosos/product77-update.png',
+        price: dinero({
+          amount: price - 1,
+        }),
+        category: await ProductCategory.findOne(1),
+      };
+
+      const res: ProductResponse = await ProductService.createProduct(ctx.users[0], productParams);
+
+      const updateParams: { [key:string]: any } & Partial<BaseProduct> = {
+        alcoholPercentage: 10,
+        name: `Product${res.id}-update`,
+        picture: `https://sudosos/product${res.id}-update.png`,
+        price: dinero({
+          amount: price,
+        }),
+        category: await ProductCategory.findOne(2),
+      };
+
+      await ProductService.updateProduct(res.id, updateParams);
+      const product = await ProductService.confirmProductUpdate(res.id);
+
+      Object.keys(updateParams).forEach((key: keyof ProductResponse) => {
+        if (key === 'price') {
+          expect(updateParams.price.getAmount()).to.be.equal(price);
+        } else if (typeof updateParams[key] !== 'object') {
+          expect((updateParams[key] as any)).to.be.equal((product[key]));
+        }
+      });
+
+      expect(product).to.exist;
     });
   });
 });
