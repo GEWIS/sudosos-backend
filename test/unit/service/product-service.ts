@@ -20,7 +20,6 @@ import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import bodyParser from 'body-parser';
 import { expect } from 'chai';
-import dinero from 'dinero.js';
 import User from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
@@ -33,8 +32,7 @@ import { ProductResponse } from '../../../src/controller/response/product-respon
 import ProductRevision from '../../../src/entity/product/product-revision';
 import UpdatedProduct from '../../../src/entity/product/updated-product';
 import UpdatedContainer from '../../../src/entity/container/updated-container';
-import BaseProduct from '../../../src/entity/product/base-product';
-import ProductCategory from '../../../src/entity/product/product-category';
+import ProductRequest, { ProductUpdateRequest } from '../../../src/controller/request/product-request';
 
 /**
  * Test if all the product responses are part of the product set array.
@@ -47,6 +45,19 @@ function productSuperset(response: ProductResponse[], superset: Product[]): Bool
       supersetProduct.id === searchProduct.id && supersetProduct.owner.id === searchProduct.owner.id
     )) !== undefined
   ));
+}
+
+function validateProductProperties(response: ProductResponse,
+  productParams: Partial<ProductRequest>) {
+  Object.keys(productParams).forEach((key: keyof ProductRequest) => {
+    if (key === 'price') {
+      expect((productParams[key] as any)).to.be.equal((response.price.getAmount()));
+    } else if (key === 'category') {
+      expect((productParams[key] as any)).to.be.equal((response.category.id));
+    } else {
+      expect((productParams[key] as any)).to.be.equal((response[key]));
+    }
+  });
 }
 
 describe('ProductService', async (): Promise<void> => {
@@ -218,24 +229,16 @@ describe('ProductService', async (): Promise<void> => {
 
   describe('updateProducts function', () => {
     it('should update a product by ID', async () => {
-      const updateParams: { [key: string]: any } & Partial<BaseProduct> = {
+      const updateParams: ProductUpdateRequest = {
         alcoholPercentage: 8,
         name: 'Product2-update',
         picture: 'https://sudosos/product2-update.png',
-        price: dinero({
-          amount: 69,
-        }),
+        price: 69,
       };
 
       const res: ProductResponse = await ProductService.updateProduct(2, updateParams);
 
-      Object.keys(updateParams).forEach((key: keyof ProductResponse) => {
-        if (key === 'price') {
-          expect(updateParams.price.getAmount()).to.be.equal(69);
-        } else {
-          expect((updateParams[key] as any)).to.be.equal((res[key]));
-        }
-      });
+      validateProductProperties(res, updateParams);
 
       expect(res).to.exist;
     });
@@ -243,26 +246,17 @@ describe('ProductService', async (): Promise<void> => {
     it('should create a new product', async () => {
       const price = 77;
 
-      const productParams: { [key:string]: any } & Partial<BaseProduct> = {
+      const productParams: ProductRequest = {
         alcoholPercentage: 9,
         name: 'Product77-update',
         picture: 'https://sudosos/product77-update.png',
-        price: dinero({
-          amount: price,
-        }),
-        category: await ProductCategory.findOne(1),
+        price,
+        category: 2,
       };
 
       const res: ProductResponse = await ProductService.createProduct(ctx.users[0], productParams);
 
-      Object.keys(productParams).forEach((key: keyof ProductResponse) => {
-        if (key === 'price') {
-          expect(productParams.price.getAmount()).to.be.equal(price);
-        } else if (typeof productParams[key] !== 'object') {
-          expect((productParams[key] as any)).to.be.equal((res[key]));
-        }
-      });
-
+      validateProductProperties(res, productParams);
       expect(res).to.exist;
 
       // Hard Clean up
@@ -274,39 +268,28 @@ describe('ProductService', async (): Promise<void> => {
       // Create a new product.
       const price = 77;
 
-      const productParams: { [key:string]: any } & Partial<BaseProduct> = {
+      const productParams: ProductRequest = {
         alcoholPercentage: 9,
         name: 'Product77-update',
         picture: 'https://sudosos/product77-update.png',
-        price: dinero({
-          amount: price - 1,
-        }),
-        category: await ProductCategory.findOne(1),
+        price: price - 1,
+        category: 1,
       };
 
       const res: ProductResponse = await ProductService.createProduct(ctx.users[0], productParams);
 
-      const updateParams: { [key:string]: any } & Partial<BaseProduct> = {
-        alcoholPercentage: 10,
-        name: `Product${res.id}-update`,
-        picture: `https://sudosos/product${res.id}-update.png`,
-        price: dinero({
-          amount: price,
-        }),
-        category: await ProductCategory.findOne(2),
+      const updateParams: ProductUpdateRequest = {
+        alcoholPercentage: 9,
+        name: 'Product77-update',
+        picture: 'https://sudosos/product77-update.png',
+        price,
+        category: 2,
       };
 
       await ProductService.updateProduct(res.id, updateParams);
       const product = await ProductService.confirmProductUpdate(res.id);
 
-      Object.keys(updateParams).forEach((key: keyof ProductResponse) => {
-        if (key === 'price') {
-          expect(updateParams.price.getAmount()).to.be.equal(price);
-        } else if (typeof updateParams[key] !== 'object') {
-          expect((updateParams[key] as any)).to.be.equal((product[key]));
-        }
-      });
-
+      validateProductProperties(product, updateParams);
       expect(product).to.exist;
     });
   });

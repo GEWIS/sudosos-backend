@@ -16,6 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { createQueryBuilder, SelectQueryBuilder } from 'typeorm';
+import dinero from 'dinero.js';
 import { ProductResponse } from '../controller/response/product-response';
 import Product from '../entity/product/product';
 import ProductRevision from '../entity/product/product-revision';
@@ -27,6 +28,8 @@ import Container from '../entity/container/container';
 import UpdatedContainer from '../entity/container/updated-container';
 import BaseProduct from '../entity/product/base-product';
 import User from '../entity/user/user';
+import ProductRequest, {ProductUpdateRequest} from '../controller/request/product-request';
+import ProductCategory from '../entity/product/product-category';
 
 /**
  * Define product filtering parameters used to filter query results.
@@ -274,7 +277,7 @@ export default class ProductService {
    * @param update - The variables to update.
    *  If undefined it uses the params from the latest revision.
    */
-  public static async updateProduct(productId: number, update: Partial<BaseProduct>)
+  public static async updateProduct(productId: number, update: ProductUpdateRequest)
     : Promise<ProductResponse> {
     // Get the base product.
     const base: Product = await Product.findOne(productId);
@@ -295,6 +298,10 @@ export default class ProductService {
       product: base,
       ...latest,
       ...update,
+      // Price number into dinero.
+      price: dinero({
+        amount: update.price,
+      }),
     });
 
     // Save the product.
@@ -314,7 +321,7 @@ export default class ProductService {
    * @param owner - The user that created the product.
    * @param product - The product to be created.
    */
-  public static async createProduct(owner: User, product: Partial<BaseProduct>)
+  public static async createProduct(owner: User, product: ProductRequest)
     : Promise<ProductResponse> {
     const base: Product = Product.create();
 
@@ -332,6 +339,10 @@ export default class ProductService {
     Object.assign(updatedProduct, {
       product: await Product.findOne(base.id),
       ...product,
+      // Price number into dinero.
+      price: dinero({
+        amount: product.price,
+      }),
     });
 
     await updatedProduct.save();
@@ -352,25 +363,59 @@ export default class ProductService {
       return undefined;
     }
 
-    // Create the product.
-    const productRevision: ProductRevision = ProductRevision.create();
-
     // Set base product, then the oldest settings and then the newest.
-    Object.assign(productRevision, {
+    const productRevision: ProductRevision = Object.assign(new ProductRevision(), {
       product: base,
       // Apply the update.
       ...(await this.getUpdatedProducts({ productId }))[0],
       // Increment revision.
-      revision: base.currentRevision ? 1 : base.currentRevision + 1,
+      revision: base.currentRevision ? base.currentRevision + 1 : 1,
     });
 
     // First save the revision.
-    await productRevision.save();
+    await ProductRevision.save(productRevision);
     // Increment current revision.
-    base.currentRevision = base.currentRevision ? 1 : base.currentRevision + 1;
+    base.currentRevision = base.currentRevision ? base.currentRevision + 1 : 1;
     await base.save();
 
     // Return the new product.
     return (await this.getProducts({ productId }))[0];
+  }
+
+  /**
+   * Verifies whether the product request translates to a valid product
+   * @param {ProductRequest.model} productRequest - the product request to verify
+   * @returns {boolean} - whether product is ok or not
+   */
+  public static async verifyProduct(productRequest: ProductRequest): Promise<boolean> {
+    return productRequest.price >= 0
+        && productRequest.name !== ''
+        && await ProductCategory.findOne(productRequest.category)
+        && productRequest.picture !== ''
+        && productRequest.alcoholPercentage >= 0;
+  }
+
+  /**
+   * Verifies whether the product request translates to a valid product
+   * @param {ProductRequest.model} productRequest - the product request to verify
+   * @returns {boolean} - whether product is ok or not
+   */
+  public static async verifyUpdate(productRequest: ProductUpdateRequest): Promise<boolean> {
+    if (productRequest.price) {
+      if (productRequest.price < 0) return false;
+    }
+    if (productRequest.name) {
+      if (productRequest.name === '') return false;
+    }
+    if (productRequest.category) {
+      if (!await ProductCategory.findOne(productRequest.category)) return false;
+    }
+    if (productRequest.picture) {
+      if (productRequest.picture === '') return false;
+    }
+    if (productRequest.alcoholPercentage) {
+      if (productRequest.alcoholPercentage < 0) return false;
+    }
+    return true;
   }
 }
