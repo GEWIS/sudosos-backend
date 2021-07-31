@@ -28,6 +28,49 @@ import TransactionService from '../../../src/service/transaction-service';
 import { verifyBaseTransactionEntity } from '../validators';
 import Swagger from '../../../src/start/swagger';
 import { SubTransactionRequest, SubTransactionRowRequest, TransactionRequest } from '../../../src/controller/request/transaction-request';
+import { TransactionResponse } from '../../../src/controller/response/transaction-response';
+
+function transactionEq(req: TransactionRequest, res: TransactionResponse): Boolean {
+  // check top level users
+  if (req.from !== res.from.id || req.createdBy !== res.createdBy.id) {
+    return false;
+  }
+
+  // check point of sale
+  if (req.pointOfSale.id !== res.pointOfSale.id) {
+    return false;
+  }
+
+  // check subtransactions
+  if (req.subtransactions.length !== res.subTransactions.length) {
+    return false;
+  }
+  req.subtransactions.every((subReq) => res.subTransactions.some((subRes) => {
+    // check to user
+    if (subReq.to !== subRes.to.id) {
+      return false;
+    }
+
+    // check container
+    if (subReq.container.id !== subRes.container.id) {
+      return false;
+    }
+
+    // check sub transaction rows
+    subReq.subTransactionRows.every((rowReq) => subRes.subTransactionRows.some((rowRes) => {
+      // check product
+      if (rowReq.product.id !== rowRes.product.id || rowReq.amount !== rowRes.amount) {
+        return false;
+      }
+
+      return true;
+    }));
+
+    return true;
+  }));
+
+  return true;
+}
 
 describe('TransactionService', (): void => {
   let ctx: {
@@ -92,7 +135,6 @@ describe('TransactionService', (): void => {
     await ctx.connection.close();
   });
 
-  // TODO: active users tests
   describe('Verify transaction', () => {
     it('should return true if the transaction request is valid', async () => {
       expect(await TransactionService.verifyTransaction(ctx.validTransReq)).to.be.true;
@@ -131,6 +173,10 @@ describe('TransactionService', (): void => {
       badFromReq.from = 0;
       expect(await TransactionService.verifyTransaction(badFromReq), 'non existent from accepted').to.be.false;
 
+      // inactive from user
+      badFromReq.from = 5;
+      expect(await TransactionService.verifyTransaction(badFromReq), 'inactive from accepted').to.be.false;
+
       // undefined createdBy
       const badCreatedByReq = {
         ...ctx.validTransReq,
@@ -141,6 +187,10 @@ describe('TransactionService', (): void => {
       // non existent createdBy user
       badCreatedByReq.createdBy = 0;
       expect(await TransactionService.verifyTransaction(badCreatedByReq), 'nonexistent createdBy accepted').to.be.false;
+
+      // inactive createdBy user
+      badCreatedByReq.createdBy = 5;
+      expect(await TransactionService.verifyTransaction(badCreatedByReq), 'inactive createdBy accepted').to.be.false;
     });
   });
 
@@ -185,6 +235,10 @@ describe('TransactionService', (): void => {
       // non existent to user
       badToReq.to = 0;
       expect(await TransactionService.verifySubTransaction(badToReq), 'non existent to accepted').to.be.false;
+
+      // inactive to user
+      badToReq.to = 5;
+      expect(await TransactionService.verifySubTransaction(badToReq), 'inactive to accepted').to.be.false;
     });
   });
 
@@ -430,8 +484,9 @@ describe('TransactionService', (): void => {
   });
 
   describe('Create a transaction', () => {
-    it('return an instance of a newly created transaction corresponding to the transaction request when the request is valid', async () => {
-      expect(ctx.validTransReq).to.be.true;
+    it('should return a transaction response corresponding to the saved transaction', async () => {
+      const savedTransaction = await TransactionService.createTransaction(ctx.validTransReq);
+      expect(transactionEq(ctx.validTransReq, savedTransaction), 'request not saved correctly').to.be.true;
     });
   });
 });

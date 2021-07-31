@@ -119,11 +119,13 @@ export default class TransactionService {
       return false;
     }
 
-    // check if to user exists in database
+    // check if to user exists and is active in database
     if (!req.to) {
       return false;
     }
-    if (!await User.findOne(req.to)) {
+
+    const user = await User.findOne(req.to);
+    if (!user || !user.active) {
       return false;
     }
 
@@ -146,8 +148,7 @@ export default class TransactionService {
       return false;
     }
 
-    // TODO: active users check
-    // check if top level users exist in database
+    // get top level users in the transaction
     if (!req.from || !req.createdBy) {
       return false;
     }
@@ -156,11 +157,11 @@ export default class TransactionService {
       ids.push(req.createdBy);
     }
 
-    if (req.createdBy !== req.from) {
-      if ((await User.findByIds([req.from, req.createdBy])).length !== 2) {
-        return false;
-      }
-    } else if (!await User.findOne(req.from)) {
+    // check existence of users and whether they are active
+    const users = await User.findByIds(ids);
+    if (users.length === 0
+      || (req.createdBy !== req.from && users.length !== 2)
+      || !users.every((user) => user.active)) {
       return false;
     }
 
@@ -387,7 +388,7 @@ export default class TransactionService {
   }
 
   /**
-   * Saves a transaction to the database
+   * Saves a transaction to the database, the transaction request should be verified beforehand
    * @param {TransactionRequest.model} req - the transaction request to save
    * @returns {Transaction.model} - the saved transaction
    */
