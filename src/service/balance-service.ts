@@ -23,41 +23,51 @@ export default class BalanceService {
    * Update the balance cache with active values
    * Note: insafe query! safety leveraged by typesafety
    */
-  public static async updateBalances(ids?: number|number[]) {
+  public static async updateBalances(ids?: number | number[]) {
     const entityManager = getManager();
+    const lastIds: any = await entityManager.query(`select max(\`transaction\`) as transactionMax, max(transfer) as transferMax from (
+      select max(id) as "transaction", 0 as "transfer" from \`transaction\` 
+      union select 0 as "transaction", max(id) as "transfer" from \`transfer\` 
+    )`);
+    const { transactionMax } = lastIds[0];
+    const { transferMax } = lastIds[0];
+
     if (ids) {
       const idStr = typeof ids === 'number' ? `(${ids})` : `(${ids.join(',')})`;
       // eslint-disable-next-line prefer-template
-      await entityManager.query('REPLACE INTO balance select id, sum(amount), max(stamp) from ( '
+      await entityManager.query(`REPLACE INTO balance select id, sum(amount), ${transactionMax}, ${transferMax} from ( `
           + 'select t.fromId as `id`, str.amount * pr.price * -1 as `amount`, str.updatedAt as `stamp` from `transaction` as `t` '
             + 'inner join sub_transaction st on t.id=st.transactionId '
             + 'inner join sub_transaction_row str on st.id=str.subTransactionId '
             + 'inner join product_revision pr on str.productRevision=pr.revision and str.productProduct=pr.productId '
-            + 'where t.fromId in ' + idStr
+            + 'where t.id <= ' + transactionMax + ' and t.fromId in ' + idStr + ' '
           + 'UNION ALL '
           + 'select st2.toId as `id`, str2.amount * pr2.price as `amount`, str2.updatedAt as `stamp` from sub_transaction st2 '
             + 'inner join sub_transaction_row str2 on st2.id=str2.subTransactionId '
             + 'inner join product_revision pr2 on str2.productRevision=pr2.revision and str2.productProduct=pr2.productId '
-            + 'where st2.toId in ' + idStr
+            + 'where st2.transactionId <= ' + transactionMax + ' and st2.toId in ' + idStr + ' '
           + 'UNION ALL '
-          + 'select t2.fromId as `id`, amount*-1 as `amount`, t2.updatedAt as `stamp` from transfer t2 where fromId in ' + idStr
+          + 'select t2.fromId as `id`, amount*-1 as `amount`, t2.updatedAt as `stamp` from transfer t2 where t2.id<=' + transferMax + ' and fromId in ' + idStr
           + 'UNION ALL '
-          + 'select t2.toId as `id`, amount as `amount`, updatedAt as `stamp` from transfer t2 where toId in ' + idStr + ') as moneys '
+          + 'select t2.toId as `id`, amount as `amount`, updatedAt as `stamp` from transfer t2 where t2.id<=' + transferMax + ' and toId in ' + idStr + ') as moneys '
         + 'group by moneys.id');
     } else {
-      await entityManager.query('REPLACE INTO balance select id, sum(amount), max(stamp) from ( '
+      // eslint-disable-next-line prefer-template
+      await entityManager.query(`REPLACE INTO balance select id, sum(amount), ${transactionMax}, ${transferMax} from ( `
           + 'select t.fromId as `id`, str.amount * pr.price * -1 as `amount`, str.updatedAt as `stamp` from `transaction` as `t` '
             + 'inner join sub_transaction st on t.id=st.transactionId '
             + 'inner join sub_transaction_row str on st.id=str.subTransactionId '
             + 'inner join product_revision pr on str.productRevision=pr.revision and str.productProduct=pr.productId '
+            + `where t.id <= ${transactionMax} `
           + 'UNION ALL '
           + 'select st2.toId as `id`, str2.amount * pr2.price as `amount`, str2.updatedAt as `stamp` from sub_transaction st2 '
             + 'inner join sub_transaction_row str2 on st2.id=str2.subTransactionId '
             + 'inner join product_revision pr2 on str2.productRevision=pr2.revision and str2.productProduct=pr2.productId '
+            + `where st2.transactionId <= ${transactionMax} `
           + 'UNION ALL '
-          + 'select t2.fromId as `id`, amount*-1 as `amount`, t2.updatedAt as `stamp` from transfer t2 where fromId is not NULL '
+          + 'select t2.fromId as `id`, amount*-1 as `amount`, t2.updatedAt as `stamp` from transfer t2 where t2.id <= ' + transferMax + ' and fromId is not NULL '
           + 'UNION ALL '
-          + 'select t2.toId as `id`, amount as `amount`, updatedAt as `stamp` from transfer t2 where toId is not NULL) as moneys '
+          + 'select t2.toId as `id`, amount as `amount`, updatedAt as `stamp` from transfer t2 where t2.id <= ' + transferMax + ' and toId is not NULL) as moneys '
         + 'group by moneys.id');
     }
   }
@@ -65,9 +75,9 @@ export default class BalanceService {
   /**
    * Clear balance cache
    */
-  public static async clearBalanceCache(ids?: number|number[]) {
+  public static async clearBalanceCache(ids?: number | number[]) {
     if (ids) {
-      Balance.delete(ids);
+      await Balance.delete(ids);
     } else {
       const entityManager = getManager();
       await entityManager.query('DELETE from balance where 1=1;');
@@ -81,14 +91,16 @@ export default class BalanceService {
    */
   public static async getBalance(id: number): Promise<number> {
     const entityManager = getManager();
-    const balanceArray = await entityManager.query('SELECT amount, updatedAt FROM balance where user_id=?', [id]);
+    const balanceArray = await entityManager.query('SELECT amount, lastTransaction, lastTransfer FROM balance where user_id=?', [id]);
 
     let balance: number = 0;
-    let time: String = '1993-11-09 00:00'; // Random constant in the past
+    let lastTransaction: number = 0;
+    let lastTransfer: number = 0;
 
     if (balanceArray.length > 0) {
-      time = balanceArray[0].updatedAt;
       balance += balanceArray[0].amount;
+      lastTransaction = balanceArray[0].lastTransaction;
+      lastTransfer = balanceArray[0].lastTransfer;
     }
 
     const laterTransactions = await entityManager.query('SELECT id, sum(amount) as amount from ( '
@@ -96,21 +108,47 @@ export default class BalanceService {
       + 'inner join sub_transaction st on t.id=st.transactionId '
       + 'inner join sub_transaction_row str on st.id=str.subTransactionId '
       + 'inner join product_revision pr on str.productRevision=pr.revision and str.productProduct=pr.productId '
-      + 'where t.fromId = ? and str.updatedAt > ?'
+      + 'where t.fromId = ? and t.id > ?'
       + 'UNION ALL '
       + 'select st2.toId as `id`, str2.amount * pr2.price as `amount`, str2.updatedAt as `stamp` from sub_transaction st2 '
       + 'inner join sub_transaction_row str2 on st2.id=str2.subTransactionId '
       + 'inner join product_revision pr2 on str2.productRevision=pr2.revision and str2.productProduct=pr2.productId '
-      + 'where st2.toId = ? and str2.updatedAt > ? '
+      + 'where st2.toId = ? and st2.transactionId > ? '
       + 'UNION ALL '
-      + 'select t2.fromId as `id`, amount*-1 as `amount`, t2.updatedAt as `stamp` from transfer t2 where fromId=? and t2.updatedAt>? '
+      + 'select t2.fromId as `id`, amount*-1 as `amount`, t2.updatedAt as `stamp` from transfer t2 where fromId=? and t2.id > ? '
       + 'UNION ALL '
-      + 'select t3.toId as `id`, amount as `amount`, updatedAt as `stamp` from transfer t3 where t3.toId=? and t3.updatedAt>?) as moneys ', [id, time, id, time, id, time, id, time]);
+      + 'select t3.toId as `id`, amount as `amount`, updatedAt as `stamp` from transfer t3 where t3.toId=? and t3.id > ?) as moneys ', [id, lastTransaction, id, lastTransaction, id, lastTransfer, id, lastTransfer]);
 
     if (laterTransactions.length > 0 && laterTransactions[0].amount) {
       balance += laterTransactions[0].amount;
     }
 
     return balance;
+  }
+
+  /**
+   * Get balances of all users with minimally one transaction, all others are 0
+   * USE ONLY IF LARGE PART OF BALANCES IS NEEDED, since call is quite inefficient
+   * it triggers a full rebuild of the balances table and returns from there
+   * @returns the balances of all users
+   */
+  public static async getAllBalances(ids?: [number]): Promise<Map<number, number>> {
+    await this.updateBalances(ids);
+    const entityManager = getManager();
+
+    let inClause = '1=1';
+    if (ids) {
+      inClause = `id in (${ids.join(',')})`;
+    }
+
+    const balanceArray = await entityManager.query(`select id, sum(amount) as 'amount' from (
+      select id, 0 as 'amount' from user where ${inClause} union 
+      select user_id as id, amount as 'amount' from balance where ${inClause}
+    ) group by id`);
+    const balanceMap = balanceArray.reduce((map: Map<number, number>, obj: any) => {
+      map.set(obj.id, obj.amount);
+      return map;
+    }, new Map());
+    return balanceMap;
   }
 }

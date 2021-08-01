@@ -23,7 +23,6 @@ import { SwaggerSpecification } from 'swagger-model-validator';
 import Transaction from '../../../src/entity/transactions/transaction';
 import Database from '../../../src/database/database';
 import seedDatabase, { defineTransactions } from '../../seed';
-import TransactionService from '../../../src/service/transaction-service';
 import Swagger from '../../../src/start/swagger';
 import BalanceService from '../../../src/service/balance-service';
 import User from '../../../src/entity/user/user';
@@ -41,7 +40,7 @@ describe('BalanceService', (): void => {
 
   // eslint-disable-next-line func-names
   before(async function (): Promise<void> {
-    this.timeout(5000);
+    this.timeout(50000);
     const connection = await Database.initialize();
     const app = express();
     await seedDatabase();
@@ -64,7 +63,7 @@ describe('BalanceService', (): void => {
 
   describe('Check balance updates', async () => {
     it('caching is optional', async () => {
-      BalanceService.clearBalanceCache();
+      await BalanceService.clearBalanceCache();
       ctx.users.forEach(async (element) => {
         ctx.balances[element.id] = await BalanceService.getBalance(element.id);
         expect(ctx.balances[element.id]).to.not.be.NaN;
@@ -72,21 +71,21 @@ describe('BalanceService', (): void => {
     });
 
     it('balances can be cached without changing them', async () => {
-      BalanceService.updateBalances();
+      await BalanceService.updateBalances();
       ctx.users.forEach(async (element) => {
         const balance = await BalanceService.getBalance(element.id);
         expect(balance).to.equal(ctx.balances[element.id]);
       });
     });
     it('balance can be cleared for specific users', async () => {
-      BalanceService.clearBalanceCache([ctx.users[0].id, ctx.users[1].id]);
+      await BalanceService.clearBalanceCache([ctx.users[0].id, ctx.users[1].id]);
       const balance = await BalanceService.getBalance(ctx.users[0].id);
       expect(balance).to.equal(ctx.balances[ctx.users[0].id]);
       const balance2 = await BalanceService.getBalance(ctx.users[1].id);
       expect(balance2).to.equal(ctx.balances[ctx.users[1].id]);
     });
     it('balance can be cached for specific users', async () => {
-      BalanceService.updateBalances([ctx.users[0].id, ctx.users[1].id]);
+      await BalanceService.updateBalances([ctx.users[0].id, ctx.users[1].id]);
       const balance = await BalanceService.getBalance(ctx.users[0].id);
       expect(balance).to.equal(ctx.balances[ctx.users[0].id]);
       const balance2 = await BalanceService.getBalance(ctx.users[1].id);
@@ -115,20 +114,44 @@ describe('BalanceService', (): void => {
         ctx.users[1],
       );
 
-      await Transaction.save(transactions[0]);
-      const transactionWithValue = await TransactionService
-        .getSingleTransaction(transactions[0].id);
+      const saveTransactionPromise = Transaction.save(transactions);
 
-      const newBalance = await BalanceService.getBalance(ctx.users[0].id);
+      const oldBalanceTotal = ctx.balances.reduce((a, b) => a + b, 0);
 
-      // check new balance is old balance minus transaction value
-      expect(newBalance).to.equal(ctx.balances[ctx.users[0].id] - transactionWithValue.value.amount);
+      transactions.forEach((transaction) => {
+        let total = 0;
+        transaction.subTransactions.forEach((subtransaction) => {
+          const toId = subtransaction.to.id;
+          subtransaction.subTransactionRows.forEach((subTransactionRow) => {
+            const value = subTransactionRow.product.price.getAmount() * subTransactionRow.amount;
+            ctx.balances[toId] += value;
+            total += value;
+          });
+        });
+        ctx.balances[transaction.from.id] -= total;
+      });
 
-      let newTotalBalance = 0;
-      const answers = await Promise.all(ctx.users.map(async (user) => BalanceService.getBalance(user.id)));
-      newTotalBalance = answers.reduce((a, b) => a + b, 0);
+      const newBalanceTotal = ctx.balances.reduce((a, b) => a + b, 0);
 
-      expect(newTotalBalance).to.equal(ctx.balances.reduce((a, b) => a + b, 0));
+      // Sanity check to see if balances are still equal, basically checking arithmic above
+      expect(oldBalanceTotal).to.equal(newBalanceTotal);
+
+      await saveTransactionPromise;
+      const newBalances = [0];
+      await Promise.all(ctx.users.map(
+        async (user) => { newBalances[user.id] = await BalanceService.getBalance(user.id); },
+      ));
+
+      // Check that new transactions are included in the balance
+      ctx.users.forEach((user) => {
+        expect(ctx.balances[user.id]).to.equal(newBalances[user.id]);
+      });
+
+      const balanceMap = await BalanceService.getAllBalances();
+
+      ctx.users.forEach((user) => {
+        expect(ctx.balances[user.id]).to.equal(balanceMap.get(user.id));
+      });
     });
 
     after(async () => {
