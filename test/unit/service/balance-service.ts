@@ -79,18 +79,18 @@ describe('BalanceService', (): void => {
       });
     });
     it('balance can be cleared for specific users', async () => {
-      BalanceService.clearBalanceCache([1, 2]);
-      const balance = await BalanceService.getBalance(1);
-      expect(balance).to.equal(ctx.balances[1]);
-      const balance2 = await BalanceService.getBalance(2);
-      expect(balance2).to.equal(ctx.balances[2]);
+      BalanceService.clearBalanceCache([ctx.users[0].id, ctx.users[1].id]);
+      const balance = await BalanceService.getBalance(ctx.users[0].id);
+      expect(balance).to.equal(ctx.balances[ctx.users[0].id]);
+      const balance2 = await BalanceService.getBalance(ctx.users[1].id);
+      expect(balance2).to.equal(ctx.balances[ctx.users[1].id]);
     });
     it('balance can be cached for specific users', async () => {
-      BalanceService.updateBalances([1, 2]);
-      const balance = await BalanceService.getBalance(1);
-      expect(balance).to.equal(ctx.balances[1]);
-      const balance2 = await BalanceService.getBalance(2);
-      expect(balance2).to.equal(ctx.balances[2]);
+      BalanceService.updateBalances([ctx.users[0].id, ctx.users[1].id]);
+      const balance = await BalanceService.getBalance(ctx.users[0].id);
+      expect(balance).to.equal(ctx.balances[ctx.users[0].id]);
+      const balance2 = await BalanceService.getBalance(ctx.users[1].id);
+      expect(balance2).to.equal(ctx.balances[ctx.users[1].id]);
     });
 
     it('balance is stable after transaction insert', async () => {
@@ -119,7 +119,7 @@ describe('BalanceService', (): void => {
       const transactionWithValue = await TransactionService
         .getSingleTransaction(transactions[0].id);
 
-      const newBalance = await BalanceService.getBalance(1);
+      const newBalance = await BalanceService.getBalance(ctx.users[0].id);
 
       // check new balance is old balance minus transaction value
       expect(newBalance).to.equal(ctx.balances[ctx.users[0].id] - transactionWithValue.value.amount);

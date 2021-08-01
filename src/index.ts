@@ -63,10 +63,14 @@ export class Application {
 
   logger: Logger;
 
+  tasks: cron.ScheduledTask[];
+
   public async stop(): Promise<void> {
     this.logger.info('Stopping application instance...');
     await util.promisify(this.server.close).bind(this.server)();
     await this.connection.close();
+
+    this.tasks.forEach((task) => task.stop());
     this.logger.info('Application stopped.');
   }
 }
@@ -139,14 +143,13 @@ export default async function createApp(): Promise<Application> {
   const gewis = new Gewis(application.roleManager);
   await gewis.registerRoles();
 
-
-  // Setup Balance caching
   await BalanceService.updateBalances();
-  cron.schedule('*/10 * * * *', () => {
+  const cronTask = cron.schedule('*/10 * * * *', () => {
     logger.debug('Syncing balances.');
     BalanceService.updateBalances();
     logger.debug('Synced balances.');
   });
+  application.tasks = [cronTask];
 
   // REMOVE LATER
   const options: BaseControllerOptions = {
