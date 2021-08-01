@@ -11,7 +11,7 @@
     "seed": "ts-node-dev --poll src/database/seed.ts",
     "swagger": "ts-node-dev --poll src/start/swagger.ts",
     "test": "mocha -r ts-node/register 'test/**/*.ts'",
-    "test-file": "mocha -r ts-node/register",
+    "test-file": "mocha -r ts-node/register --file ./test/setup.ts",
     "coverage": "nyc npm run test",
     "lint": "eslint 'src/**/*.ts' 'test/**/*.ts'",
     "lint-fix": "eslint 'src/**/*.ts' 'test/**/*.ts' --fix",

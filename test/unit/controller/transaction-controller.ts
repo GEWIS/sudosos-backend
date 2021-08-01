@@ -430,7 +430,7 @@ describe('TransactionController', (): void => {
         .send(badReq);
       expect(res.status).to.equal(400);
     });
-    it('should return an HTTP 402 if the user has insufficient balance');
+    it('should return an HTTP 403 if the user has insufficient balance');
   });
 
   describe('DELETE /transactions', () => {
