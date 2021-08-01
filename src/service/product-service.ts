@@ -27,7 +27,7 @@ import ContainerRevision from '../entity/container/container-revision';
 import Container from '../entity/container/container';
 import UpdatedContainer from '../entity/container/updated-container';
 import User from '../entity/user/user';
-import ProductRequest, { ProductUpdateRequest } from '../controller/request/product-request';
+import ProductRequest from '../controller/request/product-request';
 import ProductCategory from '../entity/product/product-category';
 
 /**
@@ -268,7 +268,7 @@ export default class ProductService {
    * @param update - The variables to update. If undefined it uses the params from the latest
    * revision.
    */
-  public static async updateProduct(productId: number, update: ProductUpdateRequest)
+  public static async updateProduct(productId: number, update: ProductRequest)
     : Promise<ProductResponse> {
     // Get the base product.
     const base: Product = await Product.findOne(productId);
@@ -345,7 +345,7 @@ export default class ProductService {
    * Confirms an product update and creates a product revision.
    * @param productId - The product update to confirm.
    */
-  public static async confirmProductUpdate(productId: number)
+  public static async approveProductUpdate(productId: number)
     : Promise<ProductResponse> {
     const base: Product = await Product.findOne(productId);
 
@@ -384,29 +384,5 @@ export default class ProductService {
         && await ProductCategory.findOne(productRequest.category)
         && productRequest.picture !== ''
         && productRequest.alcoholPercentage >= 0;
-  }
-
-  /**
-   * Verifies whether the product request translates to a valid product
-   * @param {ProductRequest.model} productRequest - the product request to verify
-   * @returns {boolean} - whether product is ok or not
-   */
-  public static async verifyUpdate(productRequest: ProductUpdateRequest): Promise<boolean> {
-    if (productRequest.price) {
-      if (productRequest.price < 0) return false;
-    }
-    if (productRequest.name) {
-      if (productRequest.name === '') return false;
-    }
-    if (productRequest.category) {
-      if (!await ProductCategory.findOne(productRequest.category)) return false;
-    }
-    if (productRequest.picture) {
-      if (productRequest.picture === '') return false;
-    }
-    if (productRequest.alcoholPercentage) {
-      if (productRequest.alcoholPercentage < 0) return false;
-    }
-    return true;
   }
 }

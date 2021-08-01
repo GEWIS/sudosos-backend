@@ -296,7 +296,7 @@ describe('ProductService', async (): Promise<void> => {
       };
 
       await ProductService.updateProduct(res.id, updateParams);
-      const product = await ProductService.confirmProductUpdate(res.id);
+      const product = await ProductService.approveProductUpdate(res.id);
 
       validateProductProperties(product, updateParams);
       expect(product).to.exist;

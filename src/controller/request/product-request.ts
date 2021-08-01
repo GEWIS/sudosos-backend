@@ -31,13 +31,3 @@ export default interface ProductRequest {
   picture: string;
   alcoholPercentage: number;
 }
-
-/**
- * @typedef ProductUpdateRequest
- * @property {string} [name] - Name of the product
- * @property {number} [price] - Price of the product in 2 decimals
- * @property {number} [category] - Category of the product
- * @property {string} [picture] - URL of the product image
- * @property {number} [alcoholPercentage] - Alcohol percentage of the product in 2 decimals
- */
-export type ProductUpdateRequest = Partial<ProductRequest>;

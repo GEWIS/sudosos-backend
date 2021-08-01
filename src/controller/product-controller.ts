@@ -21,7 +21,7 @@ import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import ProductService from '../service/product-service';
-import ProductRequest, { ProductUpdateRequest } from './request/product-request';
+import ProductRequest from './request/product-request';
 
 export default class ProductController extends BaseController {
   private logger: Logger = log4js.getLogger('ProductController');
@@ -57,7 +57,7 @@ export default class ProductController extends BaseController {
           handler: this.returnSingleProduct.bind(this),
         },
         PATCH: {
-          body: { modelName: 'ProductUpdateRequest' },
+          body: { modelName: 'ProductRequest' },
           policy: async (req) => this.roleManager.can(req.token.roles, 'update', 'all', 'Product', ['*']),
           handler: this.updateProduct.bind(this),
         },
@@ -137,20 +137,20 @@ export default class ProductController extends BaseController {
    * @route PATCH /products/{id}
    * @group products - Operations of product controller
    * @param {integer} id.path.required - The id of the product which should be returned
-   * @param {ProductUpdateRequest.model} product.body.required - The product which should be created
+   * @param {ProductRequest.model} product.body.required - The product which should be created
    * @security JWT
    * @returns {ProductResponse.model} 200 - The created product entity
    * @returns {string} 400 - Validation error
    * @returns {string} 500 - Internal server error
    */
   public async updateProduct(req: RequestWithToken, res: Response): Promise<void> {
-    const body = req.body as ProductUpdateRequest;
+    const body = req.body as ProductRequest;
     const { id } = req.params;
     this.logger.trace('Update product', id, 'with', body, 'by user', req.token.user);
 
     // handle request
     try {
-      if (await ProductService.verifyUpdate(body)) {
+      if (await ProductService.verifyProduct(body)) {
         res.json(await ProductService.updateProduct(Number.parseInt(id, 10), body));
       } else {
         res.status(400).json('Invalid product.');
@@ -164,11 +164,10 @@ export default class ProductController extends BaseController {
   /**
    * Approve a product update.
    * @route POST /products/{id}/approve
-   * @param {integer} id.path.required - The id of the product to update
+   * @param {integer} id.path.required - The id of the product update to approve
    * @group products - Operations of product controller
    * @security JWT
    * @returns {ProductResponse.model} 200 - The approved product entity
-   * @returns {string} 400 - Validation error
    * @returns {string} 404 - Not found error
    * @returns {string} 500 - Internal server error
    */
@@ -179,7 +178,7 @@ export default class ProductController extends BaseController {
     const productId = Number.parseInt(id, 10);
     // Handle
     try {
-      const product = await ProductService.confirmProductUpdate(productId);
+      const product = await ProductService.approveProductUpdate(productId);
       if (product) {
         res.json(product);
       } else {
