@@ -61,6 +61,10 @@ test:
     - openssl genrsa -out config/jwt.key 2048
   script: npm run coverage
   artifacts:
+    when: always
+    reports:
+      junit: reports/junit.xml
+      cobertura: reports/coverage/cobertura-coverage.xml
     paths:
     - reports/coverage/
 

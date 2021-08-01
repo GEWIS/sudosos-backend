@@ -72,6 +72,11 @@ export default class Swagger {
   public static async importSpecification(file = 'out/swagger.json'): Promise<SwaggerSpecification> {
     const contents = await fs.readFile(file, 'utf-8');
     const swaggerSpec = JSON.parse(contents);
+
+    // Override settings from environment variables
+    swaggerSpec.host = process.env.API_HOST;
+    swaggerSpec.basePath = process.env.API_BASEPATH;
+
     new Validator(swaggerSpec);
     return swaggerSpec;
   }

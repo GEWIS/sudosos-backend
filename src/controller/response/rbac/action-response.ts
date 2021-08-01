@@ -15,28 +15,17 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import BaseResponse from './base-response';
-import { UserType } from '../../entity/user/user';
+
+import RelationResponse from './relation-response';
 
 /**
- * @typedef {BaseResponse} BaseUserResponse
- * @property {string} firstName.required - The name of the user.
- * @property {string} lastName - The last name of the user
+ * @typedef ActionResponse -
+ * The action contains the name of the action and a list of permissions per action.
+ * Typically the action name is one of the CRUD values 'create', 'read', 'update', and 'delete'.
+ * @property {string} action - The name of the action performed on the entity.
+ * @property {Array<RelationResponse>} relations - The ownership relations with permissions.
  */
-export interface BaseUserResponse extends BaseResponse {
-  firstName: string,
-  lastName: string
-}
-
-/**
- * @typedef {BaseUserResponse} UserResponse
- * @property {boolean} active.required - Whether the user activated
- * @property {boolean} deleted.required - Whether the user is deleted
- * @property {integer} type.required - The type of user
- */
-
-export interface UserResponse extends BaseUserResponse {
-  active: boolean;
-  deleted: boolean;
-  type: UserType;
+export default interface ActionResponse {
+  action: string;
+  relations: RelationResponse[];
 }

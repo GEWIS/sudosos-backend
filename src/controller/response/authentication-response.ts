@@ -15,28 +15,17 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import BaseResponse from './base-response';
-import { UserType } from '../../entity/user/user';
+
+import { UserResponse } from './user-response';
 
 /**
- * @typedef {BaseResponse} BaseUserResponse
- * @property {string} firstName.required - The name of the user.
- * @property {string} lastName - The last name of the user
- */
-export interface BaseUserResponse extends BaseResponse {
-  firstName: string,
-  lastName: string
-}
-
-/**
- * @typedef {BaseUserResponse} UserResponse
- * @property {boolean} active.required - Whether the user activated
- * @property {boolean} deleted.required - Whether the user is deleted
- * @property {integer} type.required - The type of user
- */
-
-export interface UserResponse extends BaseUserResponse {
-  active: boolean;
-  deleted: boolean;
-  type: UserType;
+  * @typedef AuthenticationResponse
+  * @property {UserResponse.model} user - The user that has authenticated.
+  * @property {Array<string>} roles - The RBAC roles that the user has.
+  * @property {string} token - The JWT token that can be used as Bearer token for authentication.
+  */
+export default interface AuthenticationResponse {
+  user: UserResponse,
+  roles: string[],
+  token: string,
 }

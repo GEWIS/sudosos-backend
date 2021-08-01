@@ -42,13 +42,8 @@ import ProductController from './controller/product-controller';
 import TransactionController from './controller/transaction-controller';
 import BorrelkaartGroupController from './controller/borrelkaart-group-controller';
 import BalanceService from './service/balance-service';
-import { defineTransactions } from '../test/seed';
-import PointOfSaleRevision from './entity/point-of-sale/point-of-sale-revision';
-import User from './entity/user/user';
-import Transaction from './entity/transactions/transaction';
-import PointOfSale from './entity/point-of-sale/point-of-sale';
-import TransactionService from './service/transaction-service';
 import BalanceController from './controller/balance-controller';
+import RbacController from './controller/rbac-controller';
 
 export class Application {
   app: express.Express;
@@ -73,6 +68,26 @@ export class Application {
     this.tasks.forEach((task) => task.stop());
     this.logger.info('Application stopped.');
   }
+}
+
+/**
+ * Sets up the rbac and initializes the rbac controllers of the application.
+ * @param application - The application on which to bind the middleware
+ *                      and controller.
+ */
+async function setupRbac(application: Application) {
+  // Setup GEWIS-specific module.
+  const gewis = new Gewis(application.roleManager);
+  await gewis.registerRoles();
+
+  // Define rbac controller and bind.
+  const controller = new RbacController(
+    {
+      specification: application.specification,
+      roleManager: application.roleManager,
+    },
+  );
+  application.app.use('/v1/rbac', controller.getRouter());
 }
 
 /**
@@ -135,6 +150,7 @@ export default async function createApp(): Promise<Application> {
 
   // Setup RBAC.
   application.roleManager = new RoleManager();
+  await setupRbac(application);
 
   // Setup token handler and authentication controller.
   await setupAuthentication(application);

@@ -15,28 +15,16 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import BaseResponse from './base-response';
-import { UserType } from '../../entity/user/user';
+
+import EntityResponse from './entity-response';
 
 /**
- * @typedef {BaseResponse} BaseUserResponse
- * @property {string} firstName.required - The name of the user.
- * @property {string} lastName - The last name of the user
+ * @typedef RoleResponse -
+ * A role contains a unique name, and a list of permissions per entity.
+ * @property {string} role.required - The name of the role.
+ * @property {Array<EntityResponse>} entities - The permissions with regards to the entity.
  */
-export interface BaseUserResponse extends BaseResponse {
-  firstName: string,
-  lastName: string
-}
-
-/**
- * @typedef {BaseUserResponse} UserResponse
- * @property {boolean} active.required - Whether the user activated
- * @property {boolean} deleted.required - Whether the user is deleted
- * @property {integer} type.required - The type of user
- */
-
-export interface UserResponse extends BaseUserResponse {
-  active: boolean;
-  deleted: boolean;
-  type: UserType;
+export default interface RoleResponse {
+  role: string;
+  entities: EntityResponse[];
 }
