@@ -25,6 +25,7 @@ import { TransactionResponse } from './response/transaction-response';
 import { asDate, asNumber } from '../helpers/validators';
 import { validatePaginationQueryParams } from '../helpers/pagination';
 import { TransactionRequest } from './request/transaction-request';
+import Transaction from '../entity/transactions/transaction';
 
 function parseGetTransactionsFilters(req: RequestWithToken): TransactionFilterParameters {
   if ((req.query.pointOfSaleRevision && !req.query.pointOfSaleId)
@@ -212,7 +213,19 @@ export default class TransactionController extends BaseController {
    */
   // eslint-disable-next-line class-methods-use-this
   public async deleteTransaction(req: RequestWithToken, res: Response): Promise<void> {
-    const transaction = await TransactionService.deleteTransaction(parseInt(req.params.id, 10));
-    res.status(200).json(transaction);
+    const { id } = req.params;
+    this.logger.trace('Delete transaction', id, 'by user', req.token.user);
+
+    // handle request
+    try {
+      if (await Transaction.findOne(id)) {
+        res.status(200).json(await TransactionService.deleteTransaction(parseInt(id, 10)));
+      } else {
+        res.status(404).json('Transaction not found.');
+      }
+    } catch (error) {
+      this.logger.error('Could not delete transaction:', error);
+      res.status(500).json('Internal server error.');
+    }
   }
 }
