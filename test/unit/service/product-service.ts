@@ -35,7 +35,7 @@ import UpdatedProduct from '../../../src/entity/product/updated-product';
 import UpdatedContainer from '../../../src/entity/container/updated-container';
 import Container from '../../../src/entity/container/container';
 import ContainerRevision from '../../../src/entity/container/container-revision';
-import ProductRequest, { ProductUpdateRequest } from '../../../src/controller/request/product-request';
+import ProductRequest from '../../../src/controller/request/product-request';
 
 chai.use(deepEqualInAnyOrder);
 /**
@@ -50,10 +50,10 @@ function returnsAll(response: ProductResponse[], superset: Product[]) {
 }
 
 function validateProductProperties(response: ProductResponse,
-  productParams: Partial<ProductRequest>) {
+  productParams: ProductRequest) {
   Object.keys(productParams).forEach((key: keyof ProductRequest) => {
     if (key === 'price') {
-      expect((productParams[key] as any)).to.be.equal((response.price.getAmount()));
+      expect((productParams[key] as any)).to.be.equal((response.price.amount));
     } else if (key === 'category') {
       expect((productParams[key] as any)).to.be.equal((response.category.id));
     } else {
@@ -187,7 +187,6 @@ describe('ProductService', async (): Promise<void> => {
         .filter((prod) => (
           ctx.updatedProducts.map((upd) => upd.product).includes(prod)
         ));
-      console.info(products);
 
       returnsAll(res, products);
     });
@@ -238,7 +237,8 @@ describe('ProductService', async (): Promise<void> => {
 
   describe('updateProducts function', () => {
     it('should update a product by ID', async () => {
-      const updateParams: ProductUpdateRequest = {
+      const updateParams: ProductRequest = {
+        category: 3,
         alcoholPercentage: 8,
         name: 'Product2-update',
         picture: 'https://sudosos/product2-update.png',
@@ -287,10 +287,10 @@ describe('ProductService', async (): Promise<void> => {
 
       const res: ProductResponse = await ProductService.createProduct(ctx.users[0], productParams);
 
-      const updateParams: ProductUpdateRequest = {
-        alcoholPercentage: 9,
+      const updateParams: ProductRequest = {
+        alcoholPercentage: 10,
         name: 'Product77-update',
-        picture: 'https://sudosos/product77-update.png',
+        picture: 'https://sudosos/product78-update.png',
         price,
         category: 2,
       };

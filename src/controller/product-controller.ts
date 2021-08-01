@@ -22,6 +22,7 @@ import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import ProductService from '../service/product-service';
 import ProductRequest from './request/product-request';
+import Product from '../entity/product/product';
 
 export default class ProductController extends BaseController {
   private logger: Logger = log4js.getLogger('ProductController');
@@ -68,7 +69,7 @@ export default class ProductController extends BaseController {
           handler: this.returnAllUpdatedProducts.bind(this),
         },
       },
-      '/:id(\\d+)/updated': {
+      '/:id(\\d+)/update': {
         GET: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Product', ['*']),
           handler: this.returnSingleUpdatedProduct.bind(this),
@@ -141,6 +142,7 @@ export default class ProductController extends BaseController {
    * @security JWT
    * @returns {ProductResponse.model} 200 - The created product entity
    * @returns {string} 400 - Validation error
+   * @returns {string} 404 - Product not found error
    * @returns {string} 500 - Internal server error
    */
   public async updateProduct(req: RequestWithToken, res: Response): Promise<void> {
@@ -151,7 +153,12 @@ export default class ProductController extends BaseController {
     // handle request
     try {
       if (await ProductService.verifyProduct(body)) {
-        res.json(await ProductService.updateProduct(Number.parseInt(id, 10), body));
+        const update = await ProductService.updateProduct(Number.parseInt(id, 10), body);
+        if (update) {
+          res.json(update);
+        } else {
+          res.status(404).json('Product not found.');
+        }
       } else {
         res.status(400).json('Invalid product.');
       }
@@ -207,7 +214,7 @@ export default class ProductController extends BaseController {
     // handle request
     try {
       // check if product in database
-      const product = await ProductService.getProducts({ productId: parseInt(id, 10) });
+      const product = (await ProductService.getProducts({ productId: parseInt(id, 10) }))[0];
       if (product) {
         res.json(product);
       } else {
@@ -243,7 +250,7 @@ export default class ProductController extends BaseController {
 
   /**
    * Returns the requested updated product
-   * @route GET /products/{id}/updated
+   * @route GET /products/{id}/update
    * @group products - Operations of products controller
    * @param {integer} id.path.required - The id of the product which should be returned
    * @security JWT
@@ -255,12 +262,12 @@ export default class ProductController extends BaseController {
     const { id } = req.params;
     this.logger.trace('Get single product', id, 'by user', req.token.user);
 
+    const productId = parseInt(id, 10);
+
     // handle request
     try {
-      // check if product in database
-      const product = await ProductService.getUpdatedProducts({ productId: parseInt(id, 10) });
-      if (product) {
-        res.json(product);
+      if (await Product.findOne(productId)) {
+        res.json((await ProductService.getUpdatedProducts({ productId: parseInt(id, 10) }))[0]);
       } else {
         res.status(404).json('Product not found.');
       }

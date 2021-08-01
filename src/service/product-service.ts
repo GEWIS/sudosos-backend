@@ -80,7 +80,7 @@ export default class ProductService {
       },
       picture: rawProduct.picture,
       name: rawProduct.name,
-      price: DineroTransformer.Instance.from(rawProduct.price),
+      price: DineroTransformer.Instance.from(rawProduct.price).toObject(),
     };
   }
 
@@ -281,11 +281,8 @@ export default class ProductService {
     // Get the latest available of this product.
     const latest: ProductResponse = (await this.getProducts({ productId }))[0];
 
-    // Create the product.
-    const updatedProduct: UpdatedProduct = UpdatedProduct.create();
-
     // Set base product, then the oldest settings and then the newest.
-    Object.assign(updatedProduct, {
+    const updatedProduct = Object.assign(new UpdatedProduct(), {
       product: base,
       ...latest,
       ...update,
@@ -314,26 +311,19 @@ export default class ProductService {
    */
   public static async createProduct(owner: User, product: ProductRequest)
     : Promise<ProductResponse> {
-    const base: Product = Product.create();
-
-    Object.assign(base, {
+    const base = Object.assign(new Product(), {
       owner,
     });
 
     // Save the product.
     await base.save();
 
-    // Create the product.
-    const updatedProduct: UpdatedProduct = UpdatedProduct.create();
-
     // Set base product, then the oldest settings and then the newest.
-    Object.assign(updatedProduct, {
+    const updatedProduct = Object.assign(new UpdatedProduct(), {
       product: await Product.findOne(base.id),
       ...product,
       // Price number into dinero.
-      price: dinero({
-        amount: product.price,
-      }),
+      price: DineroTransformer.Instance.from(product.price),
     });
 
     await updatedProduct.save();
@@ -348,19 +338,24 @@ export default class ProductService {
   public static async approveProductUpdate(productId: number)
     : Promise<ProductResponse> {
     const base: Product = await Product.findOne(productId);
+    const rawUpdateProduct = await UpdatedProduct.findOne(productId);
 
     // return undefined if not found or request is invalid
-    if (!base) {
+    if (!base || !rawUpdateProduct) {
       return undefined;
     }
+
+    const update: ProductResponse = (await this.getUpdatedProducts({ productId }))[0];
 
     // Set base product, then the oldest settings and then the newest.
     const productRevision: ProductRevision = Object.assign(new ProductRevision(), {
       product: base,
       // Apply the update.
-      ...(await this.getUpdatedProducts({ productId }))[0],
+      ...update,
       // Increment revision.
       revision: base.currentRevision ? base.currentRevision + 1 : 1,
+      // Fix dinero
+      price: DineroTransformer.Instance.from(update.price.amount),
     });
 
     // First save the revision.
@@ -368,6 +363,9 @@ export default class ProductService {
     // Increment current revision.
     base.currentRevision = base.currentRevision ? base.currentRevision + 1 : 1;
     await base.save();
+
+    // Remove update after revision is created.
+    await UpdatedProduct.delete(productId);
 
     // Return the new product.
     return (await this.getProducts({ productId }))[0];
