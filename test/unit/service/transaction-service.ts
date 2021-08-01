@@ -20,6 +20,7 @@ import express, { Application } from 'express';
 import { expect } from 'chai';
 import { Connection } from 'typeorm';
 import { SwaggerSpecification } from 'swagger-model-validator';
+import log4js, { Logger } from 'log4js';
 import Transaction from '../../../src/entity/transactions/transaction';
 import Database from '../../../src/database/database';
 import seedDatabase from '../../seed';
@@ -29,6 +30,8 @@ import { verifyBaseTransactionEntity } from '../validators';
 import Swagger from '../../../src/start/swagger';
 import { SubTransactionRequest, SubTransactionRowRequest, TransactionRequest } from '../../../src/controller/request/transaction-request';
 import { TransactionResponse } from '../../../src/controller/response/transaction-response';
+import SubTransaction from '../../../src/entity/transactions/sub-transaction';
+import SubTransactionRow from '../../../src/entity/transactions/sub-transaction-row';
 
 function transactionEq(req: TransactionRequest, res: TransactionResponse): Boolean {
   // check top level users
@@ -80,11 +83,14 @@ describe('TransactionService', (): void => {
     req: RequestWithToken,
     validTransReq: TransactionRequest
     spec: SwaggerSpecification,
+    logger: Logger,
   };
 
   // eslint-disable-next-line func-names
-  before(async function (): Promise<void> {
+  beforeEach(async function (): Promise<void> {
     this.timeout(5000);
+    const logger: Logger = log4js.getLogger('TransactionServiceTest');
+    logger.level = 'ALL';
     const connection = await Database.initialize();
     const app = express();
     const { transactions } = await seedDatabase();
@@ -128,10 +134,11 @@ describe('TransactionService', (): void => {
       validTransReq,
       transactions,
       spec: await Swagger.importSpecification(),
+      logger,
     };
   });
 
-  after(async () => {
+  afterEach(async () => {
     await ctx.connection.close();
   });
 
@@ -487,6 +494,17 @@ describe('TransactionService', (): void => {
     it('should return a transaction response corresponding to the saved transaction', async () => {
       const savedTransaction = await TransactionService.createTransaction(ctx.validTransReq);
       expect(transactionEq(ctx.validTransReq, savedTransaction), 'request not saved correctly').to.be.true;
+    });
+  });
+
+  describe('Delete a transaction', () => {
+    it('should return a transaction response corresponding to the deleted transaction', async () => {
+      await TransactionService.createTransaction(ctx.validTransReq);
+      const deletedTransaction = await TransactionService.deleteTransaction(193);
+      expect(transactionEq(ctx.validTransReq, deletedTransaction), 'return value incorrect').to.be.true;
+      expect(await SubTransactionRow.findOne(176), 'sub transaction row not deleted').to.be.undefined;
+      expect(await SubTransaction.findOne(209), 'sub transaction not deleted').to.be.undefined;
+      expect(await Transaction.findOne(193), 'transaction not deleted').to.be.undefined;
     });
   });
 });

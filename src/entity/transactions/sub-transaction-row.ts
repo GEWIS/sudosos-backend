@@ -39,6 +39,8 @@ export default class SubTransactionRow extends BaseEntity {
   })
   public amount: number;
 
-  @ManyToOne(() => SubTransaction, { nullable: false })
+  @ManyToOne(() => SubTransaction,
+    (subTransaction) => subTransaction.subTransactionRows,
+    { nullable: false, onDelete: 'CASCADE' })
   public subTransaction: SubTransaction;
 }

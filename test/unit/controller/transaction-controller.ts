@@ -20,6 +20,7 @@ import express, { Application } from 'express';
 import { expect, request } from 'chai';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
+import log4js, { Logger } from 'log4js';
 import TransactionController from '../../../src/controller/transaction-controller';
 import Transaction from '../../../src/entity/transactions/transaction';
 import Database from '../../../src/database/database';
@@ -46,11 +47,14 @@ describe('TransactionController', (): void => {
     transactions: Transaction[],
     validTransReq: TransactionRequest,
     swaggerspec: SwaggerSpecification,
+    logger: Logger,
   };
 
-  before(async () => {
+  beforeEach(async () => {
     // @ts-ignore
-    this.timeout(10000);
+    // this.timeout(10000);
+    const logger: Logger = log4js.getLogger('TransactionControllerTest');
+    logger.level = 'ALL';
     const connection = await Database.initialize();
     const app = express();
     const database = await seedDatabase();
@@ -81,6 +85,7 @@ describe('TransactionController', (): void => {
       },
     } as TransactionRequest;
     ctx = {
+      logger,
       connection,
       app,
       swaggerspec: undefined,
@@ -106,7 +111,9 @@ describe('TransactionController', (): void => {
       permissions: {
         Transaction: {
           get: all,
+          create: all,
           update: all,
+          delete: all,
         },
 
       },
@@ -125,7 +132,7 @@ describe('TransactionController', (): void => {
     ctx.app.use('/transactions', ctx.controller.getRouter());
   });
 
-  after(async () => {
+  afterEach(async () => {
     await ctx.connection.close();
   });
 
@@ -424,5 +431,37 @@ describe('TransactionController', (): void => {
       expect(res.status).to.equal(400);
     });
     it('should return an HTTP 402 if the user has insufficient balance');
+  });
+
+  describe('DELETE /transactions', () => {
+    it('should return an HTTP 200 and the deleted transaction if the transaction exists and user is admin', async () => {
+      let res = await request(ctx.app)
+        .get('/transactions/1')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      const deletedTransaction = res.body;
+
+      // delete the first transaction in the database
+      res = await request(ctx.app)
+        .delete('/transactions/1')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.body).to.eql(deletedTransaction);
+      expect(res.status).to.equal(200);
+    });
+    it('should return an HTTP 404 if the transaction does not exist', async () => {
+      // delete a nonexistent transaction in the database
+      const res = await request(ctx.app)
+        .delete('/transactions/0')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.body).to.equal('Transaction not found.');
+      expect(res.status).to.equal(404);
+    });
+    it('should return an HTTP 403 if not admin', async () => {
+      // delete the first transaction in the database
+      const res = await request(ctx.app)
+        .delete('/transactions/1')
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(403);
+    });
   });
 });

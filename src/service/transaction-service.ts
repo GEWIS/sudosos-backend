@@ -426,20 +426,8 @@ export default class TransactionService {
    */
   public static async deleteTransaction(id: number):
   Promise<TransactionResponse | undefined> {
-    // TODO: make cascading instead of wonky manual work
     // get the transaction we should delete
     const transaction = await this.getSingleTransaction(id);
-
-    // get transaction ids
-    const rowIds: number[] = [];
-    const subIds: number[] = transaction.subTransactions.map((sub) => {
-      sub.subTransactionRows.forEach((row) => rowIds.push(row.id));
-      return sub.id;
-    });
-
-    // delete transaction
-    await SubTransactionRow.delete(rowIds);
-    await SubTransaction.delete(subIds);
     await Transaction.delete(id);
 
     // return deleted transaction
