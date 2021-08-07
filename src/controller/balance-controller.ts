@@ -35,7 +35,6 @@ export default class BalanceController extends BaseController {
     this.logger.level = process.env.LOG_LEVEL;
   }
 
-
   /**
      * @inheritdoc
      */
