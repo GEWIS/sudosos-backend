@@ -26,7 +26,7 @@ import dinero, { Currency } from 'dinero.js';
 import { config } from 'dotenv';
 import express from 'express';
 import log4js, { Logger } from 'log4js';
-import { Connection, FindConditions, getManager } from 'typeorm';
+import { Connection } from 'typeorm';
 import cron from 'node-cron';
 import Database from './database/database';
 import Swagger from './start/swagger';
@@ -155,10 +155,6 @@ export default async function createApp(): Promise<Application> {
   // Setup token handler and authentication controller.
   await setupAuthentication(application);
 
-  // Setup GEWIS-specific module.
-  const gewis = new Gewis(application.roleManager);
-  await gewis.registerRoles();
-
   await BalanceService.updateBalances();
   const cronTask = cron.schedule('*/10 * * * *', () => {
     logger.debug('Syncing balances.');
@@ -190,7 +186,7 @@ if (require.main === module) {
   // Only execute the application directly if this is the main execution file.
   config();
   createApp().catch((e) => {
-    const logger = log4js.getLogger('index');
+    const logger = log4js.getLogger('Application');
     logger.fatal(e);
   });
 }

@@ -21,9 +21,7 @@ import {
   JoinColumn,
   ManyToOne,
   PrimaryColumn,
-  UpdateDateColumn,
   BaseEntity,
-  VersionColumn,
 } from 'typeorm';
 // eslint-disable-next-line import/no-cycle
 import User from '../user/user';

@@ -20,7 +20,6 @@ import express, { Application } from 'express';
 import { expect, request } from 'chai';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
-import TransactionController from '../../../src/controller/transaction-controller';
 import Transaction from '../../../src/entity/transactions/transaction';
 import Database from '../../../src/database/database';
 import seedDatabase from '../../seed';
@@ -28,8 +27,6 @@ import Swagger from '../../../src/start/swagger';
 import TokenHandler from '../../../src/authentication/token-handler';
 import User, { UserType } from '../../../src/entity/user/user';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
-import { BaseTransactionResponse } from '../../../src/controller/response/transaction-response';
-import { verifyBaseTransactionEntity } from '../validators';
 import RoleManager from '../../../src/rbac/role-manager';
 import BalanceController from '../../../src/controller/balance-controller';
 
@@ -46,7 +43,7 @@ describe('BalanceController', (): void => {
     transactions: Transaction[],
   };
 
-  before(async function (): Promise<void> {
+  before(async () => {
     // @ts-ignore
     this.timeout(10000);
     const connection = await Database.initialize();

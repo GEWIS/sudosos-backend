@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { FindManyOptions, QueryBuilder, SelectQueryBuilder } from 'typeorm';
+import { FindManyOptions, SelectQueryBuilder } from 'typeorm';
 import { RequestWithToken } from '../middleware/token-middleware';
 
 export function validatePaginationQueryParams(req: RequestWithToken): boolean {

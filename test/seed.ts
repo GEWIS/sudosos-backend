@@ -17,7 +17,6 @@
  */
 import dinero from 'dinero.js';
 import { addDays } from 'date-fns';
-import log4js from 'log4js';
 import Container from '../src/entity/container/container';
 import ContainerRevision from '../src/entity/container/container-revision';
 import PointOfSale from '../src/entity/point-of-sale/point-of-sale';

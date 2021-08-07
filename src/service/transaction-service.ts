@@ -43,14 +43,17 @@ export interface TransactionFilterParameters {
 }
 
 export default class TransactionService {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public static async verifyTransaction(req: TransactionRequest): Promise<boolean> {
     return true;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public static asTransaction(req: TransactionRequest): Transaction {
     return null;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public static asTransactionResponse(transaction: Transaction): TransactionResponse {
     return null;
   }
@@ -157,6 +160,7 @@ export default class TransactionService {
     });
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public static async createTransaction(req: TransactionRequest): Promise<TransactionResponse> {
     return {} as TransactionResponse;
   }
