@@ -24,7 +24,6 @@ import TransactionService, { TransactionFilterParameters } from '../service/tran
 import { TransactionResponse } from './response/transaction-response';
 import { asDate, asNumber } from '../helpers/validators';
 import { validatePaginationQueryParams } from '../helpers/pagination';
-import { TransactionRequest } from './request/transaction-request';
 
 function parseGetTransactionsFilters(req: RequestWithToken): TransactionFilterParameters {
   if ((req.query.pointOfSaleRevision && !req.query.pointOfSaleId)
@@ -72,13 +71,8 @@ export default class TransactionController extends BaseController {
           policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Transaction', ['*']),
           handler: this.getAllTransactions.bind(this),
         },
-        POST: {
-          body: { modelName: 'TransactionRequest' },
-          policy: async (req) => this.roleManager.can(req.token.roles, 'create', 'all', 'Transaction', ['*']),
-          handler: this.createTransaction.bind(this),
-        },
       },
-      '/:id(\\d+)': {
+      '/:id': {
         GET: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Transaction', ['*']),
           handler: this.getTransaction.bind(this),
@@ -134,39 +128,9 @@ export default class TransactionController extends BaseController {
   }
 
   /**
-   * Creates a new transaction
-   * @route POST /transactions
-   * @group transactions - Operations of the transaction controller
-   * @param {TransactionRequest.model} transaction.body.required -
-   * The transaction which should be created
-   * @security JWT
-   * @returns {TransactionResponse.model} 200 - The created transaction entity
-   * @returns {string} 400 - Validation error
-   * @returns {string} 500 - Internal server error
-   */
-  // eslint-disable-next-line class-methods-use-this
-  public async createTransaction(req: RequestWithToken, res: Response): Promise<void> {
-    const body = req.body as TransactionRequest;
-    this.logger.trace('Create banner', body, 'by user', req.token.user);
-
-    // handle request
-    try {
-      if (await TransactionService.verifyTransaction(body)) {
-        res.json(await TransactionService.createTransaction(body));
-      } else {
-        res.status(400).json('Invalid transaction.');
-      }
-    } catch (error) {
-      this.logger.error('Could not create transaction:', error);
-      res.status(500).json('Internal server error.');
-    }
-  }
-
-  /**
    * Get a single transaction
-   * @route GET /transactions/{id}
+   * @route GET /transactions/:id
    * @group transactions - Operations of the transaction controller
-   * @param {integer} id.path.required - The id of the transaction which should be returned
    * @security JWT
    * @returns {TransactionResponse.model} 200 - Single transaction with given id
    * @returns {string 404} - Nonexistent transaction id
