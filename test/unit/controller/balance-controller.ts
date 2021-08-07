@@ -43,8 +43,7 @@ describe('BalanceController', (): void => {
     transactions: Transaction[],
   };
 
-  before(async () => {
-    // @ts-ignore
+  before(async function test(): Promise<void> {
     this.timeout(10000);
     const connection = await Database.initialize();
     const app = express();
