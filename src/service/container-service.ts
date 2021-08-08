@@ -55,6 +55,10 @@ export interface ContainerParameters extends UpdatedContainerParameters {
    * Filter based on pointOfSale revision.
    */
   posRevision?: number;
+  /**
+   * Whether to select public containers.
+   */
+  public?: boolean;
 }
 
 export default class ContainerService {
@@ -69,6 +73,7 @@ export default class ContainerService {
       name: rawContainer.name,
       createdAt: rawContainer.createdAt,
       updatedAt: rawContainer.updatedAt,
+      public: rawContainer.public,
       owner: {
         id: rawContainer.owner_id,
         firstName: rawContainer.owner_firstName,
@@ -87,6 +92,7 @@ export default class ContainerService {
       name: rawContainer.name,
       createdAt: rawContainer.createdAt,
       updatedAt: rawContainer.updatedAt,
+      public: rawContainer.public,
       owner: {
         id: rawContainer.owner_id,
         firstName: rawContainer.owner_firstName,
@@ -114,6 +120,7 @@ export default class ContainerService {
       .innerJoin('container.owner', 'owner')
       .select([
         'container.id AS id',
+        'container.public as public',
         'container.createdAt AS createdAt',
         'containerrevision.revision AS revision',
         'containerrevision.updatedAt AS updatedAt',
@@ -153,6 +160,7 @@ export default class ContainerService {
       containerId: 'container.id',
       containerRevision: 'containerrevision.revision',
       ownerId: 'owner.id',
+      public: 'container.public',
     };
     QueryFilter.applyFilter(builder, filterMapping, p);
     if (!(posId || p.containerRevision)) {
@@ -162,6 +170,16 @@ export default class ContainerService {
     const rawContainers = await builder.getRawMany();
 
     return rawContainers.map((rawContainer) => this.asContainerResponse(rawContainer));
+  }
+
+  /**
+   * Function that returns all the containers visible to a user.
+   * @param params
+   */
+  public static async getContainersInUserContext(params: ContainerParameters): Promise<ContainerResponse[]> {
+    const publicContainers: ContainerResponse[] = await this.getContainers({ ...params, ownerId: undefined, public: true } as ContainerParameters);
+    const ownContainers: ContainerResponse[] = await this.getContainers({ ...params, public: false } as ContainerParameters);
+    return publicContainers.concat(ownContainers);
   }
 
   /**
@@ -181,6 +199,7 @@ export default class ContainerService {
       .innerJoinAndSelect('container.owner', 'owner')
       .select([
         'container.id AS id',
+        'container.public as public',
         'container.createdAt AS createdAt',
         'updatedcontainer.updatedAt AS updatedAt',
         'updatedcontainer.name AS name',
@@ -193,6 +212,7 @@ export default class ContainerService {
       containerId: 'container.id',
       containerRevision: 'containerrevision.revision',
       ownerId: 'owner.id',
+      public: 'container.public',
     };
     QueryFilter.applyFilter(builder, filterMapping, params);
 

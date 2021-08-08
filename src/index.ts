@@ -41,6 +41,7 @@ import ProductController from './controller/product-controller';
 import TransactionController from './controller/transaction-controller';
 import BorrelkaartGroupController from './controller/borrelkaart-group-controller';
 import RbacController from './controller/rbac-controller';
+import ContainerController from "./controller/container-controller";
 
 export class Application {
   app: express.Express;
@@ -156,6 +157,7 @@ export default async function createApp(): Promise<Application> {
   application.app.use('/v1/banners', new BannerController(options).getRouter());
   application.app.use('/v1/users', new UserController(options).getRouter());
   application.app.use('/v1/products', new ProductController(options).getRouter());
+  application.app.use('/v1/containers', new ContainerController(options).getRouter());
   application.app.use('/v1/transactions', new TransactionController(options).getRouter());
   application.app.use('/v1/borrelkaartgroups', new BorrelkaartGroupController(options).getRouter());
 
