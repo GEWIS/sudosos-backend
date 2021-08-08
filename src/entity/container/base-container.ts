@@ -20,6 +20,10 @@ import {
 } from 'typeorm';
 import BaseEntityWithoutId from '../base-entity-without-id';
 
+/**
+ * @typedef {BaseEntityWithoutId} BaseContainer
+ * @property {string} name.required - The unique name of the container.
+ */
 export default class BaseContainer extends BaseEntityWithoutId {
   @Column({
     length: 64,

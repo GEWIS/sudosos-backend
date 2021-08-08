@@ -20,6 +20,11 @@ import {
 } from 'typeorm';
 import User from './user';
 
+/**
+ * @typedef {BaseEntity} GewisUser
+ * @property {User.model} user.required - The user.
+ * @property {integer} gewisId.required - The id of the member/committee/fraternity.
+ */
 @Entity()
 export default class GewisUser extends BaseEntity {
   @OneToOne(() => User, { primary: true, nullable: false })

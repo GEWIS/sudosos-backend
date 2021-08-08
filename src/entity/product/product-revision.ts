@@ -24,6 +24,11 @@ import {
 import BaseProduct from './base-product';
 import Product from './product';
 
+/**
+ * @typedef {BaseProduct} ProductRevision
+ * @property {Product.model} product.required - The product the revision belongs to.
+ * @property {integer} revision.required - The revision number of this revision.
+ */
 @Entity()
 export default class ProductRevision extends BaseProduct {
   @ManyToOne(() => Product, {

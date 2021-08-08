@@ -25,9 +25,9 @@ import ProductRevision from '../product/product-revision';
 
 /**
  * @typedef {SubTransactionRow} SubTransactionRow
- * @property {Product.model} product.required - The product that has been bought
- * @property {integer} amount.required - The amount that has been bought
- * @property {Array.<SubTransaction>} subTransactions
+ * @property {Product.model} product.required - The product that has been bought.
+ * @property {integer} amount.required - The amount that has been bought.
+ * @property {SubTransaction.model} subTransaction - The subTransaction this row belongs to.
  */
 @Entity()
 export default class SubTransactionRow extends BaseEntity {
