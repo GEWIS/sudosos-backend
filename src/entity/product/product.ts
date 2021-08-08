@@ -23,6 +23,12 @@ import {
 import BaseEntity from '../base-entity';
 import User from '../user/user';
 
+/**
+ * @typedef {BaseEntity} Product
+ * @property {integer} currentRevision - The current revision of the product.
+ * Can be null if no revision exists.
+ * @property {User.model} owner.required - The owner of the product.
+ */
 @Entity()
 export default class Product extends BaseEntity {
   @Column({

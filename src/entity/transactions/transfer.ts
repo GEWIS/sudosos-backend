@@ -30,13 +30,15 @@ export enum TransferType {
 }
 
 /**
- * @typedef {Transfer} Transfer
- * @property {User.model} from.required - The account from which the transaction is subtracted.
- * @property {User.model} to.required - The account to which the transaction is added.
- * @property {Dinero.model} price.required - The amount of money transferred.
- * @property {TransferType} type.required - The type of transfer
- * @prpoerty {string} description - If the Transfer is of type 'custom', this contains a
- *  description of the transfer
+ * @typedef {BaseEntity} Transfer
+ * @property {User.model} from - The account from which the transfer is subtracted. Can be
+ * null if money was deposited.
+ * @property {User.model} to - The account to which the transaction is added. Can be null if
+ * money was paid out.
+ * @property {Dinero.model} amount.required - The amount of money transferred.
+ * @property {integer} type.required - The type of transfer.
+ * @prpoerty {string} description - If the transfer is of type 'custom', this contains a
+ * description of the transfer.
  */
 @Entity()
 export default class Transfer extends BaseEntity {

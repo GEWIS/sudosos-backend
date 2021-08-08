@@ -24,6 +24,12 @@ import BasePointOfSale from './base-point-of-sale';
 import PointOfSale from './point-of-sale';
 import Container from '../container/container';
 
+/**
+ * @typedef {BasePointOfSale} UpdatedPointOfSale
+ * @property {PointOfSale.model} pointOfSale.required - The pointOfSale the revision belongs to.
+ * @property {Array.<Container>} containers.required - The containers that should be contained
+ * in the pointOfSale.
+ */
 @Entity()
 export default class UpdatedPointOfSale extends BasePointOfSale {
   @OneToOne(() => PointOfSale, {
