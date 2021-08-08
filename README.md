@@ -5,11 +5,11 @@ Hi welcome to SudoSOS. To get you quickly started follow the install steps below
 This quick start first states what software needs to be installed to be able to work with the project and then explains how to get the project started.
 
 Prerequisites:
--	Have NPM installed
+-	Have Node.js installed
      - Note that NPM 14.16 (latest) might not run the coverage on Linux. This is probably a race condition in the package and is being addressed.
-- Have OpenSSL installed
 - Have Git and possibly a Git manager installed
-- Have a SQLite viewer installed (optional, you can also set it to be saved in another database, but SQLite is the default)
+- Have OpenSSL installed (if you're using Git Bash you already have OpenSSL)
+- Have a SQLite viewer installed (optional, you can also set it to be saved in another database, but SQLite is the default).
 
 Installing:
 -	Checkout the Git to your favorite directory
@@ -18,6 +18,7 @@ Installing:
 - Run `openssl genrsa -out config/jwt.key 2048`
 - Check that there exists a jwt.key file in the config directory starting with `-----BEGIN RSA PRIVATE KEY-----`
 - Run `npm run swagger`
+- Run `npm run build`
 - Run `npm run test` - All of these should now pass
 
 Running:
