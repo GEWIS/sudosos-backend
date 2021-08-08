@@ -58,7 +58,7 @@ describe('UserController', (): void => {
     transactions: Transaction[],
   };
 
-  before(async function test() {
+  before(async function before() {
     const connection = await Database.initialize();
     ctx = { connection } as any; // on timeout forces connection to close
     const app = express();

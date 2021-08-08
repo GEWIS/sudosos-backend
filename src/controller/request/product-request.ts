@@ -15,22 +15,19 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import * as express from 'express';
-import { SwaggerSpecification } from 'swagger-model-validator';
-import Swagger from '../../../../src/start/swagger';
-import { sourceFile } from '../../../setup';
 
 /**
- * @typedef TestModel
- * @property {string} name.required - The name of the model.
- * @property {number} value.required - A test value.
+ * @typedef ProductRequest
+ * @property {string} name - Name of the product
+ * @property {number} price - Price of the product in 2 decimals
+ * @property {number} category - Category of the product
+ * @property {string} picture - URL of the product image
+ * @property {number} alcoholPercentage - Alcohol percentage of the product in 2 decimals
  */
-export class TestModel {
+export default interface ProductRequest {
   name: string;
-
-  value: number;
-}
-
-export async function getSpecification(app: express.Application): Promise<SwaggerSpecification> {
-  return Swagger.generateSpecification(app, sourceFile(__filename));
+  price: number;
+  category: number;
+  picture: string;
+  alcoholPercentage: number;
 }
