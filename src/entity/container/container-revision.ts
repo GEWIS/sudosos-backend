@@ -25,6 +25,13 @@ import BaseContainer from './base-container';
 import Container from './container';
 import ProductRevision from '../product/product-revision';
 
+/**
+ * @typedef {BaseContainer} ContainerRevision
+ * @property {Container.model} container.required - The container the revision belongs to.
+ * @property {integer} revision.required - The revision number of this revision.
+ * @property {Array.<ProductRevision>} products.required - The products that are contained in this
+ * revision.
+ */
 @Entity()
 export default class ContainerRevision extends BaseContainer {
   @ManyToOne(() => Container, {

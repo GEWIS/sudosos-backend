@@ -25,6 +25,13 @@ import BasePointOfSale from './base-point-of-sale';
 import PointOfSale from './point-of-sale';
 import ContainerRevision from '../container/container-revision';
 
+/**
+ * @typedef {BasePointOfSale} PointOfSaleRevision
+ * @property {PointOfSale.model} pointOfSale.required - The pointOfSale the revision belongs to.
+ * @property {integer} revision.required - The revision number of this revision.
+ * @property {Array.<ContainerRevision>} containers.required - The containers that are contained
+ * in this revision.
+ */
 @Entity()
 export default class PointOfSaleRevision extends BasePointOfSale {
   @ManyToOne(() => PointOfSale, {

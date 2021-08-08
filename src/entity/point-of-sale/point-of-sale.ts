@@ -23,6 +23,12 @@ import {
 import BaseEntity from '../base-entity';
 import User from '../user/user';
 
+/**
+ * @typedef {BaseEntity} PointOfSale
+ * @property {integer} currentRevision - The current revision of the pointOfSale.
+ * Can be null if no revision exists.
+ * @property {User.model} owner.required - The owner of the pointOfSale.
+ */
 @Entity()
 export default class PointOfSale extends BaseEntity {
   @Column({

@@ -29,5 +29,5 @@ import BaseEntityWithoutId from './base-entity-without-id';
  */
 export default class BaseEntity extends BaseEntityWithoutId {
   @PrimaryGeneratedColumn()
-  public readonly id?: number;
+  public readonly id: number;
 }
