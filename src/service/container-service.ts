@@ -166,8 +166,7 @@ export default class ContainerService {
 
   /**
    * Query to return all updated containers.
-   * @param owner - If specified it will only return containers who has the owner Owner.
-   * @param containerId - If specified, only return the container with id containerId.
+   * @param params
    */
   public static async getUpdatedContainers(
     params: UpdatedContainerParameters = {},
