@@ -18,7 +18,7 @@
 
 /**
  * @typedef AuthenticationMockRequest
- * @property {integer} userId.required
+ * @property {number} userId.required
  * @property {string} nonce.required
  */
 export default interface AuthenticationMockRequest {

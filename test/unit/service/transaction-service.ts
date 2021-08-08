@@ -37,7 +37,7 @@ describe('TransactionService', (): void => {
     spec: SwaggerSpecification,
   };
 
-  before(async function () {
+  before(async function before() {
     // @ts-ignore
     this.timeout(5000);
     const connection = await Database.initialize();

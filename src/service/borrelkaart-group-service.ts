@@ -69,7 +69,7 @@ export default class BorrelkaartGroupService {
   /**
    * Verifies whether the borrelkaart group request holds user conflicts
    * @param {BorrelkaartGroupRequest.model} bkgReq - The borrelkaart group request
-   * @param {number} ignoreGroupId - Ignore users in the group with given id when updating.
+   * @param {integer} ignoreGroupId - Ignore users in the group with given id when updating.
    * @returns {boolean} whether the borrelkaart group is ok
    */
   public static async checkUserConflicts(

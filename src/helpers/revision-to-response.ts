@@ -28,7 +28,7 @@ export function parseProductToBaseResponse(
   return {
     id: product.product.id,
     name: product.name,
-    price: product.price,
+    price: product.price.toObject(),
     createdAt: timestamps ? product.createdAt.toISOString() : undefined,
     updatedAt: timestamps ? product.updatedAt.toISOString() : undefined,
   } as BaseProductResponse;
