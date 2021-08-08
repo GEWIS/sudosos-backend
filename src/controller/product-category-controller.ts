@@ -23,7 +23,7 @@ import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import ProductCategoryService from '../service/product-category-service';
 import ProductCategoryRequest from './request/product-category-request';
-import ProductCategory from '../entity/product/product-category';
+// import ProductCategory from '../entity/product/product-category';
 
 export default class ProductCategoryController extends BaseController {
   private logger: Logger = log4js.getLogger('ProductCategoryController');
@@ -87,7 +87,8 @@ export default class ProductCategoryController extends BaseController {
    * Post a new product-category.
    * @route POST /product-categories
    * @group productCategories - Operations of product-categories controller
-   * @param {ProductCategoryRequest.model} productCategory.body.required - The product-category which should be created
+   * @param {ProductCategoryRequest.model} productCategory.body.required
+   * - The product-category which should be created
    * @security JWT
    * @returns {ProductResponse.model} 200 - The created product-category entity
    * @returns {string} 400 - Validation error
@@ -123,7 +124,9 @@ export default class ProductCategoryController extends BaseController {
     // handle request
     try {
       // check if product in database
-      const productCategory = (await ProductCategoryService.getProductCategories({ id: parseInt(id, 10) }))[0];
+      const parsedId = parseInt(id, 10);
+      const productCategory = (
+        (await ProductCategoryService.getProductCategories({ id: parsedId }))[0]);
       if (productCategory) {
         res.json(productCategory);
       } else {
