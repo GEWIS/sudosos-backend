@@ -121,6 +121,7 @@ export default class ProductCategoryService {
   public static async verifyProductCategory(productCategoryRequest: ProductCategoryRequest):
   Promise<boolean> {
     return productCategoryRequest.name !== ''
-        && productCategoryRequest.name.length <= 64;
+        && productCategoryRequest.name.length <= 64
+        && !(await ProductCategory.findOne({ where: { name: productCategoryRequest.name } }));
   }
 }
