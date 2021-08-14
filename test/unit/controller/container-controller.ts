@@ -30,11 +30,9 @@ import TokenMiddleware from '../../../src/middleware/token-middleware';
 import ContainerRequest from '../../../src/controller/request/container-request';
 import ContainerController from '../../../src/controller/container-controller';
 import Container from '../../../src/entity/container/container';
-import { ContainerResponse } from '../../../src/controller/response/container-response';
+import { ContainerResponse, ContainerWithProductsResponse } from '../../../src/controller/response/container-response';
 import { ProductResponse } from '../../../src/controller/response/product-response';
-import UpdatedProduct from '../../../src/entity/product/updated-product';
 import UpdatedContainer from '../../../src/entity/container/updated-container';
-import Product from '../../../src/entity/product/product';
 
 /**
  * Tests if a container response is equal to the request.
@@ -97,7 +95,7 @@ describe('ContainerController', async (): Promise<void> => {
     const token = await tokenHandler.signToken({ user: localUser, roles: ['User'] }, 'nonce');
 
     const validContainerReq: ContainerRequest = {
-      products: [1, 2],
+      products: [7, 8],
       public: true,
       name: 'Valid container',
     };
@@ -345,7 +343,12 @@ describe('ContainerController', async (): Promise<void> => {
   });
   describe('POST /containers/:id/approve', () => {
     it('should approve the container update if it exists and admin', async () => {
-      const id = 4;
+      const newContainer = await request(ctx.app)
+        .post('/containers')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(ctx.validContainerReq);
+
+      const { id } = newContainer.body;
 
       // sanity check / precondition
       expect(await UpdatedContainer.findOne(id)).to.exist;
@@ -355,10 +358,10 @@ describe('ContainerController', async (): Promise<void> => {
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
       // sanity check
-      expect(await UpdatedContainer.findOne(4)).to.be.undefined;
+      expect(await UpdatedContainer.findOne(id)).to.be.undefined;
 
       const latest = await request(ctx.app)
-        .get('/containers/4')
+        .get(`/containers/${id}`)
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
       expect(latest.body).to.deep.equal(res.body);

@@ -28,6 +28,7 @@ import ContainerRequest from '../controller/request/container-request';
 import User from '../entity/user/user';
 import Product from '../entity/product/product';
 import UpdatedProduct from '../entity/product/updated-product';
+import ProductRevision from '../entity/product/product-revision';
 
 /**
  * Define updated container filtering parameters used to filter query results.
@@ -243,12 +244,14 @@ export default class ContainerService {
 
     // Save the base.
     await base.save();
+    let products: Product[] = [];
+    await Promise.all(container.products.map((id) => Product.findOne(id))).then((result) => { products = result.filter((p) => p); });
 
     // Set base container and apply new update.
     const updatedContainer = Object.assign(new UpdatedContainer(), {
       container: await Container.findOne(base.id),
       name: container.name,
-      products: container.products,
+      products,
     });
 
     // Save update
@@ -279,15 +282,27 @@ export default class ContainerService {
       .from(UpdatedContainer, 'container')
       .where('container.container.id = :id', { id: containerId })
       .innerJoinAndSelect('container.products', 'product')
-      .select('product.id');
+      .select('product.currentRevision, product.id');
 
-    const products = (await builder.getRawMany()).map((product: any) => product.product_id);
+    const productIds: any[] = await builder.getRawMany();
+    const valid = productIds.every(async (p) => !(await UpdatedProduct.findOne(p.id)));
+
+    if (!valid) {
+      throw new Error('Container update has unapproved product(s).');
+    }
+
+    const products = (productIds).map(async (product: any) => ProductRevision.findOne({ where: `currentRevision = ${product.currentRevision} AND id = ${product.id}` }));
+
+    let revision: ProductRevision[] = [];
+    await Promise.all(products).then((prod) => {
+      revision = prod.filter((p) => p);
+    });
 
     // Set base container and apply new revision.
     const containerRevision: ContainerRevision = Object.assign(new ContainerRevision(), {
       container: base,
-      products,
-      name: base.name,
+      products: revision,
+      name: rawContainerUpdate.name,
       // Increment revision.
       revision: base.currentRevision ? base.currentRevision + 1 : 1,
     });
@@ -306,14 +321,14 @@ export default class ContainerService {
     const update: ContainerResponse = (await this.getContainers({ containerId: base.id }))[0];
 
     const containerResponse: ContainerWithProductsResponse = update as ContainerWithProductsResponse;
-    containerResponse.products = await ProductService.getUpdatedProducts({ containerId: base.id });
+    containerResponse.products = await ProductService.getProducts({ containerId: base.id });
 
     return containerResponse;
   }
 
   /**
    * Verifies whether the container request translates to a valid container
-   * @param {ContainerRequest.model} containerRequest - the container request to verify
+   * @param containerRequest - The request to verify
    * @returns {boolean} - whether container is ok or not
    */
   public static async verifyContainer(containerRequest: ContainerRequest) {
