@@ -63,6 +63,7 @@ export default class TransactionController extends BaseController {
     this.logger.level = process.env.LOG_LEVEL;
   }
 
+  // TODO: implement user policy
   /**
    * @inheritDoc
    */
