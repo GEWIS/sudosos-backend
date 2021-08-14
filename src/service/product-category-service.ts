@@ -20,6 +20,7 @@ import ProductCategory from '../entity/product/product-category';
 import { ProductCategoryResponse } from '../controller/response/product-category-response';
 import ProductCategoryRequest from '../controller/request/product-category-request';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
+import ProductRequest from '../controller/request/product-request';
 
 /**
  * Define productCategory filtering parameters used to filter query results.
@@ -110,5 +111,17 @@ export default class ProductCategoryService {
       return null;
     }
     return ProductCategory.delete(id).then(() => this.asProductCategoryResponse(productCategory));
+  }
+
+  /**
+   * Verifies whether the productCategory request translates to a valid productCategory
+   * @param {ProductCategoryRequest.model} productCategoryRequest
+   * - the productCategory request to verify
+   * @returns {boolean} - whether productCategory is ok or not
+   */
+  public static async verifyProductCategory(productCategoryRequest: ProductCategoryRequest):
+  Promise<boolean> {
+    return productCategoryRequest.name !== ''
+        && productCategoryRequest.name.length <= 64;
   }
 }

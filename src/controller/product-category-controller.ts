@@ -23,6 +23,7 @@ import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import ProductCategoryService from '../service/product-category-service';
 import ProductCategoryRequest from './request/product-category-request';
+import ProductService from '../service/product-service';
 // import ProductCategory from '../entity/product/product-category';
 
 export default class ProductCategoryController extends BaseController {
@@ -70,9 +71,9 @@ export default class ProductCategoryController extends BaseController {
   /**
    * Returns all existing product-categories
    * @route GET /product-categories
-   * @group productCategories - Operations of product-categories controller
+   * @group productCategories - Operations of productCategories controller
    * @security JWT
-   * @returns {Array<ProductCategoryResponse>} 200 - All existing product-categories
+   * @returns {Array<ProductCategoryResponse>} 200 - All existing productCategories
    * @returns {string} 500 - Internal server error
    */
   public async returnAllProductCategories(req: RequestWithToken, res: Response): Promise<void> {
@@ -95,7 +96,7 @@ export default class ProductCategoryController extends BaseController {
    * @param {ProductCategoryRequest.model} productCategory.body.required
    * - The productCategory which should be created
    * @security JWT
-   * @returns {ProductResponse.model} 200 - The created productCategory entity
+   * @returns {ProductCategoryResponse.model} 200 - The created productCategory entity
    * @returns {string} 400 - Validation error
    * @returns {string} 500 - Internal server error
    */
@@ -105,7 +106,11 @@ export default class ProductCategoryController extends BaseController {
 
     // handle request
     try {
-      res.json(await ProductCategoryService.postProductCategory(body));
+      if (await ProductCategoryService.verifyProductCategory(body)) {
+        res.json(await ProductCategoryService.postProductCategory(body));
+      } else {
+        res.status(400).json('Invalid productCategory.');
+      }
     } catch (error) {
       this.logger.error('Could not create productCategory:', error);
       res.status(500).json('Internal server error.');
@@ -115,7 +120,7 @@ export default class ProductCategoryController extends BaseController {
   /**
    * Returns the requested productCategory
    * @route GET /product-categories/{id}
-   * @group productCategories - Operations of product-categories controller
+   * @group productCategories - Operations of productCategories controller
    * @param {integer} id.path.required - The id of the productCategory which should be returned
    * @security JWT
    * @returns {ProductCategoryResponse.model} 200 - The requested productCategory entity
@@ -163,12 +168,16 @@ export default class ProductCategoryController extends BaseController {
 
     // handle request
     try {
-      const parsedId = Number.parseInt(id, 10);
-      const update = await ProductCategoryService.patchProductCategory(parsedId, body);
-      if (update) {
-        res.json(update);
+      if (await ProductCategoryService.verifyProductCategory(body)) {
+        const parsedId = Number.parseInt(id, 10);
+        const update = await ProductCategoryService.patchProductCategory(parsedId, body);
+        if (update) {
+          res.json(update);
+        } else {
+          res.status(404).json('productCategory not found.');
+        }
       } else {
-        res.status(404).json('productCategory not found.');
+        res.status(400).json('Invalid productCategory.');
       }
     } catch (error) {
       this.logger.error('Could not update productCategory:', error);
