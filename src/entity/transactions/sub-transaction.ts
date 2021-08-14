@@ -44,7 +44,7 @@ export default class SubTransaction extends BaseEntity {
 
   @ManyToOne(() => Transaction,
     (transaction) => transaction.subTransactions,
-    { nullable: false, onDelete: 'CASCADE' })
+    { nullable: false, onUpdate: 'CASCADE', onDelete: 'CASCADE' })
   public transaction: Transaction;
 
   @OneToMany(() => SubTransactionRow,

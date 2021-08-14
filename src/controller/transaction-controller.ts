@@ -85,6 +85,11 @@ export default class TransactionController extends BaseController {
           policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Transaction', ['*']),
           handler: this.getTransaction.bind(this),
         },
+        PATCH: {
+          body: { modelName: 'TransactionRequest' },
+          policy: async (req) => this.roleManager.can(req.token.roles, 'update', 'all', 'Transaction', ['*']),
+          handler: this.updateTransaction.bind(this),
+        },
         DELETE: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'delete', 'all', 'Transaction', ['*']),
           handler: this.deleteTransaction.bind(this),
@@ -148,6 +153,7 @@ export default class TransactionController extends BaseController {
    * @security JWT
    * @returns {TransactionResponse.model} 200 - The created transaction entity
    * @returns {string} 400 - Validation error
+   * @returns {string} 403 - Insufficient balance error
    * @returns {string} 500 - Internal server error
    */
   // eslint-disable-next-line class-methods-use-this
@@ -201,6 +207,47 @@ export default class TransactionController extends BaseController {
     }
 
     res.status(200).json(transaction);
+  }
+
+  /**
+   * Updates the requested transaction
+   * @route PATCH /transactions/{id}
+   * @group transactions - Operations of transaction controller
+   * @param {integer} id.path.required - The id of the transaction which should be updated
+   * @param {BorrelkaartGroupRequest.model} transaction.body.required -
+   * The updated transaction
+   * @security JWT
+   * @returns {TransactionResponse.model} 200 - The requested transaction entity
+   * @returns {string} 400 - Validation error
+   * @returns {string} 404 - Not found error
+   * @returns {string} 500 - Internal server error
+   */
+  public async updateTransaction(req: RequestWithToken, res: Response): Promise<void> {
+    const body = req.body as TransactionRequest;
+    const { id } = req.params;
+    this.logger.trace('Update Transaction', id, 'by user', req.token.user);
+
+    // handle request
+    try {
+      if (await Transaction.findOne(id)) {
+        if (await TransactionService.verifyTransaction(body)) {
+          if (await TransactionService.verifyBalance(body)) {
+            res.status(200).json(await TransactionService.updateTransaction(
+              parseInt(id, 10), body,
+            ));
+          } else {
+            res.status(403).json('Insufficient balance.');
+          }
+        } else {
+          res.status(400).json('Invalid transaction.');
+        }
+      } else {
+        res.status(404).json('Transaction not found.');
+      }
+    } catch (error) {
+      this.logger.error('Could not update transaction:', error);
+      res.status(500).json('Internal server error.');
+    }
   }
 
   /**

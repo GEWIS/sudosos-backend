@@ -420,6 +420,22 @@ export default class TransactionService {
   }
 
   /**
+   * Updates a transaction and its user relations in the database
+   * @param {string} id - requested transaction id
+   * @param {TransactionRequest.model} req - new transaction request
+   * @returns {TransactionResponse.model} updated transaction
+   * @returns {undefined} undefined when transaction not found
+   */
+  public static async updateTransaction(id: number, req: TransactionRequest):
+  Promise<TransactionResponse | undefined> {
+    const transaction = await this.asTransaction(req);
+
+    // update transaction and return response
+    await Transaction.update(id, transaction);
+    return this.asTransactionResponse(transaction);
+  }
+
+  /**
    * Deletes a transaction
    * @param {number} id - the id of the requested transaction
    * @returns {TransactionResponse.model} - the deleted transaction
