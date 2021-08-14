@@ -15,25 +15,19 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import {
-  BaseEntity, Column, Entity, JoinColumn, OneToOne,
-} from 'typeorm';
-import User from './user';
 
 /**
- * @typedef {BaseEntity} GewisUser
- * @property {User.model} user.required - The user.
- * @property {integer} gewisId.required - The id of the member/committee/fraternity.
+ * @typedef ProductRequest
+ * @property {string} name - Name of the product
+ * @property {number} price - Price of the product in 2 decimals
+ * @property {number} category - Category of the product
+ * @property {string} picture - URL of the product image
+ * @property {number} alcoholPercentage - Alcohol percentage of the product in 2 decimals
  */
-@Entity()
-export default class GewisUser extends BaseEntity {
-  @OneToOne(() => User, { primary: true, nullable: false })
-  @JoinColumn()
-  public user: User;
-
-  @Column({
-    type: 'integer',
-  })
-  // Can be both a Membership ID or a committee / fraternity ID
-  public gewisId: number;
+export default interface ProductRequest {
+  name: string;
+  price: number;
+  category: number;
+  picture: string;
+  alcoholPercentage: number;
 }

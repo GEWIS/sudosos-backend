@@ -138,6 +138,10 @@ describe('RoleManager', (): void => {
       const r = ctx.manager.can(['Role2'], 'create', 'own', 'Entity2', [...ctx.attrOne]);
       expect(r).to.be.true;
     });
+    it('should support multiple relations as argument', () => {
+      const r = ctx.manager.can(['Role2'], 'create', ['own', 'created'], 'Entity2', [...ctx.attrOne]);
+      expect(r).to.be.true;
+    });
     it('should support querying all relation', () => {
       const r = ctx.manager.can(['Role2'], 'create', 'all', 'Entity2', [...ctx.attrOne]);
       expect(r).to.be.true;

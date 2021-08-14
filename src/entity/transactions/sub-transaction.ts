@@ -29,10 +29,10 @@ import SubTransactionRow from './sub-transaction-row';
  * @typedef {BaseEntityWithoutId} SubTransaction
  * @property {User.model} to.required - The account that the transaction is added to.
  * @property {Container.model} container.required - The container from which all products in the
- *     SubTransactionRows are bought
- * @property {Transaction.model} transaction.required - The parent transaction
+ * SubTransactionRows are bought.
+ * @property {Transaction.model} transaction.required - The parent transaction.
  * @property {Array.<SubTransactionRow>} subTransactionsRows.required - The rows of this
- *     SubTransaction
+ * SubTransaction.
  */
 @Entity()
 export default class SubTransaction extends BaseEntity {

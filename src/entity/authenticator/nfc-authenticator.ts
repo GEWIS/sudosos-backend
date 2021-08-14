@@ -23,8 +23,8 @@ import User from '../user/user';
 
 /**
  * @typedef {NfcAuthenticator} NfcAuthenticator
- * @property {User.model} user - The user this authenticator is for
- * @property {string} uid - The hash of the UID of the NFC chip
+ * @property {User.model} user.required - The user this authenticator is for
+ * @property {string} uid.required - The hash of the UID of the NFC chip
  */
 @Entity()
 export default class NfcAuthenticator extends BaseEntityWithoutId {

@@ -23,6 +23,12 @@ import User from './user';
 // eslint-disable-next-line import/no-cycle
 import BorrelkaartGroup from './borrelkaart-group';
 
+/**
+ * @typedef {BaseEntity} UserBorrelkaartGroup
+ * @property {User.model} user.required - The user that belongs to the group.
+ * @property {BorrelkaartGroup.model} borrelkaartGroup.required - The borrelkaartGroup the user
+ * belongs to.
+ */
 @Entity()
 export default class UserBorrelkaartGroup extends BaseEntity {
   @OneToOne(() => User, { primary: true, nullable: false })

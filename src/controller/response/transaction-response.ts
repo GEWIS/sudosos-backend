@@ -74,7 +74,7 @@ export interface SubTransactionResponse extends BaseResponse {
 /**
  * @typedef {SubTransactionRowResponse} SubTransactionRowResponse
  * @property {BaseProductResponse} product.required - The product that has been bought
- * @property {integer} amount.required - The amount that has been bought
+ * @property {number} amount.required - The amount that has been bought
  */
 export interface SubTransactionRowResponse extends BaseResponse {
   product: BaseProductResponse,

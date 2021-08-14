@@ -15,25 +15,16 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import {
-  BaseEntity, Column, Entity, JoinColumn, OneToOne,
-} from 'typeorm';
-import User from './user';
+
+import ActionResponse from './action-response';
 
 /**
- * @typedef {BaseEntity} GewisUser
- * @property {User.model} user.required - The user.
- * @property {integer} gewisId.required - The id of the member/committee/fraternity.
+ * @typedef EntityResponse -
+ * The entity contains a name and a list of permissions per action.
+ * @property {string} entity - The name of the entity for which the permissions are.
+ * @property {Array<ActionResponse>} actions - The permissions per action.
  */
-@Entity()
-export default class GewisUser extends BaseEntity {
-  @OneToOne(() => User, { primary: true, nullable: false })
-  @JoinColumn()
-  public user: User;
-
-  @Column({
-    type: 'integer',
-  })
-  // Can be both a Membership ID or a committee / fraternity ID
-  public gewisId: number;
+export default interface EntityResponse {
+  entity: string;
+  actions: ActionResponse[];
 }

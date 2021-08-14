@@ -15,25 +15,18 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import {
-  BaseEntity, Column, Entity, JoinColumn, OneToOne,
-} from 'typeorm';
-import User from './user';
+
+import { AllowedAttribute } from '../../../rbac/role-manager';
 
 /**
- * @typedef {BaseEntity} GewisUser
- * @property {User.model} user.required - The user.
- * @property {integer} gewisId.required - The id of the member/committee/fraternity.
+ * @typedef RelationResponse -
+ * The relation response contains the name of the ownership relation towards the entity,
+ * and the list of attributes for which the role gives access.
+ * Typical ownership relations are 'own', 'created', and 'all'.
+ * @property {string} relation - The the ownership relation towards the entity.
+ * @property {Array<string>} attributes - The attributes of the entity for which there is access.
  */
-@Entity()
-export default class GewisUser extends BaseEntity {
-  @OneToOne(() => User, { primary: true, nullable: false })
-  @JoinColumn()
-  public user: User;
-
-  @Column({
-    type: 'integer',
-  })
-  // Can be both a Membership ID or a committee / fraternity ID
-  public gewisId: number;
+export default interface RelationResponse {
+  relation: string;
+  attributes: AllowedAttribute[];
 }

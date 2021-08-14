@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { Dinero } from 'dinero.js';
+import { DineroObject } from 'dinero.js';
 import BaseResponse from './base-response';
 import { BaseUserResponse } from './user-response';
 import { ProductCategoryResponse } from './product-category-response';
@@ -23,11 +23,11 @@ import { ProductCategoryResponse } from './product-category-response';
 /**
  * @typedef {BaseResponse} BaseProductResponse
  * @property {string} name.required - The name of the product.
- * @property {Dinero.model} price.required - The price of the product.
+ * @property {DineroObject.model} price.required - The price of the product.
  */
 export interface BaseProductResponse extends BaseResponse {
   name: string,
-  price: Dinero,
+  price: DineroObject,
 }
 
 /**

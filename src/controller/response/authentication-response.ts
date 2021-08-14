@@ -15,25 +15,17 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import {
-  BaseEntity, Column, Entity, JoinColumn, OneToOne,
-} from 'typeorm';
-import User from './user';
+
+import { UserResponse } from './user-response';
 
 /**
- * @typedef {BaseEntity} GewisUser
- * @property {User.model} user.required - The user.
- * @property {integer} gewisId.required - The id of the member/committee/fraternity.
- */
-@Entity()
-export default class GewisUser extends BaseEntity {
-  @OneToOne(() => User, { primary: true, nullable: false })
-  @JoinColumn()
-  public user: User;
-
-  @Column({
-    type: 'integer',
-  })
-  // Can be both a Membership ID or a committee / fraternity ID
-  public gewisId: number;
+  * @typedef AuthenticationResponse
+  * @property {UserResponse.model} user - The user that has authenticated.
+  * @property {Array<string>} roles - The RBAC roles that the user has.
+  * @property {string} token - The JWT token that can be used as Bearer token for authentication.
+  */
+export default interface AuthenticationResponse {
+  user: UserResponse,
+  roles: string[],
+  token: string,
 }
