@@ -152,15 +152,15 @@ export default class TransactionService {
     if (!req.from || !req.createdBy) {
       return false;
     }
+
+    // check existence of users and whether they are active
     const ids: number[] = [req.from];
     if (req.createdBy !== req.from) {
       ids.push(req.createdBy);
     }
 
-    // check existence of users and whether they are active
     const users = await User.findByIds(ids);
-    if (users.length === 0
-      || (req.createdBy !== req.from && users.length !== 2)
+    if (users.length !== ids.length
       || !users.every((user) => user.active)) {
       return false;
     }
