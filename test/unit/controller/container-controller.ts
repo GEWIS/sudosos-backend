@@ -20,7 +20,6 @@ import express, { Application } from 'express';
 import { request, expect } from 'chai';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
-import exp from 'constants';
 import User, { UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import { seedAllContainers, seedAllProducts, seedProductCategories } from '../../seed';
@@ -33,6 +32,20 @@ import ContainerController from '../../../src/controller/container-controller';
 import Container from '../../../src/entity/container/container';
 import { ContainerResponse } from '../../../src/controller/response/container-response';
 import { ProductResponse } from '../../../src/controller/response/product-response';
+import UpdatedProduct from '../../../src/entity/product/updated-product';
+import UpdatedContainer from '../../../src/entity/container/updated-container';
+import Product from '../../../src/entity/product/product';
+
+/**
+ * Tests if a container response is equal to the request.
+ * @param source - The source from which the container was created.
+ * @param response - The received container.
+ * @return true if the source and response describe the same product.
+ */
+function containerEq(source: ContainerRequest, response: ContainerResponse) {
+  return source.name === response.name
+      && source.public == response.public;
+}
 
 describe('ContainerController', async (): Promise<void> => {
   let ctx: {
@@ -84,8 +97,7 @@ describe('ContainerController', async (): Promise<void> => {
     const token = await tokenHandler.signToken({ user: localUser, roles: ['User'] }, 'nonce');
 
     const validContainerReq: ContainerRequest = {
-      owner: adminUser,
-      products: [],
+      products: [1, 2],
       public: true,
       name: 'Valid container',
     };
@@ -93,6 +105,7 @@ describe('ContainerController', async (): Promise<void> => {
     const invalidContainerReq: ContainerRequest = {
       ...validContainerReq,
       name: '',
+      products: [-1],
     };
 
     // start app
@@ -175,7 +188,6 @@ describe('ContainerController', async (): Promise<void> => {
       const publicContainerCount = await Container.count({ where: 'currentRevision AND public = 1' } as FindManyOptions);
       const ownPriviteContainerCount = await Container.count({ where: 'currentRevision AND ownerId = 2 AND public = 0' } as FindManyOptions);
 
-      // check no response body
       expect(res.status).to.equal(200);
 
       // forbidden code
@@ -245,6 +257,112 @@ describe('ContainerController', async (): Promise<void> => {
 
       // success code
       expect(res.status).to.equal(404);
+    });
+  });
+  describe('GET /containers/:id/products', () => {
+    it('should return an HTTP 200 and all the products in the container if admin', async () => {
+      const res = await request(ctx.app)
+        .get('/containers/1/products')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect((res.body as ProductResponse[])).to.not.empty;
+      expect(res.status).to.equal(200);
+    });
+    it('should return an HTTP 403 if container not public or own and if not admin', async () => {
+      const containerId = 2;
+      const container = await request(ctx.app)
+        .get(`/containers/${containerId}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      // Sanity check
+      expect((container.body as ContainerResponse).public).to.equal(0);
+      expect((container.body as ContainerResponse).owner.id).to.not.equal(ctx.localUser.id);
+
+      const res = await request(ctx.app)
+        .get(`/containers/${containerId}/products`)
+        .set('Authorization', `Bearer ${ctx.token}`);
+
+      expect(res.status).to.equal(403);
+      expect(res.body).to.be.equal('Incorrect permissions to get container.');
+    });
+    it('should return an HTTP 200 and all the products in the container is public and if not admin', async () => {
+      const containerId = 1;
+      const container = await request(ctx.app)
+        .get(`/containers/${containerId}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      // Sanity check
+      expect((container.body as ContainerResponse).public).to.equal(1);
+      expect((container.body as ContainerResponse).owner.id).to.not.equal(ctx.localUser.id);
+
+      const res = await request(ctx.app)
+        .get(`/containers/${containerId}/products`)
+        .set('Authorization', `Bearer ${ctx.token}`);
+
+      expect(res.status).to.equal(200);
+    });
+  });
+  describe('POST /containers', () => {
+    it('should store the given container in the database and return an HTTP 200 and the created container if admin', async () => {
+      const containerCount = await Container.count();
+      const res = await request(ctx.app)
+        .post('/containers')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(ctx.validContainerReq);
+
+      expect(await Container.count()).to.equal(containerCount + 1);
+      expect(containerEq(ctx.validContainerReq, res.body as ContainerResponse)).to.be.true;
+
+      const databaseProduct = await UpdatedContainer.findOne((res.body as ContainerResponse).id);
+      expect(databaseProduct).to.exist;
+
+      expect(res.status).to.equal(200);
+    });
+    it('should return an HTTP 400 if the given product is invalid', async () => {
+      const containerCounter = await Container.count();
+      const res = await request(ctx.app)
+        .post('/containers')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(ctx.invalidContainerReq);
+
+      expect(await Container.count()).to.equal(containerCounter);
+      expect(res.body).to.equal('Invalid container.');
+
+      expect(res.status).to.equal(400);
+    });
+    it('should return an HTTP 403 if not admin', async () => {
+      const containerCount = await Container.count();
+      const res = await request(ctx.app)
+        .post('/containers')
+        .set('Authorization', `Bearer ${ctx.token}`)
+        .send(ctx.validContainerReq);
+
+      expect(await Container.count()).to.equal(containerCount);
+      expect(res.body).to.be.empty;
+
+      expect(res.status).to.equal(403);
+    });
+  });
+  describe('POST /containers/:id/approve', () => {
+    it('should approve the container update if it exists and admin', async () => {
+      const id = 4;
+
+      // sanity check / precondition
+      expect(await UpdatedContainer.findOne(id)).to.exist;
+
+      const res = await request(ctx.app)
+        .post(`/containers/${id}/approve`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      // sanity check
+      expect(await UpdatedContainer.findOne(4)).to.be.undefined;
+
+      const latest = await request(ctx.app)
+        .get('/containers/4')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(latest.body).to.deep.equal(res.body);
+      expect(res.status).to.equal(200);
     });
   });
 });

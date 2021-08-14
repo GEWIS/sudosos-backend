@@ -24,6 +24,10 @@ import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision'
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import ProductService from './product-service';
 import PointOfSale from '../entity/point-of-sale/point-of-sale';
+import ContainerRequest from '../controller/request/container-request';
+import User from '../entity/user/user';
+import Product from '../entity/product/product';
+import UpdatedProduct from '../entity/product/updated-product';
 
 /**
  * Define updated container filtering parameters used to filter query results.
@@ -219,5 +223,114 @@ export default class ContainerService {
     const rawContainers = await builder.getRawMany();
 
     return rawContainers.map((rawContainer) => (this.asContainerResponse(rawContainer)));
+  }
+
+  /**
+   * Creates a new container.
+   *
+   * The newly created container resides in the Container table and has no
+   * current revision. To confirm the revision the update has to be accepted.
+   *
+   * @param owner - The user that created the container.
+   * @param container - The container to be created.
+   */
+  public static async createContainer(owner: User, container: ContainerRequest)
+    : Promise<ContainerWithProductsResponse> {
+    const base = Object.assign(new Container(), {
+      owner,
+      public: container.public,
+    });
+
+    // Save the base.
+    await base.save();
+
+    // Set base container and apply new update.
+    const updatedContainer = Object.assign(new UpdatedContainer(), {
+      container: await Container.findOne(base.id),
+      name: container.name,
+      products: container.products,
+    });
+
+    // Save update
+    await updatedContainer.save();
+    const update: ContainerResponse = (await this.getUpdatedContainers({ containerId: base.id }))[0];
+
+    const containerResponse: ContainerWithProductsResponse = update as ContainerWithProductsResponse;
+    containerResponse.products = await ProductService.getUpdatedProducts({ containerId: base.id });
+
+    return containerResponse;
+  }
+
+  /**
+   * Confirms an container update and creates a container revision.
+   * @param containerId - The container update to confirm.
+   */
+  public static async approveContainerUpdate(containerId: number): Promise<ContainerWithProductsResponse> {
+    const base: Container = await Container.findOne(containerId);
+    const rawContainerUpdate = await UpdatedContainer.findOne(containerId);
+
+    // return undefined if not found or request is invalid
+    if (!base || !rawContainerUpdate) {
+      return undefined;
+    }
+
+    // Get the product id's for this update.
+    const builder = createQueryBuilder()
+      .from(UpdatedContainer, 'container')
+      .where('container.container.id = :id', { id: containerId })
+      .innerJoinAndSelect('container.products', 'product')
+      .select('product.id');
+
+    const products = (await builder.getRawMany()).map((product: any) => product.product_id);
+
+    // Set base container and apply new revision.
+    const containerRevision: ContainerRevision = Object.assign(new ContainerRevision(), {
+      container: base,
+      products,
+      name: base.name,
+      // Increment revision.
+      revision: base.currentRevision ? base.currentRevision + 1 : 1,
+    });
+
+    // First save revision.
+    await ContainerRevision.save(containerRevision);
+
+    // Increment current revision.
+    base.currentRevision = base.currentRevision ? base.currentRevision + 1 : 1;
+    await base.save();
+
+    // Remove update after revision is created.
+    await UpdatedContainer.delete(containerId);
+
+    // Return the new container with products.
+    const update: ContainerResponse = (await this.getContainers({ containerId: base.id }))[0];
+
+    const containerResponse: ContainerWithProductsResponse = update as ContainerWithProductsResponse;
+    containerResponse.products = await ProductService.getUpdatedProducts({ containerId: base.id });
+
+    return containerResponse;
+  }
+
+  /**
+   * Verifies whether the container request translates to a valid container
+   * @param {ContainerRequest.model} containerRequest - the container request to verify
+   * @returns {boolean} - whether container is ok or not
+   */
+  public static async verifyContainer(containerRequest: ContainerRequest) {
+    return containerRequest.name !== ''
+        && containerRequest.products.every(async (productId) => {
+          await Product.findOne(productId, { where: 'currentRevision' });
+        });
+  }
+
+  /**
+   * Test to see if the user can view a specified container
+   * @param userId - The User to test
+   * @param containerId - The container to view
+   */
+  public static async canViewContainer(userId: number, containerId: number): Promise<boolean> {
+    const container: ContainerResponse[] = (await this.getContainers({ containerId }));
+    if (container.length === 0) return false;
+    return container[0].owner.id === userId || container[0].public;
   }
 }

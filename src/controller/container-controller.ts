@@ -21,8 +21,10 @@ import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import ContainerService, { ContainerParameters } from '../service/container-service';
-import { ContainerResponse } from './response/container-response';
+import { ContainerResponse, ContainerWithProductsResponse } from './response/container-response';
 import ContainerRevision from '../entity/container/container-revision';
+import ProductService from '../service/product-service';
+import ContainerRequest from './request/container-request';
 
 export default class ContainerController extends BaseController {
   private logger: Logger = log4js.getLogger('ContainerController');
@@ -46,11 +48,28 @@ export default class ContainerController extends BaseController {
           policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'own', 'Container', ['*']),
           handler: this.returnAllContainers.bind(this),
         },
+        POST: {
+          body: { modelName: 'ContainerRequest' },
+          policy: async (req) => this.roleManager.can(req.token.roles, 'create', 'all', 'Container', ['*']),
+          handler: this.createContainer.bind(this),
+        },
       },
       '/:id(\\d+)': {
         GET: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'own', 'Container', ['*']),
           handler: this.returnSingleContainer.bind(this),
+        },
+      },
+      '/:id(\\d+)/products': {
+        GET: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'own', 'Container', ['*']),
+          handler: this.returnProductsContainer.bind(this),
+        },
+      },
+      '/:id(\\d+)/approve': {
+        POST: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'create', 'all', 'Container', ['*']),
+          handler: this.approveUpdate.bind(this),
         },
       },
     };
@@ -70,11 +89,8 @@ export default class ContainerController extends BaseController {
 
     // Handle request
     try {
-      //  If user can view all containers.
-      const getAll = this.roleManager.can(req.token.roles, 'get', 'all', 'Container', ['*']);
-
       let containers: ContainerResponse[];
-      if (getAll) {
+      if (this.getAll(req)) {
         containers = await ContainerService.getContainers();
       } else {
         containers = await ContainerService
@@ -93,7 +109,7 @@ export default class ContainerController extends BaseController {
    * @group containers - Operations of container controller
    * @param {integer} id.path.required - The id of the container which should be returned
    * @security JWT
-   * @returns {ContainerResponse.model} 200 - All existing containers
+   * @returns {ContainerWithProductsResponse.model} 200 - The requested container
    * @returns {string} 404 - Not found error
    * @returns {string} 500 - Internal server error
    */
@@ -112,11 +128,9 @@ export default class ContainerController extends BaseController {
         return;
       }
 
-      // If user can view all containers.
-      const getAll = this.roleManager.can(req.token.roles, 'get', 'all', 'Container', ['*']);
-
       let containers: ContainerResponse[];
-      if (getAll) {
+      // We distinguish the case if the user can see all containers or only in his own context.
+      if (this.getAll(req)) {
         containers = await ContainerService.getContainers({ containerId });
       } else {
         containers = await ContainerService
@@ -128,10 +142,107 @@ export default class ContainerController extends BaseController {
           return;
         }
       }
+      const container: ContainerWithProductsResponse = (
+        (containers[0] as ContainerWithProductsResponse));
+
+      // Fill products
+      container.products = await ProductService.getAllProducts({ containerId });
       res.json(containers[0]);
     } catch (error) {
       this.logger.error('Could not return single container:', error);
       res.status(500).json('Internal server error.');
     }
   }
+
+  /**
+   * Returns all the products in the container
+   * @route GET /containers/{id}/products
+   * @group containers - Operations of container controller
+   * @param {integer} id.path.required - The id of the container which should be returned
+   * @security JWT
+   * @returns {Array.<ProductResponse>} 200 - All products in the container
+   * @returns {string} 404 - Not found error
+   * @returns {string} 500 - Internal server error
+   */
+  public async returnProductsContainer(req: RequestWithToken, res: Response): Promise<void> {
+    const { id } = req.params;
+    const containerId = parseInt(id, 10);
+
+    this.logger.trace('Get all products in container', containerId, 'by user', req.token.user);
+
+    try {
+      // Check if the request can view the container
+      if (this.getAll(req)
+          || await ContainerService.canViewContainer(req.token.user.id, containerId)) {
+        res.json(await ProductService.getProducts({ containerId }));
+      } else {
+        res.status(403).json('Incorrect permissions to get container.');
+      }
+    } catch (error) {
+      this.logger.error('Could not return all products in container:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Create a new container.
+   * @route POST /containers
+   * @group containers - Operations of container controller
+   * @param {ContainerRequest.model} container.body.required - The container which should be created
+   * @security JWT
+   * @returns {ContainerResponse.model} 200 - The created container entity
+   * @returns {string} 400 - Validation error
+   * @returns {string} 500 - Internal server error
+   */
+  public async createContainer(req: RequestWithToken, res: Response): Promise<void> {
+    const body = req.body as ContainerRequest;
+    this.logger.trace('Create container', body, 'by user', req.token.user);
+
+    // handle request
+    try {
+      if (await ContainerService.verifyContainer(body)) {
+        res.json(await ContainerService.createContainer(req.token.user, body));
+      } else {
+        res.status(400).json('Invalid container.');
+      }
+    } catch (error) {
+      this.logger.error('Could not create container:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Approve a container update.
+   * @route POST /containers/{id}/approve
+   * @param {integer} id.path.required - The id of the container update to approve
+   * @group containers - Operations of container controller
+   * @security JWT
+   * @returns {ContainerWithProductsResponse.model} 200 - The approved container entity
+   * @returns {string} 404 - Not found error
+   * @returns {string} 500 - Internal server error
+   */
+  public async approveUpdate(req: RequestWithToken, res: Response): Promise<void> {
+    const { id } = req.params;
+    this.logger.trace('Update accepted', id, 'by user', req.token.user);
+
+    const containerId = Number.parseInt(id, 10);
+    // Handle
+    try {
+      const container = await ContainerService.approveContainerUpdate(containerId);
+      if (container) {
+        res.json(container);
+      } else {
+        res.status(404).json('Container update not found.');
+      }
+    } catch (error) {
+      this.logger.error('Could not approve update: ', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Test if request user can view all containers.
+   * @param req - The Request
+   */
+  getAll = (req: RequestWithToken) => this.roleManager.can(req.token.roles, 'get', 'all', 'Container', ['*']);
 }
