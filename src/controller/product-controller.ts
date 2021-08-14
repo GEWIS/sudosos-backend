@@ -137,8 +137,8 @@ export default class ProductController extends BaseController {
    * Update an existing product.
    * @route PATCH /products/{id}
    * @group products - Operations of product controller
-   * @param {integer} id.path.required - The id of the product which should be returned
-   * @param {ProductRequest.model} product.body.required - The product which should be created
+   * @param {integer} id.path.required - The id of the product which should be updated
+   * @param {ProductRequest.model} product.body.required - The product which should be updated
    * @security JWT
    * @returns {ProductResponse.model} 200 - The created product entity
    * @returns {string} 400 - Validation error

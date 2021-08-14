@@ -33,6 +33,8 @@ import Container from '../../../src/entity/container/container';
 import { ContainerResponse, ContainerWithProductsResponse } from '../../../src/controller/response/container-response';
 import { ProductResponse } from '../../../src/controller/response/product-response';
 import UpdatedContainer from '../../../src/entity/container/updated-container';
+import UpdatedProduct from '../../../src/entity/product/updated-product';
+import Product from '../../../src/entity/product/product';
 
 /**
  * Tests if a container response is equal to the request.
@@ -366,6 +368,82 @@ describe('ContainerController', async (): Promise<void> => {
 
       expect(latest.body).to.deep.equal(res.body);
       expect(res.status).to.equal(200);
+    });
+    it('should return an HTTP 404 and an empty response if the product has no pending update', async () => {
+      const id = 3;
+
+      // sanity check / precondition
+      expect(await UpdatedContainer.findOne(id)).to.be.undefined;
+      expect(await Container.findOne(id)).to.exist;
+
+      const res = await request(ctx.app)
+        .post(`/containers/${id}/approve`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(404);
+      expect(res.body).to.equal('Container update not found.');
+    });
+    it('should return an HTTP 403 if not admin', async () => {
+      const id = 5;
+      // sanity check / precondition
+      expect(await UpdatedContainer.findOne(id)).to.exist;
+
+      const res = await request(ctx.app)
+        .post(`/containers/${id}/approve`)
+        .set('Authorization', `Bearer ${ctx.token}`);
+
+      expect(res.body).to.be.empty;
+      expect(res.status).to.equal(403);
+    });
+  });
+  describe('PATCH /containers/:id', () => {
+    it('should return an HTTP 200 and the product update if admin', async () => {
+      const res = await request(ctx.app)
+        .patch('/containers/1')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(ctx.validContainerReq);
+
+      expect(containerEq(ctx.validContainerReq, res.body as ContainerWithProductsResponse)).to.be.true;
+      const databaseContainer = await UpdatedContainer.findOne((res.body as ContainerResponse).id);
+      expect(databaseContainer).to.exist;
+
+      expect(res.status).to.equal(200);
+    });
+    it('should return an HTTP 400 if the update is invalid', async () => {
+      const res = await request(ctx.app)
+        .patch('/containers/1')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(ctx.invalidContainerReq);
+
+      expect(res.body).to.equal('Invalid container.');
+      expect(res.status).to.equal(400);
+    });
+    it('should return an HTTP 404 if the container with the given id does not exist', async () => {
+      const res = await request(ctx.app)
+        .patch(`/containers/${(await Container.count()) + 1}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(ctx.validContainerReq);
+
+      // sanity check
+      expect(await Container.findOne((await Container.count()) + 1)).to.be.undefined;
+
+      // check if banner is not returned
+      expect(res.body).to.equal('Container not found.');
+
+      // success code
+      expect(res.status).to.equal(404);
+    });
+    it('should return an HTTP 403 if not admin', async () => {
+      const res = await request(ctx.app)
+        .patch('/containers/1')
+        .set('Authorization', `Bearer ${ctx.token}`)
+        .send(ctx.validContainerReq);
+
+      // check if banner is not returned
+      expect(res.body).to.be.empty;
+
+      // success code
+      expect(res.status).to.equal(403);
     });
   });
 });

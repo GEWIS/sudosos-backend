@@ -244,24 +244,7 @@ export default class ContainerService {
 
     // Save the base.
     await base.save();
-    let products: Product[] = [];
-    await Promise.all(container.products.map((id) => Product.findOne(id))).then((result) => { products = result.filter((p) => p); });
-
-    // Set base container and apply new update.
-    const updatedContainer = Object.assign(new UpdatedContainer(), {
-      container: await Container.findOne(base.id),
-      name: container.name,
-      products,
-    });
-
-    // Save update
-    await updatedContainer.save();
-    const update: ContainerResponse = (await this.getUpdatedContainers({ containerId: base.id }))[0];
-
-    const containerResponse: ContainerWithProductsResponse = update as ContainerWithProductsResponse;
-    containerResponse.products = await ProductService.getUpdatedProducts({ containerId: base.id });
-
-    return containerResponse;
+    return this.updateContainer(base.id, container);
   }
 
   /**
@@ -322,6 +305,41 @@ export default class ContainerService {
 
     const containerResponse: ContainerWithProductsResponse = update as ContainerWithProductsResponse;
     containerResponse.products = await ProductService.getProducts({ containerId: base.id });
+
+    return containerResponse;
+  }
+
+  /**
+   * Creates a container update.
+   * @param containerId - The ID of the product to update
+   * @param update - The container variables to update.
+   */
+  public static async updateContainer(containerId: number, update: ContainerRequest): Promise<ContainerWithProductsResponse> {
+    // Get the base container.
+    const base: Container = await Container.findOne(containerId);
+
+    // return undefined if not found.
+    if (!base) {
+      return undefined;
+    }
+
+    let products: Product[] = [];
+    await Promise.all(update.products.map((id) => Product.findOne(id))).then((result) => { products = result.filter((p) => p); });
+
+    // Set base container and apply new update.
+    const updatedContainer = Object.assign(new UpdatedContainer(), {
+      container: await Container.findOne(base.id),
+      name: update.name,
+      products,
+    });
+
+    // Save update
+    await updatedContainer.save();
+
+    const response: ContainerResponse = (await this.getUpdatedContainers({ containerId: base.id }))[0];
+
+    const containerResponse: ContainerWithProductsResponse = response as ContainerWithProductsResponse;
+    containerResponse.products = await ProductService.getAllProducts({ containerId: base.id, updatedContainer: true });
 
     return containerResponse;
   }

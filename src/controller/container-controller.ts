@@ -25,6 +25,7 @@ import { ContainerResponse, ContainerWithProductsResponse } from './response/con
 import ContainerRevision from '../entity/container/container-revision';
 import ProductService from '../service/product-service';
 import ContainerRequest from './request/container-request';
+import ProductRequest from './request/product-request';
 
 export default class ContainerController extends BaseController {
   private logger: Logger = log4js.getLogger('ContainerController');
@@ -58,6 +59,11 @@ export default class ContainerController extends BaseController {
         GET: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'own', 'Container', ['*']),
           handler: this.returnSingleContainer.bind(this),
+        },
+        PATCH: {
+          body: { modelName: 'ContainerRequest' },
+          policy: async (req) => this.roleManager.can(req.token.roles, 'update', 'all', 'Container', ['*']),
+          handler: this.updateContainer.bind(this),
         },
       },
       '/:id(\\d+)/products': {
@@ -236,6 +242,42 @@ export default class ContainerController extends BaseController {
       }
     } catch (error) {
       this.logger.error('Could not approve update: ', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Update an existing container.
+   * @route PATCH /containers/{id}
+   * @group containers - Operations of container controller
+   * @param {integer} id.path.required - The id of the container which should be updated
+   * @param {ContainerRequest.model} container.body.required - The container which should be updated
+   * @security JWT
+   * @returns {ContainerWithProductsResponse.model} 200 - The created container entity
+   * @returns {string} 400 - Validation error
+   * @returns {string} 404 - Product not found error
+   * @returns {string} 500 - Internal server error
+   */
+  public async updateContainer(req: RequestWithToken, res: Response): Promise<void> {
+    const body = req.body as ContainerRequest;
+    const { id } = req.params;
+    const containerId = Number.parseInt(id, 10);
+    this.logger.trace('Update container', id, 'with', body, 'by user', req.token.user);
+
+    // handle request
+    try {
+      if (await ContainerService.verifyContainer(body)) {
+        const update = await ContainerService.updateContainer(containerId, body);
+        if (update) {
+          res.json(update);
+        } else {
+          res.status(404).json('Container not found.');
+        }
+      } else {
+        res.status(400).json('Invalid container.');
+      }
+    } catch (error) {
+      this.logger.error('Could not update container:', error);
       res.status(500).json('Internal server error.');
     }
   }
