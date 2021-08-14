@@ -52,7 +52,7 @@ describe('TransactionController', (): void => {
 
   beforeEach(async () => {
     // @ts-ignore
-    // this.timeout(10000);
+    this.timeout(10000);
     const logger: Logger = log4js.getLogger('TransactionControllerTest');
     logger.level = 'ALL';
     const connection = await Database.initialize();
