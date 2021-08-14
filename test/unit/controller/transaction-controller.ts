@@ -50,8 +50,7 @@ describe('TransactionController', (): void => {
     logger: Logger,
   };
 
-  beforeEach(async () => {
-    // @ts-ignore
+  beforeEach(async function beforeEach() {
     this.timeout(10000);
     const logger: Logger = log4js.getLogger('TransactionControllerTest');
     logger.level = 'ALL';
