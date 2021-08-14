@@ -28,7 +28,7 @@ export default class ProductCategoryController extends BaseController {
   private logger: Logger = log4js.getLogger('ProductCategoryController');
 
   /**
-     * Creates a new productCategory controller instance.
+     * Creates a new productcategory controller instance.
      * @param options - The options passed to the base controller.
      */
   public constructor(options: BaseControllerOptions) {
@@ -67,11 +67,11 @@ export default class ProductCategoryController extends BaseController {
   }
 
   /**
-   * Returns all existing product-categories
+   * Returns all existing productcategories
    * @route GET /productcategories
-   * @group productCategories - Operations of productCategories controller
+   * @group productCategories - Operations of productcategories controller
    * @security JWT
-   * @returns {Array<ProductCategoryResponse>} 200 - All existing productCategories
+   * @returns {Array<ProductCategoryResponse>} 200 - All existing productcategories
    * @returns {string} 500 - Internal server error
    */
   public async returnAllProductCategories(req: RequestWithToken, res: Response): Promise<void> {
@@ -90,44 +90,44 @@ export default class ProductCategoryController extends BaseController {
   /**
    * Post a new productCategory.
    * @route POST /productcategories
-   * @group productCategories - Operations of productCategories controller
+   * @group productCategories - Operations of productcategories controller
    * @param {ProductCategoryRequest.model} productCategory.body.required
    * - The productCategory which should be created
    * @security JWT
-   * @returns {ProductCategoryResponse.model} 200 - The created productCategory entity
+   * @returns {ProductCategoryResponse.model} 200 - The created productcategory entity
    * @returns {string} 400 - Validation error
    * @returns {string} 500 - Internal server error
    */
   public async postProductCategory(req: RequestWithToken, res: Response): Promise<void> {
     const body = req.body as ProductCategoryRequest;
-    this.logger.trace('Create productCategory', body, 'by user', req.token.user);
+    this.logger.trace('Create productcategory', body, 'by user', req.token.user);
 
     // handle request
     try {
       if (await ProductCategoryService.verifyProductCategory(body)) {
         res.json(await ProductCategoryService.postProductCategory(body));
       } else {
-        res.status(400).json('Invalid productCategory.');
+        res.status(400).json('Invalid productcategory.');
       }
     } catch (error) {
-      this.logger.error('Could not create productCategory:', error);
+      this.logger.error('Could not create productcategory:', error);
       res.status(500).json('Internal server error.');
     }
   }
 
   /**
-   * Returns the requested productCategory
+   * Returns the requested productcategory
    * @route GET /productcategories/{id}
-   * @group productCategories - Operations of productCategories controller
-   * @param {integer} id.path.required - The id of the productCategory which should be returned
+   * @group productCategories - Operations of productcategories controller
+   * @param {integer} id.path.required - The id of the productcategory which should be returned
    * @security JWT
-   * @returns {ProductCategoryResponse.model} 200 - The requested productCategory entity
+   * @returns {ProductCategoryResponse.model} 200 - The requested productcategory entity
    * @returns {string} 404 - Not found error
    * @returns {string} 500 - Internal server error
    */
   public async returnSingleProductCategory(req: RequestWithToken, res: Response): Promise<void> {
     const { id } = req.params;
-    this.logger.trace('Get single productCategory', id, 'by user', req.token.user);
+    this.logger.trace('Get single productcategory', id, 'by user', req.token.user);
 
     // handle request
     try {
@@ -138,23 +138,23 @@ export default class ProductCategoryController extends BaseController {
       if (productCategory) {
         res.json(productCategory);
       } else {
-        res.status(404).json('productCategory not found.');
+        res.status(404).json('Productcategory not found.');
       }
     } catch (error) {
-      this.logger.error('Could not return productCategory:', error);
+      this.logger.error('Could not return productcategory:', error);
       res.status(500).json('Internal server error.');
     }
   }
 
   /**
-   * Update an existing productCategory.
+   * Update an existing productcategory.
    * @route PATCH /productcategories/{id}
-   * @group productCategories - Operations of productCategory controller
-   * @param {integer} id.path.required - The id of the productCategory which should be returned
+   * @group productCategories - Operations of productcategory controller
+   * @param {integer} id.path.required - The id of the productcategory which should be returned
    * @param {ProductCategoryRequest.model} productCategory.body.required
-   * - The productCategory which should be created
+   * - The productcategory which should be created
    * @security JWT
-   * @returns {ProductCategoryResponse.model} 200 - The patched productCategory entity
+   * @returns {ProductCategoryResponse.model} 200 - The patched productcategory entity
    * @returns {string} 400 - Validation error
    * @returns {string} 404 - Not found error
    * @returns {string} 500 - Internal server error
@@ -162,7 +162,7 @@ export default class ProductCategoryController extends BaseController {
   public async updateProductCategory(req: RequestWithToken, res: Response): Promise<void> {
     const body = req.body as ProductCategoryRequest;
     const { id } = req.params;
-    this.logger.trace('Update productCategory', id, 'with', body, 'by user', req.token.user);
+    this.logger.trace('Update productcategory', id, 'with', body, 'by user', req.token.user);
 
     // handle request
     try {
@@ -172,13 +172,13 @@ export default class ProductCategoryController extends BaseController {
         if (update) {
           res.json(update);
         } else {
-          res.status(404).json('productCategory not found.');
+          res.status(404).json('Productcategory not found.');
         }
       } else {
-        res.status(400).json('Invalid productCategory.');
+        res.status(400).json('Invalid productcategory.');
       }
     } catch (error) {
-      this.logger.error('Could not update productCategory:', error);
+      this.logger.error('Could not update productcategory:', error);
       res.status(500).json('Internal server error.');
     }
   }

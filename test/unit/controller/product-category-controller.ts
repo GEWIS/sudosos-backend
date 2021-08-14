@@ -32,7 +32,6 @@ import Swagger from '../../../src/start/swagger';
 import RoleManager from '../../../src/rbac/role-manager';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import ProductCategory from '../../../src/entity/product/product-category';
-import { ProductResponse } from '../../../src/controller/response/product-response';
 
 /**
  * Tests if a productCategory response is equal to the request.
@@ -54,8 +53,8 @@ describe('ProductCategoryController', async (): Promise<void> => {
     localUser: User,
     adminToken: String,
     token: String,
-    validProductCategoryReq: ProductCategoryRequest,
-    invalidProductCategoryReq: ProductCategoryRequest,
+    validRequest: ProductCategoryRequest,
+    invalidRequest: ProductCategoryRequest,
   };
 
   // Initialize context
@@ -90,11 +89,11 @@ describe('ProductCategoryController', async (): Promise<void> => {
     const adminToken = await tokenHandler.signToken({ user: adminUser, roles: ['Admin'] }, 'nonce admin');
     const token = await tokenHandler.signToken({ user: localUser, roles: [] }, 'nonce');
 
-    const validProductCategoryReq: ProductCategoryRequest = {
-      name: 'Valid productCategory',
+    const validRequest: ProductCategoryRequest = {
+      name: 'Valid productcategory',
     };
 
-    const invalidProductCategoryReq: ProductCategoryRequest = {
+    const invalidRequest: ProductCategoryRequest = {
       name: '',
     };
 
@@ -107,7 +106,7 @@ describe('ProductCategoryController', async (): Promise<void> => {
     roleManager.registerRole({
       name: 'Admin',
       permissions: {
-        Product: {
+        ProductCategory: {
           create: all,
           get: all,
           update: all,
@@ -132,8 +131,8 @@ describe('ProductCategoryController', async (): Promise<void> => {
       localUser,
       adminToken,
       token,
-      validProductCategoryReq,
-      invalidProductCategoryReq,
+      validRequest,
+      invalidRequest,
     };
   });
 
@@ -143,17 +142,92 @@ describe('ProductCategoryController', async (): Promise<void> => {
   });
 
   // Unit test cases
-  describe('GET /productscategories', () => {
-    it('should return an HTTP 200 and all existing productCategories in the database if user', async () => {
+  describe('GET /productcategories', () => {
+    it('should return an HTTP 200 and all existing productcategories in the database if user', async () => {
       const res = await request(ctx.app)
-        .get('/productcategories')
+        .get('/productcategories/')
         .set('Authorization', `Bearer ${ctx.token}`);
 
       expect(res.status).to.equal(200);
 
-      // Every productCategory that has a current revision should be returned.
+      // Every productcategory should be returned.
       const productCategoryCount = await ProductCategory.count();
       expect((res.body as ProductCategoryResponse[]).length).to.equal(productCategoryCount);
+    });
+  });
+  describe('GET /productcategories/:id', () => {
+    it('should return an HTTP 200 and the productcategory with given id if user', async () => {
+      const res = await request(ctx.app)
+        .get('/productcategories/1')
+        .set('Authorization', `Bearer ${ctx.token}`);
+
+      expect((res.body as ProductCategoryResponse).id).to.equal(1);
+
+      // success code
+      expect(res.status).to.equal(200);
+    });
+    it('should return an HTTP 404 if the product with the given id does not exist', async () => {
+      const res = await request(ctx.app)
+        .get(`/productcategories/${(await ProductCategory.count()) + 1}`)
+        .set('Authorization', `Bearer ${ctx.token}`);
+
+      expect(await ProductCategory.findOne((await ProductCategory.count()) + 1)).to.be.undefined;
+
+      // check if productcategory is not returned
+      expect(res.body).to.equal('Productcategory not found.');
+
+      // expected code
+      expect(res.status).to.equal(404);
+    });
+  });
+  describe('PATCH /productcategories/:id', () => {
+    it('should return an HTTP 200 and the productcategory update if admin', async () => {
+      const res = await request(ctx.app)
+        .patch('/productcategories/1')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(ctx.validRequest);
+
+      expect(productCategoryEq(ctx.validRequest, res.body as ProductCategoryResponse)).to.be.true;
+      const databaseProduct = await ProductCategory.findOne((res.body as ProductCategoryResponse).id);
+      expect(databaseProduct).to.exist;
+
+      expect(res.status).to.equal(200);
+    });
+    it('should return an HTTP 400 if the update is invalid', async () => {
+      const res = await request(ctx.app)
+        .patch('/productcategories/1')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(ctx.invalidRequest);
+
+      expect(res.body).to.equal('Invalid productcategory.');
+      expect(res.status).to.equal(400);
+    });
+    it('should return an HTTP 404 if the productcategory with the given id does not exist', async () => {
+      const res = await request(ctx.app)
+        .patch(`/productcategories/${(await ProductCategory.count()) + 1}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(ctx.validRequest);
+
+      // sanity check
+      expect(await ProductCategory.findOne((await ProductCategory.count()) + 1)).to.be.undefined;
+
+      // check if productcategory is not returned
+      expect(res.body).to.equal('Productcategory not found.');
+
+      // success code
+      expect(res.status).to.equal(404);
+    });
+    it('should return an HTTP 403 if not admin', async () => {
+      const res = await request(ctx.app)
+        .patch('/productcategories/1')
+        .set('Authorization', `Bearer ${ctx.token}`)
+        .send(ctx.validRequest);
+
+      // check if productcategory is not returned
+      expect(res.body).to.be.empty;
+
+      // success code
+      expect(res.status).to.equal(403);
     });
   });
 });
