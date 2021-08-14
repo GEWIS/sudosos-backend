@@ -23,8 +23,6 @@ import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import ProductCategoryService from '../service/product-category-service';
 import ProductCategoryRequest from './request/product-category-request';
-import ProductService from '../service/product-service';
-// import ProductCategory from '../entity/product/product-category';
 
 export default class ProductCategoryController extends BaseController {
   private logger: Logger = log4js.getLogger('ProductCategoryController');

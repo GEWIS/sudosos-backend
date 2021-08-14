@@ -20,7 +20,6 @@ import ProductCategory from '../entity/product/product-category';
 import { ProductCategoryResponse } from '../controller/response/product-category-response';
 import ProductCategoryRequest from '../controller/request/product-category-request';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
-import ProductRequest from '../controller/request/product-request';
 
 /**
  * Define productCategory filtering parameters used to filter query results.
