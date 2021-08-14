@@ -20,7 +20,7 @@ import { Response } from 'express';
 import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
-import { UserType } from '../entity/user/user';
+import User, { UserType } from '../entity/user/user';
 import BalanceService from '../service/balance-service';
 
 export default class BalanceController extends BaseController {
@@ -42,13 +42,13 @@ export default class BalanceController extends BaseController {
     return {
       '/': {
         GET: {
-          policy: this.canAccess.bind(this),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'own', 'Balance', ['*']),
           handler: this.getOwnBalance.bind(this),
         },
       },
       '/:id(\\d+)': {
         GET: {
-          policy: this.canAccess.bind(this),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Balance', ['*']),
           handler: this.getBalance.bind(this),
         },
       },
@@ -67,14 +67,19 @@ export default class BalanceController extends BaseController {
    */
   // eslint-disable-next-line class-methods-use-this
   private async getOwnBalance(req: RequestWithToken, res: Response): Promise<void> {
-    return this.getBalance(req, res);
+    try {
+      await this.getBalance(req, res);
+    } catch (error) {
+      this.logger.error(`Could not get balance of user with id ${req.token.user.id}`, error);
+      res.status(500).json('Internal server error.');
+    }
   }
 
   /**
    * Retrieves the requested balance
    * @route get /balances/{id}
    * @group balance - Operations of balance controller
-   * @param {integer} id.path.optional - The id of the user for which the saldo is requested
+   * @param {integer} id.path - The id of the user for which the saldo is requested
    * @security JWT
    * @returns {Number} 200 - The requested user's balance
    * @returns {string} 400 - Validation error
@@ -83,16 +88,26 @@ export default class BalanceController extends BaseController {
    */
   // eslint-disable-next-line class-methods-use-this
   private async getBalance(req: RequestWithToken, res: Response): Promise<void> {
-    if (req?.params?.id === undefined) {
-      res.json(await BalanceService.getBalance(req.token.user.id));
-    } else {
-      res.json(await BalanceService.getBalance(+req.params.id));
+    try {
+      if (req?.params?.id === undefined) {
+        res.json(await BalanceService.getBalance(req.token.user.id));
+      } else if (!Number.isNaN(Number.parseInt(req.params.id, 10))) {
+        if (await User.findOne(Number.parseInt(req.params.id, 10), { where: { deleted: false } })) {
+          res.json(await BalanceService.getBalance(+req.params.id));
+        } else {
+          res.status(404).json('User does not exist');
+        }
+      } else {
+        res.status(400).json('Invalid definition of user id');
+      }
+    } catch (error) {
+      if (req?.params?.id === undefined) {
+        this.logger.error(`Could not get balance of user with id ${req.token.user.id}`, error);
+      } else {
+        this.logger.error(`Could not get balance of user with id ${req.params.id}`, error);
+      }
+      res.status(500).json('Internal server error.');
     }
-  }
-
-  // eslint-disable-next-line class-methods-use-this
-  private async getBalances(): Promise<void> {
-    // TODO: Make dependent on user service
   }
 
   /**

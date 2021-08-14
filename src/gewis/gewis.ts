@@ -54,6 +54,11 @@ export default class Gewis {
           create: { own: star },
           read: { own: star },
         },
+        Balance: {
+          create: { own: star },
+          read: { own: star },
+          update: { own: star },
+        },
       },
       assignmentCheck: async (user: User) => buyerUserTypes.has(user.type),
     });
@@ -72,6 +77,11 @@ export default class Gewis {
         Transaction: {
           create: { created: star },
           read: { created: star },
+        },
+        Balance: {
+          create: { own: star },
+          read: { own: star },
+          update: { own: star },
         },
       },
       assignmentCheck: async (user: User) => authorizedBuyerUserTypes.has(user.type),
@@ -102,6 +112,11 @@ export default class Gewis {
           create: { own: star },
           read: { own: star },
           update: { own: star },
+        },
+        Balance: {
+          create: { all: star },
+          read: { all: star },
+          update: { all: star },
         },
       },
       assignmentCheck: async (user: User) => sellerUserTypes.has(user.type),

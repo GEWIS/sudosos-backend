@@ -28,6 +28,7 @@ import BalanceService from '../../../src/service/balance-service';
 import User from '../../../src/entity/user/user';
 import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
+import Balance from '../../../src/entity/transactions/balance';
 
 describe('BalanceService', (): void => {
   let ctx: {
@@ -38,8 +39,7 @@ describe('BalanceService', (): void => {
     spec: SwaggerSpecification,
   };
 
-  // eslint-disable-next-line func-names
-  before(async function (): Promise<void> {
+  before(async function test(): Promise<void> {
     this.timeout(50000);
     const connection = await Database.initialize();
     const app = express();
@@ -50,7 +50,11 @@ describe('BalanceService', (): void => {
         where: { deleted: false },
       },
     );
-    const balances = [] as number[];
+
+    const balances: number[] = [];
+    await Promise.all(users.map(
+      async (user) => { balances[user.id] = await BalanceService.getBalance(user.id); },
+    ));
 
     ctx = {
       connection,
@@ -62,37 +66,61 @@ describe('BalanceService', (): void => {
   });
 
   describe('Check balance updates', async () => {
-    it('caching is optional', async () => {
+    it('should be able to get balance without cache being created', async () => {
       await BalanceService.clearBalanceCache();
-      ctx.users.forEach(async (element) => {
-        ctx.balances[element.id] = await BalanceService.getBalance(element.id);
-        expect(ctx.balances[element.id]).to.not.be.NaN;
-      });
+      await Promise.all(ctx.users.map(
+        async (user) => {
+          const cachedBalance = await Balance.findOne(user.id);
+          expect(cachedBalance).to.be.undefined;
+          const balance = await BalanceService.getBalance(user.id);
+          expect(balance).to.not.be.NaN;
+        },
+      ));
     });
 
-    it('balances can be cached without changing them', async () => {
+    it('should have equal balances when cache is created', async () => {
       await BalanceService.updateBalances();
-      ctx.users.forEach(async (element) => {
-        const balance = await BalanceService.getBalance(element.id);
-        expect(balance).to.equal(ctx.balances[element.id]);
-      });
+      await Promise.all(ctx.users.map(
+        async (user) => {
+          const cachedBalance = await Balance.findOne(user.id);
+          expect(cachedBalance).to.not.be.undefined;
+          const balance = await BalanceService.getBalance(user.id);
+          expect(balance).to.equal(ctx.balances[user.id]);
+        },
+      ));
     });
-    it('balance can be cleared for specific users', async () => {
+
+    it('should be able to clear balance for specific users', async () => {
       await BalanceService.clearBalanceCache([ctx.users[0].id, ctx.users[1].id]);
-      const balance = await BalanceService.getBalance(ctx.users[0].id);
-      expect(balance).to.equal(ctx.balances[ctx.users[0].id]);
-      const balance2 = await BalanceService.getBalance(ctx.users[1].id);
-      expect(balance2).to.equal(ctx.balances[ctx.users[1].id]);
-    });
-    it('balance can be cached for specific users', async () => {
-      await BalanceService.updateBalances([ctx.users[0].id, ctx.users[1].id]);
+
+      let cachedBalance = await Balance.findOne(ctx.users[0].id);
+      expect(cachedBalance).to.be.undefined;
+
+      cachedBalance = await Balance.findOne(ctx.users[1].id);
+      expect(cachedBalance).to.be.undefined;
+
       const balance = await BalanceService.getBalance(ctx.users[0].id);
       expect(balance).to.equal(ctx.balances[ctx.users[0].id]);
       const balance2 = await BalanceService.getBalance(ctx.users[1].id);
       expect(balance2).to.equal(ctx.balances[ctx.users[1].id]);
     });
 
-    it('balance is stable after transaction insert', async () => {
+    it('should be able to cache the balance of certain users', async () => {
+      await BalanceService.updateBalances({ ids: [ctx.users[0].id, ctx.users[1].id] });
+
+      let cachedBalance = await Balance.findOne(ctx.users[0].id);
+      expect(cachedBalance).to.not.be.undefined;
+
+      cachedBalance = await Balance.findOne(ctx.users[1].id);
+      expect(cachedBalance).to.not.be.undefined;
+
+      const balance = await BalanceService.getBalance(ctx.users[0].id);
+      expect(balance).to.equal(ctx.balances[ctx.users[0].id]);
+      const balance2 = await BalanceService.getBalance(ctx.users[1].id);
+      expect(balance2).to.equal(ctx.balances[ctx.users[1].id]);
+    });
+
+    it('should be able to alter balance by adding transactions', async () => {
       const entityManager = getManager();
       const lastTransaction = (await entityManager.query('SELECT MAX(id) as id from `transaction`'))[0].id ?? 0;
       const lastSubTransaction = (await entityManager.query('SELECT MAX(id) as id from `sub_transaction`'))[0].id ?? 0;

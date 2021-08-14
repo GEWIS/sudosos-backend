@@ -38,7 +38,6 @@ describe('BalanceController', (): void => {
     controller: BalanceController,
     userToken: string,
     adminToken: string,
-    transaction: Transaction,
     users: User[],
     transactions: Transaction[],
   };
@@ -48,29 +47,20 @@ describe('BalanceController', (): void => {
     const connection = await Database.initialize();
     const app = express();
     const database = await seedDatabase();
-    ctx = {
-      connection,
-      app,
-      specification: undefined,
-      controller: undefined,
-      userToken: undefined,
-      adminToken: undefined,
-      transaction: undefined,
-      ...database,
-    };
 
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
-    ctx.userToken = await tokenHandler.signToken({ user: ctx.users[0], roles: ['User'] }, '33');
-    ctx.adminToken = await tokenHandler.signToken({ user: ctx.users[6], roles: ['User', 'Admin'] }, '33');
+    const userToken = await tokenHandler.signToken({ user: database.users[0], roles: ['User'] }, '33');
+    const adminToken = await tokenHandler.signToken({ user: database.users[6], roles: ['User', 'Admin'] }, '33');
 
     const all = { all: new Set<string>(['*']) };
+    const own = { own: new Set<string>(['*']) };
     const roleManager = new RoleManager();
     roleManager.registerRole({
       name: 'Admin',
       permissions: {
-        Transaction: {
+        Balance: {
           get: all,
           update: all,
         },
@@ -79,15 +69,37 @@ describe('BalanceController', (): void => {
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
     });
 
-    ctx.specification = await Swagger.initialize(ctx.app);
-    ctx.controller = new BalanceController({
-      specification: ctx.specification,
+    roleManager.registerRole({
+      name: 'User',
+      permissions: {
+        Balance: {
+          get: own,
+          update: own,
+        },
+
+      },
+      assignmentCheck: async () => true,
+    });
+
+    const specification = await Swagger.initialize(app);
+    const controller = new BalanceController({
+      specification,
       roleManager,
     });
 
-    ctx.app.use(json());
-    ctx.app.use(new TokenMiddleware({ tokenHandler, refreshFactor: 0.5 }).getMiddleware());
-    ctx.app.use('/balances', ctx.controller.getRouter());
+    app.use(json());
+    app.use(new TokenMiddleware({ tokenHandler, refreshFactor: 0.5 }).getMiddleware());
+    app.use('/balances', controller.getRouter());
+
+    ctx = {
+      connection,
+      app,
+      specification,
+      controller,
+      userToken,
+      adminToken,
+      ...database,
+    };
   });
 
   describe('GET /balances', () => {
@@ -96,7 +108,7 @@ describe('BalanceController', (): void => {
         .get('/balances')
         .set('Authorization', `Bearer ${ctx.userToken}`);
       expect(res.status).to.equal(200);
-      expect(+res.body % 1).to.equal(0);
+      expect(Number.parseInt(res.body, 10)).to.not.be.NaN;
     });
 
     it('should return forbidden when user is not admin', async () => {
@@ -111,7 +123,7 @@ describe('BalanceController', (): void => {
         .get('/balances/2')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
-      expect(+res.body % 1).to.equal(0);
+      expect(Number.parseInt(res.body, 10)).to.not.be.NaN;
     });
   });
 

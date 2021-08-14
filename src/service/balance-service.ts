@@ -18,12 +18,15 @@
 import { getManager } from 'typeorm';
 import Balance from '../entity/transactions/balance';
 
+export interface BalanceParameters {
+  ids: number[],
+}
 export default class BalanceService {
   /**
    * Update the balance cache with active values
    * Note: insafe query! safety leveraged by typesafety
    */
-  public static async updateBalances(ids?: number | number[]) {
+  public static async updateBalances(params?: BalanceParameters) {
     const entityManager = getManager();
     const lastIds: any = await entityManager.query(`select max(\`transaction\`) as transactionMax, max(transfer) as transferMax from (
       select max(id) as "transaction", 0 as "transfer" from \`transaction\` 
@@ -32,8 +35,8 @@ export default class BalanceService {
     const { transactionMax } = lastIds[0];
     const { transferMax } = lastIds[0];
 
-    if (ids) {
-      const idStr = typeof ids === 'number' ? `(${ids})` : `(${ids.join(',')})`;
+    if (params && params.ids) {
+      const idStr = typeof params.ids === 'number' ? `(${params.ids})` : `(${params.ids.join(',')})`;
       // eslint-disable-next-line prefer-template
       await entityManager.query(`REPLACE INTO balance select id, sum(amount), ${transactionMax}, ${transferMax} from ( `
           + 'select t.fromId as `id`, str.amount * pr.price * -1 as `amount`, str.updatedAt as `stamp` from `transaction` as `t` '
@@ -85,7 +88,7 @@ export default class BalanceService {
   }
 
   /**
-   * Get current balance of a user
+   * Get current balance of a user, if user does not exist balance is 0
    * @param id id of user to get balance of
    * @returns the current balance of a user
    */
@@ -98,7 +101,7 @@ export default class BalanceService {
     let lastTransfer: number = 0;
 
     if (balanceArray.length > 0) {
-      balance += balanceArray[0].amount;
+      balance = balanceArray[0].amount;
       lastTransaction = balanceArray[0].lastTransaction;
       lastTransfer = balanceArray[0].lastTransfer;
     }
@@ -127,18 +130,21 @@ export default class BalanceService {
   }
 
   /**
-   * Get balances of all users with minimally one transaction, all others are 0
+   * Get balances of all specified users or everyone if no parameters are given
    * USE ONLY IF LARGE PART OF BALANCES IS NEEDED, since call is quite inefficient
    * it triggers a full rebuild of the balances table and returns from there
-   * @returns the balances of all users
+   *
+   * If user does not exist no entry is returned for that user
+   *
+   * @returns the balances of all (specified) users
    */
-  public static async getAllBalances(ids?: [number]): Promise<Map<number, number>> {
-    await this.updateBalances(ids);
+  public static async getAllBalances(params?: BalanceParameters): Promise<Map<number, number>> {
+    await this.updateBalances(params);
     const entityManager = getManager();
 
     let inClause = '1=1';
-    if (ids) {
-      inClause = `id in (${ids.join(',')})`;
+    if (params && params.ids) {
+      inClause = `id in (${params.ids.join(',')})`;
     }
 
     const balanceArray = await entityManager.query(`select id, sum(amount) as 'amount' from (
