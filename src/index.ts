@@ -157,7 +157,7 @@ export default async function createApp(): Promise<Application> {
   application.app.use('/v1/banners', new BannerController(options).getRouter());
   application.app.use('/v1/users', new UserController(options).getRouter());
   application.app.use('/v1/products', new ProductController(options).getRouter());
-  application.app.use('/v1/product-categories', new ProductCategoryController(options).getRouter());
+  application.app.use('/v1/productcategories', new ProductCategoryController(options).getRouter());
   application.app.use('/v1/transactions', new TransactionController(options).getRouter());
   application.app.use('/v1/borrelkaartgroups', new BorrelkaartGroupController(options).getRouter());
 

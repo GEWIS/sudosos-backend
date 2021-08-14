@@ -68,7 +68,7 @@ export default class ProductCategoryController extends BaseController {
 
   /**
    * Returns all existing product-categories
-   * @route GET /product-categories
+   * @route GET /productcategories
    * @group productCategories - Operations of productCategories controller
    * @security JWT
    * @returns {Array<ProductCategoryResponse>} 200 - All existing productCategories
@@ -76,7 +76,7 @@ export default class ProductCategoryController extends BaseController {
    */
   public async returnAllProductCategories(req: RequestWithToken, res: Response): Promise<void> {
     const { body } = req;
-    this.logger.trace('Get all product-categories', body, 'by user', req.token.user);
+    this.logger.trace('Get all productcategories', body, 'by user', req.token.user);
     // Handle request
     try {
       const productCategories = await ProductCategoryService.getProductCategories();
@@ -89,8 +89,8 @@ export default class ProductCategoryController extends BaseController {
 
   /**
    * Post a new productCategory.
-   * @route POST /product-categories
-   * @group productCategories - Operations of product-categories controller
+   * @route POST /productcategories
+   * @group productCategories - Operations of productCategories controller
    * @param {ProductCategoryRequest.model} productCategory.body.required
    * - The productCategory which should be created
    * @security JWT
@@ -117,7 +117,7 @@ export default class ProductCategoryController extends BaseController {
 
   /**
    * Returns the requested productCategory
-   * @route GET /product-categories/{id}
+   * @route GET /productcategories/{id}
    * @group productCategories - Operations of productCategories controller
    * @param {integer} id.path.required - The id of the productCategory which should be returned
    * @security JWT
@@ -148,7 +148,7 @@ export default class ProductCategoryController extends BaseController {
 
   /**
    * Update an existing productCategory.
-   * @route PATCH /product-categories/{id}
+   * @route PATCH /productcategories/{id}
    * @group productCategories - Operations of productCategory controller
    * @param {integer} id.path.required - The id of the productCategory which should be returned
    * @param {ProductCategoryRequest.model} productCategory.body.required
