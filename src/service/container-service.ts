@@ -29,6 +29,7 @@ import User from '../entity/user/user';
 import Product from '../entity/product/product';
 import UpdatedProduct from '../entity/product/updated-product';
 import ProductRevision from '../entity/product/product-revision';
+import container from '../entity/container/container';
 
 /**
  * Define updated container filtering parameters used to filter query results.
@@ -78,7 +79,7 @@ export default class ContainerService {
       name: rawContainer.name,
       createdAt: rawContainer.createdAt,
       updatedAt: rawContainer.updatedAt,
-      public: rawContainer.public,
+      public: !!rawContainer.public,
       owner: {
         id: rawContainer.owner_id,
         firstName: rawContainer.owner_firstName,
@@ -180,10 +181,25 @@ export default class ContainerService {
   /**
    * Function that returns all the containers visible to a user.
    * @param params
+   * @param updated
    */
-  public static async getContainersInUserContext(params: ContainerParameters): Promise<ContainerResponse[]> {
-    const publicContainers: ContainerResponse[] = await this.getContainers({ ...params, ownerId: undefined, public: true } as ContainerParameters);
-    const ownContainers: ContainerResponse[] = await this.getContainers({ ...params, public: false } as ContainerParameters);
+  public static async getContainersInUserContext(params: ContainerParameters, updated?: boolean): Promise<ContainerResponse[]> {
+    const publicContainers: ContainerResponse[] = updated
+      ? (await this.getUpdatedContainers(
+        { ...params, ownerId: undefined, public: true } as ContainerParameters,
+      ))
+      : (await this.getContainers(
+        { ...params, ownerId: undefined, public: true } as ContainerParameters,
+      ));
+
+    const ownContainers: ContainerResponse[] = updated
+      ? (await this.getUpdatedContainers(
+        { ...params, public: false } as ContainerParameters,
+      ))
+      : (await this.getContainers(
+        { ...params, public: false } as ContainerParameters,
+      ));
+
     return publicContainers.concat(ownContainers);
   }
 
@@ -336,12 +352,8 @@ export default class ContainerService {
     // Save update
     await updatedContainer.save();
 
-    const response: ContainerResponse = (await this.getUpdatedContainers({ containerId: base.id }))[0];
-
-    const containerResponse: ContainerWithProductsResponse = response as ContainerWithProductsResponse;
-    containerResponse.products = await ProductService.getAllProducts({ containerId: base.id, updatedContainer: true });
-
-    return containerResponse;
+    // Return container with products.
+    return this.getProductsResponse(base.id, true);
   }
 
   /**
@@ -354,6 +366,29 @@ export default class ContainerService {
         && containerRequest.products.every(async (productId) => {
           await Product.findOne(productId, { where: 'currentRevision' });
         });
+  }
+
+  /**
+   * Turns a ContainerResponse into a ContainerWithProductsResponse
+   * @param containerId - The id of the container to return.
+   * @param updated
+   */
+  public static async getProductsResponse(containerId: number, updated?: boolean)
+    : Promise<ContainerWithProductsResponse> {
+    // Get base container
+    const containerResponse: ContainerResponse = updated
+      ? ((await this.getUpdatedContainers({ containerId }))[0])
+      : ((await this.getContainers({ containerId }))[0]);
+
+    const containerProducts
+    : ContainerWithProductsResponse = containerResponse as ContainerWithProductsResponse;
+
+    // Fill products
+    containerProducts.products = await ProductService.getProducts(
+      { containerId, updatedContainer: updated },
+    );
+
+    return containerProducts;
   }
 
   /**
