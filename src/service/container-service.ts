@@ -246,8 +246,7 @@ export default class ContainerService {
    */
   public static async approveContainerUpdate(containerId: number)
     : Promise<ContainerWithProductsResponse> {
-    const base: Container = await Container.findOne(containerId);
-    const rawContainerUpdate = await UpdatedContainer.findOne(containerId);
+    const [base, rawContainerUpdate] = await Promise.all([Container.findOne(containerId), UpdatedContainer.findOne(containerId)]);
 
     // return undefined if not found or request is invalid
     if (!base || !rawContainerUpdate) {
@@ -262,9 +261,9 @@ export default class ContainerService {
       .select('product.currentRevision, product.id');
 
     const productIds: any[] = await builder.getRawMany();
-    const valid = productIds.every(async (p) => !(await UpdatedProduct.findOne(p.id)));
+    const invalid = await productIds.some(async (p) => (UpdatedProduct.findOne(p.id)));
 
-    if (!valid) {
+    if (invalid) {
       throw new Error('Container update has unapproved product(s).');
     }
 

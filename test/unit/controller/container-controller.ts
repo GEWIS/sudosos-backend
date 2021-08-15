@@ -21,6 +21,7 @@ import chai, { request, expect } from 'chai';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
+import assert from 'assert';
 import User, { UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import { seedAllContainers, seedAllProducts, seedProductCategories } from '../../seed';
@@ -34,6 +35,7 @@ import Container from '../../../src/entity/container/container';
 import { ContainerResponse, ContainerWithProductsResponse } from '../../../src/controller/response/container-response';
 import { ProductResponse } from '../../../src/controller/response/product-response';
 import UpdatedContainer from '../../../src/entity/container/updated-container';
+import UpdatedProduct from '../../../src/entity/product/updated-product';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -373,6 +375,28 @@ describe('ContainerController', async (): Promise<void> => {
 
       expect(latest.body).to.deep.equal(res.body);
       expect(res.status).to.equal(200);
+    });
+    it('should idfk', async () => {
+      // precondition
+      const productId = 4;
+      expect(await UpdatedProduct.findOne(productId)).to.exist;
+
+      const container: ContainerRequest = {
+        name: 'Container with unapproved products.',
+        products: [productId],
+        public: true,
+      };
+
+      const newContainer = (await request(ctx.app)
+        .post('/containers')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(container)).body as ContainerWithProductsResponse;
+
+      const res = await request(ctx.app)
+        .post(`/containers/${newContainer.id}/approve`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      console.warn(res.body);
     });
     it('should return an HTTP 404 and an empty response if the product has no pending update', async () => {
       const id = 3;
