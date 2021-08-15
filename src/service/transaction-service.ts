@@ -16,6 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { createQueryBuilder, SelectQueryBuilder } from 'typeorm';
+import { DineroObject } from 'dinero.js';
 import { RequestWithToken } from '../middleware/token-middleware';
 import {
   BaseTransactionResponse,
@@ -60,29 +61,58 @@ export interface TransactionFilterParameters {
 
 export default class TransactionService {
   /**
+   * Gets total cost of a transaction
+   * @param {TransactionRequest.model} req - the transaction request
+   * @returns {DineroObject.model} - the total cost of a transaction
+   */
+  public static async getTotalCost(req: TransactionRequest): Promise<DineroObject> {
+    const totalCost: DineroObject = {
+      amount: 0,
+      currency: 'EUR',
+      precision: 2,
+    };
+
+    // get row requests in the transaction
+    const rows: SubTransactionRowRequest[] = [];
+    req.subtransactions.forEach((sub) => sub.subTransactionRows.forEach((row) => rows.push(row)));
+
+    // get costs of individual rows
+    const rowCosts = await Promise.all(rows.map(async (row) => {
+      const rowCost = await ProductRevision.findOne({
+        revision: row.product.revision,
+        product: { id: row.product.id },
+      }).then((product) => product.price.getAmount() * row.amount);
+
+      return rowCost;
+    }));
+
+    // sum the costs
+    totalCost.amount = rowCosts.reduce((total, current) => total + current);
+
+    return totalCost;
+  }
+
+  /**
+   * Checks whether database prices are in accordance with request prices
+   * @param {TransactionRequest.model} req - the transaction request to verify
+   * @returns {boolean} - whether prices are correct
+   */
+  public static async verifyPrices(req: TransactionRequest): Promise<boolean> {
+    return req === undefined;
+  }
+
+  /**
    * Verifies whether a user has a sufficient balance to complete the transaction
    * @param {TransactionRequest.model} req - the transaction request to verify
    * @returns {boolean} - whether user's balance is ok or not
    */
   public static async verifyBalance(req: TransactionRequest): Promise<boolean> {
     // check whether from user has sufficient balance
-    let totalCost: number = 0;
-
-    // sum costs of the transaction
-    await Promise.all(req.subtransactions.map(async (subTransaction) => {
-      await Promise.all(subTransaction.subTransactionRows.map(async (row) => {
-        const product = await ProductRevision.findOne({
-          revision: row.product.revision,
-          product: {
-            id: row.product.id,
-          },
-        });
-        totalCost += DineroTransformer.Instance.to(product.price) * row.amount;
-      }));
-    }));
+    const totalCost = await this.getTotalCost(req);
 
     // TODO: get user balance and compare
-    return totalCost > 0;
+
+    return totalCost.amount > 0;
   }
 
   /**
@@ -193,7 +223,8 @@ export default class TransactionService {
 
     // get point of sale
     transaction.pointOfSale = await PointOfSaleRevision.findOne({
-      where: [{ revision: req.pointOfSale.revision }, { pointOfSale: req.pointOfSale.id }],
+      revision: req.pointOfSale.revision,
+      pointOfSale: { id: req.pointOfSale.id },
     });
 
     return transaction;
@@ -241,7 +272,8 @@ export default class TransactionService {
 
     // get container revision
     subTransaction.container = await ContainerRevision.findOne({
-      where: [{ revision: req.container.revision }, { container: req.container.id }],
+      revision: req.container.revision,
+      container: { id: req.container.id },
     });
 
     // sub transaction rows
@@ -287,7 +319,8 @@ export default class TransactionService {
       return undefined;
     }
     const product = await ProductRevision.findOne({
-      where: [{ revision: req.product.revision }, { product: req.product.id }],
+      revision: req.product.revision,
+      product: { id: req.product.id },
     });
     return { product, amount: req.amount, subTransaction } as SubTransactionRow;
   }

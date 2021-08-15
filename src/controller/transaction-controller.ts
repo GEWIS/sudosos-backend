@@ -161,6 +161,8 @@ export default class TransactionController extends BaseController {
     const body = req.body as TransactionRequest;
     this.logger.trace('Create transaction', body, 'by user', req.token.user);
 
+    // this.logger.trace('get cost', await TransactionService.getTotalCost(body));
+
     // handle request
     try {
       if (await TransactionService.verifyTransaction(body)) {
