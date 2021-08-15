@@ -29,8 +29,6 @@ import User from '../entity/user/user';
 import Product from '../entity/product/product';
 import UpdatedProduct from '../entity/product/updated-product';
 import ProductRevision from '../entity/product/product-revision';
-import container from '../entity/container/container';
-
 /**
  * Define updated container filtering parameters used to filter query results.
  */
@@ -85,28 +83,6 @@ export default class ContainerService {
         firstName: rawContainer.owner_firstName,
         lastName: rawContainer.owner_lastName,
       },
-    };
-  }
-
-  /**
-   * Helper function for the base mapping the raw getMany response container.
-   * @param rawContainer - the raw response to parse.
-   */
-  private static asContainerWithProductsResponse(rawContainer: any): ContainerWithProductsResponse {
-    return {
-      id: rawContainer.id,
-      name: rawContainer.name,
-      createdAt: rawContainer.createdAt,
-      updatedAt: rawContainer.updatedAt,
-      public: rawContainer.public,
-      owner: {
-        id: rawContainer.owner_id,
-        firstName: rawContainer.owner_firstName,
-        lastName: rawContainer.owner_lastName,
-      },
-      products: rawContainer.products.map(
-        (product: any) => ProductService.asProductResponse(product),
-      ),
     };
   }
 
@@ -183,7 +159,8 @@ export default class ContainerService {
    * @param params
    * @param updated
    */
-  public static async getContainersInUserContext(params: ContainerParameters, updated?: boolean): Promise<ContainerResponse[]> {
+  public static async getContainersInUserContext(params: ContainerParameters, updated?: boolean)
+    : Promise<ContainerResponse[]> {
     const publicContainers: ContainerResponse[] = updated
       ? (await this.getUpdatedContainers(
         { ...params, ownerId: undefined, public: true } as ContainerParameters,
@@ -267,7 +244,8 @@ export default class ContainerService {
    * Confirms an container update and creates a container revision.
    * @param containerId - The container update to confirm.
    */
-  public static async approveContainerUpdate(containerId: number): Promise<ContainerWithProductsResponse> {
+  public static async approveContainerUpdate(containerId: number)
+    : Promise<ContainerWithProductsResponse> {
     const base: Container = await Container.findOne(containerId);
     const rawContainerUpdate = await UpdatedContainer.findOne(containerId);
 
@@ -317,12 +295,7 @@ export default class ContainerService {
     await UpdatedContainer.delete(containerId);
 
     // Return the new container with products.
-    const update: ContainerResponse = (await this.getContainers({ containerId: base.id }))[0];
-
-    const containerResponse: ContainerWithProductsResponse = update as ContainerWithProductsResponse;
-    containerResponse.products = await ProductService.getProducts({ containerId: base.id });
-
-    return containerResponse;
+    return this.getProductsResponse(containerId, false);
   }
 
   /**
@@ -330,7 +303,8 @@ export default class ContainerService {
    * @param containerId - The ID of the product to update
    * @param update - The container variables to update.
    */
-  public static async updateContainer(containerId: number, update: ContainerRequest): Promise<ContainerWithProductsResponse> {
+  public static async updateContainer(containerId: number, update: ContainerRequest)
+    : Promise<ContainerWithProductsResponse> {
     // Get the base container.
     const base: Container = await Container.findOne(containerId);
 
@@ -340,7 +314,8 @@ export default class ContainerService {
     }
 
     let products: Product[] = [];
-    await Promise.all(update.products.map((id) => Product.findOne(id))).then((result) => { products = result.filter((p) => p); });
+    await Promise.all(update.products.map((id) => Product.findOne(id)))
+      .then((result) => { products = result.filter((p) => p); });
 
     // Set base container and apply new update.
     const updatedContainer = Object.assign(new UpdatedContainer(), {

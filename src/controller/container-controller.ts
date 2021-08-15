@@ -21,7 +21,7 @@ import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import ContainerService, { ContainerParameters } from '../service/container-service';
-import { ContainerResponse, ContainerWithProductsResponse } from './response/container-response';
+import { ContainerResponse } from './response/container-response';
 import ContainerRevision from '../entity/container/container-revision';
 import ProductService from '../service/product-service';
 import ContainerRequest from './request/container-request';

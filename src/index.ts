@@ -41,7 +41,7 @@ import ProductController from './controller/product-controller';
 import TransactionController from './controller/transaction-controller';
 import BorrelkaartGroupController from './controller/borrelkaart-group-controller';
 import RbacController from './controller/rbac-controller';
-import ContainerController from "./controller/container-controller";
+import ContainerController from './controller/container-controller';
 
 export class Application {
   app: express.Express;

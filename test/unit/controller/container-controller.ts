@@ -21,7 +21,6 @@ import chai, { request, expect } from 'chai';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
-import exp from 'constants';
 import User, { UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import { seedAllContainers, seedAllProducts, seedProductCategories } from '../../seed';
