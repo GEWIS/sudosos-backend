@@ -22,7 +22,7 @@ import RevisionRequest from './revision-request';
  * @typedef TransactionRequest
  * @property {integer} from.required - from user id
  * @property {integer} createdBy - createdBy user id
- * @property {Array<SubtransactionRequest>} subtransactions.required - subtransactions
+ * @property {Array<SubTransactionRequest>} subtransactions.required - subtransactions
  * @property {RevisionRequest.model} pointOfSale.required - point of sale
  */
 export interface TransactionRequest {
