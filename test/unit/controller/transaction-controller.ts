@@ -74,13 +74,78 @@ describe('TransactionController', (): void => {
                 revision: 2,
               },
               amount: 1,
+              price: {
+                amount: 72,
+                currency: 'EUR',
+                precision: 2,
+              },
+            },
+            {
+              product: {
+                id: 2,
+                revision: 3,
+              },
+              amount: 2,
+              price: {
+                amount: 148,
+                currency: 'EUR',
+                precision: 2,
+              },
             },
           ],
+          price: {
+            amount: 220,
+            currency: 'EUR',
+            precision: 2,
+          },
+        },
+        {
+          to: 9,
+          container: {
+            id: 2,
+            revision: 3,
+          },
+          subTransactionRows: [
+            {
+              product: {
+                id: 3,
+                revision: 1,
+              },
+              amount: 3,
+              price: {
+                amount: 219,
+                currency: 'EUR',
+                precision: 2,
+              },
+            },
+            {
+              product: {
+                id: 5,
+                revision: 2,
+              },
+              amount: 4,
+              price: {
+                amount: 304,
+                currency: 'EUR',
+                precision: 2,
+              },
+            },
+          ],
+          price: {
+            amount: 523,
+            currency: 'EUR',
+            precision: 2,
+          },
         },
       ],
       pointOfSale: {
         id: 1,
         revision: 2,
+      },
+      price: {
+        amount: 743,
+        currency: 'EUR',
+        precision: 2,
       },
     } as TransactionRequest;
     ctx = {
