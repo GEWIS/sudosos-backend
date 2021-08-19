@@ -45,6 +45,7 @@ import PointOfSale from '../entity/point-of-sale/point-of-sale';
 import Container from '../entity/container/container';
 import Product from '../entity/product/product';
 import { DineroObjectRequest } from '../controller/request/dinero-request';
+import { DineroObjectResponse } from '../controller/response/dinero-response';
 
 export interface TransactionFilterParameters {
   fromId?: number,
@@ -142,7 +143,6 @@ export default class TransactionService {
     if (!req.price) {
       return false;
     }
-
     const cost = await this.getTotalCost([req]);
     return this.dineroEq(req.price, cost);
   }
@@ -176,7 +176,6 @@ export default class TransactionService {
     if (!req.price) {
       return false;
     }
-
     const rows: SubTransactionRowRequest[] = [];
     req.subTransactionRows.forEach((row) => rows.push(row));
     const cost = await this.getTotalCost(rows);
@@ -224,7 +223,6 @@ export default class TransactionService {
     if (!req.price) {
       return false;
     }
-
     const rows: SubTransactionRowRequest[] = [];
     req.subtransactions.forEach((sub) => sub.subTransactionRows.forEach((row) => rows.push(row)));
     const cost = await this.getTotalCost(rows);
@@ -272,10 +270,27 @@ export default class TransactionService {
    * @param {Transaction.model} req - the transaction to cast
    * @returns {TransactionResponse.model} - the transaction response
    */
-  public static asTransactionResponse(transaction: Transaction): TransactionResponse | undefined {
+  public static async asTransactionResponse(transaction: Transaction):
+  Promise<TransactionResponse | undefined> {
     if (!transaction) {
       return undefined;
     }
+
+    // get sub transaction rows to calculate total cost
+    const rows: SubTransactionRowRequest[] = [];
+    transaction.subTransactions.forEach(
+      (sub) => sub.subTransactionRows.forEach((row) => rows.push(
+        {
+          product: {
+            id: row.product.product.id,
+            revision: row.product.revision,
+          },
+          amount: row.amount,
+          price: undefined,
+        } as SubTransactionRowRequest,
+      )),
+    );
+    const cost = await this.getTotalCost(rows);
 
     return {
       id: transaction.id,
@@ -283,10 +298,11 @@ export default class TransactionService {
       updatedAt: transaction.updatedAt.toISOString(),
       from: parseUserToBaseResponse(transaction.from, false),
       createdBy: parseUserToBaseResponse(transaction.createdBy, false),
-      subTransactions: transaction.subTransactions.map(
-        (subTransaction) => this.asSubTransactionResponse(subTransaction),
-      ),
+      subTransactions: await Promise.all(transaction.subTransactions.map(
+        async (subTransaction) => this.asSubTransactionResponse(subTransaction),
+      )),
       pointOfSale: parsePOSToBasePOS(transaction.pointOfSale, false),
+      price: { ...cost } as DineroObjectResponse,
     } as TransactionResponse;
   }
 
@@ -326,11 +342,26 @@ export default class TransactionService {
    * @param {SubTransaction.model} req - the sub transaction to cast
    * @returns {SubTransactionResponse.model} - the sub transaction response
    */
-  public static asSubTransactionResponse(subTransaction: SubTransaction):
-  SubTransactionResponse | undefined {
-    if (!SubTransaction) {
+  public static async asSubTransactionResponse(subTransaction: SubTransaction):
+  Promise<SubTransactionResponse | undefined> {
+    if (!subTransaction) {
       return undefined;
     }
+
+    // get sub transaction rows to calculate total cost
+    const rows: SubTransactionRowRequest[] = [];
+    subTransaction.subTransactionRows.forEach((row) => rows.push(
+      {
+        product: {
+          id: row.product.product.id,
+          revision: row.product.revision,
+        },
+        amount: row.amount,
+        price: undefined,
+      } as SubTransactionRowRequest,
+    ));
+    const cost = await this.getTotalCost(rows);
+
     return {
       id: subTransaction.id,
       to: parseUserToBaseResponse(subTransaction.to, false),
@@ -339,7 +370,13 @@ export default class TransactionService {
         id: row.id,
         product: parseProductToBaseResponse(row.product, false),
         amount: row.amount,
+        price: {
+          amount: row.product.price.getAmount() * row.amount,
+          currency: row.product.price.getCurrency(),
+          precision: row.product.price.getPrecision(),
+        } as DineroObjectResponse,
       } as SubTransactionRowResponse)),
+      price: { ...cost } as DineroObjectResponse,
     } as SubTransactionResponse;
   }
 
@@ -498,6 +535,7 @@ export default class TransactionService {
    */
   public static async updateTransaction(id: number, req: TransactionRequest):
   Promise<TransactionResponse | undefined> {
+    // TODO: make update
     const transaction = await this.asTransaction(req);
 
     // update transaction and return response

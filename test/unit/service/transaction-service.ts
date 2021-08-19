@@ -579,19 +579,63 @@ describe('TransactionService', (): void => {
 
   describe('Create a transaction', () => {
     it('should return a transaction response corresponding to the saved transaction', async () => {
+      // check response without prices
       const savedTransaction = await TransactionService.createTransaction(ctx.validTransReq);
-      expect(savedTransaction, 'request not saved correctly').to.eql(await TransactionService.getSingleTransaction(193));
+      const correctResponse = await TransactionService.getSingleTransaction(savedTransaction.id);
+      expect(savedTransaction, 'request not saved correctly').to.eql(correctResponse);
+
+      // check transaction response prices
+      expect(correctResponse.price, 'top level price incorrect').to.eql(ctx.validTransReq.price);
+
+      // check sub transaction response prices
+      for (let i = 0; i < correctResponse.subTransactions.length; i += 1) {
+        expect(correctResponse.subTransactions[i].price, 'sub transaction price incorrect')
+          .to.eql(ctx.validTransReq.subtransactions[i].price);
+
+        // check sub transaction row response prices
+        for (let j = 0; j < correctResponse.subTransactions[i].subTransactionRows.length; j += 1) {
+          expect(correctResponse.subTransactions[i].subTransactionRows[j].price, 'sub transaction row price incorrect')
+            .to.eql(ctx.validTransReq.subtransactions[i].subTransactionRows[j].price);
+        }
+      }
     });
   });
 
   describe('Delete a transaction', () => {
     it('should return a transaction response corresponding to the deleted transaction', async () => {
       const savedTransaction = await TransactionService.createTransaction(ctx.validTransReq);
-      const deletedTransaction = await TransactionService.deleteTransaction(193);
+      const deletedTransaction = await TransactionService.deleteTransaction(savedTransaction.id);
       expect(deletedTransaction, 'return value incorrect').to.eql(savedTransaction);
-      expect(await SubTransactionRow.findOne(176), 'sub transaction row not deleted').to.be.undefined;
-      expect(await SubTransaction.findOne(209), 'sub transaction not deleted').to.be.undefined;
-      expect(await Transaction.findOne(193), 'transaction not deleted').to.be.undefined;
+
+      // check deletion of transaction
+      expect(await Transaction.findOne(deletedTransaction.id), 'transaction not deleted').to.be.undefined;
+
+      // check deletion of sub transactions
+      await Promise.all(deletedTransaction.subTransactions.map(async (sub) => {
+        expect(await SubTransaction.findOne(sub.id), 'sub transaction not deleted').to.be.undefined;
+
+        // check deletion of sub transaction rows
+        await Promise.all(sub.subTransactionRows.map(async (row) => {
+          expect(await SubTransactionRow.findOne(row.id), 'sub transaction row not deleted').to.be.undefined;
+        }));
+      }));
+
+      // check transaction response prices
+      expect(deletedTransaction.price, 'top level price incorrect').to.eql(ctx.validTransReq.price);
+
+      // check sub transaction response prices
+      for (let i = 0; i < deletedTransaction.subTransactions.length; i += 1) {
+        expect(deletedTransaction.subTransactions[i].price, 'sub transaction price incorrect')
+          .to.eql(ctx.validTransReq.subtransactions[i].price);
+
+        // check sub transaction row response prices
+        for (let j = 0;
+          j < deletedTransaction.subTransactions[i].subTransactionRows.length;
+          j += 1) {
+          expect(deletedTransaction.subTransactions[i].subTransactionRows[j].price, 'sub transaction row price incorrect')
+            .to.eql(ctx.validTransReq.subtransactions[i].subTransactionRows[j].price);
+        }
+      }
     });
   });
 });
