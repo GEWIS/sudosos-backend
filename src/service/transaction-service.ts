@@ -61,7 +61,7 @@ export interface TransactionFilterParameters {
 
 export default class TransactionService {
   /**
-   * Gets total cost of a transaction
+   * Gets total cost of a transaction with values stored in the database
    * @param {TransactionRequest.model} req - the transaction request
    * @returns {DineroObject.model} - the total cost of a transaction
    */

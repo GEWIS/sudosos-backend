@@ -33,48 +33,6 @@ import { TransactionResponse } from '../../../src/controller/response/transactio
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import SubTransactionRow from '../../../src/entity/transactions/sub-transaction-row';
 
-function transactionEq(req: TransactionRequest, res: TransactionResponse): Boolean {
-  // check top level users
-  if (req.from !== res.from.id || req.createdBy !== res.createdBy.id) {
-    return false;
-  }
-
-  // check point of sale
-  if (req.pointOfSale.id !== res.pointOfSale.id) {
-    return false;
-  }
-
-  // check subtransactions
-  if (req.subtransactions.length !== res.subTransactions.length) {
-    return false;
-  }
-  req.subtransactions.every((subReq) => res.subTransactions.some((subRes) => {
-    // check to user
-    if (subReq.to !== subRes.to.id) {
-      return false;
-    }
-
-    // check container
-    if (subReq.container.id !== subRes.container.id) {
-      return false;
-    }
-
-    // check sub transaction rows
-    subReq.subTransactionRows.every((rowReq) => subRes.subTransactionRows.some((rowRes) => {
-      // check product
-      if (rowReq.product.id !== rowRes.product.id || rowReq.amount !== rowRes.amount) {
-        return false;
-      }
-
-      return true;
-    }));
-
-    return true;
-  }));
-
-  return true;
-}
-
 describe('TransactionService', (): void => {
   let ctx: {
     connection: Connection,
@@ -493,15 +451,15 @@ describe('TransactionService', (): void => {
   describe('Create a transaction', () => {
     it('should return a transaction response corresponding to the saved transaction', async () => {
       const savedTransaction = await TransactionService.createTransaction(ctx.validTransReq);
-      expect(transactionEq(ctx.validTransReq, savedTransaction), 'request not saved correctly').to.be.true;
+      expect(savedTransaction, 'request not saved correctly').to.eql(await TransactionService.getSingleTransaction(193));
     });
   });
 
   describe('Delete a transaction', () => {
     it('should return a transaction response corresponding to the deleted transaction', async () => {
-      await TransactionService.createTransaction(ctx.validTransReq);
+      const savedTransaction = await TransactionService.createTransaction(ctx.validTransReq);
       const deletedTransaction = await TransactionService.deleteTransaction(193);
-      expect(transactionEq(ctx.validTransReq, deletedTransaction), 'return value incorrect').to.be.true;
+      expect(deletedTransaction, 'return value incorrect').to.eql(savedTransaction);
       expect(await SubTransactionRow.findOne(176), 'sub transaction row not deleted').to.be.undefined;
       expect(await SubTransaction.findOne(209), 'sub transaction not deleted').to.be.undefined;
       expect(await Transaction.findOne(193), 'transaction not deleted').to.be.undefined;
