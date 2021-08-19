@@ -21,6 +21,7 @@ import { expect } from 'chai';
 import { Connection } from 'typeorm';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import log4js, { Logger } from 'log4js';
+import { DineroObject } from 'dinero.js';
 import Transaction from '../../../src/entity/transactions/transaction';
 import Database from '../../../src/database/database';
 import seedDatabase from '../../seed';
@@ -75,6 +76,11 @@ describe('TransactionService', (): void => {
                 revision: 2,
               },
               amount: 1,
+              price: {
+                amount: 72,
+                currency: 'EUR',
+                precision: 2,
+              },
             },
             {
               product: {
@@ -82,8 +88,18 @@ describe('TransactionService', (): void => {
                 revision: 3,
               },
               amount: 2,
+              price: {
+                amount: 148,
+                currency: 'EUR',
+                precision: 2,
+              },
             },
           ],
+          price: {
+            amount: 220,
+            currency: 'EUR',
+            precision: 2,
+          },
         },
         {
           to: 9,
@@ -98,6 +114,11 @@ describe('TransactionService', (): void => {
                 revision: 1,
               },
               amount: 3,
+              price: {
+                amount: 219,
+                currency: 'EUR',
+                precision: 2,
+              },
             },
             {
               product: {
@@ -105,13 +126,28 @@ describe('TransactionService', (): void => {
                 revision: 2,
               },
               amount: 4,
+              price: {
+                amount: 304,
+                currency: 'EUR',
+                precision: 2,
+              },
             },
           ],
+          price: {
+            amount: 523,
+            currency: 'EUR',
+            precision: 2,
+          },
         },
       ],
       pointOfSale: {
         id: 1,
         revision: 2,
+      },
+      price: {
+        amount: 743,
+        currency: 'EUR',
+        precision: 2,
       },
     } as TransactionRequest;
     ctx = {
@@ -131,13 +167,18 @@ describe('TransactionService', (): void => {
 
   describe('Get total cost of a transaction', () => {
     it('should return the total cost of a transaction', async () => {
-      expect((await TransactionService.getTotalCost(ctx.validTransReq)).amount).to.equal(743);
-    });
-  });
+      const total = {
+        amount: 743,
+        currency: 'EUR',
+        precision: 2,
+      } as DineroObject;
 
-  describe('Verify prices', () => {
-    it('should return true if the prices in the request are correct');
-    it('should return false if the prices in the request are incorrect');
+      const rows: SubTransactionRowRequest[] = [];
+      ctx.validTransReq.subtransactions.forEach(
+        (sub) => sub.subTransactionRows.forEach((row) => rows.push(row)),
+      );
+      expect((await TransactionService.getTotalCost(rows))).to.eql(total);
+    });
   });
 
   describe('Verifiy balance', () => {
@@ -202,6 +243,22 @@ describe('TransactionService', (): void => {
       badCreatedByReq.createdBy = 5;
       expect(await TransactionService.verifyTransaction(badCreatedByReq), 'inactive createdBy accepted').to.be.false;
     });
+    it('should return false if the price is set incorrectly', async () => {
+      // undefined price
+      const badPriceReq = {
+        ...ctx.validTransReq,
+        price: undefined,
+      } as TransactionRequest;
+      expect(await TransactionService.verifyTransaction(badPriceReq), 'undefined accepted').to.be.false;
+
+      // incorrect price
+      badPriceReq.price = {
+        amount: 1,
+        currency: 'EUR',
+        precision: 2,
+      };
+      expect(await TransactionService.verifyTransaction(badPriceReq), 'incorrect accepted').to.be.false;
+    });
   });
 
   describe('Verifiy sub transaction', () => {
@@ -250,6 +307,22 @@ describe('TransactionService', (): void => {
       badToReq.to = 5;
       expect(await TransactionService.verifySubTransaction(badToReq), 'inactive to accepted').to.be.false;
     });
+    it('should return false if the price is set incorrectly', async () => {
+      // undefined price
+      const badPriceReq = {
+        ...ctx.validTransReq.subtransactions[0],
+        price: undefined,
+      } as SubTransactionRequest;
+      expect(await TransactionService.verifySubTransaction(badPriceReq), 'undefined accepted').to.be.false;
+
+      // incorrect price
+      badPriceReq.price = {
+        amount: 1,
+        currency: 'EUR',
+        precision: 2,
+      };
+      expect(await TransactionService.verifySubTransaction(badPriceReq), 'incorrect accepted').to.be.false;
+    });
   });
 
   describe('Verifiy sub transaction row', () => {
@@ -280,7 +353,7 @@ describe('TransactionService', (): void => {
       };
       expect(await TransactionService.verifySubTransactionRow(badProductReq), 'incorrect current revision accepted').to.be.false;
     });
-    it('should return false if the specified amount of products is invalid', async () => {
+    it('should return false if the specified amount of the product is invalid', async () => {
       // undefined amount
       const badAmountReq = {
         ...ctx.validTransReq.subtransactions[0].subTransactionRows[0],
@@ -295,6 +368,22 @@ describe('TransactionService', (): void => {
       // amount not an integer
       badAmountReq.amount = 1.1;
       expect(await TransactionService.verifySubTransactionRow(badAmountReq), 'non integer amount accepted').to.be.false;
+    });
+    it('should return false if the price is set incorrectly', async () => {
+      // undefined price
+      const badPriceReq = {
+        ...ctx.validTransReq.subtransactions[0].subTransactionRows[0],
+        price: undefined,
+      } as SubTransactionRowRequest;
+      expect(await TransactionService.verifySubTransactionRow(badPriceReq), 'undefined accepted').to.be.false;
+
+      // incorrect price
+      badPriceReq.price = {
+        amount: 1,
+        currency: 'EUR',
+        precision: 2,
+      };
+      expect(await TransactionService.verifySubTransactionRow(badPriceReq), 'incorrect accepted').to.be.false;
     });
   });
 

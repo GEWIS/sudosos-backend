@@ -44,6 +44,7 @@ import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision'
 import PointOfSale from '../entity/point-of-sale/point-of-sale';
 import Container from '../entity/container/container';
 import Product from '../entity/product/product';
+import { DineroObjectRequest } from '../controller/request/dinero-request';
 
 export interface TransactionFilterParameters {
   fromId?: number,
@@ -65,16 +66,12 @@ export default class TransactionService {
    * @param {TransactionRequest.model} req - the transaction request
    * @returns {DineroObject.model} - the total cost of a transaction
    */
-  public static async getTotalCost(req: TransactionRequest): Promise<DineroObject> {
+  public static async getTotalCost(rows: SubTransactionRowRequest[]): Promise<DineroObject> {
     const totalCost: DineroObject = {
       amount: 0,
       currency: 'EUR',
       precision: 2,
     };
-
-    // get row requests in the transaction
-    const rows: SubTransactionRowRequest[] = [];
-    req.subtransactions.forEach((sub) => sub.subTransactionRows.forEach((row) => rows.push(row)));
 
     // get costs of individual rows
     const rowCosts = await Promise.all(rows.map(async (row) => {
@@ -93,26 +90,32 @@ export default class TransactionService {
   }
 
   /**
-   * Checks whether database prices are in accordance with request prices
-   * @param {TransactionRequest.model} req - the transaction request to verify
-   * @returns {boolean} - whether prices are correct
-   */
-  public static async verifyPrices(req: TransactionRequest): Promise<boolean> {
-    return req === undefined;
-  }
-
-  /**
    * Verifies whether a user has a sufficient balance to complete the transaction
    * @param {TransactionRequest.model} req - the transaction request to verify
    * @returns {boolean} - whether user's balance is ok or not
    */
   public static async verifyBalance(req: TransactionRequest): Promise<boolean> {
+    const rows: SubTransactionRowRequest[] = [];
+    req.subtransactions.forEach((sub) => sub.subTransactionRows.forEach((row) => rows.push(row)));
+
     // check whether from user has sufficient balance
-    const totalCost = await this.getTotalCost(req);
+    const totalCost = await this.getTotalCost(rows);
 
     // TODO: get user balance and compare
 
     return totalCost.amount > 0;
+  }
+
+  /**
+   * Tests whether a dinero request equals a dinero object
+   * @param {DineroObjectRequest.model} req - dinero request
+   * @param {DineroObject.model} din - dinero object
+   * @returns {boolean} - equality of the parameters
+   */
+  public static dineroEq(req: DineroObjectRequest, din: DineroObject): boolean {
+    return (req.amount === din.amount
+      && req.currency === din.currency
+      && req.precision === din.precision);
   }
 
   /**
@@ -131,7 +134,17 @@ export default class TransactionService {
     }
 
     // check whether amount is correct
-    return req.amount > 0 && Number.isInteger(req.amount);
+    if (req.amount <= 0 || !Number.isInteger(req.amount)) {
+      return false;
+    }
+
+    // check whether the request price corresponds to the database price
+    if (!req.price) {
+      return false;
+    }
+
+    const cost = await this.getTotalCost([req]);
+    return this.dineroEq(req.price, cost);
   }
 
   /**
@@ -156,6 +169,18 @@ export default class TransactionService {
 
     const user = await User.findOne(req.to);
     if (!user || !user.active) {
+      return false;
+    }
+
+    // check whether the request price corresponds to the database price
+    if (!req.price) {
+      return false;
+    }
+
+    const rows: SubTransactionRowRequest[] = [];
+    req.subTransactionRows.forEach((row) => rows.push(row));
+    const cost = await this.getTotalCost(rows);
+    if (!this.dineroEq(req.price, cost)) {
       return false;
     }
 
@@ -192,6 +217,18 @@ export default class TransactionService {
     const users = await User.findByIds(ids);
     if (users.length !== ids.length
       || !users.every((user) => user.active)) {
+      return false;
+    }
+
+    // check whether the request price corresponds to the database price
+    if (!req.price) {
+      return false;
+    }
+
+    const rows: SubTransactionRowRequest[] = [];
+    req.subtransactions.forEach((sub) => sub.subTransactionRows.forEach((row) => rows.push(row)));
+    const cost = await this.getTotalCost(rows);
+    if (!this.dineroEq(req.price, cost)) {
       return false;
     }
 

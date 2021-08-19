@@ -16,6 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import { DineroObjectRequest } from './dinero-request';
 import RevisionRequest from './revision-request';
 
 /**
@@ -24,12 +25,14 @@ import RevisionRequest from './revision-request';
  * @property {integer} createdBy - createdBy user id
  * @property {Array<SubTransactionRequest>} subtransactions.required - subtransactions
  * @property {RevisionRequest.model} pointOfSale.required - point of sale
+ * @property {DineroObjectRequest.model} price.required - total price of the transaction
  */
 export interface TransactionRequest {
   from: number,
   createdBy: number,
   subtransactions: SubTransactionRequest[],
   pointOfSale: RevisionRequest,
+  price: DineroObjectRequest,
 }
 
 /**
@@ -37,19 +40,23 @@ export interface TransactionRequest {
  * @property {integer} to.required - to user id
  * @property {RevisionRequest.model} container.required - container
  * @property {Array<SubTransactionRowRequest>} subTransactionRows.required - subtransaction rows
+ * @property {DineroObjectRequest.model} price.required - total price of the subtransaction
  */
 export interface SubTransactionRequest {
   to: number,
   container: RevisionRequest,
   subTransactionRows: SubTransactionRowRequest[],
+  price: DineroObjectRequest,
 }
 
 /**
  * @typedef SubTransactionRowRequest
  * @property {RevisionRequest.model} product - product
- * @property {integer} amount - amount of this product in transaction
+ * @property {integer} amount - amount of this product in subtransaction
+ * @property {DineroObjectRequest.model} price.required - total price of the subtransaction row
  */
 export interface SubTransactionRowRequest {
   product: RevisionRequest,
   amount: number,
+  price: DineroObjectRequest,
 }
