@@ -76,6 +76,36 @@ describe('TransactionService', (): void => {
               },
               amount: 1,
             },
+            {
+              product: {
+                id: 2,
+                revision: 3,
+              },
+              amount: 2,
+            },
+          ],
+        },
+        {
+          to: 9,
+          container: {
+            id: 2,
+            revision: 3,
+          },
+          subTransactionRows: [
+            {
+              product: {
+                id: 3,
+                revision: 1,
+              },
+              amount: 3,
+            },
+            {
+              product: {
+                id: 5,
+                revision: 2,
+              },
+              amount: 4,
+            },
           ],
         },
       ],
@@ -97,6 +127,22 @@ describe('TransactionService', (): void => {
 
   afterEach(async () => {
     await ctx.connection.close();
+  });
+
+  describe('Get total cost of a transaction', () => {
+    it('should return the total cost of a transaction', async () => {
+      expect((await TransactionService.getTotalCost(ctx.validTransReq)).amount).to.equal(743);
+    });
+  });
+
+  describe('Verify prices', () => {
+    it('should return true if the prices in the request are correct');
+    it('should return false if the prices in the request are incorrect');
+  });
+
+  describe('Verifiy balance', () => {
+    it('should return true if the balance is sufficient');
+    it('should return false if the balance is insuficient');
   });
 
   describe('Verify transaction', () => {
@@ -250,11 +296,6 @@ describe('TransactionService', (): void => {
       badAmountReq.amount = 1.1;
       expect(await TransactionService.verifySubTransactionRow(badAmountReq), 'non integer amount accepted').to.be.false;
     });
-  });
-
-  describe('Verifiy balance', () => {
-    it('should return true if the balance is sufficient');
-    it('should return false if the balance is insuficient');
   });
 
   describe('Get all transactions', () => {
