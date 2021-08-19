@@ -29,7 +29,6 @@ import TransactionService from '../../../src/service/transaction-service';
 import { verifyBaseTransactionEntity } from '../validators';
 import Swagger from '../../../src/start/swagger';
 import { SubTransactionRequest, SubTransactionRowRequest, TransactionRequest } from '../../../src/controller/request/transaction-request';
-import { TransactionResponse } from '../../../src/controller/response/transaction-response';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import SubTransactionRow from '../../../src/entity/transactions/sub-transaction-row';
 
