@@ -90,8 +90,9 @@ export default class BalanceController extends BaseController {
   private async getBalance(req: RequestWithToken, res: Response): Promise<void> {
     try {
       if (isNumber(req.params.id)) {
-        if (await User.findOne(Number.parseInt(req.params.id, 10), { where: { deleted: false } })) {
-          res.json(await BalanceService.getBalance(Number.parseInt(req.params.id, 10)));
+        const userId = Number.parseInt(req.params.id, 10);
+        if (await User.findOne(userId, { where: { deleted: false } })) {
+          res.json(await BalanceService.getBalance(userId));
         } else {
           res.status(404).json('User does not exist');
         }
