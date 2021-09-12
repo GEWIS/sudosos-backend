@@ -42,6 +42,7 @@ import ProductCategoryController from './controller/product-category-controller'
 import TransactionController from './controller/transaction-controller';
 import BorrelkaartGroupController from './controller/borrelkaart-group-controller';
 import RbacController from './controller/rbac-controller';
+import GewisAuthenticationController from './gewis/controller/gewis-authentication-controller';
 
 export class Application {
   app: express.Express;
@@ -114,6 +115,17 @@ async function setupAuthentication(application: Application) {
     tokenHandler,
   );
   application.app.use('/v1/authentication', controller.getRouter());
+
+  // Define GEWIS authentication controller and bind before middleware.
+  const gewisController = new GewisAuthenticationController(
+    {
+      specification: application.specification,
+      roleManager: application.roleManager,
+    },
+    tokenHandler,
+    process.env.GEWISWEB_JWT_SECRET,
+  );
+  application.app.use('/v1/authentication', gewisController.getRouter());
 
   // Define middleware to be used by any other route.
   const tokenMiddleware = new TokenMiddleware({ refreshFactor: 0.5, tokenHandler });
