@@ -64,9 +64,8 @@ export class Application {
   public async stop(): Promise<void> {
     this.logger.info('Stopping application instance...');
     await util.promisify(this.server.close).bind(this.server)();
-    await this.connection.close();
-
     this.tasks.forEach((task) => task.stop());
+    await this.connection.close();
     this.logger.info('Application stopped.');
   }
 }

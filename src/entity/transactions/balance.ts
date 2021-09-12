@@ -30,7 +30,7 @@ import User from '../user/user';
  * @typedef {Balance} Balance
  * @property {User.model} user.required - The account which has this balance
  * @property {Number} amount - The amount of balance a user has.
- * @property {Date>} subtransactions.required - The time of last sync with transactions
+ * @property {Date} subtransactions.required - The time of last sync with transactions
  *    to this transaction.
  */
 @Entity()

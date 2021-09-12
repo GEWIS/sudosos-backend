@@ -86,7 +86,6 @@ export default class BalanceController extends BaseController {
    * @returns {string} 404 - Not found error
    * @returns {string} 500 - Internal server error
    */
-  // eslint-disable-next-line class-methods-use-this
   private async getBalance(req: RequestWithToken, res: Response): Promise<void> {
     try {
       if (req?.params?.id === undefined) {
@@ -101,26 +100,9 @@ export default class BalanceController extends BaseController {
         res.status(400).json('Invalid definition of user id');
       }
     } catch (error) {
-      if (req?.params?.id === undefined) {
-        this.logger.error(`Could not get balance of user with id ${req.token.user.id}`, error);
-      } else {
-        this.logger.error(`Could not get balance of user with id ${req.params.id}`, error);
-      }
+      const id = req?.params?.id ?? req.token.user.id;
+      this.logger.error(`Could not get balance of user with id ${id}`, error);
       res.status(500).json('Internal server error.');
     }
-  }
-
-  /**
-     * Validates that the request is authorized by the policy.
-     * @param req - The incoming request.
-     */
-  // eslint-disable-next-line class-methods-use-this
-  private isAdmin(req: RequestWithToken): boolean {
-    return req.token.user.type === UserType.LOCAL_ADMIN;
-  }
-
-  private canAccess(req: RequestWithToken): boolean {
-    return (req?.params?.id && +req.params.id === req.token.user.id)
-     || this.isAdmin(req) || req?.params?.id === undefined;
   }
 }
