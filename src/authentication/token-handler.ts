@@ -86,6 +86,7 @@ export default class TokenHandler {
    */
   public async verifyToken(token: string): Promise<JsonWebToken> {
     return util.promisify(jwt.verify).bind(null, token, this.options.publicKey, {
+      algorithms: [this.options.algorithm],
       complete: false,
     })();
   }

@@ -15,24 +15,11 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import {
-  BaseEntity, Column, Entity, JoinColumn, OneToOne,
-} from 'typeorm';
-import User from './user';
 
 /**
- * @typedef {BaseEntity} GewisUser
- * @property {User.model} user.required - The user.
- * @property {integer} gewisId.required - The id of the member.
+ * @typedef MessageResponse
+ * @property {string} message.required - The message response text.
  */
-@Entity()
-export default class GewisUser extends BaseEntity {
-  @OneToOne(() => User, { primary: true, nullable: false })
-  @JoinColumn()
-  public user: User;
-
-  @Column({
-    type: 'integer',
-  })
-  public gewisId: number;
+export default interface MessageResponse {
+  message: string
 }

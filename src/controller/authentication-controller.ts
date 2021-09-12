@@ -71,6 +71,36 @@ export default class AuthenticationController extends BaseController {
   }
 
   /**
+   * Converts the internal object representation to an authentication response, which can be
+   * returned in the API response.
+   * @param user - The user that authenticated.
+   * @param roles - The roles that the authenticated user has.
+   * @param token - The JWT token that can be used to authenticate.
+   * @returns The authentication response.
+   */
+  public static asAuthenticationResponse(
+    user: User,
+    roles: string[],
+    token: string,
+  ): AuthenticationResponse {
+    const response: AuthenticationResponse = {
+      user: {
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        active: user.active,
+        deleted: user.deleted,
+        type: user.type,
+        createdAt: user.createdAt.toISOString(),
+        updatedAt: user.updatedAt.toISOString(),
+      },
+      roles,
+      token,
+    };
+    return response;
+  }
+
+  /**
    * Validates that the request is authorized by the policy.
    * @param req - The incoming request.
    */
@@ -109,21 +139,7 @@ export default class AuthenticationController extends BaseController {
         roles,
       };
       const token = await this.tokenHandler.signToken(contents, body.nonce);
-
-      const response: AuthenticationResponse = {
-        user: {
-          id: user.id,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          active: user.active,
-          deleted: user.deleted,
-          type: user.type,
-          createdAt: user.createdAt.toISOString(),
-          updatedAt: user.updatedAt.toISOString(),
-        },
-        roles,
-        token,
-      };
+      const response = AuthenticationController.asAuthenticationResponse(user, roles, token);
       res.json(response);
     } catch (error) {
       this.logger.error('Could not create token:', error);
