@@ -107,6 +107,15 @@ describe('TokenHandler', (): void => {
       await expect(promise).to.eventually.be.rejectedWith(jwt.JsonWebTokenError);
     });
 
+    it('should fail to verify if signature is from different algorithm', async () => {
+      const token = util.promisify(jwt.sign).bind(null, 'nonce', {
+        ...ctx.handler.getOptions(),
+        algorithm: 'none',
+      })();
+      const promise = ctx.handler.verifyToken(token);
+      await expect(promise).to.eventually.be.rejectedWith(jwt.JsonWebTokenError);
+    });
+
     it('should fail to verify if token is expired', async () => {
       const token = await util.promisify(jwt.sign).bind(null, { user: ctx.user },
         ctx.handler.getOptions().privateKey, {

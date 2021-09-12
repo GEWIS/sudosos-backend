@@ -45,6 +45,7 @@ import BorrelkaartGroupController from './controller/borrelkaart-group-controlle
 import BalanceService from './service/balance-service';
 import BalanceController from './controller/balance-controller';
 import RbacController from './controller/rbac-controller';
+import GewisAuthenticationController from './gewis/controller/gewis-authentication-controller';
 
 export class Application {
   app: express.Express;
@@ -121,6 +122,17 @@ async function setupAuthentication(application: Application) {
   );
   application.app.use('/v1/authentication', controller.getRouter());
 
+  // Define GEWIS authentication controller and bind before middleware.
+  const gewisController = new GewisAuthenticationController(
+    {
+      specification: application.specification,
+      roleManager: application.roleManager,
+    },
+    tokenHandler,
+    process.env.GEWISWEB_JWT_SECRET,
+  );
+  application.app.use('/v1/authentication', gewisController.getRouter());
+
   // Define middleware to be used by any other route.
   const tokenMiddleware = new TokenMiddleware({ refreshFactor: 0.5, tokenHandler });
   application.app.use(tokenMiddleware.getMiddleware());
@@ -187,7 +199,8 @@ if (require.main === module) {
   // Only execute the application directly if this is the main execution file.
   config();
   createApp().catch((e) => {
-    const logger = log4js.getLogger('Application');
+    const logger = log4js.getLogger('index');
+    logger.level = process.env.LOG_LEVEL;
     logger.fatal(e);
   });
 }
