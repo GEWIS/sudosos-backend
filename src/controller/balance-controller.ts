@@ -20,7 +20,7 @@ import { Response } from 'express';
 import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
-import User, { UserType } from '../entity/user/user';
+import User from '../entity/user/user';
 import BalanceService from '../service/balance-service';
 
 export default class BalanceController extends BaseController {
