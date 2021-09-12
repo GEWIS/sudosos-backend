@@ -173,6 +173,7 @@ if (require.main === module) {
   config();
   createApp().catch((e) => {
     const logger = log4js.getLogger('index');
+    logger.level = process.env.LOG_LEVEL;
     logger.fatal(e);
   });
 }
