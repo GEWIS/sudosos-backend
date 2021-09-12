@@ -27,6 +27,7 @@ import { config } from 'dotenv';
 import express from 'express';
 import log4js, { Logger } from 'log4js';
 import { Connection } from 'typeorm';
+import cron from 'node-cron';
 import Database from './database/database';
 import Swagger from './start/swagger';
 import TokenHandler from './authentication/token-handler';
@@ -41,6 +42,8 @@ import ProductController from './controller/product-controller';
 import ProductCategoryController from './controller/product-category-controller';
 import TransactionController from './controller/transaction-controller';
 import BorrelkaartGroupController from './controller/borrelkaart-group-controller';
+import BalanceService from './service/balance-service';
+import BalanceController from './controller/balance-controller';
 import RbacController from './controller/rbac-controller';
 import GewisAuthenticationController from './gewis/controller/gewis-authentication-controller';
 
@@ -57,9 +60,12 @@ export class Application {
 
   logger: Logger;
 
+  tasks: cron.ScheduledTask[];
+
   public async stop(): Promise<void> {
     this.logger.info('Stopping application instance...');
     await util.promisify(this.server.close).bind(this.server)();
+    this.tasks.forEach((task) => task.stop());
     await this.connection.close();
     this.logger.info('Application stopped.');
   }
@@ -161,11 +167,20 @@ export default async function createApp(): Promise<Application> {
   // Setup token handler and authentication controller.
   await setupAuthentication(application);
 
+  await BalanceService.updateBalances();
+  const cronTask = cron.schedule('*/10 * * * *', () => {
+    logger.debug('Syncing balances.');
+    BalanceService.updateBalances();
+    logger.debug('Synced balances.');
+  });
+  application.tasks = [cronTask];
+
   // REMOVE LATER
   const options: BaseControllerOptions = {
     specification: application.specification,
     roleManager: application.roleManager,
   };
+  application.app.use('/v1/balances', new BalanceController(options).getRouter());
   application.app.use('/v1/banners', new BannerController(options).getRouter());
   application.app.use('/v1/users', new UserController(options).getRouter());
   application.app.use('/v1/products', new ProductController(options).getRouter());

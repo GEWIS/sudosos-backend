@@ -44,6 +44,7 @@ import ProductOrdering from '../entity/point-of-sale/product-ordering';
 import UpdatedProduct from '../entity/product/updated-product';
 import UpdatedContainer from '../entity/container/updated-container';
 import UpdatedPointOfSale from '../entity/point-of-sale/updated-point-of-sale';
+import Balance from '../entity/transactions/balance';
 
 export default class Database {
   public static async initialize(): Promise<Connection> {
@@ -76,6 +77,7 @@ export default class Database {
         PinAuthenticator,
         Banner,
         ProductOrdering,
+        Balance,
       ],
     };
     return createConnection(options);
