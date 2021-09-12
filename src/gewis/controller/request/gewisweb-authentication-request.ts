@@ -15,24 +15,20 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import {
-  BaseEntity, Column, Entity, JoinColumn, OneToOne,
-} from 'typeorm';
-import User from './user';
+
+import { Request } from 'express';
+import GewiswebToken from '../../gewisweb-token';
 
 /**
- * @typedef {BaseEntity} GewisUser
- * @property {User.model} user.required - The user.
- * @property {integer} gewisId.required - The id of the member.
+ * @typedef GewiswebAuthenticationRequest
+ * @property {string} token.required The gewisweb JWT token.
+ * @property {string} nonce.required The nonce used in the newly signed JWT token.
  */
-@Entity()
-export default class GewisUser extends BaseEntity {
-  @OneToOne(() => User, { primary: true, nullable: false })
-  @JoinColumn()
-  public user: User;
+export default interface GewiswebAuthenticationRequest {
+  token: string,
+  nonce: string,
+}
 
-  @Column({
-    type: 'integer',
-  })
-  public gewisId: number;
+export interface GewiswebTokenRequest extends Request {
+  token: GewiswebToken;
 }

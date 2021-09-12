@@ -78,7 +78,7 @@ export default class AuthenticationController extends BaseController {
    * @param token - The JWT token that can be used to authenticate.
    * @returns The authentication response.
    */
-  private static asAuthenticationResponse(
+  public static asAuthenticationResponse(
     user: User,
     roles: string[],
     token: string,
