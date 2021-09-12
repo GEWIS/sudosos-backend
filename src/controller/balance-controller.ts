@@ -22,6 +22,7 @@ import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import User from '../entity/user/user';
 import BalanceService from '../service/balance-service';
+import { isNumber } from '../helpers/validators';
 
 export default class BalanceController extends BaseController {
   private logger: Logger = log4js.getLogger('BannerController');
@@ -68,7 +69,7 @@ export default class BalanceController extends BaseController {
   // eslint-disable-next-line class-methods-use-this
   private async getOwnBalance(req: RequestWithToken, res: Response): Promise<void> {
     try {
-      await this.getBalance(req, res);
+      res.json(await BalanceService.getBalance(req.token.user.id));
     } catch (error) {
       this.logger.error(`Could not get balance of user with id ${req.token.user.id}`, error);
       res.status(500).json('Internal server error.');
@@ -88,11 +89,9 @@ export default class BalanceController extends BaseController {
    */
   private async getBalance(req: RequestWithToken, res: Response): Promise<void> {
     try {
-      if (req?.params?.id === undefined) {
-        res.json(await BalanceService.getBalance(req.token.user.id));
-      } else if (!Number.isNaN(Number.parseInt(req.params.id, 10))) {
+      if (isNumber(req.params.id)) {
         if (await User.findOne(Number.parseInt(req.params.id, 10), { where: { deleted: false } })) {
-          res.json(await BalanceService.getBalance(+req.params.id));
+          res.json(await BalanceService.getBalance(Number.parseInt(req.params.id, 10)));
         } else {
           res.status(404).json('User does not exist');
         }
