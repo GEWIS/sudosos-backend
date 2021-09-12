@@ -29,7 +29,6 @@ import Swagger from '../../../../src/start/swagger';
 import RoleManager from '../../../../src/rbac/role-manager';
 import AuthenticationResponse from '../../../../src/controller/response/authentication-response';
 import GewisAuthenticationController from '../../../../src/gewis/controller/gewis-authentication-controller';
-import GewiswebAuthenticationRequest from '../../../../src/gewis/controller/request/gewisweb-authentication-request';
 import GewiswebToken from '../../../../src/gewis/gewisweb-token';
 import GewisUser from '../../../../src/entity/user/gewis-user';
 
