@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import * as jwt from 'jsonwebtoken';
 import log4js, { Logger } from 'log4js';
 import * as util from 'util';
@@ -25,7 +25,8 @@ import JsonWebToken from '../../authentication/json-web-token';
 import TokenHandler from '../../authentication/token-handler';
 import GewisUser from '../../entity/user/gewis-user';
 import AuthenticationController from '../../controller/authentication-controller';
-import GewiswebAuthenticationRequest, { GewiswebTokenRequest } from './request/gewisweb-authentication-request';
+import GewiswebToken from '../gewisweb-token';
+import GewiswebAuthenticationRequest from './request/gewisweb-authentication-request';
 
 /**
   * The GEWIS authentication controller is responsible for:
@@ -73,36 +74,11 @@ export default class GewisAuthenticationController extends BaseController {
       '/gewisweb': {
         POST: {
           body: { modelName: 'GewiswebAuthenticationRequest' },
-          policy: this.canPerformGewiswebLogin.bind(this),
+          policy: async () => true,
           handler: this.gewiswebLogin.bind(this),
         },
       },
     };
-  }
-
-  /**
-    * Validates that the request is authorized by the policy.
-    * @param req - The incoming request.
-    */
-  public async canPerformGewiswebLogin(req: GewiswebTokenRequest): Promise<boolean> {
-    const body = req.body as GewiswebAuthenticationRequest;
-
-    try {
-      req.token = await util.promisify(jwt.verify)
-        .bind(null, body.token, this.gewiswebSecret, {
-          algorithms: ['HS256'],
-          complete: false,
-        })();
-
-      // Check the existence of the user
-      const user = await GewisUser.findOne({ gewisId: req.token.lidnr });
-      if (!user) return false;
-    } catch {
-      // Invalid token supplied.
-      return false;
-    }
-
-    return true;
   }
 
   /**
@@ -116,15 +92,37 @@ export default class GewisAuthenticationController extends BaseController {
     * @returns {MessageResponse.model} 403 - The created json web token.
     * @returns {string} 400 - Validation error.
     */
-  public async gewiswebLogin(req: GewiswebTokenRequest, res: Response): Promise<void> {
+  public async gewiswebLogin(req: Request, res: Response): Promise<void> {
     const body = req.body as GewiswebAuthenticationRequest;
-    this.logger.trace('Gewisweb authentication for user with membership id', req.token.lidnr);
 
     try {
+      let gewisweb: GewiswebToken;
+      try {
+        gewisweb = await util.promisify(jwt.verify)
+          .bind(null, body.token, this.gewiswebSecret, {
+            algorithms: ['HS256'],
+            complete: false,
+          })();
+      } catch {
+        // Invalid token supplied.
+        res.status(403).json({
+          message: 'Invalid JWT signature',
+        });
+        return;
+      }
+      this.logger.trace('Gewisweb authentication for user with membership id', gewisweb.lidnr);
+
       const user = await GewisUser.findOne({
-        where: { gewisId: req.token.lidnr },
+        where: { gewisId: gewisweb.lidnr },
         relations: ['user'],
       });
+      if (!user) {
+        res.status(403).json({
+          message: `User ${gewisweb.lidnr} not registered`,
+        });
+        return;
+      }
+
       const roles = await this.roleManager.getRoles(user.user);
 
       const contents: JsonWebToken = {

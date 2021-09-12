@@ -16,15 +16,10 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { Request } from 'express';
-import GewiswebToken from '../../gewisweb-token';
-
 /**
- * @typedef GewiswebAuthenticationRequest
- * @property {string} token.required The gewisweb JWT token.
- * @property {string} nonce.required The nonce used in the newly signed JWT token.
+ * @typedef MessageResponse
+ * @property {string} message.required - The message response text.
  */
-export default interface GewiswebAuthenticationRequest {
-  token: string,
-  nonce: string,
+export default interface MessageResponse {
+  message: string
 }
