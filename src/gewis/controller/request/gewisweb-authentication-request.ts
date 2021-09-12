@@ -16,9 +16,6 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { Request } from 'express';
-import GewiswebToken from '../../gewisweb-token';
-
 /**
  * @typedef GewiswebAuthenticationRequest
  * @property {string} token.required The gewisweb JWT token.
