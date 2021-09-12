@@ -39,6 +39,7 @@ import BannerController from './controller/banner-controller';
 import { BaseControllerOptions } from './controller/base-controller';
 import UserController from './controller/user-controller';
 import ProductController from './controller/product-controller';
+import ProductCategoryController from './controller/product-category-controller';
 import TransactionController from './controller/transaction-controller';
 import BorrelkaartGroupController from './controller/borrelkaart-group-controller';
 import BalanceService from './service/balance-service';
@@ -172,6 +173,7 @@ export default async function createApp(): Promise<Application> {
   application.app.use('/v1/banners', new BannerController(options).getRouter());
   application.app.use('/v1/users', new UserController(options).getRouter());
   application.app.use('/v1/products', new ProductController(options).getRouter());
+  application.app.use('/v1/productcategories', new ProductCategoryController(options).getRouter());
   application.app.use('/v1/transactions', new TransactionController(options).getRouter());
   application.app.use('/v1/borrelkaartgroups', new BorrelkaartGroupController(options).getRouter());
 
