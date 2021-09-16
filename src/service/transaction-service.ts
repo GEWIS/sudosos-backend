@@ -64,30 +64,24 @@ export interface TransactionFilterParameters {
 export default class TransactionService {
   /**
    * Gets total cost of a transaction with values stored in the database
-   * @param {TransactionRequest.model} req - the transaction request
+   * @param {Array.<SubTransactionRowRequest>} req - the transaction request
    * @returns {DineroObject.model} - the total cost of a transaction
    */
   public static async getTotalCost(rows: SubTransactionRowRequest[]): Promise<DineroObject> {
-    const totalCost: DineroObject = {
-      amount: 0,
-      currency: 'EUR',
-      precision: 2,
-    };
-
     // get costs of individual rows
     const rowCosts = await Promise.all(rows.map(async (row) => {
       const rowCost = await ProductRevision.findOne({
         revision: row.product.revision,
         product: { id: row.product.id },
-      }).then((product) => product.price.getAmount() * row.amount);
+      }).then((product) => product.price.multiply(row.amount));
 
       return rowCost;
     }));
 
     // sum the costs
-    totalCost.amount = rowCosts.reduce((total, current) => total + current);
+    const totalCost = rowCosts.reduce((total, current) => total.add(current));
 
-    return totalCost;
+    return totalCost.toObject();
   }
 
   /**
