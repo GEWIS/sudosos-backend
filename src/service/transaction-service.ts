@@ -250,11 +250,11 @@ export default class TransactionService {
       async (subTransaction) => this.asSubTransaction(subTransaction),
     ));
 
-    // get point of sale
+    // get point of sale revision
     transaction.pointOfSale = await PointOfSaleRevision.findOne({
       revision: req.pointOfSale.revision,
       pointOfSale: { id: req.pointOfSale.id },
-    });
+    }, { relations: ['pointOfSale'] });
 
     return transaction;
   }

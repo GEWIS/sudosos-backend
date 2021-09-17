@@ -930,7 +930,7 @@ export async function seedAllPointsOfSale(
  * @param from - The user that buys stuff from the point of sale.
  * @param createdBy - The user that has created the transaction for the 'from' user, or null.
  */
-function defineTransactions(
+export function defineTransactions(
   start: number,
   startSubTransaction: number,
   startRow: number,
