@@ -648,11 +648,11 @@ function definePointsOfSale(
 ): PointOfSale[] {
   const pointsOfSale: PointOfSale[] = [];
   for (let nr = 1; nr <= count; nr += 1) {
-    const container = Object.assign(new Container(), {
+    const pointOfSale = Object.assign(new PointOfSale(), {
       id: start + nr,
       owner: user,
     });
-    pointsOfSale.push(container);
+    pointsOfSale.push(pointOfSale);
   }
   return pointsOfSale;
 }
