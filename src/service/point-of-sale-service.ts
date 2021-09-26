@@ -80,7 +80,7 @@ export default class PointOfSaleService {
    * Query to return current point of sales.
    * @param params - Parameters to query the point of sales with.
    */
-  public static async getPointOfSales(params: PointOfSaleParameters = {})
+  public static async getPointsOfSale(params: PointOfSaleParameters = {})
     : Promise<PointOfSaleResponse[]> {
     const builder = createQueryBuilder()
       .from(PointOfSale, 'pos')
@@ -126,7 +126,7 @@ export default class PointOfSaleService {
    * Query to return updated (pending) point of sales.
    * @param params - Parameters to query the point of sales with.
    */
-  public static async getUpdatedPointOfSales(params: PointOfSaleParameters = {})
+  public static async getUpdatedPointsOfSale(params: PointOfSaleParameters = {})
     : Promise<UpdatedPointOfSaleResponse[]> {
     const builder = createQueryBuilder()
       .from(PointOfSale, 'pos')

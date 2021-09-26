@@ -34,7 +34,6 @@ import {
 import Swagger from '../../../src/start/swagger';
 import { PointOfSaleResponse, UpdatedPointOfSaleResponse } from '../../../src/controller/response/point-of-sale-response';
 import PointOfSaleService from '../../../src/service/point-of-sale-service';
-import { ContainerResponse } from '../../../src/controller/response/container-response';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -103,7 +102,7 @@ describe('PointOfSaleService', async (): Promise<void> => {
 
   describe('getPointsOfSale function', () => {
     it('should return all point of sales with no input specification', async () => {
-      const res: PointOfSaleResponse[] = await PointOfSaleService.getPointOfSales();
+      const res: PointOfSaleResponse[] = await PointOfSaleService.getPointsOfSale();
 
       const withRevisions = ctx.pointsOfSale.filter((c) => c.currentRevision > 0);
       expect(res).to.be.length(withRevisions.length);
@@ -154,7 +153,7 @@ describe('PointOfSaleService', async (): Promise<void> => {
       expect(res).to.be.length(0);
     });
     it('should return all updated point of sales with no input specification', async () => {
-      const res: UpdatedPointOfSaleResponse[] = await PointOfSaleService.getUpdatedPointOfSales();
+      const res: UpdatedPointOfSaleResponse[] = await PointOfSaleService.getUpdatedPointsOfSale();
       expect(res.map((p) => p.id))
         .to.deep.equalInAnyOrder(ctx.updatedPointsOfSale.map((p) => p.pointOfSale.id));
       // expect(updatedPointOfSaleSuperset(res, ctx.updatedPointsOfSale)).to.be.true;
