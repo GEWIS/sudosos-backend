@@ -19,7 +19,8 @@ import { Connection } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
-import { expect } from 'chai';
+import chai, { expect } from 'chai';
+import deepEqualInAnyOrder from 'deep-equal-in-any-order';
 import User from '../../../src/entity/user/user';
 import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
 import UpdatedPointOfSale from '../../../src/entity/point-of-sale/updated-point-of-sale';
@@ -31,15 +32,18 @@ import {
   seedUsers,
 } from '../../seed';
 import Swagger from '../../../src/start/swagger';
-import { PointOfSaleResponse } from '../../../src/controller/response/point-of-sale-response';
+import { PointOfSaleResponse, UpdatedPointOfSaleResponse } from '../../../src/controller/response/point-of-sale-response';
 import PointOfSaleService from '../../../src/service/point-of-sale-service';
+
+chai.use(deepEqualInAnyOrder);
 
 /**
  * Test if all the point of sale responses are part of the point of sale set array.
  * @param response
  * @param superset
  */
-function pointOfSaleSuperset(response: PointOfSaleResponse[], superset: PointOfSale[]): Boolean {
+function pointOfSaleSuperset(response: PointOfSaleResponse[] | UpdatedPointOfSaleResponse[],
+  superset: PointOfSale[]) : Boolean {
   return response.every((searchPOS: PointOfSaleResponse) => (
     superset.find((supersetPOS: PointOfSale) => (
       supersetPOS.id === searchPOS.id
@@ -58,7 +62,9 @@ describe('PointOfSaleService', async (): Promise<void> => {
     updatedPointsOfSale: UpdatedPointOfSale[]
   };
 
-  before(async () => {
+  before(async function before() {
+    this.timeout(5000);
+
     const connection = await Database.initialize();
 
     const users = await seedUsers();
@@ -96,15 +102,20 @@ describe('PointOfSaleService', async (): Promise<void> => {
 
   describe('getPointOfSales function', () => {
     it('should return all point of sales with no input specification', async () => {
-      console.log('get result');
       const res: PointOfSaleResponse[] = await PointOfSaleService.getPointOfSales();
 
       const withRevisions = ctx.pointsOfSale.filter((c) => c.currentRevision > 0);
       expect(res).to.be.length(withRevisions.length);
       expect(pointOfSaleSuperset(res, ctx.pointsOfSale)).to.be.true;
       expect(res.every(
-        (c: PointOfSaleResponse) => ctx.specification.validateModel('PointOfSaleResponse', c, false, true).valid
+        (c: PointOfSaleResponse) => ctx.specification.validateModel('PointOfSaleResponse', c, false, true).valid,
       )).to.be.true;
+    });
+    it('should return all updated point of sales with no input specification', async () => {
+      const res: UpdatedPointOfSaleResponse[] = await PointOfSaleService.getUpdatedPointOfSales();
+      expect(res.map((p) => p.id))
+        .to.deep.equalInAnyOrder(ctx.updatedPointsOfSale.map((p) => p.pointOfSale.id));
+      // expect(updatedPointOfSaleSuperset(res, ctx.updatedPointsOfSale)).to.be.true;
     });
   });
 });

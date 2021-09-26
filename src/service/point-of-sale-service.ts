@@ -16,15 +16,16 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { createQueryBuilder } from 'typeorm';
-import { PointOfSaleResponse } from '../controller/response/point-of-sale-response';
+import { PointOfSaleResponse, UpdatedPointOfSaleResponse } from '../controller/response/point-of-sale-response';
 import PointOfSale from '../entity/point-of-sale/point-of-sale';
 import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
+import UpdatedPointOfSale from '../entity/point-of-sale/updated-point-of-sale';
 
 /**
- * Define updated point of sale filtering parameters used to filter query results.
+ * Define point of sale filtering parameters used to filter query results.
  */
-export interface UpdatedPointOfSaleParameters {
+export interface PointOfSaleParameters {
   /**
    * Filter based on point of sale id.
    */
@@ -56,7 +57,7 @@ export default class PointOfSaleService {
    * Helper function for the base mapping the raw getMany response point of sale.
    * @param rawPointOfSale - the raw response to parse.
    */
-  public static asPointOfSaleResponse(rawPointOfSale: any): PointOfSaleResponse {
+  private static asPointOfSaleResponse(rawPointOfSale: any): PointOfSaleResponse {
     return {
       id: rawPointOfSale.id,
       revision: rawPointOfSale.revision,
@@ -75,10 +76,10 @@ export default class PointOfSaleService {
   }
 
   /**
-   * Query to return all updated point of sales.
-   * @param params - Parameters to query the updated point of sales with.
+   * Query to return current point of sales.
+   * @param params - Parameters to query the point of sales with.
    */
-  public static async getPointOfSales(params: UpdatedPointOfSaleParameters = {})
+  public static async getPointOfSales(params: PointOfSaleParameters = {})
     : Promise<PointOfSaleResponse[]> {
     const builder = createQueryBuilder()
       .from(PointOfSale, 'pos')
@@ -100,8 +101,9 @@ export default class PointOfSaleService {
         'owner.id AS owner_id',
         'owner.firstName AS owner_firstName',
         'owner.lastName AS owner_lastName',
-      ])
-      .where('pos.currentRevision = posrevision.revision');
+      ]);
+
+    if (params.pointOfSaleRevision === undefined) builder.where('pos.currentRevision = posrevision.revision');
 
     const filterMapping: FilterMapping = {
       pointOfSaleId: 'pos.id',
@@ -111,13 +113,54 @@ export default class PointOfSaleService {
       useAuthentication: 'posrevision.useAuthentication',
       ownerId: 'owner.id',
     };
-    QueryFilter.applyFilter(builder, filterMapping, params);
 
-    const query = builder.getQuery();
-    console.log(query);
+    QueryFilter.applyFilter(builder, filterMapping, params);
 
     const rawPointOfSales = await builder.getRawMany();
 
     return rawPointOfSales.map((rawPointOfSale) => this.asPointOfSaleResponse(rawPointOfSale));
+  }
+
+  /**
+   * Query to return updated (pending) point of sales.
+   * @param params - Parameters to query the point of sales with.
+   */
+  public static async getUpdatedPointOfSales(params: PointOfSaleParameters = {})
+    : Promise<UpdatedPointOfSaleResponse[]> {
+    const builder = createQueryBuilder()
+      .from(PointOfSale, 'pos')
+      .innerJoin(
+        UpdatedPointOfSale,
+        'updatedpos',
+        'pos.id = updatedpos.pointOfSaleId',
+      )
+      .innerJoin('pos.owner', 'owner')
+      .select([
+        'pos.id AS id',
+        'pos.createdAt AS createdAt',
+        'updatedpos.updatedAt AS updatedAt',
+        'updatedpos.name AS name',
+        'updatedpos.startDate AS startDate',
+        'updatedpos.endDate AS endDate',
+        'updatedpos.useAuthentication AS useAuthentication',
+        'owner.id AS owner_id',
+        'owner.firstName AS owner_firstName',
+        'owner.lastName AS owner_lastName',
+      ]);
+
+    const filterMapping: FilterMapping = {
+      pointOfSaleId: 'pos.id',
+      startDate: 'pos.startDate',
+      endDate: 'pos.endDate',
+      useAuthentication: 'pos.useAuthentication',
+      ownerId: 'owner.id',
+    };
+    QueryFilter.applyFilter(builder, filterMapping, params);
+
+    const rawPointOfSales = await builder.getRawMany();
+
+    return rawPointOfSales.map(
+      (rawPointOfSale) => this.asPointOfSaleResponse(rawPointOfSale) as UpdatedPointOfSaleResponse,
+    );
   }
 }
