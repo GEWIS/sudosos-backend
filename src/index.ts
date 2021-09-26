@@ -46,6 +46,7 @@ import BalanceService from './service/balance-service';
 import BalanceController from './controller/balance-controller';
 import RbacController from './controller/rbac-controller';
 import GewisAuthenticationController from './gewis/controller/gewis-authentication-controller';
+import TransferController from './controller/transfer-controller';
 
 export class Application {
   app: express.Express;
@@ -187,6 +188,7 @@ export default async function createApp(): Promise<Application> {
   application.app.use('/v1/productcategories', new ProductCategoryController(options).getRouter());
   application.app.use('/v1/transactions', new TransactionController(options).getRouter());
   application.app.use('/v1/borrelkaartgroups', new BorrelkaartGroupController(options).getRouter());
+  application.app.use('/v1/transfers', new TransferController(options).getRouter());
 
   // Start express application.
   logger.info(`Server listening on port ${process.env.HTTP_PORT}.`);

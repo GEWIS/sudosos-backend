@@ -15,3 +15,76 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
+import dinero from 'dinero.js';
+import { FindManyOptions } from 'typeorm';
+import Transfer, { TransferType } from '../entity/transactions/transfer';
+import { TransferResponse } from '../controller/response/transfer-response';
+import TransferRequest from '../controller/request/transfer-request';
+import { parseUserToBaseResponse } from '../helpers/entity-to-response';
+import User from '../entity/user/user';
+import QueryFilter, { FilterMapping } from '../helpers/query-filter';
+
+export interface TransferFilterParameters {
+  id?: number;
+  createdById?: number,
+  fromId?: number,
+  toId?: number,
+  type?: TransferType,
+}
+
+export default class TransferService {
+  private static asTransferResponse(transfer: Transfer) : TransferResponse {
+    return {
+      amount: transfer.amount.toObject(),
+      from: parseUserToBaseResponse(transfer.from, false),
+      to: parseUserToBaseResponse(transfer.to, false),
+      type: transfer.type,
+      id: transfer.id,
+      description: transfer.description,
+      createdAt: transfer.createdAt.toISOString(),
+      updatedAt: transfer.updatedAt.toISOString(),
+    };
+  }
+
+  private static async asTransfer(transferRequest: TransferRequest) : Promise<Transfer> {
+    return Object.assign(new Transfer(), {
+      type: transferRequest.type,
+      amount: dinero(transferRequest.amount),
+      from: await User.findOne(transferRequest.fromId),
+      to: await User.findOne(transferRequest.toId),
+    });
+  }
+
+  /**
+   * Query for getting transfers.
+   */
+  public static async getTransfers(params: TransferFilterParameters = {})
+    : Promise<TransferResponse[]> {
+    const filterMapping: FilterMapping = {
+      id: 'id',
+      createdById: 'createdById',
+      fromId: 'fromId',
+      toId: 'toId',
+      type: 'type',
+    };
+    const options: FindManyOptions = {
+      where: QueryFilter.createFilterWhereClause(filterMapping, params),
+      relations: ['from', 'to'],
+    };
+    const transfers = await Transfer.find(options);
+    return transfers.map(
+      (transfer) => (this.asTransferResponse(transfer)),
+    );
+  }
+
+  /**
+   * Saves a Transfer to the database.
+   * @param request - The TransferRequest with values.
+   */
+  public static async postTransfer(request: TransferRequest) : Promise<TransferResponse> {
+    const transfer = await this.asTransfer(request);
+    await transfer.save();
+    return this.asTransferResponse(transfer);
+  }
+}
