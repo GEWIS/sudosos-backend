@@ -29,7 +29,7 @@ import User from '../entity/user/user';
 import Product from '../entity/product/product';
 import UpdatedProduct from '../entity/product/updated-product';
 import ProductRevision from '../entity/product/product-revision';
-import UnapprovedProductError from '../entity/error';
+import UnapprovedProductError from '../entity/errors/unapproved-product-error';
 
 /**
  * Define updated container filtering parameters used to filter query results.
@@ -248,7 +248,8 @@ export default class ContainerService {
    */
   public static async approveContainerUpdate(containerId: number)
     : Promise<ContainerWithProductsResponse> {
-    const [base, rawContainerUpdate] = await Promise.all([Container.findOne(containerId), UpdatedContainer.findOne(containerId)]);
+    const [base, rawContainerUpdate] = (
+      await Promise.all([Container.findOne(containerId), UpdatedContainer.findOne(containerId)]));
 
     // return undefined if not found or request is invalid
     if (!base || !rawContainerUpdate) {

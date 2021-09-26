@@ -27,7 +27,7 @@ import ProductService from '../service/product-service';
 import ContainerRequest from './request/container-request';
 import UpdatedContainer from '../entity/container/updated-container';
 import Container from '../entity/container/container';
-import UnapprovedProductError from '../entity/error';
+import UnapprovedProductError from '../entity/errors/unapproved-product-error';
 
 export default class ContainerController extends BaseController {
   private logger: Logger = log4js.getLogger('ContainerController');
