@@ -38,14 +38,15 @@ export interface PointOfSaleParameters {
    * Filter based on point of sale owner.
    */
   ownerId?: number;
-  /**
-   * Filter based on point of sale start date.
-   */
-  startDate?: Date;
-  /**
-   * Filter based on point of sale end date.
-   */
-  endDate?: Date;
+  // TODO: implement filters on start and end date
+  // /**
+  //  * Filter based on point of sale start date.
+  //  */
+  // startDate?: Date;
+  // /**
+  //  * Filter based on point of sale end date.
+  //  */
+  // endDate?: Date;
   /**
    * Filter based on whether a point of sale uses authentication.
    */

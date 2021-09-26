@@ -29,6 +29,9 @@ import UpdatedContainer from '../entity/container/updated-container';
 import User from '../entity/user/user';
 import ProductRequest from '../controller/request/product-request';
 import ProductCategory from '../entity/product/product-category';
+import PointOfSale from '../entity/point-of-sale/point-of-sale';
+import UpdatedPointOfSale from '../entity/point-of-sale/updated-point-of-sale';
+import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision';
 
 /**
  * Define product filtering parameters used to filter query results.
@@ -54,6 +57,18 @@ export interface ProductParameters {
    * Filter based on if the updated container should be used.
    */
   updatedContainer?: boolean;
+  /**
+   * Filter based on point of sale id.
+   */
+  pointOfSaleId?: number;
+  /**
+   * Filter based on a specific point of sale revision.
+   */
+  pointOfSaleRevision?: number;
+  /**
+   * Filter based on if the updated point of sale should be used.
+   */
+  updatedPointOfSale?: boolean;
 }
 
 /**
@@ -95,7 +110,7 @@ export default class ProductService {
    */
   private static addContainerFilter(
     builder: SelectQueryBuilder<Product>,
-    containerId: number,
+    containerId?: number,
     isUpdatedProduct?: boolean,
     isUpdatedContainer?: boolean,
     containerRevision?: number,
@@ -120,19 +135,62 @@ export default class ProductService {
 
     // Filter on products in the container.
     builder
+      .innerJoinAndSelect((qb) => {
+        qb
+          .from(Container, 'container')
+          .innerJoinAndSelect(
+            isUpdatedContainer ? UpdatedContainer : ContainerRevision,
+            'containeralias',
+            innerJoin(),
+          )
+          .innerJoinAndSelect('containeralias.products', 'product')
+          .select(isUpdatedContainer
+            ? ['productId']
+            : ['product.productId AS productId', 'product.revision as productRevision']);
+        if (containerId) qb.where('container.id = :id', { id: containerId });
+        return qb;
+      }, 'containerproducts', condition());
+  }
+
+  private static addPointOfSaleFilter(
+    builder: SelectQueryBuilder<Product>,
+    pointOfSaleId: number,
+    isUpdatedProduct?: boolean,
+    isUpdatedPointOfSale?: boolean,
+    pointOfSaleRevision?: number,
+  ) {
+    // Case distinction for the inner join condition.
+    function condition() {
+      if (isUpdatedProduct) return 'updatedcontainer.container = poscontainers.containerId';
+      if (isUpdatedPointOfSale) {
+        return 'containerrevision.product = poscontainers.productId';
+      }
+      return 'containerrevision.product = poscontainers.productId AND containerrevision.revision = poscontainers.productRevision';
+    }
+
+    // Case distinction for the inner join.
+    function innerJoin() {
+      if (isUpdatedPointOfSale) return 'pos.id = posalias.pointOfSaleId';
+      if (pointOfSaleRevision) {
+        return `pos.id = posalias.pointOfSaleId AND ${pointOfSaleRevision} = posalias.revision`;
+      }
+      return 'pos.id = posalias.pointOfSaleId AND pos.currentRevision = posalias.revision';
+    }
+
+    builder
       .innerJoinAndSelect((qb) => qb
-        .from(Container, 'container')
+        .from(PointOfSale, 'pos')
         .innerJoinAndSelect(
-          isUpdatedContainer ? UpdatedContainer : ContainerRevision,
-          'containeralias',
+          isUpdatedPointOfSale ? UpdatedPointOfSale : PointOfSaleRevision,
+          'posalias',
           innerJoin(),
         )
-        .innerJoinAndSelect('containeralias.products', 'product')
-        .where('container.id = :id', { id: containerId })
-        .select(isUpdatedContainer
-          ? ['productId']
-          : ['product.productId AS productId', 'product.revision as productRevision']),
-      'containerproducts', condition());
+        .innerJoinAndSelect('posalias.containers', 'container')
+        .where('pos.id = :id', { id: pointOfSaleId })
+        .select(isUpdatedPointOfSale
+          ? ['containerId']
+          : ['container.containerId AS containerId', 'container.revision as containerrevision']),
+      'poscontainers', condition());
   }
 
   /**
@@ -204,9 +262,12 @@ export default class ProductService {
         'product.id = updatedproduct.product',
       );
 
-    if (params.containerId) {
-      this.addContainerFilter(builder, params.containerId, true,
-        params.updatedContainer);
+    if (params.containerId || params.pointOfSaleId) {
+      this.addContainerFilter(builder, params.containerId, true, params.updatedContainer);
+    }
+
+    if (params.pointOfSaleId) {
+      this.addPointOfSaleFilter(builder, params.pointOfSaleId, true, params.updatedPointOfSale);
     }
 
     builder
@@ -232,6 +293,8 @@ export default class ProductService {
     };
 
     QueryFilter.applyFilter(builder, filterMapping, params);
+
+    const query = builder.getQuery();
 
     const rawProducts = await builder.getRawMany();
 
