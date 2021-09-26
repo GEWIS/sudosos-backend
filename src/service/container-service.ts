@@ -29,6 +29,8 @@ import User from '../entity/user/user';
 import Product from '../entity/product/product';
 import UpdatedProduct from '../entity/product/updated-product';
 import ProductRevision from '../entity/product/product-revision';
+import UnapprovedProductError from '../entity/error';
+
 /**
  * Define updated container filtering parameters used to filter query results.
  */
@@ -261,10 +263,11 @@ export default class ContainerService {
       .select('product.currentRevision, product.id');
 
     const productIds: any[] = await builder.getRawMany();
-    const invalid = await productIds.some(async (p) => (UpdatedProduct.findOne(p.id)));
+    const invalid = (await Promise.all(productIds.map(async (p) => (UpdatedProduct.findOne(p.id)))))
+      .some((p) => p !== undefined);
 
     if (invalid) {
-      throw new Error('Container update has unapproved product(s).');
+      throw new UnapprovedProductError('Container update has unapproved product(s).');
     }
 
     const products = (productIds).map(async (product: any) => ProductRevision.findOne({ where: `currentRevision = ${product.currentRevision} AND id = ${product.id}` }));

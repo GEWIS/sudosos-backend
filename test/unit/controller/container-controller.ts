@@ -352,10 +352,16 @@ describe('ContainerController', async (): Promise<void> => {
   });
   describe('POST /containers/:id/approve', () => {
     it('should approve the container update if it exists and admin', async () => {
+      const containerApprovedProducts: ContainerRequest = {
+        products: [1],
+        public: true,
+        name: 'Valid container',
+      };
+
       const newContainer = await request(ctx.app)
         .post('/containers')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
-        .send(ctx.validContainerReq);
+        .send(containerApprovedProducts);
 
       const { id } = newContainer.body;
 
@@ -376,7 +382,7 @@ describe('ContainerController', async (): Promise<void> => {
       expect(latest.body).to.deep.equal(res.body);
       expect(res.status).to.equal(200);
     });
-    it('should idfk', async () => {
+    it('should return an HTTP 400 if the container has unapproved products', async () => {
       // precondition
       const productId = 4;
       expect(await UpdatedProduct.findOne(productId)).to.exist;
@@ -396,7 +402,8 @@ describe('ContainerController', async (): Promise<void> => {
         .post(`/containers/${newContainer.id}/approve`)
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
-      console.warn(res.body);
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('Container update has unapproved product(s).');
     });
     it('should return an HTTP 404 and an empty response if the product has no pending update', async () => {
       const id = 3;

@@ -27,6 +27,7 @@ import ProductService from '../service/product-service';
 import ContainerRequest from './request/container-request';
 import UpdatedContainer from '../entity/container/updated-container';
 import Container from '../entity/container/container';
+import UnapprovedProductError from '../entity/error';
 
 export default class ContainerController extends BaseController {
   private logger: Logger = log4js.getLogger('ContainerController');
@@ -244,8 +245,12 @@ export default class ContainerController extends BaseController {
 
       res.json(container);
     } catch (error) {
-      this.logger.error('Could not approve update: ', error);
-      res.status(500).json('Internal server error.');
+      if (error instanceof UnapprovedProductError) {
+        res.status(400).json(error.message);
+      } else {
+        this.logger.error('Could not approve update: ', error);
+        res.status(500).json('Internal server error.');
+      }
     }
   }
 
