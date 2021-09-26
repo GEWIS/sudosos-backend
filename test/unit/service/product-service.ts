@@ -26,7 +26,7 @@ import Database from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
 import ProductService, { ProductParameters } from '../../../src/service/product-service';
 import {
-  seedAllProducts, seedAllContainers, seedProductCategories, seedUsers,
+  seedAllProducts, seedAllContainers, seedProductCategories, seedUsers, seedAllPointsOfSale,
 } from '../../seed';
 import Product from '../../../src/entity/product/product';
 import { ProductResponse } from '../../../src/controller/response/product-response';
@@ -36,6 +36,9 @@ import UpdatedContainer from '../../../src/entity/container/updated-container';
 import Container from '../../../src/entity/container/container';
 import ContainerRevision from '../../../src/entity/container/container-revision';
 import ProductRequest from '../../../src/controller/request/product-request';
+import PointOfSale from "../../../src/entity/point-of-sale/point-of-sale";
+import PointOfSaleRevision from "../../../src/entity/point-of-sale/point-of-sale-revision";
+import UpdatedPointOfSale from "../../../src/entity/point-of-sale/updated-point-of-sale";
 
 chai.use(deepEqualInAnyOrder);
 /**
@@ -74,6 +77,9 @@ describe('ProductService', async (): Promise<void> => {
     containers: Container[],
     containerRevisions: ContainerRevision[],
     updatedContainers: UpdatedContainer[],
+    pointsOfSale: PointOfSale[],
+    pointOfSaleRevisions: PointOfSaleRevision[],
+    updatedPointsOfSale: UpdatedPointOfSale[],
   };
 
   before(async () => {
@@ -92,6 +98,11 @@ describe('ProductService', async (): Promise<void> => {
       containerRevisions,
       updatedContainers,
     } = await seedAllContainers(users, productRevisions, products);
+    const {
+      pointsOfSale,
+      pointOfSaleRevisions,
+      updatedPointsOfSale,
+    } = await seedAllPointsOfSale(users, containerRevisions, containers);
 
     // start app
     const app = express();
@@ -110,6 +121,9 @@ describe('ProductService', async (): Promise<void> => {
       containers,
       containerRevisions,
       updatedContainers,
+      pointsOfSale,
+      pointOfSaleRevisions,
+      updatedPointsOfSale,
     };
   });
 
@@ -231,6 +245,28 @@ describe('ProductService', async (): Promise<void> => {
 
       const { products } = ctx.updatedContainers
         .filter((cnt) => cnt.container.id === 4)[0];
+      returnsAll(res, products);
+    });
+    it('should return the products belonging to a point of sale', async () => {
+      const res: ProductResponse[] = await ProductService
+        .getAllProducts({ pointOfSaleId: 1 });
+
+      const containers = ctx.pointOfSaleRevisions
+        .filter((rev) => {
+          const pointOfSale = ctx.pointsOfSale.filter((pos) => pos.id === 1)[0];
+          return rev.pointOfSale.id === pointOfSale.id
+            && rev.revision === pointOfSale.currentRevision;
+        })
+        .map((rev) => rev.containers.map((cont) => cont.container))[0];
+
+      const products = ctx.containerRevisions
+        .filter((rev) => {
+          const container = ctx.containers.filter((cont) => (
+            containers.some((c) => c.id === cont.id)))[0];
+          return rev.container.id === container.id && rev.revision === container.currentRevision;
+        })
+        .map((rev) => rev.products.map((prod) => prod.product))[0];
+
       returnsAll(res, products);
     });
   });

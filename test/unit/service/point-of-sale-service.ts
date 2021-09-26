@@ -33,6 +33,7 @@ import {
 import Swagger from '../../../src/start/swagger';
 import { PointOfSaleResponse } from '../../../src/controller/response/point-of-sale-response';
 import PointOfSaleService from '../../../src/service/point-of-sale-service';
+import {ContainerResponse} from "../../../src/controller/response/container-response";
 
 /**
  * Test if all the point of sale responses are part of the point of sale set array.
@@ -94,10 +95,10 @@ describe('PointOfSaleService', async (): Promise<void> => {
     await ctx.connection.close();
   });
 
-  describe('getPointOfSales function', () => {
+  describe('getPointsOfSale function', () => {
     it('should return all point of sales with no input specification', async () => {
       console.log('get result');
-      const res: PointOfSaleResponse[] = await PointOfSaleService.getPointOfSales();
+      const res: PointOfSaleResponse[] = await PointOfSaleService.getPointsOfSale();
 
       const withRevisions = ctx.pointsOfSale.filter((c) => c.currentRevision > 0);
       expect(res).to.be.length(withRevisions.length);
@@ -105,6 +106,47 @@ describe('PointOfSaleService', async (): Promise<void> => {
       expect(res.every(
         (c: PointOfSaleResponse) => ctx.specification.validateModel('PointOfSaleResponse', c, false, true).valid
       )).to.be.true;
+    });
+    it('should return points of sale with owner specified', async () => {
+      const res: PointOfSaleResponse[] = await PointOfSaleService.getPointsOfSale({
+        ownerId: ctx.pointsOfSale[0].owner.id,
+      });
+
+      const withRevisions = ctx.pointsOfSale.filter((c) => c.currentRevision > 0);
+      expect(pointOfSaleSuperset(res, ctx.pointsOfSale)).to.be.true;
+      const belongsToOwner = res.every((pointOfSale: PointOfSaleResponse) => (
+        pointOfSale.owner.id === ctx.pointsOfSale[0].owner.id));
+      expect(belongsToOwner).to.be.true;
+
+      const { length } = withRevisions.filter((pointOfSale) => (
+        pointOfSale.owner.id === ctx.pointsOfSale[0].owner.id));
+      expect(res).to.be.length(length);
+    });
+    it('should return points of sale with useAuthentication specified', async () => {
+      const res: PointOfSaleResponse[] = await PointOfSaleService.getPointsOfSale({
+        useAuthentication: false,
+      });
+
+      expect(pointOfSaleSuperset(res, ctx.pointsOfSale)).to.be.true;
+      const doNotUseAuthentication = res.every((pointOfSale) => (
+        pointOfSale.useAuthentication === false));
+      expect(doNotUseAuthentication).to.be.true;
+    });
+    it('should return single point of sale if pointOfSaleId is specified', async () => {
+      const res: PointOfSaleResponse[] = await PointOfSaleService.getPointsOfSale({
+        pointOfSaleId: ctx.pointsOfSale[0].id,
+      });
+
+      expect(res).to.be.length(1);
+      expect(res[0].id).to.be.equal(ctx.pointsOfSale[0].id);
+    });
+    it('should return no points of sale if userId and containerId do not match', async () => {
+      const res: PointOfSaleResponse[] = await PointOfSaleService.getPointsOfSale({
+        ownerId: ctx.pointsOfSale[10].owner.id,
+        pointOfSaleId: ctx.pointsOfSale[0].id,
+      });
+
+      expect(res).to.be.length(0);
     });
   });
 });
