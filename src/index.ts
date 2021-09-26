@@ -27,6 +27,7 @@ import { config } from 'dotenv';
 import express from 'express';
 import log4js, { Logger } from 'log4js';
 import { Connection } from 'typeorm';
+import cron from 'node-cron';
 import Database from './database/database';
 import Swagger from './start/swagger';
 import TokenHandler from './authentication/token-handler';
@@ -38,9 +39,13 @@ import BannerController from './controller/banner-controller';
 import { BaseControllerOptions } from './controller/base-controller';
 import UserController from './controller/user-controller';
 import ProductController from './controller/product-controller';
+import ProductCategoryController from './controller/product-category-controller';
 import TransactionController from './controller/transaction-controller';
 import BorrelkaartGroupController from './controller/borrelkaart-group-controller';
+import BalanceService from './service/balance-service';
+import BalanceController from './controller/balance-controller';
 import RbacController from './controller/rbac-controller';
+import GewisAuthenticationController from './gewis/controller/gewis-authentication-controller';
 import ContainerController from './controller/container-controller';
 
 export class Application {
@@ -56,9 +61,12 @@ export class Application {
 
   logger: Logger;
 
+  tasks: cron.ScheduledTask[];
+
   public async stop(): Promise<void> {
     this.logger.info('Stopping application instance...');
     await util.promisify(this.server.close).bind(this.server)();
+    this.tasks.forEach((task) => task.stop());
     await this.connection.close();
     this.logger.info('Application stopped.');
   }
@@ -115,6 +123,17 @@ async function setupAuthentication(application: Application) {
   );
   application.app.use('/v1/authentication', controller.getRouter());
 
+  // Define GEWIS authentication controller and bind before middleware.
+  const gewisController = new GewisAuthenticationController(
+    {
+      specification: application.specification,
+      roleManager: application.roleManager,
+    },
+    tokenHandler,
+    process.env.GEWISWEB_JWT_SECRET,
+  );
+  application.app.use('/v1/authentication', gewisController.getRouter());
+
   // Define middleware to be used by any other route.
   const tokenMiddleware = new TokenMiddleware({ refreshFactor: 0.5, tokenHandler });
   application.app.use(tokenMiddleware.getMiddleware());
@@ -149,17 +168,27 @@ export default async function createApp(): Promise<Application> {
   // Setup token handler and authentication controller.
   await setupAuthentication(application);
 
+  await BalanceService.updateBalances();
+  const cronTask = cron.schedule('*/10 * * * *', () => {
+    logger.debug('Syncing balances.');
+    BalanceService.updateBalances();
+    logger.debug('Synced balances.');
+  });
+  application.tasks = [cronTask];
+
   // REMOVE LATER
   const options: BaseControllerOptions = {
     specification: application.specification,
     roleManager: application.roleManager,
   };
+  application.app.use('/v1/balances', new BalanceController(options).getRouter());
   application.app.use('/v1/banners', new BannerController(options).getRouter());
   application.app.use('/v1/users', new UserController(options).getRouter());
   application.app.use('/v1/products', new ProductController(options).getRouter());
-  application.app.use('/v1/containers', new ContainerController(options).getRouter());
+  application.app.use('/v1/productcategories', new ProductCategoryController(options).getRouter());
   application.app.use('/v1/transactions', new TransactionController(options).getRouter());
   application.app.use('/v1/borrelkaartgroups', new BorrelkaartGroupController(options).getRouter());
+  application.app.use('/v1/containers', new ContainerController(options).getRouter());
 
   // Start express application.
   logger.info(`Server listening on port ${process.env.HTTP_PORT}.`);
@@ -173,6 +202,7 @@ if (require.main === module) {
   config();
   createApp().catch((e) => {
     const logger = log4js.getLogger('index');
+    logger.level = process.env.LOG_LEVEL;
     logger.fatal(e);
   });
 }

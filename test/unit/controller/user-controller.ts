@@ -60,6 +60,7 @@ describe('UserController', (): void => {
 
   before(async function before() {
     const connection = await Database.initialize();
+    ctx = { connection } as any; // on timeout forces connection to close
     const app = express();
     this.timeout(10000);
     const database = await seedDatabase();

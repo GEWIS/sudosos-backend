@@ -100,9 +100,9 @@ export default class Swagger {
     return Swagger.generateSpecification(app,
       path.join(process.cwd(), 'src/entity/*.ts'),
       path.join(process.cwd(), 'src/declaration/*.ts'),
-      path.join(process.cwd(), 'src/controller/*.ts'),
-      path.join(process.cwd(), 'src/controller/response/**/*.ts'),
-      path.join(process.cwd(), 'src/controller/request/**/*.ts'));
+      path.join(process.cwd(), 'src/**/controller/*.ts'),
+      path.join(process.cwd(), 'src/**/controller/response/**/*.ts'),
+      path.join(process.cwd(), 'src/**/controller/request/**/*.ts'));
   }
 }
 

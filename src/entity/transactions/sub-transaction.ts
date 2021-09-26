@@ -45,6 +45,8 @@ export default class SubTransaction extends BaseEntity {
   @ManyToOne(() => Transaction, { nullable: false })
   public transaction: Transaction;
 
-  @OneToMany(() => SubTransactionRow, (subtransactionRow) => subtransactionRow.subTransaction)
+  @OneToMany(() => SubTransactionRow,
+    (subtransactionRow) => subtransactionRow.subTransaction,
+    { cascade: true })
   public subTransactionRows: SubTransactionRow[];
 }

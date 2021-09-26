@@ -111,4 +111,17 @@ export default class ProductCategoryService {
     }
     return ProductCategory.delete(id).then(() => this.asProductCategoryResponse(productCategory));
   }
+
+  /**
+   * Verifies whether the productCategory request translates to a valid productCategory
+   * @param {ProductCategoryRequest.model} productCategoryRequest
+   * - the productCategory request to verify
+   * @returns {boolean} - whether productCategory is ok or not
+   */
+  public static async verifyProductCategory(productCategoryRequest: ProductCategoryRequest):
+  Promise<boolean> {
+    return productCategoryRequest.name !== ''
+        && productCategoryRequest.name.length <= 64
+        && !(await ProductCategory.findOne({ where: { name: productCategoryRequest.name } }));
+  }
 }
