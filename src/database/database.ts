@@ -45,6 +45,7 @@ import UpdatedProduct from '../entity/product/updated-product';
 import UpdatedContainer from '../entity/container/updated-container';
 import UpdatedPointOfSale from '../entity/point-of-sale/updated-point-of-sale';
 import Balance from '../entity/transactions/balance';
+import BaseFile from "../entity/file/base-file";
 
 export default class Database {
   public static async initialize(): Promise<Connection> {
@@ -78,6 +79,7 @@ export default class Database {
         Banner,
         ProductOrdering,
         Balance,
+        BaseFile,
       ],
     };
     return createConnection(options);

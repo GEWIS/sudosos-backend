@@ -28,6 +28,7 @@ import express from 'express';
 import log4js, { Logger } from 'log4js';
 import { Connection } from 'typeorm';
 import cron from 'node-cron';
+import fileUpload from 'express-fileupload';
 import Database from './database/database';
 import Swagger from './start/swagger';
 import TokenHandler from './authentication/token-handler';
@@ -46,6 +47,7 @@ import BalanceService from './service/balance-service';
 import BalanceController from './controller/balance-controller';
 import RbacController from './controller/rbac-controller';
 import GewisAuthenticationController from './gewis/controller/gewis-authentication-controller';
+import SimpleFileController from './controller/simple-file-controller';
 
 export class Application {
   app: express.Express;
@@ -159,6 +161,7 @@ export default async function createApp(): Promise<Application> {
   application.app = express();
   application.specification = await Swagger.initialize(application.app);
   application.app.use(json());
+  application.app.use(fileUpload());
 
   // Setup RBAC.
   application.roleManager = new RoleManager();
@@ -187,6 +190,7 @@ export default async function createApp(): Promise<Application> {
   application.app.use('/v1/productcategories', new ProductCategoryController(options).getRouter());
   application.app.use('/v1/transactions', new TransactionController(options).getRouter());
   application.app.use('/v1/borrelkaartgroups', new BorrelkaartGroupController(options).getRouter());
+  application.app.use('/v1/files', new SimpleFileController(options).getRouter());
 
   // Start express application.
   logger.info(`Server listening on port ${process.env.HTTP_PORT}.`);
