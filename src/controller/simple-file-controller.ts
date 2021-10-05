@@ -17,12 +17,12 @@
  */
 import log4js, { Logger } from 'log4js';
 import { Response } from 'express';
+import { UploadedFile } from 'express-fileupload';
 import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
-import FileService from "../service/file-service";
-import {UploadedFile} from "express-fileupload";
-import SimpleFileRequest from "./request/simple-file-request";
+import FileService from '../service/file-service';
+import SimpleFileRequest from './request/simple-file-request';
 
 export default class SimpleFileController extends BaseController {
   private logger: Logger = log4js.getLogger('SimpleFileController');

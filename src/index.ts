@@ -48,6 +48,7 @@ import BalanceController from './controller/balance-controller';
 import RbacController from './controller/rbac-controller';
 import GewisAuthenticationController from './gewis/controller/gewis-authentication-controller';
 import SimpleFileController from './controller/simple-file-controller';
+import initializeDiskStorage from "./files/initialize";
 
 export class Application {
   app: express.Express;
@@ -145,6 +146,9 @@ export default async function createApp(): Promise<Application> {
   application.logger = log4js.getLogger('Application');
   application.logger.level = process.env.LOG_LEVEL;
   application.logger.info('Starting application instance...');
+
+  // Create folders for disk storage
+  initializeDiskStorage();
 
   application.connection = await Database.initialize();
 

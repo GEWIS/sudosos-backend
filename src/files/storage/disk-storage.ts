@@ -28,12 +28,28 @@ export default class DiskStorage implements FileStorage {
     this.workdir = workdir;
   }
 
+  /**
+   * Returns an uuidv4 string.
+   * This separate function is created to make testing easier.
+   */
+  private static getRandomName() {
+    return uuidv4();
+  }
+
   async saveFile(fileName: string, fileData: Buffer): Promise<string> {
     const fileExtension = path.extname(fileName);
-    const randomFileName = `${uuidv4()}${fileExtension}`;
+    const randomFileName = `${DiskStorage.getRandomName()}${fileExtension}`;
     const fileLocation = path.join(__dirname, '/../../..', this.workdir, randomFileName);
-    fs.writeFileSync(fileLocation, fileData);
-    return Promise.resolve(fileLocation);
+
+    return new Promise(((resolve, reject) => {
+      fs.writeFile(fileLocation, fileData, (err) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        resolve(fileLocation);
+      });
+    }));
   }
 
   getFile(file: BaseFile): Promise<Buffer> {

@@ -16,5 +16,5 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-// eslint-disable-next-line import/prefer-default-export
+export const ROOT_FILE_LOCATION = './data';
 export const SIMPLE_FILE_LOCATION = './data/simple';

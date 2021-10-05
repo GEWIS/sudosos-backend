@@ -15,16 +15,19 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import BaseFile from '../../entity/file/base-file';
+import * as fs from 'fs';
+import path from 'path';
+import { ROOT_FILE_LOCATION, SIMPLE_FILE_LOCATION } from './storage';
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export default abstract class FileStorage {
-  /**
-   * @return The location of the file
-   */
-  public abstract saveFile(fileName: string, fileData: Buffer): Promise<string>;
+/**
+ * Create all folders necessary to store files locally on disk
+ */
+export default function initializeDiskStorage() {
+  if (!fs.existsSync(path.join(__dirname, '/../..', ROOT_FILE_LOCATION))) {
+    fs.mkdirSync(path.join(__dirname, '/../..', ROOT_FILE_LOCATION));
+  }
 
-  public abstract getFile(file: BaseFile): Promise<Buffer>;
-
-  public abstract deleteFile(file: BaseFile): Promise<void>;
+  if (!fs.existsSync(path.join(__dirname, '/../..', SIMPLE_FILE_LOCATION))) {
+    fs.mkdirSync(path.join(__dirname, '/../..', SIMPLE_FILE_LOCATION));
+  }
 }

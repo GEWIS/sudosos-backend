@@ -60,15 +60,15 @@ export default class FileService {
     });
     await file.save();
 
-    let downloadName: string;
+    let location: string;
     try {
-      downloadName = await storage.saveFile(uploadedFile.name, uploadedFile.data);
+      location = await storage.saveFile(uploadedFile.name, uploadedFile.data);
     } catch (error) {
       await BaseFile.delete(file);
       throw new Error(error);
     }
 
-    file.downloadName = downloadName;
+    file.location = location;
 
     try {
       await file.save();
