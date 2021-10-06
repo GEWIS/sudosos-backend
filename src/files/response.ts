@@ -15,17 +15,15 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import BaseResponse from './base-response';
-import { UserResponse } from './user-response';
+import { Response } from 'express';
+import mime from 'mime-types';
+import BaseFile from '../entity/file/base-file';
 
-/**
- * @typedef {BaseResponse} SimpleFileResponse
- * @property {string} downloadName.required - The filename of the file
- * @property {string} location.required - The location of the file in storage
- * @property {UserResponse.model} createdBy.required - The user who created this file
- */
-export interface SimpleFileResponse extends BaseResponse {
-  downloadName: string;
-  location: string;
-  createdBy: UserResponse;
+export default function putFileInResponse(res: Response, file: BaseFile, data: Buffer) {
+  res.setHeader('Content-Type', mime.lookup(file.location).toString());
+  res.setHeader('Content-Length', data.byteLength.toString());
+  res.setHeader('Content-Disposition', `attachment; filename="${file.downloadName}"`);
+  res.status(200);
+
+  res.send(data);
 }

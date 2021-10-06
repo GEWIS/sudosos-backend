@@ -48,7 +48,7 @@ import BalanceController from './controller/balance-controller';
 import RbacController from './controller/rbac-controller';
 import GewisAuthenticationController from './gewis/controller/gewis-authentication-controller';
 import SimpleFileController from './controller/simple-file-controller';
-import initializeDiskStorage from "./files/initialize";
+import initializeDiskStorage from './files/initialize';
 
 export class Application {
   app: express.Express;

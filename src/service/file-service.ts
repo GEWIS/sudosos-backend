@@ -25,6 +25,11 @@ import User from '../entity/user/user';
 
 export type FileType = 'simple';
 
+export interface DownloadFileResponse {
+  file: BaseFile,
+  data: Buffer,
+}
+
 export default class FileService {
   /**
    * Returns the appropriate storage handler with the given entity
@@ -79,5 +84,37 @@ export default class FileService {
     }
 
     return file;
+  }
+
+  /**
+   * Get the given file object and data from storage
+   */
+  public static async getSimpleFile(
+    entity: FileType, id: number
+  ): Promise<DownloadFileResponse | undefined> {
+    const storage = this.getFileStorage(entity);
+
+    const file = await BaseFile.findOne(id);
+
+    if (!file) {
+      return undefined;
+    }
+
+    const data = await storage.getFile(file);
+    return { file, data };
+  }
+
+  public static async deleteSimpleFile(entity: FileType, id: number): Promise<void> {
+    const storage = this.getFileStorage(entity);
+
+    const file = await BaseFile.findOne(id);
+
+    if (!file) return;
+
+    // If somehow the file does not exist on disk, we do not care it cannot be deleted
+    try {
+      await storage.deleteFile(file);
+    } catch (error) {}
+    await BaseFile.delete(file);
   }
 }

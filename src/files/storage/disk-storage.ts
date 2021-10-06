@@ -36,6 +36,19 @@ export default class DiskStorage implements FileStorage {
     return uuidv4();
   }
 
+  private validateFileLocation(location: string): void {
+    const directory = path.dirname(location);
+    if (path.join(__dirname, '/../../..', this.workdir) !== directory) {
+      throw new TypeError(`Given file is not located in the directory: ${directory}`);
+    }
+  }
+
+  private validateFileExistence(location: string): void {
+    if (!fs.existsSync(location)) {
+      throw new TypeError(`Given file does not exist on disk: ${location}`);
+    }
+  }
+
   async saveFile(fileName: string, fileData: Buffer): Promise<string> {
     const fileExtension = path.extname(fileName);
     const randomFileName = `${DiskStorage.getRandomName()}${fileExtension}`;
@@ -53,10 +66,31 @@ export default class DiskStorage implements FileStorage {
   }
 
   getFile(file: BaseFile): Promise<Buffer> {
-    return Promise.resolve(undefined);
+    this.validateFileLocation(file.location);
+    this.validateFileExistence(file.location);
+
+    return new Promise((resolve, reject) => {
+      fs.readFile(file.location, ((err1, data) => {
+        if (err1) {
+          reject(err1);
+          return;
+        }
+        resolve(data);
+      }));
+    });
   }
 
   deleteFile(file: BaseFile): Promise<void> {
-    return Promise.resolve(undefined);
+    this.validateFileLocation(file.location);
+
+    return new Promise((resolve, reject) => {
+      fs.rm(file.location, ((err1) => {
+        if (err1) {
+          reject(err1);
+          return;
+        }
+        resolve();
+      }));
+    });
   }
 }

@@ -23,6 +23,7 @@ import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import FileService from '../service/file-service';
 import SimpleFileRequest from './request/simple-file-request';
+import putFileInResponse from '../files/response';
 
 export default class SimpleFileController extends BaseController {
   private logger: Logger = log4js.getLogger('SimpleFileController');
@@ -44,8 +45,18 @@ export default class SimpleFileController extends BaseController {
       '/': {
         POST: {
           body: { modelName: 'SimpleFileRequest' },
-          policy: async (req) => this.roleManager.can(req.token.roles, 'create', 'all', 'Product', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'create', 'all', 'SimpleFile', ['*']),
           handler: this.uploadFile.bind(this),
+        },
+      },
+      '/:id(\\d+)': {
+        GET: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'SimpleFile', ['*']),
+          handler: this.downloadFile.bind(this),
+        },
+        DELETE: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'delete', 'all', 'SimpleProduct', ['*']),
+          handler: this.deleteFile.bind(this),
         },
       },
     };
@@ -81,6 +92,58 @@ export default class SimpleFileController extends BaseController {
       res.json(await FileService.uploadSimpleFile('simple', req.token.user, files.file as UploadedFile, body as SimpleFileRequest));
     } catch (error) {
       this.logger.error('Could not upload file:', error);
+      res.status(500).json('Internal server error');
+    }
+  }
+
+  /**
+   * Download a file with the given id.
+   * @route GET /files/{id}
+   * @group files - Operations of the simple files controller
+   * @param {integer} id.path.required - The id of the file which should be downloaded
+   * @security JWT
+   * @returns {Buffer} 200 - The requested file
+   * @returns {string} 404 - File not found
+   * @returns {string} 500 - Internal server error
+   */
+  public async downloadFile(req: RequestWithToken, res: Response): Promise<void> {
+    const { id } = req.params;
+    this.logger.trace('Download simple file', id, ' by user', req.token.user);
+
+    try {
+      const fileInfo = await FileService.getSimpleFile('simple', Number.parseInt(id, 10));
+      if (fileInfo === undefined) {
+        res.status(404);
+      }
+
+      const { file, data } = fileInfo;
+      putFileInResponse(res, file, data);
+    } catch (error) {
+      this.logger.error('Could not download file:', error);
+      res.status(500).json('Internal server error');
+    }
+  }
+
+  /**
+   * Delete the file with the given id.
+   * @route DELETE /files/{id}
+   * @group files - Operations of the simple files controller
+   * @param {integer} id.path.required - The id of the file which should be deleted
+   * @security JWT
+   * @returns {Buffer} 204 - Success
+   * @returns {string} 404 - File not found
+   * @returns {string} 500 - Internal server error
+   */
+  public async deleteFile(req: RequestWithToken, res: Response): Promise<void> {
+    const { id } = req.params;
+    this.logger.trace('Download simple file', id, 'by user', req.token.user);
+
+    try {
+      await FileService.deleteSimpleFile('simple', Number.parseInt(id, 10));
+      res.status(204);
+      res.send();
+    } catch (error) {
+      this.logger.error('Could not delete file:', error);
       res.status(500).json('Internal server error');
     }
   }
