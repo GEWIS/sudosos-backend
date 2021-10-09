@@ -46,6 +46,7 @@ import Container from '../entity/container/container';
 import Product from '../entity/product/product';
 import { DineroObjectRequest } from '../controller/request/dinero-request';
 import { DineroObjectResponse } from '../controller/response/dinero-response';
+import BalanceService from './balance-service';
 
 export interface TransactionFilterParameters {
   fromId?: number,
@@ -547,6 +548,13 @@ export default class TransactionService {
     // get the transaction we should delete
     const transaction = await this.getSingleTransaction(id);
     await Transaction.delete(id);
+
+    // invalidate user balance cache
+    const userIds = [...new Set(transaction.subTransactions.map((sub) => sub.to.id))];
+    if (!userIds.includes(transaction.from.id)) {
+      userIds.push(transaction.from.id);
+    }
+    await BalanceService.clearBalanceCache(userIds);
 
     // return deleted transaction
     return transaction;
