@@ -182,8 +182,15 @@ describe('TransactionService', (): void => {
   });
 
   describe('Verifiy balance', () => {
-    it('should return true if the balance is sufficient');
-    it('should return false if the balance is insuficient');
+    it('should return true if the balance is sufficient', async () => {
+      expect(await TransactionService.verifyBalance(ctx.validTransReq)).to.be.true;
+    });
+    it('should return false if the balance is insuficient', async () => {
+      expect(await TransactionService.verifyBalance({
+        ...ctx.validTransReq,
+        from: 1,
+      })).to.be.false;
+    });
   });
 
   describe('Verify transaction', () => {
@@ -637,5 +644,10 @@ describe('TransactionService', (): void => {
         }
       }
     });
+  });
+
+  describe('Update a transaction', () => {
+    it('should return a transaction response corresponding to the updated transaction');
+    it('should override the values corresponding to the requested transaction currently in the database');
   });
 });

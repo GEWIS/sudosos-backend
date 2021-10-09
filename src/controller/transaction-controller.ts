@@ -164,6 +164,7 @@ export default class TransactionController extends BaseController {
     // handle request
     try {
       if (await TransactionService.verifyTransaction(body)) {
+        // TODO: Verify only when requestor doesn't have rights to go negative balance
         if (await TransactionService.verifyBalance(body)) {
           res.json(await TransactionService.createTransaction(body));
         } else {
