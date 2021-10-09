@@ -52,30 +52,22 @@ export default class FileService {
   }
 
   /**
-   * Upload a file to the database and put in storageS
+   * Create a new file in storage, given the provided parameters
    */
-  public static async uploadSimpleFile(
-    entity: FileType, createdBy: User, uploadedFile: UploadedFile, fileEntity: SimpleFileRequest,
-  ) {
+  private static async createFile(
+    entity: FileType, file: BaseFile, fileData: Buffer,
+  ): Promise<BaseFile> {
     const storage = this.getFileStorage(entity);
-
-    const fileExtension = path.extname(uploadedFile.name);
-
-    const file = Object.assign(new BaseFile(), {
-      downloadName: `${fileEntity.name}${fileExtension}`,
-      createdBy,
-      location: '',
-    });
-    await file.save();
 
     let location: string;
     try {
-      location = await storage.saveFile(uploadedFile.name, uploadedFile.data);
+      location = await storage.saveFile(file.downloadName, fileData);
     } catch (error) {
       await BaseFile.delete(file.id);
       throw new Error(error);
     }
 
+    // eslint-disable-next-line no-param-reassign
     file.location = location;
 
     try {
@@ -90,34 +82,62 @@ export default class FileService {
   }
 
   /**
-   * Get the given file object and data from storage
+   * Read and return the given file from storage
    */
-  public static async getSimpleFile(
-    entity: FileType, id: number,
-  ): Promise<DownloadFileResponse | undefined> {
+  private static async readFile(entity: FileType, file: BaseFile): Promise<Buffer> {
     const storage = this.getFileStorage(entity);
+    return storage.getFile(file);
+  }
 
+  /**
+   * Remove the given file from storage
+   */
+  private static async removeFile(entity: FileType, file: BaseFile) {
+    const storage = this.getFileStorage(entity);
+    await storage.deleteFile(file);
+  }
+
+  /**
+   * Upload a simple file to the database and put in storage
+   */
+  public static async uploadSimpleFile(
+    createdBy: User, uploadedFile: UploadedFile, fileEntity: SimpleFileRequest,
+  ) {
+    const fileExtension = path.extname(uploadedFile.name);
+
+    const file = Object.assign(new BaseFile(), {
+      downloadName: `${fileEntity.name}${fileExtension}`,
+      createdBy,
+      location: '',
+    });
+    await file.save();
+
+    return FileService.createFile('simple', file, uploadedFile.data);
+  }
+
+  /**
+   * Get the given simple file object and data from storage
+   */
+  public static async getSimpleFile(id: number): Promise<DownloadFileResponse | undefined> {
     const file = await BaseFile.findOne(id);
 
     if (!file) {
       return undefined;
     }
 
-    const data = await storage.getFile(file);
+    const data = await FileService.readFile('simple', file);
     return { file, data };
   }
 
   /**
-   * Delete the file with given ID from storage and database
+   * Delete the simple file with given ID from storage and database
    */
-  public static async deleteSimpleFile(entity: FileType, id: number): Promise<void> {
-    const storage = this.getFileStorage(entity);
-
+  public static async deleteSimpleFile(id: number): Promise<void> {
     const file = await BaseFile.findOne(id);
 
     if (!file) return;
 
-    await storage.deleteFile(file);
+    await FileService.removeFile('simple', file);
     await BaseFile.delete(file.id);
   }
 }

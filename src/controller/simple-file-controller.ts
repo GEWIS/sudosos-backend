@@ -89,7 +89,8 @@ export default class SimpleFileController extends BaseController {
 
     // handle request
     try {
-      res.json(await FileService.uploadSimpleFile('simple', req.token.user, files.file as UploadedFile, body as SimpleFileRequest));
+      res.json(await FileService.uploadSimpleFile(
+        req.token.user, files.file as UploadedFile, body as SimpleFileRequest));
     } catch (error) {
       this.logger.error('Could not upload file:', error);
       res.status(500).json('Internal server error');
@@ -111,7 +112,7 @@ export default class SimpleFileController extends BaseController {
     this.logger.trace('Download simple file', id, ' by user', req.token.user);
 
     try {
-      const fileInfo = await FileService.getSimpleFile('simple', Number.parseInt(id, 10));
+      const fileInfo = await FileService.getSimpleFile(Number.parseInt(id, 10));
       if (fileInfo === undefined) {
         res.status(404);
       }
@@ -139,7 +140,7 @@ export default class SimpleFileController extends BaseController {
     this.logger.trace('Download simple file', id, 'by user', req.token.user);
 
     try {
-      await FileService.deleteSimpleFile('simple', Number.parseInt(id, 10));
+      await FileService.deleteSimpleFile(Number.parseInt(id, 10));
       res.status(204);
       res.send();
     } catch (error) {
