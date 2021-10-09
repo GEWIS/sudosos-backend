@@ -129,7 +129,7 @@ describe('Disk Storage', async () => {
         await ctx.diskStorage.getFile(ctx.files[0]);
         assert(false, 'diskStorage.getFile did not throw an error');
       } catch (e) {
-        expect(e.message).to.equal('Given file does not exist on disk: C:\\Users\\20174303\\WebstormProjects\\sudosos-back-end\\imaginary\\directory\\file0.txt');
+        expect(e.message).to.equal(`Given file does not exist on disk: ${ctx.files[0].location}`);
       }
     });
     it('should reject when reading file fails', async () => {
@@ -166,7 +166,7 @@ describe('Disk Storage', async () => {
         await ctx.diskStorage.getFile(ctx.files[0]);
         assert(false, 'diskStorage.deleteFile did not throw an error');
       } catch (e) {
-        expect(e.message).to.equal('Given file does not exist on disk: C:\\Users\\20174303\\WebstormProjects\\sudosos-back-end\\imaginary\\directory\\file0.txt');
+        expect(e.message).to.equal(`Given file does not exist on disk: ${ctx.files[0].location}`);
       }
     });
     it('should reject when deleting file fails', async () => {
