@@ -22,7 +22,6 @@ import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import TransferService from '../service/transfer-service';
 import TransferRequest from './request/transfer-request';
-import ProductCategoryService from '../service/product-category-service';
 
 export default class TransferController extends BaseController {
   private logger: Logger = log4js.getLogger('TransferController');
