@@ -22,7 +22,7 @@ import FileStorage from './file-storage';
 import BaseFile from '../../entity/file/base-file';
 
 export default class DiskStorage implements FileStorage {
-  private workdir: string;
+  private readonly workdir: string;
 
   constructor(workdir: string) {
     this.workdir = workdir;
@@ -43,10 +43,20 @@ export default class DiskStorage implements FileStorage {
     }
   }
 
-  private validateFileExistence(location: string): void {
-    if (!fs.existsSync(location)) {
-      throw new TypeError(`Given file does not exist on disk: ${location}`);
-    }
+  private static readFile(location: string) {
+    return fs.readFileSync(location);
+  }
+
+  private static writeFile(location: string, data: Buffer) {
+    return fs.writeFileSync(location, data);
+  }
+
+  private static removeFile(location: string) {
+    return fs.rmSync(location);
+  }
+
+  private static fileExists(location: string): boolean {
+    return fs.existsSync(location);
   }
 
   async saveFile(fileName: string, fileData: Buffer): Promise<string> {
@@ -54,43 +64,27 @@ export default class DiskStorage implements FileStorage {
     const randomFileName = `${DiskStorage.getRandomName()}${fileExtension}`;
     const fileLocation = path.join(__dirname, '/../../..', this.workdir, randomFileName);
 
-    return new Promise(((resolve, reject) => {
-      fs.writeFile(fileLocation, fileData, (err) => {
-        if (err) {
-          reject(err);
-          return;
-        }
-        resolve(fileLocation);
-      });
-    }));
+    DiskStorage.writeFile(fileLocation, fileData);
+    return Promise.resolve(fileLocation);
   }
 
   getFile(file: BaseFile): Promise<Buffer> {
     this.validateFileLocation(file.location);
-    this.validateFileExistence(file.location);
+    if (!DiskStorage.fileExists(file.location)) {
+      return Promise.reject(new Error(`Given file does not exist on disk: ${file.location}`));
+    }
 
-    return new Promise((resolve, reject) => {
-      fs.readFile(file.location, ((err1, data) => {
-        if (err1) {
-          reject(err1);
-          return;
-        }
-        resolve(data);
-      }));
-    });
+    const data = DiskStorage.readFile(file.location);
+    return Promise.resolve(data);
   }
 
-  deleteFile(file: BaseFile): Promise<void> {
+  public deleteFile(file: BaseFile): Promise<boolean> {
     this.validateFileLocation(file.location);
+    if (!DiskStorage.fileExists(file.location)) {
+      return Promise.resolve(false);
+    }
 
-    return new Promise((resolve, reject) => {
-      fs.rm(file.location, ((err1) => {
-        if (err1) {
-          reject(err1);
-          return;
-        }
-        resolve();
-      }));
-    });
+    DiskStorage.removeFile(file.location);
+    return Promise.resolve(true);
   }
 }

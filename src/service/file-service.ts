@@ -51,6 +51,9 @@ export default class FileService {
     }
   }
 
+  /**
+   * Upload a file to the database and put in storageS
+   */
   public static async uploadSimpleFile(
     entity: FileType, createdBy: User, uploadedFile: UploadedFile, fileEntity: SimpleFileRequest,
   ) {
@@ -69,7 +72,7 @@ export default class FileService {
     try {
       location = await storage.saveFile(uploadedFile.name, uploadedFile.data);
     } catch (error) {
-      await BaseFile.delete(file);
+      await BaseFile.delete(file.id);
       throw new Error(error);
     }
 
@@ -79,7 +82,7 @@ export default class FileService {
       await file.save();
     } catch (error) {
       await storage.deleteFile(file);
-      await BaseFile.delete(file);
+      await BaseFile.delete(file.id);
       throw new Error(error);
     }
 
@@ -90,7 +93,7 @@ export default class FileService {
    * Get the given file object and data from storage
    */
   public static async getSimpleFile(
-    entity: FileType, id: number
+    entity: FileType, id: number,
   ): Promise<DownloadFileResponse | undefined> {
     const storage = this.getFileStorage(entity);
 
@@ -104,6 +107,9 @@ export default class FileService {
     return { file, data };
   }
 
+  /**
+   * Delete the file with given ID from storage and database
+   */
   public static async deleteSimpleFile(entity: FileType, id: number): Promise<void> {
     const storage = this.getFileStorage(entity);
 
@@ -111,10 +117,7 @@ export default class FileService {
 
     if (!file) return;
 
-    // If somehow the file does not exist on disk, we do not care it cannot be deleted
-    try {
-      await storage.deleteFile(file);
-    } catch (error) {}
-    await BaseFile.delete(file);
+    await storage.deleteFile(file);
+    await BaseFile.delete(file.id);
   }
 }
