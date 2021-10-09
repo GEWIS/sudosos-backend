@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { createQueryBuilder, SelectQueryBuilder } from 'typeorm';
-import { DineroObject } from 'dinero.js';
+import Dinero, { DineroObject } from 'dinero.js';
 import { RequestWithToken } from '../middleware/token-middleware';
 import {
   BaseTransactionResponse,
@@ -68,7 +68,7 @@ export default class TransactionService {
    * @param {Array.<SubTransactionRowRequest>} req - the transaction request
    * @returns {DineroObject.model} - the total cost of a transaction
    */
-  public static async getTotalCost(rows: SubTransactionRowRequest[]): Promise<DineroObject> {
+  public static async getTotalCost(rows: SubTransactionRowRequest[]): Promise<Dinero.Dinero> {
     // get costs of individual rows
     const rowCosts = await Promise.all(rows.map(async (row) => {
       const rowCost = await ProductRevision.findOne({
@@ -82,7 +82,7 @@ export default class TransactionService {
     // sum the costs
     const totalCost = rowCosts.reduce((total, current) => total.add(current));
 
-    return totalCost.toObject();
+    return totalCost;
   }
 
   /**
@@ -97,9 +97,15 @@ export default class TransactionService {
     // check whether from user has sufficient balance
     const totalCost = await this.getTotalCost(rows);
 
-    // TODO: get user balance and compare
+    // get user balance and compare
+    const userBalance = Dinero({
+      amount: await BalanceService.getBalance(req.from),
+      currency: 'EUR',
+      precision: 2,
+    });
 
-    return totalCost.amount > 0;
+    // return whether user balance is sufficient to complete the transaction
+    return userBalance.greaterThanOrEqual(totalCost);
   }
 
   /**
@@ -108,10 +114,9 @@ export default class TransactionService {
    * @param {DineroObject.model} din - dinero object
    * @returns {boolean} - equality of the parameters
    */
-  public static dineroEq(req: DineroObjectRequest, din: DineroObject): boolean {
-    return (req.amount === din.amount
-      && req.currency === din.currency
-      && req.precision === din.precision);
+  public static dineroEq(req: DineroObjectRequest, din: Dinero.Dinero): boolean {
+    const price = Dinero({ ...req } as DineroObject);
+    return price.equalsTo(din);
   }
 
   /**
@@ -297,7 +302,7 @@ export default class TransactionService {
         async (subTransaction) => this.asSubTransactionResponse(subTransaction),
       )),
       pointOfSale: parsePOSToBasePOS(transaction.pointOfSale, false),
-      price: { ...cost } as DineroObjectResponse,
+      price: { ...cost.toObject() } as DineroObjectResponse,
     } as TransactionResponse;
   }
 
@@ -371,7 +376,7 @@ export default class TransactionService {
           precision: row.product.price.getPrecision(),
         } as DineroObjectResponse,
       } as SubTransactionRowResponse)),
-      price: { ...cost } as DineroObjectResponse,
+      price: { ...cost.toObject() } as DineroObjectResponse,
     } as SubTransactionResponse;
   }
 
@@ -530,7 +535,6 @@ export default class TransactionService {
    */
   public static async updateTransaction(id: number, req: TransactionRequest):
   Promise<TransactionResponse | undefined> {
-    // TODO: make update
     const transaction = await this.asTransaction(req);
 
     // update transaction and return response

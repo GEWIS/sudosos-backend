@@ -177,7 +177,7 @@ describe('TransactionService', (): void => {
       ctx.validTransReq.subtransactions.forEach(
         (sub) => sub.subTransactionRows.forEach((row) => rows.push(row)),
       );
-      expect((await TransactionService.getTotalCost(rows))).to.eql(total);
+      expect((await TransactionService.getTotalCost(rows)).toObject()).to.eql(total);
     });
   });
 
