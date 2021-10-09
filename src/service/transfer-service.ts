@@ -47,12 +47,13 @@ export default class TransferService {
     };
   }
 
-  private static async asTransfer(transferRequest: TransferRequest) : Promise<Transfer> {
+  private static async asTransfer(request: TransferRequest) : Promise<Transfer> {
     return Object.assign(new Transfer(), {
-      type: transferRequest.type,
-      amount: dinero(transferRequest.amount),
-      from: await User.findOne(transferRequest.fromId),
-      to: await User.findOne(transferRequest.toId),
+      description: request.description,
+      type: request.type,
+      amount: dinero(request.amount),
+      from: await User.findOne(request.fromId),
+      to: await User.findOne(request.toId),
     });
   }
 
@@ -86,5 +87,23 @@ export default class TransferService {
     const transfer = await this.asTransfer(request);
     await transfer.save();
     return this.asTransferResponse(transfer);
+  }
+
+  /**
+   * Verifies whether the transfer request translates to a valid transfer
+   * @param {TransferRequest.model} request
+   * - the transfer request to verify
+   * @returns {boolean} - whether transfer is ok or not
+   */
+  public static async verifyTransferRequest(request: TransferRequest) : Promise<boolean> {
+    // the type of the request should be in TransferType enums
+    // if the type is custom a description is necessary
+    // a transfer is always at least from a valid user OR to a valid user
+    // a transfer may be from null to an user, or from an user to null
+    return request.type in TransferType
+        && (request.type !== TransferType.CUSTOM || request.description !== '')
+        && (await User.findOne(request.fromId) || await User.findOne(request.toId))
+        && request.amount.precision === dinero.defaultPrecision
+        && request.amount.currency === dinero.defaultCurrency;
   }
 }

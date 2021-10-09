@@ -23,7 +23,7 @@ import { TransferType } from '../../entity/transactions/transfer';
  * @typedef TransferRequest
  * @property {string} description - Description of the transfer
  * @property {Dinero.model} amount - Amount of money being transferred
- * @property {TransferType} type - Type of transfer
+ * @property {integer} type - Type of transfer
  * @property {integer} fromId - from which user the money is being transferred
  * @property {integer} toId - to which user the money is being transferred.
  */

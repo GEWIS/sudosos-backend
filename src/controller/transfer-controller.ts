@@ -21,6 +21,8 @@ import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import TransferService from '../service/transfer-service';
+import TransferRequest from './request/transfer-request';
+import ProductCategoryService from '../service/product-category-service';
 
 export default class TransferController extends BaseController {
   private logger: Logger = log4js.getLogger('TransferController');
@@ -40,6 +42,17 @@ export default class TransferController extends BaseController {
         GET: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Transfer', ['*']),
           handler: this.returnAllTransfers.bind(this),
+        },
+        POST: {
+          body: { modelName: 'TransferRequest' },
+          policy: async (req) => this.roleManager.can(req.token.roles, 'create', 'all', 'Transfer', ['*']),
+          handler: this.postTransfer.bind(this),
+        },
+      },
+      '/:id(\\d+)': {
+        GET: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Transfer', ['*']),
+          handler: this.returnTransfer.bind(this),
         },
       },
     };
@@ -61,6 +74,60 @@ export default class TransferController extends BaseController {
       res.json(transfers);
     } catch (error) {
       this.logger.error('Could not return all transfers:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Returns the requested transfer
+   * @route GET /transfers/{id}
+   * @group transfers - Operations of transfer controller
+   * @param {integer} id.path.required - The id of the transfer which should be returned
+   * @security JWT
+   * @returns {TransferResponse.model} 200 - The requested transfer entity
+   * @returns {string} 404 - Not found error
+   * @returns {string} 500 - Internal server error
+   */
+  public async returnTransfer(req: RequestWithToken, res: Response): Promise<void> {
+    const { id } = req.params;
+    this.logger.trace('Get single transfer', id, 'by user', req.token.user);
+    try {
+      const parsedId = parseInt(id, 10);
+      const transfer = (
+        (await TransferService.getTransfers({ id: parsedId }))[0]);
+      if (transfer) {
+        res.json(transfer);
+      } else {
+        res.status(404).json('Transfer not found.');
+      }
+    } catch (error) {
+      this.logger.error('Could not return transfer:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Post a new transfer.
+   * @route POST /transfers
+   * @group transfers - Operations of transfer controller
+   * @param {TransferRequest.model} transfer.body.required
+   * - The transfer which should be created
+   * @security JWT
+   * @returns {TransferResponse.model} 200 - The created transfer entity
+   * @returns {string} 400 - Validation error
+   * @returns {string} 500 - Internal server error
+   */
+  public async postTransfer(req: RequestWithToken, res: Response) : Promise<void> {
+    const request = req.body as TransferRequest;
+    this.logger.trace('Post transfer', request, 'by user', req.token.user);
+    try {
+      if (await TransferService.verifyTransferRequest(request)) {
+        res.json(await TransferService.postTransfer(request));
+      } else {
+        res.status(400).json('Invalid transfer.');
+      }
+    } catch (error) {
+      this.logger.error('Could not create transfer:', error);
       res.status(500).json('Internal server error.');
     }
   }
