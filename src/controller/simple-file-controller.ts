@@ -90,7 +90,8 @@ export default class SimpleFileController extends BaseController {
     // handle request
     try {
       res.json(await FileService.uploadSimpleFile(
-        req.token.user, files.file as UploadedFile, body as SimpleFileRequest));
+        req.token.user, files.file as UploadedFile, body as SimpleFileRequest,
+      ));
     } catch (error) {
       this.logger.error('Could not upload file:', error);
       res.status(500).json('Internal server error');
