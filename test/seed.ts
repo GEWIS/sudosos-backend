@@ -1065,7 +1065,7 @@ export async function seedTransactions(
 }
 
 export async function seedTransfers(users: User[]) : Promise<Transfer[]> {
-  let transfers: Transfer[];
+  let transfers: Transfer[] = [];
   let counter = 1;
   for(let user of users)
   {
@@ -1076,6 +1076,7 @@ export async function seedTransfers(users: User[]) : Promise<Transfer[]> {
       from: undefined,
       to: user,
     });
+    transfers.push(newTransfer);
     await Transfer.save(newTransfer);
 
     newTransfer = Object.assign(new Transfer(), {
@@ -1085,6 +1086,7 @@ export async function seedTransfers(users: User[]) : Promise<Transfer[]> {
       from: user,
       to: undefined,
     });
+    transfers.push(newTransfer);
     await Transfer.save(newTransfer);
 
     newTransfer = Object.assign(new Transfer(), {
@@ -1094,6 +1096,7 @@ export async function seedTransfers(users: User[]) : Promise<Transfer[]> {
       from: user,
       to: undefined,
     });
+    transfers.push(newTransfer);
     await Transfer.save(newTransfer);
 
     counter++;

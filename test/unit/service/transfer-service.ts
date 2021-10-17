@@ -40,32 +40,30 @@ describe('TransferService', async (): Promise<void> => {
         users: User[],
         transfers: Transfer[],
     };
+    before(async () => {
+        const connection = await Database.initialize();
+
+        const users = await seedUsers();
+        const transfers = await seedTransfers(users);
+
+        // start app
+        const app = express();
+        const specification = await Swagger.initialize(app);
+        app.use(bodyParser.json());
+
+        // initialize context
+        ctx = {
+            connection,
+            app,
+            specification,
+            users,
+            transfers,
+        };
+    });
+    after(async () => {
+        await ctx.connection.close();
+    })
     describe('getTransfers function', async (): Promise<void> => {
-        before(async () => {
-            const connection = await Database.initialize();
-
-            const users = await seedUsers();
-            const transfers = await seedTransfers(users);
-
-            // start app
-            const app = express();
-            const specification = await Swagger.initialize(app);
-            app.use(bodyParser.json());
-
-            // initialize context
-            ctx = {
-                connection,
-                app,
-                specification,
-                users,
-                transfers,
-            };
-        });
-
-        after(async () => {
-            await ctx.connection.close();
-        })
-
         it('should return all transfers', async () => {
             const res: TransferResponse[] = await TransferService.getTransfers();
             expect(res.length).to.equal(ctx.transfers.length);
@@ -84,31 +82,6 @@ describe('TransferService', async (): Promise<void> => {
         });
     })
     describe('postTransfer function', () => {
-        before(async () => {
-            const connection = await Database.initialize();
-
-            const users = await seedUsers();
-            const transfers = await seedTransfers(users);
-
-            // start app
-            const app = express();
-            const specification = await Swagger.initialize(app);
-            app.use(bodyParser.json());
-
-            // initialize context
-            ctx = {
-                connection,
-                app,
-                specification,
-                users,
-                transfers,
-            };
-        });
-
-        after(async () => {
-            await ctx.connection.close();
-        })
-
         it('should be able to post a new transfer', async () => {
             const req: TransferRequest = {
                 amount: {
