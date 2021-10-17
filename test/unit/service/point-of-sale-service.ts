@@ -156,7 +156,6 @@ describe('PointOfSaleService', async (): Promise<void> => {
       const res: UpdatedPointOfSaleResponse[] = await PointOfSaleService.getUpdatedPointsOfSale();
       expect(res.map((p) => p.id))
         .to.deep.equalInAnyOrder(ctx.updatedPointsOfSale.map((p) => p.pointOfSale.id));
-      // expect(updatedPointOfSaleSuperset(res, ctx.updatedPointsOfSale)).to.be.true;
     });
   });
 });

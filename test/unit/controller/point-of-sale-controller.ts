@@ -82,7 +82,7 @@ describe('PointOfSaleController', async () => {
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
     const adminToken = await tokenHandler.signToken({ user: adminUser, roles: ['Admin'] }, 'nonce admin');
-    const token = await tokenHandler.signToken({ user: localUser, roles: [] }, 'nonce');
+    const token = await tokenHandler.signToken({ user: localUser, roles: ['User'] }, 'nonce');
 
     const app = express();
     const specification = await Swagger.initialize(app);
@@ -98,8 +98,21 @@ describe('PointOfSaleController', async () => {
           update: all,
           delete: all,
         },
+        Container: {
+          get: all,
+        },
       },
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
+    });
+
+    roleManager.registerRole({
+      name: 'User',
+      permissions: {
+        Container: {
+          get: all,
+        },
+      },
+      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_USER,
     });
 
     const controller = new PointOfSaleController({ specification, roleManager });
@@ -158,8 +171,8 @@ describe('PointOfSaleController', async () => {
         .get(`/pointsofsale/${(await PointOfSale.count()) + 1}`)
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
-      expect(res.status).to.equal(403);
-      expect(res.body).to.be.empty;
+      expect(res.status).to.equal(404);
+      expect(res.body).to.equal('Point of Sale not found.');
     });
     it('should return an HTTP 403 if not admin', async () => {
       const res = await request(ctx.app)

@@ -49,19 +49,19 @@ export default class PointOfSaleController extends BaseController {
       },
       '/:id(\\d+)': {
         GET: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Product', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'PointOfSale', ['*']),
           handler: this.returnSinglePointOfSale.bind(this),
         },
       },
       '/:id(\\d+)/containers': {
         GET: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Product', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Container', ['*']),
           handler: this.returnAllPointOfSaleContainers.bind(this),
         },
       },
       '/:id(\\d+)/products': {
         GET: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Product', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Container', ['*']),
           handler: this.returnAllPointOfSaleProducts.bind(this),
         },
       },
@@ -155,7 +155,7 @@ export default class PointOfSaleController extends BaseController {
 
     // Handle request
     try {
-      const products = await ProductService.getAllProducts({ pointOfSaleId: parseInt(id, 10) });
+      const products = await ProductService.getProductsPOS({ pointOfSaleId: parseInt(id, 10) });
       res.json(products);
     } catch (error) {
       this.logger.error('Could not return all point of sale products:', error);

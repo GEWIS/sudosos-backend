@@ -43,5 +43,6 @@ export interface ProductResponse extends BaseProductResponse {
   owner: BaseUserResponse,
   category: ProductCategoryResponse,
   picture: String,
+  revision: number,
   alcoholPercentage: number,
 }

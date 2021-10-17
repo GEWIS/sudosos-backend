@@ -36,9 +36,9 @@ import UpdatedContainer from '../../../src/entity/container/updated-container';
 import Container from '../../../src/entity/container/container';
 import ContainerRevision from '../../../src/entity/container/container-revision';
 import ProductRequest from '../../../src/controller/request/product-request';
-import PointOfSale from "../../../src/entity/point-of-sale/point-of-sale";
-import PointOfSaleRevision from "../../../src/entity/point-of-sale/point-of-sale-revision";
-import UpdatedPointOfSale from "../../../src/entity/point-of-sale/updated-point-of-sale";
+import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
+import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
+import UpdatedPointOfSale from '../../../src/entity/point-of-sale/updated-point-of-sale';
 
 chai.use(deepEqualInAnyOrder);
 /**
@@ -50,6 +50,30 @@ function returnsAll(response: ProductResponse[], superset: Product[]) {
   expect(response).to.not.be.empty;
   expect(response.map((prod) => ({ id: prod.id, ownerid: prod.owner.id })))
     .to.deep.equalInAnyOrder(superset.map((prod) => ({ id: prod.id, ownerid: prod.owner.id })));
+}
+
+interface ProductWithRevision {
+  product: Product,
+  revision: number
+}
+
+/**
+ * Test if all the product responses are part of the product set array.
+ * @param response
+ * @param superset
+ */
+function returnsAllRevisions(response: ProductResponse[], superset: ProductWithRevision[]) {
+  expect(response).to.not.be.empty;
+  expect(response.map((prod) => ({ id: prod.id, revision: prod.revision, ownerid: prod.owner.id })))
+    .to.deep.equalInAnyOrder(superset.map((prod) => (
+      ({ id: prod.product.id, revision: prod.revision, ownerid: prod.product.owner.id }))));
+}
+
+function productRevisionToProductWithRevision(product: ProductRevision): ProductWithRevision {
+  return {
+    product: product.product,
+    revision: product.revision,
+  };
 }
 
 function validateProductProperties(response: ProductResponse,
@@ -156,6 +180,21 @@ describe('ProductService', async (): Promise<void> => {
 
       returnsAll(res, products);
     });
+    it('should return product with the revision specified', async () => {
+      const productId = ctx.products[0].id;
+      const productRevision = ctx.products[0].currentRevision - 1;
+      expect(productRevision).to.be.greaterThan(0);
+
+      const params: ProductParameters = { productId, productRevision };
+      const res: ProductResponse[] = await ProductService.getProducts(params);
+
+      const product: ProductWithRevision[] = [productRevisionToProductWithRevision(
+        ctx.productRevisions.find((prod) => (
+          (prod.revision === productRevision && prod.product.id === productId))),
+      )];
+
+      returnsAllRevisions(res, product);
+    });
     it('should return a single product if productId is specified', async () => {
       const params: ProductParameters = { productId: ctx.products[0].id };
       const res: ProductResponse[] = await ProductService.getProducts(params);
@@ -248,26 +287,27 @@ describe('ProductService', async (): Promise<void> => {
       returnsAll(res, products);
     });
     it('should return the products belonging to a point of sale', async () => {
-      const res: ProductResponse[] = await ProductService
-        .getAllProducts({ pointOfSaleId: 1 });
+      const res = await ProductService
+        .getProductsPOS({ pointOfSaleId: 1 });
 
-      const containers = ctx.pointOfSaleRevisions
-        .filter((rev) => {
-          const pointOfSale = ctx.pointsOfSale.filter((pos) => pos.id === 1)[0];
-          return rev.pointOfSale.id === pointOfSale.id
-            && rev.revision === pointOfSale.currentRevision;
-        })
-        .map((rev) => rev.containers.map((cont) => cont.container))[0];
+      const { containers } = ctx.pointOfSaleRevisions.filter((pos) => (
+        (pos.pointOfSale.id === 1 && pos.revision === pos.pointOfSale.currentRevision)))[0];
 
-      const products = ctx.containerRevisions
-        .filter((rev) => {
-          const container = ctx.containers.filter((cont) => (
-            containers.some((c) => c.id === cont.id)))[0];
-          return rev.container.id === container.id && rev.revision === container.currentRevision;
-        })
-        .map((rev) => rev.products.map((prod) => prod.product))[0];
+      const productRevisions = (containers.map((p) => p.products.map((pr) => pr)))
+        .reduce((prev, cur) => prev.concat(cur));
 
-      returnsAll(res, products);
+      const products = productRevisions.map((p) => ((
+        { product: p.product, revision: p.revision } as ProductWithRevision)));
+
+      const filteredProducts = products.reduce((acc: ProductWithRevision[], current) => {
+        if (!acc.some((item) => (
+          (item.product.id === current.product.id && item.revision === current.revision)))) {
+          acc.push(current);
+        }
+        return acc;
+      }, []);
+
+      returnsAllRevisions(res, filteredProducts);
     });
   });
 

@@ -133,15 +133,11 @@ export default class ContainerService {
             'cc',
           )
           .where(
-            'pos_revision.pointOfSaleId = :id AND pos_revision.revision = :revision',
-            {
-              id: posId,
-              revision: posRevision ?? qb.subQuery()
-                .from(PointOfSale, 'pos')
-                .select('pos.currentRevision')
-                .where('pos.id = :id', { posId })
-                .getQuery(),
-            },
+            `pos_revision.pointOfSaleId = ${posId} AND pos_revision.revision IN ${posRevision ? `(${posRevision})` : qb.subQuery()
+              .from(PointOfSale, 'pos')
+              .select('pos.currentRevision')
+              .where(`pos.id = ${posId}`)
+              .getSql()}`,
           )
           .select(['cc.containerId AS id', 'cc.revision AS revision']),
         'pos_container',
@@ -154,7 +150,9 @@ export default class ContainerService {
       containerRevision: 'containerrevision.revision',
       ownerId: 'owner.id',
     };
+
     QueryFilter.applyFilter(builder, filterMapping, p);
+
     if (!(posId || p.containerRevision)) {
       builder.andWhere('container.currentRevision = containerrevision.revision');
     }
