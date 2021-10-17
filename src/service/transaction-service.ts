@@ -41,9 +41,6 @@ import ContainerRevision from '../entity/container/container-revision';
 import SubTransactionRow from '../entity/transactions/sub-transaction-row';
 import ProductRevision from '../entity/product/product-revision';
 import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision';
-import PointOfSale from '../entity/point-of-sale/point-of-sale';
-import Container from '../entity/container/container';
-import Product from '../entity/product/product';
 import { DineroObjectRequest } from '../controller/request/dinero-request';
 import { DineroObjectResponse } from '../controller/response/dinero-response';
 import BalanceService from './balance-service';
@@ -125,33 +122,30 @@ export default class TransactionService {
    * @returns {boolean} - whether sub transaction row is ok or not
    */
   public static async verifySubTransactionRow(
-    req: SubTransactionRowRequest, con: ContainerRevision,
+    req: SubTransactionRowRequest, container: ContainerRevision,
   ): Promise<boolean> {
-    // check if product exists in database and correct current revision is provided
-    if (!req.product) {
-      return false;
-    }
-    const product = await Product.findOne(req.product.id);
-    if (!product || product.currentRevision !== req.product.revision) {
+    // check if fields provided in subtransactionrow
+    if (!req.product || !req.price
+        || !req.amount || req.amount <= 0 || !Number.isInteger(req.amount)) {
       return false;
     }
 
     // check if product is in the container
-    if (!con.products.some(
-      (prod) => prod.product.id === product.id && prod.revision === product.currentRevision,
-    )) {
+    if (!container.products.some((product) => product.product.id === req.product.id
+      && product.revision === req.product.revision)) {
       return false;
     }
 
-    // check whether amount is correct
-    if (req.amount <= 0 || !Number.isInteger(req.amount)) {
+    // check if product exists
+    const product = await ProductRevision.findOne({
+      revision: req.product.revision,
+      product: { id: req.product.id },
+    }, { relations: ['product'] });
+    if (!product) {
       return false;
     }
 
     // check whether the request price corresponds to the database price
-    if (!req.price) {
-      return false;
-    }
     const cost = await this.getTotalCost([req]);
     return this.dineroEq(req.price, cost);
   }
@@ -163,38 +157,27 @@ export default class TransactionService {
    * @returns {boolean} - whether sub transaction is ok or not
    */
   public static async verifySubTransaction(
-    req: SubTransactionRequest, pos: PointOfSaleRevision,
+    req: SubTransactionRequest, pointOfSale: PointOfSaleRevision,
   ): Promise<boolean> {
-    // check if container exists in database and correct current revision is provided
-    if (!req.container) {
-      return false;
-    }
-    const container = await Container.findOne(req.container.id);
-    if (!container || container.currentRevision !== req.container.revision) {
+    // check if fields provided in the transaction
+    if (!req.to || !req.container || !req.price
+        || !req.subTransactionRows || req.subTransactionRows.length === 0) {
       return false;
     }
 
     // check if container is in the point of sale
-    if (!pos.containers.some(
-      (con) => con.container.id === container.id && con.revision === container.currentRevision,
-    )) {
+    if (!pointOfSale.containers.some((container) => container.container.id === req.container.id
+        && container.revision === req.container.revision)) {
       return false;
     }
 
     // check if to user exists and is active in database
-    if (!req.to) {
-      return false;
-    }
-
     const user = await User.findOne(req.to);
     if (!user || !user.active) {
       return false;
     }
 
     // check whether the request price corresponds to the database price
-    if (!req.price) {
-      return false;
-    }
     const rows: SubTransactionRowRequest[] = [];
     req.subTransactionRows.forEach((row) => rows.push(row));
     const cost = await this.getTotalCost(rows);
@@ -202,14 +185,22 @@ export default class TransactionService {
       return false;
     }
 
-    // check if products are in the container
-    const con = await ContainerRevision.findOne({
+    // check if container exists in database and get products for subtransactionrow check
+    const container = await ContainerRevision.findOne({
       revision: req.container.revision,
       container: { id: req.container.id },
-    }, { relations: ['products'] });
+    }, { relations: ['container', 'products'] });
+
+    if (!container) {
+      return false;
+    }
 
     // verify subtransaction rows
-    return req.subTransactionRows.every((row) => this.verifySubTransactionRow(row, con));
+    const verification = await Promise.all(req.subTransactionRows.map(
+      async (row) => this.verifySubTransactionRow(row, container),
+    ));
+
+    return !verification.includes(false);
   }
 
   /**
@@ -218,17 +209,10 @@ export default class TransactionService {
    * @returns {boolean} - whether transaction is ok or not
    */
   public static async verifyTransaction(req: TransactionRequest): Promise<boolean> {
-    // check if point of sale exists in database and correct current revision is provided
-    if (!req.pointOfSale) {
-      return false;
-    }
-    const pointOfSale = await PointOfSale.findOne(req.pointOfSale.id);
-    if (!pointOfSale || pointOfSale.currentRevision !== req.pointOfSale.revision) {
-      return false;
-    }
-
-    // get top level users in the transaction
-    if (!req.from || !req.createdBy) {
+    // check if fields provided in the transaction
+    if (!req.from || !req.createdBy
+        || !req.subtransactions || req.subtransactions.length === 0
+        || !req.pointOfSale || !req.price) {
       return false;
     }
 
@@ -245,9 +229,6 @@ export default class TransactionService {
     }
 
     // check whether the request price corresponds to the database price
-    if (!req.price) {
-      return false;
-    }
     const rows: SubTransactionRowRequest[] = [];
     req.subtransactions.forEach((sub) => sub.subTransactionRows.forEach((row) => rows.push(row)));
     const cost = await this.getTotalCost(rows);
@@ -255,20 +236,32 @@ export default class TransactionService {
       return false;
     }
 
-    // check if containers are in the point of sale
-    const pos = await PointOfSaleRevision.findOne({
+    // check if point of sale exists in database and get containers for subtransaction check
+    const pointOfSale = await PointOfSaleRevision.findOne({
+      revision: req.pointOfSale.revision,
+      pointOfSale: { id: req.pointOfSale.id },
+    }, { relations: ['pointOfSale', 'containers'] });
+
+    if (!pointOfSale) {
+      return false;
+    }
+
+    // verify subtransactions
+    const verification = await Promise.all(req.subtransactions.map(
+      async (sub) => this.verifySubTransaction(sub, pointOfSale),
+    ));
+
+    return !verification.includes(false);
+  }
+
+  // TODO
+  public static async verifyUpdate(req: TransactionRequest): Promise<boolean> {
+    const lel = await PointOfSaleRevision.findOne({
       revision: req.pointOfSale.revision,
       pointOfSale: { id: req.pointOfSale.id },
     }, { relations: ['containers'] });
 
-    // verify subtransactions
-    return req.subtransactions.every(
-      (subtransaction) => this.verifySubTransaction(subtransaction, pos),
-    );
-  }
-
-  public static async verifyUpdate(req: TransactionRequest): Promise<boolean> {
-    return false;
+    return lel === undefined;
   }
 
   /**

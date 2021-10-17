@@ -83,18 +83,18 @@ describe('TransactionController', (): void => {
             {
               product: {
                 id: 2,
-                revision: 3,
+                revision: 2,
               },
               amount: 2,
               price: {
-                amount: 148,
+                amount: 146,
                 currency: 'EUR',
                 precision: 2,
               },
             },
           ],
           price: {
-            amount: 220,
+            amount: 218,
             currency: 'EUR',
             precision: 2,
           },
@@ -103,21 +103,9 @@ describe('TransactionController', (): void => {
           to: 9,
           container: {
             id: 2,
-            revision: 3,
+            revision: 2,
           },
           subTransactionRows: [
-            {
-              product: {
-                id: 3,
-                revision: 1,
-              },
-              amount: 3,
-              price: {
-                amount: 219,
-                currency: 'EUR',
-                precision: 2,
-              },
-            },
             {
               product: {
                 id: 5,
@@ -132,7 +120,7 @@ describe('TransactionController', (): void => {
             },
           ],
           price: {
-            amount: 523,
+            amount: 304,
             currency: 'EUR',
             precision: 2,
           },
@@ -143,7 +131,7 @@ describe('TransactionController', (): void => {
         revision: 2,
       },
       price: {
-        amount: 743,
+        amount: 522,
         currency: 'EUR',
         precision: 2,
       },
@@ -467,7 +455,6 @@ describe('TransactionController', (): void => {
     });
   });
 
-  // TODO: balance check implementation
   describe('POST /transactions', () => {
     it('should return an HTTP 200 and the saved transaction when user is admin', async () => {
       const res = await request(ctx.app)

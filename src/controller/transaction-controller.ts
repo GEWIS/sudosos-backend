@@ -165,14 +165,14 @@ export default class TransactionController extends BaseController {
     // handle request
     try {
       if (await TransactionService.verifyTransaction(body)) {
-        // verify balance is from user is borrelkaart
-        const userType = (await User.findOne(body.from)).type;
-        if (userType === 3 && !await TransactionService.verifyBalance(body)) {
-          res.status(403).json('Mag niet.');
+        // verify balance if from user is borrelkaart
+        const user = await User.findOne(body.from);
+        if (user.type === 3 && !await TransactionService.verifyBalance(body)) {
+          res.status(403).json('Insufficient balance.');
+        } else {
+          // create the transaction
+          res.json(await TransactionService.createTransaction(body));
         }
-
-        // create the transaction
-        res.json(await TransactionService.createTransaction(body));
       } else {
         res.status(400).json('Invalid transaction.');
       }

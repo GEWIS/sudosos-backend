@@ -32,6 +32,8 @@ import Swagger from '../../../src/start/swagger';
 import { SubTransactionRequest, SubTransactionRowRequest, TransactionRequest } from '../../../src/controller/request/transaction-request';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import SubTransactionRow from '../../../src/entity/transactions/sub-transaction-row';
+import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
+import ContainerRevision from '../../../src/entity/container/container-revision';
 
 describe('TransactionService', (): void => {
   let ctx: {
@@ -39,7 +41,9 @@ describe('TransactionService', (): void => {
     app: Application,
     transactions: Transaction[],
     req: RequestWithToken,
-    validTransReq: TransactionRequest
+    validTransReq: TransactionRequest,
+    pointOfSale: PointOfSaleRevision,
+    container: ContainerRevision,
     spec: SwaggerSpecification,
     logger: Logger,
   };
@@ -59,6 +63,7 @@ describe('TransactionService', (): void => {
         skip: 0,
       },
     } as any as RequestWithToken;
+
     const validTransReq = {
       from: 7,
       createdBy: 7,
@@ -85,18 +90,18 @@ describe('TransactionService', (): void => {
             {
               product: {
                 id: 2,
-                revision: 3,
+                revision: 2,
               },
               amount: 2,
               price: {
-                amount: 148,
+                amount: 146,
                 currency: 'EUR',
                 precision: 2,
               },
             },
           ],
           price: {
-            amount: 220,
+            amount: 218,
             currency: 'EUR',
             precision: 2,
           },
@@ -105,21 +110,9 @@ describe('TransactionService', (): void => {
           to: 9,
           container: {
             id: 2,
-            revision: 3,
+            revision: 2,
           },
           subTransactionRows: [
-            {
-              product: {
-                id: 3,
-                revision: 1,
-              },
-              amount: 3,
-              price: {
-                amount: 219,
-                currency: 'EUR',
-                precision: 2,
-              },
-            },
             {
               product: {
                 id: 5,
@@ -134,7 +127,7 @@ describe('TransactionService', (): void => {
             },
           ],
           price: {
-            amount: 523,
+            amount: 304,
             currency: 'EUR',
             precision: 2,
           },
@@ -145,17 +138,30 @@ describe('TransactionService', (): void => {
         revision: 2,
       },
       price: {
-        amount: 743,
+        amount: 522,
         currency: 'EUR',
         precision: 2,
       },
     } as TransactionRequest;
+
+    const pointOfSale = await PointOfSaleRevision.findOne({
+      revision: validTransReq.pointOfSale.revision,
+      pointOfSale: { id: validTransReq.pointOfSale.id },
+    }, { relations: ['pointOfSale', 'containers'] });
+
+    const container = await ContainerRevision.findOne({
+      revision: validTransReq.subtransactions[0].container.revision,
+      container: { id: validTransReq.subtransactions[0].container.id },
+    }, { relations: ['container', 'products'] });
+
     ctx = {
       connection,
       app,
       req,
       validTransReq,
+      pointOfSale,
       transactions,
+      container,
       spec: await Swagger.importSpecification(),
       logger,
     };
@@ -168,7 +174,7 @@ describe('TransactionService', (): void => {
   describe('Get total cost of a transaction', () => {
     it('should return the total cost of a transaction', async () => {
       const total = {
-        amount: 743,
+        amount: 522,
         currency: 'EUR',
         precision: 2,
       } as DineroObject;
@@ -211,13 +217,6 @@ describe('TransactionService', (): void => {
         id: 12345,
       };
       expect(await TransactionService.verifyTransaction(badPOSReq), 'non existent accepted').to.be.false;
-
-      // incorrect revision
-      badPOSReq.pointOfSale = {
-        revision: 1,
-        id: 1,
-      };
-      expect(await TransactionService.verifyTransaction(badPOSReq), 'incorrect current revision accepted').to.be.false;
     });
     it('should return false if a specified top level user is invalid', async () => {
       // undefined from
@@ -270,8 +269,9 @@ describe('TransactionService', (): void => {
 
   describe('Verifiy sub transaction', () => {
     it('should return true if the sub transaction request is valid', async () => {
-      expect(await TransactionService.verifySubTransaction(ctx.validTransReq.subtransactions[0]))
-        .to.be.true;
+      expect(await TransactionService.verifySubTransaction(
+        ctx.validTransReq.subtransactions[0], ctx.pointOfSale,
+      )).to.be.true;
     });
     it('should return false if the container is invalid', async () => {
       // undefined container
@@ -279,7 +279,7 @@ describe('TransactionService', (): void => {
         ...ctx.validTransReq.subtransactions[0],
         container: undefined,
       } as SubTransactionRequest;
-      expect(await TransactionService.verifySubTransaction(badContainerReq), 'undefined accepted')
+      expect(await TransactionService.verifySubTransaction(badContainerReq, ctx.pointOfSale), 'undefined accepted')
         .to.be.false;
 
       // non existent container
@@ -287,15 +287,15 @@ describe('TransactionService', (): void => {
         revision: 1,
         id: 12345,
       };
-      expect(await TransactionService.verifySubTransaction(badContainerReq), 'non existent accepted')
+      expect(await TransactionService.verifySubTransaction(badContainerReq, ctx.pointOfSale), 'non existent accepted')
         .to.be.false;
 
-      // incorrect revision
+      // container not in point of sale
       badContainerReq.container = {
         revision: 1,
         id: 1,
       };
-      expect(await TransactionService.verifySubTransaction(badContainerReq), 'incorrect current revision accepted')
+      expect(await TransactionService.verifySubTransaction(badContainerReq, ctx.pointOfSale), 'container not in point of sale accepted')
         .to.be.false;
     });
     it('should return false if the to user is invalid', async () => {
@@ -304,15 +304,15 @@ describe('TransactionService', (): void => {
         ...ctx.validTransReq.subtransactions[0],
         to: undefined,
       } as SubTransactionRequest;
-      expect(await TransactionService.verifySubTransaction(badToReq), 'undefined to accepted').to.be.false;
+      expect(await TransactionService.verifySubTransaction(badToReq, ctx.pointOfSale), 'undefined to accepted').to.be.false;
 
       // non existent to user
       badToReq.to = 0;
-      expect(await TransactionService.verifySubTransaction(badToReq), 'non existent to accepted').to.be.false;
+      expect(await TransactionService.verifySubTransaction(badToReq, ctx.pointOfSale), 'non existent to accepted').to.be.false;
 
       // inactive to user
       badToReq.to = 5;
-      expect(await TransactionService.verifySubTransaction(badToReq), 'inactive to accepted').to.be.false;
+      expect(await TransactionService.verifySubTransaction(badToReq, ctx.pointOfSale), 'inactive to accepted').to.be.false;
     });
     it('should return false if the price is set incorrectly', async () => {
       // undefined price
@@ -320,7 +320,7 @@ describe('TransactionService', (): void => {
         ...ctx.validTransReq.subtransactions[0],
         price: undefined,
       } as SubTransactionRequest;
-      expect(await TransactionService.verifySubTransaction(badPriceReq), 'undefined accepted').to.be.false;
+      expect(await TransactionService.verifySubTransaction(badPriceReq, ctx.pointOfSale), 'undefined accepted').to.be.false;
 
       // incorrect price
       badPriceReq.price = {
@@ -328,14 +328,14 @@ describe('TransactionService', (): void => {
         currency: 'EUR',
         precision: 2,
       };
-      expect(await TransactionService.verifySubTransaction(badPriceReq), 'incorrect accepted').to.be.false;
+      expect(await TransactionService.verifySubTransaction(badPriceReq, ctx.pointOfSale), 'incorrect accepted').to.be.false;
     });
   });
 
   describe('Verifiy sub transaction row', () => {
     it('should return true if the sub transaction row request is valid', async () => {
       expect(await TransactionService.verifySubTransactionRow(
-        ctx.validTransReq.subtransactions[0].subTransactionRows[0],
+        ctx.validTransReq.subtransactions[0].subTransactionRows[0], ctx.container,
       )).to.be.true;
     });
     it('should return false if the product is invalid', async () => {
@@ -344,21 +344,21 @@ describe('TransactionService', (): void => {
         ...ctx.validTransReq.subtransactions[0].subTransactionRows[0],
         product: undefined,
       } as SubTransactionRowRequest;
-      expect(await TransactionService.verifySubTransactionRow(badProductReq), 'undefined product accepted').to.be.false;
+      expect(await TransactionService.verifySubTransactionRow(badProductReq, ctx.container), 'undefined product accepted').to.be.false;
 
       // non existent product
       badProductReq.product = {
         revision: 1,
         id: 12345,
       };
-      expect(await TransactionService.verifySubTransactionRow(badProductReq), 'non existent product accepted').to.be.false;
+      expect(await TransactionService.verifySubTransactionRow(badProductReq, ctx.container), 'non existent product accepted').to.be.false;
 
-      // incorrect revision
+      // product not in container
       badProductReq.product = {
         revision: 1,
         id: 1,
       };
-      expect(await TransactionService.verifySubTransactionRow(badProductReq), 'incorrect current revision accepted').to.be.false;
+      expect(await TransactionService.verifySubTransactionRow(badProductReq, ctx.container), 'product not in container accepted').to.be.false;
     });
     it('should return false if the specified amount of the product is invalid', async () => {
       // undefined amount
@@ -366,15 +366,15 @@ describe('TransactionService', (): void => {
         ...ctx.validTransReq.subtransactions[0].subTransactionRows[0],
         amount: undefined,
       } as SubTransactionRowRequest;
-      expect(await TransactionService.verifySubTransactionRow(badAmountReq), 'undefined amount accepted').to.be.false;
+      expect(await TransactionService.verifySubTransactionRow(badAmountReq, ctx.container), 'undefined amount accepted').to.be.false;
 
       // amount not greater than 0
       badAmountReq.amount = 0;
-      expect(await TransactionService.verifySubTransactionRow(badAmountReq), 'amount not greater than 0 accepted').to.be.false;
+      expect(await TransactionService.verifySubTransactionRow(badAmountReq, ctx.container), 'amount not greater than 0 accepted').to.be.false;
 
       // amount not an integer
       badAmountReq.amount = 1.1;
-      expect(await TransactionService.verifySubTransactionRow(badAmountReq), 'non integer amount accepted').to.be.false;
+      expect(await TransactionService.verifySubTransactionRow(badAmountReq, ctx.container), 'non integer amount accepted').to.be.false;
     });
     it('should return false if the price is set incorrectly', async () => {
       // undefined price
@@ -382,7 +382,7 @@ describe('TransactionService', (): void => {
         ...ctx.validTransReq.subtransactions[0].subTransactionRows[0],
         price: undefined,
       } as SubTransactionRowRequest;
-      expect(await TransactionService.verifySubTransactionRow(badPriceReq), 'undefined accepted').to.be.false;
+      expect(await TransactionService.verifySubTransactionRow(badPriceReq, ctx.container), 'undefined accepted').to.be.false;
 
       // incorrect price
       badPriceReq.price = {
@@ -390,7 +390,7 @@ describe('TransactionService', (): void => {
         currency: 'EUR',
         precision: 2,
       };
-      expect(await TransactionService.verifySubTransactionRow(badPriceReq), 'incorrect accepted').to.be.false;
+      expect(await TransactionService.verifySubTransactionRow(badPriceReq, ctx.container), 'incorrect accepted').to.be.false;
     });
   });
 
