@@ -57,9 +57,6 @@ export default class TransferService {
     });
   }
 
-  /**
-   * Query for getting transfers.
-   */
   public static async getTransfers(params: TransferFilterParameters = {})
     : Promise<TransferResponse[]> {
     const filterMapping: FilterMapping = {
@@ -74,27 +71,15 @@ export default class TransferService {
       relations: ['from', 'to'],
     };
     const transfers = await Transfer.find(options);
-    return transfers.map(
-      (transfer) => (this.asTransferResponse(transfer)),
-    );
+    return transfers.map(this.asTransferResponse);
   }
 
-  /**
-   * Saves a Transfer to the database.
-   * @param request - The TransferRequest with values.
-   */
   public static async postTransfer(request: TransferRequest) : Promise<TransferResponse> {
     const transfer = await this.asTransfer(request);
     await transfer.save();
     return this.asTransferResponse(transfer);
   }
 
-  /**
-   * Verifies whether the transfer request translates to a valid transfer
-   * @param {TransferRequest.model} request
-   * - the transfer request to verify
-   * @returns {boolean} - whether transfer is ok or not
-   */
   public static async verifyTransferRequest(request: TransferRequest) : Promise<boolean> {
     // the type of the request should be in TransferType enums
     // if the type is custom a description is necessary

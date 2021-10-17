@@ -31,6 +31,8 @@ import User, { UserType } from '../src/entity/user/user';
 import UpdatedProduct from '../src/entity/product/updated-product';
 import UpdatedContainer from '../src/entity/container/updated-container';
 import UpdatedPointOfSale from '../src/entity/point-of-sale/updated-point-of-sale';
+import Transfer, { TransferType } from '../src/entity/transactions/transfer';
+import TransferService from '../src/service/transfer-service';
 
 /**
  * Defines user objects with the given parameters.
@@ -1062,6 +1064,44 @@ export async function seedTransactions(
   return { transactions };
 }
 
+export async function seedTransfers(users: User[]) : Promise<Transfer[]> {
+  let transfers: Transfer[];
+  let counter = 1;
+  for(let user of users)
+  {
+    let newTransfer = Object.assign(new Transfer(), {
+      description: "",
+      type: TransferType.DEPOSIT,
+      amount: dinero({amount : 100*counter}),
+      from: undefined,
+      to: user,
+    });
+    await Transfer.save(newTransfer);
+
+    newTransfer = Object.assign(new Transfer(), {
+      description: "",
+      type: TransferType.INVOICE,
+      amount: dinero({amount : counter}),
+      from: user,
+      to: undefined,
+    });
+    await Transfer.save(newTransfer);
+
+    newTransfer = Object.assign(new Transfer(), {
+      description: "" + counter,
+      type: TransferType.CUSTOM,
+      amount: dinero({amount : counter}),
+      from: user,
+      to: undefined,
+    });
+    await Transfer.save(newTransfer);
+
+    counter++;
+  }
+
+  return transfers;
+}
+
 export interface DatabaseContent {
   users: User[],
   categories: ProductCategory[],
@@ -1075,6 +1115,7 @@ export interface DatabaseContent {
   pointOfSaleRevisions: PointOfSaleRevision[],
   updatedPointsOfSale: UpdatedPointOfSale[],
   transactions: Transaction[],
+  transfers: Transfer[]
 }
 
 export default async function seedDatabase(): Promise<DatabaseContent> {
@@ -1088,6 +1129,7 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
     users, containerRevisions, containers,
   );
   const { transactions } = await seedTransactions(users, pointOfSaleRevisions);
+  const transfers = await seedTransfers(users);
 
   return {
     users,
@@ -1102,5 +1144,6 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
     pointOfSaleRevisions,
     updatedPointsOfSale,
     transactions,
+    transfers,
   };
 }
