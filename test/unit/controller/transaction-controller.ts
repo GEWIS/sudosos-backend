@@ -494,7 +494,28 @@ describe('TransactionController', (): void => {
         .send(badReq);
       expect(res.status).to.equal(400);
     });
-    it('should return an HTTP 403 if the user has insufficient balance');
+    it('should return an HTTP 403 if the user is a borrelkaart and has insufficient balance', async () => {
+      // create borrelkaart user
+      await User.save({
+        firstName: 'borrelkaart',
+        lastName: 'borrelkaart',
+        active: true,
+        deleted: false,
+        type: 3,
+      } as User);
+
+      const borrelkaartUser = await User.findOne({ active: true, deleted: false, type: 3 });
+      const badReq = {
+        ...ctx.validTransReq,
+        from: borrelkaartUser.id,
+      } as TransactionRequest;
+
+      const res = await request(ctx.app)
+        .post('/transactions')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(badReq);
+      expect(res.status).to.equal(403);
+    });
   });
 
   describe('DELETE /transactions', () => {

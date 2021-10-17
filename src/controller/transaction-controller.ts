@@ -26,6 +26,7 @@ import { asDate, asNumber } from '../helpers/validators';
 import { validatePaginationQueryParams } from '../helpers/pagination';
 import { TransactionRequest } from './request/transaction-request';
 import Transaction from '../entity/transactions/transaction';
+import User from '../entity/user/user';
 
 function parseGetTransactionsFilters(req: RequestWithToken): TransactionFilterParameters {
   if ((req.query.pointOfSaleRevision && !req.query.pointOfSaleId)
@@ -164,12 +165,14 @@ export default class TransactionController extends BaseController {
     // handle request
     try {
       if (await TransactionService.verifyTransaction(body)) {
-        // TODO: Verify only when requestor doesn't have rights to go negative balance
-        if (await TransactionService.verifyBalance(body)) {
-          res.json(await TransactionService.createTransaction(body));
-        } else {
-          res.status(403).json('Insufficient balance.');
+        // verify balance is from user is borrelkaart
+        const userType = (await User.findOne(body.from)).type;
+        if (userType === 3 && !await TransactionService.verifyBalance(body)) {
+          res.status(403).json('Mag niet.');
         }
+
+        // create the transaction
+        res.json(await TransactionService.createTransaction(body));
       } else {
         res.status(400).json('Invalid transaction.');
       }
