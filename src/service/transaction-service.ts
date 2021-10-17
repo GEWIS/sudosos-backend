@@ -157,7 +157,7 @@ export default class TransactionService {
    * @returns {boolean} - whether sub transaction is ok or not
    */
   public static async verifySubTransaction(
-    req: SubTransactionRequest, pointOfSale: PointOfSaleRevision,
+    req: SubTransactionRequest, pointOfSale: PointOfSaleRevision, isUpdate?: boolean,
   ): Promise<boolean> {
     // check if fields provided in the transaction
     if (!req.to || !req.container || !req.price
@@ -171,9 +171,9 @@ export default class TransactionService {
       return false;
     }
 
-    // check if to user exists and is active in database
+    // check if to user exists and check if they are active in database if the verify is not an update
     const user = await User.findOne(req.to);
-    if (!user || !user.active) {
+    if (!user || (!isUpdate && !user.active)) {
       return false;
     }
 
@@ -208,7 +208,8 @@ export default class TransactionService {
    * @param {TransactionRequest.model} req - the transaction request to verify
    * @returns {boolean} - whether transaction is ok or not
    */
-  public static async verifyTransaction(req: TransactionRequest): Promise<boolean> {
+  public static async verifyTransaction(req: TransactionRequest, isUpdate?: boolean):
+  Promise<boolean> {
     // check if fields provided in the transaction
     if (!req.from || !req.createdBy
         || !req.subtransactions || req.subtransactions.length === 0
@@ -222,9 +223,10 @@ export default class TransactionService {
       ids.push(req.createdBy);
     }
 
+    // don't check active users if verification is done on an update
     const users = await User.findByIds(ids);
     if (users.length !== ids.length
-      || !users.every((user) => user.active)) {
+      || (!isUpdate && !users.every((user) => user.active))) {
       return false;
     }
 
@@ -248,20 +250,10 @@ export default class TransactionService {
 
     // verify subtransactions
     const verification = await Promise.all(req.subtransactions.map(
-      async (sub) => this.verifySubTransaction(sub, pointOfSale),
+      async (sub) => this.verifySubTransaction(sub, pointOfSale, isUpdate),
     ));
 
     return !verification.includes(false);
-  }
-
-  // TODO
-  public static async verifyUpdate(req: TransactionRequest): Promise<boolean> {
-    const lel = await PointOfSaleRevision.findOne({
-      revision: req.pointOfSale.revision,
-      pointOfSale: { id: req.pointOfSale.id },
-    }, { relations: ['containers'] });
-
-    return lel === undefined;
   }
 
   /**
