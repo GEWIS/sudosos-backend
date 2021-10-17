@@ -171,7 +171,7 @@ export default class TransactionService {
       return false;
     }
 
-    // check if to user exists and check if they are active in database if the verify is not an update
+    // check if to user exists, check if they are active in database if the call is not an update
     const user = await User.findOne(req.to);
     if (!user || (!isUpdate && !user.active)) {
       return false;
