@@ -17,101 +17,100 @@
  */
 
 import dinero from 'dinero.js';
-import bodyParser from "body-parser";
-import { expect } from "chai";
-import express, { Application } from "express";
-import { SwaggerSpecification } from "swagger-model-validator";
-import { Connection } from "typeorm";
-import TransferRequest from "../../../src/controller/request/transfer-request";
-import { TransferResponse } from "../../../src/controller/response/transfer-response";
-import Database from "../../../src/database/database";
-import Transfer, { TransferType } from "../../../src/entity/transactions/transfer";
-import User from "../../../src/entity/user/user";
-import TransferService from "../../../src/service/transfer-service";
-import Swagger from "../../../src/start/swagger";
-import { seedTransfers, seedUsers } from "../../seed";
-
+import bodyParser from 'body-parser';
+import { expect } from 'chai';
+import express, { Application } from 'express';
+import { SwaggerSpecification } from 'swagger-model-validator';
+import { Connection } from 'typeorm';
+import TransferRequest from '../../../src/controller/request/transfer-request';
+import { TransferResponse } from '../../../src/controller/response/transfer-response';
+import Database from '../../../src/database/database';
+import Transfer, { TransferType } from '../../../src/entity/transactions/transfer';
+import User from '../../../src/entity/user/user';
+import TransferService from '../../../src/service/transfer-service';
+import Swagger from '../../../src/start/swagger';
+import { seedTransfers, seedUsers } from '../../seed';
 
 describe('TransferService', async (): Promise<void> => {
-    let ctx: {
-        connection: Connection,
-        app: Application,
-        specification: SwaggerSpecification,
-        users: User[],
-        transfers: Transfer[],
+  let ctx: {
+    connection: Connection,
+    app: Application,
+    specification: SwaggerSpecification,
+    users: User[],
+    transfers: Transfer[],
+  };
+  before(async () => {
+    const connection = await Database.initialize();
+
+    const users = await seedUsers();
+    const transfers = await seedTransfers(users);
+
+    // start app
+    const app = express();
+    const specification = await Swagger.initialize(app);
+    app.use(bodyParser.json());
+
+    // initialize context
+    ctx = {
+      connection,
+      app,
+      specification,
+      users,
+      transfers,
     };
-    before(async () => {
-        const connection = await Database.initialize();
-
-        const users = await seedUsers();
-        const transfers = await seedTransfers(users);
-
-        // start app
-        const app = express();
-        const specification = await Swagger.initialize(app);
-        app.use(bodyParser.json());
-
-        // initialize context
-        ctx = {
-            connection,
-            app,
-            specification,
-            users,
-            transfers,
-        };
+  });
+  after(async () => {
+    await ctx.connection.close();
+  });
+  describe('getTransfers function', async (): Promise<void> => {
+    it('should return all transfers', async () => {
+      const res: TransferResponse[] = await TransferService.getTransfers();
+      expect(res.length).to.equal(ctx.transfers.length);
     });
-    after(async () => {
-        await ctx.connection.close();
-    })
-    describe('getTransfers function', async (): Promise<void> => {
-        it('should return all transfers', async () => {
-            const res: TransferResponse[] = await TransferService.getTransfers();
-            expect(res.length).to.equal(ctx.transfers.length);
-        })
 
-        it('should return a single transfer if id is specified', async () => {
-            const res: TransferResponse[] = await TransferService
-                .getTransfers({ id: ctx.transfers[0].id });
-            expect(res.length).to.equal(1);
-            expect(res[0].id).to.equal(ctx.transfers[0].id);
-        })
-        it('should return nothing if a wrong id is specified', async () => {
-            const res: TransferResponse[] = await TransferService
-                .getTransfers({ id: ctx.transfers.length + 1 });
-            expect(res).to.be.empty;
-        });
-    })
-    describe('postTransfer function', () => {
-        it('should be able to post a new transfer', async () => {
-            const req: TransferRequest = {
-                amount: {
-                    amount: 10,
-                    precision: dinero.defaultPrecision,
-                    currency: dinero.defaultCurrency,
-                },
-                type: TransferType.CUSTOM,
-                description: "cool",
-                fromId: ctx.users[0].id,
-                toId: null,
-            }
-            const res = await TransferService.postTransfer(req);
-            expect(res).to.not.be.null;
-        })
+    it('should return a single transfer if id is specified', async () => {
+      const res: TransferResponse[] = await TransferService
+        .getTransfers({ id: ctx.transfers[0].id });
+      expect(res.length).to.equal(1);
+      expect(res[0].id).to.equal(ctx.transfers[0].id);
+    });
+    it('should return nothing if a wrong id is specified', async () => {
+      const res: TransferResponse[] = await TransferService
+        .getTransfers({ id: ctx.transfers.length + 1 });
+      expect(res).to.be.empty;
+    });
+  });
+  describe('postTransfer function', () => {
+    it('should be able to post a new transfer', async () => {
+      const req: TransferRequest = {
+        amount: {
+          amount: 10,
+          precision: dinero.defaultPrecision,
+          currency: dinero.defaultCurrency,
+        },
+        type: TransferType.CUSTOM,
+        description: 'cool',
+        fromId: ctx.users[0].id,
+        toId: null,
+      };
+      const res = await TransferService.postTransfer(req);
+      expect(res).to.not.be.null;
+    });
 
-        it('should not be able to post an invalid transfer', async () => {
-            const req: TransferRequest = {
-                amount: {
-                    amount: 10,
-                    precision: dinero.defaultPrecision,
-                    currency: dinero.defaultCurrency,
-                },
-                type: null, //invalid type
-                description: "cool",
-                fromId: ctx.users[0].id,
-                toId: null,
-            }
-            const promise = TransferService.postTransfer(req);
-            await expect(promise).to.eventually.be.rejected;
-        })
-    })
+    it('should not be able to post an invalid transfer', async () => {
+      const req: TransferRequest = {
+        amount: {
+          amount: 10,
+          precision: dinero.defaultPrecision,
+          currency: dinero.defaultCurrency,
+        },
+        type: null, // invalid type
+        description: 'cool',
+        fromId: ctx.users[0].id,
+        toId: null,
+      };
+      const promise = TransferService.postTransfer(req);
+      await expect(promise).to.eventually.be.rejected;
+    });
+  });
 });

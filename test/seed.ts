@@ -32,7 +32,6 @@ import UpdatedProduct from '../src/entity/product/updated-product';
 import UpdatedContainer from '../src/entity/container/updated-container';
 import UpdatedPointOfSale from '../src/entity/point-of-sale/updated-point-of-sale';
 import Transfer, { TransferType } from '../src/entity/transactions/transfer';
-import TransferService from '../src/service/transfer-service';
 
 /**
  * Defines user objects with the given parameters.
@@ -1065,42 +1064,45 @@ export async function seedTransactions(
 }
 
 export async function seedTransfers(users: User[]) : Promise<Transfer[]> {
-  let transfers: Transfer[] = [];
-  let counter = 1;
-  for(let user of users)
-  {
+  const transfers: Transfer[] = [];
+  const promises: Promise<any>[] = [];
+
+  for (let i = 0; i < users.length; i += 1) {
     let newTransfer = Object.assign(new Transfer(), {
-      description: "",
+      description: '',
       type: TransferType.DEPOSIT,
-      amount: dinero({amount : 100*counter}),
+      amount: dinero({ amount: 100 * (i + 1) }),
       from: undefined,
-      to: user,
+      to: users[i],
     });
     transfers.push(newTransfer);
-    await Transfer.save(newTransfer);
+    let promise = Transfer.save(newTransfer);
+    promises.push(promise);
 
     newTransfer = Object.assign(new Transfer(), {
-      description: "",
+      description: '',
       type: TransferType.INVOICE,
-      amount: dinero({amount : counter}),
-      from: user,
+      amount: dinero({ amount: i + 1 }),
+      from: users[i],
       to: undefined,
     });
     transfers.push(newTransfer);
-    await Transfer.save(newTransfer);
+    promise = Transfer.save(newTransfer);
+    promises.push(promise);
 
     newTransfer = Object.assign(new Transfer(), {
-      description: "" + counter,
+      description: `${i + 1}`,
       type: TransferType.CUSTOM,
-      amount: dinero({amount : counter}),
-      from: user,
+      amount: dinero({ amount: i + 1 }),
+      from: users[i],
       to: undefined,
     });
     transfers.push(newTransfer);
-    await Transfer.save(newTransfer);
-
-    counter++;
+    promise = Transfer.save(newTransfer);
+    promises.push(promise);
   }
+
+  await Promise.all(promises);
 
   return transfers;
 }
