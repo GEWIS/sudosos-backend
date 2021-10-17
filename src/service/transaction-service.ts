@@ -124,13 +124,22 @@ export default class TransactionService {
    * @param {SubTransactionRowRequest.model} req - the sub transaction row request to verify
    * @returns {boolean} - whether sub transaction row is ok or not
    */
-  public static async verifySubTransactionRow(req: SubTransactionRowRequest): Promise<boolean> {
+  public static async verifySubTransactionRow(
+    req: SubTransactionRowRequest, con: ContainerRevision,
+  ): Promise<boolean> {
     // check if product exists in database and correct current revision is provided
     if (!req.product) {
       return false;
     }
     const product = await Product.findOne(req.product.id);
     if (!product || product.currentRevision !== req.product.revision) {
+      return false;
+    }
+
+    // check if product is in the container
+    if (!con.products.some(
+      (prod) => prod.product.id === product.id && prod.revision === product.currentRevision,
+    )) {
       return false;
     }
 
@@ -150,15 +159,25 @@ export default class TransactionService {
   /**
    * Verifies whether a sub transaction within a transaction is valid
    * @param {SubTransactionRequest.model} req - the sub transaction request to verify
+   * @param {PointOfSale.model} pos - the point of sale in the request
    * @returns {boolean} - whether sub transaction is ok or not
    */
-  public static async verifySubTransaction(req: SubTransactionRequest): Promise<boolean> {
+  public static async verifySubTransaction(
+    req: SubTransactionRequest, pos: PointOfSaleRevision,
+  ): Promise<boolean> {
     // check if container exists in database and correct current revision is provided
     if (!req.container) {
       return false;
     }
     const container = await Container.findOne(req.container.id);
     if (!container || container.currentRevision !== req.container.revision) {
+      return false;
+    }
+
+    // check if container is in the point of sale
+    if (!pos.containers.some(
+      (con) => con.container.id === container.id && con.revision === container.currentRevision,
+    )) {
       return false;
     }
 
@@ -183,8 +202,14 @@ export default class TransactionService {
       return false;
     }
 
+    // check if products are in the container
+    const con = await ContainerRevision.findOne({
+      revision: req.container.revision,
+      container: { id: req.container.id },
+    }, { relations: ['products'] });
+
     // verify subtransaction rows
-    return req.subTransactionRows.every((row) => this.verifySubTransactionRow(row));
+    return req.subTransactionRows.every((row) => this.verifySubTransactionRow(row, con));
   }
 
   /**
@@ -230,8 +255,20 @@ export default class TransactionService {
       return false;
     }
 
+    // check if containers are in the point of sale
+    const pos = await PointOfSaleRevision.findOne({
+      revision: req.pointOfSale.revision,
+      pointOfSale: { id: req.pointOfSale.id },
+    }, { relations: ['containers'] });
+
     // verify subtransactions
-    return req.subtransactions.every((subtransaction) => this.verifySubTransaction(subtransaction));
+    return req.subtransactions.every(
+      (subtransaction) => this.verifySubTransaction(subtransaction, pos),
+    );
+  }
+
+  public static async verifyUpdate(req: TransactionRequest): Promise<boolean> {
+    return false;
   }
 
   /**

@@ -234,7 +234,7 @@ export default class TransactionController extends BaseController {
     // handle request
     try {
       if (await Transaction.findOne(id)) {
-        if (await TransactionService.verifyTransaction(body)) {
+        if (await TransactionService.verifyUpdate(body)) {
           res.status(200).json(await TransactionService.updateTransaction(
             parseInt(id, 10), body,
           ));
