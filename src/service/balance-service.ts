@@ -32,46 +32,45 @@ export default class BalanceService {
       select max(id) as "transaction", 0 as "transfer" from \`transaction\` 
       union select 0 as "transaction", max(id) as "transfer" from \`transfer\` 
     )`);
-    const { transactionMax } = lastIds[0];
-    const { transferMax } = lastIds[0];
+    const { transactionMax, transferMax } = lastIds[0];
 
     if (params && params.ids) {
       const idStr = `(${params.ids.join(',')})`;
       // eslint-disable-next-line prefer-template
       await entityManager.query(`REPLACE INTO balance select id, sum(amount), ${transactionMax}, ${transferMax} from ( `
-          + 'select t.fromId as `id`, str.amount * pr.price * -1 as `amount`, str.updatedAt as `stamp` from `transaction` as `t` '
+          + 'select t.fromId as `id`, str.amount * pr.price * -1 as `amount` from `transaction` as `t` '
             + 'inner join sub_transaction st on t.id=st.transactionId '
             + 'inner join sub_transaction_row str on st.id=str.subTransactionId '
             + 'inner join product_revision pr on str.productRevision=pr.revision and str.productProduct=pr.productId '
             + `where t.id <= ? and t.fromId in ${idStr} `
           + 'UNION ALL '
-          + 'select st2.toId as `id`, str2.amount * pr2.price as `amount`, str2.updatedAt as `stamp` from sub_transaction st2 '
+          + 'select st2.toId as `id`, str2.amount * pr2.price as `amount` from sub_transaction st2 '
             + 'inner join sub_transaction_row str2 on st2.id=str2.subTransactionId '
             + 'inner join product_revision pr2 on str2.productRevision=pr2.revision and str2.productProduct=pr2.productId '
             + `where st2.transactionId <= ? and st2.toId in ${idStr} `
           + 'UNION ALL '
-          + `select t2.fromId as \`id\`, amount*-1 as \`amount\`, t2.updatedAt as \`stamp\` from transfer t2 where t2.id <= ? and fromId in ${idStr}`
+          + `select t2.fromId as \`id\`, amount*-1 as \`amount\` from transfer t2 where t2.id <= ? and fromId in ${idStr}`
           + 'UNION ALL '
-          + `select t2.toId as \`id\`, amount as \`amount\`, updatedAt as \`stamp\` from transfer t2 where t2.id <= ? and toId in ${idStr}) as moneys `
+          + `select t2.toId as \`id\`, amount as \`amount\` from transfer t2 where t2.id <= ? and toId in ${idStr}) as moneys `
         + 'group by moneys.id', [transactionMax, transactionMax, transferMax, transferMax]);
     } else {
       // eslint-disable-next-line prefer-template
       await entityManager.query(`REPLACE INTO balance select id, sum(amount), ${transactionMax}, ${transferMax} from ( `
-          + 'select t.fromId as `id`, str.amount * pr.price * -1 as `amount`, str.updatedAt as `stamp` from `transaction` as `t` '
+          + 'select t.fromId as `id`, str.amount * pr.price * -1 as `amount` from `transaction` as `t` '
             + 'inner join sub_transaction st on t.id=st.transactionId '
             + 'inner join sub_transaction_row str on st.id=str.subTransactionId '
             + 'inner join product_revision pr on str.productRevision=pr.revision and str.productProduct=pr.productId '
             + 'where t.id <= ? '
           + 'UNION ALL '
-          + 'select st2.toId as `id`, str2.amount * pr2.price as `amount`, str2.updatedAt as `stamp` from sub_transaction st2 '
+          + 'select st2.toId as `id`, str2.amount * pr2.price as `amount` from sub_transaction st2 '
             + 'inner join sub_transaction_row str2 on st2.id=str2.subTransactionId '
             + 'inner join product_revision pr2 on str2.productRevision=pr2.revision and str2.productProduct=pr2.productId '
             + 'where st2.transactionId <= ? '
           + 'UNION ALL '
-          + 'select t2.fromId as `id`, amount*-1 as `amount`, t2.updatedAt as `stamp` from transfer t2 where t2.id <= ? and fromId is not NULL '
+          + 'select t2.fromId as `id`, amount*-1 as `amount` from transfer t2 where t2.id <= ? and fromId is not NULL '
           + 'UNION ALL '
-          + 'select t2.toId as `id`, amount as `amount`, updatedAt as `stamp` from transfer t2 where t2.id <= ? and toId is not NULL) as moneys '
-        + 'group by moneys.id', [transactionMax, transactionMax]);
+          + 'select t3.toId as `id`, amount as `amount` from transfer t3 where t3.id <= ? and toId is not NULL) as moneys '
+        + 'group by moneys.id', [transactionMax, transactionMax, transferMax, transferMax]);
     }
   }
 
@@ -107,20 +106,20 @@ export default class BalanceService {
     }
 
     const laterTransactions = await entityManager.query('SELECT id, sum(amount) as amount from ( '
-      + 'select t.fromId as `id`, str.amount * pr.price * -1 as `amount`, str.updatedAt as `stamp` from `transaction` as `t` '
+      + 'select t.fromId as `id`, str.amount * pr.price * -1 as `amount` from `transaction` as `t` '
       + 'inner join sub_transaction st on t.id=st.transactionId '
       + 'inner join sub_transaction_row str on st.id=str.subTransactionId '
       + 'inner join product_revision pr on str.productRevision=pr.revision and str.productProduct=pr.productId '
       + 'where t.fromId = ? and t.id > ?'
       + 'UNION ALL '
-      + 'select st2.toId as `id`, str2.amount * pr2.price as `amount`, str2.updatedAt as `stamp` from sub_transaction st2 '
+      + 'select st2.toId as `id`, str2.amount * pr2.price as `amount` from sub_transaction st2 '
       + 'inner join sub_transaction_row str2 on st2.id=str2.subTransactionId '
       + 'inner join product_revision pr2 on str2.productRevision=pr2.revision and str2.productProduct=pr2.productId '
       + 'where st2.toId = ? and st2.transactionId > ? '
       + 'UNION ALL '
-      + 'select t2.fromId as `id`, amount*-1 as `amount`, t2.updatedAt as `stamp` from transfer t2 where fromId=? and t2.id > ? '
+      + 'select t2.fromId as `id`, amount*-1 as `amount` from transfer t2 where fromId=? and t2.id > ? '
       + 'UNION ALL '
-      + 'select t3.toId as `id`, amount as `amount`, updatedAt as `stamp` from transfer t3 where t3.toId=? and t3.id > ?) as moneys ', [id, lastTransaction, id, lastTransaction, id, lastTransfer, id, lastTransfer]);
+      + 'select t3.toId as `id`, amount as `amount` from transfer t3 where t3.toId=? and t3.id > ?) as moneys ', [id, lastTransaction, id, lastTransaction, id, lastTransfer, id, lastTransfer]);
 
     if (laterTransactions.length > 0 && laterTransactions[0].amount) {
       balance += laterTransactions[0].amount;
