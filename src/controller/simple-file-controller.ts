@@ -25,6 +25,13 @@ import FileService from '../service/file-service';
 import SimpleFileRequest from './request/simple-file-request';
 import putFileInResponse from '../files/response';
 
+/**
+ * This is a mock-controller since there is no actual use for this controller in sudoSOS.
+ * This controller allows you to upload files to the server and retrieve them, however
+ * in actual production environment we only want to upload files with associations.
+ *
+ * For example, the product controller would use the file-service to upload files.
+ */
 export default class SimpleFileController extends BaseController {
   private logger: Logger = log4js.getLogger('SimpleFileController');
 
