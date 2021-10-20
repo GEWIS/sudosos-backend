@@ -162,7 +162,7 @@ export default class ProductService {
    * Gets all the products in a PointOfSale
    * @param params
    */
-  public static async getProductsPOS(params: ProductParameters = {}) {
+  public static async getProductsPOS(params: ProductParameters = {}): Promise<ProductResponse[]> {
     let POScurrent: PointOfSale;
     let revision = params.pointOfSaleRevision;
 
