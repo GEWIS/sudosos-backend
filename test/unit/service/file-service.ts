@@ -56,6 +56,7 @@ describe('FileService', async (): Promise<void> => {
     specification: SwaggerSpecification,
     users: User[],
     files: BaseFile[],
+    fileService: FileService,
   };
 
   const uploadedFile: UploadedFile = {
@@ -102,7 +103,7 @@ describe('FileService', async (): Promise<void> => {
     ] as BaseFile[];
 
     await BaseFile.save(files);
-
+    const fileService: FileService = new FileService('./data/simple', 'disk');
     const app = express();
     const specification = await Swagger.initialize(app);
     app.use(bodyParser.json());
@@ -113,6 +114,7 @@ describe('FileService', async (): Promise<void> => {
       specification,
       users,
       files,
+      fileService,
     };
   });
 
@@ -134,7 +136,7 @@ describe('FileService', async (): Promise<void> => {
       const saveFileStub = sinon.stub(DiskStorage.prototype, 'saveFile').resolves('fileLocation');
       stubs.push(saveFileStub);
 
-      const res: BaseFile = await FileService
+      const res: BaseFile = await ctx.fileService
         .uploadSimpleFile(ctx.users[0], uploadedFile, simpleFileParams);
 
       expect(res).to.exist;
@@ -158,7 +160,7 @@ describe('FileService', async (): Promise<void> => {
       stubs.push(saveFileStub);
 
       try {
-        await FileService.uploadSimpleFile(ctx.users[0], uploadedFile, simpleFileParams);
+        await ctx.fileService.uploadSimpleFile(ctx.users[0], uploadedFile, simpleFileParams);
         assert(false, 'Expected FileService.uploadSimpleFile to have thrown an error');
       } catch (e) {
         expect(e.message).to.equal(`Error: ${error.message}`);
@@ -188,7 +190,7 @@ describe('FileService', async (): Promise<void> => {
       stubs.push(deleteBaseFileStub);
 
       try {
-        await FileService.uploadSimpleFile(ctx.users[0], uploadedFile, simpleFileParams);
+        await ctx.fileService.uploadSimpleFile(ctx.users[0], uploadedFile, simpleFileParams);
         assert(false, 'Expected FileService.uploadSimpleFile to have thrown an error');
       } catch (e) {
         expect(e.message).to.equal(`Error: ${error.message}`);
@@ -199,12 +201,13 @@ describe('FileService', async (): Promise<void> => {
       expect(deleteBaseFileStub).to.have.been.called;
     });
 
-    it('should throw an error when invalid storage method is provided in environment variables', async () => {
+    it('should throw an error when an FileService is provided with an invalid storage method', async () => {
       const storageMethod = process.env.FILE_STORAGE_METHOD;
       process.env.FILE_STORAGE_METHOD = 'Nonexisting';
 
       try {
-        await FileService.uploadSimpleFile(ctx.users[0], uploadedFile, {
+        const tempFileService: FileService = new FileService('/temp', process.env.FILE_STORAGE_METHOD);
+        await tempFileService.uploadSimpleFile(ctx.users[0], uploadedFile, {
           name: 'not boeiend',
         });
         assert(false, 'Expected FileService.uploadSimpleFile to have thrown an error');
@@ -222,13 +225,13 @@ describe('FileService', async (): Promise<void> => {
       const getFileStub = sinon.stub(DiskStorage.prototype, 'getFile').resolves(buffer);
       stubs.push(getFileStub);
 
-      const { file, data } = await FileService.getSimpleFile(ctx.files[0].id);
+      const { file, data } = await ctx.fileService.getSimpleFile(ctx.files[0].id);
       expect(data).to.equal(buffer);
       expect(file.downloadName).to.equal(ctx.files[0].downloadName);
       expect(file.location).to.equal(ctx.files[0].location);
     });
     it('should return undefined when file does not exist', async () => {
-      const result = await FileService.getSimpleFile(ctx.files[ctx.files.length - 1].id + 39);
+      const result = await ctx.fileService.getSimpleFile(ctx.files[ctx.files.length - 1].id + 39);
       expect(result).to.be.undefined;
     });
     it('should throw error when getting file from storage fails', async () => {
@@ -237,7 +240,7 @@ describe('FileService', async (): Promise<void> => {
       stubs.push(getFileStub);
 
       try {
-        await FileService.getSimpleFile(ctx.files[0].id);
+        await ctx.fileService.getSimpleFile(ctx.files[0].id);
         assert(false, 'Expected FileService.getSimpleFile to have thrown an error');
       } catch (e) {
         expect(e.message).to.equal(error.message);
@@ -251,10 +254,10 @@ describe('FileService', async (): Promise<void> => {
       const deleteFileStub = sinon.stub(DiskStorage.prototype, 'deleteFile').resolves(true);
       stubs.push(deleteFileStub);
 
-      await FileService.deleteSimpleFile(ctx.files[0].id);
+      await ctx.fileService.deleteSimpleFile(ctx.files[0].id);
       expect(await BaseFile.count()).to.equal(lengthBefore - 1);
 
-      const result = await FileService.getSimpleFile(ctx.files[0].id);
+      const result = await ctx.fileService.getSimpleFile(ctx.files[0].id);
       expect(result).to.be.undefined;
     });
     it('should delete file from database when file no longer in storage', async () => {
@@ -262,10 +265,10 @@ describe('FileService', async (): Promise<void> => {
       const deleteFileStub = sinon.stub(DiskStorage.prototype, 'deleteFile').resolves(false);
       stubs.push(deleteFileStub);
 
-      await FileService.deleteSimpleFile(ctx.files[1].id);
+      await ctx.fileService.deleteSimpleFile(ctx.files[1].id);
       expect(await BaseFile.count()).to.equal(lengthBefore - 1);
 
-      const result = await FileService.getSimpleFile(ctx.files[1].id);
+      const result = await ctx.fileService.getSimpleFile(ctx.files[1].id);
       expect(result).to.be.undefined;
     });
     it('should throw error when deleting file from storage fails', async () => {
@@ -279,20 +282,20 @@ describe('FileService', async (): Promise<void> => {
       stubs.push(getFileStub);
 
       try {
-        await FileService.deleteSimpleFile(ctx.files[2].id);
+        await ctx.fileService.deleteSimpleFile(ctx.files[2].id);
         assert(false, 'Expected FileService.deleteSimpleFile to have thrown an error');
       } catch (e) {
         expect(e.message).to.equal(error.message);
       }
       expect(await BaseFile.count()).to.equal(lengthBefore);
 
-      const result = await FileService.getSimpleFile(ctx.files[2].id);
+      const result = await ctx.fileService.getSimpleFile(ctx.files[2].id);
       expect(result).to.not.be.undefined;
     });
     it('should return when file does not exist', async () => {
       const lengthBefore = await BaseFile.count();
 
-      await FileService.deleteSimpleFile(ctx.files[ctx.files.length - 1].id + 39);
+      await ctx.fileService.deleteSimpleFile(ctx.files[ctx.files.length - 1].id + 39);
       expect(await BaseFile.count()).to.equal(lengthBefore);
     });
     it('should throw error when deleting from database fails', async () => {
@@ -307,13 +310,13 @@ describe('FileService', async (): Promise<void> => {
       stubs.push(getFileStub);
 
       try {
-        await FileService.deleteSimpleFile(ctx.files[2].id);
+        await ctx.fileService.deleteSimpleFile(ctx.files[2].id);
         assert(false, 'Expected FileService.deleteSimpleFile to have thrown an error');
       } catch (e) {
         expect(e.message).to.equal(error.message);
       }
 
-      const result = await FileService.getSimpleFile(ctx.files[2].id);
+      const result = await ctx.fileService.getSimpleFile(ctx.files[2].id);
       expect(result).to.not.be.undefined;
     });
   });

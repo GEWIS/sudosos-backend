@@ -35,6 +35,8 @@ import putFileInResponse from '../files/response';
 export default class SimpleFileController extends BaseController {
   private logger: Logger = log4js.getLogger('SimpleFileController');
 
+  private fileService: FileService;
+
   /**
    * Creates a new product controller instance.
    * @param options - The options passed to the base controller.
@@ -42,6 +44,7 @@ export default class SimpleFileController extends BaseController {
   public constructor(options: BaseControllerOptions) {
     super(options);
     this.logger.level = process.env.LOG_LEVEL;
+    this.fileService = new FileService();
   }
 
   /**
@@ -96,7 +99,7 @@ export default class SimpleFileController extends BaseController {
 
     // handle request
     try {
-      res.json(await FileService.uploadSimpleFile(
+      res.json(await this.fileService.uploadSimpleFile(
         req.token.user, files.file as UploadedFile, body as SimpleFileRequest,
       ));
     } catch (error) {
@@ -120,7 +123,7 @@ export default class SimpleFileController extends BaseController {
     this.logger.trace('Download simple file', id, ' by user', req.token.user);
 
     try {
-      const fileInfo = await FileService.getSimpleFile(Number.parseInt(id, 10));
+      const fileInfo = await this.fileService.getSimpleFile(Number.parseInt(id, 10));
       if (fileInfo === undefined) {
         res.status(404);
       }
@@ -148,7 +151,7 @@ export default class SimpleFileController extends BaseController {
     this.logger.trace('Download simple file', id, 'by user', req.token.user);
 
     try {
-      await FileService.deleteSimpleFile(Number.parseInt(id, 10));
+      await this.fileService.deleteSimpleFile(Number.parseInt(id, 10));
       res.status(204);
       res.send();
     } catch (error) {

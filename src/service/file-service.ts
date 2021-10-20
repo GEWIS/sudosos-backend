@@ -31,21 +31,15 @@ export interface DownloadFileResponse {
 }
 
 export default class FileService {
-  /**
-   * Returns the appropriate storage handler with the given entity
-   * @param entity Entity to which this file belongs
-   */
-  private static getFileStorage(entity: FileType): FileStorage {
-    switch (process.env.FILE_STORAGE_METHOD) {
+  private fileStorage: FileStorage;
+
+  constructor(workdir?: string, storageMethod?: string) {
+    switch (storageMethod ?? process.env.FILE_STORAGE_METHOD) {
       case undefined:
       case '':
       case 'disk':
-        switch (entity) {
-          case 'simple':
-            return new DiskStorage(SIMPLE_FILE_LOCATION);
-          default:
-            throw new TypeError(`Unknown entity file type: ${entity}`);
-        }
+        this.fileStorage = new DiskStorage(workdir ?? SIMPLE_FILE_LOCATION);
+        break;
       default:
         throw new TypeError(`Unknown file storage method: ${process.env.FILE_STORAGE_METHOD}`);
     }
@@ -54,14 +48,12 @@ export default class FileService {
   /**
    * Create a new file in storage, given the provided parameters
    */
-  private static async createFile(
+  private async createFile(
     entity: FileType, file: BaseFile, fileData: Buffer,
   ): Promise<BaseFile> {
-    const storage = this.getFileStorage(entity);
-
     let location: string;
     try {
-      location = await storage.saveFile(file.downloadName, fileData);
+      location = await this.fileStorage.saveFile(file.downloadName, fileData);
     } catch (error) {
       await BaseFile.delete(file.id);
       throw new Error(error);
@@ -73,7 +65,7 @@ export default class FileService {
     try {
       await file.save();
     } catch (error) {
-      await storage.deleteFile(file);
+      await this.fileStorage.deleteFile(file);
       await BaseFile.delete(file.id);
       throw new Error(error);
     }
@@ -84,23 +76,21 @@ export default class FileService {
   /**
    * Read and return the given file from storage
    */
-  private static async readFile(entity: FileType, file: BaseFile): Promise<Buffer> {
-    const storage = this.getFileStorage(entity);
-    return storage.getFile(file);
+  private async readFile(entity: FileType, file: BaseFile): Promise<Buffer> {
+    return this.fileStorage.getFile(file);
   }
 
   /**
    * Remove the given file from storage
    */
-  private static async removeFile(entity: FileType, file: BaseFile) {
-    const storage = this.getFileStorage(entity);
-    await storage.deleteFile(file);
+  private async removeFile(entity: FileType, file: BaseFile) {
+    await this.fileStorage.deleteFile(file);
   }
 
   /**
    * Upload a simple file to the database and put in storage
    */
-  public static async uploadSimpleFile(
+  public async uploadSimpleFile(
     createdBy: User, uploadedFile: UploadedFile, fileEntity: SimpleFileRequest,
   ) {
     const fileExtension = path.extname(uploadedFile.name);
@@ -112,32 +102,32 @@ export default class FileService {
     });
     await file.save();
 
-    return FileService.createFile('simple', file, uploadedFile.data);
+    return this.createFile('simple', file, uploadedFile.data);
   }
 
   /**
    * Get the given simple file object and data from storage
    */
-  public static async getSimpleFile(id: number): Promise<DownloadFileResponse | undefined> {
+  public async getSimpleFile(id: number): Promise<DownloadFileResponse | undefined> {
     const file = await BaseFile.findOne(id);
 
     if (!file) {
       return undefined;
     }
 
-    const data = await FileService.readFile('simple', file);
+    const data = await this.readFile('simple', file);
     return { file, data };
   }
 
   /**
    * Delete the simple file with given ID from storage and database
    */
-  public static async deleteSimpleFile(id: number): Promise<void> {
+  public async deleteSimpleFile(id: number): Promise<void> {
     const file = await BaseFile.findOne(id);
 
     if (!file) return;
 
-    await FileService.removeFile('simple', file);
+    await this.removeFile('simple', file);
     await BaseFile.delete(file.id);
   }
 }
