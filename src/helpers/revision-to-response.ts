@@ -28,6 +28,7 @@ export function parseProductToBaseResponse(
   return {
     id: product.product.id,
     name: product.name,
+    revision: product.revision,
     price: product.price.toObject(),
     createdAt: timestamps ? product.createdAt.toISOString() : undefined,
     updatedAt: timestamps ? product.updatedAt.toISOString() : undefined,
@@ -40,6 +41,7 @@ export function parseContainerToBaseResponse(
   return {
     id: container.container.id,
     name: container.name,
+    revision: container.revision,
     createdAt: timestamps ? container.createdAt.toISOString() : undefined,
     updatedAt: timestamps ? container.updatedAt.toISOString() : undefined,
   } as BaseContainerResponse;
@@ -51,6 +53,7 @@ export function parsePOSToBasePOS(
   return {
     id: pos.pointOfSale.id,
     name: pos.name,
+    revision: pos.revision,
     createdAt: timestamps ? pos.createdAt.toISOString() : undefined,
     updatedAt: timestamps ? pos.updatedAt.toISOString() : undefined,
   } as BasePointOfSaleResponse;

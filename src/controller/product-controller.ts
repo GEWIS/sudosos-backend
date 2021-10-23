@@ -89,7 +89,7 @@ export default class ProductController extends BaseController {
    * @route GET /products
    * @group products - Operations of product controller
    * @security JWT
-   * @returns {Array<ProductResponse>} 200 - All existing products
+   * @returns {Array.<ProductResponse>} 200 - All existing products
    * @returns {string} 500 - Internal server error
    */
   public async returnAllProducts(req: RequestWithToken, res: Response): Promise<void> {
@@ -231,7 +231,7 @@ export default class ProductController extends BaseController {
    * @route GET /products/updated
    * @group products - Operations of product controller
    * @security JWT
-   * @returns {Array<ProductResponse>} 200 - All existing updated products
+   * @returns {Array.<ProductResponse>} 200 - All existing updated products
    * @returns {string} 500 - Internal server error
    */
   public async returnAllUpdatedProducts(req: RequestWithToken, res: Response): Promise<void> {
