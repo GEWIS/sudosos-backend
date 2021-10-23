@@ -338,8 +338,7 @@ export default class ProductService {
   /**
    * Creates a product update.
    * @param productId - The ID of the product to update.
-   * @param update - The variables to update. If undefined it uses the params from the latest
-   * revision.
+   * @param update - The product variables.
    */
   public static async updateProduct(productId: number, update: ProductRequest)
     : Promise<ProductResponse> {
@@ -351,13 +350,9 @@ export default class ProductService {
       return undefined;
     }
 
-    // Get the latest available of this product.
-    const latest: ProductResponse = (await this.getProducts({ productId }))[0];
-
     // Set base product, then the oldest settings and then the newest.
     const updatedProduct = Object.assign(new UpdatedProduct(), {
       product: base,
-      ...latest,
       ...update,
       // Price number into dinero.
       price: dinero({

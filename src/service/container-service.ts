@@ -24,6 +24,12 @@ import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision'
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import ProductService from './product-service';
 import PointOfSale from '../entity/point-of-sale/point-of-sale';
+import ContainerRequest from '../controller/request/container-request';
+import User from '../entity/user/user';
+import Product from '../entity/product/product';
+import UpdatedProduct from '../entity/product/updated-product';
+import ProductRevision from '../entity/product/product-revision';
+import UnapprovedProductError from '../entity/errors/unapproved-product-error';
 
 /**
  * Define updated container filtering parameters used to filter query results.
@@ -55,6 +61,10 @@ export interface ContainerParameters extends UpdatedContainerParameters {
    * Filter based on pointOfSale revision.
    */
   posRevision?: number;
+  /**
+   * Whether to select public containers.
+   */
+  public?: boolean;
 }
 
 export default class ContainerService {
@@ -69,32 +79,12 @@ export default class ContainerService {
       name: rawContainer.name,
       createdAt: rawContainer.createdAt,
       updatedAt: rawContainer.updatedAt,
+      public: !!rawContainer.public,
       owner: {
         id: rawContainer.owner_id,
         firstName: rawContainer.owner_firstName,
         lastName: rawContainer.owner_lastName,
       },
-    };
-  }
-
-  /**
-   * Helper function for the base mapping the raw getMany response container.
-   * @param rawContainer - the raw response to parse.
-   */
-  private static asContainerWithProductsResponse(rawContainer: any): ContainerWithProductsResponse {
-    return {
-      id: rawContainer.id,
-      name: rawContainer.name,
-      createdAt: rawContainer.createdAt,
-      updatedAt: rawContainer.updatedAt,
-      owner: {
-        id: rawContainer.owner_id,
-        firstName: rawContainer.owner_firstName,
-        lastName: rawContainer.owner_lastName,
-      },
-      products: rawContainer.products.map(
-        (product: any) => ProductService.asProductResponse(product),
-      ),
     };
   }
 
@@ -114,6 +104,7 @@ export default class ContainerService {
       .innerJoin('container.owner', 'owner')
       .select([
         'container.id AS id',
+        'container.public as public',
         'container.createdAt AS createdAt',
         'containerrevision.revision AS revision',
         'containerrevision.updatedAt AS updatedAt',
@@ -149,6 +140,7 @@ export default class ContainerService {
       containerId: 'container.id',
       containerRevision: 'containerrevision.revision',
       ownerId: 'owner.id',
+      public: 'container.public',
     };
 
     QueryFilter.applyFilter(builder, filterMapping, p);
@@ -163,9 +155,34 @@ export default class ContainerService {
   }
 
   /**
+   * Function that returns all the containers visible to a user.
+   * @param params
+   * @param updated
+   */
+  public static async getContainersInUserContext(params: ContainerParameters, updated?: boolean)
+    : Promise<ContainerResponse[]> {
+    const publicContainers: ContainerResponse[] = updated
+      ? (await this.getUpdatedContainers(
+        { ...params, ownerId: undefined, public: true } as ContainerParameters,
+      ))
+      : (await this.getContainers(
+        { ...params, ownerId: undefined, public: true } as ContainerParameters,
+      ));
+
+    const ownContainers: ContainerResponse[] = updated
+      ? (await this.getUpdatedContainers(
+        { ...params, public: false } as ContainerParameters,
+      ))
+      : (await this.getContainers(
+        { ...params, public: false } as ContainerParameters,
+      ));
+
+    return publicContainers.concat(ownContainers);
+  }
+
+  /**
    * Query to return all updated containers.
-   * @param owner - If specified it will only return containers who has the owner Owner.
-   * @param containerId - If specified, only return the container with id containerId.
+   * @param params
    */
   public static async getUpdatedContainers(
     params: UpdatedContainerParameters = {},
@@ -180,6 +197,7 @@ export default class ContainerService {
       .innerJoinAndSelect('container.owner', 'owner')
       .select([
         'container.id AS id',
+        'container.public as public',
         'container.createdAt AS createdAt',
         'updatedcontainer.updatedAt AS updatedAt',
         'updatedcontainer.name AS name',
@@ -192,11 +210,171 @@ export default class ContainerService {
       containerId: 'container.id',
       containerRevision: 'containerrevision.revision',
       ownerId: 'owner.id',
+      public: 'container.public',
     };
     QueryFilter.applyFilter(builder, filterMapping, params);
 
     const rawContainers = await builder.getRawMany();
 
     return rawContainers.map((rawContainer) => (this.asContainerResponse(rawContainer)));
+  }
+
+  /**
+   * Creates a new container.
+   *
+   * The newly created container resides in the Container table and has no
+   * current revision. To confirm the revision the update has to be accepted.
+   *
+   * @param owner - The user that created the container.
+   * @param container - The container to be created.
+   */
+  public static async createContainer(owner: User, container: ContainerRequest)
+    : Promise<ContainerWithProductsResponse> {
+    const base = Object.assign(new Container(), {
+      owner,
+      public: container.public,
+    });
+
+    // Save the base.
+    await base.save();
+    return this.updateContainer(base.id, container);
+  }
+
+  /**
+   * Confirms an container update and creates a container revision.
+   * @param containerId - The container update to confirm.
+   */
+  public static async approveContainerUpdate(containerId: number)
+    : Promise<ContainerWithProductsResponse> {
+    const [base, rawContainerUpdate] = (
+      await Promise.all([Container.findOne(containerId), UpdatedContainer.findOne(containerId)]));
+
+    // return undefined if not found or request is invalid
+    if (!base || !rawContainerUpdate) {
+      return undefined;
+    }
+
+    // Get the product id's for this update.
+    const builder = createQueryBuilder()
+      .from(UpdatedContainer, 'container')
+      .where('container.container.id = :id', { id: containerId })
+      .innerJoinAndSelect('container.products', 'product')
+      .select('product.currentRevision, product.id');
+
+    const productIds: any[] = await builder.getRawMany();
+    const invalid = (await Promise.all(productIds.map(async (p) => (UpdatedProduct.findOne(p.id)))))
+      .some((p) => p !== undefined);
+
+    if (invalid) {
+      throw new UnapprovedProductError('Container update has unapproved product(s).');
+    }
+
+    const products = (productIds).map(async (product: any) => ProductRevision.findOne({ where: `currentRevision = ${product.currentRevision} AND id = ${product.id}` }));
+
+    let revision: ProductRevision[] = [];
+    await Promise.all(products).then((prod) => {
+      revision = prod.filter((p) => p);
+    });
+
+    // Set base container and apply new revision.
+    const containerRevision: ContainerRevision = Object.assign(new ContainerRevision(), {
+      container: base,
+      products: revision,
+      name: rawContainerUpdate.name,
+      // Increment revision.
+      revision: base.currentRevision ? base.currentRevision + 1 : 1,
+    });
+
+    // First save revision.
+    await ContainerRevision.save(containerRevision);
+
+    // Increment current revision.
+    base.currentRevision = base.currentRevision ? base.currentRevision + 1 : 1;
+    await base.save();
+
+    // Remove update after revision is created.
+    await UpdatedContainer.delete(containerId);
+
+    // Return the new container with products.
+    return this.getProductsResponse(containerId, false);
+  }
+
+  /**
+   * Creates a container update.
+   * @param containerId - The ID of the product to update
+   * @param update - The container variables to update.
+   */
+  public static async updateContainer(containerId: number, update: ContainerRequest)
+    : Promise<ContainerWithProductsResponse> {
+    // Get the base container.
+    const base: Container = await Container.findOne(containerId);
+
+    // return undefined if not found.
+    if (!base) {
+      return undefined;
+    }
+
+    let products: Product[] = [];
+    await Promise.all(update.products.map((id) => Product.findOne(id)))
+      .then((result) => { products = result.filter((p) => p); });
+
+    // Set base container and apply new update.
+    const updatedContainer = Object.assign(new UpdatedContainer(), {
+      container: await Container.findOne(base.id),
+      name: update.name,
+      products,
+    });
+
+    // Save update
+    await updatedContainer.save();
+
+    // Return container with products.
+    return this.getProductsResponse(base.id, true);
+  }
+
+  /**
+   * Verifies whether the container request translates to a valid container
+   * @param containerRequest - The request to verify
+   * @returns {boolean} - whether container is ok or not
+   */
+  public static async verifyContainer(containerRequest: ContainerRequest) {
+    return containerRequest.name !== ''
+        && containerRequest.products.every(async (productId) => {
+          await Product.findOne(productId, { where: 'currentRevision' });
+        });
+  }
+
+  /**
+   * Turns a ContainerResponse into a ContainerWithProductsResponse
+   * @param containerId - The id of the container to return.
+   * @param updated
+   */
+  public static async getProductsResponse(containerId: number, updated?: boolean)
+    : Promise<ContainerWithProductsResponse> {
+    // Get base container
+    const containerResponse: ContainerResponse = updated
+      ? ((await this.getUpdatedContainers({ containerId }))[0])
+      : ((await this.getContainers({ containerId }))[0]);
+
+    const containerProducts
+    : ContainerWithProductsResponse = containerResponse as ContainerWithProductsResponse;
+
+    // Fill products
+    containerProducts.products = await ProductService.getProducts(
+      { containerId, updatedContainer: updated },
+    );
+
+    return containerProducts;
+  }
+
+  /**
+   * Test to see if the user can view a specified container
+   * @param userId - The User to test
+   * @param containerId - The container to view
+   */
+  public static async canViewContainer(userId: number, containerId: number): Promise<boolean> {
+    const container: ContainerResponse[] = (await this.getContainers({ containerId }));
+    if (container.length === 0) return false;
+    return container[0].owner.id === userId || container[0].public;
   }
 }
