@@ -31,9 +31,8 @@ export interface BasePointOfSaleResponse extends BaseResponse {
  * @property {BaseUserResponse.model} owner.required - The owner of the point-of-sale.
  * @property {string} startDate.required - The date starting which the POS is active
  * @property {string} endDate.required - The date at which the POS becomes inactive
- * @property {boolean} useAuthentication.required - Whether an user needs to be
+ * @property {boolean} useAuthentication.required - Whether an user needs to be authenticated
  * @property {number} revision.required - Revision of the POS
- * authenticated before a transaction can be made
  */
 export interface PointOfSaleResponse extends BasePointOfSaleResponse {
   owner?: BaseUserResponse,
@@ -43,6 +42,13 @@ export interface PointOfSaleResponse extends BasePointOfSaleResponse {
   revision: number,
 }
 
+/**
+ * @typedef {BasePointOfSaleResponse} UpdatedPointOfSaleResponse
+ * @property {BaseUserResponse.model} owner.required - The owner of the point-of-sale.
+ * @property {string} startDate.required - The date starting which the POS is active
+ * @property {string} endDate.required - The date at which the POS becomes inactive
+ * @property {boolean} useAuthentication.required - Whether an user needs to be authenticated
+ */
 export interface UpdatedPointOfSaleResponse extends BasePointOfSaleResponse {
   owner?: BaseUserResponse,
   startDate: string,

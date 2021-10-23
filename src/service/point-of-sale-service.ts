@@ -16,11 +16,24 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { createQueryBuilder } from 'typeorm';
-import { PointOfSaleResponse, UpdatedPointOfSaleResponse } from '../controller/response/point-of-sale-response';
+import {
+  PointOfSaleResponse,
+  PointOfSaleWithContainersResponse,
+  UpdatedPointOfSaleResponse,
+} from '../controller/response/point-of-sale-response';
 import PointOfSale from '../entity/point-of-sale/point-of-sale';
 import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import UpdatedPointOfSale from '../entity/point-of-sale/updated-point-of-sale';
+import PointOfSaleRequest from '../controller/request/point-of-sale-request';
+import User from '../entity/user/user';
+import Container from '../entity/container/container';
+import { parseUserToBaseResponse } from '../helpers/entity-to-response';
+import UpdatePointOfSaleRequest from '../controller/request/update-point-of-sale-request';
+import UpdatedContainer from '../entity/container/updated-container';
+import UnapprovedProductError from '../entity/errors/unapproved-product-error';
+import UnapprovedContainerError from '../entity/errors/unapproved-container-error';
+import ContainerRevision from '../entity/container/container-revision';
 
 /**
  * Define point of sale filtering parameters used to filter query results.
@@ -163,5 +176,171 @@ export default class PointOfSaleService {
     return rawPointOfSales.map(
       (rawPointOfSale) => this.asPointOfSaleResponse(rawPointOfSale) as UpdatedPointOfSaleResponse,
     );
+  }
+
+  /**
+   * Turns an updatedPointOfSale into an UpdatedPointOfSaleResponse
+   */
+  static toUpdatedPointOfSaleResponse(updatedPointOfSale: UpdatedPointOfSale)
+    : UpdatedPointOfSaleResponse {
+    return {
+      name: updatedPointOfSale.name,
+      owner: parseUserToBaseResponse(updatedPointOfSale.pointOfSale.owner, false),
+      startDate: updatedPointOfSale.startDate.toISOString(),
+      endDate: updatedPointOfSale.endDate.toISOString(),
+      useAuthentication: updatedPointOfSale.useAuthentication,
+      id: updatedPointOfSale.pointOfSale.id,
+    } as UpdatedPointOfSaleResponse;
+  }
+
+  /**
+   * Turns an PointOfSaleRevision into an PointOfSaleResponse
+   */
+  static toPointOfSaleResponse(pointOfSale: PointOfSaleRevision)
+    : PointOfSaleResponse {
+    return {
+      name: pointOfSale.name,
+      owner: parseUserToBaseResponse(pointOfSale.pointOfSale.owner, false),
+      startDate: pointOfSale.startDate.toISOString(),
+      endDate: pointOfSale.endDate.toISOString(),
+      useAuthentication: pointOfSale.useAuthentication,
+      id: pointOfSale.pointOfSale.id,
+      revision: pointOfSale.revision,
+    } as PointOfSaleResponse;
+  }
+
+  /**
+   * Confirms a PointOfSale update and creates a PointOfSale revision,
+   * @param pointOfSaleId - The PointOfSale update to confirm.
+   */
+  public static async approvePointOfSaleUpdate(pointOfSaleId: number)
+    : Promise<PointOfSaleWithContainersResponse> {
+    const [base, rawPointOfSaleUpdate] = (
+      await Promise.all(
+        [PointOfSale.findOne(pointOfSaleId, { relations: ['owner'] }), UpdatedPointOfSale.findOne(pointOfSaleId, { relations: ['containers'] })],
+      )
+    );
+
+    // Return undefined if base or update not found.
+    if (!base || !rawPointOfSaleUpdate) {
+      return undefined;
+    }
+
+    const containerIds: { revision: number, container: { id: number } }[] = (
+      rawPointOfSaleUpdate.containers.map((container) => (
+        ({ revision: container.currentRevision, container: { id: container.id } }))));
+
+    const updatedContainers: UpdatedContainer[] = await UpdatedContainer.findByIds(containerIds, { relations: ['container'] });
+
+    if (updatedContainers.length !== 0) {
+      throw new UnapprovedContainerError(`Point of sale has the unapproved container(s): [${updatedContainers.map((c) => c.container.id)}]`);
+    }
+
+    const containerRevisions: ContainerRevision[] = await ContainerRevision.findByIds(containerIds);
+
+    const pointOfSaleRevision: PointOfSaleRevision = Object.assign(new PointOfSaleRevision(), {
+      pointOfSale: base,
+      containers: containerRevisions,
+      name: rawPointOfSaleUpdate.name,
+      startDate: rawPointOfSaleUpdate.startDate,
+      endDate: rawPointOfSaleUpdate.endDate,
+      useAuthentication: rawPointOfSaleUpdate.useAuthentication,
+      // Increment revision.
+      revision: base.currentRevision ? base.currentRevision + 1 : 1,
+    });
+
+    // First save revision.
+    await PointOfSaleRevision.save(pointOfSaleRevision);
+
+    // Increment current revision.
+    base.currentRevision = base.currentRevision ? base.currentRevision + 1 : 1;
+    await base.save();
+
+    // Remove update after revision is created.
+    await UpdatedPointOfSale.delete(pointOfSaleId);
+
+    // Return the new point of sale.
+    return this.toPointOfSaleResponse(pointOfSaleRevision);
+  }
+
+  /**
+   * Creates a PointOfSale update
+   * @param pointOfSaleId - The ID of the PointOfSale to update.
+   * @param update - The PointOfSale variables to update.
+   */
+  public static async updatePointOfSale(pointOfSaleId: number, update: UpdatePointOfSaleRequest)
+    : Promise<UpdatedPointOfSaleResponse> {
+    // Get base PointOfSale
+    const base: PointOfSale = await PointOfSale.findOne(pointOfSaleId, { relations: ['owner'] });
+
+    // Return undefined if base does not exist.
+    if (!base) {
+      return undefined;
+    }
+
+    const containers = await Container.findByIds(update.containers);
+
+    // Create update object
+    const updatedPointOfSale = Object.assign(new UpdatedPointOfSale(), {
+      ...update,
+      pointOfSale: base,
+      containers,
+      startDate: new Date(update.startDate),
+      endDate: new Date(update.endDate),
+    });
+
+    // Save update
+    await updatedPointOfSale.save();
+    return this.toUpdatedPointOfSaleResponse(updatedPointOfSale);
+  }
+
+  /**
+   * Creates a new PointOfSale
+   *
+   * The newly created PointOfSale in the PointOfSale table and has no current revision.
+   * To confirm the revision the update has to be accepted.
+   *
+   * @param posRequest - The POS to be created.
+   */
+  public static async createPointOfSale(posRequest: PointOfSaleRequest)
+    : Promise<UpdatedPointOfSaleResponse> {
+    const base = Object.assign(new PointOfSale(), {
+      owner: posRequest.owner,
+    });
+
+    // Save the base and create update request.
+    await base.save();
+    return this.updatePointOfSale(base.id, posRequest.update);
+  }
+
+  /**
+   * Verifies whether the PointOfSaleRequest translates to a valid object.
+   * @param {PointOfSaleRequest.model} posRequest - The PointOfSale request
+   * @returns {boolean} whether the request is valid
+   */
+  public static async verifyPointOfSale(posRequest: PointOfSaleRequest): Promise<boolean> {
+    const { update } = posRequest;
+
+    const startDate = Date.parse(update.startDate);
+    const endDate = Date.parse(update.endDate);
+
+    const check: boolean = update.name !== ''
+        // Dates must exist.
+        && !Number.isNaN(startDate) && !Number.isNaN(endDate)
+        // End date must be in the future.
+        && endDate > new Date().getTime()
+        // End date must be after start date.
+        && endDate > startDate
+        // Owner must exist.
+        && await User.findOne({ id: posRequest.owner.id }) !== undefined;
+
+    if (!check) return false;
+
+    if (update.containers) {
+      const containers = await Container.findByIds(update.containers);
+      if (containers.length !== update.containers.length) return false;
+    }
+
+    return true;
   }
 }
