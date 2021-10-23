@@ -170,7 +170,7 @@ describe('ProductService', async (): Promise<void> => {
 
       returnsAll(updatedProducts, products);
     });
-    it('should return product with the owner specified', async () => {
+    it('should return product with the ownerId specified', async () => {
       const owner = ctx.products[0].owner.id;
       const params: ProductParameters = { ownerId: ctx.products[0].owner.id };
       const res: ProductResponse[] = await ProductService.getProducts(params);

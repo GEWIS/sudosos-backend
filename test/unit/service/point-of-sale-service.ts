@@ -73,7 +73,7 @@ function updateUpdatedResponseEqual(update: UpdatePointOfSaleRequest,
 function requestUpdatedResponseEqual(request: PointOfSaleRequest,
   response: UpdatedPointOfSaleResponse) {
   updateUpdatedResponseEqual(request.update, response);
-  expect(request.owner.id).to.equal(response.owner.id);
+  expect(request.ownerId).to.equal(response.owner.id);
 }
 
 describe('PointOfSaleService', async (): Promise<void> => {
@@ -119,7 +119,7 @@ describe('PointOfSaleService', async (): Promise<void> => {
         startDate: '2100-01-01T17:00:00.000Z',
         useAuthentication: false,
       },
-      owner: users[0],
+      ownerId: users[0].id,
     };
 
     ctx = {
@@ -148,7 +148,7 @@ describe('PointOfSaleService', async (): Promise<void> => {
         (c: PointOfSaleResponse) => ctx.specification.validateModel('PointOfSaleResponse', c, false, true).valid,
       )).to.be.true;
     });
-    it('should return points of sale with owner specified', async () => {
+    it('should return points of sale with ownerId specified', async () => {
       const res: PointOfSaleResponse[] = await PointOfSaleService.getPointsOfSale({
         ownerId: ctx.pointsOfSale[0].owner.id,
       });
@@ -233,7 +233,7 @@ describe('PointOfSaleService', async (): Promise<void> => {
       expect(invalid).to.be.false;
     });
     it('should return false for an invalid Owner', async () => {
-      const invalidRequest = { ...ctx.validPOSRequest, owner: new User() };
+      const invalidRequest = { ...ctx.validPOSRequest, ownerId: -1 };
       const invalid = await PointOfSaleService.verifyPointOfSale(invalidRequest);
       expect(invalid).to.be.false;
     });

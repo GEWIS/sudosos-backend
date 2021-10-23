@@ -16,15 +16,14 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import User from '../../entity/user/user';
 import UpdatePointOfSaleRequest from './update-point-of-sale-request';
 
 /**
  * @typedef PointOfSaleRequest
- * @property {User.model} owner.required - The owner of the POS.
+ * @property {integer} ownerId - The owner of the POS.
  * @property {UpdatePointOfSaleRequest.model} update.required - The initial update of the POS.
  */
 export default interface PointOfSaleRequest {
-  owner: User,
+  ownerId?: number,
   update: UpdatePointOfSaleRequest,
 }

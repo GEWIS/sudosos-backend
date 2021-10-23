@@ -105,7 +105,7 @@ describe('ContainerService', async (): Promise<void> => {
         (c: ContainerResponse) => ctx.specification.validateModel('ContainerResponse', c, false, true).valid,
       )).to.be.true;
     });
-    it('should return containers with the owner specified', async () => {
+    it('should return containers with the ownerId specified', async () => {
       const res: ContainerResponse[] = await ContainerService.getContainers({
         ownerId: ctx.containers[0].owner.id,
       });
@@ -165,7 +165,7 @@ describe('ContainerService', async (): Promise<void> => {
         (c: ContainerResponse) => ctx.specification.validateModel('ContainerResponse', c, false, true).valid,
       )).to.be.true;
     });
-    it('should return updated containers with the owner specified', async () => {
+    it('should return updated containers with the ownerId specified', async () => {
       const res: ContainerResponse[] = await ContainerService.getUpdatedContainers({
         ownerId: ctx.containers[0].owner.id,
       });

@@ -34,6 +34,8 @@ import UpdatedContainer from '../entity/container/updated-container';
 import UnapprovedProductError from '../entity/errors/unapproved-product-error';
 import UnapprovedContainerError from '../entity/errors/unapproved-container-error';
 import ContainerRevision from '../entity/container/container-revision';
+import { ContainerResponse } from '../controller/response/container-response';
+import { ContainerParameters } from './container-service';
 
 /**
  * Define point of sale filtering parameters used to filter query results.
@@ -210,6 +212,32 @@ export default class PointOfSaleService {
   }
 
   /**
+   * Function that returns all the points of sale visible to a user.
+   * @param params
+   * @param updated
+   */
+  public static async getPointsOfSaleInUserContext(params: PointOfSaleParameters, updated?: boolean)
+    : Promise<PointOfSaleResponse[] | UpdatedPointOfSaleResponse[]> {
+    const publicPOS: PointOfSaleResponse[] | UpdatedPointOfSaleResponse[] = updated
+      ? (await this.getUpdatedPointsOfSale(
+        { ...params, ownerId: undefined, public: true } as ContainerParameters,
+      ))
+      : (await this.getPointsOfSale(
+        { ...params, ownerId: undefined, public: true } as ContainerParameters,
+      ));
+
+    const ownPOS: PointOfSaleResponse[] | UpdatedPointOfSaleResponse[] = updated
+      ? (await this.getUpdatedPointsOfSale(
+        { ...params, public: false } as ContainerParameters,
+      ))
+      : (await this.getPointsOfSale(
+        { ...params, public: false } as ContainerParameters,
+      ));
+
+    return publicPOS.concat(ownPOS);
+  }
+
+  /**
    * Confirms a PointOfSale update and creates a PointOfSale revision,
    * @param pointOfSaleId - The PointOfSale update to confirm.
    */
@@ -278,7 +306,7 @@ export default class PointOfSaleService {
       return undefined;
     }
 
-    const containers = await Container.findByIds(update.containers);
+    const containers = update.containers ? await Container.findByIds(update.containers) : [];
 
     // Create update object
     const updatedPointOfSale = Object.assign(new UpdatedPointOfSale(), {
@@ -305,7 +333,7 @@ export default class PointOfSaleService {
   public static async createPointOfSale(posRequest: PointOfSaleRequest)
     : Promise<UpdatedPointOfSaleResponse> {
     const base = Object.assign(new PointOfSale(), {
-      owner: posRequest.owner,
+      owner: await User.findOne(posRequest.ownerId),
     });
 
     // Save the base and create update request.
@@ -318,8 +346,14 @@ export default class PointOfSaleService {
    * @param {PointOfSaleRequest.model} posRequest - The PointOfSale request
    * @returns {boolean} whether the request is valid
    */
-  public static async verifyPointOfSale(posRequest: PointOfSaleRequest): Promise<boolean> {
-    const { update } = posRequest;
+  public static async verifyPointOfSale(posRequest: PointOfSaleRequest | UpdatePointOfSaleRequest)
+    : Promise<boolean> {
+    let update: UpdatePointOfSaleRequest;
+    if (Object.prototype.hasOwnProperty.call(posRequest, 'update')) {
+      update = (posRequest as PointOfSaleRequest).update;
+    } else {
+      update = (posRequest as UpdatePointOfSaleRequest);
+    }
 
     const startDate = Date.parse(update.startDate);
     const endDate = Date.parse(update.endDate);
@@ -330,9 +364,14 @@ export default class PointOfSaleService {
         // End date must be in the future.
         && endDate > new Date().getTime()
         // End date must be after start date.
-        && endDate > startDate
-        // Owner must exist.
-        && await User.findOne({ id: posRequest.owner.id }) !== undefined;
+        && endDate > startDate;
+
+    if (Object.prototype.hasOwnProperty.call(posRequest, 'ownerId')) {
+      // Owner must exist.
+      if (await User.findOne({ id: (posRequest as PointOfSaleRequest).ownerId }) === undefined) {
+        return false;
+      }
+    }
 
     if (!check) return false;
 
@@ -342,5 +381,14 @@ export default class PointOfSaleService {
     }
 
     return true;
+  }
+
+  /**
+   * Test to see if the user can view a specified Point of Sale
+   * @param userId - The User to test
+   * @param pointOfSaleId - The Point of Sale to view
+   */
+  public static async canViewPointOfSale(userId: number, pointOfSaleId: number): Promise<boolean> {
+    return (await PointOfSale.findOne(pointOfSaleId)).owner.id === userId;
   }
 }

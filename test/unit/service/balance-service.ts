@@ -129,7 +129,7 @@ describe('BalanceService', (): void => {
       const pointOfSale = await PointOfSale.findOne(1);
       const pointOfSaleRevision = await PointOfSaleRevision.findOne(
         { pointOfSale, revision: pointOfSale.currentRevision },
-        { relations: ['pointOfSale', 'pointOfSale.owner', 'containers', 'containers.products', 'containers.products.product'] },
+        { relations: ['pointOfSale', 'pointOfSale.ownerId', 'containers', 'containers.products', 'containers.products.product'] },
       );
 
       const transactions = defineTransactions(
