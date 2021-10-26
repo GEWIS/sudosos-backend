@@ -65,7 +65,7 @@ export default class SimpleFileController extends BaseController {
           handler: this.downloadFile.bind(this),
         },
         DELETE: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'delete', 'all', 'SimpleProduct', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'delete', 'all', 'SimpleFile', ['*']),
           handler: this.deleteFile.bind(this),
         },
       },

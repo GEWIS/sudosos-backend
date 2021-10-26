@@ -23,6 +23,10 @@ import BaseFile from '../entity/file/base-file';
 import SimpleFileRequest from '../controller/request/simple-file-request';
 import User from '../entity/user/user';
 
+/**
+ * Types of files that SudoSOS currently uses. Currently, this is only 'simple',
+ * but this might be extended with 'productImage' and/or 'invoice'
+ */
 export type FileType = 'simple';
 
 export interface DownloadFileResponse {

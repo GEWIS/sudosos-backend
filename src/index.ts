@@ -194,7 +194,9 @@ export default async function createApp(): Promise<Application> {
   application.app.use('/v1/productcategories', new ProductCategoryController(options).getRouter());
   application.app.use('/v1/transactions', new TransactionController(options).getRouter());
   application.app.use('/v1/borrelkaartgroups', new BorrelkaartGroupController(options).getRouter());
-  application.app.use('/v1/files', new SimpleFileController(options).getRouter());
+  if (process.env.NODE_ENV === 'development') {
+    application.app.use('/v1/files', new SimpleFileController(options).getRouter());
+  }
 
   // Start express application.
   logger.info(`Server listening on port ${process.env.HTTP_PORT}.`);
