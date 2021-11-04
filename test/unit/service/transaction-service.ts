@@ -67,7 +67,7 @@ describe('TransactionService', (): void => {
     const validTransReq = {
       from: 7,
       createdBy: 7,
-      subtransactions: [
+      subTransactions: [
         {
           to: 8,
           container: {
@@ -150,8 +150,8 @@ describe('TransactionService', (): void => {
     }, { relations: ['pointOfSale', 'containers'] });
 
     const container = await ContainerRevision.findOne({
-      revision: validTransReq.subtransactions[0].container.revision,
-      container: { id: validTransReq.subtransactions[0].container.id },
+      revision: validTransReq.subTransactions[0].container.revision,
+      container: { id: validTransReq.subTransactions[0].container.id },
     }, { relations: ['container', 'products'] });
 
     ctx = {
@@ -180,7 +180,7 @@ describe('TransactionService', (): void => {
       } as DineroObject;
 
       const rows: SubTransactionRowRequest[] = [];
-      ctx.validTransReq.subtransactions.forEach(
+      ctx.validTransReq.subTransactions.forEach(
         (sub) => sub.subTransactionRows.forEach((row) => rows.push(row)),
       );
       expect((await TransactionService.getTotalCost(rows)).toObject()).to.eql(total);
@@ -270,13 +270,13 @@ describe('TransactionService', (): void => {
   describe('Verifiy sub transaction', () => {
     it('should return true if the sub transaction request is valid', async () => {
       expect(await TransactionService.verifySubTransaction(
-        ctx.validTransReq.subtransactions[0], ctx.pointOfSale,
+        ctx.validTransReq.subTransactions[0], ctx.pointOfSale,
       )).to.be.true;
     });
     it('should return false if the container is invalid', async () => {
       // undefined container
       const badContainerReq = {
-        ...ctx.validTransReq.subtransactions[0],
+        ...ctx.validTransReq.subTransactions[0],
         container: undefined,
       } as SubTransactionRequest;
       expect(await TransactionService.verifySubTransaction(badContainerReq, ctx.pointOfSale), 'undefined accepted')
@@ -301,7 +301,7 @@ describe('TransactionService', (): void => {
     it('should return false if the to user is invalid', async () => {
       // undefined to
       const badToReq = {
-        ...ctx.validTransReq.subtransactions[0],
+        ...ctx.validTransReq.subTransactions[0],
         to: undefined,
       } as SubTransactionRequest;
       expect(await TransactionService.verifySubTransaction(badToReq, ctx.pointOfSale), 'undefined to accepted').to.be.false;
@@ -317,7 +317,7 @@ describe('TransactionService', (): void => {
     it('should return false if the price is set incorrectly', async () => {
       // undefined price
       const badPriceReq = {
-        ...ctx.validTransReq.subtransactions[0],
+        ...ctx.validTransReq.subTransactions[0],
         price: undefined,
       } as SubTransactionRequest;
       expect(await TransactionService.verifySubTransaction(badPriceReq, ctx.pointOfSale), 'undefined accepted').to.be.false;
@@ -335,13 +335,13 @@ describe('TransactionService', (): void => {
   describe('Verifiy sub transaction row', () => {
     it('should return true if the sub transaction row request is valid', async () => {
       expect(await TransactionService.verifySubTransactionRow(
-        ctx.validTransReq.subtransactions[0].subTransactionRows[0], ctx.container,
+        ctx.validTransReq.subTransactions[0].subTransactionRows[0], ctx.container,
       )).to.be.true;
     });
     it('should return false if the product is invalid', async () => {
       // undefined product
       const badProductReq = {
-        ...ctx.validTransReq.subtransactions[0].subTransactionRows[0],
+        ...ctx.validTransReq.subTransactions[0].subTransactionRows[0],
         product: undefined,
       } as SubTransactionRowRequest;
       expect(await TransactionService.verifySubTransactionRow(badProductReq, ctx.container), 'undefined product accepted').to.be.false;
@@ -363,7 +363,7 @@ describe('TransactionService', (): void => {
     it('should return false if the specified amount of the product is invalid', async () => {
       // undefined amount
       const badAmountReq = {
-        ...ctx.validTransReq.subtransactions[0].subTransactionRows[0],
+        ...ctx.validTransReq.subTransactions[0].subTransactionRows[0],
         amount: undefined,
       } as SubTransactionRowRequest;
       expect(await TransactionService.verifySubTransactionRow(badAmountReq, ctx.container), 'undefined amount accepted').to.be.false;
@@ -379,7 +379,7 @@ describe('TransactionService', (): void => {
     it('should return false if the price is set incorrectly', async () => {
       // undefined price
       const badPriceReq = {
-        ...ctx.validTransReq.subtransactions[0].subTransactionRows[0],
+        ...ctx.validTransReq.subTransactions[0].subTransactionRows[0],
         price: undefined,
       } as SubTransactionRowRequest;
       expect(await TransactionService.verifySubTransactionRow(badPriceReq, ctx.container), 'undefined accepted').to.be.false;
@@ -392,6 +392,10 @@ describe('TransactionService', (): void => {
       };
       expect(await TransactionService.verifySubTransactionRow(badPriceReq, ctx.container), 'incorrect accepted').to.be.false;
     });
+  });
+
+  describe('Invalidate balance cache', () => {
+    it('should invalidate the balance cahce of all users in the transaction except the transaction creator');
   });
 
   describe('Get all transactions', () => {
@@ -597,12 +601,12 @@ describe('TransactionService', (): void => {
       // check sub transaction response prices
       for (let i = 0; i < correctResponse.subTransactions.length; i += 1) {
         expect(correctResponse.subTransactions[i].price, 'sub transaction price incorrect')
-          .to.eql(ctx.validTransReq.subtransactions[i].price);
+          .to.eql(ctx.validTransReq.subTransactions[i].price);
 
         // check sub transaction row response prices
         for (let j = 0; j < correctResponse.subTransactions[i].subTransactionRows.length; j += 1) {
           expect(correctResponse.subTransactions[i].subTransactionRows[j].price, 'sub transaction row price incorrect')
-            .to.eql(ctx.validTransReq.subtransactions[i].subTransactionRows[j].price);
+            .to.eql(ctx.validTransReq.subTransactions[i].subTransactionRows[j].price);
         }
       }
     });
@@ -633,14 +637,14 @@ describe('TransactionService', (): void => {
       // check sub transaction response prices
       for (let i = 0; i < deletedTransaction.subTransactions.length; i += 1) {
         expect(deletedTransaction.subTransactions[i].price, 'sub transaction price incorrect')
-          .to.eql(ctx.validTransReq.subtransactions[i].price);
+          .to.eql(ctx.validTransReq.subTransactions[i].price);
 
         // check sub transaction row response prices
         for (let j = 0;
           j < deletedTransaction.subTransactions[i].subTransactionRows.length;
           j += 1) {
           expect(deletedTransaction.subTransactions[i].subTransactionRows[j].price, 'sub transaction row price incorrect')
-            .to.eql(ctx.validTransReq.subtransactions[i].subTransactionRows[j].price);
+            .to.eql(ctx.validTransReq.subTransactions[i].subTransactionRows[j].price);
         }
       }
     });

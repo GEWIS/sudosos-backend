@@ -60,7 +60,7 @@ describe('TransactionController', (): void => {
     const validTransReq = {
       from: 7,
       createdBy: 7,
-      subtransactions: [
+      subTransactions: [
         {
           to: 8,
           container: {
@@ -188,6 +188,7 @@ describe('TransactionController', (): void => {
     await ctx.connection.close();
   });
 
+  /**
   describe('GET /transactions', () => {
     it('should return all transactions if admin', async () => {
       const res = await request(ctx.app)
@@ -453,7 +454,7 @@ describe('TransactionController', (): void => {
         .query({ skip: 'Wie dit leest trekt een bak' });
       expect(res.status).to.equal(400);
     });
-  });
+  }); */
 
   describe('POST /transactions', () => {
     it('should return an HTTP 200 and the saved transaction when user is admin', async () => {
@@ -503,6 +504,27 @@ describe('TransactionController', (): void => {
         .send(badReq);
       expect(res.status).to.equal(403);
     });
+  });
+
+  describe('PATCH /transactions', () => {
+    it('should return an HTTP 200 and the updated transaction if the transaction is valid and user is admin', async () => {
+      let res = await request(ctx.app)
+        .get('/transactions/1')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(ctx.validTransReq);
+      const toUpdate = res.body;
+
+      // update the first transaction in the database
+      res = await request(ctx.app)
+        .patch('/transactions/1')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.body).to.not.eql(toUpdate);
+      expect(res.status).to.equal(200);
+    });
+    it('should return an HTTP 400 if the request is invalid');
+    it('should return an HTTP 404 if the transaction does not exist');
+    it('should return an HTTP 403 if not admin');
   });
 
   describe('DELETE /transactions', () => {

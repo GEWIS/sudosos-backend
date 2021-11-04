@@ -48,7 +48,7 @@ export default class SubTransaction extends BaseEntity {
   public transaction: Transaction;
 
   @OneToMany(() => SubTransactionRow,
-    (subtransactionRow) => subtransactionRow.subTransaction,
+    (subTransactionRow) => subTransactionRow.subTransaction,
     { cascade: true })
   public subTransactionRows: SubTransactionRow[];
 }
