@@ -249,7 +249,7 @@ export default class ContainerService {
   public static async approveContainerUpdate(containerId: number)
     : Promise<ContainerWithProductsResponse> {
     const [base, rawContainerUpdate] = (
-      await Promise.all([Container.findOne(containerId), UpdatedContainer.findOne(containerId)]));
+      await Promise.all([Container.findOne(containerId), UpdatedContainer.findOne(containerId, { relations: ['products'] })]));
 
     // return undefined if not found or request is invalid
     if (!base || !rawContainerUpdate) {
@@ -257,31 +257,22 @@ export default class ContainerService {
     }
 
     // Get the product id's for this update.
-    const builder = createQueryBuilder()
-      .from(UpdatedContainer, 'container')
-      .where('container.container.id = :id', { id: containerId })
-      .innerJoinAndSelect('container.products', 'product')
-      .select('product.currentRevision, product.id');
+    const productIds: { revision: number, product: { id : number } }[] = (
+      rawContainerUpdate.products.map((product) => (
+        { revision: product.currentRevision, product: { id: product.id } })));
 
-    const productIds: any[] = await builder.getRawMany();
-    const invalid = (await Promise.all(productIds.map(async (p) => (UpdatedProduct.findOne(p.id)))))
-      .some((p) => p !== undefined);
+    const updatedProducts: UpdatedProduct[] = await UpdatedProduct.findByIds(productIds, { relations: ['product'] });
 
-    if (invalid) {
+    if (updatedProducts.length !== 0) {
       throw new UnapprovedProductError('Container update has unapproved product(s).');
     }
 
-    const products = (productIds).map(async (product: any) => ProductRevision.findOne({ where: `currentRevision = ${product.currentRevision} AND id = ${product.id}` }));
-
-    let revision: ProductRevision[] = [];
-    await Promise.all(products).then((prod) => {
-      revision = prod.filter((p) => p);
-    });
+    const productRevisions: ProductRevision[] = await ProductRevision.findByIds(productIds);
 
     // Set base container and apply new revision.
     const containerRevision: ContainerRevision = Object.assign(new ContainerRevision(), {
       container: base,
-      products: revision,
+      products: productRevisions,
       name: rawContainerUpdate.name,
       // Increment revision.
       revision: base.currentRevision ? base.currentRevision + 1 : 1,
@@ -375,8 +366,8 @@ export default class ContainerService {
    * @param containerId - The container to view
    */
   public static async canViewContainer(userId: number, containerId: number): Promise<boolean> {
-    const container: ContainerResponse[] = (await this.getContainers({ containerId }));
-    if (container.length === 0) return false;
-    return container[0].owner.id === userId || container[0].public;
+    const container: Container = await Container.findOne(containerId, { relations: ['owner'] });
+    if (!container) return false;
+    return container.owner.id === userId || container.public;
   }
 }

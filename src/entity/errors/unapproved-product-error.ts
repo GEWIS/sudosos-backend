@@ -23,9 +23,7 @@
  */
 export default class UnapprovedProductError extends Error {
   constructor(message: string) {
-    super();
-    this.message = message;
+    super(message);
     this.name = 'UnapprovedProductError';
-    this.stack = (new Error()).stack;
   }
 }
