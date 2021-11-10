@@ -31,10 +31,8 @@ import Container from '../entity/container/container';
 import { parseUserToBaseResponse } from '../helpers/entity-to-response';
 import UpdatePointOfSaleRequest from '../controller/request/update-point-of-sale-request';
 import UpdatedContainer from '../entity/container/updated-container';
-import UnapprovedProductError from '../entity/errors/unapproved-product-error';
 import UnapprovedContainerError from '../entity/errors/unapproved-container-error';
 import ContainerRevision from '../entity/container/container-revision';
-import { ContainerResponse } from '../controller/response/container-response';
 import { ContainerParameters } from './container-service';
 
 /**

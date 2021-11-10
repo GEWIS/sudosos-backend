@@ -46,7 +46,7 @@ import BalanceService from './service/balance-service';
 import BalanceController from './controller/balance-controller';
 import RbacController from './controller/rbac-controller';
 import GewisAuthenticationController from './gewis/controller/gewis-authentication-controller';
-import PointOfSaleController from "./controller/point-of-sale-controller";
+import PointOfSaleController from './controller/point-of-sale-controller';
 import ContainerController from './controller/container-controller';
 
 export class Application {

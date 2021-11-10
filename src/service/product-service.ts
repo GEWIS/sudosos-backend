@@ -30,9 +30,7 @@ import User from '../entity/user/user';
 import ProductRequest from '../controller/request/product-request';
 import ProductCategory from '../entity/product/product-category';
 import PointOfSale from '../entity/point-of-sale/point-of-sale';
-import UpdatedPointOfSale from '../entity/point-of-sale/updated-point-of-sale';
 import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision';
-import container from '../entity/container/container';
 
 /**
  * Define product filtering parameters used to filter query results.
@@ -162,7 +160,8 @@ export default class ProductService {
    * Gets all the products in a PointOfSale
    * @param params
    */
-  public static async getProductsPOS(params: ProductParameters = {}): Promise<ProductResponse[]> {
+  public static async getProductsPOS(params: ProductParameters = {}):
+  Promise<ProductResponse[]> {
     let POScurrent: PointOfSale;
     let revision = params.pointOfSaleRevision;
 
@@ -201,6 +200,8 @@ export default class ProductService {
       ]);
 
     const rawProducts = await builder.getRawMany();
+
+    // eslint-disable-next-line consistent-return
     return rawProducts.map((rawProduct: any) => this.asProductResponse(rawProduct));
   }
 

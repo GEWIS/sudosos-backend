@@ -21,18 +21,13 @@ import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import PointOfSaleService, { PointOfSaleParameters } from '../service/point-of-sale-service';
-import ContainerService, { ContainerParameters } from '../service/container-service';
+import ContainerService from '../service/container-service';
 import ProductService from '../service/product-service';
-import ContainerRequest from './request/container-request';
 import PointOfSaleRequest from './request/point-of-sale-request';
-import { ContainerResponse } from './response/container-response';
 import { UpdatedPointOfSaleResponse } from './response/point-of-sale-response';
-import Container from '../entity/container/container';
-import UpdatedContainer from '../entity/container/updated-container';
 import PointOfSale from '../entity/point-of-sale/point-of-sale';
 import UpdatePointOfSaleRequest from './request/update-point-of-sale-request';
-import UnapprovedProductError from "../entity/errors/unapproved-product-error";
-import UnapprovedContainerError from "../entity/errors/unapproved-container-error";
+import UnapprovedContainerError from '../entity/errors/unapproved-container-error';
 
 export default class PointOfSaleController extends BaseController {
   private logger: Logger = log4js.getLogger('PointOfSaleController');
@@ -109,7 +104,8 @@ export default class PointOfSaleController extends BaseController {
    * Create a new Point of Sale.
    * @route POST /pointsofsale
    * @group pointofsale - Operations of the point of sale controller
-   * @param {PointOfSaleRequest.model} pointofsale.body.required - The point of sale which should be created
+   * @param {PointOfSaleRequest.model} pointofsale.body.required -
+   * The point of sale which should be created
    * @security JWT
    * @returns {PointOfSale.model} 200 - The created point of sale entity
    * @returns {string} 400 - Validation error
@@ -194,7 +190,8 @@ export default class PointOfSaleController extends BaseController {
    * @route PATCH /pointsofsale/{id}
    * @group pointofsale - Operations of the point of sale controller
    * @param {integer} id.path.required - The id of the Point of Sale which should be updated
-   * @param {UpdatePointOfSaleRequest.model} pointofsale.body.required - The Point of Sale which should be updated
+   * @param {UpdatePointOfSaleRequest.model} pointofsale.body.required -
+   * The Point of Sale which should be updated
    * @security JWT
    * @returns {UpdatedPointOfSaleResponse.model} 200 - The updated Point of Sale entity
    * @returns {string} 400 - Validation error
