@@ -52,7 +52,7 @@ export default class PointOfSaleController extends BaseController {
           handler: this.returnAllPointsOfSale.bind(this),
         },
         POST: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'can', 'create', 'PointOfSale', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'create', 'all', 'PointOfSale', ['*']),
           handler: this.createPointOfSale.bind(this),
         },
       },
@@ -93,7 +93,7 @@ export default class PointOfSaleController extends BaseController {
       },
       '/:id(\\d+)/approve': {
         POST: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'create', 'all', 'PointOfSale', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'approve', 'all', 'PointOfSale', ['*']),
           handler: this.approveUpdate.bind(this),
         },
       },
