@@ -18,50 +18,28 @@
 import {
   Column, Entity,
 } from 'typeorm';
+import { Dinero } from 'dinero.js';
 import BaseEntity from '../base-entity';
-
-export enum UserType {
-  MEMBER = 1,
-  ORGAN = 2,
-  BORRELKAART = 3,
-  LOCAL_USER = 4,
-  LOCAL_ADMIN = 5,
-  INVOICE = 6,
-}
+// eslint-disable-next-line import/no-cycle
+import DineroTransformer from '../transformer/dinero-transformer';
 
 /**
- * @typedef {BaseEntity} User
- * @property {string} firstName.required - First name of the user.
- * @property {string} lastName - Last name of the user.
- * @property {boolean} active - Whether the user has accepted the TOS. Defaults to false.
- * @property {boolean} deleted - Whether the user was deleted. Defaults to false.
- * @property {enum} type.required - The type of user.
+ * @typedef {BaseEntity} InvoiceEntry
+ * @property {Dinero.model} price.required - The price of the item.
+ * @property {integer} amount.required - The amount of items in the invoice entry.
+ * @property {string} description.required - The description of the invoice entry item.
  */
 @Entity()
-export default class User extends BaseEntity {
-  @Column({
-    length: 64,
-  })
-  public firstName: string;
+export default class InvoiceEntry extends BaseEntity {
+  @Column()
+  public description: string;
+
+  @Column()
+  public amount: number;
 
   @Column({
-    length: 64,
-    default: '',
+    type: 'integer',
+    transformer: DineroTransformer.Instance,
   })
-  public lastName: string;
-
-  @Column({
-    default: false,
-  })
-  public active: boolean;
-
-  @Column({
-    default: false,
-  })
-  public deleted: boolean;
-
-  @Column({
-    nullable: false,
-  })
-  public type: UserType;
+  public price: Dinero;
 }

@@ -31,6 +31,24 @@ import User, { UserType } from '../src/entity/user/user';
 import UpdatedProduct from '../src/entity/product/updated-product';
 import UpdatedContainer from '../src/entity/container/updated-container';
 import UpdatedPointOfSale from '../src/entity/point-of-sale/updated-point-of-sale';
+import InvoiceUser from '../src/entity/user/invoice-user';
+import Invoice from '../src/entity/invoices/invoice';
+import InvoiceEntry from '../src/entity/invoices/invoice-entry';
+
+/**
+ * Defines InvoiceUsers objects for the given Users
+ * @param users - List of Invoice User type
+ */
+export function defineInvoiceUsers(users: User[]): InvoiceUser[] {
+  const invoiceUsers: InvoiceUser[] = [];
+  for (let nr = 0; nr < users.length; nr += 1) {
+    invoiceUsers.push(Object.assign(new InvoiceUser(), {
+      user: users[nr],
+      automatic: nr % 2 > 0,
+    }));
+  }
+  return invoiceUsers;
+}
 
 /**
  * Defines user objects with the given parameters.
@@ -56,6 +74,7 @@ function defineUsers(
       active,
     }) as User);
   }
+
   return users;
 }
 
@@ -64,23 +83,55 @@ function defineUsers(
  */
 export async function seedUsers(): Promise<User[]> {
   const types: UserType[] = [
-    UserType.LOCAL_USER, UserType.LOCAL_ADMIN, UserType.MEMBER, UserType.ORGAN,
+    UserType.LOCAL_USER, UserType.LOCAL_ADMIN, UserType.MEMBER, UserType.ORGAN, UserType.INVOICE,
   ];
   let users: User[] = [];
+  let invoiceUsers: InvoiceUser[] = [];
 
   const promises: Promise<any>[] = [];
   for (let i = 0; i < types.length; i += 1) {
-    let u = defineUsers(users.length, 4, types[i], true);
-    promises.push(User.save(u));
-    users = users.concat(u);
+    const uActive = defineUsers(users.length, 4, types[i], true);
+    promises.push(User.save(uActive));
+    users = users.concat(uActive);
 
-    u = defineUsers(users.length, 2, types[i], false);
-    promises.push(User.save(u));
-    users = users.concat(u);
+    const uInactive = defineUsers(users.length, 2, types[i], false);
+    promises.push(User.save(uInactive));
+    users = users.concat(uInactive);
+
+    if (types[i] === UserType.INVOICE) {
+      invoiceUsers = invoiceUsers.concat(defineInvoiceUsers(uActive.concat(uInactive)));
+    }
   }
+
   await Promise.all(promises);
+  await InvoiceUser.save(invoiceUsers);
 
   return users;
+}
+
+export function defineInvoiceEntries(transactions: Transaction[]): void {
+  const invoiceEntries: InvoiceEntry[] = [];
+  console.warn(transactions.map((t) => t.subTransactions).reduce((acc, tSub) => acc.concat(tSub)))
+  // const subTransactionRows: SubTransactionRow[] = transactions.map((t) => t.subTransactions.map((tSub) => tSub.subTransactionRows));
+  // console.warn(subTransactionRows);
+  for (let i = 0; i < transactions.length; i += 1) {
+    invoiceEntries.push(Object.assign(new InvoiceEntry(), {
+
+    }));
+  }
+}
+
+export async function seedInvoices(users: User[], transactions: Transaction[]) {
+  const invoices: Invoice[] = [];
+
+  const invoiceUsers = users.filter((u) => u.type === UserType.INVOICE);
+
+  const promises: Promise<any>[] = [];
+  for (let i = 0; i < invoiceUsers.length; i += 1) {
+    console.warn(invoiceUsers[i]);
+    const invoiceTransactions = transactions.filter((t) => t.from.id === invoiceUsers[i].id);
+    defineInvoiceEntries(invoiceTransactions);
+  }
 }
 
 /**
@@ -1089,6 +1140,7 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
     users, containerRevisions, containers,
   );
   const { transactions } = await seedTransactions(users, pointOfSaleRevisions);
+  await seedInvoices(users, transactions);
 
   return {
     users,
