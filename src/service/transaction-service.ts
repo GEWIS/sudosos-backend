@@ -210,7 +210,7 @@ export default class TransactionService {
    */
   public static async verifyTransaction(req: TransactionRequest, isUpdate?: boolean):
   Promise<boolean> {
-    // check if fields provided in the transaction
+    // check fields provided in the transaction
     if (!req.from || !req.createdBy
         || !req.subTransactions || req.subTransactions.length === 0
         || !req.pointOfSale || !req.price) {
@@ -585,7 +585,7 @@ export default class TransactionService {
     // delete old transaction
     await this.deleteTransaction(id);
 
-    // save updated transaction
+    // save updated transaction with same id
     await Transaction.save(transaction);
 
     // invalidate updated transaction user balance cache
