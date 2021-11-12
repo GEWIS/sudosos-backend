@@ -53,7 +53,7 @@ export default class Invoice extends BaseEntity {
   public invoiceEntries: InvoiceEntry[];
 
   @OneToMany(() => InvoiceStatus,
-    (invoiceStatus) => invoiceStatus.state,
+    (invoiceStatus) => invoiceStatus.invoice,
     { cascade: true })
   public invoiceStatus: InvoiceStatus[];
 

@@ -27,6 +27,7 @@ import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import Invoice from '../entity/invoices/invoice';
 import { parseUserToBaseResponse } from '../helpers/entity-to-response';
 import InvoiceEntry from '../entity/invoices/invoice-entry';
+import Base = Mocha.reporters.Base;
 
 export interface InvoiceParameters {
   /**
@@ -60,12 +61,19 @@ export default class InvoiceService {
     };
   }
 
-  private static asInvoiceResponse(invoice: Invoice) : InvoiceResponse | BaseInvoiceResponse {
+  private static asBaseInvoiceResponse(invoice: Invoice): BaseInvoiceResponse {
     return {
       to: parseUserToBaseResponse(invoice.to, false),
       addressee: invoice.addressee,
       description: invoice.description,
-      currentState: this.asInvoiceStatusResponse(invoice.invoiceStatus[0]),
+      currentState: InvoiceService.asInvoiceStatusResponse(invoice.invoiceStatus[0]),
+    } as BaseInvoiceResponse;
+  }
+
+  private static asInvoiceResponse(invoice: Invoice)
+    : InvoiceResponse {
+    return {
+      ...this.asBaseInvoiceResponse(invoice),
       invoiceEntries: invoice.invoiceEntries.map(this.asInvoiceEntryResponse),
     } as InvoiceResponse;
   }
@@ -76,15 +84,19 @@ export default class InvoiceService {
       currentState: 'currentState',
       toId: 'toId',
     };
+
     const options: FindManyOptions = {
       where: QueryFilter.createFilterWhereClause(filterMapping, params),
-      relations: ['to', 'invoiceEntries'],
-      // relations: params.returnInvoiceEntries ? ['invoiceStatus', 'invoiceEntries'] : ['invoiceStatus'],
+      relations: ['to', 'invoiceStatus'],
     };
 
-    const invoices = await Invoice.find(options);
-    console.warn(invoices);
+    if (!params.returnInvoiceEntries) {
+      const invoices = await Invoice.find(options);
+      return invoices.map(this.asBaseInvoiceResponse);
+    }
 
+    options.relations.push('invoiceEntries');
+    const invoices = await Invoice.find(options);
     return invoices.map(this.asInvoiceResponse);
   }
 }

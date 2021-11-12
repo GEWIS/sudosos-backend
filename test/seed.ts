@@ -175,6 +175,7 @@ export async function seedInvoices(users: User[], transactions: Transaction[]): 
     });
 
     const status = Object.assign(new InvoiceStatus(), {
+      id: i + 1,
       invoice,
       changedBy: users[i],
       state: InvoiceState.CREATED,

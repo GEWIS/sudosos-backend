@@ -16,12 +16,12 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  Column, Entity, ManyToOne,
+  Column, Entity, JoinColumn, ManyToOne,
 } from 'typeorm';
 // eslint-disable-next-line import/no-cycle
 import Invoice from './invoice';
 import User from '../user/user';
-import BaseEntityWithoutId from '../base-entity-without-id';
+import BaseEntity from '../base-entity';
 
 export enum InvoiceState {
   CREATED = 1,
@@ -31,18 +31,19 @@ export enum InvoiceState {
 }
 
 /**
- * @typedef {BaseEntityWithoutId} InvoiceStatus
+ * @typedef {BaseEntity} InvoiceStatus
  * @property {Invoice.model} invoice.required - The invoice to which this state belongs.
  * @property {User.model} changedBy.required - The user that changed the invoice status.
  * @property {enum} state.required - The state of the Invoice
  * @property {string} dateChanged.required - The date that the InvoiceStatus was changed.
  */
 @Entity()
-export default class InvoiceStatus extends BaseEntityWithoutId {
-  @ManyToOne(() => Invoice, { primary: true, nullable: false })
+export default class InvoiceStatus extends BaseEntity {
+  @ManyToOne(() => Invoice, (invoice) => invoice.invoiceStatus, { nullable: false })
+  @JoinColumn()
   public invoice: Invoice;
 
-  @ManyToOne(() => User, { nullable: false })
+  @ManyToOne(() => User, { nullable: false, eager: true })
   public changedBy: User;
 
   @Column()

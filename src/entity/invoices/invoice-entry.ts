@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  Column, Entity, ManyToOne,
+  Column, Entity, JoinColumn, ManyToOne,
 } from 'typeorm';
 import { Dinero } from 'dinero.js';
 // eslint-disable-next-line import/no-cycle
@@ -26,7 +26,7 @@ import Invoice from './invoice';
 import BaseEntity from '../base-entity';
 
 /**
- * @typedef {BaseEntityWithoutId} InvoiceEntry
+ * @typedef {BaseEntity} InvoiceEntry
  * @property {Invoice.model} invoice.required - The invoice to which this entry belongs
  * @property {Dinero.model} price.required - The price of the item.
  * @property {integer} amount.required - The amount of items in the invoice entry.
@@ -34,7 +34,8 @@ import BaseEntity from '../base-entity';
  */
 @Entity()
 export default class InvoiceEntry extends BaseEntity {
-  @ManyToOne(() => Invoice, { nullable: false })
+  @ManyToOne(() => Invoice, (invoice) => invoice.invoiceEntries, { nullable: false })
+  @JoinColumn()
   public invoice: Invoice;
 
   @Column()

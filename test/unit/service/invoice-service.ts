@@ -31,8 +31,8 @@ import {
   seedUsers,
 } from '../../seed';
 import Swagger from '../../../src/start/swagger';
-import {BaseInvoiceResponse, InvoiceResponse} from "../../../src/controller/response/invoice-response";
-import InvoiceService from "../../../src/service/invoice-service";
+import { BaseInvoiceResponse, InvoiceResponse } from '../../../src/controller/response/invoice-response';
+import InvoiceService from '../../../src/service/invoice-service';
 
 describe('InvoiceService', () => {
   let ctx: {
