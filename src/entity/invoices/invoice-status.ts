@@ -18,10 +18,10 @@
 import {
   Column, Entity, ManyToOne,
 } from 'typeorm';
-import BaseEntity from '../base-entity';
 // eslint-disable-next-line import/no-cycle
 import Invoice from './invoice';
 import User from '../user/user';
+import BaseEntityWithoutId from '../base-entity-without-id';
 
 export enum InvoiceState {
   CREATED = 1,
@@ -31,15 +31,15 @@ export enum InvoiceState {
 }
 
 /**
- * @typedef {BaseEntity} InvoiceStatus
+ * @typedef {BaseEntityWithoutId} InvoiceStatus
  * @property {Invoice.model} invoice.required - The invoice to which this state belongs.
  * @property {User.model} changedBy.required - The user that changed the invoice status.
  * @property {enum} state.required - The state of the Invoice
  * @property {string} dateChanged.required - The date that the InvoiceStatus was changed.
  */
 @Entity()
-export default class InvoiceStatus extends BaseEntity {
-  @ManyToOne(() => Invoice, { nullable: false })
+export default class InvoiceStatus extends BaseEntityWithoutId {
+  @ManyToOne(() => Invoice, { primary: true, nullable: false })
   public invoice: Invoice;
 
   @ManyToOne(() => User, { nullable: false })

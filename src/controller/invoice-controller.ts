@@ -16,8 +16,12 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import log4js, { Logger } from 'log4js';
+import { Response } from 'express';
 import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
+import { RequestWithToken } from '../middleware/token-middleware';
+import { BaseInvoiceResponse } from './response/invoice-response';
+import InvoiceService from '../service/invoice-service';
 
 export default class InvoiceController extends BaseController {
   private logger: Logger = log4js.getLogger('InvoiceController');
@@ -36,6 +40,12 @@ export default class InvoiceController extends BaseController {
     */
   getPolicy(): Policy {
     return {
+      '/': {
+        GET: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Invoices', ['*']),
+          handler: this.getAllInvoices.bind(this),
+        },
+      },
     };
   }
 
@@ -44,7 +54,20 @@ export default class InvoiceController extends BaseController {
    * @route GET /invoices
    * @group invoices - Operations of the invoices controller
    * @security JWT
-   * @returns {Array.<InvocieResponse>} 200 - All existing invoices
+   * @returns {Array.<BaseInvoiceResponse>} 200 - All existing invoices
    * @returns {string} 500 - Internal server error
    */
+  public async getAllInvoices(req: RequestWithToken, res: Response): Promise<void> {
+    const { body } = req;
+    this.logger.trace('Get all invoices', body, 'by user', req.token.user);
+
+    // Handle request
+    try {
+      const invoices: BaseInvoiceResponse[] = await InvoiceService.getInvoices();
+      res.json(invoices);
+    } catch (error) {
+      this.logger.error('Could not return all invoices:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
 }

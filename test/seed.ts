@@ -34,6 +34,8 @@ import UpdatedPointOfSale from '../src/entity/point-of-sale/updated-point-of-sal
 import InvoiceUser from '../src/entity/user/invoice-user';
 import Invoice from '../src/entity/invoices/invoice';
 import InvoiceEntry from '../src/entity/invoices/invoice-entry';
+import Transfer, { TransferType } from '../src/entity/transactions/transfer';
+import InvoiceStatus, { InvoiceState } from '../src/entity/invoices/invoice-status';
 
 /**
  * Defines InvoiceUsers objects for the given Users
@@ -109,29 +111,86 @@ export async function seedUsers(): Promise<User[]> {
   return users;
 }
 
-export function defineInvoiceEntries(transactions: Transaction[]): void {
+export function defineInvoiceEntries(invoiceId: number, startEntryId: number,
+  transactions: Transaction[]): { invoiceEntries: InvoiceEntry[], cost: number } {
   const invoiceEntries: InvoiceEntry[] = [];
-  console.warn(transactions.map((t) => t.subTransactions).reduce((acc, tSub) => acc.concat(tSub)))
-  // const subTransactionRows: SubTransactionRow[] = transactions.map((t) => t.subTransactions.map((tSub) => tSub.subTransactionRows));
-  // console.warn(subTransactionRows);
-  for (let i = 0; i < transactions.length; i += 1) {
-    invoiceEntries.push(Object.assign(new InvoiceEntry(), {
+  let entryId = startEntryId;
+  const subTransactions = (
+    transactions.map((t) => t.subTransactions).reduce((acc, tSub) => acc.concat(tSub)));
 
+  const subTransactionRows = (
+    subTransactions.map(
+      (tSub) => tSub.subTransactionRows,
+    ).reduce((acc, tSubRow) => acc.concat(tSubRow)));
+
+  let cost = 0;
+
+  for (let i = 0; i < subTransactionRows.length; i += 1) {
+    cost += subTransactionRows[i].amount * subTransactionRows[i].product.price.getAmount();
+    invoiceEntries.push(Object.assign(new InvoiceEntry(), {
+      id: entryId,
+      invoice: invoiceId,
+      description: subTransactionRows[i].product.name,
+      amount: subTransactionRows[i].amount,
+      price: subTransactionRows[i].product.price,
     }));
+    entryId += 1;
   }
+
+  return { invoiceEntries, cost };
 }
 
-export async function seedInvoices(users: User[], transactions: Transaction[]) {
-  const invoices: Invoice[] = [];
+export async function seedInvoices(users: User[], transactions: Transaction[]): Promise<Invoice[]> {
+  let invoices: Invoice[] = [];
 
   const invoiceUsers = users.filter((u) => u.type === UserType.INVOICE);
+  let transfers: Transfer[] = [];
+  let invoiceEntry: InvoiceEntry[] = [];
 
-  const promises: Promise<any>[] = [];
   for (let i = 0; i < invoiceUsers.length; i += 1) {
-    console.warn(invoiceUsers[i]);
     const invoiceTransactions = transactions.filter((t) => t.from.id === invoiceUsers[i].id);
-    defineInvoiceEntries(invoiceTransactions);
+    const to: User = invoiceUsers[i];
+
+    const { invoiceEntries, cost } = (
+      defineInvoiceEntries(i + 1, 1 + invoiceEntry.length, invoiceTransactions));
+    invoiceEntry = invoiceEntry.concat(invoiceEntries);
+
+    const transfer = Object.assign(new Transfer(), {
+      from: null,
+      to,
+      type: TransferType.INVOICE,
+      amount: dinero({
+        amount: cost,
+      }),
+      description: `Invoice Transfer for ${cost}`,
+    });
+
+    const invoice = Object.assign(new Invoice(), {
+      to,
+      addressee: `Addressed to ${to.firstName}`,
+      description: `Invoice #${i}`,
+      transfer,
+      invoiceEntries: [],
+      invoiceStatus: [],
+    });
+
+    const status = Object.assign(new InvoiceStatus(), {
+      invoice,
+      changedBy: users[i],
+      state: InvoiceState.CREATED,
+      dateChanged: addDays(new Date(2020, 0, 1), 2 - (i * 2)),
+    });
+
+    invoice.invoiceStatus.push(status);
+    invoices = invoices.concat(invoice);
+    transfers = transfers.concat(transfer);
   }
+
+  await Transfer.save(transfers);
+  await Invoice.save(invoices);
+  await InvoiceEntry.save(invoiceEntry);
+
+  return invoices;
 }
 
 /**
@@ -1127,6 +1186,7 @@ export interface DatabaseContent {
   pointOfSaleRevisions: PointOfSaleRevision[],
   updatedPointsOfSale: UpdatedPointOfSale[],
   transactions: Transaction[],
+  invoices: Invoice[]
 }
 
 export default async function seedDatabase(): Promise<DatabaseContent> {
@@ -1140,7 +1200,7 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
     users, containerRevisions, containers,
   );
   const { transactions } = await seedTransactions(users, pointOfSaleRevisions);
-  await seedInvoices(users, transactions);
+  const invoices = await seedInvoices(users, transactions);
 
   return {
     users,
@@ -1155,5 +1215,6 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
     pointOfSaleRevisions,
     updatedPointsOfSale,
     transactions,
+    invoices,
   };
 }

@@ -16,25 +16,33 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  Column, Entity,
+  Column, Entity, ManyToOne,
 } from 'typeorm';
 import { Dinero } from 'dinero.js';
-import BaseEntity from '../base-entity';
 // eslint-disable-next-line import/no-cycle
 import DineroTransformer from '../transformer/dinero-transformer';
+// eslint-disable-next-line import/no-cycle
+import Invoice from './invoice';
+import BaseEntity from '../base-entity';
 
 /**
- * @typedef {BaseEntity} InvoiceEntry
+ * @typedef {BaseEntityWithoutId} InvoiceEntry
+ * @property {Invoice.model} invoice.required - The invoice to which this entry belongs
  * @property {Dinero.model} price.required - The price of the item.
  * @property {integer} amount.required - The amount of items in the invoice entry.
  * @property {string} description.required - The description of the invoice entry item.
  */
 @Entity()
 export default class InvoiceEntry extends BaseEntity {
+  @ManyToOne(() => Invoice, { nullable: false })
+  public invoice: Invoice;
+
   @Column()
   public description: string;
 
-  @Column()
+  @Column({
+    type: 'integer',
+  })
   public amount: number;
 
   @Column({

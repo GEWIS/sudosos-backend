@@ -16,10 +16,11 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  BaseEntity, Column, Entity, JoinColumn, OneToOne,
+  Column, Entity, JoinColumn, OneToOne,
 } from 'typeorm';
 
 import User from './user';
+import BaseEntityWithoutId from '../base-entity-without-id';
 
 /**
  * @typedef {BaseEntity} InvoiceUser
@@ -27,7 +28,7 @@ import User from './user';
  * @property {boolean} automatic - Whether the user gets automatic invoices
  */
 @Entity()
-export default class InvoiceUser extends BaseEntity {
+export default class InvoiceUser extends BaseEntityWithoutId {
   @OneToOne(() => User, { primary: true, nullable: false })
   @JoinColumn()
   public user: User;

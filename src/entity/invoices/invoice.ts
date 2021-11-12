@@ -42,7 +42,6 @@ export default class Invoice extends BaseEntity {
   public to: User;
 
   @OneToOne(() => Transfer, {
-    primary: true,
     nullable: false,
   })
   @JoinColumn()
