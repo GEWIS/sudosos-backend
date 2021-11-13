@@ -27,7 +27,6 @@ import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import Invoice from '../entity/invoices/invoice';
 import { parseUserToBaseResponse } from '../helpers/entity-to-response';
 import InvoiceEntry from '../entity/invoices/invoice-entry';
-import Base = Mocha.reporters.Base;
 
 export interface InvoiceParameters {
   /**
@@ -50,7 +49,7 @@ export default class InvoiceService {
       description: invoiceEntries.description,
       amount: invoiceEntries.amount,
       price: invoiceEntries.price.toObject(),
-    };
+    } as InvoiceEntryResponse;
   }
 
   private static asInvoiceStatusResponse(invoiceStatus: InvoiceStatus): InvoiceStatusResponse {
@@ -58,7 +57,7 @@ export default class InvoiceService {
       dateChanged: invoiceStatus.dateChanged.toISOString(),
       state: invoiceStatus.state,
       changedBy: parseUserToBaseResponse(invoiceStatus.changedBy, false),
-    };
+    } as InvoiceStatusResponse;
   }
 
   private static asBaseInvoiceResponse(invoice: Invoice): BaseInvoiceResponse {
