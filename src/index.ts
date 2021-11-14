@@ -47,6 +47,7 @@ import BalanceService from './service/balance-service';
 import BalanceController from './controller/balance-controller';
 import RbacController from './controller/rbac-controller';
 import GewisAuthenticationController from './gewis/controller/gewis-authentication-controller';
+import ContainerController from './controller/container-controller';
 import SimpleFileController from './controller/simple-file-controller';
 import initializeDiskStorage from './files/initialize';
 
@@ -194,6 +195,7 @@ export default async function createApp(): Promise<Application> {
   application.app.use('/v1/productcategories', new ProductCategoryController(options).getRouter());
   application.app.use('/v1/transactions', new TransactionController(options).getRouter());
   application.app.use('/v1/borrelkaartgroups', new BorrelkaartGroupController(options).getRouter());
+  application.app.use('/v1/containers', new ContainerController(options).getRouter());
   if (process.env.NODE_ENV === 'development') {
     application.app.use('/v1/files', new SimpleFileController(options).getRouter());
   }
