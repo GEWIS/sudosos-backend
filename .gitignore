@@ -13,3 +13,6 @@ out
 #Local data
 *.sqlite
 config
+
+#Uploaded statics
+data/
