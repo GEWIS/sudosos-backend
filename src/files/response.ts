@@ -15,17 +15,15 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+import { Response } from 'express';
+import mime from 'mime-types';
+import BaseFile from '../entity/file/base-file';
 
-import RelationResponse from './relation-response';
+export default function putFileInResponse(res: Response, file: BaseFile, data: Buffer) {
+  res.setHeader('Content-Type', mime.lookup(file.location).toString());
+  res.setHeader('Content-Length', data.byteLength.toString());
+  res.setHeader('Content-Disposition', `attachment; filename="${file.downloadName}"`);
+  res.status(200);
 
-/**
- * @typedef ActionResponse -
- * The action contains the name of the action and a list of permissions per action.
- * Typically the action name is one of the CRUD values 'create', 'read', 'update', and 'delete'.
- * @property {string} action - The name of the action performed on the entity.
- * @property {Array.<RelationResponse>} relations - The ownership relations with permissions.
- */
-export default interface ActionResponse {
-  action: string;
-  relations: RelationResponse[];
+  res.send(data);
 }

@@ -21,6 +21,7 @@ import { BasePointOfSaleResponse } from './point-of-sale-response';
 import { BaseContainerResponse } from './container-response';
 import { BaseProductResponse } from './product-response';
 import { BaseUserResponse, UserResponse } from './user-response';
+import { DineroObjectResponse } from './dinero-response';
 
 /**
  * @typedef {BaseResponse} BaseTransactionResponse
@@ -49,12 +50,14 @@ export interface BaseTransactionResponse extends BaseResponse {
  * belonging to this transaction.
  * @property {BasePointOfSaleResponse.model} pointOfSale - The POS at which this transaction
  * has been created
+ * @property {DineroObjectResponse.model} price.required - The total cost of the transaction
  */
 export interface TransactionResponse extends BaseResponse {
   from: BaseUserResponse,
   createdBy?: BaseUserResponse,
   subTransactions: SubTransactionResponse[],
   pointOfSale: BasePointOfSaleResponse,
+  price: DineroObjectResponse,
 }
 
 /**
@@ -64,19 +67,23 @@ export interface TransactionResponse extends BaseResponse {
  * products in the SubTransactionRows are bought
  * @property {Array.<SubTransactionRowResponse>} subTransactionsRows.required - The rows of this
  *     SubTransaction
+ * @property {DineroObjectResponse.model} price.required - The total cost of the sub transaction
  */
-interface SubTransactionResponse extends BaseResponse {
+export interface SubTransactionResponse extends BaseResponse {
   to: BaseUserResponse,
   container: BaseContainerResponse,
   subTransactionRows: SubTransactionRowResponse[],
+  price: DineroObjectResponse,
 }
 
 /**
  * @typedef {SubTransactionRowResponse} SubTransactionRowResponse
  * @property {BaseProductResponse} product.required - The product that has been bought
  * @property {number} amount.required - The amount that has been bought
+ * @property {DineroObjectResponse.model} price.required - The cost of the sub transaction row
  */
-interface SubTransactionRowResponse extends BaseResponse {
+export interface SubTransactionRowResponse extends BaseResponse {
   product: BaseProductResponse,
   amount: number,
+  price: DineroObjectResponse,
 }

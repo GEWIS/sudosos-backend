@@ -43,7 +43,7 @@ export default class Transaction extends BaseEntity {
 
   @OneToMany(() => SubTransaction,
     (subTransaction) => subTransaction.transaction,
-    { cascade: true })
+    { cascade: true, onUpdate: 'CASCADE' })
   public subTransactions: SubTransaction[];
 
   @ManyToOne(() => PointOfSaleRevision)
