@@ -241,7 +241,6 @@ describe('ProductService', async (): Promise<void> => {
         category: 3,
         alcoholPercentage: 8,
         name: 'Product2-update',
-        picture: 'https://sudosos/product2-update.png',
         price: 69,
       };
 
@@ -258,7 +257,6 @@ describe('ProductService', async (): Promise<void> => {
       const productParams: ProductRequest = {
         alcoholPercentage: 9,
         name: 'Product77-update',
-        picture: 'https://sudosos/product77-update.png',
         price,
         category: 1,
       };
@@ -280,7 +278,6 @@ describe('ProductService', async (): Promise<void> => {
       const productParams: ProductRequest = {
         alcoholPercentage: 9,
         name: 'Product77-update',
-        picture: 'https://sudosos/product77-update.png',
         price: price - 1,
         category: 1,
       };
@@ -290,7 +287,6 @@ describe('ProductService', async (): Promise<void> => {
       const updateParams: ProductRequest = {
         alcoholPercentage: 10,
         name: 'Product77-update',
-        picture: 'https://sudosos/product78-update.png',
         price,
         category: 2,
       };

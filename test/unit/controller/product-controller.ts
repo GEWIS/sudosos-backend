@@ -43,8 +43,7 @@ function productEq(source: ProductRequest, response: ProductResponse) {
   return source.name === response.name
       && source.category === response.category.id
       && source.alcoholPercentage === response.alcoholPercentage
-      && source.price === response.price.amount
-      && source.picture === response.picture;
+      && source.price === response.price.amount;
 }
 
 describe('ProductController', async (): Promise<void> => {
@@ -96,7 +95,6 @@ describe('ProductController', async (): Promise<void> => {
 
     const validProductReq: ProductRequest = {
       name: 'Valid product',
-      picture: 'picture link',
       price: 1,
       alcoholPercentage: 0,
       category: 2,

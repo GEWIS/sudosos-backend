@@ -26,7 +26,6 @@ import ProductCategory from '../../entity/product/product-category';
  * @property {Dinero.model} price.required
  * @property {User.model} owner.required
  * @property {ProductCategory.model} category.required
- * @property {string} picture.required
  * @property {number} alcoholPercentage
  */
 export default interface UpdateProductRequest {
@@ -35,6 +34,5 @@ export default interface UpdateProductRequest {
   price: DineroObject,
   owner: User,
   category: ProductCategory,
-  picture: string,
   alcoholPercentage?: number,
 }

@@ -78,7 +78,7 @@ export default class ProductService {
         firstName: rawProduct.owner_firstName,
         lastName: rawProduct.owner_lastName,
       },
-      picture: rawProduct.picture,
+      image: rawProduct.image,
       name: rawProduct.name,
       price: DineroTransformer.Instance.from(rawProduct.price).toObject(),
     };
@@ -164,6 +164,7 @@ export default class ProductService {
     builder
       .innerJoinAndSelect('product.owner', 'owner')
       .innerJoinAndSelect('productrevision.category', 'category')
+      .leftJoinAndSelect('product.image', 'image')
       .select([
         'product.id AS id',
         'product.createdAt AS createdAt',
@@ -175,8 +176,8 @@ export default class ProductService {
         'owner.lastName AS owner_lastName',
         'category.id AS category_id',
         'category.name AS category_name',
-        'productrevision.picture AS picture',
         'productrevision.alcoholpercentage AS alcoholpercentage',
+        'image.downloadName as image',
       ]);
 
     const filterMapping: FilterMapping = {
@@ -223,7 +224,6 @@ export default class ProductService {
         'owner.lastName AS owner_lastName',
         'category.id AS category_id',
         'category.name AS category_name',
-        'updatedproduct.picture AS picture',
         'updatedproduct.alcoholpercentage AS alcoholpercentage',
       ]);
 
@@ -375,7 +375,6 @@ export default class ProductService {
     return productRequest.price >= 0
         && productRequest.name !== ''
         && await ProductCategory.findOne(productRequest.category)
-        && productRequest.picture !== ''
         && productRequest.alcoholPercentage >= 0;
   }
 }
