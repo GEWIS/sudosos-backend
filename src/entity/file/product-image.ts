@@ -15,23 +15,11 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import * as fs from 'fs';
-import path from 'path';
-import { PRODUCT_IMAGE_LOCATION, ROOT_FILE_LOCATION, SIMPLE_FILE_LOCATION } from './storage';
+import { Entity } from 'typeorm';
+import BaseFile from './base-file';
 
 /**
- * Create all folders necessary to store files locally on disk
+ * @typedef {BaseFile} ProductImage
  */
-export default function initializeDiskStorage() {
-  if (!fs.existsSync(path.join(__dirname, '/../..', ROOT_FILE_LOCATION))) {
-    fs.mkdirSync(path.join(__dirname, '/../..', ROOT_FILE_LOCATION));
-  }
-
-  if (!fs.existsSync(path.join(__dirname, '/../..', SIMPLE_FILE_LOCATION))) {
-    fs.mkdirSync(path.join(__dirname, '/../..', SIMPLE_FILE_LOCATION));
-  }
-
-  if (!fs.existsSync(path.join(__dirname, '/../..', PRODUCT_IMAGE_LOCATION))) {
-    fs.mkdirSync(path.join(__dirname, '/../..', PRODUCT_IMAGE_LOCATION));
-  }
-}
+@Entity()
+export default class ProductImage extends BaseFile {}

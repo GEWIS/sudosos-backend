@@ -22,12 +22,13 @@ import { DiskStorage, FileStorage, SIMPLE_FILE_LOCATION } from '../files/storage
 import BaseFile from '../entity/file/base-file';
 import SimpleFileRequest from '../controller/request/simple-file-request';
 import User from '../entity/user/user';
+import Product from '../entity/product/product';
+import ProductImage from '../entity/file/product-image';
 
 /**
- * Types of files that SudoSOS currently uses. Currently, this is only 'simple',
- * but this might be extended with 'productImage' and/or 'invoice'
+ *  Possible storage methods that can be used
  */
-export type FileType = 'simple';
+export type StorageMethod = 'disk';
 
 export interface DownloadFileResponse {
   file: BaseFile,
@@ -37,7 +38,7 @@ export interface DownloadFileResponse {
 export default class FileService {
   private fileStorage: FileStorage;
 
-  constructor(workdir?: string, storageMethod?: string) {
+  constructor(workdir?: string, storageMethod?: StorageMethod) {
     switch (storageMethod ?? process.env.FILE_STORAGE_METHOD) {
       case undefined:
       case '':
@@ -52,9 +53,7 @@ export default class FileService {
   /**
    * Create a new file in storage, given the provided parameters
    */
-  private async createFile(
-    entity: FileType, file: BaseFile, fileData: Buffer,
-  ): Promise<BaseFile> {
+  private async createFile(file: BaseFile, fileData: Buffer): Promise<BaseFile> {
     let location: string;
     try {
       location = await this.fileStorage.saveFile(file.downloadName, fileData);
@@ -80,14 +79,14 @@ export default class FileService {
   /**
    * Read and return the given file from storage
    */
-  private async readFile(entity: FileType, file: BaseFile): Promise<Buffer> {
+  private async readFile(file: BaseFile): Promise<Buffer> {
     return this.fileStorage.getFile(file);
   }
 
   /**
    * Remove the given file from storage
    */
-  private async removeFile(entity: FileType, file: BaseFile) {
+  private async removeFile(file: BaseFile) {
     await this.fileStorage.deleteFile(file);
   }
 
@@ -106,7 +105,7 @@ export default class FileService {
     });
     await file.save();
 
-    return this.createFile('simple', file, uploadedFile.data);
+    return this.createFile(file, uploadedFile.data);
   }
 
   /**
@@ -119,7 +118,7 @@ export default class FileService {
       return undefined;
     }
 
-    const data = await this.readFile('simple', file);
+    const data = await this.readFile(file);
     return { file, data };
   }
 
@@ -131,7 +130,38 @@ export default class FileService {
 
     if (!file) return;
 
-    await this.removeFile('simple', file);
+    await this.removeFile(file);
     await BaseFile.delete(file.id);
+  }
+
+  /**
+   * Upload a product image to the given product and replace the old one, if it exists
+   */
+  public async uploadProductImage(
+    product: Product, uploadedFile: UploadedFile, createdBy: User,
+  ): Promise<ProductImage> {
+    let productImage = product.image;
+
+    if (productImage == null) {
+      productImage = Object.assign(new BaseFile(), {
+        downloadName: uploadedFile.name,
+        createdBy,
+        location: '',
+      });
+      await ProductImage.save(productImage);
+    } else {
+      // If the file does exist, we first have to remove it from storage
+      await this.removeFile(productImage);
+    }
+    // Store the new file in storage.
+    productImage = await this.createFile(productImage, uploadedFile.data);
+
+    // Save the file name as the download name.
+    productImage.downloadName = path.parse(productImage.location).base;
+    // eslint-disable-next-line no-param-reassign
+    product.image = productImage;
+    await ProductImage.save(productImage);
+    await product.save();
+    return productImage;
   }
 }

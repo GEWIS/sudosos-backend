@@ -17,15 +17,20 @@
  */
 import log4js, { Logger } from 'log4js';
 import { Response } from 'express';
+import { UploadedFile } from 'express-fileupload';
 import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import ProductService from '../service/product-service';
 import ProductRequest from './request/product-request';
 import Product from '../entity/product/product';
+import FileService from '../service/file-service';
+import { PRODUCT_IMAGE_LOCATION } from '../files/storage';
 
 export default class ProductController extends BaseController {
   private logger: Logger = log4js.getLogger('ProductController');
+
+  private fileService: FileService;
 
   /**
    * Creates a new product controller instance.
@@ -34,6 +39,7 @@ export default class ProductController extends BaseController {
   public constructor(options: BaseControllerOptions) {
     super(options);
     this.logger.level = process.env.LOG_LEVEL;
+    this.fileService = new FileService(PRODUCT_IMAGE_LOCATION, 'disk');
   }
 
   /**
@@ -79,6 +85,12 @@ export default class ProductController extends BaseController {
         POST: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'create', 'all', 'Product', ['*']),
           handler: this.approveUpdate.bind(this),
+        },
+      },
+      '/:id(\\d+)/image': {
+        POST: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'create', 'all', 'Product', ['*']),
+          handler: this.updateProductImage.bind(this),
         },
       },
     };
@@ -274,6 +286,52 @@ export default class ProductController extends BaseController {
     } catch (error) {
       this.logger.error('Could not return product:', error);
       res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Upload a new image for a product
+   * @route POST /products/{id}/image
+   * @group products - Operations of products controller
+   * @consumes multipart/form-data
+   * @param {integer} id.path.required - The id of the product which should be returned
+   * @param {file} file.formData
+   * @security JWT
+   * @returns 204 - Success
+   * @returns {string} 400 - Validation error
+   * @returns {string} 500 - Internal server error
+   */
+  public async updateProductImage(req: RequestWithToken, res: Response): Promise<void> {
+    const { id } = req.params;
+    const { files } = req;
+    this.logger.trace('Update product', id, 'image by user', req.token.user);
+
+    if (!req.files || Object.keys(files).length !== 1) {
+      res.status(400).send('No file or too many files were uploaded');
+      return;
+    }
+    if (files.file === undefined) {
+      res.status(400).send("No file is uploaded in the 'file' field");
+      return;
+    }
+
+    const productId = parseInt(id, 10);
+
+    // handle request
+    try {
+      const product = await Product.findOne(productId, { relations: ['image'] });
+      if (product) {
+        await this.fileService.uploadProductImage(
+          product, files.file as UploadedFile, req.token.user,
+        );
+        res.status(204).send();
+      } else {
+        res.status(404).json('Product not found');
+        return;
+      }
+    } catch (error) {
+      this.logger.error('Could not upload image:', error);
+      res.status(500).json('Internal server error');
     }
   }
 }

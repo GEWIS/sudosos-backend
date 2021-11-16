@@ -29,7 +29,7 @@ import BaseFile from '../../../src/entity/file/base-file';
 import User from '../../../src/entity/user/user';
 import { seedUsers } from '../../seed';
 import SimpleFileRequest from '../../../src/controller/request/simple-file-request';
-import FileService from '../../../src/service/file-service';
+import FileService, {StorageMethod} from '../../../src/service/file-service';
 import { DiskStorage } from '../../../src/files/storage';
 
 /**
@@ -206,7 +206,7 @@ describe('FileService', async (): Promise<void> => {
       process.env.FILE_STORAGE_METHOD = 'Nonexisting';
 
       try {
-        const tempFileService: FileService = new FileService('/temp', process.env.FILE_STORAGE_METHOD);
+        const tempFileService: FileService = new FileService('/temp', process.env.FILE_STORAGE_METHOD as StorageMethod);
         await tempFileService.uploadSimpleFile(ctx.users[0], uploadedFile, {
           name: 'not boeiend',
         });
