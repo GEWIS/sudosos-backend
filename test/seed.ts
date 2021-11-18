@@ -31,6 +31,7 @@ import User, { UserType } from '../src/entity/user/user';
 import UpdatedProduct from '../src/entity/product/updated-product';
 import UpdatedContainer from '../src/entity/container/updated-container';
 import UpdatedPointOfSale from '../src/entity/point-of-sale/updated-point-of-sale';
+import ProductImage from '../src/entity/file/product-image';
 
 /**
  * Defines user objects with the given parameters.
@@ -106,6 +107,22 @@ export async function seedProductCategories(): Promise<ProductCategory[]> {
 }
 
 /**
+ * Defines a product image based on the parameters passed
+ *
+ * @param product - The product that this product image belongs to
+ * @param createdBy - The user who uploaded this product image
+ */
+function defineProductImage(product: Product, createdBy: User): ProductImage {
+  const downloadName = `product-${product.id}.png`;
+  return Object.assign(new ProductImage(), {
+    id: product.id,
+    location: `fake/storage/${downloadName}`,
+    downloadName,
+    createdBy,
+  });
+}
+
+/**
  * Defines product objects based on the parameters passed.
  *
  * @param start - The number of products that already exist.
@@ -123,6 +140,7 @@ function defineProducts(
       id: start + nr,
       owner: user,
     }) as Product;
+
     products.push(product);
   }
 
@@ -153,7 +171,6 @@ function defineProductRevisions(
         amount: 69 + product.id + rev,
       }),
       alcoholPercentage: product.id / (rev + 1),
-      picture: `https://sudosos/product${product.id}-${rev}.png`,
     }));
   }
 
@@ -182,7 +199,6 @@ function defineUpdatedProducts(
       amount: 42 + product.id,
     }),
     alcoholPercentage: product.id,
-    picture: `https://sudosos/product${product.id}-update.png`,
   }));
 
   return updates;
@@ -201,9 +217,11 @@ export async function seedProducts(
   categories: ProductCategory[],
 ): Promise<{
     products: Product[],
+    productImages: ProductImage[],
     productRevisions: ProductRevision[]
   }> {
   let products: Product[] = [];
+  let productImages: ProductImage[] = [];
   let productRevisions: ProductRevision[] = [];
 
   const sellers = users.filter((u) => [UserType.LOCAL_ADMIN, UserType.MEMBER].includes(u.type));
@@ -215,6 +233,17 @@ export async function seedProducts(
       3,
       sellers[i],
     );
+
+    let img: ProductImage[] = [];
+    for (let o = 0; o < prod.length; o += 1) {
+      let image;
+      if (i % 2 === 0) {
+        image = defineProductImage(prod[o], sellers[i]);
+        img = img.concat(image);
+      }
+      prod[o].image = image;
+    }
+
     let rev: ProductRevision[] = [];
     for (let o = 0; o < prod.length; o += 1) {
       const category = categories[o % categories.length];
@@ -226,15 +255,19 @@ export async function seedProducts(
       ));
     }
 
+    // Products can only be saved AFTER the images have been saved.
     // Revisions can only be saved AFTER the products themselves.
-    promises.push(Product.save(prod).then(() => ProductRevision.save(rev)));
+    promises.push(ProductImage.save(img)
+      .then(() => Product.save(prod)
+        .then(() => ProductRevision.save(rev))));
 
     products = products.concat(prod);
+    productImages = productImages.concat(img);
     productRevisions = productRevisions.concat(rev);
   }
   await Promise.all(promises);
 
-  return { products, productRevisions };
+  return { products, productImages, productRevisions };
 }
 
 /**
@@ -313,10 +346,12 @@ export async function seedAllProducts(
   categories: ProductCategory[],
 ): Promise<{
     products: Product[],
+    productImages: ProductImage[],
     productRevisions: ProductRevision[],
     updatedProducts: UpdatedProduct[],
   }> {
   let products: Product[] = [];
+  let productImages: ProductImage[] = [];
   let productRevisions: ProductRevision[] = [];
   let updatedProducts: UpdatedProduct[] = [];
 
@@ -329,6 +364,17 @@ export async function seedAllProducts(
       6,
       sellers[i],
     );
+
+    let img: ProductImage[] = [];
+    for (let o = 0; o < prod.length; o += 1) {
+      let image;
+      if (i % 2 === 0) {
+        image = defineProductImage(prod[o], sellers[i]);
+        img = img.concat(image);
+      }
+      prod[o].image = image;
+    }
+
     let rev: ProductRevision[] = [];
     for (let o = 0; o < prod.length / 2; o += 1) {
       const category = categories[o % categories.length];
@@ -360,16 +406,21 @@ export async function seedAllProducts(
     }
 
     // Revisions can only be saved AFTER the products themselves.
-    promises.push(Product.save(prod).then(() => ProductRevision.save(rev))
-      .then(() => UpdatedProduct.save(upd)));
+    promises.push(ProductImage.save(img)
+      .then(() => Product.save(prod)
+        .then(() => ProductRevision.save(rev))
+        .then(() => UpdatedProduct.save(upd))));
 
     products = products.concat(prod);
+    productImages = productImages.concat(img);
     productRevisions = productRevisions.concat(rev);
     updatedProducts = updatedProducts.concat(upd);
   }
   await Promise.all(promises);
 
-  return { products, productRevisions, updatedProducts };
+  return {
+    products, productImages, productRevisions, updatedProducts,
+  };
 }
 
 /**

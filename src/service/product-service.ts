@@ -213,6 +213,7 @@ export default class ProductService {
     builder
       .innerJoinAndSelect('product.owner', 'owner')
       .innerJoinAndSelect('updatedproduct.category', 'category')
+      .leftJoinAndSelect('product.image', 'image')
       .select([
         'product.id AS id',
         'product.createdAt AS createdAt',
@@ -225,6 +226,7 @@ export default class ProductService {
         'category.id AS category_id',
         'category.name AS category_name',
         'updatedproduct.alcoholpercentage AS alcoholpercentage',
+        'image.downloadName as image',
       ]);
 
     const filterMapping: FilterMapping = {

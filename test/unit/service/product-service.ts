@@ -36,6 +36,7 @@ import UpdatedContainer from '../../../src/entity/container/updated-container';
 import Container from '../../../src/entity/container/container';
 import ContainerRevision from '../../../src/entity/container/container-revision';
 import ProductRequest from '../../../src/controller/request/product-request';
+import ProductImage from '../../../src/entity/file/product-image';
 
 chai.use(deepEqualInAnyOrder);
 /**
@@ -45,8 +46,12 @@ chai.use(deepEqualInAnyOrder);
  */
 function returnsAll(response: ProductResponse[], superset: Product[]) {
   expect(response).to.not.be.empty;
-  expect(response.map((prod) => ({ id: prod.id, ownerid: prod.owner.id })))
-    .to.deep.equalInAnyOrder(superset.map((prod) => ({ id: prod.id, ownerid: prod.owner.id })));
+  const temp = superset.map((prod) => ({
+    id: prod.id, ownerid: prod.owner.id, image: prod.image != null ? prod.image.downloadName : null,
+  }));
+  console.log(temp);
+  expect(response.map((prod) => ({ id: prod.id, ownerid: prod.owner.id, image: prod.image })))
+    .to.deep.equalInAnyOrder(temp);
 }
 
 function validateProductProperties(response: ProductResponse,
@@ -69,6 +74,7 @@ describe('ProductService', async (): Promise<void> => {
     specification: SwaggerSpecification,
     users: User[],
     products: Product[],
+    productImages: ProductImage[],
     productRevisions: ProductRevision[],
     updatedProducts: UpdatedProduct[],
     containers: Container[],
@@ -84,6 +90,7 @@ describe('ProductService', async (): Promise<void> => {
 
     const {
       products,
+      productImages,
       productRevisions,
       updatedProducts,
     } = await seedAllProducts(users, categories);
@@ -105,6 +112,7 @@ describe('ProductService', async (): Promise<void> => {
       specification,
       users,
       products,
+      productImages,
       productRevisions,
       updatedProducts,
       containers,
