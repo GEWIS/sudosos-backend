@@ -34,6 +34,10 @@ export interface InvoiceParameters {
    */
   toId?: number;
   /**
+   * Filter based on InvoiceId
+   */
+  invoiceId?: number;
+  /**
    * Filter based on the current invoice state
    */
   currentState?: InvoiceState
@@ -62,6 +66,9 @@ export default class InvoiceService {
 
   private static asBaseInvoiceResponse(invoice: Invoice): BaseInvoiceResponse {
     return {
+      id: invoice.id,
+      createdAt: invoice.createdAt.toISOString(),
+      updatedAt: invoice.updatedAt.toISOString(),
       to: parseUserToBaseResponse(invoice.to, false),
       addressee: invoice.addressee,
       description: invoice.description,
@@ -82,6 +89,7 @@ export default class InvoiceService {
     const filterMapping: FilterMapping = {
       currentState: 'currentState',
       toId: 'toId',
+      invoiceId: 'id',
     };
 
     const options: FindManyOptions = {
@@ -96,6 +104,8 @@ export default class InvoiceService {
 
     options.relations.push('invoiceEntries');
     const invoices = await Invoice.find(options);
-    return invoices.map(this.asInvoiceResponse);
+    return invoices.map(this.asInvoiceResponse.bind(this));
   }
+
+
 }

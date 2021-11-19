@@ -124,7 +124,6 @@ export function defineInvoiceEntries(invoiceId: number, startEntryId: number,
     ).reduce((acc, tSubRow) => acc.concat(tSubRow)));
 
   let cost = 0;
-
   for (let i = 0; i < subTransactionRows.length; i += 1) {
     cost += subTransactionRows[i].amount * subTransactionRows[i].product.price.getAmount();
     invoiceEntries.push(Object.assign(new InvoiceEntry(), {
@@ -136,7 +135,6 @@ export function defineInvoiceEntries(invoiceId: number, startEntryId: number,
     }));
     entryId += 1;
   }
-
   return { invoiceEntries, cost };
 }
 
@@ -153,6 +151,11 @@ export async function seedInvoices(users: User[], transactions: Transaction[]): 
 
     const { invoiceEntries, cost } = (
       defineInvoiceEntries(i + 1, 1 + invoiceEntry.length, invoiceTransactions));
+    // Edgecase in the seeder
+    if (cost === 0) {
+      continue;
+    }
+
     invoiceEntry = invoiceEntry.concat(invoiceEntries);
 
     const transfer = Object.assign(new Transfer(), {
@@ -166,11 +169,12 @@ export async function seedInvoices(users: User[], transactions: Transaction[]): 
     });
 
     const invoice = Object.assign(new Invoice(), {
+      id: i + 1,
       to,
       addressee: `Addressed to ${to.firstName}`,
       description: `Invoice #${i}`,
       transfer,
-      invoiceEntries: [],
+      invoiceEntries,
       invoiceStatus: [],
     });
 
@@ -181,12 +185,10 @@ export async function seedInvoices(users: User[], transactions: Transaction[]): 
       state: InvoiceState.CREATED,
       dateChanged: addDays(new Date(2020, 0, 1), 2 - (i * 2)),
     });
-
     invoice.invoiceStatus.push(status);
     invoices = invoices.concat(invoice);
     transfers = transfers.concat(transfer);
   }
-
   await Transfer.save(transfers);
   await Invoice.save(invoices);
   await InvoiceEntry.save(invoiceEntry);

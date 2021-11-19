@@ -17,7 +17,7 @@
  */
 import { DineroObject } from 'dinero.js';
 import BaseResponse from './base-response';
-import { BaseUserResponse, UserResponse } from './user-response';
+import { BaseUserResponse } from './user-response';
 import { InvoiceState } from '../../entity/invoices/invoice-status';
 
 /**
