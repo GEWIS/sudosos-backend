@@ -37,7 +37,7 @@ export enum TransferType {
  * money was paid out.
  * @property {Dinero.model} amount.required - The amount of money transferred.
  * @property {integer} type.required - The type of transfer.
- * @prpoerty {string} description - If the transfer is of type 'custom', this contains a
+ * @property {string} description - If the transfer is of type 'custom', this contains a
  * description of the transfer.
  */
 @Entity()

@@ -46,6 +46,7 @@ import BalanceService from './service/balance-service';
 import BalanceController from './controller/balance-controller';
 import RbacController from './controller/rbac-controller';
 import GewisAuthenticationController from './gewis/controller/gewis-authentication-controller';
+import TransferController from './controller/transfer-controller';
 import PointOfSaleController from './controller/point-of-sale-controller';
 import ContainerController from './controller/container-controller';
 
@@ -190,6 +191,7 @@ export default async function createApp(): Promise<Application> {
   application.app.use('/v1/pointsofsale', new PointOfSaleController(options).getRouter());
   application.app.use('/v1/transactions', new TransactionController(options).getRouter());
   application.app.use('/v1/borrelkaartgroups', new BorrelkaartGroupController(options).getRouter());
+  application.app.use('/v1/transfers', new TransferController(options).getRouter());
   application.app.use('/v1/containers', new ContainerController(options).getRouter());
 
   // Start express application.

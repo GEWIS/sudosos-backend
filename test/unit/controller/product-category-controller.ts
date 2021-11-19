@@ -104,6 +104,10 @@ describe('ProductCategoryController', async (): Promise<void> => {
     const specification = await Swagger.initialize(app);
 
     const all = { all: new Set<string>(['*']) };
+
+    // Create roleManager and set roles of Admin and User
+    // In this case Admin can do anything and User nothing.
+    // This does not reflect the actual roles of the users in the final product.
     const roleManager = new RoleManager();
     roleManager.registerRole({
       name: 'Admin',

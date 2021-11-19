@@ -36,6 +36,7 @@ import Invoice from '../src/entity/invoices/invoice';
 import InvoiceEntry from '../src/entity/invoices/invoice-entry';
 import Transfer, { TransferType } from '../src/entity/transactions/transfer';
 import InvoiceStatus, { InvoiceState } from '../src/entity/invoices/invoice-status';
+import Transfer, { TransferType } from '../src/entity/transactions/transfer';
 
 /**
  * Defines InvoiceUsers objects for the given Users
@@ -76,7 +77,6 @@ function defineUsers(
       active,
     }) as User);
   }
-
   return users;
 }
 
@@ -1176,6 +1176,50 @@ export async function seedTransactions(
   return { transactions };
 }
 
+export async function seedTransfers(users: User[]) : Promise<Transfer[]> {
+  const transfers: Transfer[] = [];
+  const promises: Promise<any>[] = [];
+
+  for (let i = 0; i < users.length; i += 1) {
+    let newTransfer = Object.assign(new Transfer(), {
+      description: '',
+      type: TransferType.DEPOSIT,
+      amount: dinero({ amount: 100 * (i + 1) }),
+      from: undefined,
+      to: users[i],
+    });
+    transfers.push(newTransfer);
+    let promise = Transfer.save(newTransfer);
+    promises.push(promise);
+
+    newTransfer = Object.assign(new Transfer(), {
+      description: '',
+      type: TransferType.INVOICE,
+      amount: dinero({ amount: i + 1 }),
+      from: users[i],
+      to: undefined,
+    });
+    transfers.push(newTransfer);
+    promise = Transfer.save(newTransfer);
+    promises.push(promise);
+
+    newTransfer = Object.assign(new Transfer(), {
+      description: `${i + 1}`,
+      type: TransferType.CUSTOM,
+      amount: dinero({ amount: i + 1 }),
+      from: users[i],
+      to: undefined,
+    });
+    transfers.push(newTransfer);
+    promise = Transfer.save(newTransfer);
+    promises.push(promise);
+  }
+
+  await Promise.all(promises);
+
+  return transfers;
+}
+
 export interface DatabaseContent {
   users: User[],
   categories: ProductCategory[],
@@ -1190,6 +1234,7 @@ export interface DatabaseContent {
   updatedPointsOfSale: UpdatedPointOfSale[],
   transactions: Transaction[],
   invoices: Invoice[]
+  transfers: Transfer[]
 }
 
 export default async function seedDatabase(): Promise<DatabaseContent> {
@@ -1203,6 +1248,7 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
     users, containerRevisions, containers,
   );
   const { transactions } = await seedTransactions(users, pointOfSaleRevisions);
+  const transfers = await seedTransfers(users);
   const invoices = await seedInvoices(users, transactions);
 
   return {
@@ -1219,5 +1265,6 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
     updatedPointsOfSale,
     transactions,
     invoices,
+    transfers,
   };
 }
