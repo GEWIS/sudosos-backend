@@ -15,17 +15,17 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-
-import RelationResponse from './relation-response';
+import BaseResponse from './base-response';
+import { UserResponse } from './user-response';
 
 /**
- * @typedef ActionResponse -
- * The action contains the name of the action and a list of permissions per action.
- * Typically the action name is one of the CRUD values 'create', 'read', 'update', and 'delete'.
- * @property {string} action - The name of the action performed on the entity.
- * @property {Array.<RelationResponse>} relations - The ownership relations with permissions.
+ * @typedef {BaseResponse} SimpleFileResponse
+ * @property {string} downloadName.required - The filename of the file
+ * @property {string} location.required - The location of the file in storage
+ * @property {UserResponse.model} createdBy.required - The user who created this file
  */
-export default interface ActionResponse {
-  action: string;
-  relations: RelationResponse[];
+export interface SimpleFileResponse extends BaseResponse {
+  downloadName: string;
+  location: string;
+  createdBy: UserResponse;
 }

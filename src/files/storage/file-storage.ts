@@ -15,17 +15,26 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+import BaseFile from '../../entity/file/base-file';
 
-import RelationResponse from './relation-response';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export default abstract class FileStorage {
+  /**
+   * Save a file with the given name to storage
+   * @return The location of the file
+   */
+  public abstract saveFile(fileName: string, fileData: Buffer): Promise<string>;
 
-/**
- * @typedef ActionResponse -
- * The action contains the name of the action and a list of permissions per action.
- * Typically the action name is one of the CRUD values 'create', 'read', 'update', and 'delete'.
- * @property {string} action - The name of the action performed on the entity.
- * @property {Array.<RelationResponse>} relations - The ownership relations with permissions.
- */
-export default interface ActionResponse {
-  action: string;
-  relations: RelationResponse[];
+  /**
+   * Get the file from storage as a buffer object
+   * @throws Error when file could not be found in storage
+   */
+  public abstract getFile(file: BaseFile): Promise<Buffer>;
+
+  /**
+   * Delete the file from the storage system
+   * @returns true when file was deleted, false when file does not exist in storage
+   * @throws Error when file could not be deleted
+   */
+  public abstract deleteFile(file: BaseFile): Promise<boolean>;
 }

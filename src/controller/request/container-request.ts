@@ -19,7 +19,7 @@
 /**
  * @typedef ContainerRequest
  * @property {string} name - Name of the container
- * @property {Array.<number>} products - IDs of the products to add to the container
+ * @property {Array.<integer>} products - IDs of the products to add to the container
  * @property {boolean} public - Whether the container is public or not
  */
 export default interface ContainerRequest {

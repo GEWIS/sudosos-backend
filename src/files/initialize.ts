@@ -15,17 +15,19 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-
-import RelationResponse from './relation-response';
+import * as fs from 'fs';
+import path from 'path';
+import { ROOT_FILE_LOCATION, SIMPLE_FILE_LOCATION } from './storage';
 
 /**
- * @typedef ActionResponse -
- * The action contains the name of the action and a list of permissions per action.
- * Typically the action name is one of the CRUD values 'create', 'read', 'update', and 'delete'.
- * @property {string} action - The name of the action performed on the entity.
- * @property {Array.<RelationResponse>} relations - The ownership relations with permissions.
+ * Create all folders necessary to store files locally on disk
  */
-export default interface ActionResponse {
-  action: string;
-  relations: RelationResponse[];
+export default function initializeDiskStorage() {
+  if (!fs.existsSync(path.join(__dirname, '/../..', ROOT_FILE_LOCATION))) {
+    fs.mkdirSync(path.join(__dirname, '/../..', ROOT_FILE_LOCATION));
+  }
+
+  if (!fs.existsSync(path.join(__dirname, '/../..', SIMPLE_FILE_LOCATION))) {
+    fs.mkdirSync(path.join(__dirname, '/../..', SIMPLE_FILE_LOCATION));
+  }
 }

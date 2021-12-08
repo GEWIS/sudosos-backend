@@ -72,7 +72,7 @@ export default class BorrelkaartGroupController extends BaseController {
    * @route GET /borrelkaartgroups
    * @group borrelkaartgroups - Operations of borrelkaart group controller
    * @security JWT
-   * @returns {Array<BorrelkaartGroupResponse>} 200 - All existingborrelkaart groups without users
+   * @returns {Array.<BorrelkaartGroupResponse>} 200 - All existingborrelkaart groups without users
    * @returns {string} 500 - Internal server error
    */
   public async getAllBorrelkaartGroups(req: RequestWithToken, res: Response): Promise<void> {

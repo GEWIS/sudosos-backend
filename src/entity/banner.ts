@@ -47,7 +47,7 @@ export default class Banner extends BaseEntity {
 
   @Column({
     type: 'datetime',
-    default: 'CURRENT_TIMESTAMP',
+    default: () => 'CURRENT_TIMESTAMP',
   })
   public startDate: Date;
 
