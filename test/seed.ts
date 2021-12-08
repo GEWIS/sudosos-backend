@@ -36,7 +36,6 @@ import Invoice from '../src/entity/invoices/invoice';
 import InvoiceEntry from '../src/entity/invoices/invoice-entry';
 import Transfer, { TransferType } from '../src/entity/transactions/transfer';
 import InvoiceStatus, { InvoiceState } from '../src/entity/invoices/invoice-status';
-import Transfer, { TransferType } from '../src/entity/transactions/transfer';
 
 /**
  * Defines InvoiceUsers objects for the given Users

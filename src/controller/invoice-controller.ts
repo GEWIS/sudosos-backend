@@ -21,7 +21,29 @@ import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import { BaseInvoiceResponse } from './response/invoice-response';
-import InvoiceService from '../service/invoice-service';
+import InvoiceService, { InvoiceFilterParameters } from '../service/invoice-service';
+import { asBoolean, asInvoiceState, asNumber } from '../helpers/validators';
+
+function parseInvoiceFilterParameters(req: RequestWithToken): InvoiceFilterParameters {
+  return {
+    /**
+     * Filter based on to user.
+     */
+    toId: asNumber(req.query.toId),
+    /**
+     * Filter based on InvoiceId
+     */
+    invoiceId: asNumber(req.query.toId),
+    /**
+     * Filter based on the current invoice state
+     */
+    currentState: asInvoiceState(req.query.currentState),
+    /**
+     * Boolean if the invoice entries should be added to the response.
+     */
+    returnInvoiceEntries: asBoolean(req.query.returnInvoiceEntries),
+  };
+}
 
 export default class InvoiceController extends BaseController {
   private logger: Logger = log4js.getLogger('InvoiceController');
@@ -61,9 +83,17 @@ export default class InvoiceController extends BaseController {
     const { body } = req;
     this.logger.trace('Get all invoices', body, 'by user', req.token.user);
 
+    let filters: InvoiceFilterParameters;
+    try {
+      filters = parseInvoiceFilterParameters(req);
+    } catch (e) {
+      res.status(400).json(e.message);
+      return;
+    }
+
     // Handle request
     try {
-      const invoices: BaseInvoiceResponse[] = await InvoiceService.getInvoices();
+      const invoices: BaseInvoiceResponse[] = await InvoiceService.getInvoices(filters);
       res.json(invoices);
     } catch (error) {
       this.logger.error('Could not return all invoices:', error);

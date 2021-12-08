@@ -40,6 +40,7 @@ import {
 } from '../../../src/controller/response/invoice-response';
 import InvoiceService from '../../../src/service/invoice-service';
 import InvoiceEntry from '../../../src/entity/invoices/invoice-entry';
+import { asInvoiceState } from '../../../src/helpers/validators';
 
 chai.use(deepEqualInAnyOrder);
 

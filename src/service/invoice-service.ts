@@ -28,7 +28,7 @@ import Invoice from '../entity/invoices/invoice';
 import { parseUserToBaseResponse } from '../helpers/entity-to-response';
 import InvoiceEntry from '../entity/invoices/invoice-entry';
 
-export interface InvoiceParameters {
+export interface InvoiceFilterParameters {
   /**
    * Filter based on to user.
    */
@@ -48,6 +48,10 @@ export interface InvoiceParameters {
 }
 
 export default class InvoiceService {
+  /**
+   * Parses a InvoiceEntry Object to a InvoiceEntryResponse
+   * @param invoiceEntries - The invoiceEntries to parse
+   */
   private static asInvoiceEntryResponse(invoiceEntries: InvoiceEntry): InvoiceEntryResponse {
     return {
       description: invoiceEntries.description,
@@ -56,6 +60,10 @@ export default class InvoiceService {
     } as InvoiceEntryResponse;
   }
 
+  /**
+   * Parses a invoiceStatus Object to a InvoiceStatusResponse
+   * @param invoiceStatus - The invoiceStatus to parse
+   */
   private static asInvoiceStatusResponse(invoiceStatus: InvoiceStatus): InvoiceStatusResponse {
     return {
       dateChanged: invoiceStatus.dateChanged.toISOString(),
@@ -64,6 +72,10 @@ export default class InvoiceService {
     } as InvoiceStatusResponse;
   }
 
+  /**
+   * Parses a Invoice Object to a BaseInvoiceResponse
+   * @param invoice - The Invoice to parse
+   */
   private static asBaseInvoiceResponse(invoice: Invoice): BaseInvoiceResponse {
     return {
       id: invoice.id,
@@ -76,6 +88,10 @@ export default class InvoiceService {
     } as BaseInvoiceResponse;
   }
 
+  /**
+   * Parses a Invoice Object to a InvoiceResponse
+   * @param invoice - The Invoice to parse
+   */
   private static asInvoiceResponse(invoice: Invoice)
     : InvoiceResponse {
     return {
@@ -84,7 +100,13 @@ export default class InvoiceService {
     } as InvoiceResponse;
   }
 
-  public static async getInvoices(params: InvoiceParameters = {})
+  /**
+   * Function that returns all the invoices based on the given params.
+   * Returns either BaseInvoiceResponse, that is without InvoiceEntries, or InvoiceResponse
+   * based on if returnInvoiceEntries is set to true.
+   * @param params
+   */
+  public static async getInvoices(params: InvoiceFilterParameters = {})
     : Promise<BaseInvoiceResponse[] | InvoiceResponse[]> {
     const filterMapping: FilterMapping = {
       currentState: 'currentState',
@@ -97,6 +119,7 @@ export default class InvoiceService {
       relations: ['to', 'invoiceStatus'],
     };
 
+    // Case distinction on if we want to return entries or not.
     if (!params.returnInvoiceEntries) {
       const invoices = await Invoice.find(options);
       return invoices.map(this.asBaseInvoiceResponse);
@@ -106,6 +129,4 @@ export default class InvoiceService {
     const invoices = await Invoice.find(options);
     return invoices.map(this.asInvoiceResponse.bind(this));
   }
-
-
 }
