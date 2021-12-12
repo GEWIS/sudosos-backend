@@ -32,7 +32,6 @@ import { seedAllProducts, seedProductCategories } from '../../seed';
 import Product from '../../../src/entity/product/product';
 import { ProductResponse } from '../../../src/controller/response/product-response';
 import UpdatedProduct from '../../../src/entity/product/updated-product';
-import * as fs from "fs";
 
 /**
  * Tests if a product response is equal to the request.
