@@ -144,7 +144,7 @@ export default class FileService {
 
     if (productImage == null) {
       productImage = Object.assign(new BaseFile(), {
-        downloadName: uploadedFile.name,
+        downloadName: '',
         createdBy,
         location: '',
       });
