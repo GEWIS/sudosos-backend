@@ -171,6 +171,7 @@ export default async function createApp(): Promise<Application> {
   // Product images
   if (process.env.NODE_ENV === 'development') {
     application.app.use('/static/products', express.static('data/products'));
+    application.app.use('/static/banners', express.static('data/banners'));
   }
 
   // Setup RBAC.

@@ -83,7 +83,7 @@ export default class BannerService {
 
     let image;
     if (!banner.image) {
-      image = '';
+      image = null;
     } else {
       image = banner.image.downloadName;
     }

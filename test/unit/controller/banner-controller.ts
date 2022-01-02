@@ -45,7 +45,7 @@ function bannerEq(a: Banner, b: BannerResponse): Boolean {
     return false;
   }
 
-  const downloadName = a.image ? (a.image.downloadName ?? '') : '';
+  const downloadName = a.image ? (a.image.downloadName ?? null) : null;
 
   return a.name === b.name
     && downloadName === b.image

@@ -29,7 +29,7 @@ import BaseResponse from './base-response';
  */
 export default interface BannerResponse extends BaseResponse {
   name: string,
-  image: string,
+  image: string | null,
   duration: number,
   active: boolean,
   startDate: string,
