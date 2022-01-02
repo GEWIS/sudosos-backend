@@ -20,10 +20,7 @@ import BannerRequest from '../controller/request/banner-request';
 import BannerResponse from '../controller/response/banner-response';
 import Banner from '../entity/banner';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
-import {UploadedFile} from "express-fileupload";
-import FileService from "./file-service";
-import User from "../entity/user/user";
-import {BANNER_IMAGE_LOCATION} from "../files/storage";
+import FileService from './file-service';
 
 export interface BannerFilterParameters {
   bannerId?: number,
@@ -110,7 +107,7 @@ export default class BannerService {
    * @param options - The pagination options.
    * @returns {Array.<BannerResponse>} - all banners
    */
-  public static async getBanners(params: BannerFilterParameters, options?: FindManyOptions)
+  public static async getBanners(params: BannerFilterParameters, options: FindManyOptions = {})
     : Promise<BannerResponse[]> {
     const mapping: FilterMapping = {
       bannerId: 'id',
@@ -119,6 +116,7 @@ export default class BannerService {
     const banners = await Banner.find({
       where: QueryFilter.createFilterWhereClause(mapping, params),
       ...options,
+      relations: ['image'].concat(options.relations ? options.relations : []),
     });
     return banners.map((banner) => this.asBannerResponse(banner));
   }
@@ -152,7 +150,7 @@ export default class BannerService {
     // patch banner if found
     const banner = this.asBanner(bannerReq);
     await Banner.update(id, banner);
-    return this.asBannerResponse(await Banner.findOne(id));
+    return this.asBannerResponse(await Banner.findOne(id, { relations: ['image'] }));
   }
 
   /**
@@ -163,18 +161,25 @@ export default class BannerService {
    */
   public static async deleteBanner(id: number, fileService: FileService): Promise<BannerResponse> {
     // check if banner in database
-    const banner = await Banner.findOne(id);
+    const banner = await Banner.findOne(id, { relations: ['image'] });
 
     // return undefined if not found
     if (!banner) {
       return undefined;
     }
 
-    // delete banner if found
+    // Delete banner if found
+    const bannerImage = banner.image;
     if (banner.image) {
-      await fileService.deleteEntityFile(banner.image);
+      // Set image temporarily to null, so we can remove the foreign key constraint
+      banner.image = null;
+      await banner.save();
+      await fileService.deleteEntityFile(bannerImage);
     }
     await Banner.delete(id);
+
+    // Restore the banner image so the response will be correct
+    banner.image = bannerImage;
     return this.asBannerResponse(banner);
   }
 }

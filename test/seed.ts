@@ -17,6 +17,9 @@
  */
 import dinero from 'dinero.js';
 import { addDays } from 'date-fns';
+import * as fs from 'fs';
+import path from 'path';
+import { randomInt } from 'crypto';
 import Container from '../src/entity/container/container';
 import ContainerRevision from '../src/entity/container/container-revision';
 import PointOfSale from '../src/entity/point-of-sale/point-of-sale';
@@ -32,6 +35,9 @@ import UpdatedProduct from '../src/entity/product/updated-product';
 import UpdatedContainer from '../src/entity/container/updated-container';
 import UpdatedPointOfSale from '../src/entity/point-of-sale/updated-point-of-sale';
 import ProductImage from '../src/entity/file/product-image';
+import Banner from '../src/entity/banner';
+import BannerImage from '../src/entity/file/banner-image';
+import { BANNER_IMAGE_LOCATION, PRODUCT_IMAGE_LOCATION } from '../src/files/storage';
 
 /**
  * Defines user objects with the given parameters.
@@ -107,16 +113,26 @@ export async function seedProductCategories(): Promise<ProductCategory[]> {
 }
 
 /**
- * Defines a product image based on the parameters passed
+ * Defines a product image based on the parameters passed.
+ * When not in a testing environment, actual images will be saved to disk.
  *
  * @param product - The product that this product image belongs to
  * @param createdBy - The user who uploaded this product image
  */
 function defineProductImage(product: Product, createdBy: User): ProductImage {
   const downloadName = `product-${product.id}.png`;
+
+  let location;
+  if (process.env.NODE_ENV !== 'TEST') {
+    const source = path.join(__dirname, './static/product.png');
+    location = path.join(__dirname, '../', PRODUCT_IMAGE_LOCATION, downloadName);
+    fs.copyFileSync(source, location);
+  } else {
+    location = `fake/storage/${downloadName}`;
+  }
   return Object.assign(new ProductImage(), {
     id: product.id,
-    location: `fake/storage/${downloadName}`,
+    location,
     downloadName,
     createdBy,
   });
@@ -1114,6 +1130,71 @@ export async function seedTransactions(
   return { transactions };
 }
 
+/**
+ * Create a BannerImage object. When not in a testing environment, a banner image
+ * will also be saved on disk.
+ *
+ * @param banner
+ * @param createdBy
+ */
+function defineBannerImage(banner: Banner, createdBy: User): BannerImage {
+  const downloadName = `banner-${banner.id}.png`;
+
+  let location;
+  if (process.env.NODE_ENV !== 'TEST') {
+    const source = path.join(__dirname, './static/banner.png');
+    location = path.join(__dirname, '../', BANNER_IMAGE_LOCATION, downloadName);
+    fs.copyFileSync(source, location);
+  } else {
+    location = `fake/storage/${downloadName}`;
+  }
+
+  return Object.assign(new BannerImage(), {
+    id: banner.id,
+    location,
+    downloadName,
+    createdBy,
+  });
+}
+
+/**
+ * Seeds a default dataset of banners based on the given users.
+ * When not in a testing environment, actual images will also be saved to disk.
+ * @param users
+ */
+export async function seedBanners(users: User[]): Promise<{
+  banners: Banner[],
+  bannerImages: BannerImage[],
+}> {
+  const banners: Banner[] = [];
+  const bannerImages: BannerImage[] = [];
+
+  const creators = users.filter((u) => [UserType.LOCAL_ADMIN].includes(u.type));
+
+  for (let i = 0; i < creators.length * 4; i += 1) {
+    const banner = Object.assign(new Banner(), {
+      id: i + 1,
+      name: `Banner-${i + 1}`,
+      duration: randomInt(60, 300),
+      active: i % 2 === 0,
+      startDate: new Date(),
+      endDate: new Date(),
+    });
+
+    if (i % 4 !== 0) {
+      banner.image = defineBannerImage(banner, creators[i % creators.length]);
+      bannerImages.push(banner.image);
+    }
+
+    banners.push(banner);
+  }
+
+  await Promise.all(bannerImages.map((image) => BannerImage.save(image)));
+  await Promise.all(banners.map((banner) => Banner.save(banner)));
+
+  return { banners, bannerImages };
+}
+
 export interface DatabaseContent {
   users: User[],
   categories: ProductCategory[],
@@ -1127,6 +1208,7 @@ export interface DatabaseContent {
   pointOfSaleRevisions: PointOfSaleRevision[],
   updatedPointsOfSale: UpdatedPointOfSale[],
   transactions: Transaction[],
+  banners: Banner[],
 }
 
 export default async function seedDatabase(): Promise<DatabaseContent> {
@@ -1140,6 +1222,7 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
     users, containerRevisions, containers,
   );
   const { transactions } = await seedTransactions(users, pointOfSaleRevisions);
+  const { banners } = await seedBanners(users);
 
   return {
     users,
@@ -1154,5 +1237,6 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
     pointOfSaleRevisions,
     updatedPointsOfSale,
     transactions,
+    banners,
   };
 }

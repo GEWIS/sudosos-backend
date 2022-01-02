@@ -17,21 +17,15 @@
  */
 import * as fs from 'fs';
 import path from 'path';
-import { PRODUCT_IMAGE_LOCATION, ROOT_FILE_LOCATION, SIMPLE_FILE_LOCATION } from './storage';
+import * as locations from './storage/locations';
 
 /**
  * Create all folders necessary to store files locally on disk
  */
 export default function initializeDiskStorage() {
-  if (!fs.existsSync(path.join(__dirname, '/../..', ROOT_FILE_LOCATION))) {
-    fs.mkdirSync(path.join(__dirname, '/../..', ROOT_FILE_LOCATION));
-  }
-
-  if (!fs.existsSync(path.join(__dirname, '/../..', SIMPLE_FILE_LOCATION))) {
-    fs.mkdirSync(path.join(__dirname, '/../..', SIMPLE_FILE_LOCATION));
-  }
-
-  if (!fs.existsSync(path.join(__dirname, '/../..', PRODUCT_IMAGE_LOCATION))) {
-    fs.mkdirSync(path.join(__dirname, '/../..', PRODUCT_IMAGE_LOCATION));
-  }
+  Object.values(locations).forEach((location) => {
+    if (!fs.existsSync(path.join(__dirname, '/../..', location))) {
+      fs.mkdirSync(path.join(__dirname, '/../..', location));
+    }
+  });
 }
