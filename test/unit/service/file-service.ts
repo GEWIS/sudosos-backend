@@ -335,7 +335,7 @@ describe('FileService', async (): Promise<void> => {
       stubs.push(saveFileStub);
 
       expect(ctx.products[3].image).to.be.undefined;
-      const res: ProductImage = await ctx.fileService.uploadProductImage(
+      const res: ProductImage = await ctx.fileService.uploadEntityImage(
         ctx.products[3], uploadedFile, ctx.users[0],
       );
 
@@ -358,7 +358,7 @@ describe('FileService', async (): Promise<void> => {
       expect(ctx.products[0].image).to.not.be.undefined;
       const oldImage = ctx.products[0].image;
 
-      const res: ProductImage = await ctx.fileService.uploadProductImage(
+      const res: ProductImage = await ctx.fileService.uploadEntityImage(
         ctx.products[0], uploadedFile, ctx.users[0],
       );
 

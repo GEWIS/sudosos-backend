@@ -20,6 +20,10 @@ import BannerRequest from '../controller/request/banner-request';
 import BannerResponse from '../controller/response/banner-response';
 import Banner from '../entity/banner';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
+import {UploadedFile} from "express-fileupload";
+import FileService from "./file-service";
+import User from "../entity/user/user";
+import {BANNER_IMAGE_LOCATION} from "../files/storage";
 
 export interface BannerFilterParameters {
   bannerId?: number,
@@ -38,7 +42,6 @@ export default class BannerService {
     const eDate = Date.parse(br.endDate);
 
     return br.name !== ''
-        && br.picture !== ''
 
         // duration must be integer greater than 0
         && br.duration > 0
@@ -80,13 +83,25 @@ export default class BannerService {
     if (!banner) {
       return undefined;
     }
+
+    let image;
+    if (!banner.image) {
+      image = '';
+    } else {
+      image = banner.image.downloadName;
+    }
+
     return {
-      ...banner,
+      id: banner.id,
+      name: banner.name,
+      image,
+      duration: banner.duration,
+      active: banner.active,
       createdAt: banner.createdAt.toISOString(),
       updatedAt: banner.updatedAt.toISOString(),
       startDate: banner.startDate.toISOString(),
       endDate: banner.endDate.toISOString(),
-    } as BannerResponse;
+    };
   }
 
   /**
@@ -143,9 +158,10 @@ export default class BannerService {
   /**
    * Deletes the requested banner from the database
    * @param id - requested banner id
+   * @param fileService
    * @returns {BannerResponse.model} - deleted banner
    */
-  public static async deleteBanner(id: number): Promise<BannerResponse> {
+  public static async deleteBanner(id: number, fileService: FileService): Promise<BannerResponse> {
     // check if banner in database
     const banner = await Banner.findOne(id);
 
@@ -155,6 +171,9 @@ export default class BannerService {
     }
 
     // delete banner if found
+    if (banner.image) {
+      await fileService.deleteEntityFile(banner.image);
+    }
     await Banner.delete(id);
     return this.asBannerResponse(banner);
   }

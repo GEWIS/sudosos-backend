@@ -24,6 +24,8 @@ import SimpleFileRequest from '../controller/request/simple-file-request';
 import User from '../entity/user/user';
 import Product from '../entity/product/product';
 import ProductImage from '../entity/file/product-image';
+import Banner from '../entity/banner';
+import BannerImage from '../entity/file/banner-image';
 
 /**
  *  Possible storage methods that can be used
@@ -135,33 +137,41 @@ export default class FileService {
   }
 
   /**
-   * Upload a product image to the given product and replace the old one, if it exists
+   * Upload an entity image to the given entity and replace the old one, if it exists
    */
-  public async uploadProductImage(
-    product: Product, uploadedFile: UploadedFile, createdBy: User,
+  public async uploadEntityImage(
+    entity: Product | Banner, uploadedFile: UploadedFile, createdBy: User,
   ): Promise<ProductImage> {
-    let productImage = product.image;
+    let entityImage = entity.image;
 
-    if (productImage == null) {
-      productImage = Object.assign(new BaseFile(), {
+    if (entityImage == null) {
+      entityImage = Object.assign(new BaseFile(), {
         downloadName: '',
         createdBy,
         location: '',
       });
-      await ProductImage.save(productImage);
+      await ProductImage.save(entityImage);
     } else {
       // If the file does exist, we first have to remove it from storage
-      await this.removeFile(productImage);
+      await this.removeFile(entityImage);
     }
     // Store the new file in storage.
-    productImage = await this.createFile(productImage, uploadedFile.data);
+    entityImage = await this.createFile(entityImage, uploadedFile.data);
 
     // Save the file name as the download name.
-    productImage.downloadName = path.parse(productImage.location).base;
+    entityImage.downloadName = path.parse(entityImage.location).base;
     // eslint-disable-next-line no-param-reassign
-    product.image = productImage;
-    await ProductImage.save(productImage);
-    await product.save();
-    return productImage;
+    entity.image = entityImage;
+    await ProductImage.save(entityImage);
+    await entity.save();
+    return entityImage;
+  }
+
+  /**
+   * Delete entity file from database
+   */
+  public async deleteEntityFile(entityFile: ProductImage | BannerImage) {
+    await this.removeFile(entityFile);
+    await entityFile.remove();
   }
 }
