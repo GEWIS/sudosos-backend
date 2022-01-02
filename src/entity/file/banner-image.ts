@@ -15,23 +15,11 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-
-import BaseResponse from './base-response';
+import { Entity } from 'typeorm';
+import BaseFile from './base-file';
 
 /**
- * @typedef {BaseResponse} BannerResponse
- * @property {string} name - Name/label of the banner
- * @property {string} image - Location of the image
- * @property {number} duration - How long the banner should be shown (in seconds)
- * @property {boolean} active - Whether the banner is active. Overrides start and end date
- * @property {string} startDate - The starting date from which the banner should be shown
- * @property {string} endDate - The end date from which the banner should no longer be shown
+ * @typedef {BaseFile} BannerImage
  */
-export default interface BannerResponse extends BaseResponse {
-  name: string,
-  image: string,
-  duration: number,
-  active: boolean,
-  startDate: string,
-  endDate: string,
-}
+@Entity()
+export default class BannerImage extends BaseFile {}

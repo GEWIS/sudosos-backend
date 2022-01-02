@@ -39,7 +39,7 @@ export default class ProductController extends BaseController {
   public constructor(options: BaseControllerOptions) {
     super(options);
     this.logger.level = process.env.LOG_LEVEL;
-    this.fileService = new FileService(PRODUCT_IMAGE_LOCATION, 'disk');
+    this.fileService = new FileService(PRODUCT_IMAGE_LOCATION);
   }
 
   /**
@@ -321,7 +321,7 @@ export default class ProductController extends BaseController {
     try {
       const product = await Product.findOne(productId, { relations: ['image'] });
       if (product) {
-        await this.fileService.uploadProductImage(
+        await this.fileService.uploadEntityImage(
           product, files.file as UploadedFile, req.token.user,
         );
         res.status(204).send();
