@@ -50,7 +50,10 @@ describe('TransactionController', (): void => {
     logger: Logger,
   };
 
-  before(async () => {
+  // eslint-disable-next-line func-names
+  before(async function () {
+    this.timeout(5000);
+
     const logger: Logger = log4js.getLogger('TransactionControllerTest');
     logger.level = 'ALL';
     const connection = await Database.initialize();
@@ -467,7 +470,7 @@ describe('TransactionController', (): void => {
       const res = await request(ctx.app)
         .get('/transactions')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
-        .query({ skip: 212 });
+        .query({ skip: 180 });
       expect(res.status).to.equal(200);
 
       const transactions = res.body as BaseTransactionResponse[];
