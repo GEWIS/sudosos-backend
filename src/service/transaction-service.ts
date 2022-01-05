@@ -463,7 +463,8 @@ export default class TransactionService {
       .leftJoinAndSelect('transaction.pointOfSale', 'pointOfSaleRev')
       .leftJoinAndSelect('pointOfSaleRev.pointOfSale', 'pointOfSale')
       .leftJoin('transaction.subTransactions', 'subTransaction')
-      .leftJoin('subTransaction.subTransactionRows', 'subTransactionRow');
+      .leftJoin('subTransaction.subTransactionRows', 'subTransactionRow')
+      .distinct(true);
 
     if (fromDate) query.andWhere('"transaction"."createdAt" >= :fromDate', { fromDate: fromDate.toISOString() });
     if (tillDate) query.andWhere('"transaction"."createdAt" < :tillDate', { tillDate: tillDate.toISOString() });
