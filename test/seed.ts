@@ -123,7 +123,7 @@ function defineProductImage(product: Product, createdBy: User): ProductImage {
   const downloadName = `product-${product.id}.png`;
 
   let location;
-  if (process.env.NODE_ENV !== 'TEST') {
+  if (process.env.NODE_ENV !== 'test') {
     const source = path.join(__dirname, './static/product.png');
     location = path.join(__dirname, '../', PRODUCT_IMAGE_LOCATION, downloadName);
     fs.copyFileSync(source, location);
@@ -1141,7 +1141,7 @@ function defineBannerImage(banner: Banner, createdBy: User): BannerImage {
   const downloadName = `banner-${banner.id}.png`;
 
   let location;
-  if (process.env.NODE_ENV !== 'TEST') {
+  if (process.env.NODE_ENV !== 'test') {
     const source = path.join(__dirname, './static/banner.png');
     location = path.join(__dirname, '../', BANNER_IMAGE_LOCATION, downloadName);
     fs.copyFileSync(source, location);
