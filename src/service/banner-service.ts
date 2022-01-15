@@ -93,7 +93,7 @@ export default class BannerService {
    * Returns all banners with options.
    * @param params - The filtering parameters.
    * @param options - The pagination options.
-   * @returns {Array<BannerResponse>} - all banners
+   * @returns {Array.<BannerResponse>} - all banners
    */
   public static async getBanners(params: BannerFilterParameters, options?: FindManyOptions)
     : Promise<BannerResponse[]> {

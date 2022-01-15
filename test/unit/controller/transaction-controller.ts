@@ -20,6 +20,7 @@ import express, { Application } from 'express';
 import { expect, request } from 'chai';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
+import log4js, { Logger } from 'log4js';
 import TransactionController from '../../../src/controller/transaction-controller';
 import Transaction from '../../../src/entity/transactions/transaction';
 import Database from '../../../src/database/database';
@@ -31,6 +32,7 @@ import TokenMiddleware from '../../../src/middleware/token-middleware';
 import { BaseTransactionResponse } from '../../../src/controller/response/transaction-response';
 import { verifyBaseTransactionEntity } from '../validators';
 import RoleManager from '../../../src/rbac/role-manager';
+import { TransactionRequest } from '../../../src/controller/request/transaction-request';
 
 describe('TransactionController', (): void => {
   let ctx: {
@@ -43,16 +45,99 @@ describe('TransactionController', (): void => {
     transaction: Transaction,
     users: User[],
     transactions: Transaction[],
+    validTransReq: TransactionRequest,
     swaggerspec: SwaggerSpecification,
+    logger: Logger,
   };
 
-  before(async function before() {
-    // @ts-ignore
+  beforeEach(async function beforeEach() {
     this.timeout(10000);
+    const logger: Logger = log4js.getLogger('TransactionControllerTest');
+    logger.level = 'ALL';
     const connection = await Database.initialize();
     const app = express();
     const database = await seedDatabase();
+    const validTransReq = {
+      from: 7,
+      createdBy: 7,
+      subtransactions: [
+        {
+          to: 8,
+          container: {
+            id: 1,
+            revision: 2,
+          },
+          subTransactionRows: [
+            {
+              product: {
+                id: 1,
+                revision: 2,
+              },
+              amount: 1,
+              price: {
+                amount: 72,
+                currency: 'EUR',
+                precision: 2,
+              },
+            },
+            {
+              product: {
+                id: 2,
+                revision: 2,
+              },
+              amount: 2,
+              price: {
+                amount: 146,
+                currency: 'EUR',
+                precision: 2,
+              },
+            },
+          ],
+          price: {
+            amount: 218,
+            currency: 'EUR',
+            precision: 2,
+          },
+        },
+        {
+          to: 9,
+          container: {
+            id: 2,
+            revision: 2,
+          },
+          subTransactionRows: [
+            {
+              product: {
+                id: 5,
+                revision: 2,
+              },
+              amount: 4,
+              price: {
+                amount: 304,
+                currency: 'EUR',
+                precision: 2,
+              },
+            },
+          ],
+          price: {
+            amount: 304,
+            currency: 'EUR',
+            precision: 2,
+          },
+        },
+      ],
+      pointOfSale: {
+        id: 1,
+        revision: 2,
+      },
+      price: {
+        amount: 522,
+        currency: 'EUR',
+        precision: 2,
+      },
+    } as TransactionRequest;
     ctx = {
+      logger,
       connection,
       app,
       swaggerspec: undefined,
@@ -61,6 +146,7 @@ describe('TransactionController', (): void => {
       userToken: undefined,
       adminToken: undefined,
       transaction: undefined,
+      validTransReq,
       ...database,
     };
 
@@ -77,7 +163,9 @@ describe('TransactionController', (): void => {
       permissions: {
         Transaction: {
           get: all,
+          create: all,
           update: all,
+          delete: all,
         },
 
       },
@@ -96,7 +184,7 @@ describe('TransactionController', (): void => {
     ctx.app.use('/transactions', ctx.controller.getRouter());
   });
 
-  after(async () => {
+  afterEach(async () => {
     await ctx.connection.close();
   });
 
@@ -364,6 +452,88 @@ describe('TransactionController', (): void => {
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .query({ skip: 'Wie dit leest trekt een bak' });
       expect(res.status).to.equal(400);
+    });
+  });
+
+  describe('POST /transactions', () => {
+    it('should return an HTTP 200 and the saved transaction when user is admin', async () => {
+      const res = await request(ctx.app)
+        .post('/transactions')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(ctx.validTransReq);
+      expect(res.status).to.equal(200);
+    });
+    it('should return an HTTP 403 when user is not admin', async () => {
+      const res = await request(ctx.app)
+        .post('/transactions')
+        .set('Authorization', `Bearer ${ctx.userToken}`)
+        .send(ctx.validTransReq);
+      expect(res.status).to.equal(403);
+    });
+    it('should return an HTTP 400 if the request is invalid', async () => {
+      const badReq = {
+        ...ctx.validTransReq,
+        from: 0,
+      } as TransactionRequest;
+      const res = await request(ctx.app)
+        .post('/transactions')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(badReq);
+      expect(res.status).to.equal(400);
+    });
+    it('should return an HTTP 403 if the user is a borrelkaart and has insufficient balance', async () => {
+      // create borrelkaart user
+      await User.save({
+        firstName: 'borrelkaart',
+        lastName: 'borrelkaart',
+        active: true,
+        deleted: false,
+        type: 3,
+      } as User);
+
+      const borrelkaartUser = await User.findOne({ active: true, deleted: false, type: 3 });
+      const badReq = {
+        ...ctx.validTransReq,
+        from: borrelkaartUser.id,
+      } as TransactionRequest;
+
+      const res = await request(ctx.app)
+        .post('/transactions')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(badReq);
+      expect(res.status).to.equal(403);
+    });
+  });
+
+  describe('DELETE /transactions', () => {
+    it('should return an HTTP 200 and the deleted transaction if the transaction exists and user is admin', async () => {
+      let res = await request(ctx.app)
+        .get('/transactions/1')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      const deletedTransaction = res.body;
+
+      // delete the first transaction in the database
+      res = await request(ctx.app)
+        .delete('/transactions/1')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.body).to.eql(deletedTransaction);
+      expect(res.status).to.equal(200);
+    });
+    it('should return an HTTP 404 if the transaction does not exist', async () => {
+      // delete a nonexistent transaction in the database
+      const res = await request(ctx.app)
+        .delete('/transactions/0')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.body).to.equal('Transaction not found.');
+      expect(res.status).to.equal(404);
+    });
+    it('should return an HTTP 403 if not admin', async () => {
+      // delete the first transaction in the database
+      const res = await request(ctx.app)
+        .delete('/transactions/1')
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(403);
     });
   });
 });

@@ -23,7 +23,7 @@ import { BaseUserResponse } from './user-response';
  * @typedef {BaseResponse} BaseContainerResponse
  * @property {string} name.required - The name of the container.
  * @property {boolean} public.required - Public status of the container.
- * @property {number} revision - The container revision.
+ * @property {integer} revision - The container revision.
  */
 export interface BaseContainerResponse extends BaseResponse {
   name: string,

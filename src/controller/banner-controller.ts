@@ -81,7 +81,7 @@ export default class BannerController extends BaseController {
    * @route GET /banners
    * @group banners - Operations of banner controller
    * @security JWT
-   * @returns {Array<BannerResponse>} 200 - All existing banners
+   * @returns {Array.<BannerResponse>} 200 - All existing banners
    * @returns {string} 500 - Internal server error
    */
   public async returnAllBanners(req: RequestWithToken, res: Response): Promise<void> {
@@ -222,7 +222,7 @@ export default class BannerController extends BaseController {
    * @route GET /banners/active
    * @group banners - Operations of banner controller
    * @security JWT
-   * @returns {Array<BannerResponse>} 200 - All active banners
+   * @returns {Array.<BannerResponse>} 200 - All active banners
    * @returns {string} 400 - Validation error
    */
   public async returnActiveBanners(req: RequestWithToken, res: Response): Promise<void> {

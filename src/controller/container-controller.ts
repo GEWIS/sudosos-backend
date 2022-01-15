@@ -88,7 +88,7 @@ export default class ContainerController extends BaseController {
       },
       '/:id(\\d+)/approve': {
         POST: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'create', 'all', 'Container', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'approve', 'all', 'Container', ['*']),
           handler: this.approveUpdate.bind(this),
         },
       },

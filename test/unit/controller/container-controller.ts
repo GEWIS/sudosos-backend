@@ -130,6 +130,7 @@ describe('ContainerController', async (): Promise<void> => {
           get: all,
           update: all,
           delete: all,
+          approve: all,
         },
       },
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
