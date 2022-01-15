@@ -205,45 +205,45 @@ describe('PointOfSaleService', async (): Promise<void> => {
         ...ctx.validPOSRequest,
         update: { ...ctx.validPOSRequest.update, name: '' },
       };
-      const invalid = await PointOfSaleService.verifyPointOfSale(invalidRequest);
-      expect(invalid).to.be.false;
+      const valid = await PointOfSaleService.verifyPointOfSale(invalidRequest);
+      expect(valid).to.be.false;
     });
     it('should return false for an invalid startDate', async () => {
       const invalidRequest = {
         ...ctx.validPOSRequest,
         update: { ...ctx.validPOSRequest.update, startDate: '' },
       };
-      const invalid = await PointOfSaleService.verifyPointOfSale(invalidRequest);
-      expect(invalid).to.be.false;
+      const valid = await PointOfSaleService.verifyPointOfSale(invalidRequest);
+      expect(valid).to.be.false;
     });
     it('should return false for an invalid endDate', async () => {
       const invalidRequest = {
         ...ctx.validPOSRequest,
         update: { ...ctx.validPOSRequest.update, endDate: '' },
       };
-      const invalid = await PointOfSaleService.verifyPointOfSale(invalidRequest);
-      expect(invalid).to.be.false;
+      const valid = await PointOfSaleService.verifyPointOfSale(invalidRequest);
+      expect(valid).to.be.false;
     });
     it('should return false for an invalid date', async () => {
       const invalidRequest = {
         ...ctx.validPOSRequest,
         update: { ...ctx.validPOSRequest.update, endDate: ctx.validPOSRequest.update.startDate },
       };
-      const invalid = await PointOfSaleService.verifyPointOfSale(invalidRequest);
-      expect(invalid).to.be.false;
+      const valid = await PointOfSaleService.verifyPointOfSale(invalidRequest);
+      expect(valid).to.be.false;
     });
     it('should return false for an invalid Owner', async () => {
       const invalidRequest = { ...ctx.validPOSRequest, ownerId: -1 };
-      const invalid = await PointOfSaleService.verifyPointOfSale(invalidRequest);
-      expect(invalid).to.be.false;
+      const valid = await PointOfSaleService.verifyPointOfSale(invalidRequest);
+      expect(valid).to.be.false;
     });
     it('should return false for invalid containers', async () => {
       const invalidRequest = {
         ...ctx.validPOSRequest,
         update: { ...ctx.validPOSRequest.update, containers: [-1, -69] },
       };
-      const invalid = await PointOfSaleService.verifyPointOfSale(invalidRequest);
-      expect(invalid).to.be.false;
+      const valid = await PointOfSaleService.verifyPointOfSale(invalidRequest);
+      expect(valid).to.be.false;
     });
   });
   describe('createPointOfSale function', () => {
