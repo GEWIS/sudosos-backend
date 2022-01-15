@@ -16,7 +16,6 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import exp from 'constants';
 import { InvoiceState } from '../entity/invoices/invoice-status';
 
 /**

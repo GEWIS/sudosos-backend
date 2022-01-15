@@ -48,7 +48,7 @@ import Balance from '../entity/transactions/balance';
 import InvoiceUser from '../entity/user/invoice-user';
 import InvoiceEntry from '../entity/invoices/invoice-entry';
 import Invoice from '../entity/invoices/invoice';
-import InvoiceStatus, { InvoiceState } from '../entity/invoices/invoice-status';
+import InvoiceStatus from '../entity/invoices/invoice-status';
 import BaseFile from '../entity/file/base-file';
 
 export default class Database {

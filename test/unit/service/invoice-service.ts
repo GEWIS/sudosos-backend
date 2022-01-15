@@ -21,7 +21,6 @@ import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
 import chai, { expect } from 'chai';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
-import exp from 'constants';
 import User from '../../../src/entity/user/user';
 import Invoice from '../../../src/entity/invoices/invoice';
 import Database from '../../../src/database/database';
@@ -41,7 +40,6 @@ import {
 } from '../../../src/controller/response/invoice-response';
 import InvoiceService from '../../../src/service/invoice-service';
 import InvoiceEntry from '../../../src/entity/invoices/invoice-entry';
-import { asInvoiceState } from '../../../src/helpers/validators';
 import CreateInvoiceRequest from '../../../src/controller/request/create-invoice-request';
 import Transaction from '../../../src/entity/transactions/transaction';
 
@@ -186,6 +184,24 @@ describe('InvoiceService', () => {
         description: 'description',
         toId,
         transactionIDs: [0],
+      };
+
+      const valid = await InvoiceService.verifyInvoiceRequest(createInvoiceRequest);
+      expect(valid).to.be.false;
+    });
+    it('should return false if the transactions are not owned by the user', async () => {
+      const toId = 5;
+      expect(await User.findOne({ id: toId })).to.be.not.undefined;
+
+      const transactions: Transaction[] = await Transaction.find({ where: { from: toId } });
+      let transactionIDs = transactions.map((t) => t.id);
+      transactionIDs = [Math.max(...transactionIDs) + 1];
+
+      const createInvoiceRequest: CreateInvoiceRequest = {
+        addressee: 'addressee',
+        description: 'description',
+        toId,
+        transactionIDs,
       };
 
       const valid = await InvoiceService.verifyInvoiceRequest(createInvoiceRequest);
