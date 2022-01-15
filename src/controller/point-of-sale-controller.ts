@@ -52,6 +52,7 @@ export default class PointOfSaleController extends BaseController {
           handler: this.returnAllPointsOfSale.bind(this),
         },
         POST: {
+          body: { modelName: 'PointOfSaleRequest' },
           policy: async (req) => this.roleManager.can(req.token.roles, 'create', 'all', 'PointOfSale', ['*']),
           handler: this.createPointOfSale.bind(this),
         },
