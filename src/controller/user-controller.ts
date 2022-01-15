@@ -159,13 +159,18 @@ export default class UserController extends BaseController {
   public async getAllUsers(req: RequestWithToken, res: Response): Promise<void> {
     this.logger.trace('Get all users by user', req.token.user);
 
-    const users = await User.find(
-      {
-        where: { deleted: false },
-        ...addPaginationForFindOptions(req),
-      },
-    );
-    res.status(200).json(users);
+    try {
+      const users = await User.find(
+        {
+          where: { deleted: false },
+          ...addPaginationForFindOptions(req),
+        },
+      );
+      res.status(200).json(users);
+    } catch (error) {
+      this.logger.error('Could not get users:', error);
+      res.status(500).json('Internal server error.');
+    }
   }
 
   /**
@@ -181,15 +186,20 @@ export default class UserController extends BaseController {
     const parameters = req.params;
     this.logger.trace('Get individual user', parameters, 'by user', req.token.user);
 
-    // Get the user object if it exists
-    const user = await User.findOne(parameters.id, { where: { deleted: false } });
-    // If it does not exist, return a 404 error
-    if (user === undefined) {
-      res.status(404).json('Unknown user ID.');
-      return;
-    }
+    try {
+      // Get the user object if it exists
+      const user = await User.findOne(parameters.id, { where: { deleted: false } });
+      // If it does not exist, return a 404 error
+      if (user === undefined) {
+        res.status(404).json('Unknown user ID.');
+        return;
+      }
 
-    res.status(200).json(user);
+      res.status(200).json(user);
+    } catch (error) {
+      this.logger.error('Could not get individual user:', error);
+      res.status(500).json('Internal server error.');
+    }
   }
 
   /**
@@ -226,7 +236,7 @@ export default class UserController extends BaseController {
       const user = await User.save(body as User);
       res.status(201).json(user);
     } catch (error) {
-      this.logger.error('Could not create product:', error);
+      this.logger.error('Could not create user:', error);
       res.status(500).json('Internal server error.');
     }
   }
@@ -251,15 +261,15 @@ export default class UserController extends BaseController {
       return;
     }
 
-    // Get the user object if it exists
-    let user = await User.findOne(parameters.id, { where: { deleted: false } });
-    // If it does not exist, return a 404 error
-    if (user === undefined) {
-      res.status(404).json('Unknown user ID.');
-      return;
-    }
-
     try {
+      // Get the user object if it exists
+      let user = await User.findOne(parameters.id, { where: { deleted: false } });
+      // If it does not exist, return a 404 error
+      if (user === undefined) {
+        res.status(404).json('Unknown user ID.');
+        return;
+      }
+
       user = {
         ...body,
       } as User;
@@ -291,15 +301,15 @@ export default class UserController extends BaseController {
       return;
     }
 
-    // Get the user object if it exists
-    const user = await User.findOne(parameters.id, { where: { deleted: false } });
-    // If it does not exist, return a 404 error
-    if (user === undefined) {
-      res.status(404).json('Unknown user ID.');
-      return;
-    }
-
     try {
+      // Get the user object if it exists
+      const user = await User.findOne(parameters.id, { where: { deleted: false } });
+      // If it does not exist, return a 404 error
+      if (user === undefined) {
+        res.status(404).json('Unknown user ID.');
+        return;
+      }
+
       user.deleted = true;
       await user.save();
       res.status(204).json('User deleted');
@@ -321,14 +331,14 @@ export default class UserController extends BaseController {
     const parameters = req.params;
     this.logger.trace("Get user's products", parameters, 'by user', req.token.user);
 
-    const owner = await User.findOne(parameters.id);
-    if (owner == null) {
-      res.status(404).json({});
-      return;
-    }
-
     // Handle request
     try {
+      const owner = await User.findOne(parameters.id);
+      if (owner == null) {
+        res.status(404).json({});
+        return;
+      }
+
       const products = await ProductService.getProducts({ ownerId: parseInt(parameters.id, 10) });
       res.json(products);
     } catch (error) {
@@ -349,14 +359,14 @@ export default class UserController extends BaseController {
     const parameters = req.params;
     this.logger.trace("Get user's updated products", parameters, 'by user', req.token.user);
 
-    const owner = await User.findOne(parameters.id);
-    if (owner == null) {
-      res.status(404).json({});
-      return;
-    }
-
     // Handle request
     try {
+      const owner = await User.findOne(parameters.id);
+      if (owner == null) {
+        res.status(404).json({});
+        return;
+      }
+
       const products = await ProductService.getProducts({ ownerId: parseInt(parameters.id, 10) });
       res.json(products);
     } catch (error) {
@@ -445,16 +455,16 @@ export default class UserController extends BaseController {
     const { id } = req.params;
     this.logger.trace("Get user's points of sale", id, 'by user', req.token.user);
 
-    // Get the user object if it exists
-    const user = await User.findOne(id, { where: { deleted: false } });
-    // If it does not exist, return a 404 error
-    if (user === undefined) {
-      res.status(404).json('Unknown user ID.');
-      return;
-    }
-
     // handle request
     try {
+      // Get the user object if it exists
+      const user = await User.findOne(id, { where: { deleted: false } });
+      // If it does not exist, return a 404 error
+      if (user === undefined) {
+        res.status(404).json('Unknown user ID.');
+        return;
+      }
+
       const pointsOfSale = (await PointOfSaleService
         .getPointsOfSale({ ownerId: user.id }));
       res.json(pointsOfSale);
@@ -478,16 +488,16 @@ export default class UserController extends BaseController {
     const { id } = req.params;
     this.logger.trace("Get user's updated points of sale", id, 'by user', req.token.user);
 
-    // Get the user object if it exists
-    const user = await User.findOne(id, { where: { deleted: false } });
-    // If it does not exist, return a 404 error
-    if (user === undefined) {
-      res.status(404).json('Unknown user ID.');
-      return;
-    }
-
     // handle request
     try {
+      // Get the user object if it exists
+      const user = await User.findOne(id, { where: { deleted: false } });
+      // If it does not exist, return a 404 error
+      if (user === undefined) {
+        res.status(404).json('Unknown user ID.');
+        return;
+      }
+
       const pointsOfSale = (await PointOfSaleService
         .getUpdatedPointsOfSale({ ownerId: user.id }));
       res.json(pointsOfSale);
