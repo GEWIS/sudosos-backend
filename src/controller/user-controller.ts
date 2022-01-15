@@ -29,6 +29,7 @@ import PointOfSaleService from '../service/point-of-sale-service';
 import TransactionService, {
   parseGetTransactionsFilters,
 } from '../service/transaction-service';
+import ContainerService from '../service/container-service';
 
 export default class UserController extends BaseController {
   private logger: Logger = log4js.getLogger('UserController');
@@ -99,12 +100,20 @@ export default class UserController extends BaseController {
           handler: this.getUsersUpdatedProducts.bind(this),
         },
       },
-      '/:id/transactions': {
+      '/:id/containers': {
         GET: {
           policy: async (req) => this.roleManager.can(
-            req.token.roles, 'get', UserController.getRelation(req), 'Transaction', ['*'],
+            req.token.roles, 'get', UserController.getRelation(req), 'Container', ['*'],
           ),
-          handler: this.getUsersTransactions.bind(this),
+          handler: this.getUsersContainers.bind(this),
+        },
+      },
+      '/:id/containers/updated': {
+        GET: {
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'get', UserController.getRelation(req), 'Container', ['*'],
+          ),
+          handler: this.getUsersUpdatedContainers.bind(this),
         },
       },
       '/:id/pointsofsale': {
@@ -121,6 +130,14 @@ export default class UserController extends BaseController {
             req.token.roles, 'get', UserController.getRelation(req), 'PointOfSale', ['*'],
           ),
           handler: this.getUsersUpdatedPointsOfSale.bind(this),
+        },
+      },
+      '/:id/transactions': {
+        GET: {
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'get', UserController.getRelation(req), 'Transaction', ['*'],
+          ),
+          handler: this.getUsersTransactions.bind(this),
         },
       },
     };
@@ -349,55 +366,67 @@ export default class UserController extends BaseController {
   }
 
   /**
-   * Get an user's transactions (from, to or created)
-   * @route GET /users/{id}/transactions
+   * Returns the user's containers
+   * @route GET /users/{id}/containers
    * @group users - Operations of user controller
-   * @param {integer} id.path.required - The id of the user that should be involved
-   * in all returned transactions
-   * @param {integer} fromId.query - From-user for selected transactions
-   * @param {integer} createdById.query - User that created selected transaction
-   * @param {integer} toId.query - To-user for selected transactions
-   * transactions. Requires ContainerId
-   * @param {integer} productId.query - Product ID for selected transactions
-   * @param {integer} productRevision.query - Product Revision for selected
-   * transactions. Requires ProductID
-   * @param {string} fromDate.query - Start date for selected transactions (inclusive)
-   * @param {string} tillDate.query - End date for selected transactions (exclusive)
-   * @param {integer} take.query - How many users the endpoint should return
-   * @param {integer} skip.query - How many users should be skipped (for pagination)
+   * @param {integer} id.path.required - The id of the user
    * @security JWT
-   * @returns {[Transaction.model]} 200 - List of transactions.
+   * @returns {Array<ContainerResponse>} 200 - All users updated containers
+   * @returns {string} 404 - Not found error
+   * @returns {string} 500 - Internal server error
    */
-  public async getUsersTransactions(req: RequestWithToken, res: Response): Promise<void> {
+  public async getUsersContainers(req: RequestWithToken, res: Response): Promise<void> {
     const { id } = req.params;
-    this.logger.trace("Get user's", id, 'transactions by user', req.token.user);
+    this.logger.trace("Get user's containers", id, 'by user', req.token.user);
 
-    // Parse the filters given in the query parameters. If there are any issues,
-    // the parse method will throw an exception. We will then return a 400 error.
-    let filters;
+    // handle request
     try {
-      filters = parseGetTransactionsFilters(req);
-    } catch (e) {
-      res.status(400).json(e.message);
-      return;
-    }
-
-    if (!validatePaginationQueryParams(req)) {
-      res.status(400).json('The pagination skip and/or take are invalid');
-      return;
-    }
-
-    try {
-      const user = await User.findOne(id);
-      if (user == null) {
-        res.status(404).json({});
+      // Get the user object if it exists
+      const user = await User.findOne(id, { where: { deleted: false } });
+      // If it does not exist, return a 404 error
+      if (user === undefined) {
+        res.status(404).json('Unknown user ID.');
         return;
       }
-      const transactions = await TransactionService.getTransactions(req, filters, user);
 
-      res.status(200).json(transactions);
+      const containers = (await ContainerService
+        .getContainers({ ownerId: user.id }));
+      res.json(containers);
     } catch (error) {
-      this.logger.error('Could not return all transactions:', error);
+      this.logger.error('Could not return containers:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Returns the user's updated containers
+   * @route GET /users/{id}/containers/updated
+   * @group users - Operations of user controller
+   * @param {integer} id.path.required - The id of the user
+   * @security JWT
+   * @returns {Array<UpdatedContainerResponse>} 200 - All users updated containers
+   * @returns {string} 404 - Not found error
+   * @returns {string} 500 - Internal server error
+   */
+  public async getUsersUpdatedContainers(req: RequestWithToken, res: Response): Promise<void> {
+    const { id } = req.params;
+    this.logger.trace("Get user's updated containers", id, 'by user', req.token.user);
+
+    // handle request
+    try {
+      // Get the user object if it exists
+      const user = await User.findOne(id, { where: { deleted: false } });
+      // If it does not exist, return a 404 error
+      if (user === undefined) {
+        res.status(404).json('Unknown user ID.');
+        return;
+      }
+
+      const containers = (await ContainerService
+        .getUpdatedContainers({ ownerId: user.id }));
+      res.json(containers);
+    } catch (error) {
+      this.logger.error('Could not return updated containers:', error);
       res.status(500).json('Internal server error.');
     }
   }
@@ -464,6 +493,60 @@ export default class UserController extends BaseController {
       res.json(pointsOfSale);
     } catch (error) {
       this.logger.error('Could not return updated points of sale:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Get an user's transactions (from, to or created)
+   * @route GET /users/{id}/transactions
+   * @group users - Operations of user controller
+   * @param {integer} id.path.required - The id of the user that should be involved
+   * in all returned transactions
+   * @param {integer} fromId.query - From-user for selected transactions
+   * @param {integer} createdById.query - User that created selected transaction
+   * @param {integer} toId.query - To-user for selected transactions
+   * transactions. Requires ContainerId
+   * @param {integer} productId.query - Product ID for selected transactions
+   * @param {integer} productRevision.query - Product Revision for selected
+   * transactions. Requires ProductID
+   * @param {string} fromDate.query - Start date for selected transactions (inclusive)
+   * @param {string} tillDate.query - End date for selected transactions (exclusive)
+   * @param {integer} take.query - How many users the endpoint should return
+   * @param {integer} skip.query - How many users should be skipped (for pagination)
+   * @security JWT
+   * @returns {[Transaction.model]} 200 - List of transactions.
+   */
+  public async getUsersTransactions(req: RequestWithToken, res: Response): Promise<void> {
+    const { id } = req.params;
+    this.logger.trace("Get user's", id, 'transactions by user', req.token.user);
+
+    // Parse the filters given in the query parameters. If there are any issues,
+    // the parse method will throw an exception. We will then return a 400 error.
+    let filters;
+    try {
+      filters = parseGetTransactionsFilters(req);
+    } catch (e) {
+      res.status(400).json(e.message);
+      return;
+    }
+
+    if (!validatePaginationQueryParams(req)) {
+      res.status(400).json('The pagination skip and/or take are invalid');
+      return;
+    }
+
+    try {
+      const user = await User.findOne(id);
+      if (user == null) {
+        res.status(404).json({});
+        return;
+      }
+      const transactions = await TransactionService.getTransactions(req, filters, user);
+
+      res.status(200).json(transactions);
+    } catch (error) {
+      this.logger.error('Could not return all transactions:', error);
       res.status(500).json('Internal server error.');
     }
   }
