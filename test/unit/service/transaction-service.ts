@@ -49,8 +49,9 @@ describe('TransactionService', (): void => {
   };
 
   // eslint-disable-next-line func-names
-  beforeEach(async function (): Promise<void> {
+  before(async function (): Promise<void> {
     this.timeout(5000);
+
     const logger: Logger = log4js.getLogger('TransactionServiceTest');
     logger.level = 'ALL';
     const connection = await Database.initialize();
@@ -167,7 +168,7 @@ describe('TransactionService', (): void => {
     };
   });
 
-  afterEach(async () => {
+  after(async () => {
     await ctx.connection.close();
   });
 
@@ -408,7 +409,11 @@ describe('TransactionService', (): void => {
         fromId,
       });
 
-      expect(transactions.length).to.equal(9);
+      const actualTransactions = ctx.transactions.filter(
+        (transaction) => transaction.from.id === fromId,
+      );
+
+      expect(transactions.length).to.equal(actualTransactions.length);
       transactions.map((t) => verifyBaseTransactionEntity(ctx.spec, t));
       transactions.map((t) => expect(t.from.id).to.be.equal(fromId));
     });
@@ -419,7 +424,11 @@ describe('TransactionService', (): void => {
         createdById,
       });
 
-      expect(transactions.length).to.equal(14);
+      const actualTransactions = ctx.transactions.filter(
+        (transaction) => transaction.createdBy.id === createdById,
+      );
+
+      expect(transactions.length).to.equal(actualTransactions.length);
       transactions.map((t) => verifyBaseTransactionEntity(ctx.spec, t));
       transactions.map((t) => expect(t.createdBy.id).to.be.equal(createdById));
     });
@@ -436,7 +445,11 @@ describe('TransactionService', (): void => {
         return undefined;
       }).filter((i) => i !== undefined);
 
-      expect(transactions.length).to.equal(17);
+      const actualTransactions = ctx.transactions
+        .filter((transaction) => transaction.subTransactions
+          .some((subTransaction) => subTransaction.to.id === toId));
+
+      expect(transactions.length).to.equal(actualTransactions.length);
       transactions.map((t) => verifyBaseTransactionEntity(ctx.spec, t));
       transactions.map((t) => expect(transactionIds).to.include(t.id));
     });
@@ -447,7 +460,10 @@ describe('TransactionService', (): void => {
         pointOfSaleId: pointOfSale.id,
       });
 
-      expect(transactions.length).to.equal(6);
+      const actualTransactions = ctx.transactions
+        .filter((transaction) => transaction.pointOfSale.pointOfSale.id === pointOfSale.id);
+
+      expect(transactions.length).to.equal(actualTransactions.length);
       transactions.map((t) => verifyBaseTransactionEntity(ctx.spec, t));
       transactions.map((t) => expect(t.pointOfSale.id).to.be.equal(pointOfSale.id));
     });
@@ -459,7 +475,11 @@ describe('TransactionService', (): void => {
         pointOfSaleRevision: pointOfSale.revision,
       });
 
-      expect(transactions.length).to.equal(2);
+      const actualTransactions = ctx.transactions
+        .filter((transaction) => transaction.pointOfSale.pointOfSale.id === pointOfSale.id
+          && transaction.pointOfSale.revision === pointOfSale.revision);
+
+      expect(transactions.length).to.equal(actualTransactions.length);
       transactions.map((t) => verifyBaseTransactionEntity(ctx.spec, t));
       transactions.map((t) => expect(t.pointOfSale.id).to.be.equal(pointOfSale.id));
     });
@@ -469,16 +489,14 @@ describe('TransactionService', (): void => {
       const transactions = await TransactionService.getTransactions(ctx.req, {
         containerId: container.id,
       });
-      const transactionIds = ctx.transactions.map((t) => {
-        if (t.subTransactions.some((s) => s.container.container.id === container.id)) {
-          return t.id;
-        }
-        return undefined;
-      }).filter((i) => i !== undefined);
 
-      expect(transactions.length).to.equal(7);
+      const actualTransactions = ctx.transactions
+        .filter((transaction) => transaction.subTransactions
+          .some((subTransaction) => subTransaction.container.container.id === container.id));
+
+      expect(transactions.length).to.equal(actualTransactions.length);
       transactions.map((t) => verifyBaseTransactionEntity(ctx.spec, t));
-      transactions.map((t) => expect(transactionIds).to.include(t.id));
+      transactions.map((t) => expect(actualTransactions.map((at) => at.id)).to.include(t.id));
     });
 
     it('should filter on container with revision', async () => {
@@ -487,17 +505,15 @@ describe('TransactionService', (): void => {
         containerId: container.id,
         containerRevision: container.revision,
       });
-      const transactionIds = ctx.transactions.map((t) => {
-        if (t.subTransactions.some((s) => s.container.container.id === container.id
-          && s.container.revision === container.revision)) {
-          return t.id;
-        }
-        return undefined;
-      }).filter((i) => i !== undefined);
 
-      expect(transactions.length).to.equal(3);
+      const actualTransactions = ctx.transactions
+        .filter((transaction) => transaction.subTransactions
+          .some((subTransaction) => subTransaction.container.container.id === container.id
+            && subTransaction.container.revision === container.revision));
+
+      expect(transactions.length).to.equal(actualTransactions.length);
       transactions.map((t) => verifyBaseTransactionEntity(ctx.spec, t));
-      transactions.map((t) => expect(transactionIds).to.include(t.id));
+      transactions.map((t) => expect(actualTransactions.map((at) => at.id)).to.include(t.id));
     });
 
     it('should filter on product', async () => {
@@ -505,18 +521,15 @@ describe('TransactionService', (): void => {
       const transactions = await TransactionService.getTransactions(ctx.req, {
         productId: product.id,
       });
-      const transactionIds = ctx.transactions.map((t) => {
-        if (t.subTransactions.some((s) => s.subTransactionRows
-          .some((r) => r.product.product.id === product.id))
-        ) {
-          return t.id;
-        }
-        return undefined;
-      }).filter((i) => i !== undefined);
 
-      expect(transactions.length).to.equal(5);
+      const actualTransactions = ctx.transactions
+        .filter((transaction) => transaction.subTransactions
+          .some((subTransaction) => subTransaction.subTransactionRows
+            .some((subTransactionRow) => subTransactionRow.product.product.id === product.id)));
+
+      expect(transactions.length).to.equal(actualTransactions.length);
       transactions.map((t) => verifyBaseTransactionEntity(ctx.spec, t));
-      transactions.map((t) => expect(transactionIds).to.include(t.id));
+      transactions.map((t) => expect(actualTransactions.map((at) => at.id)).to.include(t.id));
     });
 
     it('should filter on product with revision', async () => {
@@ -525,19 +538,16 @@ describe('TransactionService', (): void => {
         productId: product.id,
         productRevision: product.revision,
       });
-      const transactionIds = ctx.transactions.map((t) => {
-        if (t.subTransactions.some((s) => s.subTransactionRows
-          .some((r) => r.product.product.id === product.id
-            && r.product.revision === product.revision))
-        ) {
-          return t.id;
-        }
-        return undefined;
-      }).filter((i) => i !== undefined);
 
-      expect(transactions.length).to.equal(2);
+      const actualTransactions = ctx.transactions
+        .filter((transaction) => transaction.subTransactions
+          .some((subTransaction) => subTransaction.subTransactionRows
+            .some((subTransactionRow) => subTransactionRow.product.product.id === product.id
+              && subTransactionRow.product.revision === product.revision)));
+
+      expect(transactions.length).to.equal(actualTransactions.length);
       transactions.map((t) => verifyBaseTransactionEntity(ctx.spec, t));
-      transactions.map((t) => expect(transactionIds).to.include(t.id));
+      transactions.map((t) => expect(actualTransactions.map((at) => at.id)).to.include(t.id));
     });
 
     it('should return transactions newer than date', async () => {
@@ -546,7 +556,12 @@ describe('TransactionService', (): void => {
         fromDate,
       });
 
-      expect(transactions.length).to.equal(23);
+      const actualTransactions = ctx.transactions
+        .filter((transaction) => transaction.createdAt.getTime() >= fromDate.getTime());
+
+      const nrOfTransactions = Math.min(actualTransactions.length, 23);
+
+      expect(transactions.length).to.equal(nrOfTransactions);
       transactions.map((t) => {
         verifyBaseTransactionEntity(ctx.spec, t);
         expect(new Date(t.createdAt)).to.be.greaterThan(fromDate);
@@ -568,7 +583,12 @@ describe('TransactionService', (): void => {
         tillDate,
       });
 
-      expect(transactions.length).to.equal(23);
+      const actualTransactions = ctx.transactions
+        .filter((transaction) => transaction.createdAt.getTime() <= tillDate.getTime());
+
+      const nrOfTransactions = Math.min(actualTransactions.length, 23);
+
+      expect(transactions.length).to.equal(nrOfTransactions);
       transactions.map((t) => {
         verifyBaseTransactionEntity(ctx.spec, t);
         expect(new Date(t.createdAt)).to.be.lessThan(tillDate);
