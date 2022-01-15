@@ -139,7 +139,8 @@ describe('PointOfSaleService', async (): Promise<void> => {
 
   describe('getPointsOfSale function', () => {
     it('should return all point of sales with no input specification', async () => {
-      const res: PointOfSaleResponse[] = await PointOfSaleService.getPointsOfSale();
+      const res: PointOfSaleResponse[] = (
+        (await PointOfSaleService.getPointsOfSale()) as PointOfSaleResponse[]);
 
       const withRevisions = ctx.pointsOfSale.filter((c) => c.currentRevision > 0);
       expect(res).to.be.length(withRevisions.length);
@@ -149,9 +150,9 @@ describe('PointOfSaleService', async (): Promise<void> => {
       )).to.be.true;
     });
     it('should return points of sale with ownerId specified', async () => {
-      const res: PointOfSaleResponse[] = await PointOfSaleService.getPointsOfSale({
+      const res: PointOfSaleResponse[] = (await PointOfSaleService.getPointsOfSale({
         ownerId: ctx.pointsOfSale[0].owner.id,
-      });
+      })) as PointOfSaleResponse[];
 
       const withRevisions = ctx.pointsOfSale.filter((c) => c.currentRevision > 0);
       expect(pointOfSaleSuperset(res, ctx.pointsOfSale)).to.be.true;
@@ -164,9 +165,9 @@ describe('PointOfSaleService', async (): Promise<void> => {
       expect(res).to.be.length(length);
     });
     it('should return points of sale with useAuthentication specified', async () => {
-      const res: PointOfSaleResponse[] = await PointOfSaleService.getPointsOfSale({
+      const res: PointOfSaleResponse[] = (await PointOfSaleService.getPointsOfSale({
         useAuthentication: false,
-      });
+      })) as PointOfSaleResponse[];
 
       expect(pointOfSaleSuperset(res, ctx.pointsOfSale)).to.be.true;
       const doNotUseAuthentication = res.every((pointOfSale) => (
@@ -174,23 +175,24 @@ describe('PointOfSaleService', async (): Promise<void> => {
       expect(doNotUseAuthentication).to.be.true;
     });
     it('should return single point of sale if pointOfSaleId is specified', async () => {
-      const res: PointOfSaleResponse[] = await PointOfSaleService.getPointsOfSale({
+      const res: PointOfSaleResponse[] = (await PointOfSaleService.getPointsOfSale({
         pointOfSaleId: ctx.pointsOfSale[0].id,
-      });
+      })) as PointOfSaleResponse[];
 
       expect(res).to.be.length(1);
       expect(res[0].id).to.be.equal(ctx.pointsOfSale[0].id);
     });
     it('should return no points of sale if userId and containerId do not match', async () => {
-      const res: PointOfSaleResponse[] = await PointOfSaleService.getPointsOfSale({
+      const res: PointOfSaleResponse[] = (await PointOfSaleService.getPointsOfSale({
         ownerId: ctx.pointsOfSale[10].owner.id,
         pointOfSaleId: ctx.pointsOfSale[0].id,
-      });
+      })) as PointOfSaleResponse[];
 
       expect(res).to.be.length(0);
     });
     it('should return all updated point of sales with no input specification', async () => {
-      const res: UpdatedPointOfSaleResponse[] = await PointOfSaleService.getUpdatedPointsOfSale();
+      const res: UpdatedPointOfSaleResponse[] = (
+        (await PointOfSaleService.getUpdatedPointsOfSale()) as UpdatedPointOfSaleResponse[]);
       expect(res.map((p) => p.id))
         .to.deep.equalInAnyOrder(ctx.updatedPointsOfSale.map((p) => p.pointOfSale.id));
     });
@@ -321,9 +323,11 @@ describe('PointOfSaleService', async (): Promise<void> => {
       const newPOS: UpdatedPointOfSaleResponse = (
         await PointOfSaleService.createPointOfSale(ctx.validPOSRequest));
 
-      const res = await PointOfSaleService.approvePointOfSaleUpdate(newPOS.id);
+      const res = ((
+        (await PointOfSaleService
+          .approvePointOfSaleUpdate(newPOS.id)) as any) as PointOfSaleResponse);
 
-      const pointOfSaleRevision = await PointOfSaleRevision.findOne({ revision: res.revision, pointOfSale: { id: res.id } }, { relations: ['containers'] });
+      const pointOfSaleRevision = await PointOfSaleRevision.findOne({ revision: res.revision, pointOfSale: { id: newPOS.id } }, { relations: ['containers'] });
       const containers = pointOfSaleRevision.containers.map((container) => container.container.id);
       expect(ctx.validPOSRequest.update.containers).to.deep.equalInAnyOrder(containers);
 

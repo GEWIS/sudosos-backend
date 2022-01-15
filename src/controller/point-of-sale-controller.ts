@@ -174,7 +174,7 @@ export default class PointOfSaleController extends BaseController {
     try {
       // check if product in database
       const pointOfSale = (await PointOfSaleService
-        .getPointsOfSale({ pointOfSaleId: parseInt(id, 10) }))[0];
+        .getPointsOfSale({ pointOfSaleId: parseInt(id, 10), returnContainers: true }))[0];
       if (pointOfSale) {
         res.json(pointOfSale);
       } else {
@@ -304,9 +304,11 @@ export default class PointOfSaleController extends BaseController {
         return;
       }
 
-      res.json((await PointOfSaleService.getUpdatedPointsOfSale({ pointOfSaleId })));
+      res.json((await PointOfSaleService.getUpdatedPointsOfSale(
+        { pointOfSaleId, returnContainers: true },
+      )));
     } catch (error) {
-      this.logger.error('Could not return container:', error);
+      this.logger.error('Could not return point of sale:', error);
       res.status(500).json('Internal server error.');
     }
   }
@@ -327,7 +329,8 @@ export default class PointOfSaleController extends BaseController {
     try {
       let pointsOfSale: UpdatedPointOfSaleResponse[];
       if (this.canGetAll(req)) {
-        pointsOfSale = await PointOfSaleService.getUpdatedPointsOfSale();
+        pointsOfSale = (
+          (await PointOfSaleService.getUpdatedPointsOfSale()) as UpdatedPointOfSaleResponse[]);
       } else {
         pointsOfSale = await PointOfSaleService
           .getPointsOfSaleInUserContext({ ownerId: req.token.user.id } as PointOfSaleParameters,
@@ -358,13 +361,13 @@ export default class PointOfSaleController extends BaseController {
     const pointOfSaleId = Number.parseInt(id, 10);
     // Handle
     try {
-      const container = await PointOfSaleService.approvePointOfSaleUpdate(pointOfSaleId);
-      if (!container) {
+      const pointOfSale = await PointOfSaleService.approvePointOfSaleUpdate(pointOfSaleId);
+      if (!pointOfSale) {
         res.status(404).json('Point of Sale update not found.');
         return;
       }
 
-      res.json(container);
+      res.json(pointOfSale);
     } catch (error) {
       if (error instanceof UnapprovedContainerError) {
         res.status(400).json(error.message);
