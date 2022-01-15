@@ -44,7 +44,7 @@ export default class ProductController extends BaseController {
       '/': {
         GET: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Product', ['*']),
-          handler: this.returnAllProducts.bind(this),
+          handler: this.getAllProducts.bind(this),
         },
         POST: {
           body: { modelName: 'ProductRequest' },
@@ -55,7 +55,7 @@ export default class ProductController extends BaseController {
       '/:id(\\d+)': {
         GET: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Product', ['*']),
-          handler: this.returnSingleProduct.bind(this),
+          handler: this.getSingleProduct.bind(this),
         },
         PATCH: {
           body: { modelName: 'ProductRequest' },
@@ -66,13 +66,13 @@ export default class ProductController extends BaseController {
       '/updated': {
         GET: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Product', ['*']),
-          handler: this.returnAllUpdatedProducts.bind(this),
+          handler: this.getAllUpdatedProducts.bind(this),
         },
       },
       '/:id(\\d+)/update': {
         GET: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Product', ['*']),
-          handler: this.returnSingleUpdatedProduct.bind(this),
+          handler: this.getSingleUpdatedProduct.bind(this),
         },
       },
       '/:id(\\d+)/approve': {
@@ -89,10 +89,10 @@ export default class ProductController extends BaseController {
    * @route GET /products
    * @group products - Operations of product controller
    * @security JWT
-   * @returns {Array<ProductResponse>} 200 - All existing products
+   * @returns {Array.<ProductResponse>} 200 - All existing products
    * @returns {string} 500 - Internal server error
    */
-  public async returnAllProducts(req: RequestWithToken, res: Response): Promise<void> {
+  public async getAllProducts(req: RequestWithToken, res: Response): Promise<void> {
     const { body } = req;
     this.logger.trace('Get all products', body, 'by user', req.token.user);
 
@@ -137,8 +137,8 @@ export default class ProductController extends BaseController {
    * Update an existing product.
    * @route PATCH /products/{id}
    * @group products - Operations of product controller
-   * @param {integer} id.path.required - The id of the product which should be returned
-   * @param {ProductRequest.model} product.body.required - The product which should be created
+   * @param {integer} id.path.required - The id of the product which should be updated
+   * @param {ProductRequest.model} product.body.required - The product which should be updated
    * @security JWT
    * @returns {ProductResponse.model} 200 - The created product entity
    * @returns {string} 400 - Validation error
@@ -207,7 +207,7 @@ export default class ProductController extends BaseController {
    * @returns {string} 404 - Not found error
    * @returns {string} 500 - Internal server error
    */
-  public async returnSingleProduct(req: RequestWithToken, res: Response): Promise<void> {
+  public async getSingleProduct(req: RequestWithToken, res: Response): Promise<void> {
     const { id } = req.params;
     this.logger.trace('Get single product', id, 'by user', req.token.user);
 
@@ -231,10 +231,10 @@ export default class ProductController extends BaseController {
    * @route GET /products/updated
    * @group products - Operations of product controller
    * @security JWT
-   * @returns {Array<ProductResponse>} 200 - All existing updated products
+   * @returns {Array.<ProductResponse>} 200 - All existing updated products
    * @returns {string} 500 - Internal server error
    */
-  public async returnAllUpdatedProducts(req: RequestWithToken, res: Response): Promise<void> {
+  public async getAllUpdatedProducts(req: RequestWithToken, res: Response): Promise<void> {
     const { body } = req;
     this.logger.trace('Get all updated products', body, 'by user', req.token.user);
 
@@ -258,7 +258,7 @@ export default class ProductController extends BaseController {
    * @returns {string} 404 - Not found error
    * @returns {string} 500 - Internal server error
    */
-  public async returnSingleUpdatedProduct(req: RequestWithToken, res: Response): Promise<void> {
+  public async getSingleUpdatedProduct(req: RequestWithToken, res: Response): Promise<void> {
     const { id } = req.params;
     this.logger.trace('Get single product', id, 'by user', req.token.user);
 

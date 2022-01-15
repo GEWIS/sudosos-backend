@@ -16,16 +16,14 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import RelationResponse from './relation-response';
-
 /**
- * @typedef ActionResponse -
- * The action contains the name of the action and a list of permissions per action.
- * Typically the action name is one of the CRUD values 'create', 'read', 'update', and 'delete'.
- * @property {string} action - The name of the action performed on the entity.
- * @property {Array.<RelationResponse>} relations - The ownership relations with permissions.
+ * @typedef ContainerRequest
+ * @property {string} name - Name of the container
+ * @property {Array.<integer>} products - IDs of the products to add to the container
+ * @property {boolean} public - Whether the container is public or not
  */
-export default interface ActionResponse {
-  action: string;
-  relations: RelationResponse[];
+export default interface ContainerRequest {
+  name: string,
+  products?: number[],
+  public: boolean,
 }

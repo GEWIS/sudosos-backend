@@ -403,11 +403,12 @@ describe('ProductController', async (): Promise<void> => {
       expect(res.status).to.equal(404);
     });
     it('should return an HTTP 403 if not admin', async () => {
+      const id = 5;
       // sanity check / precondition
-      expect(await UpdatedProduct.findOne(5)).to.exist;
+      expect(await UpdatedProduct.findOne(id)).to.exist;
 
       const res = await request(ctx.app)
-        .post('/products/4/approve')
+        .post(`/products/${id}/approve`)
         .set('Authorization', `Bearer ${ctx.token}`);
 
       expect(res.body).to.be.empty;

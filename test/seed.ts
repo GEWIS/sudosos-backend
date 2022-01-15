@@ -390,6 +390,7 @@ function defineContainers(
     const container = Object.assign(new Container(), {
       id: start + nr,
       owner: user,
+      public: nr % 2 > 0,
     }) as Container;
     containers.push(container);
   }

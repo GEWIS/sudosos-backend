@@ -71,7 +71,7 @@ export default class ProductCategoryController extends BaseController {
    * @route GET /productcategories
    * @group productCategories - Operations of productcategory controller
    * @security JWT
-   * @returns {Array<ProductCategoryResponse>} 200 - All existing productcategories
+   * @returns {Array.<ProductCategoryResponse>} 200 - All existing productcategories
    * @returns {string} 500 - Internal server error
    */
   public async returnAllProductCategories(req: RequestWithToken, res: Response): Promise<void> {

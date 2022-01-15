@@ -15,17 +15,24 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-
-import RelationResponse from './relation-response';
+import { Column, Entity, ManyToOne } from 'typeorm';
+import BaseEntity from '../base-entity';
+import User from '../user/user';
 
 /**
- * @typedef ActionResponse -
- * The action contains the name of the action and a list of permissions per action.
- * Typically the action name is one of the CRUD values 'create', 'read', 'update', and 'delete'.
- * @property {string} action - The name of the action performed on the entity.
- * @property {Array.<RelationResponse>} relations - The ownership relations with permissions.
+ * @typedef {BaseEntity} BaseFile
+ * @property {string} downloadName.required - The filename when the file is downloaded
+ * @property {string} location.required - The location of the file, including filename in storage
+ * @property {User.model} createdBy.required - The user that created this file
  */
-export default interface ActionResponse {
-  action: string;
-  relations: RelationResponse[];
+@Entity()
+export default class BaseFile extends BaseEntity {
+  @Column()
+  public downloadName: string;
+
+  @Column()
+  public location: string;
+
+  @ManyToOne(() => User, { nullable: false })
+  public createdBy: User;
 }

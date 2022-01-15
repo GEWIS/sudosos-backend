@@ -34,15 +34,15 @@ import ContainerRevision from '../../../src/entity/container/container-revision'
 import UpdatedContainer from '../../../src/entity/container/updated-container';
 
 /**
-  * Test if all the container responses are part of the container set array.
-  * @param response
-  * @param superset
-  */
+ * Test if all the container responses are part of the container set array.
+ * @param response
+ * @param superset
+ */
 function containerSuperset(response: ContainerResponse[], superset: Container[]): Boolean {
   return response.every((searchContainer: ContainerResponse) => (
     superset.find((supersetContainer: Container) => (
       supersetContainer.id === searchContainer.id
-       && supersetContainer.owner.id === searchContainer.owner.id
+          && supersetContainer.owner.id === searchContainer.owner.id
     )) !== undefined
   ));
 }
@@ -196,6 +196,28 @@ describe('ContainerService', async (): Promise<void> => {
       });
 
       expect(res).to.be.length(0);
+    });
+  });
+
+  describe('canViewContainer function', () => {
+    it('should return true if the container is public', async () => {
+      // Sanity check
+      expect(ctx.containers[0].public).to.be.true;
+      const user = ctx.containers[0].owner.id + 1;
+
+      expect(await ContainerService.canViewContainer(user, ctx.containers[0].id)).to.be.true;
+    });
+    it('should return true if the user is the owner of private container', async () => {
+      expect(ctx.containers[1].public).to.be.false;
+      expect(await ContainerService.canViewContainer(
+        ctx.containers[1].owner.id, ctx.containers[1].id,
+      )).to.be.true;
+    });
+    it('should return false if the user is not the owner and container is private', async () => {
+      expect(ctx.containers[1].public).to.be.false;
+      expect(await ContainerService.canViewContainer(
+        ctx.containers[1].owner.id + 1, ctx.containers[1].id,
+      )).to.be.false;
     });
   });
 });

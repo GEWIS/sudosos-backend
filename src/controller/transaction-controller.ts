@@ -24,6 +24,9 @@ import TransactionService, { TransactionFilterParameters } from '../service/tran
 import { TransactionResponse } from './response/transaction-response';
 import { asDate, asNumber } from '../helpers/validators';
 import { validatePaginationQueryParams } from '../helpers/pagination';
+import { TransactionRequest } from './request/transaction-request';
+import Transaction from '../entity/transactions/transaction';
+import User from '../entity/user/user';
 
 function parseGetTransactionsFilters(req: RequestWithToken): TransactionFilterParameters {
   if ((req.query.pointOfSaleRevision && !req.query.pointOfSaleId)
@@ -61,6 +64,7 @@ export default class TransactionController extends BaseController {
     this.logger.level = process.env.LOG_LEVEL;
   }
 
+  // TODO: implement user policy
   /**
    * @inheritDoc
    */
@@ -71,11 +75,25 @@ export default class TransactionController extends BaseController {
           policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Transaction', ['*']),
           handler: this.getAllTransactions.bind(this),
         },
+        POST: {
+          body: { modelName: 'TransactionRequest' },
+          policy: async (req) => this.roleManager.can(req.token.roles, 'create', 'all', 'Transaction', ['*']),
+          handler: this.createTransaction.bind(this),
+        },
       },
-      '/:id': {
+      '/:id(\\d+)': {
         GET: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Transaction', ['*']),
           handler: this.getTransaction.bind(this),
+        },
+        PATCH: {
+          body: { modelName: 'TransactionRequest' },
+          policy: async (req) => this.roleManager.can(req.token.roles, 'update', 'all', 'Transaction', ['*']),
+          handler: this.updateTransaction.bind(this),
+        },
+        DELETE: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'delete', 'all', 'Transaction', ['*']),
+          handler: this.deleteTransaction.bind(this),
         },
       },
     };
@@ -128,9 +146,47 @@ export default class TransactionController extends BaseController {
   }
 
   /**
-   * Get a single transaction
-   * @route GET /transactions/:id
+   * Creates a new transaction
+   * @route POST /transactions
    * @group transactions - Operations of the transaction controller
+   * @param {TransactionRequest.model} transaction.body.required -
+   * The transaction which should be created
+   * @security JWT
+   * @returns {TransactionResponse.model} 200 - The created transaction entity
+   * @returns {string} 400 - Validation error
+   * @returns {string} 403 - Insufficient balance error
+   * @returns {string} 500 - Internal server error
+   */
+  // eslint-disable-next-line class-methods-use-this
+  public async createTransaction(req: RequestWithToken, res: Response): Promise<void> {
+    const body = req.body as TransactionRequest;
+    this.logger.trace('Create transaction', body, 'by user', req.token.user);
+
+    // handle request
+    try {
+      if (await TransactionService.verifyTransaction(body)) {
+        // verify balance if from user is borrelkaart
+        const user = await User.findOne(body.from);
+        if (user.type === 3 && !await TransactionService.verifyBalance(body)) {
+          res.status(403).json('Insufficient balance.');
+        } else {
+          // create the transaction
+          res.json(await TransactionService.createTransaction(body));
+        }
+      } else {
+        res.status(400).json('Invalid transaction.');
+      }
+    } catch (error) {
+      this.logger.error('Could not create transaction:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Get a single transaction
+   * @route GET /transactions/{id}
+   * @group transactions - Operations of the transaction controller
+   * @param {integer} id.path.required - The id of the transaction which should be returned
    * @security JWT
    * @returns {TransactionResponse.model} 200 - Single transaction with given id
    * @returns {string 404} - Nonexistent transaction id
@@ -145,6 +201,7 @@ export default class TransactionController extends BaseController {
     } catch (e) {
       res.status(500).send();
       this.logger.error(e);
+      return;
     }
 
     // If the transaction is undefined, there does not exist a transaction with the given ID
@@ -154,5 +211,69 @@ export default class TransactionController extends BaseController {
     }
 
     res.status(200).json(transaction);
+  }
+
+  /**
+   * Updates the requested transaction
+   * @route PATCH /transactions/{id}
+   * @group transactions - Operations of transaction controller
+   * @param {integer} id.path.required - The id of the transaction which should be updated
+   * @param {BorrelkaartGroupRequest.model} transaction.body.required -
+   * The updated transaction
+   * @security JWT
+   * @returns {TransactionResponse.model} 200 - The requested transaction entity
+   * @returns {string} 400 - Validation error
+   * @returns {string} 404 - Not found error
+   * @returns {string} 500 - Internal server error
+   */
+  public async updateTransaction(req: RequestWithToken, res: Response): Promise<void> {
+    const body = req.body as TransactionRequest;
+    const { id } = req.params;
+    this.logger.trace('Update Transaction', id, 'by user', req.token.user);
+
+    // handle request
+    try {
+      if (await Transaction.findOne(id)) {
+        if (await TransactionService.verifyTransaction(body, true)) {
+          res.status(200).json(await TransactionService.updateTransaction(
+            parseInt(id, 10), body,
+          ));
+        } else {
+          res.status(400).json('Invalid transaction.');
+        }
+      } else {
+        res.status(404).json('Transaction not found.');
+      }
+    } catch (error) {
+      this.logger.error('Could not update transaction:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Deletes a transaction
+   * @route DELETE /transactions/{id}
+   * @group transactions - Operations of the transaction controller
+   * @param {integer} id.path.required - The id of the transaction which should be deleted
+   * @security JWT
+   * @returns {TransactionResponse.model} 200 - The deleted transaction
+   * @returns {string} 404 - Nonexistent transaction id
+   */
+  // eslint-disable-next-line class-methods-use-this
+  public async deleteTransaction(req: RequestWithToken, res: Response): Promise<void> {
+    const { id } = req.params;
+    this.logger.trace('Delete transaction', id, 'by user', req.token.user);
+
+    // handle request
+    try {
+      if (await Transaction.findOne(id)) {
+        res.status(200).json(await TransactionService.deleteTransaction(parseInt(id, 10)));
+      } else {
+        res.status(404).json('Transaction not found.');
+      }
+    } catch (error) {
+      this.logger.error('Could not delete transaction:', error);
+      res.status(500).json('Internal server error.');
+    }
   }
 }
