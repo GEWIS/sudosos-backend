@@ -17,15 +17,17 @@
  */
 
 /**
- * @typedef ProductRequest
- * @property {string} name - Name of the product
- * @property {number} price - Price of the product
- * @property {number} category - Category of the product
- * @property {number} alcoholPercentage - Alcohol percentage of the product in 2 decimals
+ * @typedef UpdatePointOfSaleRequest
+ * @property {string} name.required - Name of the POS
+ * @property {string} startDate.required - Date from which the POS is active
+ * @property {string} endDate - Date from which the POS is no longer active
+ * @property {Array.<number>} containers - IDs of the containers to add to the POS
+ * @property {boolean} useAuthentication - Whether the POS requires authentication or not.
  */
-export default interface ProductRequest {
-  name: string;
-  price: number;
-  category: number;
-  alcoholPercentage: number;
+export default interface UpdatePointOfSaleRequest {
+  name: string,
+  startDate: string,
+  endDate: string,
+  containers?: number[],
+  useAuthentication?: boolean,
 }

@@ -89,7 +89,7 @@ export default class TransactionService {
    */
   public static async verifyBalance(req: TransactionRequest): Promise<boolean> {
     const rows: SubTransactionRowRequest[] = [];
-    req.subtransactions.forEach((sub) => sub.subTransactionRows.forEach((row) => rows.push(row)));
+    req.subTransactions.forEach((sub) => sub.subTransactionRows.forEach((row) => rows.push(row)));
 
     // check whether from user has sufficient balance
     const totalCost = await this.getTotalCost(rows);
@@ -210,9 +210,9 @@ export default class TransactionService {
    */
   public static async verifyTransaction(req: TransactionRequest, isUpdate?: boolean):
   Promise<boolean> {
-    // check if fields provided in the transaction
+    // check fields provided in the transaction
     if (!req.from || !req.createdBy
-        || !req.subtransactions || req.subtransactions.length === 0
+        || !req.subTransactions || req.subTransactions.length === 0
         || !req.pointOfSale || !req.price) {
       return false;
     }
@@ -232,7 +232,7 @@ export default class TransactionService {
 
     // check whether the request price corresponds to the database price
     const rows: SubTransactionRowRequest[] = [];
-    req.subtransactions.forEach((sub) => sub.subTransactionRows.forEach((row) => rows.push(row)));
+    req.subTransactions.forEach((sub) => sub.subTransactionRows.forEach((row) => rows.push(row)));
     const cost = await this.getTotalCost(rows);
     if (!this.dineroEq(req.price, cost)) {
       return false;
@@ -249,7 +249,7 @@ export default class TransactionService {
     }
 
     // verify subtransactions
-    const verification = await Promise.all(req.subtransactions.map(
+    const verification = await Promise.all(req.subTransactions.map(
       async (sub) => this.verifySubTransaction(sub, pointOfSale, isUpdate),
     ));
 
@@ -261,20 +261,25 @@ export default class TransactionService {
    * @param {TransactionRequest.model} req - the transaction request to cast
    * @returns {Transaction.model} - the transaction
    */
-  public static async asTransaction(req: TransactionRequest): Promise<Transaction | undefined> {
+  public static async asTransaction(req: TransactionRequest, update?: Transaction):
+  Promise<Transaction | undefined> {
     if (!req) {
       return undefined;
     }
 
     // init transaction
-    const transaction = {} as Transaction;
+    const transaction = ((update) ? {
+      ...update,
+      version: update.version + 1,
+      updatedAt: new Date(),
+    } : {}) as Transaction;
 
     // get users
     transaction.from = await User.findOne(req.from);
     transaction.createdBy = await User.findOne(req.createdBy);
 
     // set subtransactions
-    transaction.subTransactions = await Promise.all(req.subtransactions.map(
+    transaction.subTransactions = await Promise.all(req.subTransactions.map(
       async (subTransaction) => this.asSubTransaction(subTransaction),
     ));
 
@@ -422,6 +427,20 @@ export default class TransactionService {
   }
 
   /**
+   * Invalidates user balance cache
+   * @param {TransactionResponse.model} transaction - transaction holding users to invalidate
+   */
+  public static async invalidateBalanceCache(transaction: TransactionResponse):
+  Promise<void> {
+    // get user ids to invalidate
+    const userIds = [...new Set(transaction.subTransactions.map((sub) => sub.to.id))];
+    if (!userIds.includes(transaction.from.id)) {
+      userIds.push(transaction.from.id);
+    }
+    await BalanceService.clearBalanceCache(userIds);
+  }
+
+  /**
    * Returns all transactions requested with the filter
    * @param {RequestWithToken.model} req - the request with token
    * @param {TransactionFilterParameters.model} params - the filter parameters
@@ -525,8 +544,12 @@ export default class TransactionService {
   Promise<TransactionResponse | undefined> {
     const transaction = await this.asTransaction(req);
 
+    // save the transaction and invalidate user balance cache
+    const savedTransaction = await this.asTransactionResponse(await Transaction.save(transaction));
+    await this.invalidateBalanceCache(savedTransaction);
+
     // save transaction and return response
-    return this.asTransactionResponse(await Transaction.save(transaction));
+    return savedTransaction;
   }
 
   /**
@@ -557,11 +580,20 @@ export default class TransactionService {
    */
   public static async updateTransaction(id: number, req: TransactionRequest):
   Promise<TransactionResponse | undefined> {
-    const transaction = await this.asTransaction(req);
+    const transaction = await this.asTransaction(req, await Transaction.findOne(id));
 
-    // update transaction and return response
-    await Transaction.update(id, transaction);
-    return this.asTransactionResponse(transaction);
+    // delete old transaction
+    await this.deleteTransaction(id);
+
+    // save updated transaction with same id
+    await Transaction.save(transaction);
+
+    // invalidate updated transaction user balance cache
+    const updatedTransaction = await this.getSingleTransaction(id);
+    await this.invalidateBalanceCache(updatedTransaction);
+
+    // return updatedTransaction;
+    return updatedTransaction;
   }
 
   /**
@@ -576,11 +608,7 @@ export default class TransactionService {
     await Transaction.delete(id);
 
     // invalidate user balance cache
-    const userIds = [...new Set(transaction.subTransactions.map((sub) => sub.to.id))];
-    if (!userIds.includes(transaction.from.id)) {
-      userIds.push(transaction.from.id);
-    }
-    await BalanceService.clearBalanceCache(userIds);
+    await this.invalidateBalanceCache(transaction);
 
     // return deleted transaction
     return transaction;

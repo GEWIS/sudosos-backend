@@ -23,14 +23,14 @@ import RevisionRequest from './revision-request';
  * @typedef TransactionRequest
  * @property {integer} from.required - from user id
  * @property {integer} createdBy - createdBy user id
- * @property {Array.<SubTransactionRequest>} subtransactions.required - subtransactions
+ * @property {Array.<SubTransactionRequest>} subTransactions.required - subtransactions
  * @property {RevisionRequest.model} pointOfSale.required - point of sale
  * @property {DineroObjectRequest.model} price.required - total price of the transaction
  */
 export interface TransactionRequest {
   from: number,
   createdBy: number,
-  subtransactions: SubTransactionRequest[],
+  subTransactions: SubTransactionRequest[],
   pointOfSale: RevisionRequest,
   price: DineroObjectRequest,
 }

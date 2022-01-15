@@ -60,7 +60,7 @@ describe('TransactionController', (): void => {
     const validTransReq = {
       from: 7,
       createdBy: 7,
-      subtransactions: [
+      subTransactions: [
         {
           to: 8,
           container: {
@@ -501,6 +501,65 @@ describe('TransactionController', (): void => {
         .post('/transactions')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(badReq);
+      expect(res.status).to.equal(403);
+    });
+  });
+
+  describe('PATCH /transactions', () => {
+    it('should return an HTTP 200 and the updated transaction if the transaction is valid and user is admin', async () => {
+      let res = await request(ctx.app)
+        .get('/transactions/1')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      const toUpdate = res.body;
+
+      // update the first transaction in the database
+      res = await request(ctx.app)
+        .patch('/transactions/1')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(ctx.validTransReq);
+
+      expect(res.body).to.not.eql(toUpdate);
+      expect(res.status).to.equal(200);
+    });
+    it('should return an HTTP 400 if the request is invalid', async () => {
+      let res = await request(ctx.app)
+        .get('/transactions/1')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      const toUpdate = res.body;
+
+      // incorrectly update the first transaction in the database
+      const badReq = {
+        ...ctx.validTransReq,
+        from: 0,
+      } as TransactionRequest;
+
+      res = await request(ctx.app)
+        .patch('/transactions/1')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(badReq);
+      expect(res.status).to.equal(400);
+
+      // check if vtransaction indeed not updated
+      res = await request(ctx.app)
+        .get('/transactions/1')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.body).to.eql(toUpdate);
+    });
+    it('should return an HTTP 404 if the transaction does not exist', async () => {
+      // update a nonexistent transaction in the database
+      const res = await request(ctx.app)
+        .patch('/transactions/0')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(ctx.validTransReq);
+      expect(res.body).to.equal('Transaction not found.');
+      expect(res.status).to.equal(404);
+    });
+    it('should return an HTTP 403 if not admin', async () => {
+      // update a transaction in the database with non admin token
+      const res = await request(ctx.app)
+        .patch('/transactions/1')
+        .set('Authorization', `Bearer ${ctx.userToken}`)
+        .send(ctx.validTransReq);
       expect(res.status).to.equal(403);
     });
   });

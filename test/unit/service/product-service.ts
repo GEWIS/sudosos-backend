@@ -26,7 +26,7 @@ import Database from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
 import ProductService, { ProductParameters } from '../../../src/service/product-service';
 import {
-  seedAllProducts, seedAllContainers, seedProductCategories, seedUsers,
+  seedAllProducts, seedAllContainers, seedProductCategories, seedUsers, seedAllPointsOfSale,
 } from '../../seed';
 import Product from '../../../src/entity/product/product';
 import { ProductResponse } from '../../../src/controller/response/product-response';
@@ -36,6 +36,9 @@ import UpdatedContainer from '../../../src/entity/container/updated-container';
 import Container from '../../../src/entity/container/container';
 import ContainerRevision from '../../../src/entity/container/container-revision';
 import ProductRequest from '../../../src/controller/request/product-request';
+import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
+import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
+import UpdatedPointOfSale from '../../../src/entity/point-of-sale/updated-point-of-sale';
 import ProductImage from '../../../src/entity/file/product-image';
 
 chai.use(deepEqualInAnyOrder);
@@ -52,6 +55,30 @@ function returnsAll(response: ProductResponse[], superset: Product[]) {
   console.log(temp);
   expect(response.map((prod) => ({ id: prod.id, ownerid: prod.owner.id, image: prod.image })))
     .to.deep.equalInAnyOrder(temp);
+}
+
+interface ProductWithRevision {
+  product: Product,
+  revision: number
+}
+
+/**
+ * Test if all the product responses are part of the product set array.
+ * @param response
+ * @param superset
+ */
+function returnsAllRevisions(response: ProductResponse[], superset: ProductWithRevision[]) {
+  expect(response).to.not.be.empty;
+  expect(response.map((prod) => ({ id: prod.id, revision: prod.revision, ownerid: prod.owner.id })))
+    .to.deep.equalInAnyOrder(superset.map((prod) => (
+      ({ id: prod.product.id, revision: prod.revision, ownerid: prod.product.owner.id }))));
+}
+
+function productRevisionToProductWithRevision(product: ProductRevision): ProductWithRevision {
+  return {
+    product: product.product,
+    revision: product.revision,
+  };
 }
 
 function validateProductProperties(response: ProductResponse,
@@ -80,6 +107,9 @@ describe('ProductService', async (): Promise<void> => {
     containers: Container[],
     containerRevisions: ContainerRevision[],
     updatedContainers: UpdatedContainer[],
+    pointsOfSale: PointOfSale[],
+    pointOfSaleRevisions: PointOfSaleRevision[],
+    updatedPointsOfSale: UpdatedPointOfSale[],
   };
 
   before(async () => {
@@ -99,6 +129,11 @@ describe('ProductService', async (): Promise<void> => {
       containerRevisions,
       updatedContainers,
     } = await seedAllContainers(users, productRevisions, products);
+    const {
+      pointsOfSale,
+      pointOfSaleRevisions,
+      updatedPointsOfSale,
+    } = await seedAllPointsOfSale(users, containerRevisions, containers);
 
     // start app
     const app = express();
@@ -118,6 +153,9 @@ describe('ProductService', async (): Promise<void> => {
       containers,
       containerRevisions,
       updatedContainers,
+      pointsOfSale,
+      pointOfSaleRevisions,
+      updatedPointsOfSale,
     };
   });
 
@@ -140,7 +178,7 @@ describe('ProductService', async (): Promise<void> => {
 
       returnsAll(updatedProducts, products);
     });
-    it('should return product with the owner specified', async () => {
+    it('should return product with the ownerId specified', async () => {
       const owner = ctx.products[0].owner.id;
       const params: ProductParameters = { ownerId: ctx.products[0].owner.id };
       const res: ProductResponse[] = await ProductService.getProducts(params);
@@ -149,6 +187,21 @@ describe('ProductService', async (): Promise<void> => {
         prod.currentRevision !== null && prod.owner.id === owner));
 
       returnsAll(res, products);
+    });
+    it('should return product with the revision specified', async () => {
+      const productId = ctx.products[0].id;
+      const productRevision = ctx.products[0].currentRevision - 1;
+      expect(productRevision).to.be.greaterThan(0);
+
+      const params: ProductParameters = { productId, productRevision };
+      const res: ProductResponse[] = await ProductService.getProducts(params);
+
+      const product: ProductWithRevision[] = [productRevisionToProductWithRevision(
+        ctx.productRevisions.find((prod) => (
+          (prod.revision === productRevision && prod.product.id === productId))),
+      )];
+
+      returnsAllRevisions(res, product);
     });
     it('should return a single product if productId is specified', async () => {
       const params: ProductParameters = { productId: ctx.products[0].id };
@@ -240,6 +293,29 @@ describe('ProductService', async (): Promise<void> => {
       const { products } = ctx.updatedContainers
         .filter((cnt) => cnt.container.id === 4)[0];
       returnsAll(res, products);
+    });
+    it('should return the products belonging to a point of sale', async () => {
+      const res = await ProductService
+        .getProductsPOS({ pointOfSaleId: 1 });
+
+      const { containers } = ctx.pointOfSaleRevisions.filter((pos) => (
+        (pos.pointOfSale.id === 1 && pos.revision === pos.pointOfSale.currentRevision)))[0];
+
+      const productRevisions = (containers.map((p) => p.products.map((pr) => pr)))
+        .reduce((prev, cur) => prev.concat(cur));
+
+      const products = productRevisions.map((p) => ((
+        { product: p.product, revision: p.revision } as ProductWithRevision)));
+
+      const filteredProducts = products.reduce((acc: ProductWithRevision[], current) => {
+        if (!acc.some((item) => (
+          (item.product.id === current.product.id && item.revision === current.revision)))) {
+          acc.push(current);
+        }
+        return acc;
+      }, []);
+
+      returnsAllRevisions(res, filteredProducts);
     });
   });
 
