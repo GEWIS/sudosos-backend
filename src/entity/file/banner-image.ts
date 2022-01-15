@@ -15,17 +15,11 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+import { Entity } from 'typeorm';
+import BaseFile from './base-file';
 
 /**
- * @typedef ProductRequest
- * @property {string} name - Name of the product
- * @property {number} price - Price of the product
- * @property {number} category - Category of the product
- * @property {number} alcoholPercentage - Alcohol percentage of the product in 2 decimals
+ * @typedef {BaseFile} BannerImage
  */
-export default interface ProductRequest {
-  name: string;
-  price: number;
-  category: number;
-  alcoholPercentage: number;
-}
+@Entity()
+export default class BannerImage extends BaseFile {}

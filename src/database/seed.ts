@@ -21,6 +21,7 @@ import dinero, { Currency } from 'dinero.js';
 import Database from './database';
 import { Application } from '../index';
 import seedDatabase from '../../test/seed';
+import initializeDiskStorage from '../files/initialize';
 
 export default async function createApp() {
   const application = new Application();
@@ -38,6 +39,8 @@ export default async function createApp() {
   // Set up monetary value configuration.
   dinero.defaultCurrency = process.env.CURRENCY_CODE as Currency;
   dinero.defaultPrecision = parseInt(process.env.CURRENCY_PRECISION, 10);
+
+  initializeDiskStorage();
 
   try {
     await application.connection.synchronize();
