@@ -23,6 +23,7 @@ import { RequestWithToken } from '../middleware/token-middleware';
 import { BaseInvoiceResponse } from './response/invoice-response';
 import InvoiceService, { InvoiceFilterParameters } from '../service/invoice-service';
 import { asBoolean, asInvoiceState, asNumber } from '../helpers/validators';
+import CreateInvoiceRequest from './request/create-invoice-request';
 
 function parseInvoiceFilterParameters(req: RequestWithToken): InvoiceFilterParameters {
   return {
@@ -67,6 +68,11 @@ export default class InvoiceController extends BaseController {
           policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Invoices', ['*']),
           handler: this.getAllInvoices.bind(this),
         },
+        POST: {
+          body: { modelName: 'CreateInvoiceRequest' },
+          policy: async (req) => this.roleManager.can(req.token.roles, 'create', 'all', 'Invoices', ['*']),
+          handler: this.createInvoice.bind(this),
+        },
       },
     };
   }
@@ -99,5 +105,19 @@ export default class InvoiceController extends BaseController {
       this.logger.error('Could not return all invoices:', error);
       res.status(500).json('Internal server error.');
     }
+  }
+
+  /**
+   * Adds an invoice to the system.
+   * @route POST /invoices
+   * @group invoices - Operations of the invoices controller
+   * @security JWT
+   * @returns {BaseInvoiceResponse.model} 200 - The created invoice entity
+   * @returns {string} 400 - Validation error
+   * @returns {string} 500 - Internal server error
+   */
+  public async createInvoice(req: RequestWithToken, res: Response): Promise<void> {
+    const body = req.body as CreateInvoiceRequest;
+    this.logger.trace('Create Invoice', body, 'by user', req.token.user);
   }
 }
