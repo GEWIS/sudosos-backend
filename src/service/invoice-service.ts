@@ -27,6 +27,11 @@ import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import Invoice from '../entity/invoices/invoice';
 import { parseUserToBaseResponse } from '../helpers/entity-to-response';
 import InvoiceEntry from '../entity/invoices/invoice-entry';
+import CreateInvoiceRequest from '../controller/request/create-invoice-request';
+import User from '../entity/user/user';
+import PointOfSaleRequest from "../controller/request/point-of-sale-request";
+import Container from "../entity/container/container";
+import Transaction from "../entity/transactions/transaction";
 
 export interface InvoiceFilterParameters {
   /**
@@ -128,5 +133,24 @@ export default class InvoiceService {
     options.relations.push('invoiceEntries');
     const invoices = await Invoice.find(options);
     return invoices.map(this.asInvoiceResponse.bind(this));
+  }
+
+  /**
+   * Checks if the CreateInvoiceRequest is valid.
+   * @param invoice - The CreateInvoiceRequest to check
+   */
+  public static async verifyInvoiceRequest(invoice: CreateInvoiceRequest): Promise<boolean> {
+    // Check if the To user exists.
+    const toUser: User = await User.findOne({ id: invoice.toId });
+    if (toUser === undefined) {
+      return false;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(invoice, 'transactionIDs')) {
+      const transactions = await Transaction.findByIds(invoice.transactionIDs);
+      if (transactions.length !== invoice.transactionIDs.length) return false;
+    }
+
+    return true;
   }
 }

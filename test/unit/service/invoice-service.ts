@@ -21,6 +21,7 @@ import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
 import chai, { expect } from 'chai';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
+import exp from 'constants';
 import User from '../../../src/entity/user/user';
 import Invoice from '../../../src/entity/invoices/invoice';
 import Database from '../../../src/database/database';
@@ -41,6 +42,8 @@ import {
 import InvoiceService from '../../../src/service/invoice-service';
 import InvoiceEntry from '../../../src/entity/invoices/invoice-entry';
 import { asInvoiceState } from '../../../src/helpers/validators';
+import CreateInvoiceRequest from '../../../src/controller/request/create-invoice-request';
+import Transaction from '../../../src/entity/transactions/transaction';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -128,6 +131,65 @@ describe('InvoiceService', () => {
       const invoiceId = ctx.invoices[0].id;
       const res: BaseInvoiceResponse[] = await InvoiceService.getInvoices({ invoiceId });
       returnsAll(res, [ctx.invoices[0]], baseKeyMapping);
+    });
+  });
+  describe('verifyInvoiceRequest function', () => {
+    it('should return true if the CreateInvoiceRequest is valid with defined transactions', async () => {
+      const toId = 5;
+      expect(await User.findOne({ id: toId })).to.not.be.undefined;
+
+      const transactions: Transaction[] = await Transaction.find({ where: { from: toId } });
+      const transactionIDs = transactions.map((t) => t.id);
+
+      const createInvoiceRequest: CreateInvoiceRequest = {
+        addressee: 'addressee',
+        description: 'description',
+        toId,
+        transactionIDs,
+      };
+
+      const valid = await InvoiceService.verifyInvoiceRequest(createInvoiceRequest);
+      expect(valid).to.be.true;
+    });
+    it('should return true if the CreateInvoiceRequest is valid without defined transactions', async () => {
+      const toId = 5;
+      expect(await User.findOne({ id: toId })).to.not.be.undefined;
+
+      const createInvoiceRequest: CreateInvoiceRequest = {
+        addressee: 'addressee',
+        description: 'description',
+        toId,
+      };
+
+      const valid = await InvoiceService.verifyInvoiceRequest(createInvoiceRequest);
+      expect(valid).to.be.true;
+    });
+    it('should return false if the id is invalid', async () => {
+      const toId = 0;
+      expect(await User.findOne({ id: toId })).to.be.undefined;
+
+      const createInvoiceRequest: CreateInvoiceRequest = {
+        addressee: 'addressee',
+        description: 'description',
+        toId,
+      };
+
+      const valid = await InvoiceService.verifyInvoiceRequest(createInvoiceRequest);
+      expect(valid).to.be.false;
+    });
+    it('should return false if the transaction ids are invalid', async () => {
+      const toId = 5;
+      expect(await User.findOne({ id: toId })).to.be.not.undefined;
+
+      const createInvoiceRequest: CreateInvoiceRequest = {
+        addressee: 'addressee',
+        description: 'description',
+        toId,
+        transactionIDs: [0],
+      };
+
+      const valid = await InvoiceService.verifyInvoiceRequest(createInvoiceRequest);
+      expect(valid).to.be.false;
     });
   });
 });
