@@ -19,7 +19,6 @@
 /**
  * @typedef BannerRequest
  * @property {string} name - Name/label of the banner
- * @property {string} picture - Location of the image
  * @property {number} duration - How long the banner should be shown (in seconds)
  * @property {boolean} active - Whether the banner is active. Overrides start and end date
  * @property {string} startDate - The starting date from which the adverisement should be shown
@@ -27,7 +26,6 @@
  */
 export default interface BannerRequest {
   name: string,
-  picture: string,
   duration: number,
   active: boolean,
   startDate: string,

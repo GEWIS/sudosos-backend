@@ -47,6 +47,7 @@ import BalanceService from './service/balance-service';
 import BalanceController from './controller/balance-controller';
 import RbacController from './controller/rbac-controller';
 import GewisAuthenticationController from './gewis/controller/gewis-authentication-controller';
+import PointOfSaleController from './controller/point-of-sale-controller';
 import TransferController from './controller/transfer-controller';
 import ContainerController from './controller/container-controller';
 import SimpleFileController from './controller/simple-file-controller';
@@ -169,6 +170,12 @@ export default async function createApp(): Promise<Application> {
   application.app.use(json());
   application.app.use(fileUpload());
 
+  // Product images
+  if (process.env.NODE_ENV === 'development') {
+    application.app.use('/static/products', express.static('data/products'));
+    application.app.use('/static/banners', express.static('data/banners'));
+  }
+
   // Setup RBAC.
   application.roleManager = new RoleManager();
   await setupRbac(application);
@@ -194,6 +201,7 @@ export default async function createApp(): Promise<Application> {
   application.app.use('/v1/users', new UserController(options).getRouter());
   application.app.use('/v1/products', new ProductController(options).getRouter());
   application.app.use('/v1/productcategories', new ProductCategoryController(options).getRouter());
+  application.app.use('/v1/pointsofsale', new PointOfSaleController(options).getRouter());
   application.app.use('/v1/transactions', new TransactionController(options).getRouter());
   application.app.use('/v1/borrelkaartgroups', new BorrelkaartGroupController(options).getRouter());
   application.app.use('/v1/transfers', new TransferController(options).getRouter());

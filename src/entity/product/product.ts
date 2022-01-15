@@ -17,11 +17,12 @@
  */
 import {
   Column,
-  Entity,
-  ManyToOne,
+  Entity, JoinColumn,
+  ManyToOne, OneToOne,
 } from 'typeorm';
 import BaseEntity from '../base-entity';
 import User from '../user/user';
+import ProductImage from '../file/product-image';
 
 /**
  * @typedef {BaseEntity} Product
@@ -38,4 +39,10 @@ export default class Product extends BaseEntity {
 
   @ManyToOne(() => User, { nullable: false })
   public owner: User;
+
+  // onDelete: 'CASCADE' is not possible here, because removing the
+  // image from the database will not remove it form storage
+  @OneToOne(() => ProductImage, { nullable: true, onDelete: 'RESTRICT' })
+  @JoinColumn()
+  public image?: ProductImage;
 }

@@ -15,13 +15,15 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { Column, Entity } from 'typeorm';
+import {
+  Column, Entity, JoinColumn, OneToOne,
+} from 'typeorm';
 import BaseEntity from './base-entity';
+import BannerImage from './file/banner-image';
 
 /**
  * @typedef {BaseEntity} Banner
  * @property {string} name - Name/label of the banner.
- * @property {string} picture - Location of the image.
  * @property {integer} duration - How long the banner should be shown (in seconds).
  * @property {boolean} active - Whether the banner is active. Overrides start and end date.
  * @property {string} startDate - The starting date from which the banner should be shown.
@@ -31,9 +33,6 @@ import BaseEntity from './base-entity';
 export default class Banner extends BaseEntity {
   @Column()
   public name: string;
-
-  @Column()
-  public picture: string;
 
   @Column({
     type: 'integer',
@@ -55,4 +54,10 @@ export default class Banner extends BaseEntity {
     type: 'datetime',
   })
   public endDate: Date;
+
+  // onDelete: 'CASCADE' is not possible here, because removing the
+  // image from the database will not remove it form storage
+  @OneToOne(() => BannerImage, { nullable: true, onDelete: 'RESTRICT' })
+  @JoinColumn()
+  public image?: BannerImage;
 }

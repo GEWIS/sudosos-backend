@@ -17,15 +17,21 @@
  */
 import { Response } from 'express';
 import log4js, { Logger } from 'log4js';
+import { UploadedFile } from 'express-fileupload';
 import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import BannerRequest from './request/banner-request';
 import { RequestWithToken } from '../middleware/token-middleware';
 import { addPaginationForFindOptions } from '../helpers/pagination';
 import BannerService from '../service/banner-service';
+import Banner from '../entity/banner';
+import FileService from '../service/file-service';
+import { BANNER_IMAGE_LOCATION } from '../files/storage';
 
 export default class BannerController extends BaseController {
   private logger: Logger = log4js.getLogger('BannerController');
+
+  private fileService: FileService;
 
   /**
    * Creates a new banner controller instance.
@@ -34,6 +40,7 @@ export default class BannerController extends BaseController {
   public constructor(options: BaseControllerOptions) {
     super(options);
     this.logger.level = process.env.LOG_LEVEL;
+    this.fileService = new FileService(BANNER_IMAGE_LOCATION);
   }
 
   /**
@@ -65,6 +72,12 @@ export default class BannerController extends BaseController {
         DELETE: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'delete', 'all', 'Banner', ['*']),
           handler: this.removeBanner.bind(this),
+        },
+      },
+      '/:id(\\d+)/image': {
+        POST: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'create', 'all', 'Banner', ['*']),
+          handler: this.uploadBannerImage.bind(this),
         },
       },
       '/active': {
@@ -121,6 +134,50 @@ export default class BannerController extends BaseController {
     } catch (error) {
       this.logger.error('Could not create banner:', error);
       res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Uploads a banner image to the given banner
+   * @route POST /banners/{id}/image
+   * @group banners - Operations of banner controller
+   * @param {integer} id.path.required - The id of the banner
+   * @param {file} file.formData
+   * @security JWT
+   * @returns 204 - Success
+   * @returns {string} 400 - Validation error
+   * @returns {string} 500 - Internal server error
+   */
+  public async uploadBannerImage(req: RequestWithToken, res: Response): Promise<void> {
+    const { id } = req.params;
+    const { files } = req;
+    this.logger.trace('Upload banner image for banner', id, 'by user', req.token.user);
+
+    if (!req.files || Object.keys(files).length !== 1) {
+      res.status(400).send('No file or too many files were uploaded');
+      return;
+    }
+    if (files.file === undefined) {
+      res.status(400).send("No file is uploaded in the 'file' field");
+      return;
+    }
+
+    const bannerId = parseInt(id, 10);
+
+    try {
+      const banner = await Banner.findOne(bannerId, { relations: ['image'] });
+      if (banner) {
+        await this.fileService.uploadEntityImage(
+          banner, files.file as UploadedFile, req.token.user,
+        );
+        res.status(204).send();
+        return;
+      }
+      res.status(404).json('Banner not found');
+      return;
+    } catch (error) {
+      this.logger.error('Could not upload image:', error);
+      res.status(500).json('Internal server error');
     }
   }
 
@@ -205,7 +262,7 @@ export default class BannerController extends BaseController {
     // handle request
     try {
       // check if banner in database
-      const banner = await BannerService.deleteBanner(Number.parseInt(id, 10));
+      const banner = await BannerService.deleteBanner(Number.parseInt(id, 10), this.fileService);
       if (banner) {
         res.json(banner);
       } else {

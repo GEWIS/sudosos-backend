@@ -26,6 +26,7 @@ import CreateUserRequest from './request/create-user-request';
 import UpdateUserRequest from './request/update-user-request';
 import { addPaginationForFindOptions } from '../helpers/pagination';
 import ProductService from '../service/product-service';
+import PointOfSaleService from '../service/point-of-sale-service';
 
 export default class UserController extends BaseController {
   private logger: Logger = log4js.getLogger('UserController');
@@ -102,6 +103,22 @@ export default class UserController extends BaseController {
             req.token.roles, 'get', UserController.getRelation(req), 'Transaction', ['*'],
           ),
           handler: this.getUsersTransactions.bind(this),
+        },
+      },
+      '/:id/pointsofsale': {
+        GET: {
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'get', UserController.getRelation(req), 'PointOfSale', ['*'],
+          ),
+          handler: this.getUsersPointsOfSale.bind(this),
+        },
+      },
+      '/:id/pointsofsale/updated': {
+        GET: {
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'get', UserController.getRelation(req), 'PointOfSale', ['*'],
+          ),
+          handler: this.getUsersUpdatedPointsOfSale.bind(this),
         },
       },
     };
@@ -352,5 +369,71 @@ export default class UserController extends BaseController {
     });
 
     res.status(200).json(transactions);
+  }
+
+  /**
+   * Returns the user's Points of Sale
+   * @route GET /users/{id}/pointsofsale
+   * @group users - Operations of user controller
+   * @param {integer} id.path.required - The id of the user
+   * @security JWT
+   * @returns {Array<PointOfSaleResponse>} 200 - All users updated point of sales
+   * @returns {string} 404 - Not found error
+   * @returns {string} 500 - Internal server error
+   */
+  public async getUsersPointsOfSale(req: RequestWithToken, res: Response): Promise<void> {
+    const { id } = req.params;
+    this.logger.trace("Get user's points of sale", id, 'by user', req.token.user);
+
+    // Get the user object if it exists
+    const user = await User.findOne(id, { where: { deleted: false } });
+    // If it does not exist, return a 404 error
+    if (user === undefined) {
+      res.status(404).json('Unknown user ID.');
+      return;
+    }
+
+    // handle request
+    try {
+      const pointsOfSale = (await PointOfSaleService
+        .getPointsOfSale({ ownerId: user.id }));
+      res.json(pointsOfSale);
+    } catch (error) {
+      this.logger.error('Could not return point of sale:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Returns the user's updated Points of Sale
+   * @route GET /users/{id}/pointsofsale/updated
+   * @group users - Operations of user controller
+   * @param {integer} id.path.required - The id of the user
+   * @security JWT
+   * @returns {Array<UpdatedPointOfSaleResponse>} 200 - All users updated point of sales
+   * @returns {string} 404 - Not found error
+   * @returns {string} 500 - Internal server error
+   */
+  public async getUsersUpdatedPointsOfSale(req: RequestWithToken, res: Response): Promise<void> {
+    const { id } = req.params;
+    this.logger.trace("Get user's updated points of sale", id, 'by user', req.token.user);
+
+    // Get the user object if it exists
+    const user = await User.findOne(id, { where: { deleted: false } });
+    // If it does not exist, return a 404 error
+    if (user === undefined) {
+      res.status(404).json('Unknown user ID.');
+      return;
+    }
+
+    // handle request
+    try {
+      const pointsOfSale = (await PointOfSaleService
+        .getUpdatedPointsOfSale({ ownerId: user.id }));
+      res.json(pointsOfSale);
+    } catch (error) {
+      this.logger.error('Could not return updated points of sale:', error);
+      res.status(500).json('Internal server error.');
+    }
   }
 }
