@@ -34,12 +34,14 @@ import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import SubTransactionRow from '../../../src/entity/transactions/sub-transaction-row';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
 import ContainerRevision from '../../../src/entity/container/container-revision';
+import User from '../../../src/entity/user/user';
 
 describe('TransactionService', (): void => {
   let ctx: {
     connection: Connection,
     app: Application,
     transactions: Transaction[],
+    users: User[],
     req: RequestWithToken,
     validTransReq: TransactionRequest,
     pointOfSale: PointOfSaleRevision,
@@ -50,13 +52,13 @@ describe('TransactionService', (): void => {
 
   // eslint-disable-next-line func-names
   before(async function (): Promise<void> {
-    this.timeout(5000);
+    this.timeout(10000);
 
     const logger: Logger = log4js.getLogger('TransactionServiceTest');
     logger.level = 'ALL';
     const connection = await Database.initialize();
     const app = express();
-    const { transactions } = await seedDatabase();
+    const { transactions, users } = await seedDatabase();
     const req = {
       token: '',
       query: {
@@ -162,6 +164,7 @@ describe('TransactionService', (): void => {
       validTransReq,
       pointOfSale,
       transactions,
+      users,
       container,
       spec: await Swagger.importSpecification(),
       logger,
@@ -601,6 +604,26 @@ describe('TransactionService', (): void => {
       });
 
       expect(transactions.length).to.equal(0);
+    });
+  });
+
+  describe('Get all transactions involving a user', () => {
+    it('should return a paginated list', async () => {
+      const user = ctx.users[0];
+      const transactions = await TransactionService.getTransactions(ctx.req, {}, user);
+
+      const actualTransactions = await Transaction.createQueryBuilder('transaction')
+        .select('transaction.id as id')
+        .innerJoin(SubTransaction, 'subTransaction', 'transaction.id = subTransaction.transactionId')
+        .where('transaction.fromId = :userId OR transaction.createdById = :userId OR subTransaction.toId = :userId', { userId: user.id })
+        .distinct(true)
+        .getRawMany();
+
+      expect(transactions.length).to.equal(Math.min(23, actualTransactions.length));
+      transactions.forEach((t) => {
+        const found = actualTransactions.find((at) => at.id === t.id);
+        expect(found).to.not.be.undefined;
+      });
     });
   });
 

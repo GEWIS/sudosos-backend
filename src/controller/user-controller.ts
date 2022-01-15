@@ -21,12 +21,14 @@ import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import User, { UserType } from '../entity/user/user';
-import Transaction from '../entity/transactions/transaction';
 import CreateUserRequest from './request/create-user-request';
 import UpdateUserRequest from './request/update-user-request';
-import { addPaginationForFindOptions } from '../helpers/pagination';
+import { addPaginationForFindOptions, validatePaginationQueryParams } from '../helpers/pagination';
 import ProductService from '../service/product-service';
 import PointOfSaleService from '../service/point-of-sale-service';
+import TransactionService, {
+  parseGetTransactionsFilters,
+} from '../service/transaction-service';
 
 export default class UserController extends BaseController {
   private logger: Logger = log4js.getLogger('UserController');
@@ -338,7 +340,7 @@ export default class UserController extends BaseController {
 
     // Handle request
     try {
-      const products = await ProductService.getProducts({ productId: parseInt(parameters.id, 10) });
+      const products = await ProductService.getProducts({ ownerId: parseInt(parameters.id, 10) });
       res.json(products);
     } catch (error) {
       this.logger.error('Could not return all products:', error);
@@ -350,25 +352,54 @@ export default class UserController extends BaseController {
    * Get an user's transactions (from, to or created)
    * @route GET /users/{id}/transactions
    * @group users - Operations of user controller
-   * @param {integer} id.path.required - The id of the user
+   * @param {integer} id.path.required - The id of the user that should be involved
+   * in all returned transactions
+   * @param {integer} fromId.query - From-user for selected transactions
+   * @param {integer} createdById.query - User that created selected transaction
+   * @param {integer} toId.query - To-user for selected transactions
+   * transactions. Requires ContainerId
+   * @param {integer} productId.query - Product ID for selected transactions
+   * @param {integer} productRevision.query - Product Revision for selected
+   * transactions. Requires ProductID
+   * @param {string} fromDate.query - Start date for selected transactions (inclusive)
+   * @param {string} tillDate.query - End date for selected transactions (exclusive)
+   * @param {integer} take.query - How many users the endpoint should return
+   * @param {integer} skip.query - How many users should be skipped (for pagination)
    * @security JWT
    * @returns {[Transaction.model]} 200 - List of transactions.
    */
   public async getUsersTransactions(req: RequestWithToken, res: Response): Promise<void> {
-    const parameters = req.params;
-    this.logger.trace("Get user's transactions", parameters, 'by user', req.token.user);
+    const { id } = req.params;
+    this.logger.trace("Get user's", id, 'transactions by user', req.token.user);
 
-    const user = await User.findOne(parameters.id);
-    if (user == null) {
-      res.status(404).json({});
+    // Parse the filters given in the query parameters. If there are any issues,
+    // the parse method will throw an exception. We will then return a 400 error.
+    let filters;
+    try {
+      filters = parseGetTransactionsFilters(req);
+    } catch (e) {
+      res.status(400).json(e.message);
       return;
     }
-    const transactions = await Transaction.find({
-      where: [{ to: user }, { from: user }, { createdBy: user }],
-      order: { createdAt: 'DESC' },
-    });
 
-    res.status(200).json(transactions);
+    if (!validatePaginationQueryParams(req)) {
+      res.status(400).json('The pagination skip and/or take are invalid');
+      return;
+    }
+
+    try {
+      const user = await User.findOne(id);
+      if (user == null) {
+        res.status(404).json({});
+        return;
+      }
+      const transactions = await TransactionService.getTransactions(req, filters, user);
+
+      res.status(200).json(transactions);
+    } catch (error) {
+      this.logger.error('Could not return all transactions:', error);
+      res.status(500).json('Internal server error.');
+    }
   }
 
   /**

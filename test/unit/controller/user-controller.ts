@@ -37,6 +37,8 @@ import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale
 import seedDatabase from '../../seed';
 import { verifyUserEntity } from '../validators';
 import RoleManager from '../../../src/rbac/role-manager';
+import SubTransaction from '../../../src/entity/transactions/sub-transaction';
+import { TransactionResponse } from '../../../src/controller/response/transaction-response';
 
 describe('UserController', (): void => {
   let ctx: {
@@ -118,6 +120,9 @@ describe('UserController', (): void => {
           get: all,
           update: all,
         },
+        Transaction: {
+          get: all,
+        },
       },
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
     });
@@ -130,6 +135,9 @@ describe('UserController', (): void => {
         Product: {
           get: own,
           update: own,
+        },
+        Transaction: {
+          get: own,
         },
         PointOfSale: {
           get: own,
@@ -638,30 +646,64 @@ describe('UserController', (): void => {
   //     expect(res.status).to.equal(403);
   //   });
   // });
-  //
-  // describe('GET /users/:id/transactions', () => {
-  //   it('should give correct transactions from/to user', async () => {
-  //     const res = await request(ctx.app)
-  //       .get('/users/0/transactions')
-  //       .set('Authorization', `Bearer ${ctx.adminToken}`);
-  //     expect(res.status).to.equal(200);
-  //     expect(res.body).to.deep.equal([]);
-  //   });
-  //   it('should give an HTTP 403 when user requests transactions from someone else', async () => {
-  //     const res = await request(ctx.app)
-  //       .get('/users/1/transactions')
-  //       .set('Authorization', `Bearer ${ctx.adminToken}`);
-  //     expect(res.status).to.equal(403);
-  //   });
-  //   it(
-  //     'should give an HTTP 404 when admin requests transactions from unknown user',
-  //     async () => {
-  //       const res = await request(ctx.app)
-  //         .get('/users/1234/transactions')
-  //         .set('Authorization', `Bearer ${ctx.adminToken}`);
-  //       expect(res.status).to.equal(404);
-  //     },
-  //   );
-  // });
+
+  describe('GET /users/:id/transactions', () => {
+    it('should give correct transactions from/to user', async () => {
+      const user = ctx.users[0];
+      const res = await request(ctx.app)
+        .get(`/users/${user.id}/transactions`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(200);
+
+      const transactions = res.body as TransactionResponse[];
+
+      const actualTransactions = await Transaction.createQueryBuilder('transaction')
+        .select('transaction.id as id')
+        .innerJoin(SubTransaction, 'subTransaction', 'transaction.id = subTransaction.transactionId')
+        .where('transaction.fromId = :userId OR transaction.createdById = :userId OR subTransaction.toId = :userId', { userId: user.id })
+        .distinct(true)
+        .getRawMany();
+
+      expect(transactions.length).to.equal(Math.min(23, actualTransactions.length));
+      transactions.forEach((t) => {
+        const found = actualTransactions.find((at) => at.id === t.id);
+        expect(found).to.not.be.undefined;
+      });
+    });
+    it('should give an HTTP 403 when user requests transactions from someone else', async () => {
+      const res = await request(ctx.app)
+        .get(`/users/${ctx.users[0].id + 1}/transactions`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(403);
+    });
+    it('should give transactions when admin requests transactions from someone else', async () => {
+      const user = ctx.users[ctx.users.length - 3];
+      const res = await request(ctx.app)
+        .get(`/users/${user.id}/transactions`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+
+      const transactions = res.body as TransactionResponse[];
+
+      const actualTransactions = await Transaction.createQueryBuilder('transaction')
+        .select('transaction.id as id')
+        .innerJoin(SubTransaction, 'subTransaction', 'transaction.id = subTransaction.transactionId')
+        .where('transaction.fromId = :userId OR transaction.createdById = :userId OR subTransaction.toId = :userId', { userId: user.id })
+        .distinct(true)
+        .getRawMany();
+
+      expect(transactions.length).to.equal(Math.min(23, actualTransactions.length));
+      transactions.forEach((t) => {
+        const found = actualTransactions.find((at) => at.id === t.id);
+        expect(found).to.not.be.undefined;
+      });
+    });
+    it('should give an HTTP 404 when admin requests transactions from unknown user', async () => {
+      const res = await request(ctx.app)
+        .get('/users/12345/transactions')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(404);
+    });
+  });
   // TODO: Check validity of returned transactions
 });

@@ -44,6 +44,7 @@ import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision'
 import { DineroObjectRequest } from '../controller/request/dinero-request';
 import { DineroObjectResponse } from '../controller/response/dinero-response';
 import BalanceService from './balance-service';
+import { asDate, asNumber } from '../helpers/validators';
 
 export interface TransactionFilterParameters {
   fromId?: number,
@@ -59,11 +60,35 @@ export interface TransactionFilterParameters {
   tillDate?: Date,
 }
 
+export function parseGetTransactionsFilters(req: RequestWithToken): TransactionFilterParameters {
+  if ((req.query.pointOfSaleRevision && !req.query.pointOfSaleId)
+    || (req.query.containerRevision && !req.query.containerId)
+    || (req.query.productRevision && !req.query.productId)) {
+    throw new Error('Cannot filter on a revision, when there is no id given');
+  }
+
+  const filters: TransactionFilterParameters = {
+    fromId: asNumber(req.query.fromId),
+    createdById: asNumber(req.query.createdById),
+    toId: asNumber(req.query.toId),
+    pointOfSaleId: asNumber(req.query.pointOfSaleId),
+    pointOfSaleRevision: asNumber(req.query.pointOfSaleRevision),
+    containerId: asNumber(req.query.containerId),
+    containerRevision: asNumber(req.query.containerRevision),
+    productId: asNumber(req.query.productId),
+    productRevision: asNumber(req.query.productRevision),
+    fromDate: asDate(req.query.fromDate),
+    tillDate: asDate(req.query.tillDate),
+  };
+
+  return filters;
+}
+
 export default class TransactionService {
   /**
    * Gets total cost of a transaction with values stored in the database
-   * @param {Array.<SubTransactionRowRequest>} req - the transaction request
    * @returns {DineroObject.model} - the total cost of a transaction
+   * @param rows
    */
   public static async getTotalCost(rows: SubTransactionRowRequest[]): Promise<Dinero.Dinero> {
     // get costs of individual rows
@@ -119,6 +144,7 @@ export default class TransactionService {
   /**
    * Verifies whether a sub transaction row within a sub transaction is valid
    * @param {SubTransactionRowRequest.model} req - the sub transaction row request to verify
+   * @param container
    * @returns {boolean} - whether sub transaction row is ok or not
    */
   public static async verifySubTransactionRow(
@@ -153,7 +179,8 @@ export default class TransactionService {
   /**
    * Verifies whether a sub transaction within a transaction is valid
    * @param {SubTransactionRequest.model} req - the sub transaction request to verify
-   * @param {PointOfSale.model} pos - the point of sale in the request
+   * @param {PointOfSaleRevision.model} pointOfSale - the point of sale in the request
+   * @param isUpdate
    * @returns {boolean} - whether sub transaction is ok or not
    */
   public static async verifySubTransaction(
@@ -206,6 +233,7 @@ export default class TransactionService {
   /**
    * Verifies whether a transaction is valid
    * @param {TransactionRequest.model} req - the transaction request to verify
+   * @param isUpdate
    * @returns {boolean} - whether transaction is ok or not
    */
   public static async verifyTransaction(req: TransactionRequest, isUpdate?: boolean):
@@ -259,6 +287,7 @@ export default class TransactionService {
   /**
    * Creates a transaction from a transaction request
    * @param {TransactionRequest.model} req - the transaction request to cast
+   * @param update
    * @returns {Transaction.model} - the transaction
    */
   public static async asTransaction(req: TransactionRequest, update?: Transaction):
@@ -294,8 +323,8 @@ export default class TransactionService {
 
   /**
    * Creates a transaction response from a transaction
-   * @param {Transaction.model} req - the transaction to cast
    * @returns {TransactionResponse.model} - the transaction response
+   * @param transaction
    */
   public static async asTransactionResponse(transaction: Transaction):
   Promise<TransactionResponse | undefined> {
@@ -366,8 +395,8 @@ export default class TransactionService {
 
   /**
    * Creates a sub transaction response from a sub transaction
-   * @param {SubTransaction.model} req - the sub transaction to cast
    * @returns {SubTransactionResponse.model} - the sub transaction response
+   * @param subTransaction
    */
   public static async asSubTransactionResponse(subTransaction: SubTransaction):
   Promise<SubTransactionResponse | undefined> {
@@ -444,10 +473,11 @@ export default class TransactionService {
    * Returns all transactions requested with the filter
    * @param {RequestWithToken.model} req - the request with token
    * @param {TransactionFilterParameters.model} params - the filter parameters
+   * @param {User.model} user - A user that is involved in all transactions
    * @returns {BaseTransactionResponse[]} - the transactions without sub transactions
    */
   public static async getTransactions(
-    req: RequestWithToken, params: TransactionFilterParameters,
+    req: RequestWithToken, params: TransactionFilterParameters, user?: User,
   ): Promise<BaseTransactionResponse[]> {
     // Extract fromDate and tillDate, as they cannot be directly passed to QueryFilter.
     const { fromDate, tillDate, ...p } = params;
@@ -492,6 +522,10 @@ export default class TransactionService {
       createdById: 'transaction.createdById',
     };
     QueryFilter.applyFilter(query, mapping, p);
+
+    if (user) {
+      query.andWhere('"transaction"."fromId" = :userId OR "transaction"."createdById" = :userId OR "subTransaction"."toId" = :userId', { userId: user.id });
+    }
 
     query = applySubTransactionFilters(query);
     query = addPaginationToQueryBuilder(req, query);

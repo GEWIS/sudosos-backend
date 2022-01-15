@@ -20,37 +20,14 @@ import log4js, { Logger } from 'log4js';
 import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
-import TransactionService, { TransactionFilterParameters } from '../service/transaction-service';
+import TransactionService, {
+  parseGetTransactionsFilters,
+} from '../service/transaction-service';
 import { TransactionResponse } from './response/transaction-response';
-import { asDate, asNumber } from '../helpers/validators';
 import { validatePaginationQueryParams } from '../helpers/pagination';
 import { TransactionRequest } from './request/transaction-request';
 import Transaction from '../entity/transactions/transaction';
 import User from '../entity/user/user';
-
-function parseGetTransactionsFilters(req: RequestWithToken): TransactionFilterParameters {
-  if ((req.query.pointOfSaleRevision && !req.query.pointOfSaleId)
-    || (req.query.containerRevision && !req.query.containerId)
-    || (req.query.productRevision && !req.query.productId)) {
-    throw new Error('Cannot filter on a revision, when there is no id given');
-  }
-
-  const filters: TransactionFilterParameters = {
-    fromId: asNumber(req.query.fromId),
-    createdById: asNumber(req.query.createdById),
-    toId: asNumber(req.query.toId),
-    pointOfSaleId: asNumber(req.query.pointOfSaleId),
-    pointOfSaleRevision: asNumber(req.query.pointOfSaleRevision),
-    containerId: asNumber(req.query.containerId),
-    containerRevision: asNumber(req.query.containerRevision),
-    productId: asNumber(req.query.productId),
-    productRevision: asNumber(req.query.productRevision),
-    fromDate: asDate(req.query.fromDate),
-    tillDate: asDate(req.query.tillDate),
-  };
-
-  return filters;
-}
 
 export default class TransactionController extends BaseController {
   private logger: Logger = log4js.getLogger('TransactionController');
