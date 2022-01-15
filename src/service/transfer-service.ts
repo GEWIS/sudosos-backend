@@ -18,19 +18,19 @@
 
 import dinero from 'dinero.js';
 import { FindManyOptions } from 'typeorm';
-import Transfer, { TransferType } from '../entity/transactions/transfer';
+import Transfer from '../entity/transactions/transfer';
 import { TransferResponse } from '../controller/response/transfer-response';
 import TransferRequest from '../controller/request/transfer-request';
 import { parseUserToBaseResponse } from '../helpers/entity-to-response';
 import User from '../entity/user/user';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
+import InvalidTransferError from '../entity/errors/invalid-transfer-error';
 
 export interface TransferFilterParameters {
   id?: number;
   createdById?: number,
   fromId?: number,
-  toId?: number,
-  type?: TransferType,
+  toId?: number
 }
 
 export default class TransferService {
@@ -39,7 +39,6 @@ export default class TransferService {
       amount: transfer.amount.toObject(),
       from: parseUserToBaseResponse(transfer.from, false),
       to: parseUserToBaseResponse(transfer.to, false),
-      type: transfer.type,
       id: transfer.id,
       description: transfer.description,
       createdAt: transfer.createdAt.toISOString(),
@@ -50,7 +49,6 @@ export default class TransferService {
   private static async asTransfer(request: TransferRequest) : Promise<Transfer> {
     return Object.assign(new Transfer(), {
       description: request.description,
-      type: request.type,
       amount: dinero(request.amount),
       from: await User.findOne(request.fromId),
       to: await User.findOne(request.toId),
@@ -76,8 +74,11 @@ export default class TransferService {
 
   public static async postTransfer(request: TransferRequest) : Promise<TransferResponse> {
     const transfer = await this.asTransfer(request);
-    await transfer.save();
-    return this.asTransferResponse(transfer);
+    if (await this.verifyTransferRequest(request)) {
+      await transfer.save();
+      return this.asTransferResponse(transfer);
+    }
+    throw new InvalidTransferError('Transfer does not comply with requirements');
   }
 
   public static async verifyTransferRequest(request: TransferRequest) : Promise<boolean> {
@@ -85,8 +86,7 @@ export default class TransferService {
     // if the type is custom a description is necessary
     // a transfer is always at least from a valid user OR to a valid user
     // a transfer may be from null to an user, or from an user to null
-    return request.type in TransferType
-        && (request.type !== TransferType.CUSTOM || request.description !== '')
+    return (request.fromId || request.toId)
         && (await User.findOne(request.fromId) || await User.findOne(request.toId))
         && request.amount.precision === dinero.defaultPrecision
         && request.amount.currency === dinero.defaultCurrency;

@@ -16,19 +16,14 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { DineroObject } from 'dinero.js';
-
 /**
- * @typedef TransferRequest
- * @property {string} description - Description of the transfer
- * @property {Dinero.model} amount - Amount of money being transferred
- * @property {integer} type - Type of transfer
- * @property {integer} fromId - from which user the money is being transferred
- * @property {integer} toId - to which user the money is being transferred.
+ * Creates a new Untargeted Transfer Error can be thrown when creating a transfer.
+ * @param message - The error message to use
+ * @constructor InvalidTransferError
  */
-export default interface TransferRequest {
-  amount: DineroObject;
-  description: string;
-  fromId: number;
-  toId: number;
+export default class InvalidTransferError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'InvalidTransferError';
+  }
 }

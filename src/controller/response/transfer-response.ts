@@ -18,7 +18,6 @@
 
 import { DineroObject } from 'dinero.js';
 import BaseResponse from './base-response';
-import { TransferType } from '../../entity/transactions/transfer';
 import { BaseUserResponse } from './user-response';
 
 /**
@@ -31,7 +30,6 @@ import { BaseUserResponse } from './user-response';
  */
 export interface TransferResponse extends BaseResponse {
   amount: DineroObject;
-  type: TransferType;
   description: string;
   from: BaseUserResponse;
   to: BaseUserResponse;

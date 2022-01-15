@@ -153,11 +153,21 @@ describe('ProductCategoryService', async (): Promise<void> => {
       const c2 = await ProductCategoryService.postProductCategory(c1);
       expect(c2).to.not.be.null;
       expect(c2.name).to.equal(c1.name);
+
+      const c3: ProductCategoryResponse[] = await ProductCategoryService
+        .getProductCategories({ id: 1 });
+
+      expect(c3.length).to.equal(1);
+      expect(c3[0].name).to.equal(c1.name);
     });
     it('should not be able to post an invalid productCategory', async () => {
       const c1: ProductCategoryRequest = { name: null };
       const promise = ProductCategoryService.postProductCategory(c1);
       await expect(promise).to.eventually.be.rejected;
+
+      const res: ProductCategoryResponse[] = await ProductCategoryService
+        .getProductCategories({ id: 1 });
+      expect(res).to.be.empty;
     });
   });
   describe('patchProductCategory function', async (): Promise<void> => {

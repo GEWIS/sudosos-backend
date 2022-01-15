@@ -25,7 +25,7 @@ import { Connection } from 'typeorm';
 import TransferRequest from '../../../src/controller/request/transfer-request';
 import { TransferResponse } from '../../../src/controller/response/transfer-response';
 import Database from '../../../src/database/database';
-import Transfer, { TransferType } from '../../../src/entity/transactions/transfer';
+import Transfer from '../../../src/entity/transactions/transfer';
 import User from '../../../src/entity/user/user';
 import TransferService from '../../../src/service/transfer-service';
 import Swagger from '../../../src/start/swagger';
@@ -88,7 +88,6 @@ describe('TransferService', async (): Promise<void> => {
           precision: dinero.defaultPrecision,
           currency: dinero.defaultCurrency,
         },
-        type: TransferType.CUSTOM,
         description: 'cool',
         fromId: ctx.users[0].id,
         toId: null,
@@ -104,9 +103,8 @@ describe('TransferService', async (): Promise<void> => {
           precision: dinero.defaultPrecision,
           currency: dinero.defaultCurrency,
         },
-        type: null, // invalid type
         description: 'cool',
-        fromId: ctx.users[0].id,
+        fromId: null, // Either from or to must be filled for request to be valid
         toId: null,
       };
       const promise = TransferService.postTransfer(req);

@@ -31,7 +31,7 @@ import User, { UserType } from '../src/entity/user/user';
 import UpdatedProduct from '../src/entity/product/updated-product';
 import UpdatedContainer from '../src/entity/container/updated-container';
 import UpdatedPointOfSale from '../src/entity/point-of-sale/updated-point-of-sale';
-import Transfer, { TransferType } from '../src/entity/transactions/transfer';
+import Transfer from '../src/entity/transactions/transfer';
 
 /**
  * Defines user objects with the given parameters.
@@ -1071,36 +1071,21 @@ export async function seedTransfers(users: User[]) : Promise<Transfer[]> {
   for (let i = 0; i < users.length; i += 1) {
     let newTransfer = Object.assign(new Transfer(), {
       description: '',
-      type: TransferType.DEPOSIT,
       amount: dinero({ amount: 100 * (i + 1) }),
       from: undefined,
       to: users[i],
     });
     transfers.push(newTransfer);
-    let promise = Transfer.save(newTransfer);
-    promises.push(promise);
+    promises.push(Transfer.save(newTransfer));
 
     newTransfer = Object.assign(new Transfer(), {
       description: '',
-      type: TransferType.INVOICE,
-      amount: dinero({ amount: i + 1 }),
+      amount: dinero({ amount: 50 * (i + 1) }),
       from: users[i],
       to: undefined,
     });
     transfers.push(newTransfer);
-    promise = Transfer.save(newTransfer);
-    promises.push(promise);
-
-    newTransfer = Object.assign(new Transfer(), {
-      description: `${i + 1}`,
-      type: TransferType.CUSTOM,
-      amount: dinero({ amount: i + 1 }),
-      from: users[i],
-      to: undefined,
-    });
-    transfers.push(newTransfer);
-    promise = Transfer.save(newTransfer);
-    promises.push(promise);
+    promises.push(Transfer.save(newTransfer));
   }
 
   await Promise.all(promises);
