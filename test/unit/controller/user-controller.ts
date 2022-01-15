@@ -46,6 +46,7 @@ describe('UserController', (): void => {
     controller: UserController,
     userToken: string,
     adminToken: string,
+    deletedUser: User,
     user: User,
     users: User[],
     categories: ProductCategory[],
@@ -71,6 +72,7 @@ describe('UserController', (): void => {
       controller: undefined,
       userToken: undefined,
       adminToken: undefined,
+      deletedUser: undefined,
       user: {
         firstName: 'Roy',
         lastName: 'Kakkenberg',
@@ -78,14 +80,17 @@ describe('UserController', (): void => {
       } as any as User,
       ...database,
     };
-
-    ctx.users.push({
+    const deletedUser = Object.assign(new User(), {
       firstName: 'Kevin',
       lastName: 'Jilessen',
       type: UserType.MEMBER,
       deleted: true,
       active: true,
-    } as any as User);
+    } as User);
+    await User.save(deletedUser);
+
+    ctx.users.push(deletedUser);
+    ctx.deletedUser = deletedUser;
 
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
@@ -109,6 +114,10 @@ describe('UserController', (): void => {
           get: all,
           update: all,
         },
+        PointOfSale: {
+          get: all,
+          update: all,
+        },
       },
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
     });
@@ -119,6 +128,10 @@ describe('UserController', (): void => {
           get: own,
         },
         Product: {
+          get: own,
+          update: own,
+        },
+        PointOfSale: {
           get: own,
           update: own,
         },
@@ -205,7 +218,7 @@ describe('UserController', (): void => {
     });
     it('should give an HTTP 404 when admin requests deleted user', async () => {
       const res = await request(ctx.app)
-        .get('/users/25')
+        .get(`/users/${ctx.deletedUser.id}`)
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(404);
     });
@@ -539,6 +552,72 @@ describe('UserController', (): void => {
     it('should give an HTTP 404 when admin requests products from unknown user', async () => {
       const res = await request(ctx.app)
         .get('/users/1234/products')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(404);
+    });
+  });
+
+  describe('GET /users/{id}/pointsofsale', () => {
+    it('should give an HTTP 200 when requesting own points of sale', async () => {
+      const res = await request(ctx.app)
+        .get('/users/1/pointsofsale')
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(200);
+    });
+    it('should give an HTTP 403 when user requests points of sale (s)he does not own', async () => {
+      const res = await request(ctx.app)
+        .get('/users/2/pointsofsale')
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(403);
+    });
+    it('should give an HTTP 403 when user requests points of sale from unknown user', async () => {
+      const res = await request(ctx.app)
+        .get('/users/1234/pointsofsale')
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(403);
+    });
+    it('should give correct owned points of sale for admin', async () => {
+      const res = await request(ctx.app)
+        .get('/users/2/pointsofsale')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+    });
+    it('should give an HTTP 404 when admin requests points of sale from unknown user', async () => {
+      const res = await request(ctx.app)
+        .get('/users/1234/pointsofsale')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(404);
+    });
+  });
+
+  describe('GET /users/{id}/pointsofsale/updated', () => {
+    it('should give an HTTP 200 when requesting own updated points of sale', async () => {
+      const res = await request(ctx.app)
+        .get(`/users/${ctx.users[0].id}/pointsofsale/updated`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(200);
+    });
+    it('should give an HTTP 403 when user requests updated points of sale (s)he does not own', async () => {
+      const res = await request(ctx.app)
+        .get('/users/2/pointsofsale/updated')
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(403);
+    });
+    it('should give an HTTP 403 when user requests updated points of sale from unknown user', async () => {
+      const res = await request(ctx.app)
+        .get('/users/1234/pointsofsale/updated')
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(403);
+    });
+    it('should give correct owned updated points of sale for admin', async () => {
+      const res = await request(ctx.app)
+        .get('/users/2/pointsofsale/updated')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+    });
+    it('should give an HTTP 404 when admin requests updated points of sale from unknown user', async () => {
+      const res = await request(ctx.app)
+        .get('/users/1234/pointsofsale/updated')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(404);
     });
