@@ -37,6 +37,8 @@ import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale
 import seedDatabase from '../../seed';
 import { verifyUserEntity } from '../validators';
 import RoleManager from '../../../src/rbac/role-manager';
+import SubTransaction from '../../../src/entity/transactions/sub-transaction';
+import { TransactionResponse } from '../../../src/controller/response/transaction-response';
 
 describe('UserController', (): void => {
   let ctx: {
@@ -112,11 +114,15 @@ describe('UserController', (): void => {
         },
         Product: {
           get: all,
-          update: all,
+        },
+        Container: {
+          get: all,
         },
         PointOfSale: {
           get: all,
-          update: all,
+        },
+        Transaction: {
+          get: all,
         },
       },
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
@@ -131,9 +137,14 @@ describe('UserController', (): void => {
           get: own,
           update: own,
         },
+        Container: {
+          get: own,
+        },
         PointOfSale: {
           get: own,
-          update: own,
+        },
+        Transaction: {
+          get: own,
         },
       },
       assignmentCheck: async () => true,
@@ -557,7 +568,73 @@ describe('UserController', (): void => {
     });
   });
 
-  describe('GET /users/{id}/pointsofsale', () => {
+  describe('GET /users/:id/containers', () => {
+    it('should give an HTTP 200 when requesting own containers', async () => {
+      const res = await request(ctx.app)
+        .get('/users/1/containers')
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(200);
+    });
+    it('should give an HTTP 403 when user requests containers (s)he does not own', async () => {
+      const res = await request(ctx.app)
+        .get('/users/2/containers')
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(403);
+    });
+    it('should give an HTTP 403 when user requests containers from unknown user', async () => {
+      const res = await request(ctx.app)
+        .get('/users/1234/containers')
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(403);
+    });
+    it('should give correct owned containers for admin', async () => {
+      const res = await request(ctx.app)
+        .get('/users/2/containers')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+    });
+    it('should give an HTTP 404 when admin requests containers from unknown user', async () => {
+      const res = await request(ctx.app)
+        .get('/users/1234/containers')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(404);
+    });
+  });
+
+  describe('GET /users/:id/containers/updated', () => {
+    it('should give an HTTP 200 when requesting own updated containers', async () => {
+      const res = await request(ctx.app)
+        .get(`/users/${ctx.users[0].id}/containers/updated`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(200);
+    });
+    it('should give an HTTP 403 when user requests updated containers (s)he does not own', async () => {
+      const res = await request(ctx.app)
+        .get('/users/2/containers/updated')
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(403);
+    });
+    it('should give an HTTP 403 when user requests updated containers from unknown user', async () => {
+      const res = await request(ctx.app)
+        .get('/users/1234/containers/updated')
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(403);
+    });
+    it('should give correct owned updated containers for admin', async () => {
+      const res = await request(ctx.app)
+        .get('/users/2/containers/updated')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+    });
+    it('should give an HTTP 404 when admin requests updated containers from unknown user', async () => {
+      const res = await request(ctx.app)
+        .get('/users/1234/containers/updated')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(404);
+    });
+  });
+
+  describe('GET /users/:id/pointsofsale', () => {
     it('should give an HTTP 200 when requesting own points of sale', async () => {
       const res = await request(ctx.app)
         .get('/users/1/pointsofsale')
@@ -590,7 +667,7 @@ describe('UserController', (): void => {
     });
   });
 
-  describe('GET /users/{id}/pointsofsale/updated', () => {
+  describe('GET /users/:id/pointsofsale/updated', () => {
     it('should give an HTTP 200 when requesting own updated points of sale', async () => {
       const res = await request(ctx.app)
         .get(`/users/${ctx.users[0].id}/pointsofsale/updated`)
@@ -623,45 +700,63 @@ describe('UserController', (): void => {
     });
   });
 
-  // describe('GET /users/:id/containers', () => {
-  //   it('should give correct owned containers for user', async () => {
-  //     const res = await request(ctx.app)
-  //       .get('/users/0/containers')
-  //       .set('Authorization', `Bearer ${ctx.token}`);
-  //     expect(res.status).to.equal(200);
-  //     expect(res.body).to.deep.equal([]);
-  //   });
-  //   it('should give an HTTP 403 when user requests containers (s)he does not own', async () => {
-  //     const res = await request(ctx.app)
-  //       .get('/users/1/containers')
-  //       .set('Authorization', `Bearer ${ctx.token}`);
-  //     expect(res.status).to.equal(403);
-  //   });
-  // });
-  //
-  // describe('GET /users/:id/transactions', () => {
-  //   it('should give correct transactions from/to user', async () => {
-  //     const res = await request(ctx.app)
-  //       .get('/users/0/transactions')
-  //       .set('Authorization', `Bearer ${ctx.adminToken}`);
-  //     expect(res.status).to.equal(200);
-  //     expect(res.body).to.deep.equal([]);
-  //   });
-  //   it('should give an HTTP 403 when user requests transactions from someone else', async () => {
-  //     const res = await request(ctx.app)
-  //       .get('/users/1/transactions')
-  //       .set('Authorization', `Bearer ${ctx.adminToken}`);
-  //     expect(res.status).to.equal(403);
-  //   });
-  //   it(
-  //     'should give an HTTP 404 when admin requests transactions from unknown user',
-  //     async () => {
-  //       const res = await request(ctx.app)
-  //         .get('/users/1234/transactions')
-  //         .set('Authorization', `Bearer ${ctx.adminToken}`);
-  //       expect(res.status).to.equal(404);
-  //     },
-  //   );
-  // });
+  describe('GET /users/:id/transactions', () => {
+    it('should give correct transactions from/to user', async () => {
+      const user = ctx.users[0];
+      const res = await request(ctx.app)
+        .get(`/users/${user.id}/transactions`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(200);
+
+      const transactions = res.body as TransactionResponse[];
+
+      const actualTransactions = await Transaction.createQueryBuilder('transaction')
+        .select('transaction.id as id')
+        .innerJoin(SubTransaction, 'subTransaction', 'transaction.id = subTransaction.transactionId')
+        .where('transaction.fromId = :userId OR transaction.createdById = :userId OR subTransaction.toId = :userId', { userId: user.id })
+        .distinct(true)
+        .getRawMany();
+
+      expect(transactions.length).to.equal(Math.min(23, actualTransactions.length));
+      transactions.forEach((t) => {
+        const found = actualTransactions.find((at) => at.id === t.id);
+        expect(found).to.not.be.undefined;
+      });
+    });
+    it('should give an HTTP 403 when user requests transactions from someone else', async () => {
+      const res = await request(ctx.app)
+        .get(`/users/${ctx.users[0].id + 1}/transactions`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(403);
+    });
+    it('should give transactions when admin requests transactions from someone else', async () => {
+      const user = ctx.users[ctx.users.length - 3];
+      const res = await request(ctx.app)
+        .get(`/users/${user.id}/transactions`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+
+      const transactions = res.body as TransactionResponse[];
+
+      const actualTransactions = await Transaction.createQueryBuilder('transaction')
+        .select('transaction.id as id')
+        .innerJoin(SubTransaction, 'subTransaction', 'transaction.id = subTransaction.transactionId')
+        .where('transaction.fromId = :userId OR transaction.createdById = :userId OR subTransaction.toId = :userId', { userId: user.id })
+        .distinct(true)
+        .getRawMany();
+
+      expect(transactions.length).to.equal(Math.min(23, actualTransactions.length));
+      transactions.forEach((t) => {
+        const found = actualTransactions.find((at) => at.id === t.id);
+        expect(found).to.not.be.undefined;
+      });
+    });
+    it('should give an HTTP 404 when admin requests transactions from unknown user', async () => {
+      const res = await request(ctx.app)
+        .get('/users/12345/transactions')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(404);
+    });
+  });
   // TODO: Check validity of returned transactions
 });
