@@ -1205,7 +1205,7 @@ export async function seedBanners(users: User[]): Promise<{
     const banner = Object.assign(new Banner(), {
       id: i + 1,
       name: `Banner-${i + 1}`,
-      duration: randomInt(60, 300),
+      duration: Math.floor(Math.random() * (300 - 60) + 60),
       active: i % 2 === 0,
       startDate: new Date(),
       endDate: new Date(),
