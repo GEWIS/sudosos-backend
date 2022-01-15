@@ -16,18 +16,14 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import UpdatePointOfSaleRequest from './update-point-of-sale-request';
+
 /**
- * @typedef ProductRequest
- * @property {string} name - Name of the product
- * @property {number} price - Price of the product
- * @property {number} category - Category of the product
- * @property {string} picture - URL of the product image
- * @property {number} alcoholPercentage - Alcohol percentage of the product in 2 decimals
+ * @typedef PointOfSaleRequest
+ * @property {integer} ownerId - The owner of the POS.
+ * @property {UpdatePointOfSaleRequest.model} update.required - The initial update of the POS.
  */
-export default interface ProductRequest {
-  name: string;
-  price: number;
-  category: number;
-  picture: string;
-  alcoholPercentage: number;
+export default interface PointOfSaleRequest {
+  ownerId?: number,
+  update: UpdatePointOfSaleRequest,
 }

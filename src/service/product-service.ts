@@ -29,6 +29,8 @@ import UpdatedContainer from '../entity/container/updated-container';
 import User from '../entity/user/user';
 import ProductRequest from '../controller/request/product-request';
 import ProductCategory from '../entity/product/product-category';
+import PointOfSale from '../entity/point-of-sale/point-of-sale';
+import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision';
 
 /**
  * Define product filtering parameters used to filter query results.
@@ -38,6 +40,10 @@ export interface ProductParameters {
    * Filter based on product id.
    */
   productId?: number;
+  /**
+   * Filter based on product revision.
+   */
+  productRevision?: number;
   /**
    * Filter based on product owner.
    */
@@ -54,6 +60,18 @@ export interface ProductParameters {
    * Filter based on if the updated container should be used.
    */
   updatedContainer?: boolean;
+  /**
+   * Filter based on point of sale id.
+   */
+  pointOfSaleId?: number;
+  /**
+   * Filter based on a specific point of sale revision.
+   */
+  pointOfSaleRevision?: number;
+  /**
+   * Filter based on if the updated point of sale should be used.
+   */
+  updatedPointOfSale?: boolean;
 }
 
 /**
@@ -67,6 +85,7 @@ export default class ProductService {
   public static asProductResponse(rawProduct: any): ProductResponse {
     return {
       id: rawProduct.id,
+      revision: rawProduct.revision,
       alcoholPercentage: rawProduct.alcoholpercentage,
       category: {
         id: rawProduct.category_id,
@@ -95,7 +114,7 @@ export default class ProductService {
    */
   private static addContainerFilter(
     builder: SelectQueryBuilder<Product>,
-    containerId: number,
+    containerId?: number,
     isUpdatedProduct?: boolean,
     isUpdatedContainer?: boolean,
     containerRevision?: number,
@@ -120,19 +139,70 @@ export default class ProductService {
 
     // Filter on products in the container.
     builder
-      .innerJoinAndSelect((qb) => qb
-        .from(Container, 'container')
-        .innerJoinAndSelect(
-          isUpdatedContainer ? UpdatedContainer : ContainerRevision,
-          'containeralias',
-          innerJoin(),
-        )
-        .innerJoinAndSelect('containeralias.products', 'product')
-        .where('container.id = :id', { id: containerId })
-        .select(isUpdatedContainer
-          ? ['productId']
-          : ['product.productId AS productId', 'product.revision as productRevision']),
-      'containerproducts', condition());
+      .innerJoinAndSelect((qb) => {
+        qb
+          .from(Container, 'container')
+          .innerJoinAndSelect(
+            isUpdatedContainer ? UpdatedContainer : ContainerRevision,
+            'containeralias',
+            innerJoin(),
+          )
+          .innerJoinAndSelect('containeralias.products', 'product')
+          .select(isUpdatedContainer
+            ? ['productId']
+            : ['product.productId AS productId', 'product.revision as productRevision']);
+        if (containerId) qb.where('container.id = :id', { id: containerId });
+        return qb;
+      }, 'containerproducts', condition());
+  }
+
+  /**
+   * Gets all the products in a PointOfSale
+   * @param params
+   */
+  public static async getProductsPOS(params: ProductParameters = {}):
+  Promise<ProductResponse[]> {
+    let POScurrent: PointOfSale;
+    let revision = params.pointOfSaleRevision;
+
+    if (!params.pointOfSaleRevision) {
+      POScurrent = await PointOfSale.findOne({ id: params.pointOfSaleId });
+      if (!POScurrent) return;
+      revision = POScurrent.currentRevision;
+    }
+    const id = params.pointOfSaleId;
+
+    const builder = createQueryBuilder()
+      .from(PointOfSale, 'pos')
+      .innerJoinAndSelect(PointOfSaleRevision, 'posalias', `pos.id = posalias.pointOfSaleId AND pos.id = ${id} AND posalias.revision = ${revision}`)
+      .innerJoinAndSelect('posalias.containers', 'containers')
+      .innerJoinAndSelect('containers.products', 'products')
+      .groupBy('products.productId, products.revision');
+
+    builder
+      .innerJoinAndSelect(Product, 'baseproduct', 'products.productId = baseproduct.id')
+      .innerJoinAndSelect('baseproduct.owner', 'owner')
+      .innerJoinAndSelect('products.category', 'category')
+      .select([
+        'baseproduct.id AS id',
+        'baseproduct.createdAt AS createdAt',
+        'products.updatedAt AS updatedAt',
+        'products.name AS name',
+        'products.price AS price',
+        'owner.id AS owner_id',
+        'owner.firstName AS owner_firstName',
+        'owner.lastName AS owner_lastName',
+        'category.id AS category_id',
+        'category.name AS category_name',
+        'products.picture AS picture',
+        'products.revision as revision',
+        'products.alcoholpercentage AS alcoholpercentage',
+      ]);
+
+    const rawProducts = await builder.getRawMany();
+
+    // eslint-disable-next-line consistent-return
+    return rawProducts.map((rawProduct: any) => this.asProductResponse(rawProduct));
   }
 
   /**
@@ -141,23 +211,28 @@ export default class ProductService {
    */
   public static async getProducts(params: ProductParameters = {})
     : Promise<ProductResponse[]> {
-    const filter = params.containerId;
+    function condition() {
+      // No revision defaults to latest revision.
+      const latest = params.productRevision ? params.productRevision : 'product.currentRevision';
+      // If we are getting updatedContainers or products,
+      // we only want the last revision, otherwise all revisions.
+      // This is needed since containers can contain older revisions,
+      // Whilst updatedContainer contain the oldest revisions.
+      return params.updatedContainer || !params.containerId
+        ? `product.id = productrevision.product AND ${latest} = productrevision.revision`
+        : 'product.id = productrevision.product';
+    }
+
     const builder = createQueryBuilder()
       .from(Product, 'product')
       .innerJoinAndSelect(
         ProductRevision,
         'productrevision',
-        // If we are getting updatedContainers or products,
-        // we only want the last revision, otherwise all revisions.
-        // This is needed since containers can contain older revisions,
-        // Whilst updatedContainer contain the oldest revisions.
-        params.updatedContainer || !params.containerId
-          ? 'product.id = productrevision.product AND product.currentRevision = productrevision.revision'
-          : 'product.id = productrevision.product',
+        condition(),
       );
 
-    if (filter) {
-      this.addContainerFilter(builder, filter, false,
+    if (params.containerId) {
+      this.addContainerFilter(builder, params.containerId, false,
         params.updatedContainer, params.containerRevision);
     }
 
@@ -166,6 +241,7 @@ export default class ProductService {
       .innerJoinAndSelect('productrevision.category', 'category')
       .select([
         'product.id AS id',
+        'productrevision.revision as revision',
         'product.createdAt AS createdAt',
         'productrevision.updatedAt AS updatedAt',
         'productrevision.name AS name',
@@ -204,9 +280,8 @@ export default class ProductService {
         'product.id = updatedproduct.product',
       );
 
-    if (params.containerId) {
-      this.addContainerFilter(builder, params.containerId, true,
-        params.updatedContainer);
+    if (params.containerId || params.pointOfSaleId) {
+      this.addContainerFilter(builder, params.containerId, true, params.updatedContainer);
     }
 
     builder
@@ -234,7 +309,6 @@ export default class ProductService {
     QueryFilter.applyFilter(builder, filterMapping, params);
 
     const rawProducts = await builder.getRawMany();
-
     return rawProducts.map((rawProduct: any) => this.asProductResponse(rawProduct));
   }
 

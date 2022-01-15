@@ -17,17 +17,15 @@
  */
 
 /**
- * @typedef ProductRequest
- * @property {string} name - Name of the product
- * @property {number} price - Price of the product
- * @property {number} category - Category of the product
- * @property {string} picture - URL of the product image
- * @property {number} alcoholPercentage - Alcohol percentage of the product in 2 decimals
+ * Creates a new Unapproved Container Error than can be thrown when updating an POS.
+ * @param message - The error message to use
+ * @constructor UnapprovedContainerError
  */
-export default interface ProductRequest {
-  name: string;
-  price: number;
-  category: number;
-  picture: string;
-  alcoholPercentage: number;
+export default class UnapprovedContainerError extends Error {
+  constructor(message: string) {
+    super();
+    this.message = message;
+    this.name = 'UnapprovedContainerError';
+    this.stack = (new Error()).stack;
+  }
 }
