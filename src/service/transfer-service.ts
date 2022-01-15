@@ -49,9 +49,9 @@ export default class TransferService {
   private static async asTransfer(request: TransferRequest) : Promise<Transfer> {
     return Object.assign(new Transfer(), {
       description: request.description,
-      amount: dinero(request.amount),
-      from: await User.findOne(request.fromId),
-      to: await User.findOne(request.toId),
+      amount: dinero(request.amount as Dinero.Options),
+      from: request.fromId ? await User.findOne(request.fromId) : undefined,
+      to: request.toId ? await User.findOne(request.toId) : undefined,
     });
   }
 

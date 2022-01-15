@@ -19,7 +19,6 @@ import dinero from 'dinero.js';
 import { addDays } from 'date-fns';
 import * as fs from 'fs';
 import path from 'path';
-import { randomInt } from 'crypto';
 import Container from '../src/entity/container/container';
 import ContainerRevision from '../src/entity/container/container-revision';
 import PointOfSale from '../src/entity/point-of-sale/point-of-sale';

@@ -85,8 +85,7 @@ export default class TransferController extends BaseController {
    * @returns {string} 500 - Internal server error
    */
   public async returnAllTransfers(req: RequestWithToken, res: Response): Promise<void> {
-    const { body } = req;
-    this.logger.trace('Get all transfers', body, 'by user', req.token.user);
+    this.logger.trace('Get all transfers by user', req.token.user);
     try {
       const transfers = await TransferService.getTransfers();
       res.json(transfers);

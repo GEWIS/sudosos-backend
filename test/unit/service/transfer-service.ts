@@ -66,6 +66,9 @@ describe('TransferService', async (): Promise<void> => {
     it('should return all transfers', async () => {
       const res: TransferResponse[] = await TransferService.getTransfers();
       expect(res.length).to.equal(ctx.transfers.length);
+      const ids = new Set(ctx.transfers.map((obj) => obj.id));
+      res.forEach((element) => ids.delete(element.id));
+      expect(ids.size).to.equal(0);
     });
 
     it('should return a single transfer if id is specified', async () => {
@@ -90,10 +93,19 @@ describe('TransferService', async (): Promise<void> => {
         },
         description: 'cool',
         fromId: ctx.users[0].id,
-        toId: null,
+        toId: undefined,
       };
-      const res = await TransferService.postTransfer(req);
-      expect(res).to.not.be.null;
+      const resPost = await TransferService.postTransfer(req);
+      expect(resPost).to.not.be.null;
+
+      const res: TransferResponse[] = await TransferService.getTransfers();
+      const lastEntry = res.reduce((prev, curr) => (prev.id < curr.id ? curr : prev));
+      expect(lastEntry.amount.amount).to.equal(req.amount.amount);
+      expect(lastEntry.amount.currency).to.equal(req.amount.currency);
+      expect(lastEntry.amount.precision).to.equal(req.amount.precision);
+      expect(lastEntry.description).to.equal(req.description);
+      expect(lastEntry.from.id).to.equal(req.fromId);
+      expect(lastEntry.to).to.be.undefined;
     });
 
     it('should not be able to post an invalid transfer', async () => {
