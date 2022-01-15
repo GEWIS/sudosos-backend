@@ -69,7 +69,7 @@ export default class ProductCategoryController extends BaseController {
   /**
    * Returns all existing productcategories
    * @route GET /productcategories
-   * @group productCategories - Operations of productcategories controller
+   * @group productCategories - Operations of productcategory controller
    * @security JWT
    * @returns {Array.<ProductCategoryResponse>} 200 - All existing productcategories
    * @returns {string} 500 - Internal server error
@@ -90,7 +90,7 @@ export default class ProductCategoryController extends BaseController {
   /**
    * Post a new productCategory.
    * @route POST /productcategories
-   * @group productCategories - Operations of productcategories controller
+   * @group productCategories - Operations of productcategory controller
    * @param {ProductCategoryRequest.model} productCategory.body.required
    * - The productCategory which should be created
    * @security JWT
@@ -101,8 +101,6 @@ export default class ProductCategoryController extends BaseController {
   public async postProductCategory(req: RequestWithToken, res: Response): Promise<void> {
     const body = req.body as ProductCategoryRequest;
     this.logger.trace('Create productcategory', body, 'by user', req.token.user);
-
-    // handle request
     try {
       if (await ProductCategoryService.verifyProductCategory(body)) {
         res.json(await ProductCategoryService.postProductCategory(body));
@@ -118,7 +116,7 @@ export default class ProductCategoryController extends BaseController {
   /**
    * Returns the requested productcategory
    * @route GET /productcategories/{id}
-   * @group productCategories - Operations of productcategories controller
+   * @group productCategories - Operations of productcategory controller
    * @param {integer} id.path.required - The id of the productcategory which should be returned
    * @security JWT
    * @returns {ProductCategoryResponse.model} 200 - The requested productcategory entity

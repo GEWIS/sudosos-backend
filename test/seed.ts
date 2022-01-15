@@ -19,7 +19,6 @@ import dinero from 'dinero.js';
 import { addDays } from 'date-fns';
 import * as fs from 'fs';
 import path from 'path';
-import { randomInt } from 'crypto';
 import Container from '../src/entity/container/container';
 import ContainerRevision from '../src/entity/container/container-revision';
 import PointOfSale from '../src/entity/point-of-sale/point-of-sale';
@@ -34,6 +33,7 @@ import User, { UserType } from '../src/entity/user/user';
 import UpdatedProduct from '../src/entity/product/updated-product';
 import UpdatedContainer from '../src/entity/container/updated-container';
 import UpdatedPointOfSale from '../src/entity/point-of-sale/updated-point-of-sale';
+import Transfer from '../src/entity/transactions/transfer';
 import ProductImage from '../src/entity/file/product-image';
 import Banner from '../src/entity/banner';
 import BannerImage from '../src/entity/file/banner-image';
@@ -1130,6 +1130,35 @@ export async function seedTransactions(
   return { transactions };
 }
 
+export async function seedTransfers(users: User[]) : Promise<Transfer[]> {
+  const transfers: Transfer[] = [];
+  const promises: Promise<any>[] = [];
+
+  for (let i = 0; i < users.length; i += 1) {
+    let newTransfer = Object.assign(new Transfer(), {
+      description: '',
+      amount: dinero({ amount: 100 * (i + 1) }),
+      from: undefined,
+      to: users[i],
+    });
+    transfers.push(newTransfer);
+    promises.push(Transfer.save(newTransfer));
+
+    newTransfer = Object.assign(new Transfer(), {
+      description: '',
+      amount: dinero({ amount: 50 * (i + 1) }),
+      from: users[i],
+      to: undefined,
+    });
+    transfers.push(newTransfer);
+    promises.push(Transfer.save(newTransfer));
+  }
+
+  await Promise.all(promises);
+
+  return transfers;
+}
+
 /**
  * Create a BannerImage object. When not in a testing environment, a banner image
  * will also be saved on disk.
@@ -1175,7 +1204,7 @@ export async function seedBanners(users: User[]): Promise<{
     const banner = Object.assign(new Banner(), {
       id: i + 1,
       name: `Banner-${i + 1}`,
-      duration: randomInt(60, 300),
+      duration: Math.floor(Math.random() * (300 - 60) + 60),
       active: i % 2 === 0,
       startDate: new Date(),
       endDate: new Date(),
@@ -1208,6 +1237,7 @@ export interface DatabaseContent {
   pointOfSaleRevisions: PointOfSaleRevision[],
   updatedPointsOfSale: UpdatedPointOfSale[],
   transactions: Transaction[],
+  transfers: Transfer[]
   banners: Banner[],
 }
 
@@ -1222,6 +1252,7 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
     users, containerRevisions, containers,
   );
   const { transactions } = await seedTransactions(users, pointOfSaleRevisions);
+  const transfers = await seedTransfers(users);
   const { banners } = await seedBanners(users);
 
   return {
@@ -1237,6 +1268,7 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
     pointOfSaleRevisions,
     updatedPointsOfSale,
     transactions,
+    transfers,
     banners,
   };
 }

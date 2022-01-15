@@ -92,9 +92,7 @@ export default class ProductCategoryService {
   public static async patchProductCategory(id: number, request: ProductCategoryRequest)
     : Promise<ProductCategoryResponse> {
     const productCategoryToUpdate = await ProductCategory.findOne(id);
-    if (!productCategoryToUpdate) {
-      return null;
-    }
+    if (!productCategoryToUpdate) return null;
     const productCategory = Object.assign(productCategoryToUpdate, request);
     return ProductCategory.save(productCategory)
       .then(() => this.asProductCategoryResponse(productCategory));
@@ -114,14 +112,14 @@ export default class ProductCategoryService {
 
   /**
    * Verifies whether the productCategory request translates to a valid productCategory
-   * @param {ProductCategoryRequest.model} productCategoryRequest
+   * @param {ProductCategoryRequest.model} request
    * - the productCategory request to verify
    * @returns {boolean} - whether productCategory is ok or not
    */
-  public static async verifyProductCategory(productCategoryRequest: ProductCategoryRequest):
+  public static async verifyProductCategory(request: ProductCategoryRequest):
   Promise<boolean> {
-    return productCategoryRequest.name !== ''
-        && productCategoryRequest.name.length <= 64
-        && !(await ProductCategory.findOne({ where: { name: productCategoryRequest.name } }));
+    return request.name !== ''
+        && request.name.length <= 64
+        && !(await ProductCategory.findOne({ where: { name: request.name } }));
   }
 }

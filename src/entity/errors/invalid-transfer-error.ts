@@ -15,17 +15,15 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import User from '../entity/user/user';
-import { BaseUserResponse } from '../controller/response/user-response';
 
-// eslint-disable-next-line import/prefer-default-export
-export function parseUserToBaseResponse(user: User, timestamps: boolean): BaseUserResponse {
-  if (!user) return undefined;
-  return {
-    id: user.id,
-    firstName: user.firstName,
-    lastName: user.lastName,
-    createdAt: timestamps ? user.createdAt.toISOString() : undefined,
-    updatedAt: timestamps ? user.updatedAt.toISOString() : undefined,
-  } as BaseUserResponse;
+/**
+ * Creates a new Untargeted Transfer Error can be thrown when creating a transfer.
+ * @param message - The error message to use
+ * @constructor InvalidTransferError
+ */
+export default class InvalidTransferError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'InvalidTransferError';
+  }
 }

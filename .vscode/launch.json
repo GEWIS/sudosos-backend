@@ -37,6 +37,8 @@
       "args": [
         "-r",
         "ts-node/register",
+        "--file",
+        "${workspaceFolder}/test/setup.ts",
         "--no-timeouts",
         "${relativeFile}"
       ],
