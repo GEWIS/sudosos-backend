@@ -28,6 +28,7 @@ import { UpdatedPointOfSaleResponse } from './response/point-of-sale-response';
 import PointOfSale from '../entity/point-of-sale/point-of-sale';
 import UpdatePointOfSaleRequest from './request/update-point-of-sale-request';
 import UnapprovedContainerError from '../entity/errors/unapproved-container-error';
+import { parseRequestPagination } from '../helpers/pagination';
 
 export default class PointOfSaleController extends BaseController {
   private logger: Logger = log4js.getLogger('PointOfSaleController');
@@ -139,6 +140,8 @@ export default class PointOfSaleController extends BaseController {
    * @route GET /pointsofsale
    * @group pointofsale - Operations of the point of sale controller
    * @security JWT
+   * @param {integer} take.query - How many points of sale the endpoint should return
+   * @param {integer} skip.query - How many points of sale should be skipped (for pagination)
    * @returns {Array<PointOfSaleResponse>} 200 - All existing point of sales
    * @returns {string} 500 - Internal server error
    */
@@ -146,9 +149,20 @@ export default class PointOfSaleController extends BaseController {
     const { body } = req;
     this.logger.trace('Get all point of sales', body, 'by user', req.token.user);
 
+    let take;
+    let skip;
+    try {
+      const pagination = parseRequestPagination(req);
+      take = pagination.take;
+      skip = pagination.skip;
+    } catch (e) {
+      res.status(400).send(e.message);
+      return;
+    }
+
     // Handle request
     try {
-      const pointsOfSale = await PointOfSaleService.getPointsOfSale();
+      const pointsOfSale = await PointOfSaleService.getPointsOfSale({}, { take, skip });
       res.json(pointsOfSale);
     } catch (error) {
       this.logger.error('Could not return all point of sales:', error);
@@ -230,6 +244,8 @@ export default class PointOfSaleController extends BaseController {
    * @route GET /pointsofsale/{id}/containers
    * @group pointofsale - Operations of the point of sale controller
    * @security JWT
+   * @param {integer} take.query - How many containers the endpoint should return
+   * @param {integer} skip.query - How many containers should be skipped (for pagination)
    * @returns {Array<ContainerResponse>} 200 - All containers of the requested Point of Sale
    * @returns {string} 500 - Internal server error
    */
@@ -237,9 +253,13 @@ export default class PointOfSaleController extends BaseController {
     const { id } = req.params;
     this.logger.trace('Get all point of sale containers', id, 'by user', req.token.user);
 
+    const { take, skip } = parseRequestPagination(req);
+
     // Handle request
     try {
-      const containers = await ContainerService.getContainers({ posId: parseInt(id, 10) });
+      const containers = await ContainerService.getContainers({
+        posId: parseInt(id, 10),
+      }, { take, skip });
       res.json(containers);
     } catch (error) {
       this.logger.error('Could not return all point of sale containers:', error);
@@ -252,6 +272,8 @@ export default class PointOfSaleController extends BaseController {
    * @route GET /pointsofsale/{id}/products
    * @group pointofsale - Operations of the point of sale controller
    * @security JWT
+   * @param {integer} take.query - How many products the endpoint should return
+   * @param {integer} skip.query - How many products should be skipped (for pagination)
    * @returns {Array<ProductResponse>} 200 - All products of the requested Point of Sale
    * @returns {string} 500 - Internal server error
    */
@@ -259,9 +281,13 @@ export default class PointOfSaleController extends BaseController {
     const { id } = req.params;
     this.logger.trace('Get all point of sale products', id, 'by user', req.token.user);
 
+    const { take, skip } = parseRequestPagination(req);
+
     // Handle request
     try {
-      const products = await ProductService.getProductsPOS({ pointOfSaleId: parseInt(id, 10) });
+      const products = await ProductService.getProductsPOS({
+        pointOfSaleId: parseInt(id, 10),
+      }, { take, skip });
       res.json(products);
     } catch (error) {
       this.logger.error('Could not return all point of sale products:', error);
@@ -318,6 +344,8 @@ export default class PointOfSaleController extends BaseController {
    * @route GET /pointsofsale/updated
    * @group pointofsale - Operations of the point of sale controller
    * @security JWT
+   * @param {integer} take.query - How many points of sale the endpoint should return
+   * @param {integer} skip.query - How many points of sale should be skipped (for pagination)
    * @returns {Array<UpdatedPointOfSaleResponse>} 200 - All existing updated point of sales
    * @returns {string} 500 - Internal server error
    */
@@ -325,16 +353,19 @@ export default class PointOfSaleController extends BaseController {
     const { body } = req;
     this.logger.trace('Get all updated Points of sale', body, 'by user', req.token.user);
 
+    const { take, skip } = parseRequestPagination(req);
+
     // Handle request
     try {
       let pointsOfSale: UpdatedPointOfSaleResponse[];
       if (this.canGetAll(req)) {
-        pointsOfSale = (
-          (await PointOfSaleService.getUpdatedPointsOfSale()) as UpdatedPointOfSaleResponse[]);
+        pointsOfSale = ((await PointOfSaleService.getUpdatedPointsOfSale(
+          {}, { take, skip },
+        )) as UpdatedPointOfSaleResponse[]);
       } else {
-        pointsOfSale = await PointOfSaleService
-          .getPointsOfSaleInUserContext({ ownerId: req.token.user.id } as PointOfSaleParameters,
-            true);
+        pointsOfSale = await PointOfSaleService.getPointsOfSaleInUserContext(
+          { ownerId: req.token.user.id } as PointOfSaleParameters, { take, skip }, true,
+        );
       }
 
       res.json(pointsOfSale);

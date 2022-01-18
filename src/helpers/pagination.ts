@@ -16,58 +16,59 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { FindManyOptions, SelectQueryBuilder } from 'typeorm';
 import { RequestWithToken } from '../middleware/token-middleware';
 
-export function validatePaginationQueryParams(req: RequestWithToken): boolean {
+export const PAGINATION_DEFAULT = 25;
+export const PAGINATION_MAX = 500;
+
+export interface PaginationParameters {
+  take?: number;
+  skip?: number;
+}
+
+/**
+ * @typedef PaginationResult
+ * @property {integer} take Number of records queried
+ * @property {integer} skip Number of skipped records
+ * @property {integer} count Total number of resulting records
+ */
+export interface PaginationResult {
+  take: number;
+  skip: number;
+  count: number;
+}
+
+/**
+ * Check whether the possible take and skip query parameters are valid
+ * @param req
+ */
+export function validateRequestPagination(req: RequestWithToken): boolean {
   const urlParams = req.query || {};
 
   if (urlParams.take) {
     const t = parseInt(urlParams.take as string, 10);
-    if (Number.isNaN(t) || t.toString().length !== urlParams.take.length) return false;
+    if (Number.isNaN(t) || t.toString().length !== urlParams.take.length
+      || t < 0 || !Number.isInteger(t)) return false;
   }
   if (urlParams.skip) {
     const s = parseInt(urlParams.skip as string, 10);
-    if (Number.isNaN(s) || s.toString().length !== urlParams.skip.length) return false;
+    if (Number.isNaN(s) || s.toString().length !== urlParams.skip.length
+      || s < 0 || !Number.isInteger(s)) return false;
   }
 
   return true;
 }
 
-function parseReqSkipTake(req: RequestWithToken): { take?: number, skip?: number } {
-  let take;
-  let skip;
-  const urlParams = req.query || {};
-
-  // Parse and validate the take URL parameter
-  if (urlParams.take != null && typeof urlParams.take !== 'object') {
-    const parsedTake = parseInt(urlParams.take, 10);
-    if (!Number.isNaN(parsedTake)) take = parsedTake;
-  }
-
-  // Parse and validate the take URL parameter
-  if (urlParams.skip != null && typeof urlParams.skip !== 'object') {
-    const parsedSkip = parseInt(urlParams.skip, 10);
-    if (!Number.isNaN(parsedSkip)) skip = parsedSkip;
-  }
-
-  return { take, skip };
-}
-
 /**
- * Get a FindManyOptions object that includes pagination parameters,
- * based on pagination parameters in the request URL
+ * Extract possible pagination parameters from the request and put them in the take and skip
+ * variables. If one of them (or all of them) is not defined, default values are set.
  *
- * To make pagination appear in Swagger, add the following two lines to your function definition:
- * // @param {integer} take.query - How many users the endpoint should return
- * // @param {integer} skip.query - How many users should be skipped (for pagination)
- *
- * @param req RequestWithToken object, as received in the controller
- * @returns FindManyOptions skip and take parameters for the findoptions for TypeORM.
- *  This should be concatenated with the rest of the parameters
+ * @param req
+ * @throws {Error} pagination query parameters are not positive integers or undefined
  */
+export function parseRequestPagination(req: RequestWithToken): { take: number, skip: number } {
+  if (!validateRequestPagination(req)) throw Error('Invalid pagination parameters');
 
-export function addPaginationForFindOptions(req: RequestWithToken): FindManyOptions {
   const maxTake = parseInt(process.env.PAGINATION_MAX, 10) || 500;
 
   // Set the default take and skip to the values set in the environment variables.
@@ -77,56 +78,19 @@ export function addPaginationForFindOptions(req: RequestWithToken): FindManyOpti
     0,
   ];
 
-  // Parse the values in the URL parameters
-  const parsed = parseReqSkipTake(req);
+  const urlParams = req.query || {};
 
-  // If no value has been given by the user, we simply keep using the default
-  if (parsed.take !== undefined) {
-    take = parsed.take < maxTake ? parsed.take : maxTake;
+  // Parse and validate the take URL parameter
+  if (urlParams.take != null && typeof urlParams.take !== 'object') {
+    const parsedTake = parseInt(urlParams.take, 10);
+    if (!Number.isNaN(parsedTake) && parsedTake >= 0) take = Math.min(parsedTake, maxTake);
   }
 
-  // If no value has been given by the user, we simply keep using the default
-  if (parsed.skip !== undefined) skip = parsed.skip;
-
-  return { skip, take };
-}
-
-/**
- * Add pagination to a QueryBuilder object
- * @param req RequestWithToken object, as received in the controller
- * @param query QueryBuilder object the pagination needs to be applied to
- * @returns The same QueryBuilder object as before,
- * but now with pagination added
- */
-export function addPaginationToQueryBuilder<T>(
-  req: RequestWithToken, query: SelectQueryBuilder<T>,
-) {
-  const maxTake = parseInt(process.env.PAGINATION_MAX, 10) || 500;
-
-  // Set the default take and skip to the values set in the environment variables.
-  // If these are not set, choose 25 and 0 respectively
-  const [take, skip] = [
-    parseInt(process.env.PAGINATION_DEFAULT, 10) || 25,
-    0,
-  ];
-
-  // Parse the values in the URL parameters
-  const parsed = parseReqSkipTake(req);
-
-  // We have to do two comparisons here. first, we need to check if a pagination
-  // value has been given. If this is not the case, we pick the default. Then, we
-  // have a maximum take value, so if the parsed value is larger, we return the max.
-  if (parsed.take !== undefined) {
-    query.limit(parsed.take < maxTake ? parsed.take : maxTake);
-    query.take(parsed.take < maxTake ? parsed.take : maxTake);
-  } else {
-    query.limit(take);
-    query.take(take);
+  // Parse and validate the take URL parameter
+  if (urlParams.skip != null && typeof urlParams.skip !== 'object') {
+    const parsedSkip = parseInt(urlParams.skip, 10);
+    if (!Number.isNaN(parsedSkip) && parsedSkip >= 0) skip = parsedSkip;
   }
 
-  // This could be done in one line, so why not?
-  query.offset(parsed.skip === undefined ? skip : parsed.skip);
-  query.skip(parsed.skip === undefined ? skip : parsed.skip);
-
-  return query;
+  return { take, skip };
 }

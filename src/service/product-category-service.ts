@@ -20,6 +20,7 @@ import ProductCategory from '../entity/product/product-category';
 import { ProductCategoryResponse } from '../controller/response/product-category-response';
 import ProductCategoryRequest from '../controller/request/product-category-request';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
+import { PaginationParameters } from '../helpers/pagination';
 
 /**
  * Define productCategory filtering parameters used to filter query results.
@@ -58,14 +59,19 @@ export default class ProductCategoryService {
   /**
    * Query for getting the productCategories.
    */
-  public static async getProductCategories(params: ProductCategoryFilterParameters = {})
-    : Promise<ProductCategoryResponse[]> {
+  public static async getProductCategories(
+    filters: ProductCategoryFilterParameters = {}, pagination: PaginationParameters = {},
+  ): Promise<ProductCategoryResponse[]> {
+    const { take, skip } = pagination;
+
     const filterMapping: FilterMapping = {
       id: 'id',
       name: 'name',
     };
     const options: FindManyOptions = {
-      where: QueryFilter.createFilterWhereClause(filterMapping, params),
+      where: QueryFilter.createFilterWhereClause(filterMapping, filters),
+      take,
+      skip,
     };
     const productCategories = await ProductCategory.find(options);
     return productCategories.map(

@@ -16,159 +16,161 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import express, { Application } from 'express';
 import { expect } from 'chai';
-import { createQueryBuilder } from 'typeorm';
 import { RequestWithToken } from '../../../src/middleware/token-middleware';
-import { addPaginationForFindOptions, addPaginationToQueryBuilder } from '../../../src/helpers/pagination';
+import {
+  PAGINATION_DEFAULT,
+  PAGINATION_MAX,
+  parseRequestPagination,
+  validateRequestPagination,
+} from '../../../src/helpers/pagination';
 
 describe('Pagination', (): void => {
   let ctx: {
-    app: Application,
     req: RequestWithToken,
+    paginationDefault: number,
+    paginationMax: number,
   };
 
   beforeEach((): void => {
-    const app = express();
     const req = {
       token: '',
       query: {
-        take: 23,
-        skip: 2,
+        take: '23',
+        skip: '2',
       },
     } as any as RequestWithToken;
 
     ctx = {
-      app,
       req,
+      paginationDefault: parseInt(process.env.PAGINATION_DEFAULT, 10) || PAGINATION_DEFAULT,
+      paginationMax: parseInt(process.env.PAGINATION_MAX, 10) || PAGINATION_MAX,
     };
   });
 
-  describe('Pagination FindOptions', () => {
-    it('should apply environment pagination', () => {
-      const options = addPaginationForFindOptions(ctx.req);
-
-      expect(options.take).to.equal(23);
-      expect(options.skip).to.equal(2);
+  describe('validateRequestPagination', () => {
+    it('should validate correct take and skip', async () => {
+      const response = validateRequestPagination(ctx.req);
+      expect(response).to.be.true;
     });
 
-    it('should apply default pagination from environment variables', () => {
-      ctx.req.query = {};
-      const options = addPaginationForFindOptions(ctx.req);
+    it('should return true when no take is set', async () => {
+      const req = { ...ctx.req } as any as RequestWithToken;
+      delete req.query.take;
 
-      expect(options.take).to.equal(parseInt(process.env.PAGINATION_DEFAULT, 10));
-      expect(options.skip).to.equal(0);
+      const response = validateRequestPagination(req);
+      expect(response).to.be.true;
     });
 
-    it('should apply default pagination if query is invalid', () => {
-      ctx.req.query.take = 'StringsAreNotIntegers';
-      ctx.req.query.skip = 'StringsAreNotIntegers';
-      const options = addPaginationForFindOptions(ctx.req);
+    it('should return true when no skip is set', async () => {
+      const req = { ...ctx.req } as any as RequestWithToken;
+      delete req.query.skip;
 
-      expect(options.take).to.equal(parseInt(process.env.PAGINATION_DEFAULT, 10));
-      expect(options.skip).to.equal(0);
+      const response = validateRequestPagination(req);
+      expect(response).to.be.true;
     });
 
-    it('should apply default pagination from coded value', () => {
-      ctx.req.query = {};
-      const defaultPagination = process.env.PAGINATION_DEFAULT;
-      process.env.PAGINATION_DEFAULT = null;
-      const options = addPaginationForFindOptions(ctx.req);
+    it('should return true when take is too large', async () => {
+      const req = { ...ctx.req } as any as RequestWithToken;
+      req.query.take = (ctx.paginationMax + 1).toString();
 
-      expect(options.take).to.equal(25);
-      expect(options.skip).to.equal(0);
-
-      process.env.PAGINATION_DEFAULT = defaultPagination;
+      const response = validateRequestPagination(req);
+      expect(response).to.be.true;
     });
 
-    it('should use maximum pagination', () => {
-      ctx.req.query.take = process.env.PAGINATION_MAX + 100;
-      const options = addPaginationForFindOptions(ctx.req);
+    it('should return false when take is negative', async () => {
+      const req = { ...ctx.req } as any as RequestWithToken;
+      req.query.take = '-1';
 
-      expect(options.take).to.equal(parseInt(process.env.PAGINATION_MAX, 10));
-      expect(options.skip).to.equal(2);
+      const response = validateRequestPagination(req);
+      expect(response).to.be.false;
     });
 
-    it('should use maximum pagination with hardcoded max', () => {
-      ctx.req.query.take = '10000';
-      const maxPagination = process.env.PAGINATION_MAX;
-      process.env.PAGINATION_MAX = null;
-      const options = addPaginationForFindOptions(ctx.req);
+    it('should return false when skip is negative', async () => {
+      const req = { ...ctx.req } as any as RequestWithToken;
+      req.query.skip = '-1';
 
-      expect(options.take).to.equal(500);
-      expect(options.skip).to.equal(2);
+      const response = validateRequestPagination(req);
+      expect(response).to.be.false;
+    });
 
-      process.env.PAGINATION_MAX = maxPagination;
+    it('should return false when take is a float', async () => {
+      const req = { ...ctx.req } as any as RequestWithToken;
+      req.query.take = '12.345';
+    });
+
+    it('should return false when skip is a float', async () => {
+      const req = { ...ctx.req } as any as RequestWithToken;
+      req.query.skip = '12.345';
+    });
+
+    it('should return false when both take and skip are strings', async () => {
+      const req = { ...ctx.req } as any as RequestWithToken;
+      req.query.take = 'iiieeee';
+      req.query.skip = 'aaaaaaa';
+
+      const response = validateRequestPagination(req);
+      expect(response).to.be.false;
     });
   });
 
-  describe('Pagination QueryBuilder', () => {
-    it('should apply environment pagination', () => {
-      const query = addPaginationToQueryBuilder(ctx.req, createQueryBuilder());
-
-      expect(query.expressionMap.limit).to.equal(23);
-      expect(query.expressionMap.take).to.equal(23);
-      expect(query.expressionMap.offset).to.equal(2);
-      expect(query.expressionMap.skip).to.equal(2);
+  describe('parseRequestPagination', () => {
+    it('should correctly return take and skip from request', async () => {
+      const { take, skip } = parseRequestPagination(ctx.req);
+      expect(take).to.equal(parseInt(ctx.req.query.take as string, 10));
+      expect(skip).to.equal(parseInt(ctx.req.query.skip as string, 10));
     });
 
-    it('should apply default pagination from environment variables', () => {
-      ctx.req.query = {};
-      const query = addPaginationToQueryBuilder(ctx.req, createQueryBuilder());
+    it('should set default take when no take is set', async () => {
+      const req = { ...ctx.req } as any as RequestWithToken;
+      delete req.query.take;
 
-      expect(query.expressionMap.limit).to.equal(parseInt(process.env.PAGINATION_DEFAULT, 10));
-      expect(query.expressionMap.take).to.equal(parseInt(process.env.PAGINATION_DEFAULT, 10));
-      expect(query.expressionMap.offset).to.equal(0);
-      expect(query.expressionMap.skip).to.equal(0);
+      const { take, skip } = parseRequestPagination(req);
+      expect(take).to.equal(ctx.paginationDefault);
+      expect(skip).to.equal(parseInt(req.query.skip as string, 10));
     });
 
-    it('should apply default pagination if query is invalid', () => {
-      ctx.req.query.take = 'StringsAreNotIntegers';
-      ctx.req.query.skip = 'StringsAreNotIntegers';
-      const query = addPaginationToQueryBuilder(ctx.req, createQueryBuilder());
+    it('should set skip to zero when no skip is set', async () => {
+      const req = { ...ctx.req } as any as RequestWithToken;
+      delete req.query.skip;
 
-      expect(query.expressionMap.limit).to.equal(parseInt(process.env.PAGINATION_DEFAULT, 10));
-      expect(query.expressionMap.take).to.equal(parseInt(process.env.PAGINATION_DEFAULT, 10));
-      expect(query.expressionMap.offset).to.equal(0);
-      expect(query.expressionMap.skip).to.equal(0);
+      const { take, skip } = parseRequestPagination(req);
+      expect(take).to.equal(parseInt(req.query.take as string, 10));
+      expect(skip).to.equal(0);
     });
 
-    it('should apply default pagination from coded value', () => {
-      ctx.req.query = {};
-      const defaultPagination = process.env.PAGINATION_DEFAULT;
-      process.env.PAGINATION_DEFAULT = null;
-      const query = addPaginationToQueryBuilder(ctx.req, createQueryBuilder());
+    it('should set max take when take is too large', async () => {
+      const req = { ...ctx.req } as any as RequestWithToken;
+      req.query.take = (ctx.paginationMax + 1).toString();
 
-      expect(query.expressionMap.limit).to.equal(25);
-      expect(query.expressionMap.take).to.equal(25);
-      expect(query.expressionMap.offset).to.equal(0);
-      expect(query.expressionMap.skip).to.equal(0);
-
-      process.env.PAGINATION_DEFAULT = defaultPagination;
+      const { take, skip } = parseRequestPagination(req);
+      expect(take).to.equal(ctx.paginationMax);
+      expect(skip).to.equal(parseInt(req.query.skip as string, 10));
     });
 
-    it('should use maximum pagination', () => {
-      ctx.req.query.take = process.env.PAGINATION_MAX + 100;
-      const query = addPaginationToQueryBuilder(ctx.req, createQueryBuilder());
+    it('should throw error when take is negative', async () => {
+      const req = { ...ctx.req } as any as RequestWithToken;
+      req.query.take = '-1';
 
-      expect(query.expressionMap.limit).to.equal(parseInt(process.env.PAGINATION_MAX, 10));
-      expect(query.expressionMap.take).to.equal(parseInt(process.env.PAGINATION_MAX, 10));
-      expect(query.expressionMap.offset).to.equal(2);
-      expect(query.expressionMap.skip).to.equal(2);
+      const func = () => parseRequestPagination(req);
+      expect(func).to.throw('Invalid pagination parameters');
     });
 
-    it('should use maximum pagination with hardcoded max', () => {
-      ctx.req.query.take = '10000';
-      const maxPagination = process.env.PAGINATION_MAX;
-      process.env.PAGINATION_MAX = null;
-      const query = addPaginationToQueryBuilder(ctx.req, createQueryBuilder());
+    it('should throw error when skip is negative', async () => {
+      const req = { ...ctx.req } as any as RequestWithToken;
+      req.query.skip = '-1';
 
-      expect(query.expressionMap.limit).to.equal(500);
-      expect(query.expressionMap.take).to.equal(500);
-      expect(query.expressionMap.offset).to.equal(2);
-      expect(query.expressionMap.skip).to.equal(2);
+      const func = () => parseRequestPagination(req);
+      expect(func).to.throw('Invalid pagination parameters');
+    });
 
-      process.env.PAGINATION_MAX = maxPagination;
+    it('should throw error when both are strings', async () => {
+      const req = { ...ctx.req } as any as RequestWithToken;
+      req.query.take = 'iiieeee';
+      req.query.skip = 'aaaaaaa';
+
+      const func = () => parseRequestPagination(req);
+      expect(func).to.throw('Invalid pagination parameters');
     });
   });
 });

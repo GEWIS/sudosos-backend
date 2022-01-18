@@ -35,6 +35,7 @@ import UnapprovedContainerError from '../entity/errors/unapproved-container-erro
 import ContainerRevision from '../entity/container/container-revision';
 import ContainerService, { ContainerParameters } from './container-service';
 import { ContainerWithProductsResponse } from '../controller/response/container-response';
+import { PaginationParameters } from '../helpers/pagination';
 
 /**
  * Define point of sale filtering parameters used to filter query results.
@@ -119,10 +120,14 @@ export default class PointOfSaleService {
 
   /**
    * Query to return current point of sales.
-   * @param params - Parameters to query the point of sales with.
+   * @param filters - Parameters to query the point of sales with.
+   * @param pagination
    */
-  public static async getPointsOfSale(params: PointOfSaleParameters = {})
-    : Promise<PointOfSaleResponse[] | PointOfSaleWithContainersResponse[]> {
+  public static async getPointsOfSale(
+    filters: PointOfSaleParameters = {}, pagination: PaginationParameters = {},
+  ): Promise<PointOfSaleResponse[] | PointOfSaleWithContainersResponse[]> {
+    const { take, skip } = pagination;
+
     const builder = createQueryBuilder()
       .from(PointOfSale, 'pos')
       .innerJoin(
@@ -143,9 +148,11 @@ export default class PointOfSaleService {
         'owner.id AS owner_id',
         'owner.firstName AS owner_firstName',
         'owner.lastName AS owner_lastName',
-      ]);
+      ])
+      .limit(take)
+      .offset(skip);
 
-    if (params.pointOfSaleRevision === undefined) builder.where('pos.currentRevision = posrevision.revision');
+    if (filters.pointOfSaleRevision === undefined) builder.where('pos.currentRevision = posrevision.revision');
 
     const filterMapping: FilterMapping = {
       pointOfSaleId: 'pos.id',
@@ -156,11 +163,11 @@ export default class PointOfSaleService {
       ownerId: 'owner.id',
     };
 
-    QueryFilter.applyFilter(builder, filterMapping, params);
+    QueryFilter.applyFilter(builder, filterMapping, filters);
 
     const rawPointOfSales = await builder.getRawMany();
 
-    if (params.returnContainers) {
+    if (filters.returnContainers) {
       const pointOfSales: PointOfSaleWithContainersResponse[] = [];
       await Promise.all(rawPointOfSales.map(
         async (rawPointOfSale) => {
@@ -179,10 +186,14 @@ export default class PointOfSaleService {
 
   /**
    * Query to return updated (pending) point of sales.
-   * @param params - Parameters to query the point of sales with.
+   * @param filters - Parameters to query the point of sales with.
+   * @param pagination
    */
-  public static async getUpdatedPointsOfSale(params: PointOfSaleParameters = {})
-    : Promise<UpdatedPointOfSaleResponse[] | PointOfSaleWithContainersResponse[]> {
+  public static async getUpdatedPointsOfSale(
+    filters: PointOfSaleParameters = {}, pagination: PaginationParameters = {},
+  ): Promise<UpdatedPointOfSaleResponse[] | PointOfSaleWithContainersResponse[]> {
+    const { take, skip } = pagination;
+
     const builder = createQueryBuilder()
       .from(PointOfSale, 'pos')
       .innerJoin(
@@ -202,7 +213,9 @@ export default class PointOfSaleService {
         'owner.id AS owner_id',
         'owner.firstName AS owner_firstName',
         'owner.lastName AS owner_lastName',
-      ]);
+      ])
+      .limit(take)
+      .offset(skip);
 
     const filterMapping: FilterMapping = {
       pointOfSaleId: 'pos.id',
@@ -211,11 +224,11 @@ export default class PointOfSaleService {
       useAuthentication: 'pos.useAuthentication',
       ownerId: 'owner.id',
     };
-    QueryFilter.applyFilter(builder, filterMapping, params);
+    QueryFilter.applyFilter(builder, filterMapping, filters);
 
     const rawPointOfSales = await builder.getRawMany();
 
-    if (params.returnContainers) {
+    if (filters.returnContainers) {
       const pointOfSales: PointOfSaleWithContainersResponse[] = [];
       await Promise.all(rawPointOfSales.map(
         async (rawPointOfSale) => {
@@ -268,16 +281,18 @@ export default class PointOfSaleService {
   /**
    * Function that returns all the points of sale visible to a user.
    * @param params
+   * @param pagination
    * @param updated
    */
-  public static async getPointsOfSaleInUserContext(params: PointOfSaleParameters, updated?: boolean)
-    : Promise<PointOfSaleResponse[] | UpdatedPointOfSaleResponse[]> {
+  public static async getPointsOfSaleInUserContext(
+    params: PointOfSaleParameters, pagination: PaginationParameters = {}, updated?: boolean,
+  ): Promise<PointOfSaleResponse[] | UpdatedPointOfSaleResponse[]> {
     const publicPOS: any = updated
       ? (await this.getUpdatedPointsOfSale(
-        { ...params, ownerId: undefined, public: true } as ContainerParameters,
+        { ...params, ownerId: undefined, public: true } as ContainerParameters, pagination,
       ))
       : (await this.getPointsOfSale(
-        { ...params, ownerId: undefined, public: true } as ContainerParameters,
+        { ...params, ownerId: undefined, public: true } as ContainerParameters, pagination,
       ));
 
     const ownPOS: any = updated

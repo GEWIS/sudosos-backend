@@ -26,7 +26,6 @@ import {
 } from '../controller/response/transaction-response';
 import Transaction from '../entity/transactions/transaction';
 import SubTransaction from '../entity/transactions/sub-transaction';
-import { addPaginationToQueryBuilder } from '../helpers/pagination';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
 import { parseUserToBaseResponse } from '../helpers/entity-to-response';
 import {
@@ -45,6 +44,7 @@ import { DineroObjectRequest } from '../controller/request/dinero-request';
 import { DineroObjectResponse } from '../controller/response/dinero-response';
 import BalanceService from './balance-service';
 import { asDate, asNumber } from '../helpers/validators';
+import { PaginationParameters } from '../helpers/pagination';
 
 export interface TransactionFilterParameters {
   fromId?: number,
@@ -471,16 +471,17 @@ export default class TransactionService {
 
   /**
    * Returns all transactions requested with the filter
-   * @param {RequestWithToken.model} req - the request with token
    * @param {TransactionFilterParameters.model} params - the filter parameters
+   * @param {PaginationParameters} pagination
    * @param {User.model} user - A user that is involved in all transactions
    * @returns {BaseTransactionResponse[]} - the transactions without sub transactions
    */
   public static async getTransactions(
-    req: RequestWithToken, params: TransactionFilterParameters, user?: User,
+    params: TransactionFilterParameters, pagination: PaginationParameters = {}, user?: User,
   ): Promise<BaseTransactionResponse[]> {
     // Extract fromDate and tillDate, as they cannot be directly passed to QueryFilter.
     const { fromDate, tillDate, ...p } = params;
+    const { take, skip } = pagination;
 
     function applySubTransactionFilters(query: SelectQueryBuilder<any>): SelectQueryBuilder<any> {
       const mapping: FilterMapping = {
@@ -513,7 +514,9 @@ export default class TransactionService {
       .leftJoinAndSelect('pointOfSaleRev.pointOfSale', 'pointOfSale')
       .leftJoin('transaction.subTransactions', 'subTransaction')
       .leftJoin('subTransaction.subTransactionRows', 'subTransactionRow')
-      .distinct(true);
+      .distinct(true)
+      .limit(take)
+      .offset(skip);
 
     if (fromDate) query.andWhere('"transaction"."createdAt" >= :fromDate', { fromDate: fromDate.toISOString() });
     if (tillDate) query.andWhere('"transaction"."createdAt" < :tillDate', { tillDate: tillDate.toISOString() });
@@ -528,7 +531,6 @@ export default class TransactionService {
     }
 
     query = applySubTransactionFilters(query);
-    query = addPaginationToQueryBuilder(req, query);
 
     const rawTransactions = await query.getRawMany();
 

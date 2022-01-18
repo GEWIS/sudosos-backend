@@ -31,6 +31,7 @@ import ProductRequest from '../controller/request/product-request';
 import ProductCategory from '../entity/product/product-category';
 import PointOfSale from '../entity/point-of-sale/point-of-sale';
 import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision';
+import { PaginationParameters } from '../helpers/pagination';
 
 /**
  * Define product filtering parameters used to filter query results.
@@ -159,9 +160,13 @@ export default class ProductService {
   /**
    * Gets all the products in a PointOfSale
    * @param params
+   * @param pagination
    */
-  public static async getProductsPOS(params: ProductParameters = {}):
-  Promise<ProductResponse[]> {
+  public static async getProductsPOS(
+    params: ProductParameters = {}, pagination: PaginationParameters = {},
+  ): Promise<ProductResponse[]> {
+    const { take, skip } = pagination;
+
     let POScurrent: PointOfSale;
     let revision = params.pointOfSaleRevision;
 
@@ -198,7 +203,9 @@ export default class ProductService {
         'image.downloadName AS image',
         'products.revision as revision',
         'products.alcoholpercentage AS alcoholpercentage',
-      ]);
+      ])
+      .limit(take)
+      .offset(skip);
 
     const rawProducts = await builder.getRawMany();
 
@@ -209,9 +216,11 @@ export default class ProductService {
   /**
    * Query for getting all products following the ProductParameters.
    * @param params - The product query parameters.
+   * @param pagination
    */
-  public static async getProducts(params: ProductParameters = {})
-    : Promise<ProductResponse[]> {
+  public static async getProducts(
+    params: ProductParameters = {}, pagination: PaginationParameters = {},
+  ): Promise<ProductResponse[]> {
     function condition() {
       // No revision defaults to latest revision.
       const latest = params.productRevision ? params.productRevision : 'product.currentRevision';
@@ -223,6 +232,8 @@ export default class ProductService {
         ? `product.id = productrevision.product AND ${latest} = productrevision.revision`
         : 'product.id = productrevision.product';
     }
+
+    const { take, skip } = pagination;
 
     const builder = createQueryBuilder()
       .from(Product, 'product')
@@ -255,7 +266,9 @@ export default class ProductService {
         'category.name AS category_name',
         'productrevision.alcoholpercentage AS alcoholpercentage',
         'image.downloadName as image',
-      ]);
+      ])
+      .limit(take)
+      .offset(skip);
 
     const filterMapping: FilterMapping = {
       productId: 'product.id',
@@ -271,9 +284,13 @@ export default class ProductService {
   /**
    * Query for getting all updated products following the ProductParameters.
    * @param params - The product query parameters.
+   * @param pagination
    */
-  public static async getUpdatedProducts(params: ProductParameters = {})
-    : Promise<ProductResponse[]> {
+  public static async getUpdatedProducts(
+    params: ProductParameters = {}, pagination: PaginationParameters = {},
+  ): Promise<ProductResponse[]> {
+    const { take, skip } = pagination;
+
     const builder = createQueryBuilder()
       .from(Product, 'product')
       .innerJoinAndSelect(
@@ -303,7 +320,9 @@ export default class ProductService {
         'category.name AS category_name',
         'updatedproduct.alcoholpercentage AS alcoholpercentage',
         'image.downloadName as image',
-      ]);
+      ])
+      .limit(take)
+      .offset(skip);
 
     const filterMapping: FilterMapping = {
       productId: 'product.id',

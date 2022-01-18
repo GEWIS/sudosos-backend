@@ -24,7 +24,7 @@ import TransactionService, {
   parseGetTransactionsFilters,
 } from '../service/transaction-service';
 import { TransactionResponse } from './response/transaction-response';
-import { validatePaginationQueryParams } from '../helpers/pagination';
+import { parseRequestPagination } from '../helpers/pagination';
 import { TransactionRequest } from './request/transaction-request';
 import Transaction from '../entity/transactions/transaction';
 import User from '../entity/user/user';
@@ -90,8 +90,8 @@ export default class TransactionController extends BaseController {
    * transactions. Requires ProductID
    * @param {string} fromDate.query - Start date for selected transactions (inclusive)
    * @param {string} tillDate.query - End date for selected transactions (exclusive)
-   * @param {integer} take.query - How many users the endpoint should return
-   * @param {integer} skip.query - How many users should be skipped (for pagination)
+   * @param {integer} take.query - How many transactions the endpoint should return
+   * @param {integer} skip.query - How many transactions should be skipped (for pagination)
    * @returns {[TransactionResponse]} 200 - A list of all transactions
    */
   // eslint-disable-next-line class-methods-use-this
@@ -101,20 +101,20 @@ export default class TransactionController extends BaseController {
     // Parse the filters given in the query parameters. If there are any issues,
     // the parse method will throw an exception. We will then return a 400 error.
     let filters;
+    let take;
+    let skip;
     try {
       filters = parseGetTransactionsFilters(req);
+      const pagination = parseRequestPagination(req);
+      take = pagination.take;
+      skip = pagination.skip;
     } catch (e) {
       res.status(400).json(e.message);
       return;
     }
 
-    if (!validatePaginationQueryParams(req)) {
-      res.status(400).json('The pagination skip and/or take are invalid');
-      return;
-    }
-
     try {
-      const transactions = await TransactionService.getTransactions(req, filters);
+      const transactions = await TransactionService.getTransactions(filters, { take, skip });
       res.status(200).json(transactions);
     } catch (e) {
       res.status(500).send();

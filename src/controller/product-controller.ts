@@ -26,6 +26,7 @@ import ProductRequest from './request/product-request';
 import Product from '../entity/product/product';
 import FileService from '../service/file-service';
 import { PRODUCT_IMAGE_LOCATION } from '../files/storage';
+import { parseRequestPagination } from '../helpers/pagination';
 
 export default class ProductController extends BaseController {
   private logger: Logger = log4js.getLogger('ProductController');
@@ -101,6 +102,8 @@ export default class ProductController extends BaseController {
    * @route GET /products
    * @group products - Operations of product controller
    * @security JWT
+   * @param {integer} take.query - How many products the endpoint should return
+   * @param {integer} skip.query - How many products should be skipped (for pagination)
    * @returns {Array.<ProductResponse>} 200 - All existing products
    * @returns {string} 500 - Internal server error
    */
@@ -108,9 +111,20 @@ export default class ProductController extends BaseController {
     const { body } = req;
     this.logger.trace('Get all products', body, 'by user', req.token.user);
 
+    let take;
+    let skip;
+    try {
+      const pagination = parseRequestPagination(req);
+      take = pagination.take;
+      skip = pagination.skip;
+    } catch (e) {
+      res.status(400).send(e.message);
+      return;
+    }
+
     // Handle request
     try {
-      const products = await ProductService.getProducts();
+      const products = await ProductService.getProducts({}, { take, skip });
       res.json(products);
     } catch (error) {
       this.logger.error('Could not return all products:', error);
@@ -243,6 +257,8 @@ export default class ProductController extends BaseController {
    * @route GET /products/updated
    * @group products - Operations of product controller
    * @security JWT
+   * @param {integer} take.query - How many products the endpoint should return
+   * @param {integer} skip.query - How many products should be skipped (for pagination)
    * @returns {Array.<ProductResponse>} 200 - All existing updated products
    * @returns {string} 500 - Internal server error
    */
@@ -250,9 +266,20 @@ export default class ProductController extends BaseController {
     const { body } = req;
     this.logger.trace('Get all updated products', body, 'by user', req.token.user);
 
+    let take;
+    let skip;
+    try {
+      const pagination = parseRequestPagination(req);
+      take = pagination.take;
+      skip = pagination.skip;
+    } catch (e) {
+      res.status(400).send(e.message);
+      return;
+    }
+
     // Handle request
     try {
-      const products = await ProductService.getUpdatedProducts();
+      const products = await ProductService.getUpdatedProducts({}, { take, skip });
       res.json(products);
     } catch (error) {
       this.logger.error('Could not return all products:', error);

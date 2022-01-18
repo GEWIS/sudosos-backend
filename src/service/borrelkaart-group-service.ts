@@ -15,13 +15,13 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { FindManyOptions } from 'typeorm';
 import BorrelkaartGroupRequest from '../controller/request/borrelkaart-group-request';
 import BorrelkaartGroupResponse from '../controller/response/borrelkaart-group-response';
 import { UserResponse } from '../controller/response/user-response';
 import BorrelkaartGroup from '../entity/user/borrelkaart-group';
 import User from '../entity/user/user';
 import UserBorrelkaartGroup from '../entity/user/user-borrelkaart-group';
+import { PaginationParameters } from '../helpers/pagination';
 
 export default class BorrelkaartGroupService {
   /**
@@ -148,12 +148,13 @@ export default class BorrelkaartGroupService {
 
   /**
    * Returns all borrelkaart groups without users
-   * @param {FindManyOptions.model} options - find options
+   * @param {PaginationParameters.model} params - find options
    * @returns {Array.<BorrelkaartGroupResponse>} borrelkaart groups without users
    */
-  public static async getAllBorrelkaartGroups(options?: FindManyOptions):
+  public static async getAllBorrelkaartGroups(params: PaginationParameters = {}):
   Promise<BorrelkaartGroupResponse[]> {
-    const bkgs = await BorrelkaartGroup.find({ ...options });
+    const { take, skip } = params;
+    const bkgs = await BorrelkaartGroup.find({ take, skip });
     return bkgs.map((bkg) => this.asBorrelkaartGroupResponse(bkg, null));
   }
 

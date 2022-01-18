@@ -22,11 +22,11 @@ import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import BannerRequest from './request/banner-request';
 import { RequestWithToken } from '../middleware/token-middleware';
-import { addPaginationForFindOptions } from '../helpers/pagination';
 import BannerService from '../service/banner-service';
 import Banner from '../entity/banner';
 import FileService from '../service/file-service';
 import { BANNER_IMAGE_LOCATION } from '../files/storage';
+import { parseRequestPagination } from '../helpers/pagination';
 
 export default class BannerController extends BaseController {
   private logger: Logger = log4js.getLogger('BannerController');
@@ -94,6 +94,8 @@ export default class BannerController extends BaseController {
    * @route GET /banners
    * @group banners - Operations of banner controller
    * @security JWT
+   * @param {integer} take.query - How many banners the endpoint should return
+   * @param {integer} skip.query - How many banners should be skipped (for pagination)
    * @returns {Array.<BannerResponse>} 200 - All existing banners
    * @returns {string} 500 - Internal server error
    */
@@ -101,9 +103,20 @@ export default class BannerController extends BaseController {
     const { body } = req;
     this.logger.trace('Get all banners', body, 'by user', req.token.user);
 
+    let take;
+    let skip;
+    try {
+      const pagination = parseRequestPagination(req);
+      take = pagination.take;
+      skip = pagination.skip;
+    } catch (e) {
+      res.status(400).send(e.message);
+      return;
+    }
+
     // handle request
     try {
-      res.json(await BannerService.getBanners({}, addPaginationForFindOptions(req)));
+      res.json(await BannerService.getBanners({}, { take, skip }));
     } catch (error) {
       this.logger.error('Could not return all banners:', error);
       res.status(500).json('Internal server error.');
@@ -279,6 +292,8 @@ export default class BannerController extends BaseController {
    * @route GET /banners/active
    * @group banners - Operations of banner controller
    * @security JWT
+   * @param {integer} take.query - How many banners the endpoint should return
+   * @param {integer} skip.query - How many banners should be skipped (for pagination)
    * @returns {Array.<BannerResponse>} 200 - All active banners
    * @returns {string} 400 - Validation error
    */
@@ -286,9 +301,11 @@ export default class BannerController extends BaseController {
     const { body } = req;
     this.logger.trace('Get active banners', body, 'by user', req.token.user);
 
+    const { take, skip } = parseRequestPagination(req);
+
     // handle request
     try {
-      res.json(await BannerService.getBanners({ active: true }, addPaginationForFindOptions(req)));
+      res.json(await BannerService.getBanners({ active: true }, { take, skip }));
     } catch (error) {
       this.logger.error('Could not return active banners:', error);
       res.status(500).json('Internal server error.');

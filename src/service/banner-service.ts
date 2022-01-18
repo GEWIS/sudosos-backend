@@ -15,12 +15,12 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { FindManyOptions } from 'typeorm';
 import BannerRequest from '../controller/request/banner-request';
 import BannerResponse from '../controller/response/banner-response';
 import Banner from '../entity/banner';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import FileService from './file-service';
+import { PaginationParameters } from '../helpers/pagination';
 
 export interface BannerFilterParameters {
   bannerId?: number,
@@ -103,20 +103,24 @@ export default class BannerService {
 
   /**
    * Returns all banners with options.
-   * @param params - The filtering parameters.
-   * @param options - The pagination options.
+   * @param filters - The filtering parameters.
+   * @param pagination - The pagination options.
    * @returns {Array.<BannerResponse>} - all banners
    */
-  public static async getBanners(params: BannerFilterParameters, options: FindManyOptions = {})
+  public static async getBanners(filters: BannerFilterParameters, pagination: PaginationParameters = {})
     : Promise<BannerResponse[]> {
+    const { take, skip } = pagination;
+
     const mapping: FilterMapping = {
       bannerId: 'id',
       active: 'active',
     };
+
     const banners = await Banner.find({
-      where: QueryFilter.createFilterWhereClause(mapping, params),
-      ...options,
-      relations: ['image'].concat(options.relations ? options.relations : []),
+      where: QueryFilter.createFilterWhereClause(mapping, filters),
+      relations: ['image'],
+      take,
+      skip,
     });
     return banners.map((banner) => this.asBannerResponse(banner));
   }
@@ -136,6 +140,7 @@ export default class BannerService {
   /**
    * Updates and returns banner with given id.
    * @param id - requested banner id
+   * @param bannerReq
    * @returns {BannerResponse.model} - updated banner
    */
   public static async updateBanner(id: number, bannerReq: BannerRequest): Promise<BannerResponse> {

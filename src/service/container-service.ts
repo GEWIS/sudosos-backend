@@ -30,6 +30,7 @@ import Product from '../entity/product/product';
 import UpdatedProduct from '../entity/product/updated-product';
 import ProductRevision from '../entity/product/product-revision';
 import UnapprovedProductError from '../entity/errors/unapproved-product-error';
+import { PaginationParameters } from '../helpers/pagination';
 
 /**
  * Define updated container filtering parameters used to filter query results.
@@ -90,10 +91,14 @@ export default class ContainerService {
 
   /**
    * Query for getting all containers based on user.
-   * @param params
+   * @param filters
+   * @param pagination
    */
-  public static async getContainers(params: ContainerParameters = {})
-    : Promise<ContainerResponse[]> {
+  public static async getContainers(
+    filters: ContainerParameters = {}, pagination: PaginationParameters = {},
+  ): Promise<ContainerResponse[]> {
+    const { take, skip } = pagination;
+
     const builder = createQueryBuilder()
       .from(Container, 'container')
       .innerJoin(
@@ -112,9 +117,11 @@ export default class ContainerService {
         'owner.id AS owner_id',
         'owner.firstName AS owner_firstName',
         'owner.lastName AS owner_lastName',
-      ]);
+      ])
+      .limit(take)
+      .offset(skip);
 
-    const { posId, posRevision, ...p } = params;
+    const { posId, posRevision, ...p } = filters;
 
     if (posId !== undefined) {
       builder.innerJoin(
@@ -157,24 +164,26 @@ export default class ContainerService {
   /**
    * Function that returns all the containers visible to a user.
    * @param params
+   * @param pagination
    * @param updated
    */
-  public static async getContainersInUserContext(params: ContainerParameters, updated?: boolean)
-    : Promise<ContainerResponse[]> {
+  public static async getContainersInUserContext(
+    params: ContainerParameters, pagination: PaginationParameters = {}, updated?: boolean,
+  ): Promise<ContainerResponse[]> {
     const publicContainers: ContainerResponse[] = updated
       ? (await this.getUpdatedContainers(
-        { ...params, ownerId: undefined, public: true } as ContainerParameters,
+        { ...params, ownerId: undefined, public: true } as ContainerParameters, pagination,
       ))
       : (await this.getContainers(
-        { ...params, ownerId: undefined, public: true } as ContainerParameters,
+        { ...params, ownerId: undefined, public: true } as ContainerParameters, pagination,
       ));
 
     const ownContainers: ContainerResponse[] = updated
       ? (await this.getUpdatedContainers(
-        { ...params, public: false } as ContainerParameters,
+        { ...params, public: false } as ContainerParameters, pagination,
       ))
       : (await this.getContainers(
-        { ...params, public: false } as ContainerParameters,
+        { ...params, public: false } as ContainerParameters, pagination,
       ));
 
     return publicContainers.concat(ownContainers);
@@ -182,11 +191,14 @@ export default class ContainerService {
 
   /**
    * Query to return all updated containers.
-   * @param params
+   * @param filters
+   * @param pagination
    */
   public static async getUpdatedContainers(
-    params: UpdatedContainerParameters = {},
+    filters: UpdatedContainerParameters = {}, pagination: PaginationParameters = {},
   ): Promise<ContainerResponse[]> {
+    const { take, skip } = pagination;
+
     const builder = createQueryBuilder()
       .from(Container, 'container')
       .innerJoinAndSelect(
@@ -204,7 +216,9 @@ export default class ContainerService {
         'owner.id AS owner_id',
         'owner.firstName AS owner_firstName',
         'owner.lastName AS owner_lastName',
-      ]);
+      ])
+      .limit(take)
+      .offset(skip);
 
     const filterMapping: FilterMapping = {
       containerId: 'container.id',
@@ -212,7 +226,7 @@ export default class ContainerService {
       ownerId: 'owner.id',
       public: 'container.public',
     };
-    QueryFilter.applyFilter(builder, filterMapping, params);
+    QueryFilter.applyFilter(builder, filterMapping, filters);
 
     const rawContainers = await builder.getRawMany();
 

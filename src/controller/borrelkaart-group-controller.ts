@@ -22,8 +22,8 @@ import Policy from './policy';
 import BorrelkaartGroupRequest from './request/borrelkaart-group-request';
 import { RequestWithToken } from '../middleware/token-middleware';
 import BorrelkaartGroup from '../entity/user/borrelkaart-group';
-import { addPaginationForFindOptions } from '../helpers/pagination';
 import BorrelkaartGroupService from '../service/borrelkaart-group-service';
+import { parseRequestPagination } from '../helpers/pagination';
 
 export default class BorrelkaartGroupController extends BaseController {
   private logger: Logger = log4js.getLogger('BorrelkaartGroupController');
@@ -72,6 +72,8 @@ export default class BorrelkaartGroupController extends BaseController {
    * @route GET /borrelkaartgroups
    * @group borrelkaartgroups - Operations of borrelkaart group controller
    * @security JWT
+   * @param {integer} take.query - How many borrelkaart groups the endpoint should return
+   * @param {integer} skip.query - How many borrelkaart groups should be skipped (for pagination)
    * @returns {Array.<BorrelkaartGroupResponse>} 200 - All existingborrelkaart groups without users
    * @returns {string} 500 - Internal server error
    */
@@ -79,10 +81,21 @@ export default class BorrelkaartGroupController extends BaseController {
     const { body } = req;
     this.logger.trace('Get all borrelkaart groups', body, 'by user', req.token.user);
 
+    let take;
+    let skip;
+    try {
+      const pagination = parseRequestPagination(req);
+      take = pagination.take;
+      skip = pagination.skip;
+    } catch (e) {
+      res.status(400).send(e.message);
+      return;
+    }
+
     // handle request
     try {
       res.json(await BorrelkaartGroupService
-        .getAllBorrelkaartGroups(addPaginationForFindOptions(req)));
+        .getAllBorrelkaartGroups({ take, skip }));
     } catch (error) {
       this.logger.error('Could not return all borrelkaart groups:', error);
       res.status(500).json('Internal server error.');

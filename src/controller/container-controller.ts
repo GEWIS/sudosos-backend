@@ -20,7 +20,7 @@ import { Response } from 'express';
 import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
-import ContainerService, { ContainerParameters } from '../service/container-service';
+import ContainerService from '../service/container-service';
 import { ContainerResponse } from './response/container-response';
 import ContainerRevision from '../entity/container/container-revision';
 import ProductService from '../service/product-service';
@@ -28,6 +28,7 @@ import ContainerRequest from './request/container-request';
 import UpdatedContainer from '../entity/container/updated-container';
 import Container from '../entity/container/container';
 import UnapprovedProductError from '../entity/errors/unapproved-product-error';
+import { parseRequestPagination } from '../helpers/pagination';
 
 export default class ContainerController extends BaseController {
   private logger: Logger = log4js.getLogger('ContainerController');
@@ -100,6 +101,8 @@ export default class ContainerController extends BaseController {
    * @route GET /containers
    * @group containers - Operations of container controller
    * @security JWT
+   * @param {integer} take.query - How many containers the endpoint should return
+   * @param {integer} skip.query - How many containers should be skipped (for pagination)
    * @returns {Array.<ContainerResponse>} 200 - All existing containers
    * @returns {string} 500 - Internal server error
    */
@@ -107,14 +110,17 @@ export default class ContainerController extends BaseController {
     const { body } = req;
     this.logger.trace('Get all containers', body, 'by user', req.token.user);
 
+    const { take, skip } = parseRequestPagination(req);
+
     // Handle request
     try {
       let containers: ContainerResponse[];
       if (this.canGetAll(req)) {
-        containers = await ContainerService.getContainers();
+        containers = await ContainerService.getContainers({}, { take, skip });
       } else {
-        containers = await ContainerService
-          .getContainersInUserContext({ ownerId: req.token.user.id } as ContainerParameters);
+        containers = await ContainerService.getContainersInUserContext({
+          ownerId: req.token.user.id,
+        }, { take, skip });
       }
       res.json(containers);
     } catch (error) {
@@ -168,6 +174,8 @@ export default class ContainerController extends BaseController {
    * @group containers - Operations of container controller
    * @param {integer} id.path.required - The id of the container which should be returned
    * @security JWT
+   * @param {integer} take.query - How many products the endpoint should return
+   * @param {integer} skip.query - How many products should be skipped (for pagination)
    * @returns {Array.<ProductResponse>} 200 - All products in the container
    * @returns {string} 404 - Not found error
    * @returns {string} 500 - Internal server error
@@ -178,6 +186,8 @@ export default class ContainerController extends BaseController {
 
     this.logger.trace('Get all products in container', containerId, 'by user', req.token.user);
 
+    const { take, skip } = parseRequestPagination(req);
+
     try {
       // Check if the request can view the container
       if (!await this.canGet(req, containerId)) {
@@ -185,7 +195,7 @@ export default class ContainerController extends BaseController {
         return;
       }
 
-      res.json(await ProductService.getProducts({ containerId }));
+      res.json(await ProductService.getProducts({ containerId }, { take, skip }));
     } catch (error) {
       this.logger.error('Could not return all products in container:', error);
       res.status(500).json('Internal server error.');
@@ -297,6 +307,8 @@ export default class ContainerController extends BaseController {
    * @route GET /containers/updated
    * @group containers - Operations of containers controller
    * @security JWT
+   * @param {integer} take.query - How many containers the endpoint should return
+   * @param {integer} skip.query - How many containers should be skipped (for pagination)
    * @returns {Array.<ContainerResponse>} 200 - All updated containers
    * @returns {string} 500 - Internal server error
    */
@@ -304,14 +316,26 @@ export default class ContainerController extends BaseController {
     const { body } = req;
     this.logger.trace('Get all updated containers', body, 'by user', req.token.user);
 
+    let take;
+    let skip;
+    try {
+      const pagination = parseRequestPagination(req);
+      take = pagination.take;
+      skip = pagination.skip;
+    } catch (e) {
+      res.status(400).send(e.message);
+      return;
+    }
+
     // Handle request
     try {
       let containers: ContainerResponse[];
       if (this.canGetAll(req)) {
-        containers = await ContainerService.getUpdatedContainers();
+        containers = await ContainerService.getUpdatedContainers({}, { take, skip });
       } else {
-        containers = await ContainerService
-          .getContainersInUserContext({ ownerId: req.token.user.id } as ContainerParameters, true);
+        containers = await ContainerService.getContainersInUserContext({
+          ownerId: req.token.user.id,
+        }, { take, skip }, true);
       }
 
       res.json(containers);

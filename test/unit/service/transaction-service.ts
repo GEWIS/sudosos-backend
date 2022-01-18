@@ -25,7 +25,6 @@ import { DineroObject } from 'dinero.js';
 import Transaction from '../../../src/entity/transactions/transaction';
 import Database from '../../../src/database/database';
 import seedDatabase from '../../seed';
-import { RequestWithToken } from '../../../src/middleware/token-middleware';
 import TransactionService from '../../../src/service/transaction-service';
 import { verifyBaseTransactionEntity } from '../validators';
 import Swagger from '../../../src/start/swagger';
@@ -42,7 +41,6 @@ describe('TransactionService', (): void => {
     app: Application,
     transactions: Transaction[],
     users: User[],
-    req: RequestWithToken,
     validTransReq: TransactionRequest,
     pointOfSale: PointOfSaleRevision,
     container: ContainerRevision,
@@ -59,13 +57,6 @@ describe('TransactionService', (): void => {
     const connection = await Database.initialize();
     const app = express();
     const { transactions, users } = await seedDatabase();
-    const req = {
-      token: '',
-      query: {
-        take: 23,
-        skip: 0,
-      },
-    } as any as RequestWithToken;
 
     const validTransReq = {
       from: 7,
@@ -160,7 +151,6 @@ describe('TransactionService', (): void => {
     ctx = {
       connection,
       app,
-      req,
       validTransReq,
       pointOfSale,
       transactions,
@@ -399,16 +389,40 @@ describe('TransactionService', (): void => {
   });
 
   describe('Get all transactions', () => {
-    it('should return a paginated list', async () => {
-      const transactions = await TransactionService.getTransactions(ctx.req, {});
+    it('should return all transactions', async () => {
+      const transactions = await TransactionService.getTransactions({});
 
-      expect(transactions.length).to.equal(23);
+      expect(transactions.length).to.equal(ctx.transactions.length);
       transactions.map((t) => verifyBaseTransactionEntity(ctx.spec, t));
+    });
+
+    it('should return a paginated list when take is set', async () => {
+      const take = 69;
+      const transactions = await TransactionService.getTransactions({}, { take });
+
+      expect(transactions.length).to.equal(take);
+    });
+
+    it('should not return a paginated list when skip is set', async () => {
+      const skip = 69;
+      const transactions = await TransactionService.getTransactions({}, { skip });
+
+      expect(transactions.length).to.equal(ctx.transactions.length - 69);
+    });
+
+    it('should return a paginated list when take and skip are set', async () => {
+      const skip = 150;
+      const take = 50;
+      const transactions = await TransactionService.getTransactions({}, { take, skip });
+
+      expect(transactions.length).to.equal(
+        Math.min(take, ctx.transactions.length - skip),
+      );
     });
 
     it('should filter on fromId', async () => {
       const fromId = 1;
-      const transactions = await TransactionService.getTransactions(ctx.req, {
+      const transactions = await TransactionService.getTransactions({
         fromId,
       });
 
@@ -423,7 +437,7 @@ describe('TransactionService', (): void => {
 
     it('should filter on createdById', async () => {
       const createdById = 1;
-      const transactions = await TransactionService.getTransactions(ctx.req, {
+      const transactions = await TransactionService.getTransactions({
         createdById,
       });
 
@@ -438,7 +452,7 @@ describe('TransactionService', (): void => {
 
     it('should filter on toId', async () => {
       const toId = 7;
-      const transactions = await TransactionService.getTransactions(ctx.req, {
+      const transactions = await TransactionService.getTransactions({
         toId,
       });
       const transactionIds = ctx.transactions.map((t) => {
@@ -459,7 +473,7 @@ describe('TransactionService', (): void => {
 
     it('should filter on point of sale', async () => {
       const pointOfSale = { id: 14 };
-      const transactions = await TransactionService.getTransactions(ctx.req, {
+      const transactions = await TransactionService.getTransactions({
         pointOfSaleId: pointOfSale.id,
       });
 
@@ -473,7 +487,7 @@ describe('TransactionService', (): void => {
 
     it('should filter on point of sale with revision', async () => {
       const pointOfSale = { id: 14, revision: 2 };
-      const transactions = await TransactionService.getTransactions(ctx.req, {
+      const transactions = await TransactionService.getTransactions({
         pointOfSaleId: pointOfSale.id,
         pointOfSaleRevision: pointOfSale.revision,
       });
@@ -489,7 +503,7 @@ describe('TransactionService', (): void => {
 
     it('should filter on container', async () => {
       const container = { id: 11 };
-      const transactions = await TransactionService.getTransactions(ctx.req, {
+      const transactions = await TransactionService.getTransactions({
         containerId: container.id,
       });
 
@@ -504,7 +518,7 @@ describe('TransactionService', (): void => {
 
     it('should filter on container with revision', async () => {
       const container = { id: 11, revision: 2 };
-      const transactions = await TransactionService.getTransactions(ctx.req, {
+      const transactions = await TransactionService.getTransactions({
         containerId: container.id,
         containerRevision: container.revision,
       });
@@ -521,7 +535,7 @@ describe('TransactionService', (): void => {
 
     it('should filter on product', async () => {
       const product = { id: 44 };
-      const transactions = await TransactionService.getTransactions(ctx.req, {
+      const transactions = await TransactionService.getTransactions({
         productId: product.id,
       });
 
@@ -537,7 +551,7 @@ describe('TransactionService', (): void => {
 
     it('should filter on product with revision', async () => {
       const product = { id: 44, revision: 2 };
-      const transactions = await TransactionService.getTransactions(ctx.req, {
+      const transactions = await TransactionService.getTransactions({
         productId: product.id,
         productRevision: product.revision,
       });
@@ -555,14 +569,14 @@ describe('TransactionService', (): void => {
 
     it('should return transactions newer than date', async () => {
       let fromDate = new Date(ctx.transactions[0].createdAt.getTime() - 1000 * 60 * 60 * 24);
-      let transactions = await TransactionService.getTransactions(ctx.req, {
+      let transactions = await TransactionService.getTransactions({
         fromDate,
       });
 
       const actualTransactions = ctx.transactions
         .filter((transaction) => transaction.createdAt.getTime() >= fromDate.getTime());
 
-      const nrOfTransactions = Math.min(actualTransactions.length, 23);
+      const nrOfTransactions = actualTransactions.length;
 
       expect(transactions.length).to.equal(nrOfTransactions);
       transactions.map((t) => {
@@ -572,7 +586,7 @@ describe('TransactionService', (): void => {
       });
 
       fromDate = new Date(ctx.transactions[0].createdAt.getTime() + 1000 * 60 * 60 * 24);
-      transactions = await TransactionService.getTransactions(ctx.req, {
+      transactions = await TransactionService.getTransactions({
         fromDate,
       });
 
@@ -582,14 +596,14 @@ describe('TransactionService', (): void => {
     it('should return transactions older than date', async () => {
       let tillDate = new Date(ctx.transactions[0].createdAt.getTime() + 1000 * 60 * 60 * 24);
       console.log(ctx.transactions[0].createdAt.getTime() < tillDate.getTime());
-      let transactions = await TransactionService.getTransactions(ctx.req, {
+      let transactions = await TransactionService.getTransactions({
         tillDate,
       });
 
       const actualTransactions = ctx.transactions
         .filter((transaction) => transaction.createdAt.getTime() <= tillDate.getTime());
 
-      const nrOfTransactions = Math.min(actualTransactions.length, 23);
+      const nrOfTransactions = actualTransactions.length;
 
       expect(transactions.length).to.equal(nrOfTransactions);
       transactions.map((t) => {
@@ -599,7 +613,7 @@ describe('TransactionService', (): void => {
       });
 
       tillDate = new Date(ctx.transactions[0].createdAt.getTime() - 1000 * 60 * 60 * 24);
-      transactions = await TransactionService.getTransactions(ctx.req, {
+      transactions = await TransactionService.getTransactions({
         tillDate,
       });
 
@@ -610,7 +624,7 @@ describe('TransactionService', (): void => {
   describe('Get all transactions involving a user', () => {
     it('should return a paginated list', async () => {
       const user = ctx.users[0];
-      const transactions = await TransactionService.getTransactions(ctx.req, {}, user);
+      const transactions = await TransactionService.getTransactions({}, {}, user);
 
       const actualTransactions = await Transaction.createQueryBuilder('transaction')
         .select('transaction.id as id')
