@@ -173,7 +173,7 @@ describe('ProductService', async (): Promise<void> => {
       returnsAll(res, products);
     });
     it('should return all updated products', async () => {
-      const updatedProducts: ProductResponse[] = await ProductService.getUpdatedProducts();
+      const updatedProducts: ProductResponse[] = await ProductService.getProducts({updatedProducts: true});
       const products = ctx.updatedProducts.map((prod) => prod.product);
 
       returnsAll(updatedProducts, products);
@@ -237,9 +237,10 @@ describe('ProductService', async (): Promise<void> => {
     it('should return the updated products belonging to a container', async () => {
       const params: ProductParameters = {
         containerId: 3,
+        updatedProducts: true
       };
       const res: ProductResponse[] = await ProductService
-        .getUpdatedProducts(params);
+        .getProducts(params);
 
       const products = ctx.containerRevisions.filter((rev) => {
         const container = ctx.containers.filter((cont) => cont.id === 3)[0];
@@ -255,9 +256,10 @@ describe('ProductService', async (): Promise<void> => {
       const params: ProductParameters = {
         containerId: 4,
         updatedContainer: true,
+        updatedProducts: true
       };
       const res: ProductResponse[] = await ProductService
-        .getUpdatedProducts(params);
+        .getProducts(params);
 
       const products = ctx.updatedContainers
         .filter((upd) => upd.container.id === 4)
@@ -294,9 +296,32 @@ describe('ProductService', async (): Promise<void> => {
         .filter((cnt) => cnt.container.id === 4)[0];
       returnsAll(res, products);
     });
+    it('should return the products belonging to a point of sale revision', async () => {
+      const res = await ProductService
+          .getProducts({ pointOfSaleId: 1, pointOfSaleRevision: 1 });
+
+      const { containers } = ctx.pointOfSaleRevisions.filter((pos) => (
+          (pos.pointOfSale.id === 1 && pos.revision === 1)))[0];
+
+      const productRevisions = (containers.map((p) => p.products.map((pr) => pr)))
+          .reduce((prev, cur) => prev.concat(cur));
+
+      const products = productRevisions.map((p) => ((
+          { product: p.product, revision: p.revision } as ProductWithRevision)));
+
+      const filteredProducts = products.reduce((acc: ProductWithRevision[], current) => {
+        if (!acc.some((item) => (
+            (item.product.id === current.product.id && item.revision === current.revision)))) {
+          acc.push(current);
+        }
+        return acc;
+      }, []);
+
+      returnsAllRevisions(res, filteredProducts);
+    });
     it('should return the products belonging to a point of sale', async () => {
       const res = await ProductService
-        .getProductsPOS({ pointOfSaleId: 1 });
+        .getProducts({ pointOfSaleId: 1 });
 
       const { containers } = ctx.pointOfSaleRevisions.filter((pos) => (
         (pos.pointOfSale.id === 1 && pos.revision === pos.pointOfSale.currentRevision)))[0];

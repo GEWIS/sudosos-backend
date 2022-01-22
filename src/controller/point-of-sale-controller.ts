@@ -261,7 +261,7 @@ export default class PointOfSaleController extends BaseController {
 
     // Handle request
     try {
-      const products = await ProductService.getProductsPOS({ pointOfSaleId: parseInt(id, 10) });
+      const products = await ProductService.getProducts({ pointOfSaleId: parseInt(id, 10) });
       res.json(products);
     } catch (error) {
       this.logger.error('Could not return all point of sale products:', error);
