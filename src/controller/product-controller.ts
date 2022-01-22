@@ -252,7 +252,7 @@ export default class ProductController extends BaseController {
 
     // Handle request
     try {
-      const products = await ProductService.getProducts({updatedProducts: true});
+      const products = await ProductService.getProducts({ updatedProducts: true });
       res.json(products);
     } catch (error) {
       this.logger.error('Could not return all products:', error);

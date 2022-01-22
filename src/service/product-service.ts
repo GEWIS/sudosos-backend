@@ -109,12 +109,12 @@ export default class ProductService {
 
   static getRelevantBuilder(params: ProductParameters = {}): () => SelectQueryBuilder<any> {
     if (params.updatedProducts) return this.getUpdatedProducts;
-    if (params.pointOfSaleId) return  this.getProductsPOS;
-    else return this.getCurrentProducts;
+    if (params.pointOfSaleId) return this.getProductsPOS;
+    return this.getCurrentProducts;
   }
 
   public static async getProducts(filters: ProductParameters = {}): Promise<ProductResponse[]> {
-    let builder = this.getRelevantBuilder(filters).bind(this)(filters);
+    const builder = this.getRelevantBuilder(filters).bind(this)(filters);
 
     // TODO make a getFilterMapping
     // QueryFilter.applyFilter(builder, filterMapping, params);
@@ -183,8 +183,8 @@ export default class ProductService {
    * @param params
    */
   public static getProductsPOS(params: ProductParameters = {}):
-      SelectQueryBuilder<any> {
-    let revision = params.pointOfSaleRevision;
+  SelectQueryBuilder<any> {
+    const revision = params.pointOfSaleRevision;
     const id = params.pointOfSaleId;
 
     const builder = createQueryBuilder()
@@ -195,13 +195,13 @@ export default class ProductService {
       .groupBy('products.productId, products.revision');
 
     builder
-      .innerJoinAndSelect(Product, 'baseproduct', 'products.productId = baseproduct.id')
-      .innerJoinAndSelect('baseproduct.owner', 'owner')
+      .innerJoinAndSelect(Product, 'product', 'products.productId = product.id')
+      .innerJoinAndSelect('product.owner', 'owner')
       .innerJoinAndSelect('products.category', 'category')
-      .innerJoinAndSelect('baseproduct.image', 'image')
+      .innerJoinAndSelect('product.image', 'image')
       .select([
-        'baseproduct.id AS id',
-        'baseproduct.createdAt AS createdAt',
+        'product.id AS id',
+        'product.createdAt AS createdAt',
         'products.updatedAt AS updatedAt',
         'products.name AS name',
         'products.price AS price',
@@ -214,7 +214,7 @@ export default class ProductService {
         'products.revision as revision',
         'products.alcoholpercentage AS alcoholpercentage',
       ]);
-
+    console.error(builder.getQuery());
     return builder;
   }
 
@@ -332,7 +332,7 @@ export default class ProductService {
   public static async getAllProducts(params: ProductParameters = {}) {
     // We get the products by first getting the updated products and then merge them with the
     // normal products.
-    const updatedProducts: ProductResponse[] = await this.getProducts({...params, updatedProducts: true});
+    const updatedProducts: ProductResponse[] = await this.getProducts({ ...params, updatedProducts: true });
 
     const updatedProductIds = updatedProducts.map((prod) => prod.id);
 
@@ -376,7 +376,7 @@ export default class ProductService {
     await updatedProduct.save();
 
     // Pull the just created product from the database to fix the formatting.
-    return (await this.getProducts({updatedProducts: true, productId }))[0];
+    return (await this.getProducts({ updatedProducts: true, productId }))[0];
   }
 
   /**
