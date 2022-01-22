@@ -17,6 +17,7 @@
  */
 import BaseResponse from './base-response';
 import { UserResponse } from './user-response';
+import { PaginationResult } from '../../helpers/pagination';
 
 /**
   * @typedef {BaseResponse} BorrelkaartGroupResponse
@@ -30,4 +31,14 @@ export default interface BorrelkaartGroupResponse extends BaseResponse {
   activeStartDate?: string,
   activeEndDate: string,
   users: UserResponse[],
+}
+
+/**
+ * @typedef PaginatedBorrelkaartGroupResponse
+ * @property {PaginationResult.model} _pagination - Pagination metadata
+ * @property {Array<BorrelkaartGroupResponse>} records - Returned borrelkaart groups
+ */
+export interface PaginatedBorrelkaartGroupResponse {
+  _pagination: PaginationResult,
+  records: BorrelkaartGroupResponse[],
 }

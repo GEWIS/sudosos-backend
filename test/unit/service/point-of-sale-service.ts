@@ -32,7 +32,11 @@ import {
   seedUsers,
 } from '../../seed';
 import Swagger from '../../../src/start/swagger';
-import { PointOfSaleResponse, UpdatedPointOfSaleResponse } from '../../../src/controller/response/point-of-sale-response';
+import {
+  PaginatedPointOfSaleResponse,
+  PointOfSaleResponse,
+  UpdatedPointOfSaleResponse,
+} from '../../../src/controller/response/point-of-sale-response';
 import PointOfSaleService from '../../../src/service/point-of-sale-service';
 import PointOfSaleRequest from '../../../src/controller/request/point-of-sale-request';
 import UpdatePointOfSaleRequest from '../../../src/controller/request/update-point-of-sale-request';
@@ -139,62 +143,101 @@ describe('PointOfSaleService', async (): Promise<void> => {
 
   describe('getPointsOfSale function', () => {
     it('should return all point of sales with no input specification', async () => {
-      const res: PointOfSaleResponse[] = (
-        (await PointOfSaleService.getPointsOfSale()) as PointOfSaleResponse[]);
+      // eslint-disable-next-line @typescript-eslint/naming-convention
+      const { records, _pagination } = (await PointOfSaleService
+        .getPointsOfSale()) as PaginatedPointOfSaleResponse;
 
       const withRevisions = ctx.pointsOfSale.filter((c) => c.currentRevision > 0);
-      expect(res).to.be.length(withRevisions.length);
-      expect(pointOfSaleSuperset(res, ctx.pointsOfSale)).to.be.true;
-      expect(res.every(
+      expect(records).to.be.length(withRevisions.length);
+      expect(pointOfSaleSuperset(records, ctx.pointsOfSale)).to.be.true;
+      expect(records.every(
         (c: PointOfSaleResponse) => ctx.specification.validateModel('PointOfSaleResponse', c, false, true).valid,
       )).to.be.true;
+
+      expect(_pagination.take).to.be.undefined;
+      expect(_pagination.skip).to.be.undefined;
+      expect(_pagination.count).to.equal(withRevisions.length);
     });
     it('should return points of sale with ownerId specified', async () => {
-      const res: PointOfSaleResponse[] = (await PointOfSaleService.getPointsOfSale({
+      const { records } = (await PointOfSaleService.getPointsOfSale({
         ownerId: ctx.pointsOfSale[0].owner.id,
-      })) as PointOfSaleResponse[];
+      }) as PaginatedPointOfSaleResponse);
 
       const withRevisions = ctx.pointsOfSale.filter((c) => c.currentRevision > 0);
-      expect(pointOfSaleSuperset(res, ctx.pointsOfSale)).to.be.true;
-      const belongsToOwner = res.every((pointOfSale: PointOfSaleResponse) => (
+      expect(pointOfSaleSuperset(records, ctx.pointsOfSale)).to.be.true;
+      const belongsToOwner = records.every((pointOfSale: PointOfSaleResponse) => (
         pointOfSale.owner.id === ctx.pointsOfSale[0].owner.id));
       expect(belongsToOwner).to.be.true;
 
       const { length } = withRevisions.filter((pointOfSale) => (
         pointOfSale.owner.id === ctx.pointsOfSale[0].owner.id));
-      expect(res).to.be.length(length);
+      expect(records).to.be.length(length);
     });
     it('should return points of sale with useAuthentication specified', async () => {
-      const res: PointOfSaleResponse[] = (await PointOfSaleService.getPointsOfSale({
+      const { records } = (await PointOfSaleService.getPointsOfSale({
         useAuthentication: false,
-      })) as PointOfSaleResponse[];
+      }) as PaginatedPointOfSaleResponse);
 
-      expect(pointOfSaleSuperset(res, ctx.pointsOfSale)).to.be.true;
-      const doNotUseAuthentication = res.every((pointOfSale) => (
+      expect(pointOfSaleSuperset(records, ctx.pointsOfSale)).to.be.true;
+      const doNotUseAuthentication = records.every((pointOfSale) => (
         pointOfSale.useAuthentication === false));
       expect(doNotUseAuthentication).to.be.true;
     });
     it('should return single point of sale if pointOfSaleId is specified', async () => {
-      const res: PointOfSaleResponse[] = (await PointOfSaleService.getPointsOfSale({
+      const { records } = (await PointOfSaleService.getPointsOfSale({
         pointOfSaleId: ctx.pointsOfSale[0].id,
-      })) as PointOfSaleResponse[];
+      }) as PaginatedPointOfSaleResponse);
 
-      expect(res).to.be.length(1);
-      expect(res[0].id).to.be.equal(ctx.pointsOfSale[0].id);
+      expect(records).to.be.length(1);
+      expect(records[0].id).to.be.equal(ctx.pointsOfSale[0].id);
     });
     it('should return no points of sale if userId and containerId do not match', async () => {
-      const res: PointOfSaleResponse[] = (await PointOfSaleService.getPointsOfSale({
+      const { records } = (await PointOfSaleService.getPointsOfSale({
         ownerId: ctx.pointsOfSale[10].owner.id,
         pointOfSaleId: ctx.pointsOfSale[0].id,
-      })) as PointOfSaleResponse[];
+      }) as PaginatedPointOfSaleResponse);
 
-      expect(res).to.be.length(0);
+      expect(records).to.be.length(0);
     });
+    it('should adhere to pagination', async () => {
+      const take = 3;
+      const skip = 2;
+      // eslint-disable-next-line @typescript-eslint/naming-convention
+      const { records, _pagination } = (await PointOfSaleService.getPointsOfSale({}, {
+        take, skip,
+      }) as PaginatedPointOfSaleResponse);
+
+      const withRevisions = ctx.pointsOfSale.filter((c) => c.currentRevision > 0);
+      expect(_pagination.take).to.equal(take);
+      expect(_pagination.skip).to.equal(skip);
+      expect(_pagination.count).to.equal(withRevisions.length);
+      expect(records.length).to.be.at.most(take);
+    });
+  });
+  describe('getUpdatedPointsOfSale function', () => {
     it('should return all updated point of sales with no input specification', async () => {
-      const res: UpdatedPointOfSaleResponse[] = (
-        (await PointOfSaleService.getUpdatedPointsOfSale()) as UpdatedPointOfSaleResponse[]);
-      expect(res.map((p) => p.id))
+      // eslint-disable-next-line @typescript-eslint/naming-convention
+      const { records, _pagination } = (await PointOfSaleService
+        .getUpdatedPointsOfSale() as PaginatedPointOfSaleResponse);
+      expect(records.map((p) => p.id))
         .to.deep.equalInAnyOrder(ctx.updatedPointsOfSale.map((p) => p.pointOfSale.id));
+
+      expect(_pagination.take).to.be.undefined;
+      expect(_pagination.skip).to.be.undefined;
+      expect(_pagination.count).to.equal(ctx.updatedPointsOfSale.length);
+    });
+    it('should adhere to pagination', async () => {
+      const take = 3;
+      const skip = 2;
+      // eslint-disable-next-line @typescript-eslint/naming-convention
+      const { records, _pagination } = (await PointOfSaleService.getUpdatedPointsOfSale({}, {
+        take, skip,
+      }) as PaginatedPointOfSaleResponse);
+
+      expect(_pagination.take).to.equal(take);
+      expect(_pagination.skip).to.equal(skip);
+      expect(_pagination.count).to.equal(ctx.updatedPointsOfSale.length);
+      expect(records.length).to.be.at.most(take);
     });
   });
   describe('verifyPointOfSale function', () => {

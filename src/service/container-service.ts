@@ -16,7 +16,11 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { createQueryBuilder, SelectQueryBuilder } from 'typeorm';
-import { ContainerResponse, ContainerWithProductsResponse } from '../controller/response/container-response';
+import {
+  ContainerResponse,
+  ContainerWithProductsResponse,
+  PaginatedContainerResponse,
+} from '../controller/response/container-response';
 import Container from '../entity/container/container';
 import ContainerRevision from '../entity/container/container-revision';
 import UpdatedContainer from '../entity/container/updated-container';
@@ -89,16 +93,8 @@ export default class ContainerService {
     };
   }
 
-  /**
-   * Query for getting all containers based on user.
-   * @param filters
-   * @param pagination
-   */
-  public static async getContainers(
-    filters: ContainerParameters = {}, pagination: PaginationParameters = {},
-  ): Promise<ContainerResponse[]> {
-    const { take, skip } = pagination;
-
+  private static buildGetContainersQuery(filters: ContainerParameters = {})
+    : SelectQueryBuilder<Container> {
     const builder = createQueryBuilder()
       .from(Container, 'container')
       .innerJoin(
@@ -117,9 +113,7 @@ export default class ContainerService {
         'owner.id AS owner_id',
         'owner.firstName AS owner_firstName',
         'owner.lastName AS owner_lastName',
-      ])
-      .limit(take)
-      .offset(skip);
+      ]);
 
     const { posId, posRevision, ...p } = filters;
 
@@ -156,49 +150,36 @@ export default class ContainerService {
       builder.andWhere('container.currentRevision = containerrevision.revision');
     }
 
-    const rawContainers = await builder.getRawMany();
-
-    return rawContainers.map((rawContainer) => this.asContainerResponse(rawContainer));
+    return builder;
   }
 
   /**
-   * Function that returns all the containers visible to a user.
-   * @param params
-   * @param pagination
-   * @param updated
-   */
-  public static async getContainersInUserContext(
-    params: ContainerParameters, pagination: PaginationParameters = {}, updated?: boolean,
-  ): Promise<ContainerResponse[]> {
-    const publicContainers: ContainerResponse[] = updated
-      ? (await this.getUpdatedContainers(
-        { ...params, ownerId: undefined, public: true } as ContainerParameters, pagination,
-      ))
-      : (await this.getContainers(
-        { ...params, ownerId: undefined, public: true } as ContainerParameters, pagination,
-      ));
-
-    const ownContainers: ContainerResponse[] = updated
-      ? (await this.getUpdatedContainers(
-        { ...params, public: false } as ContainerParameters, pagination,
-      ))
-      : (await this.getContainers(
-        { ...params, public: false } as ContainerParameters, pagination,
-      ));
-
-    return publicContainers.concat(ownContainers);
-  }
-
-  /**
-   * Query to return all updated containers.
+   * Query for getting all containers based on user.
    * @param filters
    * @param pagination
    */
-  public static async getUpdatedContainers(
-    filters: UpdatedContainerParameters = {}, pagination: PaginationParameters = {},
-  ): Promise<ContainerResponse[]> {
+  public static async getContainers(
+    filters: ContainerParameters = {}, pagination: PaginationParameters = {},
+  ): Promise<PaginatedContainerResponse> {
     const { take, skip } = pagination;
 
+    const results = await Promise.all([
+      this.buildGetContainersQuery(filters).limit(take).offset(skip).getRawMany(),
+      this.buildGetContainersQuery(filters).getCount(),
+    ]);
+
+    const records = results[0].map((rawContainer) => this.asContainerResponse(rawContainer));
+    return {
+      _pagination: {
+        take, skip, count: results[1],
+      },
+      records,
+    };
+  }
+
+  private static buildGetUpdatedContainersQuery(
+    filters: UpdatedContainerParameters = {},
+  ): SelectQueryBuilder<Container> {
     const builder = createQueryBuilder()
       .from(Container, 'container')
       .innerJoinAndSelect(
@@ -216,9 +197,7 @@ export default class ContainerService {
         'owner.id AS owner_id',
         'owner.firstName AS owner_firstName',
         'owner.lastName AS owner_lastName',
-      ])
-      .limit(take)
-      .offset(skip);
+      ]);
 
     const filterMapping: FilterMapping = {
       containerId: 'container.id',
@@ -228,9 +207,32 @@ export default class ContainerService {
     };
     QueryFilter.applyFilter(builder, filterMapping, filters);
 
-    const rawContainers = await builder.getRawMany();
+    return builder;
+  }
 
-    return rawContainers.map((rawContainer) => (this.asContainerResponse(rawContainer)));
+  /**
+   * Query to return all updated containers.
+   * @param filters
+   * @param pagination
+   */
+  public static async getUpdatedContainers(
+    filters: UpdatedContainerParameters = {}, pagination: PaginationParameters = {},
+  ): Promise<PaginatedContainerResponse> {
+    const { take, skip } = pagination;
+
+    const results = await Promise.all([
+      this.buildGetUpdatedContainersQuery(filters).limit(take).offset(skip).getRawMany(),
+      this.buildGetUpdatedContainersQuery(filters).getCount(),
+    ]);
+
+    const records = results[0].map((rawContainer) => (this.asContainerResponse(rawContainer)));
+
+    return {
+      _pagination: {
+        take, skip, count: results[1],
+      },
+      records,
+    };
   }
 
   /**
@@ -358,16 +360,16 @@ export default class ContainerService {
     : Promise<ContainerWithProductsResponse> {
     // Get base container
     const containerResponse: ContainerResponse = updated
-      ? ((await this.getUpdatedContainers({ containerId }))[0])
-      : ((await this.getContainers({ containerId }))[0]);
+      ? ((await this.getUpdatedContainers({ containerId })).records[0])
+      : ((await this.getContainers({ containerId })).records[0]);
 
     const containerProducts
     : ContainerWithProductsResponse = containerResponse as ContainerWithProductsResponse;
 
     // Fill products
-    containerProducts.products = await ProductService.getProducts(
+    containerProducts.products = (await ProductService.getProducts(
       { containerId, updatedContainer: updated },
-    );
+    )).records;
 
     return containerProducts;
   }

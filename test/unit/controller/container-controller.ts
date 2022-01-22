@@ -35,6 +35,7 @@ import { ContainerResponse, ContainerWithProductsResponse } from '../../../src/c
 import { ProductResponse } from '../../../src/controller/response/product-response';
 import UpdatedContainer from '../../../src/entity/container/updated-container';
 import UpdatedProduct from '../../../src/entity/product/updated-product';
+import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -180,26 +181,53 @@ describe('ContainerController', async (): Promise<void> => {
         .get('/containers')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
+      const containers = res.body.records as ContainerResponse[];
+      // eslint-disable-next-line no-underscore-dangle
+      const pagination = res.body._pagination as PaginationResult;
+
       expect(res.status).to.equal(200);
 
       // Every container that has a current revision should be returned.
       const activeContainerCount = await Container.count({ where: 'currentRevision' } as FindManyOptions);
-      expect((res.body as ContainerResponse[]).length).to.equal(activeContainerCount);
+      expect(containers.length).to.equal(activeContainerCount);
+
+      expect(pagination.take).to.equal(defaultPagination());
+      expect(pagination.skip).to.equal(0);
+      expect(pagination.count).to.equal(activeContainerCount);
     });
-    it('should return an HTTP 200 and own containers or public if not admin', async () => {
+    it('should return an HTTP 200 and public containers if not admin', async () => {
       const res = await request(ctx.app)
         .get('/containers')
         .set('Authorization', `Bearer ${ctx.token}`);
 
+      const containers = res.body.records as ContainerResponse[];
+
       // Every container that has a current revision should be returned.
       const publicContainerCount = await Container.count({ where: 'currentRevision AND public = 1' } as FindManyOptions);
-      const ownPriviteContainerCount = await Container.count({ where: 'currentRevision AND ownerId = 2 AND public = 0' } as FindManyOptions);
 
       expect(res.status).to.equal(200);
 
       // forbidden code
-      expect((res.body as ContainerResponse[]).length)
-        .to.equal(publicContainerCount + ownPriviteContainerCount);
+      expect(containers.length).to.equal(publicContainerCount);
+    });
+    it('should adhere to pagination', async () => {
+      const take = 5;
+      const skip = 3;
+      const res = await request(ctx.app)
+        .get('/containers')
+        .query({ take, skip })
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      // number of banners returned is number of banners in database
+      const containers = res.body.records as ContainerResponse[];
+      // eslint-disable-next-line no-underscore-dangle
+      const pagination = res.body._pagination as PaginationResult;
+
+      const activeContainerCount = await Container.count({ where: 'currentRevision' } as FindManyOptions);
+      expect(pagination.take).to.equal(take);
+      expect(pagination.skip).to.equal(skip);
+      expect(pagination.count).to.equal(activeContainerCount);
+      expect(containers.length).to.be.at.most(take);
     });
   });
   describe('GET /containers/:id', () => {
@@ -571,19 +599,28 @@ describe('ContainerController', async (): Promise<void> => {
         .get('/containers/updated')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
-      const ids = (res.body as ContainerResponse[]).map((c) => c.id);
+      const containers = res.body.records as ContainerResponse[];
+      // eslint-disable-next-line no-underscore-dangle
+      const pagination = res.body._pagination as PaginationResult;
+
+      const ids = (containers).map((c) => c.id);
       const exist = await ids.every(async (id) => UpdatedContainer.findOne(id));
 
+      const count = await UpdatedContainer.count();
       expect(exist).to.be.true;
-      expect(ids.length).to.equal(await UpdatedContainer.count());
+      expect(ids.length).to.equal(count);
       expect(res.status).to.equal(200);
+
+      expect(pagination.take).to.equal(defaultPagination());
+      expect(pagination.skip).to.equal(0);
+      expect(pagination.count).to.equal(count);
     });
     it('should return an HTTP 200 and all the visible updated containers if not admin', async () => {
       const res = await request(ctx.app)
         .get('/containers/updated')
         .set('Authorization', `Bearer ${ctx.token}`);
 
-      const containers = res.body as ContainerResponse[];
+      const containers = res.body.records as ContainerResponse[];
       const ids = containers.map((c) => c.id);
 
       const exist = await ids.every(async (id) => UpdatedContainer.findOne(id));
@@ -593,6 +630,25 @@ describe('ContainerController', async (): Promise<void> => {
         !(container.public === false && container.owner.id !== ctx.localUser.id)));
 
       expect(visible).to.be.true;
+    });
+    it('should adhere to pagination', async () => {
+      const take = 5;
+      const skip = 3;
+      const res = await request(ctx.app)
+        .get('/containers/updated')
+        .query({ take, skip })
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      // number of banners returned is number of banners in database
+      const containers = res.body.records as ContainerResponse[];
+      // eslint-disable-next-line no-underscore-dangle
+      const pagination = res.body._pagination as PaginationResult;
+
+      const count = await UpdatedContainer.count();
+      expect(pagination.take).to.equal(take);
+      expect(pagination.skip).to.equal(skip);
+      expect(pagination.count).to.equal(count);
+      expect(containers.length).to.be.at.most(take);
     });
   });
 });

@@ -104,7 +104,7 @@ export default class ProductController extends BaseController {
    * @security JWT
    * @param {integer} take.query - How many products the endpoint should return
    * @param {integer} skip.query - How many products should be skipped (for pagination)
-   * @returns {Array.<ProductResponse>} 200 - All existing products
+   * @returns {PaginatedProductResponse} 200 - All existing products
    * @returns {string} 500 - Internal server error
    */
   public async getAllProducts(req: RequestWithToken, res: Response): Promise<void> {
@@ -240,7 +240,8 @@ export default class ProductController extends BaseController {
     // handle request
     try {
       // check if product in database
-      const product = (await ProductService.getProducts({ productId: parseInt(id, 10) }))[0];
+      const product = (await ProductService
+        .getProducts({ productId: parseInt(id, 10) })).records[0];
       if (product) {
         res.json(product);
       } else {
@@ -259,7 +260,7 @@ export default class ProductController extends BaseController {
    * @security JWT
    * @param {integer} take.query - How many products the endpoint should return
    * @param {integer} skip.query - How many products should be skipped (for pagination)
-   * @returns {Array.<ProductResponse>} 200 - All existing updated products
+   * @returns {PaginatedProductResponse} 200 - All existing updated products
    * @returns {string} 500 - Internal server error
    */
   public async getAllUpdatedProducts(req: RequestWithToken, res: Response): Promise<void> {
@@ -306,7 +307,8 @@ export default class ProductController extends BaseController {
     // handle request
     try {
       if (await Product.findOne(productId)) {
-        res.json((await ProductService.getUpdatedProducts({ productId: parseInt(id, 10) }))[0]);
+        res.json((await ProductService
+          .getUpdatedProducts({ productId: parseInt(id, 10) })).records[0]);
       } else {
         res.status(404).json('Product not found.');
       }

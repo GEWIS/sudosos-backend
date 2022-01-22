@@ -19,8 +19,7 @@
 import { expect } from 'chai';
 import { RequestWithToken } from '../../../src/middleware/token-middleware';
 import {
-  PAGINATION_DEFAULT,
-  PAGINATION_MAX,
+  defaultPagination, maxPagination,
   parseRequestPagination,
   validateRequestPagination,
 } from '../../../src/helpers/pagination';
@@ -43,8 +42,8 @@ describe('Pagination', (): void => {
 
     ctx = {
       req,
-      paginationDefault: parseInt(process.env.PAGINATION_DEFAULT, 10) || PAGINATION_DEFAULT,
-      paginationMax: parseInt(process.env.PAGINATION_MAX, 10) || PAGINATION_MAX,
+      paginationDefault: defaultPagination(),
+      paginationMax: maxPagination(),
     };
   });
 

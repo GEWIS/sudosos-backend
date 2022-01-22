@@ -18,6 +18,7 @@
 import { ProductResponse } from './product-response';
 import BaseResponse from './base-response';
 import { BaseUserResponse } from './user-response';
+import { PaginationResult } from '../../helpers/pagination';
 
 /**
  * @typedef {BaseResponse} BaseContainerResponse
@@ -37,6 +38,16 @@ export interface BaseContainerResponse extends BaseResponse {
  */
 export interface ContainerResponse extends BaseContainerResponse {
   owner: BaseUserResponse,
+}
+
+/**
+ * @typedef PaginatedContainerResponse
+ * @property {PaginationResult.model} _pagination - Pagination metadata
+ * @property {Array<ContainerResponse>} records - Returned containers
+ */
+export interface PaginatedContainerResponse {
+  _pagination: PaginationResult,
+  records: ContainerResponse[],
 }
 
 /**

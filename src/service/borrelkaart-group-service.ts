@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import BorrelkaartGroupRequest from '../controller/request/borrelkaart-group-request';
-import BorrelkaartGroupResponse from '../controller/response/borrelkaart-group-response';
+import BorrelkaartGroupResponse, { PaginatedBorrelkaartGroupResponse } from '../controller/response/borrelkaart-group-response';
 import { UserResponse } from '../controller/response/user-response';
 import BorrelkaartGroup from '../entity/user/borrelkaart-group';
 import User from '../entity/user/user';
@@ -149,13 +149,20 @@ export default class BorrelkaartGroupService {
   /**
    * Returns all borrelkaart groups without users
    * @param {PaginationParameters.model} params - find options
-   * @returns {Array.<BorrelkaartGroupResponse>} borrelkaart groups without users
+   * @returns {PaginatedBorrelkaartGroupResponse} borrelkaart groups without users
    */
   public static async getAllBorrelkaartGroups(params: PaginationParameters = {}):
-  Promise<BorrelkaartGroupResponse[]> {
+  Promise<PaginatedBorrelkaartGroupResponse> {
     const { take, skip } = params;
     const bkgs = await BorrelkaartGroup.find({ take, skip });
-    return bkgs.map((bkg) => this.asBorrelkaartGroupResponse(bkg, null));
+    const records = bkgs.map((bkg) => this.asBorrelkaartGroupResponse(bkg, null));
+
+    return {
+      _pagination: {
+        take, skip, count: await BorrelkaartGroup.count(),
+      },
+      records,
+    };
   }
 
   /**

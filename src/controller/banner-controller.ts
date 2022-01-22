@@ -96,7 +96,8 @@ export default class BannerController extends BaseController {
    * @security JWT
    * @param {integer} take.query - How many banners the endpoint should return
    * @param {integer} skip.query - How many banners should be skipped (for pagination)
-   * @returns {Array.<BannerResponse>} 200 - All existing banners
+   * @returns {PaginatedBannerResponse.model} 200 - All existing banners
+   * @returns {string} 400 - Validation error
    * @returns {string} 500 - Internal server error
    */
   public async returnAllBanners(req: RequestWithToken, res: Response): Promise<void> {
@@ -211,9 +212,9 @@ export default class BannerController extends BaseController {
     // handle request
     try {
       // check if banner in database
-      const banner = await BannerService.getBanners({ bannerId: Number.parseInt(id, 10) });
-      if (banner.length > 0) {
-        res.json(banner[0]);
+      const { records } = await BannerService.getBanners({ bannerId: Number.parseInt(id, 10) });
+      if (records.length > 0) {
+        res.json(records[0]);
       } else {
         res.status(404).json('Banner not found.');
       }
@@ -294,7 +295,7 @@ export default class BannerController extends BaseController {
    * @security JWT
    * @param {integer} take.query - How many banners the endpoint should return
    * @param {integer} skip.query - How many banners should be skipped (for pagination)
-   * @returns {Array.<BannerResponse>} 200 - All active banners
+   * @returns {PaginatedBannerResponse.model} 200 - All active banners
    * @returns {string} 400 - Validation error
    */
   public async returnActiveBanners(req: RequestWithToken, res: Response): Promise<void> {

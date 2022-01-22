@@ -102,7 +102,8 @@ export default class Swagger {
       path.join(process.cwd(), 'src/declaration/*.ts'),
       path.join(process.cwd(), 'src/**/controller/*.ts'),
       path.join(process.cwd(), 'src/**/controller/response/**/*.ts'),
-      path.join(process.cwd(), 'src/**/controller/request/**/*.ts'));
+      path.join(process.cwd(), 'src/**/controller/request/**/*.ts'),
+      path.join(process.cwd(), 'src/**/helpers/pagination.ts'));
   }
 }
 

@@ -18,8 +18,13 @@
 
 import { RequestWithToken } from '../middleware/token-middleware';
 
-export const PAGINATION_DEFAULT = 25;
-export const PAGINATION_MAX = 500;
+const PAGINATION_DEFAULT = 25;
+const PAGINATION_MAX = 500;
+
+export const defaultPagination = () => (
+  parseInt(process.env.PAGINATION_DEFAULT, 10) || PAGINATION_DEFAULT);
+export const maxPagination = () => (
+  parseInt(process.env.PAGINATION_MAX, 10) || PAGINATION_MAX);
 
 export interface PaginationParameters {
   take?: number;
@@ -69,12 +74,12 @@ export function validateRequestPagination(req: RequestWithToken): boolean {
 export function parseRequestPagination(req: RequestWithToken): { take: number, skip: number } {
   if (!validateRequestPagination(req)) throw Error('Invalid pagination parameters');
 
-  const maxTake = parseInt(process.env.PAGINATION_MAX, 10) || 500;
+  const maxTake = parseInt(process.env.PAGINATION_MAX, 10) || PAGINATION_MAX;
 
   // Set the default take and skip to the values set in the environment variables.
   // If these are not set, choose 25 and 0 respectively
   let [take, skip] = [
-    parseInt(process.env.PAGINATION_DEFAULT, 10) || 25,
+    parseInt(process.env.PAGINATION_DEFAULT, 10) || PAGINATION_DEFAULT,
     0,
   ];
 

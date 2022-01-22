@@ -17,7 +17,7 @@
  */
 import { createQueryBuilder, SelectQueryBuilder } from 'typeorm';
 import dinero from 'dinero.js';
-import { ProductResponse } from '../controller/response/product-response';
+import { PaginatedProductResponse, ProductResponse } from '../controller/response/product-response';
 import Product from '../entity/product/product';
 import ProductRevision from '../entity/product/product-revision';
 import UpdatedProduct from '../entity/product/updated-product';
@@ -157,26 +157,9 @@ export default class ProductService {
       }, 'containerproducts', condition());
   }
 
-  /**
-   * Gets all the products in a PointOfSale
-   * @param params
-   * @param pagination
-   */
-  public static async getProductsPOS(
-    params: ProductParameters = {}, pagination: PaginationParameters = {},
-  ): Promise<ProductResponse[]> {
-    const { take, skip } = pagination;
-
-    let POScurrent: PointOfSale;
-    let revision = params.pointOfSaleRevision;
-
-    if (!params.pointOfSaleRevision) {
-      POScurrent = await PointOfSale.findOne({ id: params.pointOfSaleId });
-      if (!POScurrent) return;
-      revision = POScurrent.currentRevision;
-    }
-    const id = params.pointOfSaleId;
-
+  private static buildGetProductsPOSQuery(
+    id: number, revision: number,
+  ): SelectQueryBuilder<Product> {
     const builder = createQueryBuilder()
       .from(PointOfSale, 'pos')
       .innerJoinAndSelect(PointOfSaleRevision, 'posalias', `pos.id = posalias.pointOfSaleId AND pos.id = ${id} AND posalias.revision = ${revision}`)
@@ -203,24 +186,49 @@ export default class ProductService {
         'image.downloadName AS image',
         'products.revision as revision',
         'products.alcoholpercentage AS alcoholpercentage',
-      ])
-      .limit(take)
-      .offset(skip);
+      ]);
 
-    const rawProducts = await builder.getRawMany();
-
-    // eslint-disable-next-line consistent-return
-    return rawProducts.map((rawProduct: any) => this.asProductResponse(rawProduct));
+    return builder;
   }
 
   /**
-   * Query for getting all products following the ProductParameters.
-   * @param params - The product query parameters.
+   * Gets all the products in a PointOfSale
+   * @param params
    * @param pagination
    */
-  public static async getProducts(
+  public static async getProductsPOS(
     params: ProductParameters = {}, pagination: PaginationParameters = {},
-  ): Promise<ProductResponse[]> {
+  ): Promise<PaginatedProductResponse | undefined> {
+    const { take, skip } = pagination;
+
+    let POScurrent: PointOfSale;
+    let revision = params.pointOfSaleRevision;
+
+    if (!params.pointOfSaleRevision) {
+      POScurrent = await PointOfSale.findOne({ id: params.pointOfSaleId });
+      if (!POScurrent) return undefined;
+      revision = POScurrent.currentRevision;
+    }
+    const id = params.pointOfSaleId;
+
+    const results = await Promise.all([
+      this.buildGetProductsPOSQuery(id, revision).limit(take).offset(skip).getRawMany(),
+      // TODO: fix that .getCount() does not return the same as .getRawMany().length
+      this.buildGetProductsPOSQuery(id, revision).getRawMany(),
+    ]);
+
+    const records = results[0].map((rawProduct: any) => this.asProductResponse(rawProduct));
+
+    return {
+      _pagination: {
+        take, skip, count: results[1].length,
+      },
+      records,
+    };
+  }
+
+  private static buildGetProductsQuery(params: ProductParameters = {})
+    : SelectQueryBuilder<Product> {
     function condition() {
       // No revision defaults to latest revision.
       const latest = params.productRevision ? params.productRevision : 'product.currentRevision';
@@ -232,8 +240,6 @@ export default class ProductService {
         ? `product.id = productrevision.product AND ${latest} = productrevision.revision`
         : 'product.id = productrevision.product';
     }
-
-    const { take, skip } = pagination;
 
     const builder = createQueryBuilder()
       .from(Product, 'product')
@@ -266,9 +272,7 @@ export default class ProductService {
         'category.name AS category_name',
         'productrevision.alcoholpercentage AS alcoholpercentage',
         'image.downloadName as image',
-      ])
-      .limit(take)
-      .offset(skip);
+      ]);
 
     const filterMapping: FilterMapping = {
       productId: 'product.id',
@@ -277,20 +281,35 @@ export default class ProductService {
 
     QueryFilter.applyFilter(builder, filterMapping, params);
 
-    const rawProducts = await builder.getRawMany();
-    return rawProducts.map((rawProduct: any) => this.asProductResponse(rawProduct));
+    return builder;
   }
 
   /**
-   * Query for getting all updated products following the ProductParameters.
+   * Query for getting all products following the ProductParameters.
    * @param params - The product query parameters.
    * @param pagination
    */
-  public static async getUpdatedProducts(
+  public static async getProducts(
     params: ProductParameters = {}, pagination: PaginationParameters = {},
-  ): Promise<ProductResponse[]> {
+  ): Promise<PaginatedProductResponse> {
     const { take, skip } = pagination;
 
+    const results = await Promise.all([
+      this.buildGetProductsQuery(params).limit(take).offset(skip).getRawMany(),
+      this.buildGetProductsQuery(params).getCount(),
+    ]);
+
+    const records = results[0].map((rawProduct: any) => this.asProductResponse(rawProduct));
+    return {
+      _pagination: {
+        take, skip, count: results[1],
+      },
+      records,
+    };
+  }
+
+  private static buildGetUpdatedProductsQuery(params: ProductParameters = {})
+    : SelectQueryBuilder<Product> {
     const builder = createQueryBuilder()
       .from(Product, 'product')
       .innerJoinAndSelect(
@@ -320,9 +339,7 @@ export default class ProductService {
         'category.name AS category_name',
         'updatedproduct.alcoholpercentage AS alcoholpercentage',
         'image.downloadName as image',
-      ])
-      .limit(take)
-      .offset(skip);
+      ]);
 
     const filterMapping: FilterMapping = {
       productId: 'product.id',
@@ -330,8 +347,31 @@ export default class ProductService {
 
     QueryFilter.applyFilter(builder, filterMapping, params);
 
-    const rawProducts = await builder.getRawMany();
-    return rawProducts.map((rawProduct: any) => this.asProductResponse(rawProduct));
+    return builder;
+  }
+
+  /**
+   * Query for getting all updated products following the ProductParameters.
+   * @param params - The product query parameters.
+   * @param pagination
+   */
+  public static async getUpdatedProducts(
+    params: ProductParameters = {}, pagination: PaginationParameters = {},
+  ): Promise<PaginatedProductResponse> {
+    const { take, skip } = pagination;
+
+    const results = await Promise.all([
+      this.buildGetUpdatedProductsQuery(params).limit(take).offset(skip).getRawMany(),
+      this.buildGetUpdatedProductsQuery(params).getCount(),
+    ]);
+
+    const records = results[0].map((rawProduct: any) => this.asProductResponse(rawProduct));
+    return {
+      _pagination: {
+        take, skip, count: results[1],
+      },
+      records,
+    };
   }
 
   /**
@@ -343,12 +383,12 @@ export default class ProductService {
   public static async getAllProducts(params: ProductParameters = {}) {
     // We get the products by first getting the updated products and then merge them with the
     // normal products.
-    const updatedProducts: ProductResponse[] = await this.getUpdatedProducts(params);
+    const updatedProducts: ProductResponse[] = (await this.getUpdatedProducts(params)).records;
 
     const updatedProductIds = updatedProducts.map((prod) => prod.id);
 
     // Get the remaining products.
-    const products: ProductResponse[] = (await this.getProducts(params));
+    const products: ProductResponse[] = (await this.getProducts(params)).records;
 
     const filteredProducts = products.filter(
       (prod) => !updatedProductIds.includes(prod.id),
@@ -387,7 +427,7 @@ export default class ProductService {
     await updatedProduct.save();
 
     // Pull the just created product from the database to fix the formatting.
-    return (await this.getUpdatedProducts({ productId }))[0];
+    return (await this.getUpdatedProducts({ productId })).records[0];
   }
 
   /**
@@ -419,7 +459,7 @@ export default class ProductService {
 
     await updatedProduct.save();
 
-    return (await this.getUpdatedProducts({ productId: base.id }))[0];
+    return (await this.getUpdatedProducts({ productId: base.id })).records[0];
   }
 
   /**
@@ -436,7 +476,7 @@ export default class ProductService {
       return undefined;
     }
 
-    const update: ProductResponse = (await this.getUpdatedProducts({ productId }))[0];
+    const update: ProductResponse = (await this.getUpdatedProducts({ productId })).records[0];
 
     // Set base product, then the oldest settings and then the newest.
     const productRevision: ProductRevision = Object.assign(new ProductRevision(), {
@@ -459,7 +499,7 @@ export default class ProductService {
     await UpdatedProduct.delete(productId);
 
     // Return the new product.
-    return (await this.getProducts({ productId }))[0];
+    return (await this.getProducts({ productId })).records[0];
   }
 
   /**

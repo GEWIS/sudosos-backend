@@ -15,8 +15,9 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { createQueryBuilder } from 'typeorm';
+import { createQueryBuilder, SelectQueryBuilder } from 'typeorm';
 import {
+  PaginatedPointOfSaleResponse, PaginatedUpdatedPointOfSaleResponse,
   PointOfSaleResponse,
   PointOfSaleWithContainersResponse,
   UpdatedPointOfSaleResponse,
@@ -70,6 +71,10 @@ export interface PointOfSaleParameters {
    * If containers should be added to the response
    */
   returnContainers?: boolean
+  /**
+   * Whether to select public points of sale.
+   */
+  public?: boolean;
 }
 
 export default class PointOfSaleService {
@@ -104,7 +109,7 @@ export default class PointOfSaleService {
     pointOfSale: PointOfSaleResponse | UpdatedPointOfSaleResponse,
   ): Promise<PointOfSaleWithContainersResponse> {
     const containerIds = (
-      (await ContainerService.getContainers({ posId: pointOfSale.id })).map((c) => c.id));
+      (await ContainerService.getContainers({ posId: pointOfSale.id })).records.map((c) => c.id));
     const containers: ContainerWithProductsResponse[] = [];
     await Promise.all(
       containerIds.map(
@@ -118,16 +123,8 @@ export default class PointOfSaleService {
     };
   }
 
-  /**
-   * Query to return current point of sales.
-   * @param filters - Parameters to query the point of sales with.
-   * @param pagination
-   */
-  public static async getPointsOfSale(
-    filters: PointOfSaleParameters = {}, pagination: PaginationParameters = {},
-  ): Promise<PointOfSaleResponse[] | PointOfSaleWithContainersResponse[]> {
-    const { take, skip } = pagination;
-
+  private static buildGetPointsOfSaleQuery(filters: PointOfSaleParameters = {})
+    : SelectQueryBuilder<PointOfSale> {
     const builder = createQueryBuilder()
       .from(PointOfSale, 'pos')
       .innerJoin(
@@ -148,9 +145,7 @@ export default class PointOfSaleService {
         'owner.id AS owner_id',
         'owner.firstName AS owner_firstName',
         'owner.lastName AS owner_lastName',
-      ])
-      .limit(take)
-      .offset(skip);
+      ]);
 
     if (filters.pointOfSaleRevision === undefined) builder.where('pos.currentRevision = posrevision.revision');
 
@@ -165,11 +160,27 @@ export default class PointOfSaleService {
 
     QueryFilter.applyFilter(builder, filterMapping, filters);
 
-    const rawPointOfSales = await builder.getRawMany();
+    return builder;
+  }
+
+  /**
+   * Query to return current point of sales.
+   * @param filters - Parameters to query the point of sales with.
+   * @param pagination
+   */
+  public static async getPointsOfSale(
+    filters: PointOfSaleParameters = {}, pagination: PaginationParameters = {},
+  ): Promise<PaginatedPointOfSaleResponse | PointOfSaleWithContainersResponse[]> {
+    const { take, skip } = pagination;
+
+    const results = await Promise.all([
+      this.buildGetPointsOfSaleQuery(filters).limit(take).offset(skip).getRawMany(),
+      this.buildGetPointsOfSaleQuery(filters).getCount(),
+    ]);
 
     if (filters.returnContainers) {
       const pointOfSales: PointOfSaleWithContainersResponse[] = [];
-      await Promise.all(rawPointOfSales.map(
+      await Promise.all(results[0].map(
         async (rawPointOfSale) => {
           pointOfSales.push(
             await this.asPointOfSaleResponseWithContainers(
@@ -181,19 +192,18 @@ export default class PointOfSaleService {
       return pointOfSales;
     }
 
-    return rawPointOfSales.map((rawPointOfSale) => this.asPointOfSaleResponse(rawPointOfSale));
+    const records = results[0].map((rawPointOfSale) => this.asPointOfSaleResponse(rawPointOfSale));
+    return {
+      _pagination: {
+        take, skip, count: results[1],
+      },
+      records,
+    };
   }
 
-  /**
-   * Query to return updated (pending) point of sales.
-   * @param filters - Parameters to query the point of sales with.
-   * @param pagination
-   */
-  public static async getUpdatedPointsOfSale(
-    filters: PointOfSaleParameters = {}, pagination: PaginationParameters = {},
-  ): Promise<UpdatedPointOfSaleResponse[] | PointOfSaleWithContainersResponse[]> {
-    const { take, skip } = pagination;
-
+  public static buildGetUpdatedPointsOfSaleQuery(
+    filters: PointOfSaleParameters = {},
+  ): SelectQueryBuilder<PointOfSale> {
     const builder = createQueryBuilder()
       .from(PointOfSale, 'pos')
       .innerJoin(
@@ -213,9 +223,7 @@ export default class PointOfSaleService {
         'owner.id AS owner_id',
         'owner.firstName AS owner_firstName',
         'owner.lastName AS owner_lastName',
-      ])
-      .limit(take)
-      .offset(skip);
+      ]);
 
     const filterMapping: FilterMapping = {
       pointOfSaleId: 'pos.id',
@@ -226,11 +234,27 @@ export default class PointOfSaleService {
     };
     QueryFilter.applyFilter(builder, filterMapping, filters);
 
-    const rawPointOfSales = await builder.getRawMany();
+    return builder;
+  }
+
+  /**
+   * Query to return updated (pending) point of sales.
+   * @param filters - Parameters to query the point of sales with.
+   * @param pagination
+   */
+  public static async getUpdatedPointsOfSale(
+    filters: PointOfSaleParameters = {}, pagination: PaginationParameters = {},
+  ): Promise<PaginatedUpdatedPointOfSaleResponse | PointOfSaleWithContainersResponse[]> {
+    const { take, skip } = pagination;
+
+    const results = await Promise.all([
+      this.buildGetUpdatedPointsOfSaleQuery(filters).limit(take).offset(skip).getRawMany(),
+      this.buildGetUpdatedPointsOfSaleQuery(filters).getCount(),
+    ]);
 
     if (filters.returnContainers) {
       const pointOfSales: PointOfSaleWithContainersResponse[] = [];
-      await Promise.all(rawPointOfSales.map(
+      await Promise.all(results[0].map(
         async (rawPointOfSale) => {
           pointOfSales.push(
             await this.asPointOfSaleResponseWithContainers(
@@ -242,9 +266,16 @@ export default class PointOfSaleService {
       return pointOfSales;
     }
 
-    return rawPointOfSales.map(
+    const records = results[0].map(
       (rawPointOfSale) => this.asPointOfSaleResponse(rawPointOfSale) as UpdatedPointOfSaleResponse,
     );
+
+    return {
+      _pagination: {
+        take, skip, count: results[1],
+      },
+      records,
+    };
   }
 
   /**

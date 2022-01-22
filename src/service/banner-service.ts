@@ -15,8 +15,9 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+import { FindManyOptions } from 'typeorm';
 import BannerRequest from '../controller/request/banner-request';
-import BannerResponse from '../controller/response/banner-response';
+import { BannerResponse, PaginatedBannerResponse } from '../controller/response/banner-response';
 import Banner from '../entity/banner';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import FileService from './file-service';
@@ -107,8 +108,9 @@ export default class BannerService {
    * @param pagination - The pagination options.
    * @returns {Array.<BannerResponse>} - all banners
    */
-  public static async getBanners(filters: BannerFilterParameters, pagination: PaginationParameters = {})
-    : Promise<BannerResponse[]> {
+  public static async getBanners(
+    filters: BannerFilterParameters, pagination: PaginationParameters = {},
+  ): Promise<PaginatedBannerResponse> {
     const { take, skip } = pagination;
 
     const mapping: FilterMapping = {
@@ -116,13 +118,26 @@ export default class BannerService {
       active: 'active',
     };
 
-    const banners = await Banner.find({
+    const options: FindManyOptions = {
       where: QueryFilter.createFilterWhereClause(mapping, filters),
       relations: ['image'],
+    };
+
+    const banners = await Banner.find({
+      ...options,
       take,
       skip,
     });
-    return banners.map((banner) => this.asBannerResponse(banner));
+    const records = banners.map((banner) => this.asBannerResponse(banner));
+
+    return {
+      _pagination: {
+        take,
+        skip,
+        count: await Banner.count(options),
+      },
+      records,
+    };
   }
 
   /**

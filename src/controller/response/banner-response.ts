@@ -17,6 +17,7 @@
  */
 
 import BaseResponse from './base-response';
+import { PaginationResult } from '../../helpers/pagination';
 
 /**
  * @typedef {BaseResponse} BannerResponse
@@ -27,11 +28,21 @@ import BaseResponse from './base-response';
  * @property {string} startDate - The starting date from which the banner should be shown
  * @property {string} endDate - The end date from which the banner should no longer be shown
  */
-export default interface BannerResponse extends BaseResponse {
+export interface BannerResponse extends BaseResponse {
   name: string,
   image: string | null,
   duration: number,
   active: boolean,
   startDate: string,
   endDate: string,
+}
+
+/**
+ * @typedef PaginatedBannerResponse
+ * @property {PaginationResult.model} _pagination - Pagination metadata
+ * @property {Array<BannerResponse>} records - Returned banners
+ */
+export interface PaginatedBannerResponse {
+  _pagination: PaginationResult,
+  records: BannerResponse[],
 }

@@ -20,11 +20,14 @@ import { Response } from 'express';
 import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
-import PointOfSaleService, { PointOfSaleParameters } from '../service/point-of-sale-service';
+import PointOfSaleService from '../service/point-of-sale-service';
 import ContainerService from '../service/container-service';
 import ProductService from '../service/product-service';
 import PointOfSaleRequest from './request/point-of-sale-request';
-import { UpdatedPointOfSaleResponse } from './response/point-of-sale-response';
+import {
+  PaginatedPointOfSaleResponse,
+  PointOfSaleWithContainersResponse,
+} from './response/point-of-sale-response';
 import PointOfSale from '../entity/point-of-sale/point-of-sale';
 import UpdatePointOfSaleRequest from './request/update-point-of-sale-request';
 import UnapprovedContainerError from '../entity/errors/unapproved-container-error';
@@ -142,7 +145,7 @@ export default class PointOfSaleController extends BaseController {
    * @security JWT
    * @param {integer} take.query - How many points of sale the endpoint should return
    * @param {integer} skip.query - How many points of sale should be skipped (for pagination)
-   * @returns {Array<PointOfSaleResponse>} 200 - All existing point of sales
+   * @returns {PaginatedPointOfSaleResponse} 200 - All existing point of sales
    * @returns {string} 500 - Internal server error
    */
   public async returnAllPointsOfSale(req: RequestWithToken, res: Response): Promise<void> {
@@ -187,8 +190,9 @@ export default class PointOfSaleController extends BaseController {
     // handle request
     try {
       // check if product in database
-      const pointOfSale = (await PointOfSaleService
-        .getPointsOfSale({ pointOfSaleId: parseInt(id, 10), returnContainers: true }))[0];
+      const pointOfSale = (await PointOfSaleService.getPointsOfSale(
+        { pointOfSaleId: parseInt(id, 10), returnContainers: true },
+      ) as PointOfSaleWithContainersResponse[])[0];
       if (pointOfSale) {
         res.json(pointOfSale);
       } else {
@@ -246,7 +250,7 @@ export default class PointOfSaleController extends BaseController {
    * @security JWT
    * @param {integer} take.query - How many containers the endpoint should return
    * @param {integer} skip.query - How many containers should be skipped (for pagination)
-   * @returns {Array<ContainerResponse>} 200 - All containers of the requested Point of Sale
+   * @returns {PaginatedContainerResponse} 200 - All containers of the requested Point of Sale
    * @returns {string} 500 - Internal server error
    */
   public async returnAllPointOfSaleContainers(req: RequestWithToken, res: Response): Promise<void> {
@@ -274,7 +278,7 @@ export default class PointOfSaleController extends BaseController {
    * @security JWT
    * @param {integer} take.query - How many products the endpoint should return
    * @param {integer} skip.query - How many products should be skipped (for pagination)
-   * @returns {Array<ProductResponse>} 200 - All products of the requested Point of Sale
+   * @returns {PaginatedProductResponse} 200 - All products of the requested Point of Sale
    * @returns {string} 500 - Internal server error
    */
   public async returnAllPointOfSaleProducts(req: RequestWithToken, res: Response): Promise<void> {
@@ -346,7 +350,7 @@ export default class PointOfSaleController extends BaseController {
    * @security JWT
    * @param {integer} take.query - How many points of sale the endpoint should return
    * @param {integer} skip.query - How many points of sale should be skipped (for pagination)
-   * @returns {Array<UpdatedPointOfSaleResponse>} 200 - All existing updated point of sales
+   * @returns {PaginatedUpdatedPointOfSaleResponse>} 200 - All existing updated point of sales
    * @returns {string} 500 - Internal server error
    */
   public async returnUpdatedPointsOfSale(req: RequestWithToken, res: Response): Promise<void> {
@@ -357,15 +361,15 @@ export default class PointOfSaleController extends BaseController {
 
     // Handle request
     try {
-      let pointsOfSale: UpdatedPointOfSaleResponse[];
+      let pointsOfSale: PaginatedPointOfSaleResponse;
       if (this.canGetAll(req)) {
-        pointsOfSale = ((await PointOfSaleService.getUpdatedPointsOfSale(
+        pointsOfSale = (await PointOfSaleService.getUpdatedPointsOfSale(
           {}, { take, skip },
-        )) as UpdatedPointOfSaleResponse[]);
+        )) as PaginatedPointOfSaleResponse;
       } else {
-        pointsOfSale = await PointOfSaleService.getPointsOfSaleInUserContext(
-          { ownerId: req.token.user.id } as PointOfSaleParameters, { take, skip }, true,
-        );
+        pointsOfSale = await PointOfSaleService.getUpdatedPointsOfSale(
+          { public: true }, { take, skip },
+        ) as PaginatedPointOfSaleResponse;
       }
 
       res.json(pointsOfSale);

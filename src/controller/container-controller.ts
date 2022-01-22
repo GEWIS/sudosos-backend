@@ -21,7 +21,6 @@ import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import ContainerService from '../service/container-service';
-import { ContainerResponse } from './response/container-response';
 import ContainerRevision from '../entity/container/container-revision';
 import ProductService from '../service/product-service';
 import ContainerRequest from './request/container-request';
@@ -29,6 +28,7 @@ import UpdatedContainer from '../entity/container/updated-container';
 import Container from '../entity/container/container';
 import UnapprovedProductError from '../entity/errors/unapproved-product-error';
 import { parseRequestPagination } from '../helpers/pagination';
+import { PaginatedContainerResponse } from './response/container-response';
 
 export default class ContainerController extends BaseController {
   private logger: Logger = log4js.getLogger('ContainerController');
@@ -103,7 +103,7 @@ export default class ContainerController extends BaseController {
    * @security JWT
    * @param {integer} take.query - How many containers the endpoint should return
    * @param {integer} skip.query - How many containers should be skipped (for pagination)
-   * @returns {Array.<ContainerResponse>} 200 - All existing containers
+   * @returns {PaginatedContainerResponse} 200 - All existing containers
    * @returns {string} 500 - Internal server error
    */
   public async getAllContainers(req: RequestWithToken, res: Response): Promise<void> {
@@ -114,13 +114,11 @@ export default class ContainerController extends BaseController {
 
     // Handle request
     try {
-      let containers: ContainerResponse[];
+      let containers: PaginatedContainerResponse;
       if (this.canGetAll(req)) {
         containers = await ContainerService.getContainers({}, { take, skip });
       } else {
-        containers = await ContainerService.getContainersInUserContext({
-          ownerId: req.token.user.id,
-        }, { take, skip });
+        containers = await ContainerService.getContainers({ public: true }, { take, skip });
       }
       res.json(containers);
     } catch (error) {
@@ -329,16 +327,8 @@ export default class ContainerController extends BaseController {
 
     // Handle request
     try {
-      let containers: ContainerResponse[];
-      if (this.canGetAll(req)) {
-        containers = await ContainerService.getUpdatedContainers({}, { take, skip });
-      } else {
-        containers = await ContainerService.getContainersInUserContext({
-          ownerId: req.token.user.id,
-        }, { take, skip }, true);
-      }
-
-      res.json(containers);
+      const response = await ContainerService.getUpdatedContainers({}, { take, skip });
+      res.json(response);
     } catch (error) {
       this.logger.error('Could not return all updated containers:', error);
       res.status(500).json('Internal server error.');
