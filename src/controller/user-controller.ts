@@ -17,6 +17,7 @@
  */
 import { Response } from 'express';
 import log4js, { Logger } from 'log4js';
+import { FindManyOptions } from 'typeorm';
 import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
@@ -30,6 +31,7 @@ import TransactionService, {
   parseGetTransactionsFilters,
 } from '../service/transaction-service';
 import ContainerService from '../service/container-service';
+import { PaginatedUserResponse } from './response/user-response';
 
 export default class UserController extends BaseController {
   private logger: Logger = log4js.getLogger('UserController');
@@ -154,7 +156,7 @@ export default class UserController extends BaseController {
    * @security JWT
    * @param {integer} take.query - How many users the endpoint should return
    * @param {integer} skip.query - How many users should be skipped (for pagination)
-   * @returns {[User.model]} 200 - A list of all users
+   * @returns {PaginatedUserResponse.model} 200 - A list of all users
    */
   public async getAllUsers(req: RequestWithToken, res: Response): Promise<void> {
     this.logger.trace('Get all users by user', req.token.user);
@@ -171,14 +173,18 @@ export default class UserController extends BaseController {
     }
 
     try {
-      const users = await User.find(
-        {
-          where: { deleted: false },
-          take,
-          skip,
+      const options: FindManyOptions = { where: { deleted: false } };
+      const users = await User.find({ ...options, take, skip });
+      const count = await User.count(options);
+
+      const result: PaginatedUserResponse = {
+        _pagination: {
+          take, skip, count,
         },
-      );
-      res.status(200).json(users);
+        records: users,
+      };
+
+      res.status(200).json(result);
     } catch (error) {
       this.logger.error('Could not get users:', error);
       res.status(500).json('Internal server error.');
@@ -339,7 +345,7 @@ export default class UserController extends BaseController {
    * @param {integer} take.query - How many products the endpoint should return
    * @param {integer} skip.query - How many products should be skipped (for pagination)
    * @security JWT
-   * @returns {[Product.model]} 200 - List of products.
+   * @returns {PaginatedProductResponse.model} 200 - List of products.
    */
   public async getUsersProducts(req: RequestWithToken, res: Response): Promise<void> {
     const parameters = req.params;
@@ -382,7 +388,7 @@ export default class UserController extends BaseController {
    * @param {integer} take.query - How many products the endpoint should return
    * @param {integer} skip.query - How many products should be skipped (for pagination)
    * @security JWT
-   * @returns {[Product.model]} 200 - List of products.
+   * @returns {PaginatedProductResponse.model} 200 - List of products.
    */
   public async getUsersUpdatedProducts(req: RequestWithToken, res: Response): Promise<void> {
     const parameters = req.params;
@@ -425,7 +431,7 @@ export default class UserController extends BaseController {
    * @security JWT
    * @param {integer} take.query - How many containers the endpoint should return
    * @param {integer} skip.query - How many containers should be skipped (for pagination)
-   * @returns {Array<ContainerResponse>} 200 - All users updated containers
+   * @returns {PaginatedContainerResponse.model} 200 - All users updated containers
    * @returns {string} 404 - Not found error
    * @returns {string} 500 - Internal server error
    */
@@ -471,7 +477,7 @@ export default class UserController extends BaseController {
    * @security JWT
    * @param {integer} take.query - How many containers the endpoint should return
    * @param {integer} skip.query - How many containers should be skipped (for pagination)
-   * @returns {Array<UpdatedContainerResponse>} 200 - All users updated containers
+   * @returns {PaginatedContainerResponse.model} 200 - All users updated containers
    * @returns {string} 404 - Not found error
    * @returns {string} 500 - Internal server error
    */
@@ -517,7 +523,7 @@ export default class UserController extends BaseController {
    * @param {integer} take.query - How many points of sale the endpoint should return
    * @param {integer} skip.query - How many points of sale should be skipped (for pagination)
    * @security JWT
-   * @returns {Array<PointOfSaleResponse>} 200 - All users updated point of sales
+   * @returns {PaginatedPointOfSaleResponse.model} 200 - All users updated point of sales
    * @returns {string} 404 - Not found error
    * @returns {string} 500 - Internal server error
    */
@@ -563,7 +569,7 @@ export default class UserController extends BaseController {
    * @param {integer} take.query - How many points of sale the endpoint should return
    * @param {integer} skip.query - How many points of sale should be skipped (for pagination)
    * @security JWT
-   * @returns {Array<UpdatedPointOfSaleResponse>} 200 - All users updated point of sales
+   * @returns {PaginatedUpdatedPointOfSaleResponse.model} 200 - All users updated point of sales
    * @returns {string} 404 - Not found error
    * @returns {string} 500 - Internal server error
    */
@@ -619,7 +625,7 @@ export default class UserController extends BaseController {
    * @param {integer} take.query - How many transactions the endpoint should return
    * @param {integer} skip.query - How many transactions should be skipped (for pagination)
    * @security JWT
-   * @returns {[Transaction.model]} 200 - List of transactions.
+   * @returns {PaginatedTransactionResponse.model} 200 - List of transactions.
    */
   public async getUsersTransactions(req: RequestWithToken, res: Response): Promise<void> {
     const { id } = req.params;

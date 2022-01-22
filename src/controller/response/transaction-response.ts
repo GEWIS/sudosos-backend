@@ -22,6 +22,7 @@ import { BaseContainerResponse } from './container-response';
 import { BaseProductResponse } from './product-response';
 import { BaseUserResponse, UserResponse } from './user-response';
 import { DineroObjectResponse } from './dinero-response';
+import { PaginationResult } from '../../helpers/pagination';
 
 /**
  * @typedef {BaseResponse} BaseTransactionResponse
@@ -86,4 +87,14 @@ export interface SubTransactionRowResponse extends BaseResponse {
   product: BaseProductResponse,
   amount: number,
   price: DineroObjectResponse,
+}
+
+/**
+ * @typedef PaginatedBaseTransactionResponse
+ * @property {PaginationResult.model} _pagination - Pagination metadata
+ * @property {Array<BaseTransactionResponse>} records - Returned banners
+ */
+export interface PaginatedBaseTransactionResponse {
+  _pagination: PaginationResult,
+  records: BaseTransactionResponse[],
 }
