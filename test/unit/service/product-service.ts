@@ -173,7 +173,9 @@ describe('ProductService', async (): Promise<void> => {
       returnsAll(res, products);
     });
     it('should return all updated products', async () => {
-      const updatedProducts: ProductResponse[] = await ProductService.getProducts({ updatedProducts: true });
+      const updatedProducts: ProductResponse[] = await ProductService.getProducts(
+        { updatedProducts: true },
+      );
       const products = ctx.updatedProducts.map((prod) => prod.product);
 
       returnsAll(updatedProducts, products);

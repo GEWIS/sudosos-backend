@@ -332,7 +332,9 @@ export default class ProductService {
   public static async getAllProducts(params: ProductParameters = {}) {
     // We get the products by first getting the updated products and then merge them with the
     // normal products.
-    const updatedProducts: ProductResponse[] = await this.getProducts({ ...params, updatedProducts: true });
+    const updatedProducts: ProductResponse[] = await this.getProducts(
+      { ...params, updatedProducts: true },
+    );
 
     const updatedProductIds = updatedProducts.map((prod) => prod.id);
 
@@ -425,7 +427,9 @@ export default class ProductService {
       return undefined;
     }
 
-    const update: ProductResponse = (await this.getProducts({ updatedProducts: true, productId }))[0];
+    const update: ProductResponse = (await this.getProducts(
+      { updatedProducts: true, productId },
+    ))[0];
 
     // Set base product, then the oldest settings and then the newest.
     const productRevision: ProductRevision = Object.assign(new ProductRevision(), {
