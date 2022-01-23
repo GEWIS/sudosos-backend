@@ -92,7 +92,7 @@ export default class TransactionController extends BaseController {
    * @param {string} tillDate.query - End date for selected transactions (exclusive)
    * @param {integer} take.query - How many transactions the endpoint should return
    * @param {integer} skip.query - How many transactions should be skipped (for pagination)
-   * @returns {[TransactionResponse]} 200 - A list of all transactions
+   * @returns {PaginatedBaseTransactionResponse.model} 200 - A list of all transactions
    */
   // eslint-disable-next-line class-methods-use-this
   public async getAllTransactions(req: RequestWithToken, res: Response): Promise<void> {

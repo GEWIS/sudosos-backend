@@ -104,7 +104,7 @@ export default class ProductController extends BaseController {
    * @security JWT
    * @param {integer} take.query - How many products the endpoint should return
    * @param {integer} skip.query - How many products should be skipped (for pagination)
-   * @returns {PaginatedProductResponse} 200 - All existing products
+   * @returns {PaginatedProductResponse.model} 200 - All existing products
    * @returns {string} 500 - Internal server error
    */
   public async getAllProducts(req: RequestWithToken, res: Response): Promise<void> {
@@ -260,7 +260,7 @@ export default class ProductController extends BaseController {
    * @security JWT
    * @param {integer} take.query - How many products the endpoint should return
    * @param {integer} skip.query - How many products should be skipped (for pagination)
-   * @returns {PaginatedProductResponse} 200 - All existing updated products
+   * @returns {PaginatedProductResponse.model} 200 - All existing updated products
    * @returns {string} 500 - Internal server error
    */
   public async getAllUpdatedProducts(req: RequestWithToken, res: Response): Promise<void> {

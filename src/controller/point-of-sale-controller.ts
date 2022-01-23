@@ -145,7 +145,7 @@ export default class PointOfSaleController extends BaseController {
    * @security JWT
    * @param {integer} take.query - How many points of sale the endpoint should return
    * @param {integer} skip.query - How many points of sale should be skipped (for pagination)
-   * @returns {PaginatedPointOfSaleResponse} 200 - All existing point of sales
+   * @returns {PaginatedPointOfSaleResponse.model} 200 - All existing point of sales
    * @returns {string} 500 - Internal server error
    */
   public async returnAllPointsOfSale(req: RequestWithToken, res: Response): Promise<void> {
@@ -250,7 +250,7 @@ export default class PointOfSaleController extends BaseController {
    * @security JWT
    * @param {integer} take.query - How many containers the endpoint should return
    * @param {integer} skip.query - How many containers should be skipped (for pagination)
-   * @returns {PaginatedContainerResponse} 200 - All containers of the requested Point of Sale
+   * @returns {PaginatedContainerResponse.model} 200 - All containers of the requested Point of Sale
    * @returns {string} 500 - Internal server error
    */
   public async returnAllPointOfSaleContainers(req: RequestWithToken, res: Response): Promise<void> {
@@ -278,7 +278,7 @@ export default class PointOfSaleController extends BaseController {
    * @security JWT
    * @param {integer} take.query - How many products the endpoint should return
    * @param {integer} skip.query - How many products should be skipped (for pagination)
-   * @returns {PaginatedProductResponse} 200 - All products of the requested Point of Sale
+   * @returns {PaginatedProductResponse.model} 200 - All products of the requested Point of Sale
    * @returns {string} 500 - Internal server error
    */
   public async returnAllPointOfSaleProducts(req: RequestWithToken, res: Response): Promise<void> {
@@ -350,7 +350,7 @@ export default class PointOfSaleController extends BaseController {
    * @security JWT
    * @param {integer} take.query - How many points of sale the endpoint should return
    * @param {integer} skip.query - How many points of sale should be skipped (for pagination)
-   * @returns {PaginatedUpdatedPointOfSaleResponse>} 200 - All existing updated point of sales
+   * @returns {PaginatedUpdatedPointOfSaleResponse.model} 200 - All existing updated point of sales
    * @returns {string} 500 - Internal server error
    */
   public async returnUpdatedPointsOfSale(req: RequestWithToken, res: Response): Promise<void> {

@@ -83,10 +83,11 @@ describe('ProductCategoryService', async (): Promise<void> => {
     });
 
     it('should return all productCategories', async () => {
-      const res: ProductCategoryResponse[] = await ProductCategoryService.getProductCategories();
+      // eslint-disable-next-line @typescript-eslint/naming-convention
+      const { records, _pagination } = await ProductCategoryService.getProductCategories();
 
-      expect(productCategoryEqualset(res, ctx.categories)).to.be.true;
-      expect(res.every(
+      expect(productCategoryEqualset(records, ctx.categories)).to.be.true;
+      expect(records.every(
         (c: ProductCategoryResponse) => ctx.specification.validateModel(
           'ProductCategoryResponse',
           c,
@@ -94,34 +95,50 @@ describe('ProductCategoryService', async (): Promise<void> => {
           true,
         ).valid,
       )).to.be.true;
+
+      expect(_pagination.take).to.be.undefined;
+      expect(_pagination.skip).to.be.undefined;
+      expect(_pagination.count).to.equal(ctx.categories.length);
     });
     it('should return a single productCategory if id is specified', async () => {
-      const res: ProductCategoryResponse[] = await ProductCategoryService
+      const { records } = await ProductCategoryService
         .getProductCategories({ id: ctx.categories[0].id });
 
-      expect(res.length).to.equal(1);
-      expect(res[0].id).to.equal(ctx.categories[0].id);
-      expect(res[0].name).to.equal(ctx.categories[0].name);
+      expect(records.length).to.equal(1);
+      expect(records[0].id).to.equal(ctx.categories[0].id);
+      expect(records[0].name).to.equal(ctx.categories[0].name);
     });
     it('should return nothing if a wrong id is specified', async () => {
-      const res: ProductCategoryResponse[] = await ProductCategoryService
+      const { records } = await ProductCategoryService
         .getProductCategories({ id: ctx.categories.length + 1 });
 
-      expect(res).to.be.empty;
+      expect(records).to.be.empty;
     });
     it('should return a single productCategory if name is specified', async () => {
-      const res: ProductCategoryResponse[] = await ProductCategoryService
+      const { records } = await ProductCategoryService
         .getProductCategories({ name: ctx.categories[0].name });
 
-      expect(res.length).to.equal(1);
-      expect(res[0].id).to.equal(ctx.categories[0].id);
-      expect(res[0].name).to.equal(ctx.categories[0].name);
+      expect(records.length).to.equal(1);
+      expect(records[0].id).to.equal(ctx.categories[0].id);
+      expect(records[0].name).to.equal(ctx.categories[0].name);
     });
     it('should return nothing if a wrong name is specified', async () => {
-      const res: ProductCategoryResponse[] = await ProductCategoryService
+      const { records } = await ProductCategoryService
         .getProductCategories({ name: 'non-existing' });
 
-      expect(res).to.be.empty;
+      expect(records).to.be.empty;
+    });
+    it('should adhere to pagination', async () => {
+      const take = 5;
+      const skip = 3;
+      // eslint-disable-next-line @typescript-eslint/naming-convention
+      const { records, _pagination } = await ProductCategoryService
+        .getProductCategories({}, { take, skip });
+
+      expect(_pagination.take).to.equal(take);
+      expect(_pagination.skip).to.equal(skip);
+      expect(_pagination.count).to.equal(ctx.categories.length);
+      expect(records.length).to.be.at.most(take);
     });
   });
   describe('postProductCategory function', () => {
@@ -154,20 +171,20 @@ describe('ProductCategoryService', async (): Promise<void> => {
       expect(c2).to.not.be.null;
       expect(c2.name).to.equal(c1.name);
 
-      const c3: ProductCategoryResponse[] = await ProductCategoryService
+      const { records } = await ProductCategoryService
         .getProductCategories({ id: 1 });
 
-      expect(c3.length).to.equal(1);
-      expect(c3[0].name).to.equal(c1.name);
+      expect(records.length).to.equal(1);
+      expect(records[0].name).to.equal(c1.name);
     });
     it('should not be able to post an invalid productCategory', async () => {
       const c1: ProductCategoryRequest = { name: null };
       const promise = ProductCategoryService.postProductCategory(c1);
       await expect(promise).to.eventually.be.rejected;
 
-      const res: ProductCategoryResponse[] = await ProductCategoryService
+      const { records } = await ProductCategoryService
         .getProductCategories({ id: 1 });
-      expect(res).to.be.empty;
+      expect(records).to.be.empty;
     });
   });
   describe('patchProductCategory function', async (): Promise<void> => {
@@ -202,11 +219,11 @@ describe('ProductCategoryService', async (): Promise<void> => {
       expect(c2).to.not.be.null;
       expect(c2.name).to.equal(c1.name);
 
-      const c3: ProductCategoryResponse[] = await ProductCategoryService
+      const { records } = await ProductCategoryService
         .getProductCategories({ id: ctx.categories[0].id });
 
-      expect(c3).to.not.be.null;
-      expect(c3[0].name).to.equal(c1.name);
+      expect(records).to.not.be.null;
+      expect(records[0].name).to.equal(c1.name);
     });
     it('should not be able to patch an invalid productCategory id', async () => {
       const c1: ProductCategoryRequest = { name: 'test' };
@@ -218,12 +235,12 @@ describe('ProductCategoryService', async (): Promise<void> => {
       const c1: ProductCategoryRequest = { name: null };
       const promise = ProductCategoryService.patchProductCategory(ctx.categories[0].id, c1);
       await expect(promise).to.eventually.be.rejected;
-      const res: ProductCategoryResponse[] = await ProductCategoryService
+      const { records } = await ProductCategoryService
         .getProductCategories({ id: ctx.categories[0].id });
 
-      expect(res.length).to.equal(1);
-      expect(res[0].id).to.equal(ctx.categories[0].id);
-      expect(res[0].name).to.equal(ctx.categories[0].name);
+      expect(records.length).to.equal(1);
+      expect(records[0].id).to.equal(ctx.categories[0].id);
+      expect(records[0].name).to.equal(ctx.categories[0].name);
     });
   });
   describe('deleteProductCategory function', async (): Promise<void> => {

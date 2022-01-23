@@ -103,7 +103,7 @@ export default class ContainerController extends BaseController {
    * @security JWT
    * @param {integer} take.query - How many containers the endpoint should return
    * @param {integer} skip.query - How many containers should be skipped (for pagination)
-   * @returns {PaginatedContainerResponse} 200 - All existing containers
+   * @returns {PaginatedContainerResponse.model} 200 - All existing containers
    * @returns {string} 500 - Internal server error
    */
   public async getAllContainers(req: RequestWithToken, res: Response): Promise<void> {
@@ -174,7 +174,7 @@ export default class ContainerController extends BaseController {
    * @security JWT
    * @param {integer} take.query - How many products the endpoint should return
    * @param {integer} skip.query - How many products should be skipped (for pagination)
-   * @returns {Array.<ProductResponse>} 200 - All products in the container
+   * @returns {PaginatedProductResponse.model} 200 - All products in the container
    * @returns {string} 404 - Not found error
    * @returns {string} 500 - Internal server error
    */
@@ -307,7 +307,7 @@ export default class ContainerController extends BaseController {
    * @security JWT
    * @param {integer} take.query - How many containers the endpoint should return
    * @param {integer} skip.query - How many containers should be skipped (for pagination)
-   * @returns {Array.<ContainerResponse>} 200 - All updated containers
+   * @returns {PaginatedContainerResponse.model} 200 - All updated containers
    * @returns {string} 500 - Internal server error
    */
   public async getUpdatedContainers(req: RequestWithToken, res: Response): Promise<void> {

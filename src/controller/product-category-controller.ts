@@ -74,7 +74,7 @@ export default class ProductCategoryController extends BaseController {
    * @security JWT
    * @param {integer} take.query - How many product categories the endpoint should return
    * @param {integer} skip.query - How many product categories should be skipped (for pagination)
-   * @returns {Array.<ProductCategoryResponse>} 200 - All existing productcategories
+   * @returns {PaginatedProductCategoryResponse.model} 200 - All existing productcategories
    * @returns {string} 500 - Internal server error
    */
   public async returnAllProductCategories(req: RequestWithToken, res: Response): Promise<void> {
@@ -150,7 +150,7 @@ export default class ProductCategoryController extends BaseController {
       // check if product in database
       const parsedId = parseInt(id, 10);
       const productCategory = (
-        (await ProductCategoryService.getProductCategories({ id: parsedId }))[0]);
+        (await ProductCategoryService.getProductCategories({ id: parsedId })).records[0]);
       if (productCategory) {
         res.json(productCategory);
       } else {

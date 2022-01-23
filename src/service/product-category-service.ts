@@ -17,7 +17,10 @@
  */
 import { FindManyOptions } from 'typeorm';
 import ProductCategory from '../entity/product/product-category';
-import { ProductCategoryResponse } from '../controller/response/product-category-response';
+import {
+  PaginatedProductCategoryResponse,
+  ProductCategoryResponse,
+} from '../controller/response/product-category-response';
 import ProductCategoryRequest from '../controller/request/product-category-request';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import { PaginationParameters } from '../helpers/pagination';
@@ -61,7 +64,7 @@ export default class ProductCategoryService {
    */
   public static async getProductCategories(
     filters: ProductCategoryFilterParameters = {}, pagination: PaginationParameters = {},
-  ): Promise<ProductCategoryResponse[]> {
+  ): Promise<PaginatedProductCategoryResponse> {
     const { take, skip } = pagination;
 
     const filterMapping: FilterMapping = {
@@ -70,13 +73,23 @@ export default class ProductCategoryService {
     };
     const options: FindManyOptions = {
       where: QueryFilter.createFilterWhereClause(filterMapping, filters),
-      take,
-      skip,
     };
-    const productCategories = await ProductCategory.find(options);
-    return productCategories.map(
+
+    const results = await Promise.all([
+      ProductCategory.find({ ...options, take, skip }),
+      ProductCategory.count(options),
+    ]);
+
+    const records = results[0].map(
       (productCategory) => (this.asProductCategoryResponse(productCategory)),
     );
+
+    return {
+      _pagination: {
+        take, skip, count: results[1],
+      },
+      records,
+    };
   }
 
   /**

@@ -74,7 +74,7 @@ export default class BorrelkaartGroupController extends BaseController {
    * @security JWT
    * @param {integer} take.query - How many borrelkaart groups the endpoint should return
    * @param {integer} skip.query - How many borrelkaart groups should be skipped (for pagination)
-   * @returns {PaginatedBorrelkaartGroupResponse} 200 - All existingborrelkaart groups without users
+   * @returns {PaginatedBorrelkaartGroupResponse.model} 200 - All existingborrelkaart groups without users
    * @returns {string} 500 - Internal server error
    */
   public async getAllBorrelkaartGroups(req: RequestWithToken, res: Response): Promise<void> {
