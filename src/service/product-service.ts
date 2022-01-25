@@ -33,7 +33,6 @@ import PointOfSale from '../entity/point-of-sale/point-of-sale';
 import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision';
 import { RequestWithToken } from '../middleware/token-middleware';
 import { asDate, asNumber } from '../helpers/validators';
-import { TransactionFilterParameters } from './transaction-service';
 
 /**
  * Define product filtering parameters used to filter query results.
