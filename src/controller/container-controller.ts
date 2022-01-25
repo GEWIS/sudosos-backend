@@ -86,6 +86,12 @@ export default class ContainerController extends BaseController {
           handler: this.getUpdatedContainers.bind(this),
         },
       },
+      '/public': {
+        GET: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'own', 'Container', ['*']),
+          handler: this.getUpdatedContainers.bind(this),
+        },
+      },
       '/:id(\\d+)/approve': {
         POST: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'approve', 'all', 'Container', ['*']),
@@ -362,6 +368,8 @@ export default class ContainerController extends BaseController {
       res.status(500).json('Internal server error.');
     }
   }
+
+  // TODO FIX permissions
 
   /**
    * Test if request user can view all containers.
