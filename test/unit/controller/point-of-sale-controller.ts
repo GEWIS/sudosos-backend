@@ -32,6 +32,7 @@ import RoleManager from '../../../src/rbac/role-manager';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
 import { PointOfSaleResponse } from '../../../src/controller/response/point-of-sale-response';
+import UpdatedPointOfSale from '../../../src/entity/point-of-sale/updated-point-of-sale';
 
 describe('PointOfSaleController', async () => {
   let ctx: {
@@ -181,6 +182,18 @@ describe('PointOfSaleController', async () => {
 
       expect(res.status).to.equal(403);
       expect(res.body).to.be.empty;
+    });
+  });
+  describe('GET /pointsofsale/:id/update', async () => {
+    it('should return an HTTP 200 and the update if admin', async () => {
+      const { id } = (await UpdatedPointOfSale.find({ relations: ['pointOfSale'] }))[0].pointOfSale;
+
+      const res = await request(ctx.app)
+        .get(`/pointsofsale/${id}/update`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(200);
+      expect(res.body.id).to.be.equal(id);
     });
   });
 

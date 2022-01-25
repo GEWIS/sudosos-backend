@@ -20,7 +20,7 @@ import { Response } from 'express';
 import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
-import PointOfSaleService, { PointOfSaleParameters } from '../service/point-of-sale-service';
+import PointOfSaleService from '../service/point-of-sale-service';
 import ContainerService from '../service/container-service';
 import ProductService from '../service/product-service';
 import PointOfSaleRequest from './request/point-of-sale-request';
@@ -28,6 +28,8 @@ import { UpdatedPointOfSaleResponse } from './response/point-of-sale-response';
 import PointOfSale from '../entity/point-of-sale/point-of-sale';
 import UpdatePointOfSaleRequest from './request/update-point-of-sale-request';
 import UnapprovedContainerError from '../entity/errors/unapproved-container-error';
+import { asNumber } from '../helpers/validators';
+import UpdatedPointOfSale from '../entity/point-of-sale/updated-point-of-sale';
 
 export default class PointOfSaleController extends BaseController {
   private logger: Logger = log4js.getLogger('PointOfSaleController');
@@ -59,36 +61,36 @@ export default class PointOfSaleController extends BaseController {
       },
       '/:id(\\d+)': {
         GET: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'PointOfSale', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', await PointOfSaleController.getRelation(req), 'PointOfSale', ['*']),
           handler: this.returnSinglePointOfSale.bind(this),
         },
         PATCH: {
           body: { modelName: 'UpdatePointOfSaleRequest' },
-          policy: async (req) => this.roleManager.can(req.token.roles, 'update', 'all', 'PointOfSale', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'update', await PointOfSaleController.getRelation(req), 'PointOfSale', ['*']),
           handler: this.updatePointOfSale.bind(this),
         },
       },
       '/:id(\\d+)/update': {
         GET: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'own', 'PointOfSale', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', await PointOfSaleController.getRelation(req), 'PointOfSale', ['*']),
           handler: this.returnSingleUpdatedPointOfSale.bind(this),
         },
       },
       '/:id(\\d+)/containers': {
         GET: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Container', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', await PointOfSaleController.getRelation(req), 'Container', ['*']),
           handler: this.returnAllPointOfSaleContainers.bind(this),
         },
       },
       '/:id(\\d+)/products': {
         GET: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Container', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', await PointOfSaleController.getRelation(req), 'Container', ['*']),
           handler: this.returnAllPointOfSaleProducts.bind(this),
         },
       },
       '/updated': {
         GET: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'own', 'PointOfSale', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', await PointOfSaleController.getRelation(req), 'PointOfSale', ['*']),
           handler: this.returnUpdatedPointsOfSale.bind(this),
         },
       },
@@ -172,13 +174,17 @@ export default class PointOfSaleController extends BaseController {
 
     // handle request
     try {
-      // check if product in database
+      const pointOfSaleId = parseInt(id, 10);
+      // Check if point of sale exists.
+      if (!await PointOfSale.findOne(pointOfSaleId)) {
+        res.status(404).json('Point of Sale not found.');
+        return;
+      }
+
       const pointOfSale = (await PointOfSaleService
-        .getPointsOfSale({ pointOfSaleId: parseInt(id, 10), returnContainers: true }))[0];
+        .getPointsOfSale({ pointOfSaleId, returnContainers: true }))[0];
       if (pointOfSale) {
         res.json(pointOfSale);
-      } else {
-        res.status(404).json('Point of Sale not found.');
       }
     } catch (error) {
       this.logger.error('Could not return point of sale:', error);
@@ -286,27 +292,21 @@ export default class PointOfSaleController extends BaseController {
 
     // handle request
     try {
-      // Product does not exist.
+      // Point of sale does not exist.
       if (!await PointOfSale.findOne(pointOfSaleId)) {
         res.status(404).json('Point of Sale not found.');
         return;
       }
 
-      // Can User view Point of Sale
-      if (!await this.canGet(req, pointOfSaleId)) {
-        res.status(403).json('Incorrect permissions to get Point of Sale.');
-        return;
-      }
-
       // No update available.
-      if (!await PointOfSale.findOne(pointOfSaleId)) {
+      if (!await UpdatedPointOfSale.findOne(pointOfSaleId)) {
         res.json();
         return;
       }
 
       res.json((await PointOfSaleService.getUpdatedPointsOfSale(
         { pointOfSaleId, returnContainers: true },
-      )));
+      ))[0]);
     } catch (error) {
       this.logger.error('Could not return point of sale:', error);
       res.status(500).json('Internal server error.');
@@ -327,15 +327,8 @@ export default class PointOfSaleController extends BaseController {
 
     // Handle request
     try {
-      let pointsOfSale: UpdatedPointOfSaleResponse[];
-      if (this.canGetAll(req)) {
-        pointsOfSale = (
-          (await PointOfSaleService.getUpdatedPointsOfSale()) as UpdatedPointOfSaleResponse[]);
-      } else {
-        pointsOfSale = await PointOfSaleService
-          .getPointsOfSaleInUserContext({ ownerId: req.token.user.id } as PointOfSaleParameters,
-            true);
-      }
+      const pointsOfSale: UpdatedPointOfSaleResponse[] = (
+        (await PointOfSaleService.getUpdatedPointsOfSale()) as UpdatedPointOfSaleResponse[]);
 
       res.json(pointsOfSale);
     } catch (error) {
@@ -379,16 +372,19 @@ export default class PointOfSaleController extends BaseController {
   }
 
   /**
-   * Test if request user can view all Points Of Sale.
-   * @param req - The Request
+   * Function to determine which credentials are needed to get POS
+   * all if user is not connected to POS
+   * own if user is connected to POS
+   * @param req
+   * @returns whether POS is connected to used token
    */
-  canGetAll = (req: RequestWithToken) => this.roleManager.can(req.token.roles, 'get', 'all', 'PointOfSale', ['*']);
-
-  /**
-   * Test if request user can view specified Point of Sale.
-   * @param req - The request
-   * @param id - The Point of Sale to check.
-   */
-  canGet = async (req: RequestWithToken, id: number) => (
-    this.canGetAll(req) || await PointOfSaleService.canViewPointOfSale(req.token.user.id, id));
+  static async getRelation(req: RequestWithToken): Promise<string> {
+    const canViewPointOfSale = await PointOfSaleService.canViewPointOfSale(
+      req.token.user.id, asNumber(req.params.id),
+    );
+    if (canViewPointOfSale) {
+      return 'own';
+    }
+    return 'all';
+  }
 }

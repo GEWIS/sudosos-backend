@@ -445,6 +445,8 @@ export default class PointOfSaleService {
    * @param pointOfSaleId - The Point of Sale to view
    */
   public static async canViewPointOfSale(userId: number, pointOfSaleId: number): Promise<boolean> {
-    return (await PointOfSale.findOne(pointOfSaleId)).owner.id === userId;
+    const pointOfSale: PointOfSale = await PointOfSale.findOne(pointOfSaleId, { relations: ['owner'] });
+    if (!pointOfSale) return false;
+    return pointOfSale.owner.id === userId;
   }
 }
