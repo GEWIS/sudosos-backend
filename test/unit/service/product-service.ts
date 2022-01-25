@@ -24,7 +24,7 @@ import deepEqualInAnyOrder from 'deep-equal-in-any-order';
 import User from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
-import ProductService, { ProductParameters } from '../../../src/service/product-service';
+import ProductService, { ProductFilterParameters } from '../../../src/service/product-service';
 import {
   seedAllProducts, seedAllContainers, seedProductCategories, seedUsers, seedAllPointsOfSale,
 } from '../../seed';
@@ -182,7 +182,7 @@ describe('ProductService', async (): Promise<void> => {
     });
     it('should return product with the ownerId specified', async () => {
       const owner = ctx.products[0].owner.id;
-      const params: ProductParameters = { ownerId: ctx.products[0].owner.id };
+      const params: ProductFilterParameters = { ownerId: ctx.products[0].owner.id };
       const res: ProductResponse[] = await ProductService.getProducts(params);
 
       const products = ctx.products.filter((prod) => (
@@ -195,7 +195,7 @@ describe('ProductService', async (): Promise<void> => {
       const productRevision = ctx.products[0].currentRevision - 1;
       expect(productRevision).to.be.greaterThan(0);
 
-      const params: ProductParameters = { productId, productRevision };
+      const params: ProductFilterParameters = { productId, productRevision };
       const res: ProductResponse[] = await ProductService.getProducts(params);
 
       const product: ProductWithRevision[] = [productRevisionToProductWithRevision(
@@ -206,13 +206,13 @@ describe('ProductService', async (): Promise<void> => {
       returnsAllRevisions(res, product);
     });
     it('should return a single product if productId is specified', async () => {
-      const params: ProductParameters = { productId: ctx.products[0].id };
+      const params: ProductFilterParameters = { productId: ctx.products[0].id };
       const res: ProductResponse[] = await ProductService.getProducts(params);
 
       returnsAll(res, [ctx.products[0]]);
     });
     it('should return no products if the userId and productId dont match', async () => {
-      const params: ProductParameters = {
+      const params: ProductFilterParameters = {
         ownerId: ctx.products[0].owner.id + 1,
         productId: ctx.products[0].id,
       };
@@ -221,7 +221,7 @@ describe('ProductService', async (): Promise<void> => {
       expect(res).to.be.empty;
     });
     it('should return the products belonging to a container', async () => {
-      const params: ProductParameters = {
+      const params: ProductFilterParameters = {
         containerId: 3,
       };
       const res: ProductResponse[] = await ProductService
@@ -237,7 +237,7 @@ describe('ProductService', async (): Promise<void> => {
       returnsAll(res, products);
     });
     it('should return the updated products belonging to a container', async () => {
-      const params: ProductParameters = {
+      const params: ProductFilterParameters = {
         containerId: 3,
         updatedProducts: true,
       };
@@ -255,7 +255,7 @@ describe('ProductService', async (): Promise<void> => {
       returnsAll(res, products);
     });
     it('should return the updated products belonging to an updatedContainer', async () => {
-      const params: ProductParameters = {
+      const params: ProductFilterParameters = {
         containerId: 4,
         updatedContainer: true,
         updatedProducts: true,
@@ -279,7 +279,7 @@ describe('ProductService', async (): Promise<void> => {
       returnsAll(res, products);
     });
     it('should return the products belonging to a container revision that is not current', async () => {
-      const params: ProductParameters = {
+      const params: ProductFilterParameters = {
         containerId: 1,
         containerRevision: 2,
       };

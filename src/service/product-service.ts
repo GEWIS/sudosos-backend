@@ -31,11 +31,14 @@ import ProductRequest from '../controller/request/product-request';
 import ProductCategory from '../entity/product/product-category';
 import PointOfSale from '../entity/point-of-sale/point-of-sale';
 import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision';
+import { RequestWithToken } from '../middleware/token-middleware';
+import { asDate, asNumber } from '../helpers/validators';
+import { TransactionFilterParameters } from './transaction-service';
 
 /**
  * Define product filtering parameters used to filter query results.
  */
-export interface ProductParameters {
+export interface ProductFilterParameters {
   /**
    * Filter based on product id.
    */
@@ -76,6 +79,64 @@ export interface ProductParameters {
    * If the query should return updated products.
    */
   updatedProducts?: boolean;
+  /**
+   * Filter based on the product category id.
+   */
+  categoryId?: number;
+  /**
+   * Filter based on the product category name.
+   */
+  categoryName?: string;
+  /**
+   * Filter based on created at attribute.
+   */
+  createdAt?: Date;
+  /**
+   * Filter based on updated at attribute.
+   */
+  updatedAt?: Date;
+  /**
+   * Filter based on product name.
+   * TODO Maybe make this fuzzy? i.e, products like:
+   */
+  productName?: string;
+  /**
+   * Filter based on product price.
+   */
+  price?: number;
+  /**
+   * Filter based on alcohol percentage.
+   */
+  alcoholPercentage?: number;
+}
+
+export function parseGetProductFilters(req: RequestWithToken): ProductFilterParameters {
+  if ((req.query.pointOfSaleRevision && !req.query.pointOfSaleId)
+      || (req.query.containerRevision && !req.query.containerId)
+      || (req.query.productRevision && !req.query.productId)) {
+    throw new Error('Cannot filter on a revision, when there is no id given');
+  }
+
+  const filters: ProductFilterParameters = {
+    productId: asNumber(req.query.productId),
+    productRevision: asNumber(req.query.productRevision),
+    ownerId: asNumber(req.query.fromId),
+    containerId: asNumber(req.query.containerId),
+    containerRevision: asNumber(req.query.containerRevision),
+    // updatedContainer: asBoolean(req.query.containerRevision),
+    pointOfSaleId: asNumber(req.query.pointOfSaleId),
+    pointOfSaleRevision: asNumber(req.query.pointOfSaleRevision),
+    // updatedProducts: asBoolean(req.query.updatedProducts),
+    categoryId: asNumber(req.query.categoryId),
+    // categoryName: asString(req.query.categoryName),
+    createdAt: asDate(req.query.createdAt),
+    updatedAt: asDate(req.query.updatedAt),
+    // productName: asString(req.query.productName),
+    price: asNumber(req.query.price),
+    alcoholPercentage: asNumber(req.query.alcoholPercentage),
+  };
+
+  return filters;
 }
 
 /**
@@ -107,17 +168,27 @@ export default class ProductService {
     };
   }
 
-  static getRelevantBuilder(params: ProductParameters = {}): () => SelectQueryBuilder<any> {
+  static getRelevantBuilder(params: ProductFilterParameters = {}): () => SelectQueryBuilder<any> {
     if (params.updatedProducts) return this.getUpdatedProducts;
-    if (params.pointOfSaleId) return this.getProductsPOS;
     return this.getCurrentProducts;
   }
 
-  public static async getProducts(filters: ProductParameters = {}): Promise<ProductResponse[]> {
+  public static async getProducts(filters: ProductFilterParameters = {})
+    : Promise<ProductResponse[]> {
     const builder = this.getRelevantBuilder(filters).bind(this)(filters);
 
-    // TODO make a getFilterMapping
-    // QueryFilter.applyFilter(builder, filterMapping, params);
+    const filterMapping: FilterMapping = {
+      productId: 'product.id',
+      ownerId: 'owner.id',
+      categoryId: 'category.id',
+      categoryName: 'category.name',
+      createdAt: 'product.createdAt',
+      updatedAt: 'productrevision.updatedAt',
+      productName: 'productrevision.name',
+      price: 'productrevision.price',
+      alcoholPercentage: 'productrevision.alcoholpercentage',
+    };
+    QueryFilter.applyFilter(builder, filterMapping, filters);
 
     // TODO Apply pagination
 
@@ -179,74 +250,58 @@ export default class ProductService {
   }
 
   /**
-   * Gets all the products in a PointOfSale
-   * @param params
+   * Filter the products on point of sale ID.
+   * @param builder - The query builder being used.
+   * @param pointOfSaleId - The ID of the point of sale.
+   * @param pointOfSaleRevision - The revision of the specific point of sale.
+   * @private
    */
-  public static getProductsPOS(params: ProductParameters = {}):
-  SelectQueryBuilder<any> {
-    const revision = params.pointOfSaleRevision;
-    const id = params.pointOfSaleId;
+  private static addPOSFilter(builder: SelectQueryBuilder<any>,
+    pointOfSaleId: number, pointOfSaleRevision?: number) {
+    const revision = pointOfSaleRevision ?? 'pos.currentRevision';
 
-    const builder = createQueryBuilder()
-      .from(PointOfSale, 'pos')
-      .innerJoinAndSelect(PointOfSaleRevision, 'posalias', `pos.id = posalias.pointOfSaleId AND pos.id = ${id} AND posalias.revision = ${revision ?? 'pos.currentRevision'}`)
-      .innerJoinAndSelect('posalias.containers', 'containers')
-      .innerJoinAndSelect('containers.products', 'products')
-      .groupBy('products.productId, products.revision');
+    builder.innerJoinAndSelect((qb) => {
+      const subquery = qb.subQuery()
+        .select('products.productId, products.revision')
+        .from(PointOfSale, 'pos')
+        .innerJoinAndSelect(PointOfSaleRevision, 'posalias', `pos.id = posalias.pointOfSaleId AND pos.id = ${pointOfSaleId} AND posalias.revision = ${revision}`)
+        .innerJoinAndSelect('posalias.containers', 'containers')
+        .innerJoinAndSelect('containers.products', 'products')
+        .groupBy('products.productId, products.revision');
 
-    builder
-      .innerJoinAndSelect(Product, 'product', 'products.productId = product.id')
-      .innerJoinAndSelect('product.owner', 'owner')
-      .innerJoinAndSelect('products.category', 'category')
-      .innerJoinAndSelect('product.image', 'image')
-      .select([
-        'product.id AS id',
-        'product.createdAt AS createdAt',
-        'products.updatedAt AS updatedAt',
-        'products.name AS name',
-        'products.price AS price',
-        'owner.id AS owner_id',
-        'owner.firstName AS owner_firstName',
-        'owner.lastName AS owner_lastName',
-        'category.id AS category_id',
-        'category.name AS category_name',
-        'image.downloadName AS image',
-        'products.revision as revision',
-        'products.alcoholpercentage AS alcoholpercentage',
-      ]);
-    console.error(builder.getQuery());
-    return builder;
+      return subquery;
+    }, 'posproducts', 'productrevision.product = posproducts.productId AND productrevision.revision = posproducts.revision');
   }
 
   /**
    * Query for getting all products following the ProductParameters.
    * @param params - The product query parameters.
    */
-  public static getCurrentProducts(params: ProductParameters = {})
+  public static getCurrentProducts(params: ProductFilterParameters = {})
     : SelectQueryBuilder<any> {
     function condition() {
       // No revision defaults to latest revision.
       const latest = params.productRevision ? params.productRevision : 'product.currentRevision';
       // If we are getting updatedContainers or products,
       // we only want the last revision, otherwise all revisions.
-      // This is needed since containers can contain older revisions,
-      // Whilst updatedContainer contain the oldest revisions.
-      return params.updatedContainer || !params.containerId
+      // This is needed since containers or POS can contain older revisions,
+      // Whilst updatedContainer contain the latest revisions.
+      return (params.updatedContainer || (!params.containerId && !params.pointOfSaleId))
         ? `product.id = productrevision.product AND ${latest} = productrevision.revision`
         : 'product.id = productrevision.product';
     }
 
     const builder = createQueryBuilder()
       .from(Product, 'product')
-      .innerJoinAndSelect(
-        ProductRevision,
-        'productrevision',
-        condition(),
-      );
+      .innerJoinAndSelect(ProductRevision, 'productrevision', condition());
 
     if (params.containerId) {
       this.addContainerFilter(builder, params.containerId, false,
         params.updatedContainer, params.containerRevision);
+    }
+
+    if (params.pointOfSaleId) {
+      this.addPOSFilter(builder, params.pointOfSaleId, params.pointOfSaleRevision);
     }
 
     builder
@@ -268,13 +323,6 @@ export default class ProductService {
         'productrevision.alcoholpercentage AS alcoholpercentage',
         'image.downloadName as image',
       ]);
-
-    const filterMapping: FilterMapping = {
-      productId: 'product.id',
-      ownerId: 'owner.id',
-    };
-
-    QueryFilter.applyFilter(builder, filterMapping, params);
     return builder;
   }
 
@@ -282,7 +330,7 @@ export default class ProductService {
    * Query for getting all updated products following the ProductParameters.
    * @param params - The product query parameters.
    */
-  public static getUpdatedProducts(params: ProductParameters = {})
+  public static getUpdatedProducts(params: ProductFilterParameters = {})
     : SelectQueryBuilder<any> {
     const builder = createQueryBuilder()
       .from(Product, 'product')
@@ -315,11 +363,6 @@ export default class ProductService {
         'image.downloadName as image',
       ]);
 
-    const filterMapping: FilterMapping = {
-      productId: 'product.id',
-    };
-
-    QueryFilter.applyFilter(builder, filterMapping, params);
     return builder;
   }
 
@@ -329,7 +372,7 @@ export default class ProductService {
    * the latest revision products.
    * @param params - The product parameters to adhere to.
    */
-  public static async getAllProducts(params: ProductParameters = {}) {
+  public static async getAllProducts(params: ProductFilterParameters = {}) {
     // We get the products by first getting the updated products and then merge them with the
     // normal products.
     const updatedProducts: ProductResponse[] = await this.getProducts(
