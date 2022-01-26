@@ -173,10 +173,10 @@ export default class ProductService {
     return this.getCurrentProducts;
   }
 
-  public static async getProducts(filters: ProductFilterParameters = {}, pagination: PaginationParameters = {},
-  ): Promise<PaginatedProductResponse | undefined> {
+  public static async getProducts(filters: ProductFilterParameters = {},
+    pagination: PaginationParameters = {}): Promise<PaginatedProductResponse> {
     const { take, skip } = pagination;
-    const builder = this.getRelevantBuilder(filters).bind(this)(filters);
+    const builder: SelectQueryBuilder<any> = this.getRelevantBuilder(filters).bind(this)(filters);
 
     const filterMapping: FilterMapping = {
       productId: 'product.id',
@@ -191,10 +191,19 @@ export default class ProductService {
     };
 
     QueryFilter.applyFilter(builder, filterMapping, filters);
+
+    const count = await builder.getCount();
     builder.limit(take).offset(skip);
 
     const rawProducts = await builder.getRawMany();
-    return rawProducts.map((rawProduct: any) => this.asProductResponse(rawProduct));
+    const records = rawProducts.map((rawProduct: any) => this.asProductResponse(rawProduct));
+
+    return {
+      _pagination: {
+        take, skip, count,
+      },
+      records,
+    };
   }
 
   /**
@@ -376,14 +385,14 @@ export default class ProductService {
   public static async getAllProducts(params: ProductFilterParameters = {}) {
     // We get the products by first getting the updated products and then merge them with the
     // normal products.
-    const updatedProducts: ProductResponse[] = await this.getProducts(
+    const updatedProducts: ProductResponse[] = (await this.getProducts(
       { ...params, updatedProducts: true },
-    );
+    )).records;
 
     const updatedProductIds = updatedProducts.map((prod) => prod.id);
 
     // Get the remaining products.
-    const products: ProductResponse[] = (await this.getProducts(params));
+    const products: ProductResponse[] = (await this.getProducts(params)).records;
 
     const filteredProducts = products.filter(
       (prod) => !updatedProductIds.includes(prod.id),
@@ -422,7 +431,7 @@ export default class ProductService {
     await updatedProduct.save();
 
     // Pull the just created product from the database to fix the formatting.
-    return (await this.getProducts({ updatedProducts: true, productId })).records[0];;
+    return (await this.getProducts({ updatedProducts: true, productId })).records[0];
   }
 
   /**

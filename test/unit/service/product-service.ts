@@ -29,7 +29,7 @@ import {
   seedAllProducts, seedAllContainers, seedProductCategories, seedUsers, seedAllPointsOfSale,
 } from '../../seed';
 import Product from '../../../src/entity/product/product';
-import { ProductResponse } from '../../../src/controller/response/product-response';
+import { PaginatedProductResponse, ProductResponse } from '../../../src/controller/response/product-response';
 import ProductRevision from '../../../src/entity/product/product-revision';
 import UpdatedProduct from '../../../src/entity/product/updated-product';
 import UpdatedContainer from '../../../src/entity/container/updated-container';
@@ -178,10 +178,12 @@ describe('ProductService', async (): Promise<void> => {
       expect(_pagination.count).to.equal(products.length);
     });
     it('should return all updated products', async () => {
-      const updatedProducts: ProductResponse[] = await ProductService.getUpdatedProducts();
+      const updatedProducts: PaginatedProductResponse = await ProductService.getProducts(
+        { updatedProducts: true },
+      );
       const products = ctx.updatedProducts.map((prod) => prod.product);
 
-      returnsAll(updatedProducts, products);
+      returnsAll(updatedProducts.records, products);
     });
     it('should return product with the ownerId specified', async () => {
       const owner = ctx.products[0].owner.id;
@@ -304,11 +306,13 @@ describe('ProductService', async (): Promise<void> => {
       expect(records.map((prod) => prod.id)).to.deep.equalInAnyOrder(products);
     });
     it('should return an updated container', async () => {
-      const { records }: ProductResponse[] = await ProductService
-        .getProducts({ containerId: 4, updatedContainer: true });
+      const { id } = (await UpdatedContainer.findOne({ relations: ['container'] })).container;
+      const { records }: PaginatedProductResponse = await ProductService
+        .getProducts({ containerId: id, updatedContainer: true });
 
       const { products } = ctx.updatedContainers
-        .filter((cnt) => cnt.container.id === 4)[0];
+        .filter((cnt) => cnt.container.id === id)[0];
+
       returnsAll(records, products);
     });
     it('should return the products belonging to a point of sale', async () => {

@@ -183,7 +183,7 @@ describe('ProductController', async (): Promise<void> => {
       expect(res.status).to.equal(403);
     });
     it('should adhere to pagination', async () => {
-      const take = 5;
+      const take = 2;
       const skip = 3;
 
       const res = await request(ctx.app)

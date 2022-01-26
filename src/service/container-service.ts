@@ -370,7 +370,6 @@ export default class ContainerService {
     containerProducts.products = (await ProductService.getProducts(
       { containerId, updatedContainer: updated },
     )).records;
-
     return containerProducts;
   }
 

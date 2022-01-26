@@ -34,7 +34,7 @@ import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
 import { PointOfSaleResponse } from '../../../src/controller/response/point-of-sale-response';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import { ContainerResponse } from '../../../src/controller/response/container-response';
-import { ProductResponse } from '../../../src/controller/response/product-response';
+import { PaginatedProductResponse, ProductResponse } from '../../../src/controller/response/product-response';
 import UpdatedPointOfSale from '../../../src/entity/point-of-sale/updated-point-of-sale';
 
 describe('PointOfSaleController', async () => {
@@ -63,7 +63,7 @@ describe('PointOfSaleController', async () => {
     const localUser = {
       id: 2,
       firstName: 'User',
-      type: UserType.LOCAL_USER,
+      type: UserType.MEMBER,
       active: true,
     } as User;
 
@@ -92,6 +92,7 @@ describe('PointOfSaleController', async () => {
     const specification = await Swagger.initialize(app);
 
     const all = { all: new Set<string>(['*']) };
+    const own = { own: new Set<string>(['*']) };
     const roleManager = new RoleManager();
     roleManager.registerRole({
       name: 'Admin',
@@ -113,7 +114,13 @@ describe('PointOfSaleController', async () => {
       name: 'User',
       permissions: {
         Container: {
-          get: all,
+          get: own,
+        },
+        PointOfSale: {
+          create: own,
+          get: own,
+          update: own,
+          delete: own,
         },
       },
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_USER,
@@ -245,8 +252,10 @@ describe('PointOfSaleController', async () => {
       expect(pagination.count).to.be.at.least(1);
     });
     it('should return an HTTP 200 and the containers in the given point of sale if normal user', async () => {
+      const { id } = await PointOfSale.findOne({ relations: ['owner'], where: { owner: ctx.localUser } });
+
       const res = await request(ctx.app)
-        .get('/pointsofsale/1/containers')
+        .get(`/pointsofsale/${id}/containers`)
         .set('Authorization', `Bearer ${ctx.token}`);
 
       const containers = res.body.records as ContainerResponse[];
@@ -268,8 +277,11 @@ describe('PointOfSaleController', async () => {
 
   describe('GET /pointsofsale/:id/products', async () => {
     it('should return an HTTP 200 and the products in the given point of sale if admin', async () => {
+      const take = 5;
+      const skip = 1;
       const res = await request(ctx.app)
         .get('/pointsofsale/1/products')
+        .query({ take, skip })
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
       const products = res.body.records as ProductResponse[];
@@ -278,13 +290,15 @@ describe('PointOfSaleController', async () => {
 
       expect(res.status).to.equal(200);
       expect(products.length).to.be.at.least(1);
-      expect(pagination.take).to.equal(defaultPagination());
-      expect(pagination.skip).to.equal(0);
+      expect(pagination.take).to.equal(take);
+      expect(pagination.skip).to.equal(skip);
       expect(pagination.count).to.be.at.least(1);
     });
-    it('should return an HTTP 200 and the products in the given point of sale if normal user', async () => {
+    it('should return an HTTP 200 and the products in the given point of sale if owner', async () => {
+      const { id } = await PointOfSale.findOne({ relations: ['owner'], where: { owner: ctx.localUser } });
+
       const res = await request(ctx.app)
-        .get('/pointsofsale/1/products')
+        .get(`/pointsofsale/${id}/products`)
         .set('Authorization', `Bearer ${ctx.token}`);
 
       const products = res.body.records as ProductResponse[];
@@ -301,7 +315,7 @@ describe('PointOfSaleController', async () => {
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
       expect(res.status).to.equal(200);
-      expect(res.body.length).to.equal(0);
+      expect((res.body as PaginatedProductResponse).records.length).to.equal(0);
     });
   });
 });

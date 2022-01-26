@@ -74,7 +74,7 @@ export interface UpdatedPointOfSaleResponse extends BasePointOfSaleResponse {
  */
 export interface PaginatedUpdatedPointOfSaleResponse {
   _pagination: PaginationResult,
-  records: UpdatedPointOfSaleResponse[],
+  records: (UpdatedPointOfSaleResponse | PointOfSaleWithContainersResponse)[],
 }
 
 /**

@@ -25,8 +25,7 @@ import ContainerService from '../service/container-service';
 import ProductService from '../service/product-service';
 import PointOfSaleRequest from './request/point-of-sale-request';
 import {
-  PaginatedPointOfSaleResponse,
-  PointOfSaleWithContainersResponse,
+  PaginatedUpdatedPointOfSaleResponse,
 } from './response/point-of-sale-response';
 import PointOfSale from '../entity/point-of-sale/point-of-sale';
 import UpdatePointOfSaleRequest from './request/update-point-of-sale-request';
@@ -88,7 +87,7 @@ export default class PointOfSaleController extends BaseController {
       },
       '/:id(\\d+)/products': {
         GET: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'get', await PointOfSaleController.getRelation(req), 'Container', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', await PointOfSaleController.getRelation(req), 'PointOfSale', ['*']),
           handler: this.returnAllPointOfSaleProducts.bind(this),
         },
       },
@@ -199,7 +198,7 @@ export default class PointOfSaleController extends BaseController {
       }
 
       const pointOfSale = (await PointOfSaleService
-        .getPointsOfSale({ pointOfSaleId, returnContainers: true }))[0];
+        .getPointsOfSale({ pointOfSaleId, returnContainers: true })).records[0];
       if (pointOfSale) {
         res.json(pointOfSale);
       }
@@ -335,7 +334,7 @@ export default class PointOfSaleController extends BaseController {
 
       res.json((await PointOfSaleService.getUpdatedPointsOfSale(
         { pointOfSaleId, returnContainers: true },
-      ))[0]);
+      )).records[0]);
     } catch (error) {
       this.logger.error('Could not return point of sale:', error);
       res.status(500).json('Internal server error.');
@@ -360,8 +359,8 @@ export default class PointOfSaleController extends BaseController {
 
     // Handle request
     try {
-      const pointsOfSale: PaginatedPointOfSaleResponse[] = (
-        (await PointOfSaleService.getUpdatedPointsOfSale({}, { take, skip },)) as UpdatedPointOfSaleResponse[]);
+      const pointsOfSale: PaginatedUpdatedPointOfSaleResponse = (
+        (await PointOfSaleService.getUpdatedPointsOfSale({}, { take, skip })));
 
       res.json(pointsOfSale);
     } catch (error) {

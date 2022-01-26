@@ -170,7 +170,7 @@ export default class PointOfSaleService {
    */
   public static async getPointsOfSale(
     filters: PointOfSaleParameters = {}, pagination: PaginationParameters = {},
-  ): Promise<PaginatedPointOfSaleResponse | PointOfSaleWithContainersResponse[]> {
+  ): Promise<PaginatedPointOfSaleResponse> {
     const { take, skip } = pagination;
 
     const results = await Promise.all([
@@ -189,7 +189,6 @@ export default class PointOfSaleService {
           );
         },
       ));
-      return pointOfSales;
     }
 
     const records = results[0].map((rawPointOfSale) => this.asPointOfSaleResponse(rawPointOfSale));
@@ -244,14 +243,14 @@ export default class PointOfSaleService {
    */
   public static async getUpdatedPointsOfSale(
     filters: PointOfSaleParameters = {}, pagination: PaginationParameters = {},
-  ): Promise<PaginatedUpdatedPointOfSaleResponse | PointOfSaleWithContainersResponse[]> {
+  ): Promise<PaginatedUpdatedPointOfSaleResponse> {
     const { take, skip } = pagination;
 
     const results = await Promise.all([
       this.buildGetUpdatedPointsOfSaleQuery(filters).limit(take).offset(skip).getRawMany(),
       this.buildGetUpdatedPointsOfSaleQuery(filters).getCount(),
     ]);
-
+    let records;
     if (filters.returnContainers) {
       const pointOfSales: PointOfSaleWithContainersResponse[] = [];
       await Promise.all(results[0].map(
@@ -263,12 +262,13 @@ export default class PointOfSaleService {
           );
         },
       ));
-      return pointOfSales;
+      records = pointOfSales;
+    } else {
+      records = results[0].map(
+        (rawPointOfSale) => (
+          this.asPointOfSaleResponse(rawPointOfSale) as UpdatedPointOfSaleResponse),
+      );
     }
-
-    const records = results[0].map(
-      (rawPointOfSale) => this.asPointOfSaleResponse(rawPointOfSale) as UpdatedPointOfSaleResponse,
-    );
 
     return {
       _pagination: {
