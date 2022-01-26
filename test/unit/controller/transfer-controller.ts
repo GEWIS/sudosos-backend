@@ -25,7 +25,7 @@ import TransferRequest from '../../../src/controller/request/transfer-request';
 import { TransferResponse } from '../../../src/controller/response/transfer-response';
 import TransferController from '../../../src/controller/transfer-controller';
 import Database from '../../../src/database/database';
-import Transfer, { TransferType } from '../../../src/entity/transactions/transfer';
+import Transfer from '../../../src/entity/transactions/transfer';
 import User, { UserType } from '../../../src/entity/user/user';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import RoleManager from '../../../src/rbac/role-manager';
@@ -35,6 +35,12 @@ import { seedTransfers, seedUsers } from '../../seed';
 describe('TransferController', async (): Promise<void> => {
   let connection: Connection;
   let app: Application;
+
+  let adminAccountDeposit: Transfer;
+  let localAccountDeposit: Transfer;
+  let adminAccountWithdraw: Transfer;
+  let localAccountWithdraw: Transfer;
+
   let adminToken: String;
   let token: String;
   let validRequest: TransferRequest;
@@ -65,12 +71,10 @@ describe('TransferController', async (): Promise<void> => {
     const users = await seedUsers();
     await seedTransfers(users);
 
-    // create bearer tokens
-    const tokenHandler = new TokenHandler({
-      algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
-    });
-    adminToken = await tokenHandler.signToken({ user: adminUser, roles: ['Admin'] }, 'nonce admin');
-    token = await tokenHandler.signToken({ user: localUser, roles: [] }, 'nonce');
+    adminAccountDeposit = await Transfer.findOne({ toId: adminUser.id });
+    localAccountDeposit = await Transfer.findOne({ toId: localUser.id });
+    adminAccountWithdraw = await Transfer.findOne({ fromId: adminUser.id });
+    localAccountWithdraw = await Transfer.findOne({ fromId: localUser.id });
 
     // create valid and invaled request
     validRequest = {
@@ -79,7 +83,6 @@ describe('TransferController', async (): Promise<void> => {
         precision: dinero.defaultPrecision,
         currency: dinero.defaultCurrency,
       },
-      type: TransferType.CUSTOM,
       description: 'cool',
       fromId: 1,
       toId: null,
@@ -91,17 +94,24 @@ describe('TransferController', async (): Promise<void> => {
         precision: dinero.defaultPrecision,
         currency: dinero.defaultCurrency,
       },
-      type: null, // invalid type
       description: 'cool',
-      fromId: 1,
+      fromId: null,
       toId: null,
     };
+
+    // create bearer tokens
+    const tokenHandler = new TokenHandler({
+      algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
+    });
+    adminToken = await tokenHandler.signToken({ user: adminUser, roles: ['User', 'Admin'] }, 'nonce admin');
+    token = await tokenHandler.signToken({ user: localUser, roles: ['User'] }, 'nonce');
 
     // start app
     app = express();
     const specification = await Swagger.initialize(app);
 
     const all = { all: new Set<string>(['*']) };
+    const own = { own: new Set<string>(['*']) };
 
     // Create roleManager and set roles of Admin and User
     // In this case Admin can do anything and User nothing.
@@ -118,6 +128,15 @@ describe('TransferController', async (): Promise<void> => {
         },
       },
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
+    });
+    roleManager.registerRole({
+      name: 'User',
+      permissions: {
+        Transfer: {
+          get: own,
+        },
+      },
+      assignmentCheck: async () => true,
     });
 
     const controller = new TransferController({ specification, roleManager });
@@ -152,23 +171,41 @@ describe('TransferController', async (): Promise<void> => {
   });
 
   describe('GET /transfers/:id', () => {
-    it('should return an HTTP 200 and the transfer with given id if admin', async () => {
+    it('should return an HTTP 200 and the withdraw transfer with given id if admin', async () => {
+      console.log(`/transfers/${localAccountWithdraw.id}`);
+
       const res = await request(app)
-        .get('/transfers/1')
+        .get(`/transfers/${localAccountWithdraw.id}`)
         .set('Authorization', `Bearer ${adminToken}`);
 
-      expect((res.body as TransferResponse).id).to.equal(1);
+      expect((res.body as TransferResponse).id).to.equal(localAccountWithdraw.id);
       expect(res.status).to.equal(200);
     });
-    it('should return an HTTP 403 if not admin', async () => {
+    it('should return an HTTP 403 if not involved in withdraw transaction not admin', async () => {
       const res = await request(app)
-        .get('/transfers/1')
+        .get(`/transfers/${adminAccountWithdraw.id}`)
         .set('Authorization', `Bearer ${token}`);
 
       expect(res.body).to.be.empty;
       expect(res.status).to.equal(403);
     });
-    it('should return an HTTP 404 if the transfer with the given id does not exist', async () => {
+    it('should return an HTTP 200 and the deposit transfer with given id if admin', async () => {
+      const res = await request(app)
+        .get(`/transfers/${localAccountDeposit.id}`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect((res.body as TransferResponse).id).to.equal(localAccountDeposit.id);
+      expect(res.status).to.equal(200);
+    });
+    it('should return an HTTP 403 if not involved in deposit transaction not admin', async () => {
+      const res = await request(app)
+        .get(`/transfers/${adminAccountDeposit.id}`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.body).to.be.empty;
+      expect(res.status).to.equal(403);
+    });
+    it('should return an HTTP 404 if the transfer with the given id does not exist for admin', async () => {
       const transferCount = await Transfer.count();
       const res = await request(app)
         .get(`/transfers/${transferCount + 1}`)
@@ -177,6 +214,16 @@ describe('TransferController', async (): Promise<void> => {
       expect(await Transfer.findOne(transferCount + 1)).to.be.undefined;
       expect(res.body).to.equal('Transfer not found.');
       expect(res.status).to.equal(404);
+    });
+    it('should return an HTTP 403 if the transfer with the given id does not exist and user is not admin', async () => {
+      const transferCount = await Transfer.count();
+      const res = await request(app)
+        .get(`/transfers/${transferCount + 1}`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(await Transfer.findOne(transferCount + 1)).to.be.undefined;
+      expect(res.body).to.be.empty;
+      expect(res.status).to.equal(403);
     });
   });
 

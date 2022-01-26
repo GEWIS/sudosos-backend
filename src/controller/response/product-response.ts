@@ -36,13 +36,14 @@ export interface BaseProductResponse extends BaseResponse {
  * @property {BaseUserResponse.model} owner.required - The owner of the product.
  * @property {ProductCategoryResponse.model} category.required
  *  - The category the product belongs to.
- * @property {string} picture.required - The URL to the picture representing this product.
+ * @property {string} image - The URL to the picture representing this product.
+ * @property {integer} revision - The product revision ID
  * @property {integer} alcoholPercentage - The percentage of alcohol in this product.
  */
 export interface ProductResponse extends BaseProductResponse {
   owner: BaseUserResponse,
   category: ProductCategoryResponse,
-  picture: String,
+  image: String,
   revision: number,
   alcoholPercentage: number,
 }

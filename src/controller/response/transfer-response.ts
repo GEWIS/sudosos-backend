@@ -16,9 +16,8 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { DineroObject } from 'dinero.js';
 import BaseResponse from './base-response';
-import { TransferType } from '../../entity/transactions/transfer';
+import { DineroObjectResponse } from './dinero-response';
 import { BaseUserResponse } from './user-response';
 
 /**
@@ -30,8 +29,7 @@ import { BaseUserResponse } from './user-response';
  * @property {BaseUserResponse.model} to - to which user the money is being transferred.
  */
 export interface TransferResponse extends BaseResponse {
-  amount: DineroObject;
-  type: TransferType;
+  amount: DineroObjectResponse;
   description: string;
   from: BaseUserResponse;
   to: BaseUserResponse;

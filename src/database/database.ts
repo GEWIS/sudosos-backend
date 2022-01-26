@@ -50,6 +50,8 @@ import InvoiceEntry from '../entity/invoices/invoice-entry';
 import Invoice from '../entity/invoices/invoice';
 import InvoiceStatus from '../entity/invoices/invoice-status';
 import BaseFile from '../entity/file/base-file';
+import ProductImage from '../entity/file/product-image';
+import BannerImage from '../entity/file/banner-image';
 
 export default class Database {
   public static async initialize(): Promise<Connection> {
@@ -88,6 +90,8 @@ export default class Database {
         Invoice,
         InvoiceStatus,
         BaseFile,
+        ProductImage,
+        BannerImage,
       ],
     };
     return createConnection(options);

@@ -17,15 +17,13 @@
  */
 
 /**
- * @typedef ProductRequest
- * @property {string} name - Name of the product
- * @property {number} price - Price of the product
- * @property {number} category - Category of the product
- * @property {number} alcoholPercentage - Alcohol percentage of the product in 2 decimals
+ * Creates a new Untargeted Transfer Error can be thrown when creating a transfer.
+ * @param message - The error message to use
+ * @constructor InvalidTransferError
  */
-export default interface ProductRequest {
-  name: string;
-  price: number;
-  category: number;
-  alcoholPercentage: number;
+export default class InvalidTransferError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'InvalidTransferError';
+  }
 }

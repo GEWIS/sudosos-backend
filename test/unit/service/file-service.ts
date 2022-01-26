@@ -27,10 +27,12 @@ import Database from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
 import BaseFile from '../../../src/entity/file/base-file';
 import User from '../../../src/entity/user/user';
-import { seedUsers } from '../../seed';
+import { seedProductCategories, seedProducts, seedUsers } from '../../seed';
 import SimpleFileRequest from '../../../src/controller/request/simple-file-request';
-import FileService from '../../../src/service/file-service';
+import FileService, { StorageMethod } from '../../../src/service/file-service';
 import { DiskStorage } from '../../../src/files/storage';
+import Product from '../../../src/entity/product/product';
+import ProductImage from '../../../src/entity/file/product-image';
 
 /**
  *  SudoSOS back-end API service.
@@ -56,6 +58,8 @@ describe('FileService', async (): Promise<void> => {
     specification: SwaggerSpecification,
     users: User[],
     files: BaseFile[],
+    products: Product[],
+    productImages: ProductImage[],
     fileService: FileService,
   };
 
@@ -78,6 +82,8 @@ describe('FileService', async (): Promise<void> => {
     const connection = await Database.initialize();
 
     const users = await seedUsers();
+    const categories = await seedProductCategories();
+    const { products, productImages } = await seedProducts(users, categories);
 
     const files = [
       Object.assign(new BaseFile(), {
@@ -114,6 +120,8 @@ describe('FileService', async (): Promise<void> => {
       specification,
       users,
       files,
+      products,
+      productImages,
       fileService,
     };
   });
@@ -206,7 +214,7 @@ describe('FileService', async (): Promise<void> => {
       process.env.FILE_STORAGE_METHOD = 'Nonexisting';
 
       try {
-        const tempFileService: FileService = new FileService('/temp', process.env.FILE_STORAGE_METHOD);
+        const tempFileService: FileService = new FileService('/temp', process.env.FILE_STORAGE_METHOD as StorageMethod);
         await tempFileService.uploadSimpleFile(ctx.users[0], uploadedFile, {
           name: 'not boeiend',
         });
@@ -318,6 +326,54 @@ describe('FileService', async (): Promise<void> => {
 
       const result = await ctx.fileService.getSimpleFile(ctx.files[2].id);
       expect(result).to.not.be.undefined;
+    });
+  });
+
+  describe('uploadProductImage', () => {
+    it('should correctly upload file to product that has no image', async () => {
+      const saveFileStub = sinon.stub(DiskStorage.prototype, 'saveFile').resolves('fileLocation');
+      stubs.push(saveFileStub);
+
+      expect(ctx.products[3].image).to.be.undefined;
+      const res: ProductImage = await ctx.fileService.uploadEntityImage(
+        ctx.products[3], uploadedFile, ctx.users[0],
+      );
+
+      expect(res).to.exist;
+      expect(saveFileStub).to.have.been.calledWith(
+        '',
+        uploadedFile.data,
+      );
+      expect(res.location).to.equal('fileLocation');
+      expect(ctx.products[3].image).to.not.be.undefined;
+      expect(ctx.products[3].image.id).to.equal(res.id);
+    });
+
+    it('should correctly upload file to product that already has image', async () => {
+      const saveFileStub = sinon.stub(DiskStorage.prototype, 'saveFile').resolves('fileLocation');
+      stubs.push(saveFileStub);
+      const deleteFileStub = sinon.stub(DiskStorage.prototype, 'deleteFile').resolves(true);
+      stubs.push(deleteFileStub);
+
+      expect(ctx.products[0].image).to.not.be.undefined;
+      const oldImage = ctx.products[0].image;
+
+      const res: ProductImage = await ctx.fileService.uploadEntityImage(
+        ctx.products[0], uploadedFile, ctx.users[0],
+      );
+
+      expect(res).to.exist;
+      expect(saveFileStub).to.have.been.calledWith(
+        'product-1.png',
+        uploadedFile.data,
+      );
+      expect(deleteFileStub).to.have.been.calledWith(
+        oldImage,
+      );
+      expect(res.location).to.equal('fileLocation');
+      expect(ctx.products[0].image).to.not.be.undefined;
+      expect(ctx.products[0].image.id).to.equal(res.id);
+      expect(ctx.products[0].image.id).to.equal(oldImage.id);
     });
   });
 });

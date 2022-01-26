@@ -16,8 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { DineroObject } from 'dinero.js';
-import { TransferType } from '../../entity/transactions/transfer';
+import { DineroObjectRequest } from './dinero-request';
 
 /**
  * @typedef TransferRequest
@@ -28,8 +27,7 @@ import { TransferType } from '../../entity/transactions/transfer';
  * @property {integer} toId - to which user the money is being transferred.
  */
 export default interface TransferRequest {
-  amount: DineroObject;
-  type: TransferType;
+  amount: DineroObjectRequest;
   description: string;
   fromId: number;
   toId: number;

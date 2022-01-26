@@ -22,6 +22,8 @@ import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import TransferService from '../service/transfer-service';
 import TransferRequest from './request/transfer-request';
+import Transfer from '../entity/transactions/transfer';
+import InvalidTransferError from '../entity/errors/invalid-transfer-error';
 
 export default class TransferController extends BaseController {
   private logger: Logger = log4js.getLogger('TransferController');
@@ -50,11 +52,28 @@ export default class TransferController extends BaseController {
       },
       '/:id(\\d+)': {
         GET: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Transfer', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', await TransferController.getRelation(req), 'Transfer', ['*']),
           handler: this.returnTransfer.bind(this),
         },
       },
     };
+  }
+
+  /**
+   * Function to determine which credentials are needed to get transaction
+   * all if user is not connected to transaction
+   * own if user is connected to transaction
+   * @param req
+   * @returns whether transaction is connected to used token
+   */
+  static async getRelation(req: RequestWithToken): Promise<string> {
+    const transaction = await Transfer.findOne(req.params.id);
+    if (transaction
+      && (transaction.fromId === req.token.user.id
+      || transaction.toId === req.token.user.id)) {
+      return 'own';
+    }
+    return 'all';
   }
 
   /**
@@ -66,8 +85,7 @@ export default class TransferController extends BaseController {
    * @returns {string} 500 - Internal server error
    */
   public async returnAllTransfers(req: RequestWithToken, res: Response): Promise<void> {
-    const { body } = req;
-    this.logger.trace('Get all transfers', body, 'by user', req.token.user);
+    this.logger.trace('Get all transfers by user', req.token.user);
     try {
       const transfers = await TransferService.getTransfers();
       res.json(transfers);
@@ -120,14 +138,14 @@ export default class TransferController extends BaseController {
     const request = req.body as TransferRequest;
     this.logger.trace('Post transfer', request, 'by user', req.token.user);
     try {
-      if (await TransferService.verifyTransferRequest(request)) {
-        res.json(await TransferService.postTransfer(request));
-      } else {
-        res.status(400).json('Invalid transfer.');
-      }
+      res.json(await TransferService.postTransfer(request));
     } catch (error) {
-      this.logger.error('Could not create transfer:', error);
-      res.status(500).json('Internal server error.');
+      if (error instanceof InvalidTransferError) {
+        res.status(400).json('Invalid transfer.');
+      } else {
+        this.logger.error('Could not create transfer:', error);
+        res.status(500).json('Internal server error.');
+      }
     }
   }
 }

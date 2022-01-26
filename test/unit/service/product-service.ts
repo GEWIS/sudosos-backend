@@ -39,6 +39,7 @@ import ProductRequest from '../../../src/controller/request/product-request';
 import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
 import UpdatedPointOfSale from '../../../src/entity/point-of-sale/updated-point-of-sale';
+import ProductImage from '../../../src/entity/file/product-image';
 
 chai.use(deepEqualInAnyOrder);
 /**
@@ -48,8 +49,12 @@ chai.use(deepEqualInAnyOrder);
  */
 function returnsAll(response: ProductResponse[], superset: Product[]) {
   expect(response).to.not.be.empty;
-  expect(response.map((prod) => ({ id: prod.id, ownerid: prod.owner.id })))
-    .to.deep.equalInAnyOrder(superset.map((prod) => ({ id: prod.id, ownerid: prod.owner.id })));
+  const temp = superset.map((prod) => ({
+    id: prod.id, ownerid: prod.owner.id, image: prod.image != null ? prod.image.downloadName : null,
+  }));
+  console.log(temp);
+  expect(response.map((prod) => ({ id: prod.id, ownerid: prod.owner.id, image: prod.image })))
+    .to.deep.equalInAnyOrder(temp);
 }
 
 interface ProductWithRevision {
@@ -96,6 +101,7 @@ describe('ProductService', async (): Promise<void> => {
     specification: SwaggerSpecification,
     users: User[],
     products: Product[],
+    productImages: ProductImage[],
     productRevisions: ProductRevision[],
     updatedProducts: UpdatedProduct[],
     containers: Container[],
@@ -114,6 +120,7 @@ describe('ProductService', async (): Promise<void> => {
 
     const {
       products,
+      productImages,
       productRevisions,
       updatedProducts,
     } = await seedAllProducts(users, categories);
@@ -140,6 +147,7 @@ describe('ProductService', async (): Promise<void> => {
       specification,
       users,
       products,
+      productImages,
       productRevisions,
       updatedProducts,
       containers,
@@ -317,7 +325,6 @@ describe('ProductService', async (): Promise<void> => {
         category: 3,
         alcoholPercentage: 8,
         name: 'Product2-update',
-        picture: 'https://sudosos/product2-update.png',
         price: 69,
       };
 
@@ -334,7 +341,6 @@ describe('ProductService', async (): Promise<void> => {
       const productParams: ProductRequest = {
         alcoholPercentage: 9,
         name: 'Product77-update',
-        picture: 'https://sudosos/product77-update.png',
         price,
         category: 1,
       };
@@ -356,7 +362,6 @@ describe('ProductService', async (): Promise<void> => {
       const productParams: ProductRequest = {
         alcoholPercentage: 9,
         name: 'Product77-update',
-        picture: 'https://sudosos/product77-update.png',
         price: price - 1,
         category: 1,
       };
@@ -366,7 +371,6 @@ describe('ProductService', async (): Promise<void> => {
       const updateParams: ProductRequest = {
         alcoholPercentage: 10,
         name: 'Product77-update',
-        picture: 'https://sudosos/product78-update.png',
         price,
         category: 2,
       };

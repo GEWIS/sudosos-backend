@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import BaseResponse from './base-response';
-import { BaseContainerResponse } from './container-response';
+import { ContainerWithProductsResponse } from './container-response';
 import { BaseUserResponse } from './user-response';
 
 /**
@@ -58,9 +58,9 @@ export interface UpdatedPointOfSaleResponse extends BasePointOfSaleResponse {
 
 /**
  * @typedef {PointOfSaleResponse} PointOfSaleWithContainersResponse
- * @property {Array.<BaseContainerResponse>} containers.required - The containers
+ * @property {Array.<ContainerWithProductsResponse>} containers.required - The containers
  * in the point-of-sale.
  */
-export interface PointOfSaleWithContainersResponse extends PointOfSaleResponse {
-  containers?: BaseContainerResponse[],
+export interface PointOfSaleWithContainersResponse extends BasePointOfSaleResponse {
+  containers: ContainerWithProductsResponse[],
 }

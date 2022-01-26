@@ -44,6 +44,7 @@ import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision'
 import { DineroObjectRequest } from '../controller/request/dinero-request';
 import { DineroObjectResponse } from '../controller/response/dinero-response';
 import BalanceService from './balance-service';
+import { asDate, asNumber } from '../helpers/validators';
 
 export interface TransactionFilterParameters {
   fromId?: number,
@@ -59,11 +60,35 @@ export interface TransactionFilterParameters {
   tillDate?: Date,
 }
 
+export function parseGetTransactionsFilters(req: RequestWithToken): TransactionFilterParameters {
+  if ((req.query.pointOfSaleRevision && !req.query.pointOfSaleId)
+    || (req.query.containerRevision && !req.query.containerId)
+    || (req.query.productRevision && !req.query.productId)) {
+    throw new Error('Cannot filter on a revision, when there is no id given');
+  }
+
+  const filters: TransactionFilterParameters = {
+    fromId: asNumber(req.query.fromId),
+    createdById: asNumber(req.query.createdById),
+    toId: asNumber(req.query.toId),
+    pointOfSaleId: asNumber(req.query.pointOfSaleId),
+    pointOfSaleRevision: asNumber(req.query.pointOfSaleRevision),
+    containerId: asNumber(req.query.containerId),
+    containerRevision: asNumber(req.query.containerRevision),
+    productId: asNumber(req.query.productId),
+    productRevision: asNumber(req.query.productRevision),
+    fromDate: asDate(req.query.fromDate),
+    tillDate: asDate(req.query.tillDate),
+  };
+
+  return filters;
+}
+
 export default class TransactionService {
   /**
    * Gets total cost of a transaction with values stored in the database
-   * @param {Array.<SubTransactionRowRequest>} req - the transaction request
    * @returns {DineroObject.model} - the total cost of a transaction
+   * @param rows
    */
   public static async getTotalCost(rows: SubTransactionRowRequest[]): Promise<Dinero.Dinero> {
     // get costs of individual rows
@@ -89,7 +114,7 @@ export default class TransactionService {
    */
   public static async verifyBalance(req: TransactionRequest): Promise<boolean> {
     const rows: SubTransactionRowRequest[] = [];
-    req.subtransactions.forEach((sub) => sub.subTransactionRows.forEach((row) => rows.push(row)));
+    req.subTransactions.forEach((sub) => sub.subTransactionRows.forEach((row) => rows.push(row)));
 
     // check whether from user has sufficient balance
     const totalCost = await this.getTotalCost(rows);
@@ -119,6 +144,7 @@ export default class TransactionService {
   /**
    * Verifies whether a sub transaction row within a sub transaction is valid
    * @param {SubTransactionRowRequest.model} req - the sub transaction row request to verify
+   * @param container
    * @returns {boolean} - whether sub transaction row is ok or not
    */
   public static async verifySubTransactionRow(
@@ -153,7 +179,8 @@ export default class TransactionService {
   /**
    * Verifies whether a sub transaction within a transaction is valid
    * @param {SubTransactionRequest.model} req - the sub transaction request to verify
-   * @param {PointOfSale.model} pos - the point of sale in the request
+   * @param {PointOfSaleRevision.model} pointOfSale - the point of sale in the request
+   * @param isUpdate
    * @returns {boolean} - whether sub transaction is ok or not
    */
   public static async verifySubTransaction(
@@ -206,13 +233,14 @@ export default class TransactionService {
   /**
    * Verifies whether a transaction is valid
    * @param {TransactionRequest.model} req - the transaction request to verify
+   * @param isUpdate
    * @returns {boolean} - whether transaction is ok or not
    */
   public static async verifyTransaction(req: TransactionRequest, isUpdate?: boolean):
   Promise<boolean> {
-    // check if fields provided in the transaction
+    // check fields provided in the transaction
     if (!req.from || !req.createdBy
-        || !req.subtransactions || req.subtransactions.length === 0
+        || !req.subTransactions || req.subTransactions.length === 0
         || !req.pointOfSale || !req.price) {
       return false;
     }
@@ -232,7 +260,7 @@ export default class TransactionService {
 
     // check whether the request price corresponds to the database price
     const rows: SubTransactionRowRequest[] = [];
-    req.subtransactions.forEach((sub) => sub.subTransactionRows.forEach((row) => rows.push(row)));
+    req.subTransactions.forEach((sub) => sub.subTransactionRows.forEach((row) => rows.push(row)));
     const cost = await this.getTotalCost(rows);
     if (!this.dineroEq(req.price, cost)) {
       return false;
@@ -249,7 +277,7 @@ export default class TransactionService {
     }
 
     // verify subtransactions
-    const verification = await Promise.all(req.subtransactions.map(
+    const verification = await Promise.all(req.subTransactions.map(
       async (sub) => this.verifySubTransaction(sub, pointOfSale, isUpdate),
     ));
 
@@ -259,22 +287,28 @@ export default class TransactionService {
   /**
    * Creates a transaction from a transaction request
    * @param {TransactionRequest.model} req - the transaction request to cast
+   * @param update
    * @returns {Transaction.model} - the transaction
    */
-  public static async asTransaction(req: TransactionRequest): Promise<Transaction | undefined> {
+  public static async asTransaction(req: TransactionRequest, update?: Transaction):
+  Promise<Transaction | undefined> {
     if (!req) {
       return undefined;
     }
 
     // init transaction
-    const transaction = {} as Transaction;
+    const transaction = ((update) ? {
+      ...update,
+      version: update.version + 1,
+      updatedAt: new Date(),
+    } : {}) as Transaction;
 
     // get users
     transaction.from = await User.findOne(req.from);
     transaction.createdBy = await User.findOne(req.createdBy);
 
     // set subtransactions
-    transaction.subTransactions = await Promise.all(req.subtransactions.map(
+    transaction.subTransactions = await Promise.all(req.subTransactions.map(
       async (subTransaction) => this.asSubTransaction(subTransaction),
     ));
 
@@ -289,8 +323,8 @@ export default class TransactionService {
 
   /**
    * Creates a transaction response from a transaction
-   * @param {Transaction.model} req - the transaction to cast
    * @returns {TransactionResponse.model} - the transaction response
+   * @param transaction
    */
   public static async asTransactionResponse(transaction: Transaction):
   Promise<TransactionResponse | undefined> {
@@ -361,8 +395,8 @@ export default class TransactionService {
 
   /**
    * Creates a sub transaction response from a sub transaction
-   * @param {SubTransaction.model} req - the sub transaction to cast
    * @returns {SubTransactionResponse.model} - the sub transaction response
+   * @param subTransaction
    */
   public static async asSubTransactionResponse(subTransaction: SubTransaction):
   Promise<SubTransactionResponse | undefined> {
@@ -422,13 +456,28 @@ export default class TransactionService {
   }
 
   /**
+   * Invalidates user balance cache
+   * @param {TransactionResponse.model} transaction - transaction holding users to invalidate
+   */
+  public static async invalidateBalanceCache(transaction: TransactionResponse):
+  Promise<void> {
+    // get user ids to invalidate
+    const userIds = [...new Set(transaction.subTransactions.map((sub) => sub.to.id))];
+    if (!userIds.includes(transaction.from.id)) {
+      userIds.push(transaction.from.id);
+    }
+    await BalanceService.clearBalanceCache(userIds);
+  }
+
+  /**
    * Returns all transactions requested with the filter
    * @param {RequestWithToken.model} req - the request with token
    * @param {TransactionFilterParameters.model} params - the filter parameters
+   * @param {User.model} user - A user that is involved in all transactions
    * @returns {BaseTransactionResponse[]} - the transactions without sub transactions
    */
   public static async getTransactions(
-    req: RequestWithToken, params: TransactionFilterParameters,
+    req: RequestWithToken, params: TransactionFilterParameters, user?: User,
   ): Promise<BaseTransactionResponse[]> {
     // Extract fromDate and tillDate, as they cannot be directly passed to QueryFilter.
     const { fromDate, tillDate, ...p } = params;
@@ -463,7 +512,8 @@ export default class TransactionService {
       .leftJoinAndSelect('transaction.pointOfSale', 'pointOfSaleRev')
       .leftJoinAndSelect('pointOfSaleRev.pointOfSale', 'pointOfSale')
       .leftJoin('transaction.subTransactions', 'subTransaction')
-      .leftJoin('subTransaction.subTransactionRows', 'subTransactionRow');
+      .leftJoin('subTransaction.subTransactionRows', 'subTransactionRow')
+      .distinct(true);
 
     if (fromDate) query.andWhere('"transaction"."createdAt" >= :fromDate', { fromDate: fromDate.toISOString() });
     if (tillDate) query.andWhere('"transaction"."createdAt" < :tillDate', { tillDate: tillDate.toISOString() });
@@ -472,6 +522,10 @@ export default class TransactionService {
       createdById: 'transaction.createdById',
     };
     QueryFilter.applyFilter(query, mapping, p);
+
+    if (user) {
+      query.andWhere('"transaction"."fromId" = :userId OR "transaction"."createdById" = :userId OR "subTransaction"."toId" = :userId', { userId: user.id });
+    }
 
     query = applySubTransactionFilters(query);
     query = addPaginationToQueryBuilder(req, query);
@@ -525,8 +579,12 @@ export default class TransactionService {
   Promise<TransactionResponse | undefined> {
     const transaction = await this.asTransaction(req);
 
+    // save the transaction and invalidate user balance cache
+    const savedTransaction = await this.asTransactionResponse(await Transaction.save(transaction));
+    await this.invalidateBalanceCache(savedTransaction);
+
     // save transaction and return response
-    return this.asTransactionResponse(await Transaction.save(transaction));
+    return savedTransaction;
   }
 
   /**
@@ -557,11 +615,20 @@ export default class TransactionService {
    */
   public static async updateTransaction(id: number, req: TransactionRequest):
   Promise<TransactionResponse | undefined> {
-    const transaction = await this.asTransaction(req);
+    const transaction = await this.asTransaction(req, await Transaction.findOne(id));
 
-    // update transaction and return response
-    await Transaction.update(id, transaction);
-    return this.asTransactionResponse(transaction);
+    // delete old transaction
+    await this.deleteTransaction(id);
+
+    // save updated transaction with same id
+    await Transaction.save(transaction);
+
+    // invalidate updated transaction user balance cache
+    const updatedTransaction = await this.getSingleTransaction(id);
+    await this.invalidateBalanceCache(updatedTransaction);
+
+    // return updatedTransaction;
+    return updatedTransaction;
   }
 
   /**
@@ -576,11 +643,7 @@ export default class TransactionService {
     await Transaction.delete(id);
 
     // invalidate user balance cache
-    const userIds = [...new Set(transaction.subTransactions.map((sub) => sub.to.id))];
-    if (!userIds.includes(transaction.from.id)) {
-      userIds.push(transaction.from.id);
-    }
-    await BalanceService.clearBalanceCache(userIds);
+    await this.invalidateBalanceCache(transaction);
 
     // return deleted transaction
     return transaction;

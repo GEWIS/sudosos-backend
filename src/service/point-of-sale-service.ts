@@ -33,7 +33,8 @@ import UpdatePointOfSaleRequest from '../controller/request/update-point-of-sale
 import UpdatedContainer from '../entity/container/updated-container';
 import UnapprovedContainerError from '../entity/errors/unapproved-container-error';
 import ContainerRevision from '../entity/container/container-revision';
-import { ContainerParameters } from './container-service';
+import ContainerService, { ContainerParameters } from './container-service';
+import { ContainerWithProductsResponse } from '../controller/response/container-response';
 
 /**
  * Define point of sale filtering parameters used to filter query results.
@@ -64,6 +65,10 @@ export interface PointOfSaleParameters {
    * Filter based on whether a point of sale uses authentication.
    */
   useAuthentication?: boolean;
+  /**
+   * If containers should be added to the response
+   */
+  returnContainers?: boolean
 }
 
 export default class PointOfSaleService {
@@ -90,11 +95,34 @@ export default class PointOfSaleService {
   }
 
   /**
+   * Function that adds all the container with products to a point of sale response.
+   * It is slow and should be used sparsely.
+   * @param pointOfSale - The point of sale to decorate
+   */
+  private static async asPointOfSaleResponseWithContainers(
+    pointOfSale: PointOfSaleResponse | UpdatedPointOfSaleResponse,
+  ): Promise<PointOfSaleWithContainersResponse> {
+    const containerIds = (
+      (await ContainerService.getContainers({ posId: pointOfSale.id })).map((c) => c.id));
+    const containers: ContainerWithProductsResponse[] = [];
+    await Promise.all(
+      containerIds.map(
+        async (c) => { containers.push(await ContainerService.getProductsResponse(c)); },
+      ),
+    );
+
+    return {
+      ...pointOfSale,
+      containers,
+    };
+  }
+
+  /**
    * Query to return current point of sales.
    * @param params - Parameters to query the point of sales with.
    */
   public static async getPointsOfSale(params: PointOfSaleParameters = {})
-    : Promise<PointOfSaleResponse[]> {
+    : Promise<PointOfSaleResponse[] | PointOfSaleWithContainersResponse[]> {
     const builder = createQueryBuilder()
       .from(PointOfSale, 'pos')
       .innerJoin(
@@ -132,6 +160,20 @@ export default class PointOfSaleService {
 
     const rawPointOfSales = await builder.getRawMany();
 
+    if (params.returnContainers) {
+      const pointOfSales: PointOfSaleWithContainersResponse[] = [];
+      await Promise.all(rawPointOfSales.map(
+        async (rawPointOfSale) => {
+          pointOfSales.push(
+            await this.asPointOfSaleResponseWithContainers(
+              this.asPointOfSaleResponse(rawPointOfSale),
+            ),
+          );
+        },
+      ));
+      return pointOfSales;
+    }
+
     return rawPointOfSales.map((rawPointOfSale) => this.asPointOfSaleResponse(rawPointOfSale));
   }
 
@@ -140,7 +182,7 @@ export default class PointOfSaleService {
    * @param params - Parameters to query the point of sales with.
    */
   public static async getUpdatedPointsOfSale(params: PointOfSaleParameters = {})
-    : Promise<UpdatedPointOfSaleResponse[]> {
+    : Promise<UpdatedPointOfSaleResponse[] | PointOfSaleWithContainersResponse[]> {
     const builder = createQueryBuilder()
       .from(PointOfSale, 'pos')
       .innerJoin(
@@ -172,6 +214,20 @@ export default class PointOfSaleService {
     QueryFilter.applyFilter(builder, filterMapping, params);
 
     const rawPointOfSales = await builder.getRawMany();
+
+    if (params.returnContainers) {
+      const pointOfSales: PointOfSaleWithContainersResponse[] = [];
+      await Promise.all(rawPointOfSales.map(
+        async (rawPointOfSale) => {
+          pointOfSales.push(
+            await this.asPointOfSaleResponseWithContainers(
+              this.asPointOfSaleResponse(rawPointOfSale),
+            ),
+          );
+        },
+      ));
+      return pointOfSales;
+    }
 
     return rawPointOfSales.map(
       (rawPointOfSale) => this.asPointOfSaleResponse(rawPointOfSale) as UpdatedPointOfSaleResponse,
@@ -216,7 +272,7 @@ export default class PointOfSaleService {
    */
   public static async getPointsOfSaleInUserContext(params: PointOfSaleParameters, updated?: boolean)
     : Promise<PointOfSaleResponse[] | UpdatedPointOfSaleResponse[]> {
-    const publicPOS: PointOfSaleResponse[] | UpdatedPointOfSaleResponse[] = updated
+    const publicPOS: any = updated
       ? (await this.getUpdatedPointsOfSale(
         { ...params, ownerId: undefined, public: true } as ContainerParameters,
       ))
@@ -224,7 +280,7 @@ export default class PointOfSaleService {
         { ...params, ownerId: undefined, public: true } as ContainerParameters,
       ));
 
-    const ownPOS: PointOfSaleResponse[] | UpdatedPointOfSaleResponse[] = updated
+    const ownPOS: any = updated
       ? (await this.getUpdatedPointsOfSale(
         { ...params, public: false } as ContainerParameters,
       ))
@@ -286,7 +342,9 @@ export default class PointOfSaleService {
     await UpdatedPointOfSale.delete(pointOfSaleId);
 
     // Return the new point of sale.
-    return this.toPointOfSaleResponse(pointOfSaleRevision);
+    return await this.asPointOfSaleResponseWithContainers(
+      this.asPointOfSaleResponse(pointOfSaleRevision),
+    );
   }
 
   /**

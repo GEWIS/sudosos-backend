@@ -170,6 +170,12 @@ export default async function createApp(): Promise<Application> {
   application.app.use(json());
   application.app.use(fileUpload());
 
+  // Product images
+  if (process.env.NODE_ENV === 'development') {
+    application.app.use('/static/products', express.static('data/products'));
+    application.app.use('/static/banners', express.static('data/banners'));
+  }
+
   // Setup RBAC.
   application.roleManager = new RoleManager();
   await setupRbac(application);
