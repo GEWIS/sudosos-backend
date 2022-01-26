@@ -31,6 +31,11 @@ import UpdatedProduct from '../entity/product/updated-product';
 import ProductRevision from '../entity/product/product-revision';
 import UnapprovedProductError from '../entity/errors/unapproved-product-error';
 
+interface ContainerVisibility {
+  own: boolean;
+  public: boolean;
+}
+
 /**
  * Define updated container filtering parameters used to filter query results.
  */
@@ -363,9 +368,13 @@ export default class ContainerService {
    * @param userId - The User to test
    * @param containerId - The container to view
    */
-  public static async canViewContainer(userId: number, containerId: number): Promise<boolean> {
+  public static async canViewContainer(userId: number, containerId: number)
+    : Promise<ContainerVisibility> {
+    const result: ContainerVisibility = { own: false, public: false };
     const container: Container = await Container.findOne(containerId, { relations: ['owner'] });
-    if (!container) return false;
-    return container.owner.id === userId || container.public;
+    if (!container) return result;
+    if (container.owner.id === userId) result.own = true;
+    if (container.public) result.public = true;
+    return result;
   }
 }
