@@ -26,6 +26,7 @@ import ProductRequest from './request/product-request';
 import Product from '../entity/product/product';
 import FileService from '../service/file-service';
 import { PRODUCT_IMAGE_LOCATION } from '../files/storage';
+import { parseRequestPagination } from '../helpers/pagination';
 
 export default class ProductController extends BaseController {
   private logger: Logger = log4js.getLogger('ProductController');
@@ -101,16 +102,29 @@ export default class ProductController extends BaseController {
    * @route GET /products
    * @group products - Operations of product controller
    * @security JWT
-   * @returns {Array.<ProductResponse>} 200 - All existing products
+   * @param {integer} take.query - How many products the endpoint should return
+   * @param {integer} skip.query - How many products should be skipped (for pagination)
+   * @returns {PaginatedProductResponse.model} 200 - All existing products
    * @returns {string} 500 - Internal server error
    */
   public async getAllProducts(req: RequestWithToken, res: Response): Promise<void> {
     const { body } = req;
     this.logger.trace('Get all products', body, 'by user', req.token.user);
 
+    let take;
+    let skip;
+    try {
+      const pagination = parseRequestPagination(req);
+      take = pagination.take;
+      skip = pagination.skip;
+    } catch (e) {
+      res.status(400).send(e.message);
+      return;
+    }
+
     // Handle request
     try {
-      const products = await ProductService.getProducts();
+      const products = await ProductService.getProducts({}, { take, skip });
       res.json(products);
     } catch (error) {
       this.logger.error('Could not return all products:', error);
@@ -226,7 +240,8 @@ export default class ProductController extends BaseController {
     // handle request
     try {
       // check if product in database
-      const product = (await ProductService.getProducts({ productId: parseInt(id, 10) }))[0];
+      const product = (await ProductService
+        .getProducts({ productId: parseInt(id, 10) })).records[0];
       if (product) {
         res.json(product);
       } else {
@@ -243,16 +258,29 @@ export default class ProductController extends BaseController {
    * @route GET /products/updated
    * @group products - Operations of product controller
    * @security JWT
-   * @returns {Array.<ProductResponse>} 200 - All existing updated products
+   * @param {integer} take.query - How many products the endpoint should return
+   * @param {integer} skip.query - How many products should be skipped (for pagination)
+   * @returns {PaginatedProductResponse.model} 200 - All existing updated products
    * @returns {string} 500 - Internal server error
    */
   public async getAllUpdatedProducts(req: RequestWithToken, res: Response): Promise<void> {
     const { body } = req;
     this.logger.trace('Get all updated products', body, 'by user', req.token.user);
 
+    let take;
+    let skip;
+    try {
+      const pagination = parseRequestPagination(req);
+      take = pagination.take;
+      skip = pagination.skip;
+    } catch (e) {
+      res.status(400).send(e.message);
+      return;
+    }
+
     // Handle request
     try {
-      const products = await ProductService.getUpdatedProducts();
+      const products = await ProductService.getProducts({ updatedProducts: true }, { take, skip });
       res.json(products);
     } catch (error) {
       this.logger.error('Could not return all products:', error);
@@ -279,7 +307,8 @@ export default class ProductController extends BaseController {
     // handle request
     try {
       if (await Product.findOne(productId)) {
-        res.json((await ProductService.getUpdatedProducts({ productId: parseInt(id, 10) }))[0]);
+        res.json((await ProductService
+          .getProducts({ updatedProducts: true, productId: parseInt(id, 10) })).records[0]);
       } else {
         res.status(404).json('Product not found.');
       }

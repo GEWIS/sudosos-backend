@@ -15,8 +15,9 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { createQueryBuilder } from 'typeorm';
+import { createQueryBuilder, SelectQueryBuilder } from 'typeorm';
 import {
+  PaginatedPointOfSaleResponse, PaginatedUpdatedPointOfSaleResponse,
   PointOfSaleResponse,
   PointOfSaleWithContainersResponse,
   UpdatedPointOfSaleResponse,
@@ -35,6 +36,7 @@ import UnapprovedContainerError from '../entity/errors/unapproved-container-erro
 import ContainerRevision from '../entity/container/container-revision';
 import ContainerService, { ContainerParameters } from './container-service';
 import { ContainerWithProductsResponse } from '../controller/response/container-response';
+import { PaginationParameters } from '../helpers/pagination';
 
 /**
  * Define point of sale filtering parameters used to filter query results.
@@ -69,6 +71,10 @@ export interface PointOfSaleParameters {
    * If containers should be added to the response
    */
   returnContainers?: boolean
+  /**
+   * Whether to select public points of sale.
+   */
+  public?: boolean;
 }
 
 export default class PointOfSaleService {
@@ -103,7 +109,7 @@ export default class PointOfSaleService {
     pointOfSale: PointOfSaleResponse | UpdatedPointOfSaleResponse,
   ): Promise<PointOfSaleWithContainersResponse> {
     const containerIds = (
-      (await ContainerService.getContainers({ posId: pointOfSale.id })).map((c) => c.id));
+      (await ContainerService.getContainers({ posId: pointOfSale.id })).records.map((c) => c.id));
     const containers: ContainerWithProductsResponse[] = [];
     await Promise.all(
       containerIds.map(
@@ -117,12 +123,8 @@ export default class PointOfSaleService {
     };
   }
 
-  /**
-   * Query to return current point of sales.
-   * @param params - Parameters to query the point of sales with.
-   */
-  public static async getPointsOfSale(params: PointOfSaleParameters = {})
-    : Promise<PointOfSaleResponse[] | PointOfSaleWithContainersResponse[]> {
+  private static buildGetPointsOfSaleQuery(filters: PointOfSaleParameters = {})
+    : SelectQueryBuilder<PointOfSale> {
     const builder = createQueryBuilder()
       .from(PointOfSale, 'pos')
       .innerJoin(
@@ -145,7 +147,7 @@ export default class PointOfSaleService {
         'owner.lastName AS owner_lastName',
       ]);
 
-    if (params.pointOfSaleRevision === undefined) builder.where('pos.currentRevision = posrevision.revision');
+    if (filters.pointOfSaleRevision === undefined) builder.where('pos.currentRevision = posrevision.revision');
 
     const filterMapping: FilterMapping = {
       pointOfSaleId: 'pos.id',
@@ -156,13 +158,29 @@ export default class PointOfSaleService {
       ownerId: 'owner.id',
     };
 
-    QueryFilter.applyFilter(builder, filterMapping, params);
+    QueryFilter.applyFilter(builder, filterMapping, filters);
 
-    const rawPointOfSales = await builder.getRawMany();
+    return builder;
+  }
 
-    if (params.returnContainers) {
+  /**
+   * Query to return current point of sales.
+   * @param filters - Parameters to query the point of sales with.
+   * @param pagination
+   */
+  public static async getPointsOfSale(
+    filters: PointOfSaleParameters = {}, pagination: PaginationParameters = {},
+  ): Promise<PaginatedPointOfSaleResponse> {
+    const { take, skip } = pagination;
+
+    const results = await Promise.all([
+      this.buildGetPointsOfSaleQuery(filters).limit(take).offset(skip).getRawMany(),
+      this.buildGetPointsOfSaleQuery(filters).getCount(),
+    ]);
+
+    if (filters.returnContainers) {
       const pointOfSales: PointOfSaleWithContainersResponse[] = [];
-      await Promise.all(rawPointOfSales.map(
+      await Promise.all(results[0].map(
         async (rawPointOfSale) => {
           pointOfSales.push(
             await this.asPointOfSaleResponseWithContainers(
@@ -171,18 +189,20 @@ export default class PointOfSaleService {
           );
         },
       ));
-      return pointOfSales;
     }
 
-    return rawPointOfSales.map((rawPointOfSale) => this.asPointOfSaleResponse(rawPointOfSale));
+    const records = results[0].map((rawPointOfSale) => this.asPointOfSaleResponse(rawPointOfSale));
+    return {
+      _pagination: {
+        take, skip, count: results[1],
+      },
+      records,
+    };
   }
 
-  /**
-   * Query to return updated (pending) point of sales.
-   * @param params - Parameters to query the point of sales with.
-   */
-  public static async getUpdatedPointsOfSale(params: PointOfSaleParameters = {})
-    : Promise<UpdatedPointOfSaleResponse[] | PointOfSaleWithContainersResponse[]> {
+  public static buildGetUpdatedPointsOfSaleQuery(
+    filters: PointOfSaleParameters = {},
+  ): SelectQueryBuilder<PointOfSale> {
     const builder = createQueryBuilder()
       .from(PointOfSale, 'pos')
       .innerJoin(
@@ -211,13 +231,29 @@ export default class PointOfSaleService {
       useAuthentication: 'pos.useAuthentication',
       ownerId: 'owner.id',
     };
-    QueryFilter.applyFilter(builder, filterMapping, params);
+    QueryFilter.applyFilter(builder, filterMapping, filters);
 
-    const rawPointOfSales = await builder.getRawMany();
+    return builder;
+  }
 
-    if (params.returnContainers) {
+  /**
+   * Query to return updated (pending) point of sales.
+   * @param filters - Parameters to query the point of sales with.
+   * @param pagination
+   */
+  public static async getUpdatedPointsOfSale(
+    filters: PointOfSaleParameters = {}, pagination: PaginationParameters = {},
+  ): Promise<PaginatedUpdatedPointOfSaleResponse> {
+    const { take, skip } = pagination;
+
+    const results = await Promise.all([
+      this.buildGetUpdatedPointsOfSaleQuery(filters).limit(take).offset(skip).getRawMany(),
+      this.buildGetUpdatedPointsOfSaleQuery(filters).getCount(),
+    ]);
+    let records;
+    if (filters.returnContainers) {
       const pointOfSales: PointOfSaleWithContainersResponse[] = [];
-      await Promise.all(rawPointOfSales.map(
+      await Promise.all(results[0].map(
         async (rawPointOfSale) => {
           pointOfSales.push(
             await this.asPointOfSaleResponseWithContainers(
@@ -226,12 +262,20 @@ export default class PointOfSaleService {
           );
         },
       ));
-      return pointOfSales;
+      records = pointOfSales;
+    } else {
+      records = results[0].map(
+        (rawPointOfSale) => (
+          this.asPointOfSaleResponse(rawPointOfSale) as UpdatedPointOfSaleResponse),
+      );
     }
 
-    return rawPointOfSales.map(
-      (rawPointOfSale) => this.asPointOfSaleResponse(rawPointOfSale) as UpdatedPointOfSaleResponse,
-    );
+    return {
+      _pagination: {
+        take, skip, count: results[1],
+      },
+      records,
+    };
   }
 
   /**
@@ -268,16 +312,18 @@ export default class PointOfSaleService {
   /**
    * Function that returns all the points of sale visible to a user.
    * @param params
+   * @param pagination
    * @param updated
    */
-  public static async getPointsOfSaleInUserContext(params: PointOfSaleParameters, updated?: boolean)
-    : Promise<PointOfSaleResponse[] | UpdatedPointOfSaleResponse[]> {
+  public static async getPointsOfSaleInUserContext(
+    params: PointOfSaleParameters, pagination: PaginationParameters = {}, updated?: boolean,
+  ): Promise<PointOfSaleResponse[] | UpdatedPointOfSaleResponse[]> {
     const publicPOS: any = updated
       ? (await this.getUpdatedPointsOfSale(
-        { ...params, ownerId: undefined, public: true } as ContainerParameters,
+        { ...params, ownerId: undefined, public: true } as ContainerParameters, pagination,
       ))
       : (await this.getPointsOfSale(
-        { ...params, ownerId: undefined, public: true } as ContainerParameters,
+        { ...params, ownerId: undefined, public: true } as ContainerParameters, pagination,
       ));
 
     const ownPOS: any = updated
@@ -445,6 +491,8 @@ export default class PointOfSaleService {
    * @param pointOfSaleId - The Point of Sale to view
    */
   public static async canViewPointOfSale(userId: number, pointOfSaleId: number): Promise<boolean> {
-    return (await PointOfSale.findOne(pointOfSaleId)).owner.id === userId;
+    const pointOfSale: PointOfSale = await PointOfSale.findOne(pointOfSaleId, { relations: ['owner'] });
+    if (!pointOfSale) return false;
+    return pointOfSale.owner.id === userId;
   }
 }

@@ -32,6 +32,7 @@ import { seedAllProducts, seedProductCategories } from '../../seed';
 import Product from '../../../src/entity/product/product';
 import { ProductResponse } from '../../../src/controller/response/product-response';
 import UpdatedProduct from '../../../src/entity/product/updated-product';
+import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 
 /**
  * Tests if a product response is equal to the request.
@@ -158,9 +159,17 @@ describe('ProductController', async (): Promise<void> => {
 
       expect(res.status).to.equal(200);
 
+      const products = res.body.records as ProductResponse[];
+      // eslint-disable-next-line no-underscore-dangle
+      const pagination = res.body._pagination as PaginationResult;
+
       // Every product that has a current revision should be returned.
       const activeProductCount = await Product.count({ where: 'currentRevision' } as FindManyOptions);
-      expect((res.body as ProductResponse[]).length).to.equal(activeProductCount);
+      expect(products.length).to.equal(Math.min(activeProductCount, defaultPagination()));
+
+      expect(pagination.take).to.equal(defaultPagination());
+      expect(pagination.skip).to.equal(0);
+      expect(pagination.count).to.equal(activeProductCount);
     });
     it('should return an HTTP 403 if not admin', async () => {
       const res = await request(ctx.app)
@@ -172,6 +181,29 @@ describe('ProductController', async (): Promise<void> => {
 
       // forbidden code
       expect(res.status).to.equal(403);
+    });
+    it('should adhere to pagination', async () => {
+      const take = 2;
+      const skip = 3;
+
+      const res = await request(ctx.app)
+        .get('/products')
+        .query({ take, skip })
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(200);
+
+      const products = res.body.records as ProductResponse[];
+      // eslint-disable-next-line no-underscore-dangle
+      const pagination = res.body._pagination as PaginationResult;
+
+      // Every product that has a current revision should be returned.
+      const activeProductCount = await Product.count({ where: 'currentRevision' } as FindManyOptions);
+
+      expect(pagination.take).to.equal(take);
+      expect(pagination.skip).to.equal(skip);
+      expect(pagination.count).to.equal(activeProductCount);
+      expect(products.length).to.be.at.most(take);
     });
   });
   describe('POST /products', () => {
@@ -305,11 +337,19 @@ describe('ProductController', async (): Promise<void> => {
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
       expect(res.status).to.equal(200);
+      expect(res.body).to.not.be.empty;
+
+      const products = res.body.records as ProductResponse[];
+      // eslint-disable-next-line no-underscore-dangle
+      const pagination = res.body._pagination as PaginationResult;
 
       // Every product that has a current revision should be returned.
       const activeProductCount = await UpdatedProduct.count();
-      expect((res.body as ProductResponse[])).to.not.be.empty;
-      expect((res.body as ProductResponse[]).length).to.equal(activeProductCount);
+      expect(products.length).to.equal(Math.min(activeProductCount, defaultPagination()));
+
+      expect(pagination.take).to.equal(defaultPagination());
+      expect(pagination.skip).to.equal(0);
+      expect(pagination.count).to.equal(activeProductCount);
     });
     it('should return an HTTP 403 if not admin', async () => {
       const res = await request(ctx.app)
@@ -321,6 +361,29 @@ describe('ProductController', async (): Promise<void> => {
 
       // forbidden code
       expect(res.status).to.equal(403);
+    });
+    it('should adhere to pagination', async () => {
+      const take = 5;
+      const skip = 3;
+
+      const res = await request(ctx.app)
+        .get('/products/updated')
+        .query({ take, skip })
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(200);
+
+      const products = res.body.records as ProductResponse[];
+      // eslint-disable-next-line no-underscore-dangle
+      const pagination = res.body._pagination as PaginationResult;
+
+      // Every product that has a current revision should be returned.
+      const activeProductCount = await UpdatedProduct.count();
+
+      expect(pagination.take).to.equal(take);
+      expect(pagination.skip).to.equal(skip);
+      expect(pagination.count).to.equal(activeProductCount);
+      expect(products.length).to.be.at.most(take);
     });
   });
   describe('GET /products/:id/update', () => {

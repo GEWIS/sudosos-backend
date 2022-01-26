@@ -17,10 +17,11 @@
  */
 import { FindManyOptions } from 'typeorm';
 import BannerRequest from '../controller/request/banner-request';
-import BannerResponse from '../controller/response/banner-response';
+import { BannerResponse, PaginatedBannerResponse } from '../controller/response/banner-response';
 import Banner from '../entity/banner';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import FileService from './file-service';
+import { PaginationParameters } from '../helpers/pagination';
 
 export interface BannerFilterParameters {
   bannerId?: number,
@@ -103,22 +104,40 @@ export default class BannerService {
 
   /**
    * Returns all banners with options.
-   * @param params - The filtering parameters.
-   * @param options - The pagination options.
+   * @param filters - The filtering parameters.
+   * @param pagination - The pagination options.
    * @returns {Array.<BannerResponse>} - all banners
    */
-  public static async getBanners(params: BannerFilterParameters, options: FindManyOptions = {})
-    : Promise<BannerResponse[]> {
+  public static async getBanners(
+    filters: BannerFilterParameters, pagination: PaginationParameters = {},
+  ): Promise<PaginatedBannerResponse> {
+    const { take, skip } = pagination;
+
     const mapping: FilterMapping = {
       bannerId: 'id',
       active: 'active',
     };
+
+    const options: FindManyOptions = {
+      where: QueryFilter.createFilterWhereClause(mapping, filters),
+      relations: ['image'],
+    };
+
     const banners = await Banner.find({
-      where: QueryFilter.createFilterWhereClause(mapping, params),
       ...options,
-      relations: ['image'].concat(options.relations ? options.relations : []),
+      take,
+      skip,
     });
-    return banners.map((banner) => this.asBannerResponse(banner));
+    const records = banners.map((banner) => this.asBannerResponse(banner));
+
+    return {
+      _pagination: {
+        take,
+        skip,
+        count: await Banner.count(options),
+      },
+      records,
+    };
   }
 
   /**
@@ -136,6 +155,7 @@ export default class BannerService {
   /**
    * Updates and returns banner with given id.
    * @param id - requested banner id
+   * @param bannerReq
    * @returns {BannerResponse.model} - updated banner
    */
   public static async updateBanner(id: number, bannerReq: BannerRequest): Promise<BannerResponse> {
