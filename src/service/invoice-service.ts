@@ -29,9 +29,11 @@ import { parseUserToBaseResponse } from '../helpers/entity-to-response';
 import InvoiceEntry from '../entity/invoices/invoice-entry';
 import CreateInvoiceRequest from '../controller/request/create-invoice-request';
 import User from '../entity/user/user';
-import PointOfSaleRequest from '../controller/request/point-of-sale-request';
-import Container from '../entity/container/container';
 import Transaction from '../entity/transactions/transaction';
+import TransferService from "./transfer-service";
+import TransferRequest from "../controller/request/transfer-request";
+import BalanceService from "./balance-service";
+import TransactionService from "./transaction-service";
 
 export interface InvoiceFilterParameters {
   /**
@@ -104,6 +106,9 @@ export default class InvoiceService {
       invoiceEntries: invoice.invoiceEntries.map(this.asInvoiceEntryResponse),
     } as InvoiceResponse;
   }
+
+  // public static async createInvoice(toId: number, invoice: CreateInvoiceRequest): Promise<InvoiceResponse> {
+  // }
 
   /**
    * Function that returns all the invoices based on the given params.

@@ -35,6 +35,9 @@ import SubTransactionRow from '../../../src/entity/transactions/sub-transaction-
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
 import ContainerRevision from '../../../src/entity/container/container-revision';
 import User from '../../../src/entity/user/user';
+import TransferService from '../../../src/service/transfer-service';
+import TransferRequest from '../../../src/controller/request/transfer-request';
+import { DineroObjectRequest } from '../../../src/controller/request/dinero-request';
 
 describe('TransactionService', (): void => {
   let ctx: {
@@ -66,7 +69,17 @@ describe('TransactionService', (): void => {
         skip: 0,
       },
     } as any as RequestWithToken;
-
+    const transferRequest: TransferRequest = {
+      amount: {
+        amount: 522,
+        currency: 'EUR',
+        precision: 2,
+      } as DineroObjectRequest,
+      description: 'Magie',
+      fromId: 0,
+      toId: 7,
+    };
+    await TransferService.postTransfer(transferRequest);
     const validTransReq = {
       from: 7,
       createdBy: 7,
