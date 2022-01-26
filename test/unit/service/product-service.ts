@@ -24,7 +24,7 @@ import deepEqualInAnyOrder from 'deep-equal-in-any-order';
 import User from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
-import ProductService, { ProductParameters } from '../../../src/service/product-service';
+import ProductService, { ProductFilterParameters } from '../../../src/service/product-service';
 import {
   seedAllProducts, seedAllContainers, seedProductCategories, seedUsers, seedAllPointsOfSale,
 } from '../../seed';
@@ -177,9 +177,15 @@ describe('ProductService', async (): Promise<void> => {
       expect(_pagination.skip).to.be.undefined;
       expect(_pagination.count).to.equal(products.length);
     });
+    it('should return all updated products', async () => {
+      const updatedProducts: ProductResponse[] = await ProductService.getUpdatedProducts();
+      const products = ctx.updatedProducts.map((prod) => prod.product);
+
+      returnsAll(updatedProducts, products);
+    });
     it('should return product with the ownerId specified', async () => {
       const owner = ctx.products[0].owner.id;
-      const params: ProductParameters = { ownerId: ctx.products[0].owner.id };
+      const params: ProductFilterParameters = { ownerId: ctx.products[0].owner.id };
       const { records } = await ProductService.getProducts(params);
 
       const products = ctx.products.filter((prod) => (
@@ -192,7 +198,7 @@ describe('ProductService', async (): Promise<void> => {
       const productRevision = ctx.products[0].currentRevision - 1;
       expect(productRevision).to.be.greaterThan(0);
 
-      const params: ProductParameters = { productId, productRevision };
+      const params: ProductFilterParameters = { productId, productRevision };
       const { records } = await ProductService.getProducts(params);
 
       const product: ProductWithRevision[] = [productRevisionToProductWithRevision(
@@ -203,13 +209,13 @@ describe('ProductService', async (): Promise<void> => {
       returnsAllRevisions(records, product);
     });
     it('should return a single product if productId is specified', async () => {
-      const params: ProductParameters = { productId: ctx.products[0].id };
+      const params: ProductFilterParameters = { productId: ctx.products[0].id };
       const { records } = await ProductService.getProducts(params);
 
       returnsAll(records, [ctx.products[0]]);
     });
     it('should return no products if the userId and productId dont match', async () => {
-      const params: ProductParameters = {
+      const params: ProductFilterParameters = {
         ownerId: ctx.products[0].owner.id + 1,
         productId: ctx.products[0].id,
       };
@@ -218,7 +224,7 @@ describe('ProductService', async (): Promise<void> => {
       expect(records).to.be.empty;
     });
     it('should return the products belonging to a container', async () => {
-      const params: ProductParameters = {
+      const params: ProductFilterParameters = {
         containerId: 3,
       };
       const { records } = await ProductService.getProducts(params);
@@ -232,49 +238,12 @@ describe('ProductService', async (): Promise<void> => {
 
       returnsAll(records, products);
     });
-    it('should return the products belonging to a container revision that is not current', async () => {
-      const params: ProductParameters = {
-        containerId: 1,
-        containerRevision: 2,
-      };
-
-      const { records } = await ProductService.getProducts(params);
-
-      const products = [1, 2, 5];
-      expect(records.map((prod) => prod.id)).to.deep.equalInAnyOrder(products);
-    });
-    it('should adhere to pagination', async () => {
-      const take = 5;
-      const skip = 3;
-
-      // eslint-disable-next-line @typescript-eslint/naming-convention
-      const { records, _pagination } = await ProductService.getProducts({}, { take, skip });
-      const products = ctx.products.filter((prod) => prod.currentRevision !== null);
-
-      expect(_pagination.take).to.equal(take);
-      expect(_pagination.skip).to.equal(skip);
-      expect(_pagination.count).to.equal(products.length);
-      expect(records.length).to.be.at.most(take);
-    });
-  });
-
-  describe('getUpdatedProducts function', () => {
-    it('should return all updated products', async () => {
-      // eslint-disable-next-line @typescript-eslint/naming-convention
-      const { records, _pagination } = await ProductService.getUpdatedProducts();
-      const products = ctx.updatedProducts.map((prod) => prod.product);
-
-      returnsAll(records, products);
-
-      expect(_pagination.take).to.be.undefined;
-      expect(_pagination.skip).to.be.undefined;
-      expect(_pagination.count).to.equal(products.length);
-    });
     it('should return the updated products belonging to a container', async () => {
-      const params: ProductParameters = {
+      const params: ProductFilterParameters = {
         containerId: 3,
+        updatedProducts: true,
       };
-      const { records } = await ProductService.getUpdatedProducts(params);
+      const { records } = await ProductService.getProducts(params);
 
       const products = ctx.containerRevisions.filter((rev) => {
         const container = ctx.containers.filter((cont) => cont.id === 3)[0];
@@ -287,17 +256,25 @@ describe('ProductService', async (): Promise<void> => {
       returnsAll(records, products);
     });
     it('should return the updated products belonging to an updatedContainer', async () => {
-      const params: ProductParameters = {
+      const params: ProductFilterParameters = {
         containerId: 4,
         updatedContainer: true,
+        updatedProducts: true,
       };
-      const { records } = await ProductService.getUpdatedProducts(params);
+      const { records } = await ProductService.getProducts(params);
 
       const products = ctx.updatedContainers
         .filter((upd) => upd.container.id === 4)
         .map((upd) => upd.products)[0]
         .filter((prod) => ctx.updatedProducts
           .map((updprod) => updprod.product).includes(prod));
+
+      // const products = ctx.containerRevisions.filter((rev) => {
+      //   const container = ctx.containers.filter((cont) => cont.id === 3)[0];
+      //   return rev.container.id === container.id && rev.revision === container.currentRevision;
+      // }).map((rev) => rev.products.map((prod) => prod.product))[0]
+      //   .filter((prod) => (ctx.updatedProducts
+      //     .map((upd) => upd.product).includes(prod)));
 
       returnsAll(records, products);
     });
@@ -307,7 +284,7 @@ describe('ProductService', async (): Promise<void> => {
 
       // eslint-disable-next-line @typescript-eslint/naming-convention
       const { records, _pagination } = await ProductService
-        .getUpdatedProducts({}, { take, skip });
+        .getProducts({ updatedProducts: true }, { take, skip });
       const products = ctx.updatedProducts.map((prod) => prod.product);
 
       expect(_pagination.take).to.equal(take);
@@ -315,12 +292,28 @@ describe('ProductService', async (): Promise<void> => {
       expect(_pagination.count).to.equal(products.length);
       expect(records.length).to.be.at.most(take);
     });
-  });
+    it('should return the products belonging to a container revision that is not current', async () => {
+      const params: ProductFilterParameters = {
+        containerId: 1,
+        containerRevision: 2,
+      };
 
-  describe('getProductsPOS function', () => {
+      const { records } = await ProductService.getProducts(params);
+
+      const products = [1, 2, 5];
+      expect(records.map((prod) => prod.id)).to.deep.equalInAnyOrder(products);
+    });
+    it('should return an updated container', async () => {
+      const { records }: ProductResponse[] = await ProductService
+        .getProducts({ containerId: 4, updatedContainer: true });
+
+      const { products } = ctx.updatedContainers
+        .filter((cnt) => cnt.container.id === 4)[0];
+      returnsAll(records, products);
+    });
     it('should return the products belonging to a point of sale', async () => {
-      // eslint-disable-next-line @typescript-eslint/naming-convention
-      const { records, _pagination } = await ProductService.getProductsPOS({ pointOfSaleId: 1 });
+      const { records } = await ProductService
+        .getProducts({ pointOfSaleId: 1 });
 
       const { containers } = ctx.pointOfSaleRevisions.filter((pos) => (
         (pos.pointOfSale.id === 1 && pos.revision === pos.pointOfSale.currentRevision)))[0];
@@ -340,50 +333,6 @@ describe('ProductService', async (): Promise<void> => {
       }, []);
 
       returnsAllRevisions(records, filteredProducts);
-      expect(_pagination.take).to.be.undefined;
-      expect(_pagination.skip).to.be.undefined;
-      expect(_pagination.count).to.equal(filteredProducts.length);
-    });
-    it('should adhere to pagination', async () => {
-      const take = 5;
-      const skip = 2;
-
-      // eslint-disable-next-line @typescript-eslint/naming-convention
-      const { records, _pagination } = await ProductService
-        .getProductsPOS({ pointOfSaleId: 1 }, { take, skip });
-
-      const { containers } = ctx.pointOfSaleRevisions.filter((pos) => (
-        (pos.pointOfSale.id === 1 && pos.revision === pos.pointOfSale.currentRevision)))[0];
-
-      const productRevisions = (containers.map((p) => p.products.map((pr) => pr)))
-        .reduce((prev, cur) => prev.concat(cur));
-
-      const products = productRevisions.map((p) => ((
-        { product: p.product, revision: p.revision } as ProductWithRevision)));
-
-      const filteredProducts = products.reduce((acc: ProductWithRevision[], current) => {
-        if (!acc.some((item) => (
-          (item.product.id === current.product.id && item.revision === current.revision)))) {
-          acc.push(current);
-        }
-        return acc;
-      }, []);
-
-      expect(_pagination.take).to.equal(take);
-      expect(_pagination.skip).to.equal(skip);
-      expect(_pagination.count).to.equal(filteredProducts.length);
-      expect(records.length).to.be.at.most(take);
-    });
-  });
-
-  describe('getAllProducts function', () => {
-    it('should return an updated container', async () => {
-      const res: ProductResponse[] = await ProductService
-        .getAllProducts({ containerId: 4, updatedContainer: true });
-
-      const { products } = ctx.updatedContainers
-        .filter((cnt) => cnt.container.id === 4)[0];
-      returnsAll(res, products);
     });
   });
 

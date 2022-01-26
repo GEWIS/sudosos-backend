@@ -15,17 +15,20 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import User from '../entity/user/user';
-import { BaseUserResponse } from '../controller/response/user-response';
 
-// eslint-disable-next-line import/prefer-default-export
-export function parseUserToBaseResponse(user: User, timestamps: boolean): BaseUserResponse {
-  if (!user) return undefined;
-  return {
-    id: user.id,
-    firstName: user.firstName,
-    lastName: user.lastName,
-    createdAt: timestamps ? user.createdAt.toISOString() : undefined,
-    updatedAt: timestamps ? user.updatedAt.toISOString() : undefined,
-  } as BaseUserResponse;
+import { DineroObjectRequest } from './dinero-request';
+
+/**
+ * @typedef TransferRequest
+ * @property {string} description - Description of the transfer
+ * @property {Dinero.model} amount - Amount of money being transferred
+ * @property {integer} type - Type of transfer
+ * @property {integer} fromId - from which user the money is being transferred
+ * @property {integer} toId - to which user the money is being transferred.
+ */
+export default interface TransferRequest {
+  amount: DineroObjectRequest;
+  description: string;
+  fromId: number;
+  toId: number;
 }

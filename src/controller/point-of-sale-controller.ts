@@ -289,7 +289,7 @@ export default class PointOfSaleController extends BaseController {
 
     // Handle request
     try {
-      const products = await ProductService.getProductsPOS({
+      const products = await ProductService.getProducts({
         pointOfSaleId: parseInt(id, 10),
       }, { take, skip });
       res.json(products);

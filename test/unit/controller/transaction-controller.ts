@@ -170,7 +170,6 @@ describe('TransactionController', (): void => {
           update: all,
           delete: all,
         },
-
       },
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
     });

@@ -280,7 +280,7 @@ export default class ProductController extends BaseController {
 
     // Handle request
     try {
-      const products = await ProductService.getUpdatedProducts({}, { take, skip });
+      const products = await ProductService.getProducts({ updatedProducts: true }, { take, skip });
       res.json(products);
     } catch (error) {
       this.logger.error('Could not return all products:', error);
@@ -308,7 +308,7 @@ export default class ProductController extends BaseController {
     try {
       if (await Product.findOne(productId)) {
         res.json((await ProductService
-          .getUpdatedProducts({ productId: parseInt(id, 10) })).records[0]);
+          .getProducts({ updatedProducts: true, productId: parseInt(id, 10) })).records[0]);
       } else {
         res.status(404).json('Product not found.');
       }
