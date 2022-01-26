@@ -35,6 +35,7 @@ import { PointOfSaleResponse } from '../../../src/controller/response/point-of-s
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import { ContainerResponse } from '../../../src/controller/response/container-response';
 import { ProductResponse } from '../../../src/controller/response/product-response';
+import UpdatedPointOfSale from '../../../src/entity/point-of-sale/updated-point-of-sale';
 
 describe('PointOfSaleController', async () => {
   let ctx: {
@@ -213,6 +214,18 @@ describe('PointOfSaleController', async () => {
       expect(res.body).to.be.empty;
     });
   });
+  describe('GET /pointsofsale/:id/update', async () => {
+    it('should return an HTTP 200 and the update if admin', async () => {
+      const { id } = (await UpdatedPointOfSale.find({ relations: ['pointOfSale'] }))[0].pointOfSale;
+
+      const res = await request(ctx.app)
+        .get(`/pointsofsale/${id}/update`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(200);
+      expect(res.body.id).to.be.equal(id);
+    });
+  });
 
   describe('GET /pointsofsale/:id/containers', async () => {
     it('should return an HTTP 200 and the containers in the given point of sale if admin', async () => {
@@ -288,7 +301,7 @@ describe('PointOfSaleController', async () => {
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
       expect(res.status).to.equal(200);
-      expect(res.body).to.equal('');
+      expect(res.body.length).to.equal(0);
     });
   });
 });
