@@ -120,7 +120,7 @@ describe('ContainerController', async (): Promise<void> => {
     const specification = await Swagger.initialize(app);
 
     const all = { all: new Set<string>(['*']) };
-    const own = { own: new Set<string>(['*']) };
+    const own = { own: new Set<string>(['*']), public: new Set<string>(['*']) };
 
     const roleManager = new RoleManager();
     roleManager.registerRole({
@@ -141,7 +141,6 @@ describe('ContainerController', async (): Promise<void> => {
       name: 'User',
       permissions: {
         Container: {
-          create: own,
           get: own,
           update: own,
           delete: own,
@@ -195,28 +194,20 @@ describe('ContainerController', async (): Promise<void> => {
       expect(pagination.skip).to.equal(0);
       expect(pagination.count).to.equal(activeContainerCount);
     });
-    it('should return an HTTP 200 and public containers if not admin', async () => {
+    it('should return an HTTP 403 and no containers if not admin', async () => {
       const res = await request(ctx.app)
         .get('/containers')
         .set('Authorization', `Bearer ${ctx.token}`);
 
-      const containers = res.body.records as ContainerResponse[];
-
-      // Every container that has a current revision should be returned.
-      const publicContainerCount = await Container.count({ where: 'currentRevision AND public = 1' } as FindManyOptions);
-
-      expect(res.status).to.equal(200);
-
-      // forbidden code
-      expect(containers.length).to.equal(publicContainerCount);
+      expect(res.status).to.equal(403);
     });
     it('should adhere to pagination', async () => {
       const take = 5;
       const skip = 3;
       const res = await request(ctx.app)
-        .get('/containers')
-        .query({ take, skip })
-        .set('Authorization', `Bearer ${ctx.adminToken}`);
+          .get('/containers')
+          .query({ take, skip })
+          .set('Authorization', `Bearer ${ctx.adminToken}`);
 
       // number of banners returned is number of banners in database
       const containers = res.body.records as ContainerResponse[];
@@ -231,7 +222,7 @@ describe('ContainerController', async (): Promise<void> => {
     });
   });
   describe('GET /containers/:id', () => {
-    it('should return an HTTP 200 and the product with the given id if admin', async () => {
+    it('should return an HTTP 200 and the container with the given id if admin', async () => {
       const res = await request(ctx.app)
         .get('/containers/1')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
@@ -241,25 +232,36 @@ describe('ContainerController', async (): Promise<void> => {
       // success code
       expect(res.status).to.equal(200);
     });
-    it('should return an HTTP 200 and the container if the container is public and not admin', async () => {
-      const res = await request(ctx.app)
-        .get('/containers/3')
-        .set('Authorization', `Bearer ${ctx.token}`);
+    it('should return an HTTP 200 and the container with the given id if own container', async () => {
+      const { id } = await Container.findOne({ relations: ['owner'], where: { owner: ctx.localUser, public: false } });
 
-      expect((res.body as ContainerResponse).public).to.be.true;
-      expect((res.body as ContainerResponse).id).to.equal(3);
-
-      // success code
-      expect(res.status).to.equal(200);
-    });
-    it('should return an HTTP 200 and the container if the container is not public but the user is the owner', async () => {
       const res = await request(ctx.app)
-        .get('/containers/8')
+        .get(`/containers/${id}`)
         .set('Authorization', `Bearer ${ctx.token}`);
 
       expect((res.body as ContainerResponse).public).to.be.false;
       expect((res.body as ContainerResponse).owner.id).to.equal(ctx.localUser.id);
-      expect((res.body as ContainerResponse).id).to.equal(8);
+      expect((res.body as ContainerResponse).id).to.equal(id);
+
+      // success code
+      expect(res.status).to.equal(200);
+    });
+    it('should return an HTTP 200 and container if the container is public and not admin', async () => {
+      const { id } = await Container.findOne({ relations: ['owner'], where: { owner: ctx.adminUser, public: true } });
+
+      const res = await request(ctx.app)
+        .get(`/containers/${id}`)
+        .set('Authorization', `Bearer ${ctx.token}`);
+
+      // succes code
+      expect(res.status).to.equal(200);
+    });
+    it('should return an HTTP 200 and the container if the container is not public but the user is the owner', async () => {
+      const { id } = await Container.findOne({ relations: ['owner'], where: { owner: ctx.localUser, public: false } });
+
+      const res = await request(ctx.app)
+        .get(`/containers/${id}`)
+        .set('Authorization', `Bearer ${ctx.token}`);
 
       // success code
       expect(res.status).to.equal(200);
@@ -304,35 +306,19 @@ describe('ContainerController', async (): Promise<void> => {
       expect(res.status).to.equal(200);
     });
     it('should return an HTTP 403 if container not public or own and if not admin', async () => {
-      const containerId = 2;
-      const container = await request(ctx.app)
-        .get(`/containers/${containerId}`)
-        .set('Authorization', `Bearer ${ctx.adminToken}`);
-
-      // Sanity check
-      expect((container.body as ContainerResponse).public).to.be.false;
-      expect((container.body as ContainerResponse).owner.id).to.not.equal(ctx.localUser.id);
-
+      const { id } = await Container.findOne({ relations: ['owner'], where: { owner: ctx.adminUser, public: true } });
       const res = await request(ctx.app)
-        .get(`/containers/${containerId}/products`)
-        .set('Authorization', `Bearer ${ctx.token}`);
+        .get(`/containers/${id}/products`)
+        .set('Authorization', `Bearer ${ctx.localUser}`);
 
       expect(res.status).to.equal(403);
-      expect(res.body).to.be.equal('Incorrect permissions to get container.');
     });
-    it('should return an HTTP 200 and all the products in the container is public and if not admin', async () => {
-      const containerId = 1;
-      const container = await request(ctx.app)
-        .get(`/containers/${containerId}`)
-        .set('Authorization', `Bearer ${ctx.adminToken}`);
-
-      // Sanity check
-      expect((container.body as ContainerResponse).public).to.be.true;
-      expect((container.body as ContainerResponse).owner.id).to.not.equal(ctx.localUser.id);
+    it('should return an HTTP 200 and all the products in the container if public and if admin', async () => {
+      const { id } = await Container.findOne({ relations: ['owner'], where: { owner: ctx.localUser, public: true } });
 
       const res = await request(ctx.app)
-        .get(`/containers/${containerId}/products`)
-        .set('Authorization', `Bearer ${ctx.token}`);
+        .get(`/containers/${id}/products`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
 
       expect(res.status).to.equal(200);
     });
@@ -522,17 +508,26 @@ describe('ContainerController', async (): Promise<void> => {
       // success code
       expect(res.status).to.equal(404);
     });
-    it('should return an HTTP 403 if not admin', async () => {
+    it('should return an HTTP 403 if not admin nor owner and not public', async () => {
+      const { id } = await Container.findOne({ relations: ['owner'], where: { owner: ctx.adminUser, public: false } });
+
       const res = await request(ctx.app)
-        .patch('/containers/1')
+        .patch(`/containers/${id}`)
         .set('Authorization', `Bearer ${ctx.token}`)
         .send(ctx.validContainerReq);
 
-      // check if banner is not returned
-      expect(res.body).to.be.empty;
-
       // success code
       expect(res.status).to.equal(403);
+    });
+  });
+  describe('GET /containers/public', () => {
+    it('should return an HTTP 200 and all public containers', async () => {
+      const res = await request(ctx.app)
+        .get('/containers/public')
+        .set('Authorization', `Bearer ${ctx.token}`);
+
+      (res.body as ContainerResponse[]).every(async (container) => (expect(container.public).true));
+      expect(res.status).to.equal(200);
     });
   });
   describe('GET /containers/:id/update', () => {
@@ -546,7 +541,18 @@ describe('ContainerController', async (): Promise<void> => {
       expect((res.body as ContainerWithProductsResponse)).to.exist;
       expect(res.status).to.equal(200);
     });
-    it('should return an HTTP 404 fi the container with the given id does not exist', async () => {
+    it('should return an HTTP 200 and the updated container if container is own', async () => {
+      const updatedContainers = (await UpdatedContainer.find({ relations: ['container'] })).map((c) => c.container.id);
+      const { id } = (await Container.findByIds(updatedContainers, { relations: ['owner'], where: { owner: ctx.localUser, public: true } }))[0];
+
+      const res = await request(ctx.app)
+        .get(`/containers/${id}/update`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect((res.body as ContainerWithProductsResponse)).to.exist;
+      expect(res.status).to.equal(200);
+    });
+    it('should return an HTTP 404 if the container with the given id does not exist', async () => {
       const res = await request(ctx.app)
         .get(`/containers/${(await Container.count()) + 2}/update`)
         .set('Authorization', `Bearer ${ctx.adminToken}`);
@@ -571,25 +577,12 @@ describe('ContainerController', async (): Promise<void> => {
       expect(res.status).to.equal(200);
     });
     it('should return an HTTP 403 if not visible', async () => {
-      const id = 6;
-
-      const admin = await request(ctx.app)
-        .get(`/containers/${id}/update`)
-        .set('Authorization', `Bearer ${ctx.adminToken}`);
-
-      const container: ContainerWithProductsResponse = admin.body as ContainerWithProductsResponse;
-
-      // Sanity checks
-      expect(container.public).to.be.false;
-      expect(container.owner.id).to.not.eq(ctx.localUser.id);
+      const { id } = await Container.findOne({ relations: ['owner'], where: { owner: ctx.adminUser, public: false } });
 
       const res = await request(ctx.app)
         .get(`/containers/${id}/update`)
         .set('Authorization', `Bearer ${ctx.token}`);
 
-      // sanity check / precondition
-      expect(await UpdatedContainer.findOne(4)).to.exist;
-      expect(res.body).to.equal('Incorrect permissions to get container.');
       expect(res.status).to.equal(403);
     });
   });
@@ -615,10 +608,17 @@ describe('ContainerController', async (): Promise<void> => {
       expect(pagination.skip).to.equal(0);
       expect(pagination.count).to.equal(count);
     });
-    it('should return an HTTP 200 and all the visible updated containers if not admin', async () => {
+    it('should return an HTTP 403 and no containers if not admin', async () => {
       const res = await request(ctx.app)
         .get('/containers/updated')
         .set('Authorization', `Bearer ${ctx.token}`);
+
+      expect(res.status).to.equal(403);
+    });
+    it('should return an HTTP 200 and all the visible updated containers if not admin', async () => {
+      const res = await request(ctx.app)
+          .get('/containers/updated')
+          .set('Authorization', `Bearer ${ctx.token}`);
 
       const containers = res.body.records as ContainerResponse[];
       const ids = containers.map((c) => c.id);
@@ -627,7 +627,7 @@ describe('ContainerController', async (): Promise<void> => {
       expect(exist).to.be.true;
 
       const visible = containers.every(async (container) => (
-        !(container.public === false && container.owner.id !== ctx.localUser.id)));
+          !(container.public === false && container.owner.id !== ctx.localUser.id)));
 
       expect(visible).to.be.true;
     });
@@ -635,9 +635,9 @@ describe('ContainerController', async (): Promise<void> => {
       const take = 5;
       const skip = 3;
       const res = await request(ctx.app)
-        .get('/containers/updated')
-        .query({ take, skip })
-        .set('Authorization', `Bearer ${ctx.adminToken}`);
+          .get('/containers/updated')
+          .query({ take, skip })
+          .set('Authorization', `Bearer ${ctx.adminToken}`);
 
       // number of banners returned is number of banners in database
       const containers = res.body.records as ContainerResponse[];
