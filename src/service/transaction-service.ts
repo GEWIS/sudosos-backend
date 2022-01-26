@@ -47,6 +47,7 @@ import { asDate, asNumber } from '../helpers/validators';
 import { PaginationParameters } from '../helpers/pagination';
 
 export interface TransactionFilterParameters {
+  transactionId?: number,
   fromId?: number,
   createdById?: number,
   toId?: number,
@@ -68,6 +69,7 @@ export function parseGetTransactionsFilters(req: RequestWithToken): TransactionF
   }
 
   const filters: TransactionFilterParameters = {
+    transactionId: asNumber(req.query.transactionId),
     fromId: asNumber(req.query.fromId),
     createdById: asNumber(req.query.createdById),
     toId: asNumber(req.query.toId),
@@ -105,6 +107,19 @@ export default class TransactionService {
     const totalCost = rowCosts.reduce((total, current) => total.add(current));
 
     return totalCost;
+  }
+
+  /**
+   * Gets all BaseTransactions form a list of IDs
+   * @param ids - The Transaction IDs to return
+   */
+  public static async getTransactionsFromIds(ids: number[]): Promise<BaseTransactionResponse[]> {
+    const transactions = await Promise.all(ids.map(async (transactionId) => {
+      const transaction = await TransactionService.getTransactions({ transactionId });
+
+      return transaction.records[0];
+    }));
+    return transactions;
   }
 
   /**
@@ -477,6 +492,7 @@ export default class TransactionService {
 
     function applySubTransactionFilters(query: SelectQueryBuilder<any>): SelectQueryBuilder<any> {
       const mapping: FilterMapping = {
+        transactionId: 'transaction.id',
         toId: 'subTransaction.toId',
         pointOfSaleId: 'transaction.pointOfSalePointOfSale',
         pointOfSaleRevision: 'transaction.pointOfSaleRevision',

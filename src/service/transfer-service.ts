@@ -34,7 +34,7 @@ export interface TransferFilterParameters {
 }
 
 export default class TransferService {
-  private static asTransferResponse(transfer: Transfer) : TransferResponse {
+  public static asTransferResponse(transfer: Transfer) : TransferResponse {
     return {
       amount: transfer.amount.toObject(),
       from: parseUserToBaseResponse(transfer.from, false),

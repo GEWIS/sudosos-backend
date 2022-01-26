@@ -21,7 +21,7 @@ import { expect } from 'chai';
 import { Connection } from 'typeorm';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import log4js, { Logger } from 'log4js';
-import { DineroObject } from 'dinero.js';
+import dinero, { DineroObject } from 'dinero.js';
 import Transaction from '../../../src/entity/transactions/transaction';
 import Database from '../../../src/database/database';
 import seedDatabase from '../../seed';
@@ -34,6 +34,71 @@ import SubTransactionRow from '../../../src/entity/transactions/sub-transaction-
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
 import ContainerRevision from '../../../src/entity/container/container-revision';
 import User from '../../../src/entity/user/user';
+import TransferRequest from '../../../src/controller/request/transfer-request';
+import TransferService from '../../../src/service/transfer-service';
+import RevisionRequest from '../../../src/controller/request/revision-request';
+import { DineroObjectRequest } from '../../../src/controller/request/dinero-request';
+import {
+  PointOfSaleWithContainersResponse,
+} from '../../../src/controller/response/point-of-sale-response';
+import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
+import PointOfSaleService from '../../../src/service/point-of-sale-service';
+
+/**
+ * Function that generates a valid Transaction.
+ * @param byId - User who created the Transaction.
+ * @param pointOfSale - Point of sale that was used.
+ */
+export default async function createValidTransactionRequest(
+  byId: number, pointOfSale: PointOfSaleWithContainersResponse,
+): Promise<TransactionRequest> {
+  const productRevision = pointOfSale.containers[0].products[0];
+  const containerRevision = pointOfSale.containers[0];
+
+  expect(productRevision).to.not.be.undefined;
+  expect(containerRevision).to.not.be.undefined;
+
+  const amount = 5;
+  const subTransactionRowRequest: SubTransactionRowRequest = {
+    amount,
+    price: {
+      amount: productRevision.price.amount * amount,
+      currency: productRevision.price.currency,
+      precision: productRevision.price.precision,
+    } as DineroObjectRequest,
+    product: {
+      id: productRevision.id,
+      revision: productRevision.revision,
+    } as RevisionRequest,
+  };
+
+  const subTransactionRequest: SubTransactionRequest = {
+    to: productRevision.owner.id,
+    container: {
+      id: containerRevision.id,
+      revision: containerRevision.revision,
+    },
+    subTransactionRows: [subTransactionRowRequest],
+    price: {
+      amount: subTransactionRowRequest.price.amount,
+      currency: productRevision.price.currency,
+      precision: productRevision.price.precision,
+    },
+  } as SubTransactionRequest;
+
+  const transactionRequest: TransactionRequest = {
+    createdBy: byId,
+    from: byId,
+    pointOfSale: {
+      id: pointOfSale.id,
+      revision: pointOfSale.revision,
+    } as RevisionRequest,
+    price: subTransactionRequest.price,
+    subTransactions: [subTransactionRequest],
+  };
+
+  return transactionRequest;
+}
 
 describe('TransactionService', (): void => {
   let ctx: {
@@ -58,6 +123,17 @@ describe('TransactionService', (): void => {
     const app = express();
     const { transactions, users } = await seedDatabase();
 
+    const transferRequest: TransferRequest = {
+      amount: {
+        amount: 1000,
+        precision: dinero.defaultPrecision,
+        currency: dinero.defaultCurrency,
+      },
+      description: 'Magie',
+      fromId: 0,
+      toId: 7,
+    };
+    await TransferService.postTransfer(transferRequest);
     const validTransReq = {
       from: 7,
       createdBy: 7,
@@ -838,6 +914,19 @@ describe('TransactionService', (): void => {
             .to.eql(updateReq.subTransactions[i].subTransactionRows[j].price);
         }
       }
+    });
+  });
+
+  describe('createValidTransactionRequest function', () => {
+    it('should return a valid TransactionRequest', async () => {
+      const pointOfSaleId = (await PointOfSale.findOne({ where: 'currentRevision' })).id;
+      const pos = (await PointOfSaleService.getPointsOfSale(
+        { pointOfSaleId, returnContainers: true },
+      )).records[0];
+      const transaction = await createValidTransactionRequest(
+        1, pos as PointOfSaleWithContainersResponse,
+      );
+      expect(await TransactionService.verifyTransaction(transaction)).to.be.true;
     });
   });
 });

@@ -30,10 +30,12 @@ import InvoiceEntry from '../entity/invoices/invoice-entry';
 import CreateInvoiceRequest from '../controller/request/create-invoice-request';
 import User from '../entity/user/user';
 import Transaction from '../entity/transactions/transaction';
-import TransferService from "./transfer-service";
-import TransferRequest from "../controller/request/transfer-request";
-import BalanceService from "./balance-service";
-import TransactionService from "./transaction-service";
+import TransferService from './transfer-service';
+import TransferRequest from '../controller/request/transfer-request';
+import TransactionService from './transaction-service';
+import { DineroObjectRequest } from '../controller/request/dinero-request';
+import { TransferResponse } from '../controller/response/transfer-response';
+import { BaseTransactionResponse } from '../controller/response/transaction-response';
 
 export interface InvoiceFilterParameters {
   /**
@@ -90,6 +92,7 @@ export default class InvoiceService {
       updatedAt: invoice.updatedAt.toISOString(),
       to: parseUserToBaseResponse(invoice.to, false),
       addressee: invoice.addressee,
+      transfer: TransferService.asTransferResponse(invoice.transfer),
       description: invoice.description,
       currentState: InvoiceService.asInvoiceStatusResponse(invoice.invoiceStatus[0]),
     } as BaseInvoiceResponse;
@@ -107,8 +110,81 @@ export default class InvoiceService {
     } as InvoiceResponse;
   }
 
-  // public static async createInvoice(toId: number, invoice: CreateInvoiceRequest): Promise<InvoiceResponse> {
+  /**
+   * Creates a Transfer for an Invoice from TransactionResponses
+   * @param toId - The user which receives the Invoice/Transfer
+   * @param transactions - The array of transactions which to create the Transfer for
+   */
+  public static async createTransferFromTransactions(toId: number,
+    transactions: BaseTransactionResponse[]): Promise<TransferResponse> {
+    const dineroObjectRequest: DineroObjectRequest = { ...transactions[0].value, amount: 0 };
+    transactions.forEach((t) => { dineroObjectRequest.amount += t.value.amount; });
+
+    const transferRequest: TransferRequest = {
+      amount: dineroObjectRequest,
+      description: 'Invoice Transfer',
+      fromId: 0,
+      toId,
+    };
+
+    return TransferService.postTransfer(transferRequest);
+  }
+
+  // static async getLatestInvoice(toId: number): Promise<Invoice> {
+  //
   // }
+  //
+  // static async createTransferFromHistory(toId: number): Promise<TransferResponse> {
+  //   await Invoice.find();
+  // }
+
+  /**
+   * Creates an Invoice from an CreateInvoiceRequest
+   * @param byId - User who created the Invoice
+   * @param toId - User who receives the Invoice
+   * @param invoiceRequest - The Invoice request to create
+   */
+  public static async createInvoice(byId:number, toId: number, invoiceRequest: CreateInvoiceRequest)
+    : Promise<BaseInvoiceResponse> {
+    let transfer: TransferResponse;
+
+    // If transactions are specified.
+    if (invoiceRequest.transactionIDs) {
+      const transactions = await TransactionService.getTransactionsFromIds(
+        invoiceRequest.transactionIDs,
+      );
+      transfer = await this.createTransferFromTransactions(toId, transactions);
+    }
+
+    // Create a new Invoice
+    const newInvoice: Invoice = Object.assign(new Invoice(), {
+      to: toId,
+      transfer: transfer.id,
+      addressee: invoiceRequest.addressee,
+      invoiceStatus: [],
+      invoiceEntries: [],
+      description: invoiceRequest.description,
+    });
+
+    // Create a new InvoiceStatus
+    const invoiceStatus: InvoiceStatus = Object.assign(new InvoiceStatus(), {
+      invoice: newInvoice,
+      changedBy: byId,
+      state: InvoiceState.CREATED,
+      dateChanged: new Date(),
+    });
+
+    // First save the Invoice, then the status.
+    await Invoice.save(newInvoice).then(async () => {
+      newInvoice.invoiceStatus.push(invoiceStatus);
+      await InvoiceStatus.save(invoiceStatus);
+    });
+
+    // Return the newly created Invoice.
+    return (await this.getInvoices(
+      { invoiceId: newInvoice.id },
+    ))[0];
+  }
 
   /**
    * Function that returns all the invoices based on the given params.
@@ -126,7 +202,7 @@ export default class InvoiceService {
 
     const options: FindManyOptions = {
       where: QueryFilter.createFilterWhereClause(filterMapping, params),
-      relations: ['to', 'invoiceStatus'],
+      relations: ['to', 'invoiceStatus', 'transfer', 'transfer.to', 'transfer.from'],
     };
 
     // Case distinction on if we want to return entries or not.

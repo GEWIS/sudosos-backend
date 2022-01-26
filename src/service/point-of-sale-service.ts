@@ -118,7 +118,7 @@ export default class PointOfSaleService {
     );
 
     return {
-      ...pointOfSale,
+      ...pointOfSale as PointOfSaleResponse,
       containers,
     };
   }
@@ -178,6 +178,7 @@ export default class PointOfSaleService {
       this.buildGetPointsOfSaleQuery(filters).getCount(),
     ]);
 
+    let records;
     if (filters.returnContainers) {
       const pointOfSales: PointOfSaleWithContainersResponse[] = [];
       await Promise.all(results[0].map(
@@ -189,9 +190,11 @@ export default class PointOfSaleService {
           );
         },
       ));
+      records = pointOfSales;
+    } else {
+      records = results[0].map((rawPointOfSale) => this.asPointOfSaleResponse(rawPointOfSale));
     }
 
-    const records = results[0].map((rawPointOfSale) => this.asPointOfSaleResponse(rawPointOfSale));
     return {
       _pagination: {
         take, skip, count: results[1],

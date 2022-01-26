@@ -19,6 +19,7 @@ import { DineroObject } from 'dinero.js';
 import BaseResponse from './base-response';
 import { BaseUserResponse } from './user-response';
 import { InvoiceState } from '../../entity/invoices/invoice-status';
+import {TransferResponse} from "./transfer-response";
 
 /**
  * @typedef InvoiceStatusResponse
@@ -55,6 +56,7 @@ export interface BaseInvoiceResponse extends BaseResponse {
   to: BaseUserResponse,
   addressee: string,
   description: string,
+  transfer: TransferResponse,
   currentState: InvoiceStatusResponse,
 }
 

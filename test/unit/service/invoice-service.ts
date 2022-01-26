@@ -21,7 +21,7 @@ import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
 import chai, { expect } from 'chai';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
-import User from '../../../src/entity/user/user';
+import User, { UserType } from '../../../src/entity/user/user';
 import Invoice from '../../../src/entity/invoices/invoice';
 import Database from '../../../src/database/database';
 import {
@@ -42,6 +42,15 @@ import InvoiceService from '../../../src/service/invoice-service';
 import InvoiceEntry from '../../../src/entity/invoices/invoice-entry';
 import CreateInvoiceRequest from '../../../src/controller/request/create-invoice-request';
 import Transaction from '../../../src/entity/transactions/transaction';
+import { TransferResponse } from '../../../src/controller/response/transfer-response';
+import TransactionService from '../../../src/service/transaction-service';
+import { BaseTransactionResponse } from '../../../src/controller/response/transaction-response';
+import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
+import createValidTransactionRequest from './transaction-service';
+import PointOfSaleService from '../../../src/service/point-of-sale-service';
+import { PointOfSaleWithContainersResponse } from '../../../src/controller/response/point-of-sale-response';
+import BalanceService from '../../../src/service/balance-service';
+import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -206,6 +215,55 @@ describe('InvoiceService', () => {
 
       const valid = await InvoiceService.verifyInvoiceRequest(createInvoiceRequest);
       expect(valid).to.be.false;
+    });
+  });
+  describe('createTransferFromTransactions function', () => {
+    it('should return a correct Transfer', async () => {
+      const toId = (await User.findOne()).id;
+      const transactions: BaseTransactionResponse[] = (
+        await TransactionService.getTransactions({ fromId: toId })).records;
+      let value = 0;
+      transactions.forEach((t) => { value += t.value.amount; });
+
+      expect(transactions).to.not.be.empty;
+      const transfer: TransferResponse = (
+        await InvoiceService.createTransferFromTransactions(toId, transactions));
+      expect(transfer.amount.amount).to.be.equal(value);
+      expect(transfer.to.id).to.be.equal(toId);
+    });
+  });
+  describe('createInvoice function', () => {
+    it('should create Invoice from transactions', async () => {
+      const user = await User.save({
+        firstName: 'User',
+        type: UserType.MEMBER,
+        active: true,
+      } as User);
+
+      const pointOfSaleId = (await PointOfSaleRevision.findOne({ relations: ['pointOfSale'] })).pointOfSale.id;
+      const pos = (await PointOfSaleService.getPointsOfSale(
+        { pointOfSaleId, returnContainers: true },
+      )).records[0];
+
+      const transaction = await createValidTransactionRequest(
+        user.id, pos as PointOfSaleWithContainersResponse,
+      );
+
+      expect(await BalanceService.getBalance(user.id)).is.equal(0);
+      expect(await TransactionService.verifyTransaction(transaction)).to.be.true;
+
+      const transactionResponse = await TransactionService.createTransaction(transaction);
+      expect(await BalanceService.getBalance(user.id)).is.equal(-1 * transaction.price.amount);
+
+      const createInvoiceRequest: CreateInvoiceRequest = {
+        addressee: 'Addressee',
+        description: 'Description',
+        toId: user.id,
+        transactionIDs: [transactionResponse.id],
+      };
+      const invoice = await InvoiceService.createInvoice(user.id, user.id, createInvoiceRequest);
+      console.error(invoice);
+      expect(await BalanceService.getBalance(user.id)).is.equal(0);
     });
   });
 });

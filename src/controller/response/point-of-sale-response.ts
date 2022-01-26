@@ -50,7 +50,7 @@ export interface PointOfSaleResponse extends BasePointOfSaleResponse {
  */
 export interface PaginatedPointOfSaleResponse {
   _pagination: PaginationResult,
-  records: PointOfSaleResponse[],
+  records: (PointOfSaleResponse | PointOfSaleWithContainersResponse)[],
 }
 
 /**
@@ -82,6 +82,6 @@ export interface PaginatedUpdatedPointOfSaleResponse {
  * @property {Array.<ContainerWithProductsResponse>} containers.required - The containers
  * in the point-of-sale.
  */
-export interface PointOfSaleWithContainersResponse extends BasePointOfSaleResponse {
+export interface PointOfSaleWithContainersResponse extends PointOfSaleResponse {
   containers: ContainerWithProductsResponse[],
 }
