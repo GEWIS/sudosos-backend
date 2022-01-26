@@ -21,8 +21,7 @@ import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import ContainerService from '../service/container-service';
-import { ContainerResponse } from './response/container-response';
-import ContainerService from '../service/container-service';
+import { PaginatedContainerResponse } from './response/container-response';
 import ContainerRevision from '../entity/container/container-revision';
 import ProductService from '../service/product-service';
 import ContainerRequest from './request/container-request';
@@ -31,7 +30,6 @@ import Container from '../entity/container/container';
 import UnapprovedProductError from '../entity/errors/unapproved-product-error';
 import { asNumber } from '../helpers/validators';
 import { parseRequestPagination } from '../helpers/pagination';
-import { PaginatedContainerResponse } from './response/container-response';
 
 export default class ContainerController extends BaseController {
   private logger: Logger = log4js.getLogger('ContainerController');
@@ -123,7 +121,9 @@ export default class ContainerController extends BaseController {
 
     // Handle request
     try {
-      const containers: PaginatedContainerResponse[] = await ContainerService.getContainers({}, { take, skip });
+      const containers: PaginatedContainerResponse = await ContainerService.getContainers(
+        {}, { take, skip },
+      );
       res.json(containers);
     } catch (error) {
       this.logger.error('Could not return all containers:', error);

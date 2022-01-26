@@ -237,19 +237,23 @@ describe('ContainerService', async (): Promise<void> => {
       expect(ctx.containers[0].public).to.be.true;
       const user = ctx.containers[0].owner.id + 1;
 
-      expect(await ContainerService.canViewContainer(user, ctx.containers[0].id)).to.be.true;
+      expect((await ContainerService.canViewContainer(user, ctx.containers[0].id))
+        .public).to.be.true;
     });
     it('should return true if the user is the owner of private container', async () => {
-      expect(ctx.containers[1].public).to.be.false;
-      expect(await ContainerService.canViewContainer(
-        ctx.containers[1].owner.id, ctx.containers[1].id,
-      )).to.be.true;
+      const container = await Container.findOne({ where: { public: false }, relations: ['owner'] });
+      expect((await ContainerService.canViewContainer(
+        container.owner.id, container.id,
+      )).own).to.be.true;
     });
     it('should return false if the user is not the owner and container is private', async () => {
+      const container = await Container.findOne({ where: { public: false }, relations: ['owner'] });
       expect(ctx.containers[1].public).to.be.false;
-      expect(await ContainerService.canViewContainer(
-        ctx.containers[1].owner.id + 1, ctx.containers[1].id,
-      )).to.be.false;
+      const visibility = await ContainerService.canViewContainer(
+        container.owner.id + 1, container.id,
+      );
+      expect(visibility.own).to.be.false;
+      expect(visibility.public).to.be.false;
     });
   });
 });

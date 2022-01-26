@@ -31,7 +31,11 @@ import TokenMiddleware from '../../../src/middleware/token-middleware';
 import ContainerRequest from '../../../src/controller/request/container-request';
 import ContainerController from '../../../src/controller/container-controller';
 import Container from '../../../src/entity/container/container';
-import { ContainerResponse, ContainerWithProductsResponse } from '../../../src/controller/response/container-response';
+import {
+  ContainerResponse,
+  ContainerWithProductsResponse,
+  PaginatedContainerResponse,
+} from '../../../src/controller/response/container-response';
 import { ProductResponse } from '../../../src/controller/response/product-response';
 import UpdatedContainer from '../../../src/entity/container/updated-container';
 import UpdatedProduct from '../../../src/entity/product/updated-product';
@@ -205,9 +209,9 @@ describe('ContainerController', async (): Promise<void> => {
       const take = 5;
       const skip = 3;
       const res = await request(ctx.app)
-          .get('/containers')
-          .query({ take, skip })
-          .set('Authorization', `Bearer ${ctx.adminToken}`);
+        .get('/containers')
+        .query({ take, skip })
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
 
       // number of banners returned is number of banners in database
       const containers = res.body.records as ContainerResponse[];
@@ -526,7 +530,9 @@ describe('ContainerController', async (): Promise<void> => {
         .get('/containers/public')
         .set('Authorization', `Bearer ${ctx.token}`);
 
-      (res.body as ContainerResponse[]).every(async (container) => (expect(container.public).true));
+      (res.body as PaginatedContainerResponse).records.every(
+        async (container) => (expect(container.public).true),
+      );
       expect(res.status).to.equal(200);
     });
   });
@@ -615,29 +621,25 @@ describe('ContainerController', async (): Promise<void> => {
 
       expect(res.status).to.equal(403);
     });
-    it('should return an HTTP 200 and all the visible updated containers if not admin', async () => {
+    it('should return an HTTP 200 and all the visible updated containers if admin', async () => {
       const res = await request(ctx.app)
-          .get('/containers/updated')
-          .set('Authorization', `Bearer ${ctx.token}`);
+        .get('/containers/updated')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
 
       const containers = res.body.records as ContainerResponse[];
       const ids = containers.map((c) => c.id);
 
       const exist = await ids.every(async (id) => UpdatedContainer.findOne(id));
       expect(exist).to.be.true;
-
-      const visible = containers.every(async (container) => (
-          !(container.public === false && container.owner.id !== ctx.localUser.id)));
-
-      expect(visible).to.be.true;
+      expect(res.status).to.equal(200);
     });
     it('should adhere to pagination', async () => {
       const take = 5;
       const skip = 3;
       const res = await request(ctx.app)
-          .get('/containers/updated')
-          .query({ take, skip })
-          .set('Authorization', `Bearer ${ctx.adminToken}`);
+        .get('/containers/updated')
+        .query({ take, skip })
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
 
       // number of banners returned is number of banners in database
       const containers = res.body.records as ContainerResponse[];
