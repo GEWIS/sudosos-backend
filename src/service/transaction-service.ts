@@ -295,7 +295,6 @@ export default class TransactionService {
     const verification = await Promise.all(req.subTransactions.map(
       async (sub) => this.verifySubTransaction(sub, pointOfSale, isUpdate),
     ));
-
     return !verification.includes(false);
   }
 

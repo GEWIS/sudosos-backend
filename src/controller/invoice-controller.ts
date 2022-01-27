@@ -119,6 +119,5 @@ export default class InvoiceController extends BaseController {
   public async createInvoice(req: RequestWithToken, res: Response): Promise<void> {
     const body = req.body as CreateInvoiceRequest;
     this.logger.trace('Create Invoice', body, 'by user', req.token.user);
-
   }
 }

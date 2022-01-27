@@ -21,7 +21,7 @@ import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
 import chai, { expect } from 'chai';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
-import User, { UserType } from '../../../src/entity/user/user';
+import User from '../../../src/entity/user/user';
 import Invoice from '../../../src/entity/invoices/invoice';
 import Database from '../../../src/database/database';
 import {
@@ -45,12 +45,10 @@ import Transaction from '../../../src/entity/transactions/transaction';
 import { TransferResponse } from '../../../src/controller/response/transfer-response';
 import TransactionService from '../../../src/service/transaction-service';
 import { BaseTransactionResponse } from '../../../src/controller/response/transaction-response';
-import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
-import createValidTransactionRequest from './transaction-service';
-import PointOfSaleService from '../../../src/service/point-of-sale-service';
-import { PointOfSaleWithContainersResponse } from '../../../src/controller/response/point-of-sale-response';
 import BalanceService from '../../../src/service/balance-service';
-import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
+import { createValidTransactionRequest } from '../../helpers/transaction-factory';
+import { inUserContext, UserFactory } from '../../helpers/user-factory';
+import { TransactionRequest } from '../../../src/controller/request/transaction-request';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -234,36 +232,60 @@ describe('InvoiceService', () => {
   });
   describe('createInvoice function', () => {
     it('should create Invoice from transactions', async () => {
-      const user = await User.save({
-        firstName: 'User',
-        type: UserType.MEMBER,
-        active: true,
-      } as User);
+      await inUserContext(await UserFactory().clone(2), async (debtor: User, creditor: User) => {
+        const transaction = await createValidTransactionRequest(
+          debtor.id, creditor.id,
+        );
 
-      const pointOfSaleId = (await PointOfSaleRevision.findOne({ relations: ['pointOfSale'] })).pointOfSale.id;
-      const pos = (await PointOfSaleService.getPointsOfSale(
-        { pointOfSaleId, returnContainers: true },
-      )).records[0];
+        expect(await BalanceService.getBalance(debtor.id)).is.equal(0);
+        expect(await TransactionService.verifyTransaction(transaction)).to.be.true;
+        const transactionResponse = await TransactionService.createTransaction(transaction);
+        expect(await BalanceService.getBalance(debtor.id)).is.equal(-1 * transaction.price.amount);
 
-      const transaction = await createValidTransactionRequest(
-        user.id, pos as PointOfSaleWithContainersResponse,
-      );
+        const createInvoiceRequest: CreateInvoiceRequest = {
+          addressee: 'Addressee',
+          description: 'Description',
+          toId: debtor.id,
+          transactionIDs: [transactionResponse.id],
+        };
 
-      expect(await BalanceService.getBalance(user.id)).is.equal(0);
-      expect(await TransactionService.verifyTransaction(transaction)).to.be.true;
+        await InvoiceService.createInvoice(debtor.id, debtor.id, createInvoiceRequest);
+        expect(await BalanceService.getBalance(debtor.id)).is.equal(0);
+      });
+    });
+    it('should create Invoice from multiple transactions', async () => {
+      await inUserContext(await UserFactory().clone(2), async (debtor: User, creditor: User) => {
+        const count = 2;
+        const transactions: TransactionRequest[] = [];
+        await Promise.all([].fill(0, 0, count).map(async () => {
+          const t = await createValidTransactionRequest(
+            debtor.id, creditor.id,
+          );
+          return transactions.push(t);
+        }));
 
-      const transactionResponse = await TransactionService.createTransaction(transaction);
-      expect(await BalanceService.getBalance(user.id)).is.equal(-1 * transaction.price.amount);
+        expect(await BalanceService.getBalance(debtor.id)).is.equal(0);
 
-      const createInvoiceRequest: CreateInvoiceRequest = {
-        addressee: 'Addressee',
-        description: 'Description',
-        toId: user.id,
-        transactionIDs: [transactionResponse.id],
-      };
-      const invoice = await InvoiceService.createInvoice(user.id, user.id, createInvoiceRequest);
-      console.error(invoice);
-      expect(await BalanceService.getBalance(user.id)).is.equal(0);
+        const tIds: number[] = [];
+        let cost = 0;
+        await Promise.all(transactions.map(async (t) => {
+          const transactionResponse = await TransactionService.createTransaction(t);
+          cost += transactionResponse.price.amount;
+          tIds.push(transactionResponse.id);
+        }));
+
+        expect(await BalanceService.getBalance(debtor.id)).is.equal(-1 * cost);
+
+        const createInvoiceRequest: CreateInvoiceRequest = {
+          addressee: 'Addressee',
+          description: 'Description',
+          toId: debtor.id,
+          transactionIDs: tIds,
+        };
+
+        await InvoiceService.createInvoice(debtor.id, debtor.id, createInvoiceRequest);
+        expect(await BalanceService.getBalance(debtor.id)).is.equal(0);
+      });
     });
   });
 });

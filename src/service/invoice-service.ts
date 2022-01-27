@@ -58,7 +58,7 @@ export interface InvoiceFilterParameters {
 
 export default class InvoiceService {
   /**
-   * Parses a InvoiceEntry Object to a InvoiceEntryResponse
+   * Parses an InvoiceEntry Object to a InvoiceEntryResponse
    * @param invoiceEntries - The invoiceEntries to parse
    */
   private static asInvoiceEntryResponse(invoiceEntries: InvoiceEntry): InvoiceEntryResponse {
@@ -70,7 +70,7 @@ export default class InvoiceService {
   }
 
   /**
-   * Parses a invoiceStatus Object to a InvoiceStatusResponse
+   * Parses an invoiceStatus Object to a InvoiceStatusResponse
    * @param invoiceStatus - The invoiceStatus to parse
    */
   private static asInvoiceStatusResponse(invoiceStatus: InvoiceStatus): InvoiceStatusResponse {
@@ -82,7 +82,7 @@ export default class InvoiceService {
   }
 
   /**
-   * Parses a Invoice Object to a BaseInvoiceResponse
+   * Parses an Invoice Object to a BaseInvoiceResponse
    * @param invoice - The Invoice to parse
    */
   private static asBaseInvoiceResponse(invoice: Invoice): BaseInvoiceResponse {
@@ -99,7 +99,7 @@ export default class InvoiceService {
   }
 
   /**
-   * Parses a Invoice Object to a InvoiceResponse
+   * Parses an Invoice Object to a InvoiceResponse
    * @param invoice - The Invoice to parse
    */
   private static asInvoiceResponse(invoice: Invoice)
