@@ -33,7 +33,7 @@ import PointOfSale from '../entity/point-of-sale/point-of-sale';
 import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision';
 import { PaginationParameters } from '../helpers/pagination';
 import { RequestWithToken } from '../middleware/token-middleware';
-import { asDate, asNumber } from '../helpers/validators';
+import { asBoolean, asDate, asNumber } from '../helpers/validators';
 
 /**
  * Define product filtering parameters used to filter query results.
@@ -83,10 +83,10 @@ export interface ProductFilterParameters {
    * Filter based on the product category id.
    */
   categoryId?: number;
-  /**
-   * Filter based on the product category name.
-   */
-  categoryName?: string;
+  // /**
+  //  * Filter based on the product category name.
+  //  */
+  // categoryName?: string;
   /**
    * Filter based on created at attribute.
    */
@@ -95,11 +95,11 @@ export interface ProductFilterParameters {
    * Filter based on updated at attribute.
    */
   updatedAt?: Date;
-  /**
-   * Filter based on product name.
-   * TODO Maybe make this fuzzy? i.e, products like:
-   */
-  productName?: string;
+  // /**
+  //  * Filter based on product name.
+  //  * TODO Maybe make this fuzzy? i.e, products like:
+  //  */
+  // productName?: string;
   /**
    * Filter based on product price.
    */
@@ -123,10 +123,10 @@ export function parseGetProductFilters(req: RequestWithToken): ProductFilterPara
     ownerId: asNumber(req.query.fromId),
     containerId: asNumber(req.query.containerId),
     containerRevision: asNumber(req.query.containerRevision),
-    // updatedContainer: asBoolean(req.query.containerRevision),
+    updatedContainer: asBoolean(req.query.containerRevision),
     pointOfSaleId: asNumber(req.query.pointOfSaleId),
     pointOfSaleRevision: asNumber(req.query.pointOfSaleRevision),
-    // updatedProducts: asBoolean(req.query.updatedProducts),
+    updatedProducts: asBoolean(req.query.updatedProducts),
     categoryId: asNumber(req.query.categoryId),
     // categoryName: asString(req.query.categoryName),
     createdAt: asDate(req.query.createdAt),
