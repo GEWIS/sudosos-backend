@@ -282,7 +282,7 @@ describe('InvoiceService', () => {
     });
     it('should create Invoice from multiple transactions', async () => {
       await inUserContext(await UserFactory().clone(2), async (debtor: User, creditor: User) => {
-        await createInvoiceWithTransfers(debtor.id, creditor.id, 3);
+        await createInvoiceWithTransfers(debtor.id, creditor.id, 20);
       });
     });
     it('should create Invoice for all transactions since date', async () => {

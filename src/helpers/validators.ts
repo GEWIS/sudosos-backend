@@ -85,20 +85,6 @@ export function asDate(input: any): Date {
 }
 
 /**
- * Converts the input to a Boolean
- * Returns true for 1, '1', true, 'true' (case-insensitive) . Otherwise false
- * @param input - The input which should be converted.
- * @returns The parsed Boolean
- */
-export function asBoolean(input: any): boolean {
-  if (typeof input === 'string') {
-    return input.toLowerCase() === 'true' || !!+input;
-  }
-
-  return !!input;
-}
-
-/**
  * Converts the input to a InvoiceState
  * @param input - The input which should be converted.
  * @returns The parsed InvoiceState.

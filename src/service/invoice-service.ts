@@ -36,6 +36,7 @@ import TransactionService, { TransactionFilterParameters } from './transaction-s
 import { DineroObjectRequest } from '../controller/request/dinero-request';
 import { TransferResponse } from '../controller/response/transfer-response';
 import { BaseTransactionResponse } from '../controller/response/transaction-response';
+import ProductRevision from '../entity/product/product-revision';
 
 export interface InvoiceFilterParameters {
   /**
@@ -131,6 +132,57 @@ export default class InvoiceService {
   }
 
   /**
+   * Creates InvoiceEntries from an array of Transactions
+   * @param invoice - The invoice of which the entries are.
+   * @param baseTransactions - Array of transactions to parse.
+   */
+  public static async createInvoiceEntriesTransactions(invoice: Invoice, baseTransactions: BaseTransactionResponse[]) {
+    // Extract Transactions from IDs.
+    const ids = baseTransactions.map((t) => t.id);
+    const transactions = await Transaction.findByIds(ids, { relations: ['subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.product', 'subTransactions.subTransactionRows.product.product'] });
+
+    // Collect invoices entries and promises.
+    const invoiceEntries: InvoiceEntry[] = [];
+    const promises: Promise<any>[] = [];
+
+    // Cumulative entries.
+    const entryMap = new Map<string, InvoiceEntry>();
+
+    // Loop through transactions
+    transactions.forEach((t) => {
+      t.subTransactions.forEach((tSub) => {
+        tSub.subTransactionRows.forEach((tSubRow) => {
+          // Use a string of revision + id as key
+          const key = JSON.stringify({
+            revision: tSubRow.product.revision,
+            id: tSubRow.product.product.id,
+          });
+          // Increase amount
+          if (entryMap.has(key)) {
+            entryMap.get(key).amount += tSubRow.amount;
+          } else {
+            // Or create new entry
+            const entry = Object.assign(new InvoiceEntry(), {
+              invoice,
+              description: tSubRow.product.name,
+              amount: tSubRow.amount,
+              price: tSubRow.product.price,
+            });
+            entryMap.set(key, entry);
+
+            // collect promises.
+            promises.push(InvoiceEntry.save(entry).then((i) => invoiceEntries.push(i)));
+          }
+        });
+      });
+    });
+
+    // Await and return
+    await Promise.all(promises);
+    return invoiceEntries;
+  }
+
+  /**
    * Creates an Invoice from an CreateInvoiceRequest
    * @param byId - User who created the Invoice
    * @param toId - User who receives the Invoice
@@ -176,11 +228,12 @@ export default class InvoiceService {
     await Invoice.save(newInvoice).then(async () => {
       newInvoice.invoiceStatus.push(invoiceStatus);
       await InvoiceStatus.save(invoiceStatus);
+      await this.createInvoiceEntriesTransactions(newInvoice, transactions);
     });
 
     // Return the newly created Invoice.
     return (await this.getInvoices(
-      { invoiceId: newInvoice.id },
+      { invoiceId: newInvoice.id, returnInvoiceEntries: true },
     ))[0];
   }
 
