@@ -21,11 +21,13 @@
  * @property {integer} toId.required - The recipient of the Invoice.
  * @property {string} addressee.required - Name of the addressed.
  * @property {string} description.required - The description of the invoice.
- * @property {Array.<integer>} products - IDs of the transactions to add to the Invoice.
+ * @property {Array.<integer>} transactionIDs - IDs of the transactions to add to the Invoice.
+ * @property {Date} fromDate - For creating an Invoice for all transactions form a specific date.
  */
 export default interface CreateInvoiceRequest {
   toId: number,
   addressee: string,
   description: string,
-  transactionIDs?: number[]
+  transactionIDs?: number[],
+  fromDate?: Date,
 }

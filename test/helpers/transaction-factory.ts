@@ -89,7 +89,7 @@ Promise<PointOfSaleWithContainersResponse> {
  * @param pointOfSale - Point of sale that was used.
  * @param rowAmount - Amount of SubTrans. rows.
  */
-export default async function createValidTransactionRequestPOS(
+export async function createValidTransactionRequestPOS(
   byId: number, toId: number, rowAmount: number, pointOfSale: PointOfSaleWithContainersResponse,
 ): Promise<TransactionRequest> {
   const containerRevision = pointOfSale.containers[0];
@@ -114,7 +114,8 @@ export default async function createValidTransactionRequestPOS(
 
 export async function createValidTransactionRequest(byId: number, toId: number) {
   const pos = await getAPOSWithProducts();
-  return (createValidTransactionRequestPOS(
+  const request = (await createValidTransactionRequestPOS(
     byId, toId, 3, pos,
   ));
+  return request;
 }

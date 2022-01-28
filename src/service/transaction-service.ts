@@ -47,7 +47,7 @@ import { asDate, asNumber } from '../helpers/validators';
 import { PaginationParameters } from '../helpers/pagination';
 
 export interface TransactionFilterParameters {
-  transactionId?: number,
+  transactionId?: number | number[],
   fromId?: number,
   createdById?: number,
   toId?: number,
@@ -69,6 +69,7 @@ export function parseGetTransactionsFilters(req: RequestWithToken): TransactionF
   }
 
   const filters: TransactionFilterParameters = {
+    // TODO Make this work on arrays
     transactionId: asNumber(req.query.transactionId),
     fromId: asNumber(req.query.fromId),
     createdById: asNumber(req.query.createdById),
@@ -107,19 +108,6 @@ export default class TransactionService {
     const totalCost = rowCosts.reduce((total, current) => total.add(current));
 
     return totalCost;
-  }
-
-  /**
-   * Gets all BaseTransactions form a list of IDs
-   * @param ids - The Transaction IDs to return
-   */
-  public static async getTransactionsFromIds(ids: number[]): Promise<BaseTransactionResponse[]> {
-    const transactions = await Promise.all(ids.map(async (transactionId) => {
-      const transaction = await TransactionService.getTransactions({ transactionId });
-
-      return transaction.records[0];
-    }));
-    return transactions;
   }
 
   /**
@@ -523,8 +511,9 @@ export default class TransactionService {
       .leftJoin('subTransaction.subTransactionRows', 'subTransactionRow')
       .distinct(true);
 
-    if (fromDate) query.andWhere('"transaction"."createdAt" >= :fromDate', { fromDate: fromDate.toISOString() });
-    if (tillDate) query.andWhere('"transaction"."createdAt" < :tillDate', { tillDate: tillDate.toISOString() });
+    if (fromDate) query.andWhere('"transaction"."createdAt" >= :fromDate', { fromDate: fromDate.toISOString().replace('T', ' ') });
+    if (tillDate) query.andWhere('"transaction"."createdAt" < :tillDate', { tillDate: tillDate.toISOString().replace('T', ' ') });
+
     const mapping = {
       fromId: 'transaction.fromId',
       createdById: 'transaction.createdById',
@@ -550,9 +539,10 @@ export default class TransactionService {
   ): Promise<PaginatedBaseTransactionResponse> {
     const { take, skip } = pagination;
 
+    const builder = this.buildGetTransactionsQuery(params, user);
     const results = await Promise.all([
-      this.buildGetTransactionsQuery(params, user).limit(take).offset(skip).getRawMany(),
-      this.buildGetTransactionsQuery(params, user).getCount(),
+      builder.limit(take).offset(skip).getRawMany(),
+      builder.getCount(),
     ]);
 
     const records = results[0].map((o) => {

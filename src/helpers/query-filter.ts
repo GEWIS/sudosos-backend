@@ -51,7 +51,11 @@ export default class QueryFilter {
     Object.keys(mapping).forEach((param: string) => {
       const value = params[param];
       if (value !== undefined) {
-        query.andWhere(`${mapping[param]} = :${param}`);
+        if (Array.isArray(value)) {
+          query.andWhere(`${mapping[param]} in (${value.toString()})`);
+        } else {
+          query.andWhere(`${mapping[param]} = :${param}`);
+        }
       }
     });
     return query.setParameters(params);

@@ -24,7 +24,7 @@ export class Builder {
   public default() {
     const count = User.count();
     this.user = Object.assign(new User(), {
-      firstName: `User #${count}`,
+      firstName: `User #${count.then((c) => c)}`,
       lastName: `Doe #${count}`,
       type: UserType.MEMBER,
       active: true,
@@ -73,6 +73,6 @@ export function UserFactory(custom?: User) {
 }
 
 export async function inUserContext(users: User[], func: (...arg: any) => void) {
-  func(...users);
-  await User.delete(users.map((u) => u.id));
+  await func(...users);
+  // await User.remove(users);
 }

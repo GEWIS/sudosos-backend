@@ -32,7 +32,7 @@ import User from '../entity/user/user';
 import Transaction from '../entity/transactions/transaction';
 import TransferService from './transfer-service';
 import TransferRequest from '../controller/request/transfer-request';
-import TransactionService from './transaction-service';
+import TransactionService, { TransactionFilterParameters } from './transaction-service';
 import { DineroObjectRequest } from '../controller/request/dinero-request';
 import { TransferResponse } from '../controller/response/transfer-response';
 import { BaseTransactionResponse } from '../controller/response/transaction-response';
@@ -117,7 +117,7 @@ export default class InvoiceService {
    */
   public static async createTransferFromTransactions(toId: number,
     transactions: BaseTransactionResponse[]): Promise<TransferResponse> {
-    const dineroObjectRequest: DineroObjectRequest = { ...transactions[0].value, amount: 0 };
+    const dineroObjectRequest: DineroObjectRequest = { ...(transactions[0].value), amount: 0 };
     transactions.forEach((t) => { dineroObjectRequest.amount += t.value.amount; });
 
     const transferRequest: TransferRequest = {
@@ -130,31 +130,29 @@ export default class InvoiceService {
     return TransferService.postTransfer(transferRequest);
   }
 
-  // static async getLatestInvoice(toId: number): Promise<Invoice> {
-  //
-  // }
-  //
-  // static async createTransferFromHistory(toId: number): Promise<TransferResponse> {
-  //   await Invoice.find();
-  // }
-
   /**
    * Creates an Invoice from an CreateInvoiceRequest
    * @param byId - User who created the Invoice
    * @param toId - User who receives the Invoice
    * @param invoiceRequest - The Invoice request to create
    */
-  public static async createInvoice(byId:number, toId: number, invoiceRequest: CreateInvoiceRequest)
+  public static async createInvoice(byId:number, invoiceRequest: CreateInvoiceRequest)
     : Promise<BaseInvoiceResponse> {
-    let transfer: TransferResponse;
+    const { toId } = invoiceRequest;
+    let params: TransactionFilterParameters;
 
     // If transactions are specified.
     if (invoiceRequest.transactionIDs) {
-      const transactions = await TransactionService.getTransactionsFromIds(
-        invoiceRequest.transactionIDs,
-      );
-      transfer = await this.createTransferFromTransactions(toId, transactions);
+      params = { transactionId: invoiceRequest.transactionIDs };
+    } else if (invoiceRequest.fromDate) {
+      params = { fromDate: invoiceRequest.fromDate };
+    } else {
+      const latestInvoice = (await this.getInvoices({ toId }))[0];
+      params = { fromDate: new Date(latestInvoice.createdAt) };
     }
+
+    const transactions = (await TransactionService.getTransactions(params)).records;
+    const transfer = await this.createTransferFromTransactions(toId, transactions);
 
     // Create a new Invoice
     const newInvoice: Invoice = Object.assign(new Invoice(), {
@@ -196,13 +194,14 @@ export default class InvoiceService {
     : Promise<BaseInvoiceResponse[] | InvoiceResponse[]> {
     const filterMapping: FilterMapping = {
       currentState: 'currentState',
-      toId: 'toId',
+      toId: 'to',
       invoiceId: 'id',
     };
 
     const options: FindManyOptions = {
       where: QueryFilter.createFilterWhereClause(filterMapping, params),
       relations: ['to', 'invoiceStatus', 'transfer', 'transfer.to', 'transfer.from'],
+      order: { createdAt: 'DESC' },
     };
 
     // Case distinction on if we want to return entries or not.
