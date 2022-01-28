@@ -52,9 +52,7 @@ describe('TransactionController', (): void => {
   };
 
   // eslint-disable-next-line func-names
-  before(async function () {
-    this.timeout(5000);
-
+  before(async () => {
     const logger: Logger = log4js.getLogger('TransactionControllerTest');
     logger.level = 'ALL';
     const connection = await Database.initialize();

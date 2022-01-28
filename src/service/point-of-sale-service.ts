@@ -253,19 +253,18 @@ export default class PointOfSaleService {
       this.buildGetUpdatedPointsOfSaleQuery(filters).limit(take).offset(skip).getRawMany(),
       this.buildGetUpdatedPointsOfSaleQuery(filters).getCount(),
     ]);
-    let records;
+    let records : (UpdatedPointOfSaleResponse | PointOfSaleWithContainersResponse)[];
     if (filters.returnContainers) {
-      const pointOfSales: PointOfSaleWithContainersResponse[] = [];
+      records = [];
       await Promise.all(results[0].map(
         async (rawPointOfSale) => {
-          pointOfSales.push(
+          records.push(
             await this.asPointOfSaleResponseWithContainers(
               this.asPointOfSaleResponse(rawPointOfSale),
             ),
           );
         },
       ));
-      records = pointOfSales;
     } else {
       records = results[0].map(
         (rawPointOfSale) => (
