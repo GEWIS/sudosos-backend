@@ -267,8 +267,9 @@ export default class ContainerController extends BaseController {
    * @route GET /containers/public
    * @group containers - Operations of container controller
    * @security JWT
-   * @returns {Array.<ProductResponse>} 200 - All public containers
-   * @returns {string} 404 - Not found error
+   * @param {integer} take.query - How many containers the endpoint should return
+   * @param {integer} skip.query - How many containers should be skipped (for pagination)
+   * @returns {PaginatedContainerResponse.model} 200 - All existing public containers
    * @returns {string} 500 - Internal server error
    */
   public async getPublicContainers(req: RequestWithToken, res: Response): Promise<void> {
