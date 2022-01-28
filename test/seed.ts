@@ -652,6 +652,7 @@ export async function seedAllContainers(
   let updatedContainers: UpdatedContainer[] = [];
 
   const sellers = users.filter((u) => [UserType.LOCAL_ADMIN, UserType.MEMBER].includes(u.type));
+  const revision = products.filter((p) => p.currentRevision != null);
 
   const promises: Promise<any>[] = [];
   for (let i = 0; i < sellers.length; i += 1) {
@@ -685,7 +686,7 @@ export async function seedAllContainers(
       upd = upd.concat(defineUpdatedContainers(
         updatedContainers.length,
         con[o],
-        products,
+        revision,
       ));
     }
 

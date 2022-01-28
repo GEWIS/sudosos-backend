@@ -24,7 +24,7 @@ import sinon from 'sinon';
 import TokenHandler from '../../../src/authentication/token-handler';
 import BannerController from '../../../src/controller/banner-controller';
 import BannerRequest from '../../../src/controller/request/banner-request';
-import BannerResponse from '../../../src/controller/response/banner-response';
+import { BannerResponse } from '../../../src/controller/response/banner-response';
 import Database from '../../../src/database/database';
 import Banner from '../../../src/entity/banner';
 import User, { UserType } from '../../../src/entity/user/user';
@@ -34,6 +34,7 @@ import Swagger from '../../../src/start/swagger';
 import { seedBanners } from '../../seed';
 import BannerImage from '../../../src/entity/file/banner-image';
 import { DiskStorage } from '../../../src/files/storage';
+import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 
 function bannerEq(a: Banner, b: BannerResponse): Boolean {
   const aEmpty = a === {} as Banner || a === undefined;
@@ -183,7 +184,10 @@ describe('BannerController', async (): Promise<void> => {
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
       // number of banners returned is number of banners in database
-      const banners = res.body as BannerResponse[];
+      const banners = res.body.records as BannerResponse[];
+      // eslint-disable-next-line no-underscore-dangle
+      const pagination = res.body._pagination as PaginationResult;
+
       expect(banners.length).to.equal(await Banner.count());
       banners.forEach((bannerResponse) => {
         expect(
@@ -191,6 +195,28 @@ describe('BannerController', async (): Promise<void> => {
           `bannerResponse ${bannerResponse.id} to be correct`,
         ).to.be.true;
       });
+
+      expect(pagination.take).to.equal(defaultPagination());
+      expect(pagination.skip).to.equal(0);
+      expect(pagination.count).to.equal(ctx.banners.length);
+    });
+    it('should adhere to pagination', async () => {
+      const take = 5;
+      const skip = 3;
+      const res = await request(ctx.app)
+        .get('/banners')
+        .query({ take, skip })
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      // number of banners returned is number of banners in database
+      const banners = res.body.records as BannerResponse[];
+      // eslint-disable-next-line no-underscore-dangle
+      const pagination = res.body._pagination as PaginationResult;
+
+      expect(pagination.take).to.equal(take);
+      expect(pagination.skip).to.equal(skip);
+      expect(pagination.count).to.equal(ctx.banners.length);
+      expect(banners.length).to.be.at.most(take);
     });
     it('should return an HTTP 403 if not admin', async () => {
       const res = await request(ctx.app)
@@ -215,7 +241,9 @@ describe('BannerController', async (): Promise<void> => {
 
       expect(res.status).to.equal(200);
 
-      const bannerResponses = res.body as BannerResponse[];
+      const bannerResponses = res.body.records as BannerResponse[];
+      // eslint-disable-next-line no-underscore-dangle
+      const pagination = res.body._pagination as PaginationResult;
       // test if returned banners are active
       expect(bannerResponses.length).to.equal(activeBanners.length);
       bannerResponses.forEach((bannerResponse) => {
@@ -223,6 +251,29 @@ describe('BannerController', async (): Promise<void> => {
           bannerEq(activeBanners.find((b) => b.id === bannerResponse.id), bannerResponse),
         ).to.be.true;
       });
+
+      expect(pagination.take).to.equal(defaultPagination());
+      expect(pagination.skip).to.equal(0);
+      expect(pagination.count).to.equal(activeBanners.length);
+    });
+    it('should adhere to pagination', async () => {
+      const take = 5;
+      const skip = 3;
+      const res = await request(ctx.app)
+        .get('/banners/active')
+        .query({ take, skip })
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      const activeBanners = ctx.banners.filter((b) => b.active);
+
+      // number of banners returned is number of banners in database
+      const banners = res.body.records as BannerResponse[];
+      // eslint-disable-next-line no-underscore-dangle
+      const pagination = res.body._pagination as PaginationResult;
+
+      expect(pagination.take).to.equal(take);
+      expect(pagination.skip).to.equal(skip);
+      expect(pagination.count).to.equal(activeBanners.length);
+      expect(banners.length).to.be.at.most(take);
     });
   });
 

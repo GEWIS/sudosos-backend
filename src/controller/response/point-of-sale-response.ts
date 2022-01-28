@@ -18,6 +18,7 @@
 import BaseResponse from './base-response';
 import { ContainerWithProductsResponse } from './container-response';
 import { BaseUserResponse } from './user-response';
+import { PaginationResult } from '../../helpers/pagination';
 
 /**
  * @typedef {BaseResponse} BasePointOfSaleResponse
@@ -43,6 +44,16 @@ export interface PointOfSaleResponse extends BasePointOfSaleResponse {
 }
 
 /**
+ * @typedef PaginatedPointOfSaleResponse
+ * @property {PaginationResult.model} _pagination - Pagination metadata
+ * @property {Array<PointOfSaleResponse>} records - Returned points of sale
+ */
+export interface PaginatedPointOfSaleResponse {
+  _pagination: PaginationResult,
+  records: PointOfSaleResponse[],
+}
+
+/**
  * @typedef {BasePointOfSaleResponse} UpdatedPointOfSaleResponse
  * @property {BaseUserResponse.model} owner.required - The owner of the point-of-sale.
  * @property {string} startDate.required - The date starting which the POS is active
@@ -54,6 +65,17 @@ export interface UpdatedPointOfSaleResponse extends BasePointOfSaleResponse {
   startDate: string,
   endDate: string,
   useAuthentication: boolean,
+}
+
+/**
+ * @typedef PaginatedUpdatedPointOfSaleResponse
+ * @property {PaginationResult.model} _pagination - Pagination metadata
+ * @property {Array<UpdatedPointOfSaleResponse|PointOfSaleWithContainersResponse>} records -
+ * Returned points of sale
+ */
+export interface PaginatedUpdatedPointOfSaleResponse {
+  _pagination: PaginationResult,
+  records: (UpdatedPointOfSaleResponse | PointOfSaleWithContainersResponse)[],
 }
 
 /**

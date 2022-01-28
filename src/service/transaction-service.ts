@@ -22,11 +22,10 @@ import {
   BaseTransactionResponse,
   TransactionResponse,
   SubTransactionResponse,
-  SubTransactionRowResponse,
+  SubTransactionRowResponse, PaginatedBaseTransactionResponse,
 } from '../controller/response/transaction-response';
 import Transaction from '../entity/transactions/transaction';
 import SubTransaction from '../entity/transactions/sub-transaction';
-import { addPaginationToQueryBuilder } from '../helpers/pagination';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
 import { parseUserToBaseResponse } from '../helpers/entity-to-response';
 import {
@@ -45,6 +44,7 @@ import { DineroObjectRequest } from '../controller/request/dinero-request';
 import { DineroObjectResponse } from '../controller/response/dinero-response';
 import BalanceService from './balance-service';
 import { asDate, asNumber } from '../helpers/validators';
+import { PaginationParameters } from '../helpers/pagination';
 
 export interface TransactionFilterParameters {
   fromId?: number,
@@ -469,16 +469,9 @@ export default class TransactionService {
     await BalanceService.clearBalanceCache(userIds);
   }
 
-  /**
-   * Returns all transactions requested with the filter
-   * @param {RequestWithToken.model} req - the request with token
-   * @param {TransactionFilterParameters.model} params - the filter parameters
-   * @param {User.model} user - A user that is involved in all transactions
-   * @returns {BaseTransactionResponse[]} - the transactions without sub transactions
-   */
-  public static async getTransactions(
-    req: RequestWithToken, params: TransactionFilterParameters, user?: User,
-  ): Promise<BaseTransactionResponse[]> {
+  private static buildGetTransactionsQuery(
+    params: TransactionFilterParameters = {}, user?: User,
+  ): SelectQueryBuilder<Transaction> {
     // Extract fromDate and tillDate, as they cannot be directly passed to QueryFilter.
     const { fromDate, tillDate, ...p } = params;
 
@@ -496,7 +489,7 @@ export default class TransactionService {
       return QueryFilter.applyFilter(query, mapping, p);
     }
 
-    let query = createQueryBuilder(Transaction, 'transaction')
+    const query = createQueryBuilder(Transaction, 'transaction')
       .addSelect((qb) => {
         const subquery = qb.subQuery()
           .select('sum(subTransactionRow.amount * product.price) as value')
@@ -527,12 +520,27 @@ export default class TransactionService {
       query.andWhere('"transaction"."fromId" = :userId OR "transaction"."createdById" = :userId OR "subTransaction"."toId" = :userId', { userId: user.id });
     }
 
-    query = applySubTransactionFilters(query);
-    query = addPaginationToQueryBuilder(req, query);
+    return applySubTransactionFilters(query);
+  }
 
-    const rawTransactions = await query.getRawMany();
+  /**
+   * Returns all transactions requested with the filter
+   * @param {TransactionFilterParameters.model} params - the filter parameters
+   * @param {PaginationParameters} pagination
+   * @param {User.model} user - A user that is involved in all transactions
+   * @returns {BaseTransactionResponse[]} - the transactions without sub transactions
+   */
+  public static async getTransactions(
+    params: TransactionFilterParameters, pagination: PaginationParameters = {}, user?: User,
+  ): Promise<PaginatedBaseTransactionResponse> {
+    const { take, skip } = pagination;
 
-    return rawTransactions.map((o) => {
+    const results = await Promise.all([
+      this.buildGetTransactionsQuery(params, user).limit(take).offset(skip).getRawMany(),
+      this.buildGetTransactionsQuery(params, user).getCount(),
+    ]);
+
+    const records = results[0].map((o) => {
       const value = DineroTransformer.Instance.from(o.value || 0);
       const v: BaseTransactionResponse = {
         id: o.transaction_id,
@@ -568,6 +576,13 @@ export default class TransactionService {
       };
       return v;
     });
+
+    return {
+      _pagination: {
+        take, skip, count: results[1],
+      },
+      records,
+    };
   }
 
   /**

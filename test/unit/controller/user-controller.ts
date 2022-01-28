@@ -39,6 +39,7 @@ import { verifyUserEntity } from '../validators';
 import RoleManager from '../../../src/rbac/role-manager';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import { TransactionResponse } from '../../../src/controller/response/transaction-response';
+import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 
 describe('UserController', (): void => {
   let ctx: {
@@ -61,11 +62,10 @@ describe('UserController', (): void => {
     transactions: Transaction[],
   };
 
-  before(async function before() {
+  before(async () => {
     const connection = await Database.initialize();
     ctx = { connection } as any; // on timeout forces connection to close
     const app = express();
-    this.timeout(10000);
     const database = await seedDatabase();
     ctx = {
       connection,
@@ -172,19 +172,46 @@ describe('UserController', (): void => {
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
 
-      const users = res.body as User[];
+      const activeUsers = ctx.users.filter((u) => !u.deleted);
+
+      const users = res.body.records as User[];
+      // eslint-disable-next-line no-underscore-dangle
+      const pagination = res.body._pagination as PaginationResult;
       const spec = await Swagger.importSpecification();
-      const pagination = parseInt(process.env.PAGINATION_DEFAULT, 10);
-      expect(users.length).to.equal(pagination);
+      expect(users.length).to.equal(Math.min(activeUsers.length, pagination.take));
       users.forEach((user: User) => {
         verifyUserEntity(spec, user);
       });
+
+      expect(pagination.take).to.equal(defaultPagination());
+      expect(pagination.skip).to.equal(0);
+      expect(pagination.count).to.equal(activeUsers.length);
     });
     it('should give an HTTP 403 if not admin', async () => {
       const res = await request(ctx.app)
         .get('/users')
         .set('Authorization', `Bearer ${ctx.userToken}`);
       expect(res.status).to.equal(403);
+    });
+    it('should adhere to pagination', async () => {
+      const take = 5;
+      const skip = 3;
+      const res = await request(ctx.app)
+        .get('/users')
+        .query({ take, skip })
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+
+      const activeUsers = ctx.users.filter((u) => !u.deleted);
+
+      const users = res.body.records as User[];
+      // eslint-disable-next-line no-underscore-dangle
+      const pagination = res.body._pagination as PaginationResult;
+
+      expect(pagination.take).to.equal(take);
+      expect(pagination.skip).to.equal(skip);
+      expect(pagination.count).to.equal(activeUsers.length);
+      expect(users.length).to.be.at.most(take);
     });
   });
 
@@ -708,7 +735,7 @@ describe('UserController', (): void => {
         .set('Authorization', `Bearer ${ctx.userToken}`);
       expect(res.status).to.equal(200);
 
-      const transactions = res.body as TransactionResponse[];
+      const transactions = res.body.records as TransactionResponse[];
 
       const actualTransactions = await Transaction.createQueryBuilder('transaction')
         .select('transaction.id as id')
@@ -736,7 +763,7 @@ describe('UserController', (): void => {
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
 
-      const transactions = res.body as TransactionResponse[];
+      const transactions = res.body.records as TransactionResponse[];
 
       const actualTransactions = await Transaction.createQueryBuilder('transaction')
         .select('transaction.id as id')

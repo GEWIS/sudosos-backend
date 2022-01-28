@@ -59,6 +59,18 @@ export function asNumber(input: any): number {
 }
 
 /**
+ * Converts the input to a boolean
+ * @param input - The input which should be converted.
+ * @returns {true} - for 1, '1', true, 'true' (case-insensitive), otherwise false.
+ */
+export function asBoolean(input: any): boolean {
+  if (typeof input === 'string') {
+    return input.toLowerCase() === 'true' || !!+input;
+  }
+  return !!input;
+}
+
+/**
  * Converts the input to a Date object.
  * @param input - The input which should be converted.
  * @returns The parsed Date object.

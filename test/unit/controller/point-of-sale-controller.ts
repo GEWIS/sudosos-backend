@@ -32,6 +32,10 @@ import RoleManager from '../../../src/rbac/role-manager';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
 import { PointOfSaleResponse } from '../../../src/controller/response/point-of-sale-response';
+import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
+import { ContainerResponse } from '../../../src/controller/response/container-response';
+import { PaginatedProductResponse, ProductResponse } from '../../../src/controller/response/product-response';
+import UpdatedPointOfSale from '../../../src/entity/point-of-sale/updated-point-of-sale';
 
 describe('PointOfSaleController', async () => {
   let ctx: {
@@ -59,7 +63,7 @@ describe('PointOfSaleController', async () => {
     const localUser = {
       id: 2,
       firstName: 'User',
-      type: UserType.LOCAL_USER,
+      type: UserType.MEMBER,
       active: true,
     } as User;
 
@@ -88,6 +92,7 @@ describe('PointOfSaleController', async () => {
     const specification = await Swagger.initialize(app);
 
     const all = { all: new Set<string>(['*']) };
+    const own = { own: new Set<string>(['*']) };
     const roleManager = new RoleManager();
     roleManager.registerRole({
       name: 'Admin',
@@ -109,7 +114,13 @@ describe('PointOfSaleController', async () => {
       name: 'User',
       permissions: {
         Container: {
-          get: all,
+          get: own,
+        },
+        PointOfSale: {
+          create: own,
+          get: own,
+          update: own,
+          delete: own,
         },
       },
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_USER,
@@ -144,8 +155,16 @@ describe('PointOfSaleController', async () => {
 
       expect(res.status).to.equal(200);
 
+      const pointsOfSale = res.body.records as PointOfSaleResponse[];
+      // eslint-disable-next-line no-underscore-dangle
+      const pagination = res.body._pagination as PaginationResult;
+
       const activePointOfSaleCount = await PointOfSale.count({ where: 'currentRevision' });
-      expect((res.body as PointOfSaleResponse[]).length).to.equal(activePointOfSaleCount);
+      expect(pointsOfSale.length).to.equal(Math.min(activePointOfSaleCount, defaultPagination()));
+
+      expect(pagination.take).to.equal(defaultPagination());
+      expect(pagination.skip).to.equal(0);
+      expect(pagination.count).to.equal(activePointOfSaleCount);
     });
     it('should return an HTTP 403 if not admin', async () => {
       const res = await request(ctx.app)
@@ -154,6 +173,25 @@ describe('PointOfSaleController', async () => {
 
       expect(res.status).to.equal(403);
       expect(res.body).to.be.empty;
+    });
+    it('should adhere to pagination', async () => {
+      const take = 5;
+      const skip = 3;
+      const res = await request(ctx.app)
+        .get('/pointsofsale')
+        .query({ take, skip })
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      // number of banners returned is number of banners in database
+      const containers = res.body.records as ContainerResponse[];
+      // eslint-disable-next-line no-underscore-dangle
+      const pagination = res.body._pagination as PaginationResult;
+
+      const activePointOfSaleCount = await PointOfSale.count({ where: 'currentRevision' });
+      expect(pagination.take).to.equal(take);
+      expect(pagination.skip).to.equal(skip);
+      expect(pagination.count).to.equal(activePointOfSaleCount);
+      expect(containers.length).to.be.at.most(take);
     });
   });
 
@@ -183,6 +221,18 @@ describe('PointOfSaleController', async () => {
       expect(res.body).to.be.empty;
     });
   });
+  describe('GET /pointsofsale/:id/update', async () => {
+    it('should return an HTTP 200 and the update if admin', async () => {
+      const { id } = (await UpdatedPointOfSale.find({ relations: ['pointOfSale'] }))[0].pointOfSale;
+
+      const res = await request(ctx.app)
+        .get(`/pointsofsale/${id}/update`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(200);
+      expect(res.body.id).to.be.equal(id);
+    });
+  });
 
   describe('GET /pointsofsale/:id/containers', async () => {
     it('should return an HTTP 200 and the containers in the given point of sale if admin', async () => {
@@ -190,43 +240,74 @@ describe('PointOfSaleController', async () => {
         .get('/pointsofsale/1/containers')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
-      expect(res.status).to.equal(200);
-      expect(res.body.length).to.be.at.least(1);
-    });
-    it('should return an HTTP 200 and the containers in the given point of sale if normal user', async () => {
-      const res = await request(ctx.app)
-        .get('/pointsofsale/1/containers')
-        .set('Authorization', `Bearer ${ctx.token}`);
+      const containers = res.body.records as ContainerResponse[];
+      // eslint-disable-next-line no-underscore-dangle
+      const pagination = res.body._pagination as PaginationResult;
 
       expect(res.status).to.equal(200);
-      expect(res.body.length).to.be.at.least(1);
+      expect(containers.length).to.be.at.least(1);
+
+      expect(pagination.take).to.equal(defaultPagination());
+      expect(pagination.skip).to.equal(0);
+      expect(pagination.count).to.be.at.least(1);
+    });
+    it('should return an HTTP 200 and the containers in the given point of sale if normal user', async () => {
+      const { id } = await PointOfSale.findOne({ relations: ['owner'], where: { owner: ctx.localUser } });
+
+      const res = await request(ctx.app)
+        .get(`/pointsofsale/${id}/containers`)
+        .set('Authorization', `Bearer ${ctx.token}`);
+
+      const containers = res.body.records as ContainerResponse[];
+
+      expect(res.status).to.equal(200);
+      expect(containers.length).to.be.at.least(1);
     });
     it('should return an HTTP 200 and an empty list if point of sale does not exist', async () => {
       const res = await request(ctx.app)
         .get(`/pointsofsale/${(await PointOfSale.count()) + 1}/containers`)
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
+      const containers = res.body.records as ContainerResponse[];
+
       expect(res.status).to.equal(200);
-      expect(res.body.length).to.equal(0);
+      expect(containers.length).to.equal(0);
     });
   });
 
   describe('GET /pointsofsale/:id/products', async () => {
     it('should return an HTTP 200 and the products in the given point of sale if admin', async () => {
+      const take = 5;
+      const skip = 1;
       const res = await request(ctx.app)
         .get('/pointsofsale/1/products')
+        .query({ take, skip })
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
-      expect(res.status).to.equal(200);
-      expect(res.body.length).to.be.at.least(1);
-    });
-    it('should return an HTTP 200 and the products in the given point of sale if normal user', async () => {
-      const res = await request(ctx.app)
-        .get('/pointsofsale/1/products')
-        .set('Authorization', `Bearer ${ctx.token}`);
+      const products = res.body.records as ProductResponse[];
+      // eslint-disable-next-line no-underscore-dangle
+      const pagination = res.body._pagination as PaginationResult;
 
       expect(res.status).to.equal(200);
-      expect(res.body.length).to.be.at.least(1);
+      expect(products.length).to.be.at.least(1);
+      expect(pagination.take).to.equal(take);
+      expect(pagination.skip).to.equal(skip);
+      expect(pagination.count).to.be.at.least(1);
+    });
+    it('should return an HTTP 200 and the products in the given point of sale if owner', async () => {
+      const { id } = await PointOfSale.findOne({ relations: ['owner'], where: { owner: ctx.localUser } });
+
+      const res = await request(ctx.app)
+        .get(`/pointsofsale/${id}/products`)
+        .set('Authorization', `Bearer ${ctx.token}`);
+
+      const products = res.body.records as ProductResponse[];
+      // eslint-disable-next-line no-underscore-dangle
+      const pagination = res.body._pagination as PaginationResult;
+
+      expect(res.status).to.equal(200);
+      expect(products.length).to.be.at.least(1);
+      expect(pagination).to.not.be.undefined;
     });
     it('should return an HTTP 200 and an empty list if point of sale does not exist', async () => {
       const res = await request(ctx.app)
@@ -234,7 +315,7 @@ describe('PointOfSaleController', async () => {
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
       expect(res.status).to.equal(200);
-      expect(res.body.length).to.equal(0);
+      expect((res.body as PaginatedProductResponse).records.length).to.equal(0);
     });
   });
 });

@@ -32,6 +32,7 @@ import TokenMiddleware from '../../../src/middleware/token-middleware';
 import RoleManager from '../../../src/rbac/role-manager';
 import BorrelkaartGroupService from '../../../src/service/borrelkaart-group-service';
 import Swagger from '../../../src/start/swagger';
+import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 
 function bkgEq(req: BorrelkaartGroupRequest, res: BorrelkaartGroupResponse): Boolean {
   // check if non user fields are equal
@@ -297,11 +298,17 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
       // check if borrelkaart groups are returned without users
-      const borrelkaartGroups = res.body as BorrelkaartGroup[];
+      const borrelkaartGroups = res.body.records as BorrelkaartGroup[];
+      // eslint-disable-next-line no-underscore-dangle
+      const pagination = res.body._pagination as PaginationResult;
       expect(borrelkaartGroups.length, 'size of response not equal to size of database').to.equal(await BorrelkaartGroup.count());
 
       // success code
       expect(res.status, 'incorrect status on get').to.equal(200);
+
+      expect(pagination.take).to.equal(defaultPagination());
+      expect(pagination.skip).to.equal(0);
+      expect(pagination.count).to.equal(await BorrelkaartGroup.count());
     });
     it('should return an HTTP 403 if not admin', async () => {
       // save borrelkaart group
