@@ -275,10 +275,12 @@ export default class ContainerController extends BaseController {
     const { body } = req;
     this.logger.trace('Get all public containers', body, 'by user', req.token.user);
 
+    const { take, skip } = parseRequestPagination(req);
+
     // Handle request
     try {
       const containers: PaginatedContainerResponse = await ContainerService.getContainers(
-        { public: true },
+        { public: true }, { take, skip },
       );
       res.json(containers);
     } catch (error) {

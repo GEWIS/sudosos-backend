@@ -192,11 +192,13 @@ export default class ProductService {
 
     QueryFilter.applyFilter(builder, filterMapping, filters);
 
-    const count = await builder.getCount();
-    builder.limit(take).offset(skip);
+    const result = await Promise.all([
+      builder.getCount(),
+      builder.limit(take).offset(skip).getRawMany(),
+    ]);
 
-    const rawProducts = await builder.getRawMany();
-    const records = rawProducts.map((rawProduct: any) => this.asProductResponse(rawProduct));
+    const count = result[0];
+    const records = result[1].map((rawProduct: any) => this.asProductResponse(rawProduct));
 
     return {
       _pagination: {
