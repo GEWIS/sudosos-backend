@@ -28,13 +28,16 @@ import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision'
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import ProductService from './product-service';
 import PointOfSale from '../entity/point-of-sale/point-of-sale';
-import ContainerRequest from '../controller/request/container-request';
+import ContainerRequest, { ContainerRequestID } from '../controller/request/container-request';
 import User from '../entity/user/user';
 import Product from '../entity/product/product';
 import UpdatedProduct from '../entity/product/updated-product';
 import ProductRevision from '../entity/product/product-revision';
 import UnapprovedProductError from '../entity/errors/unapproved-product-error';
 import { PaginationParameters } from '../helpers/pagination';
+import ProductRequest, { ProductRequestID } from '../controller/request/product-request';
+import splitTypes, { getIdsAndRequests } from '../helpers/helper';
+import UpdatePointOfSaleRequest from '../controller/request/update-point-of-sale-request';
 
 interface ContainerVisibility {
   own: boolean;
@@ -326,8 +329,25 @@ export default class ContainerService {
       return undefined;
     }
 
+    // If the ContainerRequests contain product updates we delegate them.
+    const { ids, requests } = getIdsAndRequests<ProductRequestID>(update);
+
+    // Filter on valid requests.
+    const validRequests = await Promise.all(
+      requests.map((p) => ProductService.verifyProduct(p).then((b) => {
+        if (b) return p;
+        return undefined;
+      })),
+    ).then((result) => {
+      result.filter((p) => p);
+      return result;
+    });
+
+    // Apply requests.
+    await Promise.all(validRequests.map((p) => ProductService.updateProduct(p.id, p)));
+
     let products: Product[] = [];
-    await Promise.all(update.products.map((id) => Product.findOne(id)))
+    await Promise.all(ids.map((id) => Product.findOne(id)))
       .then((result) => { products = result.filter((p) => p); });
 
     // Set base container and apply new update.
@@ -349,11 +369,25 @@ export default class ContainerService {
    * @param containerRequest - The request to verify
    * @returns {boolean} - whether container is ok or not
    */
-  public static async verifyContainer(containerRequest: ContainerRequest) {
-    return containerRequest.name !== ''
-        && containerRequest.products.every(async (productId) => {
-          await Product.findOne(productId, { where: 'currentRevision' });
-        });
+  public static async verifyContainer(containerRequest: ContainerRequest | ContainerRequestID) {
+    // Validate ids / requests
+    const { ids, requests } = getIdsAndRequests<ProductRequestID>(containerRequest);
+
+    console.error("checking products");
+    const products = await Product.findByIds(ids);
+    if (products.length !== ids.length) return false;
+
+    console.error("got m");
+    const promises: Promise<boolean>[] = [];
+    requests.forEach((p) => {
+      promises.push(ProductService.verifyProduct(p));
+    });
+    console.error("got m");
+    let results: boolean[] = [];
+    await Promise.all(promises).then((r) => { results = r; });
+    if (!results.every((b) => b)) return false;
+    console.error("got m");
+    return containerRequest.name !== '';
   }
 
   /**

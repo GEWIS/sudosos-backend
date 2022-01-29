@@ -29,3 +29,11 @@ export default interface ProductRequest {
   category: number;
   alcoholPercentage: number;
 }
+
+/**
+ * @typedef ProductRequestID
+ * @property {integer} id - The id of the product to update
+ */
+export interface ProductRequestID extends ProductRequest {
+  id: number;
+}

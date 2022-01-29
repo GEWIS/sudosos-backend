@@ -41,6 +41,8 @@ import PointOfSaleService from '../../../src/service/point-of-sale-service';
 import PointOfSaleRequest from '../../../src/controller/request/point-of-sale-request';
 import UpdatePointOfSaleRequest from '../../../src/controller/request/update-point-of-sale-request';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
+import ContainerRequest, { ContainerRequestID } from '../../../src/controller/request/container-request';
+import ProductRequest, { ProductRequestID } from '../../../src/controller/request/product-request';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -288,6 +290,91 @@ describe('PointOfSaleService', async (): Promise<void> => {
         update: { ...ctx.validPOSRequest.update, containers: [-1, -69] },
       };
       const valid = await PointOfSaleService.verifyPointOfSale(invalidRequest);
+      expect(valid).to.be.false;
+    });
+    it('should return true if update contains ContainerUpdate', async () => {
+      const withContainerUpdate: PointOfSaleRequest = {
+        ...ctx.validPOSRequest,
+      };
+
+      const containerRequest: ContainerRequestID = {
+        id: withContainerUpdate.update.containers.pop() as number,
+        name: 'Container',
+        products: [1],
+        public: true,
+      };
+
+      withContainerUpdate.update.containers.push(containerRequest);
+      const valid = await PointOfSaleService.verifyPointOfSale(withContainerUpdate);
+      expect(valid).to.be.true;
+    });
+    it('should return false if update contains invalid ContainerUpdate', async () => {
+      const withContainerUpdate: PointOfSaleRequest = {
+        ...ctx.validPOSRequest,
+      };
+
+      const containerRequest: ContainerRequestID = {
+        id: withContainerUpdate.update.containers.pop() as number,
+        name: '',
+        products: [-1],
+        public: true,
+      };
+
+      withContainerUpdate.update.containers.push(containerRequest);
+      const valid = await PointOfSaleService.verifyPointOfSale(withContainerUpdate);
+      expect(valid).to.be.false;
+    });
+    it('should return true if update contains valid ContainerUpdate with valid productUpdate', async () => {
+      // TODO Should clone?
+      const withContainerUpdate: PointOfSaleRequest = {
+        ...ctx.validPOSRequest,
+      };
+
+      const productRequestID: ProductRequestID = {
+        alcoholPercentage: 0,
+        category: 1,
+        id: 1,
+        name: 'ProductRequestID',
+        price: 100,
+      };
+
+      const containerRequest: ContainerRequestID = {
+        id: 1,
+        name: 'Container',
+        products: [productRequestID],
+        public: true,
+      };
+
+      console.error('TEST');
+
+      console.error(withContainerUpdate.update.containers);
+      console.error('TEST');
+      withContainerUpdate.update.containers.push(containerRequest);
+      const valid = await PointOfSaleService.verifyPointOfSale(withContainerUpdate);
+      expect(valid).to.be.true;
+    });
+    it('should return valse if update contains valid ContainerUpdate with invalid productUpdate', async () => {
+      const withContainerUpdate: PointOfSaleRequest = {
+        ...ctx.validPOSRequest,
+      };
+
+      const productRequestID: ProductRequestID = {
+        alcoholPercentage: 0,
+        category: 1,
+        id: 0,
+        name: 'ProductRequestID',
+        price: -100,
+      };
+
+      const containerRequest: ContainerRequestID = {
+        id: withContainerUpdate.update.containers.pop() as number,
+        name: 'Container',
+        products: [productRequestID],
+        public: true,
+      };
+
+      withContainerUpdate.update.containers.push(containerRequest);
+      const valid = await PointOfSaleService.verifyPointOfSale(withContainerUpdate);
       expect(valid).to.be.false;
     });
   });

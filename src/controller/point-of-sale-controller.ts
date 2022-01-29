@@ -230,7 +230,7 @@ export default class PointOfSaleController extends BaseController {
     // handle request
     try {
       if (!await PointOfSaleService.verifyPointOfSale(body)) {
-        res.status(400).json('Invalid container.');
+        res.status(400).json('Invalid point of sale.');
         return;
       }
 

@@ -16,14 +16,24 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import { ProductRequestID } from './product-request';
+
 /**
  * @typedef ContainerRequest
  * @property {string} name - Name of the container
- * @property {Array.<integer>} products - IDs of the products to add to the container
+ * @property {Array.<integer | ProductRequestID>} products - IDs or requests of the products to add to the container
  * @property {boolean} public - Whether the container is public or not
  */
 export default interface ContainerRequest {
   name: string,
-  products?: number[],
+  products?: (number | ProductRequestID)[],
   public: boolean,
+}
+
+/**
+ * @typedef ContainerRequestID
+ * @property {integer} id - The id of the container to update.
+ */
+export interface ContainerRequestID extends ContainerRequest{
+  id: number
 }

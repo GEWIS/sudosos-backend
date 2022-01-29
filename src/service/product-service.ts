@@ -27,7 +27,7 @@ import ContainerRevision from '../entity/container/container-revision';
 import Container from '../entity/container/container';
 import UpdatedContainer from '../entity/container/updated-container';
 import User from '../entity/user/user';
-import ProductRequest from '../controller/request/product-request';
+import ProductRequest, {ProductRequestID} from '../controller/request/product-request';
 import ProductCategory from '../entity/product/product-category';
 import PointOfSale from '../entity/point-of-sale/point-of-sale';
 import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision';
@@ -515,7 +515,7 @@ export default class ProductService {
    * @param {ProductRequest.model} productRequest - the product request to verify
    * @returns {boolean} - whether product is ok or not
    */
-  public static async verifyProduct(productRequest: ProductRequest): Promise<boolean> {
+  public static async verifyProduct(productRequest: ProductRequest | ProductRequestID): Promise<boolean> {
     return productRequest.price >= 0
         && productRequest.name !== ''
         && await ProductCategory.findOne(productRequest.category)

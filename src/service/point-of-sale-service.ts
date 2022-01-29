@@ -37,6 +37,8 @@ import ContainerRevision from '../entity/container/container-revision';
 import ContainerService, { ContainerParameters } from './container-service';
 import { ContainerWithProductsResponse } from '../controller/response/container-response';
 import { PaginationParameters } from '../helpers/pagination';
+import { ContainerRequestID } from '../controller/request/container-request';
+import splitTypes, { getIdsAndRequests } from '../helpers/helper';
 
 /**
  * Define point of sale filtering parameters used to filter query results.
@@ -407,7 +409,11 @@ export default class PointOfSaleService {
       return undefined;
     }
 
-    const containers = update.containers ? await Container.findByIds(update.containers) : [];
+    const { ids, requests } = getIdsAndRequests<ContainerRequestID>(update);
+    // If the update contains container updates we delegate it.
+    await Promise.all(requests.map((r) => ContainerService.updateContainer(r.id, r)));
+
+    const containers = update.containers ? await Container.findByIds(ids) : [];
 
     // Create update object
     const updatedPointOfSale = Object.assign(new UpdatedPointOfSale(), {
@@ -477,10 +483,21 @@ export default class PointOfSaleService {
     if (!check) return false;
 
     if (update.containers) {
-      const containers = await Container.findByIds(update.containers);
-      if (containers.length !== update.containers.length) return false;
-    }
+      // Validate ids / requests
+      const { ids, requests } = getIdsAndRequests<ContainerRequestID>(update);
 
+      console.error(ids);
+      const containers = await Container.findByIds(ids);
+      if (containers.length !== ids.length) return false;
+
+      const promises: Promise<boolean>[] = [];
+      requests.forEach((c) => {
+        promises.push(ContainerService.verifyContainer(c));
+      });
+      let results: boolean[] = [];
+      await Promise.all(promises).then((r) => { results = r; });
+      if (!results.every((b) => b)) return false;
+    }
     return true;
   }
 
