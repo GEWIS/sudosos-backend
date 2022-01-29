@@ -25,7 +25,6 @@ import ProductCategory from '../../entity/product/product-category';
  * @property {Dinero.model} price.required - The price of the product.
  * @property {User.model} owner.required - The owner of the product.
  * @property {ProductCategory.model} category.required - The category of the product.
- * @property {string} picture.required - The URL to the picture representing this product.
  * @property {number} alcoholPercentage - The percentage of alcohol in this product.
  */
 export default interface CreateProductRequest {
@@ -33,6 +32,5 @@ export default interface CreateProductRequest {
   price: DineroObject,
   owner: User,
   category: ProductCategory,
-  picture: string,
   alcoholPercentage?: number,
 }

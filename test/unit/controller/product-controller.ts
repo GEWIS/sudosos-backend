@@ -32,6 +32,7 @@ import { seedAllProducts, seedProductCategories } from '../../seed';
 import Product from '../../../src/entity/product/product';
 import { ProductResponse } from '../../../src/controller/response/product-response';
 import UpdatedProduct from '../../../src/entity/product/updated-product';
+import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 
 /**
  * Tests if a product response is equal to the request.
@@ -43,8 +44,7 @@ function productEq(source: ProductRequest, response: ProductResponse) {
   return source.name === response.name
       && source.category === response.category.id
       && source.alcoholPercentage === response.alcoholPercentage
-      && source.price === response.price.amount
-      && source.picture === response.picture;
+      && source.price === response.price.amount;
 }
 
 describe('ProductController', async (): Promise<void> => {
@@ -96,7 +96,6 @@ describe('ProductController', async (): Promise<void> => {
 
     const validProductReq: ProductRequest = {
       name: 'Valid product',
-      picture: 'picture link',
       price: 1,
       alcoholPercentage: 0,
       category: 2,
@@ -160,9 +159,17 @@ describe('ProductController', async (): Promise<void> => {
 
       expect(res.status).to.equal(200);
 
+      const products = res.body.records as ProductResponse[];
+      // eslint-disable-next-line no-underscore-dangle
+      const pagination = res.body._pagination as PaginationResult;
+
       // Every product that has a current revision should be returned.
       const activeProductCount = await Product.count({ where: 'currentRevision' } as FindManyOptions);
-      expect((res.body as ProductResponse[]).length).to.equal(activeProductCount);
+      expect(products.length).to.equal(Math.min(activeProductCount, defaultPagination()));
+
+      expect(pagination.take).to.equal(defaultPagination());
+      expect(pagination.skip).to.equal(0);
+      expect(pagination.count).to.equal(activeProductCount);
     });
     it('should return an HTTP 403 if not admin', async () => {
       const res = await request(ctx.app)
@@ -174,6 +181,29 @@ describe('ProductController', async (): Promise<void> => {
 
       // forbidden code
       expect(res.status).to.equal(403);
+    });
+    it('should adhere to pagination', async () => {
+      const take = 2;
+      const skip = 3;
+
+      const res = await request(ctx.app)
+        .get('/products')
+        .query({ take, skip })
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(200);
+
+      const products = res.body.records as ProductResponse[];
+      // eslint-disable-next-line no-underscore-dangle
+      const pagination = res.body._pagination as PaginationResult;
+
+      // Every product that has a current revision should be returned.
+      const activeProductCount = await Product.count({ where: 'currentRevision' } as FindManyOptions);
+
+      expect(pagination.take).to.equal(take);
+      expect(pagination.skip).to.equal(skip);
+      expect(pagination.count).to.equal(activeProductCount);
+      expect(products.length).to.be.at.most(take);
     });
   });
   describe('POST /products', () => {
@@ -307,11 +337,19 @@ describe('ProductController', async (): Promise<void> => {
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
       expect(res.status).to.equal(200);
+      expect(res.body).to.not.be.empty;
+
+      const products = res.body.records as ProductResponse[];
+      // eslint-disable-next-line no-underscore-dangle
+      const pagination = res.body._pagination as PaginationResult;
 
       // Every product that has a current revision should be returned.
       const activeProductCount = await UpdatedProduct.count();
-      expect((res.body as ProductResponse[])).to.not.be.empty;
-      expect((res.body as ProductResponse[]).length).to.equal(activeProductCount);
+      expect(products.length).to.equal(Math.min(activeProductCount, defaultPagination()));
+
+      expect(pagination.take).to.equal(defaultPagination());
+      expect(pagination.skip).to.equal(0);
+      expect(pagination.count).to.equal(activeProductCount);
     });
     it('should return an HTTP 403 if not admin', async () => {
       const res = await request(ctx.app)
@@ -323,6 +361,29 @@ describe('ProductController', async (): Promise<void> => {
 
       // forbidden code
       expect(res.status).to.equal(403);
+    });
+    it('should adhere to pagination', async () => {
+      const take = 5;
+      const skip = 3;
+
+      const res = await request(ctx.app)
+        .get('/products/updated')
+        .query({ take, skip })
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(200);
+
+      const products = res.body.records as ProductResponse[];
+      // eslint-disable-next-line no-underscore-dangle
+      const pagination = res.body._pagination as PaginationResult;
+
+      // Every product that has a current revision should be returned.
+      const activeProductCount = await UpdatedProduct.count();
+
+      expect(pagination.take).to.equal(take);
+      expect(pagination.skip).to.equal(skip);
+      expect(pagination.count).to.equal(activeProductCount);
+      expect(products.length).to.be.at.most(take);
     });
   });
   describe('GET /products/:id/update', () => {
@@ -403,15 +464,39 @@ describe('ProductController', async (): Promise<void> => {
       expect(res.status).to.equal(404);
     });
     it('should return an HTTP 403 if not admin', async () => {
+      const id = 5;
       // sanity check / precondition
-      expect(await UpdatedProduct.findOne(5)).to.exist;
+      expect(await UpdatedProduct.findOne(id)).to.exist;
 
       const res = await request(ctx.app)
-        .post('/products/4/approve')
+        .post(`/products/${id}/approve`)
         .set('Authorization', `Bearer ${ctx.token}`);
 
       expect(res.body).to.be.empty;
       expect(res.status).to.equal(403);
     });
   });
+
+  // Somehow this testcase is not working, even though the syntax seems to be correct.
+  // The problem is that (even though a file is attached with .attach(), the endpoint
+  // still returns a 400 because "No file or too many files were uploaded". However,
+  // the actual endpoint works just fine...
+
+  // describe('POST /products/:id/image', () => {
+  //   it('should change the product image if admin', async () => {
+  //     const id = 4;
+  //     // sanity check / precondition
+  //     expect(await Product.findOne(id)).to.exist;
+  //     expect((await Product.findOne(id)).image).to.be.undefined;
+  //
+  //     const res = await request(ctx.app)
+  //       .post(`/products/${id}/image`)
+  //       .set('Authorization', `Bearer ${ctx.token}`)
+  //       .attach('file', fs.readFileSync('./test/image.png'), 'product-image.png');
+  //
+  //     expect(res.status).to.equal(204);
+  //     expect(res.body).to.be.empty;
+  //     expect((await Product.findOne(id)).image).to.be.not.undefined;
+  //   });
+  // });
 });

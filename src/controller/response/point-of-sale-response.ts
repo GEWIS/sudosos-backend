@@ -16,9 +16,9 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import BaseResponse from './base-response';
-import User from '../../entity/user/user';
-import { BaseContainerResponse, ContainerResponse } from './container-response';
-import ProductOrdering from '../../entity/point-of-sale/product-ordering';
+import { ContainerWithProductsResponse } from './container-response';
+import { BaseUserResponse } from './user-response';
+import { PaginationResult } from '../../helpers/pagination';
 
 /**
  * @typedef {BaseResponse} BasePointOfSaleResponse
@@ -29,16 +29,60 @@ export interface BasePointOfSaleResponse extends BaseResponse {
 }
 /**
  * @typedef {BasePointOfSaleResponse} PointOfSaleResponse
- * @property {integer} revision - The revision of the point-of-sale.
- * @property {User.model} owner.required - The owner of the point-of-sale.
- * @property {BaseProductResponse} products.required - The products in the point-of-sale.
+ * @property {BaseUserResponse.model} owner.required - The owner of the point-of-sale.
+ * @property {string} startDate.required - The date starting which the POS is active
+ * @property {string} endDate.required - The date at which the POS becomes inactive
+ * @property {boolean} useAuthentication.required - Whether an user needs to be authenticated
+ * @property {number} revision.required - Revision of the POS
  */
 export interface PointOfSaleResponse extends BasePointOfSaleResponse {
-  revision: number,
-  owner?: User,
-  startDate: Date,
-  endDate: Date,
-  products?: BaseContainerResponse[] | ContainerResponse[],
-  productOrder?: ProductOrdering,
+  owner?: BaseUserResponse,
+  startDate: string,
+  endDate: string,
   useAuthentication: boolean,
+  revision: number,
+}
+
+/**
+ * @typedef PaginatedPointOfSaleResponse
+ * @property {PaginationResult.model} _pagination - Pagination metadata
+ * @property {Array<PointOfSaleResponse>} records - Returned points of sale
+ */
+export interface PaginatedPointOfSaleResponse {
+  _pagination: PaginationResult,
+  records: PointOfSaleResponse[],
+}
+
+/**
+ * @typedef {BasePointOfSaleResponse} UpdatedPointOfSaleResponse
+ * @property {BaseUserResponse.model} owner.required - The owner of the point-of-sale.
+ * @property {string} startDate.required - The date starting which the POS is active
+ * @property {string} endDate.required - The date at which the POS becomes inactive
+ * @property {boolean} useAuthentication.required - Whether an user needs to be authenticated
+ */
+export interface UpdatedPointOfSaleResponse extends BasePointOfSaleResponse {
+  owner?: BaseUserResponse,
+  startDate: string,
+  endDate: string,
+  useAuthentication: boolean,
+}
+
+/**
+ * @typedef PaginatedUpdatedPointOfSaleResponse
+ * @property {PaginationResult.model} _pagination - Pagination metadata
+ * @property {Array<UpdatedPointOfSaleResponse|PointOfSaleWithContainersResponse>} records -
+ * Returned points of sale
+ */
+export interface PaginatedUpdatedPointOfSaleResponse {
+  _pagination: PaginationResult,
+  records: (UpdatedPointOfSaleResponse | PointOfSaleWithContainersResponse)[],
+}
+
+/**
+ * @typedef {PointOfSaleResponse} PointOfSaleWithContainersResponse
+ * @property {Array.<ContainerWithProductsResponse>} containers.required - The containers
+ * in the point-of-sale.
+ */
+export interface PointOfSaleWithContainersResponse extends BasePointOfSaleResponse {
+  containers: ContainerWithProductsResponse[],
 }

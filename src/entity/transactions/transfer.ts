@@ -23,12 +23,6 @@ import BaseEntity from '../base-entity';
 import User from '../user/user';
 import DineroTransformer from '../transformer/dinero-transformer';
 
-export enum TransferType {
-  DEPOSIT = 1,
-  INVOICE = 2,
-  CUSTOM = 3,
-}
-
 /**
  * @typedef {BaseEntity} Transfer
  * @property {User.model} from - The account from which the transfer is subtracted. Can be
@@ -37,13 +31,19 @@ export enum TransferType {
  * money was paid out.
  * @property {Dinero.model} amount.required - The amount of money transferred.
  * @property {integer} type.required - The type of transfer.
- * @prpoerty {string} description - If the transfer is of type 'custom', this contains a
+ * @property {string} description - If the transfer is of type 'custom', this contains a
  * description of the transfer.
  */
 @Entity()
 export default class Transfer extends BaseEntity {
+  @Column({ nullable: true })
+  public fromId?: number;
+
   @ManyToOne(() => User, { nullable: true })
   public from?: User;
+
+  @Column({ nullable: true })
+  public toId?: number;
 
   @ManyToOne(() => User, { nullable: true })
   public to?: User;
@@ -53,11 +53,6 @@ export default class Transfer extends BaseEntity {
     transformer: DineroTransformer.Instance,
   })
   public amount: Dinero;
-
-  @Column({
-    nullable: false,
-  })
-  public type: TransferType;
 
   @Column({
     nullable: true,

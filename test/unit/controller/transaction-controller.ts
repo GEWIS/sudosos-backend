@@ -33,6 +33,7 @@ import { BaseTransactionResponse } from '../../../src/controller/response/transa
 import { verifyBaseTransactionEntity } from '../validators';
 import RoleManager from '../../../src/rbac/role-manager';
 import { TransactionRequest } from '../../../src/controller/request/transaction-request';
+import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 
 describe('TransactionController', (): void => {
   let ctx: {
@@ -50,8 +51,8 @@ describe('TransactionController', (): void => {
     logger: Logger,
   };
 
-  beforeEach(async function beforeEach() {
-    this.timeout(10000);
+  // eslint-disable-next-line func-names
+  before(async () => {
     const logger: Logger = log4js.getLogger('TransactionControllerTest');
     logger.level = 'ALL';
     const connection = await Database.initialize();
@@ -167,7 +168,6 @@ describe('TransactionController', (): void => {
           update: all,
           delete: all,
         },
-
       },
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
     });
@@ -184,7 +184,7 @@ describe('TransactionController', (): void => {
     ctx.app.use('/transactions', ctx.controller.getRouter());
   });
 
-  afterEach(async () => {
+  after(async () => {
     await ctx.connection.close();
   });
 
@@ -194,12 +194,19 @@ describe('TransactionController', (): void => {
         .get('/transactions')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
-      const transactions = res.body as BaseTransactionResponse[];
-      const pagination = parseInt(process.env.PAGINATION_DEFAULT, 10);
-      expect(transactions.length).to.equal(pagination);
+
+      const transactions = res.body.records as BaseTransactionResponse[];
+      // eslint-disable-next-line no-underscore-dangle
+      const pagination = res.body._pagination as PaginationResult;
+
+      expect(transactions.length).to.equal(pagination.take);
       transactions.forEach((transaction: BaseTransactionResponse) => {
         verifyBaseTransactionEntity(ctx.swaggerspec, transaction);
       });
+
+      expect(pagination.take).to.equal(defaultPagination());
+      expect(pagination.skip).to.equal(0);
+      expect(pagination.count).to.equal(ctx.transactions.length);
     });
 
     it('should return forbidden when user is not admin', async () => {
@@ -210,18 +217,24 @@ describe('TransactionController', (): void => {
     });
 
     it('should return return correct transactions when fromId param is set', async () => {
+      const fromId = 1;
+
       const res = await request(ctx.app)
         .get('/transactions')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
-        .query({ fromId: 1 });
+        .query({ fromId });
       expect(res.status).to.equal(200);
 
-      const transactions = res.body as BaseTransactionResponse[];
+      const actualTransactions = ctx.transactions.filter(
+        (transaction) => transaction.from.id === fromId,
+      );
+
+      const transactions = res.body.records as BaseTransactionResponse[];
       const spec = await Swagger.importSpecification();
-      expect(transactions.length).to.equal(9);
+      expect(transactions.length).to.equal(actualTransactions.length);
       transactions.forEach((transaction: BaseTransactionResponse) => {
         verifyBaseTransactionEntity(spec, transaction);
-        expect(transaction.from.id).to.equal(1);
+        expect(transaction.from.id).to.equal(fromId);
       });
     });
 
@@ -234,18 +247,24 @@ describe('TransactionController', (): void => {
     });
 
     it('should return return correct transactions when createdById param is set', async () => {
+      const createdById = 1;
+
       const res = await request(ctx.app)
         .get('/transactions')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
-        .query({ createdById: 1 });
+        .query({ createdById });
       expect(res.status).to.equal(200);
 
-      const transactions = res.body as BaseTransactionResponse[];
+      const actualTransactions = ctx.transactions.filter(
+        (transaction) => transaction.createdBy.id === createdById,
+      );
+
+      const transactions = res.body.records as BaseTransactionResponse[];
       const spec = await Swagger.importSpecification();
-      expect(transactions.length).to.equal(14);
+      expect(transactions.length).to.equal(actualTransactions.length);
       transactions.forEach((transaction: BaseTransactionResponse) => {
         verifyBaseTransactionEntity(spec, transaction);
-        expect(transaction.createdBy.id).to.equal(1);
+        expect(transaction.createdBy.id).to.equal(createdById);
       });
     });
 
@@ -258,15 +277,21 @@ describe('TransactionController', (): void => {
     });
 
     it('should return return correct transactions when toId param is set', async () => {
+      const toId = 7;
+
       const res = await request(ctx.app)
         .get('/transactions')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
-        .query({ toId: 7 });
+        .query({ toId });
       expect(res.status).to.equal(200);
 
-      const transactions = res.body as BaseTransactionResponse[];
+      const actualTransactions = ctx.transactions
+        .filter((transactions) => transactions.subTransactions
+          .some((subTransaction) => subTransaction.to.id === toId));
+
+      const transactions = res.body.records as BaseTransactionResponse[];
       const spec = await Swagger.importSpecification();
-      expect(transactions.length).to.equal(17);
+      expect(transactions.length).to.equal(actualTransactions.length);
       transactions.forEach((transaction: BaseTransactionResponse) => {
         verifyBaseTransactionEntity(spec, transaction);
       });
@@ -288,14 +313,13 @@ describe('TransactionController', (): void => {
         .query({ fromDate });
       expect(res.status).to.equal(200);
 
-      let transactions = res.body as BaseTransactionResponse[];
+      let transactions = res.body.records as BaseTransactionResponse[];
       const spec = await Swagger.importSpecification();
       const pagination = parseInt(process.env.PAGINATION_DEFAULT, 10);
       expect(transactions.length).to.equal(pagination);
-      transactions.map((t) => {
+      transactions.forEach((t) => {
         verifyBaseTransactionEntity(spec, t);
         expect(new Date(t.createdAt)).to.be.greaterThan(fromDate);
-        return undefined;
       });
 
       fromDate = new Date(ctx.transactions[0].createdAt.getTime() + 1000 * 60 * 60 * 24);
@@ -304,7 +328,7 @@ describe('TransactionController', (): void => {
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .query({ fromDate });
       expect(res.status).to.equal(200);
-      transactions = res.body as BaseTransactionResponse[];
+      transactions = res.body.records as BaseTransactionResponse[];
 
       expect(transactions.length).to.equal(0);
     });
@@ -325,7 +349,7 @@ describe('TransactionController', (): void => {
         .query({ tillDate });
       expect(res.status).to.equal(200);
 
-      let transactions = res.body as BaseTransactionResponse[];
+      let transactions = res.body.records as BaseTransactionResponse[];
       const spec = await Swagger.importSpecification();
       const pagination = parseInt(process.env.PAGINATION_DEFAULT, 10);
       expect(transactions.length).to.equal(pagination);
@@ -341,7 +365,7 @@ describe('TransactionController', (): void => {
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .query({ tillDate });
       expect(res.status).to.equal(200);
-      transactions = res.body as BaseTransactionResponse[];
+      transactions = res.body.records as BaseTransactionResponse[];
 
       expect(transactions.length).to.equal(0);
     });
@@ -355,30 +379,46 @@ describe('TransactionController', (): void => {
     });
 
     it('should return correct transactions when productId is set', async () => {
+      const productId = 44;
+
       const res = await request(ctx.app)
         .get('/transactions')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
-        .query({ productId: 44 });
+        .query({ productId });
       expect(res.status).to.equal(200);
 
-      const transactions = res.body as BaseTransactionResponse[];
+      const actualTransactions = ctx.transactions
+        .filter((transaction) => transaction.subTransactions
+          .some((subTransaction) => subTransaction.subTransactionRows
+            .some((subTransactionRow) => subTransactionRow.product.product.id === productId)));
+
+      const transactions = res.body.records as BaseTransactionResponse[];
       const spec = await Swagger.importSpecification();
-      expect(transactions.length).to.equal(5);
+      expect(transactions.length).to.equal(actualTransactions.length);
       transactions.forEach((transaction: BaseTransactionResponse) => {
         verifyBaseTransactionEntity(spec, transaction);
       });
     });
 
     it('should return correct transactions when productId and productRevision are set', async () => {
+      const productId = 44;
+      const productRevision = 2;
+
       const res = await request(ctx.app)
         .get('/transactions')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
-        .query({ productId: 44, productRevision: 2 });
+        .query({ productId, productRevision });
       expect(res.status).to.equal(200);
 
-      const transactions = res.body as BaseTransactionResponse[];
+      const actualTransactions = ctx.transactions
+        .filter((transaction) => transaction.subTransactions
+          .some((subTransaction) => subTransaction.subTransactionRows
+            .some((subTransactionRow) => subTransactionRow.product.product.id === productId
+              && subTransactionRow.product.revision === productRevision)));
+
+      const transactions = res.body.records as BaseTransactionResponse[];
       const spec = await Swagger.importSpecification();
-      expect(transactions.length).to.equal(2);
+      expect(transactions.length).to.equal(actualTransactions.length);
       transactions.forEach((transaction: BaseTransactionResponse) => {
         verifyBaseTransactionEntity(spec, transaction);
       });
@@ -409,18 +449,25 @@ describe('TransactionController', (): void => {
     });
 
     it('should adhere to pagination take', async () => {
+      const take = 30;
       const res = await request(ctx.app)
         .get('/transactions')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
-        .query({ take: 30 });
+        .query({ take });
       expect(res.status).to.equal(200);
 
-      const transactions = res.body as BaseTransactionResponse[];
+      const transactions = res.body.records as BaseTransactionResponse[];
+      // eslint-disable-next-line no-underscore-dangle
+      const pagination = res.body._pagination as PaginationResult;
       const spec = await Swagger.importSpecification();
-      expect(transactions.length).to.equal(30);
+      expect(transactions.length).to.equal(take);
       transactions.forEach((transaction: BaseTransactionResponse) => {
         verifyBaseTransactionEntity(spec, transaction);
       });
+
+      expect(pagination.take).to.equal(take);
+      expect(pagination.skip).to.equal(0);
+      expect(pagination.count).to.equal(ctx.transactions.length);
     });
 
     it('should return 400 when take is not a number', async () => {
@@ -432,18 +479,25 @@ describe('TransactionController', (): void => {
     });
 
     it('should adhere to pagination skip', async () => {
+      const skip = 180;
       const res = await request(ctx.app)
         .get('/transactions')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
-        .query({ skip: 212 });
+        .query({ skip });
       expect(res.status).to.equal(200);
 
-      const transactions = res.body as BaseTransactionResponse[];
+      const transactions = res.body.records as BaseTransactionResponse[];
+      // eslint-disable-next-line no-underscore-dangle
+      const pagination = res.body._pagination as PaginationResult;
       const spec = await Swagger.importSpecification();
-      expect(transactions.length).to.equal(12);
+      expect(transactions.length).to.equal(ctx.transactions.length - skip);
       transactions.forEach((transaction: BaseTransactionResponse) => {
         verifyBaseTransactionEntity(spec, transaction);
       });
+
+      expect(pagination.take).to.equal(defaultPagination());
+      expect(pagination.skip).to.equal(skip);
+      expect(pagination.count).to.equal(ctx.transactions.length);
     });
 
     it('should return 400 when skip is not a number', async () => {

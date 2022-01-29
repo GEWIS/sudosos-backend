@@ -17,15 +17,21 @@
  */
 import log4js, { Logger } from 'log4js';
 import { Response } from 'express';
+import { UploadedFile } from 'express-fileupload';
 import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import ProductService from '../service/product-service';
 import ProductRequest from './request/product-request';
 import Product from '../entity/product/product';
+import FileService from '../service/file-service';
+import { PRODUCT_IMAGE_LOCATION } from '../files/storage';
+import { parseRequestPagination } from '../helpers/pagination';
 
 export default class ProductController extends BaseController {
   private logger: Logger = log4js.getLogger('ProductController');
+
+  private fileService: FileService;
 
   /**
    * Creates a new product controller instance.
@@ -34,6 +40,7 @@ export default class ProductController extends BaseController {
   public constructor(options: BaseControllerOptions) {
     super(options);
     this.logger.level = process.env.LOG_LEVEL;
+    this.fileService = new FileService(PRODUCT_IMAGE_LOCATION);
   }
 
   /**
@@ -44,7 +51,7 @@ export default class ProductController extends BaseController {
       '/': {
         GET: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Product', ['*']),
-          handler: this.returnAllProducts.bind(this),
+          handler: this.getAllProducts.bind(this),
         },
         POST: {
           body: { modelName: 'ProductRequest' },
@@ -55,7 +62,7 @@ export default class ProductController extends BaseController {
       '/:id(\\d+)': {
         GET: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Product', ['*']),
-          handler: this.returnSingleProduct.bind(this),
+          handler: this.getSingleProduct.bind(this),
         },
         PATCH: {
           body: { modelName: 'ProductRequest' },
@@ -66,19 +73,25 @@ export default class ProductController extends BaseController {
       '/updated': {
         GET: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Product', ['*']),
-          handler: this.returnAllUpdatedProducts.bind(this),
+          handler: this.getAllUpdatedProducts.bind(this),
         },
       },
       '/:id(\\d+)/update': {
         GET: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Product', ['*']),
-          handler: this.returnSingleUpdatedProduct.bind(this),
+          handler: this.getSingleUpdatedProduct.bind(this),
         },
       },
       '/:id(\\d+)/approve': {
         POST: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'create', 'all', 'Product', ['*']),
           handler: this.approveUpdate.bind(this),
+        },
+      },
+      '/:id(\\d+)/image': {
+        POST: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'create', 'all', 'Product', ['*']),
+          handler: this.updateProductImage.bind(this),
         },
       },
     };
@@ -89,16 +102,29 @@ export default class ProductController extends BaseController {
    * @route GET /products
    * @group products - Operations of product controller
    * @security JWT
-   * @returns {Array.<ProductResponse>} 200 - All existing products
+   * @param {integer} take.query - How many products the endpoint should return
+   * @param {integer} skip.query - How many products should be skipped (for pagination)
+   * @returns {PaginatedProductResponse.model} 200 - All existing products
    * @returns {string} 500 - Internal server error
    */
-  public async returnAllProducts(req: RequestWithToken, res: Response): Promise<void> {
+  public async getAllProducts(req: RequestWithToken, res: Response): Promise<void> {
     const { body } = req;
     this.logger.trace('Get all products', body, 'by user', req.token.user);
 
+    let take;
+    let skip;
+    try {
+      const pagination = parseRequestPagination(req);
+      take = pagination.take;
+      skip = pagination.skip;
+    } catch (e) {
+      res.status(400).send(e.message);
+      return;
+    }
+
     // Handle request
     try {
-      const products = await ProductService.getProducts();
+      const products = await ProductService.getProducts({}, { take, skip });
       res.json(products);
     } catch (error) {
       this.logger.error('Could not return all products:', error);
@@ -137,8 +163,8 @@ export default class ProductController extends BaseController {
    * Update an existing product.
    * @route PATCH /products/{id}
    * @group products - Operations of product controller
-   * @param {integer} id.path.required - The id of the product which should be returned
-   * @param {ProductRequest.model} product.body.required - The product which should be created
+   * @param {integer} id.path.required - The id of the product which should be updated
+   * @param {ProductRequest.model} product.body.required - The product which should be updated
    * @security JWT
    * @returns {ProductResponse.model} 200 - The created product entity
    * @returns {string} 400 - Validation error
@@ -207,14 +233,15 @@ export default class ProductController extends BaseController {
    * @returns {string} 404 - Not found error
    * @returns {string} 500 - Internal server error
    */
-  public async returnSingleProduct(req: RequestWithToken, res: Response): Promise<void> {
+  public async getSingleProduct(req: RequestWithToken, res: Response): Promise<void> {
     const { id } = req.params;
     this.logger.trace('Get single product', id, 'by user', req.token.user);
 
     // handle request
     try {
       // check if product in database
-      const product = (await ProductService.getProducts({ productId: parseInt(id, 10) }))[0];
+      const product = (await ProductService
+        .getProducts({ productId: parseInt(id, 10) })).records[0];
       if (product) {
         res.json(product);
       } else {
@@ -231,16 +258,29 @@ export default class ProductController extends BaseController {
    * @route GET /products/updated
    * @group products - Operations of product controller
    * @security JWT
-   * @returns {Array.<ProductResponse>} 200 - All existing updated products
+   * @param {integer} take.query - How many products the endpoint should return
+   * @param {integer} skip.query - How many products should be skipped (for pagination)
+   * @returns {PaginatedProductResponse.model} 200 - All existing updated products
    * @returns {string} 500 - Internal server error
    */
-  public async returnAllUpdatedProducts(req: RequestWithToken, res: Response): Promise<void> {
+  public async getAllUpdatedProducts(req: RequestWithToken, res: Response): Promise<void> {
     const { body } = req;
     this.logger.trace('Get all updated products', body, 'by user', req.token.user);
 
+    let take;
+    let skip;
+    try {
+      const pagination = parseRequestPagination(req);
+      take = pagination.take;
+      skip = pagination.skip;
+    } catch (e) {
+      res.status(400).send(e.message);
+      return;
+    }
+
     // Handle request
     try {
-      const products = await ProductService.getUpdatedProducts();
+      const products = await ProductService.getProducts({ updatedProducts: true }, { take, skip });
       res.json(products);
     } catch (error) {
       this.logger.error('Could not return all products:', error);
@@ -258,7 +298,7 @@ export default class ProductController extends BaseController {
    * @returns {string} 404 - Not found error
    * @returns {string} 500 - Internal server error
    */
-  public async returnSingleUpdatedProduct(req: RequestWithToken, res: Response): Promise<void> {
+  public async getSingleUpdatedProduct(req: RequestWithToken, res: Response): Promise<void> {
     const { id } = req.params;
     this.logger.trace('Get single product', id, 'by user', req.token.user);
 
@@ -267,13 +307,60 @@ export default class ProductController extends BaseController {
     // handle request
     try {
       if (await Product.findOne(productId)) {
-        res.json((await ProductService.getUpdatedProducts({ productId: parseInt(id, 10) }))[0]);
+        res.json((await ProductService
+          .getProducts({ updatedProducts: true, productId: parseInt(id, 10) })).records[0]);
       } else {
         res.status(404).json('Product not found.');
       }
     } catch (error) {
       this.logger.error('Could not return product:', error);
       res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Upload a new image for a product
+   * @route POST /products/{id}/image
+   * @group products - Operations of products controller
+   * @consumes multipart/form-data
+   * @param {integer} id.path.required - The id of the product which should be returned
+   * @param {file} file.formData
+   * @security JWT
+   * @returns 204 - Success
+   * @returns {string} 400 - Validation error
+   * @returns {string} 500 - Internal server error
+   */
+  public async updateProductImage(req: RequestWithToken, res: Response): Promise<void> {
+    const { id } = req.params;
+    const { files } = req;
+    this.logger.trace('Update product', id, 'image by user', req.token.user);
+
+    if (!req.files || Object.keys(files).length !== 1) {
+      res.status(400).send('No file or too many files were uploaded');
+      return;
+    }
+    if (files.file === undefined) {
+      res.status(400).send("No file is uploaded in the 'file' field");
+      return;
+    }
+
+    const productId = parseInt(id, 10);
+
+    // handle request
+    try {
+      const product = await Product.findOne(productId, { relations: ['image'] });
+      if (product) {
+        await this.fileService.uploadEntityImage(
+          product, files.file as UploadedFile, req.token.user,
+        );
+        res.status(204).send();
+      } else {
+        res.status(404).json('Product not found');
+        return;
+      }
+    } catch (error) {
+      this.logger.error('Could not upload image:', error);
+      res.status(500).json('Internal server error');
     }
   }
 }

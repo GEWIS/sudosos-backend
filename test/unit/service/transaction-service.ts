@@ -25,7 +25,6 @@ import { DineroObject } from 'dinero.js';
 import Transaction from '../../../src/entity/transactions/transaction';
 import Database from '../../../src/database/database';
 import seedDatabase from '../../seed';
-import { RequestWithToken } from '../../../src/middleware/token-middleware';
 import TransactionService from '../../../src/service/transaction-service';
 import { verifyBaseTransactionEntity } from '../validators';
 import Swagger from '../../../src/start/swagger';
@@ -34,13 +33,14 @@ import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import SubTransactionRow from '../../../src/entity/transactions/sub-transaction-row';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
 import ContainerRevision from '../../../src/entity/container/container-revision';
+import User from '../../../src/entity/user/user';
 
 describe('TransactionService', (): void => {
   let ctx: {
     connection: Connection,
     app: Application,
     transactions: Transaction[],
-    req: RequestWithToken,
+    users: User[],
     validTransReq: TransactionRequest,
     pointOfSale: PointOfSaleRevision,
     container: ContainerRevision,
@@ -49,20 +49,14 @@ describe('TransactionService', (): void => {
   };
 
   // eslint-disable-next-line func-names
-  beforeEach(async function (): Promise<void> {
-    this.timeout(5000);
+  before(async function (): Promise<void> {
+    this.timeout(10000);
+
     const logger: Logger = log4js.getLogger('TransactionServiceTest');
     logger.level = 'ALL';
     const connection = await Database.initialize();
     const app = express();
-    const { transactions } = await seedDatabase();
-    const req = {
-      token: '',
-      query: {
-        take: 23,
-        skip: 0,
-      },
-    } as any as RequestWithToken;
+    const { transactions, users } = await seedDatabase();
 
     const validTransReq = {
       from: 7,
@@ -157,17 +151,17 @@ describe('TransactionService', (): void => {
     ctx = {
       connection,
       app,
-      req,
       validTransReq,
       pointOfSale,
       transactions,
+      users,
       container,
       spec: await Swagger.importSpecification(),
       logger,
     };
   });
 
-  afterEach(async () => {
+  after(async () => {
     await ctx.connection.close();
   });
 
@@ -395,38 +389,75 @@ describe('TransactionService', (): void => {
   });
 
   describe('Get all transactions', () => {
-    it('should return a paginated list', async () => {
-      const transactions = await TransactionService.getTransactions(ctx.req, {});
+    it('should return all transactions', async () => {
+      // eslint-disable-next-line @typescript-eslint/naming-convention
+      const { records, _pagination } = await TransactionService.getTransactions({});
 
-      expect(transactions.length).to.equal(23);
-      transactions.map((t) => verifyBaseTransactionEntity(ctx.spec, t));
+      expect(records.length).to.equal(ctx.transactions.length);
+      records.map((t) => verifyBaseTransactionEntity(ctx.spec, t));
+
+      expect(_pagination.take).to.be.undefined;
+      expect(_pagination.skip).to.be.undefined;
+      expect(_pagination.count).to.equal(ctx.transactions.length);
+    });
+
+    it('should return a paginated list when take is set', async () => {
+      const take = 69;
+      const { records } = await TransactionService.getTransactions({}, { take });
+
+      expect(records.length).to.equal(take);
+    });
+
+    it('should not return a paginated list when skip is set', async () => {
+      const skip = 69;
+      const { records } = await TransactionService.getTransactions({}, { skip });
+
+      expect(records.length).to.equal(ctx.transactions.length - 69);
+    });
+
+    it('should return a paginated list when take and skip are set', async () => {
+      const skip = 150;
+      const take = 50;
+      const { records } = await TransactionService.getTransactions({}, { take, skip });
+
+      expect(records.length).to.equal(
+        Math.min(take, ctx.transactions.length - skip),
+      );
     });
 
     it('should filter on fromId', async () => {
       const fromId = 1;
-      const transactions = await TransactionService.getTransactions(ctx.req, {
+      const { records } = await TransactionService.getTransactions({
         fromId,
       });
 
-      expect(transactions.length).to.equal(9);
-      transactions.map((t) => verifyBaseTransactionEntity(ctx.spec, t));
-      transactions.map((t) => expect(t.from.id).to.be.equal(fromId));
+      const actualTransactions = ctx.transactions.filter(
+        (transaction) => transaction.from.id === fromId,
+      );
+
+      expect(records.length).to.equal(actualTransactions.length);
+      records.map((t) => verifyBaseTransactionEntity(ctx.spec, t));
+      records.map((t) => expect(t.from.id).to.be.equal(fromId));
     });
 
     it('should filter on createdById', async () => {
       const createdById = 1;
-      const transactions = await TransactionService.getTransactions(ctx.req, {
+      const { records } = await TransactionService.getTransactions({
         createdById,
       });
 
-      expect(transactions.length).to.equal(14);
-      transactions.map((t) => verifyBaseTransactionEntity(ctx.spec, t));
-      transactions.map((t) => expect(t.createdBy.id).to.be.equal(createdById));
+      const actualTransactions = ctx.transactions.filter(
+        (transaction) => transaction.createdBy.id === createdById,
+      );
+
+      expect(records.length).to.equal(actualTransactions.length);
+      records.map((t) => verifyBaseTransactionEntity(ctx.spec, t));
+      records.map((t) => expect(t.createdBy.id).to.be.equal(createdById));
     });
 
     it('should filter on toId', async () => {
       const toId = 7;
-      const transactions = await TransactionService.getTransactions(ctx.req, {
+      const { records } = await TransactionService.getTransactions({
         toId,
       });
       const transactionIds = ctx.transactions.map((t) => {
@@ -436,151 +467,182 @@ describe('TransactionService', (): void => {
         return undefined;
       }).filter((i) => i !== undefined);
 
-      expect(transactions.length).to.equal(17);
-      transactions.map((t) => verifyBaseTransactionEntity(ctx.spec, t));
-      transactions.map((t) => expect(transactionIds).to.include(t.id));
+      const actualTransactions = ctx.transactions
+        .filter((transaction) => transaction.subTransactions
+          .some((subTransaction) => subTransaction.to.id === toId));
+
+      expect(records.length).to.equal(actualTransactions.length);
+      records.map((t) => verifyBaseTransactionEntity(ctx.spec, t));
+      records.map((t) => expect(transactionIds).to.include(t.id));
     });
 
     it('should filter on point of sale', async () => {
       const pointOfSale = { id: 14 };
-      const transactions = await TransactionService.getTransactions(ctx.req, {
+      const { records } = await TransactionService.getTransactions({
         pointOfSaleId: pointOfSale.id,
       });
 
-      expect(transactions.length).to.equal(6);
-      transactions.map((t) => verifyBaseTransactionEntity(ctx.spec, t));
-      transactions.map((t) => expect(t.pointOfSale.id).to.be.equal(pointOfSale.id));
+      const actualTransactions = ctx.transactions
+        .filter((transaction) => transaction.pointOfSale.pointOfSale.id === pointOfSale.id);
+
+      expect(records.length).to.equal(actualTransactions.length);
+      records.map((t) => verifyBaseTransactionEntity(ctx.spec, t));
+      records.map((t) => expect(t.pointOfSale.id).to.be.equal(pointOfSale.id));
     });
 
     it('should filter on point of sale with revision', async () => {
       const pointOfSale = { id: 14, revision: 2 };
-      const transactions = await TransactionService.getTransactions(ctx.req, {
+      const { records } = await TransactionService.getTransactions({
         pointOfSaleId: pointOfSale.id,
         pointOfSaleRevision: pointOfSale.revision,
       });
 
-      expect(transactions.length).to.equal(2);
-      transactions.map((t) => verifyBaseTransactionEntity(ctx.spec, t));
-      transactions.map((t) => expect(t.pointOfSale.id).to.be.equal(pointOfSale.id));
+      const actualTransactions = ctx.transactions
+        .filter((transaction) => transaction.pointOfSale.pointOfSale.id === pointOfSale.id
+          && transaction.pointOfSale.revision === pointOfSale.revision);
+
+      expect(records.length).to.equal(actualTransactions.length);
+      records.map((t) => verifyBaseTransactionEntity(ctx.spec, t));
+      records.map((t) => expect(t.pointOfSale.id).to.be.equal(pointOfSale.id));
     });
 
     it('should filter on container', async () => {
       const container = { id: 11 };
-      const transactions = await TransactionService.getTransactions(ctx.req, {
+      const { records } = await TransactionService.getTransactions({
         containerId: container.id,
       });
-      const transactionIds = ctx.transactions.map((t) => {
-        if (t.subTransactions.some((s) => s.container.container.id === container.id)) {
-          return t.id;
-        }
-        return undefined;
-      }).filter((i) => i !== undefined);
 
-      expect(transactions.length).to.equal(7);
-      transactions.map((t) => verifyBaseTransactionEntity(ctx.spec, t));
-      transactions.map((t) => expect(transactionIds).to.include(t.id));
+      const actualTransactions = ctx.transactions
+        .filter((transaction) => transaction.subTransactions
+          .some((subTransaction) => subTransaction.container.container.id === container.id));
+
+      expect(records.length).to.equal(actualTransactions.length);
+      records.map((t) => verifyBaseTransactionEntity(ctx.spec, t));
+      records.map((t) => expect(actualTransactions.map((at) => at.id)).to.include(t.id));
     });
 
     it('should filter on container with revision', async () => {
       const container = { id: 11, revision: 2 };
-      const transactions = await TransactionService.getTransactions(ctx.req, {
+      const { records } = await TransactionService.getTransactions({
         containerId: container.id,
         containerRevision: container.revision,
       });
-      const transactionIds = ctx.transactions.map((t) => {
-        if (t.subTransactions.some((s) => s.container.container.id === container.id
-          && s.container.revision === container.revision)) {
-          return t.id;
-        }
-        return undefined;
-      }).filter((i) => i !== undefined);
 
-      expect(transactions.length).to.equal(3);
-      transactions.map((t) => verifyBaseTransactionEntity(ctx.spec, t));
-      transactions.map((t) => expect(transactionIds).to.include(t.id));
+      const actualTransactions = ctx.transactions
+        .filter((transaction) => transaction.subTransactions
+          .some((subTransaction) => subTransaction.container.container.id === container.id
+            && subTransaction.container.revision === container.revision));
+
+      expect(records.length).to.equal(actualTransactions.length);
+      records.map((t) => verifyBaseTransactionEntity(ctx.spec, t));
+      records.map((t) => expect(actualTransactions.map((at) => at.id)).to.include(t.id));
     });
 
     it('should filter on product', async () => {
       const product = { id: 44 };
-      const transactions = await TransactionService.getTransactions(ctx.req, {
+      const { records } = await TransactionService.getTransactions({
         productId: product.id,
       });
-      const transactionIds = ctx.transactions.map((t) => {
-        if (t.subTransactions.some((s) => s.subTransactionRows
-          .some((r) => r.product.product.id === product.id))
-        ) {
-          return t.id;
-        }
-        return undefined;
-      }).filter((i) => i !== undefined);
 
-      expect(transactions.length).to.equal(5);
-      transactions.map((t) => verifyBaseTransactionEntity(ctx.spec, t));
-      transactions.map((t) => expect(transactionIds).to.include(t.id));
+      const actualTransactions = ctx.transactions
+        .filter((transaction) => transaction.subTransactions
+          .some((subTransaction) => subTransaction.subTransactionRows
+            .some((subTransactionRow) => subTransactionRow.product.product.id === product.id)));
+
+      expect(records.length).to.equal(actualTransactions.length);
+      records.map((t) => verifyBaseTransactionEntity(ctx.spec, t));
+      records.map((t) => expect(actualTransactions.map((at) => at.id)).to.include(t.id));
     });
 
     it('should filter on product with revision', async () => {
       const product = { id: 44, revision: 2 };
-      const transactions = await TransactionService.getTransactions(ctx.req, {
+      const { records } = await TransactionService.getTransactions({
         productId: product.id,
         productRevision: product.revision,
       });
-      const transactionIds = ctx.transactions.map((t) => {
-        if (t.subTransactions.some((s) => s.subTransactionRows
-          .some((r) => r.product.product.id === product.id
-            && r.product.revision === product.revision))
-        ) {
-          return t.id;
-        }
-        return undefined;
-      }).filter((i) => i !== undefined);
 
-      expect(transactions.length).to.equal(2);
-      transactions.map((t) => verifyBaseTransactionEntity(ctx.spec, t));
-      transactions.map((t) => expect(transactionIds).to.include(t.id));
+      const actualTransactions = ctx.transactions
+        .filter((transaction) => transaction.subTransactions
+          .some((subTransaction) => subTransaction.subTransactionRows
+            .some((subTransactionRow) => subTransactionRow.product.product.id === product.id
+              && subTransactionRow.product.revision === product.revision)));
+
+      expect(records.length).to.equal(actualTransactions.length);
+      records.map((t) => verifyBaseTransactionEntity(ctx.spec, t));
+      records.map((t) => expect(actualTransactions.map((at) => at.id)).to.include(t.id));
     });
 
     it('should return transactions newer than date', async () => {
       let fromDate = new Date(ctx.transactions[0].createdAt.getTime() - 1000 * 60 * 60 * 24);
-      let transactions = await TransactionService.getTransactions(ctx.req, {
+      let { records } = await TransactionService.getTransactions({
         fromDate,
       });
 
-      expect(transactions.length).to.equal(23);
-      transactions.map((t) => {
+      const actualTransactions = ctx.transactions
+        .filter((transaction) => transaction.createdAt.getTime() >= fromDate.getTime());
+
+      const nrOfTransactions = actualTransactions.length;
+
+      expect(records.length).to.equal(nrOfTransactions);
+      records.map((t) => {
         verifyBaseTransactionEntity(ctx.spec, t);
         expect(new Date(t.createdAt)).to.be.greaterThan(fromDate);
         return undefined;
       });
 
       fromDate = new Date(ctx.transactions[0].createdAt.getTime() + 1000 * 60 * 60 * 24);
-      transactions = await TransactionService.getTransactions(ctx.req, {
+      records = (await TransactionService.getTransactions({
         fromDate,
-      });
+      })).records;
 
-      expect(transactions.length).to.equal(0);
+      expect(records.length).to.equal(0);
     });
 
     it('should return transactions older than date', async () => {
       let tillDate = new Date(ctx.transactions[0].createdAt.getTime() + 1000 * 60 * 60 * 24);
       console.log(ctx.transactions[0].createdAt.getTime() < tillDate.getTime());
-      let transactions = await TransactionService.getTransactions(ctx.req, {
+      let { records } = await TransactionService.getTransactions({
         tillDate,
       });
 
-      expect(transactions.length).to.equal(23);
-      transactions.map((t) => {
+      const actualTransactions = ctx.transactions
+        .filter((transaction) => transaction.createdAt.getTime() <= tillDate.getTime());
+
+      const nrOfTransactions = actualTransactions.length;
+
+      expect(records.length).to.equal(nrOfTransactions);
+      records.map((t) => {
         verifyBaseTransactionEntity(ctx.spec, t);
         expect(new Date(t.createdAt)).to.be.lessThan(tillDate);
         return undefined;
       });
 
       tillDate = new Date(ctx.transactions[0].createdAt.getTime() - 1000 * 60 * 60 * 24);
-      transactions = await TransactionService.getTransactions(ctx.req, {
+      records = (await TransactionService.getTransactions({
         tillDate,
-      });
+      })).records;
 
-      expect(transactions.length).to.equal(0);
+      expect(records.length).to.equal(0);
+    });
+  });
+
+  describe('Get all transactions involving a user', () => {
+    it('should return a paginated list', async () => {
+      const user = ctx.users[0];
+      const { records } = await TransactionService.getTransactions({}, {}, user);
+
+      const actualTransactions = await Transaction.createQueryBuilder('transaction')
+        .select('transaction.id as id')
+        .innerJoin(SubTransaction, 'subTransaction', 'transaction.id = subTransaction.transactionId')
+        .where('transaction.fromId = :userId OR transaction.createdById = :userId OR subTransaction.toId = :userId', { userId: user.id })
+        .distinct(true)
+        .getRawMany();
+
+      expect(records.length).to.equal(Math.min(23, actualTransactions.length));
+      records.forEach((t) => {
+        const found = actualTransactions.find((at) => at.id === t.id);
+        expect(found).to.not.be.undefined;
+      });
     });
   });
 

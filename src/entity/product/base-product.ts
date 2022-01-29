@@ -44,9 +44,6 @@ export default class BaseProduct extends BaseEntityWithoutId {
   @ManyToOne(() => ProductCategory, { nullable: false })
   public category: ProductCategory;
 
-  @Column()
-  public picture: string;
-
   @Column({
     type: 'decimal',
     scale: 2,

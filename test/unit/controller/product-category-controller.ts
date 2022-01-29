@@ -32,6 +32,7 @@ import Swagger from '../../../src/start/swagger';
 import RoleManager from '../../../src/rbac/role-manager';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import ProductCategory from '../../../src/entity/product/product-category';
+import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 
 /**
  * Tests if a productCategory response is equal to the request.
@@ -53,10 +54,11 @@ describe('ProductCategoryController', async (): Promise<void> => {
     validRequest: ProductCategoryRequest,
     validRequest2: ProductCategoryRequest,
     invalidRequest: ProductCategoryRequest,
+    categories: ProductCategory[],
   };
 
   // Initialize context
-  beforeEach(async () => {
+  before(async () => {
     // initialize test database
     const connection = await Database.initialize();
 
@@ -78,7 +80,7 @@ describe('ProductCategoryController', async (): Promise<void> => {
     await User.save(adminUser);
     await User.save(localUser);
 
-    await seedProductCategories();
+    const categories = await seedProductCategories();
 
     // create bearer tokens
     const tokenHandler = new TokenHandler({
@@ -104,6 +106,10 @@ describe('ProductCategoryController', async (): Promise<void> => {
     const specification = await Swagger.initialize(app);
 
     const all = { all: new Set<string>(['*']) };
+
+    // Create roleManager and set roles of Admin and User
+    // In this case Admin can do anything and User nothing.
+    // This does not reflect the actual roles of the users in the final product.
     const roleManager = new RoleManager();
     roleManager.registerRole({
       name: 'Admin',
@@ -136,11 +142,12 @@ describe('ProductCategoryController', async (): Promise<void> => {
       validRequest,
       validRequest2,
       invalidRequest,
+      categories,
     };
   });
 
   // close database connection
-  afterEach(async () => {
+  after(async () => {
     await ctx.connection.close();
   });
 
@@ -153,9 +160,15 @@ describe('ProductCategoryController', async (): Promise<void> => {
 
       expect(res.status).to.equal(200);
 
+      const categories = res.body.records as ProductCategoryResponse[];
+      // eslint-disable-next-line no-underscore-dangle
+      const pagination = res.body._pagination as PaginationResult;
+
       // Every productcategory should be returned.
-      const productCategoryCount = await ProductCategory.count();
-      expect((res.body as ProductCategoryResponse[]).length).to.equal(productCategoryCount);
+      expect(categories.length).to.equal(Math.min(ctx.categories.length, defaultPagination()));
+      expect(pagination.take).to.equal(defaultPagination());
+      expect(pagination.skip).to.equal(0);
+      expect(pagination.count).to.equal(ctx.categories.length);
     });
     it('should return an HTTP 403 if not admin', async () => {
       const res = await request(ctx.app)
@@ -167,6 +180,26 @@ describe('ProductCategoryController', async (): Promise<void> => {
 
       // forbidden code
       expect(res.status).to.equal(403);
+    });
+    it('should adhere to pagination', async () => {
+      const take = 5;
+      const skip = 3;
+      const res = await request(ctx.app)
+        .get('/productcategories/')
+        .query({ take, skip })
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(200);
+
+      const categories = res.body.records as ProductCategoryResponse[];
+      // eslint-disable-next-line no-underscore-dangle
+      const pagination = res.body._pagination as PaginationResult;
+
+      // Every productcategory should be returned.
+      expect(pagination.take).to.equal(take);
+      expect(pagination.skip).to.equal(skip);
+      expect(pagination.count).to.equal(ctx.categories.length);
+      expect(categories.length).to.be.at.most(take);
     });
   });
   describe('GET /productcategories/:id', () => {
@@ -272,19 +305,22 @@ describe('ProductCategoryController', async (): Promise<void> => {
     });
     it('should return an HTTP 404 if the productcategory with the given id does not exist', async () => {
       const productCategoryCount = await ProductCategory.count();
+      const body = { ...ctx.validRequest };
+      body.name = 'TestCaseShouldThrow404';
+
       const res = await request(ctx.app)
-        .patch(`/productcategories/${productCategoryCount + 1}`)
+        .patch(`/productcategories/${productCategoryCount + 10}`)
         .set('Authorization', `Bearer ${ctx.adminToken}`)
-        .send(ctx.validRequest);
+        .send(body);
+
+      // error code
+      expect(res.status).to.equal(404);
 
       // sanity check
       expect(await ProductCategory.findOne(productCategoryCount + 1)).to.be.undefined;
 
       // check if productcategory is not returned
       expect(res.body).to.equal('Productcategory not found.');
-
-      // success code
-      expect(res.status).to.equal(404);
     });
     it('should return an HTTP 403 if not admin', async () => {
       const res = await request(ctx.app)

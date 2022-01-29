@@ -23,6 +23,7 @@ import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import ProductCategoryService from '../service/product-category-service';
 import ProductCategoryRequest from './request/product-category-request';
+import { parseRequestPagination } from '../helpers/pagination';
 
 export default class ProductCategoryController extends BaseController {
   private logger: Logger = log4js.getLogger('ProductCategoryController');
@@ -69,17 +70,32 @@ export default class ProductCategoryController extends BaseController {
   /**
    * Returns all existing productcategories
    * @route GET /productcategories
-   * @group productCategories - Operations of productcategories controller
+   * @group productCategories - Operations of productcategory controller
    * @security JWT
-   * @returns {Array.<ProductCategoryResponse>} 200 - All existing productcategories
+   * @param {integer} take.query - How many product categories the endpoint should return
+   * @param {integer} skip.query - How many product categories should be skipped (for pagination)
+   * @returns {PaginatedProductCategoryResponse.model} 200 - All existing productcategories
    * @returns {string} 500 - Internal server error
    */
   public async returnAllProductCategories(req: RequestWithToken, res: Response): Promise<void> {
     const { body } = req;
     this.logger.trace('Get all productcategories', body, 'by user', req.token.user);
-    // Handle request
+
+    let take;
+    let skip;
     try {
-      const productCategories = await ProductCategoryService.getProductCategories();
+      const pagination = parseRequestPagination(req);
+      take = pagination.take;
+      skip = pagination.skip;
+    } catch (e) {
+      res.status(400).send(e.message);
+      return;
+    }
+
+    // Handle requestd
+    try {
+      const productCategories = await ProductCategoryService
+        .getProductCategories({}, { take, skip });
       res.json(productCategories);
     } catch (error) {
       this.logger.error('Could not return all product-categories:', error);
@@ -90,7 +106,7 @@ export default class ProductCategoryController extends BaseController {
   /**
    * Post a new productCategory.
    * @route POST /productcategories
-   * @group productCategories - Operations of productcategories controller
+   * @group productCategories - Operations of productcategory controller
    * @param {ProductCategoryRequest.model} productCategory.body.required
    * - The productCategory which should be created
    * @security JWT
@@ -101,8 +117,6 @@ export default class ProductCategoryController extends BaseController {
   public async postProductCategory(req: RequestWithToken, res: Response): Promise<void> {
     const body = req.body as ProductCategoryRequest;
     this.logger.trace('Create productcategory', body, 'by user', req.token.user);
-
-    // handle request
     try {
       if (await ProductCategoryService.verifyProductCategory(body)) {
         res.json(await ProductCategoryService.postProductCategory(body));
@@ -118,7 +132,7 @@ export default class ProductCategoryController extends BaseController {
   /**
    * Returns the requested productcategory
    * @route GET /productcategories/{id}
-   * @group productCategories - Operations of productcategories controller
+   * @group productCategories - Operations of productcategory controller
    * @param {integer} id.path.required - The id of the productcategory which should be returned
    * @security JWT
    * @returns {ProductCategoryResponse.model} 200 - The requested productcategory entity
@@ -134,7 +148,7 @@ export default class ProductCategoryController extends BaseController {
       // check if product in database
       const parsedId = parseInt(id, 10);
       const productCategory = (
-        (await ProductCategoryService.getProductCategories({ id: parsedId }))[0]);
+        (await ProductCategoryService.getProductCategories({ id: parsedId })).records[0]);
       if (productCategory) {
         res.json(productCategory);
       } else {

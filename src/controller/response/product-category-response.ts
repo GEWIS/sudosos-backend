@@ -16,6 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import BaseResponse from './base-response';
+import { PaginationResult } from '../../helpers/pagination';
 
 /**
  * @typedef {BaseResponse} ProductCategoryResponse
@@ -23,4 +24,14 @@ import BaseResponse from './base-response';
  */
 export interface ProductCategoryResponse extends BaseResponse {
   name: string,
+}
+
+/**
+ * @typedef PaginatedProductCategoryResponse
+ * @property {PaginationResult.model} _pagination - Pagination metadata
+ * @property {Array<ProductCategoryResponse>} records - Returned product categories
+ */
+export interface PaginatedProductCategoryResponse {
+  _pagination: PaginationResult,
+  records: ProductCategoryResponse[],
 }

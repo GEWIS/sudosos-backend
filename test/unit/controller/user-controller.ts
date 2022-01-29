@@ -37,6 +37,9 @@ import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale
 import seedDatabase from '../../seed';
 import { verifyUserEntity } from '../validators';
 import RoleManager from '../../../src/rbac/role-manager';
+import SubTransaction from '../../../src/entity/transactions/sub-transaction';
+import { TransactionResponse } from '../../../src/controller/response/transaction-response';
+import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 
 describe('UserController', (): void => {
   let ctx: {
@@ -46,6 +49,7 @@ describe('UserController', (): void => {
     controller: UserController,
     userToken: string,
     adminToken: string,
+    deletedUser: User,
     user: User,
     users: User[],
     categories: ProductCategory[],
@@ -58,11 +62,10 @@ describe('UserController', (): void => {
     transactions: Transaction[],
   };
 
-  before(async function before() {
+  before(async () => {
     const connection = await Database.initialize();
     ctx = { connection } as any; // on timeout forces connection to close
     const app = express();
-    this.timeout(10000);
     const database = await seedDatabase();
     ctx = {
       connection,
@@ -71,6 +74,7 @@ describe('UserController', (): void => {
       controller: undefined,
       userToken: undefined,
       adminToken: undefined,
+      deletedUser: undefined,
       user: {
         firstName: 'Roy',
         lastName: 'Kakkenberg',
@@ -78,14 +82,17 @@ describe('UserController', (): void => {
       } as any as User,
       ...database,
     };
-
-    ctx.users.push({
+    const deletedUser = Object.assign(new User(), {
       firstName: 'Kevin',
       lastName: 'Jilessen',
       type: UserType.MEMBER,
       deleted: true,
       active: true,
-    } as any as User);
+    } as User);
+    await User.save(deletedUser);
+
+    ctx.users.push(deletedUser);
+    ctx.deletedUser = deletedUser;
 
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
@@ -107,7 +114,15 @@ describe('UserController', (): void => {
         },
         Product: {
           get: all,
-          update: all,
+        },
+        Container: {
+          get: all,
+        },
+        PointOfSale: {
+          get: all,
+        },
+        Transaction: {
+          get: all,
         },
       },
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
@@ -121,6 +136,15 @@ describe('UserController', (): void => {
         Product: {
           get: own,
           update: own,
+        },
+        Container: {
+          get: own,
+        },
+        PointOfSale: {
+          get: own,
+        },
+        Transaction: {
+          get: own,
         },
       },
       assignmentCheck: async () => true,
@@ -148,19 +172,46 @@ describe('UserController', (): void => {
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
 
-      const users = res.body as User[];
+      const activeUsers = ctx.users.filter((u) => !u.deleted);
+
+      const users = res.body.records as User[];
+      // eslint-disable-next-line no-underscore-dangle
+      const pagination = res.body._pagination as PaginationResult;
       const spec = await Swagger.importSpecification();
-      const pagination = parseInt(process.env.PAGINATION_DEFAULT, 10);
-      expect(users.length).to.equal(pagination);
+      expect(users.length).to.equal(Math.min(activeUsers.length, pagination.take));
       users.forEach((user: User) => {
         verifyUserEntity(spec, user);
       });
+
+      expect(pagination.take).to.equal(defaultPagination());
+      expect(pagination.skip).to.equal(0);
+      expect(pagination.count).to.equal(activeUsers.length);
     });
     it('should give an HTTP 403 if not admin', async () => {
       const res = await request(ctx.app)
         .get('/users')
         .set('Authorization', `Bearer ${ctx.userToken}`);
       expect(res.status).to.equal(403);
+    });
+    it('should adhere to pagination', async () => {
+      const take = 5;
+      const skip = 3;
+      const res = await request(ctx.app)
+        .get('/users')
+        .query({ take, skip })
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+
+      const activeUsers = ctx.users.filter((u) => !u.deleted);
+
+      const users = res.body.records as User[];
+      // eslint-disable-next-line no-underscore-dangle
+      const pagination = res.body._pagination as PaginationResult;
+
+      expect(pagination.take).to.equal(take);
+      expect(pagination.skip).to.equal(skip);
+      expect(pagination.count).to.equal(activeUsers.length);
+      expect(users.length).to.be.at.most(take);
     });
   });
 
@@ -205,7 +256,7 @@ describe('UserController', (): void => {
     });
     it('should give an HTTP 404 when admin requests deleted user', async () => {
       const res = await request(ctx.app)
-        .get('/users/25')
+        .get(`/users/${ctx.deletedUser.id}`)
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(404);
     });
@@ -544,45 +595,195 @@ describe('UserController', (): void => {
     });
   });
 
-  // describe('GET /users/:id/containers', () => {
-  //   it('should give correct owned containers for user', async () => {
-  //     const res = await request(ctx.app)
-  //       .get('/users/0/containers')
-  //       .set('Authorization', `Bearer ${ctx.token}`);
-  //     expect(res.status).to.equal(200);
-  //     expect(res.body).to.deep.equal([]);
-  //   });
-  //   it('should give an HTTP 403 when user requests containers (s)he does not own', async () => {
-  //     const res = await request(ctx.app)
-  //       .get('/users/1/containers')
-  //       .set('Authorization', `Bearer ${ctx.token}`);
-  //     expect(res.status).to.equal(403);
-  //   });
-  // });
-  //
-  // describe('GET /users/:id/transactions', () => {
-  //   it('should give correct transactions from/to user', async () => {
-  //     const res = await request(ctx.app)
-  //       .get('/users/0/transactions')
-  //       .set('Authorization', `Bearer ${ctx.adminToken}`);
-  //     expect(res.status).to.equal(200);
-  //     expect(res.body).to.deep.equal([]);
-  //   });
-  //   it('should give an HTTP 403 when user requests transactions from someone else', async () => {
-  //     const res = await request(ctx.app)
-  //       .get('/users/1/transactions')
-  //       .set('Authorization', `Bearer ${ctx.adminToken}`);
-  //     expect(res.status).to.equal(403);
-  //   });
-  //   it(
-  //     'should give an HTTP 404 when admin requests transactions from unknown user',
-  //     async () => {
-  //       const res = await request(ctx.app)
-  //         .get('/users/1234/transactions')
-  //         .set('Authorization', `Bearer ${ctx.adminToken}`);
-  //       expect(res.status).to.equal(404);
-  //     },
-  //   );
-  // });
+  describe('GET /users/:id/containers', () => {
+    it('should give an HTTP 200 when requesting own containers', async () => {
+      const res = await request(ctx.app)
+        .get('/users/1/containers')
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(200);
+    });
+    it('should give an HTTP 403 when user requests containers (s)he does not own', async () => {
+      const res = await request(ctx.app)
+        .get('/users/2/containers')
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(403);
+    });
+    it('should give an HTTP 403 when user requests containers from unknown user', async () => {
+      const res = await request(ctx.app)
+        .get('/users/1234/containers')
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(403);
+    });
+    it('should give correct owned containers for admin', async () => {
+      const res = await request(ctx.app)
+        .get('/users/2/containers')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+    });
+    it('should give an HTTP 404 when admin requests containers from unknown user', async () => {
+      const res = await request(ctx.app)
+        .get('/users/1234/containers')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(404);
+    });
+  });
+
+  describe('GET /users/:id/containers/updated', () => {
+    it('should give an HTTP 200 when requesting own updated containers', async () => {
+      const res = await request(ctx.app)
+        .get(`/users/${ctx.users[0].id}/containers/updated`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(200);
+    });
+    it('should give an HTTP 403 when user requests updated containers (s)he does not own', async () => {
+      const res = await request(ctx.app)
+        .get('/users/2/containers/updated')
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(403);
+    });
+    it('should give an HTTP 403 when user requests updated containers from unknown user', async () => {
+      const res = await request(ctx.app)
+        .get('/users/1234/containers/updated')
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(403);
+    });
+    it('should give correct owned updated containers for admin', async () => {
+      const res = await request(ctx.app)
+        .get('/users/2/containers/updated')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+    });
+    it('should give an HTTP 404 when admin requests updated containers from unknown user', async () => {
+      const res = await request(ctx.app)
+        .get('/users/1234/containers/updated')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(404);
+    });
+  });
+
+  describe('GET /users/:id/pointsofsale', () => {
+    it('should give an HTTP 200 when requesting own points of sale', async () => {
+      const res = await request(ctx.app)
+        .get('/users/1/pointsofsale')
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(200);
+    });
+    it('should give an HTTP 403 when user requests points of sale (s)he does not own', async () => {
+      const res = await request(ctx.app)
+        .get('/users/2/pointsofsale')
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(403);
+    });
+    it('should give an HTTP 403 when user requests points of sale from unknown user', async () => {
+      const res = await request(ctx.app)
+        .get('/users/1234/pointsofsale')
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(403);
+    });
+    it('should give correct owned points of sale for admin', async () => {
+      const res = await request(ctx.app)
+        .get('/users/2/pointsofsale')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+    });
+    it('should give an HTTP 404 when admin requests points of sale from unknown user', async () => {
+      const res = await request(ctx.app)
+        .get('/users/1234/pointsofsale')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(404);
+    });
+  });
+
+  describe('GET /users/:id/pointsofsale/updated', () => {
+    it('should give an HTTP 200 when requesting own updated points of sale', async () => {
+      const res = await request(ctx.app)
+        .get(`/users/${ctx.users[0].id}/pointsofsale/updated`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(200);
+    });
+    it('should give an HTTP 403 when user requests updated points of sale (s)he does not own', async () => {
+      const res = await request(ctx.app)
+        .get('/users/2/pointsofsale/updated')
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(403);
+    });
+    it('should give an HTTP 403 when user requests updated points of sale from unknown user', async () => {
+      const res = await request(ctx.app)
+        .get('/users/1234/pointsofsale/updated')
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(403);
+    });
+    it('should give correct owned updated points of sale for admin', async () => {
+      const res = await request(ctx.app)
+        .get('/users/2/pointsofsale/updated')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+    });
+    it('should give an HTTP 404 when admin requests updated points of sale from unknown user', async () => {
+      const res = await request(ctx.app)
+        .get('/users/1234/pointsofsale/updated')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(404);
+    });
+  });
+
+  describe('GET /users/:id/transactions', () => {
+    it('should give correct transactions from/to user', async () => {
+      const user = ctx.users[0];
+      const res = await request(ctx.app)
+        .get(`/users/${user.id}/transactions`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(200);
+
+      const transactions = res.body.records as TransactionResponse[];
+
+      const actualTransactions = await Transaction.createQueryBuilder('transaction')
+        .select('transaction.id as id')
+        .innerJoin(SubTransaction, 'subTransaction', 'transaction.id = subTransaction.transactionId')
+        .where('transaction.fromId = :userId OR transaction.createdById = :userId OR subTransaction.toId = :userId', { userId: user.id })
+        .distinct(true)
+        .getRawMany();
+
+      expect(transactions.length).to.equal(Math.min(23, actualTransactions.length));
+      transactions.forEach((t) => {
+        const found = actualTransactions.find((at) => at.id === t.id);
+        expect(found).to.not.be.undefined;
+      });
+    });
+    it('should give an HTTP 403 when user requests transactions from someone else', async () => {
+      const res = await request(ctx.app)
+        .get(`/users/${ctx.users[0].id + 1}/transactions`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(403);
+    });
+    it('should give transactions when admin requests transactions from someone else', async () => {
+      const user = ctx.users[ctx.users.length - 3];
+      const res = await request(ctx.app)
+        .get(`/users/${user.id}/transactions`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+
+      const transactions = res.body.records as TransactionResponse[];
+
+      const actualTransactions = await Transaction.createQueryBuilder('transaction')
+        .select('transaction.id as id')
+        .innerJoin(SubTransaction, 'subTransaction', 'transaction.id = subTransaction.transactionId')
+        .where('transaction.fromId = :userId OR transaction.createdById = :userId OR subTransaction.toId = :userId', { userId: user.id })
+        .distinct(true)
+        .getRawMany();
+
+      expect(transactions.length).to.equal(Math.min(23, actualTransactions.length));
+      transactions.forEach((t) => {
+        const found = actualTransactions.find((at) => at.id === t.id);
+        expect(found).to.not.be.undefined;
+      });
+    });
+    it('should give an HTTP 404 when admin requests transactions from unknown user', async () => {
+      const res = await request(ctx.app)
+        .get('/users/12345/transactions')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(404);
+    });
+  });
   // TODO: Check validity of returned transactions
 });

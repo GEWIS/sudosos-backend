@@ -20,6 +20,7 @@ import { BaseUserResponse } from '../controller/response/user-response';
 
 // eslint-disable-next-line import/prefer-default-export
 export function parseUserToBaseResponse(user: User, timestamps: boolean): BaseUserResponse {
+  if (!user) return undefined;
   return {
     id: user.id,
     firstName: user.firstName,

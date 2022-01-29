@@ -19,15 +19,13 @@
 /**
  * @typedef ProductRequest
  * @property {string} name - Name of the product
- * @property {number} price - Price of the product in 2 decimals
+ * @property {number} price - Price of the product
  * @property {number} category - Category of the product
- * @property {string} picture - URL of the product image
  * @property {number} alcoholPercentage - Alcohol percentage of the product in 2 decimals
  */
 export default interface ProductRequest {
   name: string;
   price: number;
   category: number;
-  picture: string;
   alcoholPercentage: number;
 }

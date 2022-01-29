@@ -17,21 +17,32 @@
  */
 
 import BaseResponse from './base-response';
+import { PaginationResult } from '../../helpers/pagination';
 
 /**
  * @typedef {BaseResponse} BannerResponse
  * @property {string} name - Name/label of the banner
- * @property {string} picture - Location of the image
+ * @property {string} image - Location of the image
  * @property {number} duration - How long the banner should be shown (in seconds)
  * @property {boolean} active - Whether the banner is active. Overrides start and end date
  * @property {string} startDate - The starting date from which the banner should be shown
  * @property {string} endDate - The end date from which the banner should no longer be shown
  */
-export default interface BannerResponse extends BaseResponse {
+export interface BannerResponse extends BaseResponse {
   name: string,
-  picture: string,
+  image: string | null,
   duration: number,
   active: boolean,
   startDate: string,
   endDate: string,
+}
+
+/**
+ * @typedef PaginatedBannerResponse
+ * @property {PaginationResult.model} _pagination - Pagination metadata
+ * @property {Array<BannerResponse>} records - Returned banners
+ */
+export interface PaginatedBannerResponse {
+  _pagination: PaginationResult,
+  records: BannerResponse[],
 }

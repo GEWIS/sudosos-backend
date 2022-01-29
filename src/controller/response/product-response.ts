@@ -19,6 +19,7 @@ import { DineroObject } from 'dinero.js';
 import BaseResponse from './base-response';
 import { BaseUserResponse } from './user-response';
 import { ProductCategoryResponse } from './product-category-response';
+import { PaginationResult } from '../../helpers/pagination';
 
 /**
  * @typedef {BaseResponse} BaseProductResponse
@@ -36,12 +37,24 @@ export interface BaseProductResponse extends BaseResponse {
  * @property {BaseUserResponse.model} owner.required - The owner of the product.
  * @property {ProductCategoryResponse.model} category.required
  *  - The category the product belongs to.
- * @property {string} picture.required - The URL to the picture representing this product.
+ * @property {string} image - The URL to the picture representing this product.
+ * @property {integer} revision - The product revision ID
  * @property {integer} alcoholPercentage - The percentage of alcohol in this product.
  */
 export interface ProductResponse extends BaseProductResponse {
   owner: BaseUserResponse,
   category: ProductCategoryResponse,
-  picture: String,
+  image: String,
+  revision: number,
   alcoholPercentage: number,
+}
+
+/**
+ * @typedef PaginatedProductResponse
+ * @property {PaginationResult.model} _pagination - Pagination metadata
+ * @property {Array<ProductResponse>} records - Returned products
+ */
+export interface PaginatedProductResponse {
+  _pagination: PaginationResult,
+  records: ProductResponse[],
 }

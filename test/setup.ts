@@ -24,11 +24,14 @@ import chaiHttp from 'chai-http';
 import chaiAsPromised from 'chai-as-promised';
 import dinero from 'dinero.js';
 import log4js from 'log4js';
+import sinonChai from 'sinon-chai';
 
 use(chaiAsPromised);
 use(chaiHttp);
 use(chaiSwag);
+use(sinonChai);
 
+process.env.NODE_ENV = 'test';
 process.env.HTTP_PORT = '3001';
 process.env.TYPEORM_CONNECTION = 'sqlite';
 process.env.TYPEORM_DATABASE = ':memory:';

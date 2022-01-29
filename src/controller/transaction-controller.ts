@@ -20,37 +20,14 @@ import log4js, { Logger } from 'log4js';
 import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
-import TransactionService, { TransactionFilterParameters } from '../service/transaction-service';
+import TransactionService, {
+  parseGetTransactionsFilters,
+} from '../service/transaction-service';
 import { TransactionResponse } from './response/transaction-response';
-import { asDate, asNumber } from '../helpers/validators';
-import { validatePaginationQueryParams } from '../helpers/pagination';
+import { parseRequestPagination } from '../helpers/pagination';
 import { TransactionRequest } from './request/transaction-request';
 import Transaction from '../entity/transactions/transaction';
 import User from '../entity/user/user';
-
-function parseGetTransactionsFilters(req: RequestWithToken): TransactionFilterParameters {
-  if ((req.query.pointOfSaleRevision && !req.query.pointOfSaleId)
-    || (req.query.containerRevision && !req.query.containerId)
-    || (req.query.productRevision && !req.query.productId)) {
-    throw new Error('Cannot filter on a revision, when there is no id given');
-  }
-
-  const filters: TransactionFilterParameters = {
-    fromId: asNumber(req.query.fromId),
-    createdById: asNumber(req.query.createdById),
-    toId: asNumber(req.query.toId),
-    pointOfSaleId: asNumber(req.query.pointOfSaleId),
-    pointOfSaleRevision: asNumber(req.query.pointOfSaleRevision),
-    containerId: asNumber(req.query.containerId),
-    containerRevision: asNumber(req.query.containerRevision),
-    productId: asNumber(req.query.productId),
-    productRevision: asNumber(req.query.productRevision),
-    fromDate: asDate(req.query.fromDate),
-    tillDate: asDate(req.query.tillDate),
-  };
-
-  return filters;
-}
 
 export default class TransactionController extends BaseController {
   private logger: Logger = log4js.getLogger('TransactionController');
@@ -113,9 +90,9 @@ export default class TransactionController extends BaseController {
    * transactions. Requires ProductID
    * @param {string} fromDate.query - Start date for selected transactions (inclusive)
    * @param {string} tillDate.query - End date for selected transactions (exclusive)
-   * @param {integer} take.query - How many users the endpoint should return
-   * @param {integer} skip.query - How many users should be skipped (for pagination)
-   * @returns {[TransactionResponse]} 200 - A list of all transactions
+   * @param {integer} take.query - How many transactions the endpoint should return
+   * @param {integer} skip.query - How many transactions should be skipped (for pagination)
+   * @returns {PaginatedBaseTransactionResponse.model} 200 - A list of all transactions
    */
   // eslint-disable-next-line class-methods-use-this
   public async getAllTransactions(req: RequestWithToken, res: Response): Promise<void> {
@@ -124,20 +101,20 @@ export default class TransactionController extends BaseController {
     // Parse the filters given in the query parameters. If there are any issues,
     // the parse method will throw an exception. We will then return a 400 error.
     let filters;
+    let take;
+    let skip;
     try {
       filters = parseGetTransactionsFilters(req);
+      const pagination = parseRequestPagination(req);
+      take = pagination.take;
+      skip = pagination.skip;
     } catch (e) {
       res.status(400).json(e.message);
       return;
     }
 
-    if (!validatePaginationQueryParams(req)) {
-      res.status(400).json('The pagination skip and/or take are invalid');
-      return;
-    }
-
     try {
-      const transactions = await TransactionService.getTransactions(req, filters);
+      const transactions = await TransactionService.getTransactions(filters, { take, skip });
       res.status(200).json(transactions);
     } catch (e) {
       res.status(500).send();

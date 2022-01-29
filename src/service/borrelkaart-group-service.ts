@@ -15,13 +15,13 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { FindManyOptions } from 'typeorm';
 import BorrelkaartGroupRequest from '../controller/request/borrelkaart-group-request';
-import BorrelkaartGroupResponse from '../controller/response/borrelkaart-group-response';
+import BorrelkaartGroupResponse, { PaginatedBorrelkaartGroupResponse } from '../controller/response/borrelkaart-group-response';
 import { UserResponse } from '../controller/response/user-response';
 import BorrelkaartGroup from '../entity/user/borrelkaart-group';
 import User from '../entity/user/user';
 import UserBorrelkaartGroup from '../entity/user/user-borrelkaart-group';
+import { PaginationParameters } from '../helpers/pagination';
 
 export default class BorrelkaartGroupService {
   /**
@@ -148,13 +148,21 @@ export default class BorrelkaartGroupService {
 
   /**
    * Returns all borrelkaart groups without users
-   * @param {FindManyOptions.model} options - find options
-   * @returns {Array.<BorrelkaartGroupResponse>} borrelkaart groups without users
+   * @param {PaginationParameters.model} params - find options
+   * @returns {PaginatedBorrelkaartGroupResponse} borrelkaart groups without users
    */
-  public static async getAllBorrelkaartGroups(options?: FindManyOptions):
-  Promise<BorrelkaartGroupResponse[]> {
-    const bkgs = await BorrelkaartGroup.find({ ...options });
-    return bkgs.map((bkg) => this.asBorrelkaartGroupResponse(bkg, null));
+  public static async getAllBorrelkaartGroups(params: PaginationParameters = {}):
+  Promise<PaginatedBorrelkaartGroupResponse> {
+    const { take, skip } = params;
+    const bkgs = await BorrelkaartGroup.find({ take, skip });
+    const records = bkgs.map((bkg) => this.asBorrelkaartGroupResponse(bkg, null));
+
+    return {
+      _pagination: {
+        take, skip, count: await BorrelkaartGroup.count(),
+      },
+      records,
+    };
   }
 
   /**
