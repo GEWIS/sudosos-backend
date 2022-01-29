@@ -36,7 +36,6 @@ import TransactionService, { TransactionFilterParameters } from './transaction-s
 import { DineroObjectRequest } from '../controller/request/dinero-request';
 import { TransferResponse } from '../controller/response/transfer-response';
 import { BaseTransactionResponse } from '../controller/response/transaction-response';
-import ProductRevision from '../entity/product/product-revision';
 
 export interface InvoiceFilterParameters {
   /**
@@ -136,7 +135,8 @@ export default class InvoiceService {
    * @param invoice - The invoice of which the entries are.
    * @param baseTransactions - Array of transactions to parse.
    */
-  public static async createInvoiceEntriesTransactions(invoice: Invoice, baseTransactions: BaseTransactionResponse[]) {
+  public static async createInvoiceEntriesTransactions(invoice: Invoice,
+    baseTransactions: BaseTransactionResponse[]) {
     // Extract Transactions from IDs.
     const ids = baseTransactions.map((t) => t.id);
     const transactions = await Transaction.findByIds(ids, { relations: ['subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.product', 'subTransactions.subTransactionRows.product.product'] });

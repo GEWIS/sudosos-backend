@@ -37,6 +37,7 @@ import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale
 import ContainerRevision from '../../../src/entity/container/container-revision';
 import TransferRequest from '../../../src/controller/request/transfer-request';
 import { generateBalance } from '../../helpers/test-helpers';
+import { inUserContext, UserFactory } from '../../helpers/user-factory';
 
 describe('TransactionService', (): void => {
   let ctx: {
@@ -847,10 +848,12 @@ describe('TransactionService', (): void => {
 
   describe('createValidTransactionRequest function', () => {
     it('should return a valid TransactionRequest', async () => {
-      const transaction = await createValidTransactionRequest(
-        1, 7.0,
-      );
-      expect(await TransactionService.verifyTransaction(transaction)).to.be.true;
+      await inUserContext(await UserFactory().clone(2), async (debtor: User, creditor: User) => {
+        const transaction = await createValidTransactionRequest(
+          debtor.id, creditor.id,
+        );
+        expect(await TransactionService.verifyTransaction(transaction)).to.be.true;
+      });
     });
   });
 });

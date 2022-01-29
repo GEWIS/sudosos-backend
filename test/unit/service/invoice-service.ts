@@ -231,7 +231,8 @@ describe('InvoiceService', () => {
     });
   });
   describe('createInvoice function', () => {
-    async function createTransactionRequest(debtorId: number, creditorId:number, transactionCount: number) {
+    async function createTransactionRequest(debtorId: number,
+      creditorId:number, transactionCount: number) {
       const transactions: TransactionRequest[] = [];
       await Promise.all(Array(transactionCount).fill(0, 0).map(async () => {
         const t = await createValidTransactionRequest(
