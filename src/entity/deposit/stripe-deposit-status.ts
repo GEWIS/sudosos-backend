@@ -23,6 +23,9 @@ import StripeDeposit from './stripe-deposit';
 
 export enum StripeDepositState {
   CREATED = 1,
+  PROCESSING = 2,
+  SUCCEEDED = 3,
+  FAILED,
 }
 
 @Entity()

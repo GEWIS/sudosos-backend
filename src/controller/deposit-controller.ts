@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import log4js, { Logger } from 'log4js';
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import dinero from 'dinero.js';
 import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
@@ -50,6 +50,13 @@ export default class DepositController extends BaseController {
             req.token.roles, 'create', 'all', 'StripeDeposit', ['*'],
           ),
           handler: this.createStripeDeposit.bind(this),
+          body: { modelName: 'StripeRequest' },
+        },
+      },
+      '/stripe/webhook': {
+        POST: {
+          policy: async () => true,
+          handler: this.updateStripeDepositStatus.bind(this),
         },
       },
     };
@@ -76,5 +83,30 @@ export default class DepositController extends BaseController {
       this.logger.error('Could not create Stripe payment intent:', error);
       res.status(500).send('Internal server error.');
     }
+  }
+
+  /**
+   * Webhook for Stripe event updates
+   *
+   * @route POST /deposit/stripe/webhook
+   * @group deposits - Operations of the deposit controller
+   * @returns 200 - Success
+   * @returns 400 - Not
+   */
+  public async updateStripeDepositStatus(req: Request, res: Response): Promise<void> {
+    const { body } = req;
+    const signature = req.headers['stripe-signature'];
+
+    let webhookEvent;
+    try {
+      webhookEvent = await this.stripeService.constructWebhookEvent(body, signature);
+    } catch (error) {
+      res.status(400).json('Event could not be verified');
+      return;
+    }
+
+    StripeService.handleWebhookEvent(webhookEvent);
+
+    res.status(200);
   }
 }

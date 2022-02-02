@@ -46,5 +46,5 @@ export default class StripeDeposit extends BaseEntity {
     type: 'integer',
     transformer: DineroTransformer.Instance,
   })
-  public price: Dinero;
+  public amount: Dinero;
 }

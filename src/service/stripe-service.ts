@@ -17,11 +17,14 @@
  */
 import Stripe from 'stripe';
 import { Dinero } from 'dinero.js';
+import { getLogger } from 'log4js';
 import User from '../entity/user/user';
 import StripeDeposit from '../entity/deposit/stripe-deposit';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
 import StripeDepositStatus, { StripeDepositState } from '../entity/deposit/stripe-deposit-status';
 import { StripePaymentIntentResponse } from '../controller/response/stripe-response';
+import TransferService from './transfer-service';
+import Transfer from '../entity/transactions/transfer';
 
 export default class StripeService {
   private stripe: Stripe;
@@ -74,5 +77,67 @@ export default class StripeService {
       stripeId: stripeDeposit.stripeId,
       clientSecret: paymentIntent.client_secret,
     };
+  }
+
+  /**
+   * Validate a Stripe webhook event
+   * @param body
+   * @param signature
+   */
+  public async constructWebhookEvent(
+    body: any, signature: string | string[],
+  ): Promise<Stripe.Event> {
+    return this.stripe.webhooks.constructEvent(body, signature, process.env.STRIPE_WEBHOOK_SECRET);
+  }
+
+  /**
+   * Handle the event by making the appropriate database additions
+   * @param event {Stripe.Event} Event received from Stripe webhook
+   */
+  public static async handleWebhookEvent(event: Stripe.Event) {
+    try {
+      const paymentIntent = event.data.object as Stripe.PaymentIntent;
+      const deposit = await StripeDeposit.findOne({
+        where: { stripeId: paymentIntent.id },
+        relations: ['depositStatus', 'to'],
+      });
+
+      const depositStatus = Object.assign(new StripeDepositStatus(), { deposit });
+
+      let transferResponse;
+      let transfer;
+      switch (event.type) {
+        case 'payment_intent.succeeded':
+          depositStatus.state = StripeDepositState.SUCCEEDED;
+          await depositStatus.save();
+
+          transferResponse = await TransferService.postTransfer({
+            amount: {
+              amount: deposit.amount.getAmount(),
+              precision: deposit.amount.getPrecision(),
+              currency: deposit.amount.getCurrency(),
+            },
+            toId: deposit.to.id,
+            description: deposit.stripeId,
+            fromId: undefined,
+          });
+          transfer = await Transfer.findOne(transferResponse.id);
+          deposit.transfer = transfer;
+
+          await deposit.save();
+          break;
+        case 'payment_intent.processing':
+          depositStatus.state = StripeDepositState.PROCESSING;
+          await depositStatus.save();
+          break;
+        case 'payment_intent.payment_failed':
+          depositStatus.state = StripeDepositState.FAILED;
+          await depositStatus.save();
+          break;
+        default:
+      }
+    } catch (error) {
+      getLogger('DepositController').error('Could not process Stripe webhook event with ID', event.id, error);
+    }
   }
 }
