@@ -27,13 +27,25 @@ import ContainerRevision from '../entity/container/container-revision';
 import Container from '../entity/container/container';
 import UpdatedContainer from '../entity/container/updated-container';
 import User from '../entity/user/user';
-import ProductRequest, {ProductRequestID} from '../controller/request/product-request';
+import CreateProductRequest, { ProductRequestID } from '../controller/request/product-request';
 import ProductCategory from '../entity/product/product-category';
 import PointOfSale from '../entity/point-of-sale/point-of-sale';
 import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision';
 import { PaginationParameters } from '../helpers/pagination';
 import { RequestWithToken } from '../middleware/token-middleware';
-import { asBoolean, asDate, asNumber } from '../helpers/validators';
+import {
+  asBoolean, asDate, asNumber,
+} from '../helpers/validators';
+import UpdatePointOfSaleRequest from '../controller/request/update-point-of-sale-request';
+import {
+  Either,
+  Specification,
+  toFail,
+  toPass,
+  validateSpecification, ValidationError,
+  validName,
+} from '../helpers/specification-validation';
+import productRequestSpec from '../controller/request/validators/product-request-spec';
 
 /**
  * Define product filtering parameters used to filter query results.
@@ -409,7 +421,7 @@ export default class ProductService {
    * @param productId - The ID of the product to update.
    * @param update - The product variables.
    */
-  public static async updateProduct(productId: number, update: ProductRequest)
+  public static async updateProduct(productId: number, update: CreateProductRequest)
     : Promise<ProductResponse> {
     // Get the base product.
     const base: Product = await Product.findOne(productId);
@@ -446,7 +458,7 @@ export default class ProductService {
    * @param owner - The user that created the product.
    * @param product - The product to be created.
    */
-  public static async createProduct(owner: User, product: ProductRequest)
+  public static async createProduct(owner: User, product: CreateProductRequest)
     : Promise<ProductResponse> {
     const base = Object.assign(new Product(), {
       owner,
@@ -508,17 +520,5 @@ export default class ProductService {
 
     // Return the new product.
     return (await this.getProducts({ productId })).records[0];
-  }
-
-  /**
-   * Verifies whether the product request translates to a valid product
-   * @param {ProductRequest.model} productRequest - the product request to verify
-   * @returns {boolean} - whether product is ok or not
-   */
-  public static async verifyProduct(productRequest: ProductRequest | ProductRequestID): Promise<boolean> {
-    return productRequest.price >= 0
-        && productRequest.name !== ''
-        && await ProductCategory.findOne(productRequest.category)
-        && productRequest.alcoholPercentage >= 0;
   }
 }

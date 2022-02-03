@@ -36,6 +36,23 @@ import { defaultPagination, PaginationResult } from '../../../src/helpers/pagina
 import { ContainerResponse } from '../../../src/controller/response/container-response';
 import { PaginatedProductResponse, ProductResponse } from '../../../src/controller/response/product-response';
 import UpdatedPointOfSale from '../../../src/entity/point-of-sale/updated-point-of-sale';
+import { ProductRequestID } from '../../../src/controller/request/product-request';
+import PointOfSaleRequest from '../../../src/controller/request/point-of-sale-request';
+import { ContainerUpdateRequest } from '../../../src/controller/request/container-request';
+
+/**
+ * Tests if a POS response is equal to the request.
+ * @param source - The source from which the POS was created.
+ * @param response - The received POS.
+ * @return true if the source and response describe the same POS.
+ */
+function pointOfSaleEq(source: PointOfSaleRequest, response: PointOfSaleResponse) {
+  expect(source.name).to.eq(response.name);
+  expect(source.endDate).to.eq(response.endDate);
+  expect(source.startDate).to.eq(response.startDate);
+  expect(source.useAuthentication).to.eq(response.useAuthentication);
+  expect(source.ownerId).to.eq(response.owner.id);
+}
 
 describe('PointOfSaleController', async () => {
   let ctx: {
@@ -45,6 +62,7 @@ describe('PointOfSaleController', async () => {
     controller: PointOfSaleController,
     adminUser: User,
     localUser: User,
+    validPOSRequest: PointOfSaleRequest,
     adminToken: string,
     token: string,
   };
@@ -80,6 +98,15 @@ describe('PointOfSaleController', async () => {
       containerRevisions,
     } = await seedAllContainers([adminUser, localUser], productRevisions, products);
     await seedAllPointsOfSale([adminUser, localUser], containerRevisions, containers);
+
+    const validPOSRequest: PointOfSaleRequest = {
+      containers: [containers[0].id, containers[1].id, containers[2].id],
+      endDate: '2100-01-01T21:00:00.000Z',
+      name: 'Valid POS',
+      startDate: '2100-01-01T17:00:00.000Z',
+      useAuthentication: false,
+      ownerId: 2,
+    };
 
     // create bearer tokens
     const tokenHandler = new TokenHandler({
@@ -138,6 +165,7 @@ describe('PointOfSaleController', async () => {
       controller,
       adminUser,
       localUser,
+      validPOSRequest,
       adminToken,
       token,
     };
@@ -194,7 +222,6 @@ describe('PointOfSaleController', async () => {
       expect(containers.length).to.be.at.most(take);
     });
   });
-
   describe('GET /pointsofsale/:id', () => {
     it('should return an HTTP 200 and the point of sale with given id if admin', async () => {
       const res = await request(ctx.app)
@@ -233,7 +260,6 @@ describe('PointOfSaleController', async () => {
       expect(res.body.id).to.be.equal(id);
     });
   });
-
   describe('GET /pointsofsale/:id/containers', async () => {
     it('should return an HTTP 200 and the containers in the given point of sale if admin', async () => {
       const res = await request(ctx.app)
@@ -274,7 +300,6 @@ describe('PointOfSaleController', async () => {
       expect(containers.length).to.equal(0);
     });
   });
-
   describe('GET /pointsofsale/:id/products', async () => {
     it('should return an HTTP 200 and the products in the given point of sale if admin', async () => {
       const take = 5;
@@ -316,6 +341,142 @@ describe('PointOfSaleController', async () => {
 
       expect(res.status).to.equal(200);
       expect((res.body as PaginatedProductResponse).records.length).to.equal(0);
+    });
+  });
+
+  function testValidationOnRoute(type: any, route: string) {
+    async function expectError(req: PointOfSaleRequest, error: string) {
+      // @ts-ignore
+      const res = await ((request(ctx.app)[type])(route)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(req));
+      expect(res.status).to.eq(400);
+      expect(res.body).to.eq(error);
+    }
+    it('should verify endDate after startDate', async () => {
+      const req: PointOfSaleRequest = {
+        ...ctx.validPOSRequest,
+        endDate: ctx.validPOSRequest.startDate,
+      };
+      await expectError(req, 'End Date must be after the Start Date.');
+    });
+    it('should verify endDate', async () => {
+      const req: PointOfSaleRequest = { ...ctx.validPOSRequest, endDate: '' };
+      await expectError(req, 'End Date must be a valid Date.');
+    });
+    it('should verify startDate', async () => {
+      const req: PointOfSaleRequest = { ...ctx.validPOSRequest, startDate: '' };
+      await expectError(req, 'Start Date must be a valid Date.');
+    });
+    it('should verify Name', async () => {
+      const req: PointOfSaleRequest = { ...ctx.validPOSRequest, name: '' };
+      await expectError(req, 'Name must be a non-zero length string.');
+    });
+    it('should verify Owner', async () => {
+      const req: PointOfSaleRequest = { ...ctx.validPOSRequest, ownerId: -1 };
+      await expectError(req, 'Owner must exist.');
+    });
+    it('should verify containers Ids', async () => {
+      const invalidRequest = {
+        ...ctx.validPOSRequest,
+        containers: [-1, -69],
+      };
+      await expectError(invalidRequest, 'Not all container IDs are valid.');
+    });
+    it('should verify Container Updates', async () => {
+      const withContainerUpdate: PointOfSaleRequest = JSON.parse(
+        JSON.stringify(ctx.validPOSRequest),
+      );
+
+      const failID = withContainerUpdate.containers.pop() as number;
+      const containerRequest: ContainerUpdateRequest = {
+        id: failID,
+        name: '',
+        products: [1],
+        public: true,
+      };
+
+      withContainerUpdate.containers.push(containerRequest);
+      await expectError(withContainerUpdate, `Container #${failID} validation failed: Name must be a non-zero length string.`);
+    });
+    it('should verify ContainerUpdate with productUpdate', async () => {
+      const withContainerUpdate: PointOfSaleRequest = JSON.parse(
+        JSON.stringify(ctx.validPOSRequest),
+      );
+      const failID = withContainerUpdate.containers.pop() as number;
+      const productRequestID: ProductRequestID = {
+        alcoholPercentage: 0,
+        category: 1,
+        id: 0,
+        name: 'ProductRequestID',
+        price: -100,
+      };
+
+      const containerRequest: ContainerUpdateRequest = {
+        id: failID,
+        name: 'Container',
+        products: [productRequestID],
+        public: true,
+      };
+
+      withContainerUpdate.containers.push(containerRequest);
+      await expectError(withContainerUpdate, `Container #${failID} validation failed: Not all product IDs are valid.`);
+    });
+    it('should verify ContainerUpdate with productUpdate ', async () => {
+      const withContainerUpdate: PointOfSaleRequest = JSON.parse(
+        JSON.stringify(ctx.validPOSRequest),
+      );
+      const failID = withContainerUpdate.containers.pop() as number;
+      const productRequestID: ProductRequestID = {
+        alcoholPercentage: 0,
+        category: 1,
+        id: 1,
+        name: '',
+        price: 100,
+      };
+
+      const containerRequest: ContainerUpdateRequest = {
+        id: failID,
+        name: 'Container',
+        products: [productRequestID],
+        public: true,
+      };
+
+      withContainerUpdate.containers.push(containerRequest);
+      await expectError(withContainerUpdate, `Container #${failID} validation failed: Product #1 validation failed: Name must be a non-zero length string.`);
+    });
+  }
+  describe('POST /pointsofsale', () => {
+    describe('verifyPointOfSaleRequest Specification', async (): Promise<void> => {
+      testValidationOnRoute('post', '/pointsofsale');
+    });
+    it('should store the given POS and return an HTTP 200 if admin', async () => {
+      const count = await PointOfSale.count();
+      const res = await request(ctx.app)
+        .post('/pointsofsale')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(ctx.validPOSRequest);
+
+      expect(await PointOfSale.count()).to.equal(count + 1);
+      pointOfSaleEq(ctx.validPOSRequest, res.body as PointOfSaleResponse);
+      const databaseProduct = await UpdatedPointOfSale.findOne(
+        (res.body as PointOfSaleResponse).id,
+      );
+      expect(databaseProduct).to.exist;
+
+      expect(res.status).to.equal(200);
+    });
+    it('should return an HTTP 403 if not admin', async () => {
+      const count = await PointOfSale.count();
+      const res = await request(ctx.app)
+        .post('/pointsofsale')
+        .set('Authorization', `Bearer ${ctx.token}`)
+        .send(ctx.validPOSRequest);
+
+      expect(await PointOfSale.count()).to.equal(count);
+      expect(res.body).to.be.empty;
+
+      expect(res.status).to.equal(403);
     });
   });
 });

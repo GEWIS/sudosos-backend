@@ -28,16 +28,15 @@ import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision'
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import ProductService from './product-service';
 import PointOfSale from '../entity/point-of-sale/point-of-sale';
-import ContainerRequest, { ContainerRequestID } from '../controller/request/container-request';
+import CreateContainerRequest from '../controller/request/container-request';
 import User from '../entity/user/user';
 import Product from '../entity/product/product';
 import UpdatedProduct from '../entity/product/updated-product';
 import ProductRevision from '../entity/product/product-revision';
 import UnapprovedProductError from '../entity/errors/unapproved-product-error';
 import { PaginationParameters } from '../helpers/pagination';
-import ProductRequest, { ProductRequestID } from '../controller/request/product-request';
-import splitTypes, { getIdsAndRequests } from '../helpers/helper';
-import UpdatePointOfSaleRequest from '../controller/request/update-point-of-sale-request';
+import { ProductRequestID } from '../controller/request/product-request';
+import { getIdsAndRequests } from '../helpers/helper';
 
 interface ContainerVisibility {
   own: boolean;
@@ -171,9 +170,11 @@ export default class ContainerService {
   ): Promise<PaginatedContainerResponse> {
     const { take, skip } = pagination;
 
+    const builder = this.buildGetContainersQuery(filters);
+
     const results = await Promise.all([
-      this.buildGetContainersQuery(filters).limit(take).offset(skip).getRawMany(),
-      this.buildGetContainersQuery(filters).getCount(),
+      builder.limit(take).offset(skip).getRawMany(),
+      builder.getCount(),
     ]);
 
     const records = results[0].map((rawContainer) => this.asContainerResponse(rawContainer));
@@ -228,9 +229,11 @@ export default class ContainerService {
   ): Promise<PaginatedContainerResponse> {
     const { take, skip } = pagination;
 
+    const builder = this.buildGetUpdatedContainersQuery(filters);
+
     const results = await Promise.all([
-      this.buildGetUpdatedContainersQuery(filters).limit(take).offset(skip).getRawMany(),
-      this.buildGetUpdatedContainersQuery(filters).getCount(),
+      builder.limit(take).offset(skip).getRawMany(),
+      builder.getCount(),
     ]);
 
     const records = results[0].map((rawContainer) => (this.asContainerResponse(rawContainer)));
@@ -249,13 +252,13 @@ export default class ContainerService {
    * The newly created container resides in the Container table and has no
    * current revision. To confirm the revision the update has to be accepted.
    *
-   * @param owner - The user that created the container.
+   * @param ownerId - The id of the user that created the container.
    * @param container - The container to be created.
    */
-  public static async createContainer(owner: User, container: ContainerRequest)
+  public static async createContainer(ownerId: number, container: CreateContainerRequest)
     : Promise<ContainerWithProductsResponse> {
     const base = Object.assign(new Container(), {
-      owner,
+      ownerId,
       public: container.public,
     });
 
@@ -286,7 +289,9 @@ export default class ContainerService {
     const updatedProducts: UpdatedProduct[] = await UpdatedProduct.findByIds(productIds, { relations: ['product'] });
 
     if (updatedProducts.length !== 0) {
-      throw new UnapprovedProductError('Container update has unapproved product(s).');
+      await Promise.all(updatedProducts.map(
+        (p) => ContainerService.approveContainerUpdate(p.product.id),
+      ));
     }
 
     const productRevisions: ProductRevision[] = await ProductRevision.findByIds(productIds);
@@ -319,7 +324,7 @@ export default class ContainerService {
    * @param containerId - The ID of the product to update
    * @param update - The container variables to update.
    */
-  public static async updateContainer(containerId: number, update: ContainerRequest)
+  public static async updateContainer(containerId: number, update: CreateContainerRequest)
     : Promise<ContainerWithProductsResponse> {
     // Get the base container.
     const base: Container = await Container.findOne(containerId);
@@ -332,19 +337,8 @@ export default class ContainerService {
     // If the ContainerRequests contain product updates we delegate them.
     const { ids, requests } = getIdsAndRequests<ProductRequestID>(update);
 
-    // Filter on valid requests.
-    const validRequests = await Promise.all(
-      requests.map((p) => ProductService.verifyProduct(p).then((b) => {
-        if (b) return p;
-        return undefined;
-      })),
-    ).then((result) => {
-      result.filter((p) => p);
-      return result;
-    });
-
     // Apply requests.
-    await Promise.all(validRequests.map((p) => ProductService.updateProduct(p.id, p)));
+    await Promise.all(requests.map((p) => ProductService.updateProduct(p.id, p)));
 
     let products: Product[] = [];
     await Promise.all(ids.map((id) => Product.findOne(id)))
@@ -362,32 +356,6 @@ export default class ContainerService {
 
     // Return container with products.
     return this.getProductsResponse(base.id, true);
-  }
-
-  /**
-   * Verifies whether the container request translates to a valid container
-   * @param containerRequest - The request to verify
-   * @returns {boolean} - whether container is ok or not
-   */
-  public static async verifyContainer(containerRequest: ContainerRequest | ContainerRequestID) {
-    // Validate ids / requests
-    const { ids, requests } = getIdsAndRequests<ProductRequestID>(containerRequest);
-
-    console.error("checking products");
-    const products = await Product.findByIds(ids);
-    if (products.length !== ids.length) return false;
-
-    console.error("got m");
-    const promises: Promise<boolean>[] = [];
-    requests.forEach((p) => {
-      promises.push(ProductService.verifyProduct(p));
-    });
-    console.error("got m");
-    let results: boolean[] = [];
-    await Promise.all(promises).then((r) => { results = r; });
-    if (!results.every((b) => b)) return false;
-    console.error("got m");
-    return containerRequest.name !== '';
   }
 
   /**

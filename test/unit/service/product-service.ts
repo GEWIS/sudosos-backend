@@ -35,7 +35,7 @@ import UpdatedProduct from '../../../src/entity/product/updated-product';
 import UpdatedContainer from '../../../src/entity/container/updated-container';
 import Container from '../../../src/entity/container/container';
 import ContainerRevision from '../../../src/entity/container/container-revision';
-import ProductRequest from '../../../src/controller/request/product-request';
+import CreateProductRequest from '../../../src/controller/request/product-request';
 import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
 import UpdatedPointOfSale from '../../../src/entity/point-of-sale/updated-point-of-sale';
@@ -82,8 +82,8 @@ function productRevisionToProductWithRevision(product: ProductRevision): Product
 }
 
 function validateProductProperties(response: ProductResponse,
-  productParams: ProductRequest) {
-  Object.keys(productParams).forEach((key: keyof ProductRequest) => {
+  productParams: CreateProductRequest) {
+  Object.keys(productParams).forEach((key: keyof CreateProductRequest) => {
     if (key === 'price') {
       expect((productParams[key] as any)).to.be.equal((response.price.amount));
     } else if (key === 'category') {
@@ -342,7 +342,7 @@ describe('ProductService', async (): Promise<void> => {
 
   describe('updateProducts function', () => {
     it('should update a product by ID', async () => {
-      const updateParams: ProductRequest = {
+      const updateParams: CreateProductRequest = {
         category: 3,
         alcoholPercentage: 8,
         name: 'Product2-update',
@@ -359,7 +359,7 @@ describe('ProductService', async (): Promise<void> => {
     it('should create a new product', async () => {
       const price = 77;
 
-      const productParams: ProductRequest = {
+      const productParams: CreateProductRequest = {
         alcoholPercentage: 9,
         name: 'Product77-update',
         price,
@@ -380,7 +380,7 @@ describe('ProductService', async (): Promise<void> => {
       // Create a new product.
       const price = 77;
 
-      const productParams: ProductRequest = {
+      const productParams: CreateProductRequest = {
         alcoholPercentage: 9,
         name: 'Product77-update',
         price: price - 1,
@@ -389,7 +389,7 @@ describe('ProductService', async (): Promise<void> => {
 
       const res: ProductResponse = await ProductService.createProduct(ctx.users[0], productParams);
 
-      const updateParams: ProductRequest = {
+      const updateParams: CreateProductRequest = {
         alcoholPercentage: 10,
         name: 'Product77-update',
         price,

@@ -22,7 +22,7 @@ import { json } from 'body-parser';
 import { request, expect } from 'chai';
 import User, { UserType } from '../../../src/entity/user/user';
 import ProductController from '../../../src/controller/product-controller';
-import ProductRequest from '../../../src/controller/request/product-request';
+import CreateProductRequest from '../../../src/controller/request/product-request';
 import Database from '../../../src/database/database';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Swagger from '../../../src/start/swagger';
@@ -40,7 +40,7 @@ import { defaultPagination, PaginationResult } from '../../../src/helpers/pagina
  * @param response - The received product.
  * @return true if the source and response describe the same product.
  */
-function productEq(source: ProductRequest, response: ProductResponse) {
+function productEq(source: CreateProductRequest, response: ProductResponse) {
   return source.name === response.name
       && source.category === response.category.id
       && source.alcoholPercentage === response.alcoholPercentage
@@ -57,8 +57,8 @@ describe('ProductController', async (): Promise<void> => {
     localUser: User,
     adminToken: String,
     token: String,
-    validProductReq: ProductRequest,
-    invalidProductReq: ProductRequest,
+    validProductReq: CreateProductRequest,
+    invalidProductReq: CreateProductRequest,
   };
 
   // Initialize context
@@ -94,14 +94,14 @@ describe('ProductController', async (): Promise<void> => {
     const adminToken = await tokenHandler.signToken({ user: adminUser, roles: ['Admin'] }, 'nonce admin');
     const token = await tokenHandler.signToken({ user: localUser, roles: [] }, 'nonce');
 
-    const validProductReq: ProductRequest = {
+    const validProductReq: CreateProductRequest = {
       name: 'Valid product',
       price: 1,
       alcoholPercentage: 0,
       category: 2,
     };
 
-    const invalidProductReq: ProductRequest = {
+    const invalidProductReq: CreateProductRequest = {
       ...validProductReq,
       name: '',
     };
@@ -206,7 +206,38 @@ describe('ProductController', async (): Promise<void> => {
       expect(products.length).to.be.at.most(take);
     });
   });
+
+  function testValidationOnRoute(type: any, route: string) {
+    async function expectError(req: CreateProductRequest, error: string) {
+      // @ts-ignore
+      const res = await ((request(ctx.app)[type])(route)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(req));
+      expect(res.status).to.eq(400);
+      expect(res.body).to.eq(error);
+    }
+    it('should verify Alcohol', async () => {
+      const req: CreateProductRequest = { ...ctx.validProductReq, alcoholPercentage: -1 };
+      await expectError(req, 'Alcohol percentage must be non-negative');
+    });
+    it('should verify Category', async () => {
+      const req: CreateProductRequest = { ...ctx.validProductReq, category: -1 };
+      await expectError(req, '-1 is an invalid product category.');
+    });
+    it('should verify Price', async () => {
+      const req: CreateProductRequest = { ...ctx.validProductReq, price: -1 };
+      await expectError(req, 'Price must be greater than zero');
+    });
+    it('should verify Name', async () => {
+      const req: CreateProductRequest = { ...ctx.validProductReq, name: '' };
+      await expectError(req, 'Name must be a non-zero length string.');
+    });
+  }
   describe('POST /products', () => {
+    describe('verifyProductRequest Specification', async (): Promise<void> => {
+      testValidationOnRoute('post', '/products');
+    });
+
     it('should store the given product in the database and return an HTTP 200 and the product if admin', async () => {
       const productCount = await Product.count();
       const res = await request(ctx.app)
@@ -220,18 +251,6 @@ describe('ProductController', async (): Promise<void> => {
       expect(databaseProduct).to.exist;
 
       expect(res.status).to.equal(200);
-    });
-    it('should return an HTTP 400 if the given product is invalid', async () => {
-      const productCount = await Product.count();
-      const res = await request(ctx.app)
-        .post('/products')
-        .set('Authorization', `Bearer ${ctx.adminToken}`)
-        .send(ctx.invalidProductReq);
-
-      expect(await Product.count()).to.equal(productCount);
-      expect(res.body).to.equal('Invalid product.');
-
-      expect(res.status).to.equal(400);
     });
     it('should return an HTTP 403 if not admin', async () => {
       const productCount = await Product.count();
@@ -281,6 +300,10 @@ describe('ProductController', async (): Promise<void> => {
     });
   });
   describe('PATCH /products/:id', () => {
+    describe('verifyProductRequest Specification', async (): Promise<void> => {
+      testValidationOnRoute('patch', '/products/1');
+    });
+
     it('should return an HTTP 200 and the product update if admin', async () => {
       const res = await request(ctx.app)
         .patch('/products/1')
@@ -292,15 +315,6 @@ describe('ProductController', async (): Promise<void> => {
       expect(databaseProduct).to.exist;
 
       expect(res.status).to.equal(200);
-    });
-    it('should return an HTTP 400 if the update is invalid', async () => {
-      const res = await request(ctx.app)
-        .patch('/products/1')
-        .set('Authorization', `Bearer ${ctx.adminToken}`)
-        .send(ctx.invalidProductReq);
-
-      expect(res.body).to.equal('Invalid product.');
-      expect(res.status).to.equal(400);
     });
     it('should return an HTTP 404 if the product with the given id does not exist', async () => {
       const res = await request(ctx.app)

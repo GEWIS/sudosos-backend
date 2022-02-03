@@ -28,7 +28,7 @@ import TokenHandler from '../../../src/authentication/token-handler';
 import Swagger from '../../../src/start/swagger';
 import RoleManager from '../../../src/rbac/role-manager';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
-import ContainerRequest from '../../../src/controller/request/container-request';
+import CreateContainerRequest from '../../../src/controller/request/container-request';
 import ContainerController from '../../../src/controller/container-controller';
 import Container from '../../../src/entity/container/container';
 import {
@@ -48,7 +48,7 @@ chai.use(deepEqualInAnyOrder);
  * @param source - The source from which the container was created.
  * @param response - The received container.
  */
-function containerEq(source: ContainerRequest, response: ContainerResponse) {
+function containerEq(source: CreateContainerRequest, response: ContainerResponse) {
   expect(source.name).to.equal(response.name);
   expect(source.public).to.equal(response.public);
 }
@@ -59,7 +59,7 @@ function asRequested(requested: Container, response: ContainerResponse) {
   expect(response.public).to.eq(requested.public);
 }
 
-function containerProductsEq(source: ContainerRequest, response: ContainerWithProductsResponse) {
+function containerProductsEq(source: CreateContainerRequest, response: ContainerWithProductsResponse) {
   containerEq(source, response);
   expect(response.products.map((p) => p.id)).to.deep.equalInAnyOrder(source.products);
 }
@@ -74,8 +74,8 @@ describe('ContainerController', async (): Promise<void> => {
     localUser: User,
     adminToken: String,
     token: String,
-    validContainerReq: ContainerRequest,
-    invalidContainerReq: ContainerRequest,
+    validContainerReq: CreateContainerRequest,
+    invalidContainerReq: CreateContainerRequest,
   };
 
   // Initialize context
@@ -113,13 +113,13 @@ describe('ContainerController', async (): Promise<void> => {
     const adminToken = await tokenHandler.signToken({ user: adminUser, roles: ['Admin'] }, 'nonce admin');
     const token = await tokenHandler.signToken({ user: localUser, roles: ['User'] }, 'nonce');
 
-    const validContainerReq: ContainerRequest = {
+    const validContainerReq: CreateContainerRequest = {
       products: [7, 8],
       public: true,
       name: 'Valid container',
     };
 
-    const invalidContainerReq: ContainerRequest = {
+    const invalidContainerReq: CreateContainerRequest = {
       ...validContainerReq,
       name: '',
       products: [-1],
@@ -357,7 +357,7 @@ describe('ContainerController', async (): Promise<void> => {
   });
   describe('POST /containers/:id/approve', () => {
     it('should approve the container update if it exists and admin', async () => {
-      const containerApprovedProducts: ContainerRequest = {
+      const containerApprovedProducts: CreateContainerRequest = {
         products: [1],
         public: true,
         name: 'Valid container',
@@ -392,7 +392,7 @@ describe('ContainerController', async (): Promise<void> => {
       const productId = 4;
       expect(await UpdatedProduct.findOne(productId)).to.exist;
 
-      const container: ContainerRequest = {
+      const container: CreateContainerRequest = {
         name: 'Container with unapproved products.',
         products: [productId],
         public: true,
@@ -454,7 +454,7 @@ describe('ContainerController', async (): Promise<void> => {
     it('should return an HTTP 200 and override a previous update if admin', async () => {
       const id = 1;
 
-      const newUpdate: ContainerRequest = {
+      const newUpdate: CreateContainerRequest = {
         public: true,
         name: 'Valid Container Update',
         products: [3, 4],

@@ -16,24 +16,31 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import { DineroObjectRequest } from './dinero-request';
+
 /**
- * @typedef ProductRequest
- * @property {string} name - Name of the product
- * @property {number} price - Price of the product
- * @property {number} category - Category of the product
- * @property {number} alcoholPercentage - Alcohol percentage of the product in 2 decimals
+ * @typedef CreateProductRequest
+ * @property {number} ownerId.required - ID of the owner
+ * @property {string} name.required - Name of the product
+ * @property {DineroObjectRequest} price.required - Price of the product
+ * @property {number} price.required  - Price of the product
+ * @property {number} category.required  - Category of the product
+ * @property {number} alcoholPercentage.required  - Alcohol percentage of the product in 2 decimals
  */
-export default interface ProductRequest {
+export default interface CreateProductRequest {
+  ownerId: number;
   name: string;
-  price: number;
+  price: DineroObjectRequest;
   category: number;
   alcoholPercentage: number;
 }
 
 /**
- * @typedef ProductRequestID
- * @property {integer} id - The id of the product to update
+ * @typedef {CreateProductRequest} UpdateProductRequest
+ * @property {integer} id.required - The id of the product to update
  */
-export interface ProductRequestID extends ProductRequest {
+export interface UpdateProductRequest extends CreateProductRequest {
   id: number;
 }
+
+export type ProductRequest = UpdateProductRequest | CreateProductRequest;

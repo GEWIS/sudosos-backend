@@ -37,8 +37,13 @@ import ContainerRevision from '../entity/container/container-revision';
 import ContainerService, { ContainerParameters } from './container-service';
 import { ContainerWithProductsResponse } from '../controller/response/container-response';
 import { PaginationParameters } from '../helpers/pagination';
-import { ContainerRequestID } from '../controller/request/container-request';
-import splitTypes, { getIdsAndRequests } from '../helpers/helper';
+import CreateContainerRequest, { ContainerUpdateRequest } from '../controller/request/container-request';
+import { getIdsAndRequests } from '../helpers/helper';
+import {
+  Either,
+  validateSpecification, ValidationError,
+} from '../helpers/specification-validation';
+import updatePointOfSaleRequestSpec from '../controller/request/validators/update-point-of-sale-request-spec';
 
 /**
  * Define point of sale filtering parameters used to filter query results.
@@ -361,8 +366,11 @@ export default class PointOfSaleService {
 
     const updatedContainers: UpdatedContainer[] = await UpdatedContainer.findByIds(containerIds, { relations: ['container'] });
 
+    // Force approve all containers
     if (updatedContainers.length !== 0) {
-      throw new UnapprovedContainerError(`Point of sale has the unapproved container(s): [${updatedContainers.map((c) => c.container.id)}]`);
+      await Promise.all(updatedContainers.map(
+        (c) => ContainerService.approveContainerUpdate(c.container.id),
+      ));
     }
 
     const containerRevisions: ContainerRevision[] = await ContainerRevision.findByIds(containerIds);
@@ -409,9 +417,12 @@ export default class PointOfSaleService {
       return undefined;
     }
 
-    const { ids, requests } = getIdsAndRequests<ContainerRequestID>(update);
-    // If the update contains container updates we delegate it.
-    await Promise.all(requests.map((r) => ContainerService.updateContainer(r.id, r)));
+    const { ids, requests } = getIdsAndRequests<ContainerUpdateRequest>(update);
+    // If the update contains container updates or creations we delegate it.
+    await Promise.all(requests.map((r) => {
+      if (r.id) return ContainerService.updateContainer(r.id, r);
+      return ContainerService.createContainer(update.ownerId, r);
+    }));
 
     const containers = update.containers ? await Container.findByIds(ids) : [];
 
@@ -437,7 +448,7 @@ export default class PointOfSaleService {
    *
    * @param posRequest - The POS to be created.
    */
-  public static async createPointOfSale(posRequest: PointOfSaleRequest)
+  public static async createPointOfSale(posRequest: UpdatePointOfSaleRequest)
     : Promise<UpdatedPointOfSaleResponse> {
     const base = Object.assign(new PointOfSale(), {
       owner: await User.findOne(posRequest.ownerId),
@@ -445,60 +456,7 @@ export default class PointOfSaleService {
 
     // Save the base and create update request.
     await base.save();
-    return this.updatePointOfSale(base.id, posRequest.update);
-  }
-
-  /**
-   * Verifies whether the PointOfSaleRequest translates to a valid object.
-   * @param {PointOfSaleRequest.model} posRequest - The PointOfSale request
-   * @returns {boolean} whether the request is valid
-   */
-  public static async verifyPointOfSale(posRequest: PointOfSaleRequest | UpdatePointOfSaleRequest)
-    : Promise<boolean> {
-    let update: UpdatePointOfSaleRequest;
-    if (Object.prototype.hasOwnProperty.call(posRequest, 'update')) {
-      update = (posRequest as PointOfSaleRequest).update;
-    } else {
-      update = (posRequest as UpdatePointOfSaleRequest);
-    }
-
-    const startDate = Date.parse(update.startDate);
-    const endDate = Date.parse(update.endDate);
-
-    const check: boolean = update.name !== ''
-        // Dates must exist.
-        && !Number.isNaN(startDate) && !Number.isNaN(endDate)
-        // End date must be in the future.
-        && endDate > new Date().getTime()
-        // End date must be after start date.
-        && endDate > startDate;
-
-    if (Object.prototype.hasOwnProperty.call(posRequest, 'ownerId')) {
-      // Owner must exist.
-      if (await User.findOne({ id: (posRequest as PointOfSaleRequest).ownerId }) === undefined) {
-        return false;
-      }
-    }
-
-    if (!check) return false;
-
-    if (update.containers) {
-      // Validate ids / requests
-      const { ids, requests } = getIdsAndRequests<ContainerRequestID>(update);
-
-      console.error(ids);
-      const containers = await Container.findByIds(ids);
-      if (containers.length !== ids.length) return false;
-
-      const promises: Promise<boolean>[] = [];
-      requests.forEach((c) => {
-        promises.push(ContainerService.verifyContainer(c));
-      });
-      let results: boolean[] = [];
-      await Promise.all(promises).then((r) => { results = r; });
-      if (!results.every((b) => b)) return false;
-    }
-    return true;
+    return this.updatePointOfSale(base.id, posRequest as UpdatePointOfSaleRequest);
   }
 
   /**

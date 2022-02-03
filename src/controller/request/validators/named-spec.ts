@@ -15,19 +15,25 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+import {
+  Specification, toFail, toPass, ValidationError,
+} from '../../../helpers/specification-validation';
+import NamedRequest from '../named-request';
 
 /**
- * @typedef BannerRequest
- * @property {string} name - Name/label of the banner
- * @property {number} duration - How long the banner should be shown (in seconds)
- * @property {boolean} active - Whether the banner is active. Overrides start and end date
- * @property {string} startDate - The starting date from which the advertisement should be shown
- * @property {string} endDate - The end date from which the banner should no longer be shown
+ * Checks if the name attribute is not an empty string.
  */
-export default interface BannerRequest {
-  name: string,
-  duration: number,
-  active: boolean,
-  startDate: string,
-  endDate: string,
+const validName = (p: NamedRequest) => {
+  if (p.name === '') {
+    return toFail(new ValidationError('Name must be a non-zero length string.'));
+  }
+  return toPass(p);
+};
+
+function namedSpec<T extends NamedRequest>(): Specification<T, ValidationError> {
+  return [
+    validName,
+  ] as Specification<T, ValidationError>;
 }
+
+export default namedSpec;

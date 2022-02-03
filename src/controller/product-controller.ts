@@ -22,11 +22,13 @@ import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import ProductService from '../service/product-service';
-import ProductRequest from './request/product-request';
+import CreateProductRequest from './request/product-request';
 import Product from '../entity/product/product';
 import FileService from '../service/file-service';
 import { PRODUCT_IMAGE_LOCATION } from '../files/storage';
 import { parseRequestPagination } from '../helpers/pagination';
+import verifyProductRequest from './request/validators/product-request-spec';
+import { isFail, isPass } from '../helpers/specification-validation';
 
 export default class ProductController extends BaseController {
   private logger: Logger = log4js.getLogger('ProductController');
@@ -136,22 +138,23 @@ export default class ProductController extends BaseController {
    * Create a new product.
    * @route POST /products
    * @group products - Operations of product controller
-   * @param {ProductRequest.model} product.body.required - The product which should be created
+   * @param {CreateProductRequest.model} product.body.required - The product which should be created
    * @security JWT
    * @returns {ProductResponse.model} 200 - The created product entity
    * @returns {string} 400 - Validation error
    * @returns {string} 500 - Internal server error
    */
   public async createProduct(req: RequestWithToken, res: Response): Promise<void> {
-    const body = req.body as ProductRequest;
+    const body = req.body as CreateProductRequest;
     this.logger.trace('Create product', body, 'by user', req.token.user);
 
     // handle request
     try {
-      if (await ProductService.verifyProduct(body)) {
+      const validation = await verifyProductRequest(body);
+      if (isPass(validation)) {
         res.json(await ProductService.createProduct(req.token.user, body));
       } else {
-        res.status(400).json('Invalid product.');
+        res.status(400).json(validation.fail.value);
       }
     } catch (error) {
       this.logger.error('Could not create product:', error);
@@ -164,7 +167,7 @@ export default class ProductController extends BaseController {
    * @route PATCH /products/{id}
    * @group products - Operations of product controller
    * @param {integer} id.path.required - The id of the product which should be updated
-   * @param {ProductRequest.model} product.body.required - The product which should be updated
+   * @param {CreateProductRequest.model} product.body.required - The product which should be updated
    * @security JWT
    * @returns {ProductResponse.model} 200 - The created product entity
    * @returns {string} 400 - Validation error
@@ -172,21 +175,23 @@ export default class ProductController extends BaseController {
    * @returns {string} 500 - Internal server error
    */
   public async updateProduct(req: RequestWithToken, res: Response): Promise<void> {
-    const body = req.body as ProductRequest;
+    const body = req.body as CreateProductRequest;
     const { id } = req.params;
     this.logger.trace('Update product', id, 'with', body, 'by user', req.token.user);
 
     // handle request
     try {
-      if (await ProductService.verifyProduct(body)) {
-        const update = await ProductService.updateProduct(Number.parseInt(id, 10), body);
-        if (update) {
-          res.json(update);
-        } else {
-          res.status(404).json('Product not found.');
-        }
+      const validation = await verifyProductRequest(body);
+      if (isFail(validation)) {
+        res.status(400).json(validation.fail.value);
+        return;
+      }
+
+      const update = await ProductService.updateProduct(Number.parseInt(id, 10), body);
+      if (update) {
+        res.json(update);
       } else {
-        res.status(400).json('Invalid product.');
+        res.status(404).json('Product not found.');
       }
     } catch (error) {
       this.logger.error('Could not update product:', error);

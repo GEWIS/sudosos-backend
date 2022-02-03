@@ -41,8 +41,6 @@ import PointOfSaleService from '../../../src/service/point-of-sale-service';
 import PointOfSaleRequest from '../../../src/controller/request/point-of-sale-request';
 import UpdatePointOfSaleRequest from '../../../src/controller/request/update-point-of-sale-request';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
-import ContainerRequest, { ContainerRequestID } from '../../../src/controller/request/container-request';
-import ProductRequest, { ProductRequestID } from '../../../src/controller/request/product-request';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -76,9 +74,9 @@ function updateUpdatedResponseEqual(update: UpdatePointOfSaleRequest,
 /**
  * Checks if response adheres to creation.
  */
-function requestUpdatedResponseEqual(request: PointOfSaleRequest,
+function requestUpdatedResponseEqual(request: UpdatePointOfSaleRequest,
   response: UpdatedPointOfSaleResponse) {
-  updateUpdatedResponseEqual(request.update, response);
+  updateUpdatedResponseEqual(request, response);
   expect(request.ownerId).to.equal(response.owner.id);
 }
 
@@ -117,15 +115,13 @@ describe('PointOfSaleService', async (): Promise<void> => {
     const specification = await Swagger.initialize(app);
     app.use(json());
 
-    const validPOSRequest: PointOfSaleRequest = {
-      update: {
-        containers: [containers[0].id, containers[1].id, containers[2].id],
-        endDate: '2100-01-01T21:00:00.000Z',
-        name: 'Valid POS',
-        startDate: '2100-01-01T17:00:00.000Z',
-        useAuthentication: false,
-      },
-      ownerId: users[0].id,
+    const validPOSRequest: UpdatePointOfSaleRequest = {
+      containers: [containers[0].id, containers[1].id, containers[2].id],
+      endDate: '2100-01-01T21:00:00.000Z',
+      name: 'Valid POS',
+      startDate: '2100-01-01T17:00:00.000Z',
+      useAuthentication: false,
+      ownerId: 2,
     };
 
     ctx = {
@@ -242,142 +238,6 @@ describe('PointOfSaleService', async (): Promise<void> => {
       expect(records.length).to.be.at.most(take);
     });
   });
-  describe('verifyPointOfSale function', () => {
-    it('should return true for a valid POSRequest', async () => {
-      const valid = await PointOfSaleService.verifyPointOfSale(ctx.validPOSRequest);
-      expect(valid).to.be.true;
-    });
-    it('should return false for an invalid name', async () => {
-      const invalidRequest = {
-        ...ctx.validPOSRequest,
-        update: { ...ctx.validPOSRequest.update, name: '' },
-      };
-      const valid = await PointOfSaleService.verifyPointOfSale(invalidRequest);
-      expect(valid).to.be.false;
-    });
-    it('should return false for an invalid startDate', async () => {
-      const invalidRequest = {
-        ...ctx.validPOSRequest,
-        update: { ...ctx.validPOSRequest.update, startDate: '' },
-      };
-      const valid = await PointOfSaleService.verifyPointOfSale(invalidRequest);
-      expect(valid).to.be.false;
-    });
-    it('should return false for an invalid endDate', async () => {
-      const invalidRequest = {
-        ...ctx.validPOSRequest,
-        update: { ...ctx.validPOSRequest.update, endDate: '' },
-      };
-      const valid = await PointOfSaleService.verifyPointOfSale(invalidRequest);
-      expect(valid).to.be.false;
-    });
-    it('should return false for an invalid date', async () => {
-      const invalidRequest = {
-        ...ctx.validPOSRequest,
-        update: { ...ctx.validPOSRequest.update, endDate: ctx.validPOSRequest.update.startDate },
-      };
-      const valid = await PointOfSaleService.verifyPointOfSale(invalidRequest);
-      expect(valid).to.be.false;
-    });
-    it('should return false for an invalid Owner', async () => {
-      const invalidRequest = { ...ctx.validPOSRequest, ownerId: -1 };
-      const valid = await PointOfSaleService.verifyPointOfSale(invalidRequest);
-      expect(valid).to.be.false;
-    });
-    it('should return false for invalid containers', async () => {
-      const invalidRequest = {
-        ...ctx.validPOSRequest,
-        update: { ...ctx.validPOSRequest.update, containers: [-1, -69] },
-      };
-      const valid = await PointOfSaleService.verifyPointOfSale(invalidRequest);
-      expect(valid).to.be.false;
-    });
-    it('should return true if update contains ContainerUpdate', async () => {
-      const withContainerUpdate: PointOfSaleRequest = {
-        ...ctx.validPOSRequest,
-      };
-
-      const containerRequest: ContainerRequestID = {
-        id: withContainerUpdate.update.containers.pop() as number,
-        name: 'Container',
-        products: [1],
-        public: true,
-      };
-
-      withContainerUpdate.update.containers.push(containerRequest);
-      const valid = await PointOfSaleService.verifyPointOfSale(withContainerUpdate);
-      expect(valid).to.be.true;
-    });
-    it('should return false if update contains invalid ContainerUpdate', async () => {
-      const withContainerUpdate: PointOfSaleRequest = {
-        ...ctx.validPOSRequest,
-      };
-
-      const containerRequest: ContainerRequestID = {
-        id: withContainerUpdate.update.containers.pop() as number,
-        name: '',
-        products: [-1],
-        public: true,
-      };
-
-      withContainerUpdate.update.containers.push(containerRequest);
-      const valid = await PointOfSaleService.verifyPointOfSale(withContainerUpdate);
-      expect(valid).to.be.false;
-    });
-    it('should return true if update contains valid ContainerUpdate with valid productUpdate', async () => {
-      // TODO Should clone?
-      const withContainerUpdate: PointOfSaleRequest = {
-        ...ctx.validPOSRequest,
-      };
-
-      const productRequestID: ProductRequestID = {
-        alcoholPercentage: 0,
-        category: 1,
-        id: 1,
-        name: 'ProductRequestID',
-        price: 100,
-      };
-
-      const containerRequest: ContainerRequestID = {
-        id: 1,
-        name: 'Container',
-        products: [productRequestID],
-        public: true,
-      };
-
-      console.error('TEST');
-
-      console.error(withContainerUpdate.update.containers);
-      console.error('TEST');
-      withContainerUpdate.update.containers.push(containerRequest);
-      const valid = await PointOfSaleService.verifyPointOfSale(withContainerUpdate);
-      expect(valid).to.be.true;
-    });
-    it('should return valse if update contains valid ContainerUpdate with invalid productUpdate', async () => {
-      const withContainerUpdate: PointOfSaleRequest = {
-        ...ctx.validPOSRequest,
-      };
-
-      const productRequestID: ProductRequestID = {
-        alcoholPercentage: 0,
-        category: 1,
-        id: 0,
-        name: 'ProductRequestID',
-        price: -100,
-      };
-
-      const containerRequest: ContainerRequestID = {
-        id: withContainerUpdate.update.containers.pop() as number,
-        name: 'Container',
-        products: [productRequestID],
-        public: true,
-      };
-
-      withContainerUpdate.update.containers.push(containerRequest);
-      const valid = await PointOfSaleService.verifyPointOfSale(withContainerUpdate);
-      expect(valid).to.be.false;
-    });
-  });
   describe('createPointOfSale function', () => {
     it('should create a new PointOfSale', async () => {
       const count = await PointOfSale.count();
@@ -388,15 +248,15 @@ describe('PointOfSaleService', async (): Promise<void> => {
 
       const updatedPointOfSale = await UpdatedPointOfSale.findOne(res.id, { relations: ['containers'] });
       const containers = updatedPointOfSale.containers.map((container) => container.id);
-      expect(ctx.validPOSRequest.update.containers).to.deep.equalInAnyOrder(containers);
+      expect(ctx.validPOSRequest.containers).to.deep.equalInAnyOrder(containers);
 
-      expect(updatedPointOfSale.name).to.equal(ctx.validPOSRequest.update.name);
+      expect(updatedPointOfSale.name).to.equal(ctx.validPOSRequest.name);
       expect(updatedPointOfSale.startDate.toISOString())
-        .to.equal(ctx.validPOSRequest.update.startDate);
+        .to.equal(ctx.validPOSRequest.startDate);
       expect(updatedPointOfSale.endDate.toISOString())
-        .to.equal(ctx.validPOSRequest.update.endDate);
+        .to.equal(ctx.validPOSRequest.endDate);
       expect(updatedPointOfSale.useAuthentication)
-        .to.equal(ctx.validPOSRequest.update.useAuthentication);
+        .to.equal(ctx.validPOSRequest.useAuthentication);
 
       requestUpdatedResponseEqual(ctx.validPOSRequest, res);
     });
@@ -413,6 +273,7 @@ describe('PointOfSaleService', async (): Promise<void> => {
         name: 'Updated POS',
         startDate: '2049-01-01T17:00:00.000Z',
         useAuthentication: true,
+        ownerId: 2,
       };
 
       const res: UpdatedPointOfSaleResponse = (
@@ -420,7 +281,7 @@ describe('PointOfSaleService', async (): Promise<void> => {
 
       const updatedPointOfSale = await UpdatedPointOfSale.findOne(res.id, { relations: ['containers'] });
       const containers = updatedPointOfSale.containers.map((container) => container.id);
-      expect(ctx.validPOSRequest.update.containers).to.deep.equalInAnyOrder(containers);
+      expect(ctx.validPOSRequest.containers).to.deep.equalInAnyOrder(containers);
 
       updateUpdatedResponseEqual(updateRequest, res);
     });
@@ -436,6 +297,7 @@ describe('PointOfSaleService', async (): Promise<void> => {
         name: 'Updated POS',
         startDate: '2049-01-01T17:00:00.000Z',
         useAuthentication: true,
+        ownerId: 2,
       };
 
       const res: UpdatedPointOfSaleResponse = (
@@ -443,7 +305,7 @@ describe('PointOfSaleService', async (): Promise<void> => {
 
       const updatedPointOfSale = await UpdatedPointOfSale.findOne(res.id, { relations: ['containers'] });
       const containers = updatedPointOfSale.containers.map((container) => container.id);
-      expect(ctx.validPOSRequest.update.containers).to.deep.equalInAnyOrder(containers);
+      expect(ctx.validPOSRequest.containers).to.deep.equalInAnyOrder(containers);
 
       updateUpdatedResponseEqual(updateRequest, res);
     });
@@ -459,7 +321,7 @@ describe('PointOfSaleService', async (): Promise<void> => {
 
       const pointOfSaleRevision = await PointOfSaleRevision.findOne({ revision: res.revision, pointOfSale: { id: newPOS.id } }, { relations: ['containers'] });
       const containers = pointOfSaleRevision.containers.map((container) => container.container.id);
-      expect(ctx.validPOSRequest.update.containers).to.deep.equalInAnyOrder(containers);
+      expect(ctx.validPOSRequest.containers).to.deep.equalInAnyOrder(containers);
 
       expect(res.name).to.equal(pointOfSaleRevision.name);
       expect(res.revision).to.equal(pointOfSaleRevision.revision);

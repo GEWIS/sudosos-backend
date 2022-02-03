@@ -15,15 +15,14 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import ContainerRequest, { ContainerRequestID } from '../controller/request/container-request';
-import { ProductRequestID } from '../controller/request/product-request';
-import UpdatePointOfSaleRequest from '../controller/request/update-point-of-sale-request';
+
+import { ContainerRequest } from '../controller/request/container-request';
+import { ProductRequest } from '../controller/request/product-request';
 
 export default function splitTypes<S, T>(array: any[], split: string) {
   const type: S[] = [];
   const remainder: T[] = [];
   array.forEach((item) => {
-    console.error(item);
     if (typeof item === split) {
       type.push(item);
     } else {
@@ -33,18 +32,16 @@ export default function splitTypes<S, T>(array: any[], split: string) {
   return { type, remainder };
 }
 
-export function getIdsAndRequests<T extends ContainerRequestID | ProductRequestID>(
-  update: ContainerRequest | UpdatePointOfSaleRequest,
+type IdOrRequest<T = ContainerRequest | ProductRequest> = (number | (T))[];
+
+export function getIdsAndRequests<T>(
+  array: IdOrRequest<T>,
 ) {
-  let array;
-  if (Object.prototype.hasOwnProperty.call(update, 'products')) {
-    array = (update as ContainerRequest).products;
-  } else {
-    array = (update as UpdatePointOfSaleRequest).containers;
-  }
   const split = splitTypes<number, T>(array, 'number');
   const ids: number[] = split.type;
   const requests: T[] = split.remainder;
-  requests.forEach((c) => ids.push(c.id));
+  requests.forEach((c) => { if ((c as any).id) ids.push((c as any).id); });
   return { ids, requests };
 }
+
+export type Optional<T, K extends keyof T> = Pick<Partial<T>, K> & Omit<T, K>;

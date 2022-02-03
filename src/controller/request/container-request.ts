@@ -15,25 +15,34 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-
-import { ProductRequestID } from './product-request';
+import { ProductRequest } from './product-request';
+import NamedRequest from './named-request';
 
 /**
- * @typedef ContainerRequest
- * @property {string} name - Name of the container
- * @property {Array.<integer | ProductRequestID>} products - IDs or requests of the products to add to the container
- * @property {boolean} public - Whether the container is public or not
+ * @typedef BaseContainerRequest
+ * @property {string} name.required - Name of the container
+ * @property {Array.<integer | ProductRequest>} products - IDs or requests of the products to add to the container
+ * @property {boolean} public.required - Whether the container is public or not
  */
-export default interface ContainerRequest {
-  name: string,
-  products?: (number | ProductRequestID)[],
+export interface BaseContainerRequest extends NamedRequest {
+  products?: (number | ProductRequest)[],
   public: boolean,
 }
 
 /**
- * @typedef ContainerRequestID
- * @property {integer} id - The id of the container to update.
+ * @typedef CreateContainerRequest
+ * @property {integer} ownerId.required - ID of the owner
  */
-export interface ContainerRequestID extends ContainerRequest{
+export interface CreateContainerRequest extends BaseContainerRequest {
+  ownerId: number,
+}
+
+/**
+ * @typedef {CreateContainerRequest} UpdateContainerRequest
+ * @property {integer} id.required - The id of the container to update.
+ */
+export interface UpdateContainerRequest extends CreateContainerRequest{
   id: number
 }
+
+export type ContainerRequest = UpdateContainerRequest | CreateContainerRequest;

@@ -15,15 +15,36 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-
-import UpdatePointOfSaleRequest from './update-point-of-sale-request';
+import { ContainerRequest } from './container-request';
+import DurationRequest from './duration-request';
+import NamedRequest from './named-request';
 
 /**
- * @typedef PointOfSaleRequest
- * @property {integer} ownerId - The owner of the POS.
- * @property {UpdatePointOfSaleRequest.model} update.required - The initial update of the POS.
+ * @typedef BasePointOfSaleRequest
+ * @property {string} name.required - Name of the POS
+ * @property {string} startDate.required - Date from which the POS is active
+ * @property {string} endDate - Date from which the POS is no longer active
+ * @property {Array.<number | ContainerRequest>} containers -
+ * IDs or Requests of the containers to add to the POS
+ * @property {boolean} useAuthentication - Whether the POS requires authentication or not.
  */
-export default interface PointOfSaleRequest {
-  ownerId?: number,
-  update: UpdatePointOfSaleRequest,
+export interface BasePointOfSaleRequest extends DurationRequest, NamedRequest {
+  containers?: (number | ContainerRequest)[],
+  useAuthentication?: boolean,
+}
+
+/**
+ * @typedef {BasePointOfSaleRequest} CreatePointOfSaleRequestID
+ * @property {integer} ownerId - ID of the owner
+ */
+export interface CreatePointOfSaleRequest extends BasePointOfSaleRequest{
+  ownerId: number,
+}
+
+/**
+ * @typedef {CreatePointOfSaleRequest} UpdatePointOfSaleRequest
+ * @property {integer} id.required - ID of the POS to update.
+ */
+export interface UpdatePointOfSaleRequest extends CreatePointOfSaleRequest {
+  id: number
 }

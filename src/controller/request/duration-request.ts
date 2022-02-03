@@ -16,21 +16,10 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { ContainerRequestID } from './container-request';
-
 /**
- * @typedef UpdatePointOfSaleRequest
- * @property {string} name.required - Name of the POS
- * @property {string} startDate.required - Date from which the POS is active
- * @property {string} endDate - Date from which the POS is no longer active
- * @property {Array.<number | ContainerRequestID>} containers -
- * IDs or Requests of the containers to add to the POS
- * @property {boolean} useAuthentication - Whether the POS requires authentication or not.
+ * For all requests that contain an object with a start and end date.
  */
-export default interface UpdatePointOfSaleRequest {
-  name: string,
+export default interface DurationRequest {
   startDate: string,
-  endDate: string,
-  containers?: (number | ContainerRequestID)[],
-  useAuthentication?: boolean,
+  endDate?: string,
 }

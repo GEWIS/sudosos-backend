@@ -21,7 +21,7 @@ import { DineroObjectRequest } from './dinero-request';
 /**
  * @typedef TransferRequest
  * @property {string} description - Description of the transfer
- * @property {Dinero.model} amount - Amount of money being transferred
+ * @property {DineroObjectRequest} amount - Amount of money being transferred
  * @property {integer} type - Type of transfer
  * @property {integer} fromId - from which user the money is being transferred
  * @property {integer} toId - to which user the money is being transferred.

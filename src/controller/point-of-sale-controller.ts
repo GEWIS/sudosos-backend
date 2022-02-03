@@ -23,16 +23,16 @@ import { RequestWithToken } from '../middleware/token-middleware';
 import PointOfSaleService from '../service/point-of-sale-service';
 import ContainerService from '../service/container-service';
 import ProductService from '../service/product-service';
-import PointOfSaleRequest from './request/point-of-sale-request';
 import {
   PaginatedUpdatedPointOfSaleResponse,
 } from './response/point-of-sale-response';
 import PointOfSale from '../entity/point-of-sale/point-of-sale';
-import UpdatePointOfSaleRequest from './request/update-point-of-sale-request';
-import UnapprovedContainerError from '../entity/errors/unapproved-container-error';
 import { asNumber } from '../helpers/validators';
 import UpdatedPointOfSale from '../entity/point-of-sale/updated-point-of-sale';
 import { parseRequestPagination } from '../helpers/pagination';
+import verifyUpdatePointOfSaleRequest from './request/validators/update-point-of-sale-request-spec';
+import { isFail } from '../helpers/specification-validation';
+import { CreatePointOfSaleRequest, UpdatePointOfSaleRequest } from './request/point-of-sale-request';
 
 export default class PointOfSaleController extends BaseController {
   private logger: Logger = log4js.getLogger('PointOfSaleController');
@@ -57,7 +57,7 @@ export default class PointOfSaleController extends BaseController {
           handler: this.returnAllPointsOfSale.bind(this),
         },
         POST: {
-          body: { modelName: 'PointOfSaleRequest' },
+          body: { modelName: 'CreatePointOfSaleRequest' },
           policy: async (req) => this.roleManager.can(req.token.roles, 'create', 'all', 'PointOfSale', ['*']),
           handler: this.createPointOfSale.bind(this),
         },
@@ -110,7 +110,7 @@ export default class PointOfSaleController extends BaseController {
    * Create a new Point of Sale.
    * @route POST /pointsofsale
    * @group pointofsale - Operations of the point of sale controller
-   * @param {PointOfSaleRequest.model} pointofsale.body.required -
+   * @param {CreatePointOfSaleRequest.model} pointofsale.body.required -
    * The point of sale which should be created
    * @security JWT
    * @returns {PointOfSale.model} 200 - The created point of sale entity
@@ -118,21 +118,24 @@ export default class PointOfSaleController extends BaseController {
    * @returns {string} 500 - Internal server error
    */
   public async createPointOfSale(req: RequestWithToken, res: Response): Promise<void> {
-    const body = req.body as PointOfSaleRequest;
+    const body = req.body as CreatePointOfSaleRequest;
     this.logger.trace('Create point of sale', body, 'by user', req.token.user);
 
     // handle request
     try {
-      if (!body.ownerId) {
-        body.ownerId = req.token.user.id;
-      }
+      // If no ownerId is provided we use the token user id.
+      const request: CreatePointOfSaleRequest = {
+        ...body,
+        ownerId: body.ownerId ?? req.token.user.id,
+      };
 
-      if (!await PointOfSaleService.verifyPointOfSale(body)) {
-        res.status(400).json('Invalid Point of Sale.');
+      const validation = await verifyUpdatePointOfSaleRequest(request);
+      if (isFail(validation)) {
+        res.status(400).json(validation.fail.value);
         return;
       }
 
-      res.json(await PointOfSaleService.createPointOfSale(body));
+      res.json(await PointOfSaleService.createPointOfSale(request));
     } catch (error) {
       this.logger.error('Could not create point of sale:', error);
       res.status(500).json('Internal server error.');
@@ -229,12 +232,18 @@ export default class PointOfSaleController extends BaseController {
 
     // handle request
     try {
-      if (!await PointOfSaleService.verifyPointOfSale(body)) {
-        res.status(400).json('Invalid point of sale.');
+      const request: UpdatePointOfSaleRequest = {
+        ...body,
+        ownerId: body.ownerId ?? req.token.user.id,
+      };
+
+      const validation = await verifyUpdatePointOfSaleRequest(request);
+      if (isFail(validation)) {
+        res.status(400).json(validation.fail.value);
         return;
       }
 
-      const update = await PointOfSaleService.updatePointOfSale(pointOfSaleId, body);
+      const update = await PointOfSaleService.updatePointOfSale(pointOfSaleId, request);
       if (!update) {
         res.status(404).json('Point of Sale not found.');
         return;
@@ -394,12 +403,8 @@ export default class PointOfSaleController extends BaseController {
 
       res.json(pointOfSale);
     } catch (error) {
-      if (error instanceof UnapprovedContainerError) {
-        res.status(400).json(error.message);
-      } else {
-        this.logger.error('Could not approve update: ', error);
-        res.status(500).json('Internal server error.');
-      }
+      this.logger.error('Could not approve update: ', error);
+      res.status(500).json('Internal server error.');
     }
   }
 

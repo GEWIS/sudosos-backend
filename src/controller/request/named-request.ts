@@ -17,17 +17,8 @@
  */
 
 /**
- * @typedef BannerRequest
- * @property {string} name - Name/label of the banner
- * @property {number} duration - How long the banner should be shown (in seconds)
- * @property {boolean} active - Whether the banner is active. Overrides start and end date
- * @property {string} startDate - The starting date from which the advertisement should be shown
- * @property {string} endDate - The end date from which the banner should no longer be shown
+ * For all requests that contain an object with a name.
  */
-export default interface BannerRequest {
-  name: string,
-  duration: number,
-  active: boolean,
-  startDate: string,
-  endDate: string,
+export default interface NamedRequest {
+  name: string
 }
