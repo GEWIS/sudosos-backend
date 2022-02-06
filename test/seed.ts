@@ -1145,7 +1145,7 @@ export async function seedStripeDeposits(users: User[]): Promise<StripeDeposit[]
 
   const totalNrOfStatuses = 3;
 
-  for (let i = 0; i < users.length * totalNrOfStatuses; i += 1) {
+  for (let i = 0; i < users.length * totalNrOfStatuses + 1; i += 1) {
     const newDeposit = Object.assign(new StripeDeposit(), {
       stripeId: `FakeStripeIDDoNotUsePleaseThankYou_${i + 1}`,
       to: users[Math.floor(i / 4)],
@@ -1155,9 +1155,9 @@ export async function seedStripeDeposits(users: User[]): Promise<StripeDeposit[]
     // eslint-disable-next-line no-await-in-loop
     await newDeposit.save();
 
-    const succeeded = Math.floor(((i % 6) + 1) / 3) !== 1;
+    const succeeded = Math.floor(((i % 8) + 1) / 4) !== 1;
     const states = [StripeDepositState.CREATED, StripeDepositState.PROCESSING,
-      succeeded ? StripeDepositState.SUCCEEDED : StripeDepositState.FAILED].slice(0, (i % 3) + 1);
+      succeeded ? StripeDepositState.SUCCEEDED : StripeDepositState.FAILED].slice(0, i % 4);
 
     const statePromises: Promise<any>[] = [];
     states.forEach((state) => {

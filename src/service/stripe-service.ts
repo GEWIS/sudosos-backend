@@ -64,13 +64,6 @@ export default class StripeService {
 
     await stripeDeposit.save();
 
-    const stripeDepositStatus = Object.assign(new StripeDepositStatus(), {
-      state: StripeDepositState.CREATED,
-      deposit: stripeDeposit,
-    });
-
-    await stripeDepositStatus.save();
-
     return {
       id: stripeDeposit.id,
       createdAt: stripeDeposit.createdAt.toISOString(),
@@ -145,6 +138,9 @@ export default class StripeService {
       });
 
       switch (event.type) {
+        case 'payment_intent.created':
+          await StripeService.createNewDepositStatus(deposit.id, StripeDepositState.CREATED);
+          break;
         case 'payment_intent.processing':
           await StripeService.createNewDepositStatus(deposit.id, StripeDepositState.PROCESSING);
           break;

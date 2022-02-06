@@ -75,8 +75,7 @@ describe('StripeService', async (): Promise<void> => {
       expect(countAfter).to.equal(countBefore + 1);
 
       expect(intent.stripeId).to.equal(stripeDeposit.stripeId);
-      expect(stripeDeposit.depositStatus.length).to.equal(1);
-      expect(stripeDeposit.depositStatus[0].state).to.equal(StripeDepositState.CREATED);
+      expect(stripeDeposit.depositStatus.length).to.equal(0);
     });
   });
 
@@ -98,6 +97,10 @@ describe('StripeService', async (): Promise<void> => {
       await expect(StripeService.createNewDepositStatus(id, state))
         .to.eventually.be.rejectedWith(`Status ${state} already exists.`);
     };
+    it('should correctly create only one created status', async () => {
+      const { id } = (ctx.stripeDeposits.filter((d) => d.depositStatus.length === 0))[0];
+      await testStatusCreation(id, StripeDepositState.CREATED);
+    });
     it('should correctly create only one processing status', async () => {
       const { id } = (ctx.stripeDeposits.filter((d) => d.depositStatus.length === 1))[0];
       await testStatusCreation(id, StripeDepositState.PROCESSING);
@@ -152,6 +155,9 @@ describe('StripeService', async (): Promise<void> => {
 
       let type;
       switch (state) {
+        case StripeDepositState.CREATED:
+          type = 'payment_intent.created';
+          break;
         case StripeDepositState.PROCESSING:
           type = 'payment_intent.processing';
           break;
@@ -184,6 +190,10 @@ describe('StripeService', async (): Promise<void> => {
       expect(afterStripeDeposit.depositStatus.some((s) => s.state === state)).to.be.true;
     };
 
+    it('should correctly handle payment_intent.created', async () => {
+      const { id } = (ctx.stripeDeposits.filter((d) => d.depositStatus.length === 0))[1];
+      await testHandleWebhookEvent(id, StripeDepositState.CREATED);
+    });
     it('should correctly handle payment_intent.processing', async () => {
       const { id } = (ctx.stripeDeposits.filter((d) => d.depositStatus.length === 1))[1];
       await testHandleWebhookEvent(id, StripeDepositState.PROCESSING);
