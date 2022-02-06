@@ -16,3 +16,5 @@ config
 
 #Uploaded statics
 data/
+
+.env
