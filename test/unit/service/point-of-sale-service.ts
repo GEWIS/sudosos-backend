@@ -294,21 +294,22 @@ describe('PointOfSaleService', async (): Promise<void> => {
       const update = await UpdatedPointOfSale.findOne(id, { relations: ['containers'] });
       expect(update).to.not.be.undefined;
 
-      const updateRequest: UpdatePointOfSaleRequest = {
+      const updateRequest: UpdatePointOfSaleParams = {
+        id,
+        ownerId: 1,
         containers: [1, 2, 3],
         endDate: '2050-01-01T21:00:00.000Z',
         name: 'Updated POS',
         startDate: '2049-01-01T17:00:00.000Z',
         useAuthentication: true,
-        ownerId: 2,
       };
 
       const res: UpdatedPointOfSaleResponse = (
-        await PointOfSaleService.updatePointOfSale(id, updateRequest));
+        await PointOfSaleService.updatePointOfSale(updateRequest));
 
       const updatedPointOfSale = await UpdatedPointOfSale.findOne(res.id, { relations: ['containers'] });
       const containers = updatedPointOfSale.containers.map((container) => container.id);
-      expect(ctx.validPOSRequest.containers).to.deep.equalInAnyOrder(containers);
+      expect(ctx.validPOSParams.containers).to.deep.equalInAnyOrder(containers);
 
       updateUpdatedResponseEqual(updateRequest, res);
     });
@@ -316,7 +317,7 @@ describe('PointOfSaleService', async (): Promise<void> => {
   describe('approvePointOfSaleUpdate function', () => {
     it('should approve a new PointOfSale update', async () => {
       const newPOS: UpdatedPointOfSaleResponse = (
-        await PointOfSaleService.createPointOfSale(ctx.validPOSRequest));
+        await PointOfSaleService.createPointOfSale(ctx.validPOSParams));
 
       const res = ((
         (await PointOfSaleService
@@ -324,7 +325,7 @@ describe('PointOfSaleService', async (): Promise<void> => {
 
       const pointOfSaleRevision = await PointOfSaleRevision.findOne({ revision: res.revision, pointOfSale: { id: newPOS.id } }, { relations: ['containers'] });
       const containers = pointOfSaleRevision.containers.map((container) => container.container.id);
-      expect(ctx.validPOSRequest.containers).to.deep.equalInAnyOrder(containers);
+      expect(ctx.validPOSParams.containers).to.deep.equalInAnyOrder(containers);
 
       expect(res.name).to.equal(pointOfSaleRevision.name);
       expect(res.revision).to.equal(pointOfSaleRevision.revision);
