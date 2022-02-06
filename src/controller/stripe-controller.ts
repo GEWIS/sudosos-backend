@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import log4js, { Logger } from 'log4js';
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import Dinero, { DineroObject } from 'dinero.js';
 import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';

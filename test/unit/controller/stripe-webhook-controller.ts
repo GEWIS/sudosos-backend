@@ -31,6 +31,8 @@ import StripeService, { STRIPE_API_VERSION } from '../../../src/service/stripe-s
 import { extractRawBody } from '../../../src/helpers/raw-body';
 
 describe('StripeWebhookController', async (): Promise<void> => {
+  let shouldSkip: boolean;
+
   let ctx: {
     connection: Connection,
     app: Application,
@@ -43,7 +45,12 @@ describe('StripeWebhookController', async (): Promise<void> => {
 
   const stubs: sinon.SinonStub[] = [];
 
-  before(async () => {
+  // eslint-disable-next-line func-names
+  before(async function () {
+    shouldSkip = (process.env.STRIPE_PUBLIC_KEY === '' || process.env.STRIPE_PUBLIC_KEY === undefined
+      || process.env.STRIPE_PRIVATE_KEY === '' || process.env.STRIPE_PRIVATE_KEY === undefined);
+    if (shouldSkip) this.skip();
+
     const connection = await Database.initialize();
 
     // start app
@@ -108,10 +115,12 @@ describe('StripeWebhookController', async (): Promise<void> => {
   });
 
   after(async () => {
+    if (shouldSkip) return;
     await ctx.connection.close();
   });
 
   afterEach(() => {
+    if (shouldSkip) return;
     stubs.forEach((stub) => stub.restore());
     stubs.splice(0, stubs.length);
   });

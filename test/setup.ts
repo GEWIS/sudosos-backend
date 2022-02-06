@@ -25,6 +25,7 @@ import chaiAsPromised from 'chai-as-promised';
 import dinero from 'dinero.js';
 import log4js from 'log4js';
 import sinonChai from 'sinon-chai';
+import { config } from 'dotenv';
 
 use(chaiAsPromised);
 use(chaiHttp);
@@ -44,6 +45,7 @@ dinero.defaultPrecision = 2;
 const logger = log4js.getLogger('Console');
 logger.level = process.env.LOG_LEVEL;
 console.log = (message: any, ...additional: any[]) => logger.debug(message, ...additional);
+config();
 
 /**
  * Generates a basic RSA keypair.

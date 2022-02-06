@@ -34,6 +34,8 @@ import DineroTransformer from '../../../src/entity/transformer/dinero-transforme
 import { StripePaymentIntentResponse } from '../../../src/controller/response/stripe-response';
 
 describe('StripeController', async (): Promise<void> => {
+  let shouldSkip: boolean;
+
   let ctx: {
     connection: Connection,
     app: Application,
@@ -47,7 +49,12 @@ describe('StripeController', async (): Promise<void> => {
     validStripeRequest: StripeRequest;
   };
 
-  before(async () => {
+  // eslint-disable-next-line func-names
+  before(async function () {
+    shouldSkip = (process.env.STRIPE_PUBLIC_KEY === '' || process.env.STRIPE_PUBLIC_KEY === undefined
+      || process.env.STRIPE_PRIVATE_KEY === '' || process.env.STRIPE_PRIVATE_KEY === undefined);
+    if (shouldSkip) this.skip();
+
     const connection = await Database.initialize();
 
     // create dummy users
@@ -134,6 +141,7 @@ describe('StripeController', async (): Promise<void> => {
   });
 
   after(async () => {
+    if (shouldSkip) return;
     await ctx.connection.close();
   });
 

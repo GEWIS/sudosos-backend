@@ -27,6 +27,8 @@ import DineroTransformer from '../../../src/entity/transformer/dinero-transforme
 import { StripeDepositState } from '../../../src/entity/deposit/stripe-deposit-status';
 
 describe('StripeService', async (): Promise<void> => {
+  let shouldSkip: boolean;
+
   let ctx: {
     connection: Connection,
     users: User[],
@@ -35,7 +37,12 @@ describe('StripeService', async (): Promise<void> => {
     dineroTransformer: DineroTransformer,
   };
 
-  before(async () => {
+  // eslint-disable-next-line func-names
+  before(async function () {
+    shouldSkip = (process.env.STRIPE_PUBLIC_KEY === '' || process.env.STRIPE_PUBLIC_KEY === undefined
+      || process.env.STRIPE_PRIVATE_KEY === '' || process.env.STRIPE_PRIVATE_KEY === undefined);
+    if (shouldSkip) this.skip();
+
     const connection = await Database.initialize();
 
     const users = await seedUsers();
@@ -54,6 +61,7 @@ describe('StripeService', async (): Promise<void> => {
   });
 
   after(async () => {
+    if (shouldSkip) return;
     await ctx.connection.close();
   });
 
