@@ -24,8 +24,8 @@ import { RequestWithToken } from '../middleware/token-middleware';
 import StripeService from '../service/stripe-service';
 import { StripeRequest } from './request/stripe-request';
 
-export default class DepositController extends BaseController {
-  private logger: Logger = log4js.getLogger('DepositController');
+export default class StripeController extends BaseController {
+  private logger: Logger = log4js.getLogger('StripeController');
 
   private stripeService: StripeService;
 
@@ -44,7 +44,7 @@ export default class DepositController extends BaseController {
    */
   public getPolicy(): Policy {
     return {
-      '/stripe': {
+      '/deposit': {
         POST: {
           policy: async (req) => this.roleManager.can(
             req.token.roles, 'create', 'all', 'StripeDeposit', ['*'],
@@ -53,7 +53,7 @@ export default class DepositController extends BaseController {
           body: { modelName: 'StripeRequest' },
         },
       },
-      '/stripe/webhook': {
+      '/webhook': {
         POST: {
           policy: async () => true,
           handler: this.updateStripeDepositStatus.bind(this),
@@ -64,7 +64,7 @@ export default class DepositController extends BaseController {
 
   /**
    * Start the stripe deposit flow
-   * @route POST /deposit/stripe
+   * @route POST /stripe/deposit
    * @group deposits - Operations of the deposit controller
    * @param {StripeRequest.model} stripe.body.required - The deposit that should be created
    * @returns {StripePaymentIntentResponse.model} 200 - Payment Intent information
@@ -88,7 +88,7 @@ export default class DepositController extends BaseController {
   /**
    * Webhook for Stripe event updates
    *
-   * @route POST /deposit/stripe/webhook
+   * @route POST /stripe/webhook
    * @group deposits - Operations of the deposit controller
    * @returns 200 - Success
    * @returns 400 - Not

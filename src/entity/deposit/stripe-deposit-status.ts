@@ -16,16 +16,17 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  BaseEntity, Column, Entity, ManyToOne,
+  Column, Entity, ManyToOne,
 } from 'typeorm';
 // eslint-disable-next-line import/no-cycle
 import StripeDeposit from './stripe-deposit';
+import BaseEntity from '../base-entity';
 
 export enum StripeDepositState {
   CREATED = 1,
   PROCESSING = 2,
   SUCCEEDED = 3,
-  FAILED,
+  FAILED = 4,
 }
 
 @Entity()

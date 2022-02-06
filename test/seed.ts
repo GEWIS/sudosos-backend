@@ -38,6 +38,9 @@ import ProductImage from '../src/entity/file/product-image';
 import Banner from '../src/entity/banner';
 import BannerImage from '../src/entity/file/banner-image';
 import { BANNER_IMAGE_LOCATION, PRODUCT_IMAGE_LOCATION } from '../src/files/storage';
+import StripeDeposit from '../src/entity/deposit/stripe-deposit';
+import StripeDepositStatus, { StripeDepositState } from '../src/entity/deposit/stripe-deposit-status';
+import DineroTransformer from '../src/entity/transformer/dinero-transformer';
 
 /**
  * Defines user objects with the given parameters.
@@ -1129,6 +1132,49 @@ export async function seedTransactions(
   await Promise.all(promises);
 
   return { transactions };
+}
+
+/**
+ * Create mock stripe deposits objects. Note that the stripe IDs are fake, so you cannot use
+ * these entries to make actual API calls to Stripe.
+ * @param users
+ */
+// TODO: Increase speed with correct awaits/then/Promise.all()
+export async function seedStripeDeposits(users: User[]): Promise<StripeDeposit[]> {
+  const stripeDeposits: StripeDeposit[] = [];
+
+  const totalNrOfStatuses = 3;
+
+  for (let i = 0; i < users.length * totalNrOfStatuses; i += 1) {
+    const newDeposit = Object.assign(new StripeDeposit(), {
+      stripeId: `FakeStripeIDDoNotUsePleaseThankYou_${i + 1}`,
+      to: users[Math.floor(i / 4)],
+      amount: DineroTransformer.Instance.from(3900),
+      depositStatus: [],
+    });
+    // eslint-disable-next-line no-await-in-loop
+    await newDeposit.save();
+
+    const succeeded = Math.floor(((i % 6) + 1) / 3) !== 1;
+    const states = [StripeDepositState.CREATED, StripeDepositState.PROCESSING,
+      succeeded ? StripeDepositState.SUCCEEDED : StripeDepositState.FAILED].slice(0, (i % 3) + 1);
+
+    const statePromises: Promise<any>[] = [];
+    states.forEach((state) => {
+      const newState = Object.assign(new StripeDepositStatus(), {
+        state,
+        deposit: newDeposit,
+      });
+      statePromises.push(newState.save());
+      newDeposit.depositStatus.push(newState);
+    });
+
+    // eslint-disable-next-line no-await-in-loop
+    await Promise.all(statePromises);
+    stripeDeposits.push(newDeposit);
+  }
+
+  return stripeDeposits;
 }
 
 export async function seedTransfers(users: User[]) : Promise<Transfer[]> {

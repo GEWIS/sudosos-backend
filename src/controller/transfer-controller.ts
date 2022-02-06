@@ -23,7 +23,6 @@ import { RequestWithToken } from '../middleware/token-middleware';
 import TransferService from '../service/transfer-service';
 import TransferRequest from './request/transfer-request';
 import Transfer from '../entity/transactions/transfer';
-import InvalidTransferError from '../entity/errors/invalid-transfer-error';
 
 export default class TransferController extends BaseController {
   private logger: Logger = log4js.getLogger('TransferController');
@@ -137,15 +136,17 @@ export default class TransferController extends BaseController {
   public async postTransfer(req: RequestWithToken, res: Response) : Promise<void> {
     const request = req.body as TransferRequest;
     this.logger.trace('Post transfer', request, 'by user', req.token.user);
+
     try {
+      if (!(await TransferService.verifyTransferRequest(request))) {
+        res.status(400).json('Invalid transfer.');
+        return;
+      }
+
       res.json(await TransferService.postTransfer(request));
     } catch (error) {
-      if (error instanceof InvalidTransferError) {
-        res.status(400).json('Invalid transfer.');
-      } else {
-        this.logger.error('Could not create transfer:', error);
-        res.status(500).json('Internal server error.');
-      }
+      this.logger.error('Could not create transfer:', error);
+      res.status(500).json('Internal server error.');
     }
   }
 }

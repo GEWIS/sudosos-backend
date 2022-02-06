@@ -24,20 +24,21 @@ import DineroTransformer from '../entity/transformer/dinero-transformer';
 import StripeDepositStatus, { StripeDepositState } from '../entity/deposit/stripe-deposit-status';
 import { StripePaymentIntentResponse } from '../controller/response/stripe-response';
 import TransferService from './transfer-service';
-import Transfer from '../entity/transactions/transfer';
+
+export const STRIPE_API_VERSION = '2020-08-27';
 
 export default class StripeService {
   private stripe: Stripe;
 
   constructor() {
     this.stripe = new Stripe(process.env.STRIPE_PRIVATE_KEY, {
-      apiVersion: '2020-08-27',
+      apiVersion: STRIPE_API_VERSION,
     });
   }
 
-  public static async getStripeDeposit(id: number) {
+  public static async getStripeDeposit(id: number, relations: string[] = []) {
     return StripeDeposit.findOne(id, {
-      relations: ['depositStatus'],
+      relations: ['depositStatus'].concat(relations),
     });
   }
 
@@ -91,6 +92,48 @@ export default class StripeService {
   }
 
   /**
+   * Create a new deposit status
+   * @param depositId
+   * @param state
+   */
+  public static async createNewDepositStatus(
+    depositId: number, state: StripeDepositState,
+  ): Promise<StripeDepositStatus> {
+    let deposit = await StripeService.getStripeDeposit(depositId);
+
+    const states = deposit.depositStatus.map((status) => status.state);
+    if (states.includes(state)) throw new Error(`Status ${state} already exists.`);
+    if (state === StripeDepositState.SUCCEEDED && states.includes(StripeDepositState.FAILED)) {
+      throw new Error('Cannot create status SUCCEEDED, because FAILED already exists');
+    }
+    if (state === StripeDepositState.FAILED && states.includes(StripeDepositState.SUCCEEDED)) {
+      throw new Error('Cannot create status FAILED, because SUCCEEDED already exists');
+    }
+
+    const depositStatus = Object.assign(new StripeDepositStatus(), { deposit, state });
+    await depositStatus.save();
+
+    // If payment has succeeded, create the transfer
+    if (state === StripeDepositState.SUCCEEDED) {
+      deposit = await StripeService.getStripeDeposit(depositId, ['to']);
+      deposit.transfer = await TransferService.createTransfer({
+        amount: {
+          amount: deposit.amount.getAmount(),
+          precision: deposit.amount.getPrecision(),
+          currency: deposit.amount.getCurrency(),
+        },
+        toId: deposit.to.id,
+        description: deposit.stripeId,
+        fromId: undefined,
+      });
+
+      await deposit.save();
+    }
+
+    return depositStatus;
+  }
+
+  /**
    * Handle the event by making the appropriate database additions
    * @param event {Stripe.Event} Event received from Stripe webhook
    */
@@ -99,45 +142,23 @@ export default class StripeService {
       const paymentIntent = event.data.object as Stripe.PaymentIntent;
       const deposit = await StripeDeposit.findOne({
         where: { stripeId: paymentIntent.id },
-        relations: ['depositStatus', 'to'],
       });
 
-      const depositStatus = Object.assign(new StripeDepositStatus(), { deposit });
-
-      let transferResponse;
-      let transfer;
       switch (event.type) {
-        case 'payment_intent.succeeded':
-          depositStatus.state = StripeDepositState.SUCCEEDED;
-          await depositStatus.save();
-
-          transferResponse = await TransferService.postTransfer({
-            amount: {
-              amount: deposit.amount.getAmount(),
-              precision: deposit.amount.getPrecision(),
-              currency: deposit.amount.getCurrency(),
-            },
-            toId: deposit.to.id,
-            description: deposit.stripeId,
-            fromId: undefined,
-          });
-          transfer = await Transfer.findOne(transferResponse.id);
-          deposit.transfer = transfer;
-
-          await deposit.save();
-          break;
         case 'payment_intent.processing':
-          depositStatus.state = StripeDepositState.PROCESSING;
-          await depositStatus.save();
+          await StripeService.createNewDepositStatus(deposit.id, StripeDepositState.PROCESSING);
+          break;
+        case 'payment_intent.succeeded':
+          await StripeService.createNewDepositStatus(deposit.id, StripeDepositState.SUCCEEDED);
           break;
         case 'payment_intent.payment_failed':
-          depositStatus.state = StripeDepositState.FAILED;
-          await depositStatus.save();
+          await StripeService.createNewDepositStatus(deposit.id, StripeDepositState.FAILED);
           break;
         default:
+          getLogger('StripeController').warn('Tried to process event', event.type, 'but processing method is not defined');
       }
     } catch (error) {
-      getLogger('DepositController').error('Could not process Stripe webhook event with ID', event.id, error);
+      getLogger('StripeController').error('Could not process Stripe webhook event with ID', event.id, error);
     }
   }
 }

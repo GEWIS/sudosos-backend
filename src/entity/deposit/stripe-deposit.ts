@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  Column, Entity, ManyToOne, OneToMany, OneToOne,
+  Column, Entity, JoinColumn, ManyToOne, OneToMany, OneToOne,
 } from 'typeorm';
 import { Dinero } from 'dinero.js';
 import BaseEntity from '../base-entity';
@@ -28,18 +28,21 @@ import Transfer from '../transactions/transfer';
 
 @Entity()
 export default class StripeDeposit extends BaseEntity {
-  @ManyToOne(() => User, { nullable: false })
+  @ManyToOne(() => User, { nullable: false, eager: true })
+  @JoinColumn()
   public to: User;
 
   @OneToOne(() => Transfer, { nullable: true })
-  public transfer: Transfer;
+  @JoinColumn()
+  public transfer?: Transfer;
 
   @OneToMany(() => StripeDepositStatus,
     (depositStatus) => depositStatus.deposit,
     { cascade: true })
+  @JoinColumn()
   public depositStatus: StripeDepositStatus[];
 
-  @Column()
+  @Column({ unique: true })
   public stripeId: string;
 
   @Column({
