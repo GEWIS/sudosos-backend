@@ -17,20 +17,17 @@
  */
 import log4js, { Logger } from 'log4js';
 import { Request, Response } from 'express';
-import Dinero, { DineroObject } from 'dinero.js';
 import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
-import { RequestWithToken } from '../middleware/token-middleware';
 import StripeService from '../service/stripe-service';
-import { StripeRequest } from './request/stripe-request';
 
-export default class StripeController extends BaseController {
+export default class StripeWebhookController extends BaseController {
   private logger: Logger = log4js.getLogger('StripeController');
 
   private stripeService: StripeService;
 
   /**
-   * Create a new stripe controller instance
+   * Create a new stripe webhook controller instance
    * @param options
    */
   public constructor(options: BaseControllerOptions) {
@@ -44,38 +41,37 @@ export default class StripeController extends BaseController {
    */
   public getPolicy(): Policy {
     return {
-      '/deposit': {
+      '/webhook': {
         POST: {
-          policy: async (req) => this.roleManager.can(
-            req.token.roles, 'create', 'all', 'StripeDeposit', ['*'],
-          ),
-          handler: this.createStripeDeposit.bind(this),
-          body: { modelName: 'StripeRequest' },
+          policy: async () => true,
+          handler: this.handleWebhookEvent.bind(this),
         },
       },
     };
   }
 
   /**
-   * Start the stripe deposit flow
-   * @route POST /stripe/deposit
+   * Webhook for Stripe event updates
+   *
+   * @route POST /stripe/webhook
    * @group Stripe - Operations of the stripe controller
-   * @param {StripeRequest.model} stripe.body.required - The deposit that should be created
-   * @returns {StripePaymentIntentResponse.model} 200 - Payment Intent information
-   * @returns {string} 500 - Internal server error
-   * @security JWT
+   * @returns 200 - Success
+   * @returns 400 - Not
    */
-  public async createStripeDeposit(req: RequestWithToken, res: Response): Promise<void> {
-    this.logger.trace('Create a new stripe deposit by user', req.token.user);
-    const request = req.body as StripeRequest;
+  public async handleWebhookEvent(req: Request, res: Response): Promise<void> {
+    const { body } = req;
+    const signature = req.headers['stripe-signature'];
 
+    let webhookEvent;
     try {
-      const amount = Dinero({ ...request.amount } as DineroObject);
-      const result = await this.stripeService.createStripePaymentIntent(req.token.user, amount);
-      res.status(200).json(result);
+      webhookEvent = await this.stripeService.constructWebhookEvent(body, signature);
     } catch (error) {
-      this.logger.error('Could not create Stripe payment intent:', error);
-      res.status(500).send('Internal server error.');
+      res.status(400).json('Event could not be verified');
+      return;
     }
+
+    StripeService.handleWebhookEvent(webhookEvent);
+
+    res.status(200);
   }
 }

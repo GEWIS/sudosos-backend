@@ -53,6 +53,7 @@ import ContainerController from './controller/container-controller';
 import SimpleFileController from './controller/simple-file-controller';
 import initializeDiskStorage from './files/initialize';
 import StripeController from './controller/stripe-controller';
+import StripeWebhookController from './controller/stripe-webhook-controller';
 
 export class Application {
   app: express.Express;
@@ -180,6 +181,13 @@ export default async function createApp(): Promise<Application> {
   // Setup RBAC.
   application.roleManager = new RoleManager();
   await setupRbac(application);
+
+  application.app.use('/v1/stripe', new StripeWebhookController(
+    {
+      specification: application.specification,
+      roleManager: application.roleManager,
+    },
+  ).getRouter());
 
   // Setup token handler and authentication controller.
   await setupAuthentication(application);
