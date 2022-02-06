@@ -16,10 +16,11 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import log4js, { Logger } from 'log4js';
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import StripeService from '../service/stripe-service';
+import { RequestWithRawBody } from '../helpers/raw-body';
 
 export default class StripeWebhookController extends BaseController {
   private logger: Logger = log4js.getLogger('StripeController');
@@ -58,13 +59,13 @@ export default class StripeWebhookController extends BaseController {
    * @returns 200 - Success
    * @returns 400 - Not
    */
-  public async handleWebhookEvent(req: Request, res: Response): Promise<void> {
-    const { body } = req;
+  public async handleWebhookEvent(req: RequestWithRawBody, res: Response): Promise<void> {
+    const { rawBody } = req;
     const signature = req.headers['stripe-signature'];
 
     let webhookEvent;
     try {
-      webhookEvent = await this.stripeService.constructWebhookEvent(body, signature);
+      webhookEvent = await this.stripeService.constructWebhookEvent(rawBody, signature);
     } catch (error) {
       res.status(400).json('Event could not be verified');
       return;
@@ -72,6 +73,6 @@ export default class StripeWebhookController extends BaseController {
 
     StripeService.handleWebhookEvent(webhookEvent);
 
-    res.status(200);
+    res.status(200).send();
   }
 }

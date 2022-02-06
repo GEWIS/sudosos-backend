@@ -54,6 +54,7 @@ import SimpleFileController from './controller/simple-file-controller';
 import initializeDiskStorage from './files/initialize';
 import StripeController from './controller/stripe-controller';
 import StripeWebhookController from './controller/stripe-webhook-controller';
+import { extractRawBody } from './helpers/raw-body';
 
 export class Application {
   app: express.Express;
@@ -169,7 +170,9 @@ export default async function createApp(): Promise<Application> {
   // Create express application.
   application.app = express();
   application.specification = await Swagger.initialize(application.app);
-  application.app.use(json());
+  application.app.use(json({
+    verify: extractRawBody,
+  }));
   application.app.use(fileUpload());
 
   // Product images
