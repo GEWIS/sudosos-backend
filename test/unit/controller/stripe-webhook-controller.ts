@@ -20,11 +20,15 @@ import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
 import { expect, request } from 'chai';
+import Stripe from 'stripe';
+import sinon from 'sinon';
 import User, { UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
 import RoleManager from '../../../src/rbac/role-manager';
 import StripeWebhookController from '../../../src/controller/stripe-webhook-controller';
+import StripeService, { STRIPE_API_VERSION } from '../../../src/service/stripe-service';
+import { extractRawBody } from '../../../src/helpers/raw-body';
 
 describe('StripeWebhookController', async (): Promise<void> => {
   let ctx: {
@@ -32,7 +36,12 @@ describe('StripeWebhookController', async (): Promise<void> => {
     app: Application,
     specification: SwaggerSpecification,
     controller: StripeWebhookController,
+    stripe: Stripe;
+    payload: object;
+    signatureHeader: string;
   };
+
+  const stubs: sinon.SinonStub[] = [];
 
   before(async () => {
     const connection = await Database.initialize();
@@ -64,19 +73,47 @@ describe('StripeWebhookController', async (): Promise<void> => {
     });
 
     const controller = new StripeWebhookController({ specification, roleManager });
-    app.use(json());
+    app.use(json({
+      verify: extractRawBody,
+    }));
     app.use('/stripe', controller.getRouter());
+
+    const stripe = new Stripe(process.env.STRIPE_PRIVATE_KEY, {
+      apiVersion: STRIPE_API_VERSION,
+    });
+
+    const payload = {
+      data: {
+        object: {
+          id: 'abcde12345',
+        } as Stripe.PaymentIntent,
+      },
+      type: 'UNKNOWN',
+    };
+
+    const signatureHeader = stripe.webhooks.generateTestHeaderString({
+      payload: JSON.stringify(payload),
+      secret: process.env.stripe_webhook_secret,
+    });
 
     ctx = {
       connection,
       app,
       specification,
       controller,
+      stripe,
+      payload,
+      signatureHeader,
     };
   });
 
   after(async () => {
     await ctx.connection.close();
+  });
+
+  afterEach(() => {
+    stubs.forEach((stub) => stub.restore());
+    stubs.splice(0, stubs.length);
   });
 
   describe('POST /webhook', () => {
@@ -86,6 +123,25 @@ describe('StripeWebhookController', async (): Promise<void> => {
         .send({});
 
       expect(res.status).to.equal(400);
+    });
+    it('should return 400 when sending no header', async () => {
+      const res = await request(ctx.app)
+        .post('/stripe/webhook')
+        .send(ctx.payload);
+
+      expect(res.status).to.equal(400);
+    });
+    it('should return 200 when sending correct request', async () => {
+      const handleWebhookEventStub = sinon.stub(StripeService, 'handleWebhookEvent').resolves();
+      stubs.push(handleWebhookEventStub);
+
+      const res = await request(ctx.app)
+        .post('/stripe/webhook')
+        .set('stripe-signature', ctx.signatureHeader)
+        .send(ctx.payload);
+
+      expect(handleWebhookEventStub).to.have.been.calledOnce;
+      expect(res.status).to.equal(200);
     });
   });
 });
