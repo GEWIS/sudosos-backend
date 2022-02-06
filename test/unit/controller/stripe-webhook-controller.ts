@@ -100,7 +100,7 @@ describe('StripeWebhookController', async (): Promise<void> => {
 
     const signatureHeader = stripe.webhooks.generateTestHeaderString({
       payload: JSON.stringify(payload),
-      secret: process.env.stripe_webhook_secret,
+      secret: process.env.STRIPE_WEBHOOK_SECRET,
     });
 
     ctx = {
