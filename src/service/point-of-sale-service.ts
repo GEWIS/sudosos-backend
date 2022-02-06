@@ -26,24 +26,21 @@ import PointOfSale from '../entity/point-of-sale/point-of-sale';
 import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import UpdatedPointOfSale from '../entity/point-of-sale/updated-point-of-sale';
-import PointOfSaleRequest from '../controller/request/point-of-sale-request';
 import User from '../entity/user/user';
 import Container from '../entity/container/container';
 import { parseUserToBaseResponse } from '../helpers/entity-to-response';
-import UpdatePointOfSaleRequest from '../controller/request/update-point-of-sale-request';
 import UpdatedContainer from '../entity/container/updated-container';
-import UnapprovedContainerError from '../entity/errors/unapproved-container-error';
 import ContainerRevision from '../entity/container/container-revision';
 import ContainerService, { ContainerParameters } from './container-service';
 import { ContainerWithProductsResponse } from '../controller/response/container-response';
 import { PaginationParameters } from '../helpers/pagination';
-import CreateContainerRequest, { ContainerUpdateRequest } from '../controller/request/container-request';
 import { getIdsAndRequests } from '../helpers/helper';
+import { CreatePointOfSaleParams, UpdatePointOfSaleParams } from '../controller/request/point-of-sale-request';
 import {
-  Either,
-  validateSpecification, ValidationError,
-} from '../helpers/specification-validation';
-import updatePointOfSaleRequestSpec from '../controller/request/validators/update-point-of-sale-request-spec';
+  ContainerParams,
+  CreateContainerParams,
+  UpdateContainerParams,
+} from '../controller/request/container-request';
 
 /**
  * Define point of sale filtering parameters used to filter query results.
@@ -407,21 +404,23 @@ export default class PointOfSaleService {
    * @param pointOfSaleId - The ID of the PointOfSale to update.
    * @param update - The PointOfSale variables to update.
    */
-  public static async updatePointOfSale(pointOfSaleId: number, update: UpdatePointOfSaleRequest)
+  public static async updatePointOfSale(update: UpdatePointOfSaleParams)
     : Promise<UpdatedPointOfSaleResponse> {
     // Get base PointOfSale
-    const base: PointOfSale = await PointOfSale.findOne(pointOfSaleId, { relations: ['owner'] });
+    const base: PointOfSale = await PointOfSale.findOne(update.id, { relations: ['owner'] });
 
     // Return undefined if base does not exist.
     if (!base) {
       return undefined;
     }
 
-    const { ids, requests } = getIdsAndRequests<ContainerUpdateRequest>(update);
+    const { ids, requests } = getIdsAndRequests<ContainerParams>(update.containers);
     // If the update contains container updates or creations we delegate it.
     await Promise.all(requests.map((r) => {
-      if (r.id) return ContainerService.updateContainer(r.id, r);
-      return ContainerService.createContainer(update.ownerId, r);
+      if (Object.prototype.hasOwnProperty.call(r, 'id')) {
+        return ContainerService.updateContainer((r as UpdateContainerParams));
+      }
+      return ContainerService.createContainer((r as CreateContainerParams));
     }));
 
     const containers = update.containers ? await Container.findByIds(ids) : [];
@@ -448,15 +447,24 @@ export default class PointOfSaleService {
    *
    * @param posRequest - The POS to be created.
    */
-  public static async createPointOfSale(posRequest: UpdatePointOfSaleRequest)
-    : Promise<UpdatedPointOfSaleResponse> {
+  public static async createPointOfSale(posRequest: CreatePointOfSaleParams)
+    : Promise<UpdatedPointOfSaleResponse | undefined> {
+    const owner = await User.findOne(posRequest.ownerId);
+
+    if (!owner) return undefined;
+
     const base = Object.assign(new PointOfSale(), {
-      owner: await User.findOne(posRequest.ownerId),
+      owner,
     });
 
-    // Save the base and create update request.
+    const update: UpdatePointOfSaleParams = {
+      ...posRequest,
+      id: base.id,
+    };
+
+    // Save the base and update..
     await base.save();
-    return this.updatePointOfSale(base.id, posRequest as UpdatePointOfSaleRequest);
+    return this.updatePointOfSale(update);
   }
 
   /**

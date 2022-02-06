@@ -28,15 +28,13 @@ import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision'
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import ProductService from './product-service';
 import PointOfSale from '../entity/point-of-sale/point-of-sale';
-import CreateContainerRequest from '../controller/request/container-request';
-import User from '../entity/user/user';
 import Product from '../entity/product/product';
 import UpdatedProduct from '../entity/product/updated-product';
 import ProductRevision from '../entity/product/product-revision';
-import UnapprovedProductError from '../entity/errors/unapproved-product-error';
 import { PaginationParameters } from '../helpers/pagination';
-import { ProductRequestID } from '../controller/request/product-request';
 import { getIdsAndRequests } from '../helpers/helper';
+import { CreateContainerParams, UpdateContainerParams } from '../controller/request/container-request';
+import { ProductRequest, UpdateProductParams } from '../controller/request/product-request';
 
 interface ContainerVisibility {
   own: boolean;
@@ -255,16 +253,22 @@ export default class ContainerService {
    * @param ownerId - The id of the user that created the container.
    * @param container - The container to be created.
    */
-  public static async createContainer(ownerId: number, container: CreateContainerRequest)
+  public static async createContainer(container: CreateContainerParams)
     : Promise<ContainerWithProductsResponse> {
     const base = Object.assign(new Container(), {
-      ownerId,
+      ownerId: container.ownerId,
       public: container.public,
     });
 
     // Save the base.
     await base.save();
-    return this.updateContainer(base.id, container);
+
+    const update: UpdateContainerParams = {
+      ...container,
+      id: base.id,
+    };
+
+    return this.updateContainer(update);
   }
 
   /**
@@ -324,10 +328,10 @@ export default class ContainerService {
    * @param containerId - The ID of the product to update
    * @param update - The container variables to update.
    */
-  public static async updateContainer(containerId: number, update: CreateContainerRequest)
+  public static async updateContainer(update: UpdateContainerParams)
     : Promise<ContainerWithProductsResponse> {
     // Get the base container.
-    const base: Container = await Container.findOne(containerId);
+    const base: Container = await Container.findOne(update.id);
 
     // return undefined if not found.
     if (!base) {
@@ -335,10 +339,17 @@ export default class ContainerService {
     }
 
     // If the ContainerRequests contain product updates we delegate them.
-    const { ids, requests } = getIdsAndRequests<ProductRequestID>(update);
+    const { ids, requests } = getIdsAndRequests<ProductRequest>(update.products);
 
     // Apply requests.
-    await Promise.all(requests.map((p) => ProductService.updateProduct(p.id, p)));
+    await Promise.all(requests.map((p) => {
+      if (Object.prototype.hasOwnProperty.call(p, 'id')) {
+        // Push down ownership if unspecified.
+        if (!p.ownerId) p.ownerId = update.ownerId;
+        return ProductService.updateProduct(p as UpdateProductParams);
+      }
+      return ProductService.createProduct(p);
+    }));
 
     let products: Product[] = [];
     await Promise.all(ids.map((id) => Product.findOne(id)))

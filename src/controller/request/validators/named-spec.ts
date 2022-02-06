@@ -18,19 +18,19 @@
 import {
   Specification, toFail, toPass, ValidationError,
 } from '../../../helpers/specification-validation';
-import NamedRequest from '../named-request';
+import Named from '../named';
 
 /**
  * Checks if the name attribute is not an empty string.
  */
-const validName = (p: NamedRequest) => {
+const validName = (p: Named) => {
   if (p.name === '') {
     return toFail(new ValidationError('Name must be a non-zero length string.'));
   }
   return toPass(p);
 };
 
-function namedSpec<T extends NamedRequest>(): Specification<T, ValidationError> {
+function namedSpec<T extends Named>(): Specification<T, ValidationError> {
   return [
     validName,
   ] as Specification<T, ValidationError>;

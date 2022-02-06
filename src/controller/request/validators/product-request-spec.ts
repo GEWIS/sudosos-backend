@@ -15,25 +15,25 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import CreateProductRequest from '../product-request';
+import CreateProductParams, { ProductRequest } from '../product-request';
 import {
   Specification,
   toFail,
   toPass,
   validateSpecification,
   ValidationError,
-  validName,
 } from '../../../helpers/specification-validation';
 import ProductCategory from '../../../entity/product/product-category';
+import namedSpec from './named-spec';
 
-const validAlcohol = (p: CreateProductRequest) => {
+const validAlcohol = (p: CreateProductParams) => {
   if (p.alcoholPercentage < 0) {
     return toFail(new ValidationError('Alcohol percentage must be non-negative'));
   }
   return toPass(p);
 };
 
-const validCategory = async (p: CreateProductRequest) => {
+const validCategory = async (p: CreateProductParams) => {
   const category = await ProductCategory.findOne(p.category);
   if (!category) {
     return toFail(new ValidationError(`${p.category} is an invalid product category.`));
@@ -41,22 +41,22 @@ const validCategory = async (p: CreateProductRequest) => {
   return toPass(p);
 };
 
-const validPrice = (p: CreateProductRequest) => {
-  if (p.price < 0) {
+const validPrice = (p: CreateProductParams) => {
+  if (p.price.amount < 0) {
     return toFail(new ValidationError('Price must be greater than zero'));
   }
   return toPass(p);
 };
 
-const productRequestSpec: Specification<CreateProductRequest, ValidationError> = [
-  validName,
+const productRequestSpec: Specification<CreateProductParams, ValidationError> = [
+  ...namedSpec<CreateProductParams>(),
   validPrice,
   validCategory,
   validAlcohol,
 ];
 
-async function verifyProductRequest(productRequest: CreateProductRequest) {
-  return Promise.resolve(await validateSpecification(
+async function verifyProductRequest(productRequest: ProductRequest) {
+  return Promise.resolve(await validateSpecification<ProductRequest, ValidationError>(
     productRequest, productRequestSpec,
   ));
 }

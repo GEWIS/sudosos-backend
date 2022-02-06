@@ -26,11 +26,14 @@ import {
   ValidationError,
 } from '../../../helpers/specification-validation';
 import verifyProductRequest from './product-request-spec';
-import { BaseContainerRequest, CreateContainerRequest, UpdateContainerRequest } from '../container-request';
+import {
+  BaseContainerParams,
+  ContainerParams,
+} from '../container-request';
 import namedSpec from './named-spec';
 import { ProductRequest } from '../product-request';
 
-async function validProducts<T extends BaseContainerRequest>(c: T) {
+async function validProducts<T extends BaseContainerParams>(c: T) {
   const { ids, requests } = getIdsAndRequests<ProductRequest>(c.products);
 
   const products = await Product.findByIds(ids);
@@ -38,27 +41,23 @@ async function validProducts<T extends BaseContainerRequest>(c: T) {
     return toFail(new ValidationError('Not all product IDs are valid.'));
   }
 
-  const promises: Promise<[Either<ValidationError, ProductRequest>, number]>[] = [];
+  const promises: Promise<Either<ValidationError, ProductRequest>>[] = [];
   requests.forEach((p) => {
-    if (Object.prototype.hasOwnProperty.call(p, 'ownerId')) {
-      promises.push(verifyProductRequest(p).then((res) => [res, p.id]));
-    } else {
-      promises.push(verifyProductRequest(p).then((res) => [res, p.id]));
-    }
+    promises.push(verifyProductRequest(p).then((res) => res));
   });
 
-  let results: [Either<ValidationError, ProductRequest>, number][] = [];
+  let results: Either<ValidationError, ProductRequest>[] = [];
   await Promise.all(promises).then((r) => { results = r; });
 
   for (let i = 0; i < results.length; i += 1) {
-    const [result, id] = results[i];
-    if (isFail(result)) return toFail(new ValidationError(`Product #${id} validation failed:`).join(result.fail));
+    const result = results[i];
+    if (isFail(result)) return toFail(new ValidationError('Product validation failed:').join(result.fail));
   }
 
   return toPass(c);
 }
 
-function baseContainerRequestSpec<T extends BaseContainerRequest>():
+function baseContainerRequestSpec<T extends BaseContainerParams>():
 Specification<T, ValidationError> {
   return [
     ...namedSpec<T>(),
@@ -66,20 +65,8 @@ Specification<T, ValidationError> {
   ];
 }
 
-const createContainerRequestSpec = [
-  ...baseContainerRequestSpec<CreateContainerRequest>(),
-  ...namedSpec<CreateContainerRequest>(),
-];
-
-export async function verifyCreateContainerRequest(containerRequest:
-CreateContainerRequest) {
-  return Promise.resolve(await validateSpecification(
-    containerRequest, createContainerRequestSpec,
-  ));
-}
-
-export async function verifyUpdateContainerRequest(containerRequest:
-UpdateContainerRequest) {
+export default async function verifyContainerRequest(containerRequest:
+ContainerParams) {
   return Promise.resolve(await validateSpecification(
     containerRequest, baseContainerRequestSpec(),
   ));

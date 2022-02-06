@@ -15,15 +15,78 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import PointOfSaleRequest from '../point-of-sale-request';
 import {
-  Specification, SubSpecification, ValidationError, validUserId,
+  Either, isFail, Specification,
+  toFail,
+  toPass, validateSpecification,
+  ValidationError,
 } from '../../../helpers/specification-validation';
-import { updatePointOfSaleRequestSpec } from './update-point-of-sale-request-spec';
+import { getIdsAndRequests } from '../../../helpers/helper'; import Container from '../../../entity/container/container';
+import User from '../../../entity/user/user';
+import { BasePointOfSaleParams, CreatePointOfSaleParams, UpdatePointOfSaleParams } from '../point-of-sale-request';
+import durationSpec from './duration-spec';
+import namedSpec from './named-spec';
+import { ContainerParams } from '../container-request';
+import verifyContainerRequest from "./container-request-spec";
 
-const pointOfSaleRequestSpec: Specification<PointOfSaleRequest, ValidationError> = [
-  [[validUserId], 'ownerId', new ValidationError('PointOfSaleRequest.ownerId:')] as SubSpecification<PointOfSaleRequest, ValidationError>,
-  ...updatePointOfSaleRequestSpec,
+const ownerMustExist = async (p: CreatePointOfSaleParams) => {
+  // Owner must exist.
+  if (await User.findOne({ id: p.ownerId }) === undefined) {
+    return toFail(new ValidationError('Owner must exist.'));
+  }
+  return toPass(p);
+};
+
+async function validContainers<T extends BasePointOfSaleParams>(p: T) {
+  const { ids, requests } = getIdsAndRequests<ContainerParams>(p.containers);
+
+  const containers = await Container.findByIds(ids);
+  if (containers.length !== ids.length) {
+    return toFail(new ValidationError('Not all container IDs are valid.'));
+  }
+
+  const promises: Promise<Either<ValidationError, ContainerParams>>[] = [];
+  requests.forEach((r) => {
+    promises.push(verifyContainerRequest(r).then((res) => res));
+  });
+
+  let results: Either<ValidationError, ContainerParams>[] = [];
+  await Promise.all(promises).then((r) => {
+    results = r;
+  });
+
+  for (let i = 0; i < results.length; i += 1) {
+    const result = results[i];
+    if (isFail(result)) return toFail(new ValidationError('Container validation failed:').join(result.fail));
+  }
+
+  return toPass(p);
+}
+
+function basePointOfSaleRequestSpec<T extends BasePointOfSaleParams>():
+Specification<T, ValidationError> {
+  return [
+    ...durationSpec<T>(),
+    ...namedSpec<T>(),
+    validContainers,
+  ];
+}
+
+const createPointOfSaleRequestSpec = [
+  ...basePointOfSaleRequestSpec<CreatePointOfSaleParams>(),
+  ownerMustExist,
 ];
 
-export default pointOfSaleRequestSpec;
+export async function verifyCreatePointOfSaleRequest(createPointOfSaleRequest:
+CreatePointOfSaleParams) {
+  return Promise.resolve(await validateSpecification(
+    createPointOfSaleRequest, createPointOfSaleRequestSpec,
+  ));
+}
+
+export async function verifyUpdatePointOfSaleRequest(updatePointOfSaleRequest:
+UpdatePointOfSaleParams) {
+  return Promise.resolve(await validateSpecification(
+    updatePointOfSaleRequest, createPointOfSaleRequestSpec,
+  ));
+}

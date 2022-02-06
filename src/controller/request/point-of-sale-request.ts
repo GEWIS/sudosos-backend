@@ -15,36 +15,46 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { ContainerRequest } from './container-request';
-import DurationRequest from './duration-request';
-import NamedRequest from './named-request';
+import { ContainerParams } from './container-request';
+import Duration from './duration';
+import Named from './named';
 
-/**
- * @typedef BasePointOfSaleRequest
- * @property {string} name.required - Name of the POS
- * @property {string} startDate.required - Date from which the POS is active
- * @property {string} endDate - Date from which the POS is no longer active
- * @property {Array.<number | ContainerRequest>} containers -
- * IDs or Requests of the containers to add to the POS
- * @property {boolean} useAuthentication - Whether the POS requires authentication or not.
- */
-export interface BasePointOfSaleRequest extends DurationRequest, NamedRequest {
-  containers?: (number | ContainerRequest)[],
+export interface BasePointOfSaleParams extends Duration, Named {
+  containers?: (number | ContainerParams)[],
   useAuthentication?: boolean,
 }
 
-/**
- * @typedef {BasePointOfSaleRequest} CreatePointOfSaleRequestID
- * @property {integer} ownerId - ID of the owner
- */
-export interface CreatePointOfSaleRequest extends BasePointOfSaleRequest{
+export interface CreatePointOfSaleParams extends BasePointOfSaleParams{
   ownerId: number,
 }
 
-/**
- * @typedef {CreatePointOfSaleRequest} UpdatePointOfSaleRequest
- * @property {integer} id.required - ID of the POS to update.
- */
-export interface UpdatePointOfSaleRequest extends CreatePointOfSaleRequest {
+export interface UpdatePointOfSaleParams extends CreatePointOfSaleParams {
   id: number
 }
+
+/**
+ * @typedef CreatePointOfSaleRequest
+ * @property {string} name.required - Name of the POS
+ * @property {string} startDate.required - Date from which the POS is active
+ * @property {string} endDate - Date from which the POS is no longer active
+ * @property {Array.<number | ContainerParams>} containers -
+ * IDs or Requests of the containers to add to the POS
+ * @property {boolean} useAuthentication - Whether the POS requires authentication or not.
+ * @property {integer} ownerId - ID of the user who will own the POS, if undefined it will
+ *    default to the token ID.
+ */
+export interface CreatePointOfSaleRequest extends BasePointOfSaleParams{
+  ownerId?: number,
+}
+
+/**
+ * @typedef CreatePointOfSaleRequest
+ * @property {string} name.required - Name of the POS
+ * @property {string} startDate.required - Date from which the POS is active
+ * @property {string} endDate - Date from which the POS is no longer active
+ * @property {Array.<number | ContainerParams>} containers -
+ * IDs or Requests of the containers to add to the POS
+ * @property {boolean} useAuthentication - Whether the POS requires authentication or not.
+ * @property {integer} id.required - ID of the POS to update.
+ */
+export type UpdatePointOfSaleRequest = BasePointOfSaleParams;

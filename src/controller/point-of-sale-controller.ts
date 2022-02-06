@@ -30,9 +30,16 @@ import PointOfSale from '../entity/point-of-sale/point-of-sale';
 import { asNumber } from '../helpers/validators';
 import UpdatedPointOfSale from '../entity/point-of-sale/updated-point-of-sale';
 import { parseRequestPagination } from '../helpers/pagination';
-import verifyUpdatePointOfSaleRequest from './request/validators/update-point-of-sale-request-spec';
 import { isFail } from '../helpers/specification-validation';
-import { CreatePointOfSaleRequest, UpdatePointOfSaleRequest } from './request/point-of-sale-request';
+import {
+  CreatePointOfSaleParams, CreatePointOfSaleRequest,
+  UpdatePointOfSaleParams,
+  UpdatePointOfSaleRequest
+} from './request/point-of-sale-request';
+import {
+  verifyCreatePointOfSaleRequest,
+  verifyUpdatePointOfSaleRequest
+} from "./request/validators/point-of-sale-request-spec";
 
 export default class PointOfSaleController extends BaseController {
   private logger: Logger = log4js.getLogger('PointOfSaleController');
@@ -124,18 +131,18 @@ export default class PointOfSaleController extends BaseController {
     // handle request
     try {
       // If no ownerId is provided we use the token user id.
-      const request: CreatePointOfSaleRequest = {
+      const params: CreatePointOfSaleParams = {
         ...body,
         ownerId: body.ownerId ?? req.token.user.id,
       };
 
-      const validation = await verifyUpdatePointOfSaleRequest(request);
+      const validation = await verifyCreatePointOfSaleRequest(params);
       if (isFail(validation)) {
         res.status(400).json(validation.fail.value);
         return;
       }
 
-      res.json(await PointOfSaleService.createPointOfSale(request));
+      res.json(await PointOfSaleService.createPointOfSale(params));
     } catch (error) {
       this.logger.error('Could not create point of sale:', error);
       res.status(500).json('Internal server error.');
@@ -217,7 +224,7 @@ export default class PointOfSaleController extends BaseController {
    * @group pointofsale - Operations of the point of sale controller
    * @param {integer} id.path.required - The id of the Point of Sale which should be updated
    * @param {UpdatePointOfSaleRequest.model} pointofsale.body.required -
-   * The Point of Sale which should be updated
+   *    The Point of Sale which should be updated
    * @security JWT
    * @returns {UpdatedPointOfSaleResponse.model} 200 - The updated Point of Sale entity
    * @returns {string} 400 - Validation error
@@ -232,9 +239,10 @@ export default class PointOfSaleController extends BaseController {
 
     // handle request
     try {
-      const request: UpdatePointOfSaleRequest = {
+      const request: UpdatePointOfSaleParams = {
         ...body,
-        ownerId: body.ownerId ?? req.token.user.id,
+        ownerId: req.token.user.id,
+        id: pointOfSaleId,
       };
 
       const validation = await verifyUpdatePointOfSaleRequest(request);

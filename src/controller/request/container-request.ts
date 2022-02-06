@@ -16,33 +16,45 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { ProductRequest } from './product-request';
-import NamedRequest from './named-request';
+import Named from './named';
 
-/**
- * @typedef BaseContainerRequest
- * @property {string} name.required - Name of the container
- * @property {Array.<integer | ProductRequest>} products - IDs or requests of the products to add to the container
- * @property {boolean} public.required - Whether the container is public or not
- */
-export interface BaseContainerRequest extends NamedRequest {
+export interface BaseContainerParams extends Named {
   products?: (number | ProductRequest)[],
   public: boolean,
 }
 
-/**
- * @typedef CreateContainerRequest
- * @property {integer} ownerId.required - ID of the owner
- */
-export interface CreateContainerRequest extends BaseContainerRequest {
+export interface CreateContainerParams extends BaseContainerParams {
   ownerId: number,
 }
 
-/**
- * @typedef {CreateContainerRequest} UpdateContainerRequest
- * @property {integer} id.required - The id of the container to update.
- */
-export interface UpdateContainerRequest extends CreateContainerRequest{
+export interface UpdateContainerParams extends CreateContainerParams{
   id: number
 }
 
-export type ContainerRequest = UpdateContainerRequest | CreateContainerRequest;
+export type ContainerParams = UpdateContainerParams | CreateContainerParams;
+
+// These are definitions only used by the endpoints since we need the OwnerID
+// But dont want to include them in the type as required but still need
+// strict type checker later down the line.
+
+/**
+ * @typedef CreateContainerRequest
+ * @property {string} name.required - Name of the container
+ * @property {Array.<integer | ProductRequest>} products -
+ *    IDs or requests of the products to add to the container
+ * @property {boolean} public.required - Whether the container is public or not
+ * @property {integer} ownerId - Id of the user who will own the container, if undefined it will
+ *    default to the token ID.
+ */
+export interface CreateContainerRequest extends BaseContainerParams {
+  ownerId?: number,
+}
+
+/**
+ * @typedef UpdateContainerRequest
+ * @property {string} name.required - Name of the container
+ * @property {Array.<integer | ProductRequest>} products -
+ *    IDs or requests of the products to add to the container
+ * @property {boolean} public.required - Whether the container is public or not
+ */
+export type UpdateContainerRequest = BaseContainerParams;

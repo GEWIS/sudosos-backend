@@ -22,7 +22,11 @@ import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import ProductService from '../service/product-service';
-import CreateProductRequest from './request/product-request';
+import CreateProductParams, {
+  CreateProductRequest,
+  UpdateProductParams,
+  UpdateProductRequest,
+} from './request/product-request';
 import Product from '../entity/product/product';
 import FileService from '../service/file-service';
 import { PRODUCT_IMAGE_LOCATION } from '../files/storage';
@@ -150,12 +154,17 @@ export default class ProductController extends BaseController {
 
     // handle request
     try {
-      const validation = await verifyProductRequest(body);
-      if (isPass(validation)) {
-        res.json(await ProductService.createProduct(req.token.user, body));
-      } else {
+      const request: CreateProductParams = {
+        ...body,
+        ownerId: body.ownerId ?? req.token.user.id,
+      };
+
+      const validation = await verifyProductRequest(request);
+      if (isFail(validation)) {
         res.status(400).json(validation.fail.value);
       }
+
+      res.json(await ProductService.createProduct(request));
     } catch (error) {
       this.logger.error('Could not create product:', error);
       res.status(500).json('Internal server error.');
@@ -167,7 +176,7 @@ export default class ProductController extends BaseController {
    * @route PATCH /products/{id}
    * @group products - Operations of product controller
    * @param {integer} id.path.required - The id of the product which should be updated
-   * @param {CreateProductRequest.model} product.body.required - The product which should be updated
+   * @param {UpdateProductRequest.model} product.body.required - The product which should be updated
    * @security JWT
    * @returns {ProductResponse.model} 200 - The created product entity
    * @returns {string} 400 - Validation error
@@ -175,19 +184,26 @@ export default class ProductController extends BaseController {
    * @returns {string} 500 - Internal server error
    */
   public async updateProduct(req: RequestWithToken, res: Response): Promise<void> {
-    const body = req.body as CreateProductRequest;
+    const body = req.body as UpdateProductRequest;
     const { id } = req.params;
+    const productId = Number.parseInt(id, 10);
     this.logger.trace('Update product', id, 'with', body, 'by user', req.token.user);
 
     // handle request
     try {
-      const validation = await verifyProductRequest(body);
+      const params: UpdateProductParams = {
+        ...body,
+        ownerId: req.token.user.id,
+        id: productId,
+      };
+
+      const validation = await verifyProductRequest(params);
       if (isFail(validation)) {
         res.status(400).json(validation.fail.value);
         return;
       }
 
-      const update = await ProductService.updateProduct(Number.parseInt(id, 10), body);
+      const update = await ProductService.updateProduct(params);
       if (update) {
         res.json(update);
       } else {

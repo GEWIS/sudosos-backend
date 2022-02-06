@@ -17,30 +17,42 @@
  */
 
 import { DineroObjectRequest } from './dinero-request';
+import Named from './named';
 
-/**
- * @typedef CreateProductRequest
- * @property {number} ownerId.required - ID of the owner
- * @property {string} name.required - Name of the product
- * @property {DineroObjectRequest} price.required - Price of the product
- * @property {number} price.required  - Price of the product
- * @property {number} category.required  - Category of the product
- * @property {number} alcoholPercentage.required  - Alcohol percentage of the product in 2 decimals
- */
-export default interface CreateProductRequest {
-  ownerId: number;
-  name: string;
+export interface BaseProductParams extends Named {
   price: DineroObjectRequest;
   category: number;
   alcoholPercentage: number;
 }
 
-/**
- * @typedef {CreateProductRequest} UpdateProductRequest
- * @property {integer} id.required - The id of the product to update
- */
-export interface UpdateProductRequest extends CreateProductRequest {
+export default interface CreateProductParams extends BaseProductParams{
+  ownerId: number;
+}
+
+export interface UpdateProductParams extends CreateProductParams {
   id: number;
 }
 
-export type ProductRequest = UpdateProductRequest | CreateProductRequest;
+export type ProductRequest = UpdateProductParams | CreateProductParams;
+
+/**
+ * @typedef CreateProductRequest
+ * @property {number} ownerId - ID of the owner
+ * @property {string} name.required - Name of the product
+ * @property {DineroObjectRequest} price.required - Price of the product
+ * @property {number} category.required  - Category of the product
+ * @property {number} alcoholPercentage.required  - Alcohol percentage of the product in 2 decimals
+ */
+export interface CreateProductRequest extends BaseProductParams{
+  ownerId?: number,
+}
+
+/**
+ * @typedef UpdateProductRequest
+ * @property {string} name.required - Name of the product
+ * @property {DineroObjectRequest} price.required - Price of the product
+ * @property {number} category.required  - Category of the product
+ * @property {number} alcoholPercentage.required  - Alcohol percentage of the product in 2 decimals
+ * @property {integer} id.required - ID of the product to update
+ */
+export type UpdateProductRequest = BaseProductParams;

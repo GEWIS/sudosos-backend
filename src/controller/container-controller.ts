@@ -24,7 +24,6 @@ import ContainerService from '../service/container-service';
 import { PaginatedContainerResponse } from './response/container-response';
 import ContainerRevision from '../entity/container/container-revision';
 import ProductService from '../service/product-service';
-import CreateContainerRequest from './request/container-request';
 import UpdatedContainer from '../entity/container/updated-container';
 import Container from '../entity/container/container';
 import UnapprovedProductError from '../entity/errors/unapproved-product-error';
@@ -32,6 +31,12 @@ import { asNumber } from '../helpers/validators';
 import { parseRequestPagination } from '../helpers/pagination';
 import verifyContainerRequest from './request/validators/container-request-spec';
 import { isFail } from '../helpers/specification-validation';
+import {
+  CreateContainerParams,
+  CreateContainerRequest,
+  UpdateContainerParams,
+  UpdateContainerRequest
+} from './request/container-request';
 
 export default class ContainerController extends BaseController {
   private logger: Logger = log4js.getLogger('ContainerController');
@@ -206,7 +211,8 @@ export default class ContainerController extends BaseController {
    * Create a new container.
    * @route POST /containers
    * @group containers - Operations of container controller
-   * @param {CreateContainerRequest.model} container.body.required - The container which should be created
+   * @param {CreateContainerRequest.model} container.body.required -
+   *    The container which should be created
    * @security JWT
    * @returns {ContainerWithProductsResponse.model} 200 - The created container entity
    * @returns {string} 400 - Validation error
@@ -218,13 +224,18 @@ export default class ContainerController extends BaseController {
 
     // handle request
     try {
-      const validation = await verifyContainerRequest(body);
+      const request: CreateContainerParams = {
+        ...body,
+        ownerId: body.ownerId ?? req.token.user.id,
+      };
+
+      const validation = await verifyContainerRequest(request);
       if (isFail(validation)) {
         res.status(400).json(validation.fail.value);
         return;
       }
 
-      res.json(await ContainerService.createContainer(req.token.user, body));
+      res.json(await ContainerService.createContainer(request));
     } catch (error) {
       this.logger.error('Could not create container:', error);
       res.status(500).json('Internal server error.');
@@ -298,7 +309,8 @@ export default class ContainerController extends BaseController {
    * @route PATCH /containers/{id}
    * @group containers - Operations of container controller
    * @param {integer} id.path.required - The id of the container which should be updated
-   * @param {CreateContainerRequest.model} container.body.required - The container which should be updated
+   * @param {UpdateContainerRequest.model} container.body.required -
+   *    The container which should be updated
    * @security JWT
    * @returns {ContainerWithProductsResponse.model} 200 - The created container entity
    * @returns {string} 400 - Validation error
@@ -306,20 +318,26 @@ export default class ContainerController extends BaseController {
    * @returns {string} 500 - Internal server error
    */
   public async updateContainer(req: RequestWithToken, res: Response): Promise<void> {
-    const body = req.body as CreateContainerRequest;
+    const body = req.body as UpdateContainerRequest;
     const { id } = req.params;
     const containerId = Number.parseInt(id, 10);
     this.logger.trace('Update container', id, 'with', body, 'by user', req.token.user);
 
     // handle request
     try {
-      const validation = await verifyContainerRequest(body);
+      const request: UpdateContainerParams = {
+        ...body,
+        ownerId: req.token.user.id,
+        id: containerId,
+      };
+
+      const validation = await verifyContainerRequest(request);
       if (isFail(validation)) {
         res.status(400).json(validation.fail.value);
         return;
       }
 
-      const update = await ContainerService.updateContainer(containerId, body);
+      const update = await ContainerService.updateContainer(request);
       if (!update) {
         res.status(404).json('Container not found.');
         return;

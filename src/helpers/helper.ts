@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { ContainerRequest } from '../controller/request/container-request';
+import { ContainerParams } from '../controller/request/container-request';
 import { ProductRequest } from '../controller/request/product-request';
 
 export default function splitTypes<S, T>(array: any[], split: string) {
@@ -32,7 +32,7 @@ export default function splitTypes<S, T>(array: any[], split: string) {
   return { type, remainder };
 }
 
-type IdOrRequest<T = ContainerRequest | ProductRequest> = (number | (T))[];
+type IdOrRequest<T = ContainerParams | ProductRequest> = (number | (T))[];
 
 export function getIdsAndRequests<T>(
   array: IdOrRequest<T>,

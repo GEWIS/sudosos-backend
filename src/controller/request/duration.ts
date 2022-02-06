@@ -15,22 +15,11 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { DineroObject } from 'dinero.js';
-import User from '../../entity/user/user';
-import ProductCategory from '../../entity/product/product-category';
 
 /**
- * @typedef CreateProductRequest
- * @property {string} name.required -  The name of the product.
- * @property {Dinero.model} price.required - The price of the product.
- * @property {User.model} owner.required - The owner of the product.
- * @property {ProductCategory.model} category.required - The category of the product.
- * @property {number} alcoholPercentage - The percentage of alcohol in this product.
+ * For all requests that contain an object with a start and end date.
  */
-export default interface CreateProductRequest {
-  name: string,
-  price: DineroObject,
-  owner: User,
-  category: ProductCategory,
-  alcoholPercentage?: number,
+export default interface Duration {
+  startDate: string,
+  endDate?: string,
 }

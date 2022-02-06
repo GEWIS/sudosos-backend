@@ -15,24 +15,25 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
 import { Connection, FindManyOptions } from 'typeorm';
 import express, { Application } from 'express';
+import { request, expect } from 'chai';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
-import { request, expect } from 'chai';
 import User, { UserType } from '../../../src/entity/user/user';
-import ProductController from '../../../src/controller/product-controller';
-import CreateProductRequest from '../../../src/controller/request/product-request';
 import Database from '../../../src/database/database';
+import { seedAllProducts, seedProductCategories } from '../../seed';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Swagger from '../../../src/start/swagger';
 import RoleManager from '../../../src/rbac/role-manager';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
-import { seedAllProducts, seedProductCategories } from '../../seed';
-import Product from '../../../src/entity/product/product';
-import { ProductResponse } from '../../../src/controller/response/product-response';
+import { CreateProductRequest } from '../../../src/controller/request/product-request';
 import UpdatedProduct from '../../../src/entity/product/updated-product';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
+import { ProductResponse } from '../../../src/controller/response/product-response';
+import Product from '../../../src/entity/product/product';
+import ProductController from '../../../src/controller/product-controller';
 
 /**
  * Tests if a product response is equal to the request.
@@ -44,7 +45,7 @@ function productEq(source: CreateProductRequest, response: ProductResponse) {
   return source.name === response.name
       && source.category === response.category.id
       && source.alcoholPercentage === response.alcoholPercentage
-      && source.price === response.price.amount;
+      && source.price.amount === response.price.amount;
 }
 
 describe('ProductController', async (): Promise<void> => {
@@ -96,7 +97,11 @@ describe('ProductController', async (): Promise<void> => {
 
     const validProductReq: CreateProductRequest = {
       name: 'Valid product',
-      price: 1,
+      price: {
+        amount: 72,
+        currency: 'EUR',
+        precision: 2,
+      },
       alcoholPercentage: 0,
       category: 2,
     };
@@ -225,7 +230,14 @@ describe('ProductController', async (): Promise<void> => {
       await expectError(req, '-1 is an invalid product category.');
     });
     it('should verify Price', async () => {
-      const req: CreateProductRequest = { ...ctx.validProductReq, price: -1 };
+      const req: CreateProductRequest = {
+        ...ctx.validProductReq,
+        price: {
+          amount: 72,
+          currency: 'EUR',
+          precision: 2,
+        },
+      };
       await expectError(req, 'Price must be greater than zero');
     });
     it('should verify Name', async () => {

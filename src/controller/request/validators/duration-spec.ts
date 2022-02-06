@@ -18,13 +18,13 @@
 import {
   Specification, toFail, toPass, ValidationError,
 } from '../../../helpers/specification-validation';
-import DurationRequest from '../duration-request';
+import Duration from '../duration';
 
 /**
  * Tests if the endDate property is a valid date.
  * @param d - Request to check
  */
-function endNotNaN<T extends DurationRequest>(d: T) {
+function endNotNaN<T extends Duration>(d: T) {
   if (Number.isNaN(Date.parse(d.endDate))) {
     return toFail(new ValidationError('End Date must be a valid Date.'));
   }
@@ -35,7 +35,7 @@ function endNotNaN<T extends DurationRequest>(d: T) {
  * Tests if the startDate property is a valid date.
  * @param d - Request to check
  */
-function startNotNaN<T extends DurationRequest>(d: T) {
+function startNotNaN<T extends Duration>(d: T) {
   if (Number.isNaN(Date.parse(d.startDate))) {
     return toFail(new ValidationError('Start Date must be a valid Date.'));
   }
@@ -46,14 +46,14 @@ function startNotNaN<T extends DurationRequest>(d: T) {
  * Tests if the endDate is after startDate
  * @param d - Request to check
  */
-function endAfterStart<T extends DurationRequest>(d: T) {
+function endAfterStart<T extends Duration>(d: T) {
   if (Date.parse(d.endDate) <= Date.parse(d.startDate)) {
     return toFail(new ValidationError('End Date must be after the Start Date.'));
   }
   return toPass(d);
 }
 
-function durationSpec<T extends DurationRequest>(): Specification<T, ValidationError> {
+function durationSpec<T extends Duration>(): Specification<T, ValidationError> {
   return [
     endNotNaN,
     startNotNaN,

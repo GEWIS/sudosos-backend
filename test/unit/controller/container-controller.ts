@@ -28,7 +28,6 @@ import TokenHandler from '../../../src/authentication/token-handler';
 import Swagger from '../../../src/start/swagger';
 import RoleManager from '../../../src/rbac/role-manager';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
-import CreateContainerRequest from '../../../src/controller/request/container-request';
 import ContainerController from '../../../src/controller/container-controller';
 import Container from '../../../src/entity/container/container';
 import {
@@ -40,6 +39,7 @@ import { ProductResponse } from '../../../src/controller/response/product-respon
 import UpdatedContainer from '../../../src/entity/container/updated-container';
 import UpdatedProduct from '../../../src/entity/product/updated-product';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
+import { CreateContainerRequest } from '../../../src/controller/request/container-request';
 
 chai.use(deepEqualInAnyOrder);
 

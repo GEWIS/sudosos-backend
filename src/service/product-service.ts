@@ -16,7 +16,6 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { createQueryBuilder, SelectQueryBuilder } from 'typeorm';
-import dinero from 'dinero.js';
 import { PaginatedProductResponse, ProductResponse } from '../controller/response/product-response';
 import Product from '../entity/product/product';
 import ProductRevision from '../entity/product/product-revision';
@@ -27,8 +26,7 @@ import ContainerRevision from '../entity/container/container-revision';
 import Container from '../entity/container/container';
 import UpdatedContainer from '../entity/container/updated-container';
 import User from '../entity/user/user';
-import CreateProductRequest, { ProductRequestID } from '../controller/request/product-request';
-import ProductCategory from '../entity/product/product-category';
+import CreateProductParams, { UpdateProductParams } from '../controller/request/product-request';
 import PointOfSale from '../entity/point-of-sale/point-of-sale';
 import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision';
 import { PaginationParameters } from '../helpers/pagination';
@@ -36,16 +34,6 @@ import { RequestWithToken } from '../middleware/token-middleware';
 import {
   asBoolean, asDate, asNumber,
 } from '../helpers/validators';
-import UpdatePointOfSaleRequest from '../controller/request/update-point-of-sale-request';
-import {
-  Either,
-  Specification,
-  toFail,
-  toPass,
-  validateSpecification, ValidationError,
-  validName,
-} from '../helpers/specification-validation';
-import productRequestSpec from '../controller/request/validators/product-request-spec';
 
 /**
  * Define product filtering parameters used to filter query results.
@@ -421,10 +409,10 @@ export default class ProductService {
    * @param productId - The ID of the product to update.
    * @param update - The product variables.
    */
-  public static async updateProduct(productId: number, update: CreateProductRequest)
+  public static async updateProduct(update: UpdateProductParams)
     : Promise<ProductResponse> {
     // Get the base product.
-    const base: Product = await Product.findOne(productId);
+    const base: Product = await Product.findOne(update.id);
 
     // return undefined if not found or request is invalid
     if (!base) {
@@ -435,17 +423,14 @@ export default class ProductService {
     const updatedProduct = Object.assign(new UpdatedProduct(), {
       product: base,
       ...update,
-      // Price number into dinero.
-      price: dinero({
-        amount: update.price,
-      }),
+      price: update.price,
     });
 
     // Save the product.
     await updatedProduct.save();
 
     // Pull the just created product from the database to fix the formatting.
-    return (await this.getProducts({ updatedProducts: true, productId })).records[0];
+    return (await this.getProducts({ updatedProducts: true, productId: update.id })).records[0];
   }
 
   /**
@@ -458,8 +443,12 @@ export default class ProductService {
    * @param owner - The user that created the product.
    * @param product - The product to be created.
    */
-  public static async createProduct(owner: User, product: CreateProductRequest)
+  public static async createProduct(product: CreateProductParams)
     : Promise<ProductResponse> {
+    const owner = await User.findOne(product.ownerId);
+
+    if (!owner) return undefined;
+
     const base = Object.assign(new Product(), {
       owner,
     });
@@ -472,7 +461,7 @@ export default class ProductService {
       product: await Product.findOne(base.id),
       ...product,
       // Price number into dinero.
-      price: DineroTransformer.Instance.from(product.price),
+      price: product.price,
     });
 
     await updatedProduct.save();

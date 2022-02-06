@@ -17,9 +17,8 @@
  */
 
 /**
- * For all requests that contain an object with a start and end date.
+ * For all requests that contain an object with a name.
  */
-export default interface DurationRequest {
-  startDate: string,
-  endDate?: string,
+export default interface Named {
+  name: string
 }
