@@ -34,12 +34,12 @@ import { isFail } from '../helpers/specification-validation';
 import {
   CreatePointOfSaleParams, CreatePointOfSaleRequest,
   UpdatePointOfSaleParams,
-  UpdatePointOfSaleRequest
+  UpdatePointOfSaleRequest,
 } from './request/point-of-sale-request';
 import {
   verifyCreatePointOfSaleRequest,
-  verifyUpdatePointOfSaleRequest
-} from "./request/validators/point-of-sale-request-spec";
+  verifyUpdatePointOfSaleRequest,
+} from './request/validators/point-of-sale-request-spec';
 
 export default class PointOfSaleController extends BaseController {
   private logger: Logger = log4js.getLogger('PointOfSaleController');
@@ -239,19 +239,19 @@ export default class PointOfSaleController extends BaseController {
 
     // handle request
     try {
-      const request: UpdatePointOfSaleParams = {
+      const params: UpdatePointOfSaleParams = {
         ...body,
         ownerId: req.token.user.id,
         id: pointOfSaleId,
       };
 
-      const validation = await verifyUpdatePointOfSaleRequest(request);
+      const validation = await verifyUpdatePointOfSaleRequest(params);
       if (isFail(validation)) {
         res.status(400).json(validation.fail.value);
         return;
       }
 
-      const update = await PointOfSaleService.updatePointOfSale(pointOfSaleId, request);
+      const update = await PointOfSaleService.updatePointOfSale(params);
       if (!update) {
         res.status(404).json('Point of Sale not found.');
         return;

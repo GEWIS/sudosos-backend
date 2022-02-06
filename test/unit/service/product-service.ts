@@ -21,7 +21,6 @@ import { SwaggerSpecification } from 'swagger-model-validator';
 import bodyParser from 'body-parser';
 import chai, { expect } from 'chai';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
-import User from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
 import ProductService, { ProductFilterParameters } from '../../../src/service/product-service';
@@ -35,11 +34,12 @@ import UpdatedProduct from '../../../src/entity/product/updated-product';
 import UpdatedContainer from '../../../src/entity/container/updated-container';
 import Container from '../../../src/entity/container/container';
 import ContainerRevision from '../../../src/entity/container/container-revision';
-import CreateProductParams from '../../../src/controller/request/product-request';
+import CreateProductParams, { UpdateProductParams } from '../../../src/controller/request/product-request';
 import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
 import UpdatedPointOfSale from '../../../src/entity/point-of-sale/updated-point-of-sale';
 import ProductImage from '../../../src/entity/file/product-image';
+import User from '../../../src/entity/user/user';
 
 chai.use(deepEqualInAnyOrder);
 /**
@@ -85,9 +85,13 @@ function validateProductProperties(response: ProductResponse,
   productParams: CreateProductParams) {
   Object.keys(productParams).forEach((key: keyof CreateProductParams) => {
     if (key === 'price') {
-      expect((productParams[key] as any)).to.be.equal((response.price.amount));
+      expect((productParams[key] as any).amount).to.be.equal((response.price.amount));
     } else if (key === 'category') {
       expect((productParams[key] as any)).to.be.equal((response.category.id));
+    } else if (key === 'ownerId') {
+      if (productParams[key] !== undefined) {
+        expect((productParams[key] as any)).to.be.equal((response.owner.id));
+      }
     } else {
       expect((productParams[key] as any)).to.be.equal((response[key]));
     }
@@ -342,14 +346,20 @@ describe('ProductService', async (): Promise<void> => {
 
   describe('updateProducts function', () => {
     it('should update a product by ID', async () => {
-      const updateParams: CreateProductParams = {
+      const updateParams: UpdateProductParams = {
         category: 3,
+        id: 2,
+        ownerId: undefined,
         alcoholPercentage: 8,
         name: 'Product2-update',
-        price: 69,
+        price: {
+          amount: 72,
+          currency: 'EUR',
+          precision: 2,
+        },
       };
 
-      const res: ProductResponse = await ProductService.updateProduct(2, updateParams);
+      const res: ProductResponse = await ProductService.updateProduct(updateParams);
 
       validateProductProperties(res, updateParams);
 
@@ -357,16 +367,21 @@ describe('ProductService', async (): Promise<void> => {
     });
 
     it('should create a new product', async () => {
-      const price = 77;
+      const amount = 77;
 
       const productParams: CreateProductParams = {
         alcoholPercentage: 9,
         name: 'Product77-update',
-        price,
+        price: {
+          amount,
+          currency: 'EUR',
+          precision: 2,
+        },
         category: 1,
+        ownerId: ctx.users[0].id,
       };
 
-      const res: ProductResponse = await ProductService.createProduct(ctx.users[0], productParams);
+      const res: ProductResponse = await ProductService.createProduct(productParams);
 
       validateProductProperties(res, productParams);
       expect(res).to.exist;
@@ -378,25 +393,36 @@ describe('ProductService', async (): Promise<void> => {
 
     it('should confirm an updated product', async () => {
       // Create a new product.
-      const price = 77;
+      const amount = 77;
 
       const productParams: CreateProductParams = {
         alcoholPercentage: 9,
+        ownerId: ctx.users[0].id,
         name: 'Product77-update',
-        price: price - 1,
+        price: {
+          amount: amount - 1,
+          currency: 'EUR',
+          precision: 2,
+        },
         category: 1,
       };
 
-      const res: ProductResponse = await ProductService.createProduct(ctx.users[0], productParams);
+      const res: ProductResponse = await ProductService.createProduct(productParams);
 
-      const updateParams: CreateProductParams = {
+      const updateParams: UpdateProductParams = {
         alcoholPercentage: 10,
+        ownerId: undefined,
         name: 'Product77-update',
-        price,
+        price: {
+          amount,
+          currency: 'EUR',
+          precision: 2,
+        },
         category: 2,
+        id: res.id,
       };
 
-      await ProductService.updateProduct(res.id, updateParams);
+      await ProductService.updateProduct(updateParams);
       const product = await ProductService.approveProductUpdate(res.id);
 
       validateProductProperties(product, updateParams);

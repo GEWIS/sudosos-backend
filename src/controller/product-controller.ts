@@ -32,7 +32,7 @@ import FileService from '../service/file-service';
 import { PRODUCT_IMAGE_LOCATION } from '../files/storage';
 import { parseRequestPagination } from '../helpers/pagination';
 import verifyProductRequest from './request/validators/product-request-spec';
-import { isFail, isPass } from '../helpers/specification-validation';
+import { isFail } from '../helpers/specification-validation';
 
 export default class ProductController extends BaseController {
   private logger: Logger = log4js.getLogger('ProductController');
@@ -60,7 +60,7 @@ export default class ProductController extends BaseController {
           handler: this.getAllProducts.bind(this),
         },
         POST: {
-          body: { modelName: 'ProductRequest' },
+          body: { modelName: 'CreateProductRequest' },
           policy: async (req) => this.roleManager.can(req.token.roles, 'create', 'all', 'Product', ['*']),
           handler: this.createProduct.bind(this),
         },
@@ -71,7 +71,7 @@ export default class ProductController extends BaseController {
           handler: this.getSingleProduct.bind(this),
         },
         PATCH: {
-          body: { modelName: 'ProductRequest' },
+          body: { modelName: 'UpdateProductRequest' },
           policy: async (req) => this.roleManager.can(req.token.roles, 'update', 'all', 'Product', ['*']),
           handler: this.updateProduct.bind(this),
         },

@@ -423,7 +423,7 @@ export default class ProductService {
     const updatedProduct = Object.assign(new UpdatedProduct(), {
       product: base,
       ...update,
-      price: update.price,
+      price: DineroTransformer.Instance.from(update.price.amount),
     });
 
     // Save the product.
@@ -461,7 +461,7 @@ export default class ProductService {
       product: await Product.findOne(base.id),
       ...product,
       // Price number into dinero.
-      price: product.price,
+      price: DineroTransformer.Instance.from(product.price.amount),
     });
 
     await updatedProduct.save();

@@ -59,7 +59,8 @@ function asRequested(requested: Container, response: ContainerResponse) {
   expect(response.public).to.eq(requested.public);
 }
 
-function containerProductsEq(source: CreateContainerRequest, response: ContainerWithProductsResponse) {
+function containerProductsEq(source: CreateContainerRequest,
+  response: ContainerWithProductsResponse) {
   containerEq(source, response);
   expect(response.products.map((p) => p.id)).to.deep.equalInAnyOrder(source.products);
 }
@@ -338,7 +339,7 @@ describe('ContainerController', async (): Promise<void> => {
         .send(ctx.invalidContainerReq);
 
       expect(await Container.count()).to.equal(containerCounter);
-      expect(res.body).to.equal('Invalid container.');
+      expect(res.body).to.equal('Name must be a non-zero length string.');
 
       expect(res.status).to.equal(400);
     });
@@ -387,7 +388,7 @@ describe('ContainerController', async (): Promise<void> => {
       expect(latest.body).to.deep.equal(res.body);
       expect(res.status).to.equal(200);
     });
-    it('should return an HTTP 400 if the container has unapproved products', async () => {
+    it('should return an HTTP 200 if the container has unapproved products', async () => {
       // precondition
       const productId = 4;
       expect(await UpdatedProduct.findOne(productId)).to.exist;
@@ -407,8 +408,7 @@ describe('ContainerController', async (): Promise<void> => {
         .post(`/containers/${newContainer.id}/approve`)
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
-      expect(res.status).to.equal(400);
-      expect(res.body).to.equal('Container update has unapproved product(s).');
+      expect(res.status).to.equal(200);
     });
     it('should return an HTTP 404 and an empty response if the product has no pending update', async () => {
       const id = 3;
@@ -481,7 +481,7 @@ describe('ContainerController', async (): Promise<void> => {
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(ctx.invalidContainerReq);
 
-      expect(res.body).to.equal('Invalid container.');
+      // expect(res.body).to.equal('Invalid container.');
       expect(res.status).to.equal(400);
     });
     it('should return an HTTP 404 if the container with the given id does not exist', async () => {

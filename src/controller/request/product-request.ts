@@ -39,7 +39,7 @@ export type ProductRequest = UpdateProductParams | CreateProductParams;
  * @typedef CreateProductRequest
  * @property {number} ownerId - ID of the owner
  * @property {string} name.required - Name of the product
- * @property {DineroObjectRequest} price.required - Price of the product
+ * @property {DineroObjectRequest.model} price.required - Price of the product
  * @property {number} category.required  - Category of the product
  * @property {number} alcoholPercentage.required  - Alcohol percentage of the product in 2 decimals
  */
@@ -50,9 +50,8 @@ export interface CreateProductRequest extends BaseProductParams{
 /**
  * @typedef UpdateProductRequest
  * @property {string} name.required - Name of the product
- * @property {DineroObjectRequest} price.required - Price of the product
+ * @property {DineroObjectRequest.model} price.required - Price of the product
  * @property {number} category.required  - Category of the product
  * @property {number} alcoholPercentage.required  - Alcohol percentage of the product in 2 decimals
- * @property {integer} id.required - ID of the product to update
  */
 export type UpdateProductRequest = BaseProductParams;

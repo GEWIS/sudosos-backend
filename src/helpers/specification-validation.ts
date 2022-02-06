@@ -15,7 +15,6 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import User from '../entity/user/user';
 
 export interface Joinable {
   value: any,
@@ -80,12 +79,4 @@ export async function validateSpecification<T, F extends Joinable>(target: T,
     }
   }
   return toPass(target);
-}
-
-type Named = { name: string };
-
-export async function validUserId(userId: number) {
-  const user = await User.findOne(userId);
-  if (user) return toPass(userId);
-  return toFail(new ValidationError('invalid User ID'));
 }

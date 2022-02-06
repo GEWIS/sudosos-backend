@@ -457,13 +457,12 @@ export default class PointOfSaleService {
       owner,
     });
 
+    // Save the base and update..
+    await base.save();
     const update: UpdatePointOfSaleParams = {
       ...posRequest,
       id: base.id,
     };
-
-    // Save the base and update..
-    await base.save();
     return this.updatePointOfSale(update);
   }
 

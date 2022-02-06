@@ -48,7 +48,7 @@ export interface CreatePointOfSaleRequest extends BasePointOfSaleParams{
 }
 
 /**
- * @typedef CreatePointOfSaleRequest
+ * @typedef UpdatePointOfSaleRequest
  * @property {string} name.required - Name of the POS
  * @property {string} startDate.required - Date from which the POS is active
  * @property {string} endDate - Date from which the POS is no longer active

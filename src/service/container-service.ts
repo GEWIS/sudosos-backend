@@ -256,8 +256,8 @@ export default class ContainerService {
   public static async createContainer(container: CreateContainerParams)
     : Promise<ContainerWithProductsResponse> {
     const base = Object.assign(new Container(), {
-      ownerId: container.ownerId,
       public: container.public,
+      owner: container.ownerId,
     });
 
     // Save the base.
@@ -290,11 +290,13 @@ export default class ContainerService {
       rawContainerUpdate.products.map((product) => (
         { revision: product.currentRevision, product: { id: product.id } })));
 
+    // All products with a pending update are also updated
     const updatedProducts: UpdatedProduct[] = await UpdatedProduct.findByIds(productIds, { relations: ['product'] });
 
     if (updatedProducts.length !== 0) {
       await Promise.all(updatedProducts.map(
-        (p) => ContainerService.approveContainerUpdate(p.product.id),
+        (p) => ProductService.approveProductUpdate(p.product.id)
+          .then((up) => productIds.push({ revision: up.revision, product: { id: up.id } })),
       ));
     }
 
@@ -345,8 +347,11 @@ export default class ContainerService {
     await Promise.all(requests.map((p) => {
       if (Object.prototype.hasOwnProperty.call(p, 'id')) {
         // Push down ownership if unspecified.
-        if (!p.ownerId) p.ownerId = update.ownerId;
-        return ProductService.updateProduct(p as UpdateProductParams);
+        const param : UpdateProductParams = {
+          ...(p as UpdateProductParams),
+          ownerId: p.ownerId ?? update.ownerId,
+        };
+        return ProductService.updateProduct(param);
       }
       return ProductService.createProduct(p);
     }));

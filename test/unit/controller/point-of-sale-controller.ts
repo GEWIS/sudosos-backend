@@ -398,7 +398,7 @@ describe('PointOfSaleController', async () => {
       };
 
       withContainerUpdate.containers.push(containerRequest);
-      await expectError(withContainerUpdate, `Container #${failID} validation failed: Name must be a non-zero length string.`);
+      await expectError(withContainerUpdate, 'Container validation failed: Name must be a non-zero length string.');
     });
     it('should verify ContainerUpdate with productUpdate', async () => {
       const withContainerUpdate: CreatePointOfSaleRequest = JSON.parse(
@@ -427,7 +427,7 @@ describe('PointOfSaleController', async () => {
       };
 
       withContainerUpdate.containers.push(containerRequest);
-      await expectError(withContainerUpdate, `Container #${failID} validation failed: Not all product IDs are valid.`);
+      await expectError(withContainerUpdate, 'Container validation failed: Product validation failed: Price must be greater than zero');
     });
     it('should verify ContainerUpdate with productUpdate ', async () => {
       const withContainerUpdate: CreatePointOfSaleRequest = JSON.parse(
@@ -456,7 +456,7 @@ describe('PointOfSaleController', async () => {
       };
 
       withContainerUpdate.containers.push(updateContainerParams);
-      await expectError(withContainerUpdate, `Container #${failID} validation failed: Product #1 validation failed: Name must be a non-zero length string.`);
+      await expectError(withContainerUpdate, 'Container validation failed: Product validation failed: Name must be a non-zero length string.');
     });
   }
   describe('POST /pointsofsale', () => {

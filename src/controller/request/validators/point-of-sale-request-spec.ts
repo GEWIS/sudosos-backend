@@ -27,7 +27,7 @@ import { BasePointOfSaleParams, CreatePointOfSaleParams, UpdatePointOfSaleParams
 import durationSpec from './duration-spec';
 import namedSpec from './named-spec';
 import { ContainerParams } from '../container-request';
-import verifyContainerRequest from "./container-request-spec";
+import verifyContainerRequest from './container-request-spec';
 
 const ownerMustExist = async (p: CreatePointOfSaleParams) => {
   // Owner must exist.

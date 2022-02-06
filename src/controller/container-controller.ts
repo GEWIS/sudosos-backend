@@ -35,7 +35,7 @@ import {
   CreateContainerParams,
   CreateContainerRequest,
   UpdateContainerParams,
-  UpdateContainerRequest
+  UpdateContainerRequest,
 } from './request/container-request';
 
 export default class ContainerController extends BaseController {
@@ -61,7 +61,7 @@ export default class ContainerController extends BaseController {
           handler: this.getAllContainers.bind(this),
         },
         POST: {
-          body: { modelName: 'ContainerRequest' },
+          body: { modelName: 'CreateContainerRequest' },
           policy: async (req) => this.roleManager.can(req.token.roles, 'create', 'own', 'Container', ['*']),
           handler: this.createContainer.bind(this),
         },
@@ -72,7 +72,7 @@ export default class ContainerController extends BaseController {
           handler: this.getSingleContainer.bind(this),
         },
         PATCH: {
-          body: { modelName: 'ContainerRequest' },
+          body: { modelName: 'UpdateContainerRequest' },
           policy: async (req) => this.roleManager.can(req.token.roles, 'update', await ContainerController.getRelation(req), 'Container', ['*']),
           handler: this.updateContainer.bind(this),
         },

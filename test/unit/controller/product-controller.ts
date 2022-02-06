@@ -34,6 +34,7 @@ import { defaultPagination, PaginationResult } from '../../../src/helpers/pagina
 import { ProductResponse } from '../../../src/controller/response/product-response';
 import Product from '../../../src/entity/product/product';
 import ProductController from '../../../src/controller/product-controller';
+import { DineroObjectRequest } from '../../../src/controller/request/dinero-request';
 
 /**
  * Tests if a product response is equal to the request.
@@ -42,10 +43,10 @@ import ProductController from '../../../src/controller/product-controller';
  * @return true if the source and response describe the same product.
  */
 function productEq(source: CreateProductRequest, response: ProductResponse) {
-  return source.name === response.name
-      && source.category === response.category.id
-      && source.alcoholPercentage === response.alcoholPercentage
-      && source.price.amount === response.price.amount;
+  expect(source.name).to.eq(response.name);
+  expect(source.category).to.eq(response.category.id);
+  expect(source.alcoholPercentage).to.eq(response.alcoholPercentage);
+  expect(source.price.amount).to.eq(response.price.amount);
 }
 
 describe('ProductController', async (): Promise<void> => {
@@ -101,7 +102,7 @@ describe('ProductController', async (): Promise<void> => {
         amount: 72,
         currency: 'EUR',
         precision: 2,
-      },
+      } as DineroObjectRequest,
       alcoholPercentage: 0,
       category: 2,
     };
@@ -215,9 +216,16 @@ describe('ProductController', async (): Promise<void> => {
   function testValidationOnRoute(type: any, route: string) {
     async function expectError(req: CreateProductRequest, error: string) {
       // @ts-ignore
-      const res = await ((request(ctx.app)[type])(route)
-        .set('Authorization', `Bearer ${ctx.adminToken}`)
-        .send(req));
+      let res;
+      if (type === 'post') {
+        res = await request(ctx.app).post(route)
+          .set('Authorization', `Bearer ${ctx.adminToken}`)
+          .send(req);
+      } else if (type === 'patch') {
+        res = await request(ctx.app).patch(route)
+          .set('Authorization', `Bearer ${ctx.adminToken}`)
+          .send(req);
+      }
       expect(res.status).to.eq(400);
       expect(res.body).to.eq(error);
     }
@@ -233,7 +241,7 @@ describe('ProductController', async (): Promise<void> => {
       const req: CreateProductRequest = {
         ...ctx.validProductReq,
         price: {
-          amount: 72,
+          amount: -72,
           currency: 'EUR',
           precision: 2,
         },
@@ -246,8 +254,8 @@ describe('ProductController', async (): Promise<void> => {
     });
   }
   describe('POST /products', () => {
-    describe('verifyProductRequest Specification', async (): Promise<void> => {
-      testValidationOnRoute('post', '/products');
+    it('should verifyProductRequest Specification', async (): Promise<void> => {
+      await testValidationOnRoute('post', '/products');
     });
 
     it('should store the given product in the database and return an HTTP 200 and the product if admin', async () => {
@@ -258,7 +266,7 @@ describe('ProductController', async (): Promise<void> => {
         .send(ctx.validProductReq);
 
       expect(await Product.count()).to.equal(productCount + 1);
-      expect(productEq(ctx.validProductReq, res.body as ProductResponse)).to.be.true;
+      productEq(ctx.validProductReq, res.body as ProductResponse);
       const databaseProduct = await UpdatedProduct.findOne((res.body as ProductResponse).id);
       expect(databaseProduct).to.exist;
 
@@ -312,8 +320,8 @@ describe('ProductController', async (): Promise<void> => {
     });
   });
   describe('PATCH /products/:id', () => {
-    describe('verifyProductRequest Specification', async (): Promise<void> => {
-      testValidationOnRoute('patch', '/products/1');
+    it('should verifyProductRequest Specification', async (): Promise<void> => {
+      await testValidationOnRoute('patch', '/products/1');
     });
 
     it('should return an HTTP 200 and the product update if admin', async () => {
@@ -322,7 +330,7 @@ describe('ProductController', async (): Promise<void> => {
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(ctx.validProductReq);
 
-      expect(productEq(ctx.validProductReq, res.body as ProductResponse)).to.be.true;
+      productEq(ctx.validProductReq, res.body as ProductResponse);
       const databaseProduct = await UpdatedProduct.findOne((res.body as ProductResponse).id);
       expect(databaseProduct).to.exist;
 
