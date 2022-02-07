@@ -33,7 +33,6 @@ import TransactionService, {
 import ContainerService from '../service/container-service';
 import { PaginatedUserResponse } from './response/user-response';
 import TransferService, { parseGetTransferFilters } from '../service/transfer-service';
-import { asNumber } from '../helpers/validators';
 
 export default class UserController extends BaseController {
   private logger: Logger = log4js.getLogger('UserController');
