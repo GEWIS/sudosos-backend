@@ -24,6 +24,7 @@ import TransferService from '../service/transfer-service';
 import TransferRequest from './request/transfer-request';
 import Transfer from '../entity/transactions/transfer';
 import InvalidTransferError from '../entity/errors/invalid-transfer-error';
+import { parseRequestPagination } from '../helpers/pagination';
 
 export default class TransferController extends BaseController {
   private logger: Logger = log4js.getLogger('TransferController');
@@ -81,13 +82,28 @@ export default class TransferController extends BaseController {
    * @route GET /transfers
    * @group transfers - Operations of transfer controller
    * @security JWT
+   * @param {integer} take.query - How many points of sale the endpoint should return
+   * @param {integer} skip.query - How many points of sale should be skipped (for pagination)
    * @returns {Array<TransferResponse>} 200 - All existing transfers
    * @returns {string} 500 - Internal server error
    */
   public async returnAllTransfers(req: RequestWithToken, res: Response): Promise<void> {
-    this.logger.trace('Get all transfers by user', req.token.user);
+    const { body } = req;
+    this.logger.trace('Get all transfers by user', body, 'by user', req.token.user);
+
+    let take;
+    let skip;
     try {
-      const transfers = await TransferService.getTransfers();
+      const pagination = parseRequestPagination(req);
+      take = pagination.take;
+      skip = pagination.skip;
+    } catch (e) {
+      res.status(400).send(e.message);
+      return;
+    }
+
+    try {
+      const transfers = await TransferService.getTransfers({}, { take, skip });
       res.json(transfers);
     } catch (error) {
       this.logger.error('Could not return all transfers:', error);
@@ -111,7 +127,7 @@ export default class TransferController extends BaseController {
     try {
       const parsedId = parseInt(id, 10);
       const transfer = (
-        (await TransferService.getTransfers({ id: parsedId }))[0]);
+        (await TransferService.getTransfers({ id: parsedId }, {})).records[0]);
       if (transfer) {
         res.json(transfer);
       } else {

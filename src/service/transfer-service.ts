@@ -19,12 +19,13 @@
 import dinero from 'dinero.js';
 import { FindManyOptions } from 'typeorm';
 import Transfer from '../entity/transactions/transfer';
-import { TransferResponse } from '../controller/response/transfer-response';
+import { PaginatedTransferResponse, TransferResponse } from '../controller/response/transfer-response';
 import TransferRequest from '../controller/request/transfer-request';
 import { parseUserToBaseResponse } from '../helpers/entity-to-response';
 import User from '../entity/user/user';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import InvalidTransferError from '../entity/errors/invalid-transfer-error';
+import { PaginationParameters } from '../helpers/pagination';
 
 export interface TransferFilterParameters {
   id?: number;
@@ -55,8 +56,16 @@ export default class TransferService {
     });
   }
 
-  public static async getTransfers(params: TransferFilterParameters = {})
-    : Promise<TransferResponse[]> {
+  /**
+   * Query to return transfers from the database
+   * @param filters - Parameters to query the transfers with
+   * @param pagination
+   */
+  public static async getTransfers(filters: TransferFilterParameters = {},
+    pagination: PaginationParameters = {})
+    : Promise<PaginatedTransferResponse> {
+    const { take, skip } = pagination;
+
     const filterMapping: FilterMapping = {
       id: 'id',
       createdById: 'createdById',
@@ -64,12 +73,26 @@ export default class TransferService {
       toId: 'toId',
       type: 'type',
     };
+
     const options: FindManyOptions = {
-      where: QueryFilter.createFilterWhereClause(filterMapping, params),
+      where: QueryFilter.createFilterWhereClause(filterMapping, filters),
       relations: ['from', 'to'],
+      take,
+      skip,
     };
-    const transfers = await Transfer.find(options);
-    return transfers.map(this.asTransferResponse);
+
+    const results = await Promise.all([
+      Transfer.find(options),
+      Transfer.count(options),
+    ]);
+
+    const records = results[0].map((rawTransfer) => this.asTransferResponse(rawTransfer));
+    return {
+      _pagination: {
+        take, skip, count: results[1],
+      },
+      records,
+    };
   }
 
   public static async postTransfer(request: TransferRequest) : Promise<TransferResponse> {

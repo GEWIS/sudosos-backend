@@ -23,7 +23,7 @@ import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { Connection } from 'typeorm';
 import TransferRequest from '../../../src/controller/request/transfer-request';
-import { TransferResponse } from '../../../src/controller/response/transfer-response';
+import { PaginatedTransferResponse } from '../../../src/controller/response/transfer-response';
 import Database from '../../../src/database/database';
 import Transfer from '../../../src/entity/transactions/transfer';
 import User from '../../../src/entity/user/user';
@@ -64,23 +64,23 @@ describe('TransferService', async (): Promise<void> => {
   });
   describe('getTransfers function', async (): Promise<void> => {
     it('should return all transfers', async () => {
-      const res: TransferResponse[] = await TransferService.getTransfers();
-      expect(res.length).to.equal(ctx.transfers.length);
+      const res: PaginatedTransferResponse = await TransferService.getTransfers();
+      expect(res.records.length).to.equal(ctx.transfers.length);
       const ids = new Set(ctx.transfers.map((obj) => obj.id));
-      res.forEach((element) => ids.delete(element.id));
+      res.records.forEach((element) => ids.delete(element.id));
       expect(ids.size).to.equal(0);
     });
 
     it('should return a single transfer if id is specified', async () => {
-      const res: TransferResponse[] = await TransferService
+      const res: PaginatedTransferResponse = await TransferService
         .getTransfers({ id: ctx.transfers[0].id });
-      expect(res.length).to.equal(1);
-      expect(res[0].id).to.equal(ctx.transfers[0].id);
+      expect(res.records.length).to.equal(1);
+      expect(res.records[0].id).to.equal(ctx.transfers[0].id);
     });
     it('should return nothing if a wrong id is specified', async () => {
-      const res: TransferResponse[] = await TransferService
+      const res: PaginatedTransferResponse = await TransferService
         .getTransfers({ id: ctx.transfers.length + 1 });
-      expect(res).to.be.empty;
+      expect(res.records).to.be.empty;
     });
   });
   describe('postTransfer function', () => {
@@ -98,8 +98,9 @@ describe('TransferService', async (): Promise<void> => {
       const resPost = await TransferService.postTransfer(req);
       expect(resPost).to.not.be.null;
 
-      const res: TransferResponse[] = await TransferService.getTransfers();
-      const lastEntry = res.reduce((prev, curr) => (prev.id < curr.id ? curr : prev));
+      const res: PaginatedTransferResponse = await TransferService.getTransfers();
+      const transfers = res.records;
+      const lastEntry = transfers.reduce((prev, curr) => (prev.id < curr.id ? curr : prev));
       expect(lastEntry.amount.amount).to.equal(req.amount.amount);
       expect(lastEntry.amount.currency).to.equal(req.amount.currency);
       expect(lastEntry.amount.precision).to.equal(req.amount.precision);
