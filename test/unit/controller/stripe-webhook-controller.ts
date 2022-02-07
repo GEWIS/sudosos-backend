@@ -141,7 +141,7 @@ describe('StripeWebhookController', async (): Promise<void> => {
       expect(res.status).to.equal(400);
     });
     it('should return 200 when sending correct request', async () => {
-      const handleWebhookEventStub = sinon.stub(StripeService, 'handleWebhookEvent').resolves();
+      const handleWebhookEventStub = sinon.stub(StripeService.prototype, 'handleWebhookEvent').resolves();
       stubs.push(handleWebhookEventStub);
 
       const res = await request(ctx.app)

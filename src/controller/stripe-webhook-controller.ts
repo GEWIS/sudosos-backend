@@ -71,7 +71,7 @@ export default class StripeWebhookController extends BaseController {
       return;
     }
 
-    StripeService.handleWebhookEvent(webhookEvent);
+    this.stripeService.handleWebhookEvent(webhookEvent);
 
     res.status(200).send();
   }

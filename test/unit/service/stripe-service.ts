@@ -190,7 +190,7 @@ describe('StripeService', async (): Promise<void> => {
         },
       } as Stripe.Event;
 
-      await expect(StripeService.handleWebhookEvent(event)).to.eventually.be.fulfilled;
+      await expect(ctx.stripeService.handleWebhookEvent(event)).to.eventually.be.fulfilled;
 
       const afterStripeDeposit = await StripeService.getStripeDeposit(id);
       expect(afterStripeDeposit.depositStatus.length)
@@ -228,7 +228,7 @@ describe('StripeService', async (): Promise<void> => {
         },
       } as Stripe.Event;
 
-      await expect(StripeService.handleWebhookEvent(event)).to.be.eventually.fulfilled;
+      await expect(ctx.stripeService.handleWebhookEvent(event)).to.be.eventually.fulfilled;
       const afterStripeDeposit = await StripeService.getStripeDeposit(id);
 
       expect(afterStripeDeposit.depositStatus.length)

@@ -17,7 +17,7 @@
  */
 import Stripe from 'stripe';
 import { Dinero } from 'dinero.js';
-import { getLogger } from 'log4js';
+import { getLogger, Logger } from 'log4js';
 import User from '../entity/user/user';
 import StripeDeposit from '../entity/deposit/stripe-deposit';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
@@ -30,10 +30,13 @@ export const STRIPE_API_VERSION = '2020-08-27';
 export default class StripeService {
   private stripe: Stripe;
 
+  private logger: Logger;
+
   constructor() {
     this.stripe = new Stripe(process.env.STRIPE_PRIVATE_KEY, {
       apiVersion: STRIPE_API_VERSION,
     });
+    this.logger = getLogger('StripeController');
   }
 
   public static async getStripeDeposit(id: number, relations: string[] = []) {
@@ -130,7 +133,7 @@ export default class StripeService {
    * Handle the event by making the appropriate database additions
    * @param event {Stripe.Event} Event received from Stripe webhook
    */
-  public static async handleWebhookEvent(event: Stripe.Event) {
+  public async handleWebhookEvent(event: Stripe.Event) {
     try {
       const paymentIntent = event.data.object as Stripe.PaymentIntent;
       const deposit = await StripeDeposit.findOne({
@@ -151,10 +154,10 @@ export default class StripeService {
           await StripeService.createNewDepositStatus(deposit.id, StripeDepositState.FAILED);
           break;
         default:
-          getLogger('StripeController').warn('Tried to process event', event.type, 'but processing method is not defined');
+          this.logger.warn('Tried to process event', event.type, 'but processing method is not defined');
       }
     } catch (error) {
-      getLogger('StripeController').error('Could not process Stripe webhook event with ID', event.id, error);
+      this.logger.error('Could not process Stripe webhook event with ID', event.id, error);
     }
   }
 }
