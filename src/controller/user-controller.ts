@@ -32,6 +32,8 @@ import TransactionService, {
 } from '../service/transaction-service';
 import ContainerService from '../service/container-service';
 import { PaginatedUserResponse } from './response/user-response';
+import TransferService, { parseGetTransferFilters } from '../service/transfer-service';
+import { asNumber } from '../helpers/validators';
 
 export default class UserController extends BaseController {
   private logger: Logger = log4js.getLogger('UserController');
@@ -140,6 +142,14 @@ export default class UserController extends BaseController {
             req.token.roles, 'get', UserController.getRelation(req), 'Transaction', ['*'],
           ),
           handler: this.getUsersTransactions.bind(this),
+        },
+      },
+      '/:id/transfers': {
+        GET: {
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'get', UserController.getRelation(req), 'Transfer', ['*'],
+          ),
+          handler: this.getUsersTransfers.bind(this),
         },
       },
     };
@@ -663,6 +673,66 @@ export default class UserController extends BaseController {
       res.status(200).json(transactions);
     } catch (error) {
       this.logger.error('Could not return all transactions:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Get an user's transfers
+   * @route GET /users/{id}/transfers
+   * @group users - Operations of user controller
+   * @param {integer} id.path.required - The id of the user that should be involved
+   * in all returned transfers
+   * @param {integer} take.query - How many transfers the endpoint should return
+   * @param {integer} skip.query - How many transfers should be skipped (for pagination)
+   * @param {integer} fromId.query - From-user for selected transfers
+   * @param {integer} toId.query - To-user for selected transfers
+   * @param {integer} id.query - ID of selected transfers
+   * @security JWT
+   * @returns {PaginatedTransferResponse.model} 200 - List of transfers.
+   */
+  public async getUsersTransfers(req: RequestWithToken, res: Response): Promise<void> {
+    const { id } = req.params;
+    const involvedId = parseInt(id, 10);
+    this.logger.trace("Get user's transfers", id, 'by user', req.token.user);
+
+    // Parse the filters given in the query parameters. If there are any issues,
+    // the parse method will throw an exception. We will then return a 400 error.
+    let filters;
+    try {
+      filters = parseGetTransferFilters(req);
+    } catch (e) {
+      res.status(400).json(e.message);
+      return;
+    }
+
+    let take;
+    let skip;
+    try {
+      const pagination = parseRequestPagination(req);
+      take = pagination.take;
+      skip = pagination.skip;
+    } catch (e) {
+      res.status(400).send(e.message);
+      return;
+    }
+
+    // handle request
+    try {
+      // Get the user object if it exists
+      const user = await User.findOne(id, { where: { deleted: false } });
+      // If it does not exist, return a 404 error
+      if (user === undefined) {
+        res.status(404).json('Unknown user ID.');
+        return;
+      }
+
+      const transfers = (await TransferService.getTransfers(
+        { ...filters, involvedId }, { take, skip },
+      ));
+      res.json(transfers);
+    } catch (error) {
+      this.logger.error('Could not return user transfers', error);
       res.status(500).json('Internal server error.');
     }
   }

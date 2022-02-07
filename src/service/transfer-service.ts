@@ -26,12 +26,27 @@ import User from '../entity/user/user';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import InvalidTransferError from '../entity/errors/invalid-transfer-error';
 import { PaginationParameters } from '../helpers/pagination';
+import { RequestWithToken } from '../middleware/token-middleware';
+import { asNumber } from '../helpers/validators';
 
 export interface TransferFilterParameters {
   id?: number;
   createdById?: number,
   fromId?: number,
   toId?: number
+  // createdBy or from or to
+  involvedId?: number
+}
+
+export function parseGetTransferFilters(req: RequestWithToken): TransferFilterParameters {
+  const filters: TransferFilterParameters = {
+    id: asNumber(req.query.id),
+    createdById: asNumber(req.query.id),
+    fromId: asNumber(req.query.id),
+    toId: asNumber(req.query.id),
+    involvedId: asNumber(req.query.id),
+  };
+  return filters;
 }
 
 export default class TransferService {
@@ -68,14 +83,29 @@ export default class TransferService {
 
     const filterMapping: FilterMapping = {
       id: 'id',
-      createdById: 'createdById',
       fromId: 'fromId',
       toId: 'toId',
       type: 'type',
     };
 
+    const whereClause = QueryFilter.createFilterWhereClause(filterMapping, filters);
+    let whereOptions: any = [];
+
+    // Apparently this is how you make a and-or clause in typeorm without a query builder.
+    if (filters.involvedId) {
+      whereOptions = [{
+        fromId: filters.involvedId,
+        ...whereClause,
+      }, {
+        toId: filters.involvedId,
+        ...whereClause,
+      }];
+    } else {
+      whereOptions = whereClause;
+    }
+
     const options: FindManyOptions = {
-      where: QueryFilter.createFilterWhereClause(filterMapping, filters),
+      where: whereOptions,
       relations: ['from', 'to'],
       take,
       skip,
