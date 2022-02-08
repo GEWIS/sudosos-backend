@@ -82,8 +82,8 @@ export default class TransferController extends BaseController {
    * @route GET /transfers
    * @group transfers - Operations of transfer controller
    * @security JWT
-   * @param {integer} take.query - How many points of sale the endpoint should return
-   * @param {integer} skip.query - How many points of sale should be skipped (for pagination)
+   * @param {integer} take.query - How many transfers the endpoint should return
+   * @param {integer} skip.query - How many transfers should be skipped (for pagination)
    * @returns {Array<TransferResponse>} 200 - All existing transfers
    * @returns {string} 500 - Internal server error
    */
