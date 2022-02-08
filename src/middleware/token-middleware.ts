@@ -16,9 +16,10 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { v4 as uuid4 } from 'uuid';
-import { RequestHandler, Request, Response } from 'express';
+import { RequestHandler, Response } from 'express';
 import TokenHandler from '../authentication/token-handler';
 import JsonWebToken from '../authentication/json-web-token';
+import { RequestWithRawBody } from '../helpers/raw-body';
 
 /**
  * The configuration options for the token middleware.
@@ -40,7 +41,7 @@ export interface MiddlewareOptions {
  * Extend the Express request interface with a token property, which will be filled by this
  * middleware.
  */
-export interface RequestWithToken extends Request {
+export interface RequestWithToken extends RequestWithRawBody {
   /**
    * The parsed JWT in the request header.
    */

@@ -48,6 +48,8 @@ import Balance from '../entity/transactions/balance';
 import BaseFile from '../entity/file/base-file';
 import ProductImage from '../entity/file/product-image';
 import BannerImage from '../entity/file/banner-image';
+import StripeDeposit from '../entity/deposit/stripe-deposit';
+import StripeDepositStatus from '../entity/deposit/stripe-deposit-status';
 
 export default class Database {
   public static async initialize(): Promise<Connection> {
@@ -65,6 +67,8 @@ export default class Database {
         PointOfSaleRevision,
         UpdatedPointOfSale,
         Transfer,
+        StripeDeposit,
+        StripeDepositStatus,
         Transaction,
         SubTransaction,
         SubTransactionRow,

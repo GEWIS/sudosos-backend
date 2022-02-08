@@ -15,15 +15,46 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+import { ContainerParams } from './container-request';
+import Duration from './duration';
+import Named from './named';
 
-import UpdatePointOfSaleRequest from './update-point-of-sale-request';
+export interface BasePointOfSaleParams extends Duration, Named {
+  containers?: (number | ContainerParams)[],
+  useAuthentication?: boolean,
+}
+
+export interface CreatePointOfSaleParams extends BasePointOfSaleParams{
+  ownerId: number,
+}
+
+export interface UpdatePointOfSaleParams extends CreatePointOfSaleParams {
+  id: number
+}
 
 /**
- * @typedef PointOfSaleRequest
- * @property {integer} ownerId - The owner of the POS.
- * @property {UpdatePointOfSaleRequest.model} update.required - The initial update of the POS.
+ * @typedef CreatePointOfSaleRequest
+ * @property {string} name.required - Name of the POS
+ * @property {string} startDate.required - Date from which the POS is active
+ * @property {string} endDate - Date from which the POS is no longer active
+ * @property {Array.<number | ContainerParams>} containers -
+ * IDs or Requests of the containers to add to the POS
+ * @property {boolean} useAuthentication - Whether the POS requires authentication or not.
+ * @property {integer} ownerId - ID of the user who will own the POS, if undefined it will
+ *    default to the token ID.
  */
-export default interface PointOfSaleRequest {
+export interface CreatePointOfSaleRequest extends BasePointOfSaleParams{
   ownerId?: number,
-  update: UpdatePointOfSaleRequest,
 }
+
+/**
+ * @typedef UpdatePointOfSaleRequest
+ * @property {string} name.required - Name of the POS
+ * @property {string} startDate.required - Date from which the POS is active
+ * @property {string} endDate - Date from which the POS is no longer active
+ * @property {Array.<number | ContainerParams>} containers -
+ * IDs or Requests of the containers to add to the POS
+ * @property {boolean} useAuthentication - Whether the POS requires authentication or not.
+ * @property {integer} id.required - ID of the POS to update.
+ */
+export type UpdatePointOfSaleRequest = BasePointOfSaleParams;

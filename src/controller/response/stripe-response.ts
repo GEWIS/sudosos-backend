@@ -15,24 +15,15 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { DineroObject } from 'dinero.js';
-import User from '../../entity/user/user';
-import ProductCategory from '../../entity/product/product-category';
+
+import BaseResponse from './base-response';
 
 /**
- * @typedef UpdateProductRequest
- * @property {number} id.required
- * @property {string} name.required
- * @property {Dinero.model} price.required
- * @property {User.model} owner.required
- * @property {ProductCategory.model} category.required
- * @property {number} alcoholPercentage
+ * @typedef {BaseResponse} StripePaymentIntentResponse
+ * @property {string} stripeId.required - ID of the intent in Stripe.
+ * @property {string} clientSecret.required - The client secret of the created Payment Intent.
  */
-export default interface UpdateProductRequest {
-  id: number,
-  name: string,
-  price: DineroObject,
-  owner: User,
-  category: ProductCategory,
-  alcoholPercentage?: number,
+export interface StripePaymentIntentResponse extends BaseResponse {
+  stripeId: string;
+  clientSecret: string;
 }

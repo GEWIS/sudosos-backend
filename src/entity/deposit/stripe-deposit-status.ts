@@ -15,19 +15,25 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+import {
+  Column, Entity, ManyToOne,
+} from 'typeorm';
+// eslint-disable-next-line import/no-cycle
+import StripeDeposit from './stripe-deposit';
+import BaseEntity from '../base-entity';
 
-/**
- * @typedef UpdatePointOfSaleRequest
- * @property {string} name.required - Name of the POS
- * @property {string} startDate.required - Date from which the POS is active
- * @property {string} endDate - Date from which the POS is no longer active
- * @property {Array.<number>} containers - IDs of the containers to add to the POS
- * @property {boolean} useAuthentication - Whether the POS requires authentication or not.
- */
-export default interface UpdatePointOfSaleRequest {
-  name: string,
-  startDate: string,
-  endDate: string,
-  containers?: number[],
-  useAuthentication?: boolean,
+export enum StripeDepositState {
+  CREATED = 1,
+  PROCESSING = 2,
+  SUCCEEDED = 3,
+  FAILED = 4,
+}
+
+@Entity()
+export default class StripeDepositStatus extends BaseEntity {
+  @ManyToOne(() => StripeDeposit, (deposit) => deposit.depositStatus, { nullable: false })
+  public deposit: StripeDeposit;
+
+  @Column()
+  public state: StripeDepositState;
 }

@@ -108,20 +108,5 @@ describe('TransferService', async (): Promise<void> => {
       expect(lastEntry.from.id).to.equal(req.fromId);
       expect(lastEntry.to).to.be.undefined;
     });
-
-    it('should not be able to post an invalid transfer', async () => {
-      const req: TransferRequest = {
-        amount: {
-          amount: 10,
-          precision: dinero.defaultPrecision,
-          currency: dinero.defaultCurrency,
-        },
-        description: 'cool',
-        fromId: null, // Either from or to must be filled for request to be valid
-        toId: null,
-      };
-      const promise = TransferService.postTransfer(req);
-      await expect(promise).to.eventually.be.rejected;
-    });
   });
 });

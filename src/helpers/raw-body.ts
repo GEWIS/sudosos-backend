@@ -16,14 +16,24 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import { IncomingMessage, ServerResponse } from 'http';
+import { Request } from 'express';
+
 /**
- * Creates a new Untargeted Transfer Error can be thrown when creating a transfer.
- * @param message - The error message to use
- * @constructor InvalidTransferError
+ * Extend the Express Request object with a raw body attribute, which is used by Stripe
+ * to validate incoming events
  */
-export default class InvalidTransferError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'InvalidTransferError';
-  }
+export interface RequestWithRawBody extends Request {
+  rawBody: Buffer;
+}
+
+/**
+ * Put the raw, unparsed body also in the request object
+ * @param req
+ * @param res
+ * @param buf
+ */
+export function extractRawBody(req: IncomingMessage, res: ServerResponse, buf: Buffer) {
+  // @ts-ignore
+  req.rawBody = buf;
 }

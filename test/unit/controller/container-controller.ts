@@ -28,7 +28,6 @@ import TokenHandler from '../../../src/authentication/token-handler';
 import Swagger from '../../../src/start/swagger';
 import RoleManager from '../../../src/rbac/role-manager';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
-import ContainerRequest from '../../../src/controller/request/container-request';
 import ContainerController from '../../../src/controller/container-controller';
 import Container from '../../../src/entity/container/container';
 import {
@@ -40,6 +39,8 @@ import { ProductResponse } from '../../../src/controller/response/product-respon
 import UpdatedContainer from '../../../src/entity/container/updated-container';
 import UpdatedProduct from '../../../src/entity/product/updated-product';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
+import { CreateContainerRequest } from '../../../src/controller/request/container-request';
+import { ProductRequest } from '../../../src/controller/request/product-request';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -48,7 +49,7 @@ chai.use(deepEqualInAnyOrder);
  * @param source - The source from which the container was created.
  * @param response - The received container.
  */
-function containerEq(source: ContainerRequest, response: ContainerResponse) {
+function containerEq(source: CreateContainerRequest, response: ContainerResponse) {
   expect(source.name).to.equal(response.name);
   expect(source.public).to.equal(response.public);
 }
@@ -59,7 +60,8 @@ function asRequested(requested: Container, response: ContainerResponse) {
   expect(response.public).to.eq(requested.public);
 }
 
-function containerProductsEq(source: ContainerRequest, response: ContainerWithProductsResponse) {
+function containerProductsEq(source: CreateContainerRequest,
+  response: ContainerWithProductsResponse) {
   containerEq(source, response);
   expect(response.products.map((p) => p.id)).to.deep.equalInAnyOrder(source.products);
 }
@@ -74,8 +76,8 @@ describe('ContainerController', async (): Promise<void> => {
     localUser: User,
     adminToken: String,
     token: String,
-    validContainerReq: ContainerRequest,
-    invalidContainerReq: ContainerRequest,
+    validContainerReq: CreateContainerRequest,
+    invalidContainerReq: CreateContainerRequest,
   };
 
   // Initialize context
@@ -113,13 +115,13 @@ describe('ContainerController', async (): Promise<void> => {
     const adminToken = await tokenHandler.signToken({ user: adminUser, roles: ['Admin'] }, 'nonce admin');
     const token = await tokenHandler.signToken({ user: localUser, roles: ['User'] }, 'nonce');
 
-    const validContainerReq: ContainerRequest = {
+    const validContainerReq: CreateContainerRequest = {
       products: [7, 8],
       public: true,
       name: 'Valid container',
     };
 
-    const invalidContainerReq: ContainerRequest = {
+    const invalidContainerReq: CreateContainerRequest = {
       ...validContainerReq,
       name: '',
       products: [-1],
@@ -314,8 +316,47 @@ describe('ContainerController', async (): Promise<void> => {
       expect(res.status).to.equal(200);
     });
   });
+
+  function testValidationOnRoute(type: any, route: string) {
+    async function expectError(req: CreateContainerRequest, error: string) {
+      // @ts-ignore
+      const res = await ((request(ctx.app)[type])(route)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(req));
+      expect(res.status).to.eq(400);
+      expect(res.body).to.eq(error);
+    }
+
+    describe('validate products function', () => {
+      it('should verify product IDs', async () => {
+        const req: CreateContainerRequest = {
+          ...ctx.validContainerReq,
+          products: [-1, 5, 10, 1000],
+        };
+        await expectError(req, 'Not all product IDs are valid.');
+      });
+      it('should verify product requests', async () => {
+        const req: CreateContainerRequest = {
+          ...ctx.validContainerReq,
+          products: [
+            {
+              ownerId: 1, price: { amount: -100, currency: 'EUR', precision: 2 }, category: 1, alcoholPercentage: 0.5,
+            } as ProductRequest,
+          ],
+        };
+        await expectError(req, 'Product validation failed: Price must be greater than zero');
+      });
+    });
+    it('should verify Name', async () => {
+      const req: CreateContainerRequest = { ...ctx.validContainerReq, name: '' };
+      await expectError(req, 'Name must be a non-zero length string.');
+    });
+  }
   describe('POST /containers', () => {
-    it('should store the given container in the database and return an HTTP 200 and the created container if admin', async () => {
+    describe('verifyContainerRequest Specification', async () => {
+      await testValidationOnRoute('post', '/containers');
+    });
+    it('should store the give)n container in the database and return an HTTP 200 and the created container if admin', async () => {
       const containerCount = await Container.count();
       const res = await request(ctx.app)
         .post('/containers')
@@ -338,7 +379,7 @@ describe('ContainerController', async (): Promise<void> => {
         .send(ctx.invalidContainerReq);
 
       expect(await Container.count()).to.equal(containerCounter);
-      expect(res.body).to.equal('Invalid container.');
+      expect(res.body).to.equal('Name must be a non-zero length string.');
 
       expect(res.status).to.equal(400);
     });
@@ -357,7 +398,7 @@ describe('ContainerController', async (): Promise<void> => {
   });
   describe('POST /containers/:id/approve', () => {
     it('should approve the container update if it exists and admin', async () => {
-      const containerApprovedProducts: ContainerRequest = {
+      const containerApprovedProducts: CreateContainerRequest = {
         products: [1],
         public: true,
         name: 'Valid container',
@@ -387,12 +428,12 @@ describe('ContainerController', async (): Promise<void> => {
       expect(latest.body).to.deep.equal(res.body);
       expect(res.status).to.equal(200);
     });
-    it('should return an HTTP 400 if the container has unapproved products', async () => {
+    it('should return an HTTP 200 if the container has unapproved products', async () => {
       // precondition
       const productId = 4;
       expect(await UpdatedProduct.findOne(productId)).to.exist;
 
-      const container: ContainerRequest = {
+      const container: CreateContainerRequest = {
         name: 'Container with unapproved products.',
         products: [productId],
         public: true,
@@ -407,8 +448,7 @@ describe('ContainerController', async (): Promise<void> => {
         .post(`/containers/${newContainer.id}/approve`)
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
-      expect(res.status).to.equal(400);
-      expect(res.body).to.equal('Container update has unapproved product(s).');
+      expect(res.status).to.equal(200);
     });
     it('should return an HTTP 404 and an empty response if the product has no pending update', async () => {
       const id = 3;
@@ -438,6 +478,9 @@ describe('ContainerController', async (): Promise<void> => {
     });
   });
   describe('PATCH /containers/:id', () => {
+    describe('verifyContainerRequest Specification', async () => {
+      await testValidationOnRoute('patch', '/containers/1');
+    });
     it('should return an HTTP 200 and the container update if admin', async () => {
       const res = await request(ctx.app)
         .patch('/containers/1')
@@ -454,7 +497,7 @@ describe('ContainerController', async (): Promise<void> => {
     it('should return an HTTP 200 and override a previous update if admin', async () => {
       const id = 1;
 
-      const newUpdate: ContainerRequest = {
+      const newUpdate: CreateContainerRequest = {
         public: true,
         name: 'Valid Container Update',
         products: [3, 4],
@@ -481,7 +524,6 @@ describe('ContainerController', async (): Promise<void> => {
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(ctx.invalidContainerReq);
 
-      expect(res.body).to.equal('Invalid container.');
       expect(res.status).to.equal(400);
     });
     it('should return an HTTP 404 if the container with the given id does not exist', async () => {
