@@ -15,24 +15,10 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { DineroObject } from 'dinero.js';
-import User from '../../entity/user/user';
-import ProductCategory from '../../entity/product/product-category';
 
 /**
- * @typedef UpdateProductRequest
- * @property {number} id.required
- * @property {string} name.required
- * @property {Dinero.model} price.required
- * @property {User.model} owner.required
- * @property {ProductCategory.model} category.required
- * @property {number} alcoholPercentage
+ * For all requests that contain an object with a name.
  */
-export default interface UpdateProductRequest {
-  id: number,
-  name: string,
-  price: DineroObject,
-  owner: User,
-  category: ProductCategory,
-  alcoholPercentage?: number,
+export default interface Named {
+  name: string
 }

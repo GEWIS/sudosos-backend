@@ -21,7 +21,7 @@
  * @property {string} name - Name/label of the banner
  * @property {number} duration - How long the banner should be shown (in seconds)
  * @property {boolean} active - Whether the banner is active. Overrides start and end date
- * @property {string} startDate - The starting date from which the adverisement should be shown
+ * @property {string} startDate - The starting date from which the advertisement should be shown
  * @property {string} endDate - The end date from which the banner should no longer be shown
  */
 export default interface BannerRequest {

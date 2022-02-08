@@ -15,19 +15,25 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+import {
+  Specification, toFail, toPass, ValidationError,
+} from '../../../helpers/specification-validation';
+import Named from '../named';
 
 /**
- * @typedef UpdatePointOfSaleRequest
- * @property {string} name.required - Name of the POS
- * @property {string} startDate.required - Date from which the POS is active
- * @property {string} endDate - Date from which the POS is no longer active
- * @property {Array.<number>} containers - IDs of the containers to add to the POS
- * @property {boolean} useAuthentication - Whether the POS requires authentication or not.
+ * Checks if the name attribute is not an empty string.
  */
-export default interface UpdatePointOfSaleRequest {
-  name: string,
-  startDate: string,
-  endDate: string,
-  containers?: number[],
-  useAuthentication?: boolean,
+const validName = (p: Named) => {
+  if (p.name === '') {
+    return toFail(new ValidationError('Name must be a non-zero length string.'));
+  }
+  return toPass(p);
+};
+
+function namedSpec<T extends Named>(): Specification<T, ValidationError> {
+  return [
+    validName,
+  ] as Specification<T, ValidationError>;
 }
+
+export default namedSpec;
