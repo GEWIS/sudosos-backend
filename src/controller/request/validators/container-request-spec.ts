@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { getIdsAndRequests } from '../../../helpers/helper';
+import { getIdsAndRequests } from '../../../helpers/array-splitter';
 import Product from '../../../entity/product/product';
 import {
   Either,

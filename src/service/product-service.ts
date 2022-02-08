@@ -406,7 +406,6 @@ export default class ProductService {
 
   /**
    * Creates a product update.
-   * @param productId - The ID of the product to update.
    * @param update - The product variables.
    */
   public static async updateProduct(update: UpdateProductParams)
@@ -440,7 +439,6 @@ export default class ProductService {
    * but it does have an updated product.
    * To confirm the product the updated product has to be confirmed and a revision will be created.
    *
-   * @param owner - The user that created the product.
    * @param product - The product to be created.
    */
   public static async createProduct(product: CreateProductParams)

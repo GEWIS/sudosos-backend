@@ -34,7 +34,7 @@ import ContainerRevision from '../entity/container/container-revision';
 import ContainerService, { ContainerParameters } from './container-service';
 import { ContainerWithProductsResponse } from '../controller/response/container-response';
 import { PaginationParameters } from '../helpers/pagination';
-import { getIdsAndRequests } from '../helpers/helper';
+import { getIdsAndRequests } from '../helpers/array-splitter';
 import { CreatePointOfSaleParams, UpdatePointOfSaleParams } from '../controller/request/point-of-sale-request';
 import {
   ContainerParams,

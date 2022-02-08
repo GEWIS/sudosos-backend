@@ -32,7 +32,7 @@ import Product from '../entity/product/product';
 import UpdatedProduct from '../entity/product/updated-product';
 import ProductRevision from '../entity/product/product-revision';
 import { PaginationParameters } from '../helpers/pagination';
-import { getIdsAndRequests } from '../helpers/helper';
+import { getIdsAndRequests } from '../helpers/array-splitter';
 import { CreateContainerParams, UpdateContainerParams } from '../controller/request/container-request';
 import { ProductRequest, UpdateProductParams } from '../controller/request/product-request';
 
@@ -250,8 +250,7 @@ export default class ContainerService {
    * The newly created container resides in the Container table and has no
    * current revision. To confirm the revision the update has to be accepted.
    *
-   * @param ownerId - The id of the user that created the container.
-   * @param container - The container to be created.
+   * @param container - The params that describe the container to be created.
    */
   public static async createContainer(container: CreateContainerParams)
     : Promise<ContainerWithProductsResponse> {
@@ -327,8 +326,7 @@ export default class ContainerService {
 
   /**
    * Creates a container update.
-   * @param containerId - The ID of the product to update
-   * @param update - The container variables to update.
+   * @param update - The container update request to progress
    */
   public static async updateContainer(update: UpdateContainerParams)
     : Promise<ContainerWithProductsResponse> {

@@ -21,7 +21,7 @@ import {
   toPass, validateSpecification,
   ValidationError,
 } from '../../../helpers/specification-validation';
-import { getIdsAndRequests } from '../../../helpers/helper'; import Container from '../../../entity/container/container';
+import { getIdsAndRequests } from '../../../helpers/array-splitter'; import Container from '../../../entity/container/container';
 import User from '../../../entity/user/user';
 import { BasePointOfSaleParams, CreatePointOfSaleParams, UpdatePointOfSaleParams } from '../point-of-sale-request';
 import durationSpec from './duration-spec';

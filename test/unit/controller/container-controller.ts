@@ -481,7 +481,6 @@ describe('ContainerController', async (): Promise<void> => {
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(ctx.invalidContainerReq);
 
-      // expect(res.body).to.equal('Invalid container.');
       expect(res.status).to.equal(400);
     });
     it('should return an HTTP 404 if the container with the given id does not exist', async () => {
