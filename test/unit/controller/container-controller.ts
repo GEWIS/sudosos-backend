@@ -40,6 +40,8 @@ import UpdatedContainer from '../../../src/entity/container/updated-container';
 import UpdatedProduct from '../../../src/entity/product/updated-product';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import { CreateContainerRequest } from '../../../src/controller/request/container-request';
+import { CreatePointOfSaleRequest } from '../../../src/controller/request/point-of-sale-request';
+import { ProductRequest } from '../../../src/controller/request/product-request';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -315,8 +317,47 @@ describe('ContainerController', async (): Promise<void> => {
       expect(res.status).to.equal(200);
     });
   });
+
+  function testValidationOnRoute(type: any, route: string) {
+    async function expectError(req: CreateContainerRequest, error: string) {
+      // @ts-ignore
+      const res = await ((request(ctx.app)[type])(route)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(req));
+      expect(res.status).to.eq(400);
+      expect(res.body).to.eq(error);
+    }
+
+    describe('validate products function', () => {
+      it('should verify product IDs', async () => {
+        const req: CreateContainerRequest = {
+          ...ctx.validContainerReq,
+          products: [-1, 5, 10, 1000],
+        };
+        await expectError(req, 'Not all product IDs are valid.');
+      });
+      it('should verify product requests', async () => {
+        const req: CreateContainerRequest = {
+          ...ctx.validContainerReq,
+          products: [
+            {
+              ownerId: 1, price: { amount: -100, currency: 'EUR', precision: 2 }, category: 1, alcoholPercentage: 0.5,
+            } as ProductRequest,
+          ],
+        };
+        await expectError(req, 'Product validation failed: Price must be greater than zero');
+      });
+    });
+    it('should verify Name', async () => {
+      const req: CreateContainerRequest = { ...ctx.validContainerReq, name: '' };
+      await expectError(req, 'Name must be a non-zero length string.');
+    });
+  }
   describe('POST /containers', () => {
-    it('should store the given container in the database and return an HTTP 200 and the created container if admin', async () => {
+    describe('verifyContainerRequest Specification', async () => {
+      await testValidationOnRoute('post', '/containers');
+    });
+    it('should store the give)n container in the database and return an HTTP 200 and the created container if admin', async () => {
       const containerCount = await Container.count();
       const res = await request(ctx.app)
         .post('/containers')
@@ -438,6 +479,9 @@ describe('ContainerController', async (): Promise<void> => {
     });
   });
   describe('PATCH /containers/:id', () => {
+    describe('verifyContainerRequest Specification', async () => {
+      await testValidationOnRoute('patch', '/containers/1');
+    });
     it('should return an HTTP 200 and the container update if admin', async () => {
       const res = await request(ctx.app)
         .patch('/containers/1')

@@ -461,7 +461,7 @@ describe('PointOfSaleController', async () => {
   }
   describe('POST /pointsofsale', () => {
     describe('verifyPointOfSaleRequest Specification', async (): Promise<void> => {
-      testValidationOnRoute('post', '/pointsofsale');
+      await testValidationOnRoute('post', '/pointsofsale');
     });
     it('should store the given POS and return an HTTP 200 if admin', async () => {
       const count = await PointOfSale.count();
