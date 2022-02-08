@@ -34,8 +34,6 @@ export interface TransferFilterParameters {
   createdById?: number,
   fromId?: number,
   toId?: number
-  // createdBy or from or to
-  involvedId?: number
 }
 
 export function parseGetTransferFilters(req: RequestWithToken): TransferFilterParameters {
@@ -44,7 +42,6 @@ export function parseGetTransferFilters(req: RequestWithToken): TransferFilterPa
     createdById: asNumber(req.query.id),
     fromId: asNumber(req.query.id),
     toId: asNumber(req.query.id),
-    involvedId: asNumber(req.query.id),
   };
   return filters;
 }
@@ -77,7 +74,7 @@ export default class TransferService {
    * @param pagination
    */
   public static async getTransfers(filters: TransferFilterParameters = {},
-    pagination: PaginationParameters = {})
+    pagination: PaginationParameters = {}, user?: User)
     : Promise<PaginatedTransferResponse> {
     const { take, skip } = pagination;
 
@@ -92,12 +89,12 @@ export default class TransferService {
     let whereOptions: any = [];
 
     // Apparently this is how you make a and-or clause in typeorm without a query builder.
-    if (filters.involvedId) {
+    if (user) {
       whereOptions = [{
-        fromId: filters.involvedId,
+        fromId: user.id,
         ...whereClause,
       }, {
-        toId: filters.involvedId,
+        toId: user.id,
         ...whereClause,
       }];
     } else {

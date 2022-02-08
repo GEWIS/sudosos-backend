@@ -692,7 +692,6 @@ export default class UserController extends BaseController {
    */
   public async getUsersTransfers(req: RequestWithToken, res: Response): Promise<void> {
     const { id } = req.params;
-    const involvedId = parseInt(id, 10);
     this.logger.trace("Get user's transfers", id, 'by user', req.token.user);
 
     // Parse the filters given in the query parameters. If there are any issues,
@@ -727,7 +726,7 @@ export default class UserController extends BaseController {
       }
 
       const transfers = (await TransferService.getTransfers(
-        { ...filters, involvedId }, { take, skip },
+        { ...filters }, { take, skip }, user,
       ));
       res.json(transfers);
     } catch (error) {
