@@ -15,15 +15,25 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+import {
+  Column, Entity, ManyToOne,
+} from 'typeorm';
+// eslint-disable-next-line import/no-cycle
+import StripeDeposit from './stripe-deposit';
+import BaseEntity from '../base-entity';
 
-/**
- * Creates a new Untargeted Transfer Error can be thrown when creating a transfer.
- * @param message - The error message to use
- * @constructor InvalidTransferError
- */
-export default class InvalidTransferError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'InvalidTransferError';
-  }
+export enum StripeDepositState {
+  CREATED = 1,
+  PROCESSING = 2,
+  SUCCEEDED = 3,
+  FAILED = 4,
+}
+
+@Entity()
+export default class StripeDepositStatus extends BaseEntity {
+  @ManyToOne(() => StripeDeposit, (deposit) => deposit.depositStatus, { nullable: false })
+  public deposit: StripeDeposit;
+
+  @Column()
+  public state: StripeDepositState;
 }

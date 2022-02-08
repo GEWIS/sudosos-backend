@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import dinero from 'dinero.js';
+import dinero, { Dinero } from 'dinero.js';
 import { FindManyOptions } from 'typeorm';
 import Transfer from '../entity/transactions/transfer';
 import { TransferResponse } from '../controller/response/transfer-response';
@@ -24,7 +24,6 @@ import TransferRequest from '../controller/request/transfer-request';
 import { parseUserToBaseResponse } from '../helpers/entity-to-response';
 import User from '../entity/user/user';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
-import InvalidTransferError from '../entity/errors/invalid-transfer-error';
 
 export interface TransferFilterParameters {
   id?: number;
@@ -46,13 +45,16 @@ export default class TransferService {
     };
   }
 
-  private static async asTransfer(request: TransferRequest) : Promise<Transfer> {
-    return Object.assign(new Transfer(), {
+  public static async createTransfer(request: TransferRequest) : Promise<Transfer> {
+    const transfer = Object.assign(new Transfer(), {
       description: request.description,
       amount: dinero(request.amount as Dinero.Options),
       from: request.fromId ? await User.findOne(request.fromId) : undefined,
       to: request.toId ? await User.findOne(request.toId) : undefined,
     });
+
+    await transfer.save();
+    return transfer;
   }
 
   public static async getTransfers(params: TransferFilterParameters = {})
@@ -73,12 +75,8 @@ export default class TransferService {
   }
 
   public static async postTransfer(request: TransferRequest) : Promise<TransferResponse> {
-    const transfer = await this.asTransfer(request);
-    if (await this.verifyTransferRequest(request)) {
-      await transfer.save();
-      return this.asTransferResponse(transfer);
-    }
-    throw new InvalidTransferError('Transfer does not comply with requirements');
+    const transfer = await this.createTransfer(request);
+    return this.asTransferResponse(transfer);
   }
 
   public static async verifyTransferRequest(request: TransferRequest) : Promise<boolean> {
