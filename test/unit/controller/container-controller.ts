@@ -40,7 +40,6 @@ import UpdatedContainer from '../../../src/entity/container/updated-container';
 import UpdatedProduct from '../../../src/entity/product/updated-product';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import { CreateContainerRequest } from '../../../src/controller/request/container-request';
-import { CreatePointOfSaleRequest } from '../../../src/controller/request/point-of-sale-request';
 import { ProductRequest } from '../../../src/controller/request/product-request';
 
 chai.use(deepEqualInAnyOrder);
