@@ -37,15 +37,15 @@ export default class PayoutRequestService {
     : SelectQueryBuilder<PayoutRequest> {
     const { fromDate, tillDate, ...p } = filters;
 
-    const builder = createQueryBuilder()
+    const builder = createQueryBuilder(PayoutRequest, 'payoutRequest')
+      .select('payoutRequest.*')
       .addSelect((qb) => qb.subQuery()
         .select('status.state as status')
         .from(PayoutRequestStatus, 'status')
         .orderBy('status.createdAt', 'DESC')
         .where('status.payoutRequestId = payoutRequest.id')
         .limit(1))
-      .from(PayoutRequest, 'payoutRequest')
-      .leftJoinAndSelect('payoutRequest.requestBy', 'requestBy')
+      .leftJoinAndSelect('payoutRequest.requestedBy', 'requestedBy')
       .leftJoinAndSelect('payoutRequest.approvedBy', 'approvedBy')
       // .leftJoinAndSelect('payoutRequest.payoutRequestStatus', 'status')
       .distinct(true);
@@ -63,7 +63,7 @@ export default class PayoutRequestService {
   }
 
   public static async getPayoutRequests(
-    filters: PayoutRequestFilters, pagination: PaginationParameters,
+    filters: PayoutRequestFilters, pagination: PaginationParameters = {},
   ) {
     const { take, skip } = pagination;
 
@@ -76,9 +76,9 @@ export default class PayoutRequestService {
     const records = results[0].map((o) => {
       const dinero = dineroTransformer.from(o.amount);
       const v: BasePayoutRequestResponse = {
-        id: o.payoutRequest_id,
-        createdAt: new Date(o.payoutRequest_createdAt).toISOString(),
-        updatedAt: new Date(o.payoutRequest_updatedAt).toISOString(),
+        id: o.id,
+        createdAt: new Date(o.createdAt).toISOString(),
+        updatedAt: new Date(o.updatedAt).toISOString(),
         createdBy: o.createdBy_id ? {
           id: o.createdBy_id,
           createdAt: new Date(o.createdBy_createdAt).toISOString(),

@@ -45,7 +45,8 @@ export default class PayoutRequest extends BaseEntity {
   })
   public amount: Dinero;
 
-  @Column({ nullable: true })
+  @ManyToOne(() => User, { nullable: true })
+  @JoinColumn()
   public approvedBy?: User;
 
   @Column()

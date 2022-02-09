@@ -41,6 +41,8 @@ import { BANNER_IMAGE_LOCATION, PRODUCT_IMAGE_LOCATION } from '../src/files/stor
 import StripeDeposit from '../src/entity/deposit/stripe-deposit';
 import StripeDepositStatus, { StripeDepositState } from '../src/entity/deposit/stripe-deposit-status';
 import DineroTransformer from '../src/entity/transformer/dinero-transformer';
+import PayoutRequest from '../src/entity/transactions/payout-request';
+import PayoutRequestStatus, { PayoutRequestState } from '../src/entity/transactions/payout-request-status';
 
 /**
  * Defines user objects with the given parameters.
@@ -1175,6 +1177,49 @@ export async function seedStripeDeposits(users: User[]): Promise<StripeDeposit[]
   }
 
   return stripeDeposits;
+}
+
+export async function seedPayoutRequests(users: User[]): Promise<PayoutRequest[]> {
+  const payoutRequests: Promise<PayoutRequest>[] = [];
+
+  const admins = users.filter((u) => u.type === UserType.LOCAL_ADMIN);
+  admins.push(undefined);
+
+  const totalNrOfStatuses = 3;
+  for (let i = 0; i < users.length * 2; i += 1) {
+    const requestedBy = users[Math.floor(i / totalNrOfStatuses)];
+    const newPayoutReq = Object.assign(new PayoutRequest(), {
+      requestedBy,
+      amount: DineroTransformer.Instance.from(3900),
+      bankAccountNumber: 'NL69GEWI0420042069',
+      bankAccountName: `${requestedBy.firstName} ${requestedBy.lastName}`,
+    });
+
+    const approved = Math.floor(((i % (totalNrOfStatuses * 2)) + 1) / totalNrOfStatuses) !== 1;
+    const states = [PayoutRequestState.CREATED, approved ? PayoutRequestState.APPROVED
+      : PayoutRequestState.DENIED].slice(0, i % totalNrOfStatuses);
+
+    const statusses: PayoutRequestStatus[] = [];
+    states.forEach((state) => {
+      statusses.push(Object.assign(new PayoutRequestStatus(), {
+        state,
+      }));
+      if (state === PayoutRequestState.APPROVED) {
+        newPayoutReq.approvedBy = admins[i % admins.length];
+      }
+    });
+
+    payoutRequests.push(newPayoutReq.save().then(async (payoutRequest) => {
+      await Promise.all(statusses.map((s) => {
+        // eslint-disable-next-line no-param-reassign
+        s.payoutRequest = payoutRequest;
+        return s.save();
+      }));
+      return payoutRequest;
+    }));
+  }
+
+  return Promise.all(payoutRequests);
 }
 
 export async function seedTransfers(users: User[]) : Promise<Transfer[]> {
