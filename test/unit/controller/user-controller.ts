@@ -40,6 +40,8 @@ import RoleManager from '../../../src/rbac/role-manager';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import { TransactionResponse } from '../../../src/controller/response/transaction-response';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
+import { TransferResponse } from '../../../src/controller/response/transfer-response';
+import Transfer from '../../../src/entity/transactions/transfer';
 
 describe('UserController', (): void => {
   let ctx: {
@@ -124,6 +126,9 @@ describe('UserController', (): void => {
         Transaction: {
           get: all,
         },
+        Transfer: {
+          get: all,
+        },
       },
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
     });
@@ -144,6 +149,9 @@ describe('UserController', (): void => {
           get: own,
         },
         Transaction: {
+          get: own,
+        },
+        Transfer: {
           get: own,
         },
       },
@@ -783,6 +791,29 @@ describe('UserController', (): void => {
         .get('/users/12345/transactions')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(404);
+    });
+  });
+  describe('GET /users/:id/transfers', () => {
+    it('should give correct transfers from/to/created by user', async () => {
+      const user = ctx.users[0];
+      const res = await request(ctx.app)
+        .get(`/users/${user.id}/transfers`)
+        .query({ take: 99999, skip: 0 })
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(200);
+
+      const tranfers = res.body.records as TransferResponse[];
+
+      const actualTransfers = await Transfer.createQueryBuilder('transfer')
+        .select('transfer.id as id')
+        .where('transfer.fromId = :userId  or transfer.toId = :userId', { userId: user.id })
+        .distinct(true)
+        .getRawMany();
+      expect(tranfers.length).to.equal(Math.min(23, actualTransfers.length));
+      tranfers.forEach((t) => {
+        const found = actualTransfers.find((at) => at.id === t.id);
+        expect(found).to.not.be.undefined;
+      });
     });
   });
   // TODO: Check validity of returned transactions
