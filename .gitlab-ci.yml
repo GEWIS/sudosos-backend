@@ -8,6 +8,23 @@ cache:
   paths:
   - node_modules/
 
+variables:
+  API_HOST: localhost:3000
+  API_BASEPATH: /v1
+  CURRENCY_CODE: EUR
+  CURRENCY_PRECISION: 2
+  GEWISWEB_JWT_SECRET: ChangeMe
+  JWT_KEY_PATH: config/jwt.key
+  HTTP_PORT: 3000
+  TYPEORM_CONNECTION: sqlite
+  TYPEORM_DATABASE: local.sqlite
+  TYPEORM_SYNCHRONIZE: 0
+  TYPEORM_LOGGING: 1
+  LOG_LEVEL: INFO
+  PAGINATION_DEFAULT: 20
+  PAGINATION_MAX: 500
+  FILE_STORAGE_METHOD: disk
+
 install_dependencies:
   stage: install
   script: npm install

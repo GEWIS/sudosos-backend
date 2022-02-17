@@ -15,15 +15,46 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+import { ProductRequest } from './product-request';
+import Named from './named';
 
-/**
- * @typedef ContainerRequest
- * @property {string} name - Name of the container
- * @property {Array.<integer>} products - IDs of the products to add to the container
- * @property {boolean} public - Whether the container is public or not
- */
-export default interface ContainerRequest {
-  name: string,
-  products?: number[],
+export interface BaseContainerParams extends Named {
+  products?: (number | ProductRequest)[],
   public: boolean,
 }
+
+export interface CreateContainerParams extends BaseContainerParams {
+  ownerId: number,
+}
+
+export interface UpdateContainerParams extends CreateContainerParams{
+  id: number
+}
+
+export type ContainerParams = UpdateContainerParams | CreateContainerParams;
+
+// These are definitions only used by the endpoints since we need the OwnerID
+// But dont want to include them in the type as required but still need
+// strict type checker later down the line.
+
+/**
+ * @typedef CreateContainerRequest
+ * @property {string} name.required - Name of the container
+ * @property {Array.<integer | ProductRequest>} products -
+ *    IDs or requests of the products to add to the container
+ * @property {boolean} public.required - Whether the container is public or not
+ * @property {integer} ownerId - Id of the user who will own the container, if undefined it will
+ *    default to the token ID.
+ */
+export interface CreateContainerRequest extends BaseContainerParams {
+  ownerId?: number,
+}
+
+/**
+ * @typedef UpdateContainerRequest
+ * @property {string} name.required - Name of the container
+ * @property {Array.<integer | ProductRequest>} products -
+ *    IDs or requests of the products to add to the container
+ * @property {boolean} public.required - Whether the container is public or not
+ */
+export type UpdateContainerRequest = BaseContainerParams;

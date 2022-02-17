@@ -19,6 +19,7 @@
 import BaseResponse from './base-response';
 import { DineroObjectResponse } from './dinero-response';
 import { BaseUserResponse } from './user-response';
+import { PaginationResult } from '../../helpers/pagination';
 
 /**
  * @typedef {BaseResponse} TransferResponse
@@ -33,4 +34,14 @@ export interface TransferResponse extends BaseResponse {
   description: string;
   from: BaseUserResponse;
   to: BaseUserResponse;
+}
+
+/**
+ * @typedef PaginatedTransferResponse
+ * @property {PaginationResult.model} _pagination - Pagination metadata
+ * @property {Array<TransferResponse>} records - Returned transfers
+ */
+export interface PaginatedTransferResponse {
+  _pagination: PaginationResult,
+  records: TransferResponse[],
 }

@@ -31,6 +31,7 @@ import TokenMiddleware from '../../../src/middleware/token-middleware';
 import RoleManager from '../../../src/rbac/role-manager';
 import Swagger from '../../../src/start/swagger';
 import { seedTransfers, seedUsers } from '../../seed';
+import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 
 describe('TransferController', async (): Promise<void> => {
   let connection: Connection;
@@ -150,6 +151,25 @@ describe('TransferController', async (): Promise<void> => {
   });
 
   describe('GET /transfers', () => {
+    it('should adhere to pagination', async () => {
+      const take = 5;
+      const skip = 3;
+      const res = await request(app)
+        .get('/transfers')
+        .query({ take, skip })
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      // number of banners returned is number of banners in database
+      const transfers = res.body.records as TransferResponse[];
+      // eslint-disable-next-line no-underscore-dangle
+      const pagination = res.body._pagination as PaginationResult;
+
+      const TransferCount = await Transfer.count();
+      expect(pagination.take).to.equal(take);
+      expect(pagination.skip).to.equal(skip);
+      expect(pagination.count).to.equal(TransferCount);
+      expect(transfers.length).to.be.at.most(take);
+    });
     it('should return an HTTP 200 and all existing transfers in the database if admin', async () => {
       const res = await request(app)
         .get('/transfers/')
@@ -158,7 +178,8 @@ describe('TransferController', async (): Promise<void> => {
       expect(res.status).to.equal(200);
 
       const TransferCount = await Transfer.count();
-      expect((res.body as TransferResponse[]).length).to.equal(TransferCount);
+      expect((res.body.records as TransferResponse[]).length)
+        .to.equal(Math.min(TransferCount, defaultPagination()));
     });
     it('should return an HTTP 403 if not admin', async () => {
       const res = await request(app)

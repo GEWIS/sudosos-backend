@@ -16,16 +16,42 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/**
- * @typedef ProductRequest
- * @property {string} name - Name of the product
- * @property {number} price - Price of the product
- * @property {number} category - Category of the product
- * @property {number} alcoholPercentage - Alcohol percentage of the product in 2 decimals
- */
-export default interface ProductRequest {
-  name: string;
-  price: number;
+import { DineroObjectRequest } from './dinero-request';
+import Named from './named';
+
+export interface BaseProductParams extends Named {
+  price: DineroObjectRequest;
   category: number;
   alcoholPercentage: number;
 }
+
+export default interface CreateProductParams extends BaseProductParams{
+  ownerId: number;
+}
+
+export interface UpdateProductParams extends CreateProductParams {
+  id: number;
+}
+
+export type ProductRequest = UpdateProductParams | CreateProductParams;
+
+/**
+ * @typedef CreateProductRequest
+ * @property {number} ownerId - ID of the owner
+ * @property {string} name.required - Name of the product
+ * @property {DineroObjectRequest.model} price.required - Price of the product
+ * @property {number} category.required  - Category of the product
+ * @property {number} alcoholPercentage.required  - Alcohol percentage of the product in 2 decimals
+ */
+export interface CreateProductRequest extends BaseProductParams{
+  ownerId?: number,
+}
+
+/**
+ * @typedef UpdateProductRequest
+ * @property {string} name.required - Name of the product
+ * @property {DineroObjectRequest.model} price.required - Price of the product
+ * @property {number} category.required  - Category of the product
+ * @property {number} alcoholPercentage.required  - Alcohol percentage of the product in 2 decimals
+ */
+export type UpdateProductRequest = BaseProductParams;

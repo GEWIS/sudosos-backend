@@ -16,21 +16,33 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import dinero from 'dinero.js';
+import dinero, { Dinero } from 'dinero.js';
 import { FindManyOptions } from 'typeorm';
 import Transfer from '../entity/transactions/transfer';
-import { TransferResponse } from '../controller/response/transfer-response';
+import { PaginatedTransferResponse, TransferResponse } from '../controller/response/transfer-response';
 import TransferRequest from '../controller/request/transfer-request';
 import { parseUserToBaseResponse } from '../helpers/entity-to-response';
 import User from '../entity/user/user';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
-import InvalidTransferError from '../entity/errors/invalid-transfer-error';
+import { PaginationParameters } from '../helpers/pagination';
+import { RequestWithToken } from '../middleware/token-middleware';
+import { asNumber } from '../helpers/validators';
 
 export interface TransferFilterParameters {
   id?: number;
   createdById?: number,
   fromId?: number,
   toId?: number
+}
+
+export function parseGetTransferFilters(req: RequestWithToken): TransferFilterParameters {
+  const filters: TransferFilterParameters = {
+    id: asNumber(req.query.id),
+    createdById: asNumber(req.query.id),
+    fromId: asNumber(req.query.id),
+    toId: asNumber(req.query.id),
+  };
+  return filters;
 }
 
 export default class TransferService {
@@ -46,39 +58,75 @@ export default class TransferService {
     };
   }
 
-  private static async asTransfer(request: TransferRequest) : Promise<Transfer> {
-    return Object.assign(new Transfer(), {
+  public static async createTransfer(request: TransferRequest) : Promise<Transfer> {
+    const transfer = Object.assign(new Transfer(), {
       description: request.description,
       amount: dinero(request.amount as Dinero.Options),
       from: request.fromId ? await User.findOne(request.fromId) : undefined,
       to: request.toId ? await User.findOne(request.toId) : undefined,
     });
+
+    await transfer.save();
+    return transfer;
   }
 
-  public static async getTransfers(params: TransferFilterParameters = {})
-    : Promise<TransferResponse[]> {
+  /**
+   * Query to return transfers from the database
+   * @param filters - Parameters to query the transfers with
+   * @param pagination
+   */
+  public static async getTransfers(filters: TransferFilterParameters = {},
+    pagination: PaginationParameters = {}, user?: User)
+    : Promise<PaginatedTransferResponse> {
+    const { take, skip } = pagination;
+
     const filterMapping: FilterMapping = {
       id: 'id',
-      createdById: 'createdById',
       fromId: 'fromId',
       toId: 'toId',
       type: 'type',
     };
+
+    const whereClause = QueryFilter.createFilterWhereClause(filterMapping, filters);
+    let whereOptions: any = [];
+
+    // Apparently this is how you make a and-or clause in typeorm without a query builder.
+    if (user) {
+      whereOptions = [{
+        fromId: user.id,
+        ...whereClause,
+      }, {
+        toId: user.id,
+        ...whereClause,
+      }];
+    } else {
+      whereOptions = whereClause;
+    }
+
     const options: FindManyOptions = {
-      where: QueryFilter.createFilterWhereClause(filterMapping, params),
+      where: whereOptions,
       relations: ['from', 'to'],
+      take,
+      skip,
     };
-    const transfers = await Transfer.find(options);
-    return transfers.map(this.asTransferResponse);
+
+    const results = await Promise.all([
+      Transfer.find(options),
+      Transfer.count(options),
+    ]);
+
+    const records = results[0].map((rawTransfer) => this.asTransferResponse(rawTransfer));
+    return {
+      _pagination: {
+        take, skip, count: results[1],
+      },
+      records,
+    };
   }
 
   public static async postTransfer(request: TransferRequest) : Promise<TransferResponse> {
-    const transfer = await this.asTransfer(request);
-    if (await this.verifyTransferRequest(request)) {
-      await transfer.save();
-      return this.asTransferResponse(transfer);
-    }
-    throw new InvalidTransferError('Transfer does not comply with requirements');
+    const transfer = await this.createTransfer(request);
+    return this.asTransferResponse(transfer);
   }
 
   public static async verifyTransferRequest(request: TransferRequest) : Promise<boolean> {
