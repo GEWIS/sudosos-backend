@@ -19,7 +19,8 @@ import { DineroObject } from 'dinero.js';
 import BaseResponse from './base-response';
 import { BaseUserResponse } from './user-response';
 import { InvoiceState } from '../../entity/invoices/invoice-status';
-import {TransferResponse} from "./transfer-response";
+import { TransferResponse } from './transfer-response';
+import { PaginationResult } from '../../helpers/pagination';
 
 /**
  * @typedef InvoiceStatusResponse
@@ -66,4 +67,14 @@ export interface BaseInvoiceResponse extends BaseResponse {
  */
 export interface InvoiceResponse extends BaseInvoiceResponse{
   invoiceEntries: InvoiceEntryResponse[]
+}
+
+/**
+ * @typedef PaginatedBaseInvoiceResponse
+ * @property {PaginationResult.model} _pagination - Pagination metadata
+ * @property {Array<BaseInvoiceResponse | InvoiceResponse>} records - Returned Invoices
+ */
+export interface PaginatedInvoiceResponse {
+  _pagination: PaginationResult,
+  records: BaseInvoiceResponse | InvoiceResponse[],
 }

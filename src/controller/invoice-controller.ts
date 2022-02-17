@@ -21,30 +21,9 @@ import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import { BaseInvoiceResponse } from './response/invoice-response';
-import InvoiceService, { InvoiceFilterParameters } from '../service/invoice-service';
-import { asBoolean, asInvoiceState, asNumber } from '../helpers/validators';
+import InvoiceService, {InvoiceFilterParameters, parseInvoiceFilterParameters} from '../service/invoice-service';
 import CreateInvoiceRequest from './request/create-invoice-request';
 
-function parseInvoiceFilterParameters(req: RequestWithToken): InvoiceFilterParameters {
-  return {
-    /**
-     * Filter based on to user.
-     */
-    toId: asNumber(req.query.toId),
-    /**
-     * Filter based on InvoiceId
-     */
-    invoiceId: asNumber(req.query.toId),
-    /**
-     * Filter based on the current invoice state
-     */
-    currentState: asInvoiceState(req.query.currentState),
-    /**
-     * Boolean if the invoice entries should be added to the response.
-     */
-    returnInvoiceEntries: asBoolean(req.query.returnInvoiceEntries),
-  };
-}
 
 export default class InvoiceController extends BaseController {
   private logger: Logger = log4js.getLogger('InvoiceController');
@@ -82,7 +61,7 @@ export default class InvoiceController extends BaseController {
    * @route GET /invoices
    * @group invoices - Operations of the invoices controller
    * @security JWT
-   * @returns {Array.<BaseInvoiceResponse>} 200 - All existing invoices
+   * @returns {PaginatedInvoiceResponse.model} 200 - All existing invoices
    * @returns {string} 500 - Internal server error
    */
   public async getAllInvoices(req: RequestWithToken, res: Response): Promise<void> {

@@ -21,7 +21,7 @@ import {
   BaseInvoiceResponse,
   InvoiceEntryResponse,
   InvoiceResponse,
-  InvoiceStatusResponse,
+  InvoiceStatusResponse, PaginatedInvoiceResponse,
 } from '../controller/response/invoice-response';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import Invoice from '../entity/invoices/invoice';
@@ -36,6 +36,9 @@ import TransactionService, { TransactionFilterParameters } from './transaction-s
 import { DineroObjectRequest } from '../controller/request/dinero-request';
 import { TransferResponse } from '../controller/response/transfer-response';
 import { BaseTransactionResponse } from '../controller/response/transaction-response';
+import {RequestWithToken} from "../middleware/token-middleware";
+import {asBoolean, asInvoiceState, asNumber} from "../helpers/validators";
+import {PaginationParameters} from "../helpers/pagination";
 
 export interface InvoiceFilterParameters {
   /**
@@ -54,6 +57,27 @@ export interface InvoiceFilterParameters {
    * Boolean if the invoice entries should be added to the response.
    */
   returnInvoiceEntries?: boolean
+}
+
+export function parseInvoiceFilterParameters(req: RequestWithToken): InvoiceFilterParameters {
+  return {
+    /**
+     * Filter based on to user.
+     */
+    toId: asNumber(req.query.toId),
+    /**
+     * Filter based on InvoiceId
+     */
+    invoiceId: asNumber(req.query.toId),
+    /**
+     * Filter based on the current invoice state
+     */
+    currentState: asInvoiceState(req.query.currentState),
+    /**
+     * Boolean if the invoice entries should be added to the response.
+     */
+    returnInvoiceEntries: asBoolean(req.query.returnInvoiceEntries),
+  };
 }
 
 export default class InvoiceService {
@@ -199,6 +223,7 @@ export default class InvoiceService {
     } else if (invoiceRequest.fromDate) {
       params = { fromDate: invoiceRequest.fromDate };
     } else {
+      // By default we create an Invoice from all transactions since last invoice.
       const latestInvoice = (await this.getInvoices({ toId }))[0];
       params = { fromDate: new Date(latestInvoice.createdAt) };
     }
@@ -243,8 +268,8 @@ export default class InvoiceService {
    * based on if returnInvoiceEntries is set to true.
    * @param params
    */
-  public static async getInvoices(params: InvoiceFilterParameters = {})
-    : Promise<BaseInvoiceResponse[] | InvoiceResponse[]> {
+  public static async getInvoices(params: InvoiceFilterParameters = {}, pagination: PaginationParameters = {})
+    : Promise<PaginatedInvoiceResponse> {
     const filterMapping: FilterMapping = {
       currentState: 'currentState',
       toId: 'to',
@@ -257,6 +282,7 @@ export default class InvoiceService {
       order: { createdAt: 'DESC' },
     };
 
+
     // Case distinction on if we want to return entries or not.
     if (!params.returnInvoiceEntries) {
       const invoices = await Invoice.find(options);
@@ -266,6 +292,8 @@ export default class InvoiceService {
     options.relations.push('invoiceEntries');
     const invoices = await Invoice.find(options);
     return invoices.map(this.asInvoiceResponse.bind(this));
+
+
   }
 
   /**
