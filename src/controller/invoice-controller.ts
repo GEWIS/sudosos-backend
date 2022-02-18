@@ -20,10 +20,10 @@ import { Response } from 'express';
 import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
-import { BaseInvoiceResponse } from './response/invoice-response';
-import InvoiceService, {InvoiceFilterParameters, parseInvoiceFilterParameters} from '../service/invoice-service';
+import { PaginatedInvoiceResponse } from './response/invoice-response';
+import InvoiceService, { InvoiceFilterParameters, parseInvoiceFilterParameters } from '../service/invoice-service';
 import CreateInvoiceRequest from './request/create-invoice-request';
-
+import { parseRequestPagination } from '../helpers/pagination';
 
 export default class InvoiceController extends BaseController {
   private logger: Logger = log4js.getLogger('InvoiceController');
@@ -68,6 +68,17 @@ export default class InvoiceController extends BaseController {
     const { body } = req;
     this.logger.trace('Get all invoices', body, 'by user', req.token.user);
 
+    let take;
+    let skip;
+    try {
+      const pagination = parseRequestPagination(req);
+      take = pagination.take;
+      skip = pagination.skip;
+    } catch (e) {
+      res.status(400).send(e.message);
+      return;
+    }
+
     let filters: InvoiceFilterParameters;
     try {
       filters = parseInvoiceFilterParameters(req);
@@ -78,7 +89,9 @@ export default class InvoiceController extends BaseController {
 
     // Handle request
     try {
-      const invoices: BaseInvoiceResponse[] = await InvoiceService.getInvoices(filters);
+      const invoices: PaginatedInvoiceResponse = await InvoiceService.getInvoices(
+        filters, { take, skip },
+      );
       res.json(invoices);
     } catch (error) {
       this.logger.error('Could not return all invoices:', error);

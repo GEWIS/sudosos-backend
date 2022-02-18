@@ -76,5 +76,5 @@ export interface InvoiceResponse extends BaseInvoiceResponse{
  */
 export interface PaginatedInvoiceResponse {
   _pagination: PaginationResult,
-  records: BaseInvoiceResponse | InvoiceResponse[],
+  records: (BaseInvoiceResponse | InvoiceResponse)[],
 }

@@ -16,18 +16,31 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/**
- * @typedef CreateInvoiceRequest
- * @property {integer} toId.required - The recipient of the Invoice.
- * @property {string} addressee.required - Name of the addressed.
- * @property {string} description.required - The description of the invoice.
- * @property {Array.<integer>} transactionIDs - IDs of the transactions to add to the Invoice.
- * @property {Date} fromDate - For creating an Invoice for all transactions form a specific date.
- */
-export default interface CreateInvoiceRequest {
+import InvoiceEntryRequest from './invoice-entry-request';
+
+interface BaseInvoice {
   toId: number,
   addressee: string,
   description: string,
+  customEntries?: InvoiceEntryRequest[],
   transactionIDs?: number[],
   fromDate?: Date,
+}
+
+export interface CreateInvoiceParams extends BaseInvoice {
+  byId: number,
+}
+
+/**
+ * @typedef CreateInvoiceRequest
+ * @property {integer} toId.required - The recipient of the Invoice.
+ * @property {integer} byId - The creator of the Invoice, defaults to the ID of the requester.
+ * @property {string} addressee.required - Name of the addressed.
+ * @property {string} description.required - The description of the invoice.
+ * @property {Array.<InvoiceEntryRequest>} - Custom entries to be added to the invoice
+ * @property {Array.<integer>} transactionIDs - IDs of the transactions to add to the Invoice.
+ * @property {Date} fromDate - For creating an Invoice for all transactions form a specific date.
+ */
+export interface CreateInvoiceRequest extends BaseInvoice{
+  byId?: number,
 }

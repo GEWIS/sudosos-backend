@@ -27,7 +27,7 @@ import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import Invoice from '../entity/invoices/invoice';
 import { parseUserToBaseResponse } from '../helpers/entity-to-response';
 import InvoiceEntry from '../entity/invoices/invoice-entry';
-import CreateInvoiceRequest from '../controller/request/create-invoice-request';
+import { CreateInvoiceParams, CreateInvoiceRequest } from '../controller/request/create-invoice-request';
 import User from '../entity/user/user';
 import Transaction from '../entity/transactions/transaction';
 import TransferService from './transfer-service';
@@ -36,9 +36,10 @@ import TransactionService, { TransactionFilterParameters } from './transaction-s
 import { DineroObjectRequest } from '../controller/request/dinero-request';
 import { TransferResponse } from '../controller/response/transfer-response';
 import { BaseTransactionResponse } from '../controller/response/transaction-response';
-import {RequestWithToken} from "../middleware/token-middleware";
-import {asBoolean, asInvoiceState, asNumber} from "../helpers/validators";
-import {PaginationParameters} from "../helpers/pagination";
+import { RequestWithToken } from '../middleware/token-middleware';
+import { asBoolean, asInvoiceState, asNumber } from '../helpers/validators';
+import { PaginationParameters } from '../helpers/pagination';
+import InvoiceEntryRequest from '../controller/request/invoice-entry-request';
 
 export interface InvoiceFilterParameters {
   /**
@@ -207,14 +208,33 @@ export default class InvoiceService {
   }
 
   /**
+   * Adds custom entries to the invoice.
+   * @param invoice - The Invoice to append to
+   * @param customEntries - THe custom entries to append
+   */
+  private static async AddCustomEntries(invoice: Invoice,
+    customEntries: InvoiceEntryRequest[]): Promise<void> {
+    const promises: Promise<InvoiceEntry>[] = [];
+    customEntries.forEach((request) => {
+      const { description, amount } = request;
+      const entry = Object.assign(new InvoiceEntry(), {
+        invoice,
+        description,
+        amount,
+        price: request.price.amount,
+      });
+      promises.push(entry.save());
+    });
+    await Promise.all(promises);
+  }
+
+  /**
    * Creates an Invoice from an CreateInvoiceRequest
-   * @param byId - User who created the Invoice
-   * @param toId - User who receives the Invoice
    * @param invoiceRequest - The Invoice request to create
    */
-  public static async createInvoice(byId:number, invoiceRequest: CreateInvoiceRequest)
+  public static async createInvoice(invoiceRequest: CreateInvoiceParams)
     : Promise<BaseInvoiceResponse> {
-    const { toId } = invoiceRequest;
+    const { toId, byId } = invoiceRequest;
     let params: TransactionFilterParameters;
 
     // If transactions are specified.
@@ -224,7 +244,7 @@ export default class InvoiceService {
       params = { fromDate: invoiceRequest.fromDate };
     } else {
       // By default we create an Invoice from all transactions since last invoice.
-      const latestInvoice = (await this.getInvoices({ toId }))[0];
+      const latestInvoice = (await this.getInvoices({ toId })).records[0];
       params = { fromDate: new Date(latestInvoice.createdAt) };
     }
 
@@ -254,12 +274,15 @@ export default class InvoiceService {
       newInvoice.invoiceStatus.push(invoiceStatus);
       await InvoiceStatus.save(invoiceStatus);
       await this.createInvoiceEntriesTransactions(newInvoice, transactions);
+      if (invoiceRequest.customEntries) {
+        await this.AddCustomEntries(newInvoice, invoiceRequest.customEntries);
+      }
     });
 
     // Return the newly created Invoice.
     return (await this.getInvoices(
       { invoiceId: newInvoice.id, returnInvoiceEntries: true },
-    ))[0];
+    )).records[0];
   }
 
   /**
@@ -268,8 +291,11 @@ export default class InvoiceService {
    * based on if returnInvoiceEntries is set to true.
    * @param params
    */
-  public static async getInvoices(params: InvoiceFilterParameters = {}, pagination: PaginationParameters = {})
+  public static async getInvoices(params: InvoiceFilterParameters = {},
+    pagination: PaginationParameters = {})
     : Promise<PaginatedInvoiceResponse> {
+    const { take, skip } = pagination;
+
     const filterMapping: FilterMapping = {
       currentState: 'currentState',
       toId: 'to',
@@ -280,20 +306,29 @@ export default class InvoiceService {
       where: QueryFilter.createFilterWhereClause(filterMapping, params),
       relations: ['to', 'invoiceStatus', 'transfer', 'transfer.to', 'transfer.from'],
       order: { createdAt: 'DESC' },
+      take,
+      skip,
     };
 
+    let records: (BaseInvoiceResponse | InvoiceResponse)[];
 
     // Case distinction on if we want to return entries or not.
     if (!params.returnInvoiceEntries) {
       const invoices = await Invoice.find(options);
-      return invoices.map(this.asBaseInvoiceResponse);
+      records = invoices.map(this.asBaseInvoiceResponse);
+    } else {
+      options.relations.push('invoiceEntries');
+      const invoices = await Invoice.find(options);
+      records = invoices.map(this.asInvoiceResponse.bind(this));
     }
 
-    options.relations.push('invoiceEntries');
-    const invoices = await Invoice.find(options);
-    return invoices.map(this.asInvoiceResponse.bind(this));
-
-
+    const count = await Invoice.count(options);
+    return {
+      _pagination: {
+        take, skip, count,
+      },
+      records,
+    };
   }
 
   /**
