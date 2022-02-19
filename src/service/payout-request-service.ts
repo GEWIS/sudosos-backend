@@ -16,12 +16,18 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { createQueryBuilder, SelectQueryBuilder } from 'typeorm';
+import Dinero, { Currency } from 'dinero.js';
 import { PaginationParameters } from '../helpers/pagination';
 import PayoutRequest from '../entity/transactions/payout-request';
 import PayoutRequestStatus, { PayoutRequestState } from '../entity/transactions/payout-request-status';
 import QueryFilter from '../helpers/query-filter';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
-import { BasePayoutRequestResponse } from '../controller/response/payout-request-response';
+import {
+  BasePayoutRequestResponse,
+  PaginatedBasePayoutRequestResponse, PayoutRequestResponse, PayoutRequestStatusResponse,
+} from '../controller/response/payout-request-response';
+import PayoutRequestRequest from '../controller/request/payout-request-request';
+import User from '../entity/user/user';
 
 export interface PayoutRequestFilters {
   id?: number | number[],
@@ -33,6 +39,52 @@ export interface PayoutRequestFilters {
 }
 
 export default class PayoutRequestService {
+  private static asPayoutRequestResponse(req: PayoutRequest): PayoutRequestResponse {
+    return {
+      id: req.id,
+      createdAt: req.createdAt.toISOString(),
+      updatedAt: req.updatedAt.toISOString(),
+      amount: {
+        amount: req.amount.getAmount(),
+        precision: req.amount.getPrecision(),
+        currency: req.amount.getCurrency(),
+      },
+      bankAccountNumber: req.bankAccountNumber,
+      bankAccountName: req.bankAccountName,
+      requestedBy: {
+        id: req.requestedBy.id,
+        createdAt: req.requestedBy.createdAt.toISOString(),
+        updatedAt: req.requestedBy.updatedAt.toISOString(),
+        type: req.requestedBy.type,
+        firstName: req.requestedBy.firstName,
+        lastName: req.requestedBy.lastName,
+        deleted: req.requestedBy.deleted,
+        active: req.requestedBy.active,
+      },
+      approvedBy: req.approvedBy == null ? undefined : {
+        id: req.approvedBy.id,
+        createdAt: req.approvedBy.createdAt.toISOString(),
+        updatedAt: req.approvedBy.updatedAt.toISOString(),
+        type: req.approvedBy.type,
+        firstName: req.approvedBy.firstName,
+        lastName: req.approvedBy.lastName,
+        deleted: req.approvedBy.deleted,
+        active: req.approvedBy.active,
+      },
+      status: req.payoutRequestStatus.map((status): PayoutRequestStatusResponse => ({
+        id: status.id,
+        createdAt: status.createdAt.toISOString(),
+        updatedAt: status.updatedAt.toISOString(),
+        state: status.state,
+      })),
+    };
+  }
+
+  /**
+   * Build the query to get all payout requests
+   * @param filters
+   * @private
+   */
   private static buildGetPayoutRequestsQuery(filters: PayoutRequestFilters = {})
     : SelectQueryBuilder<PayoutRequest> {
     const {
@@ -69,9 +121,14 @@ export default class PayoutRequestService {
     return builder;
   }
 
+  /**
+   * Get all transactions with the given filters
+   * @param filters
+   * @param pagination
+   */
   public static async getPayoutRequests(
     filters: PayoutRequestFilters, pagination: PaginationParameters = {},
-  ) {
+  ): Promise<PaginatedBasePayoutRequestResponse> {
     const { take, skip } = pagination;
 
     const results = await Promise.all([
@@ -86,7 +143,7 @@ export default class PayoutRequestService {
         id: o.id,
         createdAt: new Date(o.createdAt).toISOString(),
         updatedAt: new Date(o.updatedAt).toISOString(),
-        createdBy: o.createdBy_id ? {
+        requestedBy: o.createdBy_id ? {
           id: o.createdBy_id,
           createdAt: new Date(o.createdBy_createdAt).toISOString(),
           updatedAt: new Date(o.createdBy_updatedAt).toISOString(),
@@ -118,5 +175,49 @@ export default class PayoutRequestService {
       },
       records,
     };
+  }
+
+  /**
+   * Get single payout request
+   * @param id
+   */
+  public static async getSinglePayoutRequest(id: number)
+    : Promise<PayoutRequestResponse | undefined> {
+    const payoutRequest = await PayoutRequest.findOne(id, {
+      relations: ['requestedBy', 'approvedBy', 'payoutRequestStatus'],
+    });
+
+    if (payoutRequest === undefined) return undefined;
+
+    return PayoutRequestService.asPayoutRequestResponse(payoutRequest);
+  }
+
+  /**
+   * Create a new payout request
+   * @param payoutRequestRequest
+   * @param requestedBy
+   */
+  public static async createPayoutRequest(
+    payoutRequestRequest: PayoutRequestRequest, requestedBy: User,
+  ): Promise<PayoutRequestResponse> {
+    const payoutRequest = Object.assign(new PayoutRequest(), {
+      requestedBy,
+      amount: Dinero({
+        amount: payoutRequestRequest.amount.amount,
+        precision: payoutRequestRequest.amount.precision,
+        currency: payoutRequestRequest.amount.currency as Currency,
+      }),
+      bankAccountNumber: payoutRequestRequest.bankAccountNumber,
+      bankAccountName: payoutRequestRequest.bankAccountName,
+    });
+
+    await payoutRequest.save();
+    const createdStatus = Object.assign(new PayoutRequestStatus(), {
+      state: PayoutRequestState.CREATED,
+      payoutRequest,
+    });
+    await createdStatus.save();
+
+    return PayoutRequestService.getSinglePayoutRequest(payoutRequest.id);
   }
 }

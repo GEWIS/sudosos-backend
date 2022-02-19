@@ -24,6 +24,7 @@ import { seedPayoutRequests, seedUsers } from '../../seed';
 import Database from '../../../src/database/database';
 import PayoutRequestService from '../../../src/service/payout-request-service';
 import { PayoutRequestState } from '../../../src/entity/transactions/payout-request-status';
+import PayoutRequestRequest from '../../../src/controller/request/payout-request-request';
 
 describe('PayoutRequestService', () => {
   let ctx: {
@@ -31,6 +32,7 @@ describe('PayoutRequestService', () => {
     users: User[],
     payoutRequests: PayoutRequest[],
     dineroTransformer: DineroTransformer,
+    validPayoutRequestRequest: PayoutRequestRequest,
   };
 
   before(async () => {
@@ -41,11 +43,22 @@ describe('PayoutRequestService', () => {
 
     const dineroTransformer = DineroTransformer.Instance;
 
+    const validPayoutRequestRequest: PayoutRequestRequest = {
+      amount: {
+        amount: 3900,
+        precision: 2,
+        currency: 'EUR',
+      },
+      bankAccountNumber: 'NL22 ABNA 0528195913',
+      bankAccountName: 'Studievereniging GEWIS',
+    };
+
     ctx = {
       connection,
       users,
       payoutRequests,
       dineroTransformer,
+      validPayoutRequestRequest,
     };
   });
 
@@ -140,6 +153,42 @@ describe('PayoutRequestService', () => {
 
     it('should return all payout requests with APPROVED or DENIED status', async () => {
       await testPayoutRequestsWithState([PayoutRequestState.APPROVED, PayoutRequestState.DENIED]);
+    });
+  });
+
+  describe('getSinglePayoutRequest', () => {
+    it('should return a single payout request', async () => {
+      const { id } = ctx.payoutRequests[0];
+
+      const payoutRequest = await PayoutRequestService.getSinglePayoutRequest(id);
+      expect(payoutRequest).to.not.be.undefined;
+      expect(payoutRequest.id).to.equal(id);
+    });
+
+    it('should return undefined if payout request does not exist', async () => {
+      const { id } = ctx.payoutRequests[ctx.payoutRequests.length - 1];
+
+      const payoutRequest = await PayoutRequestService.getSinglePayoutRequest(id + 1000);
+      expect(payoutRequest).to.be.undefined;
+    });
+  });
+
+  describe('createPayoutRequest', () => {
+    it('should correctly create payout request for user', async () => {
+      const lengthBefore = await PayoutRequest.count();
+      const user = ctx.users[0];
+      const payoutRequest = await PayoutRequestService
+        .createPayoutRequest(ctx.validPayoutRequestRequest, user);
+
+      expect(payoutRequest).to.not.be.undefined;
+      expect(await PayoutRequest.count()).to.equal(lengthBefore + 1);
+      expect(payoutRequest.bankAccountNumber).to
+        .equal(ctx.validPayoutRequestRequest.bankAccountNumber);
+      expect(payoutRequest.bankAccountName).to
+        .equal(ctx.validPayoutRequestRequest.bankAccountName);
+      expect(payoutRequest.status.length).to.equal(1);
+      expect(payoutRequest.status[0].state).to.equal(PayoutRequestState.CREATED);
+      expect(payoutRequest.requestedBy.id).to.equal(user.id);
     });
   });
 });

@@ -28,7 +28,7 @@ import { PaginationResult } from '../../helpers/pagination';
  * @property {DineroObjectResponse.model} amount.required - The amount requested to be paid out
  */
 interface BoilerPayoutRequestResponse extends BaseResponse {
-  createdBy: UserResponse,
+  requestedBy: UserResponse,
   approvedBy?: UserResponse,
   amount: DineroObjectResponse,
 }
