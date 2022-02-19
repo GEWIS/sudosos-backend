@@ -264,7 +264,9 @@ export default class PayoutRequestService {
   ) {
     const payoutRequest = await PayoutRequestService.getSinglePayoutRequest(id);
     const currentStates = payoutRequest.status.map((s) => s.state as PayoutRequestState);
+    const allStatuses = Object.values(PayoutRequestState);
 
+    if (!allStatuses.includes(state)) throw Error(`unknown status: ${state}.`);
     if (currentStates.includes(state)) throw Error(`status ${state} already exists.`);
 
     switch (state) {

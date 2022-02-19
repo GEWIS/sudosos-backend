@@ -35,7 +35,7 @@ import {
   PayoutRequestResponse,
 } from '../../../src/controller/response/payout-request-response';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
-import { PayoutRequestState } from '../../../src/entity/transactions/payout-request-status';
+import PayoutRequestStatus, { PayoutRequestState } from '../../../src/entity/transactions/payout-request-status';
 
 describe('PayoutRequestController', () => {
   let ctx: {
@@ -80,6 +80,7 @@ describe('PayoutRequestController', () => {
       permissions: {
         payoutRequest: {
           get: all,
+          update: all,
         },
       },
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
@@ -400,6 +401,53 @@ describe('PayoutRequestController', () => {
         .get(`/payoutrequests/${id}`)
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(404);
+    });
+  });
+
+  describe('POST /payoutrequests/{id}/status', async () => {
+    it('should correctly update a payout request status', async () => {
+      const { id } = ctx.payoutRequests[0];
+      const before = await PayoutRequest.findOne(id, {
+        relations: ['payoutRequestStatus'],
+      });
+      const res = await request(ctx.app)
+        .post(`/payoutrequests/${id}/status`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ state: PayoutRequestState.APPROVED });
+      expect(res.status).to.equal(200);
+
+      const payoutRequest = res.body as PayoutRequestResponse;
+
+      const validation = ctx.specification.validateModel('PayoutRequestResponse', payoutRequest, false, true);
+      expect(validation.valid).to.be.true;
+      expect(payoutRequest.status.length).to.equal(before.payoutRequestStatus.length + 1);
+    });
+
+    it('should return 403 if not admin', async () => {
+      const { id } = ctx.payoutRequests[0];
+      const res = await request(ctx.app)
+        .post(`/payoutrequests/${id}/status`)
+        .set('Authorization', `Bearer ${ctx.userToken}`)
+        .send({ state: PayoutRequestState.APPROVED });
+      expect(res.status).to.equal(403);
+    });
+
+    it('should return 404 if payout request does not exist', async () => {
+      const id = ctx.payoutRequests[ctx.payoutRequests.length - 1].id + 1000;
+      const res = await request(ctx.app)
+        .post(`/payoutrequests/${id}/status`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ state: PayoutRequestState.APPROVED });
+      expect(res.status).to.equal(404);
+    });
+
+    it('should return 400 if sending invalid state', async () => {
+      const { id } = ctx.payoutRequests[0];
+      const res = await request(ctx.app)
+        .post(`/payoutrequests/${id}/status`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ state: 'Yeeee' });
+      expect(res.status).to.equal(400);
     });
   });
 });

@@ -22,6 +22,7 @@ import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import { parseRequestPagination } from '../helpers/pagination';
 import PayoutRequestService, { parseGetPayoutRequestsFilters } from '../service/payout-request-service';
+import { PayoutRequestStatusRequest } from './request/payout-request-status-request';
 
 export default class PayoutRequestController extends BaseController {
   private logger: Logger = log4js.getLogger('PayoutRequestController');
@@ -44,6 +45,14 @@ export default class PayoutRequestController extends BaseController {
           // TODO: Users should be able to get the details of their own payout requests
           policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'payoutRequest', ['*']),
           handler: this.returnSinglePayoutRequest.bind(this),
+        },
+      },
+      '/:id(\\d+)/status': {
+        POST: {
+          // TODO: Users should only be allowed to create a "CANCELLED" status,
+          //  while admins only the rest
+          policy: async (req) => this.roleManager.can(req.token.roles, 'update', 'all', 'payoutRequest', ['*']),
+          handler: this.updatePayoutRequestStatus.bind(this),
         },
       },
     };
@@ -116,5 +125,55 @@ export default class PayoutRequestController extends BaseController {
     }
 
     res.status(200).json(payoutRequest);
+  }
+
+  /**
+   * Create a new status for a payout request
+   * @route GET /payoutrequests/{id}/status
+   * @group payoutRequests - Operations of the payout request controller
+   * @param {integer} id.path.required - The ID of the payout request object that should be returned
+   * @security JWT
+   * @returns {PayoutRequestResponse.model} 200
+   * @returns {string} 400 - Validation error
+   * @returns {string} 404 - Nonexistent payout request id
+   */
+  public async updatePayoutRequestStatus(req: RequestWithToken, res: Response): Promise<void> {
+    const parameters = req.params;
+    const body = req.body as PayoutRequestStatusRequest;
+    this.logger.trace('Update single payout request status', parameters, 'by user', req.token.user);
+
+    const id = parseInt(parameters.id, 10);
+
+    // Check if payout request exists
+    let payoutRequest;
+    try {
+      payoutRequest = await PayoutRequestService.getSinglePayoutRequest(id);
+    } catch (e) {
+      res.status(500).send();
+      this.logger.error(e);
+      return;
+    }
+
+    if (payoutRequest === undefined) {
+      res.status(404).json('Unknown payout request ID.');
+      return;
+    }
+
+    // Verify validity of new status
+    try {
+      await PayoutRequestService.canUpdateStatus(id, body.state);
+    } catch (e) {
+      res.status(400).json(e);
+      return;
+    }
+
+    // Execute
+    try {
+      payoutRequest = await PayoutRequestService.updateStatus(id, body.state, req.token.user);
+      res.status(200).json(payoutRequest);
+    } catch (e) {
+      res.status(500).send();
+      this.logger.error(e);
+    }
   }
 }

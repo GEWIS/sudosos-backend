@@ -247,28 +247,28 @@ describe('PayoutRequestService', () => {
       const failState = PayoutRequestState.APPROVED;
       const { id } = ctx.payoutRequests
         .filter((req) => req.payoutRequestStatus.some((s) => s.state === failState))[0];
-      await testShouldFail(id, PayoutRequestState.APPROVED, failState);
+      await testShouldFail(id, PayoutRequestState.DENIED, failState);
     });
 
     it('should not allow DENIED status if CANCELLED exists', async () => {
       const failState = PayoutRequestState.CANCELLED;
       const { id } = ctx.payoutRequests
         .filter((req) => req.payoutRequestStatus.some((s) => s.state === failState))[0];
-      await testShouldFail(id, PayoutRequestState.APPROVED, failState);
+      await testShouldFail(id, PayoutRequestState.DENIED, failState);
     });
 
     it('should not allow CANCELLED status if APPROVED exists', async () => {
       const failState = PayoutRequestState.APPROVED;
       const { id } = ctx.payoutRequests
         .filter((req) => req.payoutRequestStatus.some((s) => s.state === failState))[0];
-      await testShouldFail(id, PayoutRequestState.APPROVED, failState);
+      await testShouldFail(id, PayoutRequestState.CANCELLED, failState);
     });
 
     it('should not allow CANCELLED status if DENIED exists', async () => {
       const failState = PayoutRequestState.DENIED;
       const { id } = ctx.payoutRequests
         .filter((req) => req.payoutRequestStatus.some((s) => s.state === failState))[0];
-      await testShouldFail(id, PayoutRequestState.APPROVED, failState);
+      await testShouldFail(id, PayoutRequestState.CANCELLED, failState);
     });
 
     it('should not allow duplicate statusses', async () => {
