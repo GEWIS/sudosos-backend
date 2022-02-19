@@ -55,6 +55,7 @@ import initializeDiskStorage from './files/initialize';
 import StripeController from './controller/stripe-controller';
 import StripeWebhookController from './controller/stripe-webhook-controller';
 import { extractRawBody } from './helpers/raw-body';
+import PayoutRequestController from './controller/payout-request-controller';
 
 export class Application {
   app: express.Express;
@@ -218,6 +219,7 @@ export default async function createApp(): Promise<Application> {
   application.app.use('/v1/borrelkaartgroups', new BorrelkaartGroupController(options).getRouter());
   application.app.use('/v1/transfers', new TransferController(options).getRouter());
   application.app.use('/v1/stripe', new StripeController(options).getRouter());
+  application.app.use('/v1/payoutrequests', new PayoutRequestController(options).getRouter());
   application.app.use('/v1/containers', new ContainerController(options).getRouter());
   if (process.env.NODE_ENV === 'development') {
     application.app.use('/v1/files', new SimpleFileController(options).getRouter());

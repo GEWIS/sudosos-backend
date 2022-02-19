@@ -31,6 +31,9 @@ import {
 import PayoutRequestRequest from '../controller/request/payout-request-request';
 import User from '../entity/user/user';
 import TransferService from './transfer-service';
+import { RequestWithToken } from '../middleware/token-middleware';
+import { asDate } from '../helpers/validators';
+import { dateToUTC, toMySQLString } from '../helpers/timestamps';
 
 export interface PayoutRequestFilters {
   id?: number | number[],
@@ -39,6 +42,32 @@ export interface PayoutRequestFilters {
   fromDate?: Date,
   tillDate?: Date,
   status?: PayoutRequestState[],
+}
+
+export function parseGetPayoutRequestsFilters(req: RequestWithToken): PayoutRequestFilters {
+  const statuses = Object.values(PayoutRequestState);
+  let parsedStatus;
+  if (req.query.status != null) {
+    if (!Array.isArray(req.query.status)) {
+      parsedStatus = [req.query.status];
+    } else {
+      parsedStatus = req.query.status;
+    }
+    parsedStatus.forEach((status) => {
+      if (!statuses.includes(status as PayoutRequestState)) throw TypeError('status is not of type PayoutRequestState');
+    });
+    parsedStatus = parsedStatus as PayoutRequestState[];
+  } else {
+    parsedStatus = undefined;
+  }
+
+  return {
+    requestedById: QueryFilter.extractUndefinedNumberOrArray(req.query.requestedById),
+    approvedById: QueryFilter.extractUndefinedNumberOrArray(req.query.approvedById),
+    fromDate: asDate(req.query.fromDate),
+    tillDate: asDate(req.query.tillDate),
+    status: parsedStatus,
+  };
 }
 
 export default class PayoutRequestService {
@@ -111,8 +140,8 @@ export default class PayoutRequestService {
       .leftJoinAndSelect('payoutRequest.approvedBy', 'approvedBy')
       .distinct(true);
 
-    if (fromDate) builder.andWhere('"payoutRequest"."createdAt" >= :fromDate', { fromDate: fromDate.toISOString() });
-    if (tillDate) builder.andWhere('"payoutRequest"."createdAt" < :tillDate', { tillDate: tillDate.toISOString() });
+    if (fromDate) builder.andWhere('"payoutRequest"."createdAt" >= :fromDate', { fromDate: toMySQLString(dateToUTC(fromDate)) });
+    if (tillDate) builder.andWhere('"payoutRequest"."createdAt" < :tillDate', { tillDate: toMySQLString(dateToUTC(tillDate)) });
     const mapping = {
       id: 'payoutRequest.id',
       requestedById: 'payoutRequest.requestedById',
@@ -146,15 +175,15 @@ export default class PayoutRequestService {
         id: o.id,
         createdAt: new Date(o.createdAt).toISOString(),
         updatedAt: new Date(o.updatedAt).toISOString(),
-        requestedBy: o.createdBy_id ? {
-          id: o.createdBy_id,
-          createdAt: new Date(o.createdBy_createdAt).toISOString(),
-          updatedAt: new Date(o.createdBy_updatedAt).toISOString(),
-          firstName: o.createdBy_firstName,
-          lastName: o.createdBy_lastName,
+        requestedBy: o.requestedBy_id ? {
+          id: o.requestedBy_id,
+          createdAt: new Date(o.requestedBy_createdAt).toISOString(),
+          updatedAt: new Date(o.requestedBy_updatedAt).toISOString(),
+          firstName: o.requestedBy_firstName,
+          lastName: o.requestedBy_lastName,
           active: o.from_active === 1,
           deleted: o.from_deleted === 1,
-          type: o.createdBy_type,
+          type: o.requestedBy_type,
         } : undefined,
         approvedBy: o.approvedBy_id ? {
           id: o.approvedBy_id,
