@@ -196,7 +196,7 @@ export default class PayoutRequestService {
           type: o.approvedBy_type,
         } : undefined,
         amount: dinero.toObject(),
-        status: o.status,
+        status: o.status || '',
       };
       return v;
     });

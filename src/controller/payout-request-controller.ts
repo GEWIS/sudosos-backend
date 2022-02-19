@@ -39,6 +39,13 @@ export default class PayoutRequestController extends BaseController {
           handler: this.returnAllPayoutRequests.bind(this),
         },
       },
+      '/:id(\\d+)': {
+        GET: {
+          // TODO: Users should be able to get the details of their own payout requests
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'payoutRequest', ['*']),
+          handler: this.returnSinglePayoutRequest.bind(this),
+        },
+      },
     };
   }
 
@@ -78,5 +85,36 @@ export default class PayoutRequestController extends BaseController {
       res.status(500).send('Internal server error.');
       this.logger.error(e);
     }
+  }
+
+  /**
+   * Get a single payout request
+   * @route GET /payoutrequests/{id}
+   * @group payoutRequests - Operations of the payout request controller
+   * @param {integer} id.path.required - The ID of the payout request object that should be returned
+   * @security JWT
+   * @returns {PayoutRequestResponse.model} 200 - Single payout request with given id
+   * @returns {string} 404 - Nonexistent payout request id
+   */
+  public async returnSinglePayoutRequest(req: RequestWithToken, res: Response): Promise<void> {
+    const parameters = req.params;
+    this.logger.trace('Get single payout request', parameters, 'by user', req.token.user);
+
+    let payoutRequest;
+    try {
+      payoutRequest = await PayoutRequestService
+        .getSinglePayoutRequest(parseInt(parameters.id, 10));
+    } catch (e) {
+      res.status(500).send();
+      this.logger.error(e);
+      return;
+    }
+
+    if (payoutRequest === undefined) {
+      res.status(404).json('Unknown payout request ID.');
+      return;
+    }
+
+    res.status(200).json(payoutRequest);
   }
 }

@@ -50,10 +50,11 @@ export interface PayoutRequestStatusResponse extends BaseResponse {
 }
 
 /**
- * @typedef {BasePayoutRequestResponse} PayoutRequestResponse
- * @typedef {Array<PayoutRequestStatusResponse>} status - Statuses of this payout response over time
- * @typedef {string} bankAccountNumber - Bank account number
- * @typedef {string} bankAccountName - Name of the account owner
+ * @typedef {BoilerPayoutRequestResponse} PayoutRequestResponse
+ * @property {Array<PayoutRequestStatusResponse>} status - Statuses of this
+ * payout response over time
+ * @property {string} bankAccountNumber - Bank account number
+ * @property {string} bankAccountName - Name of the account owner
  */
 export interface PayoutRequestResponse extends BoilerPayoutRequestResponse {
   status: PayoutRequestStatusResponse[],
