@@ -1186,7 +1186,7 @@ export async function seedPayoutRequests(users: User[]): Promise<PayoutRequest[]
   admins.push(undefined);
 
   const totalNrOfStatuses = 3;
-  for (let i = 0; i < users.length * 2; i += 1) {
+  for (let i = 0; i < users.length * 3; i += 1) {
     const requestedBy = users[Math.floor(i / totalNrOfStatuses)];
     const newPayoutReq = Object.assign(new PayoutRequest(), {
       requestedBy,
@@ -1215,6 +1215,8 @@ export async function seedPayoutRequests(users: User[]): Promise<PayoutRequest[]
         s.payoutRequest = payoutRequest;
         return s.save();
       }));
+      // eslint-disable-next-line no-param-reassign
+      payoutRequest.payoutRequestStatus = statusses;
       return payoutRequest;
     }));
   }
@@ -1329,7 +1331,8 @@ export interface DatabaseContent {
   pointOfSaleRevisions: PointOfSaleRevision[],
   updatedPointsOfSale: UpdatedPointOfSale[],
   transactions: Transaction[],
-  transfers: Transfer[]
+  transfers: Transfer[],
+  payoutRequests: PayoutRequest[],
   banners: Banner[],
 }
 
@@ -1345,6 +1348,7 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
   );
   const { transactions } = await seedTransactions(users, pointOfSaleRevisions);
   const transfers = await seedTransfers(users);
+  const payoutRequests = await seedPayoutRequests(users);
   const { banners } = await seedBanners(users);
 
   return {
@@ -1361,6 +1365,7 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
     updatedPointsOfSale,
     transactions,
     transfers,
+    payoutRequests,
     banners,
   };
 }
