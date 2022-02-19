@@ -24,10 +24,13 @@ import QueryFilter from '../helpers/query-filter';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
 import {
   BasePayoutRequestResponse,
-  PaginatedBasePayoutRequestResponse, PayoutRequestResponse, PayoutRequestStatusResponse,
+  PaginatedBasePayoutRequestResponse,
+  PayoutRequestResponse,
+  PayoutRequestStatusResponse,
 } from '../controller/response/payout-request-response';
 import PayoutRequestRequest from '../controller/request/payout-request-request';
 import User from '../entity/user/user';
+import TransferService from './transfer-service';
 
 export interface PayoutRequestFilters {
   id?: number | number[],
@@ -217,6 +220,93 @@ export default class PayoutRequestService {
       payoutRequest,
     });
     await createdStatus.save();
+
+    return PayoutRequestService.getSinglePayoutRequest(payoutRequest.id);
+  }
+
+  /**
+   * Verify that the status of the payout request with given id can be changed to the given state
+   * @param id
+   * @param state
+   * @throws Error with message what precondition has failed
+   */
+  public static async canUpdateStatus(
+    id: number, state: PayoutRequestState,
+  ) {
+    const payoutRequest = await PayoutRequestService.getSinglePayoutRequest(id);
+    const currentStates = payoutRequest.status.map((s) => s.state as PayoutRequestState);
+
+    if (currentStates.includes(state)) throw Error(`status ${state} already exists.`);
+
+    switch (state) {
+      case PayoutRequestState.APPROVED:
+        if (currentStates.includes(PayoutRequestState.DENIED)) {
+          throw Error(`status ${PayoutRequestState.DENIED} already exists.`);
+        }
+        if (currentStates.includes(PayoutRequestState.CANCELLED)) {
+          throw Error(`status ${PayoutRequestState.CANCELLED} already exists.`);
+        }
+        break;
+      case PayoutRequestState.DENIED:
+        if (currentStates.includes(PayoutRequestState.APPROVED)) {
+          throw Error(`status ${PayoutRequestState.APPROVED} already exists.`);
+        }
+        if (currentStates.includes(PayoutRequestState.CANCELLED)) {
+          throw Error(`status ${PayoutRequestState.CANCELLED} already exists.`);
+        }
+        break;
+      case PayoutRequestState.CANCELLED:
+        if (currentStates.includes(PayoutRequestState.APPROVED)) {
+          throw Error(`status ${PayoutRequestState.APPROVED} already exists.`);
+        }
+        if (currentStates.includes(PayoutRequestState.DENIED)) {
+          throw Error(`status ${PayoutRequestState.DENIED} already exists.`);
+        }
+        break;
+      default:
+    }
+  }
+
+  /**
+   * Change the status of the payout request.
+   * @param id ID of payout request
+   * @param state State to change payout request to
+   * @param user User who performs the update
+   * @return Promise<undefined> - Status cannot be created
+   * @return Promise<PayoutRequestResponse> - Status created
+   */
+  public static async updateStatus(
+    id: number, state: PayoutRequestState, user: User,
+  ): Promise<PayoutRequestResponse | undefined> {
+    const payoutRequest = await PayoutRequest.findOne(id, {
+      relations: ['requestedBy'],
+    });
+
+    if (payoutRequest == null) throw Error(`PayoutRequest with ID ${id} does not exist`);
+
+    await PayoutRequestService.canUpdateStatus(id, state);
+
+    const payoutRequestStatus = Object.assign(new PayoutRequestStatus(), {
+      payoutRequest,
+      state,
+    });
+
+    await payoutRequestStatus.save();
+
+    if (state === PayoutRequestState.APPROVED) {
+      payoutRequest.transfer = await TransferService.createTransfer({
+        amount: {
+          amount: payoutRequest.amount.getAmount(),
+          precision: payoutRequest.amount.getPrecision(),
+          currency: payoutRequest.amount.getCurrency(),
+        },
+        description: 'Payout Request',
+        fromId: payoutRequest.requestedBy.id,
+        toId: undefined,
+      });
+      payoutRequest.approvedBy = user;
+      await payoutRequest.save();
+    }
 
     return PayoutRequestService.getSinglePayoutRequest(payoutRequest.id);
   }

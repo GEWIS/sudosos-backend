@@ -151,6 +151,10 @@ describe('PayoutRequestService', () => {
       await testPayoutRequestsWithState([PayoutRequestState.DENIED]);
     });
 
+    it('should return all payout requests with CANCELLED status', async () => {
+      await testPayoutRequestsWithState([PayoutRequestState.CANCELLED]);
+    });
+
     it('should return all payout requests with APPROVED or DENIED status', async () => {
       await testPayoutRequestsWithState([PayoutRequestState.APPROVED, PayoutRequestState.DENIED]);
     });
@@ -189,6 +193,162 @@ describe('PayoutRequestService', () => {
       expect(payoutRequest.status.length).to.equal(1);
       expect(payoutRequest.status[0].state).to.equal(PayoutRequestState.CREATED);
       expect(payoutRequest.requestedBy.id).to.equal(user.id);
+    });
+  });
+
+  describe('canUpdateStatus', () => {
+    const testShouldSucceed = async (id: number, state: PayoutRequestState) => {
+      await expect(PayoutRequestService.canUpdateStatus(id, state))
+        .to.eventually.be.fulfilled;
+    };
+
+    const testShouldFail = async (
+      id: number, state: PayoutRequestState, reason: PayoutRequestState,
+    ) => {
+      await expect(PayoutRequestService.canUpdateStatus(id, state))
+        .to.eventually.be.rejectedWith(`status ${reason} already exists.`);
+    };
+
+    it('should correctly allow CREATED status', async () => {
+      const { id } = ctx.payoutRequests.filter((req) => req.payoutRequestStatus.length === 0)[0];
+      await testShouldSucceed(id, PayoutRequestState.CREATED);
+    });
+
+    it('should correctly allow APRROVED status', async () => {
+      const { id } = ctx.payoutRequests.filter((req) => req.payoutRequestStatus.length === 1)[0];
+      await testShouldSucceed(id, PayoutRequestState.APPROVED);
+    });
+
+    it('should correctly allow DENIED status', async () => {
+      const { id } = ctx.payoutRequests.filter((req) => req.payoutRequestStatus.length === 1)[0];
+      await testShouldSucceed(id, PayoutRequestState.DENIED);
+    });
+
+    it('should correctly allow CANCELLED status', async () => {
+      const { id } = ctx.payoutRequests.filter((req) => req.payoutRequestStatus.length === 1)[0];
+      await testShouldSucceed(id, PayoutRequestState.CANCELLED);
+    });
+
+    it('should not allow APPROVED status if DENIED exists', async () => {
+      const failState = PayoutRequestState.DENIED;
+      const { id } = ctx.payoutRequests
+        .filter((req) => req.payoutRequestStatus.some((s) => s.state === failState))[0];
+      await testShouldFail(id, PayoutRequestState.APPROVED, failState);
+    });
+
+    it('should not allow APPROVED status if CANCELLED exists', async () => {
+      const failState = PayoutRequestState.CANCELLED;
+      const { id } = ctx.payoutRequests
+        .filter((req) => req.payoutRequestStatus.some((s) => s.state === failState))[0];
+      await testShouldFail(id, PayoutRequestState.APPROVED, failState);
+    });
+
+    it('should not allow DENIED status if APPROVED exists', async () => {
+      const failState = PayoutRequestState.APPROVED;
+      const { id } = ctx.payoutRequests
+        .filter((req) => req.payoutRequestStatus.some((s) => s.state === failState))[0];
+      await testShouldFail(id, PayoutRequestState.APPROVED, failState);
+    });
+
+    it('should not allow DENIED status if CANCELLED exists', async () => {
+      const failState = PayoutRequestState.CANCELLED;
+      const { id } = ctx.payoutRequests
+        .filter((req) => req.payoutRequestStatus.some((s) => s.state === failState))[0];
+      await testShouldFail(id, PayoutRequestState.APPROVED, failState);
+    });
+
+    it('should not allow CANCELLED status if APPROVED exists', async () => {
+      const failState = PayoutRequestState.APPROVED;
+      const { id } = ctx.payoutRequests
+        .filter((req) => req.payoutRequestStatus.some((s) => s.state === failState))[0];
+      await testShouldFail(id, PayoutRequestState.APPROVED, failState);
+    });
+
+    it('should not allow CANCELLED status if DENIED exists', async () => {
+      const failState = PayoutRequestState.DENIED;
+      const { id } = ctx.payoutRequests
+        .filter((req) => req.payoutRequestStatus.some((s) => s.state === failState))[0];
+      await testShouldFail(id, PayoutRequestState.APPROVED, failState);
+    });
+
+    it('should not allow duplicate statusses', async () => {
+      const states = Object.keys(PayoutRequestState);
+      await Promise.all(states.map((state) => {
+        const { id } = ctx.payoutRequests
+          .filter((req) => req.payoutRequestStatus.some((s) => s.state === state))[0];
+        return testShouldFail(
+          id, state as PayoutRequestState, state as PayoutRequestState,
+        );
+      }));
+    });
+  });
+
+  describe('updateStatus', () => {
+    it('should correctly update status to CREATED', async () => {
+      const { id } = ctx.payoutRequests.filter((req) => req.payoutRequestStatus.length === 0)[3];
+      const user = ctx.users[1];
+
+      const payoutRequest = await PayoutRequestService
+        .updateStatus(id, PayoutRequestState.CREATED, user);
+      expect(payoutRequest.status.length).to.equal(1);
+      expect(payoutRequest.status[0].state).to.equal(PayoutRequestState.CREATED);
+      expect(payoutRequest.approvedBy).to.be.undefined;
+    });
+
+    it('should correctly update status to CANCELLED', async () => {
+      const { id } = ctx.payoutRequests.filter((req) => req.payoutRequestStatus.length === 1)[3];
+      const user = ctx.users[1];
+
+      const payoutRequest = await PayoutRequestService
+        .updateStatus(id, PayoutRequestState.CANCELLED, user);
+      expect(payoutRequest.status.length).to.equal(2);
+      expect(payoutRequest.status[1].state).to.equal(PayoutRequestState.CANCELLED);
+      expect(payoutRequest.approvedBy).to.be.undefined;
+    });
+
+    it('should correctly update status to DENIED', async () => {
+      const { id } = ctx.payoutRequests.filter((req) => req.payoutRequestStatus.length === 1)[4];
+      const user = ctx.users[1];
+
+      const payoutRequest = await PayoutRequestService
+        .updateStatus(id, PayoutRequestState.DENIED, user);
+      expect(payoutRequest.status.length).to.equal(2);
+      expect(payoutRequest.status[1].state).to.equal(PayoutRequestState.DENIED);
+      expect(payoutRequest.approvedBy).to.be.undefined;
+    });
+
+    it('should correctly update status to APPROVED', async () => {
+      const { id } = ctx.payoutRequests.filter((req) => req.payoutRequestStatus.length === 1)[5];
+      const user = ctx.users[1];
+
+      const payoutRequest = await PayoutRequestService
+        .updateStatus(id, PayoutRequestState.APPROVED, user);
+      expect(payoutRequest.status.length).to.equal(2);
+      expect(payoutRequest.status[1].state).to.equal(PayoutRequestState.APPROVED);
+      expect(payoutRequest.approvedBy).to.not.be.undefined;
+      expect(payoutRequest.approvedBy.id).to.equal(user.id);
+
+      const payoutRequestRaw = await PayoutRequest.findOne(payoutRequest.id, {
+        relations: ['transfer'],
+      });
+      expect(payoutRequestRaw.transfer).to.not.be.undefined;
+    });
+
+    it('should throw error if cannot update to status', async () => {
+      const { id } = ctx.payoutRequests.filter((req) => req.payoutRequestStatus.length === 1)[5];
+      const user = ctx.users[1];
+
+      await expect(PayoutRequestService.updateStatus(id, PayoutRequestState.CREATED, user))
+        .to.eventually.be.rejectedWith(`status ${PayoutRequestState.CREATED} already exists`);
+    });
+
+    it('should throw error if payout request does not exist', async () => {
+      let { id } = ctx.payoutRequests[ctx.payoutRequests.length - 1];
+      id += 3900;
+      const user = ctx.users[1];
+
+      await expect(PayoutRequestService.updateStatus(id, PayoutRequestState.CREATED, user))
+        .to.eventually.be.rejectedWith(`PayoutRequest with ID ${id} does not exist`);
     });
   });
 });

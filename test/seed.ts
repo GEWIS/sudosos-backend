@@ -1186,6 +1186,8 @@ export async function seedPayoutRequests(users: User[]): Promise<PayoutRequest[]
   admins.push(undefined);
 
   const totalNrOfStatuses = 3;
+  let finalState = 0;
+
   for (let i = 0; i < users.length * 3; i += 1) {
     const requestedBy = users[Math.floor(i / totalNrOfStatuses)];
     const newPayoutReq = Object.assign(new PayoutRequest(), {
@@ -1195,9 +1197,15 @@ export async function seedPayoutRequests(users: User[]): Promise<PayoutRequest[]
       bankAccountName: `${requestedBy.firstName} ${requestedBy.lastName}`,
     });
 
-    const approved = Math.floor(((i % (totalNrOfStatuses * 2)) + 1) / totalNrOfStatuses) !== 1;
-    const states = [PayoutRequestState.CREATED, approved ? PayoutRequestState.APPROVED
-      : PayoutRequestState.DENIED].slice(0, i % totalNrOfStatuses);
+    const option = Math.floor(finalState % 3);
+    let lastOption;
+    switch (option) {
+      case 0: lastOption = PayoutRequestState.APPROVED; break;
+      case 1: lastOption = PayoutRequestState.DENIED; break;
+      default: lastOption = PayoutRequestState.CANCELLED; break;
+    }
+    const states = [PayoutRequestState.CREATED, lastOption].slice(0, i % totalNrOfStatuses);
+    if (states.length === 2) finalState += 1;
 
     const statusses: PayoutRequestStatus[] = [];
     states.forEach((state, index) => {

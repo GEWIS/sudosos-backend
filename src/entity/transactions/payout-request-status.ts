@@ -24,6 +24,7 @@ export enum PayoutRequestState {
   CREATED = 'CREATED',
   APPROVED = 'APPROVED',
   DENIED = 'DENIED',
+  CANCELLED = 'CANCELLED',
 }
 
 @Entity()
