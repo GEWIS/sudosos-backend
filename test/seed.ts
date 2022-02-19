@@ -1200,9 +1200,11 @@ export async function seedPayoutRequests(users: User[]): Promise<PayoutRequest[]
       : PayoutRequestState.DENIED].slice(0, i % totalNrOfStatuses);
 
     const statusses: PayoutRequestStatus[] = [];
-    states.forEach((state) => {
+    states.forEach((state, index) => {
       statusses.push(Object.assign(new PayoutRequestStatus(), {
         state,
+        createdAt: new Date((new Date()).getTime() + 1000 * 60 * index),
+        updatedAt: new Date((new Date()).getTime() + 1000 * 60 * index),
       }));
       if (state === PayoutRequestState.APPROVED) {
         newPayoutReq.approvedBy = admins[i % admins.length];

@@ -39,13 +39,19 @@ export default class PayoutRequestService {
       fromDate, tillDate, ...p
     } = filters;
 
-    const builder = createQueryBuilder(PayoutRequest, 'payoutRequest')
-      .select('payoutRequest.*')
-      .addSelect((qb) => qb.subQuery()
+    const stateSubquery = (qb?: SelectQueryBuilder<PayoutRequest>) => {
+      const builder = qb !== undefined ? qb.subQuery() : createQueryBuilder();
+      return builder
         .select('payoutRequestStatus.state', 'status')
         .from(PayoutRequestStatus, 'payoutRequestStatus')
         .orderBy('payoutRequestStatus.createdAt', 'DESC')
-        .where('payoutRequestStatus.payoutRequestId = payoutRequest.id'), 'status')
+        .where('payoutRequestStatus.payoutRequestId = payoutRequest.id')
+        .limit(1);
+    };
+
+    const builder = createQueryBuilder(PayoutRequest, 'payoutRequest')
+      .select('payoutRequest.*')
+      .addSelect((qb) => stateSubquery(qb), 'status')
       .leftJoinAndSelect('payoutRequest.requestedBy', 'requestedBy')
       .leftJoinAndSelect('payoutRequest.approvedBy', 'approvedBy')
       .distinct(true);
@@ -53,10 +59,10 @@ export default class PayoutRequestService {
     if (fromDate) builder.andWhere('"payoutRequest"."createdAt" >= :fromDate', { fromDate: fromDate.toISOString() });
     if (tillDate) builder.andWhere('"payoutRequest"."createdAt" < :tillDate', { tillDate: tillDate.toISOString() });
     const mapping = {
-      id: 'id',
+      id: 'payoutRequest.id',
       requestedById: 'payoutRequest.requestedById',
       approvedById: 'payoutRequest.approvedById',
-      status: 'status',
+      status: `(${stateSubquery().getSql()})`,
     };
     QueryFilter.applyFilter(builder, mapping, p);
 
