@@ -21,7 +21,7 @@ import { expect } from 'chai';
 import { Connection } from 'typeorm';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import log4js, { Logger } from 'log4js';
-import dinero, { DineroObject } from 'dinero.js';
+import { DineroObject } from 'dinero.js';
 import Transaction from '../../../src/entity/transactions/transaction';
 import Database from '../../../src/database/database';
 import seedDatabase from '../../seed';
@@ -35,8 +35,7 @@ import User from '../../../src/entity/user/user';
 import { createValidTransactionRequest } from '../../helpers/transaction-factory';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
 import ContainerRevision from '../../../src/entity/container/container-revision';
-import TransferRequest from '../../../src/controller/request/transfer-request';
-import { generateBalance } from '../../helpers/test-helpers';
+import generateBalance from '../../helpers/test-helpers';
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
 
 describe('TransactionService', (): void => {

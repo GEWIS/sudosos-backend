@@ -161,6 +161,7 @@ export async function seedInvoices(users: User[], transactions: Transaction[]): 
       defineInvoiceEntries(i + 1, 1 + invoiceEntry.length, invoiceTransactions));
     // Edgecase in the seeder
     if (cost === 0) {
+      // eslint-disable-next-line no-continue
       continue;
     }
 

@@ -19,7 +19,7 @@ import dinero from 'dinero.js';
 import TransferRequest from '../../src/controller/request/transfer-request';
 import TransferService from '../../src/service/transfer-service';
 
-export async function generateBalance(amount: number, toId: number) {
+export default async function generateBalance(amount: number, toId: number) {
   const transferRequest: TransferRequest = {
     amount: {
       amount,

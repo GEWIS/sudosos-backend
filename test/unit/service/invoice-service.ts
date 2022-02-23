@@ -141,7 +141,8 @@ describe('InvoiceService', () => {
 
   // Should be moved to invoice Controller test suit.
   // describe('verifyInvoiceRequest function', () => {
-  //   it('should return true if the CreateInvoiceRequest is valid with defined transactions', async () => {
+  //   it('should return true if the CreateInvoiceRequest
+  //   is valid with defined transactions', async () => {
   //     const toId = 5;
   //     expect(await User.findOne({ id: toId })).to.not.be.undefined;
   //
@@ -158,7 +159,8 @@ describe('InvoiceService', () => {
   //     const valid = await InvoiceService.verifyInvoiceRequest(createInvoiceRequest);
   //     expect(valid).to.be.true;
   //   });
-  //   it('should return true if the CreateInvoiceRequest is valid without defined transactions', async () => {
+  //   it('should return true if the CreateInvoiceRequest
+  //   is valid without defined transactions', async () => {
   //     const toId = 5;
   //     expect(await User.findOne({ id: toId })).to.not.be.undefined;
   //
