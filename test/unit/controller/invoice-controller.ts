@@ -24,7 +24,9 @@ import User, { UserType } from '../../../src/entity/user/user';
 import InvoiceController from '../../../src/controller/invoice-controller';
 import Database from '../../../src/database/database';
 import {
-  seedAllContainers, seedAllPointsOfSale, seedAllProducts, seedPointsOfSale, seedProductCategories, seedTransactions,
+  seedAllContainers,
+  seedAllPointsOfSale,
+  seedAllProducts, seedPointsOfSale, seedProductCategories, seedTransactions,
 } from '../../seed';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Swagger from '../../../src/start/swagger';
