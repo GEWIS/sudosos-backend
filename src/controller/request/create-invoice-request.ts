@@ -18,13 +18,13 @@
 
 import InvoiceEntryRequest from './invoice-entry-request';
 
-interface BaseInvoice {
+export interface BaseInvoice {
   toId: number,
   addressee: string,
   description: string,
   customEntries?: InvoiceEntryRequest[],
   transactionIDs?: number[],
-  fromDate?: Date,
+  fromDate?: string,
 }
 
 export interface CreateInvoiceParams extends BaseInvoice {

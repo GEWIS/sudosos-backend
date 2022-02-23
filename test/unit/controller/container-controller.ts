@@ -349,7 +349,7 @@ describe('ContainerController', async (): Promise<void> => {
     });
     it('should verify Name', async () => {
       const req: CreateContainerRequest = { ...ctx.validContainerReq, name: '' };
-      await expectError(req, 'Name must be a non-zero length string.');
+      await expectError(req, 'Name: must be a non-zero length string.');
     });
   }
   describe('POST /containers', () => {
@@ -379,7 +379,7 @@ describe('ContainerController', async (): Promise<void> => {
         .send(ctx.invalidContainerReq);
 
       expect(await Container.count()).to.equal(containerCounter);
-      expect(res.body).to.equal('Name must be a non-zero length string.');
+      expect(res.body).to.equal('Name: must be a non-zero length string.');
 
       expect(res.status).to.equal(400);
     });

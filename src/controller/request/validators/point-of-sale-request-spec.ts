@@ -16,22 +16,22 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  Either, isFail, Specification,
+  Either, isFail, Specification, SubSpecification,
   toFail,
   toPass, validateSpecification,
-  ValidationError,
+  ValidationError, ValidationRule,
 } from '../../../helpers/specification-validation';
 import { getIdsAndRequests } from '../../../helpers/array-splitter'; import Container from '../../../entity/container/container';
 import User from '../../../entity/user/user';
 import { BasePointOfSaleParams, CreatePointOfSaleParams, UpdatePointOfSaleParams } from '../point-of-sale-request';
 import durationSpec from './duration-spec';
-import namedSpec from './named-spec';
 import { ContainerParams } from '../container-request';
 import verifyContainerRequest from './container-request-spec';
+import stringSpec, { nonZeroString } from './string-spec';
 
-const ownerMustExist = async (p: CreatePointOfSaleParams) => {
+export const userMustExist = async (p: number) => {
   // Owner must exist.
-  if (await User.findOne({ id: p.ownerId }) === undefined) {
+  if (await User.findOne({ id: p }) === undefined) {
     return toFail(new ValidationError('Owner must exist.'));
   }
   return toPass(p);
@@ -67,14 +67,14 @@ function basePointOfSaleRequestSpec<T extends BasePointOfSaleParams>():
 Specification<T, ValidationError> {
   return [
     ...durationSpec<T>(),
-    ...namedSpec<T>(),
+    [stringSpec(), 'name', new ValidationError('Name:')],
     validContainers,
   ];
 }
 
-const createPointOfSaleRequestSpec = [
+const createPointOfSaleRequestSpec: Specification<CreatePointOfSaleParams, ValidationError> = [
   ...basePointOfSaleRequestSpec<CreatePointOfSaleParams>(),
-  ownerMustExist,
+  [[userMustExist], 'ownerId', new ValidationError('ownerId:')],
 ];
 
 export async function verifyCreatePointOfSaleRequest(createPointOfSaleRequest:

@@ -17,12 +17,12 @@
  */
 
 import { DineroObjectRequest } from './dinero-request';
-import Named from './named';
 
-export interface BaseProductParams extends Named {
+export interface BaseProductParams {
   price: DineroObjectRequest;
   category: number;
   alcoholPercentage: number;
+  name: string;
 }
 
 export default interface CreateProductParams extends BaseProductParams{

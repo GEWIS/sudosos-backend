@@ -40,8 +40,7 @@ import {
 } from '../../../src/controller/response/invoice-response';
 import InvoiceService from '../../../src/service/invoice-service';
 import InvoiceEntry from '../../../src/entity/invoices/invoice-entry';
-import CreateInvoiceRequest from '../../../src/controller/request/create-invoice-request';
-import Transaction from '../../../src/entity/transactions/transaction';
+import { CreateInvoiceParams } from '../../../src/controller/request/create-invoice-request';
 import { TransferResponse } from '../../../src/controller/response/transfer-response';
 import TransactionService from '../../../src/service/transaction-service';
 import { BaseTransactionResponse } from '../../../src/controller/response/transaction-response';
@@ -124,97 +123,101 @@ describe('InvoiceService', () => {
 
   describe('getInvoices function', () => {
     it('should return all invoices with no input specification', async () => {
-      const res: BaseInvoiceResponse[] = await InvoiceService.getInvoices();
+      const res: BaseInvoiceResponse[] = (await InvoiceService.getInvoices()).records;
       returnsAll(res, ctx.invoices, baseKeyMapping);
     });
     it('should return all invoices and their entries if specified', async () => {
       const res: InvoiceResponse[] = (
-        await InvoiceService.getInvoices({ returnInvoiceEntries: true })) as InvoiceResponse[];
+        await InvoiceService.getInvoices({ returnInvoiceEntries: true }))
+        .records as InvoiceResponse[];
       returnsAll(res, ctx.invoices, keyMapping);
     });
     it('should return a specific invoice if the ID is specified', async () => {
       const invoiceId = ctx.invoices[0].id;
-      const res: BaseInvoiceResponse[] = await InvoiceService.getInvoices({ invoiceId });
+      const res: BaseInvoiceResponse[] = (await InvoiceService.getInvoices({ invoiceId })).records;
       returnsAll(res, [ctx.invoices[0]], baseKeyMapping);
     });
   });
-  describe('verifyInvoiceRequest function', () => {
-    it('should return true if the CreateInvoiceRequest is valid with defined transactions', async () => {
-      const toId = 5;
-      expect(await User.findOne({ id: toId })).to.not.be.undefined;
 
-      const transactions: Transaction[] = await Transaction.find({ where: { from: toId } });
-      const transactionIDs = transactions.map((t) => t.id);
+  // Should be moved to invoice Controller test suit.
+  // describe('verifyInvoiceRequest function', () => {
+  //   it('should return true if the CreateInvoiceRequest is valid with defined transactions', async () => {
+  //     const toId = 5;
+  //     expect(await User.findOne({ id: toId })).to.not.be.undefined;
+  //
+  //     const transactions: Transaction[] = await Transaction.find({ where: { from: toId } });
+  //     const transactionIDs = transactions.map((t) => t.id);
+  //
+  //     const createInvoiceRequest: CreateInvoiceRequest = {
+  //       addressee: 'addressee',
+  //       description: 'description',
+  //       toId,
+  //       transactionIDs,
+  //     };
+  //
+  //     const valid = await InvoiceService.verifyInvoiceRequest(createInvoiceRequest);
+  //     expect(valid).to.be.true;
+  //   });
+  //   it('should return true if the CreateInvoiceRequest is valid without defined transactions', async () => {
+  //     const toId = 5;
+  //     expect(await User.findOne({ id: toId })).to.not.be.undefined;
+  //
+  //     const createInvoiceRequest: CreateInvoiceRequest = {
+  //       addressee: 'addressee',
+  //       description: 'description',
+  //       toId,
+  //     };
+  //
+  //     const valid = await InvoiceService.verifyInvoiceRequest(createInvoiceRequest);
+  //     expect(valid).to.be.true;
+  //   });
+  //   it('should return false if the id is invalid', async () => {
+  //     const toId = 0;
+  //     expect(await User.findOne({ id: toId })).to.be.undefined;
+  //
+  //     const createInvoiceRequest: CreateInvoiceRequest = {
+  //       addressee: 'addressee',
+  //       description: 'description',
+  //       toId,
+  //     };
+  //
+  //     const valid = await InvoiceService.verifyInvoiceRequest(createInvoiceRequest);
+  //     expect(valid).to.be.false;
+  //   });
+  //   it('should return false if the transaction ids are invalid', async () => {
+  //     const toId = 5;
+  //     expect(await User.findOne({ id: toId })).to.be.not.undefined;
+  //
+  //     const createInvoiceRequest: CreateInvoiceRequest = {
+  //       addressee: 'addressee',
+  //       description: 'description',
+  //       toId,
+  //       transactionIDs: [0],
+  //     };
+  //
+  //     const valid = await InvoiceService.verifyInvoiceRequest(createInvoiceRequest);
+  //     expect(valid).to.be.false;
+  //   });
+  //   it('should return false if the transactions are not owned by the user', async () => {
+  //     const toId = 5;
+  //     expect(await User.findOne({ id: toId })).to.be.not.undefined;
+  //
+  //     const transactions: Transaction[] = await Transaction.find({ where: { from: toId } });
+  //     let transactionIDs = transactions.map((t) => t.id);
+  //     transactionIDs = [Math.max(...transactionIDs) + 1];
+  //
+  //     const createInvoiceRequest: CreateInvoiceRequest = {
+  //       addressee: 'addressee',
+  //       description: 'description',
+  //       toId,
+  //       transactionIDs,
+  //     };
+  //
+  //     const valid = await InvoiceService.verifyInvoiceRequest(createInvoiceRequest);
+  //     expect(valid).to.be.false;
+  //   });
+  // });
 
-      const createInvoiceRequest: CreateInvoiceRequest = {
-        addressee: 'addressee',
-        description: 'description',
-        toId,
-        transactionIDs,
-      };
-
-      const valid = await InvoiceService.verifyInvoiceRequest(createInvoiceRequest);
-      expect(valid).to.be.true;
-    });
-    it('should return true if the CreateInvoiceRequest is valid without defined transactions', async () => {
-      const toId = 5;
-      expect(await User.findOne({ id: toId })).to.not.be.undefined;
-
-      const createInvoiceRequest: CreateInvoiceRequest = {
-        addressee: 'addressee',
-        description: 'description',
-        toId,
-      };
-
-      const valid = await InvoiceService.verifyInvoiceRequest(createInvoiceRequest);
-      expect(valid).to.be.true;
-    });
-    it('should return false if the id is invalid', async () => {
-      const toId = 0;
-      expect(await User.findOne({ id: toId })).to.be.undefined;
-
-      const createInvoiceRequest: CreateInvoiceRequest = {
-        addressee: 'addressee',
-        description: 'description',
-        toId,
-      };
-
-      const valid = await InvoiceService.verifyInvoiceRequest(createInvoiceRequest);
-      expect(valid).to.be.false;
-    });
-    it('should return false if the transaction ids are invalid', async () => {
-      const toId = 5;
-      expect(await User.findOne({ id: toId })).to.be.not.undefined;
-
-      const createInvoiceRequest: CreateInvoiceRequest = {
-        addressee: 'addressee',
-        description: 'description',
-        toId,
-        transactionIDs: [0],
-      };
-
-      const valid = await InvoiceService.verifyInvoiceRequest(createInvoiceRequest);
-      expect(valid).to.be.false;
-    });
-    it('should return false if the transactions are not owned by the user', async () => {
-      const toId = 5;
-      expect(await User.findOne({ id: toId })).to.be.not.undefined;
-
-      const transactions: Transaction[] = await Transaction.find({ where: { from: toId } });
-      let transactionIDs = transactions.map((t) => t.id);
-      transactionIDs = [Math.max(...transactionIDs) + 1];
-
-      const createInvoiceRequest: CreateInvoiceRequest = {
-        addressee: 'addressee',
-        description: 'description',
-        toId,
-        transactionIDs,
-      };
-
-      const valid = await InvoiceService.verifyInvoiceRequest(createInvoiceRequest);
-      expect(valid).to.be.false;
-    });
-  });
   describe('createTransferFromTransactions function', () => {
     it('should return a correct Transfer', async () => {
       const toId = (await User.findOne()).id;
@@ -264,15 +267,15 @@ describe('InvoiceService', () => {
       const { tIds, cost } = await requestToTransaction(transactions);
       expect(await BalanceService.getBalance(debtorId)).is.equal(-1 * cost);
 
-      const createInvoiceRequest: CreateInvoiceRequest = {
+      const createInvoiceRequest: CreateInvoiceParams = {
+        byId: creditorId,
         addressee: 'Addressee',
         description: 'Description',
         toId: debtorId,
         transactionIDs: tIds,
       };
 
-      const invoice = await InvoiceService.createInvoice(debtorId,
-        createInvoiceRequest);
+      const invoice = await InvoiceService.createInvoice(createInvoiceRequest);
       expect(await BalanceService.getBalance(debtorId)).is.equal(0);
       return invoice;
     }
@@ -295,14 +298,15 @@ describe('InvoiceService', () => {
         await new Promise((f) => setTimeout(f, 500));
         await createInvoiceWithTransfers(debtor.id, creditor.id, 5);
 
-        const invoice = (await InvoiceService.getInvoices({ toId: debtor.id }))[0];
+        const invoice = (await InvoiceService.getInvoices({ toId: debtor.id })).records[0];
         expect(invoice).to.not.be.undefined;
 
-        const createInvoiceRequest: CreateInvoiceRequest = {
+        const createInvoiceRequest: CreateInvoiceParams = {
+          byId: creditor.id,
           addressee: 'Addressee',
           description: 'Description',
           toId: debtor.id,
-          fromDate: new Date(),
+          fromDate: new Date().toISOString(),
         };
 
         await new Promise((f) => setTimeout(f, 1000));
@@ -314,7 +318,7 @@ describe('InvoiceService', () => {
         const first = await requestToTransaction(transactions);
         expect(await BalanceService.getBalance(debtor.id)).is.equal(-1 * first.cost);
 
-        await InvoiceService.createInvoice(debtor.id, createInvoiceRequest);
+        await InvoiceService.createInvoice(createInvoiceRequest);
         expect(await BalanceService.getBalance(debtor.id)).is.equal(0);
       });
     });
@@ -327,10 +331,11 @@ describe('InvoiceService', () => {
         await new Promise((f) => setTimeout(f, 500));
         await createInvoiceWithTransfers(debtor.id, creditor.id, 5);
 
-        const invoice = (await InvoiceService.getInvoices({ toId: debtor.id }))[0];
+        const invoice = (await InvoiceService.getInvoices({ toId: debtor.id })).records[0];
         expect(invoice).to.not.be.undefined;
 
-        const createInvoiceRequest: CreateInvoiceRequest = {
+        const createInvoiceRequest: CreateInvoiceParams = {
+          byId: creditor.id,
           addressee: 'Addressee',
           description: 'Description',
           toId: debtor.id,
@@ -345,7 +350,7 @@ describe('InvoiceService', () => {
         const first = await requestToTransaction(transactions);
         expect(await BalanceService.getBalance(debtor.id)).is.equal(-1 * first.cost);
 
-        await InvoiceService.createInvoice(debtor.id, createInvoiceRequest);
+        await InvoiceService.createInvoice(createInvoiceRequest);
         expect(await BalanceService.getBalance(debtor.id)).is.equal(0);
       });
     });

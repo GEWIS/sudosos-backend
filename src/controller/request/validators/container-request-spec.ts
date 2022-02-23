@@ -30,7 +30,7 @@ import {
   BaseContainerParams,
   ContainerParams,
 } from '../container-request';
-import namedSpec from './named-spec';
+import stringSpec from './string-spec';
 import { ProductRequest } from '../product-request';
 
 async function validProducts<T extends BaseContainerParams>(c: T) {
@@ -60,7 +60,7 @@ async function validProducts<T extends BaseContainerParams>(c: T) {
 function baseContainerRequestSpec<T extends BaseContainerParams>():
 Specification<T, ValidationError> {
   return [
-    ...namedSpec<T>(),
+    [stringSpec(), 'name', new ValidationError('Name:')],
     validProducts,
   ];
 }

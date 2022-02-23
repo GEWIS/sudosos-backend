@@ -27,8 +27,7 @@ import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import Invoice from '../entity/invoices/invoice';
 import { parseUserToBaseResponse } from '../helpers/entity-to-response';
 import InvoiceEntry from '../entity/invoices/invoice-entry';
-import { CreateInvoiceParams, CreateInvoiceRequest } from '../controller/request/create-invoice-request';
-import User from '../entity/user/user';
+import { CreateInvoiceParams } from '../controller/request/create-invoice-request';
 import Transaction from '../entity/transactions/transaction';
 import TransferService from './transfer-service';
 import TransferRequest from '../controller/request/transfer-request';
@@ -37,7 +36,7 @@ import { DineroObjectRequest } from '../controller/request/dinero-request';
 import { TransferResponse } from '../controller/response/transfer-response';
 import { BaseTransactionResponse } from '../controller/response/transaction-response';
 import { RequestWithToken } from '../middleware/token-middleware';
-import { asBoolean, asInvoiceState, asNumber } from '../helpers/validators';
+import {asBoolean, asDate, asInvoiceState, asNumber} from '../helpers/validators';
 import { PaginationParameters } from '../helpers/pagination';
 import InvoiceEntryRequest from '../controller/request/invoice-entry-request';
 
@@ -241,7 +240,7 @@ export default class InvoiceService {
     if (invoiceRequest.transactionIDs) {
       params = { transactionId: invoiceRequest.transactionIDs };
     } else if (invoiceRequest.fromDate) {
-      params = { fromDate: invoiceRequest.fromDate };
+      params = { fromDate: asDate(invoiceRequest.fromDate) };
     } else {
       // By default we create an Invoice from all transactions since last invoice.
       const latestInvoice = (await this.getInvoices({ toId })).records[0];
@@ -329,26 +328,5 @@ export default class InvoiceService {
       },
       records,
     };
-  }
-
-  /**
-   * Checks if the CreateInvoiceRequest is valid.
-   * @param invoice - The CreateInvoiceRequest to check
-   */
-  public static async verifyInvoiceRequest(invoice: CreateInvoiceRequest): Promise<boolean> {
-    // Check if the To user exists.
-    const toUser: User = await User.findOne({ id: invoice.toId });
-    if (toUser === undefined) {
-      return false;
-    }
-
-    if (Object.prototype.hasOwnProperty.call(invoice, 'transactionIDs')) {
-      const transactions = await Transaction.findByIds(invoice.transactionIDs, { relations: ['from'] });
-      const notOwnedByUser = transactions.filter((t) => t.from.id !== invoice.toId);
-      if (notOwnedByUser.length !== 0) return false;
-      if (transactions.length !== invoice.transactionIDs.length) return false;
-    }
-
-    return true;
   }
 }
