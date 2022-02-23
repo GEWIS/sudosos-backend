@@ -374,7 +374,7 @@ describe('PointOfSaleController', async () => {
     });
     it('should verify Owner', async () => {
       const req: CreatePointOfSaleRequest = { ...ctx.validPOSRequest, ownerId: -1 };
-      await expectError(req, 'ownerId: Owner must exist.');
+      await expectError(req, 'ownerId: must exist.');
     });
     it('should verify containers Ids', async () => {
       const invalidRequest = {

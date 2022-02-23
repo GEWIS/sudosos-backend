@@ -15,16 +15,16 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { BaseInvoice, CreateInvoiceParams, CreateInvoiceRequest } from '../create-invoice-request';
+import { BaseInvoice, CreateInvoiceParams, InvoiceRequest } from '../invoice-request';
 import {
   createArrayRule,
   Specification, toFail, toPass, validateSpecification, ValidationError,
 } from '../../../helpers/specification-validation';
-import { userMustExist } from './point-of-sale-request-spec';
 import Transaction from '../../../entity/transactions/transaction';
 import InvoiceEntryRequest from '../invoice-entry-request';
 import { validOrUndefinedDate } from './duration-spec';
 import stringSpec from './string-spec';
+import { positiveNumber, userMustExist } from './general-validators';
 
 /**
  * Checks whether all the transactions exists and are credited to the debtor.
@@ -39,11 +39,6 @@ async function validTransactionIds<T extends BaseInvoice>(p: T) {
 
   return toPass(p);
 }
-
-const positiveNumber = async (p: number) => {
-  if (p <= 0) return toFail(new ValidationError('Number must be positive'));
-  return toPass(p);
-};
 
 const invoiceEntryRequestSpec: Specification<InvoiceEntryRequest, ValidationError> = [
   [stringSpec(), 'description', new ValidationError('description:')],
@@ -67,7 +62,7 @@ const createInvoiceRequestSpec: Specification<CreateInvoiceParams, ValidationErr
 ];
 
 export default async function verifyCreateInvoiceRequest(
-  createInvoiceRequest: CreateInvoiceRequest,
+  createInvoiceRequest: InvoiceRequest,
 ) {
   return Promise.resolve(await validateSpecification(
     createInvoiceRequest, createInvoiceRequestSpec,

@@ -40,7 +40,7 @@ import {
 } from '../../../src/controller/response/invoice-response';
 import InvoiceService from '../../../src/service/invoice-service';
 import InvoiceEntry from '../../../src/entity/invoices/invoice-entry';
-import { CreateInvoiceParams } from '../../../src/controller/request/create-invoice-request';
+import { CreateInvoiceParams } from '../../../src/controller/request/invoice-request';
 import { TransferResponse } from '../../../src/controller/response/transfer-response';
 import TransactionService from '../../../src/service/transaction-service';
 import { BaseTransactionResponse } from '../../../src/controller/response/transaction-response';
@@ -315,6 +315,7 @@ describe('InvoiceService', () => {
           debtor.id, creditor.id, 2,
         );
 
+        expect(await BalanceService.getBalance(debtor.id)).is.equal(0);
         const first = await requestToTransaction(transactions);
         expect(await BalanceService.getBalance(debtor.id)).is.equal(-1 * first.cost);
 
@@ -326,10 +327,9 @@ describe('InvoiceService', () => {
       await inUserContext(await UserFactory().clone(2), async (debtor: User, creditor: User) => {
         // Spent money and create an invoice.
         await createInvoiceWithTransfers(debtor.id, creditor.id, 3);
-
-        // Wait a bit before creating a new Invoice.
         await new Promise((f) => setTimeout(f, 500));
         await createInvoiceWithTransfers(debtor.id, creditor.id, 5);
+        await new Promise((f) => setTimeout(f, 500));
 
         const invoice = (await InvoiceService.getInvoices({ toId: debtor.id })).records[0];
         expect(invoice).to.not.be.undefined;
@@ -341,7 +341,6 @@ describe('InvoiceService', () => {
           toId: debtor.id,
         };
 
-        await new Promise((f) => setTimeout(f, 1000));
         // Spent more money.
         const transactions: TransactionRequest[] = await createTransactionRequest(
           debtor.id, creditor.id, 2,
@@ -349,6 +348,8 @@ describe('InvoiceService', () => {
 
         const first = await requestToTransaction(transactions);
         expect(await BalanceService.getBalance(debtor.id)).is.equal(-1 * first.cost);
+
+        await new Promise((f) => setTimeout(f, 500));
 
         await InvoiceService.createInvoice(createInvoiceRequest);
         expect(await BalanceService.getBalance(debtor.id)).is.equal(0);

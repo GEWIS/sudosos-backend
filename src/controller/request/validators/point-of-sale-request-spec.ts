@@ -16,33 +16,25 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  Either, isFail, Specification, SubSpecification,
-  toFail,
+  Either, isFail, Specification, toFail,
   toPass, validateSpecification,
-  ValidationError, ValidationRule,
+  ValidationError,
 } from '../../../helpers/specification-validation';
 import { getIdsAndRequests } from '../../../helpers/array-splitter'; import Container from '../../../entity/container/container';
-import User from '../../../entity/user/user';
 import { BasePointOfSaleParams, CreatePointOfSaleParams, UpdatePointOfSaleParams } from '../point-of-sale-request';
 import durationSpec from './duration-spec';
 import { ContainerParams } from '../container-request';
 import verifyContainerRequest from './container-request-spec';
-import stringSpec, { nonZeroString } from './string-spec';
-
-export const userMustExist = async (p: number) => {
-  // Owner must exist.
-  if (await User.findOne({ id: p }) === undefined) {
-    return toFail(new ValidationError('Owner must exist.'));
-  }
-  return toPass(p);
-};
+import stringSpec from './string-spec';
+import { CONTAINER_VALIDATION_FAIL, INVALID_CONTAINER_IDS } from './validation-errors';
+import { userMustExist } from './general-validators';
 
 async function validContainers<T extends BasePointOfSaleParams>(p: T) {
   const { ids, requests } = getIdsAndRequests<ContainerParams>(p.containers);
 
   const containers = await Container.findByIds(ids);
   if (containers.length !== ids.length) {
-    return toFail(new ValidationError('Not all container IDs are valid.'));
+    return toFail(INVALID_CONTAINER_IDS());
   }
 
   const promises: Promise<Either<ValidationError, ContainerParams>>[] = [];
@@ -57,7 +49,7 @@ async function validContainers<T extends BasePointOfSaleParams>(p: T) {
 
   for (let i = 0; i < results.length; i += 1) {
     const result = results[i];
-    if (isFail(result)) return toFail(new ValidationError('Container validation failed:').join(result.fail));
+    if (isFail(result)) return toFail(CONTAINER_VALIDATION_FAIL().join(result.fail));
   }
 
   return toPass(p);

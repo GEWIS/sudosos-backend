@@ -22,8 +22,10 @@ import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import { PaginatedInvoiceResponse } from './response/invoice-response';
 import InvoiceService, { InvoiceFilterParameters, parseInvoiceFilterParameters } from '../service/invoice-service';
-import CreateInvoiceRequest from './request/create-invoice-request';
 import { parseRequestPagination } from '../helpers/pagination';
+import { CreateInvoiceParams, InvoiceRequest } from './request/invoice-request';
+import verifyCreateInvoiceRequest from './request/validators/invoice-request-spec';
+import { isFail } from '../helpers/specification-validation';
 
 export default class InvoiceController extends BaseController {
   private logger: Logger = log4js.getLogger('InvoiceController');
@@ -109,7 +111,27 @@ export default class InvoiceController extends BaseController {
    * @returns {string} 500 - Internal server error
    */
   public async createInvoice(req: RequestWithToken, res: Response): Promise<void> {
-    const body = req.body as CreateInvoiceRequest;
+    const body = req.body as InvoiceRequest;
     this.logger.trace('Create Invoice', body, 'by user', req.token.user);
+
+    // handle request
+    try {
+      // If no byId is provided we use the token user id.
+      const params: CreateInvoiceParams = {
+        ...body,
+        byId: body.byId ?? req.token.user.id,
+      };
+
+      const validation = await verifyCreateInvoiceRequest(params);
+      if (isFail(validation)) {
+        res.status(400).json(validation.fail.value);
+        return;
+      }
+
+      res.json(await InvoiceService.createInvoice(params));
+    } catch (error) {
+      this.logger.error('Could not create invoice:', error);
+      res.status(500).json('Internal server error.');
+    }
   }
 }

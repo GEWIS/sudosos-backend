@@ -53,9 +53,7 @@ describe('TransactionService', (): void => {
   };
 
   // eslint-disable-next-line func-names
-  before(async function (): Promise<void> {
-    this.timeout(10000);
-
+  before(async () => {
     const logger: Logger = log4js.getLogger('TransactionServiceTest');
     logger.level = 'ALL';
     const connection = await Database.initialize();

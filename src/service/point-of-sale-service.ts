@@ -112,12 +112,25 @@ export default class PointOfSaleService {
   private static async asPointOfSaleResponseWithContainers(
     pointOfSale: PointOfSaleResponse | UpdatedPointOfSaleResponse,
   ): Promise<PointOfSaleWithContainersResponse> {
+    const filters: any = { posId: pointOfSale.id };
+    let updated = false;
+    if (Object.prototype.hasOwnProperty.call(pointOfSale, 'revision')) {
+      filters.posRevision = (pointOfSale as PointOfSaleResponse).revision;
+    } else {
+      updated = true;
+    }
+
     const containerIds = (
-      (await ContainerService.getContainers({ posId: pointOfSale.id })).records.map((c) => c.id));
+      (await ContainerService.getContainers(filters))
+        .records.map((c) => ({ id: c.id, revision: c.revision })));
     const containers: ContainerWithProductsResponse[] = [];
     await Promise.all(
       containerIds.map(
-        async (c) => { containers.push(await ContainerService.getProductsResponse(c)); },
+        async (c) => {
+          containers.push(await ContainerService.getProductsResponse(
+            { containerId: c.id, containerRevision: c.revision, updated },
+          ));
+        },
       ),
     );
 
@@ -134,7 +147,7 @@ export default class PointOfSaleService {
       .innerJoin(
         PointOfSaleRevision,
         'posrevision',
-        'pos.id = posrevision.pointOfSale',
+        'pos.id = posrevision.pointOfSale.id',
       )
       .innerJoin('pos.owner', 'owner')
       .select([

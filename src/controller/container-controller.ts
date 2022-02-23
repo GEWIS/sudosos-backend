@@ -164,7 +164,7 @@ export default class ContainerController extends BaseController {
         return;
       }
 
-      const container = await ContainerService.getProductsResponse(containerId);
+      const container = await ContainerService.getProductsResponse({ containerId });
       res.json(container);
     } catch (error) {
       this.logger.error('Could not return single container:', error);
@@ -415,7 +415,7 @@ export default class ContainerController extends BaseController {
         return;
       }
 
-      res.json((await ContainerService.getProductsResponse(containerId, true)));
+      res.json((await ContainerService.getProductsResponse({ containerId, updated: true })));
     } catch (error) {
       this.logger.error('Could not return container:', error);
       res.status(500).json('Internal server error.');

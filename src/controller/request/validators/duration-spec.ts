@@ -19,6 +19,7 @@ import {
   Specification, toFail, toPass, ValidationError,
 } from '../../../helpers/specification-validation';
 import Duration from '../duration';
+import { INVALID_DATE, INVALID_DATE_DURATION } from './validation-errors';
 
 /**
  * Tests if the string is a valid date.
@@ -26,7 +27,7 @@ import Duration from '../duration';
  */
 export function validDate(d: string) {
   if (Number.isNaN(Date.parse(d))) {
-    return toFail(new ValidationError('is not a valid Date.'));
+    return toFail(INVALID_DATE());
   }
   return toPass(d);
 }
@@ -46,7 +47,7 @@ export function validOrUndefinedDate(d: string) {
  */
 function endAfterStart<T extends Duration>(d: T) {
   if (Date.parse(d.endDate) <= Date.parse(d.startDate)) {
-    return toFail(new ValidationError('End Date must be after the Start Date.'));
+    return toFail(INVALID_DATE_DURATION());
   }
   return toPass(d);
 }

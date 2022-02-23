@@ -17,6 +17,15 @@
  */
 
 import InvoiceEntryRequest from './invoice-entry-request';
+import { InvoiceState } from '../../entity/invoices/invoice-status';
+
+export interface UpdateInvoiceParams {
+  invoiceId: number,
+  addressee: string,
+  description: string,
+  state?: InvoiceState,
+  byId: number,
+}
 
 export interface BaseInvoice {
   toId: number,
@@ -41,6 +50,6 @@ export interface CreateInvoiceParams extends BaseInvoice {
  * @property {Array.<integer>} transactionIDs - IDs of the transactions to add to the Invoice.
  * @property {Date} fromDate - For creating an Invoice for all transactions form a specific date.
  */
-export interface CreateInvoiceRequest extends BaseInvoice{
+export interface InvoiceRequest extends BaseInvoice{
   byId?: number,
 }

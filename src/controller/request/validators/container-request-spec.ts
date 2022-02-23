@@ -32,13 +32,14 @@ import {
 } from '../container-request';
 import stringSpec from './string-spec';
 import { ProductRequest } from '../product-request';
+import { INVALID_PRODUCT_IDS, PRODUCT_VALIDATION_FAIL } from './validation-errors';
 
 async function validProducts<T extends BaseContainerParams>(c: T) {
   const { ids, requests } = getIdsAndRequests<ProductRequest>(c.products);
 
   const products = await Product.findByIds(ids);
   if (products.length !== ids.length) {
-    return toFail(new ValidationError('Not all product IDs are valid.'));
+    return toFail(INVALID_PRODUCT_IDS());
   }
 
   const promises: Promise<Either<ValidationError, ProductRequest>>[] = [];
@@ -51,7 +52,7 @@ async function validProducts<T extends BaseContainerParams>(c: T) {
 
   for (let i = 0; i < results.length; i += 1) {
     const result = results[i];
-    if (isFail(result)) return toFail(new ValidationError('Product validation failed:').join(result.fail));
+    if (isFail(result)) return toFail(PRODUCT_VALIDATION_FAIL().join(result.fail));
   }
 
   return toPass(c);

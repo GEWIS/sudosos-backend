@@ -21,13 +21,14 @@ import {
   BaseInvoiceResponse,
   InvoiceEntryResponse,
   InvoiceResponse,
-  InvoiceStatusResponse, PaginatedInvoiceResponse,
+  InvoiceStatusResponse,
+  PaginatedInvoiceResponse,
 } from '../controller/response/invoice-response';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import Invoice from '../entity/invoices/invoice';
 import { parseUserToBaseResponse } from '../helpers/entity-to-response';
 import InvoiceEntry from '../entity/invoices/invoice-entry';
-import { CreateInvoiceParams } from '../controller/request/create-invoice-request';
+import { CreateInvoiceParams, UpdateInvoiceParams } from '../controller/request/invoice-request';
 import Transaction from '../entity/transactions/transaction';
 import TransferService from './transfer-service';
 import TransferRequest from '../controller/request/transfer-request';
@@ -36,9 +37,12 @@ import { DineroObjectRequest } from '../controller/request/dinero-request';
 import { TransferResponse } from '../controller/response/transfer-response';
 import { BaseTransactionResponse } from '../controller/response/transaction-response';
 import { RequestWithToken } from '../middleware/token-middleware';
-import {asBoolean, asDate, asInvoiceState, asNumber} from '../helpers/validators';
+import {
+  asBoolean, asDate, asInvoiceState, asNumber,
+} from '../helpers/validators';
 import { PaginationParameters } from '../helpers/pagination';
 import InvoiceEntryRequest from '../controller/request/invoice-entry-request';
+import User from '../entity/user/user';
 
 export interface InvoiceFilterParameters {
   /**
@@ -118,7 +122,9 @@ export default class InvoiceService {
       addressee: invoice.addressee,
       transfer: TransferService.asTransferResponse(invoice.transfer),
       description: invoice.description,
-      currentState: InvoiceService.asInvoiceStatusResponse(invoice.invoiceStatus[0]),
+      currentState: InvoiceService.asInvoiceStatusResponse(
+        invoice.invoiceStatus[invoice.invoiceStatus.length - 1],
+      ),
     } as BaseInvoiceResponse;
   }
 
@@ -227,6 +233,112 @@ export default class InvoiceService {
     await Promise.all(promises);
   }
 
+  static isState(invoice: Invoice, state: InvoiceState): boolean {
+    return (invoice.invoiceStatus[invoice.invoiceStatus.length - 1]
+      .state === state);
+  }
+
+  static async deleteInvoice(invoiceId: number, byId: number)
+    : Promise<BaseInvoiceResponse | undefined> {
+    // Find base invoice.
+    const invoice = await Invoice.findOne(invoiceId, { relations: ['invoiceStatus'] });
+
+    // If invoice is undefined or deleted we return.
+    if (!invoice
+        || this.isState(invoice, InvoiceState.DELETED)) {
+      return undefined;
+    }
+
+    // Extract amount from transfer
+    const amount: DineroObjectRequest = {
+      amount: invoice.transfer.amount.getAmount(),
+      currency: invoice.transfer.amount.getCurrency(),
+      precision: invoice.transfer.amount.getPrecision(),
+    };
+
+    // We create an undo transfer that sends the money back to the void.
+    const undoTransfer: TransferRequest = {
+      amount,
+      description: `Deletion of Invoice #${invoice.id}`,
+      fromId: invoice.to.id,
+      toId: 0,
+    };
+
+    await TransferService.postTransfer(undoTransfer);
+
+    // Create a new InvoiceStatus
+    const invoiceStatus: InvoiceStatus = Object.assign(new InvoiceStatus(), {
+      invoice,
+      changedBy: byId,
+      state: InvoiceState.DELETED,
+      dateChanged: new Date(),
+    });
+
+    // Add it to the invoice and save it.
+    await invoice.save().then(async () => {
+      invoice.invoiceStatus.push(invoiceStatus);
+      await invoiceStatus.save();
+    });
+
+    return ((await this.getInvoices({ invoiceId: invoice.id }))).records[0];
+  }
+
+  /**
+   * Updates the Invoice
+   *
+   * It is not possible to change the amount or details of the transfer itself.
+   *
+   * @param update
+   */
+  public static async updateInvoice(update: UpdateInvoiceParams) {
+    const base: Invoice = await Invoice.findOne(update.invoiceId, { relations: ['invoiceStatus'] });
+
+    // Return undefined if base does not exist.
+    if (!base || this.isState(base, InvoiceState.DELETED)) {
+      return undefined;
+    }
+
+    if (update.state) {
+      // Deleting is a special case of an update.
+      if (update.state === InvoiceState.DELETED) return this.deleteInvoice(base.id, update.byId);
+
+      const invoiceStatus: InvoiceStatus = Object.assign(new InvoiceStatus(), {
+        invoice: base,
+        changedBy: update.byId,
+        state: update.state,
+        dateChanged: new Date(),
+      });
+
+      // Add it to the invoice and save it.
+      await base.save().then(async () => {
+        base.invoiceStatus.push(invoiceStatus);
+        await invoiceStatus.save();
+      });
+    }
+
+    base.description = update.description;
+    base.addressee = update.addressee;
+
+    await base.save();
+    // Return the newly updated Invoice.
+    return (await this.getInvoices(
+      { invoiceId: base.id, returnInvoiceEntries: false },
+    )).records[0];
+  }
+
+  /**
+   * Returns the latest invoice sent to an User that is not deleted.
+   * @param toId
+   */
+  static async getLatestValidInvoice(toId: number): Promise<BaseInvoiceResponse> {
+    const invoices = (await this.getInvoices({ toId })).records;
+    // Filter the deleted invoices
+    const validInvoices = invoices.filter(
+      (invoice) => invoice.currentState.state !== InvoiceState.DELETED,
+    );
+    return validInvoices[validInvoices.length - 1];
+  }
+
   /**
    * Creates an Invoice from an CreateInvoiceRequest
    * @param invoiceRequest - The Invoice request to create
@@ -243,8 +355,16 @@ export default class InvoiceService {
       params = { fromDate: asDate(invoiceRequest.fromDate) };
     } else {
       // By default we create an Invoice from all transactions since last invoice.
-      const latestInvoice = (await this.getInvoices({ toId })).records[0];
-      params = { fromDate: new Date(latestInvoice.createdAt) };
+      const latestInvoice = await this.getLatestValidInvoice(toId);
+      let date;
+      // If no invoice exists we use the time when the account was created.
+      if (!latestInvoice) {
+        const user = await User.findOne(toId, { relations: ['createdAt'] });
+        date = user.createdAt;
+      } else {
+        date = latestInvoice.createdAt;
+      }
+      params = { fromDate: new Date(date) };
     }
 
     const transactions = (await TransactionService.getTransactions(params)).records;
@@ -280,7 +400,7 @@ export default class InvoiceService {
 
     // Return the newly created Invoice.
     return (await this.getInvoices(
-      { invoiceId: newInvoice.id, returnInvoiceEntries: true },
+      { invoiceId: newInvoice.id, returnInvoiceEntries: false },
     )).records[0];
   }
 
@@ -304,7 +424,7 @@ export default class InvoiceService {
     const options: FindManyOptions = {
       where: QueryFilter.createFilterWhereClause(filterMapping, params),
       relations: ['to', 'invoiceStatus', 'transfer', 'transfer.to', 'transfer.from'],
-      order: { createdAt: 'DESC' },
+      order: { createdAt: 'ASC' },
       take,
       skip,
     };
