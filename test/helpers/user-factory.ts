@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import User, { UserType } from '../../src/entity/user/user';
-import { generateBalance } from './test-helpers';
+import generateBalance from './test-helpers';
 
 export class Builder {
   user: User;
