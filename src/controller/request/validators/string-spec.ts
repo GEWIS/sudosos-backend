@@ -18,13 +18,14 @@
 import {
   Specification, toFail, toPass, ValidationError,
 } from '../../../helpers/specification-validation';
+import { ZERO_LENGTH_STRING } from './validation-errors';
 
 /**
  * Checks if the string attribute is not an empty string.
  */
 export const nonZeroString = (p: string) => {
   if (p === '') {
-    return toFail(new ValidationError('must be a non-zero length string.'));
+    return toFail(ZERO_LENGTH_STRING());
   }
   return toPass(p);
 };

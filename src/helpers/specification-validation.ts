@@ -86,6 +86,8 @@ export function createArrayRule<T>(spec: Specification<T, Joinable>)
   async function arrayTest(array: T[]): Promise< Fail<Joinable> | Pass<T[]>> {
     const results: Either<Joinable, T>[] = [];
     const promises: Promise<void>[] = [];
+    if (!array) return toPass(array);
+
     array.forEach((entry) => {
       promises.push(validateSpecification(entry, spec).then((res) => {
         results.push(res);

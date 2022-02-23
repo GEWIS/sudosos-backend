@@ -23,7 +23,7 @@ import { RequestWithToken } from '../middleware/token-middleware';
 import { PaginatedInvoiceResponse } from './response/invoice-response';
 import InvoiceService, { InvoiceFilterParameters, parseInvoiceFilterParameters } from '../service/invoice-service';
 import { parseRequestPagination } from '../helpers/pagination';
-import { CreateInvoiceParams, InvoiceRequest } from './request/invoice-request';
+import { CreateInvoiceParams, CreateInvoiceRequest } from './request/invoice-request';
 import verifyCreateInvoiceRequest from './request/validators/invoice-request-spec';
 import { isFail } from '../helpers/specification-validation';
 
@@ -60,9 +60,13 @@ export default class InvoiceController extends BaseController {
 
   /**
    * Returns all invoices in the system.
-   * @route GET /invoices
+   * @route GET /\
    * @group invoices - Operations of the invoices controller
    * @security JWT
+   * @param {integer} toId.query - Filter on Id of the debtor
+   * @param {invoiceId} invoiceId.query - Filter on invoice ID
+   * @param {InvoiceState} state.query - Filter based on Invoice State
+   * @param {boolean} returnEntries.query - Boolean if invoice entries should be returned
    * @returns {PaginatedInvoiceResponse.model} 200 - All existing invoices
    * @returns {string} 500 - Internal server error
    */
@@ -106,12 +110,14 @@ export default class InvoiceController extends BaseController {
    * @route POST /invoices
    * @group invoices - Operations of the invoices controller
    * @security JWT
+   * @param {CreateInvoiceRequest.model} invoice.body.required -
+   * The invoice which should be created
    * @returns {BaseInvoiceResponse.model} 200 - The created invoice entity
    * @returns {string} 400 - Validation error
    * @returns {string} 500 - Internal server error
    */
   public async createInvoice(req: RequestWithToken, res: Response): Promise<void> {
-    const body = req.body as InvoiceRequest;
+    const body = req.body as CreateInvoiceRequest;
     this.logger.trace('Create Invoice', body, 'by user', req.token.user);
 
     // handle request

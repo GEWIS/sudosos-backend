@@ -359,7 +359,7 @@ export default class InvoiceService {
       let date;
       // If no invoice exists we use the time when the account was created.
       if (!latestInvoice) {
-        const user = await User.findOne(toId, { relations: ['createdAt'] });
+        const user = await User.findOne(toId);
         date = user.createdAt;
       } else {
         date = latestInvoice.createdAt;

@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { BaseInvoice, CreateInvoiceParams, InvoiceRequest } from '../invoice-request';
+import { BaseInvoice, CreateInvoiceParams, CreateInvoiceRequest } from '../invoice-request';
 import {
   createArrayRule,
   Specification, toFail, toPass, validateSpecification, ValidationError,
@@ -41,8 +41,8 @@ async function validTransactionIds<T extends BaseInvoice>(p: T) {
 }
 
 const invoiceEntryRequestSpec: Specification<InvoiceEntryRequest, ValidationError> = [
-  [stringSpec(), 'description', new ValidationError('description:')],
   [[positiveNumber], 'amount', new ValidationError('amount:')],
+  [stringSpec(), 'description', new ValidationError('description:')],
 ];
 
 function baseInvoiceRequestSpec<T extends BaseInvoice>(): Specification<T, ValidationError> {
@@ -62,7 +62,7 @@ const createInvoiceRequestSpec: Specification<CreateInvoiceParams, ValidationErr
 ];
 
 export default async function verifyCreateInvoiceRequest(
-  createInvoiceRequest: InvoiceRequest,
+  createInvoiceRequest: CreateInvoiceRequest,
 ) {
   return Promise.resolve(await validateSpecification(
     createInvoiceRequest, createInvoiceRequestSpec,

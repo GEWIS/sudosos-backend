@@ -91,6 +91,7 @@ export function asDate(input: any): Date {
  * @throws TypeError - If the input is not a valid InvoiceState
  */
 export function asInvoiceState(input: any): InvoiceState {
+  if (!input) return undefined;
   const state: InvoiceState = InvoiceState[input as keyof typeof InvoiceState];
   if (state === undefined) {
     throw new TypeError(`Input '${input}' is not a valid InvoiceState.`);

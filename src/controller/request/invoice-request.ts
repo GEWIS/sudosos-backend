@@ -46,10 +46,10 @@ export interface CreateInvoiceParams extends BaseInvoice {
  * @property {integer} byId - The creator of the Invoice, defaults to the ID of the requester.
  * @property {string} addressee.required - Name of the addressed.
  * @property {string} description.required - The description of the invoice.
- * @property {Array.<InvoiceEntryRequest>} - Custom entries to be added to the invoice
+ * @property {Array.<InvoiceEntryRequest>} customEntries - Custom entries to be added to the invoice
  * @property {Array.<integer>} transactionIDs - IDs of the transactions to add to the Invoice.
- * @property {Date} fromDate - For creating an Invoice for all transactions form a specific date.
+ * @property {string} fromDate - For creating an Invoice for all transactions from a specific date.
  */
-export interface InvoiceRequest extends BaseInvoice{
+export interface CreateInvoiceRequest extends BaseInvoice{
   byId?: number,
 }
