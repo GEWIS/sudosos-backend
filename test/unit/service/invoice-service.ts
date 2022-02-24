@@ -51,6 +51,29 @@ import { TransactionRequest } from '../../../src/controller/request/transaction-
 
 chai.use(deepEqualInAnyOrder);
 
+export async function createTransactionRequest(debtorId: number,
+  creditorId:number, transactionCount: number) {
+  const transactions: TransactionRequest[] = [];
+  await Promise.all(Array(transactionCount).fill(0, 0).map(async () => {
+    const t = await createValidTransactionRequest(
+      debtorId, creditorId,
+    );
+    return transactions.push(t as TransactionRequest);
+  }));
+  return transactions;
+}
+
+export async function requestToTransaction(transactions: TransactionRequest[]) {
+  const tIds: number[] = [];
+  let cost = 0;
+  await Promise.all(transactions.map(async (t) => {
+    const transactionResponse = await TransactionService.createTransaction(t);
+    cost += transactionResponse.price.amount;
+    tIds.push(transactionResponse.id);
+  }));
+  return { tIds, cost };
+}
+
 function baseKeyMapping(invoice: BaseInvoiceResponse | Invoice) {
   return {
     id: invoice.id,
@@ -139,87 +162,6 @@ describe('InvoiceService', () => {
     });
   });
 
-  // Should be moved to invoice Controller test suit.
-  // describe('verifyInvoiceRequest function', () => {
-  //   it('should return true if the CreateInvoiceRequest
-  //   is valid with defined transactions', async () => {
-  //     const toId = 5;
-  //     expect(await User.findOne({ id: toId })).to.not.be.undefined;
-  //
-  //     const transactions: Transaction[] = await Transaction.find({ where: { from: toId } });
-  //     const transactionIDs = transactions.map((t) => t.id);
-  //
-  //     const createInvoiceRequest: CreateInvoiceRequest = {
-  //       addressee: 'addressee',
-  //       description: 'description',
-  //       toId,
-  //       transactionIDs,
-  //     };
-  //
-  //     const valid = await InvoiceService.verifyInvoiceRequest(createInvoiceRequest);
-  //     expect(valid).to.be.true;
-  //   });
-  //   it('should return true if the CreateInvoiceRequest
-  //   is valid without defined transactions', async () => {
-  //     const toId = 5;
-  //     expect(await User.findOne({ id: toId })).to.not.be.undefined;
-  //
-  //     const createInvoiceRequest: CreateInvoiceRequest = {
-  //       addressee: 'addressee',
-  //       description: 'description',
-  //       toId,
-  //     };
-  //
-  //     const valid = await InvoiceService.verifyInvoiceRequest(createInvoiceRequest);
-  //     expect(valid).to.be.true;
-  //   });
-  //   it('should return false if the id is invalid', async () => {
-  //     const toId = 0;
-  //     expect(await User.findOne({ id: toId })).to.be.undefined;
-  //
-  //     const createInvoiceRequest: CreateInvoiceRequest = {
-  //       addressee: 'addressee',
-  //       description: 'description',
-  //       toId,
-  //     };
-  //
-  //     const valid = await InvoiceService.verifyInvoiceRequest(createInvoiceRequest);
-  //     expect(valid).to.be.false;
-  //   });
-  //   it('should return false if the transaction ids are invalid', async () => {
-  //     const toId = 5;
-  //     expect(await User.findOne({ id: toId })).to.be.not.undefined;
-  //
-  //     const createInvoiceRequest: CreateInvoiceRequest = {
-  //       addressee: 'addressee',
-  //       description: 'description',
-  //       toId,
-  //       transactionIDs: [0],
-  //     };
-  //
-  //     const valid = await InvoiceService.verifyInvoiceRequest(createInvoiceRequest);
-  //     expect(valid).to.be.false;
-  //   });
-  //   it('should return false if the transactions are not owned by the user', async () => {
-  //     const toId = 5;
-  //     expect(await User.findOne({ id: toId })).to.be.not.undefined;
-  //
-  //     const transactions: Transaction[] = await Transaction.find({ where: { from: toId } });
-  //     let transactionIDs = transactions.map((t) => t.id);
-  //     transactionIDs = [Math.max(...transactionIDs) + 1];
-  //
-  //     const createInvoiceRequest: CreateInvoiceRequest = {
-  //       addressee: 'addressee',
-  //       description: 'description',
-  //       toId,
-  //       transactionIDs,
-  //     };
-  //
-  //     const valid = await InvoiceService.verifyInvoiceRequest(createInvoiceRequest);
-  //     expect(valid).to.be.false;
-  //   });
-  // });
-
   describe('createTransferFromTransactions function', () => {
     it('should return a correct Transfer', async () => {
       const toId = (await User.findOne()).id;
@@ -236,29 +178,6 @@ describe('InvoiceService', () => {
     });
   });
   describe('createInvoice function', () => {
-    async function createTransactionRequest(debtorId: number,
-      creditorId:number, transactionCount: number) {
-      const transactions: TransactionRequest[] = [];
-      await Promise.all(Array(transactionCount).fill(0, 0).map(async () => {
-        const t = await createValidTransactionRequest(
-          debtorId, creditorId,
-        );
-        return transactions.push(t as TransactionRequest);
-      }));
-      return transactions;
-    }
-
-    async function requestToTransaction(transactions: TransactionRequest[]) {
-      const tIds: number[] = [];
-      let cost = 0;
-      await Promise.all(transactions.map(async (t) => {
-        const transactionResponse = await TransactionService.createTransaction(t);
-        cost += transactionResponse.price.amount;
-        tIds.push(transactionResponse.id);
-      }));
-      return { tIds, cost };
-    }
-
     async function createInvoiceWithTransfers(debtorId: number, creditorId: number,
       transactionCount: number) {
       const transactions: TransactionRequest[] = await createTransactionRequest(

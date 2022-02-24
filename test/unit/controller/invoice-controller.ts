@@ -43,6 +43,13 @@ import {
   ZERO_LENGTH_STRING,
 } from '../../../src/controller/request/validators/validation-errors';
 import InvoiceEntryRequest from '../../../src/controller/request/invoice-entry-request';
+import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
+import { PointOfSaleResponse } from '../../../src/controller/response/point-of-sale-response';
+import UpdatedPointOfSale from '../../../src/entity/point-of-sale/updated-point-of-sale';
+import { inUserContext, UserFactory } from '../../helpers/user-factory';
+import { TransactionRequest } from '../../../src/controller/request/transaction-request';
+import { createTransactionRequest, requestToTransaction } from '../service/invoice-service';
+import BalanceService from '../../../src/service/balance-service';
 
 describe('InvoiceController', async () => {
   let ctx: {
@@ -279,6 +286,45 @@ describe('InvoiceController', async () => {
   describe('POST /invoices', () => {
     describe('verifyInvoiceRequest Specification', async () => {
       await testValidationOnRoute('post', '/invoices');
+    });
+    it('should create an empty Invoice and return an HTTP 200 if admin', async () => {
+      const count = await Invoice.count();
+      const res = await request(ctx.app)
+        .post('/invoices')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(ctx.validInvoiceRequest);
+
+      expect(await Invoice.count()).to.equal(count + 1);
+
+      expect(res.status).to.equal(200);
+    });
+    it('should create an Invoice and return an HTTP 200 if admin', async () => {
+      await inUserContext(await UserFactory().clone(2), async (debtor: User, creditor: User) => {
+        // Spent money.
+        const transactions: TransactionRequest[] = await createTransactionRequest(
+          debtor.id, creditor.id, 2,
+        );
+
+        const { tIds, cost } = await requestToTransaction(transactions);
+        const newRequest: CreateInvoiceRequest = {
+          ...ctx.validInvoiceRequest,
+          transactionIDs: tIds,
+          toId: debtor.id,
+          byId: creditor.id,
+        };
+        expect(await BalanceService.getBalance(debtor.id)).is.equal(-1 * cost);
+
+        const count = await Invoice.count();
+        const res = await request(ctx.app)
+          .post('/invoices')
+          .set('Authorization', `Bearer ${ctx.adminToken}`)
+          .send(newRequest);
+
+        expect(await BalanceService.getBalance(debtor.id)).is.equal(0);
+        expect(await Invoice.count()).to.equal(count + 1);
+
+        expect(res.status).to.equal(200);
+      });
     });
   });
 });

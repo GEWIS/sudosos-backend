@@ -16,6 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { FindManyOptions } from 'typeorm';
+import dinero from 'dinero.js';
 import InvoiceStatus, { InvoiceState } from '../entity/invoices/invoice-status';
 import {
   BaseInvoiceResponse,
@@ -147,8 +148,15 @@ export default class InvoiceService {
    */
   public static async createTransferFromTransactions(toId: number,
     transactions: BaseTransactionResponse[]): Promise<TransferResponse> {
-    const dineroObjectRequest: DineroObjectRequest = { ...(transactions[0].value), amount: 0 };
-    transactions.forEach((t) => { dineroObjectRequest.amount += t.value.amount; });
+    const dineroObjectRequest: DineroObjectRequest = {
+      amount: 0,
+      currency: dinero.defaultCurrency,
+      precision: dinero.defaultPrecision,
+    };
+
+    if (transactions.length !== 0) {
+      transactions.forEach((t) => { dineroObjectRequest.amount += t.value.amount; });
+    }
 
     const transferRequest: TransferRequest = {
       amount: dineroObjectRequest,
