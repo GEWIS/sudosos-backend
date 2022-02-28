@@ -374,8 +374,7 @@ export default class ContainerService {
 
   /**
    * Turns a ContainerResponse into a ContainerWithProductsResponse
-   * @param containerId - The id of the container to return.
-   * @param updated
+   * @param container - The container to return
    */
   public static async getProductsResponse(container
   : { containerId: number, containerRevision?: number, updated?: boolean })

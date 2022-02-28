@@ -43,9 +43,6 @@ import {
   ZERO_LENGTH_STRING,
 } from '../../../src/controller/request/validators/validation-errors';
 import InvoiceEntryRequest from '../../../src/controller/request/invoice-entry-request';
-import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
-import { PointOfSaleResponse } from '../../../src/controller/response/point-of-sale-response';
-import UpdatedPointOfSale from '../../../src/entity/point-of-sale/updated-point-of-sale';
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import { TransactionRequest } from '../../../src/controller/request/transaction-request';
 import { createTransactionRequest, requestToTransaction } from '../service/invoice-service';
@@ -104,6 +101,7 @@ describe('InvoiceController', async () => {
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
+
     const adminToken = await tokenHandler.signToken({ user: adminUser, roles: ['Admin'] }, 'nonce admin');
     const token = await tokenHandler.signToken({ user: localUser, roles: ['User'] }, 'nonce');
 

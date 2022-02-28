@@ -29,7 +29,8 @@ import {
   seedAllProducts,
   seedInvoices,
   seedPointsOfSale,
-  seedProductCategories, seedTransactions,
+  seedProductCategories,
+  seedTransactions,
   seedUsers,
 } from '../../seed';
 import Swagger from '../../../src/start/swagger';
@@ -40,7 +41,7 @@ import {
 } from '../../../src/controller/response/invoice-response';
 import InvoiceService from '../../../src/service/invoice-service';
 import InvoiceEntry from '../../../src/entity/invoices/invoice-entry';
-import { CreateInvoiceParams } from '../../../src/controller/request/invoice-request';
+import { CreateInvoiceParams, UpdateInvoiceParams } from '../../../src/controller/request/invoice-request';
 import { TransferResponse } from '../../../src/controller/response/transfer-response';
 import TransactionService from '../../../src/service/transaction-service';
 import { BaseTransactionResponse } from '../../../src/controller/response/transaction-response';
@@ -48,6 +49,7 @@ import BalanceService from '../../../src/service/balance-service';
 import { createValidTransactionRequest } from '../../helpers/transaction-factory';
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import { TransactionRequest } from '../../../src/controller/request/transaction-request';
+import { InvoiceState } from '../../../src/entity/invoices/invoice-status';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -96,6 +98,29 @@ export type T = InvoiceResponse | BaseInvoiceResponse;
 function returnsAll(response: T[], supeset: Invoice[], mapping: any) {
   expect(response.map(mapping))
     .to.deep.equalInAnyOrder(supeset.map(mapping));
+}
+
+async function createInvoiceWithTransfers(debtorId: number, creditorId: number,
+  transactionCount: number) {
+  const transactions: TransactionRequest[] = await createTransactionRequest(
+    debtorId, creditorId, transactionCount,
+  );
+  expect(await BalanceService.getBalance(debtorId)).is.equal(0);
+
+  const { tIds, cost } = await requestToTransaction(transactions);
+  expect(await BalanceService.getBalance(debtorId)).is.equal(-1 * cost);
+
+  const createInvoiceRequest: CreateInvoiceParams = {
+    byId: creditorId,
+    addressee: 'Addressee',
+    description: 'Description',
+    toId: debtorId,
+    transactionIDs: tIds,
+  };
+
+  const invoice = await InvoiceService.createInvoice(createInvoiceRequest);
+  expect(await BalanceService.getBalance(debtorId)).is.equal(0);
+  return invoice;
 }
 
 describe('InvoiceService', () => {
@@ -161,7 +186,6 @@ describe('InvoiceService', () => {
       returnsAll(res, [ctx.invoices[0]], baseKeyMapping);
     });
   });
-
   describe('createTransferFromTransactions function', () => {
     it('should return a correct Transfer', async () => {
       const toId = (await User.findOne()).id;
@@ -178,28 +202,6 @@ describe('InvoiceService', () => {
     });
   });
   describe('createInvoice function', () => {
-    async function createInvoiceWithTransfers(debtorId: number, creditorId: number,
-      transactionCount: number) {
-      const transactions: TransactionRequest[] = await createTransactionRequest(
-        debtorId, creditorId, transactionCount,
-      );
-      expect(await BalanceService.getBalance(debtorId)).is.equal(0);
-
-      const { tIds, cost } = await requestToTransaction(transactions);
-      expect(await BalanceService.getBalance(debtorId)).is.equal(-1 * cost);
-
-      const createInvoiceRequest: CreateInvoiceParams = {
-        byId: creditorId,
-        addressee: 'Addressee',
-        description: 'Description',
-        toId: debtorId,
-        transactionIDs: tIds,
-      };
-
-      const invoice = await InvoiceService.createInvoice(createInvoiceRequest);
-      expect(await BalanceService.getBalance(debtorId)).is.equal(0);
-      return invoice;
-    }
     it('should create Invoice from transactions', async () => {
       await inUserContext(await UserFactory().clone(2), async (debtor: User, creditor: User) => {
         await createInvoiceWithTransfers(debtor.id, creditor.id, 1);
@@ -274,6 +276,98 @@ describe('InvoiceService', () => {
 
         await InvoiceService.createInvoice(createInvoiceRequest);
         expect(await BalanceService.getBalance(debtor.id)).is.equal(0);
+      });
+    });
+  });
+  describe('updateInvoice function', () => {
+    it('should update an invoice description and addressee', async () => {
+      await inUserContext(await UserFactory().clone(2), async (debtor: User, creditor: User) => {
+        // First create an Invoice.
+        const invoice = await createInvoiceWithTransfers(debtor.id, creditor.id, 1);
+
+        const validUpdateInvoiceParams: UpdateInvoiceParams = {
+          addressee: 'Updated-addressee',
+          byId: creditor.id,
+          description: 'Updated-description',
+          invoiceId: invoice.id,
+        };
+
+        // Test if attributes were updated
+        const updatedInvoice = await InvoiceService.updateInvoice(validUpdateInvoiceParams);
+        expect(updatedInvoice.description).to.equal(validUpdateInvoiceParams.description);
+        expect(updatedInvoice.addressee).to.equal(validUpdateInvoiceParams.addressee);
+
+        // Sanity check
+        const fromDB = await Invoice.findOne(invoice.id);
+        expect(fromDB.description).to.equal(validUpdateInvoiceParams.description);
+        expect(fromDB.addressee).to.equal(validUpdateInvoiceParams.addressee);
+      });
+    });
+    it('should update an Invoice state', async () => {
+      await inUserContext(await UserFactory().clone(2), async (debtor: User, creditor: User) => {
+        // First create an Invoice.
+        const invoice = await createInvoiceWithTransfers(debtor.id, creditor.id, 1);
+
+        const { addressee, description } = invoice;
+        const validUpdateInvoiceParams: UpdateInvoiceParams = {
+          addressee,
+          byId: creditor.id,
+          description,
+          invoiceId: invoice.id,
+          state: InvoiceState.SENT,
+        };
+
+        // Test if attributes were updated
+        const updatedInvoice = await InvoiceService.updateInvoice(validUpdateInvoiceParams);
+        expect(updatedInvoice.currentState.state).to.be.equal(InvoiceState.SENT);
+      });
+    });
+    it('should update an Invoice state twice', async () => {
+      await inUserContext(await UserFactory().clone(2), async (debtor: User, creditor: User) => {
+        // First create an Invoice.
+        const invoice = await createInvoiceWithTransfers(debtor.id, creditor.id, 1);
+
+        const { addressee, description } = invoice;
+        const makeParamsState = (state: InvoiceState) => ({
+          addressee,
+          byId: creditor.id,
+          description,
+          invoiceId: invoice.id,
+          state,
+        });
+
+        // Test if attributes were updated
+        let updatedInvoice = await InvoiceService
+          .updateInvoice(makeParamsState(InvoiceState.SENT));
+        expect(updatedInvoice.currentState.state).to.be.equal(InvoiceState.SENT);
+
+        updatedInvoice = await InvoiceService
+          .updateInvoice(makeParamsState(InvoiceState.PAYED));
+        expect(updatedInvoice.currentState.state).to.be.equal(InvoiceState.PAYED);
+      });
+    });
+    it('should delete an Invoice', async () => {
+      await inUserContext(await UserFactory().clone(2), async (debtor: User, creditor: User) => {
+        // First create an Invoice.
+        const invoice = await createInvoiceWithTransfers(debtor.id, creditor.id, 1);
+
+        const { addressee, description } = invoice;
+        const makeParamsState = (state: InvoiceState) => ({
+          addressee,
+          byId: creditor.id,
+          description,
+          invoiceId: invoice.id,
+          state,
+        });
+
+        // Test if attributes were updated
+        const updatedInvoice = await InvoiceService
+          .updateInvoice(makeParamsState(InvoiceState.DELETED));
+        expect(updatedInvoice.currentState.state).to.be.equal(InvoiceState.DELETED);
+
+        // Check if the balance has been decreased
+        expect(await BalanceService.getBalance(debtor.id))
+          .is.equal(-1 * invoice.transfer.amount.amount);
       });
     });
   });

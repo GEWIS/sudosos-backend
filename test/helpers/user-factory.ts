@@ -21,14 +21,16 @@ import generateBalance from './test-helpers';
 export class Builder {
   user: User;
 
-  public default() {
-    const count = User.count();
+  public async default() {
+    const count = await User.count();
     this.user = Object.assign(new User(), {
-      firstName: `User #${count.then((c) => c)}`,
-      lastName: `Doe #${count}`,
+      firstName: `User #${count + 1}`,
+      lastName: `Doe #${count + 1}`,
       type: UserType.MEMBER,
       active: true,
+      id: count + 1,
     } as User);
+    await User.save(this.user);
     return this;
   }
 
@@ -50,16 +52,29 @@ export class Builder {
     const users: any[] = [];
 
     const count = await User.count();
-    for (let i = 0; i < amount; i += 1) {
+
+    for (let i = 1; i <= amount; i += 1) {
       const clone = {
         ...this.user,
         firstName: `User #${count + i}`,
+        lastName: `Doe #${count + i}`,
+        id: count + i + 1,
       } as User;
       users.push(clone);
     }
     await User.save(users);
     return users;
   }
+}
+
+async function setInactive(users: User[]) {
+  const promises: Promise<User>[] = [];
+  users.forEach((u) => {
+    const user = u;
+    user.active = false;
+    promises.push(User.save(user));
+  });
+  await Promise.all(promises);
 }
 
 export function UserFactory(custom?: User) {
@@ -74,5 +89,5 @@ export function UserFactory(custom?: User) {
 
 export async function inUserContext(users: User[], func: (...arg: any) => void) {
   await func(...users);
-  // await User.remove(users);
+  await setInactive(users);
 }

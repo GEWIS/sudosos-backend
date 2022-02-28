@@ -23,9 +23,17 @@ import { RequestWithToken } from '../middleware/token-middleware';
 import { PaginatedInvoiceResponse } from './response/invoice-response';
 import InvoiceService, { InvoiceFilterParameters, parseInvoiceFilterParameters } from '../service/invoice-service';
 import { parseRequestPagination } from '../helpers/pagination';
-import { CreateInvoiceParams, CreateInvoiceRequest } from './request/invoice-request';
-import verifyCreateInvoiceRequest from './request/validators/invoice-request-spec';
+import {
+  CreateInvoiceParams,
+  CreateInvoiceRequest,
+  UpdateInvoiceParams,
+  UpdateInvoiceRequest,
+} from './request/invoice-request';
+import verifyCreateInvoiceRequest, { verifyUpdateInvoiceRequest } from './request/validators/invoice-request-spec';
 import { isFail } from '../helpers/specification-validation';
+import { asBoolean, asNumber } from '../helpers/validators';
+import ContainerService from '../service/container-service';
+import Invoice from '../entity/invoices/invoice';
 
 export default class InvoiceController extends BaseController {
   private logger: Logger = log4js.getLogger('InvoiceController');
@@ -55,12 +63,23 @@ export default class InvoiceController extends BaseController {
           handler: this.createInvoice.bind(this),
         },
       },
+      '/:id(\\d+)': {
+        GET: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', await InvoiceController.getRelation(req), 'Invoices', ['*']),
+          handler: this.getSingleInvoice.bind(this),
+        },
+        PATCH: {
+          body: { modelName: 'TransactionRequest' },
+          policy: async (req) => this.roleManager.can(req.token.roles, 'update', await InvoiceController.getRelation(req), 'Invoices', ['*']),
+          handler: this.updateInvoice.bind(this),
+        },
+      },
     };
   }
 
   /**
    * Returns all invoices in the system.
-   * @route GET /\
+   * @route GET /invoices
    * @group invoices - Operations of the invoices controller
    * @security JWT
    * @param {integer} toId.query - Filter on Id of the debtor
@@ -106,6 +125,42 @@ export default class InvoiceController extends BaseController {
   }
 
   /**
+   * Returns a single invoice in the system.
+   * @route GET /invoices/{id}
+   * @group invoices - Operations of the invoices controller
+   * @security JWT
+   * @param {boolean} returnEntries.query -
+   * Boolean if invoice entries should be returned, defaults to true.
+   * @returns {InvoiceResponse.model} 200 - All existing invoices
+   * @returns {string} 404 - Invoice not found
+   * @returns {string} 500 - Internal server error
+   */
+  public async getSingleInvoice(req: RequestWithToken, res: Response): Promise<void> {
+    const { id } = req.params;
+    const invoiceId = parseInt(id, 10);
+    this.logger.trace('Get invoice', invoiceId, 'by user', req.token.user);
+
+    // Handle request
+    try {
+      const returnInvoiceEntries = asBoolean(req.query.returnEntries) ?? true;
+
+      const invoices: PaginatedInvoiceResponse = await InvoiceService.getInvoices(
+        { invoiceId, returnInvoiceEntries }, { },
+      );
+
+      if (!invoices.records[0]) {
+        res.status(404).json('Unknown invoice ID.');
+        return;
+      }
+
+      res.json(invoices.records[0]);
+    } catch (error) {
+      this.logger.error('Could not return invoice:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
    * Adds an invoice to the system.
    * @route POST /invoices
    * @group invoices - Operations of the invoices controller
@@ -139,5 +194,57 @@ export default class InvoiceController extends BaseController {
       this.logger.error('Could not create invoice:', error);
       res.status(500).json('Internal server error.');
     }
+  }
+
+  /**
+   * Adds an invoice to the system.
+   * @route PATCH /invoices/{id}
+   * @group invoices - Operations of the invoices controller
+   * @security JWT
+   * @param {integer} id.path.required - The id of the invoice which should be updated
+   * @param {UpdateInvoiceRequest.model} invoice.body.required -
+   * The invoice update to process
+   * @returns {BaseInvoiceResponse.model} 200 - The updated invoice entity
+   * @returns {string} 400 - Validation error
+   * @returns {string} 500 - Internal server error
+   */
+  public async updateInvoice(req: RequestWithToken, res: Response): Promise<void> {
+    const body = req.body as UpdateInvoiceRequest;
+    const { id } = req.params;
+    const invoiceId = parseInt(id, 10);
+    this.logger.trace('Update Invoice', body, 'by user', req.token.user);
+
+    try {
+      // Default byId to token user id.
+      const params: UpdateInvoiceParams = {
+        ...body,
+        invoiceId,
+        byId: body.byId ?? req.token.user.id,
+      };
+
+      const validation = await verifyUpdateInvoiceRequest(params);
+      if (isFail(validation)) {
+        res.status(400).json(validation.fail.value);
+        return;
+      }
+
+      res.json(await InvoiceService.updateInvoice(params));
+    } catch (error) {
+      this.logger.error('Could not update invoice:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Function to determine which credentials are needed to get invoice
+   * all if user is not connected to invoice
+   * own if user is connected to invoice
+   * @param req
+   * @returns whether invoice is connected to used token
+   */
+  static async getRelation(req: RequestWithToken): Promise<string> {
+    const invoice: Invoice = await Invoice.findOne(req.params.id);
+    if (invoice.to.id === req.token.user.id) return 'own';
+    return 'all';
   }
 }

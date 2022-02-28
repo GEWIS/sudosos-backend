@@ -34,3 +34,11 @@ export const INVALID_USER_ID = () => new ValidationError('must exist.');
 export const ZERO_LENGTH_STRING = () => new ValidationError('must be a non-zero length string.');
 
 export const INVALID_ACTIVE_USER_ID = () => new ValidationError('must exist and be active.');
+
+export const INVALID_TRANSACTION_OWNER = () => new ValidationError('Not all transactions are owned by the debtor.');
+
+export const INVALID_TRANSACTION_IDS = () => new ValidationError('Not all transaction IDs are valid.');
+
+export const INVALID_INVOICE_ID = () => new ValidationError('Invoice with this ID does not exist.');
+
+export const INVOICE_IS_DELETED = () => new ValidationError('Invoice is deleted.');

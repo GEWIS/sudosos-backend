@@ -44,6 +44,7 @@ import {
 import { PaginationParameters } from '../helpers/pagination';
 import InvoiceEntryRequest from '../controller/request/invoice-entry-request';
 import User from '../entity/user/user';
+import Container from '../entity/container/container';
 
 export interface InvoiceFilterParameters {
   /**
@@ -249,13 +250,7 @@ export default class InvoiceService {
   static async deleteInvoice(invoiceId: number, byId: number)
     : Promise<BaseInvoiceResponse | undefined> {
     // Find base invoice.
-    const invoice = await Invoice.findOne(invoiceId, { relations: ['invoiceStatus'] });
-
-    // If invoice is undefined or deleted we return.
-    if (!invoice
-        || this.isState(invoice, InvoiceState.DELETED)) {
-      return undefined;
-    }
+    const invoice = await Invoice.findOne(invoiceId, { relations: ['to', 'invoiceStatus', 'transfer', 'transfer.to', 'transfer.from'] });
 
     // Extract amount from transfer
     const amount: DineroObjectRequest = {
@@ -335,7 +330,7 @@ export default class InvoiceService {
   }
 
   /**
-   * Returns the latest invoice sent to an User that is not deleted.
+   * Returns the latest invoice sent to a User that is not deleted.
    * @param toId
    */
   static async getLatestValidInvoice(toId: number): Promise<BaseInvoiceResponse> {
@@ -416,7 +411,8 @@ export default class InvoiceService {
    * Function that returns all the invoices based on the given params.
    * Returns either BaseInvoiceResponse, that is without InvoiceEntries, or InvoiceResponse
    * based on if returnInvoiceEntries is set to true.
-   * @param params
+   * @param params - The filter params to apply
+   * @param pagination - The pagination params to apply
    */
   public static async getInvoices(params: InvoiceFilterParameters = {},
     pagination: PaginationParameters = {})
