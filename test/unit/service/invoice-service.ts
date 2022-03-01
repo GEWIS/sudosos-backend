@@ -218,7 +218,7 @@ describe('InvoiceService', () => {
         await createInvoiceWithTransfers(debtor.id, creditor.id, 3);
 
         // Wait a bit before creating a new Invoice.
-        await new Promise((f) => setTimeout(f, 500));
+        await new Promise((f) => setTimeout(f, 1000));
         await createInvoiceWithTransfers(debtor.id, creditor.id, 5);
 
         const invoice = (await InvoiceService.getInvoices({ toId: debtor.id })).records[0];
@@ -249,7 +249,7 @@ describe('InvoiceService', () => {
     it('should create an Invoice for transactions without prior invoice', async () => {
       await inUserContext(await UserFactory().clone(2), async (debtor: User, creditor: User) => {
         // If we don't wait then the user created at and transactions will be the same.
-        await new Promise((f) => setTimeout(f, 500));
+        await new Promise((f) => setTimeout(f, 1000));
 
         // Spent money
         const transactions: TransactionRequest[] = await createTransactionRequest(
@@ -266,7 +266,7 @@ describe('InvoiceService', () => {
         const first = await requestToTransaction(transactions);
         expect(await BalanceService.getBalance(debtor.id)).is.equal(-1 * first.cost);
 
-        await new Promise((f) => setTimeout(f, 500));
+        await new Promise((f) => setTimeout(f, 1000));
 
         await InvoiceService.createInvoice(createInvoiceRequest);
         expect(await BalanceService.getBalance(debtor.id)).is.equal(0);
@@ -276,9 +276,9 @@ describe('InvoiceService', () => {
       await inUserContext(await UserFactory().clone(2), async (debtor: User, creditor: User) => {
         // Spent money and create an invoice.
         await createInvoiceWithTransfers(debtor.id, creditor.id, 3);
-        await new Promise((f) => setTimeout(f, 500));
+        await new Promise((f) => setTimeout(f, 1000));
         await createInvoiceWithTransfers(debtor.id, creditor.id, 5);
-        await new Promise((f) => setTimeout(f, 500));
+        await new Promise((f) => setTimeout(f, 1000));
 
         const invoice = (await InvoiceService.getInvoices({ toId: debtor.id })).records[0];
         expect(invoice).to.not.be.undefined;
