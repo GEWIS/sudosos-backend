@@ -306,6 +306,7 @@ describe('InvoiceController', async () => {
         const newRequest = {
           ...ctx.validInvoiceRequest,
           toId: debtor.id,
+          byId: creditor.id,
         };
         const res = await request(ctx.app)
           .post('/invoices')
