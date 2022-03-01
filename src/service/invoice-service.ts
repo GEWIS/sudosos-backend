@@ -363,6 +363,7 @@ export default class InvoiceService {
       if (!latestInvoice) {
         const user = await User.findOne(toId);
         date = user.createdAt;
+        console.error(date);
       } else {
         date = latestInvoice.createdAt;
       }
@@ -370,6 +371,7 @@ export default class InvoiceService {
     }
 
     const transactions = (await TransactionService.getTransactions(params)).records;
+    console.error(transactions);
     const transfer = await this.createTransferFromTransactions(toId, transactions);
 
     // Create a new Invoice

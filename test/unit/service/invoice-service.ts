@@ -248,6 +248,9 @@ describe('InvoiceService', () => {
     });
     it('should create an Invoice for transactions without prior invoice', async () => {
       await inUserContext(await UserFactory().clone(2), async (debtor: User, creditor: User) => {
+        // If we don't wait then the user created at and transactions will be the same.
+        await new Promise((f) => setTimeout(f, 500));
+
         // Spent money
         const transactions: TransactionRequest[] = await createTransactionRequest(
           debtor.id, creditor.id, 2,
