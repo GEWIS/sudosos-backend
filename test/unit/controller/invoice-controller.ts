@@ -301,15 +301,21 @@ describe('InvoiceController', async () => {
       await testValidationOnRoute('post', '/invoices');
     });
     it('should create an empty Invoice and return an HTTP 200 if admin', async () => {
-      const count = await Invoice.count();
-      const res = await request(ctx.app)
-        .post('/invoices')
-        .set('Authorization', `Bearer ${ctx.adminToken}`)
-        .send(ctx.validInvoiceRequest);
+      await inUserContext(await UserFactory().clone(2), async (debtor: User, creditor: User) => {
+        const count = await Invoice.count();
+        const newRequest = {
+          ...ctx.validInvoiceRequest,
+          toId: debtor.id,
+        };
+        const res = await request(ctx.app)
+          .post('/invoices')
+          .set('Authorization', `Bearer ${ctx.adminToken}`)
+          .send(newRequest);
 
-      expect(await Invoice.count()).to.equal(count + 1);
+        expect(await Invoice.count()).to.equal(count + 1);
 
-      expect(res.status).to.equal(200);
+        expect(res.status).to.equal(200);
+      });
     });
     it('should create an Invoice and return an HTTP 200 if admin', async () => {
       await inUserContext(await UserFactory().clone(2), async (debtor: User, creditor: User) => {
