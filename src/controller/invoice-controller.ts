@@ -31,8 +31,7 @@ import {
 } from './request/invoice-request';
 import verifyCreateInvoiceRequest, { verifyUpdateInvoiceRequest } from './request/validators/invoice-request-spec';
 import { isFail } from '../helpers/specification-validation';
-import { asBoolean, asNumber } from '../helpers/validators';
-import ContainerService from '../service/container-service';
+import { asBoolean } from '../helpers/validators';
 import Invoice from '../entity/invoices/invoice';
 
 export default class InvoiceController extends BaseController {
@@ -69,9 +68,13 @@ export default class InvoiceController extends BaseController {
           handler: this.getSingleInvoice.bind(this),
         },
         PATCH: {
-          body: { modelName: 'TransactionRequest' },
+          body: { modelName: 'UpdateInvoiceRequest' },
           policy: async (req) => this.roleManager.can(req.token.roles, 'update', await InvoiceController.getRelation(req), 'Invoices', ['*']),
           handler: this.updateInvoice.bind(this),
+        },
+        DELETE: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'delete', await InvoiceController.getRelation(req), 'Invoices', ['*']),
+          handler: this.deleteInvoice.bind(this),
         },
       },
     };
@@ -231,6 +234,27 @@ export default class InvoiceController extends BaseController {
       res.json(await InvoiceService.updateInvoice(params));
     } catch (error) {
       this.logger.error('Could not update invoice:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Deletes an invoice.
+   * @route DELETE /invoices/{id}
+   * @group invoices - Operations of the invoices controller
+   * @security JWT
+   * @param {integer} id.path.required - The id of the invoice which should be deleted
+   * @returns {string} 500 - Internal server error
+   */
+  public async deleteInvoice(req: RequestWithToken, res: Response): Promise<void> {
+    const { id } = req.params;
+    const invoiceId = parseInt(id, 10);
+    this.logger.trace('Delete Invoice', id, 'by user', req.token.user);
+
+    try {
+      res.json(await InvoiceService.deleteInvoice(invoiceId, req.token.user.id));
+    } catch (error) {
+      this.logger.error('Could not delete invoice:', error);
       res.status(500).json('Internal server error.');
     }
   }

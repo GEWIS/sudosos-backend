@@ -246,6 +246,29 @@ describe('InvoiceService', () => {
         expect(await BalanceService.getBalance(debtor.id)).is.equal(0);
       });
     });
+    it('should create an Invoice for transactions without prior invoice', async () => {
+      await inUserContext(await UserFactory().clone(2), async (debtor: User, creditor: User) => {
+        // Spent money
+        const transactions: TransactionRequest[] = await createTransactionRequest(
+          debtor.id, creditor.id, 2,
+        );
+
+        const createInvoiceRequest: CreateInvoiceParams = {
+          byId: creditor.id,
+          addressee: 'Addressee',
+          description: 'Description',
+          toId: debtor.id,
+        };
+
+        const first = await requestToTransaction(transactions);
+        expect(await BalanceService.getBalance(debtor.id)).is.equal(-1 * first.cost);
+
+        await new Promise((f) => setTimeout(f, 500));
+
+        await InvoiceService.createInvoice(createInvoiceRequest);
+        expect(await BalanceService.getBalance(debtor.id)).is.equal(0);
+      });
+    });
     it('should create Invoice since latest invoice if nothing specified', async () => {
       await inUserContext(await UserFactory().clone(2), async (debtor: User, creditor: User) => {
         // Spent money and create an invoice.

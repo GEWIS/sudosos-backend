@@ -247,7 +247,7 @@ export default class InvoiceService {
       .state === state);
   }
 
-  static async deleteInvoice(invoiceId: number, byId: number)
+  public static async deleteInvoice(invoiceId: number, byId: number)
     : Promise<BaseInvoiceResponse | undefined> {
     // Find base invoice.
     const invoice = await Invoice.findOne(invoiceId, { relations: ['to', 'invoiceStatus', 'transfer', 'transfer.to', 'transfer.from'] });
