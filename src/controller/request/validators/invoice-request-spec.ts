@@ -59,7 +59,7 @@ async function existsAndNotDeleted<T extends BaseUpdateInvoice>(p: T) {
     return toFail(INVOICE_IS_DELETED());
   }
 
-  toPass(p);
+  return toPass(p);
 }
 
 const invoiceEntryRequestSpec: Specification<InvoiceEntryRequest, ValidationError> = [

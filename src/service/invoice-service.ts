@@ -44,7 +44,6 @@ import {
 import { PaginationParameters } from '../helpers/pagination';
 import InvoiceEntryRequest from '../controller/request/invoice-entry-request';
 import User from '../entity/user/user';
-import Container from '../entity/container/container';
 
 export interface InvoiceFilterParameters {
   /**
