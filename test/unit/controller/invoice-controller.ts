@@ -26,16 +26,20 @@ import Database from '../../../src/database/database';
 import {
   seedAllContainers,
   seedAllPointsOfSale,
-  seedAllProducts, seedPointsOfSale, seedProductCategories, seedTransactions,
+  seedAllProducts,
+  seedInvoices,
+  seedPointsOfSale,
+  seedProductCategories,
+  seedTransactions,
 } from '../../seed';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Swagger from '../../../src/start/swagger';
 import RoleManager from '../../../src/rbac/role-manager';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
-import { BaseInvoiceResponse } from '../../../src/controller/response/invoice-response';
+import { BaseInvoiceResponse, InvoiceResponse } from '../../../src/controller/response/invoice-response';
 import Invoice from '../../../src/entity/invoices/invoice';
-import { CreateInvoiceRequest } from '../../../src/controller/request/invoice-request';
+import { CreateInvoiceRequest, UpdateInvoiceRequest } from '../../../src/controller/request/invoice-request';
 import Transaction from '../../../src/entity/transactions/transaction';
 import {
   INVALID_DATE,
@@ -57,6 +61,7 @@ describe('InvoiceController', async () => {
     adminUser: User,
     localUser: User,
     adminToken: string,
+    invoiceToken: string,
     validInvoiceRequest: CreateInvoiceRequest,
     token: string,
   };
@@ -79,6 +84,13 @@ describe('InvoiceController', async () => {
       active: true,
     } as User;
 
+    const invoiceUser = {
+      id: 2,
+      firstName: 'User',
+      type: UserType.INVOICE,
+      active: true,
+    } as User;
+
     await User.save(adminUser);
     await User.save(localUser);
 
@@ -95,7 +107,8 @@ describe('InvoiceController', async () => {
     const { pointOfSaleRevisions } = await seedPointsOfSale(
       [adminUser, localUser], containerRevisions,
     );
-    await seedTransactions([adminUser, localUser], pointOfSaleRevisions);
+    const { transactions } = await seedTransactions([adminUser, localUser], pointOfSaleRevisions);
+    await seedInvoices([invoiceUser], transactions);
 
     // create bearer tokens
     const tokenHandler = new TokenHandler({
@@ -104,6 +117,7 @@ describe('InvoiceController', async () => {
 
     const adminToken = await tokenHandler.signToken({ user: adminUser, roles: ['Admin'] }, 'nonce admin');
     const token = await tokenHandler.signToken({ user: localUser, roles: ['User'] }, 'nonce');
+    const invoiceToken = await tokenHandler.signToken({ user: invoiceUser, roles: ['User'] }, 'nonce');
 
     const app = express();
     const specification = await Swagger.initialize(app);
@@ -131,7 +145,8 @@ describe('InvoiceController', async () => {
           get: own,
         },
       },
-      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_USER,
+      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_USER
+          || user.type === UserType.INVOICE,
     });
 
     const controller = new InvoiceController({ specification, roleManager });
@@ -154,6 +169,7 @@ describe('InvoiceController', async () => {
       controller,
       adminUser,
       localUser,
+      invoiceToken,
       adminToken,
       token,
     };
@@ -280,7 +296,6 @@ describe('InvoiceController', async () => {
       expectError(req, 'Custom entries: description: must be a non-zero length string.');
     });
   }
-
   describe('POST /invoices', () => {
     describe('verifyInvoiceRequest Specification', async () => {
       await testValidationOnRoute('post', '/invoices');
@@ -323,6 +338,92 @@ describe('InvoiceController', async () => {
 
         expect(res.status).to.equal(200);
       });
+    });
+  });
+  describe('GET /invoices/{id}', () => {
+    it('should return an HTTP 200 and the requested invoice if exists and admin', async () => {
+      const invoice = (await Invoice.find())[0];
+      const res = await request(ctx.app)
+        .get(`/invoices/${invoice.id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(200);
+      expect((res.body as InvoiceResponse).id).to.be.equal(invoice.id);
+    });
+    it('should return an HTTP 200 and the requested invoice if exists and user owns Invoice', async () => {
+      const invoice = (await Invoice.find())[0];
+      const res = await request(ctx.app)
+        .get(`/invoices/${invoice.id}`)
+        .set('Authorization', `Bearer ${ctx.invoiceToken}`);
+
+      expect(res.status).to.equal(200);
+      expect((res.body as InvoiceResponse).id).to.be.equal(invoice.id);
+    });
+    it('should return an HTTP 403 if not admin', async () => {
+      const invoice = (await Invoice.find())[0];
+      const res = await request(ctx.app)
+        .get(`/invoices/${invoice.id}`)
+        .set('Authorization', `Bearer ${ctx.localUser}`);
+
+      expect(res.status).to.equal(403);
+    });
+  });
+  describe('PATCH /invoices/{id}', () => {
+    it('should return an HTTP 200 and update an invoice if admin', async () => {
+      const invoice = (await Invoice.find())[0];
+      const updateRequest: UpdateInvoiceRequest = {
+        addressee: 'Updated-addressee',
+        description: 'Updated-description',
+        state: 'SENT',
+      };
+
+      const res = await request(ctx.app)
+        .patch(`/invoices/${invoice.id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(updateRequest);
+
+      expect(res.status).to.equal(200);
+      const body = res.body as InvoiceResponse;
+      expect(body.description).to.equal(updateRequest.description);
+      expect(body.addressee).to.equal(updateRequest.addressee);
+      expect(body.currentState.state).to.equal(updateRequest.state);
+    });
+    it('should return an HTTP 403 if not admin', async () => {
+      const invoice = (await Invoice.find())[0];
+      const updateRequest: UpdateInvoiceRequest = {
+        addressee: 'Updated-addressee',
+        description: 'Updated-description',
+        state: 'PAYED',
+      };
+
+      const res = await request(ctx.app)
+        .patch(`/invoices/${invoice.id}`)
+        .set('Authorization', `Bearer ${ctx.localUser}`)
+        .send(updateRequest);
+
+      expect(res.status).to.equal(403);
+    });
+  });
+  describe('DELETE /invoices/{id}', () => {
+    it('should return an HTTP 200 and delete the requested invoice if exists and admin', async () => {
+      const invoice = (await Invoice.find())[0];
+
+      const res = await request(ctx.app)
+        .delete(`/invoices/${invoice.id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(200);
+      const body = res.body as InvoiceResponse;
+      expect(body.currentState.state).to.equal('DELETED');
+    });
+    it('should return an HTTP 403 if not admin', async () => {
+      const invoice = (await Invoice.find())[0];
+
+      const res = await request(ctx.app)
+        .delete(`/invoices/${invoice.id}`)
+        .set('Authorization', `Bearer ${ctx.localUser}`);
+
+      expect(res.status).to.equal(403);
     });
   });
 });

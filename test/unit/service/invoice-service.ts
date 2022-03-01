@@ -100,7 +100,7 @@ function returnsAll(response: T[], supeset: Invoice[], mapping: any) {
     .to.deep.equalInAnyOrder(supeset.map(mapping));
 }
 
-async function createInvoiceWithTransfers(debtorId: number, creditorId: number,
+export async function createInvoiceWithTransfers(debtorId: number, creditorId: number,
   transactionCount: number) {
   const transactions: TransactionRequest[] = await createTransactionRequest(
     debtorId, creditorId, transactionCount,
@@ -298,7 +298,7 @@ describe('InvoiceService', () => {
         const first = await requestToTransaction(transactions);
         expect(await BalanceService.getBalance(debtor.id)).is.equal(-1 * first.cost);
 
-        await new Promise((f) => setTimeout(f, 500));
+        await new Promise((f) => setTimeout(f, 1000));
 
         await InvoiceService.createInvoice(createInvoiceRequest);
         expect(await BalanceService.getBalance(debtor.id)).is.equal(0);
@@ -345,7 +345,7 @@ describe('InvoiceService', () => {
 
         // Test if attributes were updated
         const updatedInvoice = await InvoiceService.updateInvoice(validUpdateInvoiceParams);
-        expect(updatedInvoice.currentState.state).to.be.equal(InvoiceState.SENT);
+        expect(updatedInvoice.currentState.state).to.be.equal(InvoiceState[InvoiceState.SENT]);
       });
     });
     it('should update an Invoice state twice', async () => {
@@ -365,11 +365,11 @@ describe('InvoiceService', () => {
         // Test if attributes were updated
         let updatedInvoice = await InvoiceService
           .updateInvoice(makeParamsState(InvoiceState.SENT));
-        expect(updatedInvoice.currentState.state).to.be.equal(InvoiceState.SENT);
+        expect(updatedInvoice.currentState.state).to.be.equal(InvoiceState[InvoiceState.SENT]);
 
         updatedInvoice = await InvoiceService
           .updateInvoice(makeParamsState(InvoiceState.PAYED));
-        expect(updatedInvoice.currentState.state).to.be.equal(InvoiceState.PAYED);
+        expect(updatedInvoice.currentState.state).to.be.equal(InvoiceState[InvoiceState.PAYED]);
       });
     });
     it('should delete an Invoice', async () => {
@@ -389,7 +389,7 @@ describe('InvoiceService', () => {
         // Test if attributes were updated
         const updatedInvoice = await InvoiceService
           .updateInvoice(makeParamsState(InvoiceState.DELETED));
-        expect(updatedInvoice.currentState.state).to.be.equal(InvoiceState.DELETED);
+        expect(updatedInvoice.currentState.state).to.be.equal(InvoiceState[InvoiceState.DELETED]);
 
         // Check if the balance has been decreased
         expect(await BalanceService.getBalance(debtor.id))

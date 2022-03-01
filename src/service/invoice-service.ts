@@ -105,7 +105,7 @@ export default class InvoiceService {
   private static asInvoiceStatusResponse(invoiceStatus: InvoiceStatus): InvoiceStatusResponse {
     return {
       dateChanged: invoiceStatus.dateChanged.toISOString(),
-      state: invoiceStatus.state,
+      state: InvoiceState[invoiceStatus.state],
       changedBy: parseUserToBaseResponse(invoiceStatus.changedBy, false),
     } as InvoiceStatusResponse;
   }
@@ -336,7 +336,7 @@ export default class InvoiceService {
     const invoices = (await this.getInvoices({ toId })).records;
     // Filter the deleted invoices
     const validInvoices = invoices.filter(
-      (invoice) => invoice.currentState.state !== InvoiceState.DELETED,
+      (invoice) => invoice.currentState.state !== InvoiceState[InvoiceState.DELETED],
     );
     return validInvoices[validInvoices.length - 1];
   }
@@ -363,7 +363,6 @@ export default class InvoiceService {
       if (!latestInvoice) {
         const user = await User.findOne(toId);
         date = user.createdAt;
-        console.error(date);
       } else {
         date = latestInvoice.createdAt;
       }
@@ -371,7 +370,6 @@ export default class InvoiceService {
     }
 
     const transactions = (await TransactionService.getTransactions(params)).records;
-    console.error(transactions);
     const transfer = await this.createTransferFromTransactions(toId, transactions);
 
     // Create a new Invoice

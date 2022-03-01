@@ -18,19 +18,19 @@
 import { DineroObject } from 'dinero.js';
 import BaseResponse from './base-response';
 import { BaseUserResponse } from './user-response';
-import { InvoiceState } from '../../entity/invoices/invoice-status';
 import { TransferResponse } from './transfer-response';
 import { PaginationResult } from '../../helpers/pagination';
+import { InvoiceState } from '../../entity/invoices/invoice-status';
 
 /**
  * @typedef InvoiceStatusResponse
  * @property {string} dateChanged.required - Date when the state of the invoice was changed.
  * @property {BaseUserResponse.model} changedBy.required - The user that changed the invoice status.
- * @property {enum} state.required - The state of the invoice.
+ * @property {keyof typeof InvoiceState} state.required - The state of the invoice.
  */
 export interface InvoiceStatusResponse {
   dateChanged: string,
-  state: InvoiceState,
+  state: keyof typeof InvoiceState,
   changedBy: BaseUserResponse,
 }
 

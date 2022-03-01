@@ -31,7 +31,7 @@ import {
 } from './request/invoice-request';
 import verifyCreateInvoiceRequest, { verifyUpdateInvoiceRequest } from './request/validators/invoice-request-spec';
 import { isFail } from '../helpers/specification-validation';
-import { asBoolean } from '../helpers/validators';
+import { asBoolean, asInvoiceState } from '../helpers/validators';
 import Invoice from '../entity/invoices/invoice';
 
 export default class InvoiceController extends BaseController {
@@ -69,11 +69,11 @@ export default class InvoiceController extends BaseController {
         },
         PATCH: {
           body: { modelName: 'UpdateInvoiceRequest' },
-          policy: async (req) => this.roleManager.can(req.token.roles, 'update', await InvoiceController.getRelation(req), 'Invoices', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'update', 'all', 'Invoices', ['*']),
           handler: this.updateInvoice.bind(this),
         },
         DELETE: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'delete', await InvoiceController.getRelation(req), 'Invoices', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'delete', 'all', 'Invoices', ['*']),
           handler: this.deleteInvoice.bind(this),
         },
       },
@@ -222,6 +222,7 @@ export default class InvoiceController extends BaseController {
       const params: UpdateInvoiceParams = {
         ...body,
         invoiceId,
+        state: asInvoiceState(body.state),
         byId: body.byId ?? req.token.user.id,
       };
 
@@ -267,7 +268,7 @@ export default class InvoiceController extends BaseController {
    * @returns whether invoice is connected to used token
    */
   static async getRelation(req: RequestWithToken): Promise<string> {
-    const invoice: Invoice = await Invoice.findOne(req.params.id);
+    const invoice: Invoice = await Invoice.findOne(req.params.id, { relations: ['to'] });
     if (invoice.to.id === req.token.user.id) return 'own';
     return 'all';
   }

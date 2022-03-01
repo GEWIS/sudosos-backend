@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  BaseInvoice, BaseUpdateInvoice, CreateInvoiceParams, CreateInvoiceRequest, UpdateInvoiceParams,
+  BaseInvoice, CreateInvoiceParams, CreateInvoiceRequest, UpdateInvoiceParams,
 } from '../invoice-request';
 import {
   createArrayRule,
@@ -50,7 +50,7 @@ async function validTransactionIds<T extends BaseInvoice>(p: T) {
   return toPass(p);
 }
 
-async function existsAndNotDeleted<T extends BaseUpdateInvoice>(p: T) {
+async function existsAndNotDeleted<T extends UpdateInvoiceParams>(p: T) {
   const base: Invoice = await Invoice.findOne(p.invoiceId, { relations: ['invoiceStatus'] });
 
   if (!base) return toFail(INVALID_INVOICE_ID());

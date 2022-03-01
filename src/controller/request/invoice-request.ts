@@ -20,15 +20,14 @@ import InvoiceEntryRequest from './invoice-entry-request';
 import { InvoiceState } from '../../entity/invoices/invoice-status';
 
 export interface BaseUpdateInvoice {
-  invoiceId: number,
   addressee: string,
   description: string,
-  state?: InvoiceState,
 }
 
 export interface UpdateInvoiceParams extends BaseUpdateInvoice {
   byId: number,
   invoiceId: number,
+  state?: InvoiceState,
 }
 
 /**
@@ -36,10 +35,12 @@ export interface UpdateInvoiceParams extends BaseUpdateInvoice {
  * @property {integer} byId - The user who updates the Invoice, defaults to the ID of the requester.
  * @property {string} addressee.required - Name of the addressed.
  * @property {string} description.required - The description of the invoice.
- * @property {InvoiceState.model} state - The state to set of the invoice.
+ * @property {string} state - The state to set of the invoice,
+ *    can be either CREATED, SENT, PAYED or DELETED.
  */
 export interface UpdateInvoiceRequest extends BaseUpdateInvoice {
   byId?: number,
+  state?: keyof typeof InvoiceState,
 }
 
 export interface BaseInvoice {
