@@ -17,15 +17,11 @@
  */
 
 /**
- * Creates a new Unapproved Container Error than can be thrown when updating an POS.
- * @param message - The error message to use
- * @constructor UnapprovedContainerError
+ * @typedef GEWISAuthenticationPinRequest
+ * @property {number} gewisId.required
+ * @property {number} pin.required
  */
-export default class UnapprovedContainerError extends Error {
-  constructor(message: string) {
-    super();
-    this.message = message;
-    this.name = 'UnapprovedContainerError';
-    this.stack = (new Error()).stack;
-  }
+export default interface GEWISAuthenticationPinRequest {
+  gewisId: number,
+  pin: number,
 }

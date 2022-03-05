@@ -23,7 +23,7 @@ import User from '../entity/user/user';
 import AuthenticationMockRequest from './request/authentication-mock-request';
 import JsonWebToken from '../authentication/json-web-token';
 import TokenHandler from '../authentication/token-handler';
-import AuthenticationResponse from './response/authentication-response';
+import AuthenticationService from '../service/authentication-service';
 
 /**
  * The authentication controller is responsible for:
@@ -63,7 +63,7 @@ export default class AuthenticationController extends BaseController {
       '/mock': {
         POST: {
           body: { modelName: 'AuthenticationMockRequest' },
-          policy: this.canPerformMock.bind(this),
+          policy: AuthenticationController.canPerformMock.bind(this),
           handler: this.mockLogin.bind(this),
         },
       },
@@ -71,41 +71,10 @@ export default class AuthenticationController extends BaseController {
   }
 
   /**
-   * Converts the internal object representation to an authentication response, which can be
-   * returned in the API response.
-   * @param user - The user that authenticated.
-   * @param roles - The roles that the authenticated user has.
-   * @param token - The JWT token that can be used to authenticate.
-   * @returns The authentication response.
-   */
-  public static asAuthenticationResponse(
-    user: User,
-    roles: string[],
-    token: string,
-  ): AuthenticationResponse {
-    const response: AuthenticationResponse = {
-      user: {
-        id: user.id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        active: user.active,
-        deleted: user.deleted,
-        type: user.type,
-        createdAt: user.createdAt.toISOString(),
-        updatedAt: user.updatedAt.toISOString(),
-      },
-      roles,
-      token,
-    };
-    return response;
-  }
-
-  /**
    * Validates that the request is authorized by the policy.
    * @param req - The incoming request.
    */
-  // eslint-disable-next-line class-methods-use-this
-  public async canPerformMock(req: Request): Promise<boolean> {
+  static async canPerformMock(req: Request): Promise<boolean> {
     const body = req.body as AuthenticationMockRequest;
 
     // Only allow in development setups
@@ -137,9 +106,10 @@ export default class AuthenticationController extends BaseController {
       const contents: JsonWebToken = {
         user,
         roles,
+        lesser: false,
       };
       const token = await this.tokenHandler.signToken(contents, body.nonce);
-      const response = AuthenticationController.asAuthenticationResponse(user, roles, token);
+      const response = AuthenticationService.asAuthenticationResponse(user, roles, token);
       res.json(response);
     } catch (error) {
       this.logger.error('Could not create token:', error);

@@ -32,6 +32,11 @@ export default class JsonWebToken {
   public roles: string[];
 
   /**
+   * If the JWT token provides restricted acces.
+   */
+  public lesser: boolean;
+
+  /**
    * The JWT expiry field. Set automatically by signing the token.
    */
   public readonly exp?: number;

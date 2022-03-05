@@ -26,7 +26,6 @@ import ContainerRevision from '../entity/container/container-revision';
 import ProductService from '../service/product-service';
 import UpdatedContainer from '../entity/container/updated-container';
 import Container from '../entity/container/container';
-import UnapprovedProductError from '../entity/errors/unapproved-product-error';
 import { asNumber } from '../helpers/validators';
 import { parseRequestPagination } from '../helpers/pagination';
 import verifyContainerRequest from './request/validators/container-request-spec';
@@ -267,12 +266,8 @@ export default class ContainerController extends BaseController {
 
       res.json(container);
     } catch (error) {
-      if (error instanceof UnapprovedProductError) {
-        res.status(400).json(error.message);
-      } else {
-        this.logger.error('Could not approve update: ', error);
-        res.status(500).json('Internal server error.');
-      }
+      this.logger.error('Could not approve update: ', error);
+      res.status(500).json('Internal server error.');
     }
   }
 

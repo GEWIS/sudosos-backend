@@ -15,17 +15,15 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import {
-  Column, Entity,
-} from 'typeorm';
-import AuthenticationMethod from './authentication-method';
-
-@Entity()
+import { JoinColumn, OneToOne } from 'typeorm';
+import BaseEntityWithoutId from '../base-entity-without-id';
+import User from '../user/user';
 /**
- * @typedef {AuthenticationMethod} EanAuthenticator
- * @property {string} eanCode.required - The EAN code
+ * @typedef {AuthenticationMethod} AuthenticationMethod
+ * @property {User.model} user.required - The user this authenticator is for
  */
-export default class EanAuthenticator extends AuthenticationMethod {
-  @Column()
-  public eanCode: string;
+export default class AuthenticationMethod extends BaseEntityWithoutId {
+  @OneToOne(() => User, { primary: true, nullable: false })
+  @JoinColumn()
+  public user: User;
 }
