@@ -19,7 +19,6 @@ import { Request, Response } from 'express';
 import * as jwt from 'jsonwebtoken';
 import log4js, { Logger } from 'log4js';
 import * as util from 'util';
-import bcrypt from 'bcrypt';
 import BaseController, { BaseControllerOptions } from '../../controller/base-controller';
 import Policy from '../../controller/policy';
 import JsonWebToken from '../../authentication/json-web-token';
