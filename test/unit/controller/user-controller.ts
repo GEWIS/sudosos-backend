@@ -99,8 +99,8 @@ describe('UserController', (): void => {
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
-    ctx.userToken = await tokenHandler.signToken({ user: ctx.users[0], roles: ['User'] }, '1');
-    ctx.adminToken = await tokenHandler.signToken({ user: ctx.users[6], roles: ['User', 'Admin'] }, '1');
+    ctx.userToken = await tokenHandler.signToken({ user: ctx.users[0], roles: ['User'], lesser: false }, '1');
+    ctx.adminToken = await tokenHandler.signToken({ user: ctx.users[6], roles: ['User', 'Admin'], lesser: false }, '1');
 
     const all = { all: new Set<string>(['*']) };
     const own = { own: new Set<string>(['*']) };
