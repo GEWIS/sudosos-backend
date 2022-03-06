@@ -38,6 +38,34 @@ export default class Gewis {
   async registerRoles(): Promise<void> {
     const star = new Set(['*']);
 
+    // Temp for testing in a more realistic environment.
+    const ownedEntity = {
+      create: { own: star },
+      read: { own: star, all: star },
+      update: { own: star },
+    };
+    const publicPermissions = {
+      Banner: {
+        ...ownedEntity,
+      },
+      Container: {
+        ...ownedEntity,
+      },
+      Product: {
+        ...ownedEntity,
+      },
+      ProductCategories: {
+        ...ownedEntity,
+      },
+      PointOfSale: {
+        ...ownedEntity,
+      },
+      User: {
+        read: { own: star, all: star },
+        update: { own: star },
+      },
+    };
+
     /**
      * Define a Buyer role, which indicates that the user
      * is allowed to create transactions for itself.
@@ -59,6 +87,7 @@ export default class Gewis {
           read: { own: star },
           update: { own: star },
         },
+        ...publicPermissions,
       },
       assignmentCheck: async (user: User) => buyerUserTypes.has(user.type),
     });
