@@ -41,7 +41,7 @@ export default class Gewis {
     // Temp for testing in a more realistic environment.
     const ownedEntity = {
       create: { own: star },
-      read: { own: star, all: star },
+      get: { own: star, all: star },
       update: { own: star },
     };
     const publicPermissions = {
@@ -61,7 +61,7 @@ export default class Gewis {
         ...ownedEntity,
       },
       User: {
-        read: { own: star, all: star },
+        get: { own: star, all: star },
         update: { own: star },
       },
     };
