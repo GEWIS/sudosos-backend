@@ -5,7 +5,7 @@ COPY ./package.json ./package-lock.json ./
 RUN npm install
 COPY ./ ./
 RUN npm run build \
- && npm run swagger \
+ && npm run swagger
 
 # The target image that will be run
 FROM node:14-alpine as target
