@@ -25,6 +25,7 @@ import PayoutRequestService, { parseGetPayoutRequestsFilters } from '../service/
 import { PayoutRequestStatusRequest } from './request/payout-request-status-request';
 import PayoutRequest from '../entity/transactions/payout-request';
 import { PayoutRequestState } from '../entity/transactions/payout-request-status';
+import PayoutRequestRequest from './request/payout-request-request';
 
 export default class PayoutRequestController extends BaseController {
   private logger: Logger = log4js.getLogger('PayoutRequestController');
@@ -40,6 +41,10 @@ export default class PayoutRequestController extends BaseController {
         GET: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'payoutRequest', ['*']),
           handler: this.returnAllPayoutRequests.bind(this),
+        },
+        POST: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'create', 'own', 'payoutRequest', ['*']),
+          handler: this.createPayoutRequest.bind(this),
         },
       },
       '/:id(\\d+)': {
@@ -130,6 +135,28 @@ export default class PayoutRequestController extends BaseController {
     }
 
     res.status(200).json(payoutRequest);
+  }
+
+  /**
+   * Create a new payout request
+   * @route POST /payoutrequests
+   * @group payoutRequests - Operations of the payout request controller
+   * @param {PayoutRequestRequest.model} payoutRequest.body.required - New payout request
+   * @security JWT
+   * @returns {PayoutRequestResponse.model} 200
+   * @returns {string} 400 - Validation error
+   */
+  public async createPayoutRequest(req: RequestWithToken, res: Response): Promise<void> {
+    const body = req.body as PayoutRequestRequest;
+    this.logger.trace('Create payout request by user', req.token.user);
+
+    try {
+      const payoutRequest = await PayoutRequestService.createPayoutRequest(body, req.token.user);
+      res.status(200).json(payoutRequest);
+    } catch (e) {
+      res.status(500).send();
+      this.logger.error(e);
+    }
   }
 
   /**

@@ -81,6 +81,7 @@ describe('PayoutRequestController', () => {
       permissions: {
         payoutRequest: {
           get: all,
+          create: own,
           update: all,
         },
       },
@@ -91,6 +92,7 @@ describe('PayoutRequestController', () => {
       permissions: {
         payoutRequest: {
           get: own,
+          create: own,
           update: own,
         },
       },
@@ -419,6 +421,38 @@ describe('PayoutRequestController', () => {
         .get(`/payoutrequests/${id}`)
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(404);
+    });
+  });
+
+  describe('POST /payoutrequests', () => {
+    it('should correctly create payout request if admin', async () => {
+      const countBefore = await PayoutRequest.count();
+      const res = await request(ctx.app)
+        .post('/payoutrequests')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(ctx.validPayoutRequestRequest);
+      expect(res.status).to.equal(200);
+
+      const payoutRequest = res.body as PayoutRequestResponse;
+
+      const validation = ctx.specification.validateModel('PayoutRequestResponse', payoutRequest, false, true);
+      expect(validation.valid).to.be.true;
+      expect(await PayoutRequest.count()).to.equal(countBefore + 1);
+    });
+
+    it('should correctly create payout request if user', async () => {
+      const countBefore = await PayoutRequest.count();
+      const res = await request(ctx.app)
+        .post('/payoutrequests')
+        .set('Authorization', `Bearer ${ctx.userToken}`)
+        .send(ctx.validPayoutRequestRequest);
+      expect(res.status).to.equal(200);
+
+      const payoutRequest = res.body as PayoutRequestResponse;
+
+      const validation = ctx.specification.validateModel('PayoutRequestResponse', payoutRequest, false, true);
+      expect(validation.valid).to.be.true;
+      expect(await PayoutRequest.count()).to.equal(countBefore + 1);
     });
   });
 
