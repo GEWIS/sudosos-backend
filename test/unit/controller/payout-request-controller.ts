@@ -35,7 +35,7 @@ import {
   PayoutRequestResponse,
 } from '../../../src/controller/response/payout-request-response';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
-import PayoutRequestStatus, { PayoutRequestState } from '../../../src/entity/transactions/payout-request-status';
+import { PayoutRequestState } from '../../../src/entity/transactions/payout-request-status';
 
 describe('PayoutRequestController', () => {
   let ctx: {
@@ -46,6 +46,8 @@ describe('PayoutRequestController', () => {
     userToken: string,
     adminToken: string,
     users: User[],
+    adminUser: User,
+    localUser: User,
     payoutRequests: PayoutRequest[],
     validPayoutRequestRequest: PayoutRequestRequest,
   };
@@ -71,8 +73,7 @@ describe('PayoutRequestController', () => {
     const specification = await Swagger.initialize(app);
 
     const all = { all: new Set<string>(['*']) };
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const own = { own: new Set<string>(['*']), public: new Set<string>(['*']) };
+    const own = { own: new Set<string>(['*']) };
 
     const roleManager = new RoleManager();
     roleManager.registerRole({
@@ -89,6 +90,8 @@ describe('PayoutRequestController', () => {
       name: 'User',
       permissions: {
         payoutRequest: {
+          get: own,
+          update: own,
         },
       },
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_USER,
@@ -115,6 +118,8 @@ describe('PayoutRequestController', () => {
       specification,
       controller,
       users,
+      adminUser,
+      localUser,
       payoutRequests,
       adminToken,
       userToken,
@@ -387,8 +392,21 @@ describe('PayoutRequestController', () => {
       expect(validation.valid).to.be.true;
     });
 
-    it('should return 403 if not admin', async () => {
-      const { id } = ctx.payoutRequests[0];
+    it('should correctly return own payout request', async () => {
+      const { id } = ctx.payoutRequests.filter((req) => req.requestedBy.id === ctx.localUser.id)[0];
+      const res = await request(ctx.app)
+        .get(`/payoutrequests/${id}`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(200);
+
+      const payoutRequest = res.body as PayoutRequestResponse;
+
+      const validation = ctx.specification.validateModel('PayoutRequestResponse', payoutRequest, false, true);
+      expect(validation.valid).to.be.true;
+    });
+
+    it("should return 403 if requesting someone else's payout request and not admin", async () => {
+      const { id } = ctx.payoutRequests.filter((req) => req.requestedBy.id !== ctx.localUser.id)[0];
       const res = await request(ctx.app)
         .get(`/payoutrequests/${id}`)
         .set('Authorization', `Bearer ${ctx.userToken}`);
@@ -405,8 +423,9 @@ describe('PayoutRequestController', () => {
   });
 
   describe('POST /payoutrequests/{id}/status', async () => {
-    it('should correctly update a payout request status', async () => {
-      const { id } = ctx.payoutRequests[0];
+    it('should correctly update a payout request status as admin', async () => {
+      const { id } = ctx.payoutRequests.filter((req) => req.requestedBy.id !== ctx.adminUser.id
+        && req.payoutRequestStatus.length === 1)[1];
       const before = await PayoutRequest.findOne(id, {
         relations: ['payoutRequestStatus'],
       });
@@ -423,13 +442,41 @@ describe('PayoutRequestController', () => {
       expect(payoutRequest.status.length).to.equal(before.payoutRequestStatus.length + 1);
     });
 
+    it("should return 403 if admin tries to cancel someone else's payout request", async () => {
+      const { id } = ctx.payoutRequests.filter((req) => req.requestedBy.id !== ctx.adminUser.id
+        && req.payoutRequestStatus.length === 1)[1];
+      const res = await request(ctx.app)
+        .post(`/payoutrequests/${id}/status`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ state: PayoutRequestState.CANCELLED });
+      expect(res.status).to.equal(403);
+    });
+
     it('should return 403 if not admin', async () => {
-      const { id } = ctx.payoutRequests[0];
+      const { id } = ctx.payoutRequests.filter((req) => req.requestedBy.id !== ctx.localUser.id)[0];
       const res = await request(ctx.app)
         .post(`/payoutrequests/${id}/status`)
         .set('Authorization', `Bearer ${ctx.userToken}`)
         .send({ state: PayoutRequestState.APPROVED });
       expect(res.status).to.equal(403);
+    });
+
+    it('should correctly cancel payout request if cancelling own as user', async () => {
+      const userRequests = ctx.payoutRequests
+        .filter((req) => req.requestedBy.id === ctx.localUser.id
+          && req.payoutRequestStatus.length === 1);
+      const { id } = userRequests[0];
+      const before = await PayoutRequest.findOne(id, {
+        relations: ['payoutRequestStatus'],
+      });
+      const res = await request(ctx.app)
+        .post(`/payoutrequests/${id}/status`)
+        .set('Authorization', `Bearer ${ctx.userToken}`)
+        .send({ state: PayoutRequestState.CANCELLED });
+      expect(res.status).to.equal(200);
+
+      const payoutRequest = res.body as PayoutRequestResponse;
+      expect(payoutRequest.status.length).to.equal(before.payoutRequestStatus.length + 1);
     });
 
     it('should return 404 if payout request does not exist', async () => {

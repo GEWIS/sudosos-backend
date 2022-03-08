@@ -46,7 +46,7 @@ export interface BasePayoutRequestResponse extends BoilerPayoutRequestResponse {
  * @property {string} state - The state of this status change
  */
 export interface PayoutRequestStatusResponse extends BaseResponse {
-  state: string
+  state: PayoutRequestState
 }
 
 /**

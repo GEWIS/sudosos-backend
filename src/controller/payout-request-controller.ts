@@ -23,6 +23,8 @@ import { RequestWithToken } from '../middleware/token-middleware';
 import { parseRequestPagination } from '../helpers/pagination';
 import PayoutRequestService, { parseGetPayoutRequestsFilters } from '../service/payout-request-service';
 import { PayoutRequestStatusRequest } from './request/payout-request-status-request';
+import PayoutRequest from '../entity/transactions/payout-request';
+import { PayoutRequestState } from '../entity/transactions/payout-request-status';
 
 export default class PayoutRequestController extends BaseController {
   private logger: Logger = log4js.getLogger('PayoutRequestController');
@@ -42,20 +44,23 @@ export default class PayoutRequestController extends BaseController {
       },
       '/:id(\\d+)': {
         GET: {
-          // TODO: Users should be able to get the details of their own payout requests
-          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'payoutRequest', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', await PayoutRequestController.getRelation(req), 'payoutRequest', ['*']),
           handler: this.returnSinglePayoutRequest.bind(this),
         },
       },
       '/:id(\\d+)/status': {
         POST: {
-          // TODO: Users should only be allowed to create a "CANCELLED" status,
-          //  while admins only the rest
-          policy: async (req) => this.roleManager.can(req.token.roles, 'update', 'all', 'payoutRequest', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'update', await PayoutRequestController.getRelation(req), 'payoutRequest', ['*']),
           handler: this.updatePayoutRequestStatus.bind(this),
         },
       },
     };
+  }
+
+  static async getRelation(req: RequestWithToken): Promise<string> {
+    const { id } = req.params;
+    const payoutRequest = await PayoutRequest.findOne(id, { relations: ['requestedBy'] });
+    return (payoutRequest !== undefined && payoutRequest.requestedBy.id === req.token.user.id) ? 'own' : 'all';
   }
 
   /**
@@ -129,9 +134,10 @@ export default class PayoutRequestController extends BaseController {
 
   /**
    * Create a new status for a payout request
-   * @route GET /payoutrequests/{id}/status
+   * @route POST /payoutrequests/{id}/status
    * @group payoutRequests - Operations of the payout request controller
    * @param {integer} id.path.required - The ID of the payout request object that should be returned
+   * @param {PayoutRequestStatusRequest.model} state.body.required - New state of payout request
    * @security JWT
    * @returns {PayoutRequestResponse.model} 200
    * @returns {string} 400 - Validation error
@@ -156,6 +162,17 @@ export default class PayoutRequestController extends BaseController {
 
     if (payoutRequest === undefined) {
       res.status(404).json('Unknown payout request ID.');
+      return;
+    }
+
+    // Everyone can cancel their own payout requests, but only admins can update to other states.
+    if (body.state !== PayoutRequestState.CANCELLED) {
+      if (!this.roleManager.can(req.token.roles, 'update', 'all', 'payoutRequest', ['*'])) {
+        res.status(403).send('You can only cancel your own payout requests.');
+        return;
+      }
+    } else if (payoutRequest.requestedBy.id !== req.token.user.id) {
+      res.status(403).send('You can only cancel your own payout requests.');
       return;
     }
 
