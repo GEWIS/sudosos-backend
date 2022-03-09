@@ -405,9 +405,13 @@ describe('TransactionService', (): void => {
 
     it('should return a paginated list when take is set', async () => {
       const take = 69;
-      const { records } = await TransactionService.getTransactions({}, { take });
+      // eslint-disable-next-line @typescript-eslint/naming-convention
+      const { records, _pagination } = await TransactionService.getTransactions({}, { take });
+
+      const total = await Transaction.count();
 
       expect(records.length).to.equal(take);
+      expect(_pagination.count).to.equal(total);
     });
 
     it('should not return a paginated list when skip is set', async () => {
@@ -420,8 +424,12 @@ describe('TransactionService', (): void => {
     it('should return a paginated list when take and skip are set', async () => {
       const skip = 150;
       const take = 50;
-      const { records } = await TransactionService.getTransactions({}, { take, skip });
+      // eslint-disable-next-line @typescript-eslint/naming-convention
+      const { records, _pagination } = await TransactionService.getTransactions({}, { take, skip });
 
+      const total = await Transaction.count();
+
+      expect(_pagination.count).to.equal(total);
       expect(records.length).to.equal(
         Math.min(take, ctx.transactions.length - skip),
       );

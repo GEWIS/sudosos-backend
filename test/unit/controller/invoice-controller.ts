@@ -43,7 +43,7 @@ import { CreateInvoiceRequest, UpdateInvoiceRequest } from '../../../src/control
 import Transaction from '../../../src/entity/transactions/transaction';
 import {
   INVALID_DATE,
-  INVALID_USER_ID,
+  INVALID_USER_ID, SAME_INVOICE_STATE,
   ZERO_LENGTH_STRING,
 } from '../../../src/controller/request/validators/validation-errors';
 import InvoiceEntryRequest from '../../../src/controller/request/invoice-entry-request';
@@ -51,6 +51,7 @@ import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import { TransactionRequest } from '../../../src/controller/request/transaction-request';
 import { createTransactionRequest, requestToTransaction } from '../service/invoice-service';
 import BalanceService from '../../../src/service/balance-service';
+import { InvoiceState } from '../../../src/entity/invoices/invoice-status';
 
 describe('InvoiceController', async () => {
   let ctx: {
@@ -93,6 +94,7 @@ describe('InvoiceController', async () => {
 
     await User.save(adminUser);
     await User.save(localUser);
+    await User.save(invoiceUser);
 
     const categories = await seedProductCategories();
     const {
@@ -300,13 +302,24 @@ describe('InvoiceController', async () => {
     describe('verifyInvoiceRequest Specification', async () => {
       await testValidationOnRoute('post', '/invoices');
     });
-    it('should create an empty Invoice and return an HTTP 200 if admin', async () => {
+    it('should create an Invoice with only custom entries and return an HTTP 200 if admin', async () => {
       await inUserContext(await UserFactory().clone(2), async (debtor: User, creditor: User) => {
         const count = await Invoice.count();
         const newRequest = {
           ...ctx.validInvoiceRequest,
           toId: debtor.id,
           byId: creditor.id,
+          customEntries: [
+            {
+              description: 'Tappers vergoeding',
+              amount: 1,
+              price: {
+                amount: 2000,
+                currency: 'EUR',
+                precision: 2,
+              },
+            },
+          ],
         };
         const res = await request(ctx.app)
           .post('/invoices')
@@ -316,6 +329,21 @@ describe('InvoiceController', async () => {
         expect(await Invoice.count()).to.equal(count + 1);
 
         expect(res.status).to.equal(200);
+      });
+    });
+    it('should return an HTTP 403 if not admin', async () => {
+      await inUserContext(await UserFactory().clone(2), async (debtor: User, creditor: User) => {
+        const newRequest = {
+          ...ctx.validInvoiceRequest,
+          toId: debtor.id,
+          byId: creditor.id,
+        };
+        const res = await request(ctx.app)
+          .post('/invoices')
+          .set('Authorization', `Bearer ${ctx.token}`)
+          .send(newRequest);
+
+        expect(res.status).to.equal(403);
       });
     });
     it('should create an Invoice and return an HTTP 200 if admin', async () => {
@@ -343,6 +371,41 @@ describe('InvoiceController', async () => {
 
         expect(await BalanceService.getBalance(debtor.id)).is.equal(0);
         expect(await Invoice.count()).to.equal(count + 1);
+
+        expect(res.status).to.equal(200);
+      });
+    });
+    it('should create an Invoice with custom entries and return an HTTP 200 if admin', async () => {
+      await inUserContext(await UserFactory().clone(2), async (debtor: User, creditor: User) => {
+        const count = await Invoice.count();
+        const newRequest: CreateInvoiceRequest = {
+          ...ctx.validInvoiceRequest,
+          toId: debtor.id,
+          byId: creditor.id,
+          customEntries: [
+            {
+              description: 'Tappers vergoeding',
+              amount: 1,
+              price: {
+                amount: 2000,
+                currency: 'EUR',
+                precision: 2,
+              },
+            },
+          ],
+        };
+        const res = await request(ctx.app)
+          .post('/invoices')
+          .set('Authorization', `Bearer ${ctx.adminToken}`)
+          .send(newRequest);
+
+        expect(await Invoice.count()).to.equal(count + 1);
+        expect(((res.body) as InvoiceResponse).invoiceEntries[0].description)
+          .to.equal(newRequest.customEntries[0].description);
+        expect(((res.body) as InvoiceResponse).invoiceEntries[0].amount)
+          .to.equal(newRequest.customEntries[0].amount);
+        expect(((res.body) as InvoiceResponse).invoiceEntries[0].price.amount)
+          .to.equal(newRequest.customEntries[0].price.amount);
 
         expect(res.status).to.equal(200);
       });
@@ -401,15 +464,31 @@ describe('InvoiceController', async () => {
       const updateRequest: UpdateInvoiceRequest = {
         addressee: 'Updated-addressee',
         description: 'Updated-description',
-        state: 'PAYED',
+        state: 'PAID',
       };
 
       const res = await request(ctx.app)
         .patch(`/invoices/${invoice.id}`)
-        .set('Authorization', `Bearer ${ctx.localUser}`)
+        .set('Authorization', `Bearer ${ctx.token}`)
         .send(updateRequest);
 
       expect(res.status).to.equal(403);
+    });
+    it('should verify that new invoice state is not the same as current', async () => {
+      const invoice = (await Invoice.find({ relations: ['invoiceStatus'] }))[0];
+      const currentState = invoice.invoiceStatus[invoice.invoiceStatus.length - 1].state;
+      const req: UpdateInvoiceRequest = {
+        addressee: 'Updated-addressee',
+        description: 'Updated-description',
+        state: InvoiceState[currentState] as 'SENT' | 'CREATED' | 'PAID' | 'DELETED',
+      };
+      const res = await request(ctx.app)
+        .patch(`/invoices/${invoice.id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(req);
+
+      expect(res.status).to.eq(400);
+      expect(res.body).to.eq(SAME_INVOICE_STATE().value);
     });
   });
   describe('DELETE /invoices/{id}', () => {

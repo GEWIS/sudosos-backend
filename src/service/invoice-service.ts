@@ -44,6 +44,7 @@ import {
 import { PaginationParameters } from '../helpers/pagination';
 import InvoiceEntryRequest from '../controller/request/invoice-entry-request';
 import User from '../entity/user/user';
+import DineroTransformer from '../entity/transformer/dinero-transformer';
 
 export interface InvoiceFilterParameters {
   /**
@@ -62,26 +63,24 @@ export interface InvoiceFilterParameters {
    * Boolean if the invoice entries should be added to the response.
    */
   returnInvoiceEntries?: boolean
+  /**
+   * Filter based on from date,
+   */
+  fromDate?: Date,
+  /**
+   * Filter based on till date,
+   */
+  tillDate?: Date
 }
 
 export function parseInvoiceFilterParameters(req: RequestWithToken): InvoiceFilterParameters {
   return {
-    /**
-     * Filter based on to user.
-     */
     toId: asNumber(req.query.toId),
-    /**
-     * Filter based on InvoiceId
-     */
     invoiceId: asNumber(req.query.toId),
-    /**
-     * Filter based on the current invoice state
-     */
     currentState: asInvoiceState(req.query.currentState),
-    /**
-     * Boolean if the invoice entries should be added to the response.
-     */
     returnInvoiceEntries: asBoolean(req.query.returnInvoiceEntries),
+    fromDate: asDate(req.query.fromDate),
+    tillDate: asDate(req.query.tillDate),
   };
 }
 
@@ -104,7 +103,6 @@ export default class InvoiceService {
    */
   private static asInvoiceStatusResponse(invoiceStatus: InvoiceStatus): InvoiceStatusResponse {
     return {
-      dateChanged: invoiceStatus.dateChanged.toISOString(),
       state: InvoiceState[invoiceStatus.state],
       changedBy: parseUserToBaseResponse(invoiceStatus.changedBy, false),
     } as InvoiceStatusResponse;
@@ -137,7 +135,8 @@ export default class InvoiceService {
     : InvoiceResponse {
     return {
       ...this.asBaseInvoiceResponse(invoice),
-      invoiceEntries: invoice.invoiceEntries.map(this.asInvoiceEntryResponse),
+      invoiceEntries: invoice.invoiceEntries
+        ? invoice.invoiceEntries.map(this.asInvoiceEntryResponse) : [],
     } as InvoiceResponse;
   }
 
@@ -234,7 +233,7 @@ export default class InvoiceService {
         invoice,
         description,
         amount,
-        price: request.price.amount,
+        price: DineroTransformer.Instance.from(request.price.amount),
       });
       promises.push(entry.save());
     });
@@ -273,7 +272,6 @@ export default class InvoiceService {
       invoice,
       changedBy: byId,
       state: InvoiceState.DELETED,
-      dateChanged: new Date(),
     });
 
     // Add it to the invoice and save it.
@@ -308,7 +306,6 @@ export default class InvoiceService {
         invoice: base,
         changedBy: update.byId,
         state: update.state,
-        dateChanged: new Date(),
       });
 
       // Add it to the invoice and save it.
@@ -387,7 +384,6 @@ export default class InvoiceService {
       invoice: newInvoice,
       changedBy: byId,
       state: InvoiceState.CREATED,
-      dateChanged: new Date(),
     });
 
     // First save the Invoice, then the status.
@@ -402,7 +398,7 @@ export default class InvoiceService {
 
     // Return the newly created Invoice.
     return (await this.getInvoices(
-      { invoiceId: newInvoice.id, returnInvoiceEntries: false },
+      { invoiceId: newInvoice.id, returnInvoiceEntries: true },
     )).records[0];
   }
 
@@ -428,19 +424,17 @@ export default class InvoiceService {
       where: QueryFilter.createFilterWhereClause(filterMapping, params),
       relations: ['to', 'invoiceStatus', 'transfer', 'transfer.to', 'transfer.from'],
       order: { createdAt: 'ASC' },
-      take,
       skip,
     };
 
     let records: (BaseInvoiceResponse | InvoiceResponse)[];
-
     // Case distinction on if we want to return entries or not.
     if (!params.returnInvoiceEntries) {
-      const invoices = await Invoice.find(options);
+      const invoices = await Invoice.find({ ...options, take });
       records = invoices.map(this.asBaseInvoiceResponse);
     } else {
       options.relations.push('invoiceEntries');
-      const invoices = await Invoice.find(options);
+      const invoices = await Invoice.find({ ...options, take });
       records = invoices.map(this.asInvoiceResponse.bind(this));
     }
 

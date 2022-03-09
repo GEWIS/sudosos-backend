@@ -31,13 +31,14 @@ import {
   INVALID_INVOICE_ID,
   INVALID_TRANSACTION_IDS,
   INVALID_TRANSACTION_OWNER,
-  INVOICE_IS_DELETED,
+  INVOICE_IS_DELETED, SAME_INVOICE_STATE,
 } from './validation-errors';
 import { InvoiceState } from '../../../entity/invoices/invoice-status';
 import Invoice from '../../../entity/invoices/invoice';
 
 /**
  * Checks whether all the transactions exists and are credited to the debtor.
+ * TODO Discuss negative invoices transactions.
  */
 async function validTransactionIds<T extends BaseInvoice>(p: T) {
   if (!p.transactionIDs) return toPass(p);
@@ -62,6 +63,18 @@ async function existsAndNotDeleted<T extends UpdateInvoiceParams>(p: T) {
   return toPass(p);
 }
 
+async function differentState<T extends UpdateInvoiceParams>(p: T) {
+  if (!p.state) return toPass(p);
+
+  const base: Invoice = await Invoice.findOne(p.invoiceId, { relations: ['invoiceStatus'] });
+  if (base.invoiceStatus[base.invoiceStatus.length - 1]
+    .state === p.state) {
+    return toFail(SAME_INVOICE_STATE());
+  }
+
+  return toPass(p);
+}
+
 const invoiceEntryRequestSpec: Specification<InvoiceEntryRequest, ValidationError> = [
   [[positiveNumber], 'amount', new ValidationError('amount:')],
   [stringSpec(), 'description', new ValidationError('description:')],
@@ -81,6 +94,7 @@ function baseInvoiceRequestSpec<T extends BaseInvoice>(): Specification<T, Valid
 const updateInvoiceRequestSpec: Specification<UpdateInvoiceParams, ValidationError> = [
   [stringSpec(), 'description', new ValidationError('description:')],
   [stringSpec(), 'addressee', new ValidationError('addressee:')],
+  differentState,
   existsAndNotDeleted,
 ];
 

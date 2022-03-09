@@ -368,8 +368,8 @@ describe('InvoiceService', () => {
         expect(updatedInvoice.currentState.state).to.be.equal(InvoiceState[InvoiceState.SENT]);
 
         updatedInvoice = await InvoiceService
-          .updateInvoice(makeParamsState(InvoiceState.PAYED));
-        expect(updatedInvoice.currentState.state).to.be.equal(InvoiceState[InvoiceState.PAYED]);
+          .updateInvoice(makeParamsState(InvoiceState.PAID));
+        expect(updatedInvoice.currentState.state).to.be.equal(InvoiceState[InvoiceState.PAID]);
       });
     });
     it('should delete an Invoice', async () => {

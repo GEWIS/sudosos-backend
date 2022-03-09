@@ -26,7 +26,7 @@ import BaseEntity from '../base-entity';
 export enum InvoiceState {
   CREATED = 1,
   SENT = 2,
-  PAYED = 3,
+  PAID = 3,
   DELETED = 4,
 }
 
@@ -35,7 +35,6 @@ export enum InvoiceState {
  * @property {Invoice.model} invoice.required - The invoice to which this state belongs.
  * @property {User.model} changedBy.required - The user that changed the invoice status.
  * @property {enum} state.required - The state of the Invoice
- * @property {string} dateChanged.required - The date that the InvoiceStatus was changed.
  */
 @Entity()
 export default class InvoiceStatus extends BaseEntity {
@@ -48,7 +47,4 @@ export default class InvoiceStatus extends BaseEntity {
 
   @Column()
   public state: InvoiceState;
-
-  @Column()
-  public dateChanged: Date;
 }

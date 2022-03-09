@@ -38,7 +38,7 @@ export default class InvoiceController extends BaseController {
   private logger: Logger = log4js.getLogger('InvoiceController');
 
   /**
-    * Creates a new product controller instance.
+    * Creates a new Invoice controller instance.
     * @param options - The options passed to the base controller.
     */
   public constructor(options: BaseControllerOptions) {
@@ -248,6 +248,7 @@ export default class InvoiceController extends BaseController {
    * @param {integer} id.path.required - The id of the invoice which should be deleted
    * @returns {string} 500 - Internal server error
    */
+  // TODO Deleting of invoices that are not of state CREATED?
   public async deleteInvoice(req: RequestWithToken, res: Response): Promise<void> {
     const { id } = req.params;
     const invoiceId = parseInt(id, 10);

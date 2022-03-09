@@ -55,7 +55,7 @@ import initializeDiskStorage from './files/initialize';
 import StripeController from './controller/stripe-controller';
 import StripeWebhookController from './controller/stripe-webhook-controller';
 import { extractRawBody } from './helpers/raw-body';
-import InvoiceController from "./controller/invoice-controller";
+import InvoiceController from './controller/invoice-controller';
 
 export class Application {
   app: express.Express;

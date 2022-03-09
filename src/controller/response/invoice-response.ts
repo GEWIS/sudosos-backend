@@ -24,12 +24,11 @@ import { InvoiceState } from '../../entity/invoices/invoice-status';
 
 /**
  * @typedef InvoiceStatusResponse
- * @property {string} dateChanged.required - Date when the state of the invoice was changed.
  * @property {BaseUserResponse.model} changedBy.required - The user that changed the invoice status.
- * @property {keyof typeof InvoiceState} state.required - The state of the invoice.
+ * @property {string} state.required - The state of the invoice,
+ * can be either CREATED, SENT, PAYED or DELETED.
  */
 export interface InvoiceStatusResponse {
-  dateChanged: string,
   state: keyof typeof InvoiceState,
   changedBy: BaseUserResponse,
 }

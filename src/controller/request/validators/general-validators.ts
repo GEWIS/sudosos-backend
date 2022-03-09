@@ -25,7 +25,6 @@ export const positiveNumber = async (p: number) => {
 };
 
 export const userMustExist = async (p: number) => {
-  // Owner must exist.
   if (await User.findOne({ id: p }) === undefined) {
     return toFail(INVALID_USER_ID());
   }
@@ -33,7 +32,6 @@ export const userMustExist = async (p: number) => {
 };
 
 export const activeUserMustExist = async (p: number) => {
-  // Owner must exist.
   if (await User.findOne({ id: p }, { where: 'active' }) === undefined) {
     return toFail(INVALID_ACTIVE_USER_ID());
   }
