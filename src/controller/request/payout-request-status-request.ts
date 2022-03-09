@@ -19,7 +19,8 @@ import { PayoutRequestState } from '../../entity/transactions/payout-request-sta
 
 /**
  * @typedef PayoutRequestStatusRequest
- * @property {string} state - PayoutRequestState to change to
+ * @property {string} state - PayoutRequestState to change to,
+ * should be one of CREATED, APPROVED, DENIED, CANCELLED
  */
 export interface PayoutRequestStatusRequest {
   state: PayoutRequestState;
