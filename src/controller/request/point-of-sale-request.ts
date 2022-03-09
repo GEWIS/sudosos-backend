@@ -16,12 +16,13 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { ContainerParams } from './container-request';
-import Duration from './duration';
-import Named from './named';
 
-export interface BasePointOfSaleParams extends Duration, Named {
+export interface BasePointOfSaleParams {
   containers?: (number | ContainerParams)[],
   useAuthentication?: boolean,
+  name: string,
+  startDate: string,
+  endDate?: string,
 }
 
 export interface CreatePointOfSaleParams extends BasePointOfSaleParams{

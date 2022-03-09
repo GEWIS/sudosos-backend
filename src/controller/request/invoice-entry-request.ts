@@ -15,10 +15,16 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+import { DineroObjectRequest } from './dinero-request';
 
 /**
- * For all requests that contain an object with a name.
+ * @typedef InvoiceEntryRequest
+ * @property {string} description.required - The description of the entry
+ * @property {integer} amount.required - Amount of item sold.
+ * @property {DineroObjectRequest.model} price.required - The price per item.
  */
-export default interface Named {
-  name: string
+export default interface InvoiceEntryRequest {
+  description: string,
+  amount: number,
+  price: DineroObjectRequest
 }

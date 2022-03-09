@@ -16,6 +16,8 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import { InvoiceState } from '../entity/invoices/invoice-status';
+
 /**
  * Returns whether the given object is a number
  * @param number any - The object to check
@@ -80,4 +82,19 @@ export function asDate(input: any): Date {
   if (!isDate(input, true)) throw new TypeError(`Input '${input}' is not a date.`);
   const parsed = (input ? new Date(input) : undefined);
   return parsed;
+}
+
+/**
+ * Converts the input to a InvoiceState
+ * @param input - The input which should be converted.
+ * @returns The parsed InvoiceState.
+ * @throws TypeError - If the input is not a valid InvoiceState
+ */
+export function asInvoiceState(input: any): InvoiceState {
+  if (!input) return undefined;
+  const state: InvoiceState = InvoiceState[input as keyof typeof InvoiceState];
+  if (state === undefined) {
+    throw new TypeError(`Input '${input}' is not a valid InvoiceState.`);
+  }
+  return state;
 }

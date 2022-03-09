@@ -15,25 +15,25 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import {
-  Specification, toFail, toPass, ValidationError,
-} from '../../../helpers/specification-validation';
-import Named from '../named';
+import { toFail, toPass, ValidationError } from '../../../helpers/specification-validation';
+import User from '../../../entity/user/user';
+import { INVALID_ACTIVE_USER_ID, INVALID_USER_ID } from './validation-errors';
 
-/**
- * Checks if the name attribute is not an empty string.
- */
-const validName = (p: Named) => {
-  if (p.name === '') {
-    return toFail(new ValidationError('Name must be a non-zero length string.'));
+export const positiveNumber = async (p: number) => {
+  if (p <= 0) return toFail(new ValidationError('Number must be positive'));
+  return toPass(p);
+};
+
+export const userMustExist = async (p: number) => {
+  if (await User.findOne({ id: p }) === undefined) {
+    return toFail(INVALID_USER_ID());
   }
   return toPass(p);
 };
 
-function namedSpec<T extends Named>(): Specification<T, ValidationError> {
-  return [
-    validName,
-  ] as Specification<T, ValidationError>;
-}
-
-export default namedSpec;
+export const activeUserMustExist = async (p: number) => {
+  if (await User.findOne({ id: p }, { where: 'active' }) === undefined) {
+    return toFail(INVALID_ACTIVE_USER_ID());
+  }
+  return toPass(p);
+};
