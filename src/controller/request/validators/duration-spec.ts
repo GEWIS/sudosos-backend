@@ -19,27 +19,26 @@ import {
   Specification, toFail, toPass, ValidationError,
 } from '../../../helpers/specification-validation';
 import Duration from '../duration';
+import { INVALID_DATE, INVALID_DATE_DURATION } from './validation-errors';
 
 /**
- * Tests if the endDate property is a valid date.
- * @param d - Request to check
+ * Tests if the string is a valid date.
+ * @param d
  */
-function endNotNaN<T extends Duration>(d: T) {
-  if (Number.isNaN(Date.parse(d.endDate))) {
-    return toFail(new ValidationError('End Date must be a valid Date.'));
+export function validDate(d: string) {
+  if (Number.isNaN(Date.parse(d))) {
+    return toFail(INVALID_DATE());
   }
   return toPass(d);
 }
 
 /**
- * Tests if the startDate property is a valid date.
- * @param d - Request to check
+ * Tests if the string is valid date or undefined
+ * @param d
  */
-function startNotNaN<T extends Duration>(d: T) {
-  if (Number.isNaN(Date.parse(d.startDate))) {
-    return toFail(new ValidationError('Start Date must be a valid Date.'));
-  }
-  return toPass(d);
+export function validOrUndefinedDate(d: string) {
+  if (!d) return toPass(d);
+  return validDate(d);
 }
 
 /**
@@ -48,15 +47,15 @@ function startNotNaN<T extends Duration>(d: T) {
  */
 function endAfterStart<T extends Duration>(d: T) {
   if (Date.parse(d.endDate) <= Date.parse(d.startDate)) {
-    return toFail(new ValidationError('End Date must be after the Start Date.'));
+    return toFail(INVALID_DATE_DURATION());
   }
   return toPass(d);
 }
 
 function durationSpec<T extends Duration>(): Specification<T, ValidationError> {
   return [
-    endNotNaN,
-    startNotNaN,
+    [[validDate], 'startDate', new ValidationError('startDate:')],
+    [[validDate], 'endDate', new ValidationError('endDate:')],
     endAfterStart,
   ];
 }

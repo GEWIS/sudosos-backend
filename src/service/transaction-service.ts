@@ -47,6 +47,7 @@ import { asDate, asNumber } from '../helpers/validators';
 import { PaginationParameters } from '../helpers/pagination';
 
 export interface TransactionFilterParameters {
+  transactionId?: number | number[],
   fromId?: number,
   createdById?: number,
   toId?: number,
@@ -58,6 +59,7 @@ export interface TransactionFilterParameters {
   productRevision?: number,
   fromDate?: Date,
   tillDate?: Date,
+  invoiceId?: number,
 }
 
 export function parseGetTransactionsFilters(req: RequestWithToken): TransactionFilterParameters {
@@ -68,6 +70,8 @@ export function parseGetTransactionsFilters(req: RequestWithToken): TransactionF
   }
 
   const filters: TransactionFilterParameters = {
+    // TODO Make this work on arrays
+    transactionId: asNumber(req.query.transactionId),
     fromId: asNumber(req.query.fromId),
     createdById: asNumber(req.query.createdById),
     toId: asNumber(req.query.toId),
@@ -79,6 +83,7 @@ export function parseGetTransactionsFilters(req: RequestWithToken): TransactionF
     productRevision: asNumber(req.query.productRevision),
     fromDate: asDate(req.query.fromDate),
     tillDate: asDate(req.query.tillDate),
+    invoiceId: asNumber(req.query.invoiceId),
   };
 
   return filters;
@@ -280,7 +285,6 @@ export default class TransactionService {
     const verification = await Promise.all(req.subTransactions.map(
       async (sub) => this.verifySubTransaction(sub, pointOfSale, isUpdate),
     ));
-
     return !verification.includes(false);
   }
 
@@ -477,12 +481,14 @@ export default class TransactionService {
 
     function applySubTransactionFilters(query: SelectQueryBuilder<any>): SelectQueryBuilder<any> {
       const mapping: FilterMapping = {
+        transactionId: 'transaction.id',
         toId: 'subTransaction.toId',
         pointOfSaleId: 'transaction.pointOfSalePointOfSale',
         pointOfSaleRevision: 'transaction.pointOfSaleRevision',
         containerId: 'subTransaction.containerContainer',
         containerRevision: 'subTransaction.containerRevision',
         productId: 'subTransactionRow.productProduct',
+        invoiceId: 'subTransactionRow.invoice',
         productRevision: 'subTransactionRow.productRevision',
       };
 
@@ -508,8 +514,9 @@ export default class TransactionService {
       .leftJoin('subTransaction.subTransactionRows', 'subTransactionRow')
       .distinct(true);
 
-    if (fromDate) query.andWhere('"transaction"."createdAt" >= :fromDate', { fromDate: fromDate.toISOString() });
-    if (tillDate) query.andWhere('"transaction"."createdAt" < :tillDate', { tillDate: tillDate.toISOString() });
+    if (fromDate) query.andWhere('"transaction"."createdAt" >= :fromDate', { fromDate: fromDate.toISOString().replace('T', ' ') });
+    if (tillDate) query.andWhere('"transaction"."createdAt" < :tillDate', { tillDate: tillDate.toISOString().replace('T', ' ') });
+
     const mapping = {
       fromId: 'transaction.fromId',
       createdById: 'transaction.createdById',
@@ -535,9 +542,10 @@ export default class TransactionService {
   ): Promise<PaginatedBaseTransactionResponse> {
     const { take, skip } = pagination;
 
+    const builder = this.buildGetTransactionsQuery(params, user);
     const results = await Promise.all([
-      this.buildGetTransactionsQuery(params, user).limit(take).offset(skip).getRawMany(),
-      this.buildGetTransactionsQuery(params, user).getCount(),
+      builder.limit(take).offset(skip).getRawMany(),
+      builder.getCount(),
     ]);
 
     const records = results[0].map((o) => {

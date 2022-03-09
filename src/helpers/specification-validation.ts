@@ -39,7 +39,7 @@ export type Fail<F> = { fail: F };
 export type Pass<P> = { pass: P };
 export type Either<F, P> = Fail<F> | Pass<P>;
 export type ValidationRule<T, F> = (val: T) => Either<F, T> | Promise<Either<F, T>>;
-export type SubSpecification<T, F> = [Specification<T[keyof T], F>, keyof T, F];
+export type SubSpecification<T, F> = [Specification<T[any], F>, keyof T, F];
 export type Specification<T, F> = (ValidationRule<T, F> | SubSpecification<T, F>)[];
 
 export function isFail<L, R>(value: Either<L, R>): value is Fail<L> {
@@ -79,4 +79,25 @@ export async function validateSpecification<T, F extends Joinable>(target: T,
     }
   }
   return toPass(target);
+}
+
+export function createArrayRule<T>(spec: Specification<T, Joinable>)
+  : ValidationRule<T[], Joinable> {
+  async function arrayTest(array: T[]): Promise< Fail<Joinable> | Pass<T[]>> {
+    const results: Either<Joinable, T>[] = [];
+    const promises: Promise<void>[] = [];
+    if (!array) return toPass(array);
+
+    array.forEach((entry) => {
+      promises.push(validateSpecification(entry, spec).then((res) => {
+        results.push(res);
+      }));
+    });
+    await Promise.all(promises);
+    const hasFail = results.find((item) => isFail(item));
+
+    if (hasFail && isFail(hasFail)) return hasFail;
+    return toPass(array);
+  }
+  return arrayTest;
 }

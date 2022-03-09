@@ -362,19 +362,19 @@ describe('PointOfSaleController', async () => {
     });
     it('should verify endDate', async () => {
       const req: CreatePointOfSaleRequest = { ...ctx.validPOSRequest, endDate: '' };
-      await expectError(req, 'End Date must be a valid Date.');
+      await expectError(req, 'endDate: is not a valid Date.');
     });
     it('should verify startDate', async () => {
       const req: CreatePointOfSaleRequest = { ...ctx.validPOSRequest, startDate: '' };
-      await expectError(req, 'Start Date must be a valid Date.');
+      await expectError(req, 'startDate: is not a valid Date.');
     });
     it('should verify Name', async () => {
       const req: CreatePointOfSaleRequest = { ...ctx.validPOSRequest, name: '' };
-      await expectError(req, 'Name must be a non-zero length string.');
+      await expectError(req, 'Name: must be a non-zero length string.');
     });
     it('should verify Owner', async () => {
       const req: CreatePointOfSaleRequest = { ...ctx.validPOSRequest, ownerId: -1 };
-      await expectError(req, 'Owner must exist.');
+      await expectError(req, 'ownerId: must exist.');
     });
     it('should verify containers Ids', async () => {
       const invalidRequest = {
@@ -398,7 +398,7 @@ describe('PointOfSaleController', async () => {
       };
 
       withContainerUpdate.containers.push(containerRequest);
-      await expectError(withContainerUpdate, 'Container validation failed: Name must be a non-zero length string.');
+      await expectError(withContainerUpdate, 'Container validation failed: Name: must be a non-zero length string.');
     });
     it('should verify ContainerUpdate with productUpdate', async () => {
       const withContainerUpdate: CreatePointOfSaleRequest = JSON.parse(
@@ -456,7 +456,7 @@ describe('PointOfSaleController', async () => {
       };
 
       withContainerUpdate.containers.push(updateContainerParams);
-      await expectError(withContainerUpdate, 'Container validation failed: Product validation failed: Name must be a non-zero length string.');
+      await expectError(withContainerUpdate, 'Container validation failed: Product validation failed: Name: must be a non-zero length string.');
     });
   }
   describe('POST /pointsofsale', () => {

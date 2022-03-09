@@ -16,11 +16,11 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { ProductRequest } from './product-request';
-import Named from './named';
 
-export interface BaseContainerParams extends Named {
+export interface BaseContainerParams {
   products?: (number | ProductRequest)[],
   public: boolean,
+  name: string,
 }
 
 export interface CreateContainerParams extends BaseContainerParams {

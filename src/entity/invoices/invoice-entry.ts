@@ -18,34 +18,37 @@
 import {
   Column, Entity, JoinColumn, ManyToOne,
 } from 'typeorm';
-import BaseEntity from '../base-entity';
+import { Dinero } from 'dinero.js';
 // eslint-disable-next-line import/no-cycle
-import SubTransaction from './sub-transaction';
-import ProductRevision from '../product/product-revision';
-import Invoice from '../invoices/invoice';
+import DineroTransformer from '../transformer/dinero-transformer';
+// eslint-disable-next-line import/no-cycle
+import Invoice from './invoice';
+import BaseEntity from '../base-entity';
 
 /**
- * @typedef {SubTransactionRow} SubTransactionRow
- * @property {Product.model} product.required - The product that has been bought.
- * @property {integer} amount.required - The amount that has been bought.
- * @property {SubTransaction.model} subTransaction - The subTransaction this row belongs to.
+ * @typedef {BaseEntity} InvoiceEntry
+ * @property {Invoice.model} invoice.required - The invoice to which this entry belongs
+ * @property {Dinero.model} price.required - The price of the item.
+ * @property {integer} amount.required - The amount of items in the invoice entry.
+ * @property {string} description.required - The description of the invoice entry item.
  */
 @Entity()
-export default class SubTransactionRow extends BaseEntity {
-  @ManyToOne(() => ProductRevision, { nullable: false })
-  public product: ProductRevision;
+export default class InvoiceEntry extends BaseEntity {
+  @ManyToOne(() => Invoice, (invoice) => invoice.invoiceEntries, { nullable: false })
+  @JoinColumn()
+  public invoice: Invoice;
+
+  @Column()
+  public description: string;
 
   @Column({
     type: 'integer',
   })
   public amount: number;
 
-  @ManyToOne(() => Invoice, { nullable: true })
-  @JoinColumn()
-  public invoice?: Invoice;
-
-  @ManyToOne(() => SubTransaction,
-    (subTransaction) => subTransaction.subTransactionRows,
-    { nullable: false, onDelete: 'CASCADE' })
-  public subTransaction: SubTransaction;
+  @Column({
+    type: 'integer',
+    transformer: DineroTransformer.Instance,
+  })
+  public price: Dinero;
 }

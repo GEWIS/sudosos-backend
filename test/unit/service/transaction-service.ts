@@ -31,9 +31,12 @@ import Swagger from '../../../src/start/swagger';
 import { SubTransactionRequest, SubTransactionRowRequest, TransactionRequest } from '../../../src/controller/request/transaction-request';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import SubTransactionRow from '../../../src/entity/transactions/sub-transaction-row';
+import User from '../../../src/entity/user/user';
+import { createValidTransactionRequest } from '../../helpers/transaction-factory';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
 import ContainerRevision from '../../../src/entity/container/container-revision';
-import User from '../../../src/entity/user/user';
+import generateBalance from '../../helpers/test-helpers';
+import { inUserContext, UserFactory } from '../../helpers/user-factory';
 
 describe('TransactionService', (): void => {
   let ctx: {
@@ -49,15 +52,14 @@ describe('TransactionService', (): void => {
   };
 
   // eslint-disable-next-line func-names
-  before(async function (): Promise<void> {
-    this.timeout(10000);
-
+  before(async () => {
     const logger: Logger = log4js.getLogger('TransactionServiceTest');
     logger.level = 'ALL';
     const connection = await Database.initialize();
     const app = express();
     const { transactions, users } = await seedDatabase();
 
+    await generateBalance(1000, 7);
     const validTransReq = {
       from: 7,
       createdBy: 7,
@@ -403,9 +405,13 @@ describe('TransactionService', (): void => {
 
     it('should return a paginated list when take is set', async () => {
       const take = 69;
-      const { records } = await TransactionService.getTransactions({}, { take });
+      // eslint-disable-next-line @typescript-eslint/naming-convention
+      const { records, _pagination } = await TransactionService.getTransactions({}, { take });
+
+      const total = await Transaction.count();
 
       expect(records.length).to.equal(take);
+      expect(_pagination.count).to.equal(total);
     });
 
     it('should not return a paginated list when skip is set', async () => {
@@ -418,8 +424,12 @@ describe('TransactionService', (): void => {
     it('should return a paginated list when take and skip are set', async () => {
       const skip = 150;
       const take = 50;
-      const { records } = await TransactionService.getTransactions({}, { take, skip });
+      // eslint-disable-next-line @typescript-eslint/naming-convention
+      const { records, _pagination } = await TransactionService.getTransactions({}, { take, skip });
 
+      const total = await Transaction.count();
+
+      expect(_pagination.count).to.equal(total);
       expect(records.length).to.equal(
         Math.min(take, ctx.transactions.length - skip),
       );
@@ -838,6 +848,17 @@ describe('TransactionService', (): void => {
             .to.eql(updateReq.subTransactions[i].subTransactionRows[j].price);
         }
       }
+    });
+  });
+
+  describe('createValidTransactionRequest function', () => {
+    it('should return a valid TransactionRequest', async () => {
+      await inUserContext(await UserFactory().clone(2), async (debtor: User, creditor: User) => {
+        const transaction = await createValidTransactionRequest(
+          debtor.id, creditor.id,
+        );
+        expect(await TransactionService.verifyTransaction(transaction)).to.be.true;
+      });
     });
   });
 });

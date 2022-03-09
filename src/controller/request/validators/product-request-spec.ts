@@ -24,7 +24,7 @@ import {
   ValidationError,
 } from '../../../helpers/specification-validation';
 import ProductCategory from '../../../entity/product/product-category';
-import namedSpec from './named-spec';
+import stringSpec from './string-spec';
 
 const validAlcohol = (p: CreateProductParams) => {
   if (p.alcoholPercentage < 0) {
@@ -49,7 +49,7 @@ const validPrice = (p: CreateProductParams) => {
 };
 
 const productRequestSpec: Specification<CreateProductParams, ValidationError> = [
-  ...namedSpec<CreateProductParams>(),
+  [stringSpec(), 'name', new ValidationError('Name:')],
   validPrice,
   validCategory,
   validAlcohol,
