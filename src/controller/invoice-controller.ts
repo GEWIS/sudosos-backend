@@ -89,6 +89,8 @@ export default class InvoiceController extends BaseController {
    * @param {invoiceId} invoiceId.query - Filter on invoice ID
    * @param {InvoiceState} state.query - Filter based on Invoice State
    * @param {boolean} returnEntries.query - Boolean if invoice entries should be returned
+   * @param {string} fromDate.query - Start date for selected invoices (inclusive)
+   * @param {string} tillDate.query - End date for selected invoices (exclusive)
    * @returns {PaginatedInvoiceResponse.model} 200 - All existing invoices
    * @returns {string} 500 - Internal server error
    */

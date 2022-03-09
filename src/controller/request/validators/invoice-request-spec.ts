@@ -20,7 +20,11 @@ import {
 } from '../invoice-request';
 import {
   createArrayRule,
-  Specification, toFail, toPass, validateSpecification, ValidationError,
+  Specification,
+  toFail,
+  toPass,
+  validateSpecification,
+  ValidationError,
 } from '../../../helpers/specification-validation';
 import Transaction from '../../../entity/transactions/transaction';
 import InvoiceEntryRequest from '../invoice-entry-request';
@@ -31,7 +35,8 @@ import {
   INVALID_INVOICE_ID,
   INVALID_TRANSACTION_IDS,
   INVALID_TRANSACTION_OWNER,
-  INVOICE_IS_DELETED, SAME_INVOICE_STATE,
+  INVOICE_IS_DELETED,
+  SAME_INVOICE_STATE, SUBTRANSACTION_ALREADY_INVOICED,
 } from './validation-errors';
 import { InvoiceState } from '../../../entity/invoices/invoice-status';
 import Invoice from '../../../entity/invoices/invoice';
@@ -43,11 +48,20 @@ import Invoice from '../../../entity/invoices/invoice';
 async function validTransactionIds<T extends BaseInvoice>(p: T) {
   if (!p.transactionIDs) return toPass(p);
 
-  const transactions = await Transaction.findByIds(p.transactionIDs, { relations: ['from'] });
+  const transactions = await Transaction.findByIds(p.transactionIDs, { relations: ['from', 'subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice'] });
   const notOwnedByUser = transactions.filter((t) => t.from.id !== p.toId);
   if (notOwnedByUser.length !== 0) return toFail(INVALID_TRANSACTION_OWNER());
   if (transactions.length !== p.transactionIDs.length) return toFail(INVALID_TRANSACTION_IDS());
 
+  const alreadyInvoiced: number[] = [];
+  transactions.forEach((t) => {
+    t.subTransactions.forEach((tSub) => {
+      tSub.subTransactionRows.forEach((tSubRow) => {
+        if (tSubRow.invoice !== null) alreadyInvoiced.push(tSubRow.id);
+      });
+    });
+  });
+  if (alreadyInvoiced.length !== 0) return toFail(SUBTRANSACTION_ALREADY_INVOICED(alreadyInvoiced));
   return toPass(p);
 }
 

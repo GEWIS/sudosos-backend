@@ -16,12 +16,13 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  Column, Entity, ManyToOne,
+  Column, Entity, JoinColumn, ManyToOne,
 } from 'typeorm';
 import BaseEntity from '../base-entity';
 // eslint-disable-next-line import/no-cycle
 import SubTransaction from './sub-transaction';
 import ProductRevision from '../product/product-revision';
+import Invoice from '../invoices/invoice';
 
 /**
  * @typedef {SubTransactionRow} SubTransactionRow
@@ -38,6 +39,10 @@ export default class SubTransactionRow extends BaseEntity {
     type: 'integer',
   })
   public amount: number;
+
+  @ManyToOne(() => Invoice, { nullable: true })
+  @JoinColumn()
+  public invoice?: Invoice;
 
   @ManyToOne(() => SubTransaction,
     (subTransaction) => subTransaction.subTransactionRows,

@@ -59,6 +59,7 @@ export interface TransactionFilterParameters {
   productRevision?: number,
   fromDate?: Date,
   tillDate?: Date,
+  invoiceId?: number,
 }
 
 export function parseGetTransactionsFilters(req: RequestWithToken): TransactionFilterParameters {
@@ -82,6 +83,7 @@ export function parseGetTransactionsFilters(req: RequestWithToken): TransactionF
     productRevision: asNumber(req.query.productRevision),
     fromDate: asDate(req.query.fromDate),
     tillDate: asDate(req.query.tillDate),
+    invoiceId: asNumber(req.query.invoiceId),
   };
 
   return filters;
@@ -486,6 +488,7 @@ export default class TransactionService {
         containerId: 'subTransaction.containerContainer',
         containerRevision: 'subTransaction.containerRevision',
         productId: 'subTransactionRow.productProduct',
+        invoiceId: 'subTransactionRow.invoice',
         productRevision: 'subTransactionRow.productRevision',
       };
 

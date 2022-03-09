@@ -39,11 +39,15 @@ import TokenMiddleware from '../../../src/middleware/token-middleware';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import { BaseInvoiceResponse, InvoiceResponse } from '../../../src/controller/response/invoice-response';
 import Invoice from '../../../src/entity/invoices/invoice';
-import { CreateInvoiceRequest, UpdateInvoiceRequest } from '../../../src/controller/request/invoice-request';
+import {
+  CreateInvoiceParams,
+  CreateInvoiceRequest,
+  UpdateInvoiceRequest,
+} from '../../../src/controller/request/invoice-request';
 import Transaction from '../../../src/entity/transactions/transaction';
 import {
   INVALID_DATE,
-  INVALID_USER_ID, SAME_INVOICE_STATE,
+  INVALID_USER_ID, SAME_INVOICE_STATE, SUBTRANSACTION_ALREADY_INVOICED,
   ZERO_LENGTH_STRING,
 } from '../../../src/controller/request/validators/validation-errors';
 import InvoiceEntryRequest from '../../../src/controller/request/invoice-entry-request';
@@ -52,6 +56,7 @@ import { TransactionRequest } from '../../../src/controller/request/transaction-
 import { createTransactionRequest, requestToTransaction } from '../service/invoice-service';
 import BalanceService from '../../../src/service/balance-service';
 import { InvoiceState } from '../../../src/entity/invoices/invoice-status';
+import InvoiceService from '../../../src/service/invoice-service';
 
 describe('InvoiceController', async () => {
   let ctx: {
@@ -296,6 +301,35 @@ describe('InvoiceController', async () => {
       ];
       const req: CreateInvoiceRequest = { ...ctx.validInvoiceRequest, customEntries };
       expectError(req, 'Custom entries: description: must be a non-zero length string.');
+    });
+    it('should disallow double invoicing of a transaction', async () => {
+      await inUserContext(await UserFactory().clone(2), async (debtor: User, creditor: User) => {
+        const transactionRequests: TransactionRequest[] = await createTransactionRequest(
+          debtor.id, creditor.id, 2,
+        );
+        const { tIds } = await requestToTransaction(transactionRequests);
+
+        const createInvoiceRequest: CreateInvoiceParams = {
+          byId: creditor.id,
+          addressee: 'Addressee',
+          description: 'Description',
+          toId: debtor.id,
+          transactionIDs: tIds,
+        };
+
+        const transactions = await Transaction.findByIds(tIds, { relations: ['subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice'] });
+        const subIDs: number[] = [];
+        transactions.forEach((t) => {
+          t.subTransactions.forEach((tSub) => {
+            tSub.subTransactionRows.forEach((tSubRow) => {
+              if (tSubRow.invoice !== undefined) subIDs.push(tSubRow.id);
+            });
+          });
+        });
+
+        await InvoiceService.createInvoice(createInvoiceRequest);
+        await expectError(createInvoiceRequest, (SUBTRANSACTION_ALREADY_INVOICED(subIDs)).value);
+      });
     });
   }
   describe('POST /invoices', () => {

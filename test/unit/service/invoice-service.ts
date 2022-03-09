@@ -50,6 +50,7 @@ import { createValidTransactionRequest } from '../../helpers/transaction-factory
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import { TransactionRequest } from '../../../src/controller/request/transaction-request';
 import { InvoiceState } from '../../../src/entity/invoices/invoice-status';
+import Transaction from '../../../src/entity/transactions/transaction';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -304,6 +305,33 @@ describe('InvoiceService', () => {
         expect(await BalanceService.getBalance(debtor.id)).is.equal(0);
       });
     });
+    it('should set a reference to Invoice for all SubTransactionRows', async () => {
+      await inUserContext(await UserFactory().clone(2), async (debtor: User, creditor: User) => {
+        const transactionRequests: TransactionRequest[] = await createTransactionRequest(
+          debtor.id, creditor.id, 2,
+        );
+        const { tIds } = await requestToTransaction(transactionRequests);
+
+        const createInvoiceRequest: CreateInvoiceParams = {
+          byId: creditor.id,
+          addressee: 'Addressee',
+          description: 'Description',
+          toId: debtor.id,
+          transactionIDs: tIds,
+        };
+
+        const invoice = await InvoiceService.createInvoice(createInvoiceRequest);
+        expect(await BalanceService.getBalance(debtor.id)).is.equal(0);
+        const transactions = await Transaction.findByIds(tIds, { relations: ['subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice'] });
+        transactions.forEach((t) => {
+          t.subTransactions.forEach((tSub) => {
+            tSub.subTransactionRows.forEach((tSubRow) => {
+              expect(tSubRow.invoice.id).to.equal(invoice.id);
+            });
+          });
+        });
+      });
+    });
   });
   describe('updateInvoice function', () => {
     it('should update an invoice description and addressee', async () => {
@@ -394,6 +422,53 @@ describe('InvoiceService', () => {
         // Check if the balance has been decreased
         expect(await BalanceService.getBalance(debtor.id))
           .is.equal(-1 * invoice.transfer.amount.amount);
+      });
+    });
+    it('should delete invoice reference from subTransactions when Invoice is deleted', async () => {
+      await inUserContext(await UserFactory().clone(2), async (debtor: User, creditor: User) => {
+        const transactionRequests: TransactionRequest[] = await createTransactionRequest(
+          debtor.id, creditor.id, 2,
+        );
+        const { tIds } = await requestToTransaction(transactionRequests);
+
+        const createInvoiceRequest: CreateInvoiceParams = {
+          byId: creditor.id,
+          addressee: 'Addressee',
+          description: 'Description',
+          toId: debtor.id,
+          transactionIDs: tIds,
+        };
+
+        const invoice = await InvoiceService.createInvoice(createInvoiceRequest);
+        let transactions = await Transaction.findByIds(tIds, { relations: ['subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice'] });
+        transactions.forEach((t) => {
+          t.subTransactions.forEach((tSub) => {
+            tSub.subTransactionRows.forEach((tSubRow) => {
+              expect(tSubRow.invoice.id).to.equal(invoice.id);
+            });
+          });
+        });
+
+        const { addressee, description } = invoice;
+        const makeParamsState = (state: InvoiceState) => ({
+          addressee,
+          byId: creditor.id,
+          description,
+          invoiceId: invoice.id,
+          state,
+        });
+        const updatedInvoice = await InvoiceService
+          .updateInvoice(makeParamsState(InvoiceState.DELETED));
+        expect(updatedInvoice.currentState.state).to.be.equal(InvoiceState[InvoiceState.DELETED]);
+
+        transactions = await Transaction.findByIds(tIds, { relations: ['subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice'] });
+        transactions.forEach((t) => {
+          t.subTransactions.forEach((tSub) => {
+            tSub.subTransactionRows.forEach((tSubRow) => {
+              expect(tSubRow.invoice).to.equal(null);
+            });
+          });
+        });
       });
     });
   });

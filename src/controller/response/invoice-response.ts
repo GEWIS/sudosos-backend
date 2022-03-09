@@ -26,7 +26,7 @@ import { InvoiceState } from '../../entity/invoices/invoice-status';
  * @typedef InvoiceStatusResponse
  * @property {BaseUserResponse.model} changedBy.required - The user that changed the invoice status.
  * @property {string} state.required - The state of the invoice,
- * can be either CREATED, SENT, PAYED or DELETED.
+ * can be either CREATED, SENT, PAID or DELETED.
  */
 export interface InvoiceStatusResponse {
   state: keyof typeof InvoiceState,
@@ -69,7 +69,7 @@ export interface InvoiceResponse extends BaseInvoiceResponse{
 }
 
 /**
- * @typedef PaginatedBaseInvoiceResponse
+ * @typedef PaginatedInvoiceResponse
  * @property {PaginationResult.model} _pagination - Pagination metadata
  * @property {Array<BaseInvoiceResponse | InvoiceResponse>} records - Returned Invoices
  */

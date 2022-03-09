@@ -36,7 +36,7 @@ export interface UpdateInvoiceParams extends BaseUpdateInvoice {
  * @property {string} addressee.required - Name of the addressed.
  * @property {string} description.required - The description of the invoice.
  * @property {string} state - The state to set of the invoice,
- *    can be either CREATED, SENT, PAYED or DELETED.
+ *    can be either CREATED, SENT, PAID or DELETED.
  */
 export interface UpdateInvoiceRequest extends BaseUpdateInvoice {
   byId?: number,

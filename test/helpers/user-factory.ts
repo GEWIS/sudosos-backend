@@ -28,7 +28,6 @@ export class Builder {
       lastName: `Doe #${count + 1}`,
       type: UserType.MEMBER,
       active: true,
-      id: count + 1,
     } as User);
     await User.save(this.user);
     return this;
@@ -58,7 +57,7 @@ export class Builder {
         ...this.user,
         firstName: `User #${count + i}`,
         lastName: `Doe #${count + i}`,
-        id: count + i + 1,
+        type: this.user.type ?? UserType.MEMBER,
       } as User;
       users.push(clone);
     }

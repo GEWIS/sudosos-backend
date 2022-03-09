@@ -45,6 +45,7 @@ import { PaginationParameters } from '../helpers/pagination';
 import InvoiceEntryRequest from '../controller/request/invoice-entry-request';
 import User from '../entity/user/user';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
+import SubTransactionRow from '../entity/transactions/sub-transaction-row';
 
 export interface InvoiceFilterParameters {
   /**
@@ -76,7 +77,7 @@ export interface InvoiceFilterParameters {
 export function parseInvoiceFilterParameters(req: RequestWithToken): InvoiceFilterParameters {
   return {
     toId: asNumber(req.query.toId),
-    invoiceId: asNumber(req.query.toId),
+    invoiceId: asNumber(req.query.invoiceId),
     currentState: asInvoiceState(req.query.currentState),
     returnInvoiceEntries: asBoolean(req.query.returnInvoiceEntries),
     fromDate: asDate(req.query.fromDate),
@@ -274,6 +275,24 @@ export default class InvoiceService {
       state: InvoiceState.DELETED,
     });
 
+    // Unreference invoices.
+    const { records } = await TransactionService.getTransactions({ invoiceId: invoice.id });
+    const tIds: number[] = records.map((t) => t.id);
+    const promises: Promise<any>[] = [];
+    const transactions = await Transaction.findByIds(tIds, { relations: ['subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice'] });
+    transactions.forEach((t) => {
+      t.subTransactions.forEach((tSub) => {
+        tSub.subTransactionRows.forEach((tSubRow) => {
+          const row = tSubRow;
+          if (row.invoice.id === invoice.id) {
+            row.invoice = null;
+          }
+          promises.push(row.save());
+        });
+      });
+    });
+    await Promise.all(promises);
+
     // Add it to the invoice and save it.
     await invoice.save().then(async () => {
       invoice.invoiceStatus.push(invoiceStatus);
@@ -323,6 +342,32 @@ export default class InvoiceService {
     return (await this.getInvoices(
       { invoiceId: base.id, returnInvoiceEntries: false },
     )).records[0];
+  }
+
+  /**
+   * Set a reference to an Invoice for all subTransactionRows of the transactions.
+   * @param transactions
+   * @param invoice
+   */
+  static async setTransactionInvoice(invoice: Invoice,
+    baseTransactions: BaseTransactionResponse[]) {
+    // Extract Transactions from IDs.
+    const ids = baseTransactions.map((t) => t.id);
+    const transactions = await Transaction.findByIds(ids, { relations: ['subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice'] });
+    const promises: Promise<any>[] = [];
+
+    // Loop through transactions
+    transactions.forEach((t) => {
+      t.subTransactions.forEach((tSub) => {
+        tSub.subTransactionRows.forEach((tSubRow) => {
+          const row = tSubRow;
+          row.invoice = invoice;
+          promises.push(SubTransactionRow.save(row));
+        });
+      });
+    });
+
+    await Promise.all(promises);
   }
 
   /**
@@ -390,6 +435,7 @@ export default class InvoiceService {
     await Invoice.save(newInvoice).then(async () => {
       newInvoice.invoiceStatus.push(invoiceStatus);
       await InvoiceStatus.save(invoiceStatus);
+      await this.setTransactionInvoice(newInvoice, transactions);
       await this.createInvoiceEntriesTransactions(newInvoice, transactions);
       if (invoiceRequest.customEntries) {
         await this.AddCustomEntries(newInvoice, invoiceRequest.customEntries);
