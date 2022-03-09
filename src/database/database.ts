@@ -54,6 +54,8 @@ import ProductImage from '../entity/file/product-image';
 import BannerImage from '../entity/file/banner-image';
 import StripeDeposit from '../entity/deposit/stripe-deposit';
 import StripeDepositStatus from '../entity/deposit/stripe-deposit-status';
+import PayoutRequest from '../entity/transactions/payout-request';
+import PayoutRequestStatus from '../entity/transactions/payout-request-status';
 
 export default class Database {
   public static async initialize(): Promise<Connection> {
@@ -73,6 +75,8 @@ export default class Database {
         Transfer,
         StripeDeposit,
         StripeDepositStatus,
+        PayoutRequest,
+        PayoutRequestStatus,
         Transaction,
         SubTransaction,
         SubTransactionRow,

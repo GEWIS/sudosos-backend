@@ -41,6 +41,8 @@ import { BANNER_IMAGE_LOCATION, PRODUCT_IMAGE_LOCATION } from '../src/files/stor
 import StripeDeposit from '../src/entity/deposit/stripe-deposit';
 import StripeDepositStatus, { StripeDepositState } from '../src/entity/deposit/stripe-deposit-status';
 import DineroTransformer from '../src/entity/transformer/dinero-transformer';
+import PayoutRequest from '../src/entity/transactions/payout-request';
+import PayoutRequestStatus, { PayoutRequestState } from '../src/entity/transactions/payout-request-status';
 import InvoiceUser from '../src/entity/user/invoice-user';
 import Invoice from '../src/entity/invoices/invoice';
 import InvoiceEntry from '../src/entity/invoices/invoice-entry';
@@ -1288,6 +1290,61 @@ export async function seedStripeDeposits(users: User[]): Promise<StripeDeposit[]
   return stripeDeposits;
 }
 
+export async function seedPayoutRequests(users: User[]): Promise<PayoutRequest[]> {
+  const payoutRequests: Promise<PayoutRequest>[] = [];
+
+  const admins = users.filter((u) => u.type === UserType.LOCAL_ADMIN);
+  admins.push(undefined);
+
+  const totalNrOfStatuses = 3;
+  let finalState = 0;
+
+  for (let i = 0; i < users.length * 3; i += 1) {
+    const requestedBy = users[Math.floor(i / totalNrOfStatuses)];
+    const newPayoutReq = Object.assign(new PayoutRequest(), {
+      requestedBy,
+      amount: DineroTransformer.Instance.from(3900),
+      bankAccountNumber: 'NL69GEWI0420042069',
+      bankAccountName: `${requestedBy.firstName} ${requestedBy.lastName}`,
+    });
+
+    const option = Math.floor(finalState % 3);
+    let lastOption;
+    switch (option) {
+      case 0: lastOption = PayoutRequestState.APPROVED; break;
+      case 1: lastOption = PayoutRequestState.DENIED; break;
+      default: lastOption = PayoutRequestState.CANCELLED; break;
+    }
+    const states = [PayoutRequestState.CREATED, lastOption].slice(0, i % totalNrOfStatuses);
+    if (states.length === 2) finalState += 1;
+
+    const statusses: PayoutRequestStatus[] = [];
+    states.forEach((state, index) => {
+      statusses.push(Object.assign(new PayoutRequestStatus(), {
+        state,
+        createdAt: new Date((new Date()).getTime() + 1000 * 60 * index),
+        updatedAt: new Date((new Date()).getTime() + 1000 * 60 * index),
+      }));
+      if (state === PayoutRequestState.APPROVED) {
+        newPayoutReq.approvedBy = admins[i % admins.length];
+      }
+    });
+
+    payoutRequests.push(newPayoutReq.save().then(async (payoutRequest) => {
+      await Promise.all(statusses.map((s) => {
+        // eslint-disable-next-line no-param-reassign
+        s.payoutRequest = payoutRequest;
+        return s.save();
+      }));
+      // eslint-disable-next-line no-param-reassign
+      payoutRequest.payoutRequestStatus = statusses;
+      return payoutRequest;
+    }));
+  }
+
+  return Promise.all(payoutRequests);
+}
+
 export async function seedTransfers(users: User[]) : Promise<Transfer[]> {
   const transfers: Transfer[] = [];
   const promises: Promise<any>[] = [];
@@ -1395,8 +1452,9 @@ export interface DatabaseContent {
   pointOfSaleRevisions: PointOfSaleRevision[],
   updatedPointsOfSale: UpdatedPointOfSale[],
   transactions: Transaction[],
-  invoices: Invoice[]
-  transfers: Transfer[]
+  transfers: Transfer[],
+  payoutRequests: PayoutRequest[],
+  invoices: Invoice[],
   banners: Banner[],
 }
 
@@ -1412,6 +1470,7 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
   );
   const { transactions } = await seedTransactions(users, pointOfSaleRevisions);
   const transfers = await seedTransfers(users);
+  const payoutRequests = await seedPayoutRequests(users);
   const invoices = await seedInvoices(users, transactions);
   const { banners } = await seedBanners(users);
 
@@ -1430,6 +1489,7 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
     transactions,
     invoices,
     transfers,
+    payoutRequests,
     banners,
   };
 }
