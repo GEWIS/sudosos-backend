@@ -130,6 +130,7 @@ export default class InvoiceController extends BaseController {
   /**
    * Returns a single invoice in the system.
    * @route GET /invoices/{id}
+   * @param {integer} id.path.required - The id of the requested invoice
    * @group invoices - Operations of the invoices controller
    * @security JWT
    * @param {boolean} returnEntries.query -
