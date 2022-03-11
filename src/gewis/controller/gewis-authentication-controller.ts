@@ -155,6 +155,7 @@ export default class GewisAuthenticationController extends BaseController {
    * @param {GEWISAuthenticationPinRequest.model} req.body.required - The PIN login.
    * @returns {AuthenticationResponse.model} 200 - The created json web token.
    * @returns {string} 400 - Validation error.
+   * @returns {string} 403 - Authentication error.
    */
   public async gewisPINLogin(req: Request, res: Response): Promise<void> {
     const { pin, gewisId } = req.body as GEWISAuthenticationPinRequest;

@@ -23,7 +23,8 @@ import User from '../entity/user/user';
 import AuthenticationMockRequest from './request/authentication-mock-request';
 import JsonWebToken from '../authentication/json-web-token';
 import TokenHandler from '../authentication/token-handler';
-import AuthenticationService from '../service/authentication-service';
+import AuthenticationService, { AuthenticationContext } from '../service/authentication-service';
+import AuthenticationLDAPRequest from './request/validators/authentication-ldap-request';
 
 /**
  * The authentication controller is responsible for:
@@ -67,6 +68,13 @@ export default class AuthenticationController extends BaseController {
           handler: this.mockLogin.bind(this),
         },
       },
+      '/LDAP': {
+        POST: {
+          body: { modelName: 'AuthenticationLDAPRequest' },
+          policy: async () => true,
+          handler: this.ldapLogin.bind(this),
+        },
+      },
     };
   }
 
@@ -85,6 +93,45 @@ export default class AuthenticationController extends BaseController {
     if (!user) return false;
 
     return true;
+  }
+
+  /**
+   * LDAP login and hand out token
+   *    If user has never signed in before this also creates an account.
+   * @route POST /authentication/LDAP
+   * @group authenticate - Operations of authentication controller
+   * @param {AuthenticationLDAPRequest.model} req.body.required - The LDAP login.
+   * @returns {AuthenticationResponse.model} 200 - The created json web token.
+   * @returns {string} 400 - Validation error.
+   * @returns {string} 403 - Authentication error.
+   */
+  public async ldapLogin(req: Request, res: Response): Promise<void> {
+    const body = req.body as AuthenticationLDAPRequest;
+    this.logger.trace('LDAP authentication for user', body.accountName);
+
+    try {
+      const user = await AuthenticationService.LDAPAuthentication(body.accountName, body.password);
+
+      // If user is undefined something went wrong.
+      if (!user) {
+        res.status(403).json({
+          message: 'Invalid credentials.',
+        });
+        return;
+      }
+
+      const context: AuthenticationContext = {
+        roleManager: this.roleManager,
+        tokenHandler: this.tokenHandler,
+      };
+
+      // AD login gives full access.
+      const token = await AuthenticationService.getSaltedToken(user, context, false);
+      res.json(token);
+    } catch (error) {
+      this.logger.error('Could not authenticate using LDAP:', error);
+      res.status(500).json('Internal server error.');
+    }
   }
 
   /**

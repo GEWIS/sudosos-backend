@@ -31,6 +31,8 @@
     "express-swagger-generator": "^1.1.17",
     "express-swaggerize-ui": "^1.1.0",
     "jsonwebtoken": "^8.5.1",
+    "ldap-escape": "^2.0.5",
+    "ldapts": "^3.2.2",
     "log4js": "^6.3.0",
     "mime-types": "^2.1.33",
     "node-cron": "^3.0.0",

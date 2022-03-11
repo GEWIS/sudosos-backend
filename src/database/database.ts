@@ -50,6 +50,7 @@ import ProductImage from '../entity/file/product-image';
 import BannerImage from '../entity/file/banner-image';
 import StripeDeposit from '../entity/deposit/stripe-deposit';
 import StripeDepositStatus from '../entity/deposit/stripe-deposit-status';
+import LDAPAuthenticator from "../entity/authenticator/ldap-authenticator";
 
 export default class Database {
   public static async initialize(): Promise<Connection> {
@@ -82,6 +83,7 @@ export default class Database {
         MemberAuthenticator,
         NfcAuthenticator,
         PinAuthenticator,
+        LDAPAuthenticator,
         Banner,
         ProductOrdering,
         Balance,
