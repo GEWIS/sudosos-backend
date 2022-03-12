@@ -61,13 +61,13 @@ export default class AuthenticationController extends BaseController {
    */
   public getPolicy(): Policy {
     return {
-      '/mock': {
-        POST: {
-          body: { modelName: 'AuthenticationMockRequest' },
-          policy: AuthenticationController.canPerformMock.bind(this),
-          handler: this.mockLogin.bind(this),
-        },
-      },
+      // '/mock': {
+      //   POST: {
+      //     body: { modelName: 'AuthenticationMockRequest' },
+      //     policy: AuthenticationController.canPerformMock.bind(this),
+      //     handler: this.mockLogin.bind(this),
+      //   },
+      // },
       '/LDAP': {
         POST: {
           body: { modelName: 'AuthenticationLDAPRequest' },
