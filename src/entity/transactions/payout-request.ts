@@ -16,36 +16,42 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  Column, Entity, JoinColumn, ManyToOne,
+  Column, Entity, JoinColumn, ManyToOne, OneToMany, OneToOne,
 } from 'typeorm';
+import { Dinero } from 'dinero.js';
 import BaseEntity from '../base-entity';
+import User from '../user/user';
+import Transfer from './transfer';
+import DineroTransformer from '../transformer/dinero-transformer';
 // eslint-disable-next-line import/no-cycle
-import SubTransaction from './sub-transaction';
-import ProductRevision from '../product/product-revision';
-import Invoice from '../invoices/invoice';
+import PayoutRequestStatus from './payout-request-status';
 
-/**
- * @typedef {SubTransactionRow} SubTransactionRow
- * @property {Product.model} product.required - The product that has been bought.
- * @property {integer} amount.required - The amount that has been bought.
- * @property {SubTransaction.model} subTransaction - The subTransaction this row belongs to.
- */
 @Entity()
-export default class SubTransactionRow extends BaseEntity {
-  @ManyToOne(() => ProductRevision, { nullable: false })
-  public product: ProductRevision;
+export default class PayoutRequest extends BaseEntity {
+  @ManyToOne(() => User, { nullable: false })
+  @JoinColumn()
+  public requestedBy: User;
+
+  @OneToOne(() => Transfer, { nullable: true })
+  @JoinColumn()
+  public transfer?: Transfer;
+
+  @OneToMany(() => PayoutRequestStatus, (status) => status.payoutRequest, { cascade: true })
+  public payoutRequestStatus: PayoutRequestStatus[];
 
   @Column({
     type: 'integer',
+    transformer: DineroTransformer.Instance,
   })
-  public amount: number;
+  public amount: Dinero;
 
-  @ManyToOne(() => Invoice, { nullable: true })
+  @ManyToOne(() => User, { nullable: true })
   @JoinColumn()
-  public invoice?: Invoice;
+  public approvedBy?: User;
 
-  @ManyToOne(() => SubTransaction,
-    (subTransaction) => subTransaction.subTransactionRows,
-    { nullable: false, onDelete: 'CASCADE' })
-  public subTransaction: SubTransaction;
+  @Column()
+  public bankAccountNumber: string;
+
+  @Column()
+  public bankAccountName: string;
 }

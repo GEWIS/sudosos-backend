@@ -42,9 +42,31 @@ import { BANNER_IMAGE_LOCATION, PRODUCT_IMAGE_LOCATION } from '../src/files/stor
 import StripeDeposit from '../src/entity/deposit/stripe-deposit';
 import StripeDepositStatus, { StripeDepositState } from '../src/entity/deposit/stripe-deposit-status';
 import DineroTransformer from '../src/entity/transformer/dinero-transformer';
+import PayoutRequest from '../src/entity/transactions/payout-request';
+import PayoutRequestStatus, { PayoutRequestState } from '../src/entity/transactions/payout-request-status';
+import InvoiceUser from '../src/entity/user/invoice-user';
+import Invoice from '../src/entity/invoices/invoice';
+import InvoiceEntry from '../src/entity/invoices/invoice-entry';
+import InvoiceStatus, { InvoiceState } from '../src/entity/invoices/invoice-status';
 import GewisUser from '../src/entity/user/gewis-user';
 import seedGEWISUsers from '../src/gewis/database/seed';
 import PinAuthenticator from '../src/entity/authenticator/pin-authenticator';
+
+
+/**
+ * Defines InvoiceUsers objects for the given Users
+ * @param users - List of Invoice User type
+ */
+export function defineInvoiceUsers(users: User[]): InvoiceUser[] {
+  const invoiceUsers: InvoiceUser[] = [];
+  for (let nr = 0; nr < users.length; nr += 1) {
+    invoiceUsers.push(Object.assign(new InvoiceUser(), {
+      user: users[nr],
+      automatic: nr % 2 > 0,
+    }));
+  }
+  return invoiceUsers;
+}
 
 /**
  * Defines user objects with the given parameters.
@@ -106,23 +128,115 @@ async function seedPinAuthenticators(users: User[]): Promise<PinAuthenticator[]>
  */
 export async function seedUsers(): Promise<User[]> {
   const types: UserType[] = [
-    UserType.LOCAL_USER, UserType.LOCAL_ADMIN, UserType.MEMBER, UserType.ORGAN,
+    UserType.LOCAL_USER, UserType.LOCAL_ADMIN, UserType.MEMBER, UserType.ORGAN, UserType.INVOICE,
   ];
   let users: User[] = [];
+  let invoiceUsers: InvoiceUser[] = [];
 
   const promises: Promise<any>[] = [];
   for (let i = 0; i < types.length; i += 1) {
-    let u = defineUsers(users.length, 4, types[i], true);
-    promises.push(User.save(u));
-    users = users.concat(u);
+    const uActive = defineUsers(users.length, 4, types[i], true);
+    promises.push(User.save(uActive));
+    users = users.concat(uActive);
 
-    u = defineUsers(users.length, 2, types[i], false);
-    promises.push(User.save(u));
-    users = users.concat(u);
+    const uInactive = defineUsers(users.length, 2, types[i], false);
+    promises.push(User.save(uInactive));
+    users = users.concat(uInactive);
+
+    if (types[i] === UserType.INVOICE) {
+      invoiceUsers = invoiceUsers.concat(defineInvoiceUsers(uActive.concat(uInactive)));
+    }
   }
+
   await Promise.all(promises);
+  await InvoiceUser.save(invoiceUsers);
 
   return users;
+}
+
+export function defineInvoiceEntries(invoiceId: number, startEntryId: number,
+  transactions: Transaction[]): { invoiceEntries: InvoiceEntry[], cost: number } {
+  const invoiceEntries: InvoiceEntry[] = [];
+  let entryId = startEntryId;
+  const subTransactions = (
+    transactions.map((t) => t.subTransactions).reduce((acc, tSub) => acc.concat(tSub)));
+
+  const subTransactionRows = (
+    subTransactions.map(
+      (tSub) => tSub.subTransactionRows,
+    ).reduce((acc, tSubRow) => acc.concat(tSubRow)));
+
+  let cost = 0;
+  for (let i = 0; i < subTransactionRows.length; i += 1) {
+    cost += subTransactionRows[i].amount * subTransactionRows[i].product.price.getAmount();
+    invoiceEntries.push(Object.assign(new InvoiceEntry(), {
+      id: entryId,
+      invoice: invoiceId,
+      description: subTransactionRows[i].product.name,
+      amount: subTransactionRows[i].amount,
+      price: subTransactionRows[i].product.price,
+    }));
+    entryId += 1;
+  }
+  return { invoiceEntries, cost };
+}
+
+export async function seedInvoices(users: User[], transactions: Transaction[]): Promise<Invoice[]> {
+  let invoices: Invoice[] = [];
+
+  const invoiceUsers = users.filter((u) => u.type === UserType.INVOICE);
+  let transfers: Transfer[] = [];
+  let invoiceEntry: InvoiceEntry[] = [];
+
+  for (let i = 0; i < invoiceUsers.length; i += 1) {
+    const invoiceTransactions = transactions.filter((t) => t.from.id === invoiceUsers[i].id);
+    const to: User = invoiceUsers[i];
+
+    const { invoiceEntries, cost } = (
+      defineInvoiceEntries(i + 1, 1 + invoiceEntry.length, invoiceTransactions));
+    // Edgecase in the seeder
+    if (cost === 0) {
+      // eslint-disable-next-line no-continue
+      continue;
+    }
+
+    invoiceEntry = invoiceEntry.concat(invoiceEntries);
+
+    const transfer = Object.assign(new Transfer(), {
+      from: null,
+      to,
+      amount: dinero({
+        amount: cost,
+      }),
+      description: `Invoice Transfer for ${cost}`,
+    });
+
+    const invoice = Object.assign(new Invoice(), {
+      id: i + 1,
+      to,
+      addressee: `Addressed to ${to.firstName}`,
+      description: `Invoice #${i}`,
+      transfer,
+      invoiceEntries,
+      invoiceStatus: [],
+    });
+
+    const status = Object.assign(new InvoiceStatus(), {
+      id: i + 1,
+      invoice,
+      changedBy: users[i],
+      state: InvoiceState.CREATED,
+      dateChanged: addDays(new Date(2020, 0, 1), 2 - (i * 2)),
+    });
+    invoice.invoiceStatus.push(status);
+    invoices = invoices.concat(invoice);
+    transfers = transfers.concat(transfer);
+  }
+  await Transfer.save(transfers);
+  await Invoice.save(invoices);
+  await InvoiceEntry.save(invoiceEntry);
+
+  return invoices;
 }
 
 /**
@@ -1209,6 +1323,61 @@ export async function seedStripeDeposits(users: User[]): Promise<StripeDeposit[]
   return stripeDeposits;
 }
 
+export async function seedPayoutRequests(users: User[]): Promise<PayoutRequest[]> {
+  const payoutRequests: Promise<PayoutRequest>[] = [];
+
+  const admins = users.filter((u) => u.type === UserType.LOCAL_ADMIN);
+  admins.push(undefined);
+
+  const totalNrOfStatuses = 3;
+  let finalState = 0;
+
+  for (let i = 0; i < users.length * 3; i += 1) {
+    const requestedBy = users[Math.floor(i / totalNrOfStatuses)];
+    const newPayoutReq = Object.assign(new PayoutRequest(), {
+      requestedBy,
+      amount: DineroTransformer.Instance.from(3900),
+      bankAccountNumber: 'NL69GEWI0420042069',
+      bankAccountName: `${requestedBy.firstName} ${requestedBy.lastName}`,
+    });
+
+    const option = Math.floor(finalState % 3);
+    let lastOption;
+    switch (option) {
+      case 0: lastOption = PayoutRequestState.APPROVED; break;
+      case 1: lastOption = PayoutRequestState.DENIED; break;
+      default: lastOption = PayoutRequestState.CANCELLED; break;
+    }
+    const states = [PayoutRequestState.CREATED, lastOption].slice(0, i % totalNrOfStatuses);
+    if (states.length === 2) finalState += 1;
+
+    const statusses: PayoutRequestStatus[] = [];
+    states.forEach((state, index) => {
+      statusses.push(Object.assign(new PayoutRequestStatus(), {
+        state,
+        createdAt: new Date((new Date()).getTime() + 1000 * 60 * index),
+        updatedAt: new Date((new Date()).getTime() + 1000 * 60 * index),
+      }));
+      if (state === PayoutRequestState.APPROVED) {
+        newPayoutReq.approvedBy = admins[i % admins.length];
+      }
+    });
+
+    payoutRequests.push(newPayoutReq.save().then(async (payoutRequest) => {
+      await Promise.all(statusses.map((s) => {
+        // eslint-disable-next-line no-param-reassign
+        s.payoutRequest = payoutRequest;
+        return s.save();
+      }));
+      // eslint-disable-next-line no-param-reassign
+      payoutRequest.payoutRequestStatus = statusses;
+      return payoutRequest;
+    }));
+  }
+
+  return Promise.all(payoutRequests);
+}
+
 export async function seedTransfers(users: User[]) : Promise<Transfer[]> {
   const transfers: Transfer[] = [];
   const promises: Promise<any>[] = [];
@@ -1316,7 +1485,9 @@ export interface DatabaseContent {
   pointOfSaleRevisions: PointOfSaleRevision[],
   updatedPointsOfSale: UpdatedPointOfSale[],
   transactions: Transaction[],
-  transfers: Transfer[]
+  transfers: Transfer[],
+  payoutRequests: PayoutRequest[],
+  invoices: Invoice[],
   banners: Banner[],
   gewisUsers: GewisUser[],
   pinUsers: PinAuthenticator[],
@@ -1336,6 +1507,8 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
   );
   const { transactions } = await seedTransactions(users, pointOfSaleRevisions);
   const transfers = await seedTransfers(users);
+  const payoutRequests = await seedPayoutRequests(users);
+  const invoices = await seedInvoices(users, transactions);
   const { banners } = await seedBanners(users);
 
   return {
@@ -1351,7 +1524,9 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
     pointOfSaleRevisions,
     updatedPointsOfSale,
     transactions,
+    invoices,
     transfers,
+    payoutRequests,
     banners,
     gewisUsers,
     pinUsers,

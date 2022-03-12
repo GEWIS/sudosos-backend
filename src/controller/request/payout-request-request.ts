@@ -15,25 +15,16 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import {
-  Specification, toFail, toPass, ValidationError,
-} from '../../../helpers/specification-validation';
-import Named from '../named';
+import { DineroObjectRequest } from './dinero-request';
 
 /**
- * Checks if the name attribute is not an empty string.
+ * @typedef PayoutRequestRequest
+ * @property {DineroObjectRequest.model} amount.required - The requested amount to be paid out
+ * @property {string} bankAccountNumber.required - The bank account number to transfer the money to
+ * @property {string} bankAccountName.required - The name of the owner of the bank account
  */
-const validName = (p: Named) => {
-  if (p.name === '') {
-    return toFail(new ValidationError('Name must be a non-zero length string.'));
-  }
-  return toPass(p);
-};
-
-function namedSpec<T extends Named>(): Specification<T, ValidationError> {
-  return [
-    validName,
-  ] as Specification<T, ValidationError>;
+export default interface PayoutRequestRequest {
+  amount: DineroObjectRequest;
+  bankAccountNumber: string;
+  bankAccountName: string;
 }
-
-export default namedSpec;

@@ -321,7 +321,7 @@ export default class ContainerService {
     await UpdatedContainer.delete(containerId);
 
     // Return the new container with products.
-    return this.getProductsResponse(containerId, false);
+    return this.getProductsResponse({ containerId, updated: false });
   }
 
   /**
@@ -369,27 +369,35 @@ export default class ContainerService {
     await updatedContainer.save();
 
     // Return container with products.
-    return this.getProductsResponse(base.id, true);
+    return this.getProductsResponse({ containerId: base.id, updated: true });
   }
 
   /**
    * Turns a ContainerResponse into a ContainerWithProductsResponse
-   * @param containerId - The id of the container to return.
-   * @param updated
+   * @param container - The container to return
    */
-  public static async getProductsResponse(containerId: number, updated?: boolean)
+  public static async getProductsResponse(container
+  : { containerId: number, containerRevision?: number, updated?: boolean })
     : Promise<ContainerWithProductsResponse> {
     // Get base container
-    const containerResponse: ContainerResponse = updated
-      ? ((await this.getUpdatedContainers({ containerId })).records[0])
-      : ((await this.getContainers({ containerId })).records[0]);
+    const containerResponse: ContainerResponse = container.updated
+      ? ((await this.getUpdatedContainers(
+        { containerId: container.containerId },
+      )).records[0])
+      : ((await this.getContainers(
+        { containerId: container.containerId, containerRevision: container.containerRevision },
+      )).records[0]);
 
     const containerProducts
     : ContainerWithProductsResponse = containerResponse as ContainerWithProductsResponse;
 
     // Fill products
     containerProducts.products = (await ProductService.getProducts(
-      { containerId, updatedContainer: updated },
+      {
+        containerId: container.containerId,
+        containerRevision: container.containerRevision,
+        updatedContainer: container.updated,
+      },
     )).records;
     return containerProducts;
   }

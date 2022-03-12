@@ -45,11 +45,17 @@ import UpdatedProduct from '../entity/product/updated-product';
 import UpdatedContainer from '../entity/container/updated-container';
 import UpdatedPointOfSale from '../entity/point-of-sale/updated-point-of-sale';
 import Balance from '../entity/transactions/balance';
+import InvoiceUser from '../entity/user/invoice-user';
+import InvoiceEntry from '../entity/invoices/invoice-entry';
+import Invoice from '../entity/invoices/invoice';
+import InvoiceStatus from '../entity/invoices/invoice-status';
 import BaseFile from '../entity/file/base-file';
 import ProductImage from '../entity/file/product-image';
 import BannerImage from '../entity/file/banner-image';
 import StripeDeposit from '../entity/deposit/stripe-deposit';
 import StripeDepositStatus from '../entity/deposit/stripe-deposit-status';
+import PayoutRequest from '../entity/transactions/payout-request';
+import PayoutRequestStatus from '../entity/transactions/payout-request-status';
 import LDAPAuthenticator from "../entity/authenticator/ldap-authenticator";
 
 export default class Database {
@@ -70,6 +76,8 @@ export default class Database {
         Transfer,
         StripeDeposit,
         StripeDepositStatus,
+        PayoutRequest,
+        PayoutRequestStatus,
         Transaction,
         SubTransaction,
         SubTransactionRow,
@@ -87,6 +95,10 @@ export default class Database {
         Banner,
         ProductOrdering,
         Balance,
+        InvoiceUser,
+        InvoiceEntry,
+        Invoice,
+        InvoiceStatus,
         BaseFile,
         ProductImage,
         BannerImage,

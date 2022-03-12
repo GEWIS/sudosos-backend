@@ -15,10 +15,23 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+import { Column, Entity, ManyToOne } from 'typeorm';
+import BaseEntity from '../base-entity';
+// eslint-disable-next-line import/no-cycle
+import PayoutRequest from './payout-request';
 
-/**
- * For all requests that contain an object with a name.
- */
-export default interface Named {
-  name: string
+export enum PayoutRequestState {
+  CREATED = 'CREATED',
+  APPROVED = 'APPROVED',
+  DENIED = 'DENIED',
+  CANCELLED = 'CANCELLED',
+}
+
+@Entity()
+export default class PayoutRequestStatus extends BaseEntity {
+  @ManyToOne(() => PayoutRequest, (pr) => pr.payoutRequestStatus, { nullable: false })
+  public payoutRequest: PayoutRequest;
+
+  @Column()
+  public state: PayoutRequestState;
 }

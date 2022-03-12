@@ -26,6 +26,8 @@ export enum UserType {
   BORRELKAART = 3,
   LOCAL_USER = 4,
   LOCAL_ADMIN = 5,
+  INVOICE = 6,
+  AUTOMATIC_INVOICE = 7,
 }
 
 /**
