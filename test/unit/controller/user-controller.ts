@@ -226,11 +226,11 @@ describe('UserController', (): void => {
   describe('GET /users/usertype/:userType', () => {
     it('should return all users of type MEMBER if admin', async () => {
       const res = await request(ctx.app)
-        .get('/users/usertype/' + UserType.MEMBER)
+        .get(`/users/usertype/${UserType.MEMBER}`)
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
 
-      const activeUsers = ctx.users.filter((u) => !u.deleted && u.type == UserType.MEMBER);
+      const activeUsers = ctx.users.filter((u) => !u.deleted && u.type === UserType.MEMBER);
 
       const users = res.body.records as User[];
       // eslint-disable-next-line no-underscore-dangle
@@ -247,11 +247,11 @@ describe('UserController', (): void => {
     });
     it('should return all users of type  if admin', async () => {
       const res = await request(ctx.app)
-        .get('/users/usertype/' + UserType.INVOICE)
+        .get(`/users/usertype/${UserType.INVOICE}`)
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
 
-      const activeUsers = ctx.users.filter((u) => !u.deleted && u.type == UserType.INVOICE);
+      const activeUsers = ctx.users.filter((u) => !u.deleted && u.type === UserType.INVOICE);
 
       const users = res.body.records as User[];
       // eslint-disable-next-line no-underscore-dangle
@@ -268,7 +268,7 @@ describe('UserController', (): void => {
     });
     it('should give an HTTP 403 if not admin', async () => {
       const res = await request(ctx.app)
-        .get('/users/usertype/' + UserType.MEMBER)
+        .get(`/users/usertype/${UserType.MEMBER}`)
         .set('Authorization', `Bearer ${ctx.userToken}`);
       expect(res.status).to.equal(403);
     });
@@ -276,12 +276,12 @@ describe('UserController', (): void => {
       const take = 5;
       const skip = 3;
       const res = await request(ctx.app)
-        .get('/users/usertype/' + UserType.MEMBER)
+        .get(`/users/usertype/${UserType.MEMBER}`)
         .query({ take, skip })
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
 
-      const activeUsers = ctx.users.filter((u) => !u.deleted && u.type == UserType.MEMBER);
+      const activeUsers = ctx.users.filter((u) => !u.deleted && u.type === UserType.MEMBER);
 
       const users = res.body.records as User[];
       // eslint-disable-next-line no-underscore-dangle
