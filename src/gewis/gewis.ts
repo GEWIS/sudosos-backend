@@ -17,7 +17,6 @@
  */
 import User, { UserType } from '../entity/user/user';
 import RoleManager from '../rbac/role-manager';
-import {LDAPUser} from "../entity/authenticator/ldap-authenticator";
 
 /**
  * The GEWIS-specific module with definitions and helper functions.
@@ -28,9 +27,9 @@ export default class Gewis {
    */
   private roleManager: RoleManager;
 
-  public static async createGewisUser(ADUser: LDAPUser) {
-
-  }
+  // public static async createGewisUser(ADUser: LDAPUser) {
+  //
+  // }
 
   /**
    * Creates a new GEWIS-specific module class.
@@ -85,11 +84,11 @@ export default class Gewis {
       permissions: {
         Transaction: {
           create: { own: star },
-          read: { own: star },
+          get: { own: star },
         },
         Balance: {
           create: { own: star },
-          read: { own: star },
+          get: { own: star },
           update: { own: star },
         },
         ...publicPermissions,

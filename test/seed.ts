@@ -52,7 +52,6 @@ import GewisUser from '../src/entity/user/gewis-user';
 import seedGEWISUsers from '../src/gewis/database/seed';
 import PinAuthenticator from '../src/entity/authenticator/pin-authenticator';
 
-
 /**
  * Defines InvoiceUsers objects for the given Users
  * @param users - List of Invoice User type

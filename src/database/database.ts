@@ -56,7 +56,7 @@ import StripeDeposit from '../entity/deposit/stripe-deposit';
 import StripeDepositStatus from '../entity/deposit/stripe-deposit-status';
 import PayoutRequest from '../entity/transactions/payout-request';
 import PayoutRequestStatus from '../entity/transactions/payout-request-status';
-import LDAPAuthenticator from "../entity/authenticator/ldap-authenticator";
+import LDAPAuthenticator from '../entity/authenticator/ldap-authenticator';
 
 export default class Database {
   public static async initialize(): Promise<Connection> {

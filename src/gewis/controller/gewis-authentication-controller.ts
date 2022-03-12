@@ -29,7 +29,7 @@ import GewiswebAuthenticationRequest from './request/gewisweb-authentication-req
 import AuthenticationService, { AuthenticationContext } from '../../service/authentication-service';
 import PinAuthenticator from '../../entity/authenticator/pin-authenticator';
 import GEWISAuthenticationPinRequest from './request/gewis-authentication-pin-request';
-import AuthenticationLDAPRequest from "../../controller/request/validators/authentication-ldap-request";
+import AuthenticationLDAPRequest from '../../controller/request/validators/authentication-ldap-request';
 
 /**
   * The GEWIS authentication controller is responsible for:
@@ -172,7 +172,7 @@ export default class GewisAuthenticationController extends BaseController {
 
     try {
       const user = await AuthenticationService.LDAPAuthentication(
-          body.accountName, body.password, AuthenticationService.createUserAndBind,
+        body.accountName, body.password, AuthenticationService.createUserAndBind,
       );
 
       // If user is undefined something went wrong.

@@ -65,8 +65,8 @@ describe('PayoutRequestController', () => {
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
-    const adminToken = await tokenHandler.signToken({ user: adminUser, roles: ['Admin'] }, 'nonce admin');
-    const userToken = await tokenHandler.signToken({ user: localUser, roles: ['User'] }, 'nonce');
+    const adminToken = await tokenHandler.signToken({ user: adminUser, roles: ['Admin'], lesser: false }, 'nonce admin');
+    const userToken = await tokenHandler.signToken({ user: localUser, roles: ['User'], lesser: false }, 'nonce');
 
     // start app
     const app = express();
