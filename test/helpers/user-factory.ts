@@ -51,13 +51,14 @@ export class Builder {
     const users: any[] = [];
 
     const count = await User.count();
+    const user = this.user ?? (await this.default()).user;
 
     for (let i = 1; i <= amount; i += 1) {
       const clone = {
-        ...this.user,
+        ...user,
         firstName: `User #${count + i}`,
         lastName: `Doe #${count + i}`,
-        type: this.user.type ?? UserType.MEMBER,
+        type: user.type ?? UserType.MEMBER,
       } as User;
       users.push(clone);
     }

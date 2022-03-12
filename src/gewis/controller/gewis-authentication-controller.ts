@@ -29,7 +29,6 @@ import GewiswebAuthenticationRequest from './request/gewisweb-authentication-req
 import AuthenticationService, { AuthenticationContext } from '../../service/authentication-service';
 import PinAuthenticator from '../../entity/authenticator/pin-authenticator';
 import GEWISAuthenticationPinRequest from './request/gewis-authentication-pin-request';
-import AuthenticationLDAPRequest from '../../controller/request/validators/authentication-ldap-request';
 
 /**
   * The GEWIS authentication controller is responsible for:
@@ -86,13 +85,6 @@ export default class GewisAuthenticationController extends BaseController {
           body: { modelName: 'GEWISAuthenticationPinRequest' },
           policy: async () => true,
           handler: this.gewisPINLogin.bind(this),
-        },
-      },
-      '/GEWIS/LDAP': {
-        POST: {
-          body: { modelName: 'AuthenticationLDAPRequest' },
-          policy: async () => true,
-          handler: this.ldapLogin.bind(this),
         },
       },
     };
@@ -152,47 +144,6 @@ export default class GewisAuthenticationController extends BaseController {
       res.json(response);
     } catch (error) {
       this.logger.error('Could not create token:', error);
-      res.status(500).json('Internal server error.');
-    }
-  }
-
-  /**
-   * LDAP login and hand out token
-   *    If user has never signed in before this also creates an GEWIS account.
-   * @route POST /authentication/GEWIS/LDAP
-   * @group authenticate - Operations of authentication controller
-   * @param {AuthenticationLDAPRequest.model} req.body.required - The LDAP login.
-   * @returns {AuthenticationResponse.model} 200 - The created json web token.
-   * @returns {string} 400 - Validation error.
-   * @returns {string} 403 - Authentication error.
-   */
-  public async ldapLogin(req: Request, res: Response): Promise<void> {
-    const body = req.body as AuthenticationLDAPRequest;
-    this.logger.trace('LDAP authentication for user', body.accountName);
-
-    try {
-      const user = await AuthenticationService.LDAPAuthentication(
-        body.accountName, body.password, AuthenticationService.createUserAndBind,
-      );
-
-      // If user is undefined something went wrong.
-      if (!user) {
-        res.status(403).json({
-          message: 'Invalid credentials.',
-        });
-        return;
-      }
-
-      const context: AuthenticationContext = {
-        roleManager: this.roleManager,
-        tokenHandler: this.tokenHandler,
-      };
-
-      // AD login gives full access.
-      const token = await AuthenticationService.getSaltedToken(user, context, false);
-      res.json(token);
-    } catch (error) {
-      this.logger.error('Could not authenticate using LDAP:', error);
       res.status(500).json('Internal server error.');
     }
   }

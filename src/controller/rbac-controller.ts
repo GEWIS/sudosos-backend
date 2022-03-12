@@ -51,6 +51,7 @@ export default class RbacController extends BaseController {
    * Returns all existing roles
    * @route GET /rbac/roles
    * @group rbac - Operations of rbac controller
+   * @security JWT
    * @returns {Array.<RoleResponse>} 200 - All existing roles
    * @returns {string} 500 - Internal server error
    */

@@ -182,6 +182,8 @@ export default class AuthenticationService {
 
     // At this point the user is authenticated.
     const authenticator = await LDAPAuthenticator.findOne({ where: { UUID: ADUser.objectGUID }, relations: ['user'] });
+
+    // If there is no user associated with the GUID we create the user and bind it.
     return Promise.resolve(authenticator
       ? authenticator.user : await onNewUser.bind(this)(ADUser));
   }

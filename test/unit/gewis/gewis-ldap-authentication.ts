@@ -15,23 +15,23 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-// import { Connection } from 'typeorm';
-// import AuthenticationService from '../../../src/service/authentication-service';
-// import Database from '../../../src/database/database';
-//
-// describe('GEWIS LDAP Authentication', () => {
-//   let ctx: {
-//     connection: Connection,
-//   };
-//
-//   before(async () => {
-//     // Initialize context
-//     ctx = {
-//       connection: await Database.initialize(),
-//     };
-//   });
-//   it('should login using GEWIS LDAP', async () => {
-//     console.error(await AuthenticationService.LDAPAuthentication('m999',
-//     'IkBenEenGast!', AuthenticationService.createUserAndBind));
-//   });
-// });
+import { Connection } from 'typeorm';
+import AuthenticationService from '../../../src/service/authentication-service';
+import Database from '../../../src/database/database';
+
+describe('GEWIS LDAP Authentication', () => {
+  let ctx: {
+    connection: Connection,
+  };
+
+  before(async () => {
+    // Initialize context
+    ctx = {
+      connection: await Database.initialize(),
+    };
+  });
+  it('should login using GEWIS LDAP', async () => {
+    console.error(await AuthenticationService.LDAPAuthentication('m999',
+      'IkBenEenGast!', AuthenticationService.createUserAndBind));
+  });
+});
