@@ -44,7 +44,6 @@ export default class Gewis {
    * @param ADUser
    */
   public static async createGEWISUserAndBind(ADUser: LDAPUser): Promise<User> {
-    console.error('Creating a new user');
     const regex = /(?<=m)\d*$/gm;
     const match = regex.exec(ADUser.sAMAccountName);
     let gewisUser;
@@ -69,15 +68,12 @@ export default class Gewis {
    * @param gewisId - GEWIS member ID of the user
    */
   public static async createGEWISUser(user: User, gewisId: number): Promise<GewisUser> {
-    console.error('Creating GEWIS USER');
     const gewisUser = Object.assign(new GewisUser(), {
       user,
       gewisId,
     });
 
     await GewisUser.save(gewisUser);
-    console.error(gewisUser);
-
     // This would be the place to make a PIN Code and mail it to the user.
     // await AuthenticationService.setUserPINCode(user, gewisId.toString());
 
@@ -128,7 +124,7 @@ export default class Gewis {
       name: 'Buyer',
       permissions: {
         Transaction: {
-          create: { own: star },
+          create: { own: star, all: star },
           get: { own: star },
         },
         Balance: {
