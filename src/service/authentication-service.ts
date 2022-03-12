@@ -91,7 +91,7 @@ export default class AuthenticationService {
     };
   }
 
-  private static async createUserAndBind(ADUser: LDAPUser): Promise<User> {
+  public static async createUserAndBind(ADUser: LDAPUser): Promise<User> {
     // TODO Make this a single database transaction
     const account = Object.assign(new User(), {
       firstName: ADUser.givenName,
@@ -120,9 +120,11 @@ export default class AuthenticationService {
    * Authenticates the account against the AD
    * @param uid - The AD account name.
    * @param password - The password user for authentication.
+   * @param onNewUser - Callback function when user does not exist in local system.
    * @constructor
    */
-  public static async LDAPAuthentication(uid:string, password: string): Promise<User | undefined> {
+  public static async LDAPAuthentication(uid:string, password: string,
+    onNewUser: (ADUser: LDAPUser) => Promise<User>): Promise<User | undefined> {
     const logger: Logger = log4js.getLogger('LDAPAuthentication');
     const ldapSettings = this.getLDAPSettings();
 
@@ -181,7 +183,7 @@ export default class AuthenticationService {
     // At this point the user is authenticated.
     const authenticator = await LDAPAuthenticator.findOne({ where: { UUID: ADUser.objectGUID }, relations: ['user'] });
     return Promise.resolve(authenticator
-      ? authenticator.user : await this.createUserAndBind(ADUser));
+      ? authenticator.user : await onNewUser.bind(this)(ADUser));
   }
 
   /**

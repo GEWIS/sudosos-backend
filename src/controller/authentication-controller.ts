@@ -110,7 +110,9 @@ export default class AuthenticationController extends BaseController {
     this.logger.trace('LDAP authentication for user', body.accountName);
 
     try {
-      const user = await AuthenticationService.LDAPAuthentication(body.accountName, body.password);
+      const user = await AuthenticationService.LDAPAuthentication(
+        body.accountName, body.password, AuthenticationService.createUserAndBind,
+      );
 
       // If user is undefined something went wrong.
       if (!user) {

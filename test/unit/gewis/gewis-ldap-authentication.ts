@@ -30,8 +30,7 @@ describe('GEWIS LDAP Authentication', () => {
       connection: await Database.initialize(),
     };
   });
-
   it('should login using GEWIS LDAP', async () => {
-    console.error(await AuthenticationService.LDAPAuthentication('m999', 'IkBenEenGast!'));
+    console.error(await AuthenticationService.LDAPAuthentication('m999', 'IkBenEenGast!', AuthenticationService.createUserAndBind));
   });
 });
