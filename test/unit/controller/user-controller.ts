@@ -223,6 +223,83 @@ describe('UserController', (): void => {
     });
   });
 
+  describe('GET /users/usertype/:userType', () => {
+    it('should return all users of type MEMBER if admin', async () => {
+      const res = await request(ctx.app)
+        .get('/users/usertype/' + UserType.MEMBER)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+
+      const activeUsers = ctx.users.filter((u) => !u.deleted && u.type == UserType.MEMBER);
+
+      const users = res.body.records as User[];
+      // eslint-disable-next-line no-underscore-dangle
+      const pagination = res.body._pagination as PaginationResult;
+      const spec = await Swagger.importSpecification();
+      expect(users.length).to.equal(Math.min(activeUsers.length, pagination.take));
+      users.forEach((user: User) => {
+        verifyUserEntity(spec, user);
+      });
+
+      expect(pagination.take).to.equal(defaultPagination());
+      expect(pagination.skip).to.equal(0);
+      expect(pagination.count).to.equal(activeUsers.length);
+    });
+    it('should return all users of type  if admin', async () => {
+      const res = await request(ctx.app)
+        .get('/users/usertype/' + UserType.INVOICE)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+
+      const activeUsers = ctx.users.filter((u) => !u.deleted && u.type == UserType.INVOICE);
+
+      const users = res.body.records as User[];
+      // eslint-disable-next-line no-underscore-dangle
+      const pagination = res.body._pagination as PaginationResult;
+      const spec = await Swagger.importSpecification();
+      expect(users.length).to.equal(Math.min(activeUsers.length, pagination.take));
+      users.forEach((user: User) => {
+        verifyUserEntity(spec, user);
+      });
+
+      expect(pagination.take).to.equal(defaultPagination());
+      expect(pagination.skip).to.equal(0);
+      expect(pagination.count).to.equal(activeUsers.length);
+    });
+    it('should give an HTTP 403 if not admin', async () => {
+      const res = await request(ctx.app)
+        .get('/users/usertype/' + UserType.MEMBER)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(403);
+    });
+    it('should adhere to pagination', async () => {
+      const take = 5;
+      const skip = 3;
+      const res = await request(ctx.app)
+        .get('/users/usertype/' + UserType.MEMBER)
+        .query({ take, skip })
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+
+      const activeUsers = ctx.users.filter((u) => !u.deleted && u.type == UserType.MEMBER);
+
+      const users = res.body.records as User[];
+      // eslint-disable-next-line no-underscore-dangle
+      const pagination = res.body._pagination as PaginationResult;
+
+      expect(pagination.take).to.equal(take);
+      expect(pagination.skip).to.equal(skip);
+      expect(pagination.count).to.equal(activeUsers.length);
+      expect(users.length).to.be.at.most(take);
+    });
+    it('should give an HTTP 404 when admin requests usertype that does not exist', async () => {
+      const res = await request(ctx.app)
+        .get('/users/usertype/1000')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(404);
+    });
+  });
+
   describe('GET /users/:id', () => {
     it('should return correct user (myself)', async () => {
       const res = await request(ctx.app)
