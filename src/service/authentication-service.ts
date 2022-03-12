@@ -27,8 +27,7 @@ import TokenHandler from '../authentication/token-handler';
 import PinAuthenticator from '../entity/authenticator/pin-authenticator';
 import RoleManager from '../rbac/role-manager';
 import LDAPAuthenticator, { LDAPUser } from '../entity/authenticator/ldap-authenticator';
-
-const BCRYPT_ROUNDS = 12;
+import { asNumber } from '../helpers/validators';
 
 export interface AuthenticationContext {
   tokenHandler: TokenHandler,
@@ -36,6 +35,20 @@ export interface AuthenticationContext {
 }
 
 export default class AuthenticationService {
+  /**
+   * Amount of salt rounds to use.
+   */
+  private static BCRYPT_ROUNDS: number = asNumber(process.env.BCRYPT_ROUNDS) ?? 12;
+
+  /**
+   * Helper function hashes the given string with salt.
+   * @param password - password to hash
+   */
+  private static async hashPassword(password: string): Promise<string> {
+    const salt = await bcrypt.genSalt(AuthenticationService.BCRYPT_ROUNDS);
+    return Promise.resolve(bcrypt.hash(password, salt));
+  }
+
   /**
      * Converts the internal object representation to an authentication response, which can be
      * returned in the API response.
@@ -65,6 +78,9 @@ export default class AuthenticationService {
     };
   }
 
+  /**
+   * Wrapper for the LDAP environment variables.
+   */
   private static getLDAPSettings() {
     return {
       url: process.env.LDAP_SERVER_URL,
@@ -75,6 +91,10 @@ export default class AuthenticationService {
     };
   }
 
+  /**
+   * Wrapper for typing the untyped ldap result.
+   * @param ldapResult - Search result to type
+   */
   private static userFromLDAP(ldapResult: any): LDAPUser {
     const {
       dn, memberOfFlattened, givenName, sn,
@@ -91,6 +111,10 @@ export default class AuthenticationService {
     };
   }
 
+  /**
+   * Creates a new User and binds it to the ObjectGUID of the provided LDAPUser.
+   * @param ADUser - The user for which to create a new account.
+   */
   public static async createUserAndBind(ADUser: LDAPUser): Promise<User> {
     // TODO Make this a single database transaction
     const account = Object.assign(new User(), {
@@ -114,6 +138,32 @@ export default class AuthenticationService {
     });
 
     return user;
+  }
+
+  /**
+   * Set the PIN code of a user.
+   * If the user has no PIN Authentication set it will create the authentication.
+   * @param user - The user for which to set the PIN
+   * @param pin - PIN Code to set, must be a valid 4 number string.
+   */
+  public static async setUserPINCode(user: User, pin: string): Promise<PinAuthenticator> {
+    let authenticator = await PinAuthenticator.findOne({ where: { user } });
+    const hashedPin = await this.hashPassword(pin);
+
+    if (authenticator) {
+      // We only need to update the PIN
+      authenticator.hashedPin = hashedPin;
+    } else {
+      // We must create the authenticator
+      authenticator = Object.assign(new PinAuthenticator(), {
+        user,
+        hashedPin,
+      });
+    }
+
+    // Save and return
+    await PinAuthenticator.save(authenticator);
+    return authenticator;
   }
 
   /**
@@ -185,7 +235,7 @@ export default class AuthenticationService {
 
     // If there is no user associated with the GUID we create the user and bind it.
     return Promise.resolve(authenticator
-      ? authenticator.user : await onNewUser.bind(this)(ADUser));
+      ? authenticator.user : await onNewUser(ADUser));
   }
 
   /**
@@ -219,7 +269,7 @@ export default class AuthenticationService {
       lesser,
     };
 
-    const salt = await bcrypt.genSalt(BCRYPT_ROUNDS);
+    const salt = await bcrypt.genSalt(AuthenticationService.BCRYPT_ROUNDS);
     const token = await context.tokenHandler.signToken(contents, salt);
     return this.asAuthenticationResponse(user, roles, token);
   }

@@ -29,6 +29,9 @@ import GewiswebAuthenticationRequest from './request/gewisweb-authentication-req
 import AuthenticationService, { AuthenticationContext } from '../../service/authentication-service';
 import PinAuthenticator from '../../entity/authenticator/pin-authenticator';
 import GEWISAuthenticationPinRequest from './request/gewis-authentication-pin-request';
+import AuthenticationLDAPRequest from '../../controller/request/validators/authentication-ldap-request';
+import AuthenticationController from '../../controller/authentication-controller';
+import Gewis from '../gewis';
 
 /**
   * The GEWIS authentication controller is responsible for:
@@ -85,6 +88,13 @@ export default class GewisAuthenticationController extends BaseController {
           body: { modelName: 'GEWISAuthenticationPinRequest' },
           policy: async () => true,
           handler: this.gewisPINLogin.bind(this),
+        },
+      },
+      '/GEWIS/LDAP': {
+        POST: {
+          body: { modelName: 'AuthenticationLDAPRequest' },
+          policy: async () => true,
+          handler: this.ldapLogin.bind(this),
         },
       },
     };
@@ -144,6 +154,29 @@ export default class GewisAuthenticationController extends BaseController {
       res.json(response);
     } catch (error) {
       this.logger.error('Could not create token:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * LDAP login and hand out token
+   *    If user has never signed in before this also creates an GEWIS account.
+   * @route POST /authentication/GEWIS/LDAP
+   * @group authenticate - Operations of authentication controller
+   * @param {AuthenticationLDAPRequest.model} req.body.required - The LDAP login.
+   * @returns {AuthenticationResponse.model} 200 - The created json web token.
+   * @returns {string} 400 - Validation error.
+   * @returns {string} 403 - Authentication error.
+   */
+  public async ldapLogin(req: Request, res: Response): Promise<void> {
+    const body = req.body as AuthenticationLDAPRequest;
+    this.logger.trace('GEWIS LDAP authentication for user', body.accountName);
+
+    try {
+      AuthenticationController.LDAPLogin(this.roleManager, this.tokenHandler,
+        Gewis.createGEWISUserAndBind)(req, res);
+    } catch (error) {
+      this.logger.error('Could not authenticate using LDAP:', error);
       res.status(500).json('Internal server error.');
     }
   }

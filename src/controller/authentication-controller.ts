@@ -25,6 +25,8 @@ import JsonWebToken from '../authentication/json-web-token';
 import TokenHandler from '../authentication/token-handler';
 import AuthenticationService, { AuthenticationContext } from '../service/authentication-service';
 import AuthenticationLDAPRequest from './request/validators/authentication-ldap-request';
+import RoleManager from '../rbac/role-manager';
+import { LDAPUser } from '../entity/authenticator/ldap-authenticator';
 
 /**
  * The authentication controller is responsible for:
@@ -110,8 +112,24 @@ export default class AuthenticationController extends BaseController {
     this.logger.trace('LDAP authentication for user', body.accountName);
 
     try {
+      AuthenticationController.LDAPLogin(this.roleManager, this.tokenHandler,
+        AuthenticationService.createUserAndBind)(req, res);
+    } catch (error) {
+      this.logger.error('Could not authenticate using LDAP:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Constructor for the LDAP function to make it easily adaptable.
+   * @constructor
+   */
+  public static LDAPLogin(roleManager: RoleManager, tokenHandler: TokenHandler,
+    onNewUser: (ADUser: LDAPUser) => Promise<User>) {
+    return async (req: Request, res: Response) => {
+      const body = req.body as AuthenticationLDAPRequest;
       const user = await AuthenticationService.LDAPAuthentication(
-        body.accountName, body.password, AuthenticationService.createUserAndBind,
+        body.accountName, body.password, onNewUser,
       );
 
       // If user is undefined something went wrong.
@@ -123,17 +141,14 @@ export default class AuthenticationController extends BaseController {
       }
 
       const context: AuthenticationContext = {
-        roleManager: this.roleManager,
-        tokenHandler: this.tokenHandler,
+        roleManager,
+        tokenHandler,
       };
 
       // AD login gives full access.
       const token = await AuthenticationService.getSaltedToken(user, context, false);
       res.json(token);
-    } catch (error) {
-      this.logger.error('Could not authenticate using LDAP:', error);
-      res.status(500).json('Internal server error.');
-    }
+    };
   }
 
   /**

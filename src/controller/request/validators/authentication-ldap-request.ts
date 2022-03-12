@@ -18,7 +18,7 @@
 
 /**
  * @typedef AuthenticationLDAPRequest
- * @property {number} accountName.required - The AD account name to authenticate
+ * @property {string} accountName.required - The AD account name to authenticate
  * @property {string} password.required - The password
  */
 export default interface AuthenticationLDAPRequest {

@@ -18,6 +18,9 @@
 import User, { UserType } from '../entity/user/user';
 import RoleManager from '../rbac/role-manager';
 import { LDAPUser } from '../entity/authenticator/ldap-authenticator';
+import GewisUser from '../entity/user/gewis-user';
+import AuthenticationService from '../service/authentication-service';
+import { asNumber } from '../helpers/validators';
 
 /**
  * The GEWIS-specific module with definitions and helper functions.
@@ -34,6 +37,51 @@ export default class Gewis {
    */
   public constructor(roleManager: RoleManager) {
     this.roleManager = roleManager;
+  }
+
+  /**
+   * This function creates an new user and binds it to a GEWIS number and AD account.
+   * @param ADUser
+   */
+  public static async createGEWISUserAndBind(ADUser: LDAPUser): Promise<User> {
+    console.error('Creating a new user');
+    const regex = /(?<=m)\d*$/gm;
+    const match = regex.exec(ADUser.sAMAccountName);
+    let gewisUser;
+
+    // Only allow m-accounts to sign in.
+    if (!match) return undefined;
+    try {
+      const gewisId = asNumber(match[0]);
+      // User is a valid GEWIS user and authenticated so we can start binding.
+      gewisUser = await AuthenticationService.createUserAndBind(ADUser).then(async (u) => (
+        (Promise.resolve(await Gewis.createGEWISUser(u, gewisId)))));
+    } catch (error) {
+      return undefined;
+    }
+
+    return gewisUser.user;
+  }
+
+  /**
+   * Function that turns a local User into a GEWIS User.
+   * @param user - The local user
+   * @param gewisId - GEWIS member ID of the user
+   */
+  public static async createGEWISUser(user: User, gewisId: number): Promise<GewisUser> {
+    console.error('Creating GEWIS USER');
+    const gewisUser = Object.assign(new GewisUser(), {
+      user,
+      gewisId,
+    });
+
+    await GewisUser.save(gewisUser);
+    console.error(gewisUser);
+
+    // This would be the place to make a PIN Code and mail it to the user.
+    // await AuthenticationService.setUserPINCode(user, gewisId.toString());
+
+    return gewisUser;
   }
 
   async registerRoles(): Promise<void> {
