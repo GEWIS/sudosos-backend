@@ -500,11 +500,13 @@ export async function seedAllProducts(
     let img: ProductImage[] = [];
     for (let o = 0; o < prod.length; o += 1) {
       let image;
-      if (i % 2 === 0) {
+      if (o % 2 === 0) {
         image = defineProductImage(prod[o], sellers[i]);
         img = img.concat(image);
+        prod[o].image = image;
+      } else {
+        prod[o].image = undefined;
       }
-      prod[o].image = image;
     }
 
     let rev: ProductRevision[] = [];

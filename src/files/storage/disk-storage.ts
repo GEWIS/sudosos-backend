@@ -36,7 +36,7 @@ export default class DiskStorage implements FileStorage {
     return uuidv4();
   }
 
-  private validateFileLocation(location: string): void {
+  public validateFileLocation(location: string): void {
     const directory = path.dirname(location);
     if (path.join(__dirname, '/../../..', this.workdir) !== directory) {
       throw new TypeError(`Given file is not located in the directory: ${directory}`);
