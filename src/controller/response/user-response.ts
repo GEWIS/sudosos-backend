@@ -39,7 +39,7 @@ export interface BaseUserResponse extends BaseResponse {
 export interface UserResponse extends BaseUserResponse {
   active: boolean;
   deleted: boolean;
-  type: UserType;
+  type: string;
 }
 
 /**

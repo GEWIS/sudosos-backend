@@ -99,7 +99,7 @@ export default class AuthenticationController extends BaseController {
 
   /**
    * LDAP login and hand out token
-   *    If user has never signed in before this also creates an account.
+   * If user has never signed in before this also creates an account.
    * @route POST /authentication/LDAP
    * @group authenticate - Operations of authentication controller
    * @param {AuthenticationLDAPRequest.model} req.body.required - The LDAP login.
@@ -113,7 +113,8 @@ export default class AuthenticationController extends BaseController {
 
     try {
       AuthenticationController.LDAPLogin(this.roleManager, this.tokenHandler,
-        AuthenticationService.createUserAndBind)(req, res);
+        AuthenticationService
+          .wrapInManager<User>(AuthenticationService.createUserAndBind))(req, res);
     } catch (error) {
       this.logger.error('Could not authenticate using LDAP:', error);
       res.status(500).json('Internal server error.');

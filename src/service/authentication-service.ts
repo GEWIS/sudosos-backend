@@ -20,6 +20,7 @@ import { Client } from 'ldapts';
 // @ts-ignore
 import { filter } from 'ldap-escape';
 import log4js, { Logger } from 'log4js';
+import { EntityManager, getManager } from 'typeorm';
 import User, { UserType } from '../entity/user/user';
 import JsonWebToken from '../authentication/json-web-token';
 import AuthenticationResponse from '../controller/response/authentication-response';
@@ -28,6 +29,7 @@ import PinAuthenticator from '../entity/authenticator/pin-authenticator';
 import RoleManager from '../rbac/role-manager';
 import LDAPAuthenticator, { LDAPUser } from '../entity/authenticator/ldap-authenticator';
 import { asNumber } from '../helpers/validators';
+import { parseUserToResponse } from '../helpers/entity-to-response';
 
 export interface AuthenticationContext {
   tokenHandler: TokenHandler,
@@ -63,16 +65,7 @@ export default class AuthenticationService {
     token: string,
   ): AuthenticationResponse {
     return {
-      user: {
-        id: user.id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        active: user.active,
-        deleted: user.deleted,
-        type: user.type,
-        createdAt: user.createdAt.toISOString(),
-        updatedAt: user.updatedAt.toISOString(),
-      },
+      user: parseUserToResponse(user, true),
       roles,
       token,
     };
@@ -113,10 +106,11 @@ export default class AuthenticationService {
 
   /**
    * Creates a new User and binds it to the ObjectGUID of the provided LDAPUser.
+   * Function is ran in a single DB transaction in  the context of an EntityManager
    * @param ADUser - The user for which to create a new account.
    */
-  public static async createUserAndBind(ADUser: LDAPUser): Promise<User> {
-    // TODO Make this a single database transaction
+  public static async createUserAndBind(manager: EntityManager, ADUser: LDAPUser): Promise<User> {
+    console.error(ADUser);
     const account = Object.assign(new User(), {
       firstName: ADUser.givenName,
       lastName: ADUser.sn,
@@ -125,19 +119,32 @@ export default class AuthenticationService {
     }) as User;
 
     let user: User;
-    await User.save(account).then(async (acc) => {
+    await manager.save(account).then(async (acc) => {
       // Bind the user to the newly created account
       const auth = Object.assign(new LDAPAuthenticator(), {
         user: acc,
         UUID: ADUser.objectGUID,
       }) as LDAPAuthenticator;
 
-      await LDAPAuthenticator.save(auth).then((a) => {
+      await manager.save(auth).then((a) => {
         user = a.user;
       });
     });
 
     return user;
+  }
+
+  /**
+   * Wraps a function that takes an EntityManager in a single DB transaction.
+   * The function can be multiple function chained, if any function fails TypeORM will rollback
+   * all DB changes.
+   * @param transactionFunction - The function describing the DB transaction.
+   */
+  public static wrapInManager<T>(transactionFunction:
+  (manager: EntityManager, arg: any) => Promise<T>): (arg: any) => Promise<T> {
+    return async (arg: any) => Promise.resolve(getManager().transaction(
+      async (manager) => Promise.resolve(transactionFunction(manager, arg)),
+    ));
   }
 
   /**

@@ -15,6 +15,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+import { EntityManager } from 'typeorm';
 import User, { UserType } from '../entity/user/user';
 import RoleManager from '../rbac/role-manager';
 import { LDAPUser } from '../entity/authenticator/ldap-authenticator';
@@ -43,7 +44,9 @@ export default class Gewis {
    * This function creates an new user and binds it to a GEWIS number and AD account.
    * @param ADUser
    */
-  public static async createGEWISUserAndBind(ADUser: LDAPUser): Promise<User> {
+  public static async createGEWISUserAndBind(manager: EntityManager, ADUser: LDAPUser)
+    : Promise<User> {
+    // We use regex to extract the GEWIS account number from the AD account name.
     const regex = /(?<=m)\d*$/gm;
     const match = regex.exec(ADUser.sAMAccountName);
     let gewisUser;
@@ -53,8 +56,8 @@ export default class Gewis {
     try {
       const gewisId = asNumber(match[0]);
       // User is a valid GEWIS user and authenticated so we can start binding.
-      gewisUser = await AuthenticationService.createUserAndBind(ADUser).then(async (u) => (
-        (Promise.resolve(await Gewis.createGEWISUser(u, gewisId)))));
+      gewisUser = await AuthenticationService.createUserAndBind(manager, ADUser).then(async (u) => (
+        (Promise.resolve(await Gewis.createGEWISUser(manager, u, gewisId)))));
     } catch (error) {
       return undefined;
     }
@@ -67,7 +70,8 @@ export default class Gewis {
    * @param user - The local user
    * @param gewisId - GEWIS member ID of the user
    */
-  public static async createGEWISUser(user: User, gewisId: number): Promise<GewisUser> {
+  public static async createGEWISUser(manager: EntityManager, user: User, gewisId: number)
+    : Promise<GewisUser> {
     const gewisUser = Object.assign(new GewisUser(), {
       user,
       gewisId,

@@ -32,6 +32,7 @@ import GEWISAuthenticationPinRequest from './request/gewis-authentication-pin-re
 import AuthenticationLDAPRequest from '../../controller/request/validators/authentication-ldap-request';
 import AuthenticationController from '../../controller/authentication-controller';
 import Gewis from '../gewis';
+import User from '../../entity/user/user';
 
 /**
   * The GEWIS authentication controller is responsible for:
@@ -174,7 +175,7 @@ export default class GewisAuthenticationController extends BaseController {
 
     try {
       AuthenticationController.LDAPLogin(this.roleManager, this.tokenHandler,
-        Gewis.createGEWISUserAndBind)(req, res);
+        AuthenticationService.wrapInManager<User>(Gewis.createGEWISUserAndBind))(req, res);
     } catch (error) {
       this.logger.error('Could not authenticate using LDAP:', error);
       res.status(500).json('Internal server error.');
