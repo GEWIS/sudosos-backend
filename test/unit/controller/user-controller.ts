@@ -245,7 +245,7 @@ describe('UserController', (): void => {
       expect(pagination.skip).to.equal(0);
       expect(pagination.count).to.equal(activeUsers.length);
     });
-    it('should return all users of type  if admin', async () => {
+    it('should return all users of type INVOICE if admin', async () => {
       const res = await request(ctx.app)
         .get(`/users/usertype/${UserType.INVOICE}`)
         .set('Authorization', `Bearer ${ctx.adminToken}`);
