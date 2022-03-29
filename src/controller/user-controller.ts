@@ -66,6 +66,14 @@ export default class UserController extends BaseController {
           handler: this.createUser.bind(this),
         },
       },
+      '/usertype/:userType': {
+        GET: {
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'get', 'all', 'User', ['*'],
+          ),
+          handler: this.getAllUsersOfUserType.bind(this),
+        },
+      },
       '/:id': {
         GET: {
           policy: async (req) => this.roleManager.can(
@@ -183,6 +191,56 @@ export default class UserController extends BaseController {
 
     try {
       const options: FindManyOptions = { where: { deleted: false } };
+      const users = await User.find({ ...options, take, skip });
+      const count = await User.count(options);
+
+      const result: PaginatedUserResponse = {
+        _pagination: {
+          take, skip, count,
+        },
+        records: users,
+      };
+
+      res.status(200).json(result);
+    } catch (error) {
+      this.logger.error('Could not get users:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Get all users of user type
+   * @route GET /users/usertype/{userType}
+   * @group users - Operations of user controller
+   * @param {integer} userType.path.required - The userType of the requested users
+   * @security JWT
+   * @param {integer} take.query - How many users the endpoint should return
+   * @param {integer} skip.query - How many users should be skipped (for pagination)
+   * @returns {PaginatedUserResponse.model} 200 - A list of all users
+   * @returns {string} 404 - Nonexistent usertype
+   */
+  public async getAllUsersOfUserType(req: RequestWithToken, res: Response): Promise<void> {
+    const parameters = req.params;
+    this.logger.trace('Get all users of userType', parameters, 'by user', req.token.user);
+
+    // If it does not exist, return a 404 error
+    if (!(parameters.userType in UserType)) {
+      res.status(404).json('Unknown userType.');
+      return;
+    }
+    let take;
+    let skip;
+    try {
+      const pagination = parseRequestPagination(req);
+      take = pagination.take;
+      skip = pagination.skip;
+    } catch (e) {
+      res.status(400).send(e.message);
+      return;
+    }
+
+    try {
+      const options: FindManyOptions = { where: { deleted: false, type: parameters.userType } };
       const users = await User.find({ ...options, take, skip });
       const count = await User.count(options);
 
