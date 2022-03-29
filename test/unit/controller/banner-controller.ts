@@ -38,7 +38,6 @@ import { seedBanners } from '../../seed';
 import BannerImage from '../../../src/entity/file/banner-image';
 import { DiskStorage } from '../../../src/files/storage';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
-import Product from '../../../src/entity/product/product';
 
 function bannerEq(a: Banner, b: BannerResponse): Boolean {
   const aEmpty = a === {} as Banner || a === undefined;
@@ -600,6 +599,16 @@ describe('BannerController', async (): Promise<void> => {
         .attach('file', fs.readFileSync(path.join(__dirname, '../../static/banner.png')), 'banner-image.png');
 
       expect(res.status).to.equal(404);
+    });
+    it('should correctly throw error if file does not have data', async () => {
+      const { id } = ctx.banners.filter((banner) => banner.image === undefined)[0];
+
+      const res = await request(ctx.app)
+        .post(`/banners/${id}/image`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .attach('file', null, 'yeee.png');
+
+      expect(res.status).to.equal(400);
     });
   });
 });

@@ -39,7 +39,6 @@ import { ProductResponse } from '../../../src/controller/response/product-respon
 import Product from '../../../src/entity/product/product';
 import ProductController from '../../../src/controller/product-controller';
 import { DineroObjectRequest } from '../../../src/controller/request/dinero-request';
-import ProductImage from '../../../src/entity/file/product-image';
 import { DiskStorage } from '../../../src/files/storage';
 
 /**
@@ -598,6 +597,16 @@ describe('ProductController', async (): Promise<void> => {
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .attach('file', fs.readFileSync(path.join(__dirname, '../../static/product.png')), 'product-image.png')
         .attach('file', fs.readFileSync(path.join(__dirname, '../../static/product.png')), 'product-image-duplicate.png');
+
+      expect(res.status).to.equal(400);
+    });
+    it('should return 400 if no file data is given', async () => {
+      const { id } = ctx.products.filter((product) => product.image === undefined)[0];
+
+      const res = await request(ctx.app)
+        .post(`/products/${id}/image`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .attach('file', null, 'product-image.png');
 
       expect(res.status).to.equal(400);
     });
