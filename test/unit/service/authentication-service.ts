@@ -28,11 +28,13 @@ import Swagger from '../../../src/start/swagger';
 import AuthenticationService from '../../../src/service/authentication-service';
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import PinAuthenticator from '../../../src/entity/authenticator/pin-authenticator';
+import { UserResponse } from '../../../src/controller/response/user-response';
+import { isNumber } from '../../../src/helpers/validators';
 
-export default function userIsAsExpected(user: User, ADResponse: any) {
+export default function userIsAsExpected(user: User | UserResponse, ADResponse: any) {
   expect(user.firstName).to.equal(ADResponse.givenName);
   expect(user.lastName).to.equal(ADResponse.sn);
-  expect(user.type).to.equal(1);
+  if (isNumber(user.type)) expect(user.type).to.equal(1);
   expect(user.active).to.equal(true);
   expect(user.deleted).to.equal(false);
 }
