@@ -29,7 +29,7 @@ import AuthenticationService from '../../../src/service/authentication-service';
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import PinAuthenticator from '../../../src/entity/authenticator/pin-authenticator';
 
-function userIsAsExpected(user: User, ADResponse: any) {
+export default function userIsAsExpected(user: User, ADResponse: any) {
   expect(user.firstName).to.equal(ADResponse.givenName);
   expect(user.lastName).to.equal(ADResponse.sn);
   expect(user.type).to.equal(1);
@@ -97,7 +97,6 @@ describe('AuthenticationService', (): void => {
     stubs.splice(0, stubs.length);
   });
 
-  // m999 IkBenEenGast!
   describe('LDAP Authentication', () => {
     it('should login and create a user using LDAP', async () => {
       let DBUser = await User.findOne(

@@ -47,6 +47,7 @@ export default class Gewis {
   public static async createGEWISUserAndBind(manager: EntityManager, ADUser: LDAPUser)
     : Promise<User> {
     // We use regex to extract the GEWIS account number from the AD account name.
+    // TODO Allow for external e-number accounts.
     const regex = /(?<=m)\d*$/gm;
     const match = regex.exec(ADUser.sAMAccountName);
     let gewisUser;
