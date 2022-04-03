@@ -26,6 +26,8 @@ import Database from '../../../src/database/database';
 import seedDatabase from '../../seed';
 import Swagger from '../../../src/start/swagger';
 import AuthenticationService from '../../../src/service/authentication-service';
+import { inUserContext, UserFactory } from '../../helpers/user-factory';
+import PinAuthenticator from '../../../src/entity/authenticator/pin-authenticator';
 
 function userIsAsExpected(user: User, ADResponse: any) {
   expect(user.firstName).to.equal(ADResponse.givenName);
@@ -162,6 +164,17 @@ describe('AuthenticationService', (): void => {
       const user = await AuthenticationService.LDAPAuthentication('m4141', 'This Is Wrong',
         AuthenticationService.wrapInManager<User>(AuthenticationService.createUserAndBind));
       expect(user).to.be.undefined;
+    });
+  });
+  describe('PIN Authentication', () => {
+    it('should set and verify a user PIN-Code', async () => {
+      await inUserContext(await UserFactory().clone(1), async (user: User) => {
+        await AuthenticationService.setUserPINCode(user, '1000');
+        const auth = await PinAuthenticator.findOne({ where: { user } });
+        expect(auth).to.not.be.undefined;
+        expect(await AuthenticationService.compareHash('2000', auth.hashedPin)).to.be.false;
+        expect(await AuthenticationService.compareHash('1000', auth.hashedPin)).to.be.true;
+      });
     });
   });
 });
