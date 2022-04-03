@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import BaseResponse from './base-response';
-import User, { UserType } from '../../entity/user/user';
+import User from '../../entity/user/user';
 import { PaginationResult } from '../../helpers/pagination';
 
 /**

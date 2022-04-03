@@ -18,12 +18,22 @@
 import { Connection } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
+import { expect } from 'chai';
 import sinon from 'sinon';
+import { Client } from 'ldapts';
 import User from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import seedDatabase from '../../seed';
 import Swagger from '../../../src/start/swagger';
 import AuthenticationService from '../../../src/service/authentication-service';
+
+function userIsAsExpected(user: User, ADResponse: any) {
+  expect(user.firstName).to.equal(ADResponse.givenName);
+  expect(user.lastName).to.equal(ADResponse.sn);
+  expect(user.type).to.equal(1);
+  expect(user.active).to.equal(true);
+  expect(user.deleted).to.equal(false);
+}
 
 describe('AuthenticationService', (): void => {
   let ctx: {
@@ -31,10 +41,20 @@ describe('AuthenticationService', (): void => {
     app: Application,
     users: User[],
     spec: SwaggerSpecification,
+    validADUser: any,
   };
+
+  const stubs: sinon.SinonStub[] = [];
 
   before(async function test(): Promise<void> {
     this.timeout(50000);
+
+    process.env.LDAP_SERVER_URL = 'ldaps://gewisdc03.gewis.nl:636';
+    process.env.LDAP_BASE = 'DC=gewiswg,DC=gewis,DC=nl';
+    process.env.LDAP_USER_FILTER = '(&(objectClass=user)(objectCategory=person)(memberOf:1.2.840.113556.1.4.1941:=CN=PRIV - SudoSOS Users,OU=Privileges,OU=Groups,DC=gewiswg,DC=gewis,DC=nl)(mail=*)(sAMAccountName=%u))';
+    process.env.LDAP_BIND_USER = 'CN=Service account SudoSOS,OU=Service Accounts,OU=Special accounts,DC=gewiswg,DC=gewis,DC=nl';
+    process.env.LDAP_BIND_PW = 'BIND PW';
+
     const connection = await Database.initialize();
     const app = express();
     await seedDatabase();
@@ -45,27 +65,103 @@ describe('AuthenticationService', (): void => {
       },
     );
 
+    const validADUser = {
+      dn: 'CN=Sudo SOS (m4141),OU=Member accounts,DC=gewiswg,DC=gewis,DC=nl',
+      memberOfFlattened: [
+        'CN=Domain Users,CN=Users,DC=gewiswg,DC=gewis,DC=nl',
+      ],
+      givenName: 'Sudo',
+      sn: 'SOS',
+      objectGUID: '1',
+      sAMAccountName: 'm4141',
+      mail: 'm4141@gewis.nl',
+    };
+
     ctx = {
       connection,
       app,
       users,
+      validADUser,
       spec: await Swagger.importSpecification(),
     };
-
-    after(async () => {
-      await ctx.connection.close();
-    });
-
-    const stubs: sinon.SinonStub[] = [];
-
-    afterEach(() => {
-      stubs.forEach((stub) => stub.restore());
-      stubs.splice(0, stubs.length);
-    });
   });
 
-  it('should login using LDAP', async () => {
-    await AuthenticationService.LDAPAuthentication('m999', 'IkBenEenGast!',
-      AuthenticationService.wrapInManager<User>(AuthenticationService.createUserAndBind));
+  after(async () => {
+    await ctx.connection.close();
+  });
+
+  afterEach(() => {
+    stubs.forEach((stub) => stub.restore());
+    stubs.splice(0, stubs.length);
+  });
+
+  // m999 IkBenEenGast!
+  describe('LDAP Authentication', () => {
+    it('should login and create a user using LDAP', async () => {
+      let DBUser = await User.findOne(
+        { where: { firstName: ctx.validADUser.givenName, lastName: ctx.validADUser.sn } },
+      );
+      expect(DBUser).to.be.undefined;
+      const clientBindStub = sinon.stub(Client.prototype, 'bind').resolves(null);
+      const clientSearchStub = sinon.stub(Client.prototype, 'search').resolves({ searchReferences: [], searchEntries: [ctx.validADUser] });
+      stubs.push(clientBindStub);
+      stubs.push(clientSearchStub);
+
+      const user = await AuthenticationService.LDAPAuthentication('m4141', 'This Is Correct',
+        AuthenticationService.wrapInManager<User>(AuthenticationService.createUserAndBind));
+
+      DBUser = await User.findOne(
+        { where: { firstName: ctx.validADUser.givenName, lastName: ctx.validADUser.sn } },
+      );
+      expect(DBUser).to.exist;
+
+      userIsAsExpected(user, ctx.validADUser);
+
+      expect(user).to.not.be.undefined;
+      expect(clientBindStub).to.have.been.calledWith(
+        process.env.LDAP_BIND_USER, process.env.LDAP_BIND_PW,
+      );
+    });
+    it('should login without creating a user if already bound', async () => {
+      const otherValidADUser = {
+        ...ctx.validADUser, givenName: 'Test', objectGUID: 2, sAMAccountName: 'm0041',
+      };
+      let DBUser = await User.findOne(
+        { where: { firstName: otherValidADUser.givenName, lastName: otherValidADUser.sn } },
+      );
+
+      expect(DBUser).to.be.undefined;
+      const clientBindStub = sinon.stub(Client.prototype, 'bind').resolves(null);
+      const clientSearchStub = sinon.stub(Client.prototype, 'search').resolves({ searchReferences: [], searchEntries: [otherValidADUser] });
+      stubs.push(clientBindStub);
+      stubs.push(clientSearchStub);
+
+      let user = await AuthenticationService.LDAPAuthentication('m0041', 'This Is Correct',
+        AuthenticationService.wrapInManager<User>(AuthenticationService.createUserAndBind));
+
+      userIsAsExpected(user, otherValidADUser);
+
+      DBUser = await User.findOne(
+        { where: { firstName: otherValidADUser.givenName, lastName: otherValidADUser.sn } },
+      );
+      expect(DBUser).to.not.be.undefined;
+
+      const count = await User.count();
+      user = await AuthenticationService.LDAPAuthentication('m0041', 'This Is Correct',
+        AuthenticationService.wrapInManager<User>(AuthenticationService.createUserAndBind));
+      userIsAsExpected(user, otherValidADUser);
+
+      expect(count).to.be.equal(await User.count());
+    });
+    it('should return undefined if wrong password', async () => {
+      const clientBindStub = sinon.stub(Client.prototype, 'bind').resolves(null);
+      const clientSearchStub = sinon.stub(Client.prototype, 'search').resolves({ searchReferences: [], searchEntries: [] });
+      stubs.push(clientBindStub);
+      stubs.push(clientSearchStub);
+
+      const user = await AuthenticationService.LDAPAuthentication('m4141', 'This Is Wrong',
+        AuthenticationService.wrapInManager<User>(AuthenticationService.createUserAndBind));
+      expect(user).to.be.undefined;
+    });
   });
 });

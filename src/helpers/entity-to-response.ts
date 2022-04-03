@@ -15,9 +15,8 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import User, {UserType} from '../entity/user/user';
+import User, { UserType } from '../entity/user/user';
 import { BaseUserResponse, UserResponse } from '../controller/response/user-response';
-import {InvoiceState} from "../entity/invoices/invoice-status";
 
 // eslint-disable-next-line import/prefer-default-export
 export function parseUserToBaseResponse(user: User, timestamps: boolean): BaseUserResponse {

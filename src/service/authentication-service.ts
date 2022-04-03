@@ -110,7 +110,6 @@ export default class AuthenticationService {
    * @param ADUser - The user for which to create a new account.
    */
   public static async createUserAndBind(manager: EntityManager, ADUser: LDAPUser): Promise<User> {
-    console.error(ADUser);
     const account = Object.assign(new User(), {
       firstName: ADUser.givenName,
       lastName: ADUser.sn,
@@ -183,6 +182,8 @@ export default class AuthenticationService {
   public static async LDAPAuthentication(uid:string, password: string,
     onNewUser: (ADUser: LDAPUser) => Promise<User>): Promise<User | undefined> {
     const logger: Logger = log4js.getLogger('LDAPAuthentication');
+    logger.level = process.env.LOG_LEVEL;
+
     const ldapSettings = this.getLDAPSettings();
 
     const client = new Client({
