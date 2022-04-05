@@ -17,6 +17,7 @@
  */
 import { Request, Response } from 'express';
 import log4js, { Logger } from 'log4js';
+import { Connection, getConnection } from 'typeorm';
 import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import User from '../entity/user/user';
@@ -145,5 +146,16 @@ export default class AuthenticationController extends BaseController {
       this.logger.error('Could not create token:', error);
       res.status(500).json('Internal server error.');
     }
+  }
+
+  /**
+   * Check whether the backend works correctly
+   *
+   * @route POST /ping
+   * @param req
+   * @param res
+   */
+  public async ping(req: Request, res: Response): Promise<void> {
+    const working = getConnection().query('');
   }
 }

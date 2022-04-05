@@ -57,6 +57,7 @@ import StripeWebhookController from './controller/stripe-webhook-controller';
 import { extractRawBody } from './helpers/raw-body';
 import InvoiceController from './controller/invoice-controller';
 import PayoutRequestController from './controller/payout-request-controller';
+import RootController from './controller/root-controller';
 
 export class Application {
   app: express.Express;
@@ -176,6 +177,11 @@ export default async function createApp(): Promise<Application> {
     verify: extractRawBody,
   }));
   application.app.use(fileUpload());
+
+  application.app.use('/v1', new RootController({
+    specification: application.specification,
+    roleManager: application.roleManager,
+  }).getRouter());
 
   // Product images
   if (process.env.NODE_ENV === 'development') {
