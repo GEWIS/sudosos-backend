@@ -175,7 +175,7 @@ export default class GewisAuthenticationController extends BaseController {
 
     try {
       AuthenticationController.LDAPLogin(this.roleManager, this.tokenHandler,
-        AuthenticationService.wrapInManager<User>(Gewis.createGEWISUserAndBind))(req, res);
+        AuthenticationService.wrapInManager<User>(Gewis.findOrCreateGEWISUserAndBind))(req, res);
     } catch (error) {
       this.logger.error('Could not authenticate using LDAP:', error);
       res.status(500).json('Internal server error.');

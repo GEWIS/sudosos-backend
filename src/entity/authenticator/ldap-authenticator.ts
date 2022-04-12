@@ -41,4 +41,5 @@ export interface LDAPUser {
   objectGUID: string,
   sAMAccountName: string,
   mail: string,
+  mNumber: number | undefined;
 }

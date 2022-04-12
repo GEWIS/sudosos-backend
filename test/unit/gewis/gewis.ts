@@ -69,6 +69,7 @@ describe('GEWIS Helper functions', async (): Promise<void> => {
       givenName: 'Sudo',
       sn: 'SOS',
       objectGUID: '1',
+      employeeNumber: '4141',
       sAMAccountName: 'm4141',
       mail: 'm4141@gewis.nl',
     };
@@ -92,10 +93,41 @@ describe('GEWIS Helper functions', async (): Promise<void> => {
   });
 
   describe('GEWIS LDAP Authentication', () => {
+    it('should bind to GEWIS User if already exists', async () => {
+      await inUserContext(await UserFactory().clone(1), async (user: User) => {
+        const ADuser = {
+          ...ctx.validADUser, givenName: `Sudo #${user.firstName}`, sn: `SOS #${user.lastName}`, objectGUID: user.id, employeeNumber: `${user.id}`,
+        };
+        const userCount = await User.count();
+
+        const newGewisUser = Object.assign(new GewisUser(), {
+          user,
+          gewisId: user.id,
+        });
+        await newGewisUser.save();
+        const gewisUserCount = await GewisUser.count();
+
+        const clientBindStub = sinon.stub(Client.prototype, 'bind').resolves(null);
+        const clientSearchStub = sinon.stub(Client.prototype, 'search').resolves({ searchReferences: [], searchEntries: [ADuser] });
+        stubs.push(clientBindStub);
+        stubs.push(clientSearchStub);
+
+        const authUser = await AuthenticationService.LDAPAuthentication(`m${user.id}`, 'This Is Correct',
+          AuthenticationService.wrapInManager<User>(Gewis.findOrCreateGEWISUserAndBind));
+
+        expect(authUser.id).to.be.equal(user.id);
+        expect(await User.count()).to.be.equal(userCount);
+        expect(await GewisUser.count()).to.be.equal(gewisUserCount);
+        expect(user).to.not.be.undefined;
+        expect(clientBindStub).to.have.been.calledWith(
+          process.env.LDAP_BIND_USER, process.env.LDAP_BIND_PW,
+        );
+      });
+    });
     it('should login and create a user + GEWIS user using LDAP ', async () => {
       await inUserContext(await UserFactory().clone(1), async (user: User) => {
         const ADuser = {
-          ...ctx.validADUser, givenName: `Sudo #${user.firstName}`, sn: `SOS #${user.lastName}`, objectGUID: user.id, sAMAccountName: `m${user.id}`,
+          ...ctx.validADUser, givenName: `Sudo #${user.firstName}`, sn: `SOS #${user.lastName}`, objectGUID: user.id, employeeNumber: `${user.id}`,
         };
         let DBUser = await User.findOne(
           { where: { firstName: ctx.validADUser.givenName, lastName: ctx.validADUser.sn } },
@@ -110,7 +142,7 @@ describe('GEWIS Helper functions', async (): Promise<void> => {
         stubs.push(clientSearchStub);
 
         const authUser = await AuthenticationService.LDAPAuthentication(`m${user.id}`, 'This Is Correct',
-          AuthenticationService.wrapInManager<User>(Gewis.createGEWISUserAndBind));
+          AuthenticationService.wrapInManager<User>(Gewis.findOrCreateGEWISUserAndBind));
 
         DBUser = await User.findOne(
           { where: { firstName: ADuser.givenName, lastName: ADuser.sn } },

@@ -209,6 +209,7 @@ describe('GewisAuthenticationController', async (): Promise<void> => {
       givenName: 'Sudo',
       sn: 'SOS',
       objectGUID: '1',
+      employeeNumber: '4141',
       sAMAccountName: 'm4141',
       mail: 'm4141@gewis.nl',
     };
@@ -259,7 +260,6 @@ describe('GewisAuthenticationController', async (): Promise<void> => {
       const res = await request(ctx.app)
         .post('/authentication/GEWIS/pin')
         .send(validPinRequest);
-      console.error(res.body);
       expect((res.body as AuthenticationResponse).user.id).to.be.equal(1);
       expect(res.status).to.equal(200);
     });

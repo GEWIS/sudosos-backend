@@ -41,24 +41,29 @@ export default class Gewis {
   }
 
   /**
-   * This function creates an new user and binds it to a GEWIS number and AD account.
+   * This function creates an new user if needed and binds it to a GEWIS number and AD account.
    * @param ADUser
    */
-  public static async createGEWISUserAndBind(manager: EntityManager, ADUser: LDAPUser)
+  public static async findOrCreateGEWISUserAndBind(manager: EntityManager, ADUser: LDAPUser)
     : Promise<User> {
-    // We use regex to extract the GEWIS account number from the AD account name.
-    // TODO Allow for external e-number accounts.
-    const regex = /(?<=m)\d*$/gm;
-    const match = regex.exec(ADUser.sAMAccountName);
+    // The employeeNumber is the leading truth for m-number.
+    if (!ADUser.mNumber) return undefined;
     let gewisUser;
 
-    // Only allow m-accounts to sign in.
-    if (!match) return undefined;
     try {
-      const gewisId = asNumber(match[0]);
-      // User is a valid GEWIS user and authenticated so we can start binding.
-      gewisUser = await AuthenticationService.createUserAndBind(manager, ADUser).then(async (u) => (
-        (Promise.resolve(await Gewis.createGEWISUser(manager, u, gewisId)))));
+      const gewisId = asNumber(ADUser.mNumber);
+      // Check if GEWIS User already exists.
+      gewisUser = await GewisUser.findOne({ where: { gewisId }, relations: ['user'] });
+
+      if (gewisUser) {
+        // If user exists we only have to bind the AD user
+        await AuthenticationService.bindUser(manager, ADUser, gewisUser.user);
+      } else {
+        // If m-account does not exist we create an account and bind it.
+        gewisUser = await AuthenticationService
+          .createUserAndBind(manager, ADUser).then(async (u) => (
+            (Promise.resolve(await Gewis.createGEWISUser(manager, u, gewisId)))));
+      }
     } catch (error) {
       return undefined;
     }

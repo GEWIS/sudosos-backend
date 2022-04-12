@@ -91,7 +91,7 @@ export default class AuthenticationService {
   private static userFromLDAP(ldapResult: any): LDAPUser {
     const {
       dn, memberOfFlattened, givenName, sn,
-      objectGUID, sAMAccountName, mail,
+      objectGUID, sAMAccountName, mail, employeeNumber,
     } = ldapResult;
     return {
       dn,
@@ -101,6 +101,7 @@ export default class AuthenticationService {
       objectGUID,
       sAMAccountName,
       mail,
+      mNumber: employeeNumber,
     };
   }
 
@@ -118,19 +119,30 @@ export default class AuthenticationService {
     }) as User;
 
     let user: User;
-    await manager.save(account).then(async (acc) => {
-      // Bind the user to the newly created account
-      const auth = Object.assign(new LDAPAuthenticator(), {
-        user: acc,
-        UUID: ADUser.objectGUID,
-      }) as LDAPAuthenticator;
 
-      await manager.save(auth).then((a) => {
-        user = a.user;
-      });
+    await manager.save(account).then(async (acc) => {
+      const auth = await AuthenticationService.bindUser(manager, ADUser, acc);
+      user = auth.user;
     });
 
     return user;
+  }
+
+  /**
+   * Function that takes a valid ADUser response and binds it
+   * to a existing User such that the AD user can authenticate as the existing user.
+   * @param manager - Transaction manager.
+   * @param ADUser - The AD user to bind.
+   * @param user - The User to bind to.
+   */
+  public static async bindUser(manager: EntityManager, ADUser: LDAPUser, user: User)
+    : Promise<LDAPAuthenticator> {
+    const auth = Object.assign(new LDAPAuthenticator(), {
+      user,
+      UUID: ADUser.objectGUID,
+    }) as LDAPAuthenticator;
+    await manager.save(auth);
+    return auth;
   }
 
   /**
@@ -140,9 +152,9 @@ export default class AuthenticationService {
    * @param transactionFunction - The function describing the DB transaction.
    */
   public static wrapInManager<T>(transactionFunction:
-  (manager: EntityManager, arg: any) => Promise<T>): (arg: any) => Promise<T> {
-    return async (arg: any) => Promise.resolve(getManager().transaction(
-      async (manager) => Promise.resolve(transactionFunction(manager, arg)),
+  (manager: EntityManager, ...arg: any[]) => Promise<T>): (...arg: any[]) => Promise<T> {
+    return async (...arg: any[]) => Promise.resolve(getManager().transaction(
+      async (manager) => Promise.resolve(transactionFunction(manager, ...arg)),
     ));
   }
 
