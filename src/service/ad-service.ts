@@ -150,7 +150,8 @@ export default class ADService {
     const ids = sharedAccounts.map((s) => s.objectGUID);
 
     // Filter on un-bound groups
-    const existing = (await LDAPAuthenticator.findByIds(ids)).map((l) => l.UUID);
+    const existing = (await LDAPAuthenticator.find({ where: ids.map((UUID) => ({ UUID })) }))
+      .map((l) => l.UUID);
     const unexisting = sharedAccounts
       .filter((account) => existing.indexOf(account.objectGUID) === -1);
 
