@@ -57,6 +57,7 @@ import StripeWebhookController from './controller/stripe-webhook-controller';
 import { extractRawBody } from './helpers/raw-body';
 import InvoiceController from './controller/invoice-controller';
 import PayoutRequestController from './controller/payout-request-controller';
+import ADService from './service/ad-service';
 
 export class Application {
   app: express.Express;
@@ -206,12 +207,19 @@ export default async function createApp(): Promise<Application> {
   await setupAuthentication(tokenHandler, application);
 
   await BalanceService.updateBalances();
-  const cronTask = cron.schedule('*/10 * * * *', () => {
+  const syncBalances = cron.schedule('*/10 * * * *', () => {
     logger.debug('Syncing balances.');
     BalanceService.updateBalances();
     logger.debug('Synced balances.');
   });
-  application.tasks = [cronTask];
+
+  await ADService.syncSharedAccounts();
+  const syncADGroups = cron.schedule('*/10 * * * *', () => {
+    logger.debug('Syncing shared accounts.');
+    ADService.syncSharedAccounts();
+    logger.debug('Synced shared accounts..');
+  });
+  application.tasks = [syncBalances, syncADGroups];
 
   // REMOVE LATER
   const options: BaseControllerOptions = {
