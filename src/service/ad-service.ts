@@ -24,6 +24,7 @@ import User, { UserType } from '../entity/user/user';
 import wrapInManager from '../helpers/database';
 // eslint-disable-next-line import/no-cycle
 import AuthenticationService from './authentication-service';
+import Gewis from '../gewis/gewis';
 
 interface SharedUser {
   objectGUID: string,
@@ -133,7 +134,18 @@ export default class ADService {
   private static async setSharedUsers(user: User, ldapUsers: LDAPUser[]) {
     // Extract all accounts from GUIDs.
     const ldapUserUIDs = ldapUsers.map((u) => u.objectGUID);
-    const members: User[] = (await LDAPAuthenticator.find({ where: ldapUserUIDs.map((UUID) => ({ UUID })), relations: ['user'] })).map((u) => u.user);
+    const authenticators = (await LDAPAuthenticator.find({ where: ldapUserUIDs.map((UUID) => ({ UUID })), relations: ['user'] }));
+
+    // Create accounts for all new accounts.
+    const existing = authenticators.map((auth) => auth.UUID);
+
+    const newUsers = ldapUsers.filter((u) => existing.indexOf(u.objectGUID) === -1);
+    const createUser = async (manager: EntityManager, ADUsers: LDAPUser[]): Promise<any> => {
+      ADUsers.forEach((u) => Gewis.findOrCreateGEWISUserAndBind(manager, u));
+    };
+    await wrapInManager(createUser)(newUsers);
+
+    const members: User[] = authenticators.map((u) => u.user);
 
     // Give accounts access to the shared user.
     await wrapInManager(AuthenticationService.setMemberAuthenticator)(members, user);
