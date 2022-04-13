@@ -20,7 +20,8 @@ import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import sinon from 'sinon';
 import { Client } from 'ldapts';
-import { expect } from 'chai';
+import chai, { expect } from 'chai';
+import deepEqualInAnyOrder from 'deep-equal-in-any-order';
 import User, { UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import seedDatabase from '../../seed';
@@ -30,6 +31,8 @@ import LDAPAuthenticator from '../../../src/entity/authenticator/ldap-authentica
 import AuthenticationService from '../../../src/service/authentication-service';
 import wrapInManager from '../../../src/helpers/database';
 import MemberAuthenticator from '../../../src/entity/authenticator/member-authenticator';
+
+chai.use(deepEqualInAnyOrder);
 
 describe('AuthenticationService', (): void => {
   let ctx: {
@@ -250,6 +253,7 @@ describe('AuthenticationService', (): void => {
 
       stubs.forEach((stub) => stub.restore());
       stubs.splice(0, stubs.length);
+      // stubs = [];
 
       stubs.push(clientBindStub);
       clientSearchStub = sinon.stub(Client.prototype, 'search');
@@ -276,7 +280,8 @@ describe('AuthenticationService', (): void => {
         { where: { authenticateAs: newOrgan }, relations: ['user'] },
       )).map((mAuth) => mAuth.user.id);
 
-      expect(canAuthenticateAsIDs).to.deep.equalInAnyOrder(secondMembers.map((u: any) => u.id));
+      const currentMemberIDs = secondMembers.map((u: any) => u.id);
+      await expect(canAuthenticateAsIDs).to.deep.equalInAnyOrder(currentMemberIDs);
     });
   });
 });
