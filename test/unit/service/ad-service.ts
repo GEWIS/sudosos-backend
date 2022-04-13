@@ -208,7 +208,7 @@ describe('AuthenticationService', (): void => {
       expect(auth).to.be.undefined;
 
       const clientBindStub = sinon.stub(Client.prototype, 'bind').resolves(null);
-      let clientSearchStub = sinon.stub(Client.prototype, 'search');
+      const clientSearchStub = sinon.stub(Client.prototype, 'search');
 
       const sharedAccountMemberConstruction = (number: number) => ({
         dn: `CN=Sudo SOS (m${number}),OU=Member accounts,DC=gewiswg,DC=gewis,DC=nl`,
@@ -255,24 +255,25 @@ describe('AuthenticationService', (): void => {
       stubs.splice(0, stubs.length);
       // stubs = [];
 
-      stubs.push(clientBindStub);
-      clientSearchStub = sinon.stub(Client.prototype, 'search');
+      const clientBindStub2 = sinon.stub(Client.prototype, 'bind').resolves(null);
+      const clientSearchStub2 = sinon.stub(Client.prototype, 'search');
 
       sharedAccountMembers = [sharedAccountMemberConstruction(11),
         sharedAccountMemberConstruction(3)];
 
       const secondMembers = await createAccountsFromLDAP(sharedAccountMembers);
 
-      clientSearchStub.withArgs(process.env.LDAP_SHARED_ACCOUNT_FILTER, {
+      clientSearchStub2.withArgs(process.env.LDAP_SHARED_ACCOUNT_FILTER, {
         filter: '(CN=*)',
       }).resolves({ searchReferences: [], searchEntries: [newADSharedAccount] });
 
-      clientSearchStub.withArgs(process.env.LDAP_BASE, {
+      clientSearchStub2.withArgs(process.env.LDAP_BASE, {
         filter: `(&(objectClass=user)(objectCategory=person)(memberOf:1.2.840.113556.1.4.1941:=${newADSharedAccount.dn}))`,
       })
         .resolves({ searchReferences: [], searchEntries: sharedAccountMembers });
 
-      stubs.push(clientSearchStub);
+      stubs.push(clientBindStub2);
+      stubs.push(clientSearchStub2);
 
       await ADService.syncSharedAccounts();
 
@@ -281,7 +282,7 @@ describe('AuthenticationService', (): void => {
       )).map((mAuth) => mAuth.user.id);
 
       const currentMemberIDs = secondMembers.map((u: any) => u.id);
-      await expect(canAuthenticateAsIDs).to.deep.equalInAnyOrder(currentMemberIDs);
+      expect(canAuthenticateAsIDs).to.deep.equalInAnyOrder(currentMemberIDs);
     });
   });
 });
