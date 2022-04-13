@@ -30,6 +30,7 @@ import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import PinAuthenticator from '../../../src/entity/authenticator/pin-authenticator';
 import { UserResponse } from '../../../src/controller/response/user-response';
 import { isNumber } from '../../../src/helpers/validators';
+import wrapInManager from '../../../src/helpers/database';
 
 export default function userIsAsExpected(user: User | UserResponse, ADResponse: any) {
   expect(user.firstName).to.equal(ADResponse.givenName);
@@ -100,17 +101,6 @@ describe('AuthenticationService', (): void => {
   });
 
   describe('LDAP Authentication', () => {
-    // it('should get user', async () => {
-    //   process.env.LDAP_SERVER_URL = 'ldaps://gewisdc03.gewis.nl:636';
-    //   process.env.LDAP_BASE = 'DC=gewiswg,DC=gewis,DC=nl';
-    //   process.env.LDAP_BIND_USER = 'CN=Service account GeTeX,OU=Service Accounts,OU=Special accounts,DC=gewiswg,DC=gewis,DC=nl';
-    //   process.env.LDAP_BIND_PW = 'peLVLqPkzs98vBJ2o6tyqvHnSB8VoLTUdQfKDdy9Fw4HE6EtY5YBposjjm7jn3nx';
-    //   process.env.LDAP_USER_FILTER = '(&(objectClass=user)(objectCategory=person)(memberOf:1.2.840.113556.1.4.1941:=CN=PRIV - GeTeX Users,OU=Privileges,OU=Groups,DC=gewiswg,DC=gewis,DC=nl)(mail=*)(sAMAccountName=%u))';
-    //
-    //   const user = await AuthenticationService.LDAPAuthentication('m999', 'ThisIsCorrect!',
-    //     AuthenticationService.wrapInManager<User>(AuthenticationService.createUserAndBind));
-    //   console.error(user);
-    // });
     it('should login and create a user using LDAP', async () => {
       let DBUser = await User.findOne(
         { where: { firstName: ctx.validADUser.givenName, lastName: ctx.validADUser.sn } },
@@ -122,7 +112,7 @@ describe('AuthenticationService', (): void => {
       stubs.push(clientSearchStub);
 
       const user = await AuthenticationService.LDAPAuthentication('m4141', 'This Is Correct',
-        AuthenticationService.wrapInManager<User>(AuthenticationService.createUserAndBind));
+        wrapInManager<User>(AuthenticationService.createUserAndBind));
 
       DBUser = await User.findOne(
         { where: { firstName: ctx.validADUser.givenName, lastName: ctx.validADUser.sn } },
@@ -151,7 +141,7 @@ describe('AuthenticationService', (): void => {
       stubs.push(clientSearchStub);
 
       let user = await AuthenticationService.LDAPAuthentication('m0041', 'This Is Correct',
-        AuthenticationService.wrapInManager<User>(AuthenticationService.createUserAndBind));
+        wrapInManager<User>(AuthenticationService.createUserAndBind));
 
       userIsAsExpected(user, otherValidADUser);
 
@@ -162,7 +152,7 @@ describe('AuthenticationService', (): void => {
 
       const count = await User.count();
       user = await AuthenticationService.LDAPAuthentication('m0041', 'This Is Correct',
-        AuthenticationService.wrapInManager<User>(AuthenticationService.createUserAndBind));
+        wrapInManager<User>(AuthenticationService.createUserAndBind));
       userIsAsExpected(user, otherValidADUser);
 
       expect(count).to.be.equal(await User.count());
@@ -174,7 +164,7 @@ describe('AuthenticationService', (): void => {
       stubs.push(clientSearchStub);
 
       const user = await AuthenticationService.LDAPAuthentication('m4141', 'This Is Wrong',
-        AuthenticationService.wrapInManager<User>(AuthenticationService.createUserAndBind));
+        wrapInManager<User>(AuthenticationService.createUserAndBind));
       expect(user).to.be.undefined;
     });
   });

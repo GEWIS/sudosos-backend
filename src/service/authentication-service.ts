@@ -16,11 +16,10 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import bcrypt from 'bcrypt';
-import { Client } from 'ldapts';
 // @ts-ignore
 import { filter } from 'ldap-escape';
 import log4js, { Logger } from 'log4js';
-import { EntityManager, getManager } from 'typeorm';
+import { EntityManager } from 'typeorm';
 import User, { UserType } from '../entity/user/user';
 import JsonWebToken from '../authentication/json-web-token';
 import AuthenticationResponse from '../controller/response/authentication-response';
@@ -30,6 +29,9 @@ import RoleManager from '../rbac/role-manager';
 import LDAPAuthenticator, { LDAPUser } from '../entity/authenticator/ldap-authenticator';
 import { asNumber } from '../helpers/validators';
 import { parseUserToResponse } from '../helpers/entity-to-response';
+// eslint-disable-next-line import/no-cycle
+import ADService from './ad-service';
+import MemberAuthenticator from '../entity/authenticator/member-authenticator';
 
 export interface AuthenticationContext {
   tokenHandler: TokenHandler,
@@ -72,42 +74,8 @@ export default class AuthenticationService {
   }
 
   /**
-   * Wrapper for the LDAP environment variables.
-   */
-  private static getLDAPSettings() {
-    return {
-      url: process.env.LDAP_SERVER_URL,
-      reader: process.env.LDAP_BIND_USER,
-      readerPassword: process.env.LDAP_BIND_PW,
-      base: process.env.LDAP_BASE,
-      userFilter: process.env.LDAP_USER_FILTER,
-    };
-  }
-
-  /**
-   * Wrapper for typing the untyped ldap result.
-   * @param ldapResult - Search result to type
-   */
-  private static userFromLDAP(ldapResult: any): LDAPUser {
-    const {
-      dn, memberOfFlattened, givenName, sn,
-      objectGUID, sAMAccountName, mail, employeeNumber,
-    } = ldapResult;
-    return {
-      dn,
-      memberOfFlattened,
-      givenName,
-      sn,
-      objectGUID,
-      sAMAccountName,
-      mail,
-      mNumber: employeeNumber,
-    };
-  }
-
-  /**
    * Creates a new User and binds it to the ObjectGUID of the provided LDAPUser.
-   * Function is ran in a single DB transaction in  the context of an EntityManager
+   * Function is ran in a single DB transaction in the context of an EntityManager
    * @param ADUser - The user for which to create a new account.
    */
   public static async createUserAndBind(manager: EntityManager, ADUser: LDAPUser): Promise<User> {
@@ -121,41 +89,11 @@ export default class AuthenticationService {
     let user: User;
 
     await manager.save(account).then(async (acc) => {
-      const auth = await AuthenticationService.bindUser(manager, ADUser, acc);
+      const auth = await ADService.bindUser(manager, ADUser, acc);
       user = auth.user;
     });
 
     return user;
-  }
-
-  /**
-   * Function that takes a valid ADUser response and binds it
-   * to a existing User such that the AD user can authenticate as the existing user.
-   * @param manager - Transaction manager.
-   * @param ADUser - The AD user to bind.
-   * @param user - The User to bind to.
-   */
-  public static async bindUser(manager: EntityManager, ADUser: LDAPUser, user: User)
-    : Promise<LDAPAuthenticator> {
-    const auth = Object.assign(new LDAPAuthenticator(), {
-      user,
-      UUID: ADUser.objectGUID,
-    }) as LDAPAuthenticator;
-    await manager.save(auth);
-    return auth;
-  }
-
-  /**
-   * Wraps a function that takes an EntityManager in a single DB transaction.
-   * The function can be multiple function chained, if any function fails TypeORM will rollback
-   * all DB changes.
-   * @param transactionFunction - The function describing the DB transaction.
-   */
-  public static wrapInManager<T>(transactionFunction:
-  (manager: EntityManager, ...arg: any[]) => Promise<T>): (...arg: any[]) => Promise<T> {
-    return async (...arg: any[]) => Promise.resolve(getManager().transaction(
-      async (manager) => Promise.resolve(transactionFunction(manager, ...arg)),
-    ));
   }
 
   /**
@@ -193,27 +131,20 @@ export default class AuthenticationService {
    */
   public static async LDAPAuthentication(uid:string, password: string,
     onNewUser: (ADUser: LDAPUser) => Promise<User>): Promise<User | undefined> {
-    const logger: Logger = log4js.getLogger('LDAPAuthentication');
+    const logger: Logger = log4js.getLogger('LDAP');
     logger.level = process.env.LOG_LEVEL;
 
-    const ldapSettings = this.getLDAPSettings();
+    const ldapSettings = ADService.getLDAPSettings();
+    const client = await ADService.getLDAPConnection();
 
-    const client = new Client({
-      url: ldapSettings.url,
-    });
+    if (!client) {
+      return undefined;
+    }
 
     // replace all appearances of %u with uid
     const replacerUid = new RegExp('%u', 'g');
 
     const filterstr = ldapSettings.userFilter.replace(replacerUid, filter`${uid}`);
-
-    // Bind LDAP Reader
-    try {
-      await client.bind(ldapSettings.reader, ldapSettings.readerPassword);
-    } catch (error) {
-      logger.error(`Could not bind LDAP reader: ${ldapSettings.reader} err: ${String(error)}`);
-      return undefined;
-    }
 
     let ADUser: LDAPUser;
     // Get user data
@@ -223,7 +154,7 @@ export default class AuthenticationService {
         filter: filterstr,
       });
       if (searchEntries[0]) {
-        ADUser = this.userFromLDAP(searchEntries[0]);
+        ADUser = ADService.userFromLDAP(searchEntries[0]);
       } else {
         logger.trace(`User ${uid} not found in DB`);
         return undefined;
@@ -256,6 +187,38 @@ export default class AuthenticationService {
     // If there is no user associated with the GUID we create the user and bind it.
     return Promise.resolve(authenticator
       ? authenticator.user : await onNewUser(ADUser));
+  }
+
+  /**
+   * Gives the array of users access to the authenticateAs user.
+   * Used for shared accounts. Note that this replaces the
+   * existing authentication for this authenticateAs.
+   * @param manager - EntityManager used for single transaction.
+   * @param users - The users that gain access.
+   * @param authenticateAs - The account that needs to be accessed.
+   */
+  public static async setMemberAuthenticator(manager: EntityManager, users: User[],
+    authenticateAs: User) {
+    // First drop all rows containing authenticateAs
+    const toRemove: MemberAuthenticator[] = await MemberAuthenticator
+      .find({ where: { authenticateAs } });
+
+    if (toRemove.length !== 0) {
+      await manager.delete(MemberAuthenticator, { authenticateAs });
+    }
+
+    const promises: Promise<MemberAuthenticator>[] = [];
+
+    // Create MemberAuthenticator object for each user in users.
+    users.forEach((user) => {
+      const authenticator = Object.assign(new MemberAuthenticator(), {
+        user,
+        authenticateAs,
+      });
+      promises.push(manager.save(authenticator));
+    });
+
+    await Promise.all(promises);
   }
 
   /**

@@ -103,12 +103,9 @@ async function setupRbac(application: Application) {
 }
 
 /**
- * Sets up the token handling middleware and initializes the authentication
- * controllers of the application.
- * @param application - The application on which to bind the middleware
- *                      and controller.
+ * Sets up the token handler to be used by the application.
  */
-async function setupAuthentication(application: Application) {
+async function createTokenHandler(): Promise<TokenHandler> {
   // Import JWT key
   const jwtPath = process.env.JWT_KEY_PATH;
   const jwtContent = await fs.readFile(jwtPath);
@@ -116,13 +113,22 @@ async function setupAuthentication(application: Application) {
   const jwtPublic = crypto.createPublicKey(jwtPrivate);
 
   // Define middleware
-  const tokenHandler = new TokenHandler({
+  return new TokenHandler({
     algorithm: 'RS512',
     publicKey: jwtPublic.export({ type: 'spki', format: 'pem' }),
     privateKey: jwtPrivate.export({ type: 'pkcs8', format: 'pem' }),
     expiry: 3600,
   });
+}
 
+/**
+ * Sets up the token handling middleware and initializes the authentication
+ * controllers of the application.
+ * @param tokenHandler - Reference to the token handler used by the application.
+ * @param application - The application on which to bind the middleware
+ *                      and controller.
+ */
+async function setupAuthentication(tokenHandler: TokenHandler, application: Application) {
   // Define authentication controller and bind before middleware.
   const controller = new AuthenticationController(
     {
@@ -147,6 +153,7 @@ async function setupAuthentication(application: Application) {
   // Define middleware to be used by any other route.
   const tokenMiddleware = new TokenMiddleware({ refreshFactor: 0.5, tokenHandler });
   application.app.use(tokenMiddleware.getMiddleware());
+  return controller;
 }
 
 export default async function createApp(): Promise<Application> {
@@ -194,8 +201,9 @@ export default async function createApp(): Promise<Application> {
     },
   ).getRouter());
 
+  const tokenHandler = await createTokenHandler();
   // Setup token handler and authentication controller.
-  await setupAuthentication(application);
+  await setupAuthentication(tokenHandler, application);
 
   await BalanceService.updateBalances();
   const cronTask = cron.schedule('*/10 * * * *', () => {
@@ -212,7 +220,7 @@ export default async function createApp(): Promise<Application> {
   };
   application.app.use('/v1/balances', new BalanceController(options).getRouter());
   application.app.use('/v1/banners', new BannerController(options).getRouter());
-  application.app.use('/v1/users', new UserController(options).getRouter());
+  application.app.use('/v1/users', new UserController(options, tokenHandler).getRouter());
   application.app.use('/v1/products', new ProductController(options).getRouter());
   application.app.use('/v1/productcategories', new ProductCategoryController(options).getRouter());
   application.app.use('/v1/pointsofsale', new PointOfSaleController(options).getRouter());

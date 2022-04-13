@@ -162,7 +162,7 @@ describe('UserController', (): void => {
     ctx.controller = new UserController({
       specification: ctx.specification,
       roleManager,
-    });
+    }, tokenHandler);
 
     ctx.app.use(json());
     ctx.app.use(new TokenMiddleware({ tokenHandler, refreshFactor: 0.5 }).getMiddleware());

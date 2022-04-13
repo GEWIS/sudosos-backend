@@ -22,6 +22,7 @@ import { LDAPUser } from '../entity/authenticator/ldap-authenticator';
 import GewisUser from '../entity/user/gewis-user';
 import AuthenticationService from '../service/authentication-service';
 import { asNumber } from '../helpers/validators';
+import ADService from '../service/ad-service';
 
 /**
  * The GEWIS-specific module with definitions and helper functions.
@@ -57,7 +58,7 @@ export default class Gewis {
 
       if (gewisUser) {
         // If user exists we only have to bind the AD user
-        await AuthenticationService.bindUser(manager, ADUser, gewisUser.user);
+        await ADService.bindUser(manager, ADUser, gewisUser.user);
       } else {
         // If m-account does not exist we create an account and bind it.
         gewisUser = await AuthenticationService
@@ -85,7 +86,8 @@ export default class Gewis {
 
     await GewisUser.save(gewisUser);
     // This would be the place to make a PIN Code and mail it to the user.
-    // await AuthenticationService.setUserPINCode(user, gewisId.toString());
+    // This is not meant for production code
+    await AuthenticationService.setUserPINCode(user, gewisId.toString());
 
     return gewisUser;
   }

@@ -31,7 +31,7 @@ import AuthenticationController from '../../../src/controller/authentication-con
 import AuthenticationMockRequest from '../../../src/controller/request/authentication-mock-request';
 import RoleManager from '../../../src/rbac/role-manager';
 import AuthenticationResponse from '../../../src/controller/response/authentication-response';
-import AuthenticationLDAPRequest from '../../../src/controller/request/validators/authentication-ldap-request';
+import AuthenticationLDAPRequest from '../../../src/controller/request/authentication-ldap-request';
 import userIsAsExpected from '../service/authentication-service';
 
 describe('AuthenticationController', async (): Promise<void> => {

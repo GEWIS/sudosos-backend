@@ -33,7 +33,7 @@ import AuthenticationResponse from '../../../../src/controller/response/authenti
 import GewisAuthenticationController from '../../../../src/gewis/controller/gewis-authentication-controller';
 import GewiswebToken from '../../../../src/gewis/gewisweb-token';
 import GewisUser from '../../../../src/entity/user/gewis-user';
-import AuthenticationLDAPRequest from '../../../../src/controller/request/validators/authentication-ldap-request';
+import AuthenticationLDAPRequest from '../../../../src/controller/request/authentication-ldap-request';
 import userIsAsExpected from '../../service/authentication-service';
 import AuthenticationService from '../../../../src/service/authentication-service';
 import GEWISAuthenticationPinRequest from '../../../../src/gewis/controller/request/gewis-authentication-pin-request';

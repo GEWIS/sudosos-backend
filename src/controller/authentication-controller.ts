@@ -24,9 +24,10 @@ import AuthenticationMockRequest from './request/authentication-mock-request';
 import JsonWebToken from '../authentication/json-web-token';
 import TokenHandler from '../authentication/token-handler';
 import AuthenticationService, { AuthenticationContext } from '../service/authentication-service';
-import AuthenticationLDAPRequest from './request/validators/authentication-ldap-request';
+import AuthenticationLDAPRequest from './request/authentication-ldap-request';
 import RoleManager from '../rbac/role-manager';
 import { LDAPUser } from '../entity/authenticator/ldap-authenticator';
+import wrapInManager from '../helpers/database';
 
 /**
  * The authentication controller is responsible for:
@@ -42,7 +43,7 @@ export default class AuthenticationController extends BaseController {
   /**
    * Reference to the token handler of the application.
    */
-  private tokenHandler: TokenHandler;
+  public tokenHandler: TokenHandler;
 
   /**
    * Creates a new authentication controller instance.
@@ -113,8 +114,7 @@ export default class AuthenticationController extends BaseController {
 
     try {
       AuthenticationController.LDAPLogin(this.roleManager, this.tokenHandler,
-        AuthenticationService
-          .wrapInManager<User>(AuthenticationService.createUserAndBind))(req, res);
+        wrapInManager<User>(AuthenticationService.createUserAndBind))(req, res);
     } catch (error) {
       this.logger.error('Could not authenticate using LDAP:', error);
       res.status(500).json('Internal server error.');

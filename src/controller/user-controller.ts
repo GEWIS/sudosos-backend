@@ -33,17 +33,29 @@ import TransactionService, {
 import ContainerService from '../service/container-service';
 import { PaginatedUserResponse } from './response/user-response';
 import TransferService, { parseGetTransferFilters } from '../service/transfer-service';
+import MemberAuthenticator from '../entity/authenticator/member-authenticator';
+import AuthenticationService, { AuthenticationContext } from '../service/authentication-service';
+import TokenHandler from '../authentication/token-handler';
 
 export default class UserController extends BaseController {
   private logger: Logger = log4js.getLogger('UserController');
 
   /**
+   * Reference to the token handler of the application.
+   */
+  private tokenHandler: TokenHandler;
+
+  /**
   * Create a new user controller instance.
   * @param options - The options passed to the base controller.
   */
-  public constructor(options: BaseControllerOptions) {
+  public constructor(
+    options: BaseControllerOptions,
+    tokenHandler: TokenHandler,
+  ) {
     super(options);
     this.logger.level = process.env.LOG_LEVEL;
+    this.tokenHandler = tokenHandler;
   }
 
   /**
@@ -85,6 +97,12 @@ export default class UserController extends BaseController {
             req.token.roles, 'update', UserController.getRelation(req), 'User', ['*'],
           ),
           handler: this.updateUser.bind(this),
+        },
+      },
+      '/:id/authenticate': {
+        POST: {
+          policy: async () => true,
+          handler: this.authenticateAsUser.bind(this),
         },
       },
       '/:id/products': {
@@ -731,6 +749,52 @@ export default class UserController extends BaseController {
       res.json(transfers);
     } catch (error) {
       this.logger.error('Could not return user transfers', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Authenticate as another user
+   * @route POST /users/{id}/authenticate
+   * @group users - Operations of user controller
+   * @param {integer} id.path.required - The id of the user that should be authenticated as
+   * @security JWT
+   * @returns {AuthenticationResponse.model} 200 - The created json web token.
+   * @returns {string} 400 - Validation error.
+   * @returns {string} 404 - User not found error.
+   * @returns {string} 403 - Authentication error.
+   */
+  public async authenticateAsUser(req: RequestWithToken, res: Response): Promise<void> {
+    const parameters = req.params;
+    this.logger.trace('Authenticate as user', parameters, 'by user', req.token.user);
+
+    try {
+      // Get the user object if it exists
+      const authenticateAs = await User.findOne(parameters.id, { where: { deleted: false } });
+      // If it does not exist, return a 404 error
+      if (authenticateAs === undefined) {
+        res.status(404).json('Unknown user ID.');
+        return;
+      }
+
+      // Check if user can authenticate as requested user.
+      const authenticator = await MemberAuthenticator
+        .find({ where: { user: req.token.user, authenticateAs } });
+
+      if (!authenticator) {
+        res.status(403);
+        return;
+      }
+
+      const context: AuthenticationContext = {
+        roleManager: this.roleManager,
+        tokenHandler: this.tokenHandler,
+      };
+
+      const token = await AuthenticationService.getSaltedToken(authenticateAs, context, false);
+      res.status(200).json(token);
+    } catch (error) {
+      this.logger.error('Could not get individual user:', error);
       res.status(500).json('Internal server error.');
     }
   }

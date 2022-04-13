@@ -30,6 +30,7 @@ import userIsAsExpected from '../service/authentication-service';
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import GewisUser from '../../../src/entity/user/gewis-user';
 import Gewis from '../../../src/gewis/gewis';
+import wrapInManager from '../../../src/helpers/database';
 
 describe('GEWIS Helper functions', async (): Promise<void> => {
   let ctx: {
@@ -113,7 +114,7 @@ describe('GEWIS Helper functions', async (): Promise<void> => {
         stubs.push(clientSearchStub);
 
         const authUser = await AuthenticationService.LDAPAuthentication(`m${user.id}`, 'This Is Correct',
-          AuthenticationService.wrapInManager<User>(Gewis.findOrCreateGEWISUserAndBind));
+          wrapInManager<User>(Gewis.findOrCreateGEWISUserAndBind));
 
         expect(authUser.id).to.be.equal(user.id);
         expect(await User.count()).to.be.equal(userCount);
@@ -142,7 +143,7 @@ describe('GEWIS Helper functions', async (): Promise<void> => {
         stubs.push(clientSearchStub);
 
         const authUser = await AuthenticationService.LDAPAuthentication(`m${user.id}`, 'This Is Correct',
-          AuthenticationService.wrapInManager<User>(Gewis.findOrCreateGEWISUserAndBind));
+          wrapInManager<User>(Gewis.findOrCreateGEWISUserAndBind));
 
         DBUser = await User.findOne(
           { where: { firstName: ADuser.givenName, lastName: ADuser.sn } },
