@@ -42,6 +42,7 @@ import { TransactionResponse } from '../../../src/controller/response/transactio
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import { TransferResponse } from '../../../src/controller/response/transfer-response';
 import Transfer from '../../../src/entity/transactions/transfer';
+import MemberAuthenticator from '../../../src/entity/authenticator/member-authenticator';
 
 describe('UserController', (): void => {
   let ctx: {
@@ -814,6 +815,33 @@ describe('UserController', (): void => {
         const found = actualTransfers.find((at) => at.id === t.id);
         expect(found).to.not.be.undefined;
       });
+    });
+  });
+  describe('POST /users/{id}/authenticate', () => {
+    it('should return an HTTP 403 if unauthorized', async () => {
+      const user = ctx.users[0];
+      expect(await MemberAuthenticator
+        .findOne({ where: { authenticateAs: user.id } })).to.be.undefined;
+
+      const res = await request(ctx.app)
+        .post(`/users/${user.id}/authenticate`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(403);
+    });
+    it('should return an HTTP 200 if authorized', async () => {
+      const user = ctx.users[1];
+      expect(await MemberAuthenticator
+        .find({ where: { authenticateAs: user.id } })).to.be.empty;
+      const auth = Object.assign(new MemberAuthenticator(), {
+        user: ctx.users[6],
+        authenticateAs: user.id,
+      });
+      await auth.save();
+      const res = await request(ctx.app)
+        .post(`/users/${user.id}/authenticate`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
     });
   });
   // TODO: Check validity of returned transactions

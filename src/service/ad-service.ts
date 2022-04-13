@@ -24,6 +24,7 @@ import User, { UserType } from '../entity/user/user';
 import wrapInManager from '../helpers/database';
 // eslint-disable-next-line import/no-cycle
 import AuthenticationService from './authentication-service';
+// eslint-disable-next-line import/no-cycle
 import Gewis from '../gewis/gewis';
 
 interface SharedUser {

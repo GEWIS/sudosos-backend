@@ -779,10 +779,10 @@ export default class UserController extends BaseController {
 
       // Check if user can authenticate as requested user.
       const authenticator = await MemberAuthenticator
-        .find({ where: { user: req.token.user, authenticateAs } });
+        .findOne({ where: { user: req.token.user, authenticateAs } });
 
-      if (!authenticator) {
-        res.status(403);
+      if (authenticator === undefined) {
+        res.status(403).json('Authentication error');
         return;
       }
 
