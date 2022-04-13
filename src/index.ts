@@ -215,7 +215,7 @@ export default async function createApp(): Promise<Application> {
 
   application.tasks = [syncBalances];
 
-  if (process.env.LDAP_SERVER_URL) {
+  if (process.env.ENABLE_LDAP) {
     await ADService.syncSharedAccounts();
     const syncADGroups = cron.schedule('*/10 * * * *', () => {
       logger.debug('Syncing shared accounts.');
