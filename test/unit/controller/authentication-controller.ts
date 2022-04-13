@@ -179,6 +179,11 @@ describe('AuthenticationController', async (): Promise<void> => {
     };
 
     afterEach(() => {
+      process.env.LDAP_SERVER_URL = undefined;
+      process.env.LDAP_BASE = undefined;
+      process.env.LDAP_USER_FILTER = undefined;
+      process.env.LDAP_BIND_USER = undefined;
+      process.env.LDAP_BIND_PW = undefined;
       stubs.forEach((stub) => stub.restore());
       stubs.splice(0, stubs.length);
     });
@@ -190,6 +195,11 @@ describe('AuthenticationController', async (): Promise<void> => {
 
     function stubLDAP(searchEntries: any[]) {
       // Stub LDAP functions
+      process.env.LDAP_SERVER_URL = 'ldaps://gewisdc03.gewis.nl:636';
+      process.env.LDAP_BASE = 'DC=gewiswg,DC=gewis,DC=nl';
+      process.env.LDAP_USER_FILTER = '(&(objectClass=user)(objectCategory=person)(memberOf:1.2.840.113556.1.4.1941:=CN=PRIV - SudoSOS Users,OU=Privileges,OU=Groups,DC=gewiswg,DC=gewis,DC=nl)(mail=*)(sAMAccountName=%u))';
+      process.env.LDAP_BIND_USER = 'CN=Service account SudoSOS,OU=Service Accounts,OU=Special accounts,DC=gewiswg,DC=gewis,DC=nl';
+      process.env.LDAP_BIND_PW = 'BIND PW';
       const clientBindStub = sinon.stub(Client.prototype, 'bind').resolves(null);
       const clientSearchStub = sinon.stub(Client.prototype, 'search').resolves({ searchReferences: [], searchEntries });
       stubs.push(clientBindStub);

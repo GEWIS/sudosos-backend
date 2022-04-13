@@ -143,6 +143,7 @@ export default class ADService {
    * Syncs all the shared account and access with AD.
    */
   public static async syncSharedAccounts() {
+    if (!process.env.LDAP_SERVER_URL) return;
     const client = await this.getLDAPConnection();
 
     const sharedAccounts = await this.getSharedAccounts(client);
