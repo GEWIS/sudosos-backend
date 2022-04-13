@@ -220,7 +220,7 @@ export default async function createApp(): Promise<Application> {
     const syncADGroups = cron.schedule('*/10 * * * *', () => {
       logger.debug('Syncing shared accounts.');
       ADService.syncSharedAccounts();
-      logger.debug('Synced shared accounts..');
+      logger.debug('Synced shared accounts.');
     });
     application.tasks.push(syncADGroups);
   }
