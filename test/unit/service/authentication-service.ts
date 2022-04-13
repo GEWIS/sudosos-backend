@@ -92,6 +92,11 @@ describe('AuthenticationService', (): void => {
   });
 
   after(async () => {
+    process.env.LDAP_SERVER_URL = undefined;
+    process.env.LDAP_BASE = undefined;
+    process.env.LDAP_USER_FILTER = undefined;
+    process.env.LDAP_BIND_USER = undefined;
+    process.env.LDAP_BIND_PW = undefined;
     await ctx.connection.close();
   });
 
