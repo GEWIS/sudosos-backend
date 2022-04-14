@@ -113,6 +113,12 @@ export default class UserController extends BaseController {
           handler: this.getUsersProducts.bind(this),
         },
       },
+      '/:id/roles': {
+        GET: {
+          policy: async () => true,
+          handler: this.getUserRoles.bind(this),
+        },
+      },
       '/:id/products/updated': {
         GET: {
           policy: async (req) => this.roleManager.can(
@@ -794,7 +800,38 @@ export default class UserController extends BaseController {
       const token = await AuthenticationService.getSaltedToken(authenticateAs, context, false);
       res.status(200).json(token);
     } catch (error) {
-      this.logger.error('Could not get individual user:', error);
+      this.logger.error('Could not authenticate as user:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Get all roles assigned to the user.
+   * @route GET /users/{id}/roles
+   * @group users - Operations of user controller
+   * @param {integer} id.path.required - The id of the user to get the roles from
+   * @security JWT
+   * @returns {string} 200 - The roles of the user
+   * @returns {string} 400 - Validation error.
+   * @returns {string} 404 - User not found error.
+   */
+  public async getUserRoles(req: RequestWithToken, res: Response): Promise<void> {
+    const parameters = req.params;
+    this.logger.trace('Get roles of user', parameters, 'by user', req.token.user);
+
+    try {
+      // Get the user object if it exists
+      const user = await User.findOne(parameters.id, { where: { deleted: false } });
+      // If it does not exist, return a 404 error
+      if (user === undefined) {
+        res.status(404).json('Unknown user ID.');
+        return;
+      }
+
+      const result = this.roleManager.getRoles(user);
+      res.status(200).json(result);
+    } catch (error) {
+      this.logger.error('Could not get roles of user:', error);
       res.status(500).json('Internal server error.');
     }
   }
