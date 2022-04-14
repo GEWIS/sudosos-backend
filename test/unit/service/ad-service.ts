@@ -287,10 +287,10 @@ describe('AuthenticationService', (): void => {
       expect(canAuthenticateAsIDs).to.deep.equalInAnyOrder(currentMemberIDs);
     });
   });
-  describe('syncUserRoles', () => {
-    it('should get all roles from LDAP', async () => {
-      const roleManager = new RoleManager();
-      await Gewis.syncUserRoles(roleManager);
-    });
-  });
+  // describe('syncUserRoles', () => {
+  //   it('should get all roles from LDAP', async () => {
+  //     // const roleManager = new RoleManager();
+  //     // await Gewis.syncUserRoles(roleManager);
+  //   });
+  // });
 });

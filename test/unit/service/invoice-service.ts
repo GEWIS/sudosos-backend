@@ -109,6 +109,7 @@ export async function createInvoiceWithTransfers(debtorId: number, creditorId: n
   expect(await BalanceService.getBalance(debtorId)).is.equal(0);
 
   const { tIds, cost } = await requestToTransaction(transactions);
+  await new Promise((f) => setTimeout(f, 200));
   expect(await BalanceService.getBalance(debtorId)).is.equal(-1 * cost);
 
   const createInvoiceRequest: CreateInvoiceParams = {
@@ -120,6 +121,7 @@ export async function createInvoiceWithTransfers(debtorId: number, creditorId: n
   };
 
   const invoice = await InvoiceService.createInvoice(createInvoiceRequest);
+  await new Promise((f) => setTimeout(f, 100));
   expect(await BalanceService.getBalance(debtorId)).is.equal(0);
   return invoice;
 }
@@ -265,6 +267,8 @@ describe('InvoiceService', () => {
         };
 
         const first = await requestToTransaction(transactions);
+
+        await new Promise((f) => setTimeout(f, 500));
         expect(await BalanceService.getBalance(debtor.id)).is.equal(-1 * first.cost);
 
         await new Promise((f) => setTimeout(f, 1000));
@@ -297,6 +301,7 @@ describe('InvoiceService', () => {
         );
 
         const first = await requestToTransaction(transactions);
+        await new Promise((f) => setTimeout(f, 500));
         expect(await BalanceService.getBalance(debtor.id)).is.equal(-1 * first.cost);
 
         await new Promise((f) => setTimeout(f, 1000));

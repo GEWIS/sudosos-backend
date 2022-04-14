@@ -36,6 +36,7 @@ import TransferService, { parseGetTransferFilters } from '../service/transfer-se
 import MemberAuthenticator from '../entity/authenticator/member-authenticator';
 import AuthenticationService, { AuthenticationContext } from '../service/authentication-service';
 import TokenHandler from '../authentication/token-handler';
+import RBACService from '../service/rbac-service';
 
 export default class UserController extends BaseController {
   private logger: Logger = log4js.getLogger('UserController');
@@ -828,8 +829,9 @@ export default class UserController extends BaseController {
         return;
       }
 
-      const result = await this.roleManager.getRoles(user);
-      res.status(200).json(result);
+      const roles = await this.roleManager.getRoles(user);
+      const definitions = this.roleManager.toRoleDefinitions(roles);
+      res.status(200).json(RBACService.asRoleResponse(definitions));
     } catch (error) {
       this.logger.error('Could not get roles of user:', error);
       res.status(500).json('Internal server error.');

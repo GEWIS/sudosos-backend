@@ -254,6 +254,16 @@ export default class RoleManager {
   }
 
   /**
+   * Returns a RoleDefinitions object for the provided role names.
+   * @param roles - Names of the roles to return.
+   */
+  public toRoleDefinitions(roles: string[]): RoleDefinitions {
+    const definitions: RoleDefinitions = {};
+    roles.forEach((role) => { definitions[role] = this.roles[role]; });
+    return definitions;
+  }
+
+  /**
    * Get all registered roles in the system.
    * Warning: changes to the returned content are reflected in the role manager.
    * @returns a list of all roles.
