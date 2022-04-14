@@ -200,6 +200,7 @@ export default class AuthenticationService {
   public static async setMemberAuthenticator(manager: EntityManager, users: User[],
     authenticateAs: User) {
     // First drop all rows containing authenticateAs
+    // We check if there is anything to drop or else type orm will complain.
     const toRemove: MemberAuthenticator[] = await MemberAuthenticator
       .find({ where: { authenticateAs } });
 

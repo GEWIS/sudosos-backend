@@ -15,20 +15,20 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import {
-  Entity, ManyToOne,
-} from 'typeorm';
+import { Column, Entity, ManyToOne } from 'typeorm';
+import BaseEntityWithoutId from '../base-entity-without-id';
 import User from '../user/user';
-import AuthenticationMethod from './authentication-method';
 
 /**
- * @typedef {AuthenticationMethod} MemberAuthenticator
- * @property {User.model} user.required - The user this authenticator is for
- * @property {User.model} authenticateAs.required - The user entity this user wants to
- * authenticate as.
+ * @typedef {BaseEntityWithoutId} AssignedRole
+ * @property {User.model} user.required - The user being assigned a role
+ * @property {string} role.required - The name of the role
  */
 @Entity()
-export default class MemberAuthenticator extends AuthenticationMethod {
-  @ManyToOne(() => User, { primary: true, nullable: false })
-  public authenticateAs: User;
+export default class AssignedRole extends BaseEntityWithoutId {
+  @ManyToOne(() => User, { primary: true })
+  public user: User;
+
+  @Column({ primary: true })
+  public role: string;
 }

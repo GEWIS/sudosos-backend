@@ -16,6 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { EntityManager } from 'typeorm';
+import { Client } from 'ldapts';
 import User, { UserType } from '../entity/user/user';
 import RoleManager from '../rbac/role-manager';
 import { LDAPUser } from '../entity/authenticator/ldap-authenticator';
@@ -24,7 +25,8 @@ import GewisUser from '../entity/user/gewis-user';
 import AuthenticationService from '../service/authentication-service';
 import { asNumber } from '../helpers/validators';
 // eslint-disable-next-line import/no-cycle
-import ADService from '../service/ad-service';
+import ADService, { LDAPGroup } from '../service/ad-service';
+import AssignedRole from '../entity/roles/assigned-role';
 
 /**
  * The GEWIS-specific module with definitions and helper functions.
@@ -57,7 +59,6 @@ export default class Gewis {
       const gewisId = asNumber(ADUser.mNumber);
       // Check if GEWIS User already exists.
       gewisUser = await GewisUser.findOne({ where: { gewisId }, relations: ['user'] });
-
       if (gewisUser) {
         // If user exists we only have to bind the AD user
         await ADService.bindUser(manager, ADUser, gewisUser.user);
@@ -92,6 +93,35 @@ export default class Gewis {
     await AuthenticationService.setUserPINCode(user, gewisId.toString());
 
     return gewisUser;
+  }
+
+  public static async addUsersToRole(roleManager: RoleManager, role: string, users: LDAPUser[]) {
+    const members = await ADService.getUsers(users, true);
+    await roleManager.setRoleUsers(members, role);
+  }
+
+  private static async handleADRoles(roleManager: RoleManager, client: Client, roles: LDAPGroup[]) {
+    const promises: Promise<any>[] = [];
+    roles.forEach((role) => {
+      if (roleManager.containsRole(role.cn)) {
+        promises.push(ADService.getLDAPGroupMembers(client, role.dn).then(async (result) => {
+          const members: LDAPUser[] = result.searchEntries.map((u) => ADService.userFromLDAP(u));
+          await Gewis.addUsersToRole(roleManager, role.cn, members);
+        }));
+      }
+    });
+
+    await Promise.all(promises);
+  }
+
+  public static async syncUserRoles(roleManager: RoleManager) {
+    if (!process.env.LDAP_SERVER_URL) return;
+    const client = await ADService.getLDAPConnection();
+
+    const roles = await ADService.getLDAPGroups<LDAPGroup>(client, process.env.LDAP_ROLE_FILTER);
+    if (!roles) return;
+
+    await Gewis.handleADRoles(roleManager, client, roles);
   }
 
   async registerRoles(): Promise<void> {
@@ -149,6 +179,17 @@ export default class Gewis {
         ...publicPermissions,
       },
       assignmentCheck: async (user: User) => buyerUserTypes.has(user.type),
+    });
+
+    this.roleManager.registerRole({
+      name: 'SudoSOS - BAC',
+      permissions: {
+        Product: {
+          get: { all: star },
+          update: { all: star },
+        },
+      },
+      assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: 'SudoSOS - BAC', user } }) !== undefined,
     });
 
     /**
