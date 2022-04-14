@@ -150,6 +150,7 @@ export default class ADService {
    * @param createIfNew - Boolean if unknown users should be created.
    */
   public static async getUsers(ldapUsers: LDAPUser[], createIfNew = false): Promise<User[]> {
+    console.error(ldapUsers);
     if (createIfNew) await this.createAccountIfNew(ldapUsers);
     const authenticators = (await LDAPAuthenticator.find({ where: ldapUsers.map((u) => ({ UUID: u.objectGUID })), relations: ['user'] }));
     return authenticators.map((u) => u.user);
@@ -161,7 +162,7 @@ export default class ADService {
    * @param ldapUsers - The users to gain access
    */
   private static async setSharedUsers(user: User, ldapUsers: LDAPUser[]) {
-    const members = this.getUsers(ldapUsers, true);
+    const members = await this.getUsers(ldapUsers, true);
     // Give accounts access to the shared user.
     await wrapInManager(AuthenticationService.setMemberAuthenticator)(members, user);
   }
