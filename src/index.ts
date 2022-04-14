@@ -218,18 +218,13 @@ export default async function createApp(): Promise<Application> {
   if (process.env.ENABLE_LDAP) {
     await ADService.syncSharedAccounts();
     await Gewis.syncUserRoles(application.roleManager);
-    const syncADGroups = cron.schedule('*/10 * * * *', () => {
-      logger.debug('Syncing shared accounts.');
-      ADService.syncSharedAccounts();
-      logger.debug('Synced shared accounts.');
-    });
-    const syncADRoles = cron.schedule('*/10 * * * *', () => {
-      logger.debug('Syncing AD Roles.');
-      Gewis.syncUserRoles(application.roleManager);
-      logger.debug('Synced AD Roles.');
+    const syncADGroups = cron.schedule('*/10 * * * *', async () => {
+      logger.debug('Syncing AD.');
+      await ADService.syncSharedAccounts();
+      await Gewis.syncUserRoles(application.roleManager);
+      logger.debug('Synced AD');
     });
     application.tasks.push(syncADGroups);
-    application.tasks.push(syncADRoles);
   }
 
   // REMOVE LATER

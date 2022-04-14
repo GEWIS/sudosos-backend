@@ -150,7 +150,6 @@ export default class ADService {
    * @param createIfNew - Boolean if unknown users should be created.
    */
   public static async getUsers(ldapUsers: LDAPUser[], createIfNew = false): Promise<User[]> {
-    console.error(ldapUsers);
     if (createIfNew) await this.createAccountIfNew(ldapUsers);
     const authenticators = (await LDAPAuthenticator.find({ where: ldapUsers.map((u) => ({ UUID: u.objectGUID })), relations: ['user'] }));
     return authenticators.map((u) => u.user);

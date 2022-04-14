@@ -57,6 +57,7 @@ import StripeDepositStatus from '../entity/deposit/stripe-deposit-status';
 import PayoutRequest from '../entity/transactions/payout-request';
 import PayoutRequestStatus from '../entity/transactions/payout-request-status';
 import LDAPAuthenticator from '../entity/authenticator/ldap-authenticator';
+import AssignedRole from '../entity/roles/assigned-role';
 
 export default class Database {
   public static async initialize(): Promise<Connection> {
@@ -102,6 +103,7 @@ export default class Database {
         BaseFile,
         ProductImage,
         BannerImage,
+        AssignedRole,
       ],
     };
     return createConnection(options);
