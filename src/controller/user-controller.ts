@@ -828,7 +828,7 @@ export default class UserController extends BaseController {
         return;
       }
 
-      const result = this.roleManager.getRoles(user);
+      const result = await this.roleManager.getRoles(user);
       res.status(200).json(result);
     } catch (error) {
       this.logger.error('Could not get roles of user:', error);
