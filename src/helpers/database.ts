@@ -17,7 +17,6 @@
  */
 import { EntityManager, getManager } from 'typeorm';
 
-// eslint-disable-next-line import/prefer-default-export
 /**
  * Takes a function with an EntityManager as first param and wraps it in a manager.
  * This ensures that if any of the DB transactions fail of the given transaction

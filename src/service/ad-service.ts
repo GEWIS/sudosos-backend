@@ -119,6 +119,7 @@ export default class ADService {
    * @param sharedUser - The group that needs an account.
    */
   private static async toSharedUser(manager: EntityManager, sharedUser: LDAPGroup) {
+    console.error(sharedUser);
     const account = Object.assign(new User(), {
       firstName: sharedUser.displayName,
       lastName: '',
