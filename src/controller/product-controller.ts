@@ -132,6 +132,7 @@ export default class ProductController extends BaseController {
     // Handle request
     try {
       const products = await ProductService.getProducts({}, { take, skip });
+      console.error(products);
       res.json(products);
     } catch (error) {
       this.logger.error('Could not return all products:', error);
@@ -409,7 +410,7 @@ export default class ProductController extends BaseController {
   static async getRelation(req: RequestWithToken): Promise<string> {
     const productId = asNumber(req.params.id);
     const product = await Product.findOne({ where: { id: productId }, relations: ['owner'] });
-    if (product.owner.id === req.token.user.id) return 'own';
+    if (product && product.owner.id === req.token.user.id) return 'own';
     return 'all';
   }
 }

@@ -126,6 +126,7 @@ describe('ProductController', async (): Promise<void> => {
           get: all,
           update: all,
           delete: all,
+          approve: all,
         },
       },
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
@@ -303,7 +304,7 @@ describe('ProductController', async (): Promise<void> => {
 
       expect(await Product.findOne((await Product.count()) + 1)).to.be.undefined;
 
-      // check if banner is not returned
+      // check if product is not returned
       expect(res.body).to.equal('Product not found.');
 
       // success code

@@ -144,7 +144,6 @@ describe('PointOfSaleController', async () => {
           get: own,
         },
         PointOfSale: {
-          create: own,
           get: own,
           update: own,
           delete: own,

@@ -173,6 +173,10 @@ export default class Gewis {
       assignmentCheck: async (user: User) => buyerUserTypes.has(user.type),
     });
 
+    /**
+     * Define a BAC role, which indicates that the user
+     * is a member of the BAr Committee group in AD.
+     */
     this.roleManager.registerRole({
       name: 'SudoSOS - BAC',
       permissions: {
@@ -189,6 +193,46 @@ export default class Gewis {
         },
       },
       assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: 'SudoSOS - BAC', user } }) !== undefined,
+    });
+
+    const admin = {
+      get: { own: star, all: star },
+      update: { own: star, all: star },
+      create: { own: star, all: star },
+      delete: { own: star, all: star },
+      approve: { own: star, all: star },
+    };
+
+    /**
+     * Define a Board role, which indicates that the user
+     * is a member of the Board group in AD.
+     */
+    this.roleManager.registerRole({
+      name: 'SudoSOS - Board',
+      permissions: {
+        Transaction: {
+          ...admin,
+        },
+        BorrelkaartGroup: {
+          ...admin,
+        },
+        User: {
+          ...admin,
+        },
+        Transfer: {
+          ...admin,
+        },
+        Product: {
+          ...admin,
+        },
+        PointOfSale: {
+          ...admin,
+        },
+        Container: {
+          ...admin,
+        },
+      },
+      assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: 'SudoSOS - Board', user } }) !== undefined,
     });
 
     /**
