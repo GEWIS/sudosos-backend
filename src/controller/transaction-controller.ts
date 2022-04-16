@@ -28,6 +28,7 @@ import { parseRequestPagination } from '../helpers/pagination';
 import { TransactionRequest } from './request/transaction-request';
 import Transaction from '../entity/transactions/transaction';
 import User from '../entity/user/user';
+import { asNumber } from '../helpers/validators';
 
 export default class TransactionController extends BaseController {
   private logger: Logger = log4js.getLogger('TransactionController');
@@ -41,7 +42,6 @@ export default class TransactionController extends BaseController {
     this.logger.level = process.env.LOG_LEVEL;
   }
 
-  // TODO: implement user policy
   /**
    * @inheritDoc
    */
@@ -54,22 +54,22 @@ export default class TransactionController extends BaseController {
         },
         POST: {
           body: { modelName: 'TransactionRequest' },
-          policy: async (req) => this.roleManager.can(req.token.roles, 'create', 'all', 'Transaction', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'create', TransactionController.postRelation(req), 'Transaction', ['*']),
           handler: this.createTransaction.bind(this),
         },
       },
       '/:id(\\d+)': {
         GET: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Transaction', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', await TransactionController.getRelation(req), 'Transaction', ['*']),
           handler: this.getTransaction.bind(this),
         },
         PATCH: {
           body: { modelName: 'TransactionRequest' },
-          policy: async (req) => this.roleManager.can(req.token.roles, 'update', 'all', 'Transaction', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'update', TransactionController.postRelation(req), 'Transaction', ['*']),
           handler: this.updateTransaction.bind(this),
         },
         DELETE: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'delete', 'all', 'Transaction', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'delete', await TransactionController.getRelation(req), 'Transaction', ['*']),
           handler: this.deleteTransaction.bind(this),
         },
       },
@@ -142,17 +142,19 @@ export default class TransactionController extends BaseController {
 
     // handle request
     try {
-      if (await TransactionService.verifyTransaction(body)) {
-        // verify balance if from user is borrelkaart
-        const user = await User.findOne(body.from);
-        if (user.type === 3 && !await TransactionService.verifyBalance(body)) {
-          res.status(403).json('Insufficient balance.');
-        } else {
-          // create the transaction
-          res.json(await TransactionService.createTransaction(body));
-        }
-      } else {
+      if (!await TransactionService.verifyTransaction(body)) {
         res.status(400).json('Invalid transaction.');
+        return;
+      }
+
+      // verify balance if user cannot have negative balance.
+      const user = await User.findOne(body.from);
+      const allowNegative = this.roleManager.can(await this.roleManager.getRoles(user), 'update', 'own', 'Balance', ['negative']);
+      if (!allowNegative && !await TransactionService.verifyBalance(body)) {
+        res.status(403).json('Insufficient balance.');
+      } else {
+        // create the transaction
+        res.json(await TransactionService.createTransaction(body));
       }
     } catch (error) {
       this.logger.error('Could not create transaction:', error);
@@ -253,5 +255,31 @@ export default class TransactionController extends BaseController {
       this.logger.error('Could not delete transaction:', error);
       res.status(500).json('Internal server error.');
     }
+  }
+
+  /**
+   * Function to determine which credentials are needed to post transaction
+   *    all if user is not connected to transaction
+   *    own if user is connected to transaction
+   * @param req - Request with TransactionRequest in the body
+   * @returns whether transaction is connected to user token
+   */
+  static postRelation(req: RequestWithToken): string {
+    const request = req.body as TransactionRequest;
+    if (request.from === req.token.user.id) return 'own';
+    return 'all';
+  }
+
+  /**
+   * Function to determine which credentials are needed to get transactions
+   *    all if user is not connected to transaction
+   *    own if user is connected to transaction
+   * @param req - Request with transaction id as param
+   * @returns whether transaction is connected to user token
+   */
+  static async getRelation(req: RequestWithToken): Promise<string> {
+    const transaction = await Transaction.findOne({ where: { id: asNumber(req.params.id) }, relations: ['from', 'createdBy'] });
+    if (transaction.from.id === req.token.user.id || transaction.createdBy.id === req.token.user.id) return 'own';
+    return 'all';
   }
 }

@@ -146,7 +146,7 @@ export default class ADService {
   /**
    * This function returns all user objects related to the provided ldapUsers
    * If createIfNew is true it will create users for all unbounded ldapUsers.
-   * @param ldapUser - LDAP user object to get users for.
+   * @param ldapUsers - LDAP user object to get users for.
    * @param createIfNew - Boolean if unknown users should be created.
    */
   public static async getUsers(ldapUsers: LDAPUser[], createIfNew = false): Promise<User[]> {

@@ -46,7 +46,8 @@ export default class Gewis {
   }
 
   /**
-   * This function creates an new user if needed and binds it to a GEWIS number and AD account.
+   * This function creates a new user if needed and binds it to a GEWIS number and AD account.
+   * @param manager - Reference to the EntityManager needed for the transaction.
    * @param ADUser
    */
   public static async findOrCreateGEWISUserAndBind(manager: EntityManager, ADUser: LDAPUser)
@@ -77,6 +78,7 @@ export default class Gewis {
 
   /**
    * Function that turns a local User into a GEWIS User.
+   * @param manager - Reference to the EntityManager needed for the transaction.
    * @param user - The local user
    * @param gewisId - GEWIS member ID of the user
    */
@@ -144,34 +146,6 @@ export default class Gewis {
   async registerRoles(): Promise<void> {
     const star = new Set(['*']);
 
-    // Temp for testing in a more realistic environment.
-    const ownedEntity = {
-      create: { own: star },
-      get: { own: star, all: star },
-      update: { own: star },
-    };
-    const publicPermissions = {
-      Banner: {
-        ...ownedEntity,
-      },
-      Container: {
-        ...ownedEntity,
-      },
-      Product: {
-        ...ownedEntity,
-      },
-      ProductCategories: {
-        ...ownedEntity,
-      },
-      PointOfSale: {
-        ...ownedEntity,
-      },
-      User: {
-        get: { own: star, all: star },
-        update: { own: star },
-      },
-    };
-
     /**
      * Define a Buyer role, which indicates that the user
      * is allowed to create transactions for itself.
@@ -180,12 +154,14 @@ export default class Gewis {
       UserType.LOCAL_USER,
       UserType.MEMBER,
       UserType.BORRELKAART,
+      UserType.INVOICE,
+      UserType.AUTOMATIC_INVOICE,
     ]);
     this.roleManager.registerRole({
       name: 'Buyer',
       permissions: {
         Transaction: {
-          create: { own: star, all: star },
+          create: { own: star },
           get: { own: star },
         },
         Balance: {
@@ -193,7 +169,6 @@ export default class Gewis {
           get: { own: star },
           update: { own: star },
         },
-        ...publicPermissions,
       },
       assignmentCheck: async (user: User) => buyerUserTypes.has(user.type),
     });
@@ -201,9 +176,16 @@ export default class Gewis {
     this.roleManager.registerRole({
       name: 'SudoSOS - BAC',
       permissions: {
-        Product: {
+        Transaction: {
+          get: { own: star, all: star },
+          update: { own: star, all: star },
+          delete: { own: star, all: star },
+        },
+        BorrelkaartGroup: {
           get: { all: star },
           update: { all: star },
+          delete: { all: star },
+          create: { all: star },
         },
       },
       assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: 'SudoSOS - BAC', user } }) !== undefined,
@@ -221,13 +203,16 @@ export default class Gewis {
       name: 'AuthorizedBuyer',
       permissions: {
         Transaction: {
-          create: { created: star },
-          read: { created: star },
+          create: { own: star },
+          read: { own: star },
         },
         Balance: {
           create: { own: star },
           read: { own: star },
           update: { own: star },
+        },
+        StripeDeposit: {
+          create: { all: star },
         },
       },
       assignmentCheck: async (user: User) => authorizedBuyerUserTypes.has(user.type),
@@ -246,12 +231,12 @@ export default class Gewis {
       permissions: {
         Product: {
           create: { own: star },
-          read: { own: star },
+          get: { own: star },
           update: { own: star },
         },
         Container: {
           create: { own: star },
-          read: { own: star },
+          Get: { own: star },
           update: { own: star },
         },
         PointOfSale: {
@@ -260,9 +245,9 @@ export default class Gewis {
           update: { own: star },
         },
         Balance: {
-          create: { all: star },
-          read: { all: star },
-          update: { all: star },
+          create: { own: star },
+          get: { own: star },
+          update: { own: star },
         },
       },
       assignmentCheck: async (user: User) => sellerUserTypes.has(user.type),
