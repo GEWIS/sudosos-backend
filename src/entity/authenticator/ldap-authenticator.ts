@@ -32,14 +32,3 @@ export default class LDAPAuthenticator extends AuthenticationMethod {
   })
   public UUID: string;
 }
-
-export interface LDAPUser {
-  dn: string,
-  memberOfFlattened: string[],
-  givenName: string,
-  sn: string,
-  objectGUID: string,
-  sAMAccountName: string,
-  mail: string,
-  mNumber: number | undefined;
-}

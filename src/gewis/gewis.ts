@@ -18,12 +18,11 @@
 import { EntityManager } from 'typeorm';
 import User, { UserType } from '../entity/user/user';
 import RoleManager from '../rbac/role-manager';
-import { LDAPUser } from '../entity/authenticator/ldap-authenticator';
 import GewisUser from '../entity/user/gewis-user';
 import AuthenticationService from '../service/authentication-service';
 import { asNumber } from '../helpers/validators';
 import AssignedRole from '../entity/roles/assigned-role';
-import { bindUser } from '../helpers/ad';
+import { bindUser, LDAPUser } from '../helpers/ad';
 
 /**
  * The GEWIS-specific module with definitions and helper functions.

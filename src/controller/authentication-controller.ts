@@ -26,8 +26,8 @@ import TokenHandler from '../authentication/token-handler';
 import AuthenticationService, { AuthenticationContext } from '../service/authentication-service';
 import AuthenticationLDAPRequest from './request/authentication-ldap-request';
 import RoleManager from '../rbac/role-manager';
-import { LDAPUser } from '../entity/authenticator/ldap-authenticator';
 import wrapInManager from '../helpers/database';
+import { LDAPUser } from '../helpers/ad';
 
 /**
  * The authentication controller is responsible for:

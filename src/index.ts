@@ -226,6 +226,7 @@ export default async function createApp(): Promise<Application> {
   application.tasks = [syncBalances];
 
   if (process.env.ENABLE_LDAP === 'true') {
+    await ADService.syncUsers();
     await ADService.syncSharedAccounts().then(
       () => ADService.syncUserRoles(application.roleManager),
     );

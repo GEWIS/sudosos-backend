@@ -34,6 +34,7 @@ export enum UserType {
  * @typedef {BaseEntity} User
  * @property {string} firstName.required - First name of the user.
  * @property {string} lastName - Last name of the user.
+ * @property {string} email - Email of the user.
  * @property {boolean} active - Whether the user has accepted the TOS. Defaults to false.
  * @property {boolean} deleted - Whether the user was deleted. Defaults to false.
  * @property {enum} type.required - The type of user.
@@ -50,6 +51,12 @@ export default class User extends BaseEntity {
     default: '',
   })
   public lastName: string;
+
+  @Column({
+    length: 64,
+    default: '',
+  })
+  public email: string;
 
   @Column({
     default: false,

@@ -17,8 +17,8 @@
  */
 import { EntityManager } from 'typeorm';
 import User from '../entity/user/user';
-import { LDAPUser } from '../entity/authenticator/ldap-authenticator';
 import AuthenticationService from '../service/authentication-service';
+import { LDAPUser } from './ad';
 
 /**
  * Class used for setting default functions or bindings.

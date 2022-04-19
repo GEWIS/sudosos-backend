@@ -18,23 +18,15 @@
 
 import { Client } from 'ldapts';
 import { EntityManager } from 'typeorm';
-import LDAPAuthenticator, { LDAPUser } from '../entity/authenticator/ldap-authenticator';
+import LDAPAuthenticator from '../entity/authenticator/ldap-authenticator';
 import User, { UserType } from '../entity/user/user';
 import wrapInManager from '../helpers/database';
-import { bindUser, getLDAPConnection, userFromLDAP } from '../helpers/ad';
+import {
+  bindUser, getLDAPConnection, LDAPGroup, LDAPResponse, LDAPUser, userFromLDAP,
+} from '../helpers/ad';
 import AuthenticationService from './authentication-service';
 import Bindings from '../helpers/bindings';
 import RoleManager from '../rbac/role-manager';
-
-interface LDAPResponse {
-  objectGUID: string,
-}
-
-export interface LDAPGroup extends LDAPResponse {
-  displayName: string,
-  dn: string,
-  cn: string,
-}
 
 export default class ADService {
   /**
@@ -147,7 +139,7 @@ export default class ADService {
    * Syncs all the shared account and access with AD.
    */
   public static async syncSharedAccounts() {
-    if (!process.env.LDAP_SERVER_URL) return;
+    if (!process.env.ENABLE_LDAP) return;
     const client = await getLDAPConnection();
 
     const sharedAccounts = await this.getLDAPGroups<LDAPGroup>(
@@ -202,13 +194,25 @@ export default class ADService {
    * @param roleManager - Reference to the application role manager
    */
   public static async syncUserRoles(roleManager: RoleManager) {
-    if (!process.env.LDAP_SERVER_URL) return;
+    if (!process.env.ENABLE_LDAP) return;
     const client = await getLDAPConnection();
 
     const roles = await ADService.getLDAPGroups<LDAPGroup>(client, process.env.LDAP_ROLE_FILTER);
     if (!roles) return;
 
     await wrapInManager(ADService.handleADRoles)(roleManager, client, roles);
+  }
+
+  /**
+   * Sync all Users from AD and create account if needed.
+   */
+  public static async syncUsers() {
+    if (!process.env.ENABLE_LDAP) return;
+    const client = await getLDAPConnection();
+
+    const { searchEntries } = await ADService.getLDAPGroupMembers(client, 'CN=PRIV - SudoSOS Users,OU=SudoSOS Roles,OU=Groups,DC=gewiswg,DC=gewis,DC=nl');
+    const users = searchEntries.map((entry) => userFromLDAP(entry));
+    wrapInManager(ADService.getUsers)(users);
   }
 
   /**

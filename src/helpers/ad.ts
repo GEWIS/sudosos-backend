@@ -19,7 +19,7 @@ import { EntityManager } from 'typeorm';
 import { Client } from 'ldapts';
 import log4js, { Logger } from 'log4js';
 import User from '../entity/user/user';
-import LDAPAuthenticator, { LDAPUser } from '../entity/authenticator/ldap-authenticator';
+import LDAPAuthenticator from '../entity/authenticator/ldap-authenticator';
 
 /**
  * Wrapper for the LDAP environment variables.
@@ -32,6 +32,28 @@ export function getLDAPSettings() {
     base: process.env.LDAP_BASE,
     userFilter: process.env.LDAP_USER_FILTER,
   };
+}
+
+export interface LDAPResponse {
+  objectGUID: string,
+  whenChanged: string,
+}
+
+export interface LDAPGroup extends LDAPResponse {
+  displayName: string,
+  dn: string,
+  cn: string,
+}
+
+export interface LDAPUser {
+  dn: string,
+  whenChanged: string,
+  memberOfFlattened: string[],
+  givenName: string,
+  sn: string,
+  objectGUID: string,
+  mail: string,
+  mNumber: number | undefined;
 }
 
 /**
@@ -82,15 +104,15 @@ export async function getLDAPConnection(): Promise<Client> {
 export function userFromLDAP(ldapResult: any): LDAPUser {
   const {
     dn, memberOfFlattened, givenName, sn,
-    objectGUID, sAMAccountName, mail, employeeNumber,
+    objectGUID, mail, employeeNumber, whenChanged,
   } = ldapResult;
   return {
+    whenChanged,
     dn,
     memberOfFlattened,
     givenName,
     sn,
     objectGUID,
-    sAMAccountName,
     mail,
     mNumber: employeeNumber,
   };
