@@ -39,23 +39,23 @@ export default class PayoutRequestController extends BaseController {
     return {
       '/': {
         GET: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'payoutRequest', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'PayoutRequest', ['*']),
           handler: this.returnAllPayoutRequests.bind(this),
         },
         POST: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'create', 'own', 'payoutRequest', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'create', 'own', 'PayoutRequest', ['*']),
           handler: this.createPayoutRequest.bind(this),
         },
       },
       '/:id(\\d+)': {
         GET: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'get', await PayoutRequestController.getRelation(req), 'payoutRequest', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', await PayoutRequestController.getRelation(req), 'PayoutRequest', ['*']),
           handler: this.returnSinglePayoutRequest.bind(this),
         },
       },
       '/:id(\\d+)/status': {
         POST: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'update', await PayoutRequestController.getRelation(req), 'payoutRequest', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'update', await PayoutRequestController.getRelation(req), 'PayoutRequest', ['*']),
           handler: this.updatePayoutRequestStatus.bind(this),
         },
       },

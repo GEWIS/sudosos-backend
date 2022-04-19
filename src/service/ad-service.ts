@@ -24,6 +24,7 @@ import wrapInManager from '../helpers/database';
 import { bindUser, getLDAPConnection, userFromLDAP } from '../helpers/ad';
 import AuthenticationService from './authentication-service';
 import Bindings from '../helpers/bindings';
+import RoleManager from '../rbac/role-manager';
 
 interface LDAPResponse {
   objectGUID: string,
@@ -160,6 +161,54 @@ export default class ADService {
 
     // Adds users to the shared groups.
     await wrapInManager(ADService.handleSharedGroups)(client, sharedAccounts);
+  }
+
+  /**
+   * Gives Users the correct role.
+   *    Note that this creates Users if they do not exists in the LDAPAuth. table.
+   * @param roleManager - Reference to the application role manager
+   * @param role - Name of the role
+   * @param users - LDAPUsers to give the role to
+   */
+  public static async addUsersToRole(manager: EntityManager, roleManager: RoleManager,
+    role: string, users: LDAPUser[]) {
+    const members = await ADService.getUsers(manager, users, true);
+    await roleManager.setRoleUsers(members, role);
+  }
+
+  /**
+   * Function that handles the updating of the AD roles as returned by the AD Query
+   * @param roleManager - Reference to the application role manager
+   * @param client - LDAP Client connection
+   * @param roles - Roles returned from LDAP
+   */
+  private static async handleADRoles(manager: EntityManager, roleManager: RoleManager,
+    client: Client, roles: LDAPGroup[]) {
+    const promises: Promise<any>[] = [];
+    roles.forEach((role) => {
+      if (roleManager.containsRole(role.cn)) {
+        promises.push(ADService.getLDAPGroupMembers(client, role.dn).then(async (result) => {
+          const members: LDAPUser[] = result.searchEntries.map((u) => userFromLDAP(u));
+          await ADService.addUsersToRole(manager, roleManager, role.cn, members);
+        }));
+      }
+    });
+
+    await Promise.all(promises);
+  }
+
+  /**
+   * Sync User Roles from AD
+   * @param roleManager - Reference to the application role manager
+   */
+  public static async syncUserRoles(roleManager: RoleManager) {
+    if (!process.env.LDAP_SERVER_URL) return;
+    const client = await getLDAPConnection();
+
+    const roles = await ADService.getLDAPGroups<LDAPGroup>(client, process.env.LDAP_ROLE_FILTER);
+    if (!roles) return;
+
+    await wrapInManager(ADService.handleADRoles)(roleManager, client, roles);
   }
 
   /**

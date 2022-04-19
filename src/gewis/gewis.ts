@@ -16,17 +16,14 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { EntityManager } from 'typeorm';
-import { Client } from 'ldapts';
 import User, { UserType } from '../entity/user/user';
 import RoleManager from '../rbac/role-manager';
 import { LDAPUser } from '../entity/authenticator/ldap-authenticator';
 import GewisUser from '../entity/user/gewis-user';
 import AuthenticationService from '../service/authentication-service';
 import { asNumber } from '../helpers/validators';
-import ADService, { LDAPGroup } from '../service/ad-service';
 import AssignedRole from '../entity/roles/assigned-role';
-import wrapInManager from '../helpers/database';
-import { bindUser, getLDAPConnection, userFromLDAP } from '../helpers/ad';
+import { bindUser } from '../helpers/ad';
 
 /**
  * The GEWIS-specific module with definitions and helper functions.
@@ -97,54 +94,6 @@ export default class Gewis {
     return gewisUser;
   }
 
-  /**
-   * Gives Users the correct role.
-   *    Note that this creates Users if they do not exists in the LDAPAuth. table.
-   * @param roleManager - Reference to the application role manager
-   * @param role - Name of the role
-   * @param users - LDAPUsers to give the role to
-   */
-  public static async addUsersToRole(manager: EntityManager, roleManager: RoleManager,
-    role: string, users: LDAPUser[]) {
-    const members = await ADService.getUsers(manager, users, true);
-    await roleManager.setRoleUsers(members, role);
-  }
-
-  /**
-   * Function that handles the updating of the AD roles as returned by the AD Query
-   * @param roleManager - Reference to the application role manager
-   * @param client - LDAP Client connection
-   * @param roles - Roles returned from LDAP
-   */
-  private static async handleADRoles(manager: EntityManager, roleManager: RoleManager,
-    client: Client, roles: LDAPGroup[]) {
-    const promises: Promise<any>[] = [];
-    roles.forEach((role) => {
-      if (roleManager.containsRole(role.cn)) {
-        promises.push(ADService.getLDAPGroupMembers(client, role.dn).then(async (result) => {
-          const members: LDAPUser[] = result.searchEntries.map((u) => userFromLDAP(u));
-          await Gewis.addUsersToRole(manager, roleManager, role.cn, members);
-        }));
-      }
-    });
-
-    await Promise.all(promises);
-  }
-
-  /**
-   * Sync User Roles from AD
-   * @param roleManager - Reference to the application role manager
-   */
-  public static async syncUserRoles(roleManager: RoleManager) {
-    if (!process.env.LDAP_SERVER_URL) return;
-    const client = await getLDAPConnection();
-
-    const roles = await ADService.getLDAPGroups<LDAPGroup>(client, process.env.LDAP_ROLE_FILTER);
-    if (!roles) return;
-
-    await wrapInManager(Gewis.handleADRoles)(roleManager, client, roles);
-  }
-
   async registerRoles(): Promise<void> {
     const star = new Set(['*']);
 
@@ -162,17 +111,117 @@ export default class Gewis {
     this.roleManager.registerRole({
       name: 'Buyer',
       permissions: {
+        Balance: {
+          get: { own: star },
+        },
+        Container: {
+          get: { all: star },
+        },
+        Product: {
+          get: { all: star },
+        },
+        PointOfSale: {
+          get: { all: star },
+        },
+        ProductCategory: {
+          get: { all: star },
+        },
         Transaction: {
           create: { own: star },
           get: { own: star },
         },
+        User: {
+          get: { own: star },
+        },
+      },
+      assignmentCheck: async (user: User) => buyerUserTypes.has(user.type),
+    });
+
+    /**
+     * Invoice users
+     */
+    const invoiceUserTypes = new Set<UserType>([
+      UserType.INVOICE,
+      UserType.AUTOMATIC_INVOICE,
+    ]);
+    this.roleManager.registerRole({
+      name: 'Invoice',
+      permissions: {
         Balance: {
+          update: { own: star },
+        },
+        Invoice: {
+          get: { own: star },
+        },
+      },
+      assignmentCheck: async (user: User) => invoiceUserTypes.has(user.type),
+    });
+
+    /**
+     * Define an Authorized Buyer role, which indicates that the user
+     * is allowed to create transactions for other people.
+     */
+    const authorizedBuyerUserTypes = new Set<UserType>([
+      UserType.LOCAL_USER,
+      UserType.MEMBER,
+    ]);
+    this.roleManager.registerRole({
+      name: 'AuthorizedBuyer',
+      permissions: {
+        Transaction: {
+          create: { all: star },
+        },
+        Balance: {
+          update: { own: star },
+        },
+        StripeDeposit: {
+          create: { own: star, all: star },
+        },
+      },
+      assignmentCheck: async (user: User) => authorizedBuyerUserTypes.has(user.type),
+    });
+
+    /**
+     * Define a Seller role, which indicates that the user
+     * can manage sellable products.
+     */
+    const sellerUserTypes = new Set<UserType>([
+      UserType.LOCAL_ADMIN,
+      UserType.ORGAN,
+    ]);
+    this.roleManager.registerRole({
+      name: 'Seller',
+      permissions: {
+        Product: {
           create: { own: star },
           get: { own: star },
           update: { own: star },
         },
+        Container: {
+          create: { own: star },
+          get: { own: star },
+          update: { own: star },
+        },
+        PointOfSale: {
+          create: { own: star },
+          get: { own: star },
+          update: { own: star },
+        },
+        Balance: {
+          get: { own: star },
+        },
+        Transaction: {
+          get: { own: star },
+        },
+        Transfer: {
+          get: { own: star },
+        },
+        PayoutRequest: {
+          create: { own: star },
+          get: { own: star },
+        },
       },
-      assignmentCheck: async (user: User) => buyerUserTypes.has(user.type),
+      assignmentCheck: async (user: User) => sellerUserTypes.has(user.type),
     });
 
     /**
@@ -184,10 +233,17 @@ export default class Gewis {
       permissions: {
         Transaction: {
           get: { own: star, all: star },
+          create: { own: star, all: star },
           update: { own: star, all: star },
           delete: { own: star, all: star },
         },
         BorrelkaartGroup: {
+          get: { all: star },
+          update: { all: star },
+          delete: { all: star },
+          create: { all: star },
+        },
+        ProductCategory: {
           get: { all: star },
           update: { all: star },
           delete: { all: star },
@@ -212,7 +268,7 @@ export default class Gewis {
     this.roleManager.registerRole({
       name: 'SudoSOS - Board',
       permissions: {
-        Transaction: {
+        Banner: {
           ...admin,
         },
         BorrelkaartGroup: {
@@ -221,82 +277,63 @@ export default class Gewis {
         User: {
           ...admin,
         },
-        Transfer: {
-          ...admin,
-        },
-        Product: {
-          ...admin,
-        },
-        PointOfSale: {
-          ...admin,
-        },
-        Container: {
-          ...admin,
-        },
       },
       assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: 'SudoSOS - Board', user } }) !== undefined,
     });
 
     /**
-     * Define an Authorized Buyer role, which indicates that the user
-     * is allowed to create transactions for other people.
+     * Define a BAC Treasurer role, which indicates that the user
+     * is the BAC Treasurer.
      */
-    const authorizedBuyerUserTypes = new Set<UserType>([
-      UserType.LOCAL_USER,
-      UserType.MEMBER,
-    ]);
     this.roleManager.registerRole({
-      name: 'AuthorizedBuyer',
+      name: 'SudoSOS - BAC PM',
       permissions: {
+        Container: {
+          ...admin,
+        },
+        Invoice: {
+          ...admin,
+        },
+        PayoutRequest: {
+          ...admin,
+        },
+        PointOfSale: {
+          ...admin,
+        },
+        ProductCategory: {
+          ...admin,
+        },
+        Product: {
+          ...admin,
+        },
         Transaction: {
-          create: { own: star },
-          read: { own: star },
+          ...admin,
         },
-        Balance: {
-          create: { own: star },
-          read: { own: star },
-          update: { own: star },
-        },
-        StripeDeposit: {
-          create: { all: star },
+        Transfer: {
+          ...admin,
         },
       },
-      assignmentCheck: async (user: User) => authorizedBuyerUserTypes.has(user.type),
+      assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: 'SudoSOS - BAC PM', user } }) !== undefined,
     });
 
     /**
-     * Define a Seller role, which indicates that the user
-     * can manage sellable products.
+     * Define a Audit Committee role, which indicates that the user
+     * is a part of the Audit Committee.
      */
-    const sellerUserTypes = new Set<UserType>([
-      UserType.LOCAL_ADMIN,
-      UserType.ORGAN,
-    ]);
     this.roleManager.registerRole({
-      name: 'Seller',
+      name: 'SudoSOS - Audit',
       permissions: {
-        Product: {
-          create: { own: star },
-          get: { own: star },
-          update: { own: star },
+        Invoice: {
+          get: { all: star, own: star },
         },
-        Container: {
-          create: { own: star },
-          Get: { own: star },
-          update: { own: star },
+        Transaction: {
+          get: { all: star, own: star },
         },
-        PointOfSale: {
-          create: { own: star },
-          read: { own: star },
-          update: { own: star },
-        },
-        Balance: {
-          create: { own: star },
-          get: { own: star },
-          update: { own: star },
+        Transfer: {
+          get: { all: star, own: star },
         },
       },
-      assignmentCheck: async (user: User) => sellerUserTypes.has(user.type),
+      assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: 'SudoSOS - Audit', user } }) !== undefined,
     });
   }
 }
