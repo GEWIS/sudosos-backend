@@ -65,21 +65,21 @@ describe('PayoutRequestController', () => {
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
-    const adminToken = await tokenHandler.signToken({ user: adminUser, roles: ['Admin'], lesser: false }, 'nonce admin');
+    const adminToken = await tokenHandler.signToken({ user: adminUser, roles: ['User', 'Admin'], lesser: false }, 'nonce admin');
     const userToken = await tokenHandler.signToken({ user: localUser, roles: ['User'], lesser: false }, 'nonce');
 
     // start app
     const app = express();
     const specification = await Swagger.initialize(app);
 
-    const all = { all: new Set<string>(['*']) };
     const own = { own: new Set<string>(['*']) };
+    const all = { all: new Set<string>(['*']), ...own };
 
     const roleManager = new RoleManager();
     roleManager.registerRole({
       name: 'Admin',
       permissions: {
-        payoutRequest: {
+        PayoutRequest: {
           get: all,
           create: own,
           update: all,
@@ -90,7 +90,7 @@ describe('PayoutRequestController', () => {
     roleManager.registerRole({
       name: 'User',
       permissions: {
-        payoutRequest: {
+        PayoutRequest: {
           get: own,
           create: own,
           update: own,

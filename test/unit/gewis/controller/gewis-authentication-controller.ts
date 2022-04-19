@@ -264,7 +264,7 @@ describe('GewisAuthenticationController', async (): Promise<void> => {
   describe('POST /authentication/GEWIS/pin', () => {
     const validPinRequest: GEWISAuthenticationPinRequest = {
       gewisId: 11,
-      pin: 1000,
+      pin: '1000',
     };
     it('should return an HTTP 200 and User if correct pin code', async () => {
       const res = await request(ctx.app)
@@ -276,7 +276,7 @@ describe('GewisAuthenticationController', async (): Promise<void> => {
     it('should return an HTTP 403 if incorrect pin code', async () => {
       const res = await request(ctx.app)
         .post('/authentication/GEWIS/pin')
-        .send({ ...validPinRequest, pin: 1 });
+        .send({ ...validPinRequest, pin: '1' });
       expect(res.status).to.equal(403);
     });
   });

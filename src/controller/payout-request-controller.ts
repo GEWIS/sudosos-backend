@@ -194,7 +194,7 @@ export default class PayoutRequestController extends BaseController {
 
     // Everyone can cancel their own payout requests, but only admins can update to other states.
     if (body.state !== PayoutRequestState.CANCELLED) {
-      if (!this.roleManager.can(req.token.roles, 'update', 'all', 'payoutRequest', ['*'])) {
+      if (!this.roleManager.can(req.token.roles, 'update', 'all', 'PayoutRequest', ['*'])) {
         res.status(403).send('You can only cancel your own payout requests.');
         return;
       }

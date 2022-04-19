@@ -40,7 +40,7 @@ import RBACService from '../service/rbac-service';
 import { isFail } from '../helpers/specification-validation';
 import verifyUpdatePinRequest from './request/validators/update-pin-request-spec';
 import UpdatePinRequest from './request/update-pin-request';
-import {parseUserToResponse} from "../helpers/entity-to-response";
+import { parseUserToResponse } from '../helpers/entity-to-response';
 
 export default class UserController extends BaseController {
   private logger: Logger = log4js.getLogger('UserController');
@@ -928,8 +928,6 @@ export default class UserController extends BaseController {
    * @param {integer} id.path.required - The id of the user to get authentications of
    * @security JWT
    * @returns {string} 404 - User not found error.
-   * @param {integer} take.query - How many users the endpoint should return
-   * @param {integer} skip.query - How many users should be skipped (for pagination)
    * @returns {Array<UserResponse>} 200 - A list of all users the given ID can authenticate
    */
   public async getUserAuthenticatable(req: RequestWithToken, res: Response): Promise<void> {
