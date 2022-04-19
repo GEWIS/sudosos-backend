@@ -53,12 +53,6 @@ export default class User extends BaseEntity {
   public lastName: string;
 
   @Column({
-    length: 64,
-    default: '',
-  })
-  public email: string;
-
-  @Column({
     default: false,
   })
   public active: boolean;
