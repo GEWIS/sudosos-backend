@@ -27,6 +27,7 @@ import { asNumber } from '../helpers/validators';
 // eslint-disable-next-line import/no-cycle
 import ADService, { LDAPGroup } from '../service/ad-service';
 import AssignedRole from '../entity/roles/assigned-role';
+import wrapInManager from "../helpers/database";
 
 /**
  * The GEWIS-specific module with definitions and helper functions.
@@ -104,8 +105,8 @@ export default class Gewis {
    * @param role - Name of the role
    * @param users - LDAPUsers to give the role to
    */
-  public static async addUsersToRole(roleManager: RoleManager, role: string, users: LDAPUser[]) {
-    const members = await ADService.getUsers(users, true);
+  public static async addUsersToRole(manager: EntityManager, roleManager: RoleManager, role: string, users: LDAPUser[]) {
+    const members = await ADService.getUsers(manager, users, true);
     await roleManager.setRoleUsers(members, role);
   }
 
@@ -115,13 +116,13 @@ export default class Gewis {
    * @param client - LDAP Client connection
    * @param roles - Roles returned from LDAP
    */
-  private static async handleADRoles(roleManager: RoleManager, client: Client, roles: LDAPGroup[]) {
+  private static async handleADRoles(manager: EntityManager, roleManager: RoleManager, client: Client, roles: LDAPGroup[]) {
     const promises: Promise<any>[] = [];
     roles.forEach((role) => {
       if (roleManager.containsRole(role.cn)) {
         promises.push(ADService.getLDAPGroupMembers(client, role.dn).then(async (result) => {
           const members: LDAPUser[] = result.searchEntries.map((u) => ADService.userFromLDAP(u));
-          await Gewis.addUsersToRole(roleManager, role.cn, members);
+          await Gewis.addUsersToRole(manager, roleManager, role.cn, members);
         }));
       }
     });
@@ -140,7 +141,7 @@ export default class Gewis {
     const roles = await ADService.getLDAPGroups<LDAPGroup>(client, process.env.LDAP_ROLE_FILTER);
     if (!roles) return;
 
-    await Gewis.handleADRoles(roleManager, client, roles);
+    await wrapInManager(Gewis.handleADRoles)(roleManager, client, roles);
   }
 
   async registerRoles(): Promise<void> {

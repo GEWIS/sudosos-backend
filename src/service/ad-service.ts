@@ -119,7 +119,6 @@ export default class ADService {
    * @param sharedUser - The group that needs an account.
    */
   private static async toSharedUser(manager: EntityManager, sharedUser: LDAPGroup) {
-    console.error(sharedUser);
     const account = Object.assign(new User(), {
       firstName: sharedUser.displayName,
       lastName: '',
@@ -136,12 +135,12 @@ export default class ADService {
    * Creates an account for all new GUIDs
    * @param ldapUsers
    */
-  public static async createAccountIfNew(ldapUsers: LDAPUser[]) {
+  public static async createAccountIfNew(manager: EntityManager, ldapUsers: LDAPUser[]) {
     const filtered = await this.filterUnboundGUID(ldapUsers);
-    const createUser = async (manager: EntityManager, ADUsers: LDAPUser[]): Promise<any> => {
+    const createUser = async (ADUsers: LDAPUser[]): Promise<any> => {
       ADUsers.forEach((u) => Gewis.findOrCreateGEWISUserAndBind(manager, u));
     };
-    await wrapInManager(createUser)(filtered);
+    await createUser(filtered as LDAPUser[]);
   }
 
   /**
@@ -150,8 +149,8 @@ export default class ADService {
    * @param ldapUsers - LDAP user object to get users for.
    * @param createIfNew - Boolean if unknown users should be created.
    */
-  public static async getUsers(ldapUsers: LDAPUser[], createIfNew = false): Promise<User[]> {
-    if (createIfNew) await this.createAccountIfNew(ldapUsers);
+  public static async getUsers(manager: EntityManager, ldapUsers: LDAPUser[], createIfNew = false): Promise<User[]> {
+    if (createIfNew) await this.createAccountIfNew(manager, ldapUsers);
     const authenticators = (await LDAPAuthenticator.find({ where: ldapUsers.map((u) => ({ UUID: u.objectGUID })), relations: ['user'] }));
     return authenticators.map((u) => u.user);
   }
@@ -161,10 +160,10 @@ export default class ADService {
    * @param user - The user to give access
    * @param ldapUsers - The users to gain access
    */
-  private static async setSharedUsers(user: User, ldapUsers: LDAPUser[]) {
-    const members = await this.getUsers(ldapUsers, true);
+  private static async setSharedUsers(manager: EntityManager, user: User, ldapUsers: LDAPUser[]) {
+    const members = await this.getUsers(manager, ldapUsers, true);
     // Give accounts access to the shared user.
-    await wrapInManager(AuthenticationService.setMemberAuthenticator)(members, user);
+    await AuthenticationService.setMemberAuthenticator(manager, members, user);
   }
 
   /**
@@ -202,15 +201,15 @@ export default class ADService {
    * @param client - The LDAP client
    * @param sharedAccounts - Accounts to give access
    */
-  private static async handleSharedGroups(client: Client, sharedAccounts: LDAPGroup[]) {
+  private static async handleSharedGroups(manager: EntityManager, client: Client, sharedAccounts: LDAPGroup[]) {
     const promises: Promise<void>[] = [];
 
     sharedAccounts.forEach((shared) => {
       // Extract members
-      promises.push(this.getLDAPGroupMembers(client, shared.dn).then(async (result) => {
+      promises.push(ADService.getLDAPGroupMembers(client, shared.dn).then(async (result) => {
         const members: LDAPUser[] = result.searchEntries.map((u) => ADService.userFromLDAP(u));
         await LDAPAuthenticator.findOne({ where: { UUID: shared.objectGUID }, relations: ['user'] }).then(async (auth) => {
-          if (auth) await ADService.setSharedUsers(auth.user, members);
+          if (auth) await ADService.setSharedUsers(manager, auth.user, members);
         });
       }));
     });
@@ -235,7 +234,7 @@ export default class ADService {
     await this.asyncForEach<LDAPResponse>(unexisting, wrapInManager(ADService.toSharedUser));
 
     // Adds users to the shared groups.
-    await this.handleSharedGroups(client, sharedAccounts);
+    await wrapInManager(ADService.handleSharedGroups)(client, sharedAccounts);
   }
 
   /**

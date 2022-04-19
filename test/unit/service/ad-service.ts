@@ -31,8 +31,6 @@ import LDAPAuthenticator from '../../../src/entity/authenticator/ldap-authentica
 import AuthenticationService from '../../../src/service/authentication-service';
 import wrapInManager from '../../../src/helpers/database';
 import MemberAuthenticator from '../../../src/entity/authenticator/member-authenticator';
-import Gewis from '../../../src/gewis/gewis';
-import RoleManager from '../../../src/rbac/role-manager';
 
 chai.use(deepEqualInAnyOrder);
 
