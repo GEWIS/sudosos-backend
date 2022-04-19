@@ -67,7 +67,7 @@ export default class ADService {
    */
   public static async getUsers(manager: EntityManager, ldapUsers: LDAPUser[],
     createIfNew = false): Promise<User[]> {
-    if (createIfNew) await this.createAccountIfNew(manager, ldapUsers);
+    if (createIfNew) await ADService.createAccountIfNew(manager, ldapUsers);
     const authenticators = (await LDAPAuthenticator.find({ where: ldapUsers.map((u) => ({ UUID: u.objectGUID })), relations: ['user'] }));
     return authenticators.map((u) => u.user);
   }
