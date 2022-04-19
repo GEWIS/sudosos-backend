@@ -40,6 +40,7 @@ import RBACService from '../service/rbac-service';
 import { isFail } from '../helpers/specification-validation';
 import verifyUpdatePinRequest from './request/validators/update-pin-request-spec';
 import UpdatePinRequest from './request/update-pin-request';
+import {parseUserToResponse} from "../helpers/entity-to-response";
 
 export default class UserController extends BaseController {
   private logger: Logger = log4js.getLogger('UserController');
@@ -124,6 +125,10 @@ export default class UserController extends BaseController {
         POST: {
           policy: async () => true,
           handler: this.authenticateAsUser.bind(this),
+        },
+        GET: {
+          policy: async () => true,
+          handler: this.getUserAuthenticatable.bind(this),
         },
       },
       '/:id(\\d+)/products': {
@@ -912,6 +917,40 @@ export default class UserController extends BaseController {
       res.status(200).json(token);
     } catch (error) {
       this.logger.error('Could not authenticate as user:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Get all users that the user can authenticate as
+   * @route GET /users/{id}/authenticate
+   * @group users - Operations of user controller
+   * @param {integer} id.path.required - The id of the user to get authentications of
+   * @security JWT
+   * @returns {string} 404 - User not found error.
+   * @param {integer} take.query - How many users the endpoint should return
+   * @param {integer} skip.query - How many users should be skipped (for pagination)
+   * @returns {Array<UserResponse>} 200 - A list of all users the given ID can authenticate
+   */
+  public async getUserAuthenticatable(req: RequestWithToken, res: Response): Promise<void> {
+    const parameters = req.params;
+    this.logger.trace('Get authenticatable users of user', parameters, 'by user', req.token.user);
+
+    try {
+      // Get the user object if it exists
+      const user = await User.findOne(parameters.id, { where: { deleted: false } });
+      // If it does not exist, return a 404 error
+      if (user === undefined) {
+        res.status(404).json('Unknown user ID.');
+        return;
+      }
+
+      // Extract from member authenticator table.
+      const authenticators = await MemberAuthenticator.find({ where: { user }, relations: ['authenticateAs'] });
+      const users = authenticators.map((auth) => parseUserToResponse(auth.authenticateAs));
+      res.status(200).json(users);
+    } catch (error) {
+      this.logger.error('Could not get authenticatable of user:', error);
       res.status(500).json('Internal server error.');
     }
   }
