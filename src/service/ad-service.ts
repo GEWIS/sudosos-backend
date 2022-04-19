@@ -17,15 +17,13 @@
  */
 
 import { Client } from 'ldapts';
-import log4js, { Logger } from 'log4js';
 import { EntityManager } from 'typeorm';
 import LDAPAuthenticator, { LDAPUser } from '../entity/authenticator/ldap-authenticator';
 import User, { UserType } from '../entity/user/user';
 import wrapInManager from '../helpers/database';
-// eslint-disable-next-line import/no-cycle
+import { bindUser, getLDAPConnection, userFromLDAP } from '../helpers/ad';
 import AuthenticationService from './authentication-service';
-// eslint-disable-next-line import/no-cycle
-import Gewis from '../gewis/gewis';
+import Bindings from '../helpers/bindings';
 
 interface LDAPResponse {
   objectGUID: string,
@@ -38,81 +36,6 @@ export interface LDAPGroup extends LDAPResponse {
 }
 
 export default class ADService {
-  /**
-   * Wrapper for the LDAP environment variables.
-   */
-  public static getLDAPSettings() {
-    return {
-      url: process.env.LDAP_SERVER_URL,
-      reader: process.env.LDAP_BIND_USER,
-      readerPassword: process.env.LDAP_BIND_PW,
-      base: process.env.LDAP_BASE,
-      userFilter: process.env.LDAP_USER_FILTER,
-    };
-  }
-
-  /**
-   * Wrapper for typing the untyped ldap result.
-   * @param ldapResult - Search result to type
-   */
-  public static userFromLDAP(ldapResult: any): LDAPUser {
-    const {
-      dn, memberOfFlattened, givenName, sn,
-      objectGUID, sAMAccountName, mail, employeeNumber,
-    } = ldapResult;
-    return {
-      dn,
-      memberOfFlattened,
-      givenName,
-      sn,
-      objectGUID,
-      sAMAccountName,
-      mail,
-      mNumber: employeeNumber,
-    };
-  }
-
-  /**
-   * Function that takes a valid ADUser response and binds it
-   * to a existing User such that the AD user can authenticate as the existing user.
-   * @param manager - Transaction manager.
-   * @param ADUser - The AD user to bind.
-   * @param user - The User to bind to.
-   */
-  public static async bindUser(manager: EntityManager, ADUser: { objectGUID: string }, user: User)
-    : Promise<LDAPAuthenticator> {
-    const auth = Object.assign(new LDAPAuthenticator(), {
-      user,
-      UUID: ADUser.objectGUID,
-    }) as LDAPAuthenticator;
-    await manager.save(auth);
-    return auth;
-  }
-
-  /**
-   * Makes and bind an LDAP connection.
-   */
-  public static async getLDAPConnection(): Promise<Client> {
-    const logger: Logger = log4js.getLogger('LDAP');
-    logger.level = process.env.LOG_LEVEL;
-
-    const ldapSettings = ADService.getLDAPSettings();
-
-    const client = new Client({
-      url: ldapSettings.url,
-    });
-
-    // Bind LDAP Reader
-    try {
-      await client.bind(ldapSettings.reader, ldapSettings.readerPassword);
-    } catch (error) {
-      logger.error(`Could not bind LDAP reader: ${ldapSettings.reader} err: ${String(error)}`);
-      return undefined;
-    }
-
-    return client;
-  }
-
   /**
    * Creates and binds an Shared (Organ) group to an actual User
    * @param manager - Transaction Manager.
@@ -127,7 +50,7 @@ export default class ADService {
     }) as User;
 
     await manager.save(account).then(async (acc) => {
-      await ADService.bindUser(manager, sharedUser, acc);
+      await bindUser(manager, sharedUser, acc);
     });
   }
 
@@ -138,7 +61,7 @@ export default class ADService {
   public static async createAccountIfNew(manager: EntityManager, ldapUsers: LDAPUser[]) {
     const filtered = await this.filterUnboundGUID(ldapUsers);
     const createUser = async (ADUsers: LDAPUser[]): Promise<any> => {
-      ADUsers.forEach((u) => Gewis.findOrCreateGEWISUserAndBind(manager, u));
+      ADUsers.forEach((u) => Bindings.ldapUserCreation(manager, u));
     };
     await createUser(filtered as LDAPUser[]);
   }
@@ -149,7 +72,8 @@ export default class ADService {
    * @param ldapUsers - LDAP user object to get users for.
    * @param createIfNew - Boolean if unknown users should be created.
    */
-  public static async getUsers(manager: EntityManager, ldapUsers: LDAPUser[], createIfNew = false): Promise<User[]> {
+  public static async getUsers(manager: EntityManager, ldapUsers: LDAPUser[],
+    createIfNew = false): Promise<User[]> {
     if (createIfNew) await this.createAccountIfNew(manager, ldapUsers);
     const authenticators = (await LDAPAuthenticator.find({ where: ldapUsers.map((u) => ({ UUID: u.objectGUID })), relations: ['user'] }));
     return authenticators.map((u) => u.user);
@@ -201,13 +125,14 @@ export default class ADService {
    * @param client - The LDAP client
    * @param sharedAccounts - Accounts to give access
    */
-  private static async handleSharedGroups(manager: EntityManager, client: Client, sharedAccounts: LDAPGroup[]) {
+  private static async handleSharedGroups(manager: EntityManager,
+    client: Client, sharedAccounts: LDAPGroup[]) {
     const promises: Promise<void>[] = [];
 
     sharedAccounts.forEach((shared) => {
       // Extract members
       promises.push(ADService.getLDAPGroupMembers(client, shared.dn).then(async (result) => {
-        const members: LDAPUser[] = result.searchEntries.map((u) => ADService.userFromLDAP(u));
+        const members: LDAPUser[] = result.searchEntries.map((u) => userFromLDAP(u));
         await LDAPAuthenticator.findOne({ where: { UUID: shared.objectGUID }, relations: ['user'] }).then(async (auth) => {
           if (auth) await ADService.setSharedUsers(manager, auth.user, members);
         });
@@ -222,7 +147,7 @@ export default class ADService {
    */
   public static async syncSharedAccounts() {
     if (!process.env.LDAP_SERVER_URL) return;
-    const client = await this.getLDAPConnection();
+    const client = await getLDAPConnection();
 
     const sharedAccounts = await this.getLDAPGroups<LDAPGroup>(
       client, process.env.LDAP_SHARED_ACCOUNT_FILTER,

@@ -29,9 +29,10 @@ import RoleManager from '../rbac/role-manager';
 import LDAPAuthenticator, { LDAPUser } from '../entity/authenticator/ldap-authenticator';
 import { asNumber } from '../helpers/validators';
 import { parseUserToResponse } from '../helpers/entity-to-response';
-// eslint-disable-next-line import/no-cycle
-import ADService from './ad-service';
 import MemberAuthenticator from '../entity/authenticator/member-authenticator';
+import {
+  bindUser, getLDAPConnection, getLDAPSettings, userFromLDAP,
+} from '../helpers/ad';
 
 export interface AuthenticationContext {
   tokenHandler: TokenHandler,
@@ -89,7 +90,7 @@ export default class AuthenticationService {
     let user: User;
 
     await manager.save(account).then(async (acc) => {
-      const auth = await ADService.bindUser(manager, ADUser, acc);
+      const auth = await bindUser(manager, ADUser, acc);
       user = auth.user;
     });
 
@@ -134,8 +135,8 @@ export default class AuthenticationService {
     const logger: Logger = log4js.getLogger('LDAP');
     logger.level = process.env.LOG_LEVEL;
 
-    const ldapSettings = ADService.getLDAPSettings();
-    const client = await ADService.getLDAPConnection();
+    const ldapSettings = getLDAPSettings();
+    const client = await getLDAPConnection();
 
     if (!client) {
       return undefined;
@@ -154,7 +155,7 @@ export default class AuthenticationService {
         filter: filterstr,
       });
       if (searchEntries[0]) {
-        ADUser = ADService.userFromLDAP(searchEntries[0]);
+        ADUser = userFromLDAP(searchEntries[0]);
       } else {
         logger.trace(`User ${uid} not found in DB`);
         return undefined;

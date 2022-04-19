@@ -59,6 +59,7 @@ import InvoiceController from './controller/invoice-controller';
 import PayoutRequestController from './controller/payout-request-controller';
 import RootController from './controller/root-controller';
 import ADService from './service/ad-service';
+import Bindings from './helpers/bindings';
 
 export class Application {
   app: express.Express;
@@ -151,6 +152,9 @@ async function setupAuthentication(tokenHandler: TokenHandler, application: Appl
     process.env.GEWISWEB_JWT_SECRET,
   );
   application.app.use('/v1/authentication', gewisController.getRouter());
+
+  // INJECT GEWIS BINDINGS
+  Bindings.ldapUserCreation = Gewis.findOrCreateGEWISUserAndBind;
 
   // Define middleware to be used by any other route.
   const tokenMiddleware = new TokenMiddleware({ refreshFactor: 0.5, tokenHandler });

@@ -21,13 +21,12 @@ import User, { UserType } from '../entity/user/user';
 import RoleManager from '../rbac/role-manager';
 import { LDAPUser } from '../entity/authenticator/ldap-authenticator';
 import GewisUser from '../entity/user/gewis-user';
-// eslint-disable-next-line import/no-cycle
 import AuthenticationService from '../service/authentication-service';
 import { asNumber } from '../helpers/validators';
-// eslint-disable-next-line import/no-cycle
 import ADService, { LDAPGroup } from '../service/ad-service';
 import AssignedRole from '../entity/roles/assigned-role';
-import wrapInManager from "../helpers/database";
+import wrapInManager from '../helpers/database';
+import { bindUser, getLDAPConnection, userFromLDAP } from '../helpers/ad';
 
 /**
  * The GEWIS-specific module with definitions and helper functions.
@@ -63,7 +62,7 @@ export default class Gewis {
       gewisUser = await GewisUser.findOne({ where: { gewisId }, relations: ['user'] });
       if (gewisUser) {
         // If user exists we only have to bind the AD user
-        await ADService.bindUser(manager, ADUser, gewisUser.user);
+        await bindUser(manager, ADUser, gewisUser.user);
       } else {
         // If m-account does not exist we create an account and bind it.
         gewisUser = await AuthenticationService
@@ -105,7 +104,8 @@ export default class Gewis {
    * @param role - Name of the role
    * @param users - LDAPUsers to give the role to
    */
-  public static async addUsersToRole(manager: EntityManager, roleManager: RoleManager, role: string, users: LDAPUser[]) {
+  public static async addUsersToRole(manager: EntityManager, roleManager: RoleManager,
+    role: string, users: LDAPUser[]) {
     const members = await ADService.getUsers(manager, users, true);
     await roleManager.setRoleUsers(members, role);
   }
@@ -116,12 +116,13 @@ export default class Gewis {
    * @param client - LDAP Client connection
    * @param roles - Roles returned from LDAP
    */
-  private static async handleADRoles(manager: EntityManager, roleManager: RoleManager, client: Client, roles: LDAPGroup[]) {
+  private static async handleADRoles(manager: EntityManager, roleManager: RoleManager,
+    client: Client, roles: LDAPGroup[]) {
     const promises: Promise<any>[] = [];
     roles.forEach((role) => {
       if (roleManager.containsRole(role.cn)) {
         promises.push(ADService.getLDAPGroupMembers(client, role.dn).then(async (result) => {
-          const members: LDAPUser[] = result.searchEntries.map((u) => ADService.userFromLDAP(u));
+          const members: LDAPUser[] = result.searchEntries.map((u) => userFromLDAP(u));
           await Gewis.addUsersToRole(manager, roleManager, role.cn, members);
         }));
       }
@@ -136,7 +137,7 @@ export default class Gewis {
    */
   public static async syncUserRoles(roleManager: RoleManager) {
     if (!process.env.LDAP_SERVER_URL) return;
-    const client = await ADService.getLDAPConnection();
+    const client = await getLDAPConnection();
 
     const roles = await ADService.getLDAPGroups<LDAPGroup>(client, process.env.LDAP_ROLE_FILTER);
     if (!roles) return;
