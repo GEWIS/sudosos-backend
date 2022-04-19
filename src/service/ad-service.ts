@@ -212,7 +212,7 @@ export default class ADService {
 
     const { searchEntries } = await ADService.getLDAPGroupMembers(client, 'CN=PRIV - SudoSOS Users,OU=SudoSOS Roles,OU=Groups,DC=gewiswg,DC=gewis,DC=nl');
     const users = searchEntries.map((entry) => userFromLDAP(entry));
-    wrapInManager(ADService.getUsers)(users, true);
+    await wrapInManager(ADService.getUsers)(users, true);
   }
 
   /**

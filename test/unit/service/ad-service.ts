@@ -54,6 +54,7 @@ describe('AuthenticationService', (): void => {
     process.env.LDAP_BIND_USER = 'CN=Service account SudoSOS,OU=Service Accounts,OU=Special accounts,DC=gewiswg,DC=gewis,DC=nl';
     process.env.LDAP_BIND_PW = 'awmiUGtZCzvv7s';
     process.env.LLDAP_SHARED_ACCOUNT_FILTER = 'OU=SudoSOS Shared Accounts,OU=Groups,DC=GEWISWG,DC=GEWIS,DC=NL';
+    process.env.ENABLE_LDAP = 'true';
 
     const connection = await Database.initialize();
     const app = express();
