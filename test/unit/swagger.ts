@@ -26,6 +26,7 @@ describe('Swagger', (): void => {
   };
 
   before('create app', async () => {
+    process.env.ENABLE_LDAP = undefined;
     ctx = {
       app: await createApp(),
     };
