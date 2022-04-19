@@ -104,7 +104,7 @@ export default class AuthenticationService {
    * @param pin - PIN Code to set, must be a valid 4 number string.
    */
   public static async setUserPINCode(user: User, pin: string): Promise<PinAuthenticator> {
-    let authenticator = await PinAuthenticator.findOne({ where: { user } });
+    let authenticator = await PinAuthenticator.findOne({ where: { user }, relations: ['user'] });
     const hashedPin = await this.hashPassword(pin);
 
     if (authenticator) {

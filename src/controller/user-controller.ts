@@ -37,6 +37,9 @@ import MemberAuthenticator from '../entity/authenticator/member-authenticator';
 import AuthenticationService, { AuthenticationContext } from '../service/authentication-service';
 import TokenHandler from '../authentication/token-handler';
 import RBACService from '../service/rbac-service';
+import { isFail } from '../helpers/specification-validation';
+import verifyUpdatePinRequest from './request/validators/update-pin-request-spec';
+import UpdatePinRequest from './request/update-pin-request';
 
 export default class UserController extends BaseController {
   private logger: Logger = log4js.getLogger('UserController');
@@ -87,7 +90,16 @@ export default class UserController extends BaseController {
           handler: this.getAllUsersOfUserType.bind(this),
         },
       },
-      '/:id': {
+      '/:id(\\d+)/pin': {
+        PUT: {
+          body: { modelName: 'UpdatePinRequest' },
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'update', UserController.getRelation(req), 'Authenticator', ['pin'],
+          ),
+          handler: this.updateUserPin.bind(this),
+        },
+      },
+      '/:id(\\d+)': {
         GET: {
           policy: async (req) => this.roleManager.can(
             req.token.roles, 'get', UserController.getRelation(req), 'User', ['*'],
@@ -108,13 +120,13 @@ export default class UserController extends BaseController {
           handler: this.updateUser.bind(this),
         },
       },
-      '/:id/authenticate': {
+      '/:id(\\d+)/authenticate': {
         POST: {
           policy: async () => true,
           handler: this.authenticateAsUser.bind(this),
         },
       },
-      '/:id/products': {
+      '/:id(\\d+)/products': {
         GET: {
           policy: async (req) => this.roleManager.can(
             req.token.roles, 'get', UserController.getRelation(req), 'Product', ['*'],
@@ -122,13 +134,13 @@ export default class UserController extends BaseController {
           handler: this.getUsersProducts.bind(this),
         },
       },
-      '/:id/roles': {
+      '/:id(\\d+)/roles': {
         GET: {
           policy: async () => true,
           handler: this.getUserRoles.bind(this),
         },
       },
-      '/:id/products/updated': {
+      '/:id(\\d+)/products/updated': {
         GET: {
           policy: async (req) => this.roleManager.can(
             req.token.roles, 'get', UserController.getRelation(req), 'Product', ['*'],
@@ -136,7 +148,7 @@ export default class UserController extends BaseController {
           handler: this.getUsersUpdatedProducts.bind(this),
         },
       },
-      '/:id/containers': {
+      '/:id(\\d+)/containers': {
         GET: {
           policy: async (req) => this.roleManager.can(
             req.token.roles, 'get', UserController.getRelation(req), 'Container', ['*'],
@@ -144,7 +156,7 @@ export default class UserController extends BaseController {
           handler: this.getUsersContainers.bind(this),
         },
       },
-      '/:id/containers/updated': {
+      '/:id(\\d+)/containers/updated': {
         GET: {
           policy: async (req) => this.roleManager.can(
             req.token.roles, 'get', UserController.getRelation(req), 'Container', ['*'],
@@ -152,7 +164,7 @@ export default class UserController extends BaseController {
           handler: this.getUsersUpdatedContainers.bind(this),
         },
       },
-      '/:id/pointsofsale': {
+      '/:id(\\d+)/pointsofsale': {
         GET: {
           policy: async (req) => this.roleManager.can(
             req.token.roles, 'get', UserController.getRelation(req), 'PointOfSale', ['*'],
@@ -160,7 +172,7 @@ export default class UserController extends BaseController {
           handler: this.getUsersPointsOfSale.bind(this),
         },
       },
-      '/:id/pointsofsale/updated': {
+      '/:id(\\d+)/pointsofsale/updated': {
         GET: {
           policy: async (req) => this.roleManager.can(
             req.token.roles, 'get', UserController.getRelation(req), 'PointOfSale', ['*'],
@@ -168,7 +180,7 @@ export default class UserController extends BaseController {
           handler: this.getUsersUpdatedPointsOfSale.bind(this),
         },
       },
-      '/:id/transactions': {
+      '/:id(\\d+)/transactions': {
         GET: {
           policy: async (req) => this.roleManager.can(
             req.token.roles, 'get', UserController.getRelation(req), 'Transaction', ['*'],
@@ -176,7 +188,7 @@ export default class UserController extends BaseController {
           handler: this.getUsersTransactions.bind(this),
         },
       },
-      '/:id/transfers': {
+      '/:id(\\d+)/transfers': {
         GET: {
           policy: async (req) => this.roleManager.can(
             req.token.roles, 'get', UserController.getRelation(req), 'Transfer', ['*'],
@@ -279,6 +291,46 @@ export default class UserController extends BaseController {
       res.status(200).json(result);
     } catch (error) {
       this.logger.error('Could not get users:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Put an users pin code
+   * @route PUT /users/{id}/pin
+   * @group users - Operations of user controller
+   * @param {integer} id.path.required - The id of the user
+   * @param {UpdatePinRequest.model} update.body.required -
+   *    The PIN code to update to
+   * @security JWT
+   * @returns 200 - Update success
+   * @returns {string} 400 - Validation Error
+   * @returns {string} 404 - Nonexistent user id
+   */
+  public async updateUserPin(req: RequestWithToken, res: Response): Promise<void> {
+    const parameters = req.params;
+    const updatePinRequest = req.body as UpdatePinRequest;
+    this.logger.trace('Update user pin', parameters, 'by user', req.token.user);
+
+    try {
+      // Get the user object if it exists
+      const user = await User.findOne(parameters.id, { where: { deleted: false } });
+      // If it does not exist, return a 404 error
+      if (user === undefined) {
+        res.status(404).json('Unknown user ID.');
+        return;
+      }
+
+      const validation = await verifyUpdatePinRequest(updatePinRequest);
+      if (isFail(validation)) {
+        res.status(400).json(validation.fail.value);
+        return;
+      }
+
+      await AuthenticationService.setUserPINCode(user, updatePinRequest.pin.toString());
+      res.status(200).json();
+    } catch (error) {
+      this.logger.error('Could not update pin:', error);
       res.status(500).json('Internal server error.');
     }
   }

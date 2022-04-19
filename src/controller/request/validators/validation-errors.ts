@@ -46,3 +46,5 @@ export const INVOICE_IS_DELETED = () => new ValidationError('Invoice is deleted.
 export const SAME_INVOICE_STATE = () => new ValidationError('Update state is same as current state.');
 
 export const SUBTRANSACTION_ALREADY_INVOICED = (ids: number[]) => new ValidationError(`SubTransactions ${ids}: have already been invoiced.`);
+
+export const INVALID_PIN = () => new ValidationError('PIN is not 4 numbers');

@@ -30,7 +30,11 @@ export class ValidationError implements Joinable {
   }
 
   join(right: ValidationError): ValidationError {
-    this.value += ` ${right.value}`;
+    if (this.value.length > 0) {
+      this.value += ` ${right.value}`;
+    } else {
+      this.value = right.value;
+    }
     return this;
   }
 }

@@ -17,11 +17,9 @@
  */
 
 /**
- * @typedef GEWISAuthenticationPinRequest
- * @property {number} gewisId.required
- * @property {string} pin.required
+ * @typedef UpdatePinRequest
+ * @property {string} pin.required - The PIN code to set
  */
-export default interface GEWISAuthenticationPinRequest {
-  gewisId: number,
+export default interface UpdatePinRequest {
   pin: string,
 }
