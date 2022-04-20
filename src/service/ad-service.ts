@@ -52,9 +52,11 @@ export default class ADService {
    * @param ldapUsers
    */
   public static async createAccountIfNew(manager: EntityManager, ldapUsers: LDAPUser[]) {
-    const filtered = await this.filterUnboundGUID(ldapUsers);
+    const filtered = await ADService.filterUnboundGUID(ldapUsers);
     const createUser = async (ADUsers: LDAPUser[]): Promise<any> => {
-      ADUsers.forEach((u) => Bindings.ldapUserCreation(manager, u));
+      const promises: Promise<User>[] = [];
+      ADUsers.forEach((u) => promises.push(Bindings.ldapUserCreation(manager, u)));
+      await Promise.all(promises);
     };
     await createUser(filtered as LDAPUser[]);
   }
@@ -210,7 +212,8 @@ export default class ADService {
     if (!process.env.ENABLE_LDAP) return;
     const client = await getLDAPConnection();
 
-    const { searchEntries } = await ADService.getLDAPGroupMembers(client, 'CN=PRIV - SudoSOS Users,OU=SudoSOS Roles,OU=Groups,DC=gewiswg,DC=gewis,DC=nl');
+    const { searchEntries } = await ADService.getLDAPGroupMembers(client,
+      process.env.LDAP_USER_BASE);
     const users = searchEntries.map((entry) => userFromLDAP(entry));
     await wrapInManager(ADService.getUsers)(users, true);
   }

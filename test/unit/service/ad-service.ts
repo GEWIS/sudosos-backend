@@ -31,6 +31,10 @@ import LDAPAuthenticator from '../../../src/entity/authenticator/ldap-authentica
 import AuthenticationService from '../../../src/service/authentication-service';
 import wrapInManager from '../../../src/helpers/database';
 import MemberAuthenticator from '../../../src/entity/authenticator/member-authenticator';
+import { LDAPGroup, LDAPResponse } from '../../../src/helpers/ad';
+import userIsAsExpected from './authentication-service';
+import RoleManager from '../../../src/rbac/role-manager';
+import AssignedRole from '../../../src/entity/roles/assigned-role';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -40,7 +44,7 @@ describe('AuthenticationService', (): void => {
     app: Application,
     users: User[],
     spec: SwaggerSpecification,
-    validADUser: any,
+    validADUser: (mNumber: number) => (LDAPResponse),
   };
 
   const stubs: sinon.SinonStub[] = [];
@@ -52,9 +56,11 @@ describe('AuthenticationService', (): void => {
     process.env.LDAP_BASE = 'DC=gewiswg,DC=gewis,DC=nl';
     process.env.LDAP_USER_FILTER = '(&(objectClass=user)(objectCategory=person)(memberOf:1.2.840.113556.1.4.1941:=CN=PRIV - SudoSOS Users,OU=Privileges,OU=Groups,DC=gewiswg,DC=gewis,DC=nl)(mail=*)(sAMAccountName=%u))';
     process.env.LDAP_BIND_USER = 'CN=Service account SudoSOS,OU=Service Accounts,OU=Special accounts,DC=gewiswg,DC=gewis,DC=nl';
-    process.env.LDAP_BIND_PW = 'awmiUGtZCzvv7s';
-    process.env.LLDAP_SHARED_ACCOUNT_FILTER = 'OU=SudoSOS Shared Accounts,OU=Groups,DC=GEWISWG,DC=GEWIS,DC=NL';
+    process.env.LDAP_BIND_PW = 'BIND PW';
+    process.env.LDAP_SHARED_ACCOUNT_FILTER = 'OU=SudoSOS Shared Accounts,OU=Groups,DC=GEWISWG,DC=GEWIS,DC=NL';
+    process.env.LDAP_ROLE_FILTER = 'OU=SudoSOS Roles,OU=Groups,DC=GEWISWG,DC=GEWIS,DC=NL';
     process.env.ENABLE_LDAP = 'true';
+    process.env.LDAP_USER_BASE = 'CN=PRIV - SudoSOS Users,OU=SudoSOS Roles,OU=Groups,DC=gewiswg,DC=gewis,DC=nl';
 
     const connection = await Database.initialize();
     const app = express();
@@ -66,17 +72,18 @@ describe('AuthenticationService', (): void => {
       },
     );
 
-    const validADUser = {
-      dn: 'CN=Sudo SOS (m4141),OU=Member accounts,DC=gewiswg,DC=gewis,DC=nl',
+    const validADUser = (mNumber: number) => ({
+      dn: `CN=Sudo SOS (m${mNumber}),OU=Member accounts,DC=gewiswg,DC=gewis,DC=nl`,
       memberOfFlattened: [
         'CN=Domain Users,CN=Users,DC=gewiswg,DC=gewis,DC=nl',
       ],
-      givenName: 'Sudo',
+      givenName: `Sudo (${mNumber})`,
       sn: 'SOS',
-      objectGUID: '1',
-      sAMAccountName: 'm4141',
-      mail: 'm4141@gewis.nl',
-    };
+      objectGUID: `${mNumber}`,
+      sAMAccountName: `m${mNumber}`,
+      mail: `m${mNumber}@gewis.nl`,
+      whenChanged: '202204151213.0Z',
+    }) as LDAPResponse;
 
     ctx = {
       connection,
@@ -88,6 +95,7 @@ describe('AuthenticationService', (): void => {
   });
 
   after(async () => {
+    process.env.ENABLE_LDAP = undefined;
     await ctx.connection.close();
   });
 
@@ -286,10 +294,110 @@ describe('AuthenticationService', (): void => {
       expect(canAuthenticateAsIDs).to.deep.equalInAnyOrder(currentMemberIDs);
     });
   });
-  // describe('syncUserRoles', () => {
-  //   it('should get all roles from LDAP', async () => {
-  //     // const roleManager = new RoleManager();
-  //     // await Gewis.syncUserRoles(roleManager);
-  //   });
-  // });
+  describe('createAccountIfNew function', () => {
+    it('should create an account if GUID is unknown to DB', async () => {
+      const adUser = { ...(ctx.validADUser(await User.count() + 200)) };
+      // precondition.
+      expect(await LDAPAuthenticator.findOne(
+        { where: { UUID: adUser.objectGUID } },
+      )).to.be.undefined;
+
+      const userCount = await User.count();
+      await wrapInManager(ADService.createAccountIfNew)([adUser]);
+
+      expect(await User.count()).to.be.equal(userCount + 1);
+      const auth = (await LDAPAuthenticator.findOne(
+        { where: { UUID: adUser.objectGUID }, relations: ['user'] },
+      ));
+      expect(auth).to.exist;
+      const { user } = auth;
+      userIsAsExpected(user, adUser);
+    });
+  });
+  describe('syncUserRoles function', () => {
+    it('should assign roles to members of the group in AD', async () => {
+      process.env.ENABLE_LDAP = 'true';
+
+      const newUser = { ...(ctx.validADUser(await User.count() + 2)) };
+      const existingUser = { ...(ctx.validADUser(await User.count() + 3)) };
+
+      await wrapInManager(ADService.createAccountIfNew)([existingUser]);
+      // precondition.
+      expect(await LDAPAuthenticator.findOne(
+        { where: { UUID: newUser.objectGUID } },
+      )).to.be.undefined;
+      expect(await LDAPAuthenticator.findOne(
+        { where: { UUID: existingUser.objectGUID } },
+      )).to.exist;
+
+      const roleGroup: LDAPGroup = {
+        cn: 'SudoSOS - Test',
+        displayName: 'Test group',
+        dn: 'CN=PRIV - SudoSOS Test,OU=SudoSOS Roles,OU=Groups,DC=gewiswg,DC=gewis,DC=nl',
+        objectGUID: '1234',
+        whenChanged: '',
+      };
+
+      const clientBindStub = sinon.stub(Client.prototype, 'bind').resolves(null);
+      const clientSearchStub = sinon.stub(Client.prototype, 'search');
+
+      clientSearchStub.withArgs(process.env.LDAP_ROLE_FILTER, {
+        filter: '(CN=*)',
+      }).resolves({ searchReferences: [], searchEntries: [roleGroup as any] });
+
+      clientSearchStub.withArgs(process.env.LDAP_BASE, {
+        filter: `(&(objectClass=user)(objectCategory=person)(memberOf:1.2.840.113556.1.4.1941:=${roleGroup.dn}))`,
+      })
+        .resolves({ searchReferences: [], searchEntries: [newUser as any, existingUser as any] });
+
+      stubs.push(clientBindStub);
+      stubs.push(clientSearchStub);
+
+      const roleManager = new RoleManager();
+
+      roleManager.registerRole({
+        name: 'SudoSOS - Test',
+        permissions: {
+        },
+        assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: 'SudoSOS - Test', user } }) !== undefined,
+      });
+
+      await ADService.syncUserRoles(roleManager);
+      const auth = (await LDAPAuthenticator.findOne(
+        { where: { UUID: newUser.objectGUID }, relations: ['user'] },
+      ));
+      expect(auth).to.exist;
+      const { user } = auth;
+      userIsAsExpected(user, newUser);
+
+      const users = await wrapInManager(ADService.getUsers)([newUser, existingUser]);
+      expect(await AssignedRole.findOne({ where: { role: 'SudoSOS - Test', user: users[0] } })).to.exist;
+      expect(await AssignedRole.findOne({ where: { role: 'SudoSOS - Test', user: users[1] } })).to.exist;
+    });
+  });
+  describe('syncUsers function', () => {
+    it('should create new users if needed', async () => {
+      process.env.ENABLE_LDAP = 'true';
+
+      const newUser = { ...(ctx.validADUser(await User.count() + 23)) };
+      const clientBindStub = sinon.stub(Client.prototype, 'bind').resolves(null);
+      const clientSearchStub = sinon.stub(Client.prototype, 'search');
+
+      clientSearchStub.withArgs(process.env.LDAP_BASE, {
+        filter: `(&(objectClass=user)(objectCategory=person)(memberOf:1.2.840.113556.1.4.1941:=${process.env.LDAP_USER_BASE}))`,
+      })
+        .resolves({ searchReferences: [], searchEntries: [newUser as any] });
+
+      stubs.push(clientBindStub);
+      stubs.push(clientSearchStub);
+
+      await ADService.syncUsers();
+      const auth = (await LDAPAuthenticator.findOne(
+        { where: { UUID: newUser.objectGUID }, relations: ['user'] },
+      ));
+      expect(auth).to.exist;
+      const { user } = auth;
+      userIsAsExpected(user, newUser);
+    });
+  });
 });

@@ -132,8 +132,7 @@ export default class ProductController extends BaseController {
     // Handle request
     try {
       const products = await ProductService.getProducts({}, { take, skip });
-      console.error(products);
-      res.json(products);
+      res.status(200).json(products);
     } catch (error) {
       this.logger.error('Could not return all products:', error);
       res.status(500).json('Internal server error.');

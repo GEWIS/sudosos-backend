@@ -127,7 +127,9 @@ export default class UserController extends BaseController {
           handler: this.authenticateAsUser.bind(this),
         },
         GET: {
-          policy: async () => true,
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'get', UserController.getRelation(req), 'Authenticator', ['*'],
+          ),
           handler: this.getUserAuthenticatable.bind(this),
         },
       },
@@ -141,7 +143,9 @@ export default class UserController extends BaseController {
       },
       '/:id(\\d+)/roles': {
         GET: {
-          policy: async () => true,
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'get', UserController.getRelation(req), 'Roles', ['*'],
+          ),
           handler: this.getUserRoles.bind(this),
         },
       },
@@ -959,8 +963,7 @@ export default class UserController extends BaseController {
    * @group users - Operations of user controller
    * @param {integer} id.path.required - The id of the user to get the roles from
    * @security JWT
-   * @returns {string} 200 - The roles of the user
-   * @returns {string} 400 - Validation error.
+   * @returns {Array<RoleResponse>} 200 - The roles of the user
    * @returns {string} 404 - User not found error.
    */
   public async getUserRoles(req: RequestWithToken, res: Response): Promise<void> {
