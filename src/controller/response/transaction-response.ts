@@ -92,7 +92,7 @@ export interface SubTransactionRowResponse extends BaseResponse {
 /**
  * @typedef PaginatedBaseTransactionResponse
  * @property {PaginationResult.model} _pagination - Pagination metadata
- * @property {Array<BaseTransactionResponse>} records - Returned banners
+ * @property {Array<BaseTransactionResponse.model>} records - Returned banners
  */
 export interface PaginatedBaseTransactionResponse {
   _pagination: PaginationResult,

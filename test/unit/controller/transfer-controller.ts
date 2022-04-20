@@ -20,6 +20,7 @@ import { expect, request } from 'chai';
 import dinero from 'dinero.js';
 import express, { Application, json } from 'express';
 import { Connection } from 'typeorm';
+import { SwaggerSpecification } from 'swagger-model-validator';
 import TokenHandler from '../../../src/authentication/token-handler';
 import TransferRequest from '../../../src/controller/request/transfer-request';
 import { TransferResponse } from '../../../src/controller/response/transfer-response';
@@ -42,6 +43,7 @@ describe('TransferController', async (): Promise<void> => {
   let adminAccountWithdraw: Transfer;
   let localAccountWithdraw: Transfer;
 
+  let specification: SwaggerSpecification;
   let adminToken: String;
   let token: String;
   let validRequest: TransferRequest;
@@ -109,7 +111,7 @@ describe('TransferController', async (): Promise<void> => {
 
     // start app
     app = express();
-    const specification = await Swagger.initialize(app);
+    specification = await Swagger.initialize(app);
 
     const all = { all: new Set<string>(['*']) };
     const own = { own: new Set<string>(['*']) };
@@ -151,6 +153,18 @@ describe('TransferController', async (): Promise<void> => {
   });
 
   describe('GET /transfers', () => {
+    it('should return correct model', async () => {
+      const res = await request(app)
+        .get('/transfers')
+        .set('Authorization', `Bearer ${adminToken}`);
+      expect(res.status).to.equal(200);
+      expect(specification.validateModel(
+        'Array<TransferResponse>',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
     it('should adhere to pagination', async () => {
       const take = 5;
       const skip = 3;
@@ -192,6 +206,18 @@ describe('TransferController', async (): Promise<void> => {
   });
 
   describe('GET /transfers/:id', () => {
+    it('should return correct model', async () => {
+      const res = await request(app)
+        .get(`/transfers/${localAccountWithdraw.id}`)
+        .set('Authorization', `Bearer ${adminToken}`);
+      expect(res.status).to.equal(200);
+      expect(specification.validateModel(
+        'TransferResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
     it('should return an HTTP 200 and the withdraw transfer with given id if admin', async () => {
       console.log(`/transfers/${localAccountWithdraw.id}`);
 
@@ -257,6 +283,12 @@ describe('TransferController', async (): Promise<void> => {
         .send(validRequest);
 
       expect(res.status).to.equal(200);
+      expect(specification.validateModel(
+        'TransferResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
       expect(await Transfer.count()).to.equal(transferCount + 1);
       const databaseEntry = await Transfer.findOne((res.body as TransferResponse).id);
       expect(databaseEntry).to.exist;

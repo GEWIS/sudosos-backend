@@ -100,6 +100,18 @@ describe('AuthenticationController', async (): Promise<void> => {
   });
 
   describe('POST /authentication/mock', () => {
+    it('should return correct model', async () => {
+      const res = await request(ctx.app)
+        .post('/authentication/mock')
+        .send(ctx.request);
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'AuthenticationResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
     it('should be able to create token', async () => {
       const res = await request(ctx.app)
         .post('/authentication/mock')

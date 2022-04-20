@@ -174,6 +174,18 @@ describe('UserController', (): void => {
   });
 
   describe('GET /users', () => {
+    it('should return correct model', async () => {
+      const res = await request(ctx.app)
+        .get('/users')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'PaginatedUserResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
     it('should return all users if admin', async () => {
       const res = await request(ctx.app)
         .get('/users')
@@ -224,6 +236,18 @@ describe('UserController', (): void => {
   });
 
   describe('GET /users/usertype/:userType', () => {
+    it('should return correct model', async () => {
+      const res = await request(ctx.app)
+        .get(`/users/usertype/${UserType.MEMBER}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'PaginatedUserResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
     it('should return all users of type MEMBER if admin', async () => {
       const res = await request(ctx.app)
         .get(`/users/usertype/${UserType.MEMBER}`)
@@ -301,6 +325,18 @@ describe('UserController', (): void => {
   });
 
   describe('GET /users/:id', () => {
+    it('should return correct model', async () => {
+      const res = await request(ctx.app)
+        .get(`/users/usertype/${UserType.MEMBER}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'User',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
     it('should return correct user (myself)', async () => {
       const res = await request(ctx.app)
         .get('/users/1')
@@ -362,6 +398,12 @@ describe('UserController', (): void => {
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(ctx.user);
       expect(res.status).to.equal(201);
+      expect(ctx.specification.validateModel(
+        'User',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
 
       const user = res.body as User;
       const spec = await Swagger.importSpecification();
@@ -503,6 +545,12 @@ describe('UserController', (): void => {
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send({ firstName });
       expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'User',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
 
       const user = res.body as User;
       const spec = await Swagger.importSpecification();
@@ -644,6 +692,18 @@ describe('UserController', (): void => {
   });
 
   describe('GET /users/:id/products', () => {
+    it('should return correct model', async () => {
+      const res = await request(ctx.app)
+        .get('/users/1/products')
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'PaginatedProductResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
     it('should give correct owned products for user', async () => {
       const res = await request(ctx.app)
         .get('/users/1/products')
@@ -681,6 +741,18 @@ describe('UserController', (): void => {
   });
 
   describe('GET /users/:id/containers', () => {
+    it('should return correct model', async () => {
+      const res = await request(ctx.app)
+        .get('/users/1/containers')
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'PaginatedContainerResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
     it('should give an HTTP 200 when requesting own containers', async () => {
       const res = await request(ctx.app)
         .get('/users/1/containers')
@@ -714,6 +786,18 @@ describe('UserController', (): void => {
   });
 
   describe('GET /users/:id/containers/updated', () => {
+    it('should return correct model', async () => {
+      const res = await request(ctx.app)
+        .get(`/users/${ctx.users[0].id}/containers/updated`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'PaginatedContainerResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
     it('should give an HTTP 200 when requesting own updated containers', async () => {
       const res = await request(ctx.app)
         .get(`/users/${ctx.users[0].id}/containers/updated`)
@@ -747,6 +831,18 @@ describe('UserController', (): void => {
   });
 
   describe('GET /users/:id/pointsofsale', () => {
+    it('should return correct model', async () => {
+      const res = await request(ctx.app)
+        .get('/users/1/pointsofsale')
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'PaginatedContainerResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
     it('should give an HTTP 200 when requesting own points of sale', async () => {
       const res = await request(ctx.app)
         .get('/users/1/pointsofsale')
@@ -780,6 +876,18 @@ describe('UserController', (): void => {
   });
 
   describe('GET /users/:id/pointsofsale/updated', () => {
+    it('should return correct model', async () => {
+      const res = await request(ctx.app)
+        .get(`/users/${ctx.users[0].id}/pointsofsale/updated`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'PaginatedUpdatedPointOfSaleResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
     it('should give an HTTP 200 when requesting own updated points of sale', async () => {
       const res = await request(ctx.app)
         .get(`/users/${ctx.users[0].id}/pointsofsale/updated`)
@@ -813,6 +921,19 @@ describe('UserController', (): void => {
   });
 
   describe('GET /users/:id/transactions', () => {
+    it('should return correct model', async () => {
+      const user = ctx.users[0];
+      const res = await request(ctx.app)
+        .get(`/users/${user.id}/transactions`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'PaginatedTransactionResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
     it('should give correct transactions from/to user', async () => {
       const user = ctx.users[0];
       const res = await request(ctx.app)
@@ -871,6 +992,19 @@ describe('UserController', (): void => {
     });
   });
   describe('GET /users/:id/transfers', () => {
+    it('should return correct model', async () => {
+      const user = ctx.users[0];
+      const res = await request(ctx.app)
+        .get(`/users/${user.id}/transfers`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'PaginatedTransferResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
     it('should give correct transfers from/to/created by user', async () => {
       const user = ctx.users[0];
       const res = await request(ctx.app)

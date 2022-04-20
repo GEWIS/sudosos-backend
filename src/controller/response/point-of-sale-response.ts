@@ -29,7 +29,7 @@ export interface BasePointOfSaleResponse extends BaseResponse {
 }
 /**
  * @typedef {BasePointOfSaleResponse} PointOfSaleResponse
- * @property {BaseUserResponse.model} owner.required - The owner of the point-of-sale.
+ * @property {BaseUserResponse.model} owner - The owner of the point-of-sale.
  * @property {string} startDate.required - The date starting which the POS is active
  * @property {string} endDate.required - The date at which the POS becomes inactive
  * @property {boolean} useAuthentication.required - Whether an user needs to be authenticated
@@ -46,7 +46,7 @@ export interface PointOfSaleResponse extends BasePointOfSaleResponse {
 /**
  * @typedef PaginatedPointOfSaleResponse
  * @property {PaginationResult.model} _pagination - Pagination metadata
- * @property {Array<PointOfSaleResponse>} records - Returned points of sale
+ * @property {Array<PointOfSaleResponse.model>} records - Returned points of sale
  */
 export interface PaginatedPointOfSaleResponse {
   _pagination: PaginationResult,
@@ -70,7 +70,7 @@ export interface UpdatedPointOfSaleResponse extends BasePointOfSaleResponse {
 /**
  * @typedef PaginatedUpdatedPointOfSaleResponse
  * @property {PaginationResult.model} _pagination - Pagination metadata
- * @property {Array<UpdatedPointOfSaleResponse|PointOfSaleWithContainersResponse>} records -
+ * @property {Array<UpdatedPointOfSaleResponse.model|PointOfSaleWithContainersResponse.model>} records -
  * Returned points of sale
  */
 export interface PaginatedUpdatedPointOfSaleResponse {

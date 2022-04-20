@@ -39,12 +39,12 @@ export interface BaseProductResponse extends BaseResponse {
  *  - The category the product belongs to.
  * @property {string} image - The URL to the picture representing this product.
  * @property {integer} revision - The product revision ID
- * @property {integer} alcoholPercentage - The percentage of alcohol in this product.
+ * @property {number} alcoholPercentage - The percentage of alcohol in this product.
  */
 export interface ProductResponse extends BaseProductResponse {
   owner: BaseUserResponse,
   category: ProductCategoryResponse,
-  image: String,
+  image: string,
   revision: number,
   alcoholPercentage: number,
 }
@@ -52,7 +52,7 @@ export interface ProductResponse extends BaseProductResponse {
 /**
  * @typedef PaginatedProductResponse
  * @property {PaginationResult.model} _pagination - Pagination metadata
- * @property {Array<ProductResponse>} records - Returned products
+ * @property {Array<ProductResponse.model>} records - Returned products
  */
 export interface PaginatedProductResponse {
   _pagination: PaginationResult,

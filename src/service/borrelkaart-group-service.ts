@@ -122,7 +122,7 @@ export default class BorrelkaartGroupService {
     }
 
     // parse users to user responses if users in request
-    let userResponses: UserResponse[] = null;
+    let userResponses: UserResponse[] = [];
     if (users) {
       userResponses = [];
       users.forEach((user) => {

@@ -156,6 +156,12 @@ describe('StripeController', async (): Promise<void> => {
       const paymentIntent = res.body as StripePaymentIntentResponse;
 
       expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'StripePaymentIntentResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
       expect(await StripeDeposit.count()).to.equal(stripeDepositCount + 1);
 
       ctx.specification.validateModel('StripePaymentIntentResponse', paymentIntent);
