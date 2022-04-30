@@ -29,7 +29,7 @@ import {
   PayoutRequestStatusResponse,
 } from '../controller/response/payout-request-response';
 import PayoutRequestRequest from '../controller/request/payout-request-request';
-import User from '../entity/user/user';
+import User, { UserType } from '../entity/user/user';
 import TransferService from './transfer-service';
 import { RequestWithToken } from '../middleware/token-middleware';
 import { asDate } from '../helpers/validators';
@@ -87,7 +87,7 @@ export default class PayoutRequestService {
         id: req.requestedBy.id,
         createdAt: req.requestedBy.createdAt.toISOString(),
         updatedAt: req.requestedBy.updatedAt.toISOString(),
-        type: req.requestedBy.type,
+        type: UserType[req.requestedBy.type],
         firstName: req.requestedBy.firstName,
         lastName: req.requestedBy.lastName,
         deleted: req.requestedBy.deleted,
@@ -97,7 +97,7 @@ export default class PayoutRequestService {
         id: req.approvedBy.id,
         createdAt: req.approvedBy.createdAt.toISOString(),
         updatedAt: req.approvedBy.updatedAt.toISOString(),
-        type: req.approvedBy.type,
+        type: UserType[req.approvedBy.type],
         firstName: req.approvedBy.firstName,
         lastName: req.approvedBy.lastName,
         deleted: req.approvedBy.deleted,

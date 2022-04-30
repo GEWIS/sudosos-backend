@@ -35,6 +35,8 @@ export enum UserType {
  * @property {string} firstName.required - First name of the user.
  * @property {string} lastName - Last name of the user.
  * @property {boolean} active - Whether the user has accepted the TOS. Defaults to false.
+ * @property {boolean} ofAge - Whether the user is 18+ or not.
+ * @property {string} email - The email of the user.
  * @property {boolean} deleted - Whether the user was deleted. Defaults to false.
  * @property {enum} type.required - The type of user.
  */
@@ -55,6 +57,17 @@ export default class User extends BaseEntity {
     default: false,
   })
   public active: boolean;
+
+  @Column({
+    default: false,
+  })
+  public ofAge: boolean;
+
+  @Column({
+    length: 64,
+    default: '',
+  })
+  public email: string;
 
   @Column({
     default: false,

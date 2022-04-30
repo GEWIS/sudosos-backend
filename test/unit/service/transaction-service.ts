@@ -610,7 +610,6 @@ describe('TransactionService', (): void => {
 
     it('should return transactions older than date', async () => {
       let tillDate = new Date(ctx.transactions[0].createdAt.getTime() + 1000 * 60 * 60 * 24);
-      console.log(ctx.transactions[0].createdAt.getTime() < tillDate.getTime());
       let { records } = await TransactionService.getTransactions({
         tillDate,
       });

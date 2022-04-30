@@ -32,3 +32,29 @@ export default async function generateBalance(amount: number, toId: number) {
   };
   await TransferService.postTransfer(transferRequest);
 }
+
+export function storeLDAPEnv(): { [key: string]: any; } {
+  return {
+    LDAP_SERVER_URL: process.env.LDAP_SERVER_URL,
+    LDAP_BASE: process.env.LDAP_BASE,
+    LDAP_USER_FILTER: process.env.LDAP_USER_FILTER,
+    LDAP_BIND_USER: process.env.LDAP_BIND_USER,
+    LDAP_BIND_PW: process.env.LDAP_BIND_PW,
+    LDAP_SHARED_ACCOUNT_FILTER: process.env.LDAP_SHARED_ACCOUNT_FILTER,
+    LDAP_ROLE_FILTER: process.env.LDAP_ROLE_FILTER,
+    ENABLE_LDAP: process.env.ENABLE_LDAP,
+    LDAP_USER_BASE: process.env.LDAP_USER_BASE,
+  };
+}
+
+export function restoreLDAPEnv(ldapEnv:{ [key: string]: any; }) {
+  process.env.LDAP_SERVER_URL = ldapEnv.LDAP_SERVER_URL;
+  process.env.LDAP_BASE = ldapEnv.LDAP_BASE;
+  process.env.LDAP_USER_FILTER = ldapEnv.LDAP_USER_FILTER;
+  process.env.LDAP_BIND_USER = ldapEnv.LDAP_BIND_USER;
+  process.env.LDAP_BIND_PW = ldapEnv.LDAP_BIND_PW;
+  process.env.LDAP_SHARED_ACCOUNT_FILTER = ldapEnv.LDAP_SHARED_ACCOUNT_FILTER;
+  process.env.LDAP_ROLE_FILTER = ldapEnv.LDAP_ROLE_FILTER;
+  process.env.ENABLE_LDAP = ldapEnv.ENABLE_LDAP;
+  process.env.LDAP_USER_BASE = ldapEnv.LDAP_USER_BASE;
+}

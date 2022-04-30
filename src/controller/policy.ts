@@ -21,7 +21,7 @@ import { RequestWithToken } from '../middleware/token-middleware';
 /**
  * A custom type defining all supported HTTP methods.
  */
-export type Method = 'POST' | 'GET' | 'PATCH' | 'DELETE';
+export type Method = 'POST' | 'GET' | 'PATCH' | 'DELETE' | 'PUT';
 
 /**
  * The BodyValidator interface represents the Swagger model validation that is performed on the

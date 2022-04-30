@@ -20,12 +20,15 @@ import {
 } from 'typeorm';
 import AuthenticationMethod from './authentication-method';
 
-@Entity()
 /**
- * @typedef {AuthenticationMethod} EanAuthenticator
- * @property {string} eanCode.required - The EAN code
+ * @typedef {AuthenticationMethod} LDAPAuthenticator
+ * @property {User.model} User.required - The user this authenticator is for
+ * @property {UUID} accountName.required - The associated AD account name
  */
-export default class EanAuthenticator extends AuthenticationMethod {
-  @Column()
-  public eanCode: string;
+@Entity()
+export default class LDAPAuthenticator extends AuthenticationMethod {
+  @Column({
+    length: 32,
+  })
+  public UUID: string;
 }

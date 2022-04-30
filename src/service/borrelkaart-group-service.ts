@@ -19,7 +19,7 @@ import BorrelkaartGroupRequest from '../controller/request/borrelkaart-group-req
 import BorrelkaartGroupResponse, { PaginatedBorrelkaartGroupResponse } from '../controller/response/borrelkaart-group-response';
 import { UserResponse } from '../controller/response/user-response';
 import BorrelkaartGroup from '../entity/user/borrelkaart-group';
-import User from '../entity/user/user';
+import User, { UserType } from '../entity/user/user';
 import UserBorrelkaartGroup from '../entity/user/user-borrelkaart-group';
 import { PaginationParameters } from '../helpers/pagination';
 
@@ -130,6 +130,7 @@ export default class BorrelkaartGroupService {
           ...user,
           createdAt: user.createdAt.toISOString(),
           updatedAt: user.updatedAt.toISOString(),
+          type: UserType[user.type],
         } as UserResponse;
         userResponses.push(userRes);
       });

@@ -23,7 +23,6 @@ import User from './user';
 /**
  * @typedef {BaseEntity} LocalUser
  * @property {User.model} user.required - The user.
- * @property {string} email.required - The email of the user.
  * @property {string} passwordHash.required - The hashed password of the user.
  */
 @Entity()
@@ -31,11 +30,6 @@ export default class LocalUser extends BaseEntity {
   @OneToOne(() => User, { primary: true, nullable: false })
   @JoinColumn()
   public user: User;
-
-  @Column({
-    length: 64,
-  })
-  public email: string;
 
   @Column({
     length: 128,

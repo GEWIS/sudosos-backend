@@ -93,8 +93,8 @@ describe('ProductController', async (): Promise<void> => {
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
-    const adminToken = await tokenHandler.signToken({ user: adminUser, roles: ['Admin'] }, 'nonce admin');
-    const token = await tokenHandler.signToken({ user: localUser, roles: [] }, 'nonce');
+    const adminToken = await tokenHandler.signToken({ user: adminUser, roles: ['Admin'], lesser: false }, 'nonce admin');
+    const token = await tokenHandler.signToken({ user: localUser, roles: [], lesser: false }, 'nonce');
 
     const validProductReq: CreateProductRequest = {
       name: 'Valid product',
@@ -126,6 +126,7 @@ describe('ProductController', async (): Promise<void> => {
           get: all,
           update: all,
           delete: all,
+          approve: all,
         },
       },
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
@@ -303,7 +304,7 @@ describe('ProductController', async (): Promise<void> => {
 
       expect(await Product.findOne((await Product.count()) + 1)).to.be.undefined;
 
-      // check if banner is not returned
+      // check if product is not returned
       expect(res.body).to.equal('Product not found.');
 
       // success code
