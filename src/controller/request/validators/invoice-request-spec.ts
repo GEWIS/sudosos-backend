@@ -65,6 +65,10 @@ async function validTransactionIds<T extends BaseInvoice>(p: T) {
   return toPass(p);
 }
 
+/**
+ * Validates that Invoice exists and is not of state DELETED.
+ * @param p
+ */
 async function existsAndNotDeleted<T extends UpdateInvoiceParams>(p: T) {
   const base: Invoice = await Invoice.findOne(p.invoiceId, { relations: ['invoiceStatus'] });
 
@@ -77,6 +81,10 @@ async function existsAndNotDeleted<T extends UpdateInvoiceParams>(p: T) {
   return toPass(p);
 }
 
+/**
+ * Validates that the state of the update request is different than the current state.
+ * @param p
+ */
 async function differentState<T extends UpdateInvoiceParams>(p: T) {
   if (!p.state) return toPass(p);
 
@@ -89,11 +97,17 @@ async function differentState<T extends UpdateInvoiceParams>(p: T) {
   return toPass(p);
 }
 
+/**
+ * Specification for an InvoiceEntryRequest.
+ */
 const invoiceEntryRequestSpec: Specification<InvoiceEntryRequest, ValidationError> = [
   [[positiveNumber], 'amount', new ValidationError('amount:')],
   [stringSpec(), 'description', new ValidationError('description:')],
 ];
 
+/**
+ * Specification for an InvoiceRequest
+ */
 function baseInvoiceRequestSpec<T extends BaseInvoice>(): Specification<T, ValidationError> {
   return [
     validTransactionIds,
@@ -101,10 +115,14 @@ function baseInvoiceRequestSpec<T extends BaseInvoice>(): Specification<T, Valid
     [[validOrUndefinedDate], 'fromDate', new ValidationError('fromDate:')],
     [stringSpec(), 'description', new ValidationError('description:')],
     [stringSpec(), 'addressee', new ValidationError('addressee:')],
+    // We have only defined a single item rule, so we use this to apply it to an array,
     [[createArrayRule(invoiceEntryRequestSpec)], 'customEntries', new ValidationError('Custom entries:')],
   ];
 }
 
+/**
+ * Specification for an UpdateInvoiceParams
+ */
 const updateInvoiceRequestSpec: Specification<UpdateInvoiceParams, ValidationError> = [
   [stringSpec(), 'description', new ValidationError('description:')],
   [stringSpec(), 'addressee', new ValidationError('addressee:')],
@@ -112,6 +130,9 @@ const updateInvoiceRequestSpec: Specification<UpdateInvoiceParams, ValidationErr
   existsAndNotDeleted,
 ];
 
+/**
+ * Specification for an CreateInvoiceParams
+ */
 const createInvoiceRequestSpec: Specification<CreateInvoiceParams, ValidationError> = [
   ...baseInvoiceRequestSpec<CreateInvoiceParams>(),
   [[userMustExist], 'byId', new ValidationError('byId:')],
