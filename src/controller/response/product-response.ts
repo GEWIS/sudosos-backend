@@ -15,38 +15,45 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { DineroObject } from 'dinero.js';
 import BaseResponse from './base-response';
 import { BaseUserResponse } from './user-response';
 import { ProductCategoryResponse } from './product-category-response';
 import { PaginationResult } from '../../helpers/pagination';
+import { DineroObjectResponse } from './dinero-response';
 
 /**
  * @typedef {BaseResponse} BaseProductResponse
  * @property {string} name.required - The name of the product.
- * @property {DineroObject.model} price.required - The price of the product.
+ * @property {DineroObjectResponse.model} price.required - The price of the product.
  */
 export interface BaseProductResponse extends BaseResponse {
   name: string,
-  price: DineroObject,
+  price: DineroObjectResponse,
 }
 
 /**
- * @typedef {BaseProductResponse} ProductResponse
+ * @typedef {BaseProductResponse} UpdatedProductResponse
  * @property {integer} revision - The revision of the product.
  * @property {BaseUserResponse.model} owner.required - The owner of the product.
- * @property {ProductCategoryResponse.model} category.required
- *  - The category the product belongs to.
+ * @property {ProductCategoryResponse.model} category.required -
+ *           The category the product belongs to.
  * @property {string} image - The URL to the picture representing this product.
- * @property {integer} revision - The product revision ID
  * @property {number} alcoholPercentage - The percentage of alcohol in this product.
  */
-export interface ProductResponse extends BaseProductResponse {
+export interface UpdatedProductResponse extends BaseProductResponse {
   owner: BaseUserResponse,
   category: ProductCategoryResponse,
   image: string,
   revision: number,
   alcoholPercentage: number,
+}
+
+/**
+ * @typedef {UpdatedProductResponse} ProductResponse
+ * @property {integer} revision - The product revision ID
+ */
+export interface ProductResponse extends UpdatedProductResponse {
+  revision: number,
 }
 
 /**

@@ -530,11 +530,11 @@ describe('TransactionController', (): void => {
         .send(ctx.validTransReq);
       expect(res.status).to.equal(200);
       console.error(ctx.specification.validateModel(
-          'TransactionResponse',
-          res.body,
-          false,
-          true,
-      ))
+        'TransactionResponse',
+        res.body,
+        false,
+        true,
+      ));
       expect(ctx.specification.validateModel(
         'TransactionResponse',
         res.body,

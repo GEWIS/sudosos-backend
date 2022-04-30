@@ -67,22 +67,33 @@ export interface UpdatedPointOfSaleResponse extends BasePointOfSaleResponse {
   useAuthentication: boolean,
 }
 
+type UpdatedPOSResponses = UpdatedPointOfSaleResponse | UpdatedPointOfSaleWithContainersResponse;
+
 /**
  * @typedef PaginatedUpdatedPointOfSaleResponse
  * @property {PaginationResult.model} _pagination - Pagination metadata
- * @property {Array<UpdatedPointOfSaleResponse.model|PointOfSaleWithContainersResponse.model>} records -
- * Returned points of sale
+ * @property {Array<UpdatedPOSResponses.model>}
+ * records - Returned points of sale
  */
 export interface PaginatedUpdatedPointOfSaleResponse {
   _pagination: PaginationResult,
-  records: (UpdatedPointOfSaleResponse | PointOfSaleWithContainersResponse)[],
+  records: (UpdatedPOSResponses)[],
 }
 
 /**
  * @typedef {PointOfSaleResponse} PointOfSaleWithContainersResponse
- * @property {Array.<ContainerWithProductsResponse>} containers.required - The containers
+ * @property {Array<ContainerWithProductsResponse.model>} containers.required - The containers
  * in the point-of-sale.
  */
 export interface PointOfSaleWithContainersResponse extends PointOfSaleResponse {
+  containers: ContainerWithProductsResponse[],
+}
+
+/**
+ * @typedef {UpdatedPointOfSaleResponse} UpdatedPointOfSaleWithContainersResponse
+ * @property {Array<ContainerWithProductsResponse.model>} containers.required - The containers
+ * in the point-of-sale.
+ */
+export interface UpdatedPointOfSaleWithContainersResponse extends UpdatedPointOfSaleResponse {
   containers: ContainerWithProductsResponse[],
 }

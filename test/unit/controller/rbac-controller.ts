@@ -77,7 +77,7 @@ describe('RbacController', async (): Promise<void> => {
         .get('/rbac/roles');
       expect(res.status).to.equal(200);
       expect(ctx.specification.validateModel(
-        'RoleResponse',
+        'Array.<RoleResponse.model>',
         res.body,
         false,
         true,

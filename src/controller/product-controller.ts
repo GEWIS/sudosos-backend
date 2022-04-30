@@ -144,7 +144,7 @@ export default class ProductController extends BaseController {
    * @group products - Operations of product controller
    * @param {CreateProductRequest.model} product.body.required - The product which should be created
    * @security JWT
-   * @returns {ProductResponse.model} 200 - The created product entity
+   * @returns {UpdatedProductResponse.model} 200 - The created product entity
    * @returns {string} 400 - Validation error
    * @returns {string} 500 - Internal server error
    */

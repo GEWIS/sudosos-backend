@@ -20,6 +20,11 @@ import User, { UserType } from '../../entity/user/user';
 import { PaginationResult } from '../../helpers/pagination';
 
 /**
+ * @typedef {BaseResponse} ProductCategoryResponse
+ * @property {string} name.required - The name of the productCategory.
+ */
+
+/**
  * @typedef {BaseResponse} BaseUserResponse
  * @property {string} firstName.required - The name of the user.
  * @property {string} lastName - The last name of the user

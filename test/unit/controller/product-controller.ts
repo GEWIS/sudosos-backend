@@ -284,7 +284,7 @@ describe('ProductController', async (): Promise<void> => {
 
       expect(res.status).to.equal(200);
       expect(ctx.specification.validateModel(
-        'ProductResponse',
+        'UpdatedProductResponse',
         res.body,
         false,
         true,

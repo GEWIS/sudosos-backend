@@ -241,11 +241,11 @@ describe('PointOfSaleController', async () => {
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
       console.error(ctx.specification.validateModel(
-          'PointOfSaleResponse',
-          res.body,
-          false,
-          true,
-      ))
+        'PointOfSaleResponse',
+        res.body,
+        false,
+        true,
+      ));
       expect(ctx.specification.validateModel(
         'PointOfSaleWithContainersResponse',
         res.body,
@@ -284,14 +284,8 @@ describe('PointOfSaleController', async () => {
       const res = await request(ctx.app)
         .get(`/pointsofsale/${id}/update`)
         .set('Authorization', `Bearer ${ctx.adminToken}`);
-      console.error(ctx.specification.validateModel(
-          'UpdatedPointOfSaleResponse',
-          res.body,
-          false,
-          true,
-      ))
       expect(ctx.specification.validateModel(
-        'UpdatedPointOfSaleResponse',
+        'UpdatedPointOfSaleWithContainersResponse',
         res.body,
         false,
         true,
@@ -362,9 +356,10 @@ describe('PointOfSaleController', async () => {
   });
   describe('GET /pointsofsale/:id/products', async () => {
     it('should return correct model', async () => {
+      const { id } = await PointOfSale.findOne({ relations: ['owner'], where: { owner: ctx.localUser } });
       const res = await request(ctx.app)
-        .get('/pointsofsale/1')
-        .set('Authorization', `Bearer ${ctx.adminToken}`);
+        .get(`/pointsofsale/${id}/products`)
+        .set('Authorization', `Bearer ${ctx.token}`);
       expect(res.status).to.equal(200);
       expect(ctx.specification.validateModel(
         'PaginatedProductResponse',
