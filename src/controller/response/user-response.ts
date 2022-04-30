@@ -16,7 +16,6 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import BaseResponse from './base-response';
-import User from '../../entity/user/user';
 import { PaginationResult } from '../../helpers/pagination';
 
 /**
@@ -49,5 +48,5 @@ export interface UserResponse extends BaseUserResponse {
  */
 export interface PaginatedUserResponse {
   _pagination: PaginationResult,
-  records: User[],
+  records: UserResponse[],
 }

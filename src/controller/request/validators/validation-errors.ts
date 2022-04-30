@@ -33,6 +33,8 @@ export const INVALID_USER_ID = () => new ValidationError('must exist.');
 
 export const ZERO_LENGTH_STRING = () => new ValidationError('must be a non-zero length string.');
 
+export const MAX_STRING_SIZE = () => new ValidationError('is too long.');
+
 export const INVALID_ACTIVE_USER_ID = () => new ValidationError('must exist and be active.');
 
 export const INVALID_TRANSACTION_OWNER = () => new ValidationError('Not all transactions are owned by the debtor.');

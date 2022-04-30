@@ -27,7 +27,6 @@ import {
 } from '../controller/response/invoice-response';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import Invoice from '../entity/invoices/invoice';
-import { parseUserToBaseResponse } from '../helpers/entity-to-response';
 import InvoiceEntry from '../entity/invoices/invoice-entry';
 import { CreateInvoiceParams, UpdateInvoiceParams } from '../controller/request/invoice-request';
 import Transaction from '../entity/transactions/transaction';
@@ -46,6 +45,7 @@ import InvoiceEntryRequest from '../controller/request/invoice-entry-request';
 import User from '../entity/user/user';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
 import SubTransactionRow from '../entity/transactions/sub-transaction-row';
+import {parseUserToBaseResponse} from "./user-service";
 
 export interface InvoiceFilterParameters {
   /**

@@ -15,32 +15,16 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import {
-  Specification, toFail, toPass, ValidationError,
-} from '../../../helpers/specification-validation';
-import { ZERO_LENGTH_STRING } from './validation-errors';
+import { Specification, ValidationError } from '../../../helpers/specification-validation';
+import { maxLength, nonZeroString } from './string-spec';
+import CreateUserRequest from '../create-user-request';
 
-/**
- * Checks if the string attribute is not an empty string.
- */
-export const nonZeroString = (p: string) => {
-  if (p === '') {
-    return toFail(ZERO_LENGTH_STRING());
-  }
-  return toPass(p);
-};
+const nameSpec: () => Specification<string, ValidationError> = () => [
+  nonZeroString,
+  maxLength(64),
+];
 
-export const maxLength = (length: number) => (p: string) => {
-  if (p.length > length) {
-    return toFail(ZERO_LENGTH_STRING());
-  }
-  return toPass(p);
-};
-
-function stringSpec(): Specification<string, ValidationError> {
-  return [
-    nonZeroString,
-  ] as Specification<string, ValidationError>;
-}
-
-export default stringSpec;
+const createUserSpec: () => Specification<CreateUserRequest, ValidationError> = () => [
+  [nameSpec(), 'firstName', new ValidationError('Firstname: ')],
+  [nameSpec(), 'lastName', new ValidationError('Lastname: ')],
+];

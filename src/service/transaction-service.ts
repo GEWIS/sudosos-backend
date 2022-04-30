@@ -27,7 +27,6 @@ import {
 import Transaction from '../entity/transactions/transaction';
 import SubTransaction from '../entity/transactions/sub-transaction';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
-import { parseUserToBaseResponse } from '../helpers/entity-to-response';
 import {
   parseContainerToBaseResponse,
   parsePOSToBasePOS,
@@ -45,6 +44,7 @@ import { DineroObjectResponse } from '../controller/response/dinero-response';
 import BalanceService from './balance-service';
 import { asDate, asNumber } from '../helpers/validators';
 import { PaginationParameters } from '../helpers/pagination';
+import {parseUserToBaseResponse} from "./user-service";
 
 export interface TransactionFilterParameters {
   transactionId?: number | number[],

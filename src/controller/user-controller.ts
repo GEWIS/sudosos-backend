@@ -40,7 +40,9 @@ import RBACService from '../service/rbac-service';
 import { isFail } from '../helpers/specification-validation';
 import verifyUpdatePinRequest from './request/validators/update-pin-request-spec';
 import UpdatePinRequest from './request/update-pin-request';
-import { parseUserToResponse } from '../helpers/entity-to-response';
+import UserService, { parseGetUsersFilters, parseUserToResponse, UserFilterParameters } from '../service/user-service';
+import { InvoiceFilterParameters, parseInvoiceFilterParameters } from '../service/invoice-service';
+import { asUserType } from '../helpers/validators';
 
 export default class UserController extends BaseController {
   private logger: Logger = log4js.getLogger('UserController');
@@ -219,6 +221,12 @@ export default class UserController extends BaseController {
    * @security JWT
    * @param {integer} take.query - How many users the endpoint should return
    * @param {integer} skip.query - How many users should be skipped (for pagination)
+   * @param {string} firstName.query - Filter based on first name
+   * @param {string} lastName.query - Filter based on last name
+   * @param {boolean} active.query - Filter based if the user is active
+   * @param {boolean} ofAge.query - Filter based if the user is 18+
+   * @param {integer} id.query - Filter based on user ID
+   * @param {type} type.query - Filter based on user typ.
    * @returns {PaginatedUserResponse.model} 200 - A list of all users
    */
   public async getAllUsers(req: RequestWithToken, res: Response): Promise<void> {
@@ -226,8 +234,10 @@ export default class UserController extends BaseController {
 
     let take;
     let skip;
+    let filters: UserFilterParameters;
     try {
       const pagination = parseRequestPagination(req);
+      filters = parseGetUsersFilters(req);
       take = pagination.take;
       skip = pagination.skip;
     } catch (e) {
@@ -236,18 +246,8 @@ export default class UserController extends BaseController {
     }
 
     try {
-      const options: FindManyOptions = { where: { deleted: false } };
-      const users = await User.find({ ...options, take, skip });
-      const count = await User.count(options);
-
-      const result: PaginatedUserResponse = {
-        _pagination: {
-          take, skip, count,
-        },
-        records: users,
-      };
-
-      res.status(200).json(result);
+      const users = await UserService.getUsers(filters, { take, skip });
+      res.status(200).json(users);
     } catch (error) {
       this.logger.error('Could not get users:', error);
       res.status(500).json('Internal server error.');
@@ -258,7 +258,7 @@ export default class UserController extends BaseController {
    * Get all users of user type
    * @route GET /users/usertype/{userType}
    * @group users - Operations of user controller
-   * @param {integer} userType.path.required - The userType of the requested users
+   * @param {string} userType.path.required - The userType of the requested users
    * @security JWT
    * @param {integer} take.query - How many users the endpoint should return
    * @param {integer} skip.query - How many users should be skipped (for pagination)
@@ -266,38 +266,18 @@ export default class UserController extends BaseController {
    * @returns {string} 404 - Nonexistent usertype
    */
   public async getAllUsersOfUserType(req: RequestWithToken, res: Response): Promise<void> {
-    const parameters = req.params;
-    this.logger.trace('Get all users of userType', parameters, 'by user', req.token.user);
+    const userType = req.params.userType.toUpperCase();
 
     // If it does not exist, return a 404 error
-    if (!(parameters.userType in UserType)) {
+    const type = UserType[userType as keyof typeof UserType];
+    if (!type || Number(userType)) {
       res.status(404).json('Unknown userType.');
       return;
     }
-    let take;
-    let skip;
-    try {
-      const pagination = parseRequestPagination(req);
-      take = pagination.take;
-      skip = pagination.skip;
-    } catch (e) {
-      res.status(400).send(e.message);
-      return;
-    }
 
     try {
-      const options: FindManyOptions = { where: { deleted: false, type: parameters.userType } };
-      const users = await User.find({ ...options, take, skip });
-      const count = await User.count(options);
-
-      const result: PaginatedUserResponse = {
-        _pagination: {
-          take, skip, count,
-        },
-        records: users,
-      };
-
-      res.status(200).json(result);
+      req.query.type = userType;
+      this.getAllUsers(req, res);
     } catch (error) {
       this.logger.error('Could not get users:', error);
       res.status(500).json('Internal server error.');

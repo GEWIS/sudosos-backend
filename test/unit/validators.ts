@@ -28,7 +28,7 @@ import { BasePointOfSaleResponse } from '../../src/controller/response/point-of-
 export function verifyUserEntity(
   spec: SwaggerSpecification, user: User,
 ): void {
-  const validation = spec.validateModel('User', user, false, true);
+  const validation = spec.validateModel('UserResponse', user, false, true);
   expect(validation.valid).to.be.true;
 
   expect(user.id).to.be.greaterThan(-1);

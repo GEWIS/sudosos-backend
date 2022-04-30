@@ -251,7 +251,7 @@ describe('UserController', (): void => {
   describe('GET /users/usertype/:userType', () => {
     it('should return all users of type MEMBER if admin', async () => {
       const res = await request(ctx.app)
-        .get(`/users/usertype/${UserType.MEMBER}`)
+        .get('/users/usertype/MEMBER')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
 
@@ -272,7 +272,7 @@ describe('UserController', (): void => {
     });
     it('should return all users of type INVOICE if admin', async () => {
       const res = await request(ctx.app)
-        .get(`/users/usertype/${UserType.INVOICE}`)
+        .get('/users/usertype/invoice')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
 
@@ -301,7 +301,7 @@ describe('UserController', (): void => {
       const take = 5;
       const skip = 3;
       const res = await request(ctx.app)
-        .get(`/users/usertype/${UserType.MEMBER}`)
+        .get('/users/usertype/member')
         .query({ take, skip })
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
