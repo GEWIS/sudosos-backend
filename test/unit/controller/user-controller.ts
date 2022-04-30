@@ -945,7 +945,7 @@ describe('UserController', (): void => {
       expect(res.status).to.equal(200);
     });
   });
-  describe('PUT /users/{id}/authenticate', () => {
+  describe('PUT /users/{id}/pin', () => {
     it('should return an HTTP 200 if authorized', async () => {
       await inUserContext(await UserFactory().clone(1), async (user: User) => {
         const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');

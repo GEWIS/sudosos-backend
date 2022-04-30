@@ -43,7 +43,7 @@ export default class AuthenticationController extends BaseController {
   /**
    * Reference to the token handler of the application.
    */
-  public tokenHandler: TokenHandler;
+  protected tokenHandler: TokenHandler;
 
   /**
    * Creates a new authentication controller instance.

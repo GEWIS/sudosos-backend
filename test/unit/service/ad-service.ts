@@ -24,7 +24,7 @@ import chai, { expect } from 'chai';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
 import User, { UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
-import seedDatabase from '../../seed';
+import { seedUsers } from '../../seed';
 import Swagger from '../../../src/start/swagger';
 import ADService from '../../../src/service/ad-service';
 import LDAPAuthenticator from '../../../src/entity/authenticator/ldap-authenticator';
@@ -35,6 +35,7 @@ import { LDAPGroup, LDAPResponse } from '../../../src/helpers/ad';
 import userIsAsExpected from './authentication-service';
 import RoleManager from '../../../src/rbac/role-manager';
 import AssignedRole from '../../../src/entity/roles/assigned-role';
+import { restoreLDAPEnv, storeLDAPEnv } from '../../helpers/test-helpers';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -49,8 +50,12 @@ describe('AuthenticationService', (): void => {
 
   const stubs: sinon.SinonStub[] = [];
 
+  let ldapEnvVariables: { [key: string]: any; } = {};
+
   before(async function test(): Promise<void> {
     this.timeout(50000);
+
+    ldapEnvVariables = storeLDAPEnv();
 
     process.env.LDAP_SERVER_URL = 'ldaps://gewisdc03.gewis.nl:636';
     process.env.LDAP_BASE = 'DC=gewiswg,DC=gewis,DC=nl';
@@ -64,7 +69,7 @@ describe('AuthenticationService', (): void => {
 
     const connection = await Database.initialize();
     const app = express();
-    await seedDatabase();
+    await seedUsers();
 
     const users = await User.find(
       {
@@ -95,7 +100,7 @@ describe('AuthenticationService', (): void => {
   });
 
   after(async () => {
-    process.env.ENABLE_LDAP = undefined;
+    restoreLDAPEnv(ldapEnvVariables);
     await ctx.connection.close();
   });
 

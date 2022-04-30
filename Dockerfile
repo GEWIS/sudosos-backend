@@ -12,7 +12,6 @@ FROM node:14-alpine as target
 WORKDIR /app
 COPY ./package.json ./package-lock.json ./
 RUN npm install --production
-COPY --from=build --chown=node /app/out/test /app/out/test
 COPY --from=build --chown=node /app/out/src /app/out/src
 COPY --from=build --chown=node /app/out/swagger.json /app/out/swagger.json
 CMD ["npm", "run", "serve"]

@@ -31,6 +31,7 @@ import PinAuthenticator from '../../../src/entity/authenticator/pin-authenticato
 import { UserResponse } from '../../../src/controller/response/user-response';
 import { isNumber } from '../../../src/helpers/validators';
 import wrapInManager from '../../../src/helpers/database';
+import { restoreLDAPEnv, storeLDAPEnv } from '../../helpers/test-helpers';
 
 export default function userIsAsExpected(user: User | UserResponse, ADResponse: any) {
   expect(user.firstName).to.equal(ADResponse.givenName);
@@ -51,8 +52,12 @@ describe('AuthenticationService', (): void => {
 
   const stubs: sinon.SinonStub[] = [];
 
+  let ldapEnvVariables: { [key: string]: any; } = {};
+
   before(async function test(): Promise<void> {
     this.timeout(50000);
+
+    ldapEnvVariables = storeLDAPEnv();
 
     process.env.LDAP_SERVER_URL = 'ldaps://gewisdc03.gewis.nl:636';
     process.env.LDAP_BASE = 'DC=gewiswg,DC=gewis,DC=nl';
@@ -93,11 +98,7 @@ describe('AuthenticationService', (): void => {
   });
 
   after(async () => {
-    process.env.LDAP_SERVER_URL = undefined;
-    process.env.LDAP_BASE = undefined;
-    process.env.LDAP_USER_FILTER = undefined;
-    process.env.LDAP_BIND_USER = undefined;
-    process.env.LDAP_BIND_PW = undefined;
+    restoreLDAPEnv(ldapEnvVariables);
     await ctx.connection.close();
   });
 

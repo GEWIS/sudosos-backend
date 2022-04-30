@@ -31,6 +31,7 @@ import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import GewisUser from '../../../src/entity/user/gewis-user';
 import Gewis from '../../../src/gewis/gewis';
 import wrapInManager from '../../../src/helpers/database';
+import { restoreLDAPEnv, storeLDAPEnv } from '../../helpers/test-helpers';
 
 describe('GEWIS Helper functions', async (): Promise<void> => {
   let ctx: {
@@ -43,8 +44,12 @@ describe('GEWIS Helper functions', async (): Promise<void> => {
 
   const stubs: sinon.SinonStub[] = [];
 
+  let ldapEnvVariables: { [key: string]: any; } = {};
+
   before(async function test(): Promise<void> {
     this.timeout(50000);
+
+    ldapEnvVariables = storeLDAPEnv();
 
     process.env.LDAP_SERVER_URL = 'ldaps://gewisdc03.gewis.nl:636';
     process.env.LDAP_BASE = 'DC=gewiswg,DC=gewis,DC=nl';
@@ -86,6 +91,7 @@ describe('GEWIS Helper functions', async (): Promise<void> => {
 
   after(async () => {
     await ctx.connection.close();
+    restoreLDAPEnv(ldapEnvVariables);
   });
 
   afterEach(() => {
