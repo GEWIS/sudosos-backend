@@ -16,7 +16,11 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { createQueryBuilder, SelectQueryBuilder } from 'typeorm';
-import { PaginatedProductResponse, ProductResponse } from '../controller/response/product-response';
+import {
+  PaginatedProductResponse,
+  ProductResponse,
+  UpdatedProductResponse,
+} from '../controller/response/product-response';
 import Product from '../entity/product/product';
 import ProductRevision from '../entity/product/product-revision';
 import UpdatedProduct from '../entity/product/updated-product';
@@ -442,7 +446,7 @@ export default class ProductService {
    * @param product - The product to be created.
    */
   public static async createProduct(product: CreateProductParams)
-    : Promise<ProductResponse> {
+    : Promise<UpdatedProductResponse> {
     const owner = await User.findOne(product.ownerId);
 
     if (!owner) return undefined;

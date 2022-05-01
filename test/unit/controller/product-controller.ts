@@ -159,6 +159,18 @@ describe('ProductController', async (): Promise<void> => {
 
   // Unit test cases
   describe('GET /products', () => {
+    it('should return correct model', async () => {
+      const res = await request(ctx.app)
+        .get('/products')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'PaginatedProductResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
     it('should return an HTTP 200 and all existing products in the database if admin', async () => {
       const res = await request(ctx.app)
         .get('/products')
@@ -272,6 +284,12 @@ describe('ProductController', async (): Promise<void> => {
       expect(databaseProduct).to.exist;
 
       expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'UpdatedProductResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
     });
     it('should return an HTTP 403 if not admin', async () => {
       const productCount = await Product.count();
@@ -287,6 +305,18 @@ describe('ProductController', async (): Promise<void> => {
     });
   });
   describe('GET /products/:id', () => {
+    it('should return correct model', async () => {
+      const res = await request(ctx.app)
+        .get('/products/1')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'ProductResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
     it('should return an HTTP 200 and the product with given id if admin', async () => {
       const res = await request(ctx.app)
         .get('/products/1')
@@ -336,6 +366,12 @@ describe('ProductController', async (): Promise<void> => {
       expect(databaseProduct).to.exist;
 
       expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'ProductResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
     });
     it('should return an HTTP 404 if the product with the given id does not exist', async () => {
       const res = await request(ctx.app)
@@ -366,6 +402,18 @@ describe('ProductController', async (): Promise<void> => {
     });
   });
   describe('GET /products/updated', () => {
+    it('should return correct model', async () => {
+      const res = await request(ctx.app)
+        .get('/products/updated')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'PaginatedProductResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
     it('should return an HTTP 200 and all existing updated products in the database if admin', async () => {
       const res = await request(ctx.app)
         .get('/products/updated')
@@ -422,6 +470,18 @@ describe('ProductController', async (): Promise<void> => {
     });
   });
   describe('GET /products/:id/update', () => {
+    it('should return correct model', async () => {
+      const res = await request(ctx.app)
+        .get('/products/4/update')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'ProductResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
     it('should return the product update when it exists', async () => {
       const res = await request(ctx.app)
         .get('/products/4/update')
@@ -485,6 +545,12 @@ describe('ProductController', async (): Promise<void> => {
 
       expect(latest.body).to.deep.equal(res.body);
       expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'ProductResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
     });
     it('should return a HTTP 404 and an empty response if the product had no pending update', async () => {
       // sanity check / precondition

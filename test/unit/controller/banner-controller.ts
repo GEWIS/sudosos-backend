@@ -178,6 +178,18 @@ describe('BannerController', async (): Promise<void> => {
   });
 
   describe('GET /banners', () => {
+    it('should return correct model', async () => {
+      const res = await request(ctx.app)
+        .get('/banners')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'PaginatedBannerResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
     it('should return an HTTP 200 and all banners in the database if admin', async () => {
       const res = await request(ctx.app)
         .get('/banners')
@@ -232,6 +244,18 @@ describe('BannerController', async (): Promise<void> => {
   });
 
   describe('GET /banners/active', () => {
+    it('should return correct model', async () => {
+      const res = await request(ctx.app)
+        .get('/banners/active')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'PaginatedBannerResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
     it('should return an HTTP 200 and all active banners in the database if admin', async () => {
       // get active banners
       const res = await request(ctx.app)
@@ -333,6 +357,18 @@ describe('BannerController', async (): Promise<void> => {
   });
 
   describe('GET /banners/:id', () => {
+    it('should return correct model', async () => {
+      const res = await request(ctx.app)
+        .get('/banners/2')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'BannerResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
     it('should return an HTTP 200 and the banner with given id if admin', async () => {
       const res = await request(ctx.app)
         .get('/banners/2')
@@ -383,6 +419,13 @@ describe('BannerController', async (): Promise<void> => {
         .patch('/banners/1')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(patchBannerReq);
+
+      expect(ctx.specification.validateModel(
+        'BannerResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
 
       // check if posted banner is indeed in the database
       const databaseBanner = await Banner.findOne(1);
@@ -470,6 +513,13 @@ describe('BannerController', async (): Promise<void> => {
       const res = await request(ctx.app)
         .delete('/banners/3')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(ctx.specification.validateModel(
+        'BannerResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
 
       // success code
       expect(res.status).to.equal(200);

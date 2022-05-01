@@ -120,7 +120,7 @@ export default class PointOfSaleController extends BaseController {
    * @param {CreatePointOfSaleRequest.model} pointofsale.body.required -
    * The point of sale which should be created
    * @security JWT
-   * @returns {PointOfSale.model} 200 - The created point of sale entity
+   * @returns {UpdatedPointOfSaleResponse.model} 200 - The created point of sale entity
    * @returns {string} 400 - Validation error
    * @returns {string} 500 - Internal server error
    */
@@ -190,7 +190,7 @@ export default class PointOfSaleController extends BaseController {
    * @group pointofsale - Operations of the point of sale controller
    * @param {integer} id.path.required - The id of the Point of Sale which should be returned
    * @security JWT
-   * @returns {PointOfSaleResponse.model} 200 - The requested point of sale entity
+   * @returns {PointOfSaleWithContainersResponse.model} 200 - The requested point of sale entity
    * @returns {string} 404 - Not found error
    * @returns {string} 500 - Internal server error
    */
@@ -321,12 +321,13 @@ export default class PointOfSaleController extends BaseController {
   }
 
   /**
-   * Returns all a single Points of Sale
+   * Returns a single Points of Sale update
    * @route GET /pointsofsale/{id}/update
    * @group pointofsale - Operations of the point of sale controller
    * @param {integer} id.path.required - The id of the Point of Sale which should be returned
    * @security JWT
-   * @returns {UpdatedPointOfSaleResponse.model} 200 - The requested updated Point of Sale entity
+   * @returns {UpdatedPointOfSaleWithContainersResponse.model} 200 -
+   *          The requested updated Point of Sale entity
    * @returns {string} 404 - Not found error
    * @returns {string} 500 - Internal server error
    */

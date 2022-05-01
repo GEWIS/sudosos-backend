@@ -192,6 +192,19 @@ describe('TransactionController', (): void => {
   });
 
   describe('GET /transactions', () => {
+    it('should return correct model', async () => {
+      const res = await request(ctx.app)
+        .get('/transactions')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'PaginatedBaseTransactionResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
+
     it('should return all transactions if admin', async () => {
       const res = await request(ctx.app)
         .get('/transactions')
@@ -519,6 +532,18 @@ describe('TransactionController', (): void => {
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(ctx.validTransReq);
       expect(res.status).to.equal(200);
+      console.error(ctx.specification.validateModel(
+        'TransactionResponse',
+        res.body,
+        false,
+        true,
+      ));
+      expect(ctx.specification.validateModel(
+        'TransactionResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
     });
     it('should return an HTTP 403 when user is not admin', async () => {
       const res = await request(ctx.app)
@@ -574,6 +599,12 @@ describe('TransactionController', (): void => {
         .patch('/transactions/1')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(ctx.validTransReq);
+      expect(ctx.specification.validateModel(
+        'TransactionResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
 
       expect(res.body).to.not.eql(toUpdate);
       expect(res.status).to.equal(200);
@@ -632,6 +663,13 @@ describe('TransactionController', (): void => {
       res = await request(ctx.app)
         .delete('/transactions/1')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(ctx.specification.validateModel(
+        'TransactionResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
 
       expect(res.body).to.eql(deletedTransaction);
       expect(res.status).to.equal(200);
