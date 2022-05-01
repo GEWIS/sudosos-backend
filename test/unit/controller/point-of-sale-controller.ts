@@ -239,12 +239,6 @@ describe('PointOfSaleController', async () => {
         .get('/pointsofsale/1')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
-      console.error(ctx.specification.validateModel(
-        'PointOfSaleResponse',
-        res.body,
-        false,
-        true,
-      ));
       expect(ctx.specification.validateModel(
         'PointOfSaleWithContainersResponse',
         res.body,

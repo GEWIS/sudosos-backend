@@ -350,12 +350,6 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(ctx.validBorrelkaartGroupReq);
       expect(res.status).to.equal(200);
-      console.error(ctx.specification.validateModel(
-        'BorrelkaartGroupResponse',
-        res.body,
-        false,
-        true,
-      ));
       expect(ctx.specification.validateModel(
         'BorrelkaartGroupResponse',
         res.body,
