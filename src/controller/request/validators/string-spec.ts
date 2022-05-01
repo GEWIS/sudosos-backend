@@ -18,7 +18,7 @@
 import {
   Specification, toFail, toPass, ValidationError,
 } from '../../../helpers/specification-validation';
-import { ZERO_LENGTH_STRING } from './validation-errors';
+import { MAX_STRING_SIZE, ZERO_LENGTH_STRING } from './validation-errors';
 
 /**
  * Checks if the string attribute is not an empty string.
@@ -32,7 +32,7 @@ export const nonZeroString = (p: string) => {
 
 export const maxLength = (length: number) => (p: string) => {
   if (p.length > length) {
-    return toFail(ZERO_LENGTH_STRING());
+    return toFail(MAX_STRING_SIZE());
   }
   return toPass(p);
 };

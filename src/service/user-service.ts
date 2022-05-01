@@ -22,6 +22,8 @@ import { PaginationParameters } from '../helpers/pagination';
 import { BaseUserResponse, PaginatedUserResponse, UserResponse } from '../controller/response/user-response';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import User, { UserType } from '../entity/user/user';
+import CreateUserRequest from '../controller/request/create-user-request';
+import UpdateUserRequest, {UpdateUserParams} from '../controller/request/update-user-request';
 
 export interface UserFilterParameters {
   firstName?: string,
@@ -103,5 +105,22 @@ export default class UserService {
       },
       records,
     };
+  }
+
+  public static async getSingleUser(id: number) {
+    const user = await this.getUsers({ id, deleted: false });
+    if (!user.records[0]) {
+      return undefined;
+    }
+    return user.records[0];
+  }
+
+  public static async createUser(createUserRequest: CreateUserRequest) {
+    const user = await User.save(createUserRequest as User);
+    return Promise.resolve(this.getSingleUser(user.id));
+  }
+
+  public static async updateUser(updateUserRequest: UpdateUserParams) {
+    const user = await User.findOne(parameters.id, { where: { deleted: false } });
   }
 }

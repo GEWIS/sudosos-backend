@@ -17,7 +17,6 @@
  */
 import { Response } from 'express';
 import log4js, { Logger } from 'log4js';
-import { FindManyOptions } from 'typeorm';
 import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
@@ -41,8 +40,8 @@ import { isFail } from '../helpers/specification-validation';
 import verifyUpdatePinRequest from './request/validators/update-pin-request-spec';
 import UpdatePinRequest from './request/update-pin-request';
 import UserService, { parseGetUsersFilters, parseUserToResponse, UserFilterParameters } from '../service/user-service';
-import { InvoiceFilterParameters, parseInvoiceFilterParameters } from '../service/invoice-service';
-import { asUserType } from '../helpers/validators';
+import { asNumber } from '../helpers/validators';
+import { verifyCreateUserRequest, verifyUpdateUserRequest } from './request/validators/user-request-spec';
 
 export default class UserController extends BaseController {
   private logger: Logger = log4js.getLogger('UserController');
@@ -226,7 +225,7 @@ export default class UserController extends BaseController {
    * @param {boolean} active.query - Filter based if the user is active
    * @param {boolean} ofAge.query - Filter based if the user is 18+
    * @param {integer} id.query - Filter based on user ID
-   * @param {type} type.query - Filter based on user typ.
+   * @param {type} type.query - Filter based on user type.
    * @returns {PaginatedUserResponse.model} 200 - A list of all users
    */
   public async getAllUsers(req: RequestWithToken, res: Response): Promise<void> {
@@ -339,7 +338,7 @@ export default class UserController extends BaseController {
 
     try {
       // Get the user object if it exists
-      const user = await User.findOne(parameters.id, { where: { deleted: false } });
+      const user = await UserService.getSingleUser(asNumber(parameters.id));
       // If it does not exist, return a 404 error
       if (user === undefined) {
         res.status(404).json('Unknown user ID.');
@@ -366,25 +365,14 @@ export default class UserController extends BaseController {
     const body = req.body as CreateUserRequest;
     this.logger.trace('Create user', body, 'by user', req.token.user);
 
-    if (body.firstName.length === 0) {
-      res.status(400).json('firstName cannot be empty');
-      return;
-    }
-    if (body.firstName.length > 64) {
-      res.status(400).json('firstName too long');
-      return;
-    }
-    if (body.lastName && body.lastName.length > 64) {
-      res.status(400).json('lastName too long');
-      return;
-    }
-    if (!Object.values(UserType).includes(body.type)) {
-      res.status(400).json('type is not a valid UserType');
-      return;
-    }
-
     try {
-      const user = await User.save(body as User);
+      const validation = await verifyCreateUserRequest(body);
+      if (isFail(validation)) {
+        res.status(400).json(validation.fail.value);
+        return;
+      }
+
+      const user = await UserService.createUser(body);
       res.status(201).json(user);
     } catch (error) {
       this.logger.error('Could not create user:', error);
@@ -394,25 +382,16 @@ export default class UserController extends BaseController {
 
   public async updateUser(req: RequestWithToken, res: Response): Promise<void> {
     const body = req.body as UpdateUserRequest;
-    console.log(body);
     const parameters = req.params;
     this.logger.trace('Update user', parameters.id, 'with', body, 'by user', req.token.user);
 
-    if (body.firstName !== undefined) console.log(body.firstName.length);
-    if (body.firstName !== undefined && body.firstName.length === 0) {
-      res.status(400).json('firstName cannot be empty');
-      return;
-    }
-    if (body.firstName !== undefined && body.firstName.length > 64) {
-      res.status(400).json('firstName too long');
-      return;
-    }
-    if (body.lastName !== undefined && body.lastName.length > 64) {
-      res.status(400).json('lastName too long');
-      return;
-    }
-
     try {
+      const validation = await verifyUpdateUserRequest(body);
+      if (isFail(validation)) {
+        res.status(400).json(validation.fail.value);
+        return;
+      }
+
       // Get the user object if it exists
       let user = await User.findOne(parameters.id, { where: { deleted: false } });
       // If it does not exist, return a 404 error

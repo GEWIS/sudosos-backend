@@ -15,16 +15,41 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { Specification, ValidationError } from '../../../helpers/specification-validation';
+import {
+  Specification, toFail, toPass, validateSpecification, ValidationError,
+} from '../../../helpers/specification-validation';
 import { maxLength, nonZeroString } from './string-spec';
 import CreateUserRequest from '../create-user-request';
+import { UserType } from '../../../entity/user/user';
+import { INVALID_USER_TYPE } from './validation-errors';
+import UpdateUserRequest from '../update-user-request';
 
 const nameSpec: () => Specification<string, ValidationError> = () => [
   nonZeroString,
   maxLength(64),
 ];
 
-const createUserSpec: () => Specification<CreateUserRequest, ValidationError> = () => [
+function validUserType(u: CreateUserRequest) {
+  if (!Object.values(UserType).includes(u.type)) {
+    return toFail(INVALID_USER_TYPE());
+  }
+  return toPass(u);
+}
+
+const updateUserSpec: <T extends UpdateUserRequest>() => Specification<T, ValidationError> = () => [
   [nameSpec(), 'firstName', new ValidationError('Firstname: ')],
   [nameSpec(), 'lastName', new ValidationError('Lastname: ')],
 ];
+
+const createUserSpec: () => Specification<CreateUserRequest, ValidationError> = () => [
+  ...updateUserSpec<CreateUserRequest>(),
+  validUserType,
+];
+
+export async function verifyCreateUserRequest(createUserRequest: CreateUserRequest) {
+  return Promise.resolve(await validateSpecification(createUserRequest, createUserSpec()));
+}
+
+export async function verifyUpdateUserRequest(createUserRequest: UpdateUserRequest) {
+  return Promise.resolve(await validateSpecification(createUserRequest, updateUserSpec()));
+}

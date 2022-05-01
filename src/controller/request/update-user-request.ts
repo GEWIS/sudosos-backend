@@ -27,3 +27,11 @@ export default interface UpdateUserRequest {
   lastName?: string;
   active?: boolean;
 }
+
+// We require stricter type checking for the function than the endpoint.
+export interface UpdateUserParams {
+  firstName: string;
+  lastName: string;
+  active: boolean;
+  id: number;
+}
