@@ -19,10 +19,7 @@ import { Request, Response } from 'express';
 import log4js, { Logger } from 'log4js';
 import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
-import ActionResponse from './response/rbac/action-response';
-import EntityResponse from './response/rbac/entity-response';
-import RelationResponse from './response/rbac/relation-response';
-import RoleResponse from './response/rbac/role-response';
+import RBACService from '../service/rbac-service';
 
 export default class RbacController extends BaseController {
   private logger: Logger = log4js.getLogger('RbacController');
@@ -54,6 +51,7 @@ export default class RbacController extends BaseController {
    * Returns all existing roles
    * @route GET /rbac/roles
    * @group rbac - Operations of rbac controller
+   * @security JWT
    * @returns {Array.<RoleResponse.model>} 200 - All existing roles
    * @returns {string} 500 - Internal server error
    */
@@ -66,31 +64,7 @@ export default class RbacController extends BaseController {
       const roles = this.roleManager.getRegisteredRoles();
 
       // Map every role to response
-      const responses = Object.keys(roles).map((roleName): RoleResponse => {
-        const role = roles[roleName];
-        return {
-          role: roleName,
-          // Map every entity permission to response
-          entities: Object.keys(role.permissions).map((entityName): EntityResponse => {
-            const entity = role.permissions[entityName];
-            return {
-              entity: entityName,
-              // Map every action permission to response
-              actions: Object.keys(entity).map((actionName): ActionResponse => {
-                const action = entity[actionName];
-                return {
-                  action: actionName,
-                  // Map every relation permission to response
-                  relations: Object.keys(action).map((relationName): RelationResponse => ({
-                    relation: relationName,
-                    attributes: [...action[relationName]],
-                  })),
-                };
-              }),
-            };
-          }),
-        };
-      });
+      const responses = RBACService.asRoleResponse(roles);
       res.json(responses);
     } catch (error) {
       this.logger.error('Could not return all roles:', error);

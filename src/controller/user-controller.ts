@@ -33,17 +33,34 @@ import TransactionService, {
 import ContainerService from '../service/container-service';
 import { PaginatedUserResponse } from './response/user-response';
 import TransferService, { parseGetTransferFilters } from '../service/transfer-service';
+import MemberAuthenticator from '../entity/authenticator/member-authenticator';
+import AuthenticationService, { AuthenticationContext } from '../service/authentication-service';
+import TokenHandler from '../authentication/token-handler';
+import RBACService from '../service/rbac-service';
+import { isFail } from '../helpers/specification-validation';
+import verifyUpdatePinRequest from './request/validators/update-pin-request-spec';
+import UpdatePinRequest from './request/update-pin-request';
+import { parseUserToResponse } from '../helpers/entity-to-response';
 
 export default class UserController extends BaseController {
   private logger: Logger = log4js.getLogger('UserController');
 
   /**
+   * Reference to the token handler of the application.
+   */
+  private tokenHandler: TokenHandler;
+
+  /**
   * Create a new user controller instance.
   * @param options - The options passed to the base controller.
   */
-  public constructor(options: BaseControllerOptions) {
+  public constructor(
+    options: BaseControllerOptions,
+    tokenHandler: TokenHandler,
+  ) {
     super(options);
     this.logger.level = process.env.LOG_LEVEL;
+    this.tokenHandler = tokenHandler;
   }
 
   /**
@@ -74,7 +91,16 @@ export default class UserController extends BaseController {
           handler: this.getAllUsersOfUserType.bind(this),
         },
       },
-      '/:id': {
+      '/:id(\\d+)/pin': {
+        PUT: {
+          body: { modelName: 'UpdatePinRequest' },
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'update', UserController.getRelation(req), 'Authenticator', ['pin'],
+          ),
+          handler: this.updateUserPin.bind(this),
+        },
+      },
+      '/:id(\\d+)': {
         GET: {
           policy: async (req) => this.roleManager.can(
             req.token.roles, 'get', UserController.getRelation(req), 'User', ['*'],
@@ -95,7 +121,19 @@ export default class UserController extends BaseController {
           handler: this.updateUser.bind(this),
         },
       },
-      '/:id/products': {
+      '/:id(\\d+)/authenticate': {
+        POST: {
+          policy: async () => true,
+          handler: this.authenticateAsUser.bind(this),
+        },
+        GET: {
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'get', UserController.getRelation(req), 'Authenticator', ['*'],
+          ),
+          handler: this.getUserAuthenticatable.bind(this),
+        },
+      },
+      '/:id(\\d+)/products': {
         GET: {
           policy: async (req) => this.roleManager.can(
             req.token.roles, 'get', UserController.getRelation(req), 'Product', ['*'],
@@ -103,7 +141,15 @@ export default class UserController extends BaseController {
           handler: this.getUsersProducts.bind(this),
         },
       },
-      '/:id/products/updated': {
+      '/:id(\\d+)/roles': {
+        GET: {
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'get', UserController.getRelation(req), 'Roles', ['*'],
+          ),
+          handler: this.getUserRoles.bind(this),
+        },
+      },
+      '/:id(\\d+)/products/updated': {
         GET: {
           policy: async (req) => this.roleManager.can(
             req.token.roles, 'get', UserController.getRelation(req), 'Product', ['*'],
@@ -111,7 +157,7 @@ export default class UserController extends BaseController {
           handler: this.getUsersUpdatedProducts.bind(this),
         },
       },
-      '/:id/containers': {
+      '/:id(\\d+)/containers': {
         GET: {
           policy: async (req) => this.roleManager.can(
             req.token.roles, 'get', UserController.getRelation(req), 'Container', ['*'],
@@ -119,7 +165,7 @@ export default class UserController extends BaseController {
           handler: this.getUsersContainers.bind(this),
         },
       },
-      '/:id/containers/updated': {
+      '/:id(\\d+)/containers/updated': {
         GET: {
           policy: async (req) => this.roleManager.can(
             req.token.roles, 'get', UserController.getRelation(req), 'Container', ['*'],
@@ -127,7 +173,7 @@ export default class UserController extends BaseController {
           handler: this.getUsersUpdatedContainers.bind(this),
         },
       },
-      '/:id/pointsofsale': {
+      '/:id(\\d+)/pointsofsale': {
         GET: {
           policy: async (req) => this.roleManager.can(
             req.token.roles, 'get', UserController.getRelation(req), 'PointOfSale', ['*'],
@@ -135,7 +181,7 @@ export default class UserController extends BaseController {
           handler: this.getUsersPointsOfSale.bind(this),
         },
       },
-      '/:id/pointsofsale/updated': {
+      '/:id(\\d+)/pointsofsale/updated': {
         GET: {
           policy: async (req) => this.roleManager.can(
             req.token.roles, 'get', UserController.getRelation(req), 'PointOfSale', ['*'],
@@ -143,7 +189,7 @@ export default class UserController extends BaseController {
           handler: this.getUsersUpdatedPointsOfSale.bind(this),
         },
       },
-      '/:id/transactions': {
+      '/:id(\\d+)/transactions': {
         GET: {
           policy: async (req) => this.roleManager.can(
             req.token.roles, 'get', UserController.getRelation(req), 'Transaction', ['*'],
@@ -151,7 +197,7 @@ export default class UserController extends BaseController {
           handler: this.getUsersTransactions.bind(this),
         },
       },
-      '/:id/transfers': {
+      '/:id(\\d+)/transfers': {
         GET: {
           policy: async (req) => this.roleManager.can(
             req.token.roles, 'get', UserController.getRelation(req), 'Transfer', ['*'],
@@ -254,6 +300,46 @@ export default class UserController extends BaseController {
       res.status(200).json(result);
     } catch (error) {
       this.logger.error('Could not get users:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Put an users pin code
+   * @route PUT /users/{id}/pin
+   * @group users - Operations of user controller
+   * @param {integer} id.path.required - The id of the user
+   * @param {UpdatePinRequest.model} update.body.required -
+   *    The PIN code to update to
+   * @security JWT
+   * @returns 200 - Update success
+   * @returns {string} 400 - Validation Error
+   * @returns {string} 404 - Nonexistent user id
+   */
+  public async updateUserPin(req: RequestWithToken, res: Response): Promise<void> {
+    const parameters = req.params;
+    const updatePinRequest = req.body as UpdatePinRequest;
+    this.logger.trace('Update user pin', parameters, 'by user', req.token.user);
+
+    try {
+      // Get the user object if it exists
+      const user = await User.findOne(parameters.id, { where: { deleted: false } });
+      // If it does not exist, return a 404 error
+      if (user === undefined) {
+        res.status(404).json('Unknown user ID.');
+        return;
+      }
+
+      const validation = await verifyUpdatePinRequest(updatePinRequest);
+      if (isFail(validation)) {
+        res.status(400).json(validation.fail.value);
+        return;
+      }
+
+      await AuthenticationService.setUserPINCode(user, updatePinRequest.pin.toString());
+      res.status(200).json();
+    } catch (error) {
+      this.logger.error('Could not update pin:', error);
       res.status(500).json('Internal server error.');
     }
   }
@@ -797,6 +883,115 @@ export default class UserController extends BaseController {
       res.json(transfers);
     } catch (error) {
       this.logger.error('Could not return user transfers', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Authenticate as another user
+   * @route POST /users/{id}/authenticate
+   * @group users - Operations of user controller
+   * @param {integer} id.path.required - The id of the user that should be authenticated as
+   * @security JWT
+   * @returns {AuthenticationResponse.model} 200 - The created json web token.
+   * @returns {string} 400 - Validation error.
+   * @returns {string} 404 - User not found error.
+   * @returns {string} 403 - Authentication error.
+   */
+  public async authenticateAsUser(req: RequestWithToken, res: Response): Promise<void> {
+    const parameters = req.params;
+    this.logger.trace('Authenticate as user', parameters, 'by user', req.token.user);
+
+    try {
+      // Get the user object if it exists
+      const authenticateAs = await User.findOne(parameters.id, { where: { deleted: false } });
+      // If it does not exist, return a 404 error
+      if (authenticateAs === undefined) {
+        res.status(404).json('Unknown user ID.');
+        return;
+      }
+
+      // Check if user can authenticate as requested user.
+      const authenticator = await MemberAuthenticator
+        .findOne({ where: { user: req.token.user, authenticateAs } });
+
+      if (authenticator === undefined) {
+        res.status(403).json('Authentication error');
+        return;
+      }
+
+      const context: AuthenticationContext = {
+        roleManager: this.roleManager,
+        tokenHandler: this.tokenHandler,
+      };
+
+      const token = await AuthenticationService.getSaltedToken(authenticateAs, context, false);
+      res.status(200).json(token);
+    } catch (error) {
+      this.logger.error('Could not authenticate as user:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Get all users that the user can authenticate as
+   * @route GET /users/{id}/authenticate
+   * @group users - Operations of user controller
+   * @param {integer} id.path.required - The id of the user to get authentications of
+   * @security JWT
+   * @returns {string} 404 - User not found error.
+   * @returns {Array<UserResponse>} 200 - A list of all users the given ID can authenticate
+   */
+  public async getUserAuthenticatable(req: RequestWithToken, res: Response): Promise<void> {
+    const parameters = req.params;
+    this.logger.trace('Get authenticatable users of user', parameters, 'by user', req.token.user);
+
+    try {
+      // Get the user object if it exists
+      const user = await User.findOne(parameters.id, { where: { deleted: false } });
+      // If it does not exist, return a 404 error
+      if (user === undefined) {
+        res.status(404).json('Unknown user ID.');
+        return;
+      }
+
+      // Extract from member authenticator table.
+      const authenticators = await MemberAuthenticator.find({ where: { user }, relations: ['authenticateAs'] });
+      const users = authenticators.map((auth) => parseUserToResponse(auth.authenticateAs));
+      res.status(200).json(users);
+    } catch (error) {
+      this.logger.error('Could not get authenticatable of user:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Get all roles assigned to the user.
+   * @route GET /users/{id}/roles
+   * @group users - Operations of user controller
+   * @param {integer} id.path.required - The id of the user to get the roles from
+   * @security JWT
+   * @returns {Array<RoleResponse>} 200 - The roles of the user
+   * @returns {string} 404 - User not found error.
+   */
+  public async getUserRoles(req: RequestWithToken, res: Response): Promise<void> {
+    const parameters = req.params;
+    this.logger.trace('Get roles of user', parameters, 'by user', req.token.user);
+
+    try {
+      // Get the user object if it exists
+      const user = await User.findOne(parameters.id, { where: { deleted: false } });
+      // If it does not exist, return a 404 error
+      if (user === undefined) {
+        res.status(404).json('Unknown user ID.');
+        return;
+      }
+
+      const roles = await this.roleManager.getRoles(user);
+      const definitions = this.roleManager.toRoleDefinitions(roles);
+      res.status(200).json(RBACService.asRoleResponse(definitions));
+    } catch (error) {
+      this.logger.error('Could not get roles of user:', error);
       res.status(500).json('Internal server error.');
     }
   }

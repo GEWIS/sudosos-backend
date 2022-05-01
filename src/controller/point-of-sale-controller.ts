@@ -65,7 +65,7 @@ export default class PointOfSaleController extends BaseController {
         },
         POST: {
           body: { modelName: 'CreatePointOfSaleRequest' },
-          policy: async (req) => this.roleManager.can(req.token.roles, 'create', 'all', 'PointOfSale', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'create', PointOfSaleController.postRelation(req), 'PointOfSale', ['*']),
           handler: this.createPointOfSale.bind(this),
         },
       },
@@ -100,13 +100,13 @@ export default class PointOfSaleController extends BaseController {
       },
       '/updated': {
         GET: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'get', await PointOfSaleController.getRelation(req), 'PointOfSale', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'PointOfSale', ['*']),
           handler: this.returnUpdatedPointsOfSale.bind(this),
         },
       },
       '/:id(\\d+)/approve': {
         POST: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'approve', 'all', 'PointOfSale', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'approve', await PointOfSaleController.getRelation(req), 'PointOfSale', ['*']),
           handler: this.approveUpdate.bind(this),
         },
       },
@@ -418,9 +418,22 @@ export default class PointOfSaleController extends BaseController {
   }
 
   /**
+   * Function to determine which credentials are needed to post POS
+   *    'all' if user is not connected to POS
+   *    'own' if user is connected to POS
+   * @param req - Request with CreatePointOfSaleRequest as body
+   * @returns whether POS is connected to user token
+   */
+  static postRelation(req: RequestWithToken): string {
+    const request = req.body as CreatePointOfSaleRequest;
+    if (request.ownerId && request.ownerId !== req.token.user.id) return 'all';
+    return 'own';
+  }
+
+  /**
    * Function to determine which credentials are needed to get POS
-   * all if user is not connected to POS
-   * own if user is connected to POS
+   *    'all' if user is not connected to POS
+   *    'own' if user is connected to POS
    * @param req
    * @returns whether POS is connected to used token
    */

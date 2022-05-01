@@ -33,6 +33,7 @@ import { PRODUCT_IMAGE_LOCATION } from '../files/storage';
 import { parseRequestPagination } from '../helpers/pagination';
 import verifyProductRequest from './request/validators/product-request-spec';
 import { isFail } from '../helpers/specification-validation';
+import { asNumber } from '../helpers/validators';
 
 export default class ProductController extends BaseController {
   private logger: Logger = log4js.getLogger('ProductController');
@@ -61,18 +62,18 @@ export default class ProductController extends BaseController {
         },
         POST: {
           body: { modelName: 'CreateProductRequest' },
-          policy: async (req) => this.roleManager.can(req.token.roles, 'create', 'all', 'Product', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'create', ProductController.postRelation(req), 'Product', ['*']),
           handler: this.createProduct.bind(this),
         },
       },
       '/:id(\\d+)': {
         GET: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Product', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', await ProductController.getRelation(req), 'Product', ['*']),
           handler: this.getSingleProduct.bind(this),
         },
         PATCH: {
           body: { modelName: 'UpdateProductRequest' },
-          policy: async (req) => this.roleManager.can(req.token.roles, 'update', 'all', 'Product', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'update', await ProductController.getRelation(req), 'Product', ['*']),
           handler: this.updateProduct.bind(this),
         },
       },
@@ -84,19 +85,19 @@ export default class ProductController extends BaseController {
       },
       '/:id(\\d+)/update': {
         GET: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Product', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', await ProductController.getRelation(req), 'Product', ['*']),
           handler: this.getSingleUpdatedProduct.bind(this),
         },
       },
       '/:id(\\d+)/approve': {
         POST: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'create', 'all', 'Product', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'approve', await ProductController.getRelation(req), 'Product', ['*']),
           handler: this.approveUpdate.bind(this),
         },
       },
       '/:id(\\d+)/image': {
         POST: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'create', 'all', 'Product', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'create', await ProductController.getRelation(req), 'Product', ['*']),
           handler: this.updateProductImage.bind(this),
         },
       },
@@ -131,7 +132,7 @@ export default class ProductController extends BaseController {
     // Handle request
     try {
       const products = await ProductService.getProducts({}, { take, skip });
-      res.json(products);
+      res.status(200).json(products);
     } catch (error) {
       this.logger.error('Could not return all products:', error);
       res.status(500).json('Internal server error.');
@@ -383,5 +384,32 @@ export default class ProductController extends BaseController {
       this.logger.error('Could not upload image:', error);
       res.status(500).json('Internal server error');
     }
+  }
+
+  /**
+   * Function to determine which credentials are needed to post product
+   *    'all' if user is not connected to product
+   *    'own' if user is connected to product
+   * @param req - Request with CreateProductRequest as body
+   * @returns whether product is connected to user token
+   */
+  static postRelation(req: RequestWithToken): string {
+    const request = req.body as CreateProductRequest;
+    if (request.ownerId && request.ownerId !== req.token.user.id) return 'all';
+    return 'own';
+  }
+
+  /**
+   * Function to determine which credentials are needed to get product
+   *    'all' if user is not connected to product
+   *    'own' if user is connected to product
+   * @param req - Request with product id as param
+   * @returns whether product is connected to user token
+   */
+  static async getRelation(req: RequestWithToken): Promise<string> {
+    const productId = asNumber(req.params.id);
+    const product = await Product.findOne({ where: { id: productId }, relations: ['owner'] });
+    if (product && product.owner.id === req.token.user.id) return 'own';
+    return 'all';
   }
 }

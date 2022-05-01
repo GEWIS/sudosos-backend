@@ -15,17 +15,13 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import {
-  Column, Entity,
-} from 'typeorm';
-import AuthenticationMethod from './authentication-method';
 
-@Entity()
 /**
- * @typedef {AuthenticationMethod} EanAuthenticator
- * @property {string} eanCode.required - The EAN code
+ * @typedef AuthenticationLDAPRequest
+ * @property {string} accountName.required - The AD account name to authenticate
+ * @property {string} password.required - The password
  */
-export default class EanAuthenticator extends AuthenticationMethod {
-  @Column()
-  public eanCode: string;
+export default interface AuthenticationLDAPRequest {
+  accountName: string,
+  password: string,
 }

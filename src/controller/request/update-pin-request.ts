@@ -15,17 +15,11 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import {
-  Column, Entity,
-} from 'typeorm';
-import AuthenticationMethod from './authentication-method';
 
-@Entity()
 /**
- * @typedef {AuthenticationMethod} EanAuthenticator
- * @property {string} eanCode.required - The EAN code
+ * @typedef UpdatePinRequest
+ * @property {string} pin.required - The PIN code to set
  */
-export default class EanAuthenticator extends AuthenticationMethod {
-  @Column()
-  public eanCode: string;
+export default interface UpdatePinRequest {
+  pin: string,
 }

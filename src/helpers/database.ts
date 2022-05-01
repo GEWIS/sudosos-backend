@@ -15,17 +15,17 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import {
-  Column, Entity,
-} from 'typeorm';
-import AuthenticationMethod from './authentication-method';
+import { EntityManager, getManager } from 'typeorm';
 
-@Entity()
 /**
- * @typedef {AuthenticationMethod} EanAuthenticator
- * @property {string} eanCode.required - The EAN code
+ * Takes a function with an EntityManager as first param and wraps it in a manager.
+ * This ensures that if any of the DB transactions fail of the given transaction
+ * function everything will be rolled back.
+ * @param transactionFunction
  */
-export default class EanAuthenticator extends AuthenticationMethod {
-  @Column()
-  public eanCode: string;
+export default function wrapInManager<T>(transactionFunction:
+(manager: EntityManager, ...arg: any[]) => Promise<T>): (...arg: any[]) => Promise<T> {
+  return async (...arg: any[]) => Promise.resolve(getManager().transaction(
+    async (manager) => Promise.resolve(transactionFunction(manager, ...arg)),
+  ));
 }

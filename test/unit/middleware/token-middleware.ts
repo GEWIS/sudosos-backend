@@ -63,6 +63,7 @@ describe('TokenMiddleware', (): void => {
     ctx.token = {
       user: ctx.user,
       roles: [],
+      lesser: false,
     };
     ctx.middleware = new TokenMiddleware({
       tokenHandler: ctx.handler,

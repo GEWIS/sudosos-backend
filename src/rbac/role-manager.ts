@@ -16,6 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import User from '../entity/user/user';
+import AssignedRole from '../entity/roles/assigned-role';
 
 /**
  * The assignment check is a predicate performed on a user to determine
@@ -253,11 +254,51 @@ export default class RoleManager {
   }
 
   /**
+   * Returns a RoleDefinitions object for the provided role names.
+   * @param roles - Names of the roles to return.
+   */
+  public toRoleDefinitions(roles: string[]): RoleDefinitions {
+    const definitions: RoleDefinitions = {};
+    roles.forEach((role) => { definitions[role] = this.roles[role]; });
+    return definitions;
+  }
+
+  /**
    * Get all registered roles in the system.
    * Warning: changes to the returned content are reflected in the role manager.
    * @returns a list of all roles.
    */
   public getRegisteredRoles(): RoleDefinitions {
     return this.roles;
+  }
+
+  /**
+   * Tests if the role manager contains a role with the given name
+   * @param role - role name to test
+   */
+  public containsRole(role: string): Boolean {
+    return this.roles[role] !== undefined;
+  }
+
+  /**
+   * Sets (overwrites) all the assigned users of a role.
+   * @param users - The users being set the role
+   * @param role - The role to set
+   */
+  public async setRoleUsers(users: User[], role:string) {
+    if (!this.roles[role]) return undefined;
+
+    // Typeorm doesnt like empty deletes.
+    const drop: AssignedRole[] = await AssignedRole.find({ where: { role } });
+    if (drop.length !== 0) {
+      // Drop all assigned users.
+      await AssignedRole.delete({ role });
+    }
+
+    // Assign users the role
+    return Promise.resolve(Promise.all(users.map((user) => (Object.assign(new AssignedRole(), {
+      user,
+      role,
+    })).save())));
   }
 }

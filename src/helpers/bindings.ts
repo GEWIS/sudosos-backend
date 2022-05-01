@@ -15,17 +15,20 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import {
-  Column, Entity,
-} from 'typeorm';
-import AuthenticationMethod from './authentication-method';
+import { EntityManager } from 'typeorm';
+import User from '../entity/user/user';
+import AuthenticationService from '../service/authentication-service';
+import { LDAPUser } from './ad';
 
-@Entity()
 /**
- * @typedef {AuthenticationMethod} EanAuthenticator
- * @property {string} eanCode.required - The EAN code
+ * Class used for setting default functions or bindings.
+ *    For example, this allows the behaviour of user creation to be changed easily.
+ *    In this case it is used to inject GEWIS related code without editing the files themselves.
  */
-export default class EanAuthenticator extends AuthenticationMethod {
-  @Column()
-  public eanCode: string;
+export default class Bindings {
+  /**
+   * Function called when an unbound User is found and created.
+   */
+  public static ldapUserCreation: (manager: EntityManager,
+    ADUser: LDAPUser) => Promise<User> = AuthenticationService.createUserAndBind;
 }

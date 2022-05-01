@@ -15,8 +15,8 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import User from '../entity/user/user';
-import { BaseUserResponse } from '../controller/response/user-response';
+import User, { UserType } from '../entity/user/user';
+import { BaseUserResponse, UserResponse } from '../controller/response/user-response';
 
 // eslint-disable-next-line import/prefer-default-export
 export function parseUserToBaseResponse(user: User, timestamps: boolean): BaseUserResponse {
@@ -28,4 +28,14 @@ export function parseUserToBaseResponse(user: User, timestamps: boolean): BaseUs
     createdAt: timestamps ? user.createdAt.toISOString() : undefined,
     updatedAt: timestamps ? user.updatedAt.toISOString() : undefined,
   } as BaseUserResponse;
+}
+
+export function parseUserToResponse(user: User, timestamps = false): UserResponse {
+  if (!user) return undefined;
+  return {
+    ...parseUserToBaseResponse(user, timestamps),
+    active: user.active,
+    deleted: user.deleted,
+    type: UserType[user.type],
+  };
 }
