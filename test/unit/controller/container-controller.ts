@@ -41,6 +41,7 @@ import UpdatedProduct from '../../../src/entity/product/updated-product';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import { CreateContainerRequest } from '../../../src/controller/request/container-request';
 import { ProductRequest } from '../../../src/controller/request/product-request';
+import { INVALID_PRODUCT_ID, INVALID_PRODUCT_PRICE } from '../../../src/controller/request/validators/validation-errors';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -361,9 +362,9 @@ describe('ContainerController', async (): Promise<void> => {
       it('should verify product IDs', async () => {
         const req: CreateContainerRequest = {
           ...ctx.validContainerReq,
-          products: [-1, 5, 10, 1000],
+          products: [-1, 5, 10],
         };
-        await expectError(req, 'Not all product IDs are valid.');
+        await expectError(req, `Products: ${INVALID_PRODUCT_ID(-1).value}`);
       });
       it('should verify product requests', async () => {
         const req: CreateContainerRequest = {
@@ -374,7 +375,7 @@ describe('ContainerController', async (): Promise<void> => {
             } as ProductRequest,
           ],
         };
-        await expectError(req, 'Product validation failed: Price must be greater than zero');
+        await expectError(req, `Products: ${INVALID_PRODUCT_PRICE().value}`);
       });
     });
     it('should verify Name', async () => {

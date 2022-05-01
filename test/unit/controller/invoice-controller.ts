@@ -412,9 +412,10 @@ describe('InvoiceController', async () => {
           toId: debtor.id,
           byId: creditor.id,
         };
+
+        await new Promise((f) => setTimeout(f, 500));
         expect(await BalanceService.getBalance(debtor.id)).is.equal(-1 * cost);
 
-        await new Promise((f) => setTimeout(f, 1000));
         const count = await Invoice.count();
         const res = await request(ctx.app)
           .post('/invoices')
