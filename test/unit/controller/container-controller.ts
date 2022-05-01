@@ -332,7 +332,7 @@ describe('ContainerController', async (): Promise<void> => {
       it('should verify product IDs', async () => {
         const req: CreateContainerRequest = {
           ...ctx.validContainerReq,
-          products: [-1, 5, 10, 1000],
+          products: [-1, 5, 10],
         };
         await expectError(req, `Products: ${INVALID_PRODUCT_ID(-1).value}`);
       });
