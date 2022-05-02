@@ -16,69 +16,65 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  Either, isFail, Specification, toFail,
+  createArrayRule,
+  Specification, toFail,
   toPass, validateSpecification,
   ValidationError,
 } from '../../../helpers/specification-validation';
-import { getIdsAndRequests } from '../../../helpers/array-splitter'; import Container from '../../../entity/container/container';
+import Container from '../../../entity/container/container';
 import { BasePointOfSaleParams, CreatePointOfSaleParams, UpdatePointOfSaleParams } from '../point-of-sale-request';
 import durationSpec from './duration-spec';
 import { ContainerParams } from '../container-request';
-import verifyContainerRequest from './container-request-spec';
 import stringSpec from './string-spec';
-import { CONTAINER_VALIDATION_FAIL, INVALID_CONTAINER_IDS } from './validation-errors';
+import {
+  INVALID_CONTAINER_ID,
+} from './validation-errors';
 import { userMustExist } from './general-validators';
+import verifyContainerRequest from './container-request-spec';
 
-async function validContainers<T extends BasePointOfSaleParams>(p: T) {
-  const { ids, requests } = getIdsAndRequests<ContainerParams>(p.containers);
-
-  const containers = await Container.findByIds(ids);
-  if (containers.length !== ids.length) {
-    return toFail(INVALID_CONTAINER_IDS());
+/**
+ * Tests if the given param is either a valid container ID or ContainerRequest
+ * @param p
+ */
+async function validContainerRequestOrId(p: number | ContainerParams) {
+  if (typeof p === 'number') {
+    const product = await Container.findOne({ where: { id: p } });
+    if (!product) return toFail(INVALID_CONTAINER_ID(p));
+    return toPass(p);
   }
-
-  const promises: Promise<Either<ValidationError, ContainerParams>>[] = [];
-  requests.forEach((r) => {
-    promises.push(verifyContainerRequest(r).then((res) => res));
-  });
-
-  let results: Either<ValidationError, ContainerParams>[] = [];
-  await Promise.all(promises).then((r) => {
-    results = r;
-  });
-
-  for (let i = 0; i < results.length; i += 1) {
-    const result = results[i];
-    if (isFail(result)) return toFail(CONTAINER_VALIDATION_FAIL().join(result.fail));
-  }
-
-  return toPass(p);
+  return Promise.resolve(await verifyContainerRequest(p));
 }
 
-function basePointOfSaleRequestSpec<T extends BasePointOfSaleParams>():
-Specification<T, ValidationError> {
-  return [
-    ...durationSpec<T>(),
-    [stringSpec(), 'name', new ValidationError('Name:')],
-    validContainers,
-  ];
-}
+/**
+ * Specification of a basePointOfSale
+ * Again we use a function since otherwise it tends to resuse internal ValidationErrors.
+ */
+const basePointOfSaleRequestSpec: <T extends BasePointOfSaleParams>()
+=> Specification<T, ValidationError> = <T extends BasePointOfSaleParams>() => [
+  ...durationSpec<T>(),
+  [stringSpec(), 'name', new ValidationError('Name:')],
+  [[createArrayRule([validContainerRequestOrId])], 'containers', new ValidationError('Containers:')],
+];
 
-const createPointOfSaleRequestSpec: Specification<CreatePointOfSaleParams, ValidationError> = [
-  ...basePointOfSaleRequestSpec<CreatePointOfSaleParams>(),
+/**
+ * Specification of a createPointOfSaleRequest
+ */
+const createPointOfSaleRequestSpec
+: () => Specification<CreatePointOfSaleParams, ValidationError> = () => [
+  ...(basePointOfSaleRequestSpec<CreatePointOfSaleParams>()),
   [[userMustExist], 'ownerId', new ValidationError('ownerId:')],
 ];
 
 export async function verifyCreatePointOfSaleRequest(createPointOfSaleRequest:
 CreatePointOfSaleParams) {
   return Promise.resolve(await validateSpecification(
-    createPointOfSaleRequest, createPointOfSaleRequestSpec,
+    createPointOfSaleRequest, createPointOfSaleRequestSpec(),
   ));
 }
 
 export async function verifyUpdatePointOfSaleRequest(updatePointOfSaleRequest:
 UpdatePointOfSaleParams) {
   return Promise.resolve(await validateSpecification(
-    updatePointOfSaleRequest, createPointOfSaleRequestSpec,
+    updatePointOfSaleRequest, createPointOfSaleRequestSpec(),
   ));
 }
