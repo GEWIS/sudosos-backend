@@ -264,7 +264,7 @@ export default class InvoiceController extends BaseController {
         res.status(404).json('Invoice not found.');
         return;
       }
-      res.status(200).json(invoice);
+      res.status(204).send();
     } catch (error) {
       this.logger.error('Could not delete invoice:', error);
       res.status(500).json('Internal server error.');
