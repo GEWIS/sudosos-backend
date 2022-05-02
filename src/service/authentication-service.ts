@@ -32,7 +32,7 @@ import MemberAuthenticator from '../entity/authenticator/member-authenticator';
 import {
   bindUser, getLDAPConnection, getLDAPSettings, LDAPUser, userFromLDAP,
 } from '../helpers/ad';
-import {parseUserToResponse} from "./user-service";
+import { parseUserToResponse } from './user-service';
 
 export interface AuthenticationContext {
   tokenHandler: TokenHandler,

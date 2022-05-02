@@ -32,7 +32,7 @@ export interface BaseUserResponse extends BaseResponse {
  * @typedef {BaseUserResponse} UserResponse
  * @property {boolean} active.required - Whether the user activated
  * @property {boolean} deleted.required - Whether the user is deleted
- * @property {integer} type.required - The type of user
+ * @property {string} type.required - The type of user
  */
 
 export interface UserResponse extends BaseUserResponse {

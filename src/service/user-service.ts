@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { FindManyOptions } from 'typeorm';
+import { FindManyOptions, ObjectLiteral } from 'typeorm';
 import { RequestWithToken } from '../middleware/token-middleware';
 import { asBoolean, asNumber, asUserType } from '../helpers/validators';
 import { PaginationParameters } from '../helpers/pagination';
@@ -23,8 +23,11 @@ import { BaseUserResponse, PaginatedUserResponse, UserResponse } from '../contro
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import User, { UserType } from '../entity/user/user';
 import CreateUserRequest from '../controller/request/create-user-request';
-import UpdateUserRequest, {UpdateUserParams} from '../controller/request/update-user-request';
+import MemberAuthenticator from '../entity/authenticator/member-authenticator';
 
+/**
+ * Parameters used to filter on Get Users functions.
+ */
 export interface UserFilterParameters {
   firstName?: string,
   lastName?: string,
@@ -34,24 +37,34 @@ export interface UserFilterParameters {
   email?: string,
   deleted?: boolean,
   type?: UserType,
+  organId?: number,
 }
 
+/**
+ * Extracts UserFilterParameters from the RequestWithToken
+ * @param req - Request to parse
+ */
 export function parseGetUsersFilters(req: RequestWithToken): UserFilterParameters {
   const filters: UserFilterParameters = {
-    firstName: req.query.firstName ? String(req.query.firstName) : undefined,
-    lastName: req.query.lastName ? String(req.query.lastName) : undefined,
+    firstName: req.query.firstName as string,
+    lastName: req.query.lastName as string,
     active: req.query.active ? asBoolean(req.query.active) : undefined,
-    ofAge: req.query.ofAge ? asBoolean(req.query.ofAge) : undefined,
-    id: req.query.id ? asNumber(req.query.id) : undefined,
-    email: req.query.email ? String(req.query.email) : undefined,
-    deleted: req.query.deleted ? asBoolean(req.query.deleted) : false,
-    type: req.query.type ? asUserType(req.query.type) : undefined,
+    ofAge: req.query.active ? asBoolean(req.query.ofAge) : undefined,
+    id: asNumber(req.query.id),
+    organId: asNumber(req.query.organ),
+    email: req.query.email as string,
+    deleted: req.query.active ? asBoolean(req.query.deleted) : false,
+    type: asUserType(req.query.type),
   };
 
   return filters;
 }
 
-// eslint-disable-next-line import/prefer-default-export
+/**
+ * Parses a raw user DB object to BaseUserResponse
+ * @param user - User to parse
+ * @param timestamps - Boolean if createdAt and UpdatedAt should be included
+ */
 export function parseUserToBaseResponse(user: User, timestamps: boolean): BaseUserResponse {
   if (!user) return undefined;
   return {
@@ -63,6 +76,11 @@ export function parseUserToBaseResponse(user: User, timestamps: boolean): BaseUs
   } as BaseUserResponse;
 }
 
+/**
+ * Parses a raw User DB object to a UserResponse
+ * @param user - User to parse
+ * @param timestamps - Boolean if createdAt and UpdatedAt should be included
+ */
 export function parseUserToResponse(user: User, timestamps = false): UserResponse {
   if (!user) return undefined;
   return {
@@ -74,6 +92,11 @@ export function parseUserToResponse(user: User, timestamps = false): UserRespons
 }
 
 export default class UserService {
+  /**
+   * Function for getting al Users
+   * @param filters - Query filters to apply
+   * @param pagination - Pagination to adhere to
+   */
   public static async getUsers(
     filters: UserFilterParameters = {}, pagination: PaginationParameters = {},
   ): Promise<PaginatedUserResponse> {
@@ -95,6 +118,14 @@ export default class UserService {
       skip,
     };
 
+    if (filters.organId) {
+      // This allows us to search for organ members
+      // However it does remove the other filters
+      const userIds = await MemberAuthenticator
+        .find({ where: { authenticateAs: filters.organId }, relations: ['user'] });
+      (options.where as ObjectLiteral) = userIds.map((auth) => ({ id: auth.user.id }));
+    }
+
     const users = await User.find({ ...options, take });
     const count = await User.count(options);
     const records = users.map((u) => parseUserToResponse(u, true));
@@ -107,6 +138,12 @@ export default class UserService {
     };
   }
 
+  /**
+   * Function for getting a single user based on ID
+   * @param id - ID of the user to return
+   * @returns User if exists
+   * @returns undefined if user does not exits
+   */
   public static async getSingleUser(id: number) {
     const user = await this.getUsers({ id, deleted: false });
     if (!user.records[0]) {
@@ -115,12 +152,13 @@ export default class UserService {
     return user.records[0];
   }
 
+  /**
+   * Function for creating a user
+   * @param createUserRequest - The user to create
+   * @returns The created user
+   */
   public static async createUser(createUserRequest: CreateUserRequest) {
     const user = await User.save(createUserRequest as User);
     return Promise.resolve(this.getSingleUser(user.id));
-  }
-
-  public static async updateUser(updateUserRequest: UpdateUserParams) {
-    const user = await User.findOne(parameters.id, { where: { deleted: false } });
   }
 }

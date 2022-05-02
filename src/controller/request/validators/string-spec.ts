@@ -31,7 +31,7 @@ export const nonZeroString = (p: string) => {
 };
 
 export const maxLength = (length: number) => (p: string) => {
-  if (p.length > length) {
+  if (p && p.length > length) {
     return toFail(MAX_STRING_SIZE());
   }
   return toPass(p);

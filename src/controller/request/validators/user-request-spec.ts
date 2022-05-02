@@ -24,11 +24,17 @@ import { UserType } from '../../../entity/user/user';
 import { INVALID_USER_TYPE } from './validation-errors';
 import UpdateUserRequest from '../update-user-request';
 
+/**
+ * Most names cannot be '' or longer than 64.
+ */
 const nameSpec: () => Specification<string, ValidationError> = () => [
   nonZeroString,
   maxLength(64),
 ];
 
+/**
+ * Checks if provided type is valid
+ */
 function validUserType(u: CreateUserRequest) {
   if (!Object.values(UserType).includes(u.type)) {
     return toFail(INVALID_USER_TYPE());
@@ -36,11 +42,17 @@ function validUserType(u: CreateUserRequest) {
   return toPass(u);
 }
 
+/**
+ * When updating we check firstName and lastName.
+ */
 const updateUserSpec: <T extends UpdateUserRequest>() => Specification<T, ValidationError> = () => [
   [nameSpec(), 'firstName', new ValidationError('Firstname: ')],
-  [nameSpec(), 'lastName', new ValidationError('Lastname: ')],
+  [[maxLength(64)], 'lastName', new ValidationError('Lastname: ')],
 ];
 
+/**
+ * When creating a user we also check the userType
+ */
 const createUserSpec: () => Specification<CreateUserRequest, ValidationError> = () => [
   ...updateUserSpec<CreateUserRequest>(),
   validUserType,

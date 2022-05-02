@@ -45,7 +45,7 @@ import InvoiceEntryRequest from '../controller/request/invoice-entry-request';
 import User from '../entity/user/user';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
 import SubTransactionRow from '../entity/transactions/sub-transaction-row';
-import {parseUserToBaseResponse} from "./user-service";
+import { parseUserToBaseResponse } from './user-service';
 
 export interface InvoiceFilterParameters {
   /**

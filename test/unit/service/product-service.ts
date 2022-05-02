@@ -52,7 +52,6 @@ function returnsAll(response: ProductResponse[], superset: Product[]) {
   const temp = superset.map((prod) => ({
     id: prod.id, ownerid: prod.owner.id, image: prod.image != null ? prod.image.downloadName : null,
   }));
-  console.log(temp);
   expect(response.map((prod) => ({ id: prod.id, ownerid: prod.owner.id, image: prod.image })))
     .to.deep.equalInAnyOrder(temp);
 }

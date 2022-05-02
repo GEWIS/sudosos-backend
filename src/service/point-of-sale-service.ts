@@ -40,7 +40,7 @@ import {
   CreateContainerParams,
   UpdateContainerParams,
 } from '../controller/request/container-request';
-import {parseUserToBaseResponse} from "./user-service";
+import { parseUserToBaseResponse } from './user-service';
 
 /**
  * Define point of sale filtering parameters used to filter query results.

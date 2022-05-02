@@ -44,7 +44,7 @@ import { DineroObjectResponse } from '../controller/response/dinero-response';
 import BalanceService from './balance-service';
 import { asDate, asNumber } from '../helpers/validators';
 import { PaginationParameters } from '../helpers/pagination';
-import {parseUserToBaseResponse} from "./user-service";
+import { parseUserToBaseResponse } from './user-service';
 
 export interface TransactionFilterParameters {
   transactionId?: number | number[],
@@ -524,7 +524,7 @@ export default class TransactionService {
     QueryFilter.applyFilter(query, mapping, p);
 
     if (user) {
-      query.andWhere('"transaction"."fromId" = :userId OR "transaction"."createdById" = :userId OR "subTransaction"."toId" = :userId', { userId: user.id });
+      query.andWhere('("transaction"."fromId" = :userId OR "transaction"."createdById" = :userId OR "subTransaction"."toId" = :userId)', { userId: user.id });
     }
 
     return applySubTransactionFilters(query);

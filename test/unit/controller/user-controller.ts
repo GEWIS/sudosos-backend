@@ -263,7 +263,7 @@ describe('UserController', (): void => {
   describe('GET /users/usertype/:userType', () => {
     it('should return correct model', async () => {
       const res = await request(ctx.app)
-        .get(`/users/usertype/${UserType.MEMBER}`)
+        .get('/users/usertype/MEMBER')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
       expect(ctx.specification.validateModel(
@@ -352,7 +352,7 @@ describe('UserController', (): void => {
   describe('GET /users/:id', () => {
     it('should return correct model', async () => {
       const res = await request(ctx.app)
-        .get(`/users/usertype/${UserType.MEMBER}`)
+        .get('/users/1')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
       expect(ctx.specification.validateModel(
@@ -1166,6 +1166,24 @@ describe('UserController', (): void => {
     });
   });
   describe('GET /users/{id}/roles', () => {
+    it('should return correct model', async () => {
+      await inUserContext(await UserFactory().clone(1), async (user: User) => {
+        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
+
+        const res = await request(ctx.app)
+          .get(`/users/${user.id}/roles`)
+          .set('Authorization', `Bearer ${userToken}`);
+
+        expect((res.body as RoleResponse[]).map((r) => r.role)).to.deep.equalInAnyOrder(['User']);
+        expect(res.status).to.equal(200);
+        expect(ctx.specification.validateModel(
+          'Array.<RoleResponse.model>',
+          res.body,
+          false,
+          true,
+        ).valid).to.be.true;
+      });
+    });
     it('should return an HTTP 200 and the users roles', async () => {
       await inUserContext(await UserFactory().clone(1), async (user: User) => {
         const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
@@ -1199,5 +1217,4 @@ describe('UserController', (): void => {
       });
     });
   });
-  // TODO: Check validity of returned transactions
 });

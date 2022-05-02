@@ -100,20 +100,14 @@ export default class InvoiceController extends BaseController {
 
     let take;
     let skip;
+    let filters: InvoiceFilterParameters;
     try {
       const pagination = parseRequestPagination(req);
+      filters = parseInvoiceFilterParameters(req);
       take = pagination.take;
       skip = pagination.skip;
     } catch (e) {
       res.status(400).send(e.message);
-      return;
-    }
-
-    let filters: InvoiceFilterParameters;
-    try {
-      filters = parseInvoiceFilterParameters(req);
-    } catch (e) {
-      res.status(400).json(e.message);
       return;
     }
 
