@@ -162,7 +162,13 @@ export default class FileService {
     entityImage.downloadName = path.parse(entityImage.location).base;
     // eslint-disable-next-line no-param-reassign
     entity.image = entityImage;
-    await ProductImage.save(entityImage);
+    if (entity instanceof Product) {
+      await ProductImage.save(entityImage);
+    } else if (entity instanceof Banner) {
+      await BannerImage.save(entityImage);
+    } else {
+      throw new Error('Given entity is not a Product or a Banner');
+    }
     await entity.save();
     return entityImage;
   }

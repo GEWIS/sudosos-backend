@@ -21,6 +21,10 @@ import express, { Application } from 'express';
 import { request, expect } from 'chai';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
+import fileUpload from 'express-fileupload';
+import * as fs from 'fs';
+import path from 'path';
+import sinon from 'sinon';
 import User, { UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import { seedAllProducts, seedProductCategories } from '../../seed';
@@ -35,6 +39,7 @@ import { ProductResponse } from '../../../src/controller/response/product-respon
 import Product from '../../../src/entity/product/product';
 import ProductController from '../../../src/controller/product-controller';
 import { DineroObjectRequest } from '../../../src/controller/request/dinero-request';
+import { DiskStorage } from '../../../src/files/storage';
 
 /**
  * Tests if a product response is equal to the request.
@@ -59,9 +64,12 @@ describe('ProductController', async (): Promise<void> => {
     localUser: User,
     adminToken: String,
     token: String,
+    products: Product[],
     validProductReq: CreateProductRequest,
     invalidProductReq: CreateProductRequest,
   };
+
+  const stubs: sinon.SinonStub[] = [];
 
   // Initialize context
   before(async () => {
@@ -87,7 +95,7 @@ describe('ProductController', async (): Promise<void> => {
     await User.save(localUser);
 
     const categories = await seedProductCategories();
-    await seedAllProducts([adminUser, localUser], categories);
+    const { products } = await seedAllProducts([adminUser, localUser], categories);
 
     // create bearer tokens
     const tokenHandler = new TokenHandler({
@@ -134,6 +142,7 @@ describe('ProductController', async (): Promise<void> => {
 
     const controller = new ProductController({ specification, roleManager });
     app.use(json());
+    app.use(fileUpload());
     app.use(new TokenMiddleware({ tokenHandler, refreshFactor: 0.5 }).getMiddleware());
     app.use('/products', controller.getRouter());
 
@@ -147,6 +156,7 @@ describe('ProductController', async (): Promise<void> => {
       localUser,
       adminToken,
       token,
+      products,
       validProductReq,
       invalidProductReq,
     };
@@ -155,6 +165,11 @@ describe('ProductController', async (): Promise<void> => {
   // close database connection
   after(async () => {
     await ctx.connection.close();
+  });
+
+  afterEach(() => {
+    stubs.forEach((stub) => stub.restore());
+    stubs.splice(0, stubs.length);
   });
 
   // Unit test cases
@@ -512,26 +527,99 @@ describe('ProductController', async (): Promise<void> => {
     });
   });
 
-  // Somehow this testcase is not working, even though the syntax seems to be correct.
-  // The problem is that (even though a file is attached with .attach(), the endpoint
-  // still returns a 400 because "No file or too many files were uploaded". However,
-  // the actual endpoint works just fine...
+  describe('POST /products/:id/image', () => {
+    beforeEach(() => {
+      const saveFileStub = sinon.stub(DiskStorage.prototype, 'saveFile').resolves('fileLocation');
+      stubs.push(saveFileStub);
+    });
 
-  // describe('POST /products/:id/image', () => {
-  //   it('should change the product image if admin', async () => {
-  //     const id = 4;
-  //     // sanity check / precondition
-  //     expect(await Product.findOne(id)).to.exist;
-  //     expect((await Product.findOne(id)).image).to.be.undefined;
-  //
-  //     const res = await request(ctx.app)
-  //       .post(`/products/${id}/image`)
-  //       .set('Authorization', `Bearer ${ctx.token}`)
-  //       .attach('file', fs.readFileSync('./test/image.png'), 'product-image.png');
-  //
-  //     expect(res.status).to.equal(204);
-  //     expect(res.body).to.be.empty;
-  //     expect((await Product.findOne(id)).image).to.be.not.undefined;
-  //   });
-  // });
+    it('should upload the product image if admin', async () => {
+      const { id } = ctx.products.filter((product) => product.image === undefined)[0];
+
+      const res = await request(ctx.app)
+        .post(`/products/${id}/image`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .attach('file', fs.readFileSync(path.join(__dirname, '../../static/product.png')), 'product-image.png');
+
+      expect(res.status).to.equal(204);
+      expect(res.body).to.be.empty;
+      expect((await Product.findOne(id, { relations: ['image'] })).image).to.be.not.undefined;
+    });
+    it('should update the product image if admin', async () => {
+      const stub = sinon.stub(DiskStorage.prototype, 'validateFileLocation');
+      stubs.push(stub);
+
+      const { id } = ctx.products.filter((product) => product.image !== undefined)[0];
+      const { image } = await Product.findOne(id);
+
+      const res = await request(ctx.app)
+        .post(`/products/${id}/image`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .attach('file', fs.readFileSync(path.join(__dirname, '../../static/product.png')), 'product-image.png');
+
+      expect(res.status).to.equal(204);
+      expect(res.body).to.be.empty;
+      expect((await Product.findOne(id, { relations: ['image'] })).image.id).to.not.equal(image);
+    });
+    it('should return 403 if not admin', async () => {
+      const { id } = ctx.products.filter((product) => product.image === undefined)[0];
+
+      const res = await request(ctx.app)
+        .post(`/products/${id}/image`)
+        .set('Authorization', `Bearer ${ctx.token}`)
+        .attach('file', fs.readFileSync(path.join(__dirname, '../../static/product.png')), 'product-image.png');
+
+      expect(res.status).to.equal(403);
+    });
+    it('should return 400 if no file is given', async () => {
+      const { id } = ctx.products.filter((product) => product.image === undefined)[0];
+
+      const res = await request(ctx.app)
+        .post(`/products/${id}/image`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(400);
+    });
+    it('should return 400 if file is given in wrong field', async () => {
+      const { id } = ctx.products.filter((product) => product.image === undefined)[0];
+
+      const res = await request(ctx.app)
+        .post(`/products/${id}/image`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .attach('wrongField', fs.readFileSync(path.join(__dirname, '../../static/product.png')), 'product-image.png');
+
+      expect(res.status).to.equal(400);
+    });
+    it('should return 400 if two files are given', async () => {
+      const { id } = ctx.products.filter((product) => product.image === undefined)[0];
+
+      const res = await request(ctx.app)
+        .post(`/products/${id}/image`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .attach('file', fs.readFileSync(path.join(__dirname, '../../static/product.png')), 'product-image.png')
+        .attach('file', fs.readFileSync(path.join(__dirname, '../../static/product.png')), 'product-image-duplicate.png');
+
+      expect(res.status).to.equal(400);
+    });
+    it('should return 400 if no file data is given', async () => {
+      const { id } = ctx.products.filter((product) => product.image === undefined)[0];
+
+      const res = await request(ctx.app)
+        .post(`/products/${id}/image`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .attach('file', null, 'product-image.png');
+
+      expect(res.status).to.equal(400);
+    });
+    it('should return 404 if product does not exist', async () => {
+      const id = ctx.products[ctx.products.length - 1].id + 100;
+
+      const res = await request(ctx.app)
+        .post(`/products/${id}/image`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .attach('file', fs.readFileSync(path.join(__dirname, '../../static/product.png')), 'product-image.png');
+
+      expect(res.status).to.equal(404);
+    });
+  });
 });

@@ -365,6 +365,15 @@ export default class ProductController extends BaseController {
       res.status(400).send("No file is uploaded in the 'file' field");
       return;
     }
+    const file = files.file as UploadedFile;
+    if (file.data === undefined) {
+      res.status(400).send('File body data is missing from request');
+      return;
+    }
+    if (file.name === undefined) {
+      res.status(400).send('File name is missing from request');
+      return;
+    }
 
     const productId = parseInt(id, 10);
 
@@ -373,7 +382,7 @@ export default class ProductController extends BaseController {
       const product = await Product.findOne(productId, { relations: ['image'] });
       if (product) {
         await this.fileService.uploadEntityImage(
-          product, files.file as UploadedFile, req.token.user,
+          product, file, req.token.user,
         );
         res.status(204).send();
       } else {
