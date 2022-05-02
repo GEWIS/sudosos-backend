@@ -408,6 +408,42 @@ describe('UserController', (): void => {
     });
   });
 
+  describe('GET /users/{id}/members', () => {
+    it('should return correct model', async () => {
+      const user = await User.findOne({ where: { type: UserType.ORGAN } });
+      expect(user).to.not.be.undefined;
+
+      const res = await request(ctx.app)
+        .get(`/users/${user.id}/members`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'PaginatedUserResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
+    it('should give an HTTP 403 when not admin', async () => {
+      const user = await User.findOne({ where: { type: UserType.ORGAN } });
+      expect(user).to.not.be.undefined;
+
+      const res = await request(ctx.app)
+        .get(`/users/${user.id}/members`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(403);
+    });
+    it('should give an HTTP 400 if requested user is not of type ORGAN', async () => {
+      const user = await User.findOne({ where: { type: UserType.MEMBER } });
+      expect(user).to.not.be.undefined;
+
+      const res = await request(ctx.app)
+        .get(`/users/${user.id}/members`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(400);
+    });
+  });
+
   describe('POST /users', () => {
     it('should give an HTTP 403 when not an admin', async () => {
       const res = await request(ctx.app)

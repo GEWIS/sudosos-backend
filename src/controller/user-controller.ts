@@ -334,7 +334,7 @@ export default class UserController extends BaseController {
    * @group users - Operations of user controller
    * @param {integer} id.path.required - The id of the user
    * @security JWT
-   * @returns {User.model} 200 - Individual user
+   * @returns {PaginatedUserResponse.model} 200 - All members of the organ
    * @returns {string} 404 - Nonexistent user id
    * @returns {string} 400 - User is not an organ
    */
