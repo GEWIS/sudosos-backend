@@ -25,7 +25,8 @@ import Database from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
 import ProductService, { ProductFilterParameters } from '../../../src/service/product-service';
 import {
-  seedAllProducts, seedAllContainers, seedProductCategories, seedUsers, seedAllPointsOfSale,
+  seedAllProducts, seedAllContainers, seedProductCategories,
+  seedUsers, seedAllPointsOfSale, seedVatGroups,
 } from '../../seed';
 import Product from '../../../src/entity/product/product';
 import { PaginatedProductResponse, ProductResponse } from '../../../src/controller/response/product-response';
@@ -42,6 +43,20 @@ import ProductImage from '../../../src/entity/file/product-image';
 import User from '../../../src/entity/user/user';
 
 chai.use(deepEqualInAnyOrder);
+
+/**
+ * Test if the price excluding VAT in the response is correct
+ * @param response
+ */
+function correctPriceExclVat(response: ProductResponse) {
+  const priceInclVat = Math.round(
+    response.priceExclVat.amount * (1 + (response.vat.percentage / 100)),
+  );
+  // Rounding issues are a thing, e.g. with price including 21% VAT of 78
+  const diff = Math.abs(priceInclVat - response.priceInclVat.amount);
+  expect(diff).to.be.at.most(1);
+}
+
 /**
  * Test if all the product responses are part of the product set array.
  * @param response
@@ -52,7 +67,6 @@ function returnsAll(response: ProductResponse[], superset: Product[]) {
   const temp = superset.map((prod) => ({
     id: prod.id, ownerid: prod.owner.id, image: prod.image != null ? prod.image.downloadName : null,
   }));
-  console.log(temp);
   expect(response.map((prod) => ({ id: prod.id, ownerid: prod.owner.id, image: prod.image })))
     .to.deep.equalInAnyOrder(temp);
 }
@@ -84,10 +98,12 @@ function productRevisionToProductWithRevision(product: ProductRevision): Product
 function validateProductProperties(response: ProductResponse,
   productParams: CreateProductParams) {
   Object.keys(productParams).forEach((key: keyof CreateProductParams) => {
-    if (key === 'price') {
-      expect((productParams[key] as any).amount).to.be.equal((response.price.amount));
+    if (key === 'priceInclVat') {
+      expect((productParams[key] as any).amount).to.be.equal((response.priceInclVat.amount));
     } else if (key === 'category') {
       expect((productParams[key] as any)).to.be.equal((response.category.id));
+    } else if (key === 'vat') {
+      expect((productParams[key] as any)).to.be.equal((response.vat.id));
     } else if (key === 'ownerId') {
       if (productParams[key] !== undefined) {
         expect((productParams[key] as any)).to.be.equal((response.owner.id));
@@ -120,6 +136,7 @@ describe('ProductService', async (): Promise<void> => {
     const connection = await Database.initialize();
 
     const categories = await seedProductCategories();
+    const vatGroups = await seedVatGroups();
     const users = await seedUsers();
 
     const {
@@ -127,7 +144,7 @@ describe('ProductService', async (): Promise<void> => {
       productImages,
       productRevisions,
       updatedProducts,
-    } = await seedAllProducts(users, categories);
+    } = await seedAllProducts(users, categories, vatGroups);
     const {
       containers,
       containerRevisions,
@@ -176,6 +193,7 @@ describe('ProductService', async (): Promise<void> => {
       const products = ctx.products.filter((prod) => prod.currentRevision !== null);
 
       returnsAll(records, products);
+      records.forEach((p) => correctPriceExclVat(p));
 
       expect(_pagination.take).to.be.undefined;
       expect(_pagination.skip).to.be.undefined;
@@ -348,11 +366,12 @@ describe('ProductService', async (): Promise<void> => {
     it('should update a product by ID', async () => {
       const updateParams: UpdateProductParams = {
         category: 3,
+        vat: 1,
         id: 2,
         ownerId: undefined,
         alcoholPercentage: 8,
         name: 'Product2-update',
-        price: {
+        priceInclVat: {
           amount: 72,
           currency: 'EUR',
           precision: 2,
@@ -372,12 +391,13 @@ describe('ProductService', async (): Promise<void> => {
       const productParams: CreateProductParams = {
         alcoholPercentage: 9,
         name: 'Product77-update',
-        price: {
+        priceInclVat: {
           amount,
           currency: 'EUR',
           precision: 2,
         },
         category: 1,
+        vat: 1,
         ownerId: ctx.users[0].id,
       };
 
@@ -399,12 +419,13 @@ describe('ProductService', async (): Promise<void> => {
         alcoholPercentage: 9,
         ownerId: ctx.users[0].id,
         name: 'Product77-update',
-        price: {
+        priceInclVat: {
           amount: amount - 1,
           currency: 'EUR',
           precision: 2,
         },
         category: 1,
+        vat: 1,
       };
 
       const res: ProductResponse = await ProductService.createProduct(productParams);
@@ -413,12 +434,13 @@ describe('ProductService', async (): Promise<void> => {
         alcoholPercentage: 10,
         ownerId: undefined,
         name: 'Product77-update',
-        price: {
+        priceInclVat: {
           amount,
           currency: 'EUR',
           precision: 2,
         },
         category: 2,
+        vat: 1,
         id: res.id,
       };
 

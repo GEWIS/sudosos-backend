@@ -24,7 +24,7 @@ import PointOfSaleController from '../../../src/controller/point-of-sale-control
 import User, { UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import {
-  seedAllContainers, seedAllPointsOfSale, seedAllProducts, seedProductCategories,
+  seedAllContainers, seedAllPointsOfSale, seedAllProducts, seedProductCategories, seedVatGroups,
 } from '../../seed';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Swagger from '../../../src/start/swagger';
@@ -90,10 +90,11 @@ describe('PointOfSaleController', async () => {
     await User.save(localUser);
 
     const categories = await seedProductCategories();
+    const vatGroups = await seedVatGroups();
     const {
       products,
       productRevisions,
-    } = await seedAllProducts([adminUser, localUser], categories);
+    } = await seedAllProducts([adminUser, localUser], categories, vatGroups);
     const {
       containers,
       containerRevisions,
@@ -408,10 +409,11 @@ describe('PointOfSaleController', async () => {
       const updateProductParams: UpdateProductParams = {
         alcoholPercentage: 0,
         category: 1,
+        vat: 1,
         id: 0,
         ownerId: undefined,
         name: 'ProductRequestID',
-        price: {
+        priceInclVat: {
           amount: -100,
           currency: 'EUR',
           precision: 2,
@@ -437,10 +439,11 @@ describe('PointOfSaleController', async () => {
       const updateProductParams: UpdateProductParams = {
         alcoholPercentage: 0,
         category: 1,
+        vat: 1,
         id: 1,
         ownerId: undefined,
         name: '',
-        price: {
+        priceInclVat: {
           amount: 100,
           currency: 'EUR',
           precision: 2,

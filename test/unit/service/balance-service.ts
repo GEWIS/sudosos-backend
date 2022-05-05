@@ -151,7 +151,8 @@ describe('BalanceService', (): void => {
         transaction.subTransactions.forEach((subTransaction) => {
           const toId = subTransaction.to.id;
           subTransaction.subTransactionRows.forEach((subTransactionRow) => {
-            const value = subTransactionRow.product.price.getAmount() * subTransactionRow.amount;
+            const value = subTransactionRow.product.priceInclVat.getAmount()
+              * subTransactionRow.amount;
             ctx.balances[toId] += value;
             total += value;
           });

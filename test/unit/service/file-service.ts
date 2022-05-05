@@ -27,7 +27,9 @@ import Database from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
 import BaseFile from '../../../src/entity/file/base-file';
 import User from '../../../src/entity/user/user';
-import { seedProductCategories, seedProducts, seedUsers } from '../../seed';
+import {
+  seedProductCategories, seedProducts, seedUsers, seedVatGroups,
+} from '../../seed';
 import SimpleFileRequest from '../../../src/controller/request/simple-file-request';
 import FileService, { StorageMethod } from '../../../src/service/file-service';
 import { DiskStorage } from '../../../src/files/storage';
@@ -66,7 +68,8 @@ describe('FileService', async (): Promise<void> => {
 
     const users = await seedUsers();
     const categories = await seedProductCategories();
-    const { products, productImages } = await seedProducts(users, categories);
+    const vatGroups = await seedVatGroups();
+    const { products, productImages } = await seedProducts(users, categories, vatGroups);
 
     const files = [
       Object.assign(new BaseFile(), {

@@ -101,7 +101,7 @@ export default class TransactionService {
       const rowCost = await ProductRevision.findOne({
         revision: row.product.revision,
         product: { id: row.product.id },
-      }).then((product) => product.price.multiply(row.amount));
+      }).then((product) => product.priceInclVat.multiply(row.amount));
 
       return rowCost;
     }));
@@ -431,9 +431,9 @@ export default class TransactionService {
         product: parseProductToBaseResponse(row.product, false),
         amount: row.amount,
         price: {
-          amount: row.product.price.getAmount() * row.amount,
-          currency: row.product.price.getCurrency(),
-          precision: row.product.price.getPrecision(),
+          amount: row.product.priceInclVat.getAmount() * row.amount,
+          currency: row.product.priceInclVat.getCurrency(),
+          precision: row.product.priceInclVat.getPrecision(),
         } as DineroObjectResponse,
       } as SubTransactionRowResponse)),
       price: { ...cost.toObject() } as DineroObjectResponse,
@@ -498,7 +498,7 @@ export default class TransactionService {
     const query = createQueryBuilder(Transaction, 'transaction')
       .addSelect((qb) => {
         const subquery = qb.subQuery()
-          .select('sum(subTransactionRow.amount * product.price) as value')
+          .select('sum(subTransactionRow.amount * product.priceInclVat) as value')
           .from(SubTransaction, 'subTransaction')
           .leftJoin('subTransaction.subTransactionRows', 'subTransactionRow')
           .leftJoin('subTransactionRow.product', 'product')

@@ -20,21 +20,23 @@ import BaseResponse from './base-response';
 import { BaseUserResponse } from './user-response';
 import { ProductCategoryResponse } from './product-category-response';
 import { PaginationResult } from '../../helpers/pagination';
+import { BaseVatGroupResponse } from './vat-group-response';
 
 /**
  * @typedef {BaseResponse} BaseProductResponse
  * @property {string} name.required - The name of the product.
- * @property {DineroObject.model} price.required - The price of the product.
+ * @property {DineroObject.model} priceInclVat.required - The price of the product.
  */
 export interface BaseProductResponse extends BaseResponse {
   name: string,
-  price: DineroObject,
+  priceInclVat: DineroObject,
 }
 
 /**
  * @typedef {BaseProductResponse} ProductResponse
- * @property {integer} revision - The revision of the product.
  * @property {BaseUserResponse.model} owner.required - The owner of the product.
+ * @property {DineroObject.model} priceExclVat.required - The price of the product excluding VAT
+ * @property {BaseVatGroupResponse.model} vat.required - The VAT percentage
  * @property {ProductCategoryResponse.model} category.required
  *  - The category the product belongs to.
  * @property {string} image - The URL to the picture representing this product.
@@ -43,6 +45,8 @@ export interface BaseProductResponse extends BaseResponse {
  */
 export interface ProductResponse extends BaseProductResponse {
   owner: BaseUserResponse,
+  priceExclVat: DineroObject
+  vat: BaseVatGroupResponse,
   category: ProductCategoryResponse,
   image: String,
   revision: number,

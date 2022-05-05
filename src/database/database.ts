@@ -94,6 +94,7 @@ export default class Database {
         MemberAuthenticator,
         NfcAuthenticator,
         PinAuthenticator,
+        LDAPAuthenticator,
         Banner,
         ProductOrdering,
         Balance,

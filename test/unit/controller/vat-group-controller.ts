@@ -60,7 +60,7 @@ describe('VatGroupController', () => {
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
-    const token = await tokenHandler.signToken({ user, roles: ['Admin'] }, 'nonce admin');
+    const token = await tokenHandler.signToken({ user, roles: ['Admin'], lesser: false }, 'nonce admin');
 
     const validUpdateVatGroupReq: UpdateVatGroupRequest = {
       name: 'CustomVATGroup',
@@ -119,14 +119,17 @@ describe('VatGroupController', () => {
 
       expect(res.status).to.equal(200);
 
+      const validation1 = ctx.specification.validateModel('PaginatedVatGroupResponse', res.body, false, true);
+      expect(validation1.valid).to.be.true;
+
       const vatGroups = res.body.records as VatGroup[];
       // eslint-disable-next-line no-underscore-dangle
       const pagination = res.body._pagination as PaginationResult;
 
       expect(vatGroups.length).to.equal(ctx.vatGroups.length);
       vatGroups.forEach((vatGroup) => {
-        const validation = ctx.specification.validateModel('VatGroup', vatGroup, false, true);
-        expect(validation.valid).to.be.true;
+        const validation2 = ctx.specification.validateModel('VatGroup', vatGroup, false, true);
+        expect(validation2.valid).to.be.true;
       });
 
       expect(pagination.take).to.equal(defaultPagination());

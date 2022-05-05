@@ -25,7 +25,8 @@ import Database from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
 import ContainerService from '../../../src/service/container-service';
 import {
-  seedAllContainers, seedAllProducts, seedPointsOfSale, seedProductCategories, seedUsers,
+  seedAllContainers, seedAllProducts, seedPointsOfSale,
+  seedProductCategories, seedUsers, seedVatGroups,
 } from '../../seed';
 import Container from '../../../src/entity/container/container';
 import { ContainerResponse } from '../../../src/controller/response/container-response';
@@ -62,10 +63,11 @@ describe('ContainerService', async (): Promise<void> => {
 
     const users = await seedUsers();
     const categories = await seedProductCategories();
+    const vatGroups = await seedVatGroups();
     const {
       products,
       productRevisions,
-    } = await seedAllProducts(users, categories);
+    } = await seedAllProducts(users, categories, vatGroups);
     const {
       containers,
       containerRevisions,

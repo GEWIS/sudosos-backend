@@ -31,7 +31,7 @@ import {
   seedPointsOfSale,
   seedProductCategories,
   seedTransactions,
-  seedUsers,
+  seedUsers, seedVatGroups,
 } from '../../seed';
 import Swagger from '../../../src/start/swagger';
 import {
@@ -140,10 +140,11 @@ describe('InvoiceService', () => {
 
     const users = await seedUsers();
     const categories = await seedProductCategories();
+    const vatGroups = await seedVatGroups();
     const {
       products,
       productRevisions,
-    } = await seedAllProducts(users, categories);
+    } = await seedAllProducts(users, categories, vatGroups);
     const {
       containerRevisions,
     } = await seedAllContainers(users, productRevisions, products);

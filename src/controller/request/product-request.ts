@@ -19,7 +19,8 @@
 import { DineroObjectRequest } from './dinero-request';
 
 export interface BaseProductParams {
-  price: DineroObjectRequest;
+  priceInclVat: DineroObjectRequest;
+  vat: number;
   category: number;
   alcoholPercentage: number;
   name: string;
@@ -39,18 +40,20 @@ export type ProductRequest = UpdateProductParams | CreateProductParams;
  * @typedef CreateProductRequest
  * @property {number} ownerId - ID of the owner
  * @property {string} name.required - Name of the product
- * @property {DineroObjectRequest.model} price.required - Price of the product
+ * @property {DineroObjectRequest.model} priceInclVat.required - Price of the product
+ * @property {number} vat.required - VAT group ID of the product
  * @property {number} category.required  - Category of the product
  * @property {number} alcoholPercentage.required  - Alcohol percentage of the product in 2 decimals
  */
-export interface CreateProductRequest extends BaseProductParams{
+export interface CreateProductRequest extends BaseProductParams {
   ownerId?: number,
 }
 
 /**
  * @typedef UpdateProductRequest
  * @property {string} name.required - Name of the product
- * @property {DineroObjectRequest.model} price.required - Price of the product
+ * @property {DineroObjectRequest.model} priceInclVat.required - Price of the product
+ * @property {number} vat.required - VAT group ID of the product
  * @property {number} category.required  - Category of the product
  * @property {number} alcoholPercentage.required  - Alcohol percentage of the product in 2 decimals
  */

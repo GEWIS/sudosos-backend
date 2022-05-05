@@ -204,7 +204,7 @@ export default class InvoiceService {
               invoice,
               description: tSubRow.product.name,
               amount: tSubRow.amount,
-              price: tSubRow.product.price,
+              price: tSubRow.product.priceInclVat,
             });
             entryMap.set(key, entry);
 

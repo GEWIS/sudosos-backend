@@ -27,7 +27,7 @@ import path from 'path';
 import sinon from 'sinon';
 import User, { UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
-import { seedAllProducts, seedProductCategories } from '../../seed';
+import { seedAllProducts, seedProductCategories, seedVatGroups } from '../../seed';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Swagger from '../../../src/start/swagger';
 import RoleManager from '../../../src/rbac/role-manager';
@@ -51,7 +51,7 @@ function productEq(source: CreateProductRequest, response: ProductResponse) {
   expect(source.name).to.eq(response.name);
   expect(source.category).to.eq(response.category.id);
   expect(source.alcoholPercentage).to.eq(response.alcoholPercentage);
-  expect(source.price.amount).to.eq(response.price.amount);
+  expect(source.priceInclVat.amount).to.eq(response.priceInclVat.amount);
 }
 
 describe('ProductController', async (): Promise<void> => {
@@ -95,7 +95,8 @@ describe('ProductController', async (): Promise<void> => {
     await User.save(localUser);
 
     const categories = await seedProductCategories();
-    const { products } = await seedAllProducts([adminUser, localUser], categories);
+    const vatGroups = await seedVatGroups();
+    const { products } = await seedAllProducts([adminUser, localUser], categories, vatGroups);
 
     // create bearer tokens
     const tokenHandler = new TokenHandler({
@@ -106,13 +107,14 @@ describe('ProductController', async (): Promise<void> => {
 
     const validProductReq: CreateProductRequest = {
       name: 'Valid product',
-      price: {
+      priceInclVat: {
         amount: 72,
         currency: 'EUR',
         precision: 2,
       } as DineroObjectRequest,
       alcoholPercentage: 0,
       category: 2,
+      vat: 2,
     };
 
     const invalidProductReq: CreateProductRequest = {
@@ -256,7 +258,7 @@ describe('ProductController', async (): Promise<void> => {
     it('should verify Price', async () => {
       const req: CreateProductRequest = {
         ...ctx.validProductReq,
-        price: {
+        priceInclVat: {
           amount: -72,
           currency: 'EUR',
           precision: 2,

@@ -23,6 +23,7 @@ import { Dinero } from 'dinero.js';
 import DineroTransformer from '../transformer/dinero-transformer';
 import BaseEntityWithoutId from '../base-entity-without-id';
 import ProductCategory from './product-category';
+import VatGroup from '../vat-group';
 
 /**
  * @typedef {BaseEntityWithoutId} BaseProduct
@@ -39,7 +40,10 @@ export default class BaseProduct extends BaseEntityWithoutId {
     type: 'integer',
     transformer: DineroTransformer.Instance,
   })
-  public price: Dinero;
+  public priceInclVat: Dinero;
+
+  @ManyToOne(() => VatGroup, { nullable: false })
+  public vat: VatGroup;
 
   @ManyToOne(() => ProductCategory, { nullable: false })
   public category: ProductCategory;

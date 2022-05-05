@@ -38,9 +38,9 @@ function createValidSubTransactionRowRequest(amount: number, productRevision: Pr
   return {
     amount,
     price: {
-      amount: productRevision.price.amount * amount,
-      currency: productRevision.price.currency,
-      precision: productRevision.price.precision,
+      amount: productRevision.priceInclVat.amount * amount,
+      currency: productRevision.priceInclVat.currency,
+      precision: productRevision.priceInclVat.precision,
     } as DineroObjectRequest,
     product: {
       id: productRevision.id,

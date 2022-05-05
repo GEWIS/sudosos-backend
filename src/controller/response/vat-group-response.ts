@@ -17,7 +17,21 @@
  */
 import { PaginationResult } from '../../helpers/pagination';
 import VatGroup from '../../entity/vat-group';
+import BaseResponse from './base-response';
 
+/**
+ * @typedef {BaseResponse} BaseVatGroupResponse
+ * @property {number} percentage.required - Percentage of VAT
+ */
+export interface BaseVatGroupResponse extends BaseResponse {
+  percentage: number,
+}
+
+/**
+ * @typedef PaginatedVatGroupResponse
+ * @property {PaginationResult.model} _pagination.required - Pagination metadata
+ * @property {Array<VatGroup>} records.required - Returned VAT groups
+ */
 export interface PaginatedVatGroupResponse {
   _pagination: PaginationResult,
   records: VatGroup[],

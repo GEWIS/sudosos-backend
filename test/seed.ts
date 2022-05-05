@@ -168,13 +168,13 @@ export function defineInvoiceEntries(invoiceId: number, startEntryId: number,
 
   let cost = 0;
   for (let i = 0; i < subTransactionRows.length; i += 1) {
-    cost += subTransactionRows[i].amount * subTransactionRows[i].product.price.getAmount();
+    cost += subTransactionRows[i].amount * subTransactionRows[i].product.priceInclVat.getAmount();
     invoiceEntries.push(Object.assign(new InvoiceEntry(), {
       id: entryId,
       invoice: invoiceId,
       description: subTransactionRows[i].product.name,
       amount: subTransactionRows[i].amount,
-      price: subTransactionRows[i].product.price,
+      price: subTransactionRows[i].product.priceInclVat,
     }));
     entryId += 1;
   }
@@ -348,11 +348,13 @@ function defineProducts(
  * @param count - The number of product revisions to generate.
  * @param product - The product that the product revisions belong to.
  * @param category - The category generated product revisions will belong to.
+ * @param vat - The VAT group these product revisions will belong to
  */
 function defineProductRevisions(
   count: number,
   product: Product,
   category: ProductCategory,
+  vat: VatGroup,
 ): ProductRevision[] {
   const revisions: ProductRevision[] = [];
 
@@ -362,9 +364,10 @@ function defineProductRevisions(
       revision: rev,
       name: `Product${product.id}-${rev}`,
       category,
-      price: dinero({
+      priceInclVat: dinero({
         amount: 69 + product.id + rev,
       }),
+      vat,
       alcoholPercentage: product.id / (rev + 1),
     }));
   }
@@ -378,11 +381,13 @@ function defineProductRevisions(
  * @param start - The number of product updates that already exist.
  * @param product - The product that the product updates belong to.
  * @param category - The category generated product updates will belong to.
+ * @param vat - The VAT group these product revisions will belong to
  */
 function defineUpdatedProducts(
   start: number,
   product: Product,
   category: ProductCategory,
+  vat: VatGroup,
 ): UpdatedProduct[] {
   const updates: UpdatedProduct[] = [];
 
@@ -390,7 +395,8 @@ function defineUpdatedProducts(
     product,
     name: `Product${product.id}-update`,
     category,
-    price: dinero({
+    vat,
+    priceInclVat: dinero({
       amount: 42 + product.id,
     }),
     alcoholPercentage: product.id,
@@ -406,14 +412,16 @@ function defineUpdatedProducts(
  *
  * @param users - The dataset of users to base the product dataset on.
  * @param categories - The dataset of product categories to base the product dataset on.
+ * @param vatGroups - The dataset of VAT groups to base the product dataset on.
  */
 export async function seedProducts(
   users: User[],
   categories: ProductCategory[],
+  vatGroups: VatGroup[],
 ): Promise<{
     products: Product[],
     productImages: ProductImage[],
-    productRevisions: ProductRevision[]
+    productRevisions: ProductRevision[],
   }> {
   let products: Product[] = [];
   let productImages: ProductImage[] = [];
@@ -442,11 +450,13 @@ export async function seedProducts(
     let rev: ProductRevision[] = [];
     for (let o = 0; o < prod.length; o += 1) {
       const category = categories[o % categories.length];
+      const vatGroup = vatGroups[o % vatGroups.length];
       prod[o].currentRevision = (prod[o].id % 3) + 1;
       rev = rev.concat(defineProductRevisions(
         prod[o].currentRevision,
         prod[o],
         category,
+        vatGroup,
       ));
     }
 
@@ -472,10 +482,12 @@ export async function seedProducts(
  *
  * @param users - The dataset of users to base the product dataset on.
  * @param categories - The dataset of product categories to base the product dataset on.
+ * @param vatGroups - The dataset of VAT groups to base the product dataset on.
  */
 export async function seedUpdatedProducts(
   users: User[],
   categories: ProductCategory[],
+  vatGroups: VatGroup[],
 ): Promise<{
     products: Product[],
     productRevisions: ProductRevision[],
@@ -499,6 +511,7 @@ export async function seedUpdatedProducts(
     let upd: UpdatedProduct[] = [];
     for (let o = 0; o < prod.length; o += 1) {
       const category = categories[o % categories.length];
+      const vatGroup = vatGroups[o % vatGroups.length];
       const currentRevision = (prod[o].id % 3);
       if (currentRevision > 0) {
         prod[o].currentRevision = currentRevision;
@@ -506,12 +519,14 @@ export async function seedUpdatedProducts(
           prod[o].currentRevision,
           prod[o],
           category,
+          vatGroup,
         ));
       }
       upd = upd.concat(defineUpdatedProducts(
         updatedProducts.length,
         prod[o],
         category,
+        vatGroup,
       ));
     }
 
@@ -535,10 +550,12 @@ export async function seedUpdatedProducts(
  *
  * @param users - The dataset of users to base the product dataset on.
  * @param categories - The dataset of product categories to base the product dataset on.
+ * @param vatGroups - The dataset of VAT groups to base the product dataset on.
  */
 export async function seedAllProducts(
   users: User[],
   categories: ProductCategory[],
+  vatGroups: VatGroup[],
 ): Promise<{
     products: Product[],
     productImages: ProductImage[],
@@ -575,17 +592,20 @@ export async function seedAllProducts(
     let rev: ProductRevision[] = [];
     for (let o = 0; o < prod.length / 2; o += 1) {
       const category = categories[o % categories.length];
+      const vatGroup = vatGroups[o % vatGroups.length];
       prod[o].currentRevision = (prod[o].id % 3) + 1;
       rev = rev.concat(defineProductRevisions(
         prod[o].currentRevision,
         prod[o],
         category,
+        vatGroup,
       ));
     }
 
     let upd: UpdatedProduct[] = [];
     for (let o = prod.length / 2; o < prod.length; o += 1) {
       const category = categories[o % categories.length];
+      const vatGroup = vatGroups[o % vatGroups.length];
       const currentRevision = (prod[o].id % 3);
       if (currentRevision > 0) {
         prod[o].currentRevision = currentRevision;
@@ -593,12 +613,14 @@ export async function seedAllProducts(
           prod[o].currentRevision,
           prod[o],
           category,
+          vatGroup,
         ));
       }
       upd = upd.concat(defineUpdatedProducts(
         updatedProducts.length,
         prod[o],
         category,
+        vatGroup,
       ));
     }
 
@@ -1532,7 +1554,7 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
   const gewisUsers = await seedGEWISUsers(users);
   const categories = await seedProductCategories();
   const vatGroups = await seedVatGroups();
-  const { products, productRevisions, updatedProducts } = await seedAllProducts(users, categories);
+  const { products, productRevisions, updatedProducts } = await seedAllProducts(users, categories, vatGroups);
   const { containers, containerRevisions, updatedContainers } = await seedAllContainers(
     users, productRevisions, products,
   );

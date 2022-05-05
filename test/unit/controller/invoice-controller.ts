@@ -30,7 +30,7 @@ import {
   seedInvoices,
   seedPointsOfSale,
   seedProductCategories,
-  seedTransactions,
+  seedTransactions, seedVatGroups,
 } from '../../seed';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Swagger from '../../../src/start/swagger';
@@ -102,10 +102,11 @@ describe('InvoiceController', async () => {
     await User.save(invoiceUser);
 
     const categories = await seedProductCategories();
+    const vatGroups = await seedVatGroups();
     const {
       products,
       productRevisions,
-    } = await seedAllProducts([adminUser, localUser], categories);
+    } = await seedAllProducts([adminUser, localUser], categories, vatGroups);
     const {
       containers,
       containerRevisions,
