@@ -47,6 +47,7 @@ import InvoiceUser from '../src/entity/user/invoice-user';
 import Invoice from '../src/entity/invoices/invoice';
 import InvoiceEntry from '../src/entity/invoices/invoice-entry';
 import InvoiceStatus, { InvoiceState } from '../src/entity/invoices/invoice-status';
+import VatGroup from '../src/entity/vat-group';
 
 /**
  * Defines InvoiceUsers objects for the given Users
@@ -224,6 +225,36 @@ export async function seedProductCategories(): Promise<ProductCategory[]> {
     category({
       id: 3,
       name: 'Food',
+    }),
+  ]);
+}
+
+/**
+ * Seed the (default) Dutch VAT groups (2022)
+ */
+export async function seedVatGroups(): Promise<VatGroup[]> {
+  const vatGroup = (data: object) => Object.assign(new VatGroup(), data) as VatGroup;
+
+  return VatGroup.save([
+    vatGroup({
+      name: 'Hoog tarief',
+      percentage: 21,
+      hideIfZero: false,
+    }),
+    vatGroup({
+      name: 'Laag tarief',
+      percentage: 9,
+      hideIfZero: false,
+    }),
+    vatGroup({
+      name: 'BTW-vrij',
+      percentage: 0,
+      hideIfZero: false,
+    }),
+    vatGroup({
+      name: 'Laag tarief (oud)',
+      percentage: 6,
+      hideIfZero: true,
     }),
   ]);
 }
@@ -1442,6 +1473,7 @@ export async function seedBanners(users: User[]): Promise<{
 export interface DatabaseContent {
   users: User[],
   categories: ProductCategory[],
+  vatGroups: VatGroup[],
   products: Product[],
   productRevisions: ProductRevision[],
   updatedProducts: UpdatedProduct[],
@@ -1461,6 +1493,7 @@ export interface DatabaseContent {
 export default async function seedDatabase(): Promise<DatabaseContent> {
   const users = await seedUsers();
   const categories = await seedProductCategories();
+  const vatGroups = await seedVatGroups();
   const { products, productRevisions, updatedProducts } = await seedAllProducts(users, categories);
   const { containers, containerRevisions, updatedContainers } = await seedAllContainers(
     users, productRevisions, products,
@@ -1477,6 +1510,7 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
   return {
     users,
     categories,
+    vatGroups,
     products,
     productRevisions,
     updatedProducts,

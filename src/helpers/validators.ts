@@ -66,6 +66,7 @@ export function asNumber(input: any): number {
  * @returns {true} - for 1, '1', true, 'true' (case-insensitive), otherwise false.
  */
 export function asBoolean(input: any): boolean {
+  if (input === undefined) return undefined;
   if (typeof input === 'string') {
     return input.toLowerCase() === 'true' || !!+input;
   }

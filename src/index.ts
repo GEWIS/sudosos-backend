@@ -58,6 +58,7 @@ import { extractRawBody } from './helpers/raw-body';
 import InvoiceController from './controller/invoice-controller';
 import PayoutRequestController from './controller/payout-request-controller';
 import RootController from './controller/root-controller';
+import VatGroupController from './controller/vat-group-controller';
 
 export class Application {
   app: express.Express;
@@ -219,6 +220,7 @@ export default async function createApp(): Promise<Application> {
   application.app.use('/v1/balances', new BalanceController(options).getRouter());
   application.app.use('/v1/banners', new BannerController(options).getRouter());
   application.app.use('/v1/users', new UserController(options).getRouter());
+  application.app.use('/v1/vatgroups', new VatGroupController(options).getRouter());
   application.app.use('/v1/products', new ProductController(options).getRouter());
   application.app.use('/v1/productcategories', new ProductCategoryController(options).getRouter());
   application.app.use('/v1/pointsofsale', new PointOfSaleController(options).getRouter());
