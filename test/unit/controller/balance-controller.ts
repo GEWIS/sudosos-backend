@@ -50,8 +50,8 @@ describe('BalanceController', (): void => {
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
-    const userToken = await tokenHandler.signToken({ user: database.users[0], roles: ['User'] }, '33');
-    const adminToken = await tokenHandler.signToken({ user: database.users[6], roles: ['User', 'Admin'] }, '33');
+    const userToken = await tokenHandler.signToken({ user: database.users[0], roles: ['User'], lesser: false }, '33');
+    const adminToken = await tokenHandler.signToken({ user: database.users[6], roles: ['User', 'Admin'], lesser: false }, '33');
 
     const all = { all: new Set<string>(['*']) };
     const own = { own: new Set<string>(['*']) };

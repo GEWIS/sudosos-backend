@@ -17,9 +17,11 @@
  */
 import { ValidationError } from '../../../helpers/specification-validation';
 
-export const INVALID_PRODUCT_IDS = () => new ValidationError('Not all product IDs are valid.');
+export const INVALID_PRODUCT_ID = (id: number) => new ValidationError(`ID (${id}) is not a valid product id.`);
 
-export const INVALID_CONTAINER_IDS = () => new ValidationError('Not all container IDs are valid.');
+export const INVALID_PRODUCT_PRICE = () => new ValidationError('Price must be greater than zero');
+
+export const INVALID_CONTAINER_ID = (id: number) => new ValidationError(`ID (${id}) is not a valid container id.`);
 
 export const CONTAINER_VALIDATION_FAIL = () => new ValidationError('Container validation failed:');
 
@@ -46,3 +48,5 @@ export const INVOICE_IS_DELETED = () => new ValidationError('Invoice is deleted.
 export const SAME_INVOICE_STATE = () => new ValidationError('Update state is same as current state.');
 
 export const SUBTRANSACTION_ALREADY_INVOICED = (ids: number[]) => new ValidationError(`SubTransactions ${ids}: have already been invoiced.`);
+
+export const INVALID_PIN = () => new ValidationError('PIN is not 4 numbers');

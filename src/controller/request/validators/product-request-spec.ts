@@ -25,6 +25,7 @@ import {
 } from '../../../helpers/specification-validation';
 import ProductCategory from '../../../entity/product/product-category';
 import stringSpec from './string-spec';
+import { INVALID_PRODUCT_PRICE } from './validation-errors';
 
 const validAlcohol = (p: CreateProductParams) => {
   if (p.alcoholPercentage < 0) {
@@ -43,7 +44,7 @@ const validCategory = async (p: CreateProductParams) => {
 
 const validPrice = (p: CreateProductParams) => {
   if (p.price.amount < 0) {
-    return toFail(new ValidationError('Price must be greater than zero'));
+    return toFail(INVALID_PRODUCT_PRICE());
   }
   return toPass(p);
 };

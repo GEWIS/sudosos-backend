@@ -105,6 +105,9 @@ export default abstract class BaseController {
       if (routePolicy.DELETE) {
         BaseController.defineRoute(spec, route, routePolicy.DELETE, bind(this.router.delete));
       }
+      if (routePolicy.PUT) {
+        BaseController.defineRoute(spec, route, routePolicy.PUT, bind(this.router.put));
+      }
     });
 
     // If the request is not handled by the above handlers, the method is not supported.

@@ -41,6 +41,7 @@ import UpdatedProduct from '../../../src/entity/product/updated-product';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import { CreateContainerRequest } from '../../../src/controller/request/container-request';
 import { ProductRequest } from '../../../src/controller/request/product-request';
+import { INVALID_PRODUCT_ID, INVALID_PRODUCT_PRICE } from '../../../src/controller/request/validators/validation-errors';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -112,8 +113,8 @@ describe('ContainerController', async (): Promise<void> => {
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
-    const adminToken = await tokenHandler.signToken({ user: adminUser, roles: ['Admin'] }, 'nonce admin');
-    const token = await tokenHandler.signToken({ user: localUser, roles: ['User'] }, 'nonce');
+    const adminToken = await tokenHandler.signToken({ user: adminUser, roles: ['Admin'], lesser: false }, 'nonce admin');
+    const token = await tokenHandler.signToken({ user: localUser, roles: ['User'], lesser: false }, 'nonce');
 
     const validContainerReq: CreateContainerRequest = {
       products: [7, 8],
@@ -331,9 +332,9 @@ describe('ContainerController', async (): Promise<void> => {
       it('should verify product IDs', async () => {
         const req: CreateContainerRequest = {
           ...ctx.validContainerReq,
-          products: [-1, 5, 10, 1000],
+          products: [-1, 5, 10],
         };
-        await expectError(req, 'Not all product IDs are valid.');
+        await expectError(req, `Products: ${INVALID_PRODUCT_ID(-1).value}`);
       });
       it('should verify product requests', async () => {
         const req: CreateContainerRequest = {
@@ -344,7 +345,7 @@ describe('ContainerController', async (): Promise<void> => {
             } as ProductRequest,
           ],
         };
-        await expectError(req, 'Product validation failed: Price must be greater than zero');
+        await expectError(req, `Products: ${INVALID_PRODUCT_PRICE().value}`);
       });
     });
     it('should verify Name', async () => {

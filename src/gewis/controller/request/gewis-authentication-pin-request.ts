@@ -17,13 +17,11 @@
  */
 
 /**
- * Creates a new Unapproved Product Error than can be thrown when updating an container.
- * @param message - The error message to use
- * @constructor UnapprovedProductError
+ * @typedef GEWISAuthenticationPinRequest
+ * @property {number} gewisId.required
+ * @property {string} pin.required
  */
-export default class UnapprovedProductError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'UnapprovedProductError';
-  }
+export default interface GEWISAuthenticationPinRequest {
+  gewisId: number,
+  pin: string,
 }

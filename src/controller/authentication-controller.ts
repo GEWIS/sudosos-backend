@@ -23,7 +23,11 @@ import User from '../entity/user/user';
 import AuthenticationMockRequest from './request/authentication-mock-request';
 import JsonWebToken from '../authentication/json-web-token';
 import TokenHandler from '../authentication/token-handler';
-import AuthenticationResponse from './response/authentication-response';
+import AuthenticationService, { AuthenticationContext } from '../service/authentication-service';
+import AuthenticationLDAPRequest from './request/authentication-ldap-request';
+import RoleManager from '../rbac/role-manager';
+import wrapInManager from '../helpers/database';
+import { LDAPUser } from '../helpers/ad';
 
 /**
  * The authentication controller is responsible for:
@@ -39,7 +43,7 @@ export default class AuthenticationController extends BaseController {
   /**
    * Reference to the token handler of the application.
    */
-  private tokenHandler: TokenHandler;
+  protected tokenHandler: TokenHandler;
 
   /**
    * Creates a new authentication controller instance.
@@ -63,49 +67,25 @@ export default class AuthenticationController extends BaseController {
       '/mock': {
         POST: {
           body: { modelName: 'AuthenticationMockRequest' },
-          policy: this.canPerformMock.bind(this),
+          policy: AuthenticationController.canPerformMock.bind(this),
           handler: this.mockLogin.bind(this),
+        },
+      },
+      '/LDAP': {
+        POST: {
+          body: { modelName: 'AuthenticationLDAPRequest' },
+          policy: async () => true,
+          handler: this.ldapLogin.bind(this),
         },
       },
     };
   }
 
   /**
-   * Converts the internal object representation to an authentication response, which can be
-   * returned in the API response.
-   * @param user - The user that authenticated.
-   * @param roles - The roles that the authenticated user has.
-   * @param token - The JWT token that can be used to authenticate.
-   * @returns The authentication response.
-   */
-  public static asAuthenticationResponse(
-    user: User,
-    roles: string[],
-    token: string,
-  ): AuthenticationResponse {
-    const response: AuthenticationResponse = {
-      user: {
-        id: user.id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        active: user.active,
-        deleted: user.deleted,
-        type: user.type,
-        createdAt: user.createdAt.toISOString(),
-        updatedAt: user.updatedAt.toISOString(),
-      },
-      roles,
-      token,
-    };
-    return response;
-  }
-
-  /**
    * Validates that the request is authorized by the policy.
    * @param req - The incoming request.
    */
-  // eslint-disable-next-line class-methods-use-this
-  public async canPerformMock(req: Request): Promise<boolean> {
+  static async canPerformMock(req: Request): Promise<boolean> {
     const body = req.body as AuthenticationMockRequest;
 
     // Only allow in development setups
@@ -116,6 +96,60 @@ export default class AuthenticationController extends BaseController {
     if (!user) return false;
 
     return true;
+  }
+
+  /**
+   * LDAP login and hand out token
+   * If user has never signed in before this also creates an account.
+   * @route POST /authentication/LDAP
+   * @group authenticate - Operations of authentication controller
+   * @param {AuthenticationLDAPRequest.model} req.body.required - The LDAP login.
+   * @returns {AuthenticationResponse.model} 200 - The created json web token.
+   * @returns {string} 400 - Validation error.
+   * @returns {string} 403 - Authentication error.
+   */
+  public async ldapLogin(req: Request, res: Response): Promise<void> {
+    const body = req.body as AuthenticationLDAPRequest;
+    this.logger.trace('LDAP authentication for user', body.accountName);
+
+    try {
+      AuthenticationController.LDAPLogin(this.roleManager, this.tokenHandler,
+        wrapInManager<User>(AuthenticationService.createUserAndBind))(req, res);
+    } catch (error) {
+      this.logger.error('Could not authenticate using LDAP:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Constructor for the LDAP function to make it easily adaptable.
+   * @constructor
+   */
+  public static LDAPLogin(roleManager: RoleManager, tokenHandler: TokenHandler,
+    onNewUser: (ADUser: LDAPUser) => Promise<User>) {
+    return async (req: Request, res: Response) => {
+      const body = req.body as AuthenticationLDAPRequest;
+      const user = await AuthenticationService.LDAPAuthentication(
+        body.accountName, body.password, onNewUser,
+      );
+
+      // If user is undefined something went wrong.
+      if (!user) {
+        res.status(403).json({
+          message: 'Invalid credentials.',
+        });
+        return;
+      }
+
+      const context: AuthenticationContext = {
+        roleManager,
+        tokenHandler,
+      };
+
+      // AD login gives full access.
+      const token = await AuthenticationService.getSaltedToken(user, context, false);
+      res.json(token);
+    };
   }
 
   /**
@@ -137,9 +171,10 @@ export default class AuthenticationController extends BaseController {
       const contents: JsonWebToken = {
         user,
         roles,
+        lesser: false,
       };
       const token = await this.tokenHandler.signToken(contents, body.nonce);
-      const response = AuthenticationController.asAuthenticationResponse(user, roles, token);
+      const response = AuthenticationService.asAuthenticationResponse(user, roles, token);
       res.json(response);
     } catch (error) {
       this.logger.error('Could not create token:', error);

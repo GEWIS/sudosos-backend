@@ -21,6 +21,8 @@ import { SwaggerSpecification } from 'swagger-model-validator';
 import { Connection } from 'typeorm';
 import { json } from 'body-parser';
 import log4js from 'log4js';
+import sinon from 'sinon';
+import { Client } from 'ldapts';
 import User, { UserType } from '../../../src/entity/user/user';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Database from '../../../src/database/database';
@@ -29,6 +31,8 @@ import AuthenticationController from '../../../src/controller/authentication-con
 import AuthenticationMockRequest from '../../../src/controller/request/authentication-mock-request';
 import RoleManager from '../../../src/rbac/role-manager';
 import AuthenticationResponse from '../../../src/controller/response/authentication-response';
+import AuthenticationLDAPRequest from '../../../src/controller/request/authentication-ldap-request';
+import userIsAsExpected from '../service/authentication-service';
 
 describe('AuthenticationController', async (): Promise<void> => {
   let ctx: {
@@ -157,6 +161,68 @@ describe('AuthenticationController', async (): Promise<void> => {
         .post('/authentication/mock')
         .send(req);
       expect(res.status).to.equal(403);
+    });
+  });
+  describe('POST /authentication/LDAP', () => {
+    const stubs: sinon.SinonStub[] = [];
+
+    const validADUser = {
+      dn: 'CN=Sudo SOS (m4141),OU=Member accounts,DC=gewiswg,DC=gewis,DC=nl',
+      memberOfFlattened: [
+        'CN=Domain Users,CN=Users,DC=gewiswg,DC=gewis,DC=nl',
+      ],
+      givenName: 'Sudo',
+      sn: 'SOS',
+      objectGUID: '1',
+      sAMAccountName: 'm4141',
+      mail: 'm4141@gewis.nl',
+    };
+
+    afterEach(() => {
+      process.env.LDAP_SERVER_URL = undefined;
+      process.env.LDAP_BASE = undefined;
+      process.env.LDAP_USER_FILTER = undefined;
+      process.env.LDAP_BIND_USER = undefined;
+      process.env.LDAP_BIND_PW = undefined;
+      stubs.forEach((stub) => stub.restore());
+      stubs.splice(0, stubs.length);
+    });
+
+    const validLDAPRequest: AuthenticationLDAPRequest = {
+      accountName: 'm4141',
+      password: 'This is correct',
+    };
+
+    function stubLDAP(searchEntries: any[]) {
+      // Stub LDAP functions
+      process.env.LDAP_SERVER_URL = 'ldaps://gewisdc03.gewis.nl:636';
+      process.env.LDAP_BASE = 'DC=gewiswg,DC=gewis,DC=nl';
+      process.env.LDAP_USER_FILTER = '(&(objectClass=user)(objectCategory=person)(memberOf:1.2.840.113556.1.4.1941:=CN=PRIV - SudoSOS Users,OU=Privileges,OU=Groups,DC=gewiswg,DC=gewis,DC=nl)(mail=*)(sAMAccountName=%u))';
+      process.env.LDAP_BIND_USER = 'CN=Service account SudoSOS,OU=Service Accounts,OU=Special accounts,DC=gewiswg,DC=gewis,DC=nl';
+      process.env.LDAP_BIND_PW = 'BIND PW';
+      const clientBindStub = sinon.stub(Client.prototype, 'bind').resolves(null);
+      const clientSearchStub = sinon.stub(Client.prototype, 'search').resolves({ searchReferences: [], searchEntries });
+      stubs.push(clientBindStub);
+      stubs.push(clientSearchStub);
+    }
+
+    it('should return an HTTP 200 and the user if correct login', async () => {
+      stubLDAP([validADUser]);
+
+      const res = await request(ctx.app)
+        .post('/authentication/LDAP')
+        .send(validLDAPRequest);
+      userIsAsExpected((res.body as AuthenticationResponse).user, validADUser);
+      expect(res.status).to.equal(200);
+    });
+
+    it('should return an HTTP 403 if the login is incorrect', async () => {
+      stubLDAP([]);
+      const res = await request(ctx.app)
+        .post('/authentication/LDAP')
+        .send(validLDAPRequest);
+      expect(res.status).to.equal(403);
+      expect(res.body.message).to.equal('Invalid credentials.');
     });
   });
 });

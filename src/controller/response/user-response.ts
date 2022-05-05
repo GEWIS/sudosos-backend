@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import BaseResponse from './base-response';
-import User, { UserType } from '../../entity/user/user';
+import User from '../../entity/user/user';
 import { PaginationResult } from '../../helpers/pagination';
 
 /**
@@ -39,13 +39,13 @@ export interface BaseUserResponse extends BaseResponse {
 export interface UserResponse extends BaseUserResponse {
   active: boolean;
   deleted: boolean;
-  type: UserType;
+  type: string;
 }
 
 /**
  * @typedef PaginatedUserResponse
  * @property {PaginationResult.model} _pagination - Pagination metadata
- * @property {Array<UserResponse>} records - Returned banners
+ * @property {Array<UserResponse>} records - Returned users
  */
 export interface PaginatedUserResponse {
   _pagination: PaginationResult,

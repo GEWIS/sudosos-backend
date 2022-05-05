@@ -22,6 +22,8 @@ import { Connection } from 'typeorm';
 import { json } from 'body-parser';
 import * as jwt from 'jsonwebtoken';
 import log4js from 'log4js';
+import sinon from 'sinon';
+import { Client } from 'ldapts';
 import User, { UserType } from '../../../../src/entity/user/user';
 import TokenHandler from '../../../../src/authentication/token-handler';
 import Database from '../../../../src/database/database';
@@ -31,6 +33,10 @@ import AuthenticationResponse from '../../../../src/controller/response/authenti
 import GewisAuthenticationController from '../../../../src/gewis/controller/gewis-authentication-controller';
 import GewiswebToken from '../../../../src/gewis/gewisweb-token';
 import GewisUser from '../../../../src/entity/user/gewis-user';
+import AuthenticationLDAPRequest from '../../../../src/controller/request/authentication-ldap-request';
+import userIsAsExpected from '../../service/authentication-service';
+import AuthenticationService from '../../../../src/service/authentication-service';
+import GEWISAuthenticationPinRequest from '../../../../src/gewis/controller/request/gewis-authentication-pin-request';
 
 describe('GewisAuthenticationController', async (): Promise<void> => {
   let ctx: {
@@ -82,6 +88,8 @@ describe('GewisAuthenticationController', async (): Promise<void> => {
       } as GewisUser),
       secret: '42',
     };
+
+    await AuthenticationService.setUserPINCode(await User.findOne(1), '1000');
 
     ctx.roleManager.registerRole({
       name: 'Role',
@@ -187,6 +195,88 @@ describe('GewisAuthenticationController', async (): Promise<void> => {
       const res = await request(ctx.app)
         .post('/authentication/gewisweb')
         .send(req);
+      expect(res.status).to.equal(403);
+    });
+  });
+  describe('POST /authentication/GEWIS/LDAP', () => {
+    const stubs: sinon.SinonStub[] = [];
+
+    const validADUser = {
+      dn: 'CN=Sudo SOS (m4141),OU=Member accounts,DC=gewiswg,DC=gewis,DC=nl',
+      memberOfFlattened: [
+        'CN=Domain Users,CN=Users,DC=gewiswg,DC=gewis,DC=nl',
+      ],
+      givenName: 'Sudo',
+      sn: 'SOS',
+      objectGUID: '1',
+      employeeNumber: '4141',
+      sAMAccountName: 'm4141',
+      mail: 'm4141@gewis.nl',
+    };
+
+    afterEach(() => {
+      process.env.LDAP_SERVER_URL = undefined;
+      process.env.LDAP_BASE = undefined;
+      process.env.LDAP_USER_FILTER = undefined;
+      process.env.LDAP_BIND_USER = undefined;
+      process.env.LDAP_BIND_PW = undefined;
+      stubs.forEach((stub) => stub.restore());
+      stubs.splice(0, stubs.length);
+    });
+
+    const validLDAPRequest: AuthenticationLDAPRequest = {
+      accountName: 'm4141',
+      password: 'This is correct',
+    };
+
+    function stubLDAP(searchEntries: any[]) {
+      // Stub LDAP functions
+      process.env.LDAP_SERVER_URL = 'ldaps://gewisdc03.gewis.nl:636';
+      process.env.LDAP_BASE = 'DC=gewiswg,DC=gewis,DC=nl';
+      process.env.LDAP_USER_FILTER = '(&(objectClass=user)(objectCategory=person)(memberOf:1.2.840.113556.1.4.1941:=CN=PRIV - SudoSOS Users,OU=Privileges,OU=Groups,DC=gewiswg,DC=gewis,DC=nl)(mail=*)(sAMAccountName=%u))';
+      process.env.LDAP_BIND_USER = 'CN=Service account SudoSOS,OU=Service Accounts,OU=Special accounts,DC=gewiswg,DC=gewis,DC=nl';
+      process.env.LDAP_BIND_PW = 'BIND PW';
+      const clientBindStub = sinon.stub(Client.prototype, 'bind').resolves(null);
+      const clientSearchStub = sinon.stub(Client.prototype, 'search').resolves({ searchReferences: [], searchEntries });
+      stubs.push(clientBindStub);
+      stubs.push(clientSearchStub);
+    }
+
+    it('should return an HTTP 200 and the user if correct login', async () => {
+      stubLDAP([validADUser]);
+
+      const res = await request(ctx.app)
+        .post('/authentication/GEWIS/LDAP')
+        .send(validLDAPRequest);
+      userIsAsExpected((res.body as AuthenticationResponse).user, validADUser);
+      expect(res.status).to.equal(200);
+    });
+
+    it('should return an HTTP 403 if the login is incorrect', async () => {
+      stubLDAP([]);
+      const res = await request(ctx.app)
+        .post('/authentication/GEWIS/LDAP')
+        .send(validLDAPRequest);
+      expect(res.status).to.equal(403);
+      expect(res.body.message).to.equal('Invalid credentials.');
+    });
+  });
+  describe('POST /authentication/GEWIS/pin', () => {
+    const validPinRequest: GEWISAuthenticationPinRequest = {
+      gewisId: 11,
+      pin: '1000',
+    };
+    it('should return an HTTP 200 and User if correct pin code', async () => {
+      const res = await request(ctx.app)
+        .post('/authentication/GEWIS/pin')
+        .send(validPinRequest);
+      expect((res.body as AuthenticationResponse).user.id).to.be.equal(1);
+      expect(res.status).to.equal(200);
+    });
+    it('should return an HTTP 403 if incorrect pin code', async () => {
+      const res = await request(ctx.app)
+        .post('/authentication/GEWIS/pin')
+        .send({ ...validPinRequest, pin: '1' });
       expect(res.status).to.equal(403);
     });
   });

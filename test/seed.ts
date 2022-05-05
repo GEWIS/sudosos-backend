@@ -19,6 +19,7 @@ import dinero from 'dinero.js';
 import { addDays } from 'date-fns';
 import * as fs from 'fs';
 import path from 'path';
+import bcrypt from 'bcrypt';
 import Container from '../src/entity/container/container';
 import ContainerRevision from '../src/entity/container/container-revision';
 import PointOfSale from '../src/entity/point-of-sale/point-of-sale';
@@ -47,6 +48,9 @@ import InvoiceUser from '../src/entity/user/invoice-user';
 import Invoice from '../src/entity/invoices/invoice';
 import InvoiceEntry from '../src/entity/invoices/invoice-entry';
 import InvoiceStatus, { InvoiceState } from '../src/entity/invoices/invoice-status';
+import GewisUser from '../src/entity/user/gewis-user';
+import seedGEWISUsers from '../src/gewis/database/seed';
+import PinAuthenticator from '../src/entity/authenticator/pin-authenticator';
 import VatGroup from '../src/entity/vat-group';
 
 /**
@@ -70,7 +74,7 @@ export function defineInvoiceUsers(users: User[]): InvoiceUser[] {
  * @param start - The number of users that already exist.
  * @param count - The number of objects to define.
  * @param type - The type of users to define.
- * @param active - Active state of the defined uers.
+ * @param active - Active state of the defined users.
  */
 function defineUsers(
   start: number,
@@ -89,6 +93,34 @@ function defineUsers(
     }) as User);
   }
   return users;
+}
+
+const BCRYPT_ROUNDS = 12;
+function hashPassword(password: string, callback: any) {
+  bcrypt.genSalt(BCRYPT_ROUNDS, (error, salt) => {
+    bcrypt.hash(password, salt, callback);
+  });
+}
+
+/**
+ * Seeds a default set of PIN users and stores them in the database.
+ */
+async function seedPinAuthenticators(users: User[]): Promise<PinAuthenticator[]> {
+  const pinUsers: PinAuthenticator[] = [];
+
+  const promises: Promise<any>[] = [];
+  for (let i = 0; i < users.length; i += 1) {
+    hashPassword(i.toString(), (error: any, encrypted: any) => {
+      const pinUser = Object.assign(new PinAuthenticator(), {
+        user: users[i],
+        hashedPin: encrypted,
+      });
+      promises.push(PinAuthenticator.save(pinUser).then((u) => pinUsers.push(u)));
+    });
+  }
+
+  await Promise.all(promises);
+  return pinUsers;
 }
 
 /**
@@ -531,11 +563,13 @@ export async function seedAllProducts(
     let img: ProductImage[] = [];
     for (let o = 0; o < prod.length; o += 1) {
       let image;
-      if (i % 2 === 0) {
+      if (o % 2 === 0) {
         image = defineProductImage(prod[o], sellers[i]);
         img = img.concat(image);
+        prod[o].image = image;
+      } else {
+        prod[o].image = undefined;
       }
-      prod[o].image = image;
     }
 
     let rev: ProductRevision[] = [];
@@ -1488,10 +1522,14 @@ export interface DatabaseContent {
   payoutRequests: PayoutRequest[],
   invoices: Invoice[],
   banners: Banner[],
+  gewisUsers: GewisUser[],
+  pinUsers: PinAuthenticator[],
 }
 
 export default async function seedDatabase(): Promise<DatabaseContent> {
   const users = await seedUsers();
+  const pinUsers = await seedPinAuthenticators(users);
+  const gewisUsers = await seedGEWISUsers(users);
   const categories = await seedProductCategories();
   const vatGroups = await seedVatGroups();
   const { products, productRevisions, updatedProducts } = await seedAllProducts(users, categories);
@@ -1525,5 +1563,7 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
     transfers,
     payoutRequests,
     banners,
+    gewisUsers,
+    pinUsers,
   };
 }

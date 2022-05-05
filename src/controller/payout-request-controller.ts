@@ -39,23 +39,23 @@ export default class PayoutRequestController extends BaseController {
     return {
       '/': {
         GET: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'payoutRequest', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'PayoutRequest', ['*']),
           handler: this.returnAllPayoutRequests.bind(this),
         },
         POST: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'create', 'own', 'payoutRequest', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'create', 'own', 'PayoutRequest', ['*']),
           handler: this.createPayoutRequest.bind(this),
         },
       },
       '/:id(\\d+)': {
         GET: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'get', await PayoutRequestController.getRelation(req), 'payoutRequest', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', await PayoutRequestController.getRelation(req), 'PayoutRequest', ['*']),
           handler: this.returnSinglePayoutRequest.bind(this),
         },
       },
       '/:id(\\d+)/status': {
         POST: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'update', await PayoutRequestController.getRelation(req), 'payoutRequest', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'update', await PayoutRequestController.getRelation(req), 'PayoutRequest', ['*']),
           handler: this.updatePayoutRequestStatus.bind(this),
         },
       },
@@ -194,7 +194,7 @@ export default class PayoutRequestController extends BaseController {
 
     // Everyone can cancel their own payout requests, but only admins can update to other states.
     if (body.state !== PayoutRequestState.CANCELLED) {
-      if (!this.roleManager.can(req.token.roles, 'update', 'all', 'payoutRequest', ['*'])) {
+      if (!this.roleManager.can(req.token.roles, 'update', 'all', 'PayoutRequest', ['*'])) {
         res.status(403).send('You can only cancel your own payout requests.');
         return;
       }

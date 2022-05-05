@@ -58,6 +58,8 @@ import { extractRawBody } from './helpers/raw-body';
 import InvoiceController from './controller/invoice-controller';
 import PayoutRequestController from './controller/payout-request-controller';
 import RootController from './controller/root-controller';
+import ADService from './service/ad-service';
+import Bindings from './helpers/bindings';
 import VatGroupController from './controller/vat-group-controller';
 
 export class Application {
@@ -105,12 +107,9 @@ async function setupRbac(application: Application) {
 }
 
 /**
- * Sets up the token handling middleware and initializes the authentication
- * controllers of the application.
- * @param application - The application on which to bind the middleware
- *                      and controller.
+ * Sets up the token handler to be used by the application.
  */
-async function setupAuthentication(application: Application) {
+async function createTokenHandler(): Promise<TokenHandler> {
   // Import JWT key
   const jwtPath = process.env.JWT_KEY_PATH;
   const jwtContent = await fs.readFile(jwtPath);
@@ -118,13 +117,22 @@ async function setupAuthentication(application: Application) {
   const jwtPublic = crypto.createPublicKey(jwtPrivate);
 
   // Define middleware
-  const tokenHandler = new TokenHandler({
+  return new TokenHandler({
     algorithm: 'RS512',
     publicKey: jwtPublic.export({ type: 'spki', format: 'pem' }),
     privateKey: jwtPrivate.export({ type: 'pkcs8', format: 'pem' }),
     expiry: 3600,
   });
+}
 
+/**
+ * Sets up the token handling middleware and initializes the authentication
+ * controllers of the application.
+ * @param tokenHandler - Reference to the token handler used by the application.
+ * @param application - The application on which to bind the middleware
+ *                      and controller.
+ */
+async function setupAuthentication(tokenHandler: TokenHandler, application: Application) {
   // Define authentication controller and bind before middleware.
   const controller = new AuthenticationController(
     {
@@ -146,9 +154,13 @@ async function setupAuthentication(application: Application) {
   );
   application.app.use('/v1/authentication', gewisController.getRouter());
 
+  // INJECT GEWIS BINDINGS
+  Bindings.ldapUserCreation = Gewis.findOrCreateGEWISUserAndBind;
+
   // Define middleware to be used by any other route.
   const tokenMiddleware = new TokenMiddleware({ refreshFactor: 0.5, tokenHandler });
   application.app.use(tokenMiddleware.getMiddleware());
+  return controller;
 }
 
 export default async function createApp(): Promise<Application> {
@@ -201,16 +213,33 @@ export default async function createApp(): Promise<Application> {
     },
   ).getRouter());
 
+  const tokenHandler = await createTokenHandler();
   // Setup token handler and authentication controller.
-  await setupAuthentication(application);
+  await setupAuthentication(tokenHandler, application);
 
   await BalanceService.updateBalances();
-  const cronTask = cron.schedule('*/10 * * * *', () => {
+  const syncBalances = cron.schedule('*/10 * * * *', () => {
     logger.debug('Syncing balances.');
     BalanceService.updateBalances();
     logger.debug('Synced balances.');
   });
-  application.tasks = [cronTask];
+
+  application.tasks = [syncBalances];
+
+  if (process.env.ENABLE_LDAP === 'true') {
+    await ADService.syncUsers();
+    await ADService.syncSharedAccounts().then(
+      () => ADService.syncUserRoles(application.roleManager),
+    );
+    const syncADGroups = cron.schedule('*/10 * * * *', async () => {
+      logger.debug('Syncing AD.');
+      await ADService.syncSharedAccounts().then(
+        () => ADService.syncUserRoles(application.roleManager),
+      );
+      logger.debug('Synced AD');
+    });
+    application.tasks.push(syncADGroups);
+  }
 
   // REMOVE LATER
   const options: BaseControllerOptions = {
@@ -219,7 +248,7 @@ export default async function createApp(): Promise<Application> {
   };
   application.app.use('/v1/balances', new BalanceController(options).getRouter());
   application.app.use('/v1/banners', new BannerController(options).getRouter());
-  application.app.use('/v1/users', new UserController(options).getRouter());
+  application.app.use('/v1/users', new UserController(options, tokenHandler).getRouter());
   application.app.use('/v1/vatgroups', new VatGroupController(options).getRouter());
   application.app.use('/v1/products', new ProductController(options).getRouter());
   application.app.use('/v1/productcategories', new ProductCategoryController(options).getRouter());

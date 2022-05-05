@@ -18,20 +18,17 @@
 import {
   Entity, ManyToOne,
 } from 'typeorm';
-import BaseEntityWithoutId from '../base-entity-without-id';
 import User from '../user/user';
+import AuthenticationMethod from './authentication-method';
 
 /**
- * @typedef {MemberAuthenticator} MemberAuthenticator
+ * @typedef {AuthenticationMethod} MemberAuthenticator
  * @property {User.model} user.required - The user this authenticator is for
  * @property {User.model} authenticateAs.required - The user entity this user wants to
  * authenticate as.
  */
 @Entity()
-export default class MemberAuthenticator extends BaseEntityWithoutId {
-  @ManyToOne(() => User, { primary: true, nullable: false })
-  public user: User;
-
+export default class MemberAuthenticator extends AuthenticationMethod {
   @ManyToOne(() => User, { primary: true, nullable: false })
   public authenticateAs: User;
 }

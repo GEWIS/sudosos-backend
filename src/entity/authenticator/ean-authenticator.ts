@@ -16,22 +16,16 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  Column, Entity, JoinColumn, OneToOne,
+  Column, Entity,
 } from 'typeorm';
-import BaseEntityWithoutId from '../base-entity-without-id';
-import User from '../user/user';
+import AuthenticationMethod from './authentication-method';
 
 @Entity()
 /**
- * @typedef {EanAuthenticator} EanAuthenticator
- * @property {User.model} user.required - The user this authenticator is for
+ * @typedef {AuthenticationMethod} EanAuthenticator
  * @property {string} eanCode.required - The EAN code
  */
-export default class EanAuthenticator extends BaseEntityWithoutId {
-  @OneToOne(() => User, { primary: true, nullable: false })
-  @JoinColumn()
-  public user: User;
-
+export default class EanAuthenticator extends AuthenticationMethod {
   @Column()
   public eanCode: string;
 }

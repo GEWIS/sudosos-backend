@@ -24,9 +24,16 @@ import Policy from '../../controller/policy';
 import JsonWebToken from '../../authentication/json-web-token';
 import TokenHandler from '../../authentication/token-handler';
 import GewisUser from '../../entity/user/gewis-user';
-import AuthenticationController from '../../controller/authentication-controller';
 import GewiswebToken from '../gewisweb-token';
 import GewiswebAuthenticationRequest from './request/gewisweb-authentication-request';
+import AuthenticationService, { AuthenticationContext } from '../../service/authentication-service';
+import PinAuthenticator from '../../entity/authenticator/pin-authenticator';
+import GEWISAuthenticationPinRequest from './request/gewis-authentication-pin-request';
+import AuthenticationLDAPRequest from '../../controller/request/authentication-ldap-request';
+import AuthenticationController from '../../controller/authentication-controller';
+import Gewis from '../gewis';
+import User from '../../entity/user/user';
+import wrapInManager from '../../helpers/database';
 
 /**
   * The GEWIS authentication controller is responsible for:
@@ -76,6 +83,20 @@ export default class GewisAuthenticationController extends BaseController {
           body: { modelName: 'GewiswebAuthenticationRequest' },
           policy: async () => true,
           handler: this.gewiswebLogin.bind(this),
+        },
+      },
+      '/GEWIS/pin': {
+        POST: {
+          body: { modelName: 'GEWISAuthenticationPinRequest' },
+          policy: async () => true,
+          handler: this.gewisPINLogin.bind(this),
+        },
+      },
+      '/GEWIS/LDAP': {
+        POST: {
+          body: { modelName: 'AuthenticationLDAPRequest' },
+          policy: async () => true,
+          handler: this.ldapLogin.bind(this),
         },
       },
     };
@@ -128,10 +149,82 @@ export default class GewisAuthenticationController extends BaseController {
       const contents: JsonWebToken = {
         user: user.user,
         roles,
+        lesser: false,
       };
       const token = await this.tokenHandler.signToken(contents, body.nonce);
-      const response = AuthenticationController.asAuthenticationResponse(user.user, roles, token);
+      const response = AuthenticationService.asAuthenticationResponse(user.user, roles, token);
       res.json(response);
+    } catch (error) {
+      this.logger.error('Could not create token:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * LDAP login and hand out token
+   *    If user has never signed in before this also creates an GEWIS account.
+   * @route POST /authentication/GEWIS/LDAP
+   * @group authenticate - Operations of authentication controller
+   * @param {AuthenticationLDAPRequest.model} req.body.required - The LDAP login.
+   * @returns {AuthenticationResponse.model} 200 - The created json web token.
+   * @returns {string} 400 - Validation error.
+   * @returns {string} 403 - Authentication error.
+   */
+  public async ldapLogin(req: Request, res: Response): Promise<void> {
+    const body = req.body as AuthenticationLDAPRequest;
+    this.logger.trace('GEWIS LDAP authentication for user', body.accountName);
+
+    try {
+      AuthenticationController.LDAPLogin(this.roleManager, this.tokenHandler,
+        wrapInManager<User>(Gewis.findOrCreateGEWISUserAndBind))(req, res);
+    } catch (error) {
+      this.logger.error('Could not authenticate using LDAP:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * PIN login and hand out token.
+   * @route POST /authentication/GEWIS/pin
+   * @group authenticate - Operations of authentication controller
+   * @param {GEWISAuthenticationPinRequest.model} req.body.required - The PIN login.
+   * @returns {AuthenticationResponse.model} 200 - The created json web token.
+   * @returns {string} 400 - Validation error.
+   * @returns {string} 403 - Authentication error.
+   */
+  public async gewisPINLogin(req: Request, res: Response): Promise<void> {
+    const { pin, gewisId } = req.body as GEWISAuthenticationPinRequest;
+    this.logger.trace('GEWIS PIN authentication for user', gewisId);
+
+    try {
+      const gewisUser = await GewisUser.findOne({
+        where: { gewisId },
+        relations: ['user'],
+      });
+
+      if (!gewisUser) {
+        res.status(403).json({
+          message: `User ${gewisId} not registered`,
+        });
+        return;
+      }
+
+      const pinAuthenticator = await PinAuthenticator.findOne({ where: { user: gewisUser.user }, relations: ['user'] });
+      const context: AuthenticationContext = {
+        roleManager: this.roleManager,
+        tokenHandler: this.tokenHandler,
+      };
+
+      const result = await AuthenticationService.PINAuthentication(pin.toString(),
+        pinAuthenticator, context);
+
+      if (!result) {
+        res.status(403).json({
+          message: 'Invalid credentials.',
+        });
+      }
+
+      res.json(result);
     } catch (error) {
       this.logger.error('Could not create token:', error);
       res.status(500).json('Internal server error.');

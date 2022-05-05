@@ -104,8 +104,8 @@ describe('TransferController', async (): Promise<void> => {
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
-    adminToken = await tokenHandler.signToken({ user: adminUser, roles: ['User', 'Admin'] }, 'nonce admin');
-    token = await tokenHandler.signToken({ user: localUser, roles: ['User'] }, 'nonce');
+    adminToken = await tokenHandler.signToken({ user: adminUser, roles: ['User', 'Admin'], lesser: false }, 'nonce admin');
+    token = await tokenHandler.signToken({ user: localUser, roles: ['User'], lesser: false }, 'nonce');
 
     // start app
     app = express();

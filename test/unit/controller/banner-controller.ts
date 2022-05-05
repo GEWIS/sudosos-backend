@@ -21,6 +21,9 @@ import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { Connection } from 'typeorm';
 import sinon from 'sinon';
+import fs from 'fs';
+import path from 'path';
+import fileUpload from 'express-fileupload';
 import TokenHandler from '../../../src/authentication/token-handler';
 import BannerController from '../../../src/controller/banner-controller';
 import BannerRequest from '../../../src/controller/request/banner-request';
@@ -103,8 +106,8 @@ describe('BannerController', async (): Promise<void> => {
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
-    const adminToken = await tokenHandler.signToken({ user: adminUser, roles: ['Admin'] }, 'nonce admin');
-    const token = await tokenHandler.signToken({ user: localUser, roles: [] }, 'nonce');
+    const adminToken = await tokenHandler.signToken({ user: adminUser, roles: ['Admin'], lesser: false }, 'nonce admin');
+    const token = await tokenHandler.signToken({ user: localUser, roles: [], lesser: false }, 'nonce');
 
     // test banners
     const validBannerReq = {
@@ -147,6 +150,7 @@ describe('BannerController', async (): Promise<void> => {
 
     const controller = new BannerController({ specification, roleManager });
     app.use(json());
+    app.use(fileUpload());
     app.use(new TokenMiddleware({ tokenHandler, refreshFactor: 0.5 }).getMiddleware());
     app.use('/banners', controller.getRouter());
 
@@ -509,6 +513,102 @@ describe('BannerController', async (): Promise<void> => {
 
       // check if banner with id 1 is not deleted
       expect(await Banner.findOne(1)).to.not.be.undefined;
+    });
+  });
+
+  describe('POST /banners/:id/image', () => {
+    beforeEach(() => {
+      const saveFileStub = sinon.stub(DiskStorage.prototype, 'saveFile').resolves('fileLocation');
+      stubs.push(saveFileStub);
+    });
+
+    it('should upload the banner image if admin', async () => {
+      const { id } = ctx.banners.filter((banner) => banner.image === undefined)[0];
+
+      const res = await request(ctx.app)
+        .post(`/banners/${id}/image`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .attach('file', fs.readFileSync(path.join(__dirname, '../../static/banner.png')), 'banner-image.png');
+
+      expect(res.status).to.equal(204);
+      expect(res.body).to.be.empty;
+      expect((await Banner.findOne(id, { relations: ['image'] })).image).to.be.not.undefined;
+    });
+    it('should update the banner image if admin', async () => {
+      const stub = sinon.stub(DiskStorage.prototype, 'validateFileLocation');
+      stubs.push(stub);
+
+      const { id } = ctx.banners.filter((banner) => banner.image !== undefined)[0];
+      const { image } = await Banner.findOne(id);
+
+      const res = await request(ctx.app)
+        .post(`/banners/${id}/image`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .attach('file', fs.readFileSync(path.join(__dirname, '../../static/banner.png')), 'banner-image.png');
+
+      expect(res.status).to.equal(204);
+      expect(res.body).to.be.empty;
+      expect((await Banner.findOne(id, { relations: ['image'] })).image.id).to.not.equal(image);
+    });
+    it('should return 403 if not admin', async () => {
+      const { id } = ctx.banners.filter((banner) => banner.image === undefined)[0];
+
+      const res = await request(ctx.app)
+        .post(`/banners/${id}/image`)
+        .set('Authorization', `Bearer ${ctx.token}`)
+        .attach('file', fs.readFileSync(path.join(__dirname, '../../static/banner.png')), 'banner-image.png');
+
+      expect(res.status).to.equal(403);
+    });
+    it('should return 400 if no file is given', async () => {
+      const { id } = ctx.banners.filter((banner) => banner.image === undefined)[0];
+
+      const res = await request(ctx.app)
+        .post(`/banners/${id}/image`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(400);
+    });
+    it('should return 400 if file is given in wrong field', async () => {
+      const { id } = ctx.banners.filter((banner) => banner.image === undefined)[0];
+
+      const res = await request(ctx.app)
+        .post(`/banners/${id}/image`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .attach('wrongField', fs.readFileSync(path.join(__dirname, '../../static/banner.png')), 'banner-image.png');
+
+      expect(res.status).to.equal(400);
+    });
+    it('should return 400 if two files are given', async () => {
+      const { id } = ctx.banners.filter((banner) => banner.image === undefined)[0];
+
+      const res = await request(ctx.app)
+        .post(`/banners/${id}/image`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .attach('file', fs.readFileSync(path.join(__dirname, '../../static/banner.png')), 'banner-image.png')
+        .attach('file', fs.readFileSync(path.join(__dirname, '../../static/banner.png')), 'banner-image-duplicate.png');
+
+      expect(res.status).to.equal(400);
+    });
+    it('should return 404 if banner does not exist', async () => {
+      const id = ctx.banners[ctx.banners.length - 1].id + 100;
+
+      const res = await request(ctx.app)
+        .post(`/banners/${id}/image`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .attach('file', fs.readFileSync(path.join(__dirname, '../../static/banner.png')), 'banner-image.png');
+
+      expect(res.status).to.equal(404);
+    });
+    it('should correctly throw error if file does not have data', async () => {
+      const { id } = ctx.banners.filter((banner) => banner.image === undefined)[0];
+
+      const res = await request(ctx.app)
+        .post(`/banners/${id}/image`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .attach('file', null, 'yeee.png');
+
+      expect(res.status).to.equal(400);
     });
   });
 });

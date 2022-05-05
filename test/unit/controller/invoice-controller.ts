@@ -122,9 +122,9 @@ describe('InvoiceController', async () => {
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
 
-    const adminToken = await tokenHandler.signToken({ user: adminUser, roles: ['Admin'] }, 'nonce admin');
-    const token = await tokenHandler.signToken({ user: localUser, roles: ['User'] }, 'nonce');
-    const invoiceToken = await tokenHandler.signToken({ user: invoiceUser, roles: ['User'] }, 'nonce');
+    const adminToken = await tokenHandler.signToken({ user: adminUser, roles: ['Admin'], lesser: false }, 'nonce admin');
+    const token = await tokenHandler.signToken({ user: localUser, roles: ['User'], lesser: false }, 'nonce');
+    const invoiceToken = await tokenHandler.signToken({ user: invoiceUser, roles: ['User'], lesser: false }, 'nonce');
 
     const app = express();
     const specification = await Swagger.initialize(app);
@@ -394,9 +394,10 @@ describe('InvoiceController', async () => {
           toId: debtor.id,
           byId: creditor.id,
         };
+
+        await new Promise((f) => setTimeout(f, 500));
         expect(await BalanceService.getBalance(debtor.id)).is.equal(-1 * cost);
 
-        await new Promise((f) => setTimeout(f, 1000));
         const count = await Invoice.count();
         const res = await request(ctx.app)
           .post('/invoices')
