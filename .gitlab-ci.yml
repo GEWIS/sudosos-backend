@@ -81,7 +81,9 @@ test:
     when: always
     reports:
       junit: reports/junit.xml
-      cobertura: reports/coverage/cobertura-coverage.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: reports/coverage/cobertura-coverage.xml
     paths:
     - reports/coverage/
 
