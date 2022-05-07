@@ -47,7 +47,7 @@ import MemberAuthenticator from '../../../src/entity/authenticator/member-authen
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import UpdatePinRequest from '../../../src/controller/request/update-pin-request';
 import { INVALID_PIN } from '../../../src/controller/request/validators/validation-errors';
-import { UserResponse } from '../../../src/controller/response/user-response';
+import { PaginatedUserResponse, UserResponse } from '../../../src/controller/response/user-response';
 import RoleResponse from '../../../src/controller/response/rbac/role-response';
 
 chai.use(deepEqualInAnyOrder);
@@ -423,6 +423,29 @@ describe('UserController', (): void => {
         false,
         true,
       ).valid).to.be.true;
+    });
+    it('should return an HTTP 200 and all the members of the organ', async () => {
+      await inUserContext(await UserFactory().clone(3), async (...users: User[]) => {
+        const organ = await User.findOne({ where: { type: UserType.ORGAN } });
+        const promises: Promise<MemberAuthenticator>[] = [];
+        users.forEach((user) => {
+          const auth = Object.assign(new MemberAuthenticator(), {
+            user,
+            authenticateAs: organ,
+          });
+          promises.push(auth.save());
+        });
+        await Promise.all(promises);
+
+        const res = await request(ctx.app)
+          .get(`/users/${organ.id}/members`)
+          .set('Authorization', `Bearer ${ctx.adminToken}`);
+        expect(res.status).to.equal(200);
+        const userIds = users.map((user) => user.id);
+        expect((res.body as PaginatedUserResponse).records.map(
+          (user) => user.id,
+        )).to.deep.equalInAnyOrder(userIds);
+      });
     });
     it('should give an HTTP 403 when not admin', async () => {
       const user = await User.findOne({ where: { type: UserType.ORGAN } });
