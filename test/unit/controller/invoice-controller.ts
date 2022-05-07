@@ -573,16 +573,8 @@ describe('InvoiceController', async () => {
         .delete(`/invoices/${invoice.id}`)
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
-      expect(res.status).to.equal(200);
-      expect(ctx.specification.validateModel(
-        'BaseInvoiceResponse',
-        res.body,
-        false,
-        true,
-      ).valid).to.be.true;
-
-      const body = res.body as InvoiceResponse;
-      expect(body.currentState.state).to.equal('DELETED');
+      expect(res.status).to.equal(204);
+      expect(res.body).to.be.empty;
     });
     it('should return an HTTP 403 if not admin', async () => {
       const invoice = (await Invoice.find())[0];
