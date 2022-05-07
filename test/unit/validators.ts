@@ -28,7 +28,8 @@ import { BasePointOfSaleResponse } from '../../src/controller/response/point-of-
 export function verifyUserEntity(
   spec: SwaggerSpecification, user: User,
 ): void {
-  const validation = spec.validateModel('UserResponse', user, false, true);
+  const validation = spec.validateModel('User', user, false, true);
+  console.log(validation);
   expect(validation.valid).to.be.true;
 
   expect(user.id).to.be.greaterThan(-1);
@@ -41,8 +42,8 @@ export function verifyUserEntity(
 export function verifyUserResponse(
   spec: SwaggerSpecification, userResponse: UserResponse, canBeDeleted?: boolean,
 ): void {
-  // const validation = spec.validateModel('UserResponse', userResponse, false, false);
-  // expect(validation.valid).to.be.true;
+  const validation = spec.validateModel('UserResponse', userResponse, false, false);
+  expect(validation.valid).to.be.true;
   expect(userResponse.id).to.be.at.least(0);
   expect(userResponse.firstName).to.be.not.empty;
   expect(userResponse.lastName).to.be.not.undefined;
