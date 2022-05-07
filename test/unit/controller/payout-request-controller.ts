@@ -134,6 +134,18 @@ describe('PayoutRequestController', () => {
   });
 
   describe('GET /payoutrequests', () => {
+    it('should return correct model', async () => {
+      const res = await request(ctx.app)
+        .get('/payoutrequests')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'PaginatedBasePayoutRequestResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
     it('should return all payout requests if admin', async () => {
       const res = await request(ctx.app)
         .get('/payoutrequests')
@@ -381,13 +393,32 @@ describe('PayoutRequestController', () => {
   });
 
   describe('GET /payoutrequests/{id}', () => {
+    it('should should return correct model', async () => {
+      const { id } = ctx.payoutRequests[0];
+      const res = await request(ctx.app)
+        .get(`/payoutrequests/${id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'PayoutRequestResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
+
     it('should correctly return a payout request response', async () => {
       const { id } = ctx.payoutRequests[0];
       const res = await request(ctx.app)
         .get(`/payoutrequests/${id}`)
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
-
+      expect(ctx.specification.validateModel(
+        'PayoutRequestResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
       const payoutRequest = res.body as PayoutRequestResponse;
 
       const validation = ctx.specification.validateModel('PayoutRequestResponse', payoutRequest, false, true);
@@ -432,6 +463,12 @@ describe('PayoutRequestController', () => {
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(ctx.validPayoutRequestRequest);
       expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'PayoutRequestResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
 
       const payoutRequest = res.body as PayoutRequestResponse;
 
@@ -468,6 +505,12 @@ describe('PayoutRequestController', () => {
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send({ state: PayoutRequestState.APPROVED });
       expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'PayoutRequestResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
 
       const payoutRequest = res.body as PayoutRequestResponse;
 

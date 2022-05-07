@@ -187,6 +187,18 @@ describe('InvoiceController', async () => {
   });
 
   describe('GET /invoices', () => {
+    it('should return correct model', async () => {
+      const res = await request(ctx.app)
+        .get('/invoices')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'PaginatedInvoiceResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
     it('should return an HTTP 200 and all existing invoices if admin', async () => {
       const res = await request(ctx.app)
         .get('/invoices')
@@ -363,6 +375,12 @@ describe('InvoiceController', async () => {
         expect(await Invoice.count()).to.equal(count + 1);
 
         expect(res.status).to.equal(200);
+        expect(ctx.specification.validateModel(
+          'InvoiceResponse',
+          res.body,
+          false,
+          true,
+        ).valid).to.be.true;
       });
     });
     it('should return an HTTP 403 if not admin', async () => {
@@ -447,6 +465,20 @@ describe('InvoiceController', async () => {
     });
   });
   describe('GET /invoices/{id}', () => {
+    it('should return correct model', async () => {
+      const invoice = (await Invoice.find())[0];
+      const res = await request(ctx.app)
+        .get(`/invoices/${invoice.id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'InvoiceResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
     it('should return an HTTP 200 and the requested invoice if exists and admin', async () => {
       const invoice = (await Invoice.find())[0];
       const res = await request(ctx.app)
@@ -487,6 +519,14 @@ describe('InvoiceController', async () => {
         .patch(`/invoices/${invoice.id}`)
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(updateRequest);
+
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'BaseInvoiceResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
 
       expect(res.status).to.equal(200);
       const body = res.body as InvoiceResponse;
@@ -534,9 +574,8 @@ describe('InvoiceController', async () => {
         .delete(`/invoices/${invoice.id}`)
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
-      expect(res.status).to.equal(200);
-      const body = res.body as InvoiceResponse;
-      expect(body.currentState.state).to.equal('DELETED');
+      expect(res.status).to.equal(204);
+      expect(res.body).to.be.empty;
     });
     it('should return an HTTP 403 if not admin', async () => {
       const invoice = (await Invoice.find())[0];

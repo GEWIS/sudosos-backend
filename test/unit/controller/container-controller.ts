@@ -188,6 +188,18 @@ describe('ContainerController', async (): Promise<void> => {
   });
 
   describe('GET /containers', () => {
+    it('should return correct model', async () => {
+      const res = await request(ctx.app)
+        .get('/containers')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'PaginatedContainerResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
     it('should return an HTTP 200 and all existing containers in the database if admin', async () => {
       const res = await request(ctx.app)
         .get('/containers')
@@ -243,6 +255,12 @@ describe('ContainerController', async (): Promise<void> => {
       // success code
       asRequested(container, res.body);
       expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'ContainerWithProductsResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
     }
     it('should return an HTTP 200 and the container with the given id if admin', async () => {
       const container = await Container.findOne(1, { relations: ['owner'] });
@@ -291,6 +309,18 @@ describe('ContainerController', async (): Promise<void> => {
     });
   });
   describe('GET /containers/:id/products', () => {
+    it('should return correct model', async () => {
+      const res = await request(ctx.app)
+        .get('/containers/1/products')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'PaginatedProductResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
     it('should return an HTTP 200 and all the products in the container if admin', async () => {
       const res = await request(ctx.app)
         .get('/containers/1/products')
@@ -357,12 +387,19 @@ describe('ContainerController', async (): Promise<void> => {
     describe('verifyContainerRequest Specification', async () => {
       await testValidationOnRoute('post', '/containers');
     });
-    it('should store the give)n container in the database and return an HTTP 200 and the created container if admin', async () => {
+    it('should store the given container in the database and return an HTTP 200 and the created container if admin', async () => {
       const containerCount = await Container.count();
       const res = await request(ctx.app)
         .post('/containers')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(ctx.validContainerReq);
+
+      expect(ctx.specification.validateModel(
+        'ContainerWithProductsResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
 
       expect(await Container.count()).to.equal(containerCount + 1);
       containerProductsEq(ctx.validContainerReq, res.body as ContainerWithProductsResponse);
@@ -409,6 +446,13 @@ describe('ContainerController', async (): Promise<void> => {
         .post('/containers')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(containerApprovedProducts);
+
+      expect(ctx.specification.validateModel(
+        'ContainerWithProductsResponse',
+        newContainer.body,
+        false,
+        true,
+      ).valid).to.be.true;
 
       const { id } = newContainer.body;
 
@@ -488,6 +532,13 @@ describe('ContainerController', async (): Promise<void> => {
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(ctx.validContainerReq);
 
+      expect(ctx.specification.validateModel(
+        'ContainerWithProductsResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+
       containerProductsEq(ctx.validContainerReq, res.body as ContainerWithProductsResponse);
 
       const databaseContainer = await UpdatedContainer.findOne((res.body as ContainerResponse).id);
@@ -555,6 +606,18 @@ describe('ContainerController', async (): Promise<void> => {
     });
   });
   describe('GET /containers/public', () => {
+    it('should return correct model', async () => {
+      const res = await request(ctx.app)
+        .get('/containers/public')
+        .set('Authorization', `Bearer ${ctx.token}`);
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'PaginatedContainerResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
     it('should return an HTTP 200 and all public containers', async () => {
       const res = await request(ctx.app)
         .get('/containers/public')
@@ -567,6 +630,18 @@ describe('ContainerController', async (): Promise<void> => {
     });
   });
   describe('GET /containers/:id/update', () => {
+    it('should return correct model', async () => {
+      const res = await request(ctx.app)
+        .get('/containers/4/update')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'ContainerWithProductsResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
     it('should return an HTTP 200 and the updated container if exists and if admin', async () => {
       const res = await request(ctx.app)
         .get('/containers/4/update')
@@ -623,6 +698,18 @@ describe('ContainerController', async (): Promise<void> => {
     });
   });
   describe('GET /containers/updated', () => {
+    it('should return correct model', async () => {
+      const res = await request(ctx.app)
+        .get('/containers/updated')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'PaginatedContainerResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
     it('should return an HTTP 200 and all updated containers if admin', async () => {
       const res = await request(ctx.app)
         .get('/containers/updated')

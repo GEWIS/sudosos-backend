@@ -83,7 +83,7 @@ export default class TransferController extends BaseController {
    * @security JWT
    * @param {integer} take.query - How many transfers the endpoint should return
    * @param {integer} skip.query - How many transfers should be skipped (for pagination)
-   * @returns {Array<TransferResponse>} 200 - All existing transfers
+   * @returns {Array<TransferResponse.model>} 200 - All existing transfers
    * @returns {string} 500 - Internal server error
    */
   public async returnAllTransfers(req: RequestWithToken, res: Response): Promise<void> {

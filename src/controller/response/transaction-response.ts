@@ -47,7 +47,7 @@ export interface BaseTransactionResponse extends BaseResponse {
  * is subtracted.
  * @property {BaseUserResponse.model} createdBy - The user that created the transaction, if not
  * same as 'from'.
- * @property {Array.<SubTransactionResponse>} subTransactions.required - The subtransactions
+ * @property {Array.<SubTransactionResponse.model>} subTransactions.required - The subtransactions
  * belonging to this transaction.
  * @property {BasePointOfSaleResponse.model} pointOfSale - The POS at which this transaction
  * has been created
@@ -92,7 +92,7 @@ export interface SubTransactionRowResponse extends BaseResponse {
 /**
  * @typedef PaginatedBaseTransactionResponse
  * @property {PaginationResult.model} _pagination - Pagination metadata
- * @property {Array<BaseTransactionResponse>} records - Returned banners
+ * @property {Array<BaseTransactionResponse.model>} records - Returned banners
  */
 export interface PaginatedBaseTransactionResponse {
   _pagination: PaginationResult,

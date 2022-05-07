@@ -22,7 +22,7 @@ import ActionResponse from './action-response';
  * @typedef EntityResponse -
  * The entity contains a name and a list of permissions per action.
  * @property {string} entity - The name of the entity for which the permissions are.
- * @property {Array.<ActionResponse>} actions - The permissions per action.
+ * @property {Array.<ActionResponse.model>} actions - The permissions per action.
  */
 export default interface EntityResponse {
   entity: string;

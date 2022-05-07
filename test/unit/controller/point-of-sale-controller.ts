@@ -176,6 +176,18 @@ describe('PointOfSaleController', async () => {
   });
 
   describe('GET /pointsofsale', () => {
+    it('should return correct model', async () => {
+      const res = await request(ctx.app)
+        .get('/pointsofsale')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'PaginatedPointOfSaleResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
     it('should return an HTTP 200 and all existing points of sale if admin', async () => {
       const res = await request(ctx.app)
         .get('/pointsofsale')
@@ -223,6 +235,18 @@ describe('PointOfSaleController', async () => {
     });
   });
   describe('GET /pointsofsale/:id', () => {
+    it('should return correct model', async () => {
+      const res = await request(ctx.app)
+        .get('/pointsofsale/1')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'PointOfSaleWithContainersResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
     it('should return an HTTP 200 and the point of sale with given id if admin', async () => {
       const res = await request(ctx.app)
         .get('/pointsofsale/1')
@@ -249,6 +273,18 @@ describe('PointOfSaleController', async () => {
     });
   });
   describe('GET /pointsofsale/:id/update', async () => {
+    it('should return correct model', async () => {
+      const { id } = (await UpdatedPointOfSale.find({ relations: ['pointOfSale'] }))[0].pointOfSale;
+      const res = await request(ctx.app)
+        .get(`/pointsofsale/${id}/update`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(ctx.specification.validateModel(
+        'UpdatedPointOfSaleWithContainersResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
     it('should return an HTTP 200 and the update if admin', async () => {
       const { id } = (await UpdatedPointOfSale.find({ relations: ['pointOfSale'] }))[0].pointOfSale;
 
@@ -261,6 +297,18 @@ describe('PointOfSaleController', async () => {
     });
   });
   describe('GET /pointsofsale/:id/containers', async () => {
+    it('should return correct model', async () => {
+      const res = await request(ctx.app)
+        .get('/pointsofsale/1/containers')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'PaginatedContainerResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
     it('should return an HTTP 200 and the containers in the given point of sale if admin', async () => {
       const res = await request(ctx.app)
         .get('/pointsofsale/1/containers')
@@ -301,6 +349,19 @@ describe('PointOfSaleController', async () => {
     });
   });
   describe('GET /pointsofsale/:id/products', async () => {
+    it('should return correct model', async () => {
+      const { id } = await PointOfSale.findOne({ relations: ['owner'], where: { owner: ctx.localUser } });
+      const res = await request(ctx.app)
+        .get(`/pointsofsale/${id}/products`)
+        .set('Authorization', `Bearer ${ctx.token}`);
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'PaginatedProductResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
     it('should return an HTTP 200 and the products in the given point of sale if admin', async () => {
       const take = 5;
       const skip = 1;
@@ -469,6 +530,12 @@ describe('PointOfSaleController', async () => {
         .post('/pointsofsale')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(ctx.validPOSRequest);
+      expect(ctx.specification.validateModel(
+        'UpdatedPointOfSaleResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
 
       expect(await PointOfSale.count()).to.equal(count + 1);
       pointOfSaleEq(ctx.validPOSRequest, res.body as PointOfSaleResponse);

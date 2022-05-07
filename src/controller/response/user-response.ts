@@ -45,7 +45,7 @@ export interface UserResponse extends BaseUserResponse {
 /**
  * @typedef PaginatedUserResponse
  * @property {PaginationResult.model} _pagination - Pagination metadata
- * @property {Array<UserResponse>} records - Returned users
+ * @property {Array<UserResponse.model>} records - Returned users
  */
 export interface PaginatedUserResponse {
   _pagination: PaginationResult,

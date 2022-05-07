@@ -43,7 +43,7 @@ export interface ContainerResponse extends BaseContainerResponse {
 /**
  * @typedef PaginatedContainerResponse
  * @property {PaginationResult.model} _pagination - Pagination metadata
- * @property {Array<ContainerResponse>} records - Returned containers
+ * @property {Array<ContainerResponse.model>} records - Returned containers
  */
 export interface PaginatedContainerResponse {
   _pagination: PaginationResult,
@@ -52,7 +52,7 @@ export interface PaginatedContainerResponse {
 
 /**
  * @typedef {ContainerResponse} ContainerWithProductsResponse
- * @property {ProductResponse} products.required - The products in the container.
+ * @property {Array<ProductResponse.model>} products.required - The products in the container.
  */
 export interface ContainerWithProductsResponse extends ContainerResponse {
   products: ProductResponse[],
