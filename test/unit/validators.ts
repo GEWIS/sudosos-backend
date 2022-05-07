@@ -60,6 +60,7 @@ export function verifyProductEntity(
   spec: SwaggerSpecification, product: ProductRevision,
 ): void {
   const validation = spec.validateModel('Product', product, false, true);
+  console.error(validation);
   expect(validation.valid).to.be.true;
 
   expect(product.product.id).to.be.greaterThan(-1);

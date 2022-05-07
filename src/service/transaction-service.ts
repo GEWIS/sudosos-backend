@@ -34,7 +34,7 @@ import {
 } from '../helpers/revision-to-response';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import { SubTransactionRequest, SubTransactionRowRequest, TransactionRequest } from '../controller/request/transaction-request';
-import User from '../entity/user/user';
+import User, { UserType } from '../entity/user/user';
 import ContainerRevision from '../entity/container/container-revision';
 import SubTransactionRow from '../entity/transactions/sub-transaction-row';
 import ProductRevision from '../entity/product/product-revision';
@@ -562,7 +562,7 @@ export default class TransactionService {
           lastName: o.from_lastName,
           active: o.from_active === 1,
           deleted: o.from_deleted === 1,
-          type: o.from_type,
+          type: UserType[o.from_type],
         },
         createdBy: o.createdBy_id ? {
           id: o.createdBy_id,
@@ -572,7 +572,7 @@ export default class TransactionService {
           lastName: o.createdBy_lastName,
           active: o.from_active === 1,
           deleted: o.from_deleted === 1,
-          type: o.createdBy_type,
+          type: UserType[o.createdBy_type],
         } : undefined,
         pointOfSale: {
           id: o.pointOfSale_id,

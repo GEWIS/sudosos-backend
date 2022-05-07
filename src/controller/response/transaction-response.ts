@@ -64,10 +64,10 @@ export interface TransactionResponse extends BaseResponse {
 /**
  * @typedef {BaseResponse} SubTransactionResponse
  * @property {BaseUserResponse.model} to.required - The account that the transaction is added to.
- * @property {BaseContainerResponse} container.required - The container from which all
+ * @property {BaseContainerResponse.model} container.required - The container from which all
  * products in the SubTransactionRows are bought
- * @property {Array.<SubTransactionRowResponse>} subTransactionsRows.required - The rows of this
- *     SubTransaction
+ * @property {Array.<SubTransactionRowResponse.model>} subTransactionsRows.required
+ *            The rows of this SubTransaction
  * @property {DineroObjectResponse.model} price.required - The total cost of the sub transaction
  */
 export interface SubTransactionResponse extends BaseResponse {
