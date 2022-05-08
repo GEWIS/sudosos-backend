@@ -171,6 +171,12 @@ describe('ContainerService', async (): Promise<void> => {
       expect(_pagination.count).to.equal(withRevisions.length);
       expect(records.length).to.equal(take);
     });
+    it('should return products if specified', async () => {
+      const { records } = await ContainerService.getContainers(
+        { returnProducts: true, containerId: 1 }, {},
+      );
+      console.error(records);
+    });
   });
 
   describe('getUpdatedContainers function', () => {

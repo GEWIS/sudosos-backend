@@ -75,6 +75,7 @@ export interface ContainerParameters extends UpdatedContainerParameters {
    * Whether to select public containers.
    */
   public?: boolean;
+  returnProducts?: boolean;
 }
 
 export default class ContainerService {
@@ -108,6 +109,7 @@ export default class ContainerService {
         'container.id = containerrevision.container',
       )
       .innerJoin('container.owner', 'owner')
+      .innerJoin('containerrevision.products', 'products')
       .select([
         'container.id AS id',
         'container.public as public',
@@ -120,7 +122,9 @@ export default class ContainerService {
         'owner.lastName AS owner_lastName',
       ]);
 
-    const { posId, posRevision, ...p } = filters;
+    const {
+      posId, posRevision, returnProducts, ...p
+    } = filters;
 
     if (posId !== undefined) {
       builder.innerJoin(
@@ -142,6 +146,10 @@ export default class ContainerService {
       );
     }
 
+    if (returnProducts) {
+      // builder.innerJoin(ProductRevision, 'productrevision', '');
+    }
+
     const filterMapping: FilterMapping = {
       containerId: 'container.id',
       containerRevision: 'containerrevision.revision',
@@ -155,6 +163,7 @@ export default class ContainerService {
       builder.andWhere('container.currentRevision = containerrevision.revision');
     }
 
+    console.error(builder.getQuery());
     return builder;
   }
 
@@ -174,6 +183,7 @@ export default class ContainerService {
       builder.limit(take).offset(skip).getRawMany(),
       builder.getCount(),
     ]);
+    console.error(results[0]);
 
     const records = results[0].map((rawContainer) => this.asContainerResponse(rawContainer));
     return {

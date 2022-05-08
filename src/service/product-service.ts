@@ -472,7 +472,7 @@ export default class ProductService {
   }
 
   /**
-   * Confirms an product update and creates a product revision.
+   * Confirms a product update and creates a product revision.
    * @param productId - The product update to confirm.
    */
   public static async approveProductUpdate(productId: number)
