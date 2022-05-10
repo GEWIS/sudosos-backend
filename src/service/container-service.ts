@@ -35,6 +35,8 @@ import { PaginationParameters } from '../helpers/pagination';
 import { getIdsAndRequests } from '../helpers/array-splitter';
 import { CreateContainerParams, UpdateContainerParams } from '../controller/request/container-request';
 import { ProductRequest, UpdateProductParams } from '../controller/request/product-request';
+import ProductImage from '../entity/file/product-image';
+import User from '../entity/user/user';
 
 interface ContainerVisibility {
   own: boolean;
@@ -76,6 +78,7 @@ export interface ContainerParameters extends UpdatedContainerParameters {
    */
   public?: boolean;
   returnProducts?: boolean;
+  productId?: number;
 }
 
 export default class ContainerService {
@@ -85,12 +88,12 @@ export default class ContainerService {
    */
   private static asContainerResponse(rawContainer: any): ContainerResponse {
     return {
-      id: rawContainer.id,
-      revision: rawContainer.revision,
-      name: rawContainer.name,
-      createdAt: rawContainer.createdAt,
-      updatedAt: rawContainer.updatedAt,
-      public: !!rawContainer.public,
+      id: rawContainer.container_public,
+      revision: rawContainer.container_revision,
+      name: rawContainer.container_name,
+      createdAt: rawContainer.container_createdAt,
+      updatedAt: rawContainer.container_updatedAt,
+      public: !!rawContainer.container_public,
       owner: {
         id: rawContainer.owner_id,
         firstName: rawContainer.owner_firstName,
@@ -101,6 +104,18 @@ export default class ContainerService {
 
   private static buildGetContainersQuery(filters: ContainerParameters = {})
     : SelectQueryBuilder<Container> {
+    const selection = [
+      'container.id AS container_id',
+      'container.public as container_public',
+      'container.createdAt AS container_createdAt',
+      'containerrevision.revision AS container_revision',
+      'containerrevision.updatedAt AS container_updatedAt',
+      'containerrevision.name AS container_name',
+      'container_owner.id AS owner_id',
+      'container_owner.firstName AS owner_firstName',
+      'container_owner.lastName AS owner_lastName',
+    ];
+
     const builder = createQueryBuilder()
       .from(Container, 'container')
       .innerJoin(
@@ -108,19 +123,8 @@ export default class ContainerService {
         'containerrevision',
         'container.id = containerrevision.container',
       )
-      .innerJoin('container.owner', 'owner')
-      .innerJoin('containerrevision.products', 'products')
-      .select([
-        'container.id AS id',
-        'container.public as public',
-        'container.createdAt AS createdAt',
-        'containerrevision.revision AS revision',
-        'containerrevision.updatedAt AS updatedAt',
-        'containerrevision.name AS name',
-        'owner.id AS owner_id',
-        'owner.firstName AS owner_firstName',
-        'owner.lastName AS owner_lastName',
-      ]);
+      .innerJoin('container.owner', 'container_owner')
+      .select(selection);
 
     const {
       posId, posRevision, returnProducts, ...p
@@ -146,8 +150,27 @@ export default class ContainerService {
       );
     }
 
-    if (returnProducts) {
-      // builder.innerJoin(ProductRevision, 'productrevision', '');
+    if (returnProducts || filters.productId) {
+      builder.innerJoinAndSelect('containerrevision.products', 'products');
+      builder.innerJoinAndSelect('products.category', 'category');
+      builder.innerJoin(Product, 'base_product', 'base_product.id = products.productId');
+      builder.innerJoinAndSelect(User, 'product_owner', 'product_owner.id = base_product.owner.id');
+      builder.leftJoinAndSelect(ProductImage, 'product_image', 'product_image.id = base_product.imageId');
+      selection.push(
+        'products.productId AS product_id',
+        'products.revision as product_revision',
+        'products.createdAt AS product_createdAt',
+        'products.updatedAt AS product_updatedAt',
+        'products.name AS product_name',
+        'products.price AS product_price',
+        'products.categoryId AS product_category_id',
+        'products.category AS product_category_name',
+        'products.alcoholpercentage AS product_alcoholpercentage',
+        'product_image.downloadName as product_image',
+        'product_owner.id AS product_owner_id',
+        'product_owner.firstName AS product_firstName',
+        'product_owner.lastName AS product_lastName',
+      );
     }
 
     const filterMapping: FilterMapping = {
@@ -163,12 +186,55 @@ export default class ContainerService {
       builder.andWhere('container.currentRevision = containerrevision.revision');
     }
 
-    console.error(builder.getQuery());
     return builder;
   }
 
+  public static async combineProducts(rawResponse: any[]) {
+    const collected: ContainerWithProductsResponse[] = [];
+    const mapping = new Map<string, ContainerWithProductsResponse>();
+    rawResponse.forEach((response) => {
+      // Use a string of revision + id as key
+      const key = JSON.stringify({
+        revision: response.container_revision,
+        id: response.container_id,
+      });
+
+      const rawProduct = {
+        id: response.products_productId,
+        revision: response.products_revision,
+        alcoholpercentage: response.products_alcoholPercentage,
+        category_id: response.products_categoryId,
+        category_name: response.category_name,
+        createdAt: response.products_createdAt,
+        owner_id: response.product_owner_id,
+        owner_firstName: response.product_owner_firstName,
+        owner_lastName: response.product_owner_lastName,
+        image: response.product_image_downloadName,
+        name: response.products_name,
+        price: response.products_price,
+      };
+
+      const productResponse = ProductService.asProductResponse(rawProduct);
+
+      if (mapping.has(key)) {
+        mapping.get(key).products.push(productResponse);
+      } else {
+        const containerWithProductsResponse: ContainerWithProductsResponse = {
+          ...this.asContainerResponse(response),
+          products: [productResponse],
+        };
+
+        mapping.set(key, containerWithProductsResponse);
+      }
+    });
+    mapping.forEach((entry) => {
+      collected.push(entry);
+    });
+    return collected;
+  }
+
   /**
-   * Query for getting all containers based on user.
+   * Query for getting all containers.
    * @param filters
    * @param pagination
    */
@@ -181,11 +247,16 @@ export default class ContainerService {
 
     const results = await Promise.all([
       builder.limit(take).offset(skip).getRawMany(),
-      builder.getCount(),
+      this.buildGetContainersQuery({ ...filters, returnProducts: false }).getCount(),
     ]);
-    console.error(results[0]);
 
-    const records = results[0].map((rawContainer) => this.asContainerResponse(rawContainer));
+    let records;
+    if (filters.returnProducts) {
+      records = await this.combineProducts(results[0]);
+    } else {
+      records = results[0].map((rawContainer) => this.asContainerResponse(rawContainer));
+    }
+
     return {
       _pagination: {
         take, skip, count: results[1],

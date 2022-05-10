@@ -163,7 +163,7 @@ export default class ContainerController extends BaseController {
         return;
       }
 
-      const container = await ContainerService.getProductsResponse({ containerId });
+      const container = await ContainerService.getContainers({ containerId, returnProducts: true });
       res.json(container);
     } catch (error) {
       this.logger.error('Could not return single container:', error);
