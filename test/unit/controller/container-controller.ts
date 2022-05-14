@@ -394,6 +394,12 @@ describe('ContainerController', async (): Promise<void> => {
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(ctx.validContainerReq);
 
+      console.error(ctx.specification.validateModel(
+        'ContainerWithProductsResponse',
+        res.body,
+        false,
+        true,
+      ));
       expect(ctx.specification.validateModel(
         'ContainerWithProductsResponse',
         res.body,
