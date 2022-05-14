@@ -15,14 +15,22 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { FindManyOptions } from 'typeorm';
+import { createQueryBuilder, FindManyOptions } from 'typeorm';
+import { DineroObject } from 'dinero.js';
 import { PaginationParameters } from '../helpers/pagination';
-import VatGroup from '../entity/vat-group';
+import VatGroup, { VatDeclarationPeriod } from '../entity/vat-group';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
-import { PaginatedVatGroupResponse } from '../controller/response/vat-group-response';
+import {
+  PaginatedVatGroupResponse,
+  VatDeclarationResponse,
+  VatDeclarationRow,
+} from '../controller/response/vat-group-response';
 import { UpdateVatGroupRequest, VatGroupRequest } from '../controller/request/vat-group-request';
 import { RequestWithToken } from '../middleware/token-middleware';
-import { asBoolean, asNumber } from '../helpers/validators';
+import { asBoolean, asNumber, asVatDeclarationPeriod } from '../helpers/validators';
+import SubTransactionRow from '../entity/transactions/sub-transaction-row';
+import ProductRevision from '../entity/product/product-revision';
+import DineroTransformer from '../entity/transformer/dinero-transformer';
 
 interface VatGroupFilterParameters {
   vatGroupId?: number;
@@ -31,12 +39,34 @@ interface VatGroupFilterParameters {
   hideIfZero?: boolean;
 }
 
+interface IntermediateVatDeclarationRow extends VatDeclarationRow {
+  hideIfZero: boolean;
+}
+
+interface VatDeclarationParams {
+  /**
+   * In what period you have to do VAT declaration at the Belastingdienst
+   */
+  period: VatDeclarationPeriod;
+  /**
+   * Calendar year
+   */
+  year: number;
+}
+
 export function parseGetVatGroupsFilters(req: RequestWithToken): VatGroupFilterParameters {
   return {
     vatGroupId: asNumber(req.query.transactionId),
     name: req.query.name as string,
     percentage: asNumber(req.query.percentage),
     hideIfZero: asBoolean(req.query.hideIfZero),
+  };
+}
+
+export function parseGetVatCalculationValuesParams(req: RequestWithToken): VatDeclarationParams {
+  return {
+    period: asVatDeclarationPeriod(req.query.period),
+    year: asNumber(req.query.year),
   };
 }
 
@@ -119,5 +149,99 @@ export default class VatGroupService {
     vatGroup.hideIfZero = vatGroupReq.hideIfZero;
 
     return VatGroup.save(vatGroup);
+  }
+
+  /**
+   * Calculate the collected VAT for the periodic declaration at the tax authorization.
+   * The values are calculated as follows (based on rules of the Dutch tax
+   * athorization (De Belastingdienst):
+   * Every product has a VAT-included price. From this price (e.g. including 21% VAT),
+   * we derive the absolute VAT amount by multiplying this incl-price by 21 and then
+   * dividing by 121. Of course, we also multiply this number by the number of times
+   * this product has been bought in a single SubTransactionRow. We round this number
+   * on cents. We add up all these VAT-amounts for every SubTransactionRow and we sum
+   * everything up based on the year and the period in the year.
+   * @param params
+   */
+  public static async calculateVatDeclaration(
+    params: VatDeclarationParams,
+  ): Promise<VatDeclarationResponse> {
+    let divider: number;
+    let periods: number;
+    switch (params.period) {
+      case VatDeclarationPeriod.MONTHLY: divider = 1; periods = 12; break;
+      case VatDeclarationPeriod.QUARTERLY: divider = 3; periods = 4; break;
+      case VatDeclarationPeriod.ANNUALLY: divider = 12; periods = 1; break;
+      default: throw new Error(`Unknown VAT declaration interval: ${params.period}`);
+    }
+
+    const builder = createQueryBuilder(SubTransactionRow, 'str')
+      .select([
+        'vatgroup.id as id',
+        'MAX(vatgroup.name) as name',
+        'MAX(vatgroup.percentage) as percentage',
+        'MAX(vatgroup.hideIfZero) as hideIfZero',
+        `(STRFTIME('%m', str.createdAt) - 1) / ${divider} as period`,
+        'Strftime(\'%Y\', str.createdAt) as year',
+        'SUM(ROUND((str.amount * product.priceInclVat * vatgroup.percentage) / (100 + vatgroup.percentage))) as value',
+      ])
+      .innerJoin(ProductRevision, 'product', 'str.productRevision = product.revision AND str.productProduct = product.productId')
+      .innerJoin(VatGroup, 'vatgroup', 'product.vatId = vatgroup.id')
+      .where('str.invoiceId IS NULL')
+      .andWhere('year = :year', { year: params.year.toString() })
+      .groupBy('vatgroup.id')
+      .addGroupBy('period')
+      .orderBy('vatgroup.id');
+
+    const rawResults = await builder.getRawMany();
+
+    const dineroTransformer = DineroTransformer.Instance;
+    const resultRows: IntermediateVatDeclarationRow[] = [];
+    let values: DineroObject[] = [];
+    let lastSeenObject = rawResults[0];
+
+    const fillAndSave = (resultRow: any) => {
+      while (values.length < periods) {
+        values.push(dineroTransformer.from(0).toObject());
+      }
+
+      resultRows.push({
+        id: resultRow.id,
+        name: resultRow.name,
+        percentage: resultRow.percentage,
+        hideIfZero: resultRow.hideIfZero,
+        values,
+      });
+      values = [];
+    };
+
+    for (let i = 0; i < rawResults.length; i += 1) {
+      if (lastSeenObject.id !== rawResults[i].id) {
+        fillAndSave(lastSeenObject);
+      }
+
+      // Fill in intermediate values
+      while (values.length < rawResults[i].period) {
+        values.push(dineroTransformer.from(0).toObject());
+      }
+
+      values.push(dineroTransformer.from(rawResults[i].value).toObject());
+      lastSeenObject = rawResults[i];
+    }
+
+    if (lastSeenObject) fillAndSave(lastSeenObject);
+
+    // Keep all rows that have HideIfZero set to false or have at least one actual value in the row
+    const filteredRows = resultRows
+      .filter((r) => !r.hideIfZero
+        || r.values.reduce((prev, curr) => Math.max(prev, curr.amount), 0) > 0);
+
+    return {
+      period: params.period,
+      calendarYear: params.year,
+      rows: filteredRows.map((r) => ({
+        id: r.id, name: r.name, percentage: r.percentage, values: r.values,
+      })),
+    };
   }
 }

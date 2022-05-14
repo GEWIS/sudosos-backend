@@ -15,8 +15,9 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+import { DineroObject } from 'dinero.js';
 import { PaginationResult } from '../../helpers/pagination';
-import VatGroup from '../../entity/vat-group';
+import VatGroup, { VatDeclarationPeriod } from '../../entity/vat-group';
 import BaseResponse from './base-response';
 
 /**
@@ -35,4 +36,31 @@ export interface BaseVatGroupResponse extends BaseResponse {
 export interface PaginatedVatGroupResponse {
   _pagination: PaginationResult,
   records: VatGroup[],
+}
+
+/**
+ * @typedef VatDeclarationRow
+ * @property {number} id - ID of the VAT group
+ * @property {string} name - Name of the VAT group
+ * @property {number} percentage - Percentage of VAT in this group
+ * @property {Array<DineroObject>} values - Amount of VAT to be paid to the tax administration
+ * per period
+ */
+export interface VatDeclarationRow {
+  id: number;
+  name: string;
+  percentage: number;
+  values: DineroObject[];
+}
+
+/**
+ * @typedef VatDeclarationResponse
+ * @property {number} calendarYear - Calendar year of this result table
+ * @property {string} period - The used VAT declaration period the rows below are based upon
+ * @property {Array<VatDeclarationRow>} rows - The rows of the result table
+ */
+export interface VatDeclarationResponse {
+  calendarYear: number;
+  period: VatDeclarationPeriod,
+  rows: VatDeclarationRow[],
 }

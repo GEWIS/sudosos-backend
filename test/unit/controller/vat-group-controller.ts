@@ -22,15 +22,24 @@ import { json } from 'body-parser';
 import { expect, request } from 'chai';
 import VatGroupController from '../../../src/controller/vat-group-controller';
 import User, { UserType } from '../../../src/entity/user/user';
-import VatGroup from '../../../src/entity/vat-group';
+import Transaction from '../../../src/entity/transactions/transaction';
+import VatGroup, { VatDeclarationPeriod } from '../../../src/entity/vat-group';
 import { UpdateVatGroupRequest, VatGroupRequest } from '../../../src/controller/request/vat-group-request';
 import Database from '../../../src/database/database';
-import { seedVatGroups } from '../../seed';
+import {
+  seedContainers,
+  seedPointsOfSale,
+  seedProductCategories,
+  seedProducts, seedTransactions,
+  seedUsers,
+  seedVatGroups,
+} from '../../seed';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Swagger from '../../../src/start/swagger';
 import RoleManager from '../../../src/rbac/role-manager';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
+import { VatDeclarationResponse } from '../../../src/controller/response/vat-group-response';
 
 describe('VatGroupController', () => {
   let ctx: {
@@ -40,6 +49,8 @@ describe('VatGroupController', () => {
     controller: VatGroupController,
     user: User,
     token: string,
+    users: User[],
+    transactions: Transaction[]
     vatGroups: VatGroup[],
     validVatGroupReq: VatGroupRequest,
     validUpdateVatGroupReq: UpdateVatGroupRequest,
@@ -54,7 +65,14 @@ describe('VatGroupController', () => {
       type: UserType.LOCAL_ADMIN,
       active: true,
     } as User);
+
+    const users = await seedUsers();
     const vatGroups = await seedVatGroups();
+    const categories = await seedProductCategories();
+    const { productRevisions } = await seedProducts(users, categories, vatGroups, 100);
+    const { containerRevisions } = await seedContainers(users, productRevisions);
+    const { pointOfSaleRevisions } = await seedPointsOfSale(users, containerRevisions);
+    const { transactions } = await seedTransactions(users, pointOfSaleRevisions, new Date('2020-02-12'), new Date('2022-11-30'), 3);
 
     // create bearer tokens
     const tokenHandler = new TokenHandler({
@@ -101,7 +119,9 @@ describe('VatGroupController', () => {
       controller,
       user,
       token,
+      users,
       vatGroups,
+      transactions,
       validVatGroupReq,
       validUpdateVatGroupReq,
     };
@@ -341,6 +361,73 @@ describe('VatGroupController', () => {
 
       expect(res.status).to.equal(404);
       expect(res.body).to.equal('VAT group not found.');
+    });
+  });
+
+  describe('GET /vatgroups/declaration', () => {
+    it('should return response and HTTP 200', async () => {
+      const year = 2021;
+      const period = VatDeclarationPeriod.MONTHLY;
+
+      const res = await request(ctx.app)
+        .get('/vatgroups/declaration')
+        .set('Authorization', `Bearer ${ctx.token}`)
+        .query({ year, period });
+
+      expect(res.status).to.equal(200);
+
+      const response = res.body as VatDeclarationResponse;
+      const validation = ctx.specification.validateModel('VatDeclarationResponse', response, false, true);
+
+      expect(validation.valid).to.be.true;
+      expect(response.period).to.equal(period);
+      expect(response.calendarYear).to.equal(year);
+    });
+    it('should return HTTP 400 if year is missing', async () => {
+      const period = VatDeclarationPeriod.MONTHLY;
+
+      const res = await request(ctx.app)
+        .get('/vatgroups/declaration')
+        .set('Authorization', `Bearer ${ctx.token}`)
+        .query({ period });
+
+      expect(res.status).to.equal(400);
+      expect(res.text).to.equal('Missing year or period.');
+    });
+    it('should return HTTP 400 if period is missing', async () => {
+      const year = 2021;
+
+      const res = await request(ctx.app)
+        .get('/vatgroups/declaration')
+        .set('Authorization', `Bearer ${ctx.token}`)
+        .query({ year });
+
+      expect(res.status).to.equal(400);
+      expect(res.text).to.equal('Missing year or period.');
+    });
+    it('should return HTTP 400 is year has an invalid value', async () => {
+      const year = 'Yeeeaaahhooo';
+      const period = VatDeclarationPeriod.MONTHLY;
+
+      const res = await request(ctx.app)
+        .get('/vatgroups/declaration')
+        .set('Authorization', `Bearer ${ctx.token}`)
+        .query({ year, period });
+
+      expect(res.status).to.equal(400);
+      expect(res.text).to.equal('"Input \'Yeeeaaahhooo\' is not a number."');
+    });
+    it('should return HTTP 400 is period has an invalid value', async () => {
+      const year = 2021;
+      const period = 'Yeeeaaahhooo';
+
+      const res = await request(ctx.app)
+        .get('/vatgroups/declaration')
+        .set('Authorization', `Bearer ${ctx.token}`)
+        .query({ year, period });
+
+      expect(res.status).to.equal(400);
+      expect(res.text).to.equal('"Input \'Yeeeaaahhooo\' is not a valid VatDeclarationPeriod."');
     });
   });
 });

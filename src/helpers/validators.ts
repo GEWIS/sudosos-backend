@@ -17,6 +17,7 @@
  */
 
 import { InvoiceState } from '../entity/invoices/invoice-status';
+import { VatDeclarationPeriod } from '../entity/vat-group';
 
 /**
  * Returns whether the given object is a number
@@ -98,4 +99,18 @@ export function asInvoiceState(input: any): InvoiceState {
     throw new TypeError(`Input '${input}' is not a valid InvoiceState.`);
   }
   return state;
+}
+
+/**
+ * Converts the input to an VatDeclarationPeriod
+ * @param input - The input which should be converted.
+ * @returns VatDeclarationPeriod - The parsed VatDeclarationPeriod.
+ * @throws TypeError - If the input is not a valid VatDeclarationPeriod
+ */
+export function asVatDeclarationPeriod(input: any): VatDeclarationPeriod {
+  if (!input) return undefined;
+  if (!Object.values(VatDeclarationPeriod).includes(input)) {
+    throw new TypeError(`Input '${input}' is not a valid VatDeclarationPeriod.`);
+  }
+  return input;
 }

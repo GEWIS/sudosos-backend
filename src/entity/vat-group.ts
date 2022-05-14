@@ -25,6 +25,13 @@ import BaseEntity from './base-entity';
  * @property {boolean} hideIfZero - Whether this group should be hidden
  * in the financial overviews when its value is zero
  */
+
+export enum VatDeclarationPeriod {
+  MONTHLY = 'monthly',
+  QUARTERLY = 'quarterly',
+  ANNUALLY = 'annually',
+}
+
 @Entity()
 export default class VatGroup extends BaseEntity {
   @Column()

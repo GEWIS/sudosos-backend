@@ -21,7 +21,10 @@ import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import { parseRequestPagination } from '../helpers/pagination';
-import VatGroupService, { parseGetVatGroupsFilters } from '../service/vat-group-service';
+import VatGroupService, {
+  parseGetVatCalculationValuesParams,
+  parseGetVatGroupsFilters,
+} from '../service/vat-group-service';
 import { UpdateVatGroupRequest, VatGroupRequest } from './request/vat-group-request';
 
 export default class VatGroupController extends BaseController {
@@ -60,6 +63,12 @@ export default class VatGroupController extends BaseController {
         PATCH: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'update', 'all', 'VatGroup', ['*']),
           handler: this.updateVatGroup.bind(this),
+        },
+      },
+      '/declaration': {
+        GET: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'VatGroup', ['*']),
+          handler: this.getVatDeclarationAmounts.bind(this),
         },
       },
     };
@@ -191,6 +200,37 @@ export default class VatGroupController extends BaseController {
     } catch (error) {
       this.logger.error('Could not update VAT group:', error);
       res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Get the VAT collections needed for VAT declarations
+   * @route GET /vatgroups/declaration
+   * @group vatGroups - Operations of the VAT groups controller
+   * @security JWT
+   * @param {number} year.query.required - Calendar year for VAT declarations
+   * @param {string} period.query.required - Period for VAT declarations
+   * @returns {PaginatedVatGroupResponse.model} 200 - A list of all VAT groups with declarations
+   */
+  public async getVatDeclarationAmounts(req: RequestWithToken, res: Response): Promise<void> {
+    let params;
+    try {
+      params = parseGetVatCalculationValuesParams(req);
+    } catch (e) {
+      res.status(400).json(e.message);
+      return;
+    }
+
+    if (params.year === undefined || params.period === undefined) {
+      res.status(400).send('Missing year or period.');
+    }
+
+    try {
+      const vatGroups = await VatGroupService.calculateVatDeclaration(params);
+      res.status(200).json(vatGroups);
+    } catch (e) {
+      res.status(500).send('Internal server error.');
+      this.logger.error(e);
     }
   }
 }
