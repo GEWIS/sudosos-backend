@@ -88,7 +88,7 @@ export default class ContainerService {
    */
   private static asContainerResponse(rawContainer: any): ContainerResponse {
     return {
-      id: rawContainer.container_public,
+      id: rawContainer.container_id,
       revision: rawContainer.container_revision,
       name: rawContainer.container_name,
       createdAt: rawContainer.container_createdAt,
@@ -156,21 +156,6 @@ export default class ContainerService {
       builder.innerJoin(Product, 'base_product', 'base_product.id = products.productId');
       builder.innerJoinAndSelect(User, 'product_owner', 'product_owner.id = base_product.owner.id');
       builder.leftJoinAndSelect(ProductImage, 'product_image', 'product_image.id = base_product.imageId');
-      selection.push(
-        'products.productId AS product_id',
-        'products.revision as product_revision',
-        'products.createdAt AS product_createdAt',
-        'products.updatedAt AS product_updatedAt',
-        'products.name AS product_name',
-        'products.price AS product_price',
-        'products.categoryId AS product_category_id',
-        'products.category AS product_category_name',
-        'products.alcoholpercentage AS product_alcoholpercentage',
-        'product_image.downloadName as product_image',
-        'product_owner.id AS product_owner_id',
-        'product_owner.firstName AS product_firstName',
-        'product_owner.lastName AS product_lastName',
-      );
     }
 
     const filterMapping: FilterMapping = {

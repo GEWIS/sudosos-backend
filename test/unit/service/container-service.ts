@@ -173,9 +173,9 @@ describe('ContainerService', async (): Promise<void> => {
     });
     it('should return products if specified', async () => {
       const { records } = await ContainerService.getContainers(
-        { returnProducts: true }, {},
+        { returnProducts: true, containerId: 2 }, {},
       );
-      console.error(records);
+      console.error(JSON.stringify(records[0], null, 4));
     });
   });
 
