@@ -66,7 +66,7 @@ function createValidSubTransactionRequest(
       revision: containerRevision.revision,
     },
     subTransactionRows: subTransactionRowRequest,
-    price: {
+    totalPriceInclVat: {
       amount: price,
       currency: dinero.defaultCurrency,
       precision: dinero.defaultPrecision,
@@ -111,7 +111,7 @@ export async function createValidTransactionRequestPOS(
       id: pointOfSale.id,
       revision: pointOfSale.revision,
     } as RevisionRequest,
-    price: subTransactionRequest.price,
+    totalPriceInclVat: subTransactionRequest.totalPriceInclVat,
     subTransactions: [subTransactionRequest],
   };
 }

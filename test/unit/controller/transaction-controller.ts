@@ -75,7 +75,7 @@ describe('TransactionController', (): void => {
                 revision: 2,
               },
               amount: 1,
-              price: {
+              totalPriceInclVat: {
                 amount: 72,
                 currency: 'EUR',
                 precision: 2,
@@ -87,14 +87,14 @@ describe('TransactionController', (): void => {
                 revision: 2,
               },
               amount: 2,
-              price: {
+              totalPriceInclVat: {
                 amount: 146,
                 currency: 'EUR',
                 precision: 2,
               },
             },
           ],
-          price: {
+          totalPriceInclVat: {
             amount: 218,
             currency: 'EUR',
             precision: 2,
@@ -113,14 +113,14 @@ describe('TransactionController', (): void => {
                 revision: 2,
               },
               amount: 4,
-              price: {
+              totalPriceInclVat: {
                 amount: 304,
                 currency: 'EUR',
                 precision: 2,
               },
             },
           ],
-          price: {
+          totalPriceInclVat: {
             amount: 304,
             currency: 'EUR',
             precision: 2,
@@ -131,7 +131,7 @@ describe('TransactionController', (): void => {
         id: 1,
         revision: 2,
       },
-      price: {
+      totalPriceInclVat: {
         amount: 522,
         currency: 'EUR',
         precision: 2,

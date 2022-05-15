@@ -156,7 +156,7 @@ export default class TransactionService {
     req: SubTransactionRowRequest, container: ContainerRevision,
   ): Promise<boolean> {
     // check if fields provided in subtransactionrow
-    if (!req.product || !req.price
+    if (!req.product || !req.totalPriceInclVat
         || !req.amount || req.amount <= 0 || !Number.isInteger(req.amount)) {
       return false;
     }
@@ -178,7 +178,7 @@ export default class TransactionService {
 
     // check whether the request price corresponds to the database price
     const cost = await this.getTotalCost([req]);
-    return this.dineroEq(req.price, cost);
+    return this.dineroEq(req.totalPriceInclVat, cost);
   }
 
   /**
@@ -192,7 +192,7 @@ export default class TransactionService {
     req: SubTransactionRequest, pointOfSale: PointOfSaleRevision, isUpdate?: boolean,
   ): Promise<boolean> {
     // check if fields provided in the transaction
-    if (!req.to || !req.container || !req.price
+    if (!req.to || !req.container || !req.totalPriceInclVat
         || !req.subTransactionRows || req.subTransactionRows.length === 0) {
       return false;
     }
@@ -213,7 +213,7 @@ export default class TransactionService {
     const rows: SubTransactionRowRequest[] = [];
     req.subTransactionRows.forEach((row) => rows.push(row));
     const cost = await this.getTotalCost(rows);
-    if (!this.dineroEq(req.price, cost)) {
+    if (!this.dineroEq(req.totalPriceInclVat, cost)) {
       return false;
     }
 
@@ -246,7 +246,7 @@ export default class TransactionService {
     // check fields provided in the transaction
     if (!req.from || !req.createdBy
         || !req.subTransactions || req.subTransactions.length === 0
-        || !req.pointOfSale || !req.price) {
+        || !req.pointOfSale || !req.totalPriceInclVat) {
       return false;
     }
 
@@ -267,7 +267,7 @@ export default class TransactionService {
     const rows: SubTransactionRowRequest[] = [];
     req.subTransactions.forEach((sub) => sub.subTransactionRows.forEach((row) => rows.push(row)));
     const cost = await this.getTotalCost(rows);
-    if (!this.dineroEq(req.price, cost)) {
+    if (!this.dineroEq(req.totalPriceInclVat, cost)) {
       return false;
     }
 
@@ -346,7 +346,7 @@ export default class TransactionService {
             revision: row.product.revision,
           },
           amount: row.amount,
-          price: undefined,
+          totalPriceInclVat: undefined,
         } as SubTransactionRowRequest,
       )),
     );
@@ -417,7 +417,7 @@ export default class TransactionService {
           revision: row.product.revision,
         },
         amount: row.amount,
-        price: undefined,
+        totalPriceInclVat: undefined,
       } as SubTransactionRowRequest,
     ));
     const cost = await this.getTotalCost(rows);

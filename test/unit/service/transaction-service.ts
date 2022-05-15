@@ -77,7 +77,7 @@ describe('TransactionService', (): void => {
                 revision: 2,
               },
               amount: 1,
-              price: {
+              totalPriceInclVat: {
                 amount: 72,
                 currency: 'EUR',
                 precision: 2,
@@ -89,14 +89,14 @@ describe('TransactionService', (): void => {
                 revision: 2,
               },
               amount: 2,
-              price: {
+              totalPriceInclVat: {
                 amount: 146,
                 currency: 'EUR',
                 precision: 2,
               },
             },
           ],
-          price: {
+          totalPriceInclVat: {
             amount: 218,
             currency: 'EUR',
             precision: 2,
@@ -115,14 +115,14 @@ describe('TransactionService', (): void => {
                 revision: 2,
               },
               amount: 4,
-              price: {
+              totalPriceInclVat: {
                 amount: 304,
                 currency: 'EUR',
                 precision: 2,
               },
             },
           ],
-          price: {
+          totalPriceInclVat: {
             amount: 304,
             currency: 'EUR',
             precision: 2,
@@ -133,7 +133,7 @@ describe('TransactionService', (): void => {
         id: 1,
         revision: 2,
       },
-      price: {
+      totalPriceInclVat: {
         amount: 522,
         currency: 'EUR',
         precision: 2,
@@ -249,12 +249,12 @@ describe('TransactionService', (): void => {
       // undefined price
       const badPriceReq = {
         ...ctx.validTransReq,
-        price: undefined,
+        totalPriceInclVat: undefined,
       } as TransactionRequest;
       expect(await TransactionService.verifyTransaction(badPriceReq), 'undefined accepted').to.be.false;
 
       // incorrect price
-      badPriceReq.price = {
+      badPriceReq.totalPriceInclVat = {
         amount: 1,
         currency: 'EUR',
         precision: 2,
@@ -314,12 +314,12 @@ describe('TransactionService', (): void => {
       // undefined price
       const badPriceReq = {
         ...ctx.validTransReq.subTransactions[0],
-        price: undefined,
+        totalPriceInclVat: undefined,
       } as SubTransactionRequest;
       expect(await TransactionService.verifySubTransaction(badPriceReq, ctx.pointOfSale), 'undefined accepted').to.be.false;
 
       // incorrect price
-      badPriceReq.price = {
+      badPriceReq.totalPriceInclVat = {
         amount: 1,
         currency: 'EUR',
         precision: 2,
@@ -376,12 +376,12 @@ describe('TransactionService', (): void => {
       // undefined price
       const badPriceReq = {
         ...ctx.validTransReq.subTransactions[0].subTransactionRows[0],
-        price: undefined,
+        totalPriceInclVat: undefined,
       } as SubTransactionRowRequest;
       expect(await TransactionService.verifySubTransactionRow(badPriceReq, ctx.container), 'undefined accepted').to.be.false;
 
       // incorrect price
-      badPriceReq.price = {
+      badPriceReq.totalPriceInclVat = {
         amount: 1,
         currency: 'EUR',
         precision: 2,
@@ -663,17 +663,17 @@ describe('TransactionService', (): void => {
       expect(savedTransaction, 'request not saved correctly').to.eql(correctResponse);
 
       // check transaction response prices
-      expect(correctResponse.price, 'top level price incorrect').to.eql(ctx.validTransReq.price);
+      expect(correctResponse.price, 'top level price incorrect').to.eql(ctx.validTransReq.totalPriceInclVat);
 
       // check sub transaction response prices
       for (let i = 0; i < correctResponse.subTransactions.length; i += 1) {
         expect(correctResponse.subTransactions[i].price, 'sub transaction price incorrect')
-          .to.eql(ctx.validTransReq.subTransactions[i].price);
+          .to.eql(ctx.validTransReq.subTransactions[i].totalPriceInclVat);
 
         // check sub transaction row response prices
         for (let j = 0; j < correctResponse.subTransactions[i].subTransactionRows.length; j += 1) {
           expect(correctResponse.subTransactions[i].subTransactionRows[j].price, 'sub transaction row price incorrect')
-            .to.eql(ctx.validTransReq.subTransactions[i].subTransactionRows[j].price);
+            .to.eql(ctx.validTransReq.subTransactions[i].subTransactionRows[j].totalPriceInclVat);
         }
       }
     });
@@ -699,19 +699,19 @@ describe('TransactionService', (): void => {
       }));
 
       // check transaction response prices
-      expect(deletedTransaction.price, 'top level price incorrect').to.eql(ctx.validTransReq.price);
+      expect(deletedTransaction.price, 'top level price incorrect').to.eql(ctx.validTransReq.totalPriceInclVat);
 
       // check sub transaction response prices
       for (let i = 0; i < deletedTransaction.subTransactions.length; i += 1) {
         expect(deletedTransaction.subTransactions[i].price, 'sub transaction price incorrect')
-          .to.eql(ctx.validTransReq.subTransactions[i].price);
+          .to.eql(ctx.validTransReq.subTransactions[i].totalPriceInclVat);
 
         // check sub transaction row response prices
         for (let j = 0;
           j < deletedTransaction.subTransactions[i].subTransactionRows.length;
           j += 1) {
           expect(deletedTransaction.subTransactions[i].subTransactionRows[j].price, 'sub transaction row price incorrect')
-            .to.eql(ctx.validTransReq.subTransactions[i].subTransactionRows[j].price);
+            .to.eql(ctx.validTransReq.subTransactions[i].subTransactionRows[j].totalPriceInclVat);
         }
       }
     });
@@ -740,7 +740,7 @@ describe('TransactionService', (): void => {
                   revision: 2,
                 },
                 amount: 2,
-                price: {
+                totalPriceInclVat: {
                   amount: 144,
                   currency: 'EUR',
                   precision: 2,
@@ -752,14 +752,14 @@ describe('TransactionService', (): void => {
                   revision: 2,
                 },
                 amount: 1,
-                price: {
+                totalPriceInclVat: {
                   amount: 73,
                   currency: 'EUR',
                   precision: 2,
                 },
               },
             ],
-            price: {
+            totalPriceInclVat: {
               amount: 217,
               currency: 'EUR',
               precision: 2,
@@ -778,14 +778,14 @@ describe('TransactionService', (): void => {
                   revision: 2,
                 },
                 amount: 4,
-                price: {
+                totalPriceInclVat: {
                   amount: 304,
                   currency: 'EUR',
                   precision: 2,
                 },
               },
             ],
-            price: {
+            totalPriceInclVat: {
               amount: 304,
               currency: 'EUR',
               precision: 2,
@@ -796,7 +796,7 @@ describe('TransactionService', (): void => {
           id: 1,
           revision: 2,
         },
-        price: {
+        totalPriceInclVat: {
           amount: 521,
           currency: 'EUR',
           precision: 2,
@@ -825,12 +825,12 @@ describe('TransactionService', (): void => {
       }));
 
       // check transaction response prices
-      expect(updatedTransaction.price, 'top level price incorrect').to.eql(updateReq.price);
+      expect(updatedTransaction.price, 'top level price incorrect').to.eql(updateReq.totalPriceInclVat);
 
       // check sub transaction response prices
       for (let i = 0; i < updatedTransaction.subTransactions.length; i += 1) {
         expect(updatedTransaction.subTransactions[i].price, 'sub transaction price incorrect')
-          .to.eql(updateReq.subTransactions[i].price);
+          .to.eql(updateReq.subTransactions[i].totalPriceInclVat);
 
         // sort on subtransactionrow id for comparing
         updatedTransaction.subTransactions[i].subTransactionRows.sort((a, b) => {
@@ -844,7 +844,7 @@ describe('TransactionService', (): void => {
           j < updatedTransaction.subTransactions[i].subTransactionRows.length;
           j += 1) {
           expect(updatedTransaction.subTransactions[i].subTransactionRows[j].price, 'sub transaction row price incorrect')
-            .to.eql(updateReq.subTransactions[i].subTransactionRows[j].price);
+            .to.eql(updateReq.subTransactions[i].subTransactionRows[j].totalPriceInclVat);
         }
       }
     });

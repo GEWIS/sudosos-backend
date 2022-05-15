@@ -17,7 +17,6 @@
  */
 import { Connection } from 'typeorm';
 import { expect } from 'chai';
-import { SwaggerSpecification } from 'swagger-model-validator';
 import VatGroup, { VatDeclarationPeriod } from '../../../src/entity/vat-group';
 import User from '../../../src/entity/user/user';
 import Transaction from '../../../src/entity/transactions/transaction';
@@ -33,7 +32,6 @@ import {
   seedVatGroups,
 } from '../../seed';
 import VatGroupService from '../../../src/service/vat-group-service';
-import Swagger from '../../../src/start/swagger';
 import { VatDeclarationResponse } from '../../../src/controller/response/vat-group-response';
 
 describe('VatGroupService', () => {
