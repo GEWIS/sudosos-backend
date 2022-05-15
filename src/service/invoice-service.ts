@@ -250,6 +250,7 @@ export default class InvoiceService {
     : Promise<BaseInvoiceResponse | undefined> {
     // Find base invoice.
     const invoice = await Invoice.findOne(invoiceId, { relations: ['to', 'invoiceStatus', 'transfer', 'transfer.to', 'transfer.from'] });
+    if (!invoice) return undefined;
 
     // Extract amount from transfer
     const amount: DineroObjectRequest = {
@@ -388,7 +389,7 @@ export default class InvoiceService {
    * @param invoiceRequest - The Invoice request to create
    */
   public static async createInvoice(invoiceRequest: CreateInvoiceParams)
-    : Promise<BaseInvoiceResponse> {
+    : Promise<InvoiceResponse> {
     const { toId, byId } = invoiceRequest;
     let params: TransactionFilterParameters;
 
@@ -445,7 +446,7 @@ export default class InvoiceService {
     // Return the newly created Invoice.
     return (await this.getInvoices(
       { invoiceId: newInvoice.id, returnInvoiceEntries: true },
-    )).records[0];
+    )).records[0] as InvoiceResponse;
   }
 
   /**

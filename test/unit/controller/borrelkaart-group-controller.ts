@@ -288,6 +288,22 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
   });
 
   describe('GET /borrelkaartgroups', () => {
+    it('should return correct model', async () => {
+      // save borrelkaart group
+      await saveBKG(ctx.validBorrelkaartGroupReq);
+
+      // get borrelkaart groups
+      const res = await request(ctx.app)
+        .get('/borrelkaartgroups')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'PaginatedBorrelkaartGroupResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
     it('should return an HTTP 200 and all borrelkaart groups without users in the database if admin', async () => {
       // save borrelkaart group
       await saveBKG(ctx.validBorrelkaartGroupReq);
@@ -327,6 +343,20 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
   });
 
   describe('POST /borrelkaartgroups', () => {
+    it('should return correct model', async () => {
+      // post borrelkaart group
+      const res = await request(ctx.app)
+        .post('/borrelkaartgroups')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(ctx.validBorrelkaartGroupReq);
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'BorrelkaartGroupResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
     it('should store the given borrelkaart group and its users in the database and return an HTTP 200 and the borrelkaart group with users if admin', async () => {
       // post borrelkaart group
       const res = await request(ctx.app)
@@ -404,6 +434,21 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
   });
 
   describe('GET /borrelkaartgroups/:id', () => {
+    it('should return correct model', async () => {
+      // save borrelkaart group
+      await saveBKG(ctx.validBorrelkaartGroupReq);
+      // get borrelkaart group by id
+      const res = await request(ctx.app)
+        .get('/borrelkaartgroups/1')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'BorrelkaartGroupResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
     it('should return an HTTP 200 and the borrelkaart group and users with given id if admin', async () => {
       // save borrelkaart group
       await saveBKG(ctx.validBorrelkaartGroupReq);
@@ -459,6 +504,13 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
         .patch('/borrelkaartgroups/1')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(ctx.conflictingBorrelkaartGroupReq);
+
+      expect(ctx.specification.validateModel(
+        'BorrelkaartGroupResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
 
       // check returned borrelkaart group
       expect(bkgEq(ctx.conflictingBorrelkaartGroupReq, res.body as BorrelkaartGroupResponse), 'returned borrelkaart group incorrect').to.be.true;
@@ -565,6 +617,13 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
       const res = await request(ctx.app)
         .delete('/borrelkaartgroups/1')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(ctx.specification.validateModel(
+        'BorrelkaartGroupResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
 
       // test deletion
       expect(res.body as BorrelkaartGroupResponse, 'returned borrelkaart group incorrect').to.eql(bkgDel);

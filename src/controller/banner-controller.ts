@@ -82,7 +82,7 @@ export default class BannerController extends BaseController {
       },
       '/active': {
         GET: {
-          policy: async () => true,
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Banner', ['*']),
           handler: this.returnActiveBanners.bind(this),
         },
       },

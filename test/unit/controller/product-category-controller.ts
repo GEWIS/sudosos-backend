@@ -153,6 +153,18 @@ describe('ProductCategoryController', async (): Promise<void> => {
 
   // Unit test cases
   describe('GET /productcategories', () => {
+    it('should return correct model', async () => {
+      const res = await request(ctx.app)
+        .get('/productcategories/')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'PaginatedProductCategoryResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
     it('should return an HTTP 200 and all existing productcategories in the database if admin', async () => {
       const res = await request(ctx.app)
         .get('/productcategories/')
@@ -203,6 +215,18 @@ describe('ProductCategoryController', async (): Promise<void> => {
     });
   });
   describe('GET /productcategories/:id', () => {
+    it('should return correct model', async () => {
+      const res = await request(ctx.app)
+        .get('/productcategories/1')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'ProductCategoryResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
     it('should return an HTTP 200 and the productcategory with given id if admin', async () => {
       const res = await request(ctx.app)
         .get('/productcategories/1')
@@ -248,6 +272,12 @@ describe('ProductCategoryController', async (): Promise<void> => {
         .send(ctx.validRequest);
 
       expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'ProductCategoryResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
 
       expect(await ProductCategory.count()).to.equal(productCategoryCount + 1);
       expect(ctx.validRequest.name).to.equal(res.body.name);
@@ -289,6 +319,12 @@ describe('ProductCategoryController', async (): Promise<void> => {
       // and name column must have unique entries.
 
       expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'ProductCategoryResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
 
       expect(ctx.validRequest2.name).to.equal(res.body.name);
       const databaseEntry = await ProductCategory.findOne((res.body as ProductCategoryResponse).id);

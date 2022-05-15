@@ -72,6 +72,17 @@ describe('RbacController', async (): Promise<void> => {
   });
 
   describe('GET /rbac/roles', () => {
+    it('should return correct model', async () => {
+      const res = await request(ctx.app)
+        .get('/rbac/roles');
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'Array.<RoleResponse.model>',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
     it('should return an HTTP 200 and all roles', async () => {
       const res = await request(ctx.app)
         .get('/rbac/roles');

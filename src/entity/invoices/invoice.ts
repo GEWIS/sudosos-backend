@@ -31,8 +31,9 @@ import InvoiceStatus from './invoice-status';
  * @typedef {BaseEntity} Invoice
  * @property {User.model} to.required - The account for whom the invoice is
  * @property {Transfer.model} transfer.required - The transfer entity representing the invoice.
- * @property {Array<InvoiceEntry>} invoiceEntries.required - The entries describing this invoice.
- * @property {Array<invoiceStatus>} invoiceStatus.required - The status history of the invoice
+ * @property {Array<InvoiceEntry.model>} invoiceEntries.required
+ *                                       The entries describing this invoice.
+ * @property {Array<invoiceStatus.model>} invoiceStatus.required - The status history of the invoice
  * @property {string} addressee.required - Name of the addressed
  * @property {string} description.required - The description of the invoice
  */

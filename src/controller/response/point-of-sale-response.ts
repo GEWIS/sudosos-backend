@@ -29,7 +29,7 @@ export interface BasePointOfSaleResponse extends BaseResponse {
 }
 /**
  * @typedef {BasePointOfSaleResponse} PointOfSaleResponse
- * @property {BaseUserResponse.model} owner.required - The owner of the point-of-sale.
+ * @property {BaseUserResponse.model} owner - The owner of the point-of-sale.
  * @property {string} startDate.required - The date starting which the POS is active
  * @property {string} endDate.required - The date at which the POS becomes inactive
  * @property {boolean} useAuthentication.required - Whether an user needs to be authenticated
@@ -46,7 +46,7 @@ export interface PointOfSaleResponse extends BasePointOfSaleResponse {
 /**
  * @typedef PaginatedPointOfSaleResponse
  * @property {PaginationResult.model} _pagination - Pagination metadata
- * @property {Array<PointOfSaleResponse>} records - Returned points of sale
+ * @property {Array<PointOfSaleResponse.model>} records - Returned points of sale
  */
 export interface PaginatedPointOfSaleResponse {
   _pagination: PaginationResult,
@@ -67,22 +67,33 @@ export interface UpdatedPointOfSaleResponse extends BasePointOfSaleResponse {
   useAuthentication: boolean,
 }
 
+type UpdatedPOSResponses = UpdatedPointOfSaleResponse | UpdatedPointOfSaleWithContainersResponse;
+
 /**
  * @typedef PaginatedUpdatedPointOfSaleResponse
  * @property {PaginationResult.model} _pagination - Pagination metadata
- * @property {Array<UpdatedPointOfSaleResponse|PointOfSaleWithContainersResponse>} records -
- * Returned points of sale
+ * @property {Array<UpdatedPOSResponses.model>}
+ * records - Returned points of sale
  */
 export interface PaginatedUpdatedPointOfSaleResponse {
   _pagination: PaginationResult,
-  records: (UpdatedPointOfSaleResponse | PointOfSaleWithContainersResponse)[],
+  records: (UpdatedPOSResponses)[],
 }
 
 /**
  * @typedef {PointOfSaleResponse} PointOfSaleWithContainersResponse
- * @property {Array.<ContainerWithProductsResponse>} containers.required - The containers
+ * @property {Array<ContainerWithProductsResponse.model>} containers.required - The containers
  * in the point-of-sale.
  */
 export interface PointOfSaleWithContainersResponse extends PointOfSaleResponse {
+  containers: ContainerWithProductsResponse[],
+}
+
+/**
+ * @typedef {UpdatedPointOfSaleResponse} UpdatedPointOfSaleWithContainersResponse
+ * @property {Array<ContainerWithProductsResponse.model>} containers.required - The containers
+ * in the point-of-sale.
+ */
+export interface UpdatedPointOfSaleWithContainersResponse extends UpdatedPointOfSaleResponse {
   containers: ContainerWithProductsResponse[],
 }

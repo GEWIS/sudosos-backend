@@ -21,9 +21,11 @@
  * @property {integer} id.required - The unique id of the entity.
  * @property {string} createdAt - The creation Date of the entity.
  * @property {string} updatedAt - The last update Date of the entity.
+ * @property {integer} version - The version of the entity.
  */
 export default interface BaseResponse {
   id: number,
   createdAt?: string,
   updatedAt?: string,
+  version?: number,
 }

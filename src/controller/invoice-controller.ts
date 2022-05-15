@@ -173,7 +173,7 @@ export default class InvoiceController extends BaseController {
    * @security JWT
    * @param {CreateInvoiceRequest.model} invoice.body.required -
    * The invoice which should be created
-   * @returns {BaseInvoiceResponse.model} 200 - The created invoice entity
+   * @returns {InvoiceResponse.model} 200 - The created invoice entity
    * @returns {string} 400 - Validation error
    * @returns {string} 500 - Internal server error
    */
@@ -248,6 +248,8 @@ export default class InvoiceController extends BaseController {
    * @group invoices - Operations of the invoices controller
    * @security JWT
    * @param {integer} id.path.required - The id of the invoice which should be deleted
+   * @return {string} 404 - Invoice not found
+   * @return {BaseInvoiceResponse.model} 200 - The deleted invoice.
    * @returns {string} 500 - Internal server error
    */
   // TODO Deleting of invoices that are not of state CREATED?
@@ -257,7 +259,12 @@ export default class InvoiceController extends BaseController {
     this.logger.trace('Delete Invoice', id, 'by user', req.token.user);
 
     try {
-      res.json(await InvoiceService.deleteInvoice(invoiceId, req.token.user.id));
+      const invoice = await InvoiceService.deleteInvoice(invoiceId, req.token.user.id);
+      if (!invoice) {
+        res.status(404).json('Invoice not found.');
+        return;
+      }
+      res.status(204).send();
     } catch (error) {
       this.logger.error('Could not delete invoice:', error);
       res.status(500).json('Internal server error.');

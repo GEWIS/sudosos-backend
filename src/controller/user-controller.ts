@@ -412,9 +412,16 @@ export default class UserController extends BaseController {
     }
   }
 
+  /**
+   * Update a user
+   * @route PATCH /users/{id}
+   * @group users - Operations of user controller
+   * @security JWT
+   * @returns {UpdateUserRequest.model} 200 - New user
+   * @returns {string} 400 - Bad request
+   */
   public async updateUser(req: RequestWithToken, res: Response): Promise<void> {
     const body = req.body as UpdateUserRequest;
-    console.log(body);
     const parameters = req.params;
     this.logger.trace('Update user', parameters.id, 'with', body, 'by user', req.token.user);
 

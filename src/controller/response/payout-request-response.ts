@@ -51,7 +51,7 @@ export interface PayoutRequestStatusResponse extends BaseResponse {
 
 /**
  * @typedef {BoilerPayoutRequestResponse} PayoutRequestResponse
- * @property {Array<PayoutRequestStatusResponse>} status - Statuses of this
+ * @property {Array<PayoutRequestStatusResponse.model>} status - Statuses of this
  * payout response over time
  * @property {string} bankAccountNumber - Bank account number
  * @property {string} bankAccountName - Name of the account owner
@@ -65,7 +65,7 @@ export interface PayoutRequestResponse extends BoilerPayoutRequestResponse {
 /**
  * @typedef PaginatedBasePayoutRequestResponse
  * @property {PaginationResult.model} _pagination - Pagination metadata
- * @property {Array<BasePayoutRequestResponse>} records - Returned payout requests
+ * @property {Array<BasePayoutRequestResponse.model>} records - Returned payout requests
  */
 export interface PaginatedBasePayoutRequestResponse {
   _pagination: PaginationResult,
