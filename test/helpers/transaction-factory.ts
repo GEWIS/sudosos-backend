@@ -34,10 +34,12 @@ function wrapGet<T>(array: T[], index: number): T {
   return array[index % array.length];
 }
 
-function createValidSubTransactionRowRequest(amount: number, productRevision: ProductResponse) {
+function createValidSubTransactionRowRequest(
+  amount: number, productRevision: ProductResponse,
+): SubTransactionRowRequest {
   return {
     amount,
-    price: {
+    totalPriceInclVat: {
       amount: productRevision.priceInclVat.amount * amount,
       currency: productRevision.priceInclVat.currency,
       precision: productRevision.priceInclVat.precision,
@@ -57,7 +59,7 @@ function createValidSubTransactionRequest(
   for (let i = 0; i < rowAmount; i += 1) {
     const t = createValidSubTransactionRowRequest(i + 1, wrapGet(containerRevision.products, i));
     subTransactionRowRequest.push(t);
-    price += t.price.amount;
+    price += t.totalPriceInclVat.amount;
   }
   return {
     to: toId,
