@@ -15,14 +15,10 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { ContainerParams } from './container-request';
 
 export interface BasePointOfSaleParams {
-  containers?: (number | ContainerParams)[],
-  useAuthentication?: boolean,
+  containers: number[],
   name: string,
-  startDate: string,
-  endDate?: string,
 }
 
 export interface CreatePointOfSaleParams extends BasePointOfSaleParams{
@@ -36,11 +32,8 @@ export interface UpdatePointOfSaleParams extends CreatePointOfSaleParams {
 /**
  * @typedef CreatePointOfSaleRequest
  * @property {string} name.required - Name of the POS
- * @property {string} startDate.required - Date from which the POS is active
- * @property {string} endDate - Date from which the POS is no longer active
- * @property {Array.<number | ContainerParams>} containers -
+ * @property {Array.<integer>} containers -
  * IDs or Requests of the containers to add to the POS
- * @property {boolean} useAuthentication - Whether the POS requires authentication or not.
  * @property {integer} ownerId - ID of the user who will own the POS, if undefined it will
  *    default to the token ID.
  */
@@ -51,11 +44,8 @@ export interface CreatePointOfSaleRequest extends BasePointOfSaleParams{
 /**
  * @typedef UpdatePointOfSaleRequest
  * @property {string} name.required - Name of the POS
- * @property {string} startDate.required - Date from which the POS is active
- * @property {string} endDate - Date from which the POS is no longer active
- * @property {Array.<number | ContainerParams>} containers -
+ * @property {Array.<integer>} containers -
  * IDs or Requests of the containers to add to the POS
- * @property {boolean} useAuthentication - Whether the POS requires authentication or not.
  * @property {integer} id.required - ID of the POS to update.
  */
 export type UpdatePointOfSaleRequest = BasePointOfSaleParams;

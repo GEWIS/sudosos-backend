@@ -32,11 +32,14 @@ import Product from '../entity/product/product';
 import UpdatedProduct from '../entity/product/updated-product';
 import ProductRevision from '../entity/product/product-revision';
 import { PaginationParameters } from '../helpers/pagination';
-import { getIdsAndRequests } from '../helpers/array-splitter';
-import { CreateContainerParams, UpdateContainerParams } from '../controller/request/container-request';
-import { ProductRequest, UpdateProductParams } from '../controller/request/product-request';
+import {
+  CreateContainerParams,
+  UpdateContainerParams,
+  UpdateContainerRequest,
+} from '../controller/request/container-request';
 import ProductImage from '../entity/file/product-image';
 import User from '../entity/user/user';
+import { UpdatePointOfSaleRequest } from '../controller/request/point-of-sale-request';
 
 interface ContainerVisibility {
   own: boolean;
@@ -350,8 +353,44 @@ export default class ContainerService {
     return this.updateContainer(update);
   }
 
+  public static async applyContainerUpdate(base: Container, updateRequest: UpdateContainerRequest) {
+    // Get the latest products
+    const products = await Product.findByIds(updateRequest.products);
+
+    // Get the product id's for this update.
+    const productIds: { revision: number, product: { id : number } }[] = (
+      products.map((product) => (
+        { revision: product.currentRevision, product: { id: product.id } }))); '';
+
+    const updatedProducts: UpdatedProduct[] = await UpdatedProduct.findByIds(productIds, { relations: ['product'] });
+
+    if (updatedProducts.length !== 0) {
+      throw Error('Container update contains unapproved product updates.');
+    }
+
+    const productRevisions: ProductRevision[] = await ProductRevision.findByIds(productIds);
+
+    // Set base container and apply new revision.
+    const containerRevision: ContainerRevision = Object.assign(new ContainerRevision(), {
+      container: base,
+      products: productRevisions,
+      name: updateRequest.name,
+      // Increment revision.
+      revision: base.currentRevision ? base.currentRevision + 1 : 1,
+    });
+
+    // First save revision.
+    await ContainerRevision.save(containerRevision);
+
+    // Increment current revision.
+    // eslint-disable-next-line no-param-reassign
+    base.currentRevision = base.currentRevision ? base.currentRevision + 1 : 1;
+    await this.propagateContainerUpdate(base.id);
+    await base.save();
+  }
+
   /**
-   * Confirms an container update and creates a container revision.
+   * Confirms a container update and creates a container revision.
    * @param containerId - The container update to confirm.
    */
   public static async approveContainerUpdate(containerId: number)
@@ -364,38 +403,13 @@ export default class ContainerService {
       return undefined;
     }
 
-    // Get the product id's for this update.
-    const productIds: { revision: number, product: { id : number } }[] = (
-      rawContainerUpdate.products.map((product) => (
-        { revision: product.currentRevision, product: { id: product.id } })));
-
-    // All products with a pending update are also updated
-    const updatedProducts: UpdatedProduct[] = await UpdatedProduct.findByIds(productIds, { relations: ['product'] });
-
-    if (updatedProducts.length !== 0) {
-      await Promise.all(updatedProducts.map(
-        (p) => ProductService.approveProductUpdate(p.product.id)
-          .then((up) => productIds.push({ revision: up.revision, product: { id: up.id } })),
-      ));
-    }
-
-    const productRevisions: ProductRevision[] = await ProductRevision.findByIds(productIds);
-
-    // Set base container and apply new revision.
-    const containerRevision: ContainerRevision = Object.assign(new ContainerRevision(), {
-      container: base,
-      products: productRevisions,
+    const updateRequest: UpdateContainerRequest = {
+      products: rawContainerUpdate.products.map((p) => p.id),
+      public: base.public,
       name: rawContainerUpdate.name,
-      // Increment revision.
-      revision: base.currentRevision ? base.currentRevision + 1 : 1,
-    });
+    };
 
-    // First save revision.
-    await ContainerRevision.save(containerRevision);
-
-    // Increment current revision.
-    base.currentRevision = base.currentRevision ? base.currentRevision + 1 : 1;
-    await base.save();
+    await this.applyContainerUpdate(base, updateRequest);
 
     // Remove update after revision is created.
     await UpdatedContainer.delete(containerId);
@@ -421,24 +435,8 @@ export default class ContainerService {
       return undefined;
     }
 
-    // If the ContainerRequests contain product updates we delegate them.
-    const { ids, requests } = getIdsAndRequests<ProductRequest>(update.products);
-
-    // Apply requests.
-    await Promise.all(requests.map((p) => {
-      if (Object.prototype.hasOwnProperty.call(p, 'id')) {
-        // Push down ownership if unspecified.
-        const param : UpdateProductParams = {
-          ...(p as UpdateProductParams),
-          ownerId: p.ownerId ?? update.ownerId,
-        };
-        return ProductService.updateProduct(param);
-      }
-      return ProductService.createProduct(p);
-    }));
-
     let products: Product[] = [];
-    await Promise.all(ids.map((id) => Product.findOne(id)))
+    await Promise.all(update.products.map((id) => Product.findOne(id)))
       .then((result) => { products = result.filter((p) => p); });
 
     // Set base container and apply new update.
@@ -455,9 +453,27 @@ export default class ContainerService {
       { containerId: base.id, returnProducts: true },
     )).records[0] as ContainerWithProductsResponse;
 
-
     // Return container with products.
     return container;
+  }
+
+  public static async directContainerUpdate(containerId: number, update: UpdateContainerRequest) {
+    const base: Container = await Container.findOne({ where: { id: containerId } });
+    await this.applyContainerUpdate(base, update);
+  }
+
+  public static async propagateContainerUpdate(containerId: number) {
+    const pos = await PointOfSaleRevision.find({ where: `"PointOfSaleRevision__containers"."containerId" = ${containerId} AND "PointOfSaleRevision__containers__container"."currentRevision" = "PointOfSaleRevision__containers"."revision"  AND "PointOfSaleRevision__pointOfSale"."currentRevision" = "PointOfSaleRevision"."revision"`, relations: ['pointOfSale', 'containers', 'containers.container'] });
+    console.error(JSON.stringify(pos, undefined, 4));
+    pos.forEach((p) => {
+      const update: UpdateContainerParams = {
+
+      };
+    });
+    // console.error(await PointOfSaleRevision.find({ where: { containers: { container: { id: containerId } } }, relations: ['containers', 'containers.container'] }));
+    const update: UpdatePointOfSaleRequest = {
+
+    };
   }
 
   /**

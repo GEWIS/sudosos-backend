@@ -27,7 +27,7 @@ import Container from '../container/container';
 /**
  * @typedef {BasePointOfSale} UpdatedPointOfSale
  * @property {PointOfSale.model} pointOfSale.required - The pointOfSale the revision belongs to.
- * @property {Array.<Container>} containers.required - The containers that should be contained
+ * @property {Array.<Container.model>} containers.required - The containers that should be contained
  * in the pointOfSale.
  */
 @Entity()

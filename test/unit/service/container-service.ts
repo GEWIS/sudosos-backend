@@ -32,6 +32,7 @@ import { ContainerResponse } from '../../../src/controller/response/container-re
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
 import ContainerRevision from '../../../src/entity/container/container-revision';
 import UpdatedContainer from '../../../src/entity/container/updated-container';
+import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
 
 /**
  * Test if all the container responses are part of the container set array.
@@ -173,8 +174,9 @@ describe('ContainerService', async (): Promise<void> => {
     });
     it('should return products if specified', async () => {
       const { records } = await ContainerService.getContainers(
-        { productId: 2 }, {},
+        { returnProducts: true }, {},
       );
+      expect(ctx.specification.validateModel('Array.<ContainerWithProductsResponse.model>', records, false, true).valid).to.be.true;
     });
   });
 
@@ -259,6 +261,14 @@ describe('ContainerService', async (): Promise<void> => {
       );
       expect(visibility.own).to.be.false;
       expect(visibility.public).to.be.false;
+    });
+  });
+
+  describe('propagateContainerUpdate function', () => {
+    it('should update all POS that include given container', async () => {
+      const pos = await PointOfSale.findOne({ where: 'currentRevision' });
+      const container = (await PointOfSaleRevision.findOne({ where: { pointOfSale: { id: pos.id }, revision: pos.currentRevision }, relations: ['pointOfSale', 'containers'] })).containers[0];
+      await ContainerService.propagateContainerUpdate(container.container.id);
     });
   });
 });

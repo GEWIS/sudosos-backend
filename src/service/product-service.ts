@@ -16,6 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { createQueryBuilder, SelectQueryBuilder } from 'typeorm';
+import { Dinero } from 'dinero.js';
 import {
   PaginatedProductResponse,
   ProductResponse,
@@ -30,7 +31,7 @@ import ContainerRevision from '../entity/container/container-revision';
 import Container from '../entity/container/container';
 import UpdatedContainer from '../entity/container/updated-container';
 import User from '../entity/user/user';
-import CreateProductParams, { UpdateProductParams } from '../controller/request/product-request';
+import CreateProductParams, { UpdateProductParams, UpdateProductRequest } from '../controller/request/product-request';
 import PointOfSale from '../entity/point-of-sale/point-of-sale';
 import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision';
 import { PaginationParameters } from '../helpers/pagination';
@@ -38,6 +39,7 @@ import { RequestWithToken } from '../middleware/token-middleware';
 import {
   asBoolean, asDate, asNumber,
 } from '../helpers/validators';
+import ContainerService from './container-service';
 
 /**
  * Define product filtering parameters used to filter query results.
@@ -471,6 +473,32 @@ export default class ProductService {
     return (await this.getProducts({ updatedProducts: true, productId: base.id })).records[0];
   }
 
+  public static async applyProductUpdate(base: Product, update: UpdateProductRequest) {
+    const product = { ...base };
+
+    // Set base product, then the oldest settings and then the newest.
+    const productRevision: ProductRevision = Object.assign(new ProductRevision(), {
+      product,
+      // Apply the update.
+      ...update,
+      // Increment revision.
+      revision: base.currentRevision ? base.currentRevision + 1 : 1,
+      // Fix dinero
+      price: DineroTransformer.Instance.from(update.price.amount) as Dinero,
+    });
+
+    // First save the revision.
+    await ProductRevision.save(productRevision);
+
+    // Increment current revision.
+    // eslint-disable-next-line no-param-reassign
+    base.currentRevision = base.currentRevision ? base.currentRevision + 1 : 1;
+    await base.save();
+
+    await this.propagateProductUpdate(base.id);
+    return productRevision;
+  }
+
   /**
    * Confirms a product update and creates a product revision.
    * @param productId - The product update to confirm.
@@ -478,38 +506,52 @@ export default class ProductService {
   public static async approveProductUpdate(productId: number)
     : Promise<ProductResponse> {
     const base: Product = await Product.findOne(productId);
-    const rawUpdateProduct = await UpdatedProduct.findOne(productId);
+    const rawUpdateProduct = await UpdatedProduct.findOne({ where: { product: { id: productId } }, relations: ['category'] });
 
     // return undefined if not found or request is invalid
     if (!base || !rawUpdateProduct) {
       return undefined;
     }
 
-    const update: ProductResponse = (await this.getProducts(
-      { updatedProducts: true, productId },
-    )).records[0];
+    const updateRequest = {
+      price: {
+        amount: rawUpdateProduct.price.getAmount(),
+        currency: rawUpdateProduct.price.getCurrency(),
+        precision: rawUpdateProduct.price.getPrecision(),
+      },
+      category: rawUpdateProduct.category.id,
+      alcoholPercentage: rawUpdateProduct.alcoholPercentage,
+      name: rawUpdateProduct.name,
+    } as UpdateProductRequest;
 
-    // Set base product, then the oldest settings and then the newest.
-    const productRevision: ProductRevision = Object.assign(new ProductRevision(), {
-      product: base,
-      // Apply the update.
-      ...update,
-      // Increment revision.
-      revision: base.currentRevision ? base.currentRevision + 1 : 1,
-      // Fix dinero
-      price: DineroTransformer.Instance.from(update.price.amount),
-    });
-
-    // First save the revision.
-    await ProductRevision.save(productRevision);
-    // Increment current revision.
-    base.currentRevision = base.currentRevision ? base.currentRevision + 1 : 1;
-    await base.save();
+    await this.applyProductUpdate(base, updateRequest);
 
     // Remove update after revision is created.
     await UpdatedProduct.delete(productId);
 
     // Return the new product.
     return (await this.getProducts({ productId })).records[0];
+  }
+
+  public static async directProductUpdate(productId: number, updateRequest: UpdateProductRequest) {
+    const base: Product = await Product.findOne(productId);
+    await this.applyProductUpdate(base, updateRequest);
+  }
+
+  public static async propagateProductUpdate(productId: number) {
+    const containers = (await ContainerService.getContainers({ productId })).records;
+    const promises: Promise<void>[] = [];
+    containers.forEach((c) => {
+      ContainerRevision.findOne({ where: { id: c.id, revision: c.revision }, relations: ['products', 'products.product'] }).then((revision) => {
+        const update = {
+          products: revision.products.map((p) => p.product.id),
+          public: c.public,
+          name: revision.name,
+        };
+        promises.push(ContainerService.directContainerUpdate(c.id, update));
+      });
+      Container.findOne({ where: { id: c.id } });
+    });
+    await Promise.all(promises);
   }
 }

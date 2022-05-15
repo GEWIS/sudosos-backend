@@ -253,12 +253,6 @@ describe('PointOfSaleService', async (): Promise<void> => {
       expect(ctx.validPOSParams.containers).to.deep.equalInAnyOrder(containers);
 
       expect(updatedPointOfSale.name).to.equal(ctx.validPOSParams.name);
-      expect(updatedPointOfSale.startDate.toISOString())
-        .to.equal(ctx.validPOSParams.startDate);
-      expect(updatedPointOfSale.endDate.toISOString())
-        .to.equal(ctx.validPOSParams.endDate);
-      expect(updatedPointOfSale.useAuthentication)
-        .to.equal(ctx.validPOSParams.useAuthentication);
 
       requestUpdatedResponseEqual(ctx.validPOSParams, res);
     });

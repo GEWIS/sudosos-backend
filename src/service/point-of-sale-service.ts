@@ -379,9 +379,6 @@ export default class PointOfSaleService {
       pointOfSale: base,
       containers: containerRevisions,
       name: rawPointOfSaleUpdate.name,
-      startDate: rawPointOfSaleUpdate.startDate,
-      endDate: rawPointOfSaleUpdate.endDate,
-      useAuthentication: rawPointOfSaleUpdate.useAuthentication,
       // Increment revision.
       revision: base.currentRevision ? base.currentRevision + 1 : 1,
     });
@@ -402,6 +399,10 @@ export default class PointOfSaleService {
     );
   }
 
+  public static async applyPointOfSaleUpdate(base: PointOfSale, update: ) {
+
+  }
+
   /**
    * Creates a PointOfSale update
    * @param pointOfSaleId - The ID of the PointOfSale to update.
@@ -417,24 +418,13 @@ export default class PointOfSaleService {
       return undefined;
     }
 
-    const { ids, requests } = getIdsAndRequests<ContainerParams>(update.containers);
-    // If the update contains container updates or creations we delegate it.
-    await Promise.all(requests.map((r) => {
-      if (Object.prototype.hasOwnProperty.call(r, 'id')) {
-        return ContainerService.updateContainer((r as UpdateContainerParams));
-      }
-      return ContainerService.createContainer((r as CreateContainerParams));
-    }));
-
-    const containers = update.containers ? await Container.findByIds(ids) : [];
+    const containers = await Container.findByIds(update.containers)
 
     // Create update object
     const updatedPointOfSale = Object.assign(new UpdatedPointOfSale(), {
       ...update,
       pointOfSale: base,
       containers,
-      startDate: new Date(update.startDate),
-      endDate: new Date(update.endDate),
     });
 
     // Save update
@@ -467,6 +457,10 @@ export default class PointOfSaleService {
       id: base.id,
     };
     return this.updatePointOfSale(update);
+  }
+
+  public static async directPointOfSaleUpdate() {
+
   }
 
   /**

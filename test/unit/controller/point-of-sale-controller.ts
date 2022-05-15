@@ -461,64 +461,64 @@ describe('PointOfSaleController', async () => {
       withContainerUpdate.containers.push(containerRequest);
       await expectError(withContainerUpdate, 'Containers: Name: must be a non-zero length string.');
     });
-    it('should verify ContainerUpdate with productUpdate', async () => {
-      const withContainerUpdate: CreatePointOfSaleRequest = JSON.parse(
-        JSON.stringify(ctx.validPOSRequest),
-      );
-      const failID = withContainerUpdate.containers.pop() as number;
-      const updateProductParams: UpdateProductParams = {
-        alcoholPercentage: 0,
-        category: 1,
-        id: 0,
-        ownerId: undefined,
-        name: 'ProductRequestID',
-        price: {
-          amount: -100,
-          currency: 'EUR',
-          precision: 2,
-        },
-      };
-
-      const containerRequest: UpdateContainerParams = {
-        id: failID,
-        ownerId: undefined,
-        name: 'Container',
-        products: [updateProductParams],
-        public: true,
-      };
-
-      withContainerUpdate.containers.push(containerRequest);
-      await expectError(withContainerUpdate, 'Containers: Products: Price must be greater than zero');
-    });
-    it('should verify ContainerUpdate with productUpdate ', async () => {
-      const withContainerUpdate: CreatePointOfSaleRequest = JSON.parse(
-        JSON.stringify(ctx.validPOSRequest),
-      );
-      const failID = withContainerUpdate.containers.pop() as number;
-      const updateProductParams: UpdateProductParams = {
-        alcoholPercentage: 0,
-        category: 1,
-        id: 1,
-        ownerId: undefined,
-        name: '',
-        price: {
-          amount: 100,
-          currency: 'EUR',
-          precision: 2,
-        },
-      };
-
-      const updateContainerParams: UpdateContainerParams = {
-        id: failID,
-        ownerId: undefined,
-        name: 'Container',
-        products: [updateProductParams],
-        public: true,
-      };
-
-      withContainerUpdate.containers.push(updateContainerParams);
-      await expectError(withContainerUpdate, 'Containers: Products: Name: must be a non-zero length string.');
-    });
+    // it('should verify ContainerUpdate with productUpdate', async () => {
+    //   const withContainerUpdate: CreatePointOfSaleRequest = JSON.parse(
+    //     JSON.stringify(ctx.validPOSRequest),
+    //   );
+    //   const failID = withContainerUpdate.containers.pop() as number;
+    //   const updateProductParams: UpdateProductParams = {
+    //     alcoholPercentage: 0,
+    //     category: 1,
+    //     id: 0,
+    //     ownerId: undefined,
+    //     name: 'ProductRequestID',
+    //     price: {
+    //       amount: -100,
+    //       currency: 'EUR',
+    //       precision: 2,
+    //     },
+    //   };
+    //
+    //   const containerRequest: UpdateContainerParams = {
+    //     id: failID,
+    //     ownerId: undefined,
+    //     name: 'Container',
+    //     products: [updateProductParams],
+    //     public: true,
+    //   };
+    //
+    //   withContainerUpdate.containers.push(containerRequest);
+    //   await expectError(withContainerUpdate, 'Containers: Products: Price must be greater than zero');
+    // });
+    // it('should verify ContainerUpdate with productUpdate ', async () => {
+    //   const withContainerUpdate: CreatePointOfSaleRequest = JSON.parse(
+    //     JSON.stringify(ctx.validPOSRequest),
+    //   );
+    //   const failID = withContainerUpdate.containers.pop() as number;
+    //   const updateProductParams: UpdateProductParams = {
+    //     alcoholPercentage: 0,
+    //     category: 1,
+    //     id: 1,
+    //     ownerId: undefined,
+    //     name: '',
+    //     price: {
+    //       amount: 100,
+    //       currency: 'EUR',
+    //       precision: 2,
+    //     },
+    //   };
+    //
+    //   const updateContainerParams: UpdateContainerParams = {
+    //     id: failID,
+    //     ownerId: undefined,
+    //     name: 'Container',
+    //     products: [updateProductParams],
+    //     public: true,
+    //   };
+    //
+    //   withContainerUpdate.containers.push(updateContainerParams);
+    //   await expectError(withContainerUpdate, 'Containers: Products: Name: must be a non-zero length string.');
+    // });
   }
   describe('POST /pointsofsale', () => {
     describe('verifyPointOfSaleRequest Specification', async (): Promise<void> => {
