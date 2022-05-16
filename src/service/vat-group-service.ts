@@ -31,6 +31,7 @@ import { asBoolean, asNumber, asVatDeclarationPeriod } from '../helpers/validato
 import SubTransactionRow from '../entity/transactions/sub-transaction-row';
 import ProductRevision from '../entity/product/product-revision';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
+import ProductService from './product-service';
 
 interface VatGroupFilterParameters {
   vatGroupId?: number;
@@ -53,6 +54,13 @@ interface VatDeclarationParams {
    * Calendar year
    */
   year: number;
+}
+
+export async function canSetVatGroupToDeleted(vatGroupId: number): Promise<boolean> {
+  const products = await ProductService.getProducts({
+    vatGroupId,
+  });
+  return products.records.length === 0;
 }
 
 export function parseGetVatGroupsFilters(req: RequestWithToken): VatGroupFilterParameters {
@@ -177,13 +185,16 @@ export default class VatGroupService {
       default: throw new Error(`Unknown VAT declaration interval: ${params.period}`);
     }
 
+    const vatGroups = await VatGroup.find({ where: { deleted: false } });
+
     const builder = createQueryBuilder(SubTransactionRow, 'str')
       .select([
         'vatgroup.id as id',
         'MAX(vatgroup.name) as name',
         'MAX(vatgroup.percentage) as percentage',
         'MAX(vatgroup.deleted) as deleted',
-        `(STRFTIME('%m', str.createdAt) - 1) / ${divider} as period`,
+        // Timezones are a bitch
+        `(STRFTIME('%m', DATETIME(str.createdAt, '${(new Date()).getTimezoneOffset()} minutes')) - 1) / ${divider} as period`,
         'Strftime(\'%Y\', str.createdAt) as year',
         'SUM(ROUND((str.amount * product.priceInclVat * vatgroup.percentage) / (100 + vatgroup.percentage))) as value',
       ])
@@ -233,15 +244,29 @@ export default class VatGroupService {
 
     if (lastSeenObject) fillAndSave(lastSeenObject);
 
+    vatGroups.forEach((v) => {
+      if (resultRows.findIndex((r) => r.id === v.id) < 0) {
+        resultRows.push({
+          id: v.id,
+          percentage: v.percentage,
+          name: v.name,
+          deleted: v.deleted,
+          values: (new Array(periods)).fill(dineroTransformer.from(0).toObject()),
+        });
+      }
+    });
+
     // Keep all rows that have deleted set to false or have at least one actual value in the row
     const filteredRows = resultRows
       .filter((r) => !r.deleted
         || r.values.reduce((prev, curr) => Math.max(prev, curr.amount), 0) > 0);
 
+    const sortedRows = filteredRows.sort((a, b) => a.id - b.id);
+
     return {
       period: params.period,
       calendarYear: params.year,
-      rows: filteredRows.map((r) => ({
+      rows: sortedRows.map((r) => ({
         id: r.id, name: r.name, percentage: r.percentage, values: r.values,
       })),
     };

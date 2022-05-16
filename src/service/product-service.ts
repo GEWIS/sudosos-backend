@@ -94,6 +94,10 @@ export interface ProductFilterParameters {
   //  */
   // categoryName?: string;
   /**
+   * Filter based on the VAT group id.
+   */
+  vatGroupId?: number;
+  /**
    * Filter based on created at attribute.
    */
   createdAt?: Date;
@@ -206,6 +210,7 @@ export default class ProductService {
       ownerId: 'owner.id',
       categoryId: 'category.id',
       categoryName: 'category.name',
+      vatGroupId: 'vatgroup.id',
       createdAt: 'product.createdAt',
       updatedAt: 'productrevision.updatedAt',
       productName: 'productrevision.name',

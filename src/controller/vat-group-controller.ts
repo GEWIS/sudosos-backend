@@ -22,6 +22,7 @@ import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import { parseRequestPagination } from '../helpers/pagination';
 import VatGroupService, {
+  canSetVatGroupToDeleted,
   parseGetVatCalculationValuesParams,
   parseGetVatGroupsFilters,
 } from '../service/vat-group-service';
@@ -159,6 +160,10 @@ export default class VatGroupController extends BaseController {
 
     try {
       if (VatGroupService.verifyVatGroup(body)) {
+        if (body.deleted) {
+          res.status(400).json('Don\'t already soft delete a new VAT group, that\'s stupid.');
+        }
+
         res.json(await VatGroupService.createVatGroup(body));
       } else {
         res.status(400).json('Invalid VAT group.');
@@ -183,17 +188,28 @@ export default class VatGroupController extends BaseController {
    */
   public async updateVatGroup(req: RequestWithToken, res: Response): Promise<void> {
     const body = req.body as UpdateVatGroupRequest;
-    const { id } = req.params;
+    const id = Number.parseInt(req.params.id, 10);
     this.logger.trace('Update VAT group', id, 'by user', req.token.user);
 
     try {
       if (VatGroupService.verifyUpdateVatGroup(body)) {
-        const vatGroup = await VatGroupService.updateVatGroup(Number.parseInt(id, 10), body);
-        if (vatGroup) {
-          res.json(vatGroup);
-        } else {
+        let vatGroup = (await VatGroupService
+          .getVatGroups({ vatGroupId: id })).records[0];
+        if (!vatGroup) {
           res.status(404).json('VAT group not found.');
+          return;
         }
+
+        if (body.deleted) {
+          const canDelete = await canSetVatGroupToDeleted(id);
+          if (!canDelete) {
+            res.status(400).json('Cannot set "deleted" to true, because the VAT group is still used by one or more products.');
+            return;
+          }
+        }
+
+        vatGroup = await VatGroupService.updateVatGroup(id, body);
+        res.status(200).json(vatGroup);
       } else {
         res.status(400).json('Invalid VAT group.');
       }

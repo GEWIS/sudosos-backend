@@ -122,54 +122,6 @@ describe('VatGroupService', () => {
     });
   });
 
-  describe('create VAT groups', () => {
-    it('should correctly create a VAT group', async () => {
-      const lengthBefore = await VatGroup.count();
-
-      const vatGroup = await VatGroupService.createVatGroup(ctx.validVatCreateReq);
-
-      expect(vatGroup.name).to.equal(ctx.validVatCreateReq.name);
-      expect(vatGroup.deleted).to.equal(ctx.validVatCreateReq.deleted);
-      expect(vatGroup.hidden).to.equal(ctx.validVatCreateReq.hidden);
-      expect(vatGroup.percentage).to.equal(ctx.validVatCreateReq.percentage);
-
-      expect(await VatGroup.count()).to.equal(lengthBefore + 1);
-    });
-  });
-
-  describe('update VAT groups', () => {
-    it('should correctly update VAT group', async () => {
-      const name = 'NewName';
-
-      const vatGroupOld = ctx.vatGroups[0];
-      const vatGroupNew = await VatGroupService.updateVatGroup(vatGroupOld.id, {
-        name,
-        deleted: !vatGroupOld.deleted,
-        hidden: !vatGroupOld.hidden,
-      });
-      const vatGroup = await VatGroup.findOne({ where: { id: vatGroupOld.id } });
-
-      expect(vatGroup.name).to.equal(name);
-      expect(vatGroupNew.name).to.equal(name);
-      expect(vatGroup.deleted).to.equal(!vatGroupOld.deleted);
-      expect(vatGroupNew.deleted).to.equal(!vatGroupOld.deleted);
-      expect(vatGroup.hidden).to.equal(!vatGroupOld.hidden);
-      expect(vatGroupNew.hidden).to.equal(!vatGroupOld.hidden);
-    });
-
-    it('should return undefined if VAT group does not exist', async () => {
-      const id = ctx.vatGroups[ctx.vatGroups.length - 1].id + 1000;
-
-      const vatGroupNew = await VatGroupService.updateVatGroup(id, {
-        name: 'yeee',
-        deleted: false,
-        hidden: true,
-      });
-
-      expect(vatGroupNew).to.be.undefined;
-    });
-  });
-
   describe('calculateVatDeclaration', async () => {
     const calculateVatValues = (year: number, period: number): any => {
       const actualValues: any = {};
@@ -325,6 +277,54 @@ describe('VatGroupService', () => {
     it('should correctly calculate annual VAT declaration 2022', async () => {
       const response = await testVatCalculations(2022, VatDeclarationPeriod.ANNUALLY);
       await testPeriodConsistency(response, VatDeclarationPeriod.QUARTERLY);
+    });
+  });
+
+  describe('create VAT groups', () => {
+    it('should correctly create a VAT group', async () => {
+      const lengthBefore = await VatGroup.count();
+
+      const vatGroup = await VatGroupService.createVatGroup(ctx.validVatCreateReq);
+
+      expect(vatGroup.name).to.equal(ctx.validVatCreateReq.name);
+      expect(vatGroup.deleted).to.equal(ctx.validVatCreateReq.deleted);
+      expect(vatGroup.hidden).to.equal(ctx.validVatCreateReq.hidden);
+      expect(vatGroup.percentage).to.equal(ctx.validVatCreateReq.percentage);
+
+      expect(await VatGroup.count()).to.equal(lengthBefore + 1);
+    });
+  });
+
+  describe('update VAT groups', () => {
+    it('should correctly update VAT group', async () => {
+      const name = 'NewName';
+
+      const vatGroupOld = ctx.vatGroups[0];
+      const vatGroupNew = await VatGroupService.updateVatGroup(vatGroupOld.id, {
+        name,
+        deleted: !vatGroupOld.deleted,
+        hidden: !vatGroupOld.hidden,
+      });
+      const vatGroup = await VatGroup.findOne({ where: { id: vatGroupOld.id } });
+
+      expect(vatGroup.name).to.equal(name);
+      expect(vatGroupNew.name).to.equal(name);
+      expect(vatGroup.deleted).to.equal(!vatGroupOld.deleted);
+      expect(vatGroupNew.deleted).to.equal(!vatGroupOld.deleted);
+      expect(vatGroup.hidden).to.equal(!vatGroupOld.hidden);
+      expect(vatGroupNew.hidden).to.equal(!vatGroupOld.hidden);
+    });
+
+    it('should return undefined if VAT group does not exist', async () => {
+      const id = ctx.vatGroups[ctx.vatGroups.length - 1].id + 1000;
+
+      const vatGroupNew = await VatGroupService.updateVatGroup(id, {
+        name: 'yeee',
+        deleted: false,
+        hidden: true,
+      });
+
+      expect(vatGroupNew).to.be.undefined;
     });
   });
 });

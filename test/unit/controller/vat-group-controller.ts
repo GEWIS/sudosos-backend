@@ -285,6 +285,21 @@ describe('VatGroupController', () => {
         .send(invalidVatGroupReq);
 
       expect(res.status).to.equal(400);
+      expect(res.body).to.equal('Invalid VAT group.');
+    });
+    it('should return an HTTP 400 if already soft deleted', async () => {
+      const invalidVatGroupReq: VatGroupRequest = {
+        ...ctx.validVatGroupReq,
+        deleted: true,
+      };
+
+      const res = await request(ctx.app)
+        .post('/vatgroups')
+        .set('Authorization', `Bearer ${ctx.token}`)
+        .send(invalidVatGroupReq);
+
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('Don\'t already soft delete a new VAT group, that\'s stupid.');
     });
   });
 
@@ -328,6 +343,31 @@ describe('VatGroupController', () => {
       expect(vatGroup.name).to.equal(ctx.validUpdateVatGroupReq.name);
       expect(vatGroup.deleted).to.equal(ctx.validUpdateVatGroupReq.deleted);
     });
+    it('should return HTTP 200 and soft delete VAT group if it has no products', async () => {
+      let res = await request(ctx.app)
+        .post('/vatgroups')
+        .set('Authorization', `Bearer ${ctx.token}`)
+        .send(ctx.validVatGroupReq);
+
+      expect(res.status).to.equal(200);
+
+      let vatGroup = res.body as VatGroup;
+      expect(vatGroup.deleted).to.be.false;
+      const { id } = vatGroup;
+
+      res = await request(ctx.app)
+        .patch(`/vatgroups/${id}`)
+        .set('Authorization', `Bearer ${ctx.token}`)
+        .send({
+          ...ctx.validUpdateVatGroupReq,
+          deleted: true,
+        } as UpdateVatGroupRequest);
+
+      expect(res.status).to.equal(200);
+
+      vatGroup = res.body as VatGroup;
+      expect(vatGroup.deleted).to.equal(true);
+    });
     it('should return HTTP 400 if VAT group has empty name', async () => {
       const invalidVatGroupReq = {
         ...ctx.validVatGroupReq,
@@ -351,6 +391,20 @@ describe('VatGroupController', () => {
         .send({ percentage: 21 });
 
       expect(res.status).to.equal(400);
+    });
+    it('should return HTTP 400 if soft deleting when VAT group has products', async () => {
+      const id = 1;
+
+      const res = await request(ctx.app)
+        .patch(`/vatgroups/${id}`)
+        .set('Authorization', `Bearer ${ctx.token}`)
+        .send({
+          ...ctx.validUpdateVatGroupReq,
+          deleted: true,
+        } as UpdateVatGroupRequest);
+
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('Cannot set "deleted" to true, because the VAT group is still used by one or more products.');
     });
     it('should return HTTP 404 if VAT group does not exist with given id', async () => {
       const id = ctx.vatGroups[0].id + 1000;

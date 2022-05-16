@@ -260,6 +260,18 @@ describe('ProductService', async (): Promise<void> => {
 
       expect(records).to.be.empty;
     });
+    it('should return the products belonging to a VAT group', async () => {
+      const params: ProductFilterParameters = {
+        vatGroupId: 1,
+      };
+      const { records } = await ProductService.getProducts(params);
+
+      const products = ctx.productRevisions
+        .filter((rev) => rev.vat.id === params.vatGroupId)
+        .filter((rev) => rev.revision === rev.product.currentRevision);
+
+      returnsAllRevisions(records, products);
+    });
     it('should return the products belonging to a container', async () => {
       const params: ProductFilterParameters = {
         containerId: 3,
