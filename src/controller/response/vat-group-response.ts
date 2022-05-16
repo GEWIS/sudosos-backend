@@ -23,9 +23,11 @@ import BaseResponse from './base-response';
 /**
  * @typedef {BaseResponse} BaseVatGroupResponse
  * @property {number} percentage.required - Percentage of VAT
+ * @property {boolean} hidden.required - Whether VAT should be hidden
  */
 export interface BaseVatGroupResponse extends BaseResponse {
   percentage: number,
+  hidden: boolean,
 }
 
 /**

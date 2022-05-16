@@ -285,7 +285,6 @@ describe('VatGroupController', () => {
         .send(invalidVatGroupReq);
 
       expect(res.status).to.equal(400);
-      expect(res.body).to.equal('Invalid VAT group.');
     });
     it('should return an HTTP 400 if already soft deleted', async () => {
       const invalidVatGroupReq: VatGroupRequest = {

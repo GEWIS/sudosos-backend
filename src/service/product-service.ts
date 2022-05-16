@@ -159,19 +159,16 @@ export default class ProductService {
    */
   public static asProductResponse(rawProduct: any): ProductResponse {
     const priceInclVat = DineroTransformer.Instance.from(rawProduct.priceInclVat).toObject();
-    let priceExclVat: DineroObject;
-    let vat: BaseVatGroupResponse;
-    if (!rawProduct.vat_hidden) {
-      const vatPercentage = rawProduct.vat_percentage as number; // percentage
-      priceExclVat = {
-        ...priceInclVat,
-        amount: Math.round(priceInclVat.amount / (1 + (vatPercentage / 100))),
-      };
-      vat = {
-        id: rawProduct.vat_id,
-        percentage: rawProduct.vat_percentage,
-      };
-    }
+    const vatPercentage = rawProduct.vat_percentage as number; // percentage
+    const priceExclVat: DineroObject = {
+      ...priceInclVat,
+      amount: Math.round(priceInclVat.amount / (1 + (vatPercentage / 100))),
+    };
+    const vat: BaseVatGroupResponse = {
+      id: rawProduct.vat_id,
+      percentage: rawProduct.vat_percentage,
+      hidden: rawProduct.vat_hidden,
+    };
 
     return {
       id: rawProduct.id,
