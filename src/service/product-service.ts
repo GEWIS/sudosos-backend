@@ -39,6 +39,7 @@ import { RequestWithToken } from '../middleware/token-middleware';
 import {
   asBoolean, asDate, asNumber,
 } from '../helpers/validators';
+import { BaseVatGroupResponse } from '../controller/response/vat-group-response';
 
 /**
  * Define product filtering parameters used to filter query results.
@@ -154,11 +155,19 @@ export default class ProductService {
    */
   public static asProductResponse(rawProduct: any): ProductResponse {
     const priceInclVat = DineroTransformer.Instance.from(rawProduct.priceInclVat).toObject();
-    const vat = rawProduct.vat_percentage as number; // percentage
-    const priceExclVat: DineroObject = {
-      ...priceInclVat,
-      amount: Math.round(priceInclVat.amount / (1 + (vat / 100))),
-    };
+    let priceExclVat: DineroObject;
+    let vat: BaseVatGroupResponse;
+    if (!rawProduct.vat_hidden) {
+      const vatPercentage = rawProduct.vat_percentage as number; // percentage
+      priceExclVat = {
+        ...priceInclVat,
+        amount: Math.round(priceInclVat.amount / (1 + (vatPercentage / 100))),
+      };
+      vat = {
+        id: rawProduct.vat_id,
+        percentage: rawProduct.vat_percentage,
+      };
+    }
 
     return {
       id: rawProduct.id,
@@ -178,10 +187,7 @@ export default class ProductService {
       name: rawProduct.name,
       priceInclVat,
       priceExclVat,
-      vat: {
-        id: rawProduct.vat_id,
-        percentage: rawProduct.vat_percentage,
-      },
+      vat,
     };
   }
 
@@ -347,6 +353,7 @@ export default class ProductService {
         'productrevision.priceInclVat AS priceInclVat',
         'vatgroup.id AS vat_id',
         'vatgroup.percentage AS vat_percentage',
+        'vatgroup.hidden AS vat_hidden',
         'owner.id AS owner_id',
         'owner.firstName AS owner_firstName',
         'owner.lastName AS owner_lastName',
@@ -389,6 +396,7 @@ export default class ProductService {
         'updatedproduct.priceInclVat AS priceInclVat',
         'vatgroup.id AS vat_id',
         'vatgroup.percentage AS vat_percentage',
+        'vatgroup.hidden AS vat_hidden',
         'owner.id AS owner_id',
         'owner.firstName AS owner_firstName',
         'owner.lastName AS owner_lastName',

@@ -36,11 +36,12 @@ interface VatGroupFilterParameters {
   vatGroupId?: number;
   name?: string;
   percentage?: number;
-  hideIfZero?: boolean;
+  deleted?: boolean;
+  hidden?: boolean;
 }
 
 interface IntermediateVatDeclarationRow extends VatDeclarationRow {
-  hideIfZero: boolean;
+  deleted: boolean;
 }
 
 interface VatDeclarationParams {
@@ -59,7 +60,7 @@ export function parseGetVatGroupsFilters(req: RequestWithToken): VatGroupFilterP
     vatGroupId: asNumber(req.query.transactionId),
     name: req.query.name as string,
     percentage: asNumber(req.query.percentage),
-    hideIfZero: asBoolean(req.query.hideIfZero),
+    deleted: asBoolean(req.query.deleted),
   };
 }
 
@@ -79,7 +80,7 @@ export default class VatGroupService {
 
   public static verifyUpdateVatGroup(vr: UpdateVatGroupRequest): boolean {
     return vr.name !== ''
-      && typeof vr.hideIfZero === 'boolean';
+      && typeof vr.deleted === 'boolean';
   }
 
   /**
@@ -96,7 +97,7 @@ export default class VatGroupService {
       vatGroupId: 'id',
       name: 'name',
       percentage: 'percentage',
-      hideIfZero: 'hideIfZero',
+      deleted: 'deleted',
     };
 
     const options: FindManyOptions = {
@@ -146,7 +147,8 @@ export default class VatGroupService {
     }
 
     vatGroup.name = vatGroupReq.name;
-    vatGroup.hideIfZero = vatGroupReq.hideIfZero;
+    vatGroup.deleted = vatGroupReq.deleted;
+    vatGroup.hidden = vatGroupReq.hidden;
 
     return VatGroup.save(vatGroup);
   }
@@ -180,7 +182,7 @@ export default class VatGroupService {
         'vatgroup.id as id',
         'MAX(vatgroup.name) as name',
         'MAX(vatgroup.percentage) as percentage',
-        'MAX(vatgroup.hideIfZero) as hideIfZero',
+        'MAX(vatgroup.deleted) as deleted',
         `(STRFTIME('%m', str.createdAt) - 1) / ${divider} as period`,
         'Strftime(\'%Y\', str.createdAt) as year',
         'SUM(ROUND((str.amount * product.priceInclVat * vatgroup.percentage) / (100 + vatgroup.percentage))) as value',
@@ -209,7 +211,7 @@ export default class VatGroupService {
         id: resultRow.id,
         name: resultRow.name,
         percentage: resultRow.percentage,
-        hideIfZero: resultRow.hideIfZero,
+        deleted: resultRow.deleted,
         values,
       });
       values = [];
@@ -231,9 +233,9 @@ export default class VatGroupService {
 
     if (lastSeenObject) fillAndSave(lastSeenObject);
 
-    // Keep all rows that have HideIfZero set to false or have at least one actual value in the row
+    // Keep all rows that have deleted set to false or have at least one actual value in the row
     const filteredRows = resultRows
-      .filter((r) => !r.hideIfZero
+      .filter((r) => !r.deleted
         || r.values.reduce((prev, curr) => Math.max(prev, curr.amount), 0) > 0);
 
     return {

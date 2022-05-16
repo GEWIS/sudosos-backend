@@ -22,7 +22,7 @@ import BaseEntity from './base-entity';
  * @typedef {BaseEntity} VatGroup
  * @property {string} name - Name of the VAT group
  * @property {number} percentage - VAT percentage
- * @property {boolean} hideIfZero - Whether this group should be hidden
+ * @property {boolean} deleted - Whether this group should be hidden
  * in the financial overviews when its value is zero
  */
 
@@ -45,5 +45,8 @@ export default class VatGroup extends BaseEntity {
   public readonly percentage: number;
 
   @Column({ default: false })
-  public hideIfZero: boolean;
+  public deleted: boolean;
+
+  @Column({ default: false })
+  public hidden: boolean;
 }

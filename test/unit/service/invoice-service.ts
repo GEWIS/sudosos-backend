@@ -71,7 +71,7 @@ export async function requestToTransaction(transactions: TransactionRequest[]) {
   let cost = 0;
   await Promise.all(transactions.map(async (t) => {
     const transactionResponse = await TransactionService.createTransaction(t);
-    cost += transactionResponse.price.amount;
+    cost += transactionResponse.totalPriceInclVat.amount;
     tIds.push(transactionResponse.id);
   }));
   return { tIds, cost };

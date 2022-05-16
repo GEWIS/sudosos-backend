@@ -40,6 +40,7 @@ import Product from '../../../src/entity/product/product';
 import ProductController from '../../../src/controller/product-controller';
 import { DineroObjectRequest } from '../../../src/controller/request/dinero-request';
 import { DiskStorage } from '../../../src/files/storage';
+import VatGroup from '../../../src/entity/vat-group';
 
 /**
  * Tests if a product response is equal to the request.
@@ -64,6 +65,7 @@ describe('ProductController', async (): Promise<void> => {
     localUser: User,
     adminToken: String,
     token: String,
+    vatGroups: VatGroup[],
     products: Product[],
     validProductReq: CreateProductRequest,
     invalidProductReq: CreateProductRequest,
@@ -158,6 +160,7 @@ describe('ProductController', async (): Promise<void> => {
       localUser,
       adminToken,
       token,
+      vatGroups,
       products,
       validProductReq,
       invalidProductReq,
@@ -320,6 +323,19 @@ describe('ProductController', async (): Promise<void> => {
 
       expect(res.status).to.equal(403);
     });
+    it('should return HTTP 400 if VAT group is deleted', async () => {
+      const vatGroup = ctx.vatGroups.find((v) => v.deleted === true);
+      const res = await request(ctx.app)
+        .post('/products')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({
+          ...ctx.validProductReq,
+          vat: vatGroup.id,
+        } as CreateProductRequest);
+
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('5 is an invalid VAT group.');
+    });
   });
   describe('GET /products/:id', () => {
     it('should return correct model', async () => {
@@ -416,6 +432,19 @@ describe('ProductController', async (): Promise<void> => {
 
       // success code
       expect(res.status).to.equal(403);
+    });
+    it('should return an HTTP 400 if VAT group is deleted', async () => {
+      const vatGroup = ctx.vatGroups.find((v) => v.deleted === true);
+      const res = await request(ctx.app)
+        .patch('/products/1')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({
+          ...ctx.validProductReq,
+          vat: vatGroup.id,
+        } as CreateProductRequest);
+
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('5 is an invalid VAT group.');
     });
   });
   describe('GET /products/updated', () => {

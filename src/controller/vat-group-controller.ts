@@ -82,7 +82,7 @@ export default class VatGroupController extends BaseController {
    * @param {integer} vatGroupId.query - ID of the VAT group
    * @param {string} name.query - Name of the VAT group
    * @param {number} percentage.query - VAT percentage
-   * @param {boolean} hideIfZero.query - Whether the VAT groups should be hidden if zero
+   * @param {boolean} deleted.query - Whether the VAT groups should be hidden if zero
    * @param {integer} take.query - How many transactions the endpoint should return
    * @param {integer} skip.query - How many transactions should be skipped (for pagination)
    * @returns {PaginatedVatGroupResponse.model} 200 - A list of all VAT groups

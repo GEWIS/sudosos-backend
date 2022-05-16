@@ -19,12 +19,15 @@
 /**
  * @typedef UpdateVatGroupRequest
  * @property {string} name.required - Name of the VAT group
- * @property {boolean} hideIfZero.required - Whether this group should be hidden
+ * @property {boolean} deleted.required - Whether this group should be hidden
  * in the financial overviews when its value is zero
+ * @property {boolean} hidden.required - Whether this group should
+ * be hidden from transactions
  */
 export interface UpdateVatGroupRequest {
   name: string,
-  hideIfZero: boolean,
+  deleted: boolean,
+  hidden: boolean,
 }
 
 /**

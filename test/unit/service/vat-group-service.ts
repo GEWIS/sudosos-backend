@@ -56,7 +56,8 @@ describe('VatGroupService', () => {
     const validVatCreateReq: VatGroupRequest = {
       name: 'Extreem hoog tarief',
       percentage: 39,
-      hideIfZero: false,
+      deleted: false,
+      hidden: false,
     };
 
     ctx = {
@@ -114,10 +115,10 @@ describe('VatGroupService', () => {
       const { records } = await VatGroupService.getVatGroups({ percentage });
       records.map((r) => expect(r.percentage).to.equal(percentage));
     });
-    it('should filter on hideIfZero', async () => {
-      const hideIfZero = false;
-      const { records } = await VatGroupService.getVatGroups({ hideIfZero });
-      records.map((r) => expect(r.hideIfZero).to.equal(hideIfZero));
+    it('should filter on deleted', async () => {
+      const deleted = false;
+      const { records } = await VatGroupService.getVatGroups({ deleted });
+      records.map((r) => expect(r.deleted).to.equal(deleted));
     });
   });
 
@@ -128,7 +129,8 @@ describe('VatGroupService', () => {
       const vatGroup = await VatGroupService.createVatGroup(ctx.validVatCreateReq);
 
       expect(vatGroup.name).to.equal(ctx.validVatCreateReq.name);
-      expect(vatGroup.hideIfZero).to.equal(ctx.validVatCreateReq.hideIfZero);
+      expect(vatGroup.deleted).to.equal(ctx.validVatCreateReq.deleted);
+      expect(vatGroup.hidden).to.equal(ctx.validVatCreateReq.hidden);
       expect(vatGroup.percentage).to.equal(ctx.validVatCreateReq.percentage);
 
       expect(await VatGroup.count()).to.equal(lengthBefore + 1);
@@ -142,14 +144,17 @@ describe('VatGroupService', () => {
       const vatGroupOld = ctx.vatGroups[0];
       const vatGroupNew = await VatGroupService.updateVatGroup(vatGroupOld.id, {
         name,
-        hideIfZero: !vatGroupOld.hideIfZero,
+        deleted: !vatGroupOld.deleted,
+        hidden: !vatGroupOld.hidden,
       });
       const vatGroup = await VatGroup.findOne({ where: { id: vatGroupOld.id } });
 
       expect(vatGroup.name).to.equal(name);
       expect(vatGroupNew.name).to.equal(name);
-      expect(vatGroup.hideIfZero).to.equal(!vatGroupOld.hideIfZero);
-      expect(vatGroupNew.hideIfZero).to.equal(!vatGroupOld.hideIfZero);
+      expect(vatGroup.deleted).to.equal(!vatGroupOld.deleted);
+      expect(vatGroupNew.deleted).to.equal(!vatGroupOld.deleted);
+      expect(vatGroup.hidden).to.equal(!vatGroupOld.hidden);
+      expect(vatGroupNew.hidden).to.equal(!vatGroupOld.hidden);
     });
 
     it('should return undefined if VAT group does not exist', async () => {
@@ -157,7 +162,8 @@ describe('VatGroupService', () => {
 
       const vatGroupNew = await VatGroupService.updateVatGroup(id, {
         name: 'yeee',
-        hideIfZero: false,
+        deleted: false,
+        hidden: true,
       });
 
       expect(vatGroupNew).to.be.undefined;
@@ -185,7 +191,7 @@ describe('VatGroupService', () => {
           })));
 
       ctx.vatGroups.forEach((g) => {
-        if (g.hideIfZero && actualValues[g.id].reduce(
+        if (g.deleted && actualValues[g.id].reduce(
           (prev: number, curr: number) => Math.max(prev, curr), 0,
         ) === 0) {
           delete actualValues[g.id];
@@ -286,7 +292,7 @@ describe('VatGroupService', () => {
       let extraVatGroup = Object.assign(new VatGroup(), {
         name: 'ExtraEmptyVatGroup',
         percentage: 10,
-        hideIfZero: true,
+        deleted: true,
       });
 
       extraVatGroup = await extraVatGroup.save();

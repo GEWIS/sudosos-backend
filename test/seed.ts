@@ -52,6 +52,7 @@ import GewisUser from '../src/entity/user/gewis-user';
 import seedGEWISUsers from '../src/gewis/database/seed';
 import PinAuthenticator from '../src/entity/authenticator/pin-authenticator';
 import VatGroup from '../src/entity/vat-group';
+import { VatGroupRequest } from '../src/controller/request/vat-group-request';
 
 /**
  * Defines InvoiceUsers objects for the given Users
@@ -265,28 +266,38 @@ export async function seedProductCategories(): Promise<ProductCategory[]> {
  * Seed the (default) Dutch VAT groups (2022)
  */
 export async function seedVatGroups(): Promise<VatGroup[]> {
-  const vatGroup = (data: object) => Object.assign(new VatGroup(), data) as VatGroup;
+  const vatGroup = (data: VatGroupRequest) => Object.assign(new VatGroup(), data) as VatGroup;
 
   return VatGroup.save([
     vatGroup({
       name: 'Hoog tarief',
       percentage: 21,
-      hideIfZero: false,
+      deleted: false,
+      hidden: false,
     }),
     vatGroup({
       name: 'Laag tarief',
       percentage: 9,
-      hideIfZero: false,
+      deleted: false,
+      hidden: false,
     }),
     vatGroup({
       name: 'BTW-vrij',
       percentage: 0,
-      hideIfZero: false,
+      deleted: false,
+      hidden: false,
+    }),
+    vatGroup({
+      name: 'NoTaxesYaaaay',
+      percentage: 0,
+      deleted: false,
+      hidden: true,
     }),
     vatGroup({
       name: 'Laag tarief (oud)',
       percentage: 6,
-      hideIfZero: true,
+      deleted: true,
+      hidden: false,
     }),
   ]);
 }

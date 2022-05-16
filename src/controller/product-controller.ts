@@ -163,6 +163,7 @@ export default class ProductController extends BaseController {
       const validation = await verifyProductRequest(request);
       if (isFail(validation)) {
         res.status(400).json(validation.fail.value);
+        return;
       }
 
       res.json(await ProductService.createProduct(request));

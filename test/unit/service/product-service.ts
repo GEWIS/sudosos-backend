@@ -193,7 +193,20 @@ describe('ProductService', async (): Promise<void> => {
       const products = ctx.products.filter((prod) => prod.currentRevision !== null);
 
       returnsAll(records, products);
-      records.forEach((p) => correctPriceExclVat(p));
+      for (let i = 0; i < records.length; i += 1) {
+        const p = records[i];
+        if (p.vat !== undefined || p.priceExclVat !== undefined) {
+          correctPriceExclVat(p);
+        } else {
+          // eslint-disable-next-line no-await-in-loop
+          const productRevision = await ProductRevision.findOne({
+            where: { product: p.id, revision: p.revision },
+            relations: ['vat'],
+          });
+          const vatGroup = productRevision!.vat;
+          expect(vatGroup.hidden).to.be.true;
+        }
+      }
 
       expect(_pagination.take).to.be.undefined;
       expect(_pagination.skip).to.be.undefined;

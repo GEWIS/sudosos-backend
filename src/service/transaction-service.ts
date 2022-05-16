@@ -362,7 +362,7 @@ export default class TransactionService {
         async (subTransaction) => this.asSubTransactionResponse(subTransaction),
       )),
       pointOfSale: parsePOSToBasePOS(transaction.pointOfSale, false),
-      price: { ...cost.toObject() } as DineroObjectResponse,
+      totalPriceInclVat: { ...cost.toObject() } as DineroObjectResponse,
     } as TransactionResponse;
   }
 
@@ -430,13 +430,13 @@ export default class TransactionService {
         id: row.id,
         product: parseProductToBaseResponse(row.product, false),
         amount: row.amount,
-        price: {
+        totalPriceInclVat: {
           amount: row.product.priceInclVat.getAmount() * row.amount,
           currency: row.product.priceInclVat.getCurrency(),
           precision: row.product.priceInclVat.getPrecision(),
         } as DineroObjectResponse,
       } as SubTransactionRowResponse)),
-      price: { ...cost.toObject() } as DineroObjectResponse,
+      totalPriceInclVat: { ...cost.toObject() } as DineroObjectResponse,
     } as SubTransactionResponse;
   }
 

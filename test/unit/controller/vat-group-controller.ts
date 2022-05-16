@@ -82,7 +82,8 @@ describe('VatGroupController', () => {
 
     const validUpdateVatGroupReq: UpdateVatGroupRequest = {
       name: 'CustomVATGroup',
-      hideIfZero: false,
+      deleted: false,
+      hidden: false,
     };
     const validVatGroupReq: VatGroupRequest = {
       ...validUpdateVatGroupReq,
@@ -213,19 +214,19 @@ describe('VatGroupController', () => {
       });
     });
     it('should filter on VAT group hide if zero', async () => {
-      const hideIfZero = true;
-      const actualNrOfGroups = ctx.vatGroups.filter((g) => g.hideIfZero === hideIfZero).length;
+      const deleted = true;
+      const actualNrOfGroups = ctx.vatGroups.filter((g) => g.deleted === deleted).length;
 
       const res = await request(ctx.app)
         .get('/vatgroups')
-        .query({ hideIfZero })
+        .query({ deleted })
         .set('Authorization', `Bearer ${ctx.token}`);
 
       const vatGroups = res.body.records as VatGroup[];
 
       expect(vatGroups.length).to.equal(actualNrOfGroups);
       vatGroups.forEach((g) => {
-        expect(g.hideIfZero).to.equal(hideIfZero);
+        expect(g.deleted).to.equal(deleted);
       });
     });
   });
@@ -325,7 +326,7 @@ describe('VatGroupController', () => {
 
       const vatGroup = res.body as VatGroup;
       expect(vatGroup.name).to.equal(ctx.validUpdateVatGroupReq.name);
-      expect(vatGroup.hideIfZero).to.equal(ctx.validUpdateVatGroupReq.hideIfZero);
+      expect(vatGroup.deleted).to.equal(ctx.validUpdateVatGroupReq.deleted);
     });
     it('should return HTTP 400 if VAT group has empty name', async () => {
       const invalidVatGroupReq = {

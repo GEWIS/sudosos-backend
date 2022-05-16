@@ -51,14 +51,15 @@ export interface BaseTransactionResponse extends BaseResponse {
  * belonging to this transaction.
  * @property {BasePointOfSaleResponse.model} pointOfSale - The POS at which this transaction
  * has been created
- * @property {DineroObjectResponse.model} price.required - The total cost of the transaction
+ * @property {DineroObjectResponse.model} totalPriceInclVat.required - The total cost of the
+ * transaction
  */
 export interface TransactionResponse extends BaseResponse {
   from: BaseUserResponse,
   createdBy?: BaseUserResponse,
   subTransactions: SubTransactionResponse[],
   pointOfSale: BasePointOfSaleResponse,
-  price: DineroObjectResponse,
+  totalPriceInclVat: DineroObjectResponse,
 }
 
 /**
@@ -68,25 +69,27 @@ export interface TransactionResponse extends BaseResponse {
  * products in the SubTransactionRows are bought
  * @property {Array.<SubTransactionRowResponse>} subTransactionsRows.required - The rows of this
  *     SubTransaction
- * @property {DineroObjectResponse.model} price.required - The total cost of the sub transaction
+ * @property {DineroObjectResponse.model} totalPriceInclVat.required - The total cost of the sub
+ *     transaction
  */
 export interface SubTransactionResponse extends BaseResponse {
   to: BaseUserResponse,
   container: BaseContainerResponse,
   subTransactionRows: SubTransactionRowResponse[],
-  price: DineroObjectResponse,
+  totalPriceInclVat: DineroObjectResponse,
 }
 
 /**
  * @typedef {SubTransactionRowResponse} SubTransactionRowResponse
  * @property {BaseProductResponse} product.required - The product that has been bought
  * @property {number} amount.required - The amount that has been bought
- * @property {DineroObjectResponse.model} price.required - The cost of the sub transaction row
+ * @property {DineroObjectResponse.model} totalPriceInclVat.required - The cost of the
+ *     sub transaction row
  */
 export interface SubTransactionRowResponse extends BaseResponse {
   product: BaseProductResponse,
   amount: number,
-  price: DineroObjectResponse,
+  totalPriceInclVat: DineroObjectResponse,
 }
 
 /**

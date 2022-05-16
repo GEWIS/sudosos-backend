@@ -663,16 +663,16 @@ describe('TransactionService', (): void => {
       expect(savedTransaction, 'request not saved correctly').to.eql(correctResponse);
 
       // check transaction response prices
-      expect(correctResponse.price, 'top level price incorrect').to.eql(ctx.validTransReq.totalPriceInclVat);
+      expect(correctResponse.totalPriceInclVat, 'top level price incorrect').to.eql(ctx.validTransReq.totalPriceInclVat);
 
       // check sub transaction response prices
       for (let i = 0; i < correctResponse.subTransactions.length; i += 1) {
-        expect(correctResponse.subTransactions[i].price, 'sub transaction price incorrect')
+        expect(correctResponse.subTransactions[i].totalPriceInclVat, 'sub transaction price incorrect')
           .to.eql(ctx.validTransReq.subTransactions[i].totalPriceInclVat);
 
         // check sub transaction row response prices
         for (let j = 0; j < correctResponse.subTransactions[i].subTransactionRows.length; j += 1) {
-          expect(correctResponse.subTransactions[i].subTransactionRows[j].price, 'sub transaction row price incorrect')
+          expect(correctResponse.subTransactions[i].subTransactionRows[j].totalPriceInclVat, 'sub transaction row price incorrect')
             .to.eql(ctx.validTransReq.subTransactions[i].subTransactionRows[j].totalPriceInclVat);
         }
       }
@@ -699,18 +699,18 @@ describe('TransactionService', (): void => {
       }));
 
       // check transaction response prices
-      expect(deletedTransaction.price, 'top level price incorrect').to.eql(ctx.validTransReq.totalPriceInclVat);
+      expect(deletedTransaction.totalPriceInclVat, 'top level price incorrect').to.eql(ctx.validTransReq.totalPriceInclVat);
 
       // check sub transaction response prices
       for (let i = 0; i < deletedTransaction.subTransactions.length; i += 1) {
-        expect(deletedTransaction.subTransactions[i].price, 'sub transaction price incorrect')
+        expect(deletedTransaction.subTransactions[i].totalPriceInclVat, 'sub transaction price incorrect')
           .to.eql(ctx.validTransReq.subTransactions[i].totalPriceInclVat);
 
         // check sub transaction row response prices
         for (let j = 0;
           j < deletedTransaction.subTransactions[i].subTransactionRows.length;
           j += 1) {
-          expect(deletedTransaction.subTransactions[i].subTransactionRows[j].price, 'sub transaction row price incorrect')
+          expect(deletedTransaction.subTransactions[i].subTransactionRows[j].totalPriceInclVat, 'sub transaction row price incorrect')
             .to.eql(ctx.validTransReq.subTransactions[i].subTransactionRows[j].totalPriceInclVat);
         }
       }
@@ -825,11 +825,11 @@ describe('TransactionService', (): void => {
       }));
 
       // check transaction response prices
-      expect(updatedTransaction.price, 'top level price incorrect').to.eql(updateReq.totalPriceInclVat);
+      expect(updatedTransaction.totalPriceInclVat, 'top level price incorrect').to.eql(updateReq.totalPriceInclVat);
 
       // check sub transaction response prices
       for (let i = 0; i < updatedTransaction.subTransactions.length; i += 1) {
-        expect(updatedTransaction.subTransactions[i].price, 'sub transaction price incorrect')
+        expect(updatedTransaction.subTransactions[i].totalPriceInclVat, 'sub transaction price incorrect')
           .to.eql(updateReq.subTransactions[i].totalPriceInclVat);
 
         // sort on subtransactionrow id for comparing
@@ -843,7 +843,7 @@ describe('TransactionService', (): void => {
         for (let j = 0;
           j < updatedTransaction.subTransactions[i].subTransactionRows.length;
           j += 1) {
-          expect(updatedTransaction.subTransactions[i].subTransactionRows[j].price, 'sub transaction row price incorrect')
+          expect(updatedTransaction.subTransactions[i].subTransactionRows[j].totalPriceInclVat, 'sub transaction row price incorrect')
             .to.eql(updateReq.subTransactions[i].subTransactionRows[j].totalPriceInclVat);
         }
       }

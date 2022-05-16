@@ -45,7 +45,7 @@ const validCategory = async (p: CreateProductParams) => {
 
 const validVatGroup = async (p: CreateProductParams) => {
   const vatGroup = await VatGroup.find({ where: { id: p.vat } });
-  if (!vatGroup) {
+  if (!vatGroup || vatGroup.length === 0 || vatGroup[0].deleted) {
     return toFail(new ValidationError(`${p.vat} is an invalid VAT group.`));
   }
   return toPass(p);
