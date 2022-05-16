@@ -175,7 +175,8 @@ export function defineInvoiceEntries(invoiceId: number, startEntryId: number,
       invoice: invoiceId,
       description: subTransactionRows[i].product.name,
       amount: subTransactionRows[i].amount,
-      price: subTransactionRows[i].product.priceInclVat,
+      priceInclVat: subTransactionRows[i].product.priceInclVat,
+      vatPercentage: subTransactionRows[i].product.vat.percentage,
     }));
     entryId += 1;
   }

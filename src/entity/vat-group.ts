@@ -22,8 +22,8 @@ import BaseEntity from './base-entity';
  * @typedef {BaseEntity} VatGroup
  * @property {string} name - Name of the VAT group
  * @property {number} percentage - VAT percentage
- * @property {boolean} deleted - Whether this group should be hidden
- * in the financial overviews when its value is zero
+ * @property {boolean} deleted - Whether this group is be soft-deleted
+ * @property {boolean} hidden - Whether this group is be hidden from transactions
  */
 
 export enum VatDeclarationPeriod {

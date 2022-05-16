@@ -21,10 +21,12 @@ import { DineroObjectRequest } from './dinero-request';
  * @typedef InvoiceEntryRequest
  * @property {string} description.required - The description of the entry
  * @property {integer} amount.required - Amount of item sold.
- * @property {DineroObjectRequest.model} price.required - The price per item.
+ * @property {DineroObjectRequest.model} priceInclVat.required - The price per item.
+ * @property {number} vatPercentage.required - The percentage of VAT applied to this item
  */
 export default interface InvoiceEntryRequest {
   description: string,
   amount: number,
-  price: DineroObjectRequest
+  priceInclVat: DineroObjectRequest,
+  vatPercentage: number,
 }

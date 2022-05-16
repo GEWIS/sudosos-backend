@@ -90,8 +90,9 @@ function keyMapping(invoice: InvoiceResponse | Invoice) {
     entries: invoice.invoiceEntries.map((entry) => ({
       amount: entry.amount,
       description: entry.description,
-      price: invoice instanceof Invoice
-        ? (entry as InvoiceEntry).price.getAmount() : (entry as InvoiceEntryResponse).price.amount,
+      priceInclVat: invoice instanceof Invoice
+        ? (entry as InvoiceEntry).priceInclVat.getAmount()
+        : (entry as InvoiceEntryResponse).priceInclVat.amount,
     })),
   };
 }

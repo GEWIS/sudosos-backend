@@ -132,7 +132,7 @@ describe('VatGroupController', () => {
     await ctx.connection.close();
   });
 
-  describe('GET /banners', () => {
+  describe('GET /vatgroups', () => {
     it('should return an HTTP 200 and all VAT groups', async () => {
       const res = await request(ctx.app)
         .get('/vatgroups')
