@@ -32,7 +32,9 @@ import { ContainerResponse } from '../../../src/controller/response/container-re
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
 import ContainerRevision from '../../../src/entity/container/container-revision';
 import UpdatedContainer from '../../../src/entity/container/updated-container';
-import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
+import { CreateContainerParams, UpdateContainerParams } from '../../../src/controller/request/container-request';
+import PointOfSaleService from '../../../src/service/point-of-sale-service';
+import { CreatePointOfSaleParams } from '../../../src/controller/request/point-of-sale-request';
 
 /**
  * Test if all the container responses are part of the container set array.
@@ -266,9 +268,38 @@ describe('ContainerService', async (): Promise<void> => {
 
   describe('propagateContainerUpdate function', () => {
     it('should update all POS that include given container', async () => {
-      const pos = await PointOfSale.findOne({ where: 'currentRevision' });
-      const container = (await PointOfSaleRevision.findOne({ where: { pointOfSale: { id: pos.id }, revision: pos.currentRevision }, relations: ['pointOfSale', 'containers'] })).containers[0];
-      await ContainerService.propagateContainerUpdate(container.container.id);
+      const ownerId = (await User.findOne({ where: { deleted: false } })).id;
+      const createContainerParams: CreateContainerParams = {
+        products: [1],
+        public: true,
+        name: 'New Container',
+        ownerId,
+      };
+      const container = await ContainerService.createContainer(createContainerParams, true);
+
+      const createPointOfSaleParams: CreatePointOfSaleParams = {
+        containers: [container.id],
+        name: 'New POS',
+        ownerId,
+      };
+      const pos = await PointOfSaleService.createPointOfSale(createPointOfSaleParams, true);
+
+      const update: UpdateContainerParams = {
+        products: [1],
+        public: true,
+        name: 'New name',
+        id: container.id,
+      };
+
+      await ContainerService.directContainerUpdate(update);
+
+      const updatedPos = await PointOfSaleRevision
+        .findOne({ where: { revision: 2, pointOfSale: { id: pos.id } }, relations: ['containers', 'containers.products'] });
+      expect(updatedPos).to.not.be.undefined;
+      expect(updatedPos.containers).length(1);
+
+      const newContainer = updatedPos.containers[0];
+      expect(newContainer.name).to.eq(update.name);
     });
   });
 });

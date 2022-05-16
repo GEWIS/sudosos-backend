@@ -25,7 +25,7 @@ export interface CreatePointOfSaleParams extends BasePointOfSaleParams{
   ownerId: number,
 }
 
-export interface UpdatePointOfSaleParams extends CreatePointOfSaleParams {
+export interface UpdatePointOfSaleParams extends BasePointOfSaleParams {
   id: number
 }
 

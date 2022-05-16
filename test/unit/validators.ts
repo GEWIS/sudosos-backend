@@ -88,9 +88,6 @@ export function verifyPOSEntity(
   expect(pointOfSale.pointOfSale.id).to.be.greaterThan(-1);
   expect(pointOfSale.name).to.be.not.empty;
   expect(pointOfSale.pointOfSale.owner).to.be.instanceOf(User);
-  expect(pointOfSale.startDate).to.be.instanceOf(Date);
-  expect(pointOfSale.endDate).to.be.instanceOf(Date);
-  expect(pointOfSale.endDate.getTime()).to.be.greaterThan(pointOfSale.startDate.getTime());
   expect(pointOfSale.containers).to.be.instanceOf(Array);
 }
 

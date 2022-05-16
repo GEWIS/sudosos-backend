@@ -52,7 +52,6 @@ function returnsAll(response: ProductResponse[], superset: Product[]) {
   const temp = superset.map((prod) => ({
     id: prod.id, ownerid: prod.owner.id, image: prod.image != null ? prod.image.downloadName : null,
   }));
-  console.log(temp);
   expect(response.map((prod) => ({ id: prod.id, ownerid: prod.owner.id, image: prod.image })))
     .to.deep.equalInAnyOrder(temp);
 }
@@ -82,15 +81,15 @@ function productRevisionToProductWithRevision(product: ProductRevision): Product
 }
 
 function validateProductProperties(response: ProductResponse,
-  productParams: CreateProductParams) {
+  productParams: CreateProductParams | UpdateProductParams) {
   Object.keys(productParams).forEach((key: keyof CreateProductParams) => {
     if (key === 'price') {
       expect((productParams[key] as any).amount).to.be.equal((response.price.amount));
     } else if (key === 'category') {
       expect((productParams[key] as any)).to.be.equal((response.category.id));
     } else if (key === 'ownerId') {
-      if (productParams[key] !== undefined) {
-        expect((productParams[key] as any)).to.be.equal((response.owner.id));
+      if ((productParams as any).ownerId !== undefined) {
+        expect((productParams as any).ownerId).to.be.equal((response.owner.id));
       }
     } else {
       expect((productParams[key] as any)).to.be.equal((response[key]));
@@ -349,7 +348,6 @@ describe('ProductService', async (): Promise<void> => {
       const updateParams: UpdateProductParams = {
         category: 3,
         id: 2,
-        ownerId: undefined,
         alcoholPercentage: 8,
         name: 'Product2-update',
         price: {
@@ -411,7 +409,6 @@ describe('ProductService', async (): Promise<void> => {
 
       const updateParams: UpdateProductParams = {
         alcoholPercentage: 10,
-        ownerId: undefined,
         name: 'Product77-update',
         price: {
           amount,

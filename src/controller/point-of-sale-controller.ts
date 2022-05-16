@@ -142,7 +142,8 @@ export default class PointOfSaleController extends BaseController {
         return;
       }
 
-      res.json(await PointOfSaleService.createPointOfSale(params));
+      const approve = this.roleManager.can(req.token.roles, 'approve', await PointOfSaleController.getRelation(req), 'PointOfSale', ['*']);
+      res.json(await PointOfSaleService.createPointOfSale(params, approve));
     } catch (error) {
       this.logger.error('Could not create point of sale:', error);
       res.status(500).json('Internal server error.');
@@ -241,7 +242,6 @@ export default class PointOfSaleController extends BaseController {
     try {
       const params: UpdatePointOfSaleParams = {
         ...body,
-        ownerId: req.token.user.id,
         id: pointOfSaleId,
       };
 
@@ -251,13 +251,18 @@ export default class PointOfSaleController extends BaseController {
         return;
       }
 
-      const update = await PointOfSaleService.updatePointOfSale(params);
-      if (!update) {
+      const pointOfSale = await PointOfSale.findOne({ where: { id: pointOfSaleId } });
+      if (!pointOfSale) {
         res.status(404).json('Point of Sale not found.');
         return;
       }
 
-      res.json(update);
+      const approve = this.roleManager.can(req.token.roles, 'approve', await PointOfSaleController.getRelation(req), 'PointOfSale', ['*']);
+      if (approve) {
+        res.json(await PointOfSaleService.directPointOfSaleUpdate(params));
+      } else {
+        res.json(await PointOfSaleService.updatePointOfSale(params));
+      }
     } catch (error) {
       this.logger.error('Could not update Point of Sale:', error);
       res.status(500).json('Internal server error.');

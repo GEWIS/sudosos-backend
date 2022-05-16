@@ -26,10 +26,8 @@ import ContainerRevision from '../entity/container/container-revision';
 import UpdatedContainer from '../entity/container/updated-container';
 import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
-import ProductService from './product-service';
 import PointOfSale from '../entity/point-of-sale/point-of-sale';
 import Product from '../entity/product/product';
-import UpdatedProduct from '../entity/product/updated-product';
 import ProductRevision from '../entity/product/product-revision';
 import { PaginationParameters } from '../helpers/pagination';
 import {
@@ -39,7 +37,13 @@ import {
 } from '../controller/request/container-request';
 import ProductImage from '../entity/file/product-image';
 import User from '../entity/user/user';
-import { UpdatePointOfSaleRequest } from '../controller/request/point-of-sale-request';
+import {
+  UpdatePointOfSaleParams,
+} from '../controller/request/point-of-sale-request';
+// eslint-disable-next-line import/no-cycle
+import PointOfSaleService from './point-of-sale-service';
+// eslint-disable-next-line import/no-cycle
+import ProductService from './product-service';
 
 interface ContainerVisibility {
   own: boolean;
@@ -330,12 +334,13 @@ export default class ContainerService {
   /**
    * Creates a new container.
    *
-   * The newly created container resides in the Container table and has no
+   * If approve is false then the newly created container resides in the Container table and has no
    * current revision. To confirm the revision the update has to be accepted.
    *
    * @param container - The params that describe the container to be created.
+   * @param approve - If the container should be instantly approved.
    */
-  public static async createContainer(container: CreateContainerParams)
+  public static async createContainer(container: CreateContainerParams, approve = false)
     : Promise<ContainerWithProductsResponse> {
     const base = Object.assign(new Container(), {
       public: container.public,
@@ -350,7 +355,14 @@ export default class ContainerService {
       id: base.id,
     };
 
-    return this.updateContainer(update);
+    let createdContainer;
+    if (approve) {
+      createdContainer = await this.directContainerUpdate(update);
+    } else {
+      createdContainer = await this.updateContainer(update);
+    }
+
+    return createdContainer;
   }
 
   public static async applyContainerUpdate(base: Container, updateRequest: UpdateContainerRequest) {
@@ -360,13 +372,7 @@ export default class ContainerService {
     // Get the product id's for this update.
     const productIds: { revision: number, product: { id : number } }[] = (
       products.map((product) => (
-        { revision: product.currentRevision, product: { id: product.id } }))); '';
-
-    const updatedProducts: UpdatedProduct[] = await UpdatedProduct.findByIds(productIds, { relations: ['product'] });
-
-    if (updatedProducts.length !== 0) {
-      throw Error('Container update contains unapproved product updates.');
-    }
+        { revision: product.currentRevision, product: { id: product.id } })));
 
     const productRevisions: ProductRevision[] = await ProductRevision.findByIds(productIds);
 
@@ -385,8 +391,8 @@ export default class ContainerService {
     // Increment current revision.
     // eslint-disable-next-line no-param-reassign
     base.currentRevision = base.currentRevision ? base.currentRevision + 1 : 1;
-    await this.propagateContainerUpdate(base.id);
     await base.save();
+    await this.propagateContainerUpdate(base.id);
   }
 
   /**
@@ -457,23 +463,29 @@ export default class ContainerService {
     return container;
   }
 
-  public static async directContainerUpdate(containerId: number, update: UpdateContainerRequest) {
-    const base: Container = await Container.findOne({ where: { id: containerId } });
+  public static async directContainerUpdate(update: UpdateContainerParams)
+    : Promise<ContainerWithProductsResponse> {
+    const base: Container = await Container.findOne({ where: { id: update.id } });
     await this.applyContainerUpdate(base, update);
+    return (this.getContainers({ containerId: base.id, returnProducts: true })
+      .then((c) => c.records[0])) as Promise<ContainerWithProductsResponse>;
   }
 
   public static async propagateContainerUpdate(containerId: number) {
-    const pos = await PointOfSaleRevision.find({ where: `"PointOfSaleRevision__containers"."containerId" = ${containerId} AND "PointOfSaleRevision__containers__container"."currentRevision" = "PointOfSaleRevision__containers"."revision"  AND "PointOfSaleRevision__pointOfSale"."currentRevision" = "PointOfSaleRevision"."revision"`, relations: ['pointOfSale', 'containers', 'containers.container'] });
-    console.error(JSON.stringify(pos, undefined, 4));
-    pos.forEach((p) => {
-      const update: UpdateContainerParams = {
+    const pos = await PointOfSaleRevision.find({ where: `"PointOfSaleRevision__containers"."containerId" = ${containerId} AND ("PointOfSaleRevision__containers__container"."currentRevision" - 1) = "PointOfSaleRevision__containers"."revision"  AND "PointOfSaleRevision__pointOfSale"."currentRevision" = "PointOfSaleRevision"."revision"`, relations: ['pointOfSale', 'containers', 'containers.container'] });
 
+    // The async-for loop is intentional to prevent race-conditions.
+    // To fix this the good way would be shortlived, the structure of POS/Containers will be changed
+    for (let i = 0; i < pos.length; i += 1) {
+      const p = pos[i];
+      const update: UpdatePointOfSaleParams = {
+        containers: p.containers.map((c) => c.container.id),
+        name: p.name,
+        id: p.pointOfSale.id,
       };
-    });
-    // console.error(await PointOfSaleRevision.find({ where: { containers: { container: { id: containerId } } }, relations: ['containers', 'containers.container'] }));
-    const update: UpdatePointOfSaleRequest = {
-
-    };
+      // eslint-disable-next-line no-await-in-loop
+      await PointOfSaleService.directPointOfSaleUpdate(update);
+    }
   }
 
   /**

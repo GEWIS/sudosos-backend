@@ -66,11 +66,10 @@ function pointOfSaleSuperset(response: PointOfSaleResponse[] | UpdatedPointOfSal
  */
 function updateUpdatedResponseEqual(update: UpdatePointOfSaleRequest,
   response: UpdatedPointOfSaleResponse) {
-  const attributes: (keyof UpdatedPointOfSaleResponse)[] = ['name', 'startDate', 'endDate', 'useAuthentication'];
+  const attributes: (keyof UpdatedPointOfSaleResponse)[] = ['name'];
   attributes.forEach((attr) => (
     (expect(update[attr as keyof UpdatePointOfSaleRequest])
       .to.equal(response[attr as keyof UpdatedPointOfSaleResponse]))));
-  // const containerResponse: number[] = response.
 }
 
 /**
@@ -119,10 +118,7 @@ describe('PointOfSaleService', async (): Promise<void> => {
 
     const validPOSParams: CreatePointOfSaleParams = {
       containers: [containers[0].id, containers[1].id, containers[2].id],
-      endDate: '2100-01-01T21:00:00.000Z',
       name: 'Valid POS',
-      startDate: '2100-01-01T17:00:00.000Z',
-      useAuthentication: false,
       ownerId: 1,
     };
 
@@ -172,16 +168,6 @@ describe('PointOfSaleService', async (): Promise<void> => {
       const { length } = withRevisions.filter((pointOfSale) => (
         pointOfSale.owner.id === ctx.pointsOfSale[0].owner.id));
       expect(records).to.be.length(length);
-    });
-    it('should return points of sale with useAuthentication specified', async () => {
-      const { records } = (await PointOfSaleService.getPointsOfSale({
-        useAuthentication: false,
-      }) as PaginatedPointOfSaleResponse);
-
-      expect(pointOfSaleSuperset(records, ctx.pointsOfSale)).to.be.true;
-      const doNotUseAuthentication = records.every((pointOfSale) => (
-        pointOfSale.useAuthentication === false));
-      expect(doNotUseAuthentication).to.be.true;
     });
     it('should return single point of sale if pointOfSaleId is specified', async () => {
       const { records } = (await PointOfSaleService.getPointsOfSale({
@@ -265,11 +251,7 @@ describe('PointOfSaleService', async (): Promise<void> => {
 
       const updateParams: UpdatePointOfSaleParams = {
         containers: [1, 2, 3],
-        endDate: '2050-01-01T21:00:00.000Z',
         name: 'Updated POS',
-        startDate: '2049-01-01T17:00:00.000Z',
-        useAuthentication: true,
-        ownerId: 2,
         id,
       };
 
@@ -290,12 +272,8 @@ describe('PointOfSaleService', async (): Promise<void> => {
 
       const updateRequest: UpdatePointOfSaleParams = {
         id,
-        ownerId: 1,
         containers: [1, 2, 3],
-        endDate: '2050-01-01T21:00:00.000Z',
         name: 'Updated POS',
-        startDate: '2049-01-01T17:00:00.000Z',
-        useAuthentication: true,
       };
 
       const res: UpdatedPointOfSaleResponse = (

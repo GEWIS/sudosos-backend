@@ -36,10 +36,10 @@ import PointOfSale from '../entity/point-of-sale/point-of-sale';
 import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision';
 import { PaginationParameters } from '../helpers/pagination';
 import { RequestWithToken } from '../middleware/token-middleware';
-import {
-  asBoolean, asDate, asNumber,
-} from '../helpers/validators';
+import { asBoolean, asDate, asNumber } from '../helpers/validators';
+// eslint-disable-next-line import/no-cycle
 import ContainerService from './container-service';
+import { UpdateContainerParams } from '../controller/request/container-request';
 
 /**
  * Define product filtering parameters used to filter query results.
@@ -441,13 +441,13 @@ export default class ProductService {
   /**
    * Creates a new product.
    *
-   * The newly created product resides in the Product table and has no revision,
-   * but it does have an updated product.
+   * If approve is false, then the newly created product resides in the
+   * Product table and has no revision, but it does have an updated product.
    * To confirm the product the updated product has to be confirmed and a revision will be created.
    *
    * @param product - The product to be created.
    */
-  public static async createProduct(product: CreateProductParams)
+  public static async createProduct(product: CreateProductParams, approve = false)
     : Promise<UpdatedProductResponse> {
     const owner = await User.findOne(product.ownerId);
 
@@ -460,17 +460,22 @@ export default class ProductService {
     // Save the product.
     await base.save();
 
-    // Set base product, then the oldest settings and then the newest.
-    const updatedProduct = Object.assign(new UpdatedProduct(), {
-      product: await Product.findOne(base.id),
-      ...product,
-      // Price number into dinero.
-      price: DineroTransformer.Instance.from(product.price.amount),
-    });
+    const update: UpdateProductParams = {
+      price: product.price,
+      category: product.category,
+      alcoholPercentage: product.alcoholPercentage,
+      name: product.name,
+      id: base.id,
+    };
 
-    await updatedProduct.save();
+    let createdProduct: ProductResponse;
+    if (approve) {
+      createdProduct = await this.directProductUpdate(update);
+    } else {
+      createdProduct = await this.updateProduct(update);
+    }
 
-    return (await this.getProducts({ updatedProducts: true, productId: base.id })).records[0];
+    return createdProduct;
   }
 
   public static async applyProductUpdate(base: Product, update: UpdateProductRequest) {
@@ -533,25 +538,29 @@ export default class ProductService {
     return (await this.getProducts({ productId })).records[0];
   }
 
-  public static async directProductUpdate(productId: number, updateRequest: UpdateProductRequest) {
-    const base: Product = await Product.findOne(productId);
+  public static async directProductUpdate(updateRequest: UpdateProductParams)
+    : Promise<ProductResponse> {
+    const base: Product = await Product.findOne(updateRequest.id);
     await this.applyProductUpdate(base, updateRequest);
+    return (this.getProducts({ productId: base.id }).then((p) => p.records[0]));
   }
 
   public static async propagateProductUpdate(productId: number) {
     const containers = (await ContainerService.getContainers({ productId })).records;
-    const promises: Promise<void>[] = [];
-    containers.forEach((c) => {
-      ContainerRevision.findOne({ where: { id: c.id, revision: c.revision }, relations: ['products', 'products.product'] }).then((revision) => {
-        const update = {
+    // The async-for loop is intentional to prevent race-conditions.
+    // To fix this the good way would be shortlived the structure of POS/Containers will be changed
+    for (let i = 0; i < containers.length; i += 1) {
+      const c = containers[i];
+      // eslint-disable-next-line no-await-in-loop
+      await ContainerRevision.findOne({ where: { container: { id: c.id }, revision: c.revision }, relations: ['products', 'products.product'] }).then(async (revision) => {
+        const update: UpdateContainerParams = {
           products: revision.products.map((p) => p.product.id),
           public: c.public,
           name: revision.name,
+          id: c.id,
         };
-        promises.push(ContainerService.directContainerUpdate(c.id, update));
+        await ContainerService.directContainerUpdate(update);
       });
-      Container.findOne({ where: { id: c.id } });
-    });
-    await Promise.all(promises);
+    }
   }
 }
