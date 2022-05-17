@@ -465,6 +465,16 @@ describe('UserController', (): void => {
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(400);
     });
+    it('should give an http 404 if provided type does not exist', async () => {
+      const userId = await User.count() + 1;
+      const user = await User.findOne({ where: { id: userId } });
+      expect(user).to.be.undefined;
+
+      const res = await request(ctx.app)
+        .get(`/users/${userId}/members`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(404);
+    });
   });
 
   describe('POST /users', () => {

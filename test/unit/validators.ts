@@ -29,7 +29,6 @@ export function verifyUserEntity(
   spec: SwaggerSpecification, user: User,
 ): void {
   const validation = spec.validateModel('User', user, false, true);
-  console.log(validation);
   expect(validation.valid).to.be.true;
 
   expect(user.id).to.be.greaterThan(-1);
@@ -60,7 +59,6 @@ export function verifyProductEntity(
   spec: SwaggerSpecification, product: ProductRevision,
 ): void {
   const validation = spec.validateModel('Product', product, false, true);
-  console.error(validation);
   expect(validation.valid).to.be.true;
 
   expect(product.product.id).to.be.greaterThan(-1);
@@ -109,7 +107,7 @@ export function verifyBasePOSResponse(
 export function verifyBaseTransactionEntity(
   spec: SwaggerSpecification, baseTransaction: BaseTransactionResponse,
 ): void {
-  const validation = spec.validateModel('BaseTransaction', baseTransaction, false, true);
+  const validation = spec.validateModel('BaseTransactionResponse', baseTransaction, false, true);
   expect(validation.valid).to.be.true;
 
   expect(baseTransaction.id).to.be.greaterThan(-1);

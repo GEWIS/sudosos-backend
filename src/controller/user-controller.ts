@@ -270,6 +270,8 @@ export default class UserController extends BaseController {
    * @returns {string} 404 - Nonexistent usertype
    */
   public async getAllUsersOfUserType(req: RequestWithToken, res: Response): Promise<void> {
+    const parameters = req.params;
+    this.logger.trace('Get all users of userType', parameters, 'by user', req.token.user);
     const userType = req.params.userType.toUpperCase();
 
     // If it does not exist, return a 404 error
