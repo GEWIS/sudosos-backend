@@ -34,7 +34,7 @@ import {
 import Swagger from '../../../src/start/swagger';
 import {
   PaginatedPointOfSaleResponse,
-  PointOfSaleResponse,
+  PointOfSaleResponse, PointOfSaleWithContainersResponse,
   UpdatedPointOfSaleResponse,
 } from '../../../src/controller/response/point-of-sale-response';
 import PointOfSaleService from '../../../src/service/point-of-sale-service';
@@ -79,6 +79,13 @@ function requestUpdatedResponseEqual(request: CreatePointOfSaleParams,
   response: UpdatedPointOfSaleResponse) {
   updateUpdatedResponseEqual(request, response);
   expect(request.ownerId).to.equal(response.owner.id);
+}
+
+function updateResponseEqual(update: UpdatePointOfSaleParams,
+  response: PointOfSaleWithContainersResponse) {
+  expect(update.id).to.equal(response.id);
+  expect(update.name).to.equal(response.name);
+  expect(update.containers).to.deep.equalInAnyOrder(response.containers.map((c) => c.id));
 }
 
 describe('PointOfSaleService', async (): Promise<void> => {
@@ -243,7 +250,7 @@ describe('PointOfSaleService', async (): Promise<void> => {
       requestUpdatedResponseEqual(ctx.validPOSParams, res);
     });
   });
-  describe('UpdatePointOfSale function', () => {
+  describe('updatePointOfSale function', () => {
     it('should create a new UpdatedPointOfSale', async () => {
       const id = 1;
       // Precondition: POS has no existing update
@@ -301,6 +308,19 @@ describe('PointOfSaleService', async (): Promise<void> => {
 
       expect(res.name).to.equal(pointOfSaleRevision.name);
       expect(res.revision).to.equal(pointOfSaleRevision.revision);
+    });
+  });
+  describe('directPointOfSaleUpdate function', () => {
+    it('should revise the point of sale without creating a UpdatedPointOfSale', async () => {
+      const pointOfSale = await PointOfSale.findOne();
+      const update: UpdatePointOfSaleParams = {
+        containers: [3],
+        id: pointOfSale.id,
+        name: 'Pos Updated Name',
+      };
+
+      const response = await PointOfSaleService.directPointOfSaleUpdate(update);
+      updateResponseEqual(update, response);
     });
   });
 });

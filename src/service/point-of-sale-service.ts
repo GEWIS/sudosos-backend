@@ -430,6 +430,10 @@ export default class PointOfSaleService {
     return createdPointOfSale;
   }
 
+  /**
+   * Revises a point of sale without creating an update
+   * @param update - the point of sale update to pass
+   */
   public static async directPointOfSaleUpdate(update: UpdatePointOfSaleParams)
     : Promise<PointOfSaleWithContainersResponse> {
     const base: PointOfSale = await PointOfSale.findOne({ where: { id: update.id } });

@@ -463,6 +463,10 @@ export default class ContainerService {
     return container;
   }
 
+  /**
+   * Updates a container by directly creating a revision.
+   * @param update - The container update
+   */
   public static async directContainerUpdate(update: UpdateContainerParams)
     : Promise<ContainerWithProductsResponse> {
     const base: Container = await Container.findOne({ where: { id: update.id } });
@@ -471,6 +475,14 @@ export default class ContainerService {
       .then((c) => c.records[0])) as Promise<ContainerWithProductsResponse>;
   }
 
+  /**
+   * Propagates the container update to all point of sales.
+   *
+   * All POS that contain the previous version of this container
+   * will be revised to include the new revision.
+   *
+   * @param containerId - The container to propagate
+   */
   public static async propagateContainerUpdate(containerId: number) {
     const pos = await PointOfSaleRevision.find({ where: `"PointOfSaleRevision__containers"."containerId" = ${containerId} AND ("PointOfSaleRevision__containers__container"."currentRevision" - 1) = "PointOfSaleRevision__containers"."revision"  AND "PointOfSaleRevision__pointOfSale"."currentRevision" = "PointOfSaleRevision"."revision"`, relations: ['pointOfSale', 'containers', 'containers.container'] });
 

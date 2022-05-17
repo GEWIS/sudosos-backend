@@ -545,6 +545,14 @@ export default class ProductService {
     return (this.getProducts({ productId: base.id }).then((p) => p.records[0]));
   }
 
+  /**
+   * Propagates the product update to all parent containers
+   *
+   * All containers that contain the previous version of this product
+   * will be revised to include the new revision.
+   *
+   * @param productId - The product to propagate
+   */
   public static async propagateProductUpdate(productId: number) {
     const containers = (await ContainerService.getContainers({ productId })).records;
     // The async-for loop is intentional to prevent race-conditions.
