@@ -134,6 +134,7 @@ export default class Gewis {
         },
         Authenticator: {
           update: { own: new Set(['pin']) },
+          get: { own: star },
         },
       },
       assignmentCheck: async (user: User) => buyerUserTypes.has(user.type),
