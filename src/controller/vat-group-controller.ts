@@ -28,6 +28,17 @@ import VatGroupService, {
 } from '../service/vat-group-service';
 import { UpdateVatGroupRequest, VatGroupRequest } from './request/vat-group-request';
 
+function verifyUpdateVatGroup(vr: UpdateVatGroupRequest): boolean {
+  return vr.name !== ''
+    && typeof vr.deleted === 'boolean';
+}
+
+function verifyVatGroup(vr: VatGroupRequest): boolean {
+  return verifyUpdateVatGroup(vr)
+    && typeof vr.percentage === 'number'
+    && vr.percentage >= 0;
+}
+
 export default class VatGroupController extends BaseController {
   private logger: Logger = log4js.getLogger('VatGroupController');
 
@@ -158,16 +169,18 @@ export default class VatGroupController extends BaseController {
     const body = req.body as VatGroupRequest;
     this.logger.trace('Create VAT group', body, 'by user', req.token.user);
 
-    try {
-      if (VatGroupService.verifyVatGroup(body)) {
-        if (body.deleted) {
-          res.status(400).json('Don\'t already soft delete a new VAT group, that\'s stupid.');
-        }
+    const validBody = verifyVatGroup(body);
+    if (!validBody) {
+      res.status(400).json('Invalid VAT group.');
+      return;
+    }
 
-        res.json(await VatGroupService.createVatGroup(body));
-      } else {
-        res.status(400).json('Invalid VAT group.');
-      }
+    if (body.deleted) {
+      res.status(400).json('Don\'t already soft delete a new VAT group, that\'s stupid.');
+    }
+
+    try {
+      res.json(await VatGroupService.createVatGroup(body));
     } catch (e) {
       res.status(500).send('Internal server error.');
       this.logger.error(e);
@@ -191,28 +204,30 @@ export default class VatGroupController extends BaseController {
     const id = Number.parseInt(req.params.id, 10);
     this.logger.trace('Update VAT group', id, 'by user', req.token.user);
 
+    const validBody = verifyUpdateVatGroup(body);
+    if (!validBody) {
+      res.status(400).json('Invalid VAT group.');
+      return;
+    }
+
     try {
-      if (VatGroupService.verifyUpdateVatGroup(body)) {
-        let vatGroup = (await VatGroupService
-          .getVatGroups({ vatGroupId: id })).records[0];
-        if (!vatGroup) {
-          res.status(404).json('VAT group not found.');
+      let vatGroup = (await VatGroupService
+        .getVatGroups({ vatGroupId: id })).records[0];
+      if (!vatGroup) {
+        res.status(404).json('VAT group not found.');
+        return;
+      }
+
+      if (body.deleted) {
+        const canDelete = await canSetVatGroupToDeleted(id);
+        if (!canDelete) {
+          res.status(400).json('Cannot set "deleted" to true, because the VAT group is still used by one or more products.');
           return;
         }
-
-        if (body.deleted) {
-          const canDelete = await canSetVatGroupToDeleted(id);
-          if (!canDelete) {
-            res.status(400).json('Cannot set "deleted" to true, because the VAT group is still used by one or more products.');
-            return;
-          }
-        }
-
-        vatGroup = await VatGroupService.updateVatGroup(id, body);
-        res.status(200).json(vatGroup);
-      } else {
-        res.status(400).json('Invalid VAT group.');
       }
+
+      vatGroup = await VatGroupService.updateVatGroup(id, body);
+      res.status(200).json(vatGroup);
     } catch (error) {
       this.logger.error('Could not update VAT group:', error);
       res.status(500).json('Internal server error.');

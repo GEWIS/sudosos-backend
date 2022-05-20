@@ -80,17 +80,6 @@ export function parseGetVatCalculationValuesParams(req: RequestWithToken): VatDe
 }
 
 export default class VatGroupService {
-  public static verifyVatGroup(vr: VatGroupRequest): boolean {
-    return VatGroupService.verifyUpdateVatGroup(vr)
-      && typeof vr.percentage === 'number'
-      && vr.percentage >= 0;
-  }
-
-  public static verifyUpdateVatGroup(vr: UpdateVatGroupRequest): boolean {
-    return vr.name !== ''
-      && typeof vr.deleted === 'boolean';
-  }
-
   /**
    * Returns all VAT groups with options.
    * @param filters - The filtering parameters.
