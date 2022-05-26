@@ -131,6 +131,19 @@ describe('ContainerService', async (): Promise<void> => {
     await ctx.connection.close();
   });
 
+  describe('updateContainer function', () => {
+    it('should return undefined is base is not defined', async () => {
+      const update: UpdateContainerParams = {
+        id: 0,
+        name: 'Container',
+        products: [],
+        public: true,
+      };
+      const container = await ContainerService.updateContainer(update);
+      expect(container).to.be.undefined;
+    });
+  });
+
   describe('getContainers function', () => {
     it('should return all containers with no input specification', async () => {
       // eslint-disable-next-line @typescript-eslint/naming-convention

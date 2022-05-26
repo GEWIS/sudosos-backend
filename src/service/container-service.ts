@@ -19,7 +19,7 @@ import { createQueryBuilder, SelectQueryBuilder } from 'typeorm';
 import {
   ContainerResponse,
   ContainerWithProductsResponse,
-  PaginatedContainerResponse,
+  PaginatedContainerResponse, PaginatedContainerWithProductResponse,
 } from '../controller/response/container-response';
 import Container from '../entity/container/container';
 import ContainerRevision from '../entity/container/container-revision';
@@ -182,7 +182,12 @@ export default class ContainerService {
     return builder;
   }
 
-  public static async combineProducts(rawResponse: any[]) {
+  /**
+   * Combines the database result products and containers into a ContainerWithProductsResponse
+   * @param rawResponse - The SQL result to combine
+   */
+  public static async combineProducts(rawResponse: any[])
+    : Promise<ContainerWithProductsResponse[]> {
     const collected: ContainerWithProductsResponse[] = [];
     const mapping = new Map<string, ContainerWithProductsResponse>();
     rawResponse.forEach((response) => {
@@ -233,7 +238,7 @@ export default class ContainerService {
    */
   public static async getContainers(
     filters: ContainerParameters = {}, pagination: PaginationParameters = {},
-  ): Promise<PaginatedContainerResponse> {
+  ): Promise<PaginatedContainerResponse | PaginatedContainerWithProductResponse> {
     const { take, skip } = pagination;
 
     const builder = this.buildGetContainersQuery(filters);
@@ -391,6 +396,8 @@ export default class ContainerService {
     // Increment current revision.
     // eslint-disable-next-line no-param-reassign
     base.currentRevision = base.currentRevision ? base.currentRevision + 1 : 1;
+    // eslint-disable-next-line no-param-reassign
+    base.public = updateRequest.public;
     await base.save();
     await this.propagateContainerUpdate(base.id);
   }
@@ -420,8 +427,9 @@ export default class ContainerService {
     // Remove update after revision is created.
     await UpdatedContainer.delete(containerId);
 
-    const container = (await this.getContainers({ containerId, returnProducts: true }))
-      .records[0] as ContainerWithProductsResponse;
+    const container = (await this.getContainers(
+      { containerId, returnProducts: true },
+    ) as PaginatedContainerWithProductResponse).records[0];
 
     // Return the new container with products.
     return container;

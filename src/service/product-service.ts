@@ -489,7 +489,7 @@ export default class ProductService {
       // Increment revision.
       revision: base.currentRevision ? base.currentRevision + 1 : 1,
       // Fix dinero
-      price: DineroTransformer.Instance.from(update.price.amount) as Dinero,
+      price: DineroTransformer.Instance.from(update.price.amount),
     });
 
     // First save the revision.

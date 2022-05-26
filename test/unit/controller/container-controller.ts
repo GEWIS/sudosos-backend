@@ -469,7 +469,7 @@ describe('ContainerController', async (): Promise<void> => {
 
       expect(res.status).to.equal(200);
     });
-    it('should return an HTTP 404 and an empty response if the product has no pending update', async () => {
+    it('should return an HTTP 404 and an empty response if the container has no pending update', async () => {
       const id = 3;
 
       // sanity check / precondition
