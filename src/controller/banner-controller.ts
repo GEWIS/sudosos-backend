@@ -175,6 +175,15 @@ export default class BannerController extends BaseController {
       res.status(400).send("No file is uploaded in the 'file' field");
       return;
     }
+    const file = files.file as UploadedFile;
+    if (file.data === undefined) {
+      res.status(400).send('File body data is missing from request');
+      return;
+    }
+    if (file.name === undefined) {
+      res.status(400).send('File name is missing from request');
+      return;
+    }
 
     const bannerId = parseInt(id, 10);
 
@@ -182,7 +191,7 @@ export default class BannerController extends BaseController {
       const banner = await Banner.findOne(bannerId, { relations: ['image'] });
       if (banner) {
         await this.fileService.uploadEntityImage(
-          banner, files.file as UploadedFile, req.token.user,
+          banner, file, req.token.user,
         );
         res.status(204).send();
         return;

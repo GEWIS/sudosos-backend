@@ -15,10 +15,9 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { ProductRequest } from './product-request';
 
 export interface BaseContainerParams {
-  products?: (number | ProductRequest)[],
+  products: number[],
   public: boolean,
   name: string,
 }
@@ -27,7 +26,7 @@ export interface CreateContainerParams extends BaseContainerParams {
   ownerId: number,
 }
 
-export interface UpdateContainerParams extends CreateContainerParams{
+export interface UpdateContainerParams extends BaseContainerParams{
   id: number
 }
 
@@ -40,7 +39,7 @@ export type ContainerParams = UpdateContainerParams | CreateContainerParams;
 /**
  * @typedef CreateContainerRequest
  * @property {string} name.required - Name of the container
- * @property {Array.<integer | ProductRequest>} products -
+ * @property {Array.<integer>} products.required -
  *    IDs or requests of the products to add to the container
  * @property {boolean} public.required - Whether the container is public or not
  * @property {integer} ownerId - Id of the user who will own the container, if undefined it will
@@ -53,7 +52,7 @@ export interface CreateContainerRequest extends BaseContainerParams {
 /**
  * @typedef UpdateContainerRequest
  * @property {string} name.required - Name of the container
- * @property {Array.<integer | ProductRequest>} products -
+ * @property {Array.<integer>} products.required -
  *    IDs or requests of the products to add to the container
  * @property {boolean} public.required - Whether the container is public or not
  */

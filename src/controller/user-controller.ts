@@ -430,7 +430,7 @@ export default class UserController extends BaseController {
    * @route PATCH /users/{id}
    * @group users - Operations of user controller
    * @security JWT
-   * @returns {User.model} 200 - New user
+   * @returns {UpdateUserRequest.model} 200 - New user
    * @returns {string} 400 - Bad request
    */
   public async updateUser(req: RequestWithToken, res: Response): Promise<void> {

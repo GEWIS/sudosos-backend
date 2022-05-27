@@ -163,7 +163,8 @@ export default class ContainerController extends BaseController {
         return;
       }
 
-      const container = await ContainerService.getProductsResponse({ containerId });
+      const container = (await ContainerService
+        .getContainers({ containerId, returnProducts: true })).records[0];
       res.json(container);
     } catch (error) {
       this.logger.error('Could not return single container:', error);
@@ -234,7 +235,8 @@ export default class ContainerController extends BaseController {
         return;
       }
 
-      res.json(await ContainerService.createContainer(request));
+      const approve = this.roleManager.can(req.token.roles, 'approve', await ContainerController.getRelation(req), 'Container', ['*']);
+      res.json(await ContainerService.createContainer(request, approve));
     } catch (error) {
       this.logger.error('Could not create container:', error);
       res.status(500).json('Internal server error.');
@@ -322,7 +324,6 @@ export default class ContainerController extends BaseController {
     try {
       const request: UpdateContainerParams = {
         ...body,
-        ownerId: req.token.user.id,
         id: containerId,
       };
 
@@ -332,13 +333,18 @@ export default class ContainerController extends BaseController {
         return;
       }
 
-      const update = await ContainerService.updateContainer(request);
-      if (!update) {
+      const container = await Container.findOne({ where: { id: containerId } });
+      if (!container) {
         res.status(404).json('Container not found.');
         return;
       }
 
-      res.json(update);
+      const approve = this.roleManager.can(req.token.roles, 'approve', await ContainerController.getRelation(req), 'Container', ['*']);
+      if (approve) {
+        res.json(await ContainerService.directContainerUpdate(request));
+      } else {
+        res.json(await ContainerService.updateContainer(request));
+      }
     } catch (error) {
       this.logger.error('Could not update container:', error);
       res.status(500).json('Internal server error.');
@@ -410,7 +416,10 @@ export default class ContainerController extends BaseController {
         return;
       }
 
-      res.json((await ContainerService.getProductsResponse({ containerId, updated: true })));
+      const updatedContainer = (await ContainerService
+        .getUpdatedContainers({ containerId, returnProducts: true })).records[0];
+
+      res.json(updatedContainer);
     } catch (error) {
       this.logger.error('Could not return container:', error);
       res.status(500).json('Internal server error.');

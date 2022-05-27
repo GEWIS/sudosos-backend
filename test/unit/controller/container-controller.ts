@@ -40,8 +40,7 @@ import UpdatedContainer from '../../../src/entity/container/updated-container';
 import UpdatedProduct from '../../../src/entity/product/updated-product';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import { CreateContainerRequest } from '../../../src/controller/request/container-request';
-import { ProductRequest } from '../../../src/controller/request/product-request';
-import { INVALID_PRODUCT_ID, INVALID_PRODUCT_PRICE } from '../../../src/controller/request/validators/validation-errors';
+import { INVALID_PRODUCT_ID } from '../../../src/controller/request/validators/validation-errors';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -155,6 +154,7 @@ describe('ContainerController', async (): Promise<void> => {
       permissions: {
         Container: {
           get: own,
+          create: own,
           update: own,
           delete: own,
         },
@@ -366,17 +366,6 @@ describe('ContainerController', async (): Promise<void> => {
         };
         await expectError(req, `Products: ${INVALID_PRODUCT_ID(-1).value}`);
       });
-      it('should verify product requests', async () => {
-        const req: CreateContainerRequest = {
-          ...ctx.validContainerReq,
-          products: [
-            {
-              ownerId: 1, price: { amount: -100, currency: 'EUR', precision: 2 }, category: 1, alcoholPercentage: 0.5,
-            } as ProductRequest,
-          ],
-        };
-        await expectError(req, `Products: ${INVALID_PRODUCT_PRICE().value}`);
-      });
     });
     it('should verify Name', async () => {
       const req: CreateContainerRequest = { ...ctx.validContainerReq, name: '' };
@@ -387,11 +376,11 @@ describe('ContainerController', async (): Promise<void> => {
     describe('verifyContainerRequest Specification', async () => {
       await testValidationOnRoute('post', '/containers');
     });
-    it('should store the given container in the database and return an HTTP 200 and the created container if admin', async () => {
+    it('should store the given container in the database and return an HTTP 200 and the created container if user', async () => {
       const containerCount = await Container.count();
       const res = await request(ctx.app)
         .post('/containers')
-        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .set('Authorization', `Bearer ${ctx.token}`)
         .send(ctx.validContainerReq);
 
       expect(ctx.specification.validateModel(
@@ -421,18 +410,6 @@ describe('ContainerController', async (): Promise<void> => {
 
       expect(res.status).to.equal(400);
     });
-    it('should return an HTTP 403 if not admin', async () => {
-      const containerCount = await Container.count();
-      const res = await request(ctx.app)
-        .post('/containers')
-        .set('Authorization', `Bearer ${ctx.token}`)
-        .send(ctx.validContainerReq);
-
-      expect(await Container.count()).to.equal(containerCount);
-      expect(res.body).to.be.empty;
-
-      expect(res.status).to.equal(403);
-    });
   });
   describe('POST /containers/:id/approve', () => {
     it('should approve the container update if it exists and admin', async () => {
@@ -444,7 +421,7 @@ describe('ContainerController', async (): Promise<void> => {
 
       const newContainer = await request(ctx.app)
         .post('/containers')
-        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .set('Authorization', `Bearer ${ctx.token}`)
         .send(containerApprovedProducts);
 
       expect(ctx.specification.validateModel(
@@ -474,6 +451,7 @@ describe('ContainerController', async (): Promise<void> => {
       expect(res.status).to.equal(200);
     });
     it('should return an HTTP 200 if the container has unapproved products', async () => {
+      // TODO think about what to do when container update has unapproved products.
       // precondition
       const productId = 4;
       expect(await UpdatedProduct.findOne(productId)).to.exist;
@@ -484,18 +462,14 @@ describe('ContainerController', async (): Promise<void> => {
         public: true,
       };
 
-      const newContainer = (await request(ctx.app)
+      const res = (await request(ctx.app)
         .post('/containers')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
-        .send(container)).body as ContainerWithProductsResponse;
-
-      const res = await request(ctx.app)
-        .post(`/containers/${newContainer.id}/approve`)
-        .set('Authorization', `Bearer ${ctx.adminToken}`);
+        .send(container));
 
       expect(res.status).to.equal(200);
     });
-    it('should return an HTTP 404 and an empty response if the product has no pending update', async () => {
+    it('should return an HTTP 404 and an empty response if the container has no pending update', async () => {
       const id = 3;
 
       // sanity check / precondition
@@ -526,10 +500,10 @@ describe('ContainerController', async (): Promise<void> => {
     describe('verifyContainerRequest Specification', async () => {
       await testValidationOnRoute('patch', '/containers/1');
     });
-    it('should return an HTTP 200 and the container update if admin', async () => {
+    it('should return an HTTP 200 and the container update if user', async () => {
       const res = await request(ctx.app)
         .patch('/containers/1')
-        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .set('Authorization', `Bearer ${ctx.token}`)
         .send(ctx.validContainerReq);
 
       expect(ctx.specification.validateModel(
@@ -557,14 +531,14 @@ describe('ContainerController', async (): Promise<void> => {
 
       const res = await request(ctx.app)
         .patch(`/containers/${id}`)
-        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .set('Authorization', `Bearer ${ctx.token}`)
         .send(ctx.validContainerReq);
 
       containerProductsEq(ctx.validContainerReq, res.body as ContainerWithProductsResponse);
 
       const updateRes = await request(ctx.app)
         .patch(`/containers/${id}`)
-        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .set('Authorization', `Bearer ${ctx.token}`)
         .send(newUpdate);
 
       containerProductsEq(newUpdate, updateRes.body as ContainerWithProductsResponse);

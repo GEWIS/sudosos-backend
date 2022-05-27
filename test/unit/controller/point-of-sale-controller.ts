@@ -37,8 +37,6 @@ import { ContainerResponse } from '../../../src/controller/response/container-re
 import { PaginatedProductResponse, ProductResponse } from '../../../src/controller/response/product-response';
 import UpdatedPointOfSale from '../../../src/entity/point-of-sale/updated-point-of-sale';
 import { CreatePointOfSaleRequest } from '../../../src/controller/request/point-of-sale-request';
-import { UpdateContainerParams } from '../../../src/controller/request/container-request';
-import { UpdateProductParams } from '../../../src/controller/request/product-request';
 import { INVALID_CONTAINER_ID } from '../../../src/controller/request/validators/validation-errors';
 
 /**
@@ -49,9 +47,6 @@ import { INVALID_CONTAINER_ID } from '../../../src/controller/request/validators
  */
 function pointOfSaleEq(source: CreatePointOfSaleRequest, response: PointOfSaleResponse) {
   expect(source.name).to.eq(response.name);
-  expect(source.endDate).to.eq(response.endDate);
-  expect(source.startDate).to.eq(response.startDate);
-  expect(source.useAuthentication).to.eq(response.useAuthentication);
   expect(source.ownerId).to.eq(response.owner.id);
 }
 
@@ -102,10 +97,7 @@ describe('PointOfSaleController', async () => {
 
     const validPOSRequest: CreatePointOfSaleRequest = {
       containers: [containers[0].id, containers[1].id, containers[2].id],
-      endDate: '2100-01-01T21:00:00.000Z',
       name: 'Valid POS',
-      startDate: '2100-01-01T17:00:00.000Z',
-      useAuthentication: false,
       ownerId: 2,
     };
 
@@ -414,21 +406,6 @@ describe('PointOfSaleController', async () => {
       expect(res.status).to.eq(400);
       expect(res.body).to.eq(error);
     }
-    it('should verify endDate after startDate', async () => {
-      const req: CreatePointOfSaleRequest = {
-        ...ctx.validPOSRequest,
-        endDate: ctx.validPOSRequest.startDate,
-      };
-      await expectError(req, 'End Date must be after the Start Date.');
-    });
-    it('should verify endDate', async () => {
-      const req: CreatePointOfSaleRequest = { ...ctx.validPOSRequest, endDate: '' };
-      await expectError(req, 'endDate: is not a valid Date.');
-    });
-    it('should verify startDate', async () => {
-      const req: CreatePointOfSaleRequest = { ...ctx.validPOSRequest, startDate: '' };
-      await expectError(req, 'startDate: is not a valid Date.');
-    });
     it('should verify Name', async () => {
       const req: CreatePointOfSaleRequest = { ...ctx.validPOSRequest, name: '' };
       await expectError(req, 'Name: must be a non-zero length string.');
@@ -443,81 +420,6 @@ describe('PointOfSaleController', async () => {
         containers: [-1, -69],
       };
       await expectError(invalidRequest, `Containers: ${INVALID_CONTAINER_ID(-1).value}`);
-    });
-    it('should verify Container Updates', async () => {
-      const withContainerUpdate: CreatePointOfSaleRequest = JSON.parse(
-        JSON.stringify(ctx.validPOSRequest),
-      );
-
-      const failID = withContainerUpdate.containers.pop() as number;
-      const containerRequest: UpdateContainerParams = {
-        id: failID,
-        name: '',
-        products: [1],
-        public: true,
-        ownerId: undefined,
-      };
-
-      withContainerUpdate.containers.push(containerRequest);
-      await expectError(withContainerUpdate, 'Containers: Name: must be a non-zero length string.');
-    });
-    it('should verify ContainerUpdate with productUpdate', async () => {
-      const withContainerUpdate: CreatePointOfSaleRequest = JSON.parse(
-        JSON.stringify(ctx.validPOSRequest),
-      );
-      const failID = withContainerUpdate.containers.pop() as number;
-      const updateProductParams: UpdateProductParams = {
-        alcoholPercentage: 0,
-        category: 1,
-        id: 0,
-        ownerId: undefined,
-        name: 'ProductRequestID',
-        price: {
-          amount: -100,
-          currency: 'EUR',
-          precision: 2,
-        },
-      };
-
-      const containerRequest: UpdateContainerParams = {
-        id: failID,
-        ownerId: undefined,
-        name: 'Container',
-        products: [updateProductParams],
-        public: true,
-      };
-
-      withContainerUpdate.containers.push(containerRequest);
-      await expectError(withContainerUpdate, 'Containers: Products: Price must be greater than zero');
-    });
-    it('should verify ContainerUpdate with productUpdate ', async () => {
-      const withContainerUpdate: CreatePointOfSaleRequest = JSON.parse(
-        JSON.stringify(ctx.validPOSRequest),
-      );
-      const failID = withContainerUpdate.containers.pop() as number;
-      const updateProductParams: UpdateProductParams = {
-        alcoholPercentage: 0,
-        category: 1,
-        id: 1,
-        ownerId: undefined,
-        name: '',
-        price: {
-          amount: 100,
-          currency: 'EUR',
-          precision: 2,
-        },
-      };
-
-      const updateContainerParams: UpdateContainerParams = {
-        id: failID,
-        ownerId: undefined,
-        name: 'Container',
-        products: [updateProductParams],
-        public: true,
-      };
-
-      withContainerUpdate.containers.push(updateContainerParams);
-      await expectError(withContainerUpdate, 'Containers: Products: Name: must be a non-zero length string.');
     });
   }
   describe('POST /pointsofsale', () => {

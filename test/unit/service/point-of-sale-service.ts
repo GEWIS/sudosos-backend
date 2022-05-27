@@ -34,7 +34,7 @@ import {
 import Swagger from '../../../src/start/swagger';
 import {
   PaginatedPointOfSaleResponse,
-  PointOfSaleResponse,
+  PointOfSaleResponse, PointOfSaleWithContainersResponse,
   UpdatedPointOfSaleResponse,
 } from '../../../src/controller/response/point-of-sale-response';
 import PointOfSaleService from '../../../src/service/point-of-sale-service';
@@ -66,11 +66,10 @@ function pointOfSaleSuperset(response: PointOfSaleResponse[] | UpdatedPointOfSal
  */
 function updateUpdatedResponseEqual(update: UpdatePointOfSaleRequest,
   response: UpdatedPointOfSaleResponse) {
-  const attributes: (keyof UpdatedPointOfSaleResponse)[] = ['name', 'startDate', 'endDate', 'useAuthentication'];
+  const attributes: (keyof UpdatedPointOfSaleResponse)[] = ['name'];
   attributes.forEach((attr) => (
     (expect(update[attr as keyof UpdatePointOfSaleRequest])
       .to.equal(response[attr as keyof UpdatedPointOfSaleResponse]))));
-  // const containerResponse: number[] = response.
 }
 
 /**
@@ -80,6 +79,13 @@ function requestUpdatedResponseEqual(request: CreatePointOfSaleParams,
   response: UpdatedPointOfSaleResponse) {
   updateUpdatedResponseEqual(request, response);
   expect(request.ownerId).to.equal(response.owner.id);
+}
+
+function updateResponseEqual(update: UpdatePointOfSaleParams,
+  response: PointOfSaleWithContainersResponse) {
+  expect(update.id).to.equal(response.id);
+  expect(update.name).to.equal(response.name);
+  expect(update.containers).to.deep.equalInAnyOrder(response.containers.map((c) => c.id));
 }
 
 describe('PointOfSaleService', async (): Promise<void> => {
@@ -119,10 +125,7 @@ describe('PointOfSaleService', async (): Promise<void> => {
 
     const validPOSParams: CreatePointOfSaleParams = {
       containers: [containers[0].id, containers[1].id, containers[2].id],
-      endDate: '2100-01-01T21:00:00.000Z',
       name: 'Valid POS',
-      startDate: '2100-01-01T17:00:00.000Z',
-      useAuthentication: false,
       ownerId: 1,
     };
 
@@ -172,16 +175,6 @@ describe('PointOfSaleService', async (): Promise<void> => {
       const { length } = withRevisions.filter((pointOfSale) => (
         pointOfSale.owner.id === ctx.pointsOfSale[0].owner.id));
       expect(records).to.be.length(length);
-    });
-    it('should return points of sale with useAuthentication specified', async () => {
-      const { records } = (await PointOfSaleService.getPointsOfSale({
-        useAuthentication: false,
-      }) as PaginatedPointOfSaleResponse);
-
-      expect(pointOfSaleSuperset(records, ctx.pointsOfSale)).to.be.true;
-      const doNotUseAuthentication = records.every((pointOfSale) => (
-        pointOfSale.useAuthentication === false));
-      expect(doNotUseAuthentication).to.be.true;
     });
     it('should return single point of sale if pointOfSaleId is specified', async () => {
       const { records } = (await PointOfSaleService.getPointsOfSale({
@@ -253,17 +246,11 @@ describe('PointOfSaleService', async (): Promise<void> => {
       expect(ctx.validPOSParams.containers).to.deep.equalInAnyOrder(containers);
 
       expect(updatedPointOfSale.name).to.equal(ctx.validPOSParams.name);
-      expect(updatedPointOfSale.startDate.toISOString())
-        .to.equal(ctx.validPOSParams.startDate);
-      expect(updatedPointOfSale.endDate.toISOString())
-        .to.equal(ctx.validPOSParams.endDate);
-      expect(updatedPointOfSale.useAuthentication)
-        .to.equal(ctx.validPOSParams.useAuthentication);
 
       requestUpdatedResponseEqual(ctx.validPOSParams, res);
     });
   });
-  describe('UpdatePointOfSale function', () => {
+  describe('updatePointOfSale function', () => {
     it('should create a new UpdatedPointOfSale', async () => {
       const id = 1;
       // Precondition: POS has no existing update
@@ -271,11 +258,7 @@ describe('PointOfSaleService', async (): Promise<void> => {
 
       const updateParams: UpdatePointOfSaleParams = {
         containers: [1, 2, 3],
-        endDate: '2050-01-01T21:00:00.000Z',
         name: 'Updated POS',
-        startDate: '2049-01-01T17:00:00.000Z',
-        useAuthentication: true,
-        ownerId: 2,
         id,
       };
 
@@ -296,12 +279,8 @@ describe('PointOfSaleService', async (): Promise<void> => {
 
       const updateRequest: UpdatePointOfSaleParams = {
         id,
-        ownerId: 1,
         containers: [1, 2, 3],
-        endDate: '2050-01-01T21:00:00.000Z',
         name: 'Updated POS',
-        startDate: '2049-01-01T17:00:00.000Z',
-        useAuthentication: true,
       };
 
       const res: UpdatedPointOfSaleResponse = (
@@ -329,6 +308,19 @@ describe('PointOfSaleService', async (): Promise<void> => {
 
       expect(res.name).to.equal(pointOfSaleRevision.name);
       expect(res.revision).to.equal(pointOfSaleRevision.revision);
+    });
+  });
+  describe('directPointOfSaleUpdate function', () => {
+    it('should revise the point of sale without creating a UpdatedPointOfSale', async () => {
+      const pointOfSale = await PointOfSale.findOne();
+      const update: UpdatePointOfSaleParams = {
+        containers: [3],
+        id: pointOfSale.id,
+        name: 'Pos Updated Name',
+      };
+
+      const response = await PointOfSaleService.directPointOfSaleUpdate(update);
+      updateResponseEqual(update, response);
     });
   });
 });

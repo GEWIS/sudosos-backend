@@ -165,7 +165,8 @@ export default class ProductController extends BaseController {
         res.status(400).json(validation.fail.value);
       }
 
-      res.json(await ProductService.createProduct(request));
+      const approve = this.roleManager.can(req.token.roles, 'approve', await ProductController.getRelation(req), 'Product', ['*']);
+      res.json(await ProductService.createProduct(request, approve));
     } catch (error) {
       this.logger.error('Could not create product:', error);
       res.status(500).json('Internal server error.');
@@ -194,7 +195,6 @@ export default class ProductController extends BaseController {
     try {
       const params: UpdateProductParams = {
         ...body,
-        ownerId: req.token.user.id,
         id: productId,
       };
 
@@ -204,11 +204,17 @@ export default class ProductController extends BaseController {
         return;
       }
 
-      const update = await ProductService.updateProduct(params);
-      if (update) {
-        res.json(update);
-      } else {
+      const product = await Product.findOne({ where: { id: productId } });
+      if (!product) {
         res.status(404).json('Product not found.');
+        return;
+      }
+
+      const approve = this.roleManager.can(req.token.roles, 'approve', await ProductController.getRelation(req), 'Product', ['*']);
+      if (approve) {
+        res.json(await ProductService.directProductUpdate(params));
+      } else {
+        res.json(await ProductService.updateProduct(params));
       }
     } catch (error) {
       this.logger.error('Could not update product:', error);
@@ -365,6 +371,15 @@ export default class ProductController extends BaseController {
       res.status(400).send("No file is uploaded in the 'file' field");
       return;
     }
+    const file = files.file as UploadedFile;
+    if (file.data === undefined) {
+      res.status(400).send('File body data is missing from request');
+      return;
+    }
+    if (file.name === undefined) {
+      res.status(400).send('File name is missing from request');
+      return;
+    }
 
     const productId = parseInt(id, 10);
 
@@ -373,7 +388,7 @@ export default class ProductController extends BaseController {
       const product = await Product.findOne(productId, { relations: ['image'] });
       if (product) {
         await this.fileService.uploadEntityImage(
-          product, files.file as UploadedFile, req.token.user,
+          product, file, req.token.user,
         );
         res.status(204).send();
       } else {
