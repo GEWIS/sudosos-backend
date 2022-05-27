@@ -105,7 +105,7 @@ export default class BalanceService {
       lastTransfer = balanceArray[0].lastTransfer;
     }
 
-    const laterTransactions = await entityManager.query('SELECT id, sum(amount) as amount from ( '
+    const laterTransactions = await entityManager.query('SELECT id, sum(amount) as amount, count(amount) as count from ( '
       + 'select t.fromId as `id`, str.amount * pr.priceInclVat * -1 as `amount` from `transaction` as `t` '
       + 'inner join sub_transaction st on t.id=st.transactionId '
       + 'inner join sub_transaction_row str on st.id=str.subTransactionId '
@@ -125,7 +125,60 @@ export default class BalanceService {
       balance += laterTransactions[0].amount;
     }
 
-    return balance;
+    const result = await this.getBalanceNew(id);
+    return result;
+  }
+
+  public static async getBalanceNew(id: number): Promise<number> {
+    const entityManager = getManager();
+    // const balanceArray = await entityManager.query('SELECT amount,
+    // lastTransaction, lastTransfer FROM balance where user_id = ?', [id]);
+    //
+    // let balance: number = 0;
+    // let lastTransaction: number = 0;
+    // let lastTransfer: number = 0;
+    //
+    // if (balanceArray.length > 0) {
+    //   balance = balanceArray[0].amount;
+    //   lastTransaction = balanceArray[0].lastTransaction;
+    //   lastTransfer = balanceArray[0].lastTransfer;
+    // }
+
+    const laterTransactions = await entityManager.query('SELECT moneys.id, '
+      + 'sum(moneys.totalValue) + COALESCE(b5.amount, 0) as amount, '
+      + 'count(moneys.totalValue) as count, '
+      + 'b5.lastTransaction as lastTransaction, '
+      + 'b5.lastTransfer as lastTransfer, '
+      + 'b5.amount as cachedAmount '
+      + 'from ( '
+      + 'select t.fromId as `id`, str.amount * pr.priceInclVat * -1 as `totalValue` from `transaction` as `t` '
+      + 'left join balance b1 on t.fromId=b1.user_id '
+      + 'inner join sub_transaction st on t.id=st.transactionId '
+      + 'inner join sub_transaction_row str on st.id=str.subTransactionId '
+      + 'inner join product_revision pr on str.productRevision=pr.revision and str.productProduct=pr.productId '
+      + 'where t.fromId = ? and t.id > COALESCE(b1.lastTransaction, 0) '
+      + 'UNION ALL '
+      + 'select st2.toId as `id`, str2.amount * pr2.priceInclVat as `totalValue` from sub_transaction st2 '
+      + 'left join balance b2 on st2.toId=b2.user_id '
+      + 'inner join sub_transaction_row str2 on st2.id=str2.subTransactionId '
+      + 'inner join product_revision pr2 on str2.productRevision=pr2.revision and str2.productProduct=pr2.productId '
+      + 'where st2.toId = ? and st2.transactionId > COALESCE(b2.lastTransaction, 0) '
+      + 'UNION ALL '
+      + 'select t2.fromId as `id`, t2.amount*-1 as `totalValue` from transfer t2 '
+      + 'left join balance b3 on t2.fromId=b3.user_id '
+      + 'where fromId=? and t2.id > COALESCE(b3.lastTransfer, 0) '
+      + 'UNION ALL '
+      + 'select t3.toId as `id`, t3.amount as `totalValue` from transfer t3 '
+      + 'left join balance b4 on t3.toId=b4.user_id '
+      + 'where t3.toId=? and t3.id > COALESCE(b4.lastTransfer, 0) '
+      + ') as moneys '
+      + 'left join balance b5 on moneys.id=b5.user_id', [id, id, id, id]);
+
+    if (laterTransactions.length > 0 && laterTransactions[0].amount) {
+      return laterTransactions[0].amount;
+    }
+
+    return 0;
   }
 
   /**

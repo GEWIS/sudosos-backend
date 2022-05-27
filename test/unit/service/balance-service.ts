@@ -20,7 +20,9 @@ import express, { Application } from 'express';
 import { expect } from 'chai';
 import { Connection, getManager } from 'typeorm';
 import { SwaggerSpecification } from 'swagger-model-validator';
+import { DineroObject } from 'dinero.js';
 import Transaction from '../../../src/entity/transactions/transaction';
+import Transfer from '../../../src/entity/transactions/transfer';
 import Database from '../../../src/database/database';
 import seedDatabase, { defineTransactions } from '../../seed';
 import Swagger from '../../../src/start/swagger';
@@ -29,6 +31,11 @@ import User from '../../../src/entity/user/user';
 import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
 import Balance from '../../../src/entity/transactions/balance';
+import { UserFactory } from '../../helpers/user-factory';
+import TransactionService from '../../../src/service/transaction-service';
+import ProductRevision from '../../../src/entity/product/product-revision';
+import ContainerRevision from '../../../src/entity/container/container-revision';
+import TransferService from '../../../src/service/transfer-service';
 
 describe('BalanceService', (): void => {
   let ctx: {
@@ -36,6 +43,11 @@ describe('BalanceService', (): void => {
     app: Application,
     balances: number[],
     users: User[],
+    productRevisions: ProductRevision[],
+    containerRevisions: ContainerRevision[],
+    pointOfSaleRevisions: PointOfSaleRevision[],
+    transactions: Transaction[],
+    transfers: Transfer[],
     spec: SwaggerSpecification,
   };
 
@@ -43,7 +55,9 @@ describe('BalanceService', (): void => {
     this.timeout(50000);
     const connection = await Database.initialize();
     const app = express();
-    await seedDatabase();
+    const {
+      productRevisions, containerRevisions, pointOfSaleRevisions, transactions, transfers,
+    } = await seedDatabase();
 
     const users = await User.find(
       {
@@ -61,6 +75,11 @@ describe('BalanceService', (): void => {
       app,
       balances,
       users,
+      productRevisions,
+      containerRevisions,
+      pointOfSaleRevisions,
+      transactions,
+      transfers,
       spec: await Swagger.importSpecification(),
     };
   });
@@ -180,6 +199,115 @@ describe('BalanceService', (): void => {
 
       ctx.users.forEach((user) => {
         expect(ctx.balances[user.id]).to.equal(balanceMap.get(user.id));
+      });
+    });
+
+    describe('Get balance', () => {
+      const addTransaction = async (newUser: User, receivedBalance: boolean) => {
+        let from: number;
+        let to: number;
+
+        const pointOfSale = ctx.pointOfSaleRevisions
+          .find((p) => p.containers.length > 0 && p.containers
+            .find((c) => c.products.length > 0) !== undefined)!;
+        const container = pointOfSale.containers
+          .find((c) => c.products.length > 0)!;
+        const product = container.products[0];
+
+        if (receivedBalance) {
+          from = product.product.owner.id;
+          to = newUser.id;
+        } else {
+          to = product.product.owner.id;
+          from = newUser.id;
+        }
+        const totalPriceInclVat = product.priceInclVat.toObject();
+        const transaction = await TransactionService.asTransaction({
+          from,
+          createdBy: newUser.id,
+          pointOfSale: {
+            id: pointOfSale.pointOfSale.id,
+            revision: pointOfSale.revision,
+          },
+          totalPriceInclVat,
+          subTransactions: [{
+            to,
+            container: {
+              id: container.container.id,
+              revision: container.revision,
+            },
+            totalPriceInclVat,
+            subTransactionRows: [{
+              product: {
+                id: product.product.id,
+                revision: product.revision,
+              },
+              amount: 1,
+              totalPriceInclVat,
+            }],
+          }],
+        });
+        await Transaction.save(transaction);
+        return totalPriceInclVat;
+      };
+
+      const addTransfer = async (newUser: User, receivedBalance: boolean) => {
+        let fromId: number;
+        let toId: number;
+        if (receivedBalance) {
+          toId = newUser.id;
+          fromId = ctx.users[0].id;
+        } else {
+          fromId = newUser.id;
+          toId = ctx.users[0].id;
+        }
+
+        const amount = 1000;
+        await TransferService.createTransfer({
+          amount: {
+            amount,
+            precision: 2,
+            currency: 'EUR',
+          },
+          description: '',
+          fromId,
+          toId,
+        });
+        return amount;
+      };
+
+      it('should return 0 for new user', async () => {
+        const newUser = await (await UserFactory().default()).get();
+        const balance = await BalanceService.getBalance(newUser.id);
+        expect(balance).to.equal(0);
+      });
+      it('should return correct balance for new user with single outgoing transaction', async () => {
+        const newUser = await (await UserFactory().default()).get();
+        const totalPriceInclVat = await addTransaction(newUser, false);
+
+        const balance = await BalanceService.getBalance(newUser.id);
+        expect(balance).to.equal(-totalPriceInclVat.amount);
+      });
+      it('should return correct balance for new user with single incoming transaction', async () => {
+        const newUser = await (await UserFactory().default()).get();
+        const totalPriceInclVat = await addTransaction(newUser, true);
+
+        const balance = await BalanceService.getBalance(newUser.id);
+        expect(balance).to.equal(totalPriceInclVat.amount);
+      });
+      it('should correctly return balance for new user with single outgoing transfer', async () => {
+        const newUser = await (await UserFactory().default()).get();
+        const amount = await addTransfer(newUser, false);
+
+        const balance = await BalanceService.getBalance(newUser.id);
+        expect(balance).to.equal(-amount);
+      });
+      it('should correctly return balance for new user with single incoming transfer', async () => {
+        const newUser = await (await UserFactory().default()).get();
+        const amount = await addTransfer(newUser, true);
+
+        const balance = await BalanceService.getBalance(newUser.id);
+        expect(balance).to.equal(amount);
       });
     });
 
