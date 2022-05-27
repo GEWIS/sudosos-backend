@@ -16,7 +16,6 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { createQueryBuilder, SelectQueryBuilder } from 'typeorm';
-import { Dinero } from 'dinero.js';
 import {
   PaginatedProductResponse,
   ProductResponse,
