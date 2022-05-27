@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import CreateProductParams, { ProductRequest } from '../product-request';
+import { BaseProductParams } from '../product-request';
 import {
   Specification,
   toFail,
@@ -27,14 +27,14 @@ import ProductCategory from '../../../entity/product/product-category';
 import stringSpec from './string-spec';
 import { INVALID_PRODUCT_PRICE } from './validation-errors';
 
-const validAlcohol = (p: CreateProductParams) => {
+const validAlcohol = (p: BaseProductParams) => {
   if (p.alcoholPercentage < 0) {
     return toFail(new ValidationError('Alcohol percentage must be non-negative'));
   }
   return toPass(p);
 };
 
-const validCategory = async (p: CreateProductParams) => {
+const validCategory = async (p: BaseProductParams) => {
   const category = await ProductCategory.findOne(p.category);
   if (!category) {
     return toFail(new ValidationError(`${p.category} is an invalid product category.`));
@@ -42,22 +42,22 @@ const validCategory = async (p: CreateProductParams) => {
   return toPass(p);
 };
 
-const validPrice = (p: CreateProductParams) => {
+const validPrice = (p: BaseProductParams) => {
   if (p.price.amount < 0) {
     return toFail(INVALID_PRODUCT_PRICE());
   }
   return toPass(p);
 };
 
-const productRequestSpec: Specification<CreateProductParams, ValidationError> = [
+const productRequestSpec: Specification<BaseProductParams, ValidationError> = [
   [stringSpec(), 'name', new ValidationError('Name:')],
   validPrice,
   validCategory,
   validAlcohol,
 ];
 
-async function verifyProductRequest(productRequest: ProductRequest) {
-  return Promise.resolve(await validateSpecification<ProductRequest, ValidationError>(
+async function verifyProductRequest(productRequest: BaseProductParams) {
+  return Promise.resolve(await validateSpecification<BaseProductParams, ValidationError>(
     productRequest, productRequestSpec,
   ));
 }

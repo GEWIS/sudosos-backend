@@ -29,7 +29,7 @@ export default interface CreateProductParams extends BaseProductParams{
   ownerId: number;
 }
 
-export interface UpdateProductParams extends CreateProductParams {
+export interface UpdateProductParams extends BaseProductParams {
   id: number;
 }
 

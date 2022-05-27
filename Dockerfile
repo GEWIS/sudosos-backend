@@ -13,5 +13,7 @@ WORKDIR /app
 COPY ./package.json ./package-lock.json ./
 RUN npm install --production
 COPY --from=build --chown=node /app/out/src /app/out/src
+RUN mkdir -p /app/out/test
+COPY --from=build --chown=node /app/out/test/seed.js /app/out/test
 COPY --from=build --chown=node /app/out/swagger.json /app/out/swagger.json
 CMD ["npm", "run", "serve"]

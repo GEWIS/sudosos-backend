@@ -23,25 +23,20 @@ import {
   toPass, validateSpecification,
   ValidationError,
 } from '../../../helpers/specification-validation';
-import verifyProductRequest from './product-request-spec';
 import {
   BaseContainerParams,
   ContainerParams,
 } from '../container-request';
 import stringSpec from './string-spec';
-import { ProductRequest } from '../product-request';
 import { INVALID_PRODUCT_ID } from './validation-errors';
 
 /**
  * Validates that param is either a valid Product ID or ProductRequest
  */
-async function validProductRequestOrId(p: number | ProductRequest) {
-  if (typeof p === 'number') {
-    const product = await Product.findOne({ where: { id: p } });
-    if (!product) return toFail(INVALID_PRODUCT_ID(p));
-    return toPass(p);
-  }
-  return Promise.resolve(await verifyProductRequest(p));
+async function validProductId(p: number) {
+  const product = await Product.findOne({ where: { id: p } });
+  if (!product) return toFail(INVALID_PRODUCT_ID(p));
+  return toPass(p);
 }
 
 /**
@@ -52,7 +47,7 @@ const baseContainerRequestSpec: <T extends BaseContainerParams>()
 => Specification<T, ValidationError> = () => [
   [stringSpec(), 'name', new ValidationError('Name:')],
   // Turn our validProduct function into an array subspecification.
-  [[createArrayRule([validProductRequestOrId])], 'products', new ValidationError('Products:')],
+  [[createArrayRule([validProductId])], 'products', new ValidationError('Products:')],
 ];
 
 export default async function verifyContainerRequest(containerRequest:
