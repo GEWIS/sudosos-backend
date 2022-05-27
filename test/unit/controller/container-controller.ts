@@ -39,8 +39,8 @@ import { ProductResponse } from '../../../src/controller/response/product-respon
 import UpdatedContainer from '../../../src/entity/container/updated-container';
 import UpdatedProduct from '../../../src/entity/product/updated-product';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
-import { CreateContainerRequest } from '../../../src/controller/request/container-request';
-import { INVALID_PRODUCT_ID } from '../../../src/controller/request/validators/validation-errors';
+import { CreateContainerRequest, UpdateContainerRequest } from '../../../src/controller/request/container-request';
+import { INVALID_ORGAN_ID, INVALID_PRODUCT_ID } from '../../../src/controller/request/validators/validation-errors';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -77,6 +77,7 @@ describe('ContainerController', async (): Promise<void> => {
     adminToken: String,
     token: String,
     validContainerReq: CreateContainerRequest,
+    validContainerUpdate: UpdateContainerRequest,
     invalidContainerReq: CreateContainerRequest,
   };
 
@@ -100,8 +101,16 @@ describe('ContainerController', async (): Promise<void> => {
       active: true,
     } as User;
 
+    const organ = {
+      id: 3,
+      firstName: 'Organ',
+      type: UserType.ORGAN,
+      active: true,
+    } as User;
+
     await User.save(adminUser);
     await User.save(localUser);
+    await User.save(organ);
 
     const categories = await seedProductCategories();
     const { products, productRevisions } = (
@@ -115,10 +124,15 @@ describe('ContainerController', async (): Promise<void> => {
     const adminToken = await tokenHandler.signToken({ user: adminUser, roles: ['Admin'], lesser: false }, 'nonce admin');
     const token = await tokenHandler.signToken({ user: localUser, roles: ['User'], lesser: false }, 'nonce');
 
-    const validContainerReq: CreateContainerRequest = {
+    const validContainerUpdate: UpdateContainerRequest = {
       products: [7, 8],
       public: true,
       name: 'Valid container',
+    };
+
+    const validContainerReq: CreateContainerRequest = {
+      ...validContainerUpdate,
+      ownerId: organ.id,
     };
 
     const invalidContainerReq: CreateContainerRequest = {
@@ -179,6 +193,7 @@ describe('ContainerController', async (): Promise<void> => {
       token,
       validContainerReq,
       invalidContainerReq,
+      validContainerUpdate,
     };
   });
 
@@ -360,17 +375,27 @@ describe('ContainerController', async (): Promise<void> => {
 
     describe('validate products function', () => {
       it('should verify product IDs', async () => {
+        const containerRequest = type === 'post' ? ctx.validContainerReq : ctx.validContainerUpdate;
         const req: CreateContainerRequest = {
-          ...ctx.validContainerReq,
+          ...containerRequest,
           products: [-1, 5, 10],
         };
         await expectError(req, `Products: ${INVALID_PRODUCT_ID(-1).value}`);
       });
     });
     it('should verify Name', async () => {
-      const req: CreateContainerRequest = { ...ctx.validContainerReq, name: '' };
+      const containerRequest = type === 'post' ? ctx.validContainerReq : ctx.validContainerUpdate;
+      const req: CreateContainerRequest = { ...containerRequest, name: '' };
       await expectError(req, 'Name: must be a non-zero length string.');
     });
+    if (type === 'post') {
+      it('should validate that owner is an Organ', async () => {
+        const owner = await User.findOne({ where: { deleted: false, type: UserType.MEMBER } });
+        const req: CreateContainerRequest = { ...ctx.validContainerReq, ownerId: owner.id };
+        console.error(owner);
+        await expectError(req, INVALID_ORGAN_ID().value);
+      });
+    }
   }
   describe('POST /containers', () => {
     describe('verifyContainerRequest Specification', async () => {
@@ -413,10 +438,12 @@ describe('ContainerController', async (): Promise<void> => {
   });
   describe('POST /containers/:id/approve', () => {
     it('should approve the container update if it exists and admin', async () => {
+      const owner = await User.findOne({ where: { deleted: false, type: UserType.ORGAN } });
       const containerApprovedProducts: CreateContainerRequest = {
         products: [1],
         public: true,
         name: 'Valid container',
+        ownerId: owner.id,
       };
 
       const newContainer = await request(ctx.app)
@@ -456,10 +483,12 @@ describe('ContainerController', async (): Promise<void> => {
       const productId = 4;
       expect(await UpdatedProduct.findOne(productId)).to.exist;
 
+      const owner = await User.findOne({ where: { deleted: false, type: UserType.ORGAN } });
       const container: CreateContainerRequest = {
         name: 'Container with unapproved products.',
         products: [productId],
         public: true,
+        ownerId: owner.id,
       };
 
       const res = (await request(ctx.app)
@@ -504,7 +533,8 @@ describe('ContainerController', async (): Promise<void> => {
       const res = await request(ctx.app)
         .patch('/containers/1')
         .set('Authorization', `Bearer ${ctx.token}`)
-        .send(ctx.validContainerReq);
+        .send(ctx.validContainerUpdate);
+      console.error(res.body);
 
       expect(ctx.specification.validateModel(
         'ContainerWithProductsResponse',
@@ -532,7 +562,7 @@ describe('ContainerController', async (): Promise<void> => {
       const res = await request(ctx.app)
         .patch(`/containers/${id}`)
         .set('Authorization', `Bearer ${ctx.token}`)
-        .send(ctx.validContainerReq);
+        .send(ctx.validContainerUpdate);
 
       containerProductsEq(ctx.validContainerReq, res.body as ContainerWithProductsResponse);
 
@@ -545,10 +575,15 @@ describe('ContainerController', async (): Promise<void> => {
       expect(updateRes.status).to.equal(200);
     });
     it('should return an HTTP 400 if the update is invalid', async () => {
+      const inValidContainerUpdate: UpdateContainerRequest = {
+        ...ctx.validContainerUpdate,
+        name: '',
+      };
+
       const res = await request(ctx.app)
         .patch('/containers/1')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
-        .send(ctx.invalidContainerReq);
+        .send(inValidContainerUpdate);
 
       expect(res.status).to.equal(400);
     });
@@ -556,7 +591,7 @@ describe('ContainerController', async (): Promise<void> => {
       const res = await request(ctx.app)
         .patch(`/containers/${(await Container.count()) + 1}`)
         .set('Authorization', `Bearer ${ctx.adminToken}`)
-        .send(ctx.validContainerReq);
+        .send(ctx.validContainerUpdate);
 
       // sanity check
       expect(await Container.findOne((await Container.count()) + 1)).to.be.undefined;
@@ -573,7 +608,7 @@ describe('ContainerController', async (): Promise<void> => {
       const res = await request(ctx.app)
         .patch(`/containers/${id}`)
         .set('Authorization', `Bearer ${ctx.token}`)
-        .send(ctx.validContainerReq);
+        .send(ctx.validContainerUpdate);
 
       // success code
       expect(res.status).to.equal(403);

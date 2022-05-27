@@ -33,6 +33,8 @@ export const INVALID_DATE_DURATION = () => new ValidationError('End Date must be
 
 export const INVALID_USER_ID = () => new ValidationError('must exist.');
 
+export const INVALID_ORGAN_ID = () => new ValidationError('Owner must be of type ORGAN.');
+
 export const ZERO_LENGTH_STRING = () => new ValidationError('must be a non-zero length string.');
 
 export const MAX_STRING_SIZE = () => new ValidationError('is too long.');

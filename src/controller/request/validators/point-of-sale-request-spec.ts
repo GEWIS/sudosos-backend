@@ -29,7 +29,7 @@ import {
   INVALID_CONTAINER_ID,
 } from './validation-errors';
 import { userMustExist } from './general-validators';
-import verifyContainerRequest from './container-request-spec';
+import { verifyContainerRequest } from './container-request-spec';
 
 /**
  * Tests if the given param is either a valid container ID or ContainerRequest
