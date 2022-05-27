@@ -263,7 +263,7 @@ describe('UserController', (): void => {
   describe('GET /users/usertype/:userType', () => {
     it('should return correct model', async () => {
       const res = await request(ctx.app)
-        .get(`/users/usertype/${UserType.MEMBER}`)
+        .get(`/users/usertype/${UserType[UserType.MEMBER]}`)
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
       expect(ctx.specification.validateModel(
@@ -275,7 +275,7 @@ describe('UserController', (): void => {
     });
     it('should return all users of type MEMBER if admin', async () => {
       const res = await request(ctx.app)
-        .get(`/users/usertype/${UserType.MEMBER}`)
+        .get(`/users/usertype/${UserType[UserType.MEMBER]}`)
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
 
