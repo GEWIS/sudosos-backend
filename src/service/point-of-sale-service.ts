@@ -28,7 +28,6 @@ import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import UpdatedPointOfSale from '../entity/point-of-sale/updated-point-of-sale';
 import User from '../entity/user/user';
 import Container from '../entity/container/container';
-import { parseUserToBaseResponse } from '../helpers/entity-to-response';
 import ContainerRevision from '../entity/container/container-revision';
 // eslint-disable-next-line import/no-cycle
 import ContainerService, { ContainerParameters } from './container-service';
@@ -39,6 +38,7 @@ import {
   CreatePointOfSaleParams,
   UpdatePointOfSaleParams,
 } from '../controller/request/point-of-sale-request';
+import { parseUserToBaseResponse } from './user-service';
 
 /**
  * Define point of sale filtering parameters used to filter query results.

@@ -17,6 +17,7 @@
  */
 
 import { InvoiceState } from '../entity/invoices/invoice-status';
+import { UserType } from '../entity/user/user';
 
 /**
  * Returns whether the given object is a number
@@ -93,6 +94,21 @@ export function asDate(input: any): Date {
 export function asInvoiceState(input: any): InvoiceState {
   if (!input) return undefined;
   const state: InvoiceState = InvoiceState[input as keyof typeof InvoiceState];
+  if (state === undefined) {
+    throw new TypeError(`Input '${input}' is not a valid InvoiceState.`);
+  }
+  return state;
+}
+
+/**
+ * Converts the input to a UserType
+ * @param input - The input which should be converted.
+ * @returns The parsed UserType.
+ * @throws TypeError - If the input is not a valid UserType
+ */
+export function asUserType(input: any): UserType {
+  if (!input) return undefined;
+  const state: UserType = UserType[input as keyof typeof UserType];
   if (state === undefined) {
     throw new TypeError(`Input '${input}' is not a valid InvoiceState.`);
   }

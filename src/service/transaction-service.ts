@@ -27,7 +27,6 @@ import {
 import Transaction from '../entity/transactions/transaction';
 import SubTransaction from '../entity/transactions/sub-transaction';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
-import { parseUserToBaseResponse } from '../helpers/entity-to-response';
 import {
   parseContainerToBaseResponse,
   parsePOSToBasePOS,
@@ -35,7 +34,7 @@ import {
 } from '../helpers/revision-to-response';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import { SubTransactionRequest, SubTransactionRowRequest, TransactionRequest } from '../controller/request/transaction-request';
-import User from '../entity/user/user';
+import User, { UserType } from '../entity/user/user';
 import ContainerRevision from '../entity/container/container-revision';
 import SubTransactionRow from '../entity/transactions/sub-transaction-row';
 import ProductRevision from '../entity/product/product-revision';
@@ -45,6 +44,7 @@ import { DineroObjectResponse } from '../controller/response/dinero-response';
 import BalanceService from './balance-service';
 import { asDate, asNumber } from '../helpers/validators';
 import { PaginationParameters } from '../helpers/pagination';
+import { parseUserToBaseResponse } from './user-service';
 
 export interface TransactionFilterParameters {
   transactionId?: number | number[],
@@ -524,7 +524,7 @@ export default class TransactionService {
     QueryFilter.applyFilter(query, mapping, p);
 
     if (user) {
-      query.andWhere('"transaction"."fromId" = :userId OR "transaction"."createdById" = :userId OR "subTransaction"."toId" = :userId', { userId: user.id });
+      query.andWhere('("transaction"."fromId" = :userId OR "transaction"."createdById" = :userId OR "subTransaction"."toId" = :userId)', { userId: user.id });
     }
 
     return applySubTransactionFilters(query);
@@ -562,7 +562,7 @@ export default class TransactionService {
           lastName: o.from_lastName,
           active: o.from_active === 1,
           deleted: o.from_deleted === 1,
-          type: o.from_type,
+          type: UserType[o.from_type],
         },
         createdBy: o.createdBy_id ? {
           id: o.createdBy_id,
@@ -572,7 +572,7 @@ export default class TransactionService {
           lastName: o.createdBy_lastName,
           active: o.from_active === 1,
           deleted: o.from_deleted === 1,
-          type: o.createdBy_type,
+          type: UserType[o.createdBy_type],
         } : undefined,
         pointOfSale: {
           id: o.pointOfSale_id,

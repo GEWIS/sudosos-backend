@@ -134,6 +134,7 @@ export default class Gewis {
         },
         Authenticator: {
           update: { own: new Set(['pin']) },
+          get: { own: star },
         },
       },
       assignmentCheck: async (user: User) => buyerUserTypes.has(user.type),
@@ -196,18 +197,21 @@ export default class Gewis {
       permissions: {
         Product: {
           create: { own: star },
-          get: { own: star },
+          get: { own: star, all: star },
           update: { own: star },
         },
         Container: {
           create: { own: star },
-          get: { own: star },
+          get: { own: star, all: star },
           update: { own: star },
         },
         PointOfSale: {
           create: { own: star },
-          get: { own: star },
+          get: { own: star, all: star },
           update: { own: star },
+        },
+        ProductCategory: {
+          get: { all: star },
         },
         Balance: {
           get: { own: star },

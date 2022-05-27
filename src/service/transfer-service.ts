@@ -21,12 +21,12 @@ import { FindManyOptions } from 'typeorm';
 import Transfer from '../entity/transactions/transfer';
 import { PaginatedTransferResponse, TransferResponse } from '../controller/response/transfer-response';
 import TransferRequest from '../controller/request/transfer-request';
-import { parseUserToBaseResponse } from '../helpers/entity-to-response';
 import User from '../entity/user/user';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import { PaginationParameters } from '../helpers/pagination';
 import { RequestWithToken } from '../middleware/token-middleware';
 import { asNumber } from '../helpers/validators';
+import { parseUserToBaseResponse } from './user-service';
 
 export interface TransferFilterParameters {
   id?: number;
