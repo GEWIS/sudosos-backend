@@ -19,7 +19,8 @@ import { Connection } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
-import { expect } from 'chai';
+import chai, { expect } from 'chai';
+import deepEqualInAnyOrder from 'deep-equal-in-any-order';
 import User from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
@@ -29,10 +30,16 @@ import {
   seedProductCategories, seedUsers, seedVatGroups,
 } from '../../seed';
 import Container from '../../../src/entity/container/container';
-import { ContainerResponse } from '../../../src/controller/response/container-response';
+import { ContainerResponse, ContainerWithProductsResponse } from '../../../src/controller/response/container-response';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
 import ContainerRevision from '../../../src/entity/container/container-revision';
 import UpdatedContainer from '../../../src/entity/container/updated-container';
+import {
+  CreateContainerParams,
+  UpdateContainerParams,
+} from '../../../src/controller/request/container-request';
+import PointOfSaleService from '../../../src/service/point-of-sale-service';
+import { CreatePointOfSaleParams } from '../../../src/controller/request/point-of-sale-request';
 
 /**
  * Test if all the container responses are part of the container set array.
@@ -47,6 +54,36 @@ function containerSuperset(response: ContainerResponse[], superset: Container[])
     )) !== undefined
   ));
 }
+
+function responseAsUpdate(update: UpdateContainerParams, response: ContainerWithProductsResponse) {
+  expect(update.id).to.be.eq(response.id);
+  expect(update.name).to.be.eq(response.name);
+  expect(update.products).to.be.deep.equalInAnyOrder(response.products.map((p) => p.id));
+}
+
+function responseAsCreation(creation: CreateContainerParams,
+  response: ContainerWithProductsResponse) {
+  expect(creation.ownerId).to.be.eq(response.owner.id);
+  expect(creation.name).to.be.eq(response.name);
+  expect(creation.public).to.be.eq(response.public);
+  expect(creation.products).to.be.deep.equalInAnyOrder(response.products.map((p) => p.id));
+}
+
+function entityAsUpdate(update: UpdateContainerParams, container: ContainerRevision) {
+  expect(update.id).to.be.eq(container.container.id);
+  expect(update.name).to.be.eq(container.name);
+  expect(update.products).to.be.deep.equalInAnyOrder(container.products.map((p) => p.product.id));
+}
+
+async function entityAsCreation(creation: CreateContainerParams, entity: ContainerRevision) {
+  const container = await Container.findOne({ where: { id: entity.container.id }, relations: ['owner'] });
+  expect(creation.ownerId).to.be.eq(container.owner.id);
+  expect(creation.name).to.be.eq(entity.name);
+  expect(creation.public).to.be.eq(entity.container.public);
+  expect(creation.products).to.be.deep.equalInAnyOrder(entity.products.map((p) => p.product.id));
+}
+
+chai.use(deepEqualInAnyOrder);
 
 describe('ContainerService', async (): Promise<void> => {
   let ctx: {
@@ -94,6 +131,19 @@ describe('ContainerService', async (): Promise<void> => {
   // close database connection
   after(async () => {
     await ctx.connection.close();
+  });
+
+  describe('updateContainer function', () => {
+    it('should return undefined is base is not defined', async () => {
+      const update: UpdateContainerParams = {
+        id: 0,
+        name: 'Container',
+        products: [],
+        public: true,
+      };
+      const container = await ContainerService.updateContainer(update);
+      expect(container).to.be.undefined;
+    });
   });
 
   describe('getContainers function', () => {
@@ -172,6 +222,12 @@ describe('ContainerService', async (): Promise<void> => {
       expect(_pagination.skip).to.equal(skip);
       expect(_pagination.count).to.equal(withRevisions.length);
       expect(records.length).to.equal(take);
+    });
+    it('should return products if specified', async () => {
+      const { records } = await ContainerService.getContainers(
+        { returnProducts: true }, {},
+      );
+      expect(ctx.specification.validateModel('Array.<ContainerWithProductsResponse.model>', records, false, true).valid).to.be.true;
     });
   });
 
@@ -256,6 +312,83 @@ describe('ContainerService', async (): Promise<void> => {
       );
       expect(visibility.own).to.be.false;
       expect(visibility.public).to.be.false;
+    });
+  });
+
+  describe('directContainerUpdate function', () => {
+    it('should revise the container without creating a UpdatedContainer', async () => {
+      const container = await Container.findOne();
+      const update: UpdateContainerParams = {
+        id: container.id,
+        name: 'Container Update Name',
+        products: [1, 2, 3],
+        public: true,
+      };
+      const response = await ContainerService.directContainerUpdate(update);
+      responseAsUpdate(update, response);
+      const entity = await Container.findOne({ id: container.id });
+      const revision = await ContainerRevision.findOne({ where: { container: { id: container.id }, revision: entity.currentRevision }, relations: ['container', 'products', 'products.product'] });
+      entityAsUpdate(update, revision);
+    });
+  });
+
+  describe('createContainer function', () => {
+    it('should create the container without update if approve is true', async () => {
+      const creation: CreateContainerParams = {
+        ownerId: (await User.findOne({ where: { deleted: false } })).id,
+        name: 'Container Update Name',
+        products: [1, 2, 3],
+        public: true,
+      };
+
+      const container = await ContainerService.createContainer(creation, true);
+      responseAsCreation(creation, container);
+      const entity = await Container.findOne({ where: { id: container.id } });
+      const revision = await ContainerRevision.findOne({
+        where: {
+          container: { id: container.id },
+          revision: entity.currentRevision,
+        },
+        relations: ['container', 'products', 'products.product', 'container.owner'],
+      });
+      await entityAsCreation(creation, revision);
+    });
+  });
+
+  describe('propagateContainerUpdate function', () => {
+    it('should update all POS that include given container', async () => {
+      const ownerId = (await User.findOne({ where: { deleted: false } })).id;
+      const createContainerParams: CreateContainerParams = {
+        products: [1],
+        public: true,
+        name: 'New Container',
+        ownerId,
+      };
+      const container = await ContainerService.createContainer(createContainerParams, true);
+
+      const createPointOfSaleParams: CreatePointOfSaleParams = {
+        containers: [container.id],
+        name: 'New POS',
+        ownerId,
+      };
+      const pos = await PointOfSaleService.createPointOfSale(createPointOfSaleParams, true);
+
+      const update: UpdateContainerParams = {
+        products: [1],
+        public: true,
+        name: 'New name',
+        id: container.id,
+      };
+
+      await ContainerService.directContainerUpdate(update);
+
+      const updatedPos = await PointOfSaleRevision
+        .findOne({ where: { revision: 2, pointOfSale: { id: pos.id } }, relations: ['containers', 'containers.products'] });
+      expect(updatedPos).to.not.be.undefined;
+      expect(updatedPos.containers).length(1);
+
+      const newContainer = updatedPos.containers[0];
+      expect(newContainer.name).to.eq(update.name);
     });
   });
 });

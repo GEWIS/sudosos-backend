@@ -66,6 +66,7 @@ describe('ProductController', async (): Promise<void> => {
     adminToken: String,
     token: String,
     vatGroups: VatGroup[],
+    tokenNoRoles: String,
     products: Product[],
     validProductReq: CreateProductRequest,
     invalidProductReq: CreateProductRequest,
@@ -105,7 +106,8 @@ describe('ProductController', async (): Promise<void> => {
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
     const adminToken = await tokenHandler.signToken({ user: adminUser, roles: ['Admin'], lesser: false }, 'nonce admin');
-    const token = await tokenHandler.signToken({ user: localUser, roles: [], lesser: false }, 'nonce');
+    const token = await tokenHandler.signToken({ user: localUser, roles: ['User'], lesser: false }, 'nonce');
+    const tokenNoRoles = await tokenHandler.signToken({ user: localUser, roles: [], lesser: false }, 'nonce');
 
     const validProductReq: CreateProductRequest = {
       name: 'Valid product',
@@ -129,6 +131,7 @@ describe('ProductController', async (): Promise<void> => {
     const specification = await Swagger.initialize(app);
 
     const all = { all: new Set<string>(['*']) };
+    const own = { own: new Set<string>(['*']) };
     const roleManager = new RoleManager();
     roleManager.registerRole({
       name: 'Admin',
@@ -142,6 +145,18 @@ describe('ProductController', async (): Promise<void> => {
         },
       },
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
+    });
+
+    roleManager.registerRole({
+      name: 'User',
+      permissions: {
+        Product: {
+          get: own,
+          create: own,
+          update: all,
+        },
+      },
+      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_USER,
     });
 
     const controller = new ProductController({ specification, roleManager });
@@ -161,6 +176,7 @@ describe('ProductController', async (): Promise<void> => {
       adminToken,
       token,
       vatGroups,
+      tokenNoRoles,
       products,
       validProductReq,
       invalidProductReq,
@@ -295,7 +311,7 @@ describe('ProductController', async (): Promise<void> => {
       const productCount = await Product.count();
       const res = await request(ctx.app)
         .post('/products')
-        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .set('Authorization', `Bearer ${ctx.token}`)
         .send(ctx.validProductReq);
 
       expect(await Product.count()).to.equal(productCount + 1);
@@ -315,7 +331,7 @@ describe('ProductController', async (): Promise<void> => {
       const productCount = await Product.count();
       const res = await request(ctx.app)
         .post('/products')
-        .set('Authorization', `Bearer ${ctx.token}`)
+        .set('Authorization', `Bearer ${ctx.tokenNoRoles}`)
         .send(ctx.validProductReq);
 
       expect(await Product.count()).to.equal(productCount);
@@ -388,10 +404,10 @@ describe('ProductController', async (): Promise<void> => {
       await testValidationOnRoute('patch', '/products/1');
     });
 
-    it('should return an HTTP 200 and the product update if admin', async () => {
+    it('should return an HTTP 200 and the product update if user', async () => {
       const res = await request(ctx.app)
         .patch('/products/1')
-        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .set('Authorization', `Bearer ${ctx.token}`)
         .send(ctx.validProductReq);
 
       productEq(ctx.validProductReq, res.body as ProductResponse);
@@ -424,7 +440,7 @@ describe('ProductController', async (): Promise<void> => {
     it('should return an HTTP 403 if not admin', async () => {
       const res = await request(ctx.app)
         .patch('/products/1')
-        .set('Authorization', `Bearer ${ctx.token}`)
+        .set('Authorization', `Bearer ${ctx.tokenNoRoles}`)
         .send(ctx.validProductReq);
 
       // check if banner is not returned

@@ -23,7 +23,6 @@ import {
 } from '../../../helpers/specification-validation';
 import Container from '../../../entity/container/container';
 import { BasePointOfSaleParams, CreatePointOfSaleParams, UpdatePointOfSaleParams } from '../point-of-sale-request';
-import durationSpec from './duration-spec';
 import { ContainerParams } from '../container-request';
 import stringSpec from './string-spec';
 import {
@@ -49,9 +48,8 @@ async function validContainerRequestOrId(p: number | ContainerParams) {
  * Specification of a basePointOfSale
  * Again we use a function since otherwise it tends to resuse internal ValidationErrors.
  */
-const basePointOfSaleRequestSpec: <T extends BasePointOfSaleParams>()
-=> Specification<T, ValidationError> = <T extends BasePointOfSaleParams>() => [
-  ...durationSpec<T>(),
+const basePointOfSaleRequestSpec:<T extends BasePointOfSaleParams>() =>
+Specification<T, ValidationError> = () => [
   [stringSpec(), 'name', new ValidationError('Name:')],
   [[createArrayRule([validContainerRequestOrId])], 'containers', new ValidationError('Containers:')],
 ];
@@ -75,6 +73,6 @@ CreatePointOfSaleParams) {
 export async function verifyUpdatePointOfSaleRequest(updatePointOfSaleRequest:
 UpdatePointOfSaleParams) {
   return Promise.resolve(await validateSpecification(
-    updatePointOfSaleRequest, createPointOfSaleRequestSpec(),
+    updatePointOfSaleRequest, basePointOfSaleRequestSpec(),
   ));
 }

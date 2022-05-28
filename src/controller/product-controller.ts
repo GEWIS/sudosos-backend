@@ -166,7 +166,8 @@ export default class ProductController extends BaseController {
         return;
       }
 
-      res.json(await ProductService.createProduct(request));
+      const approve = this.roleManager.can(req.token.roles, 'approve', await ProductController.getRelation(req), 'Product', ['*']);
+      res.json(await ProductService.createProduct(request, approve));
     } catch (error) {
       this.logger.error('Could not create product:', error);
       res.status(500).json('Internal server error.');
@@ -195,7 +196,6 @@ export default class ProductController extends BaseController {
     try {
       const params: UpdateProductParams = {
         ...body,
-        ownerId: req.token.user.id,
         id: productId,
       };
 
@@ -205,11 +205,17 @@ export default class ProductController extends BaseController {
         return;
       }
 
-      const update = await ProductService.updateProduct(params);
-      if (update) {
-        res.json(update);
-      } else {
+      const product = await Product.findOne({ where: { id: productId } });
+      if (!product) {
         res.status(404).json('Product not found.');
+        return;
+      }
+
+      const approve = this.roleManager.can(req.token.roles, 'approve', await ProductController.getRelation(req), 'Product', ['*']);
+      if (approve) {
+        res.json(await ProductService.directProductUpdate(params));
+      } else {
+        res.json(await ProductService.updateProduct(params));
       }
     } catch (error) {
       this.logger.error('Could not update product:', error);

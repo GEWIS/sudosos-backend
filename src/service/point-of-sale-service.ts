@@ -28,19 +28,17 @@ import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import UpdatedPointOfSale from '../entity/point-of-sale/updated-point-of-sale';
 import User from '../entity/user/user';
 import Container from '../entity/container/container';
-import { parseUserToBaseResponse } from '../helpers/entity-to-response';
-import UpdatedContainer from '../entity/container/updated-container';
 import ContainerRevision from '../entity/container/container-revision';
+// eslint-disable-next-line import/no-cycle
 import ContainerService, { ContainerParameters } from './container-service';
 import { ContainerWithProductsResponse } from '../controller/response/container-response';
 import { PaginationParameters } from '../helpers/pagination';
-import { getIdsAndRequests } from '../helpers/array-splitter';
-import { CreatePointOfSaleParams, UpdatePointOfSaleParams } from '../controller/request/point-of-sale-request';
 import {
-  ContainerParams,
-  CreateContainerParams,
-  UpdateContainerParams,
-} from '../controller/request/container-request';
+  BasePointOfSaleParams,
+  CreatePointOfSaleParams,
+  UpdatePointOfSaleParams,
+} from '../controller/request/point-of-sale-request';
+import { parseUserToBaseResponse } from './user-service';
 
 /**
  * Define point of sale filtering parameters used to filter query results.
@@ -58,19 +56,6 @@ export interface PointOfSaleParameters {
    * Filter based on point of sale owner.
    */
   ownerId?: number;
-  // TODO: implement filters on start and end date
-  // /**
-  //  * Filter based on point of sale start date.
-  //  */
-  // startDate?: Date;
-  // /**
-  //  * Filter based on point of sale end date.
-  //  */
-  // endDate?: Date;
-  /**
-   * Filter based on whether a point of sale uses authentication.
-   */
-  useAuthentication?: boolean;
   /**
    * If containers should be added to the response
    */
@@ -91,9 +76,6 @@ export default class PointOfSaleService {
       id: rawPointOfSale.id,
       revision: rawPointOfSale.revision,
       name: rawPointOfSale.name,
-      startDate: rawPointOfSale.startDate,
-      endDate: rawPointOfSale.endDate,
-      useAuthentication: rawPointOfSale.useAuthentication === 1,
       createdAt: rawPointOfSale.createdAt,
       updatedAt: rawPointOfSale.updatedAt,
       owner: {
@@ -113,26 +95,13 @@ export default class PointOfSaleService {
     pointOfSale: PointOfSaleResponse | UpdatedPointOfSaleResponse,
   ): Promise<PointOfSaleWithContainersResponse> {
     const filters: any = { posId: pointOfSale.id };
-    let updated = false;
     if (Object.prototype.hasOwnProperty.call(pointOfSale, 'revision')) {
       filters.posRevision = (pointOfSale as PointOfSaleResponse).revision;
-    } else {
-      updated = true;
     }
 
-    const containerIds = (
-      (await ContainerService.getContainers(filters))
-        .records.map((c) => ({ id: c.id, revision: c.revision })));
-    const containers: ContainerWithProductsResponse[] = [];
-    await Promise.all(
-      containerIds.map(
-        async (c) => {
-          containers.push(await ContainerService.getProductsResponse(
-            { containerId: c.id, containerRevision: c.revision, updated },
-          ));
-        },
-      ),
-    );
+    const containers = (await ContainerService
+      .getContainers({ ...filters, returnProducts: true }))
+      .records as ContainerWithProductsResponse[];
 
     return {
       ...pointOfSale as PointOfSaleResponse,
@@ -156,9 +125,6 @@ export default class PointOfSaleService {
         'posrevision.revision AS revision',
         'posrevision.updatedAt AS updatedAt',
         'posrevision.name AS name',
-        'posrevision.startDate AS startDate',
-        'posrevision.endDate AS endDate',
-        'posrevision.useAuthentication AS useAuthentication',
         'owner.id AS owner_id',
         'owner.firstName AS owner_firstName',
         'owner.lastName AS owner_lastName',
@@ -169,9 +135,6 @@ export default class PointOfSaleService {
     const filterMapping: FilterMapping = {
       pointOfSaleId: 'pos.id',
       pointOfSaleRevision: 'posrevision.revision',
-      startDate: 'posrevision.startDate',
-      endDate: 'posrevision.endDate',
-      useAuthentication: 'posrevision.useAuthentication',
       ownerId: 'owner.id',
     };
 
@@ -236,9 +199,6 @@ export default class PointOfSaleService {
         'pos.createdAt AS createdAt',
         'updatedpos.updatedAt AS updatedAt',
         'updatedpos.name AS name',
-        'updatedpos.startDate AS startDate',
-        'updatedpos.endDate AS endDate',
-        'updatedpos.useAuthentication AS useAuthentication',
         'owner.id AS owner_id',
         'owner.firstName AS owner_firstName',
         'owner.lastName AS owner_lastName',
@@ -246,9 +206,6 @@ export default class PointOfSaleService {
 
     const filterMapping: FilterMapping = {
       pointOfSaleId: 'pos.id',
-      startDate: 'pos.startDate',
-      endDate: 'pos.endDate',
-      useAuthentication: 'pos.useAuthentication',
       ownerId: 'owner.id',
     };
     QueryFilter.applyFilter(builder, filterMapping, filters);
@@ -305,9 +262,6 @@ export default class PointOfSaleService {
     return {
       name: updatedPointOfSale.name,
       owner: parseUserToBaseResponse(updatedPointOfSale.pointOfSale.owner, false),
-      startDate: updatedPointOfSale.startDate.toISOString(),
-      endDate: updatedPointOfSale.endDate.toISOString(),
-      useAuthentication: updatedPointOfSale.useAuthentication,
       id: updatedPointOfSale.pointOfSale.id,
     } as UpdatedPointOfSaleResponse;
   }
@@ -320,9 +274,6 @@ export default class PointOfSaleService {
     return {
       name: pointOfSale.name,
       owner: parseUserToBaseResponse(pointOfSale.pointOfSale.owner, false),
-      startDate: pointOfSale.startDate.toISOString(),
-      endDate: pointOfSale.endDate.toISOString(),
-      useAuthentication: pointOfSale.useAuthentication,
       id: pointOfSale.pointOfSale.id,
       revision: pointOfSale.revision,
     } as PointOfSaleResponse;
@@ -356,6 +307,31 @@ export default class PointOfSaleService {
     return publicPOS.concat(ownPOS);
   }
 
+  public static async applyPointOfSaleUpdate(base: PointOfSale, update: BasePointOfSaleParams) {
+    const containers = await Container.findByIds(update.containers);
+
+    const containerIds: { revision: number, container: { id: number } }[] = (
+      containers.map((container) => (
+        ({ revision: container.currentRevision, container: { id: container.id } }))));
+
+    const containerRevisions: ContainerRevision[] = await ContainerRevision.findByIds(containerIds);
+    const pointOfSaleRevision: PointOfSaleRevision = Object.assign(new PointOfSaleRevision(), {
+      pointOfSale: base,
+      containers: containerRevisions,
+      name: update.name,
+      // Increment revision.
+      revision: base.currentRevision ? base.currentRevision + 1 : 1,
+    });
+
+    // First save revision.
+    await PointOfSaleRevision.save(pointOfSaleRevision);
+
+    // Increment current revision.
+    // eslint-disable-next-line no-param-reassign
+    base.currentRevision = base.currentRevision ? base.currentRevision + 1 : 1;
+    await base.save();
+  }
+
   /**
    * Confirms a PointOfSale update and creates a PointOfSale revision,
    * @param pointOfSaleId - The PointOfSale update to confirm.
@@ -373,46 +349,21 @@ export default class PointOfSaleService {
       return undefined;
     }
 
-    const containerIds: { revision: number, container: { id: number } }[] = (
-      rawPointOfSaleUpdate.containers.map((container) => (
-        ({ revision: container.currentRevision, container: { id: container.id } }))));
-
-    const updatedContainers: UpdatedContainer[] = await UpdatedContainer.findByIds(containerIds, { relations: ['container'] });
-
-    // Force approve all containers
-    if (updatedContainers.length !== 0) {
-      await Promise.all(updatedContainers.map(
-        (c) => ContainerService.approveContainerUpdate(c.container.id),
-      ));
-    }
-
-    const containerRevisions: ContainerRevision[] = await ContainerRevision.findByIds(containerIds);
-
-    const pointOfSaleRevision: PointOfSaleRevision = Object.assign(new PointOfSaleRevision(), {
-      pointOfSale: base,
-      containers: containerRevisions,
+    const update: BasePointOfSaleParams = {
+      containers: rawPointOfSaleUpdate.containers.map((c) => c.id),
       name: rawPointOfSaleUpdate.name,
-      startDate: rawPointOfSaleUpdate.startDate,
-      endDate: rawPointOfSaleUpdate.endDate,
-      useAuthentication: rawPointOfSaleUpdate.useAuthentication,
-      // Increment revision.
-      revision: base.currentRevision ? base.currentRevision + 1 : 1,
-    });
+    };
 
-    // First save revision.
-    await PointOfSaleRevision.save(pointOfSaleRevision);
-
-    // Increment current revision.
-    base.currentRevision = base.currentRevision ? base.currentRevision + 1 : 1;
-    await base.save();
+    await this.applyPointOfSaleUpdate(base, update);
 
     // Remove update after revision is created.
     await UpdatedPointOfSale.delete(pointOfSaleId);
 
+    const pos = (await this.getPointsOfSale({ pointOfSaleId, returnContainers: true }))
+      .records[0] as PointOfSaleWithContainersResponse;
+
     // Return the new point of sale.
-    return await this.asPointOfSaleResponseWithContainers(
-      this.asPointOfSaleResponse(pointOfSaleRevision),
-    );
+    return pos;
   }
 
   /**
@@ -430,24 +381,13 @@ export default class PointOfSaleService {
       return undefined;
     }
 
-    const { ids, requests } = getIdsAndRequests<ContainerParams>(update.containers);
-    // If the update contains container updates or creations we delegate it.
-    await Promise.all(requests.map((r) => {
-      if (Object.prototype.hasOwnProperty.call(r, 'id')) {
-        return ContainerService.updateContainer((r as UpdateContainerParams));
-      }
-      return ContainerService.createContainer((r as CreateContainerParams));
-    }));
-
-    const containers = update.containers ? await Container.findByIds(ids) : [];
+    const containers = await Container.findByIds(update.containers);
 
     // Create update object
     const updatedPointOfSale = Object.assign(new UpdatedPointOfSale(), {
       ...update,
       pointOfSale: base,
       containers,
-      startDate: new Date(update.startDate),
-      endDate: new Date(update.endDate),
     });
 
     // Save update
@@ -458,12 +398,12 @@ export default class PointOfSaleService {
   /**
    * Creates a new PointOfSale
    *
-   * The newly created PointOfSale in the PointOfSale table and has no current revision.
+   * If approve is false, then the newly created PointOfSale has no revision.
    * To confirm the revision the update has to be accepted.
    *
    * @param posRequest - The POS to be created.
    */
-  public static async createPointOfSale(posRequest: CreatePointOfSaleParams)
+  public static async createPointOfSale(posRequest: CreatePointOfSaleParams, approve = false)
     : Promise<UpdatedPointOfSaleResponse | undefined> {
     const owner = await User.findOne(posRequest.ownerId);
 
@@ -479,7 +419,27 @@ export default class PointOfSaleService {
       ...posRequest,
       id: base.id,
     };
-    return this.updatePointOfSale(update);
+
+    let createdPointOfSale;
+    if (approve) {
+      createdPointOfSale = await this.directPointOfSaleUpdate(update);
+    } else {
+      createdPointOfSale = await this.updatePointOfSale(update);
+    }
+
+    return createdPointOfSale;
+  }
+
+  /**
+   * Revises a point of sale without creating an update
+   * @param update - the point of sale update to pass
+   */
+  public static async directPointOfSaleUpdate(update: UpdatePointOfSaleParams)
+    : Promise<PointOfSaleWithContainersResponse> {
+    const base: PointOfSale = await PointOfSale.findOne({ where: { id: update.id } });
+    await this.applyPointOfSaleUpdate(base, update);
+    return (this.getPointsOfSale({ pointOfSaleId: base.id, returnContainers: true })
+      .then((p) => p.records[0])) as Promise<PointOfSaleWithContainersResponse>;
   }
 
   /**

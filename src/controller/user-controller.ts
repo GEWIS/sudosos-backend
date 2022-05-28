@@ -17,7 +17,6 @@
  */
 import { Response } from 'express';
 import log4js, { Logger } from 'log4js';
-import { FindManyOptions } from 'typeorm';
 import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
@@ -27,11 +26,8 @@ import UpdateUserRequest from './request/update-user-request';
 import { parseRequestPagination } from '../helpers/pagination';
 import ProductService from '../service/product-service';
 import PointOfSaleService from '../service/point-of-sale-service';
-import TransactionService, {
-  parseGetTransactionsFilters,
-} from '../service/transaction-service';
+import TransactionService, { parseGetTransactionsFilters } from '../service/transaction-service';
 import ContainerService from '../service/container-service';
-import { PaginatedUserResponse } from './response/user-response';
 import TransferService, { parseGetTransferFilters } from '../service/transfer-service';
 import MemberAuthenticator from '../entity/authenticator/member-authenticator';
 import AuthenticationService, { AuthenticationContext } from '../service/authentication-service';
@@ -40,7 +36,9 @@ import RBACService from '../service/rbac-service';
 import { isFail } from '../helpers/specification-validation';
 import verifyUpdatePinRequest from './request/validators/update-pin-request-spec';
 import UpdatePinRequest from './request/update-pin-request';
-import { parseUserToResponse } from '../helpers/entity-to-response';
+import UserService, { parseGetUsersFilters, parseUserToResponse, UserFilterParameters } from '../service/user-service';
+import { asNumber } from '../helpers/validators';
+import { verifyCreateUserRequest } from './request/validators/user-request-spec';
 
 export default class UserController extends BaseController {
   private logger: Logger = log4js.getLogger('UserController');
@@ -119,6 +117,14 @@ export default class UserController extends BaseController {
             req.token.roles, 'update', UserController.getRelation(req), 'User', ['*'],
           ),
           handler: this.updateUser.bind(this),
+        },
+      },
+      '/:id(\\d+)/members': {
+        GET: {
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'get', UserController.getRelation(req), 'User', ['*'],
+          ),
+          handler: this.getOrganMembers.bind(this),
         },
       },
       '/:id(\\d+)/authenticate': {
@@ -219,6 +225,12 @@ export default class UserController extends BaseController {
    * @security JWT
    * @param {integer} take.query - How many users the endpoint should return
    * @param {integer} skip.query - How many users should be skipped (for pagination)
+   * @param {string} firstName.query - Filter based on first name
+   * @param {string} lastName.query - Filter based on last name
+   * @param {boolean} active.query - Filter based if the user is active
+   * @param {boolean} ofAge.query - Filter based if the user is 18+
+   * @param {integer} id.query - Filter based on user ID
+   * @param {type} type.query - Filter based on user type.
    * @returns {PaginatedUserResponse.model} 200 - A list of all users
    */
   public async getAllUsers(req: RequestWithToken, res: Response): Promise<void> {
@@ -226,8 +238,10 @@ export default class UserController extends BaseController {
 
     let take;
     let skip;
+    let filters: UserFilterParameters;
     try {
       const pagination = parseRequestPagination(req);
+      filters = parseGetUsersFilters(req);
       take = pagination.take;
       skip = pagination.skip;
     } catch (e) {
@@ -236,18 +250,8 @@ export default class UserController extends BaseController {
     }
 
     try {
-      const options: FindManyOptions = { where: { deleted: false } };
-      const users = await User.find({ ...options, take, skip });
-      const count = await User.count(options);
-
-      const result: PaginatedUserResponse = {
-        _pagination: {
-          take, skip, count,
-        },
-        records: users,
-      };
-
-      res.status(200).json(result);
+      const users = await UserService.getUsers(filters, { take, skip });
+      res.status(200).json(users);
     } catch (error) {
       this.logger.error('Could not get users:', error);
       res.status(500).json('Internal server error.');
@@ -258,7 +262,7 @@ export default class UserController extends BaseController {
    * Get all users of user type
    * @route GET /users/usertype/{userType}
    * @group users - Operations of user controller
-   * @param {integer} userType.path.required - The userType of the requested users
+   * @param {string} userType.path.required - The userType of the requested users
    * @security JWT
    * @param {integer} take.query - How many users the endpoint should return
    * @param {integer} skip.query - How many users should be skipped (for pagination)
@@ -268,36 +272,18 @@ export default class UserController extends BaseController {
   public async getAllUsersOfUserType(req: RequestWithToken, res: Response): Promise<void> {
     const parameters = req.params;
     this.logger.trace('Get all users of userType', parameters, 'by user', req.token.user);
+    const userType = req.params.userType.toUpperCase();
 
     // If it does not exist, return a 404 error
-    if (!(parameters.userType in UserType)) {
+    const type = UserType[userType as keyof typeof UserType];
+    if (!type || Number(userType)) {
       res.status(404).json('Unknown userType.');
       return;
     }
-    let take;
-    let skip;
-    try {
-      const pagination = parseRequestPagination(req);
-      take = pagination.take;
-      skip = pagination.skip;
-    } catch (e) {
-      res.status(400).send(e.message);
-      return;
-    }
 
     try {
-      const options: FindManyOptions = { where: { deleted: false, type: parameters.userType } };
-      const users = await User.find({ ...options, take, skip });
-      const count = await User.count(options);
-
-      const result: PaginatedUserResponse = {
-        _pagination: {
-          take, skip, count,
-        },
-        records: users,
-      };
-
-      res.status(200).json(result);
+      req.query.type = userType;
+      this.getAllUsers(req, res);
     } catch (error) {
       this.logger.error('Could not get users:', error);
       res.status(500).json('Internal server error.');
@@ -345,6 +331,43 @@ export default class UserController extends BaseController {
   }
 
   /**
+   * Get an organs members
+   * @route GET /users/{id}/members
+   * @group users - Operations of user controller
+   * @param {integer} id.path.required - The id of the user
+   * @security JWT
+   * @returns {PaginatedUserResponse.model} 200 - All members of the organ
+   * @returns {string} 404 - Nonexistent user id
+   * @returns {string} 400 - User is not an organ
+   */
+  public async getOrganMembers(req: RequestWithToken, res: Response): Promise<void> {
+    const parameters = req.params;
+    this.logger.trace('Get organ members', parameters, 'by user', req.token.user);
+
+    try {
+      const organId = asNumber(parameters.id);
+      // Get the user object if it exists
+      const user = await User.findOne({ where: { id: organId } });
+      // If it does not exist, return a 404 error
+      if (user === undefined) {
+        res.status(404).json('Unknown user ID.');
+        return;
+      }
+
+      if (user.type !== UserType.ORGAN) {
+        res.status(400).json('User is not of type Organ');
+        return;
+      }
+
+      const members = await UserService.getUsers({ organId });
+      res.status(200).json(members);
+    } catch (error) {
+      this.logger.error('Could not get organ members:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
    * Get an individual user
    * @route GET /users/{id}
    * @group users - Operations of user controller
@@ -359,7 +382,7 @@ export default class UserController extends BaseController {
 
     try {
       // Get the user object if it exists
-      const user = await User.findOne(parameters.id, { where: { deleted: false } });
+      const user = await UserService.getSingleUser(asNumber(parameters.id));
       // If it does not exist, return a 404 error
       if (user === undefined) {
         res.status(404).json('Unknown user ID.');
@@ -386,25 +409,14 @@ export default class UserController extends BaseController {
     const body = req.body as CreateUserRequest;
     this.logger.trace('Create user', body, 'by user', req.token.user);
 
-    if (body.firstName.length === 0) {
-      res.status(400).json('firstName cannot be empty');
-      return;
-    }
-    if (body.firstName.length > 64) {
-      res.status(400).json('firstName too long');
-      return;
-    }
-    if (body.lastName && body.lastName.length > 64) {
-      res.status(400).json('lastName too long');
-      return;
-    }
-    if (!Object.values(UserType).includes(body.type)) {
-      res.status(400).json('type is not a valid UserType');
-      return;
-    }
-
     try {
-      const user = await User.save(body as User);
+      const validation = await verifyCreateUserRequest(body);
+      if (isFail(validation)) {
+        res.status(400).json(validation.fail.value);
+        return;
+      }
+
+      const user = await UserService.createUser(body);
       res.status(201).json(user);
     } catch (error) {
       this.logger.error('Could not create user:', error);
@@ -412,6 +424,7 @@ export default class UserController extends BaseController {
     }
   }
 
+  // TODO make a specification that can handle undefined attributes.
   /**
    * Update a user
    * @route PATCH /users/{id}
@@ -453,10 +466,10 @@ export default class UserController extends BaseController {
       } as User;
       await User.update(parameters.id, user);
       res.status(200).json(
-        await User.findOne(parameters.id, { where: { deleted: false } }),
+        await UserService.getSingleUser(asNumber(parameters.id)),
       );
     } catch (error) {
-      this.logger.error('Could not create product:', error);
+      this.logger.error('Could not update user:', error);
       res.status(500).json('Internal server error.');
     }
   }
@@ -939,7 +952,7 @@ export default class UserController extends BaseController {
    * @param {integer} id.path.required - The id of the user to get authentications of
    * @security JWT
    * @returns {string} 404 - User not found error.
-   * @returns {Array<UserResponse>} 200 - A list of all users the given ID can authenticate
+   * @returns {Array.<UserResponse.model>} 200 - A list of all users the given ID can authenticate
    */
   public async getUserAuthenticatable(req: RequestWithToken, res: Response): Promise<void> {
     const parameters = req.params;
@@ -970,7 +983,7 @@ export default class UserController extends BaseController {
    * @group users - Operations of user controller
    * @param {integer} id.path.required - The id of the user to get the roles from
    * @security JWT
-   * @returns {Array<RoleResponse>} 200 - The roles of the user
+   * @returns {Array.<RoleResponse.model>} 200 - The roles of the user
    * @returns {string} 404 - User not found error.
    */
   public async getUserRoles(req: RequestWithToken, res: Response): Promise<void> {

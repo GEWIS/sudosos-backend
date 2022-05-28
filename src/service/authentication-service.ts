@@ -28,11 +28,11 @@ import PinAuthenticator from '../entity/authenticator/pin-authenticator';
 import RoleManager from '../rbac/role-manager';
 import LDAPAuthenticator from '../entity/authenticator/ldap-authenticator';
 import { asNumber } from '../helpers/validators';
-import { parseUserToResponse } from '../helpers/entity-to-response';
 import MemberAuthenticator from '../entity/authenticator/member-authenticator';
 import {
   bindUser, getLDAPConnection, getLDAPSettings, LDAPUser, userFromLDAP,
 } from '../helpers/ad';
+import { parseUserToResponse } from './user-service';
 
 export interface AuthenticationContext {
   tokenHandler: TokenHandler,

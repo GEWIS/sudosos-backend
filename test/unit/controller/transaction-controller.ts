@@ -532,12 +532,6 @@ describe('TransactionController', (): void => {
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(ctx.validTransReq);
       expect(res.status).to.equal(200);
-      console.error(ctx.specification.validateModel(
-        'TransactionResponse',
-        res.body,
-        false,
-        true,
-      ));
       expect(ctx.specification.validateModel(
         'TransactionResponse',
         res.body,

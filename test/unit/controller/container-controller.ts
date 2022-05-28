@@ -23,9 +23,7 @@ import { json } from 'body-parser';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
 import User, { UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
-import {
-  seedAllContainers, seedAllProducts, seedProductCategories, seedVatGroups,
-} from '../../seed';
+import { seedAllContainers, seedAllProducts, seedProductCategories } from '../../seed';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Swagger from '../../../src/start/swagger';
 import RoleManager from '../../../src/rbac/role-manager';
@@ -107,9 +105,8 @@ describe('ContainerController', async (): Promise<void> => {
     await User.save(localUser);
 
     const categories = await seedProductCategories();
-    const vatGroups = await seedVatGroups();
     const { products, productRevisions } = (
-      await seedAllProducts([adminUser, localUser], categories, vatGroups));
+      await seedAllProducts([adminUser, localUser], categories));
     await seedAllContainers([adminUser, localUser], productRevisions, products);
 
     // create bearer tokens
@@ -374,7 +371,7 @@ describe('ContainerController', async (): Promise<void> => {
           ...ctx.validContainerReq,
           products: [
             {
-              ownerId: 1, priceInclVat: { amount: -100, currency: 'EUR', precision: 2 }, category: 1, vat: 1, alcoholPercentage: 0.5,
+              ownerId: 1, price: { amount: -100, currency: 'EUR', precision: 2 }, category: 1, alcoholPercentage: 0.5,
             } as ProductRequest,
           ],
         };

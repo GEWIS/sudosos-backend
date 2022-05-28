@@ -19,22 +19,31 @@ import { createQueryBuilder, SelectQueryBuilder } from 'typeorm';
 import {
   ContainerResponse,
   ContainerWithProductsResponse,
-  PaginatedContainerResponse,
+  PaginatedContainerResponse, PaginatedContainerWithProductResponse,
 } from '../controller/response/container-response';
 import Container from '../entity/container/container';
 import ContainerRevision from '../entity/container/container-revision';
 import UpdatedContainer from '../entity/container/updated-container';
 import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
-import ProductService from './product-service';
 import PointOfSale from '../entity/point-of-sale/point-of-sale';
 import Product from '../entity/product/product';
-import UpdatedProduct from '../entity/product/updated-product';
 import ProductRevision from '../entity/product/product-revision';
 import { PaginationParameters } from '../helpers/pagination';
-import { getIdsAndRequests } from '../helpers/array-splitter';
-import { CreateContainerParams, UpdateContainerParams } from '../controller/request/container-request';
-import { ProductRequest, UpdateProductParams } from '../controller/request/product-request';
+import {
+  CreateContainerParams,
+  UpdateContainerParams,
+  UpdateContainerRequest,
+} from '../controller/request/container-request';
+import ProductImage from '../entity/file/product-image';
+import User from '../entity/user/user';
+import {
+  UpdatePointOfSaleParams,
+} from '../controller/request/point-of-sale-request';
+// eslint-disable-next-line import/no-cycle
+import PointOfSaleService from './point-of-sale-service';
+// eslint-disable-next-line import/no-cycle
+import ProductService from './product-service';
 
 interface ContainerVisibility {
   own: boolean;
@@ -57,6 +66,8 @@ export interface UpdatedContainerParameters {
    * Filter based on container owner.
    */
   ownerId?: number;
+  returnProducts?: boolean;
+  productId?: number;
 }
 
 /**
@@ -84,12 +95,12 @@ export default class ContainerService {
    */
   private static asContainerResponse(rawContainer: any): ContainerResponse {
     return {
-      id: rawContainer.id,
-      revision: rawContainer.revision,
-      name: rawContainer.name,
-      createdAt: rawContainer.createdAt,
-      updatedAt: rawContainer.updatedAt,
-      public: !!rawContainer.public,
+      id: rawContainer.container_id,
+      revision: rawContainer.container_revision,
+      name: rawContainer.container_name,
+      createdAt: rawContainer.container_createdAt,
+      updatedAt: rawContainer.container_updatedAt,
+      public: !!rawContainer.container_public,
       owner: {
         id: rawContainer.owner_id,
         firstName: rawContainer.owner_firstName,
@@ -100,6 +111,18 @@ export default class ContainerService {
 
   private static buildGetContainersQuery(filters: ContainerParameters = {})
     : SelectQueryBuilder<Container> {
+    const selection = [
+      'container.id AS container_id',
+      'container.public as container_public',
+      'container.createdAt AS container_createdAt',
+      'containerrevision.revision AS container_revision',
+      'containerrevision.updatedAt AS container_updatedAt',
+      'containerrevision.name AS container_name',
+      'container_owner.id AS owner_id',
+      'container_owner.firstName AS owner_firstName',
+      'container_owner.lastName AS owner_lastName',
+    ];
+
     const builder = createQueryBuilder()
       .from(Container, 'container')
       .innerJoin(
@@ -107,20 +130,12 @@ export default class ContainerService {
         'containerrevision',
         'container.id = containerrevision.container',
       )
-      .innerJoin('container.owner', 'owner')
-      .select([
-        'container.id AS id',
-        'container.public as public',
-        'container.createdAt AS createdAt',
-        'containerrevision.revision AS revision',
-        'containerrevision.updatedAt AS updatedAt',
-        'containerrevision.name AS name',
-        'owner.id AS owner_id',
-        'owner.firstName AS owner_firstName',
-        'owner.lastName AS owner_lastName',
-      ]);
+      .innerJoin('container.owner', 'container_owner')
+      .select(selection);
 
-    const { posId, posRevision, ...p } = filters;
+    const {
+      posId, posRevision, returnProducts, ...p
+    } = filters;
 
     if (posId !== undefined) {
       builder.innerJoin(
@@ -142,10 +157,19 @@ export default class ContainerService {
       );
     }
 
+    if (returnProducts || filters.productId) {
+      builder.innerJoinAndSelect('containerrevision.products', 'products');
+      builder.innerJoinAndSelect('products.category', 'category');
+      builder.innerJoin(Product, 'base_product', 'base_product.id = products.productId');
+      builder.innerJoinAndSelect(User, 'product_owner', 'product_owner.id = base_product.owner.id');
+      builder.leftJoinAndSelect(ProductImage, 'product_image', 'product_image.id = base_product.imageId');
+      if (filters.productId) builder.where(`products.productId = ${filters.productId}`);
+    }
+
     const filterMapping: FilterMapping = {
       containerId: 'container.id',
       containerRevision: 'containerrevision.revision',
-      ownerId: 'owner.id',
+      ownerId: 'ownerId',
       public: 'container.public',
     };
 
@@ -159,23 +183,78 @@ export default class ContainerService {
   }
 
   /**
-   * Query for getting all containers based on user.
+   * Combines the database result products and containers into a ContainerWithProductsResponse
+   * @param rawResponse - The SQL result to combine
+   */
+  public static async combineProducts(rawResponse: any[])
+    : Promise<ContainerWithProductsResponse[]> {
+    const collected: ContainerWithProductsResponse[] = [];
+    const mapping = new Map<string, ContainerWithProductsResponse>();
+    rawResponse.forEach((response) => {
+      // Use a string of revision + id as key
+      const key = JSON.stringify({
+        revision: response.container_revision,
+        id: response.container_id,
+      });
+
+      const rawProduct = {
+        id: response.products_productId,
+        revision: response.products_revision,
+        alcoholpercentage: response.products_alcoholPercentage,
+        category_id: response.products_categoryId,
+        category_name: response.category_name,
+        createdAt: response.products_createdAt,
+        owner_id: response.product_owner_id,
+        owner_firstName: response.product_owner_firstName,
+        owner_lastName: response.product_owner_lastName,
+        image: response.product_image_downloadName,
+        name: response.products_name,
+        price: response.products_price,
+      };
+
+      const productResponse = ProductService.asProductResponse(rawProduct);
+
+      if (mapping.has(key)) {
+        mapping.get(key).products.push(productResponse);
+      } else {
+        const containerWithProductsResponse: ContainerWithProductsResponse = {
+          ...this.asContainerResponse(response),
+          products: [productResponse],
+        };
+
+        mapping.set(key, containerWithProductsResponse);
+      }
+    });
+    mapping.forEach((entry) => {
+      collected.push(entry);
+    });
+    return collected;
+  }
+
+  /**
+   * Query for getting all containers.
    * @param filters
    * @param pagination
    */
   public static async getContainers(
     filters: ContainerParameters = {}, pagination: PaginationParameters = {},
-  ): Promise<PaginatedContainerResponse> {
+  ): Promise<PaginatedContainerResponse | PaginatedContainerWithProductResponse> {
     const { take, skip } = pagination;
 
     const builder = this.buildGetContainersQuery(filters);
 
     const results = await Promise.all([
       builder.limit(take).offset(skip).getRawMany(),
-      builder.getCount(),
+      this.buildGetContainersQuery({ ...filters, returnProducts: false }).getCount(),
     ]);
 
-    const records = results[0].map((rawContainer) => this.asContainerResponse(rawContainer));
+    let records;
+    if (filters.returnProducts) {
+      records = await this.combineProducts(results[0]);
+    } else {
+      records = results[0].map((rawContainer) => this.asContainerResponse(rawContainer));
+    }
+
     return {
       _pagination: {
         take, skip, count: results[1],
@@ -196,16 +275,24 @@ export default class ContainerService {
       )
       .innerJoinAndSelect('container.owner', 'owner')
       .select([
-        'container.id AS id',
-        'container.public as public',
-        'container.createdAt AS createdAt',
-        'updatedcontainer.updatedAt AS updatedAt',
-        'updatedcontainer.name AS name',
+        'container.id AS container_id',
+        'container.public as container_public',
+        'container.createdAt AS container_createdAt',
+        'updatedcontainer.updatedAt AS container_updatedAt',
+        'updatedcontainer.name AS container_name',
         'owner.id AS owner_id',
         'owner.firstName AS owner_firstName',
         'owner.lastName AS owner_lastName',
       ]);
 
+    if (filters.returnProducts || filters.productId) {
+      builder.innerJoinAndSelect('updatedcontainer.products', 'base_product');
+      builder.innerJoinAndSelect(ProductRevision, 'products', 'base_product.id = products.productId AND base_product.currentRevision = products.revision');
+      builder.innerJoinAndSelect('products.category', 'category');
+      builder.innerJoinAndSelect(User, 'product_owner', 'product_owner.id = base_product.owner.id');
+      builder.leftJoinAndSelect(ProductImage, 'product_image', 'product_image.id = base_product.imageId');
+      if (filters.productId) builder.where(`products.productId = ${filters.productId}`);
+    }
     const filterMapping: FilterMapping = {
       containerId: 'container.id',
       containerRevision: 'containerrevision.revision',
@@ -231,10 +318,15 @@ export default class ContainerService {
 
     const results = await Promise.all([
       builder.limit(take).offset(skip).getRawMany(),
-      builder.getCount(),
+      this.buildGetUpdatedContainersQuery({ ...filters, returnProducts: false }).getCount(),
     ]);
 
-    const records = results[0].map((rawContainer) => (this.asContainerResponse(rawContainer)));
+    let records;
+    if (filters.returnProducts) {
+      records = await this.combineProducts(results[0]);
+    } else {
+      records = results[0].map((rawContainer) => this.asContainerResponse(rawContainer));
+    }
 
     return {
       _pagination: {
@@ -247,12 +339,13 @@ export default class ContainerService {
   /**
    * Creates a new container.
    *
-   * The newly created container resides in the Container table and has no
+   * If approve is false then the newly created container resides in the Container table and has no
    * current revision. To confirm the revision the update has to be accepted.
    *
    * @param container - The params that describe the container to be created.
+   * @param approve - If the container should be instantly approved.
    */
-  public static async createContainer(container: CreateContainerParams)
+  public static async createContainer(container: CreateContainerParams, approve = false)
     : Promise<ContainerWithProductsResponse> {
     const base = Object.assign(new Container(), {
       public: container.public,
@@ -267,11 +360,50 @@ export default class ContainerService {
       id: base.id,
     };
 
-    return this.updateContainer(update);
+    let createdContainer;
+    if (approve) {
+      createdContainer = await this.directContainerUpdate(update);
+    } else {
+      createdContainer = await this.updateContainer(update);
+    }
+
+    return createdContainer;
+  }
+
+  public static async applyContainerUpdate(base: Container, updateRequest: UpdateContainerRequest) {
+    // Get the latest products
+    const products = await Product.findByIds(updateRequest.products);
+
+    // Get the product id's for this update.
+    const productIds: { revision: number, product: { id : number } }[] = (
+      products.map((product) => (
+        { revision: product.currentRevision, product: { id: product.id } })));
+
+    const productRevisions: ProductRevision[] = await ProductRevision.findByIds(productIds);
+
+    // Set base container and apply new revision.
+    const containerRevision: ContainerRevision = Object.assign(new ContainerRevision(), {
+      container: base,
+      products: productRevisions,
+      name: updateRequest.name,
+      // Increment revision.
+      revision: base.currentRevision ? base.currentRevision + 1 : 1,
+    });
+
+    // First save revision.
+    await ContainerRevision.save(containerRevision);
+
+    // Increment current revision.
+    // eslint-disable-next-line no-param-reassign
+    base.currentRevision = base.currentRevision ? base.currentRevision + 1 : 1;
+    // eslint-disable-next-line no-param-reassign
+    base.public = updateRequest.public;
+    await base.save();
+    await this.propagateContainerUpdate(base.id);
   }
 
   /**
-   * Confirms an container update and creates a container revision.
+   * Confirms a container update and creates a container revision.
    * @param containerId - The container update to confirm.
    */
   public static async approveContainerUpdate(containerId: number)
@@ -284,44 +416,23 @@ export default class ContainerService {
       return undefined;
     }
 
-    // Get the product id's for this update.
-    const productIds: { revision: number, product: { id : number } }[] = (
-      rawContainerUpdate.products.map((product) => (
-        { revision: product.currentRevision, product: { id: product.id } })));
-
-    // All products with a pending update are also updated
-    const updatedProducts: UpdatedProduct[] = await UpdatedProduct.findByIds(productIds, { relations: ['product'] });
-
-    if (updatedProducts.length !== 0) {
-      await Promise.all(updatedProducts.map(
-        (p) => ProductService.approveProductUpdate(p.product.id)
-          .then((up) => productIds.push({ revision: up.revision, product: { id: up.id } })),
-      ));
-    }
-
-    const productRevisions: ProductRevision[] = await ProductRevision.findByIds(productIds);
-
-    // Set base container and apply new revision.
-    const containerRevision: ContainerRevision = Object.assign(new ContainerRevision(), {
-      container: base,
-      products: productRevisions,
+    const updateRequest: UpdateContainerRequest = {
+      products: rawContainerUpdate.products.map((p) => p.id),
+      public: base.public,
       name: rawContainerUpdate.name,
-      // Increment revision.
-      revision: base.currentRevision ? base.currentRevision + 1 : 1,
-    });
+    };
 
-    // First save revision.
-    await ContainerRevision.save(containerRevision);
-
-    // Increment current revision.
-    base.currentRevision = base.currentRevision ? base.currentRevision + 1 : 1;
-    await base.save();
+    await this.applyContainerUpdate(base, updateRequest);
 
     // Remove update after revision is created.
     await UpdatedContainer.delete(containerId);
 
+    const container = (await this.getContainers(
+      { containerId, returnProducts: true },
+    ) as PaginatedContainerWithProductResponse).records[0];
+
     // Return the new container with products.
-    return this.getProductsResponse({ containerId, updated: false });
+    return container;
   }
 
   /**
@@ -338,24 +449,8 @@ export default class ContainerService {
       return undefined;
     }
 
-    // If the ContainerRequests contain product updates we delegate them.
-    const { ids, requests } = getIdsAndRequests<ProductRequest>(update.products);
-
-    // Apply requests.
-    await Promise.all(requests.map((p) => {
-      if (Object.prototype.hasOwnProperty.call(p, 'id')) {
-        // Push down ownership if unspecified.
-        const param : UpdateProductParams = {
-          ...(p as UpdateProductParams),
-          ownerId: p.ownerId ?? update.ownerId,
-        };
-        return ProductService.updateProduct(param);
-      }
-      return ProductService.createProduct(p);
-    }));
-
     let products: Product[] = [];
-    await Promise.all(ids.map((id) => Product.findOne(id)))
+    await Promise.all(update.products.map((id) => Product.findOne(id)))
       .then((result) => { products = result.filter((p) => p); });
 
     // Set base container and apply new update.
@@ -368,38 +463,49 @@ export default class ContainerService {
     // Save update
     await updatedContainer.save();
 
+    const container = (await this.getUpdatedContainers(
+      { containerId: base.id, returnProducts: true },
+    )).records[0] as ContainerWithProductsResponse;
+
     // Return container with products.
-    return this.getProductsResponse({ containerId: base.id, updated: true });
+    return container;
   }
 
   /**
-   * Turns a ContainerResponse into a ContainerWithProductsResponse
-   * @param container - The container to return
+   * Updates a container by directly creating a revision.
+   * @param update - The container update
    */
-  public static async getProductsResponse(container
-  : { containerId: number, containerRevision?: number, updated?: boolean })
+  public static async directContainerUpdate(update: UpdateContainerParams)
     : Promise<ContainerWithProductsResponse> {
-    // Get base container
-    const containerResponse: ContainerResponse = container.updated
-      ? ((await this.getUpdatedContainers(
-        { containerId: container.containerId },
-      )).records[0])
-      : ((await this.getContainers(
-        { containerId: container.containerId, containerRevision: container.containerRevision },
-      )).records[0]);
+    const base: Container = await Container.findOne({ where: { id: update.id } });
+    await this.applyContainerUpdate(base, update);
+    return (this.getContainers({ containerId: base.id, returnProducts: true })
+      .then((c) => c.records[0])) as Promise<ContainerWithProductsResponse>;
+  }
 
-    const containerProducts
-    : ContainerWithProductsResponse = containerResponse as ContainerWithProductsResponse;
+  /**
+   * Propagates the container update to all point of sales.
+   *
+   * All POS that contain the previous version of this container
+   * will be revised to include the new revision.
+   *
+   * @param containerId - The container to propagate
+   */
+  public static async propagateContainerUpdate(containerId: number) {
+    const pos = await PointOfSaleRevision.find({ where: `"PointOfSaleRevision__containers"."containerId" = ${containerId} AND ("PointOfSaleRevision__containers__container"."currentRevision" - 1) = "PointOfSaleRevision__containers"."revision"  AND "PointOfSaleRevision__pointOfSale"."currentRevision" = "PointOfSaleRevision"."revision"`, relations: ['pointOfSale', 'containers', 'containers.container'] });
 
-    // Fill products
-    containerProducts.products = (await ProductService.getProducts(
-      {
-        containerId: container.containerId,
-        containerRevision: container.containerRevision,
-        updatedContainer: container.updated,
-      },
-    )).records;
-    return containerProducts;
+    // The async-for loop is intentional to prevent race-conditions.
+    // To fix this the good way would be shortlived, the structure of POS/Containers will be changed
+    for (let i = 0; i < pos.length; i += 1) {
+      const p = pos[i];
+      const update: UpdatePointOfSaleParams = {
+        containers: p.containers.map((c) => c.container.id),
+        name: p.name,
+        id: p.pointOfSale.id,
+      };
+      // eslint-disable-next-line no-await-in-loop
+      await PointOfSaleService.directPointOfSaleUpdate(update);
+    }
   }
 
   /**
