@@ -110,7 +110,7 @@ export async function createInvoiceWithTransfers(debtorId: number, creditorId: n
   expect((await BalanceService.getBalance(debtorId)).amount.amount).is.equal(0);
   await new Promise((f) => setTimeout(f, 500));
   const { tIds, cost } = await requestToTransaction(transactions);
-  expect(await BalanceService.getBalance(debtorId)).is.equal(-1 * cost);
+  expect((await BalanceService.getBalance(debtorId)).amount.amount).is.equal(-1 * cost);
 
   const createInvoiceRequest: CreateInvoiceParams = {
     byId: creditorId,
@@ -122,7 +122,7 @@ export async function createInvoiceWithTransfers(debtorId: number, creditorId: n
 
   const invoice = await InvoiceService.createInvoice(createInvoiceRequest);
   await new Promise((f) => setTimeout(f, 100));
-  expect(await BalanceService.getBalance(debtorId)).is.equal(0);
+  expect((await BalanceService.getBalance(debtorId)).amount.amount).is.equal(0);
   return invoice;
 }
 
@@ -242,12 +242,15 @@ describe('InvoiceService', () => {
           debtor.id, creditor.id, 2,
         );
 
-        expect(await BalanceService.getBalance(debtor.id)).is.equal(0);
+        expect((await BalanceService.getBalance(debtor.id)).amount.amount)
+          .is.equal(0);
         const first = await requestToTransaction(transactions);
-        expect(await BalanceService.getBalance(debtor.id)).is.equal(-1 * first.cost);
+        expect((await BalanceService.getBalance(debtor.id)).amount.amount)
+          .is.equal(-1 * first.cost);
 
         await InvoiceService.createInvoice(createInvoiceRequest);
-        expect(await BalanceService.getBalance(debtor.id)).is.equal(0);
+        expect((await BalanceService.getBalance(debtor.id)).amount.amount)
+          .is.equal(0);
       });
     });
     it('should create an Invoice for transactions without prior invoice', async () => {
@@ -270,12 +273,14 @@ describe('InvoiceService', () => {
         const first = await requestToTransaction(transactions);
 
         await new Promise((f) => setTimeout(f, 500));
-        expect(await BalanceService.getBalance(debtor.id)).is.equal(-1 * first.cost);
+        expect((await BalanceService.getBalance(debtor.id)).amount.amount)
+          .is.equal(-1 * first.cost);
 
         await new Promise((f) => setTimeout(f, 1000));
 
         await InvoiceService.createInvoice(createInvoiceRequest);
-        expect(await BalanceService.getBalance(debtor.id)).is.equal(0);
+        expect((await BalanceService.getBalance(debtor.id)).amount.amount)
+          .is.equal(0);
       });
     });
     it('should create Invoice since latest invoice if nothing specified', async () => {
@@ -303,12 +308,14 @@ describe('InvoiceService', () => {
 
         const first = await requestToTransaction(transactions);
         await new Promise((f) => setTimeout(f, 500));
-        expect(await BalanceService.getBalance(debtor.id)).is.equal(-1 * first.cost);
+        expect((await BalanceService.getBalance(debtor.id)).amount.amount)
+          .is.equal(-1 * first.cost);
 
         await new Promise((f) => setTimeout(f, 1000));
 
         await InvoiceService.createInvoice(createInvoiceRequest);
-        expect(await BalanceService.getBalance(debtor.id)).is.equal(0);
+        expect((await BalanceService.getBalance(debtor.id)).amount.amount)
+          .is.equal(0);
       });
     });
     it('should set a reference to Invoice for all SubTransactionRows', async () => {
@@ -327,7 +334,7 @@ describe('InvoiceService', () => {
         };
 
         const invoice = await InvoiceService.createInvoice(createInvoiceRequest);
-        expect(await BalanceService.getBalance(debtor.id)).is.equal(0);
+        expect((await BalanceService.getBalance(debtor.id)).amount.amount).is.equal(0);
         const transactions = await Transaction.findByIds(tIds, { relations: ['subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice'] });
         transactions.forEach((t) => {
           t.subTransactions.forEach((tSub) => {
@@ -426,7 +433,7 @@ describe('InvoiceService', () => {
         expect(updatedInvoice.currentState.state).to.be.equal(InvoiceState[InvoiceState.DELETED]);
 
         // Check if the balance has been decreased
-        expect(await BalanceService.getBalance(debtor.id))
+        expect((await BalanceService.getBalance(debtor.id)).amount.amount)
           .is.equal(-1 * invoice.transfer.amount.amount);
       });
     });
