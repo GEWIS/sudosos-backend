@@ -540,7 +540,7 @@ export default class ProductService {
   public static async approveProductUpdate(productId: number)
     : Promise<ProductResponse> {
     const base: Product = await Product.findOne(productId);
-    const rawUpdateProduct = await UpdatedProduct.findOne({ where: { product: { id: productId } }, relations: ['category'] });
+    const rawUpdateProduct = await UpdatedProduct.findOne({ where: { product: { id: productId } }, relations: ['category', 'vat'] });
 
     // return undefined if not found or request is invalid
     if (!base || !rawUpdateProduct) {

@@ -435,18 +435,6 @@ describe('ContainerController', async (): Promise<void> => {
 
       expect(res.status).to.equal(400);
     });
-    it('should return an HTTP 403 if not admin', async () => {
-      const containerCount = await Container.count();
-      const res = await request(ctx.app)
-        .post('/containers')
-        .set('Authorization', `Bearer ${ctx.token}`)
-        .send(ctx.validContainerReq);
-
-      expect(await Container.count()).to.equal(containerCount);
-      expect(res.body).to.be.empty;
-
-      expect(res.status).to.equal(403);
-    });
   });
   describe('POST /containers/:id/approve', () => {
     it('should approve the container update if it exists and admin', async () => {
@@ -500,7 +488,7 @@ describe('ContainerController', async (): Promise<void> => {
 
       const newContainer = (await request(ctx.app)
         .post('/containers')
-        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .set('Authorization', `Bearer ${ctx.token}`)
         .send(container)).body as ContainerWithProductsResponse;
 
       const res = await request(ctx.app)
@@ -539,6 +527,25 @@ describe('ContainerController', async (): Promise<void> => {
   describe('PATCH /containers/:id', () => {
     describe('verifyContainerRequest Specification', async () => {
       await testValidationOnRoute('patch', '/containers/1');
+    });
+    it('should return an HTTP 200 and the container update if user', async () => {
+      const res = await request(ctx.app)
+        .patch('/containers/1')
+        .set('Authorization', `Bearer ${ctx.token}`)
+        .send(ctx.validContainerReq);
+
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'ContainerWithProductsResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+
+      containerProductsEq(ctx.validContainerReq, res.body as ContainerWithProductsResponse);
+
+      const databaseContainer = await UpdatedContainer.findOne((res.body as ContainerResponse).id);
+      expect(databaseContainer).to.exist;
     });
     it('should return an HTTP 200 and the container update if admin', async () => {
       const res = await request(ctx.app)
