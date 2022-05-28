@@ -45,9 +45,9 @@ export default class Balance extends BaseEntity {
   @Column({ type: 'integer' })
   public readonly amount: number;
 
-  @Column({ type: 'integer' })
-  public readonly lastTransaction: number;
+  @Column({ type: 'integer', nullable: true })
+  public readonly lastTransaction?: number;
 
-  @Column({ type: 'integer' })
-  public readonly lastTransfer: number;
+  @Column({ type: 'integer', nullable: true })
+  public readonly lastTransfer?: number;
 }
