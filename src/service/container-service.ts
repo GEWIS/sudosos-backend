@@ -158,10 +158,10 @@ export default class ContainerService {
     }
 
     if (returnProducts || filters.productId) {
-      builder.innerJoinAndSelect('containerrevision.products', 'products');
-      builder.innerJoinAndSelect('products.category', 'category');
-      builder.innerJoin(Product, 'base_product', 'base_product.id = products.productId');
-      builder.innerJoinAndSelect(User, 'product_owner', 'product_owner.id = base_product.owner.id');
+      builder.leftJoinAndSelect('containerrevision.products', 'products');
+      builder.leftJoinAndSelect('products.category', 'category');
+      builder.leftJoin(Product, 'base_product', 'base_product.id = products.productId');
+      builder.leftJoinAndSelect(User, 'product_owner', 'product_owner.id = base_product.owner.id');
       builder.leftJoinAndSelect(ProductImage, 'product_image', 'product_image.id = base_product.imageId');
       if (filters.productId) builder.where(`products.productId = ${filters.productId}`);
     }
@@ -212,17 +212,27 @@ export default class ContainerService {
         priceInclVat: response.products_priceInclVat,
       };
 
-      const productResponse = ProductService.asProductResponse(rawProduct);
-
-      if (mapping.has(key)) {
-        mapping.get(key).products.push(productResponse);
-      } else {
+      // Container is empty
+      if (rawProduct.id === null) {
         const containerWithProductsResponse: ContainerWithProductsResponse = {
           ...this.asContainerResponse(response),
-          products: [productResponse],
+          products: [],
         };
 
         mapping.set(key, containerWithProductsResponse);
+      } else {
+        const productResponse = ProductService.asProductResponse(rawProduct);
+
+        if (mapping.has(key)) {
+          mapping.get(key).products.push(productResponse);
+        } else {
+          const containerWithProductsResponse: ContainerWithProductsResponse = {
+            ...this.asContainerResponse(response),
+            products: [productResponse],
+          };
+
+          mapping.set(key, containerWithProductsResponse);
+        }
       }
     });
     mapping.forEach((entry) => {
