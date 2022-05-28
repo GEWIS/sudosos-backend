@@ -16,6 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { createQueryBuilder, SelectQueryBuilder } from 'typeorm';
+import { DineroObject } from 'dinero.js';
 import {
   PaginatedProductResponse,
   ProductResponse,
@@ -39,6 +40,7 @@ import { asBoolean, asDate, asNumber } from '../helpers/validators';
 // eslint-disable-next-line import/no-cycle
 import ContainerService from './container-service';
 import { UpdateContainerParams } from '../controller/request/container-request';
+import { BaseVatGroupResponse } from '../controller/response/vat-group-response';
 
 /**
  * Define product filtering parameters used to filter query results.
@@ -93,6 +95,10 @@ export interface ProductFilterParameters {
   //  */
   // categoryName?: string;
   /**
+   * Filter based on the VAT group id.
+   */
+  vatGroupId?: number;
+  /**
    * Filter based on created at attribute.
    */
   createdAt?: Date;
@@ -108,7 +114,7 @@ export interface ProductFilterParameters {
   /**
    * Filter based on product price.
    */
-  price?: number;
+  priceInclVat?: number;
   /**
    * Filter based on alcohol percentage.
    */
@@ -137,7 +143,7 @@ export function parseGetProductFilters(req: RequestWithToken): ProductFilterPara
     createdAt: asDate(req.query.createdAt),
     updatedAt: asDate(req.query.updatedAt),
     // productName: asString(req.query.productName),
-    price: asNumber(req.query.price),
+    priceInclVat: asNumber(req.query.priceInclVat),
     alcoholPercentage: asNumber(req.query.alcoholPercentage),
   };
 
@@ -153,6 +159,18 @@ export default class ProductService {
    * @param rawProduct - the raw response to parse.
    */
   public static asProductResponse(rawProduct: any): ProductResponse {
+    const priceInclVat = DineroTransformer.Instance.from(rawProduct.priceInclVat).toObject();
+    const vatPercentage = rawProduct.vat_percentage as number; // percentage
+    const priceExclVat: DineroObject = {
+      ...priceInclVat,
+      amount: Math.round(priceInclVat.amount / (1 + (vatPercentage / 100))),
+    };
+    const vat: BaseVatGroupResponse = {
+      id: rawProduct.vat_id,
+      percentage: rawProduct.vat_percentage,
+      hidden: rawProduct.vat_hidden,
+    };
+
     return {
       id: rawProduct.id,
       revision: rawProduct.revision,
@@ -169,7 +187,9 @@ export default class ProductService {
       },
       image: rawProduct.image,
       name: rawProduct.name,
-      price: DineroTransformer.Instance.from(rawProduct.price).toObject(),
+      priceInclVat,
+      priceExclVat,
+      vat,
     };
   }
 
@@ -188,10 +208,11 @@ export default class ProductService {
       ownerId: 'owner.id',
       categoryId: 'category.id',
       categoryName: 'category.name',
+      vatGroupId: 'vatgroup.id',
       createdAt: 'product.createdAt',
       updatedAt: 'productrevision.updatedAt',
       productName: 'productrevision.name',
-      price: 'productrevision.price',
+      priceInclVat: 'productrevision.priceInclVat',
       alcoholPercentage: 'productrevision.alcoholpercentage',
     };
 
@@ -324,6 +345,7 @@ export default class ProductService {
     builder
       .innerJoinAndSelect('product.owner', 'owner')
       .innerJoinAndSelect('productrevision.category', 'category')
+      .innerJoinAndSelect('productrevision.vat', 'vatgroup')
       .leftJoinAndSelect('product.image', 'image')
       .select([
         'product.id AS id',
@@ -331,7 +353,10 @@ export default class ProductService {
         'product.createdAt AS createdAt',
         'productrevision.updatedAt AS updatedAt',
         'productrevision.name AS name',
-        'productrevision.price AS price',
+        'productrevision.priceInclVat AS priceInclVat',
+        'vatgroup.id AS vat_id',
+        'vatgroup.percentage AS vat_percentage',
+        'vatgroup.hidden AS vat_hidden',
         'owner.id AS owner_id',
         'owner.firstName AS owner_firstName',
         'owner.lastName AS owner_lastName',
@@ -364,13 +389,17 @@ export default class ProductService {
     builder
       .innerJoinAndSelect('product.owner', 'owner')
       .innerJoinAndSelect('updatedproduct.category', 'category')
+      .innerJoinAndSelect('updatedproduct.vat', 'vatgroup')
       .leftJoinAndSelect('product.image', 'image')
       .select([
         'product.id AS id',
         'product.createdAt AS createdAt',
         'updatedproduct.updatedAt AS updatedAt',
         'updatedproduct.name AS name',
-        'updatedproduct.price AS price',
+        'updatedproduct.priceInclVat AS priceInclVat',
+        'vatgroup.id AS vat_id',
+        'vatgroup.percentage AS vat_percentage',
+        'vatgroup.hidden AS vat_hidden',
         'owner.id AS owner_id',
         'owner.firstName AS owner_firstName',
         'owner.lastName AS owner_lastName',
@@ -427,7 +456,7 @@ export default class ProductService {
     const updatedProduct = Object.assign(new UpdatedProduct(), {
       product: base,
       ...update,
-      price: DineroTransformer.Instance.from(update.price.amount),
+      priceInclVat: DineroTransformer.Instance.from(update.priceInclVat.amount),
     });
 
     // Save the product.
@@ -460,8 +489,9 @@ export default class ProductService {
     await base.save();
 
     const update: UpdateProductParams = {
-      price: product.price,
+      priceInclVat: product.priceInclVat,
       category: product.category,
+      vat: product.vat,
       alcoholPercentage: product.alcoholPercentage,
       name: product.name,
       id: base.id,
@@ -488,7 +518,7 @@ export default class ProductService {
       // Increment revision.
       revision: base.currentRevision ? base.currentRevision + 1 : 1,
       // Fix dinero
-      price: DineroTransformer.Instance.from(update.price.amount),
+      priceInclVat: DineroTransformer.Instance.from(update.priceInclVat.amount),
     });
 
     // First save the revision.
@@ -510,7 +540,7 @@ export default class ProductService {
   public static async approveProductUpdate(productId: number)
     : Promise<ProductResponse> {
     const base: Product = await Product.findOne(productId);
-    const rawUpdateProduct = await UpdatedProduct.findOne({ where: { product: { id: productId } }, relations: ['category'] });
+    const rawUpdateProduct = await UpdatedProduct.findOne({ where: { product: { id: productId } }, relations: ['category', 'vat'] });
 
     // return undefined if not found or request is invalid
     if (!base || !rawUpdateProduct) {
@@ -518,12 +548,13 @@ export default class ProductService {
     }
 
     const updateRequest = {
-      price: {
-        amount: rawUpdateProduct.price.getAmount(),
-        currency: rawUpdateProduct.price.getCurrency(),
-        precision: rawUpdateProduct.price.getPrecision(),
+      priceInclVat: {
+        amount: rawUpdateProduct.priceInclVat.getAmount(),
+        currency: rawUpdateProduct.priceInclVat.getCurrency(),
+        precision: rawUpdateProduct.priceInclVat.getPrecision(),
       },
       category: rawUpdateProduct.category.id,
+      vat: rawUpdateProduct.vat.id,
       alcoholPercentage: rawUpdateProduct.alcoholPercentage,
       name: rawUpdateProduct.name,
     } as UpdateProductRequest;

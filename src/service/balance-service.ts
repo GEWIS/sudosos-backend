@@ -38,13 +38,13 @@ export default class BalanceService {
       const idStr = `(${params.ids.join(',')})`;
       // eslint-disable-next-line prefer-template
       await entityManager.query(`REPLACE INTO balance select id, sum(amount), ${transactionMax}, ${transferMax} from ( `
-          + 'select t.fromId as `id`, str.amount * pr.price * -1 as `amount` from `transaction` as `t` '
+          + 'select t.fromId as `id`, str.amount * pr.priceInclVat * -1 as `amount` from `transaction` as `t` '
             + 'inner join sub_transaction st on t.id=st.transactionId '
             + 'inner join sub_transaction_row str on st.id=str.subTransactionId '
             + 'inner join product_revision pr on str.productRevision=pr.revision and str.productProduct=pr.productId '
             + `where t.id <= ? and t.fromId in ${idStr} `
           + 'UNION ALL '
-          + 'select st2.toId as `id`, str2.amount * pr2.price as `amount` from sub_transaction st2 '
+          + 'select st2.toId as `id`, str2.amount * pr2.priceInclVat as `amount` from sub_transaction st2 '
             + 'inner join sub_transaction_row str2 on st2.id=str2.subTransactionId '
             + 'inner join product_revision pr2 on str2.productRevision=pr2.revision and str2.productProduct=pr2.productId '
             + `where st2.transactionId <= ? and st2.toId in ${idStr} `
@@ -56,13 +56,13 @@ export default class BalanceService {
     } else {
       // eslint-disable-next-line prefer-template
       await entityManager.query(`REPLACE INTO balance select id, sum(amount), ${transactionMax}, ${transferMax} from ( `
-          + 'select t.fromId as `id`, str.amount * pr.price * -1 as `amount` from `transaction` as `t` '
+          + 'select t.fromId as `id`, str.amount * pr.priceInclVat * -1 as `amount` from `transaction` as `t` '
             + 'inner join sub_transaction st on t.id=st.transactionId '
             + 'inner join sub_transaction_row str on st.id=str.subTransactionId '
             + 'inner join product_revision pr on str.productRevision=pr.revision and str.productProduct=pr.productId '
             + 'where t.id <= ? '
           + 'UNION ALL '
-          + 'select st2.toId as `id`, str2.amount * pr2.price as `amount` from sub_transaction st2 '
+          + 'select st2.toId as `id`, str2.amount * pr2.priceInclVat as `amount` from sub_transaction st2 '
             + 'inner join sub_transaction_row str2 on st2.id=str2.subTransactionId '
             + 'inner join product_revision pr2 on str2.productRevision=pr2.revision and str2.productProduct=pr2.productId '
             + 'where st2.transactionId <= ? '
@@ -106,13 +106,13 @@ export default class BalanceService {
     }
 
     const laterTransactions = await entityManager.query('SELECT id, sum(amount) as amount from ( '
-      + 'select t.fromId as `id`, str.amount * pr.price * -1 as `amount` from `transaction` as `t` '
+      + 'select t.fromId as `id`, str.amount * pr.priceInclVat * -1 as `amount` from `transaction` as `t` '
       + 'inner join sub_transaction st on t.id=st.transactionId '
       + 'inner join sub_transaction_row str on st.id=str.subTransactionId '
       + 'inner join product_revision pr on str.productRevision=pr.revision and str.productProduct=pr.productId '
       + 'where t.fromId = ? and t.id > ?'
       + 'UNION ALL '
-      + 'select st2.toId as `id`, str2.amount * pr2.price as `amount` from sub_transaction st2 '
+      + 'select st2.toId as `id`, str2.amount * pr2.priceInclVat as `amount` from sub_transaction st2 '
       + 'inner join sub_transaction_row str2 on st2.id=str2.subTransactionId '
       + 'inner join product_revision pr2 on str2.productRevision=pr2.revision and str2.productProduct=pr2.productId '
       + 'where st2.toId = ? and st2.transactionId > ? '

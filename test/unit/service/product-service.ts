@@ -25,7 +25,8 @@ import Database from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
 import ProductService, { ProductFilterParameters } from '../../../src/service/product-service';
 import {
-  seedAllProducts, seedAllContainers, seedProductCategories, seedUsers, seedAllPointsOfSale,
+  seedAllProducts, seedAllContainers, seedProductCategories,
+  seedUsers, seedAllPointsOfSale, seedVatGroups,
 } from '../../seed';
 import Product from '../../../src/entity/product/product';
 import { PaginatedProductResponse, ProductResponse } from '../../../src/controller/response/product-response';
@@ -46,6 +47,19 @@ import { CreatePointOfSaleParams } from '../../../src/controller/request/point-o
 import PointOfSaleService from '../../../src/service/point-of-sale-service';
 
 chai.use(deepEqualInAnyOrder);
+
+/**
+ * Test if the price excluding VAT in the response is correct
+ * @param response
+ */
+function correctPriceExclVat(response: ProductResponse) {
+  const priceInclVat = Math.round(
+    response.priceExclVat.amount * (1 + (response.vat.percentage / 100)),
+  );
+  // Rounding issues are a thing, e.g. with price including 21% VAT of 78
+  const diff = Math.abs(priceInclVat - response.priceInclVat.amount);
+  expect(diff).to.be.at.most(1);
+}
 
 /**
  * Test if all the product responses are part of the product set array.
@@ -88,10 +102,12 @@ function productRevisionToProductWithRevision(product: ProductRevision): Product
 function validateProductProperties(response: ProductResponse,
   productParams: CreateProductParams | UpdateProductParams) {
   Object.keys(productParams).forEach((key: keyof CreateProductParams) => {
-    if (key === 'price') {
-      expect((productParams[key] as any).amount).to.be.equal((response.price.amount));
+    if (key === 'priceInclVat') {
+      expect((productParams[key] as any).amount).to.be.equal((response.priceInclVat.amount));
     } else if (key === 'category') {
       expect((productParams[key] as any)).to.be.equal((response.category.id));
+    } else if (key === 'vat') {
+      expect((productParams[key] as any)).to.be.equal((response.vat.id));
     } else if (key === 'ownerId') {
       if ((productParams as any).ownerId !== undefined) {
         expect((productParams as any).ownerId).to.be.equal((response.owner.id));
@@ -124,6 +140,7 @@ describe('ProductService', async (): Promise<void> => {
     const connection = await Database.initialize();
 
     const categories = await seedProductCategories();
+    const vatGroups = await seedVatGroups();
     const users = await seedUsers();
 
     const {
@@ -131,7 +148,7 @@ describe('ProductService', async (): Promise<void> => {
       productImages,
       productRevisions,
       updatedProducts,
-    } = await seedAllProducts(users, categories);
+    } = await seedAllProducts(users, categories, vatGroups);
     const {
       containers,
       containerRevisions,
@@ -180,6 +197,20 @@ describe('ProductService', async (): Promise<void> => {
       const products = ctx.products.filter((prod) => prod.currentRevision !== null);
 
       returnsAll(records, products);
+      for (let i = 0; i < records.length; i += 1) {
+        const p = records[i];
+        if (p.vat !== undefined || p.priceExclVat !== undefined) {
+          correctPriceExclVat(p);
+        } else {
+          // eslint-disable-next-line no-await-in-loop
+          const productRevision = await ProductRevision.findOne({
+            where: { product: p.id, revision: p.revision },
+            relations: ['vat'],
+          });
+          const vatGroup = productRevision!.vat;
+          expect(vatGroup.hidden).to.be.true;
+        }
+      }
 
       expect(_pagination.take).to.be.undefined;
       expect(_pagination.skip).to.be.undefined;
@@ -232,6 +263,18 @@ describe('ProductService', async (): Promise<void> => {
       const { records } = await ProductService.getProducts(params);
 
       expect(records).to.be.empty;
+    });
+    it('should return the products belonging to a VAT group', async () => {
+      const params: ProductFilterParameters = {
+        vatGroupId: 1,
+      };
+      const { records } = await ProductService.getProducts(params);
+
+      const products = ctx.productRevisions
+        .filter((rev) => rev.vat.id === params.vatGroupId)
+        .filter((rev) => rev.revision === rev.product.currentRevision);
+
+      returnsAllRevisions(records, products);
     });
     it('should return the products belonging to a container', async () => {
       const params: ProductFilterParameters = {
@@ -352,10 +395,11 @@ describe('ProductService', async (): Promise<void> => {
     it('should update a product by ID', async () => {
       const updateParams: UpdateProductParams = {
         category: 3,
+        vat: 1,
         id: 2,
         alcoholPercentage: 8,
         name: 'Product2-update',
-        price: {
+        priceInclVat: {
           amount: 72,
           currency: 'EUR',
           precision: 2,
@@ -375,12 +419,13 @@ describe('ProductService', async (): Promise<void> => {
       const productParams: CreateProductParams = {
         alcoholPercentage: 9,
         name: 'Product77-update',
-        price: {
+        priceInclVat: {
           amount,
           currency: 'EUR',
           precision: 2,
         },
         category: 1,
+        vat: 1,
         ownerId: ctx.users[0].id,
       };
 
@@ -402,12 +447,13 @@ describe('ProductService', async (): Promise<void> => {
         alcoholPercentage: 9,
         ownerId: ctx.users[0].id,
         name: 'Product77-update',
-        price: {
+        priceInclVat: {
           amount: amount - 1,
           currency: 'EUR',
           precision: 2,
         },
         category: 1,
+        vat: 1,
       };
 
       const res: ProductResponse = await ProductService.createProduct(productParams);
@@ -415,12 +461,13 @@ describe('ProductService', async (): Promise<void> => {
       const updateParams: UpdateProductParams = {
         alcoholPercentage: 10,
         name: 'Product77-update',
-        price: {
+        priceInclVat: {
           amount,
           currency: 'EUR',
           precision: 2,
         },
         category: 2,
+        vat: 1,
         id: res.id,
       };
 
@@ -437,9 +484,10 @@ describe('ProductService', async (): Promise<void> => {
       const creation: CreateProductParams = {
         alcoholPercentage: 0,
         category: 1,
+        vat: 1,
         name: 'New Product Name',
         ownerId: (await User.findOne({ where: { deleted: false } })).id,
-        price: {
+        priceInclVat: {
           amount: 50,
           currency: 'EUR',
           precision: 2,
@@ -459,9 +507,10 @@ describe('ProductService', async (): Promise<void> => {
       const update: UpdateProductParams = {
         alcoholPercentage: 10,
         category: 1,
+        vat: 1,
         id: product.id,
         name: 'A product update',
-        price: {
+        priceInclVat: {
           amount: 51,
           precision: 2,
           currency: 'EUR',
@@ -478,9 +527,10 @@ describe('ProductService', async (): Promise<void> => {
       const createProduct: CreateProductParams = {
         alcoholPercentage: 0,
         category: 1,
+        vat: 1,
         name: 'New Product Name',
         ownerId,
-        price: {
+        priceInclVat: {
           amount: 50,
           currency: 'EUR',
           precision: 2,
@@ -502,8 +552,9 @@ describe('ProductService', async (): Promise<void> => {
         id: product.id,
         alcoholPercentage: 1,
         category: 2,
+        vat: 1,
         name: 'New Product Name 2',
-        price: {
+        priceInclVat: {
           amount: 55,
           currency: 'EUR',
           precision: 2,
@@ -519,7 +570,7 @@ describe('ProductService', async (): Promise<void> => {
       const productInContainer = (await ContainerRevision.findOne({ where: { revision: 2, container: { id: container.id } }, relations: ['container', 'products', 'products.category'] })).products[0];
       expect(productInContainer.name).to.eq(update.name);
       expect(productInContainer.alcoholPercentage).to.eq(update.alcoholPercentage);
-      expect(productInContainer.price.getAmount()).to.eq(update.price.amount);
+      expect(productInContainer.priceInclVat.getAmount()).to.eq(update.priceInclVat.amount);
       expect(productInContainer.category.id).to.eq(update.category);
     });
     it('should propagate the update to all POS', async () => {
@@ -527,9 +578,10 @@ describe('ProductService', async (): Promise<void> => {
       const createProduct: CreateProductParams = {
         alcoholPercentage: 0,
         category: 1,
+        vat: 1,
         name: 'New Product Name',
         ownerId,
-        price: {
+        priceInclVat: {
           amount: 50,
           currency: 'EUR',
           precision: 2,
@@ -558,9 +610,10 @@ describe('ProductService', async (): Promise<void> => {
       const productUpdate: UpdateProductParams = {
         alcoholPercentage: 1,
         category: 2,
+        vat: 1,
         id: product.id,
         name: 'New Product Name 2',
-        price: {
+        priceInclVat: {
           amount: 55,
           currency: 'EUR',
           precision: 2,
@@ -573,7 +626,7 @@ describe('ProductService', async (): Promise<void> => {
       expect(productFromPos.name).to.eq(productUpdate.name);
       expect(productFromPos.category.id).to.eq(productUpdate.category);
       expect(productFromPos.name).to.eq(productUpdate.name);
-      expect(productFromPos.price.getAmount()).to.eq(productUpdate.price.amount);
+      expect(productFromPos.priceInclVat.getAmount()).to.eq(productUpdate.priceInclVat.amount);
     });
   });
 });

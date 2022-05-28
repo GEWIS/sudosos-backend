@@ -26,6 +26,7 @@ import {
 import ProductCategory from '../../../entity/product/product-category';
 import stringSpec from './string-spec';
 import { INVALID_PRODUCT_PRICE } from './validation-errors';
+import VatGroup from '../../../entity/vat-group';
 
 const validAlcohol = (p: BaseProductParams) => {
   if (p.alcoholPercentage < 0) {
@@ -42,8 +43,16 @@ const validCategory = async (p: BaseProductParams) => {
   return toPass(p);
 };
 
+const validVatGroup = async (p: BaseProductParams) => {
+  const vatGroup = await VatGroup.find({ where: { id: p.vat } });
+  if (!vatGroup || vatGroup.length === 0 || vatGroup[0].deleted) {
+    return toFail(new ValidationError(`${p.vat} is an invalid VAT group.`));
+  }
+  return toPass(p);
+};
+
 const validPrice = (p: BaseProductParams) => {
-  if (p.price.amount < 0) {
+  if (p.priceInclVat.amount < 0) {
     return toFail(INVALID_PRODUCT_PRICE());
   }
   return toPass(p);
@@ -53,6 +62,7 @@ const productRequestSpec: Specification<BaseProductParams, ValidationError> = [
   [stringSpec(), 'name', new ValidationError('Name:')],
   validPrice,
   validCategory,
+  validVatGroup,
   validAlcohol,
 ];
 

@@ -94,7 +94,8 @@ export default class InvoiceService {
     return {
       description: invoiceEntries.description,
       amount: invoiceEntries.amount,
-      price: invoiceEntries.price.toObject(),
+      priceInclVat: invoiceEntries.priceInclVat.toObject(),
+      vatPercentage: invoiceEntries.vatPercentage,
     } as InvoiceEntryResponse;
   }
 
@@ -177,7 +178,15 @@ export default class InvoiceService {
     baseTransactions: BaseTransactionResponse[]) {
     // Extract Transactions from IDs.
     const ids = baseTransactions.map((t) => t.id);
-    const transactions = await Transaction.findByIds(ids, { relations: ['subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.product', 'subTransactions.subTransactionRows.product.product'] });
+    const transactions = await Transaction.findByIds(ids, {
+      relations: [
+        'subTransactions',
+        'subTransactions.subTransactionRows',
+        'subTransactions.subTransactionRows.product',
+        'subTransactions.subTransactionRows.product.product',
+        'subTransactions.subTransactionRows.product.vat',
+      ],
+    });
 
     // Collect invoices entries and promises.
     const invoiceEntries: InvoiceEntry[] = [];
@@ -204,7 +213,8 @@ export default class InvoiceService {
               invoice,
               description: tSubRow.product.name,
               amount: tSubRow.amount,
-              price: tSubRow.product.price,
+              priceInclVat: tSubRow.product.priceInclVat,
+              vatPercentage: tSubRow.product.vat.percentage,
             });
             entryMap.set(key, entry);
 
@@ -229,12 +239,13 @@ export default class InvoiceService {
     customEntries: InvoiceEntryRequest[]): Promise<void> {
     const promises: Promise<InvoiceEntry>[] = [];
     customEntries.forEach((request) => {
-      const { description, amount } = request;
+      const { description, amount, vatPercentage } = request;
       const entry = Object.assign(new InvoiceEntry(), {
         invoice,
         description,
         amount,
-        price: DineroTransformer.Instance.from(request.price.amount),
+        priceInclVat: DineroTransformer.Instance.from(request.priceInclVat.amount),
+        vatPercentage,
       });
       promises.push(entry.save());
     });
