@@ -28,7 +28,7 @@ import UpdatedContainer from '../entity/container/updated-container';
 import Container from '../entity/container/container';
 import { asNumber } from '../helpers/validators';
 import { parseRequestPagination } from '../helpers/pagination';
-import verifyContainerRequest from './request/validators/container-request-spec';
+import { verifyContainerRequest, verifyCreateContainerRequest } from './request/validators/container-request-spec';
 import { isFail } from '../helpers/specification-validation';
 import {
   CreateContainerParams,
@@ -229,7 +229,7 @@ export default class ContainerController extends BaseController {
         ownerId: body.ownerId ?? req.token.user.id,
       };
 
-      const validation = await verifyContainerRequest(request);
+      const validation = await verifyCreateContainerRequest(request);
       if (isFail(validation)) {
         res.status(400).json(validation.fail.value);
         return;
