@@ -23,25 +23,27 @@ import {
   toPass, validateSpecification,
   ValidationError,
 } from '../../../helpers/specification-validation';
-import verifyProductRequest from './product-request-spec';
 import {
   BaseContainerParams,
-  ContainerParams,
+  ContainerParams, CreateContainerParams,
 } from '../container-request';
 import stringSpec from './string-spec';
-import { ProductRequest } from '../product-request';
-import { INVALID_PRODUCT_ID } from './validation-errors';
+import { INVALID_ORGAN_ID, INVALID_PRODUCT_ID } from './validation-errors';
+import User, { UserType } from '../../../entity/user/user';
 
 /**
  * Validates that param is either a valid Product ID or ProductRequest
  */
-async function validProductRequestOrId(p: number | ProductRequest) {
-  if (typeof p === 'number') {
-    const product = await Product.findOne({ where: { id: p } });
-    if (!product) return toFail(INVALID_PRODUCT_ID(p));
-    return toPass(p);
-  }
-  return Promise.resolve(await verifyProductRequest(p));
+async function validProductId(p: number) {
+  const product = await Product.findOne({ where: { id: p } });
+  if (!product) return toFail(INVALID_PRODUCT_ID(p));
+  return toPass(p);
+}
+
+async function ownerIsOrgan(id: number) {
+  const owner = await User.findOne({ where: { id, deleted: false, type: UserType.ORGAN } });
+  if (!owner) return toFail(INVALID_ORGAN_ID());
+  return toPass(id);
 }
 
 /**
@@ -52,12 +54,29 @@ const baseContainerRequestSpec: <T extends BaseContainerParams>()
 => Specification<T, ValidationError> = () => [
   [stringSpec(), 'name', new ValidationError('Name:')],
   // Turn our validProduct function into an array subspecification.
-  [[createArrayRule([validProductRequestOrId])], 'products', new ValidationError('Products:')],
+  [[createArrayRule([validProductId])], 'products', new ValidationError('Products:')],
 ];
 
-export default async function verifyContainerRequest(containerRequest:
+/**
+ * Specification of a createContainerRequestSpec
+ * Here we check if the owner is actually an Organ or not.
+ */
+const createContainerRequestSpec:
+() => Specification<CreateContainerParams, ValidationError> = () => [
+  ...baseContainerRequestSpec<CreateContainerParams>(),
+  [[ownerIsOrgan], 'ownerId', new ValidationError('')],
+];
+
+export async function verifyContainerRequest(containerRequest:
 ContainerParams) {
   return Promise.resolve(await validateSpecification(
     containerRequest, baseContainerRequestSpec(),
+  ));
+}
+
+export async function verifyCreateContainerRequest(createContainerRequest:
+CreateContainerParams) {
+  return Promise.resolve(await validateSpecification(
+    createContainerRequest, createContainerRequestSpec(),
   ));
 }

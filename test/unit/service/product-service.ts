@@ -41,6 +41,10 @@ import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale
 import UpdatedPointOfSale from '../../../src/entity/point-of-sale/updated-point-of-sale';
 import ProductImage from '../../../src/entity/file/product-image';
 import User from '../../../src/entity/user/user';
+import { CreateContainerParams } from '../../../src/controller/request/container-request';
+import ContainerService from '../../../src/service/container-service';
+import { CreatePointOfSaleParams } from '../../../src/controller/request/point-of-sale-request';
+import PointOfSaleService from '../../../src/service/point-of-sale-service';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -96,7 +100,7 @@ function productRevisionToProductWithRevision(product: ProductRevision): Product
 }
 
 function validateProductProperties(response: ProductResponse,
-  productParams: CreateProductParams) {
+  productParams: CreateProductParams | UpdateProductParams) {
   Object.keys(productParams).forEach((key: keyof CreateProductParams) => {
     if (key === 'priceInclVat') {
       expect((productParams[key] as any).amount).to.be.equal((response.priceInclVat.amount));
@@ -105,8 +109,8 @@ function validateProductProperties(response: ProductResponse,
     } else if (key === 'vat') {
       expect((productParams[key] as any)).to.be.equal((response.vat.id));
     } else if (key === 'ownerId') {
-      if (productParams[key] !== undefined) {
-        expect((productParams[key] as any)).to.be.equal((response.owner.id));
+      if ((productParams as any).ownerId !== undefined) {
+        expect((productParams as any).ownerId).to.be.equal((response.owner.id));
       }
     } else {
       expect((productParams[key] as any)).to.be.equal((response[key]));
@@ -393,7 +397,6 @@ describe('ProductService', async (): Promise<void> => {
         category: 3,
         vat: 1,
         id: 2,
-        ownerId: undefined,
         alcoholPercentage: 8,
         name: 'Product2-update',
         priceInclVat: {
@@ -457,7 +460,6 @@ describe('ProductService', async (): Promise<void> => {
 
       const updateParams: UpdateProductParams = {
         alcoholPercentage: 10,
-        ownerId: undefined,
         name: 'Product77-update',
         priceInclVat: {
           amount,
@@ -474,6 +476,157 @@ describe('ProductService', async (): Promise<void> => {
 
       validateProductProperties(product, updateParams);
       expect(product).to.exist;
+    });
+  });
+
+  describe('createProduct function', () => {
+    it('should create the product without update if approve is true', async () => {
+      const creation: CreateProductParams = {
+        alcoholPercentage: 0,
+        category: 1,
+        vat: 1,
+        name: 'New Product Name',
+        ownerId: (await User.findOne({ where: { deleted: false } })).id,
+        priceInclVat: {
+          amount: 50,
+          currency: 'EUR',
+          precision: 2,
+        },
+      };
+
+      const response = await ProductService.createProduct(creation, true);
+      validateProductProperties(response, creation);
+      const entity = await Product.findOne({ where: { id: response.id } });
+      expect(entity.currentRevision).to.eq(1);
+    });
+  });
+
+  describe('directProductUpdate', () => {
+    it('should revise the product without creating a UpdatedProduct', async () => {
+      const product = await Product.findOne();
+      const update: UpdateProductParams = {
+        alcoholPercentage: 10,
+        category: 1,
+        vat: 1,
+        id: product.id,
+        name: 'A product update',
+        priceInclVat: {
+          amount: 51,
+          precision: 2,
+          currency: 'EUR',
+        },
+      };
+      const response = await ProductService.directProductUpdate(update);
+      validateProductProperties(response, update);
+    });
+  });
+
+  describe('propagateProductUpdate function', () => {
+    it('should propagate the update to all containers', async () => {
+      const ownerId = (await User.findOne({ where: { deleted: false } })).id;
+      const createProduct: CreateProductParams = {
+        alcoholPercentage: 0,
+        category: 1,
+        vat: 1,
+        name: 'New Product Name',
+        ownerId,
+        priceInclVat: {
+          amount: 50,
+          currency: 'EUR',
+          precision: 2,
+        },
+      };
+
+      const product = await ProductService.createProduct(createProduct, true);
+
+      const createContainer: CreateContainerParams = {
+        name: 'Container Name',
+        ownerId,
+        products: [product.id],
+        public: true,
+      };
+
+      const container = await ContainerService.createContainer(createContainer, true);
+
+      const update: UpdateProductParams = {
+        id: product.id,
+        alcoholPercentage: 1,
+        category: 2,
+        vat: 1,
+        name: 'New Product Name 2',
+        priceInclVat: {
+          amount: 55,
+          currency: 'EUR',
+          precision: 2,
+        },
+      };
+
+      const updatedProduct = await ProductService.directProductUpdate(update);
+      validateProductProperties(updatedProduct, update);
+
+      const containerEntity = await Container.findOne({ where: { id: container.id } });
+      expect(containerEntity.currentRevision).to.be.eq(2);
+
+      const productInContainer = (await ContainerRevision.findOne({ where: { revision: 2, container: { id: container.id } }, relations: ['container', 'products', 'products.category'] })).products[0];
+      expect(productInContainer.name).to.eq(update.name);
+      expect(productInContainer.alcoholPercentage).to.eq(update.alcoholPercentage);
+      expect(productInContainer.priceInclVat.getAmount()).to.eq(update.priceInclVat.amount);
+      expect(productInContainer.category.id).to.eq(update.category);
+    });
+    it('should propagate the update to all POS', async () => {
+      const ownerId = (await User.findOne({ where: { deleted: false } })).id;
+      const createProduct: CreateProductParams = {
+        alcoholPercentage: 0,
+        category: 1,
+        vat: 1,
+        name: 'New Product Name',
+        ownerId,
+        priceInclVat: {
+          amount: 50,
+          currency: 'EUR',
+          precision: 2,
+        },
+      };
+
+      const product = await ProductService.createProduct(createProduct, true);
+
+      const createContainer: CreateContainerParams = {
+        name: 'Container Name',
+        ownerId,
+        products: [product.id],
+        public: true,
+      };
+
+      const container = await ContainerService.createContainer(createContainer, true);
+
+      const createPOS: CreatePointOfSaleParams = {
+        containers: [container.id],
+        name: 'POS Name',
+        ownerId,
+      };
+
+      const pos = await PointOfSaleService.createPointOfSale(createPOS, true);
+
+      const productUpdate: UpdateProductParams = {
+        alcoholPercentage: 1,
+        category: 2,
+        vat: 1,
+        id: product.id,
+        name: 'New Product Name 2',
+        priceInclVat: {
+          amount: 55,
+          currency: 'EUR',
+          precision: 2,
+        },
+      };
+
+      await ProductService.directProductUpdate(productUpdate);
+      const productFromPos = (await PointOfSaleRevision.findOne({ where: { revision: 2, pointOfSale: { id: pos.id } }, relations: ['pointOfSale', 'containers', 'containers.products', 'containers.products.category'] })).containers[0].products[0];
+
+      expect(productFromPos.name).to.eq(productUpdate.name);
+      expect(productFromPos.category.id).to.eq(productUpdate.category);
+      expect(productFromPos.name).to.eq(productUpdate.name);
+      expect(productFromPos.priceInclVat.getAmount()).to.eq(productUpdate.priceInclVat.amount);
     });
   });
 });

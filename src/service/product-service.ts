@@ -31,14 +31,15 @@ import ContainerRevision from '../entity/container/container-revision';
 import Container from '../entity/container/container';
 import UpdatedContainer from '../entity/container/updated-container';
 import User from '../entity/user/user';
-import CreateProductParams, { UpdateProductParams } from '../controller/request/product-request';
+import CreateProductParams, { UpdateProductParams, UpdateProductRequest } from '../controller/request/product-request';
 import PointOfSale from '../entity/point-of-sale/point-of-sale';
 import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision';
 import { PaginationParameters } from '../helpers/pagination';
 import { RequestWithToken } from '../middleware/token-middleware';
-import {
-  asBoolean, asDate, asNumber,
-} from '../helpers/validators';
+import { asBoolean, asDate, asNumber } from '../helpers/validators';
+// eslint-disable-next-line import/no-cycle
+import ContainerService from './container-service';
+import { UpdateContainerParams } from '../controller/request/container-request';
 import { BaseVatGroupResponse } from '../controller/response/vat-group-response';
 
 /**
@@ -468,13 +469,13 @@ export default class ProductService {
   /**
    * Creates a new product.
    *
-   * The newly created product resides in the Product table and has no revision,
-   * but it does have an updated product.
+   * If approve is false, then the newly created product resides in the
+   * Product table and has no revision, but it does have an updated product.
    * To confirm the product the updated product has to be confirmed and a revision will be created.
    *
    * @param product - The product to be created.
    */
-  public static async createProduct(product: CreateProductParams)
+  public static async createProduct(product: CreateProductParams, approve = false)
     : Promise<UpdatedProductResponse> {
     const owner = await User.findOne(product.ownerId);
 
@@ -487,40 +488,31 @@ export default class ProductService {
     // Save the product.
     await base.save();
 
-    // Set base product, then the oldest settings and then the newest.
-    const updatedProduct = Object.assign(new UpdatedProduct(), {
-      product: await Product.findOne(base.id),
-      ...product,
-      // Price number into dinero.
-      priceInclVat: DineroTransformer.Instance.from(product.priceInclVat.amount),
-    });
+    const update: UpdateProductParams = {
+      priceInclVat: product.priceInclVat,
+      category: product.category,
+      vat: product.vat,
+      alcoholPercentage: product.alcoholPercentage,
+      name: product.name,
+      id: base.id,
+    };
 
-    await updatedProduct.save();
-
-    return (await this.getProducts({ updatedProducts: true, productId: base.id })).records[0];
-  }
-
-  /**
-   * Confirms an product update and creates a product revision.
-   * @param productId - The product update to confirm.
-   */
-  public static async approveProductUpdate(productId: number)
-    : Promise<ProductResponse> {
-    const base: Product = await Product.findOne(productId);
-    const rawUpdateProduct = await UpdatedProduct.findOne(productId);
-
-    // return undefined if not found or request is invalid
-    if (!base || !rawUpdateProduct) {
-      return undefined;
+    let createdProduct: ProductResponse;
+    if (approve) {
+      createdProduct = await this.directProductUpdate(update);
+    } else {
+      createdProduct = await this.updateProduct(update);
     }
 
-    const update: ProductResponse = (await this.getProducts(
-      { updatedProducts: true, productId },
-    )).records[0];
+    return createdProduct;
+  }
+
+  public static async applyProductUpdate(base: Product, update: UpdateProductRequest) {
+    const product = { ...base };
 
     // Set base product, then the oldest settings and then the newest.
     const productRevision: ProductRevision = Object.assign(new ProductRevision(), {
-      product: base,
+      product,
       // Apply the update.
       ...update,
       // Increment revision.
@@ -531,14 +523,82 @@ export default class ProductService {
 
     // First save the revision.
     await ProductRevision.save(productRevision);
+
     // Increment current revision.
+    // eslint-disable-next-line no-param-reassign
     base.currentRevision = base.currentRevision ? base.currentRevision + 1 : 1;
     await base.save();
+
+    await this.propagateProductUpdate(base.id);
+    return productRevision;
+  }
+
+  /**
+   * Confirms a product update and creates a product revision.
+   * @param productId - The product update to confirm.
+   */
+  public static async approveProductUpdate(productId: number)
+    : Promise<ProductResponse> {
+    const base: Product = await Product.findOne(productId);
+    const rawUpdateProduct = await UpdatedProduct.findOne({ where: { product: { id: productId } }, relations: ['category', 'vat'] });
+
+    // return undefined if not found or request is invalid
+    if (!base || !rawUpdateProduct) {
+      return undefined;
+    }
+
+    const updateRequest = {
+      priceInclVat: {
+        amount: rawUpdateProduct.priceInclVat.getAmount(),
+        currency: rawUpdateProduct.priceInclVat.getCurrency(),
+        precision: rawUpdateProduct.priceInclVat.getPrecision(),
+      },
+      category: rawUpdateProduct.category.id,
+      vat: rawUpdateProduct.vat.id,
+      alcoholPercentage: rawUpdateProduct.alcoholPercentage,
+      name: rawUpdateProduct.name,
+    } as UpdateProductRequest;
+
+    await this.applyProductUpdate(base, updateRequest);
 
     // Remove update after revision is created.
     await UpdatedProduct.delete(productId);
 
     // Return the new product.
     return (await this.getProducts({ productId })).records[0];
+  }
+
+  public static async directProductUpdate(updateRequest: UpdateProductParams)
+    : Promise<ProductResponse> {
+    const base: Product = await Product.findOne(updateRequest.id);
+    await this.applyProductUpdate(base, updateRequest);
+    return (this.getProducts({ productId: base.id }).then((p) => p.records[0]));
+  }
+
+  /**
+   * Propagates the product update to all parent containers
+   *
+   * All containers that contain the previous version of this product
+   * will be revised to include the new revision.
+   *
+   * @param productId - The product to propagate
+   */
+  public static async propagateProductUpdate(productId: number) {
+    const containers = (await ContainerService.getContainers({ productId })).records;
+    // The async-for loop is intentional to prevent race-conditions.
+    // To fix this the good way would be shortlived the structure of POS/Containers will be changed
+    for (let i = 0; i < containers.length; i += 1) {
+      const c = containers[i];
+      // eslint-disable-next-line no-await-in-loop
+      await ContainerRevision.findOne({ where: { container: { id: c.id }, revision: c.revision }, relations: ['products', 'products.product'] }).then(async (revision) => {
+        const update: UpdateContainerParams = {
+          products: revision.products.map((p) => p.product.id),
+          public: c.public,
+          name: revision.name,
+          id: c.id,
+        };
+        await ContainerService.directContainerUpdate(update);
+      });
+    }
   }
 }

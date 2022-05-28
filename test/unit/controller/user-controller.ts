@@ -36,7 +36,7 @@ import ProductRevision from '../../../src/entity/product/product-revision';
 import ContainerRevision from '../../../src/entity/container/container-revision';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
 import seedDatabase from '../../seed';
-import { verifyUserEntity } from '../validators';
+import { verifyUserResponse } from '../validators';
 import RoleManager from '../../../src/rbac/role-manager';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import { TransactionResponse } from '../../../src/controller/response/transaction-response';
@@ -47,7 +47,7 @@ import MemberAuthenticator from '../../../src/entity/authenticator/member-authen
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import UpdatePinRequest from '../../../src/controller/request/update-pin-request';
 import { INVALID_PIN } from '../../../src/controller/request/validators/validation-errors';
-import { UserResponse } from '../../../src/controller/response/user-response';
+import { PaginatedUserResponse, UserResponse } from '../../../src/controller/response/user-response';
 import RoleResponse from '../../../src/controller/response/rbac/role-response';
 
 chai.use(deepEqualInAnyOrder);
@@ -219,13 +219,13 @@ describe('UserController', (): void => {
 
       const activeUsers = ctx.users.filter((u) => !u.deleted);
 
-      const users = res.body.records as User[];
+      const users = (res.body as PaginatedUserResponse).records;
       // eslint-disable-next-line no-underscore-dangle
       const pagination = res.body._pagination as PaginationResult;
       const spec = await Swagger.importSpecification();
       expect(users.length).to.equal(Math.min(activeUsers.length, pagination.take));
-      users.forEach((user: User) => {
-        verifyUserEntity(spec, user);
+      users.forEach((user: UserResponse) => {
+        verifyUserResponse(spec, user);
       });
 
       expect(pagination.take).to.equal(defaultPagination());
@@ -263,7 +263,7 @@ describe('UserController', (): void => {
   describe('GET /users/usertype/:userType', () => {
     it('should return correct model', async () => {
       const res = await request(ctx.app)
-        .get(`/users/usertype/${UserType.MEMBER}`)
+        .get(`/users/usertype/${UserType[UserType.MEMBER]}`)
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
       expect(ctx.specification.validateModel(
@@ -275,19 +275,19 @@ describe('UserController', (): void => {
     });
     it('should return all users of type MEMBER if admin', async () => {
       const res = await request(ctx.app)
-        .get(`/users/usertype/${UserType.MEMBER}`)
+        .get(`/users/usertype/${UserType[UserType.MEMBER]}`)
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
 
       const activeUsers = ctx.users.filter((u) => !u.deleted && u.type === UserType.MEMBER);
 
-      const users = res.body.records as User[];
+      const users = res.body.records as UserResponse[];
       // eslint-disable-next-line no-underscore-dangle
       const pagination = res.body._pagination as PaginationResult;
       const spec = await Swagger.importSpecification();
       expect(users.length).to.equal(Math.min(activeUsers.length, pagination.take));
-      users.forEach((user: User) => {
-        verifyUserEntity(spec, user);
+      users.forEach((user: UserResponse) => {
+        verifyUserResponse(spec, user);
       });
 
       expect(pagination.take).to.equal(defaultPagination());
@@ -296,19 +296,19 @@ describe('UserController', (): void => {
     });
     it('should return all users of type INVOICE if admin', async () => {
       const res = await request(ctx.app)
-        .get(`/users/usertype/${UserType.INVOICE}`)
+        .get('/users/usertype/invoice')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
 
       const activeUsers = ctx.users.filter((u) => !u.deleted && u.type === UserType.INVOICE);
 
-      const users = res.body.records as User[];
+      const users = res.body.records as UserResponse[];
       // eslint-disable-next-line no-underscore-dangle
       const pagination = res.body._pagination as PaginationResult;
       const spec = await Swagger.importSpecification();
       expect(users.length).to.equal(Math.min(activeUsers.length, pagination.take));
-      users.forEach((user: User) => {
-        verifyUserEntity(spec, user);
+      users.forEach((user: UserResponse) => {
+        verifyUserResponse(spec, user);
       });
 
       expect(pagination.take).to.equal(defaultPagination());
@@ -325,7 +325,7 @@ describe('UserController', (): void => {
       const take = 5;
       const skip = 3;
       const res = await request(ctx.app)
-        .get(`/users/usertype/${UserType.MEMBER}`)
+        .get('/users/usertype/member')
         .query({ take, skip })
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
@@ -352,7 +352,7 @@ describe('UserController', (): void => {
   describe('GET /users/:id', () => {
     it('should return correct model', async () => {
       const res = await request(ctx.app)
-        .get(`/users/usertype/${UserType.MEMBER}`)
+        .get('/users/1')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
       expect(ctx.specification.validateModel(
@@ -368,9 +368,9 @@ describe('UserController', (): void => {
         .set('Authorization', `Bearer ${ctx.userToken}`);
       expect(res.status).to.equal(200);
 
-      const user = res.body as User;
+      const user = res.body as UserResponse;
       const spec = await Swagger.importSpecification();
-      verifyUserEntity(spec, user);
+      verifyUserResponse(spec, user);
     });
     it('should give an HTTP 403 when requesting different user', async () => {
       const res = await request(ctx.app)
@@ -390,9 +390,9 @@ describe('UserController', (): void => {
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
 
-      const user = res.body as User;
+      const user = res.body as UserResponse;
       const spec = await Swagger.importSpecification();
-      verifyUserEntity(spec, user);
+      verifyUserResponse(spec, user);
     });
     it('should give an HTTP 404 when admin requests different user that does not exist', async () => {
       const res = await request(ctx.app)
@@ -403,6 +403,75 @@ describe('UserController', (): void => {
     it('should give an HTTP 404 when admin requests deleted user', async () => {
       const res = await request(ctx.app)
         .get(`/users/${ctx.deletedUser.id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(404);
+    });
+  });
+
+  describe('GET /users/{id}/members', () => {
+    it('should return correct model', async () => {
+      const user = await User.findOne({ where: { type: UserType.ORGAN } });
+      expect(user).to.not.be.undefined;
+
+      const res = await request(ctx.app)
+        .get(`/users/${user.id}/members`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'PaginatedUserResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
+    it('should return an HTTP 200 and all the members of the organ', async () => {
+      await inUserContext(await UserFactory().clone(3), async (...users: User[]) => {
+        const organ = await User.findOne({ where: { type: UserType.ORGAN } });
+        const promises: Promise<MemberAuthenticator>[] = [];
+        users.forEach((user) => {
+          const auth = Object.assign(new MemberAuthenticator(), {
+            user,
+            authenticateAs: organ,
+          });
+          promises.push(auth.save());
+        });
+        await Promise.all(promises);
+
+        const res = await request(ctx.app)
+          .get(`/users/${organ.id}/members`)
+          .set('Authorization', `Bearer ${ctx.adminToken}`);
+        expect(res.status).to.equal(200);
+        const userIds = users.map((user) => user.id);
+        expect((res.body as PaginatedUserResponse).records.map(
+          (user) => user.id,
+        )).to.deep.equalInAnyOrder(userIds);
+      });
+    });
+    it('should give an HTTP 403 when not admin', async () => {
+      const user = await User.findOne({ where: { type: UserType.ORGAN } });
+      expect(user).to.not.be.undefined;
+
+      const res = await request(ctx.app)
+        .get(`/users/${user.id}/members`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(403);
+    });
+    it('should give an HTTP 400 if requested user is not of type ORGAN', async () => {
+      const user = await User.findOne({ where: { type: UserType.MEMBER } });
+      expect(user).to.not.be.undefined;
+
+      const res = await request(ctx.app)
+        .get(`/users/${user.id}/members`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(400);
+    });
+    it('should give an http 404 if provided type does not exist', async () => {
+      const userId = await User.count() + 1;
+      const user = await User.findOne({ where: { id: userId } });
+      expect(user).to.be.undefined;
+
+      const res = await request(ctx.app)
+        .get(`/users/${userId}/members`)
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(404);
     });
@@ -423,16 +492,10 @@ describe('UserController', (): void => {
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(ctx.user);
       expect(res.status).to.equal(201);
-      expect(ctx.specification.validateModel(
-        'User',
-        res.body,
-        false,
-        true,
-      ).valid).to.be.true;
 
-      const user = res.body as User;
+      const user = res.body as UserResponse;
       const spec = await Swagger.importSpecification();
-      verifyUserEntity(spec, user);
+      verifyUserResponse(spec, user);
     });
 
     it('should create user without lastName', async () => {
@@ -445,9 +508,9 @@ describe('UserController', (): void => {
         .send(userObj);
       expect(res.status).to.equal(201);
 
-      const user = res.body as User;
+      const user = res.body as UserResponse;
       const spec = await Swagger.importSpecification();
-      verifyUserEntity(spec, user);
+      verifyUserResponse(spec, user);
     });
 
     it('should create user with empty lastName', async () => {
@@ -459,9 +522,9 @@ describe('UserController', (): void => {
         .send(userObj);
       expect(res.status).to.equal(201);
 
-      const user = res.body as User;
+      const user = res.body as UserResponse;
       const spec = await Swagger.importSpecification();
-      verifyUserEntity(spec, user);
+      verifyUserResponse(spec, user);
     });
 
     it('should give HTTP 400 when too long lastName', async () => {
@@ -534,9 +597,9 @@ describe('UserController', (): void => {
         .send(userObj);
       expect(res.status).to.equal(201);
 
-      const user = res.body as User;
+      const user = res.body as UserResponse;
       const spec = await Swagger.importSpecification();
-      verifyUserEntity(spec, user);
+      verifyUserResponse(spec, user);
     });
 
     it('should create user when active is false', async () => {
@@ -548,9 +611,9 @@ describe('UserController', (): void => {
         .send(userObj);
       expect(res.status).to.equal(201);
 
-      const user = res.body as User;
+      const user = res.body as UserResponse;
       const spec = await Swagger.importSpecification();
-      verifyUserEntity(spec, user);
+      verifyUserResponse(spec, user);
     });
   });
 
@@ -570,17 +633,11 @@ describe('UserController', (): void => {
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send({ firstName });
       expect(res.status).to.equal(200);
-      expect(ctx.specification.validateModel(
-        'User',
-        res.body,
-        false,
-        true,
-      ).valid).to.be.true;
 
-      const user = res.body as User;
+      const user = res.body as UserResponse;
       const spec = await Swagger.importSpecification();
       expect(user.firstName).to.deep.equal(firstName);
-      verifyUserEntity(spec, user);
+      verifyUserResponse(spec, user);
     });
     it('should give HTTP 400 if firstName is emtpy', async () => {
       const res = await request(ctx.app)
@@ -605,10 +662,10 @@ describe('UserController', (): void => {
         .send({ lastName });
       expect(res.status).to.equal(200);
 
-      const user = res.body as User;
+      const user = res.body as UserResponse;
       const spec = await Swagger.importSpecification();
       expect(user.lastName).to.deep.equal(lastName);
-      verifyUserEntity(spec, user);
+      verifyUserResponse(spec, user);
     });
     it('should correctly change lastName to empty string if requester is admin', async () => {
       const lastName = '';
@@ -619,10 +676,10 @@ describe('UserController', (): void => {
         .send({ lastName });
       expect(res.status).to.equal(200);
 
-      const user = res.body as User;
+      const user = res.body as UserResponse;
       const spec = await Swagger.importSpecification();
       expect(user.lastName).to.deep.equal(lastName);
-      verifyUserEntity(spec, user);
+      verifyUserResponse(spec, user);
     });
     it('should give HTTP 400 if firstName is too long', async () => {
       const res = await request(ctx.app)
@@ -640,10 +697,10 @@ describe('UserController', (): void => {
         .send({ active });
       expect(res.status).to.equal(200);
 
-      const user = res.body as User;
+      const user = res.body as UserResponse;
       const spec = await Swagger.importSpecification();
       expect(user.active).to.deep.equal(active);
-      verifyUserEntity(spec, user);
+      verifyUserResponse(spec, user);
     });
     it('should correctly set user active if requester is admin', async () => {
       const active = true;
@@ -654,10 +711,10 @@ describe('UserController', (): void => {
         .send({ active });
       expect(res.status).to.equal(200);
 
-      const user = res.body as User;
+      const user = res.body as UserResponse;
       const spec = await Swagger.importSpecification();
       expect(user.active).to.deep.equal(active);
-      verifyUserEntity(spec, user);
+      verifyUserResponse(spec, user);
     });
     it('should give HTTP 400 if active is undefined', async () => {
       const res = await request(ctx.app)
@@ -1166,6 +1223,24 @@ describe('UserController', (): void => {
     });
   });
   describe('GET /users/{id}/roles', () => {
+    it('should return correct model', async () => {
+      await inUserContext(await UserFactory().clone(1), async (user: User) => {
+        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
+
+        const res = await request(ctx.app)
+          .get(`/users/${user.id}/roles`)
+          .set('Authorization', `Bearer ${userToken}`);
+
+        expect((res.body as RoleResponse[]).map((r) => r.role)).to.deep.equalInAnyOrder(['User']);
+        expect(res.status).to.equal(200);
+        expect(ctx.specification.validateModel(
+          'Array.<RoleResponse.model>',
+          res.body,
+          false,
+          true,
+        ).valid).to.be.true;
+      });
+    });
     it('should return an HTTP 200 and the users roles', async () => {
       await inUserContext(await UserFactory().clone(1), async (user: User) => {
         const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
@@ -1199,5 +1274,4 @@ describe('UserController', (): void => {
       });
     });
   });
-  // TODO: Check validity of returned transactions
 });
