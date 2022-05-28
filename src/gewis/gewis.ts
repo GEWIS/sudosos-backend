@@ -97,6 +97,25 @@ export default class Gewis {
     const star = new Set(['*']);
 
     /**
+     * Basic permissions for every signed in person.
+     */
+    this.roleManager.registerRole({
+      name: 'User',
+      permissions: {
+        Balance: {
+          get: { own: star },
+        },
+        User: {
+          get: { own: star },
+        },
+        Authenticator: {
+          get: { own: star },
+        }
+      },
+      assignmentCheck: async () => true,
+    })
+
+    /**
      * Define a Buyer role, which indicates that the user
      * is allowed to create transactions for itself.
      */
@@ -110,9 +129,6 @@ export default class Gewis {
     this.roleManager.registerRole({
       name: 'Buyer',
       permissions: {
-        Balance: {
-          get: { own: star },
-        },
         Container: {
           get: { all: star },
         },
@@ -180,6 +196,9 @@ export default class Gewis {
         StripeDeposit: {
           create: { own: star, all: star },
         },
+        User: {
+          get: { all: star, own: star },
+        }
       },
       assignmentCheck: async (user: User) => authorizedBuyerUserTypes.has(user.type),
     });
@@ -199,16 +218,19 @@ export default class Gewis {
           create: { own: star },
           get: { own: star, all: star },
           update: { own: star },
+          approve: { all: star },
         },
         Container: {
           create: { own: star },
           get: { own: star, all: star },
           update: { own: star },
+          approve: { all: star },
         },
         PointOfSale: {
           create: { own: star },
           get: { own: star, all: star },
           update: { own: star },
+          approve: { all: star },
         },
         ProductCategory: {
           get: { all: star },
@@ -226,6 +248,9 @@ export default class Gewis {
           create: { own: star },
           get: { own: star },
         },
+        User: {
+          get: { all: star, own: star },
+        }
       },
       assignmentCheck: async (user: User) => sellerUserTypes.has(user.type),
     });
