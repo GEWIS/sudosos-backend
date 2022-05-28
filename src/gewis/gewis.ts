@@ -110,10 +110,10 @@ export default class Gewis {
         },
         Authenticator: {
           get: { own: star },
-        }
+        },
       },
       assignmentCheck: async () => true,
-    })
+    });
 
     /**
      * Define a Buyer role, which indicates that the user
@@ -198,7 +198,7 @@ export default class Gewis {
         },
         User: {
           get: { all: star, own: star },
-        }
+        },
       },
       assignmentCheck: async (user: User) => authorizedBuyerUserTypes.has(user.type),
     });
@@ -250,7 +250,7 @@ export default class Gewis {
         },
         User: {
           get: { all: star, own: star },
-        }
+        },
       },
       assignmentCheck: async (user: User) => sellerUserTypes.has(user.type),
     });
