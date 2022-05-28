@@ -138,7 +138,7 @@ export default class AuthenticationService {
     const ldapSettings = getLDAPSettings();
     const client = await getLDAPConnection();
 
-    if (!client) {
+    if (!client || password === '') {
       return undefined;
     }
 
