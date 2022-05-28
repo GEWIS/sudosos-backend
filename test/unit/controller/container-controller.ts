@@ -392,7 +392,6 @@ describe('ContainerController', async (): Promise<void> => {
       it('should validate that owner is an Organ', async () => {
         const owner = await User.findOne({ where: { deleted: false, type: UserType.MEMBER } });
         const req: CreateContainerRequest = { ...ctx.validContainerReq, ownerId: owner.id };
-        console.error(owner);
         await expectError(req, INVALID_ORGAN_ID().value);
       });
     }
@@ -534,7 +533,6 @@ describe('ContainerController', async (): Promise<void> => {
         .patch('/containers/1')
         .set('Authorization', `Bearer ${ctx.token}`)
         .send(ctx.validContainerUpdate);
-      console.error(res.body);
 
       expect(ctx.specification.validateModel(
         'ContainerWithProductsResponse',
