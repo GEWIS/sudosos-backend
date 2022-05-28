@@ -21,7 +21,7 @@ import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
 import chai, { expect } from 'chai';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
-import User from '../../../src/entity/user/user';
+import User, {UserType} from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
 import ContainerService from '../../../src/service/container-service';
@@ -222,10 +222,19 @@ describe('ContainerService', async (): Promise<void> => {
       expect(records.length).to.equal(take);
     });
     it('should return products if specified', async () => {
+      const createContainerParams: CreateContainerParams = {
+        name: "Empty Container",
+        ownerId: (await User.findOne({where: {deleted: false, type: UserType.ORGAN}})).id,
+        products: [],
+        public: true,
+      }
+      const container = await ContainerService.createContainer(createContainerParams, true);
       const { records } = await ContainerService.getContainers(
         { returnProducts: true }, {},
       );
       expect(ctx.specification.validateModel('Array.<ContainerWithProductsResponse.model>', records, false, true).valid).to.be.true;
+      const withRevisions = await Container.find({where: 'currentRevision'})
+      expect(records.map((container) => container.id)).to.deep.equalInAnyOrder(withRevisions.map((c) => c.id));
     });
   });
 
