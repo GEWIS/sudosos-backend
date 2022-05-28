@@ -235,6 +235,30 @@ describe('BalanceService', (): void => {
     await ctx.connection.close();
   });
 
+  describe('getBalances', () => {
+    it('should return balances from all users', async () => {
+      const balanceResponses = await BalanceService.getBalances();
+      expect(balanceResponses.length).to.equal(ctx.users.length);
+
+      balanceResponses.forEach((balance) => {
+        const user = ctx.users.find((u) => u.id === balance.id);
+        const actualBalance = calculateBalance(user);
+        expect(balance.amount.amount).to.equal(actualBalance.amount);
+      });
+    });
+    it('should return balance from subset of users', async () => {
+      const users = [ctx.users[10], ctx.users[11], ctx.users[12]];
+      const balanceResponses = await BalanceService.getBalances(users.map((u) => u.id));
+      expect(balanceResponses.length).to.equal(users.length);
+
+      balanceResponses.forEach((balance) => {
+        const user = ctx.users.find((u) => u.id === balance.id);
+        const actualBalance = calculateBalance(user);
+        expect(balance.amount.amount).to.equal(actualBalance.amount);
+      });
+    });
+  });
+
   describe('Check balance updates', async () => {
     it('should be able to get balance without cache being created', async () => {
       await BalanceService.clearBalanceCache();
@@ -327,7 +351,7 @@ describe('BalanceService', (): void => {
     });
   });
 
-  describe('Get balance', () => {
+  describe('getBalance', () => {
     it('should return 0 for new user', async () => {
       const newUser = await (await UserFactory().default()).get();
       const balance = await BalanceService.getBalance(newUser.id);
