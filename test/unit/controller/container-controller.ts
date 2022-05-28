@@ -23,7 +23,9 @@ import { json } from 'body-parser';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
 import User, { UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
-import { seedAllContainers, seedAllProducts, seedProductCategories } from '../../seed';
+import {
+  seedAllContainers, seedAllProducts, seedProductCategories, seedVatGroups,
+} from '../../seed';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Swagger from '../../../src/start/swagger';
 import RoleManager from '../../../src/rbac/role-manager';
@@ -40,8 +42,7 @@ import UpdatedContainer from '../../../src/entity/container/updated-container';
 import UpdatedProduct from '../../../src/entity/product/updated-product';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import { CreateContainerRequest } from '../../../src/controller/request/container-request';
-import { ProductRequest } from '../../../src/controller/request/product-request';
-import { INVALID_PRODUCT_ID, INVALID_PRODUCT_PRICE } from '../../../src/controller/request/validators/validation-errors';
+import { INVALID_PRODUCT_ID } from '../../../src/controller/request/validators/validation-errors';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -105,8 +106,9 @@ describe('ContainerController', async (): Promise<void> => {
     await User.save(localUser);
 
     const categories = await seedProductCategories();
+    const vatGroups = await seedVatGroups();
     const { products, productRevisions } = (
-      await seedAllProducts([adminUser, localUser], categories));
+      await seedAllProducts([adminUser, localUser], categories, vatGroups));
     await seedAllContainers([adminUser, localUser], productRevisions, products);
 
     // create bearer tokens
@@ -155,6 +157,7 @@ describe('ContainerController', async (): Promise<void> => {
       permissions: {
         Container: {
           get: own,
+          create: own,
           update: own,
           delete: own,
         },
@@ -253,8 +256,8 @@ describe('ContainerController', async (): Promise<void> => {
         .set('Authorization', `Bearer ${token}`);
 
       // success code
-      asRequested(container, res.body);
       expect(res.status).to.equal(200);
+      asRequested(container, res.body);
       expect(ctx.specification.validateModel(
         'ContainerWithProductsResponse',
         res.body,
@@ -366,17 +369,6 @@ describe('ContainerController', async (): Promise<void> => {
         };
         await expectError(req, `Products: ${INVALID_PRODUCT_ID(-1).value}`);
       });
-      it('should verify product requests', async () => {
-        const req: CreateContainerRequest = {
-          ...ctx.validContainerReq,
-          products: [
-            {
-              ownerId: 1, price: { amount: -100, currency: 'EUR', precision: 2 }, category: 1, alcoholPercentage: 0.5,
-            } as ProductRequest,
-          ],
-        };
-        await expectError(req, `Products: ${INVALID_PRODUCT_PRICE().value}`);
-      });
     });
     it('should verify Name', async () => {
       const req: CreateContainerRequest = { ...ctx.validContainerReq, name: '' };
@@ -387,6 +379,28 @@ describe('ContainerController', async (): Promise<void> => {
     describe('verifyContainerRequest Specification', async () => {
       await testValidationOnRoute('post', '/containers');
     });
+    it('should store the given container in the database and return an HTTP 200 and the created container if user', async () => {
+      const containerCount = await Container.count();
+      const res = await request(ctx.app)
+        .post('/containers')
+        .set('Authorization', `Bearer ${ctx.token}`)
+        .send(ctx.validContainerReq);
+
+      expect(res.status).to.equal(200);
+      const containerResponse = res.body as ContainerWithProductsResponse;
+      expect(ctx.specification.validateModel(
+        'ContainerWithProductsResponse',
+        containerResponse,
+        false,
+        true,
+      ).valid).to.be.true;
+
+      expect(await Container.count()).to.equal(containerCount + 1);
+      containerProductsEq(ctx.validContainerReq, containerResponse);
+
+      const databaseProduct = await UpdatedContainer.findOne((res.body as ContainerResponse).id);
+      expect(databaseProduct).to.exist;
+    });
     it('should store the given container in the database and return an HTTP 200 and the created container if admin', async () => {
       const containerCount = await Container.count();
       const res = await request(ctx.app)
@@ -394,20 +408,20 @@ describe('ContainerController', async (): Promise<void> => {
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(ctx.validContainerReq);
 
+      expect(res.status).to.equal(200);
+      const containerResponse = res.body as ContainerWithProductsResponse;
       expect(ctx.specification.validateModel(
         'ContainerWithProductsResponse',
-        res.body,
+        containerResponse,
         false,
         true,
       ).valid).to.be.true;
 
       expect(await Container.count()).to.equal(containerCount + 1);
-      containerProductsEq(ctx.validContainerReq, res.body as ContainerWithProductsResponse);
+      containerProductsEq(ctx.validContainerReq, containerResponse);
 
       const databaseProduct = await UpdatedContainer.findOne((res.body as ContainerResponse).id);
-      expect(databaseProduct).to.exist;
-
-      expect(res.status).to.equal(200);
+      expect(databaseProduct).to.not.exist;
     });
     it('should return an HTTP 400 if the given product is invalid', async () => {
       const containerCounter = await Container.count();
@@ -444,7 +458,7 @@ describe('ContainerController', async (): Promise<void> => {
 
       const newContainer = await request(ctx.app)
         .post('/containers')
-        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .set('Authorization', `Bearer ${ctx.token}`)
         .send(containerApprovedProducts);
 
       expect(ctx.specification.validateModel(
@@ -532,6 +546,7 @@ describe('ContainerController', async (): Promise<void> => {
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(ctx.validContainerReq);
 
+      expect(res.status).to.equal(200);
       expect(ctx.specification.validateModel(
         'ContainerWithProductsResponse',
         res.body,
@@ -543,8 +558,6 @@ describe('ContainerController', async (): Promise<void> => {
 
       const databaseContainer = await UpdatedContainer.findOne((res.body as ContainerResponse).id);
       expect(databaseContainer).to.exist;
-
-      expect(res.status).to.equal(200);
     });
     it('should return an HTTP 200 and override a previous update if admin', async () => {
       const id = 1;
