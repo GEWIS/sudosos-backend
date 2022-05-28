@@ -30,7 +30,7 @@ import {
   seedInvoices,
   seedPointsOfSale,
   seedProductCategories,
-  seedTransactions,
+  seedTransactions, seedVatGroups,
 } from '../../seed';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Swagger from '../../../src/start/swagger';
@@ -102,10 +102,11 @@ describe('InvoiceController', async () => {
     await User.save(invoiceUser);
 
     const categories = await seedProductCategories();
+    const vatGroups = await seedVatGroups();
     const {
       products,
       productRevisions,
-    } = await seedAllProducts([adminUser, localUser], categories);
+    } = await seedAllProducts([adminUser, localUser], categories, vatGroups);
     const {
       containers,
       containerRevisions,
@@ -280,11 +281,12 @@ describe('InvoiceController', async () => {
         {
           description: 'invalid',
           amount: -2,
-          price: {
+          priceInclVat: {
             amount: 72,
             currency: 'EUR',
             precision: 2,
           },
+          vatPercentage: 39,
         },
       ];
       const req: CreateInvoiceRequest = { ...ctx.validInvoiceRequest, customEntries };
@@ -295,20 +297,22 @@ describe('InvoiceController', async () => {
         {
           description: 'valid',
           amount: 1,
-          price: {
+          priceInclVat: {
             amount: 72,
             currency: 'EUR',
             precision: 2,
           },
+          vatPercentage: 39,
         },
         {
           description: '',
           amount: 2,
-          price: {
+          priceInclVat: {
             amount: 72,
             currency: 'EUR',
             precision: 2,
           },
+          vatPercentage: 39,
         },
       ];
       const req: CreateInvoiceRequest = { ...ctx.validInvoiceRequest, customEntries };
@@ -351,7 +355,7 @@ describe('InvoiceController', async () => {
     it('should create an Invoice with only custom entries and return an HTTP 200 if admin', async () => {
       await inUserContext(await UserFactory().clone(2), async (debtor: User, creditor: User) => {
         const count = await Invoice.count();
-        const newRequest = {
+        const newRequest: CreateInvoiceRequest = {
           ...ctx.validInvoiceRequest,
           toId: debtor.id,
           byId: creditor.id,
@@ -359,11 +363,12 @@ describe('InvoiceController', async () => {
             {
               description: 'Tappers vergoeding',
               amount: 1,
-              price: {
+              priceInclVat: {
                 amount: 2000,
                 currency: 'EUR',
                 precision: 2,
               },
+              vatPercentage: 39,
             },
           ],
         };
@@ -372,9 +377,9 @@ describe('InvoiceController', async () => {
           .set('Authorization', `Bearer ${ctx.adminToken}`)
           .send(newRequest);
 
+        expect(res.status).to.equal(200);
         expect(await Invoice.count()).to.equal(count + 1);
 
-        expect(res.status).to.equal(200);
         expect(ctx.specification.validateModel(
           'InvoiceResponse',
           res.body,
@@ -439,11 +444,12 @@ describe('InvoiceController', async () => {
             {
               description: 'Tappers vergoeding',
               amount: 1,
-              price: {
+              priceInclVat: {
                 amount: 2000,
                 currency: 'EUR',
                 precision: 2,
               },
+              vatPercentage: 39,
             },
           ],
         };
@@ -457,8 +463,8 @@ describe('InvoiceController', async () => {
           .to.equal(newRequest.customEntries[0].description);
         expect(((res.body) as InvoiceResponse).invoiceEntries[0].amount)
           .to.equal(newRequest.customEntries[0].amount);
-        expect(((res.body) as InvoiceResponse).invoiceEntries[0].price.amount)
-          .to.equal(newRequest.customEntries[0].price.amount);
+        expect(((res.body) as InvoiceResponse).invoiceEntries[0].priceInclVat.amount)
+          .to.equal(newRequest.customEntries[0].priceInclVat.amount);
 
         expect(res.status).to.equal(200);
       });

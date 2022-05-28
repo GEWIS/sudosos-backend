@@ -34,13 +34,15 @@ function wrapGet<T>(array: T[], index: number): T {
   return array[index % array.length];
 }
 
-function createValidSubTransactionRowRequest(amount: number, productRevision: ProductResponse) {
+function createValidSubTransactionRowRequest(
+  amount: number, productRevision: ProductResponse,
+): SubTransactionRowRequest {
   return {
     amount,
-    price: {
-      amount: productRevision.price.amount * amount,
-      currency: productRevision.price.currency,
-      precision: productRevision.price.precision,
+    totalPriceInclVat: {
+      amount: productRevision.priceInclVat.amount * amount,
+      currency: productRevision.priceInclVat.currency,
+      precision: productRevision.priceInclVat.precision,
     } as DineroObjectRequest,
     product: {
       id: productRevision.id,
@@ -57,7 +59,7 @@ function createValidSubTransactionRequest(
   for (let i = 0; i < rowAmount; i += 1) {
     const t = createValidSubTransactionRowRequest(i + 1, wrapGet(containerRevision.products, i));
     subTransactionRowRequest.push(t);
-    price += t.price.amount;
+    price += t.totalPriceInclVat.amount;
   }
   return {
     to: toId,
@@ -66,7 +68,7 @@ function createValidSubTransactionRequest(
       revision: containerRevision.revision,
     },
     subTransactionRows: subTransactionRowRequest,
-    price: {
+    totalPriceInclVat: {
       amount: price,
       currency: dinero.defaultCurrency,
       precision: dinero.defaultPrecision,
@@ -111,7 +113,7 @@ export async function createValidTransactionRequestPOS(
       id: pointOfSale.id,
       revision: pointOfSale.revision,
     } as RevisionRequest,
-    price: subTransactionRequest.price,
+    totalPriceInclVat: subTransactionRequest.totalPriceInclVat,
     subTransactions: [subTransactionRequest],
   };
 }

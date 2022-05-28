@@ -20,15 +20,16 @@ import { BaseUserResponse } from './user-response';
 import { ProductCategoryResponse } from './product-category-response';
 import { PaginationResult } from '../../helpers/pagination';
 import { DineroObjectResponse } from './dinero-response';
+import { BaseVatGroupResponse } from './vat-group-response';
 
 /**
  * @typedef {BaseResponse} BaseProductResponse
  * @property {string} name.required - The name of the product.
- * @property {DineroObjectResponse.model} price.required - The price of the product.
+ * @property {DineroObjectResponse.model} priceInclVat.required - The price of the product.
  */
 export interface BaseProductResponse extends BaseResponse {
   name: string,
-  price: DineroObjectResponse,
+  priceInclVat: DineroObjectResponse,
 }
 
 /**
@@ -37,11 +38,18 @@ export interface BaseProductResponse extends BaseResponse {
  * @property {BaseUserResponse.model} owner.required - The owner of the product.
  * @property {ProductCategoryResponse.model} category.required -
  *           The category the product belongs to.
+ * @property {DineroObjectResponse.model} priceExclVat.required - The price of the product
+ *           excluding VAT
+ * @property {BaseVatGroupResponse.model} vat.required - The VAT percentage
+ * @property {ProductCategoryResponse.model} category.required
+ *  - The category the product belongs to.
  * @property {string} image - The URL to the picture representing this product.
  * @property {number} alcoholPercentage - The percentage of alcohol in this product.
  */
 export interface UpdatedProductResponse extends BaseProductResponse {
   owner: BaseUserResponse,
+  priceExclVat: DineroObjectResponse,
+  vat: BaseVatGroupResponse,
   category: ProductCategoryResponse,
   image: string,
   revision: number,

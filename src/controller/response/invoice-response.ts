@@ -37,12 +37,14 @@ export interface InvoiceStatusResponse {
  * @typedef InvoiceEntryResponse
  * @property {string} description.required - The description of the entry
  * @property {integer} amount.required - Amount of products sold.
- * @property {DineroObject.model} price.required - The price per product.
+ * @property {DineroObject.model} priceInclVat.required - The price per product.
+ * @property {number} vatPercentage.required - The percentage of VAT applied to this entry
  */
 export interface InvoiceEntryResponse {
   description: string,
   amount: number,
-  price: DineroObject
+  priceInclVat: DineroObject
+  vatPercentage: number;
 }
 
 /**

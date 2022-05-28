@@ -31,7 +31,7 @@ import {
   seedPointsOfSale,
   seedProductCategories,
   seedTransactions,
-  seedUsers,
+  seedUsers, seedVatGroups,
 } from '../../seed';
 import Swagger from '../../../src/start/swagger';
 import {
@@ -71,7 +71,7 @@ export async function requestToTransaction(transactions: TransactionRequest[]) {
   let cost = 0;
   await Promise.all(transactions.map(async (t) => {
     const transactionResponse = await TransactionService.createTransaction(t);
-    cost += transactionResponse.price.amount;
+    cost += transactionResponse.totalPriceInclVat.amount;
     tIds.push(transactionResponse.id);
   }));
   return { tIds, cost };
@@ -90,8 +90,9 @@ function keyMapping(invoice: InvoiceResponse | Invoice) {
     entries: invoice.invoiceEntries.map((entry) => ({
       amount: entry.amount,
       description: entry.description,
-      price: invoice instanceof Invoice
-        ? (entry as InvoiceEntry).price.getAmount() : (entry as InvoiceEntryResponse).price.amount,
+      priceInclVat: invoice instanceof Invoice
+        ? (entry as InvoiceEntry).priceInclVat.getAmount()
+        : (entry as InvoiceEntryResponse).priceInclVat.amount,
     })),
   };
 }
@@ -140,10 +141,11 @@ describe('InvoiceService', () => {
 
     const users = await seedUsers();
     const categories = await seedProductCategories();
+    const vatGroups = await seedVatGroups();
     const {
       products,
       productRevisions,
-    } = await seedAllProducts(users, categories);
+    } = await seedAllProducts(users, categories, vatGroups);
     const {
       containerRevisions,
     } = await seedAllContainers(users, productRevisions, products);

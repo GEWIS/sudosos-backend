@@ -23,7 +23,9 @@ import { json } from 'body-parser';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
 import User, { UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
-import { seedAllContainers, seedAllProducts, seedProductCategories } from '../../seed';
+import {
+  seedAllContainers, seedAllProducts, seedProductCategories, seedVatGroups,
+} from '../../seed';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Swagger from '../../../src/start/swagger';
 import RoleManager from '../../../src/rbac/role-manager';
@@ -113,8 +115,9 @@ describe('ContainerController', async (): Promise<void> => {
     await User.save(organ);
 
     const categories = await seedProductCategories();
+    const vatGroups = await seedVatGroups();
     const { products, productRevisions } = (
-      await seedAllProducts([adminUser, localUser], categories));
+      await seedAllProducts([adminUser, localUser], categories, vatGroups));
     await seedAllContainers([adminUser, localUser], productRevisions, products);
 
     // create bearer tokens
@@ -268,8 +271,8 @@ describe('ContainerController', async (): Promise<void> => {
         .set('Authorization', `Bearer ${token}`);
 
       // success code
-      asRequested(container, res.body);
       expect(res.status).to.equal(200);
+      asRequested(container, res.body);
       expect(ctx.specification.validateModel(
         'ContainerWithProductsResponse',
         res.body,
@@ -407,20 +410,42 @@ describe('ContainerController', async (): Promise<void> => {
         .set('Authorization', `Bearer ${ctx.token}`)
         .send(ctx.validContainerReq);
 
+      expect(res.status).to.equal(200);
+      const containerResponse = res.body as ContainerWithProductsResponse;
       expect(ctx.specification.validateModel(
         'ContainerWithProductsResponse',
-        res.body,
+        containerResponse,
         false,
         true,
       ).valid).to.be.true;
 
       expect(await Container.count()).to.equal(containerCount + 1);
-      containerProductsEq(ctx.validContainerReq, res.body as ContainerWithProductsResponse);
+      containerProductsEq(ctx.validContainerReq, containerResponse);
 
       const databaseProduct = await UpdatedContainer.findOne((res.body as ContainerResponse).id);
       expect(databaseProduct).to.exist;
+    });
+    it('should store the given container in the database and return an HTTP 200 and the created container if admin', async () => {
+      const containerCount = await Container.count();
+      const res = await request(ctx.app)
+        .post('/containers')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(ctx.validContainerReq);
 
       expect(res.status).to.equal(200);
+      const containerResponse = res.body as ContainerWithProductsResponse;
+      expect(ctx.specification.validateModel(
+        'ContainerWithProductsResponse',
+        containerResponse,
+        false,
+        true,
+      ).valid).to.be.true;
+
+      expect(await Container.count()).to.equal(containerCount + 1);
+      containerProductsEq(ctx.validContainerReq, containerResponse);
+
+      const databaseProduct = await UpdatedContainer.findOne((res.body as ContainerResponse).id);
+      expect(databaseProduct).to.not.exist;
     });
     it('should return an HTTP 400 if the given product is invalid', async () => {
       const containerCounter = await Container.count();
@@ -477,7 +502,6 @@ describe('ContainerController', async (): Promise<void> => {
       expect(res.status).to.equal(200);
     });
     it('should return an HTTP 200 if the container has unapproved products', async () => {
-      // TODO think about what to do when container update has unapproved products.
       // precondition
       const productId = 4;
       expect(await UpdatedProduct.findOne(productId)).to.exist;
@@ -490,14 +514,18 @@ describe('ContainerController', async (): Promise<void> => {
         ownerId: owner.id,
       };
 
-      const res = (await request(ctx.app)
+      const newContainer = (await request(ctx.app)
         .post('/containers')
-        .set('Authorization', `Bearer ${ctx.adminToken}`)
-        .send(container));
+        .set('Authorization', `Bearer ${ctx.token}`)
+        .send(container)).body as ContainerWithProductsResponse;
+
+      const res = await request(ctx.app)
+        .post(`/containers/${newContainer.id}/approve`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
 
       expect(res.status).to.equal(200);
     });
-    it('should return an HTTP 404 and an empty response if the container has no pending update', async () => {
+    it('should return an HTTP 404 and an empty response if the product has no pending update', async () => {
       const id = 3;
 
       // sanity check / precondition
@@ -534,6 +562,7 @@ describe('ContainerController', async (): Promise<void> => {
         .set('Authorization', `Bearer ${ctx.token}`)
         .send(ctx.validContainerUpdate);
 
+      expect(res.status).to.equal(200);
       expect(ctx.specification.validateModel(
         'ContainerWithProductsResponse',
         res.body,
@@ -545,8 +574,25 @@ describe('ContainerController', async (): Promise<void> => {
 
       const databaseContainer = await UpdatedContainer.findOne((res.body as ContainerResponse).id);
       expect(databaseContainer).to.exist;
+    });
+    it('should return an HTTP 200 and the container update if admin', async () => {
+      const res = await request(ctx.app)
+        .patch('/containers/1')
+        .set('Authorization', `Bearer ${ctx.token}`)
+        .send(ctx.validContainerUpdate);
 
       expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'ContainerWithProductsResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+
+      containerProductsEq(ctx.validContainerReq, res.body as ContainerWithProductsResponse);
+
+      const databaseContainer = await UpdatedContainer.findOne((res.body as ContainerResponse).id);
+      expect(databaseContainer).to.exist;
     });
     it('should return an HTTP 200 and override a previous update if admin', async () => {
       const id = 1;
@@ -566,7 +612,7 @@ describe('ContainerController', async (): Promise<void> => {
 
       const updateRes = await request(ctx.app)
         .patch(`/containers/${id}`)
-        .set('Authorization', `Bearer ${ctx.token}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(newUpdate);
 
       containerProductsEq(newUpdate, updateRes.body as ContainerWithProductsResponse);

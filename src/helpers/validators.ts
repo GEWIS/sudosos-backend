@@ -17,6 +17,7 @@
  */
 
 import { InvoiceState } from '../entity/invoices/invoice-status';
+import { VatDeclarationPeriod } from '../entity/vat-group';
 import { UserType } from '../entity/user/user';
 
 /**
@@ -67,6 +68,7 @@ export function asNumber(input: any): number {
  * @returns {true} - for 1, '1', true, 'true' (case-insensitive), otherwise false.
  */
 export function asBoolean(input: any): boolean {
+  if (input === undefined) return undefined;
   if (typeof input === 'string') {
     return input.toLowerCase() === 'true' || !!+input;
   }
@@ -98,6 +100,20 @@ export function asInvoiceState(input: any): InvoiceState {
     throw new TypeError(`Input '${input}' is not a valid InvoiceState.`);
   }
   return state;
+}
+
+/**
+ * Converts the input to an VatDeclarationPeriod
+ * @param input - The input which should be converted.
+ * @returns VatDeclarationPeriod - The parsed VatDeclarationPeriod.
+ * @throws TypeError - If the input is not a valid VatDeclarationPeriod
+ */
+export function asVatDeclarationPeriod(input: any): VatDeclarationPeriod {
+  if (!input) return undefined;
+  if (!Object.values(VatDeclarationPeriod).includes(input)) {
+    throw new TypeError(`Input '${input}' is not a valid VatDeclarationPeriod.`);
+  }
+  return input;
 }
 
 /**

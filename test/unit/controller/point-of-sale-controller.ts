@@ -24,7 +24,7 @@ import PointOfSaleController from '../../../src/controller/point-of-sale-control
 import User, { UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import {
-  seedAllContainers, seedAllPointsOfSale, seedAllProducts, seedProductCategories,
+  seedAllContainers, seedAllPointsOfSale, seedAllProducts, seedProductCategories, seedVatGroups,
 } from '../../seed';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Swagger from '../../../src/start/swagger';
@@ -85,10 +85,11 @@ describe('PointOfSaleController', async () => {
     await User.save(localUser);
 
     const categories = await seedProductCategories();
+    const vatGroups = await seedVatGroups();
     const {
       products,
       productRevisions,
-    } = await seedAllProducts([adminUser, localUser], categories);
+    } = await seedAllProducts([adminUser, localUser], categories, vatGroups);
     const {
       containers,
       containerRevisions,

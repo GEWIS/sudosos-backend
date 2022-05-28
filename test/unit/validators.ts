@@ -63,8 +63,8 @@ export function verifyProductEntity(
 
   expect(product.product.id).to.be.greaterThan(-1);
   expect(product.name).to.not.be.empty;
-  expect(product.price.getAmount()).to.be.greaterThan(50);
-  expect(product.price.getCurrency()).to.equal('EUR');
+  expect(product.priceInclVat.getAmount()).to.be.greaterThan(50);
+  expect(product.priceInclVat.getCurrency()).to.equal('EUR');
 }
 
 export function verifyContainerEntity(

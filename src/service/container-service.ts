@@ -209,7 +209,7 @@ export default class ContainerService {
         owner_lastName: response.product_owner_lastName,
         image: response.product_image_downloadName,
         name: response.products_name,
-        price: response.products_price,
+        priceInclVat: response.products_priceInclVat,
       };
 
       const productResponse = ProductService.asProductResponse(rawProduct);

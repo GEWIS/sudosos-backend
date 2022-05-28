@@ -15,18 +15,25 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { DineroObjectRequest } from './dinero-request';
 
 /**
- * @typedef InvoiceEntryRequest
- * @property {string} description.required - The description of the entry
- * @property {integer} amount.required - Amount of item sold.
- * @property {DineroObjectRequest.model} priceInclVat.required - The price per item.
- * @property {number} vatPercentage.required - The percentage of VAT applied to this item
+ * @typedef UpdateVatGroupRequest
+ * @property {string} name.required - Name of the VAT group
+ * @property {boolean} deleted.required - Whether this group should be hidden
+ * in the financial overviews when its value is zero
+ * @property {boolean} hidden.required - Whether this group should
+ * be hidden from transactions
  */
-export default interface InvoiceEntryRequest {
-  description: string,
-  amount: number,
-  priceInclVat: DineroObjectRequest,
-  vatPercentage: number,
+export interface UpdateVatGroupRequest {
+  name: string,
+  deleted: boolean,
+  hidden: boolean,
+}
+
+/**
+ * @typedef {UpdateVatGroupRequest} VatGroupRequest
+ * @property {number} percentage.required - VAT percentage
+ */
+export interface VatGroupRequest extends UpdateVatGroupRequest {
+  percentage: number,
 }
