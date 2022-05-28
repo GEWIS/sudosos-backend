@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { getManager } from 'typeorm';
+import { getConnection, getManager } from 'typeorm';
 import Balance from '../entity/transactions/balance';
 
 export interface BalanceParameters {
@@ -92,64 +92,18 @@ export default class BalanceService {
    * @returns the current balance of a user
    */
   public static async getBalance(id: number): Promise<number> {
-    const entityManager = getManager();
-    const balanceArray = await entityManager.query('SELECT amount, lastTransaction, lastTransfer FROM balance where user_id = ?', [id]);
+    const connection = getConnection();
 
-    let balance: number = 0;
-    let lastTransaction: number = 0;
-    let lastTransfer: number = 0;
-
-    if (balanceArray.length > 0) {
-      balance = balanceArray[0].amount;
-      lastTransaction = balanceArray[0].lastTransaction;
-      lastTransfer = balanceArray[0].lastTransfer;
-    }
-
-    const laterTransactions = await entityManager.query('SELECT id, sum(amount) as amount, count(amount) as count from ( '
-      + 'select t.fromId as `id`, str.amount * pr.priceInclVat * -1 as `amount` from `transaction` as `t` '
-      + 'inner join sub_transaction st on t.id=st.transactionId '
-      + 'inner join sub_transaction_row str on st.id=str.subTransactionId '
-      + 'inner join product_revision pr on str.productRevision=pr.revision and str.productProduct=pr.productId '
-      + 'where t.fromId = ? and t.id > ?'
-      + 'UNION ALL '
-      + 'select st2.toId as `id`, str2.amount * pr2.priceInclVat as `amount` from sub_transaction st2 '
-      + 'inner join sub_transaction_row str2 on st2.id=str2.subTransactionId '
-      + 'inner join product_revision pr2 on str2.productRevision=pr2.revision and str2.productProduct=pr2.productId '
-      + 'where st2.toId = ? and st2.transactionId > ? '
-      + 'UNION ALL '
-      + 'select t2.fromId as `id`, amount*-1 as `amount` from transfer t2 where fromId=? and t2.id > ? '
-      + 'UNION ALL '
-      + 'select t3.toId as `id`, amount as `amount` from transfer t3 where t3.toId=? and t3.id > ?) as moneys ', [id, lastTransaction, id, lastTransaction, id, lastTransfer, id, lastTransfer]);
-
-    if (laterTransactions.length > 0 && laterTransactions[0].amount) {
-      balance += laterTransactions[0].amount;
-    }
-
-    const result = await this.getBalanceNew(id);
-    return result;
-  }
-
-  public static async getBalanceNew(id: number): Promise<number> {
-    const entityManager = getManager();
-    // const balanceArray = await entityManager.query('SELECT amount,
-    // lastTransaction, lastTransfer FROM balance where user_id = ?', [id]);
-    //
-    // let balance: number = 0;
-    // let lastTransaction: number = 0;
-    // let lastTransfer: number = 0;
-    //
-    // if (balanceArray.length > 0) {
-    //   balance = balanceArray[0].amount;
-    //   lastTransaction = balanceArray[0].lastTransaction;
-    //   lastTransfer = balanceArray[0].lastTransfer;
-    // }
-
-    const laterTransactions = await entityManager.query('SELECT moneys.id, '
-      + 'sum(moneys.totalValue) + COALESCE(b5.amount, 0) as amount, '
-      + 'count(moneys.totalValue) as count, '
+    const laterTransactions = await connection.query('SELECT moneys2.id as id, '
+      + 'moneys2.totalValue + COALESCE(b5.amount, 0) as amount, '
+      + 'moneys2.count as count, '
       + 'b5.lastTransaction as lastTransaction, '
       + 'b5.lastTransfer as lastTransfer, '
       + 'b5.amount as cachedAmount '
+      + 'from ( '
+      + 'SELECT COALESCE(moneys.id, ?) as id, '
+      + 'COALESCE(sum(moneys.totalValue), 0) as totalValue, '
+      + 'count(moneys.totalValue) as count '
       + 'from ( '
       + 'select t.fromId as `id`, str.amount * pr.priceInclVat * -1 as `totalValue` from `transaction` as `t` '
       + 'left join balance b1 on t.fromId=b1.user_id '
@@ -166,13 +120,14 @@ export default class BalanceService {
       + 'UNION ALL '
       + 'select t2.fromId as `id`, t2.amount*-1 as `totalValue` from transfer t2 '
       + 'left join balance b3 on t2.fromId=b3.user_id '
-      + 'where fromId=? and t2.id > COALESCE(b3.lastTransfer, 0) '
+      + 'where fromId = ? and t2.id > COALESCE(b3.lastTransfer, 0) '
       + 'UNION ALL '
       + 'select t3.toId as `id`, t3.amount as `totalValue` from transfer t3 '
       + 'left join balance b4 on t3.toId=b4.user_id '
-      + 'where t3.toId=? and t3.id > COALESCE(b4.lastTransfer, 0) '
+      + 'where t3.toId = ? and t3.id > COALESCE(b4.lastTransfer, 0) '
       + ') as moneys '
-      + 'left join balance b5 on moneys.id=b5.user_id', [id, id, id, id]);
+      + ') as moneys2 '
+      + 'left join balance b5 on b5.user_id=moneys2.id', [id, id, id, id, id]);
 
     if (laterTransactions.length > 0 && laterTransactions[0].amount) {
       return laterTransactions[0].amount;

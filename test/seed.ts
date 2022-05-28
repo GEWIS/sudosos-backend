@@ -183,11 +183,14 @@ export function defineInvoiceEntries(invoiceId: number, startEntryId: number,
   return { invoiceEntries, cost };
 }
 
-export async function seedInvoices(users: User[], transactions: Transaction[]): Promise<Invoice[]> {
+export async function seedInvoices(users: User[], transactions: Transaction[]): Promise<{
+  invoices: Invoice[],
+  invoiceTransfers: Transfer[],
+}> {
   let invoices: Invoice[] = [];
 
   const invoiceUsers = users.filter((u) => u.type === UserType.INVOICE);
-  let transfers: Transfer[] = [];
+  let invoiceTransfers: Transfer[] = [];
   let invoiceEntry: InvoiceEntry[] = [];
 
   for (let i = 0; i < invoiceUsers.length; i += 1) {
@@ -232,13 +235,13 @@ export async function seedInvoices(users: User[], transactions: Transaction[]): 
     });
     invoice.invoiceStatus.push(status);
     invoices = invoices.concat(invoice);
-    transfers = transfers.concat(transfer);
+    invoiceTransfers = invoiceTransfers.concat(transfer);
   }
-  await Transfer.save(transfers);
+  await Transfer.save(invoiceTransfers);
   await Invoice.save(invoices);
   await InvoiceEntry.save(invoiceEntry);
 
-  return invoices;
+  return { invoices, invoiceTransfers };
 }
 
 /**
@@ -1614,7 +1617,7 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
   const { transactions } = await seedTransactions(users, pointOfSaleRevisions);
   const transfers = await seedTransfers(users);
   const payoutRequests = await seedPayoutRequests(users);
-  const invoices = await seedInvoices(users, transactions);
+  const { invoices, invoiceTransfers } = await seedInvoices(users, transactions);
   const { banners } = await seedBanners(users);
 
   return {
@@ -1632,7 +1635,7 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
     updatedPointsOfSale,
     transactions,
     invoices,
-    transfers,
+    transfers: transfers.concat(invoiceTransfers),
     payoutRequests,
     banners,
     gewisUsers,

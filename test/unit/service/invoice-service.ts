@@ -151,7 +151,7 @@ describe('InvoiceService', () => {
     } = await seedAllContainers(users, productRevisions, products);
     const { pointOfSaleRevisions } = await seedPointsOfSale(users, containerRevisions);
     const { transactions } = await seedTransactions(users, pointOfSaleRevisions);
-    const invoices = await seedInvoices(users, transactions);
+    const { invoices } = await seedInvoices(users, transactions);
 
     // start app
     const app = express();
