@@ -17,11 +17,23 @@
  */
 import { getConnection, getManager } from 'typeorm';
 import Balance from '../entity/transactions/balance';
+import BalanceResponse from '../controller/response/balance-response';
+import DineroTransformer from '../entity/transformer/dinero-transformer';
 
 export interface BalanceParameters {
   ids: number[],
 }
+
 export default class BalanceService {
+  protected static asBalanceResponse(rawBalance: any): BalanceResponse {
+    return {
+      id: rawBalance.id,
+      amount: DineroTransformer.Instance.from(rawBalance.amount).toObject(),
+      lastTransactionId: rawBalance.lastTransaction,
+      lastTransferId: rawBalance.lastTransfer,
+    };
+  }
+
   /**
    * Update the balance cache with active values
    * Insafe Query! Safety leveraged by type safety
@@ -91,7 +103,7 @@ export default class BalanceService {
    * @param id id of user to get balance of
    * @returns the current balance of a user
    */
-  public static async getBalance(id: number): Promise<number> {
+  public static async getBalance(id: number): Promise<BalanceResponse> {
     const connection = getConnection();
 
     const laterTransactions = await connection.query('SELECT moneys2.id as id, '
@@ -129,11 +141,10 @@ export default class BalanceService {
       + ') as moneys2 '
       + 'left join balance b5 on b5.user_id=moneys2.id', [id, id, id, id, id]);
 
-    if (laterTransactions.length > 0 && laterTransactions[0].amount) {
-      return laterTransactions[0].amount;
+    if (laterTransactions.length > 0 && laterTransactions[0].amount === undefined) {
+      throw new Error('No balance returned');
     }
-
-    return 0;
+    return this.asBalanceResponse(laterTransactions[0]);
   }
 
   /**

@@ -107,7 +107,7 @@ export async function createInvoiceWithTransfers(debtorId: number, creditorId: n
   const transactions: TransactionRequest[] = await createTransactionRequest(
     debtorId, creditorId, transactionCount,
   );
-  expect(await BalanceService.getBalance(debtorId)).is.equal(0);
+  expect((await BalanceService.getBalance(debtorId)).amount.amount).is.equal(0);
   await new Promise((f) => setTimeout(f, 500));
   const { tIds, cost } = await requestToTransaction(transactions);
   expect(await BalanceService.getBalance(debtorId)).is.equal(-1 * cost);

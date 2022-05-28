@@ -61,7 +61,7 @@ export default class BalanceController extends BaseController {
    * @route get /balances
    * @group balance - Operations of balance controller
    * @security JWT
-   * @returns {Number} 200 - The requested user's balance
+   * @returns {BalanceResponse.model} 200 - The requested user's balance
    * @returns {string} 400 - Validation error
    * @returns {string} 404 - Not found error
    * @returns {string} 500 - Internal server error
@@ -82,7 +82,7 @@ export default class BalanceController extends BaseController {
    * @group balance - Operations of balance controller
    * @param {integer} id.path - The id of the user for which the saldo is requested
    * @security JWT
-   * @returns {Number} 200 - The requested user's balance
+   * @returns {BalanceResponse.model} 200 - The requested user's balance
    * @returns {string} 400 - Validation error
    * @returns {string} 404 - Not found error
    * @returns {string} 500 - Internal server error

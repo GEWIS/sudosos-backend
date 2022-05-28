@@ -258,7 +258,7 @@ describe('BalanceService', (): void => {
         expect(cachedBalance).to.not.be.undefined;
         // eslint-disable-next-line no-await-in-loop
         const balance = await BalanceService.getBalance(user.id);
-        expect(balance).to.equal(actualBalance.amount);
+        expect(balance.amount.amount).to.equal(actualBalance.amount);
         expect(cachedBalance.lastTransaction).to.equal(actualBalance.lastTransaction);
         expect(cachedBalance.lastTransfer).to.equal(actualBalance.lastTransfer);
       }
@@ -274,11 +274,11 @@ describe('BalanceService', (): void => {
 
       const actualBalance = await calculateBalance(ctx.users[0]);
       const balance = await BalanceService.getBalance(ctx.users[0].id);
-      expect(balance).to.equal(actualBalance.amount);
+      expect(balance.amount.amount).to.equal(actualBalance.amount);
 
       const actualBalance2 = await calculateBalance(ctx.users[1]);
       const balance2 = await BalanceService.getBalance(ctx.users[1].id);
-      expect(balance2).to.equal(actualBalance2.amount);
+      expect(balance2.amount.amount).to.equal(actualBalance2.amount);
     });
     it('should be able to cache the balance of certain users', async () => {
       await BalanceService.updateBalances({ ids: [ctx.users[0].id, ctx.users[1].id] });
@@ -291,11 +291,11 @@ describe('BalanceService', (): void => {
 
       const actualBalance = await calculateBalance(ctx.users[0]);
       const balance = await BalanceService.getBalance(ctx.users[0].id);
-      expect(balance).to.equal(actualBalance.amount);
+      expect(balance.amount.amount).to.equal(actualBalance.amount);
 
       const actualBalance2 = await calculateBalance(ctx.users[1]);
       const balance2 = await BalanceService.getBalance(ctx.users[1].id);
-      expect(balance2).to.equal(actualBalance2.amount);
+      expect(balance2.amount.amount).to.equal(actualBalance2.amount);
     });
     it('should be able to alter balance after adding transaction', async () => {
       // Sanity action to make sure we always start in a completely cached state
@@ -312,15 +312,17 @@ describe('BalanceService', (): void => {
       const newBalance = await BalanceService.getBalance(user.id);
       let newBalanceCache = await Balance.findOne({ where: { user_id: user.id } });
 
-      expect(newBalance).to.equal(oldBalance - amount.amount);
-      expect(newBalance).to.equal(oldBalanceCache!.amount - amount.amount);
+      expect(newBalance.id).to.equal(user.id);
+      expect(newBalance.amount.amount).to.equal(oldBalance.amount.amount - amount.amount);
+      expect(newBalance.amount.amount).to.equal(oldBalanceCache!.amount - amount.amount);
       expect(newBalanceCache!.amount).to.equal(oldBalanceCache!.amount);
       expect(newBalanceCache!.lastTransaction).to.equal(oldBalanceCache!.lastTransaction);
 
       await BalanceService.updateBalances();
       newBalanceCache = await Balance.findOne({ where: { user_id: user.id } });
       expect(newBalanceCache.lastTransaction).to.equal(transaction.id);
-      expect(newBalanceCache.amount).to.equal(newBalance);
+      expect(newBalanceCache.lastTransaction).to.equal(newBalance.lastTransactionId + 1);
+      expect(newBalanceCache.amount).to.equal(newBalance.amount.amount);
       expect(newBalanceCache.amount).to.not.equal(oldBalanceCache.amount);
     });
   });
@@ -329,35 +331,35 @@ describe('BalanceService', (): void => {
     it('should return 0 for new user', async () => {
       const newUser = await (await UserFactory().default()).get();
       const balance = await BalanceService.getBalance(newUser.id);
-      expect(balance).to.equal(0);
+      expect(balance.amount.amount).to.equal(0);
     });
     it('should return correct balance for new user with single outgoing transaction', async () => {
       const newUser = await (await UserFactory().default()).get();
       const { amount } = await addTransaction(newUser, false);
 
       const balance = await BalanceService.getBalance(newUser.id);
-      expect(balance).to.equal(-amount.amount);
+      expect(balance.amount.amount).to.equal(-amount.amount);
     });
     it('should return correct balance for new user with single incoming transaction', async () => {
       const newUser = await (await UserFactory().default()).get();
       const { amount } = await addTransaction(newUser, true);
 
       const balance = await BalanceService.getBalance(newUser.id);
-      expect(balance).to.equal(amount.amount);
+      expect(balance.amount.amount).to.equal(amount.amount);
     });
     it('should correctly return balance for new user with single outgoing transfer', async () => {
       const newUser = await (await UserFactory().default()).get();
       const { amount } = await addTransfer(newUser, false);
 
       const balance = await BalanceService.getBalance(newUser.id);
-      expect(balance).to.equal(-amount.amount);
+      expect(balance.amount.amount).to.equal(-amount.amount);
     });
     it('should correctly return balance for new user with single incoming transfer', async () => {
       const newUser = await (await UserFactory().default()).get();
       const { amount } = await addTransfer(newUser, true);
 
       const balance = await BalanceService.getBalance(newUser.id);
-      expect(balance).to.equal(amount.amount);
+      expect(balance.amount.amount).to.equal(amount.amount);
     });
     it('should return correct balance for new user with two outgoing transactions and balance cache', async () => {
       const newUser = await (await UserFactory().default()).get();
@@ -372,7 +374,7 @@ describe('BalanceService', (): void => {
       const transaction2 = await addTransaction(newUser, false);
 
       const balance = await BalanceService.getBalance(newUser.id);
-      expect(balance).to.equal(-amount.amount - transaction2.amount.amount);
+      expect(balance.amount.amount).to.equal(-amount.amount - transaction2.amount.amount);
     });
     it('should return correct balance for new user with two incoming transactions and balance cache', async () => {
       const newUser = await (await UserFactory().default()).get();
@@ -387,7 +389,7 @@ describe('BalanceService', (): void => {
       const transaction2 = await addTransaction(newUser, true);
 
       const balance = await BalanceService.getBalance(newUser.id);
-      expect(balance).to.equal(amount.amount + transaction2.amount.amount);
+      expect(balance.amount.amount).to.equal(amount.amount + transaction2.amount.amount);
     });
     it('should correctly return balance for new user with two outgoing transfers with balance cache', async () => {
       const newUser = await (await UserFactory().default()).get();
@@ -401,7 +403,7 @@ describe('BalanceService', (): void => {
       const transfer2 = await addTransfer(newUser, false);
 
       const balance = await BalanceService.getBalance(newUser.id);
-      expect(balance).to.equal(-amount.amount - transfer2.amount.amount);
+      expect(balance.amount.amount).to.equal(-amount.amount - transfer2.amount.amount);
     });
     it('should correctly return balance for new user with single incoming transfer', async () => {
       const newUser = await (await UserFactory().default()).get();
@@ -415,7 +417,7 @@ describe('BalanceService', (): void => {
       const transfer2 = await addTransfer(newUser, true);
 
       const balance = await BalanceService.getBalance(newUser.id);
-      expect(balance).to.equal(amount.amount + transfer2.amount.amount);
+      expect(balance.amount.amount).to.equal(amount.amount + transfer2.amount.amount);
     });
     it('should correctly return balance for new user with incoming and outgoing transactions and transfers', async () => {
       const newUser = await (await UserFactory().default()).get();
@@ -425,7 +427,7 @@ describe('BalanceService', (): void => {
       await addTransfer(newUser, true);
 
       const balance = await BalanceService.getBalance(newUser.id);
-      expect(balance).to.equal(0);
+      expect(balance.amount.amount).to.equal(0);
     });
     it('should correctly return balance for new user with incoming and outgoing transactions and transfers with cache', async () => {
       const newUser = await (await UserFactory().default()).get();
@@ -453,7 +455,7 @@ describe('BalanceService', (): void => {
       await addTransfer(newUser, true);
 
       const balance = await BalanceService.getBalance(newUser.id);
-      expect(balance).to.equal(0);
+      expect(balance.amount.amount).to.equal(0);
     });
   });
 });
