@@ -34,7 +34,7 @@ import { parseRequestPagination } from '../helpers/pagination';
 import verifyProductRequest from './request/validators/product-request-spec';
 import { isFail } from '../helpers/specification-validation';
 import { asNumber } from '../helpers/validators';
-import userTokenInOrgan from "../helpers/helper";
+import userTokenInOrgan from '../helpers/helper';
 
 export default class ProductController extends BaseController {
   private logger: Logger = log4js.getLogger('ProductController');
@@ -413,7 +413,7 @@ export default class ProductController extends BaseController {
    */
   static postRelation(req: RequestWithToken): string {
     const request = req.body as CreateProductRequest;
-    if (request.ownerId && userTokenInOrgan(req, request.ownerId)) return  'organ';
+    if (request.ownerId && userTokenInOrgan(req, request.ownerId)) return 'organ';
     if (request.ownerId && request.ownerId === req.token.user.id) return 'all';
     return 'own';
   }

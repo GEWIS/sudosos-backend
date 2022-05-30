@@ -39,7 +39,7 @@ import UpdatePinRequest from './request/update-pin-request';
 import UserService, { parseGetUsersFilters, parseUserToResponse, UserFilterParameters } from '../service/user-service';
 import { asNumber } from '../helpers/validators';
 import { verifyCreateUserRequest } from './request/validators/user-request-spec';
-import userTokenInOrgan from "../helpers/helper";
+import userTokenInOrgan from '../helpers/helper';
 
 export default class UserController extends BaseController {
   private logger: Logger = log4js.getLogger('UserController');

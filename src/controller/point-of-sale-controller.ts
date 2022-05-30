@@ -40,7 +40,7 @@ import {
   verifyCreatePointOfSaleRequest,
   verifyUpdatePointOfSaleRequest,
 } from './request/validators/point-of-sale-request-spec';
-import userTokenInOrgan from "../helpers/helper";
+import userTokenInOrgan from '../helpers/helper';
 
 export default class PointOfSaleController extends BaseController {
   private logger: Logger = log4js.getLogger('PointOfSaleController');

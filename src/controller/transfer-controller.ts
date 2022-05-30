@@ -24,7 +24,7 @@ import TransferService from '../service/transfer-service';
 import TransferRequest from './request/transfer-request';
 import Transfer from '../entity/transactions/transfer';
 import { parseRequestPagination } from '../helpers/pagination';
-import userTokenInOrgan from "../helpers/helper";
+import userTokenInOrgan from '../helpers/helper';
 
 export default class TransferController extends BaseController {
   private logger: Logger = log4js.getLogger('TransferController');
