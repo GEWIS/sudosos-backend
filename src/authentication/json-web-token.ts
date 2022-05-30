@@ -37,6 +37,11 @@ export default class JsonWebToken {
   public lesser: boolean;
 
   /**
+   * All the organs that the user is a part of.
+   */
+  public organs?: User[];
+
+  /**
    * The JWT expiry field. Set automatically by signing the token.
    */
   public readonly exp?: number;

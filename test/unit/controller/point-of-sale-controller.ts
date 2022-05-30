@@ -418,7 +418,7 @@ describe('PointOfSaleController', async () => {
     it('should verify containers Ids', async () => {
       const invalidRequest = {
         ...ctx.validPOSRequest,
-        containers: [-1, -69],
+        containers: [-1],
       };
       await expectError(invalidRequest, `Containers: ${INVALID_CONTAINER_ID(-1).value}`);
     });

@@ -523,10 +523,9 @@ export default class ContainerService {
    * @param userId - The User to test
    * @param containerId - The container to view
    */
-  public static async canViewContainer(userId: number, containerId: number)
+  public static async canViewContainer(userId: number, container: Container)
     : Promise<ContainerVisibility> {
     const result: ContainerVisibility = { own: false, public: false };
-    const container: Container = await Container.findOne(containerId, { relations: ['owner'] });
     if (!container) return result;
     if (container.owner.id === userId) result.own = true;
     if (container.public) result.public = true;

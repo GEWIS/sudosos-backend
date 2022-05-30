@@ -113,8 +113,8 @@ export default class AuthenticationController extends BaseController {
     this.logger.trace('LDAP authentication for user', body.accountName);
 
     try {
-      AuthenticationController.LDAPLogin(this.roleManager, this.tokenHandler,
-        wrapInManager<User>(AuthenticationService.createUserAndBind))(req, res);
+      await AuthenticationController.LDAPLogin(this.roleManager, this.tokenHandler,
+          wrapInManager<User>(AuthenticationService.createUserAndBind))(req, res);
     } catch (error) {
       this.logger.error('Could not authenticate using LDAP:', error);
       res.status(500).json('Internal server error.');
@@ -166,15 +166,9 @@ export default class AuthenticationController extends BaseController {
 
     try {
       const user = await User.findOne({ id: body.userId });
-      const roles = await this.roleManager.getRoles(user);
-
-      const contents: JsonWebToken = {
-        user,
-        roles,
-        lesser: false,
-      };
+      const contents = await AuthenticationService.makeJsonWebToken({tokenHandler: this.tokenHandler, roleManager: this.roleManager}, user, false )
       const token = await this.tokenHandler.signToken(contents, body.nonce);
-      const response = AuthenticationService.asAuthenticationResponse(user, roles, token);
+      const response = AuthenticationService.asAuthenticationResponse(contents.user, contents.roles, contents.organs, token);
       res.json(response);
     } catch (error) {
       this.logger.error('Could not create token:', error);

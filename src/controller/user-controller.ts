@@ -39,6 +39,7 @@ import UpdatePinRequest from './request/update-pin-request';
 import UserService, { parseGetUsersFilters, parseUserToResponse, UserFilterParameters } from '../service/user-service';
 import { asNumber } from '../helpers/validators';
 import { verifyCreateUserRequest } from './request/validators/user-request-spec';
+import userTokenInOrgan from "../helpers/helper";
 
 export default class UserController extends BaseController {
   private logger: Logger = log4js.getLogger('UserController');
@@ -214,7 +215,16 @@ export default class UserController extends BaseController {
     };
   }
 
+  /**
+   * Function to determine which credentials are needed to GET
+   *    'all' if user is not connected to User
+   *    'organ' if user is connected to User via organ
+   *    'own' if user is connected to User
+   * @param req
+   * @returns whether User is connected to used token
+   */
   static getRelation(req: RequestWithToken): string {
+    if (userTokenInOrgan(req, asNumber(req.params.id))) return 'organ';
     return req.params.id === req.token.user.id.toString() ? 'own' : 'all';
   }
 
@@ -1000,6 +1010,7 @@ export default class UserController extends BaseController {
       }
 
       const roles = await this.roleManager.getRoles(user);
+      if (req.token.organs && req.token.organs.length > 0) roles.push('SELLER');
       const definitions = this.roleManager.toRoleDefinitions(roles);
       res.status(200).json(RBACService.asRoleResponse(definitions));
     } catch (error) {

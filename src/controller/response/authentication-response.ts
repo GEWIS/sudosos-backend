@@ -22,10 +22,12 @@ import { UserResponse } from './user-response';
   * @typedef AuthenticationResponse
   * @property {UserResponse.model} user - The user that has authenticated.
   * @property {Array.<string>} roles - The RBAC roles that the user has.
+  * @property {Array.<UserResponse.model>} organs - The organs that the user is a member of.
   * @property {string} token - The JWT token that can be used as Bearer token for authentication.
   */
 export default interface AuthenticationResponse {
   user: UserResponse,
   roles: string[],
+  organs: UserResponse[],
   token: string,
 }

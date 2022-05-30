@@ -17,22 +17,20 @@
  */
 import bcrypt from 'bcrypt';
 // @ts-ignore
-import { filter } from 'ldap-escape';
-import log4js, { Logger } from 'log4js';
-import { EntityManager } from 'typeorm';
-import User, { UserType } from '../entity/user/user';
+import {filter} from 'ldap-escape';
+import log4js, {Logger} from 'log4js';
+import {EntityManager} from 'typeorm';
+import User, {UserType} from '../entity/user/user';
 import JsonWebToken from '../authentication/json-web-token';
 import AuthenticationResponse from '../controller/response/authentication-response';
 import TokenHandler from '../authentication/token-handler';
 import PinAuthenticator from '../entity/authenticator/pin-authenticator';
 import RoleManager from '../rbac/role-manager';
 import LDAPAuthenticator from '../entity/authenticator/ldap-authenticator';
-import { asNumber } from '../helpers/validators';
+import {asNumber} from '../helpers/validators';
 import MemberAuthenticator from '../entity/authenticator/member-authenticator';
-import {
-  bindUser, getLDAPConnection, getLDAPSettings, LDAPUser, userFromLDAP,
-} from '../helpers/ad';
-import { parseUserToResponse } from './user-service';
+import {bindUser, getLDAPConnection, getLDAPSettings, LDAPUser, userFromLDAP,} from '../helpers/ad';
+import {parseUserToResponse} from './user-service';
 
 export interface AuthenticationContext {
   tokenHandler: TokenHandler,
@@ -55,20 +53,53 @@ export default class AuthenticationService {
   }
 
   /**
-     * Converts the internal object representation to an authentication response, which can be
-     * returned in the API response.
-     * @param user - The user that authenticated.
-     * @param roles - The roles that the authenticated user has.
-     * @param token - The JWT token that can be used to authenticate.
-     * @returns The authentication response.
-     */
+   * Returns all the ORGANS the user has rights over
+   * @param user
+   */
+  private static async getUserOrgans(user: User) {
+    const organs = (await MemberAuthenticator.find({where: {user}, relations: ['authenticateAs']})).map((organ) => organ.authenticateAs)
+    return organs.filter((organs) => organs.type === UserType.ORGAN);
+  }
+
+  /**
+   * Creates the corresponding token-content of the given user in the given context.
+   * @param context - The tokenHandler and roleManager to be used.
+   * @param user - The user for which to generate the token-content
+   * @param lesser - If the token should give full access rights.
+   */
+  public static async makeJsonWebToken(context: AuthenticationContext, user: User, lesser: boolean):
+      Promise<JsonWebToken> {
+    const organs = await this.getUserOrgans(user);
+    const roles = await context.roleManager.getRoles(user);
+    // If a user is part of an organ he gains seller rights.
+    if (organs.length > 0) roles.push('SELLER');
+
+    return {
+      user,
+      roles,
+      organs,
+      lesser,
+    }
+  }
+
+  /**
+   * Converts the internal object representation to an authentication response, which can be
+   * returned in the API response.
+   * @param user - The user that authenticated.
+   * @param roles - The roles that the authenticated user has.
+   * @param organs - The organs that the user is part of.
+   * @param token - The JWT token that can be used to authenticate.
+   * @returns The authentication response.
+   */
   public static asAuthenticationResponse(
     user: User,
     roles: string[],
+    organs: User[],
     token: string,
   ): AuthenticationResponse {
     return {
       user: parseUserToResponse(user, true),
+      organs: organs.map((organ) => parseUserToResponse(organ, false)),
       roles,
       token,
     };
@@ -77,6 +108,7 @@ export default class AuthenticationService {
   /**
    * Creates a new User and binds it to the ObjectGUID of the provided LDAPUser.
    * Function is ran in a single DB transaction in the context of an EntityManager
+   * @param manager - The EntityManager context to use.
    * @param ADUser - The user for which to create a new account.
    */
   public static async createUserAndBind(manager: EntityManager, ADUser: LDAPUser): Promise<User> {
@@ -246,17 +278,12 @@ export default class AuthenticationService {
    */
   public static async getSaltedToken(user: User, context: AuthenticationContext,
     lesser = true): Promise<AuthenticationResponse> {
-    const roles = await context.roleManager.getRoles(user);
 
-    const contents: JsonWebToken = {
-      user,
-      roles,
-      lesser,
-    };
-
+    const contents = await this.makeJsonWebToken(context, user, lesser);
     const salt = await bcrypt.genSalt(AuthenticationService.BCRYPT_ROUNDS);
     const token = await context.tokenHandler.signToken(contents, salt);
-    return this.asAuthenticationResponse(user, roles, token);
+
+    return this.asAuthenticationResponse(contents.user, contents.roles, contents.organs, token);
   }
 
   public static async compareHash(password: string, hash: string): Promise<boolean> {

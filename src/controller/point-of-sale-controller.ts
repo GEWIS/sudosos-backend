@@ -40,6 +40,7 @@ import {
   verifyCreatePointOfSaleRequest,
   verifyUpdatePointOfSaleRequest,
 } from './request/validators/point-of-sale-request-spec';
+import userTokenInOrgan from "../helpers/helper";
 
 export default class PointOfSaleController extends BaseController {
   private logger: Logger = log4js.getLogger('PointOfSaleController');
@@ -425,30 +426,41 @@ export default class PointOfSaleController extends BaseController {
   /**
    * Function to determine which credentials are needed to post POS
    *    'all' if user is not connected to POS
+   *    'organ' if user is connected to POS via organ
    *    'own' if user is connected to POS
    * @param req - Request with CreatePointOfSaleRequest as body
    * @returns whether POS is connected to user token
    */
   static postRelation(req: RequestWithToken): string {
     const request = req.body as CreatePointOfSaleRequest;
-    if (request.ownerId && request.ownerId !== req.token.user.id) return 'all';
+    if (request.ownerId && request.ownerId === req.token.user.id) return 'own';
+    if (request.ownerId && userTokenInOrgan(req, request.ownerId)) return 'organ';
     return 'own';
   }
 
   /**
    * Function to determine which credentials are needed to get POS
    *    'all' if user is not connected to POS
+   *    'organ' if user is connected to POS via organ
    *    'own' if user is connected to POS
    * @param req
    * @returns whether POS is connected to used token
    */
   static async getRelation(req: RequestWithToken): Promise<string> {
+    const pointOfSaleId = asNumber(req.params.id);
+    const pos: PointOfSale = await PointOfSale.findOne(pointOfSaleId, { relations: ['owner'] });
+
+    if (!pos) return 'all';
+    if (userTokenInOrgan(req, pos.owner.id)) return 'organ';
+
     const canViewPointOfSale = await PointOfSaleService.canViewPointOfSale(
-      req.token.user.id, asNumber(req.params.id),
+      req.token.user.id, pos,
     );
+
     if (canViewPointOfSale) {
       return 'own';
     }
+
     return 'all';
   }
 }
