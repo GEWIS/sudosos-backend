@@ -652,10 +652,9 @@ describe('TransactionService', (): void => {
         .getRawMany();
 
       expect(records.length).to.equal(Math.min(23, actualTransactions.length));
-      records.forEach((t) => {
-        const found = actualTransactions.find((at) => at.id === t.id);
-        expect(found).to.not.be.undefined;
-      });
+      expect(records.map((r) => r.id)).to.deep.equalInAnyOrder(
+        actualTransactions.map((t) => t.transaction_id),
+      );
     });
   });
 
