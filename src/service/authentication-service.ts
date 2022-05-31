@@ -74,7 +74,7 @@ export default class AuthenticationService {
     const organs = await this.getUserOrgans(user);
     const roles = await context.roleManager.getRoles(user);
     // If a user is part of an organ he gains seller rights.
-    if (organs.length > 0) roles.push('SELLER');
+    if (organs.length > 0) roles.push('Seller');
 
     return {
       user,
