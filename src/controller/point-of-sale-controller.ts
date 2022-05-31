@@ -41,6 +41,7 @@ import {
   verifyUpdatePointOfSaleRequest,
 } from './request/validators/point-of-sale-request-spec';
 import userTokenInOrgan from '../helpers/helper';
+import TransactionService from '../service/transaction-service';
 
 export default class PointOfSaleController extends BaseController {
   private logger: Logger = log4js.getLogger('PointOfSaleController');
@@ -79,6 +80,12 @@ export default class PointOfSaleController extends BaseController {
           body: { modelName: 'UpdatePointOfSaleRequest' },
           policy: async (req) => this.roleManager.can(req.token.roles, 'update', await PointOfSaleController.getRelation(req), 'PointOfSale', ['*']),
           handler: this.updatePointOfSale.bind(this),
+        },
+      },
+      '/:id(\\d+)/transactions': {
+        GET: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', await PointOfSaleController.getRelation(req), 'Transaction', ['*']),
+          handler: this.returnPointOfSaleTransactions.bind(this),
         },
       },
       '/:id(\\d+)/update': {
@@ -419,6 +426,54 @@ export default class PointOfSaleController extends BaseController {
       res.json(pointOfSale);
     } catch (error) {
       this.logger.error('Could not approve update: ', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Returns a Point of Sale transactions
+   * @route GET /pointsofsale/{id}/transactions
+   * @group pointofsale - Operations of the point of sale controller
+   * @param {integer} id.path.required -
+   *          The id of the Point of Sale of which to get the transactions.
+   * @param {integer} take.query - How many transactions the endpoint should return
+   * @param {integer} skip.query - How many transactions should be skipped (for pagination)
+   * @security JWT
+   * @returns {PaginatedTransactionResponse.model} 200 -
+   *          The requested Point of Sale transactions
+   * @returns {string} 404 - Not found error
+   * @returns {string} 500 - Internal server error
+   */
+  public async returnPointOfSaleTransactions(req: RequestWithToken, res: Response): Promise<void> {
+    const { id } = req.params;
+    const pointOfSaleId = parseInt(id, 10);
+    this.logger.trace('Get Point of Sale transactions', id, 'by user', req.token.user);
+
+    let take;
+    let skip;
+    try {
+      const pagination = parseRequestPagination(req);
+      take = pagination.take;
+      skip = pagination.skip;
+    } catch (e) {
+      res.status(400).json(e.message);
+      return;
+    }
+
+    // handle request
+    try {
+      // Point of sale does not exist.
+      if (!await PointOfSale.findOne(pointOfSaleId)) {
+        res.status(404).json('Point of Sale not found.');
+        return;
+      }
+
+      const transactions = await TransactionService.getTransactions(
+        { pointOfSaleId }, { take, skip },
+      );
+      res.status(200).json(transactions);
+    } catch (error) {
+      this.logger.error('Could not return point of sale transactions:', error);
       res.status(500).json('Internal server error.');
     }
   }

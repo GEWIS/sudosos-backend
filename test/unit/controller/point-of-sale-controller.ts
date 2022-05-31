@@ -142,6 +142,9 @@ describe('PointOfSaleController', async () => {
         Container: {
           get: all,
         },
+        Transaction: {
+          get: all,
+        },
       },
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
     });
@@ -172,6 +175,9 @@ describe('PointOfSaleController', async () => {
           create: organRole,
           update: organRole,
           delete: organRole,
+        },
+        Transaction: {
+          get: organRole,
         },
       },
       assignmentCheck: async () => true,
@@ -309,6 +315,71 @@ describe('PointOfSaleController', async () => {
     it('should return an HTTP 403 if not admin', async () => {
       const res = await request(ctx.app)
         .get('/pointsofsale/1')
+        .set('Authorization', `Bearer ${ctx.token}`);
+
+      expect(res.status).to.equal(403);
+      expect(res.body).to.be.empty;
+    });
+  });
+  describe('GET /pointsofsale/:id/transactions', () => {
+    it('should return correct model', async () => {
+      const res = await request(ctx.app)
+        .get('/pointsofsale/1/transactions')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'PaginatedTransactionResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
+    it('should return an HTTP 200 and the transactions if admin', async () => {
+      const res = await request(ctx.app)
+        .get('/pointsofsale/1/transactions')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(ctx.specification.validateModel(
+        'PaginatedTransactionResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+      expect(res.status).to.equal(200);
+    });
+    it('should return an HTTP 200 and the transactions if connected via organ', async () => {
+      const pos = await PointOfSale.findOne({ where: { owner: ctx.organ } });
+      expect(pos).to.not.be.undefined;
+      const res = await request(ctx.app)
+        .get(`/pointsofsale/${pos.id}/transactions`)
+        .set('Authorization', `Bearer ${ctx.organMemberToken}`);
+
+      expect(ctx.specification.validateModel(
+        'PaginatedTransactionResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+      expect(res.status).to.equal(200);
+    });
+    it('should return an HTTP 403 if not admin and not connected via organ', async () => {
+      const pos = await PointOfSale.findOne({ where: { owner: ctx.organ } });
+      const res = await request(ctx.app)
+        .get(`/pointsofsale/${pos.id}/transactions`)
+        .set('Authorization', `Bearer ${ctx.organ}`);
+      expect(res.status).to.equal(403);
+    });
+    it('should return an HTTP 404 if the point of sale with given id does not exist', async () => {
+      const res = await request(ctx.app)
+        .get(`/pointsofsale/${(await PointOfSale.count()) + 1}/transactions`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(404);
+      expect(res.body).to.equal('Point of Sale not found.');
+    });
+    it('should return an HTTP 403 if not admin', async () => {
+      const res = await request(ctx.app)
+        .get('/pointsofsale/1/transactions')
         .set('Authorization', `Bearer ${ctx.token}`);
 
       expect(res.status).to.equal(403);
