@@ -32,7 +32,7 @@ import TokenHandler from '../../../src/authentication/token-handler';
 import Swagger from '../../../src/start/swagger';
 import RoleManager from '../../../src/rbac/role-manager';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
-import { CreateProductRequest } from '../../../src/controller/request/product-request';
+import CreateProductParams, { CreateProductRequest } from '../../../src/controller/request/product-request';
 import UpdatedProduct from '../../../src/entity/product/updated-product';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import { ProductResponse } from '../../../src/controller/response/product-response';
@@ -63,7 +63,9 @@ describe('ProductController', async (): Promise<void> => {
     controller: ProductController,
     adminUser: User,
     localUser: User,
+    organ: User,
     adminToken: String,
+    organMemberToken: String,
     token: String,
     vatGroups: VatGroup[],
     tokenNoRoles: String,
@@ -94,12 +96,20 @@ describe('ProductController', async (): Promise<void> => {
       active: true,
     } as User;
 
+    const organ = {
+      id: 3,
+      firstName: 'Organ',
+      type: UserType.ORGAN,
+      active: true,
+    } as User;
+
     await User.save(adminUser);
     await User.save(localUser);
+    await User.save(organ);
 
     const categories = await seedProductCategories();
     const vatGroups = await seedVatGroups();
-    const { products } = await seedAllProducts([adminUser, localUser], categories, vatGroups);
+    const { products } = await seedAllProducts([organ, adminUser, localUser], categories, vatGroups);
 
     // create bearer tokens
     const tokenHandler = new TokenHandler({
@@ -107,6 +117,7 @@ describe('ProductController', async (): Promise<void> => {
     });
     const adminToken = await tokenHandler.signToken({ user: adminUser, roles: ['Admin'], lesser: false }, 'nonce admin');
     const token = await tokenHandler.signToken({ user: localUser, roles: ['User'], lesser: false }, 'nonce');
+    const organMemberToken = await tokenHandler.signToken({ user: localUser, roles: ['User', 'Seller'], organs: [organ], lesser: false }, 'nonce');
     const tokenNoRoles = await tokenHandler.signToken({ user: localUser, roles: [], lesser: false }, 'nonce');
 
     const validProductReq: CreateProductRequest = {
@@ -132,6 +143,8 @@ describe('ProductController', async (): Promise<void> => {
 
     const all = { all: new Set<string>(['*']) };
     const own = { own: new Set<string>(['*']) };
+    const organRole = { organ: new Set<string>(['*']) };
+
     const roleManager = new RoleManager();
     roleManager.registerRole({
       name: 'Admin',
@@ -145,6 +158,20 @@ describe('ProductController', async (): Promise<void> => {
         },
       },
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
+    });
+
+    roleManager.registerRole({
+      name: 'Seller',
+      permissions: {
+        Product: {
+          create: organRole,
+          get: all,
+          update: organRole,
+          delete: organRole,
+          approve: organRole,
+        },
+      },
+      assignmentCheck: async () => true,
     });
 
     roleManager.registerRole({
@@ -173,6 +200,8 @@ describe('ProductController', async (): Promise<void> => {
       controller,
       adminUser,
       localUser,
+      organ,
+      organMemberToken,
       adminToken,
       token,
       vatGroups,
@@ -327,6 +356,30 @@ describe('ProductController', async (): Promise<void> => {
         true,
       ).valid).to.be.true;
     });
+    it('should store the given product in the database and return an HTTP 200 and the product if organ', async () => {
+      const productCount = await Product.count();
+      const createProductParams: CreateProductParams = {
+        ...ctx.validProductReq,
+        ownerId: ctx.organ.id,
+      }
+      const res = await request(ctx.app)
+          .post('/products')
+          .set('Authorization', `Bearer ${ctx.organMemberToken}`)
+          .send(createProductParams);
+
+      expect(await Product.count()).to.equal(productCount + 1);
+      productEq(createProductParams, res.body as ProductResponse);
+      const databaseProduct = await UpdatedProduct.findOne((res.body as ProductResponse).id);
+      expect(databaseProduct).to.exist;
+
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+          'UpdatedProductResponse',
+          res.body,
+          false,
+          true,
+      ).valid).to.be.true;
+    });
     it('should return an HTTP 403 if not admin', async () => {
       const productCount = await Product.count();
       const res = await request(ctx.app)
@@ -375,6 +428,25 @@ describe('ProductController', async (): Promise<void> => {
 
       // success code
       expect(res.status).to.equal(200);
+    });
+    it('should return an HTTP 200 and the product with the given id if connected via organ', async () => {
+      const product = await Product.findOne({relations: ['owner'], where: {owner : ctx.organ}});
+      const res = await request(ctx.app)
+          .get(`/products/${product.id}`)
+          .set('Authorization', `Bearer ${ctx.organMemberToken}`);
+      expect(ctx.specification.validateModel(
+          'ProductResponse',
+          res.body,
+          false,
+          true,
+      ).valid).to.be.true;
+      expect((res.body as ProductResponse).id).to.equal(1);
+      expect(res.status).to.equal(200);
+
+      const res2 = await request(ctx.app)
+          .get(`/products/${product.id}`)
+          .set('Authorization', `Bearer ${ctx.organ}`);
+      expect(res2.status).to.eq(403);
     });
     it('should return an HTTP 404 if the product with the given id does not exist', async () => {
       const res = await request(ctx.app)

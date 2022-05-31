@@ -46,6 +46,7 @@ describe('TransferController', async (): Promise<void> => {
   let specification: SwaggerSpecification;
   let adminToken: String;
   let token: String;
+  let organMemberToken: String;
   let validRequest: TransferRequest;
   let invalidRequest: TransferRequest;
 
@@ -108,6 +109,8 @@ describe('TransferController', async (): Promise<void> => {
     });
     adminToken = await tokenHandler.signToken({ user: adminUser, roles: ['User', 'Admin'], lesser: false }, 'nonce admin');
     token = await tokenHandler.signToken({ user: localUser, roles: ['User'], lesser: false }, 'nonce');
+    organMemberToken = await tokenHandler.signToken({ user: localUser, roles: ['User', 'Seller'], organs:[adminUser], lesser: false }, '1');
+
 
     // start app
     app = express();
@@ -115,6 +118,8 @@ describe('TransferController', async (): Promise<void> => {
 
     const all = { all: new Set<string>(['*']) };
     const own = { own: new Set<string>(['*']) };
+    const organRole = { organ: new Set<string>(['*']) };
+
 
     // Create roleManager and set roles of Admin and User
     // In this case Admin can do anything and User nothing.
@@ -141,6 +146,18 @@ describe('TransferController', async (): Promise<void> => {
       },
       assignmentCheck: async () => true,
     });
+    roleManager.registerRole({
+      name: 'Seller',
+      permissions: {
+        Transfer: {
+          create: organRole,
+          get: organRole,
+          update: organRole,
+          delete: organRole,
+        },
+      },
+      assignmentCheck: async () => true,
+    })
 
     const controller = new TransferController({ specification, roleManager });
     app.use(json());
@@ -227,6 +244,15 @@ describe('TransferController', async (): Promise<void> => {
 
       expect((res.body as TransferResponse).id).to.equal(localAccountWithdraw.id);
       expect(res.status).to.equal(200);
+    });
+    it('should return an HTTP 200 and the transfer with the given id if connected via organ', async () => {
+      const transfer = await Transfer.findOne({where: {toId: 1}});
+      expect(transfer).to.not.be.undefined;
+      const res = await request(app)
+          .get(`/transfers/${transfer.id}`)
+          .set('Authorization', `Bearer ${organMemberToken}`);
+      expect(res.status).to.equal(200);
+      expect((res.body as TransferResponse).id).to.equal(transfer.id);
     });
     it('should return an HTTP 403 if not involved in withdraw transaction not admin', async () => {
       const res = await request(app)
