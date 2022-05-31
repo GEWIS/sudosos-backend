@@ -36,7 +36,7 @@ import { defaultPagination, PaginationResult } from '../../../src/helpers/pagina
 import { ContainerResponse } from '../../../src/controller/response/container-response';
 import { PaginatedProductResponse, ProductResponse } from '../../../src/controller/response/product-response';
 import UpdatedPointOfSale from '../../../src/entity/point-of-sale/updated-point-of-sale';
-import {CreatePointOfSaleParams, CreatePointOfSaleRequest} from '../../../src/controller/request/point-of-sale-request';
+import { CreatePointOfSaleParams, CreatePointOfSaleRequest } from '../../../src/controller/request/point-of-sale-request';
 import { INVALID_CONTAINER_ID } from '../../../src/controller/request/validators/validation-errors';
 
 /**
@@ -118,7 +118,9 @@ describe('PointOfSaleController', async () => {
     });
     const adminToken = await tokenHandler.signToken({ user: adminUser, roles: ['Admin'], lesser: false }, 'nonce admin');
     const token = await tokenHandler.signToken({ user: localUser, roles: ['User'], lesser: false }, 'nonce');
-    const organMemberToken = await tokenHandler.signToken({ user: localUser, roles: ['User', 'Seller'], organs:[organ], lesser: false }, '1');
+    const organMemberToken = await tokenHandler.signToken({
+      user: localUser, roles: ['User', 'Seller'], organs: [organ], lesser: false,
+    }, '1');
 
     const app = express();
     const specification = await Swagger.initialize(app);
@@ -173,7 +175,7 @@ describe('PointOfSaleController', async () => {
         },
       },
       assignmentCheck: async () => true,
-    })
+    });
 
     const controller = new PointOfSaleController({ specification, roleManager });
     app.use(json());
@@ -280,20 +282,20 @@ describe('PointOfSaleController', async () => {
       expect(res.status).to.equal(200);
     });
     it('should return an HTTP 200 and the point of sale if connected via organ', async () => {
-      const pos = await PointOfSale.findOne({where: {owner: ctx.organ}});
+      const pos = await PointOfSale.findOne({ where: { owner: ctx.organ } });
       expect(pos).to.not.be.undefined;
       const res = await request(ctx.app)
-          .get(`/pointsofsale/${pos.id}`)
-          .set('Authorization', `Bearer ${ctx.organMemberToken}`);
+        .get(`/pointsofsale/${pos.id}`)
+        .set('Authorization', `Bearer ${ctx.organMemberToken}`);
 
       expect((res.body as PointOfSaleResponse).id).to.equal(pos.id);
       expect(res.status).to.equal(200);
     });
     it('should return an HTTP 403 if not admin and not connected via organ', async () => {
-      const pos = await PointOfSale.findOne({where: {owner: ctx.organ}});
+      const pos = await PointOfSale.findOne({ where: { owner: ctx.organ } });
       const res = await request(ctx.app)
-          .get(`/pointsofsale/${pos.id}`)
-          .set('Authorization', `Bearer ${ctx.organ}`);
+        .get(`/pointsofsale/${pos.id}`)
+        .set('Authorization', `Bearer ${ctx.organ}`);
       expect(res.status).to.equal(403);
     });
     it('should return an HTTP 404 if the point of sale with given id does not exist', async () => {
@@ -505,20 +507,20 @@ describe('PointOfSaleController', async () => {
         ownerId: ctx.organ.id,
       };
       const res = await request(ctx.app)
-          .post('/pointsofsale')
-          .set('Authorization', `Bearer ${ctx.organMemberToken}`)
-          .send(createPointOfSaleParams);
+        .post('/pointsofsale')
+        .set('Authorization', `Bearer ${ctx.organMemberToken}`)
+        .send(createPointOfSaleParams);
       expect(ctx.specification.validateModel(
-          'UpdatedPointOfSaleResponse',
-          res.body,
-          false,
-          true,
+        'UpdatedPointOfSaleResponse',
+        res.body,
+        false,
+        true,
       ).valid).to.be.true;
 
       expect(await PointOfSale.count()).to.equal(count + 1);
       pointOfSaleEq(createPointOfSaleParams, res.body as PointOfSaleResponse);
       const databaseProduct = await UpdatedPointOfSale.findOne(
-          (res.body as PointOfSaleResponse).id,
+        (res.body as PointOfSaleResponse).id,
       );
       expect(databaseProduct).to.exist;
 

@@ -60,7 +60,7 @@ export default class AuthenticationService {
    */
   private static async getUserOrgans(user: User) {
     const organs = (await MemberAuthenticator.find({ where: { user }, relations: ['authenticateAs'] })).map((organ) => organ.authenticateAs);
-    return organs.filter((organs) => organs.type === UserType.ORGAN);
+    return organs.filter((organ) => organ.type === UserType.ORGAN);
   }
 
   /**

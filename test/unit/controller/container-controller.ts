@@ -43,7 +43,7 @@ import UpdatedProduct from '../../../src/entity/product/updated-product';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import { CreateContainerRequest, UpdateContainerRequest } from '../../../src/controller/request/container-request';
 import { INVALID_ORGAN_ID, INVALID_PRODUCT_ID } from '../../../src/controller/request/validators/validation-errors';
-import ContainerRevision from "../../../src/entity/container/container-revision";
+import ContainerRevision from '../../../src/entity/container/container-revision';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -129,8 +129,9 @@ describe('ContainerController', async (): Promise<void> => {
     });
     const adminToken = await tokenHandler.signToken({ user: adminUser, roles: ['Admin'], lesser: false }, 'nonce admin');
     const token = await tokenHandler.signToken({ user: localUser, roles: ['User'], lesser: false }, 'nonce');
-    const organMemberToken = await tokenHandler.signToken({ user: localUser, roles: ['User', 'Seller'], organs:[organ], lesser: false }, '1');
-
+    const organMemberToken = await tokenHandler.signToken({
+      user: localUser, roles: ['User', 'Seller'], organs: [organ], lesser: false,
+    }, '1');
 
     const validContainerUpdate: UpdateContainerRequest = {
       products: [7, 8],
@@ -193,7 +194,7 @@ describe('ContainerController', async (): Promise<void> => {
         },
       },
       assignmentCheck: async () => true,
-    })
+    });
 
     const controller = new ContainerController({ specification, roleManager });
     app.use(json());
@@ -326,9 +327,9 @@ describe('ContainerController', async (): Promise<void> => {
         name: 'ORGAN Container',
         revision: 1,
         products: [],
-      })
+      });
       await ContainerRevision.save(revision);
-      const container = await Container.findOne({ relations: ['owner'], where: {owner: ctx.organ, public: false }});
+      const container = await Container.findOne({ relations: ['owner'], where: { owner: ctx.organ, public: false } });
       await getAndCheck(container, ctx.organMemberToken);
     });
     it('should return an HTTP 403 if the container exist but is not visible to the user', async () => {

@@ -447,7 +447,8 @@ export default class PointOfSaleService {
    * @param userId - The User to test
    * @param pointOfSale - The Point of Sale to view
    */
-  public static async canViewPointOfSale(userId: number, pointOfSale: PointOfSale): Promise<boolean> {
+  public static async canViewPointOfSale(userId: number, pointOfSale: PointOfSale)
+    : Promise<boolean> {
     if (!pointOfSale) return false;
     return pointOfSale.owner.id === userId;
   }

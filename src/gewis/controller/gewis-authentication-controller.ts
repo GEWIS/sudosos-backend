@@ -21,7 +21,6 @@ import log4js, { Logger } from 'log4js';
 import * as util from 'util';
 import BaseController, { BaseControllerOptions } from '../../controller/base-controller';
 import Policy from '../../controller/policy';
-import JsonWebToken from '../../authentication/json-web-token';
 import TokenHandler from '../../authentication/token-handler';
 import GewisUser from '../../entity/user/gewis-user';
 import GewiswebToken from '../gewisweb-token';
@@ -144,9 +143,12 @@ export default class GewisAuthenticationController extends BaseController {
         return;
       }
 
-      const contents = await AuthenticationService.makeJsonWebToken({ roleManager: this.roleManager, tokenHandler: this.tokenHandler }, user.user, false);
+      const contents = await AuthenticationService
+        .makeJsonWebToken({ roleManager: this.roleManager, tokenHandler: this.tokenHandler },
+          user.user, false);
       const token = await this.tokenHandler.signToken(contents, body.nonce);
-      const response = AuthenticationService.asAuthenticationResponse(contents.user, contents.roles, contents.organs, token);
+      const response = AuthenticationService
+        .asAuthenticationResponse(contents.user, contents.roles, contents.organs, token);
       res.json(response);
     } catch (error) {
       this.logger.error('Could not create token:', error);

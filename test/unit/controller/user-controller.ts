@@ -18,7 +18,7 @@
 import express, { Application } from 'express';
 import chai, { expect, request } from 'chai';
 import { SwaggerSpecification } from 'swagger-model-validator';
-import {Connection, createQueryBuilder} from 'typeorm';
+import { Connection, createQueryBuilder } from 'typeorm';
 import { json } from 'body-parser';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
 import UserController from '../../../src/controller/user-controller';
@@ -38,7 +38,6 @@ import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale
 import seedDatabase from '../../seed';
 import { verifyUserResponse } from '../validators';
 import RoleManager from '../../../src/rbac/role-manager';
-import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import { TransactionResponse } from '../../../src/controller/response/transaction-response';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import { TransferResponse } from '../../../src/controller/response/transfer-response';
@@ -126,7 +125,9 @@ describe('UserController', (): void => {
     ctx.tokenHandler = tokenHandler;
     ctx.userToken = await tokenHandler.signToken({ user: ctx.users[0], roles: ['User'], lesser: false }, '1');
     ctx.adminToken = await tokenHandler.signToken({ user: ctx.users[6], roles: ['User', 'Admin'], lesser: false }, '1');
-    ctx.organMemberToken = await tokenHandler.signToken({ user: ctx.users[6], roles: ['User', 'Seller'], organs:[ctx.organ], lesser: false }, '1');
+    ctx.organMemberToken = await tokenHandler.signToken({
+      user: ctx.users[6], roles: ['User', 'Seller'], organs: [ctx.organ], lesser: false,
+    }, '1');
 
     const all = { all: new Set<string>(['*']) };
     const own = { own: new Set<string>(['*']) };
@@ -205,7 +206,7 @@ describe('UserController', (): void => {
         },
       },
       assignmentCheck: async () => false,
-    })
+    });
 
     ctx.specification = await Swagger.initialize(ctx.app);
     ctx.controller = new UserController({
@@ -420,14 +421,14 @@ describe('UserController', (): void => {
     });
     it('should return correct user when user connected via organ', async () => {
       const res = await request(ctx.app)
-          .get(`/users/${ctx.organ.id}`)
-          .set('Authorization', `Bearer ${ctx.organMemberToken}`);
+        .get(`/users/${ctx.organ.id}`)
+        .set('Authorization', `Bearer ${ctx.organMemberToken}`);
       expect(res.status).to.equal(200);
       expect(ctx.specification.validateModel(
-          'User',
-          res.body,
-          false,
-          true,
+        'User',
+        res.body,
+        false,
+        true,
       ).valid).to.be.true;
     });
     it('should give an HTTP 404 when admin requests different user that does not exist', async () => {
@@ -1062,18 +1063,20 @@ describe('UserController', (): void => {
       const transactions = res.body.records as TransactionResponse[];
 
       const actualTransactions = await createQueryBuilder(Transaction, 'transaction')
-          .leftJoinAndSelect('transaction.from', 'from')
-          .leftJoinAndSelect('transaction.createdBy', 'createdBy')
-          .leftJoinAndSelect('transaction.pointOfSale', 'pointOfSaleRev')
-          .leftJoinAndSelect('pointOfSaleRev.pointOfSale', 'pointOfSale')
-          .leftJoin('transaction.subTransactions', 'subTransaction')
-          .leftJoin('subTransaction.subTransactionRows', 'subTransactionRow')
-          .where('transaction.fromId = :userId OR transaction.createdById = :userId OR subTransaction.toId = :userId', { userId: user.id })
-          .distinct(true)
-          .getRawMany();
+        .leftJoinAndSelect('transaction.from', 'from')
+        .leftJoinAndSelect('transaction.createdBy', 'createdBy')
+        .leftJoinAndSelect('transaction.pointOfSale', 'pointOfSaleRev')
+        .leftJoinAndSelect('pointOfSaleRev.pointOfSale', 'pointOfSale')
+        .leftJoin('transaction.subTransactions', 'subTransaction')
+        .leftJoin('subTransaction.subTransactionRows', 'subTransactionRow')
+        .where('transaction.fromId = :userId OR transaction.createdById = :userId OR subTransaction.toId = :userId', { userId: user.id })
+        .distinct(true)
+        .getRawMany();
 
       expect(transactions.length).to.equal(Math.min(23, actualTransactions.length));
-      expect(transactions.map((t) => t.id)).to.deep.equalInAnyOrder(actualTransactions.map((t) => t.transaction_id));
+      expect(transactions.map((t) => t.id)).to.deep.equalInAnyOrder(
+        actualTransactions.map((t) => t.transaction_id),
+      );
     });
     it('should give an HTTP 403 when user requests transactions from someone else', async () => {
       const res = await request(ctx.app)
@@ -1091,18 +1094,20 @@ describe('UserController', (): void => {
       const transactions = res.body.records as TransactionResponse[];
 
       const actualTransactions = await createQueryBuilder(Transaction, 'transaction')
-          .leftJoinAndSelect('transaction.from', 'from')
-          .leftJoinAndSelect('transaction.createdBy', 'createdBy')
-          .leftJoinAndSelect('transaction.pointOfSale', 'pointOfSaleRev')
-          .leftJoinAndSelect('pointOfSaleRev.pointOfSale', 'pointOfSale')
-          .leftJoin('transaction.subTransactions', 'subTransaction')
-          .leftJoin('subTransaction.subTransactionRows', 'subTransactionRow')
-          .where('transaction.fromId = :userId OR transaction.createdById = :userId OR subTransaction.toId = :userId', { userId: user.id })
-          .distinct(true)
-          .getRawMany();
+        .leftJoinAndSelect('transaction.from', 'from')
+        .leftJoinAndSelect('transaction.createdBy', 'createdBy')
+        .leftJoinAndSelect('transaction.pointOfSale', 'pointOfSaleRev')
+        .leftJoinAndSelect('pointOfSaleRev.pointOfSale', 'pointOfSale')
+        .leftJoin('transaction.subTransactions', 'subTransaction')
+        .leftJoin('subTransaction.subTransactionRows', 'subTransactionRow')
+        .where('transaction.fromId = :userId OR transaction.createdById = :userId OR subTransaction.toId = :userId', { userId: user.id })
+        .distinct(true)
+        .getRawMany();
 
       expect(transactions.length).to.equal(Math.min(23, actualTransactions.length));
-      expect(transactions.map((t) => t.id)).to.deep.equalInAnyOrder(actualTransactions.map((t) => t.transaction_id));
+      expect(transactions.map((t) => t.id)).to.deep.equalInAnyOrder(
+        actualTransactions.map((t) => t.transaction_id),
+      );
     });
     it('should give an HTTP 404 when admin requests transactions from unknown user', async () => {
       const res = await request(ctx.app)

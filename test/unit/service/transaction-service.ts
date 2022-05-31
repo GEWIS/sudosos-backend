@@ -18,7 +18,7 @@
 
 import express, { Application } from 'express';
 import { expect } from 'chai';
-import {Connection, createQueryBuilder} from 'typeorm';
+import { Connection, createQueryBuilder } from 'typeorm';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import log4js, { Logger } from 'log4js';
 import { DineroObject } from 'dinero.js';
@@ -641,15 +641,15 @@ describe('TransactionService', (): void => {
       const { records } = await TransactionService.getTransactions({}, {}, user);
 
       const actualTransactions = await createQueryBuilder(Transaction, 'transaction')
-          .leftJoinAndSelect('transaction.from', 'from')
-          .leftJoinAndSelect('transaction.createdBy', 'createdBy')
-          .leftJoinAndSelect('transaction.pointOfSale', 'pointOfSaleRev')
-          .leftJoinAndSelect('pointOfSaleRev.pointOfSale', 'pointOfSale')
-          .leftJoin('transaction.subTransactions', 'subTransaction')
-          .leftJoin('subTransaction.subTransactionRows', 'subTransactionRow')
-          .where('transaction.fromId = :userId OR transaction.createdById = :userId OR subTransaction.toId = :userId', { userId: user.id })
-          .distinct(true)
-          .getRawMany();
+        .leftJoinAndSelect('transaction.from', 'from')
+        .leftJoinAndSelect('transaction.createdBy', 'createdBy')
+        .leftJoinAndSelect('transaction.pointOfSale', 'pointOfSaleRev')
+        .leftJoinAndSelect('pointOfSaleRev.pointOfSale', 'pointOfSale')
+        .leftJoin('transaction.subTransactions', 'subTransaction')
+        .leftJoin('subTransaction.subTransactionRows', 'subTransactionRow')
+        .where('transaction.fromId = :userId OR transaction.createdById = :userId OR subTransaction.toId = :userId', { userId: user.id })
+        .distinct(true)
+        .getRawMany();
 
       expect(records.length).to.equal(Math.min(23, actualTransactions.length));
       records.forEach((t) => {

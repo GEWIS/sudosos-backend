@@ -21,6 +21,7 @@ import { expect, request } from 'chai';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
 import log4js, { Logger } from 'log4js';
+import { describe } from 'mocha';
 import TransactionController from '../../../src/controller/transaction-controller';
 import Transaction from '../../../src/entity/transactions/transaction';
 import Database from '../../../src/database/database';
@@ -34,7 +35,6 @@ import { verifyBaseTransactionEntity } from '../validators';
 import RoleManager from '../../../src/rbac/role-manager';
 import { TransactionRequest } from '../../../src/controller/request/transaction-request';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
-import {describe} from "mocha";
 
 describe('TransactionController', (): void => {
   let ctx: {
@@ -162,8 +162,9 @@ describe('TransactionController', (): void => {
 
     ctx.userToken = await tokenHandler.signToken({ user: ctx.users[0], roles: ['User'], lesser: false }, '39');
     ctx.adminToken = await tokenHandler.signToken({ user: ctx.users[6], roles: ['User', 'Admin'], lesser: false }, '39');
-    ctx.organMemberToken = await tokenHandler.signToken({ user: ctx.users[6], roles: ['User', 'Seller'], organs:[ctx.users[0]], lesser: false }, '1');
-
+    ctx.organMemberToken = await tokenHandler.signToken({
+      user: ctx.users[6], roles: ['User', 'Seller'], organs: [ctx.users[0]], lesser: false,
+    }, '1');
 
     const all = { all: new Set<string>(['*']) };
     const organRole = { organ: new Set<string>(['*']) };
@@ -550,23 +551,22 @@ describe('TransactionController', (): void => {
 
   describe('GET /transactions/{id}', () => {
     it('should return HTTP 200 and transaction if connected via organ', async () => {
-      const trans = await Transaction.findOne({relations: ['from'], where: {from: ctx.users[0]}});
+      const trans = await Transaction.findOne({ relations: ['from'], where: { from: ctx.users[0] } });
       expect(trans).to.not.be.undefined;
       const res = await request(ctx.app)
-          .get(`/transactions/${trans.id}`)
-          .set('Authorization', `Bearer ${ctx.organMemberToken}`);
+        .get(`/transactions/${trans.id}`)
+        .set('Authorization', `Bearer ${ctx.organMemberToken}`);
       expect(res.status).to.equal(200);
     });
     it('should return HTTP 403 if not admin and not connected via organ', async () => {
-      const trans = await Transaction.findOne({relations: ['from'], where: {from: ctx.users[3]}});
+      const trans = await Transaction.findOne({ relations: ['from'], where: { from: ctx.users[3] } });
       expect(trans).to.not.be.undefined;
       const res = await request(ctx.app)
-          .get(`/transactions/${trans.id}`)
-          .set('Authorization', `Bearer ${ctx.organMemberToken}`);
+        .get(`/transactions/${trans.id}`)
+        .set('Authorization', `Bearer ${ctx.organMemberToken}`);
       expect(res.status).to.equal(403);
     });
-  })
-
+  });
 
   describe('POST /transactions', () => {
     it('should return an HTTP 200 and the saved transaction when user is admin', async () => {
