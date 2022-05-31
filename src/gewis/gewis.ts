@@ -111,6 +111,12 @@ export default class Gewis {
         Authenticator: {
           get: { own: star },
         },
+        Transfer: {
+          get: { own: star },
+        },
+        Transaction: {
+          get: { own: star },
+        },
       },
       assignmentCheck: async () => true,
     });
