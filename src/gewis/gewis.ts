@@ -117,6 +117,9 @@ export default class Gewis {
         Transaction: {
           get: { own: star },
         },
+        VatGroup: {
+          get: { all: star },
+        },
       },
       assignmentCheck: async () => true,
     });
@@ -347,6 +350,9 @@ export default class Gewis {
           ...admin,
         },
         Transfer: {
+          ...admin,
+        },
+        VatGroup: {
           ...admin,
         },
       },
