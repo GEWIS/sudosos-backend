@@ -280,9 +280,11 @@ export default class TransactionController extends BaseController {
    * @returns whether transaction is connected to user token
    */
   static async getRelation(req: RequestWithToken): Promise<string> {
-    const transaction = await Transaction.findOne({ where: { id: asNumber(req.params.id) }, relations: ['from', 'createdBy'] });
+    const transaction = await Transaction.findOne({ where: { id: asNumber(req.params.id) }, relations: ['from', 'createdBy', 'pointOfSale.pointOfSale.owner'] });
     if (!transaction) return 'all';
-    if (userTokenInOrgan(req, transaction.from.id) || userTokenInOrgan(req, transaction.createdBy.id)) return 'organ';
+    if (userTokenInOrgan(req, transaction.from.id)
+        || userTokenInOrgan(req, transaction.createdBy.id)
+        || userTokenInOrgan(req, transaction.pointOfSale.pointOfSale.owner.id)) return 'organ';
     if (transaction.from.id === req.token.user.id || transaction.createdBy.id === req.token.user.id) return 'own';
     return 'all';
   }
