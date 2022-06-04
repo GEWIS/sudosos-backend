@@ -21,7 +21,6 @@ import log4js, { Logger } from 'log4js';
 import * as util from 'util';
 import BaseController, { BaseControllerOptions } from '../../controller/base-controller';
 import Policy from '../../controller/policy';
-import JsonWebToken from '../../authentication/json-web-token';
 import TokenHandler from '../../authentication/token-handler';
 import GewisUser from '../../entity/user/gewis-user';
 import GewiswebToken from '../gewisweb-token';
@@ -32,7 +31,7 @@ import GEWISAuthenticationPinRequest from './request/gewis-authentication-pin-re
 import AuthenticationLDAPRequest from '../../controller/request/authentication-ldap-request';
 import AuthenticationController from '../../controller/authentication-controller';
 import Gewis from '../gewis';
-import User, { UserType } from '../../entity/user/user';
+import User from '../../entity/user/user';
 import wrapInManager from '../../helpers/database';
 import UserService from '../../service/user-service';
 import UpdateUserRequest from '../../controller/request/update-user-request';
@@ -127,7 +126,6 @@ export default class GewisAuthenticationController extends BaseController {
             complete: false,
           })();
       } catch (error) {
-        console.error(error);
         // Invalid token supplied.
         res.status(403).json({
           message: 'Invalid JWT signature',
@@ -156,7 +154,7 @@ export default class GewisAuthenticationController extends BaseController {
 
       const contents = await AuthenticationService
         .makeJsonWebToken({ roleManager: this.roleManager, tokenHandler: this.tokenHandler },
-          user.user, false);
+          gewisUser.user, false);
       const token = await this.tokenHandler.signToken(contents, body.nonce);
       const response = AuthenticationService
         .asAuthenticationResponse(contents.user, contents.roles, contents.organs, token);
