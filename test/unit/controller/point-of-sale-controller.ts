@@ -36,7 +36,7 @@ import { defaultPagination, PaginationResult } from '../../../src/helpers/pagina
 import { ContainerResponse } from '../../../src/controller/response/container-response';
 import { PaginatedProductResponse, ProductResponse } from '../../../src/controller/response/product-response';
 import UpdatedPointOfSale from '../../../src/entity/point-of-sale/updated-point-of-sale';
-import { CreatePointOfSaleRequest } from '../../../src/controller/request/point-of-sale-request';
+import { CreatePointOfSaleParams, CreatePointOfSaleRequest } from '../../../src/controller/request/point-of-sale-request';
 import { INVALID_CONTAINER_ID } from '../../../src/controller/request/validators/validation-errors';
 
 /**
@@ -58,9 +58,11 @@ describe('PointOfSaleController', async () => {
     controller: PointOfSaleController,
     adminUser: User,
     localUser: User,
+    organ: User,
     validPOSRequest: CreatePointOfSaleRequest,
     adminToken: string,
     token: string,
+    organMemberToken: string,
   };
 
   before(async () => {
@@ -81,8 +83,16 @@ describe('PointOfSaleController', async () => {
       active: true,
     } as User;
 
+    const organ = {
+      id: 3,
+      firstName: 'Organ',
+      type: UserType.ORGAN,
+      active: true,
+    } as User;
+
     await User.save(adminUser);
     await User.save(localUser);
+    await User.save(organ);
 
     const categories = await seedProductCategories();
     const vatGroups = await seedVatGroups();
@@ -94,7 +104,7 @@ describe('PointOfSaleController', async () => {
       containers,
       containerRevisions,
     } = await seedAllContainers([adminUser, localUser], productRevisions, products);
-    await seedAllPointsOfSale([adminUser, localUser], containerRevisions, containers);
+    await seedAllPointsOfSale([adminUser, localUser, organ], containerRevisions, containers);
 
     const validPOSRequest: CreatePointOfSaleRequest = {
       containers: [containers[0].id, containers[1].id, containers[2].id],
@@ -108,12 +118,17 @@ describe('PointOfSaleController', async () => {
     });
     const adminToken = await tokenHandler.signToken({ user: adminUser, roles: ['Admin'], lesser: false }, 'nonce admin');
     const token = await tokenHandler.signToken({ user: localUser, roles: ['User'], lesser: false }, 'nonce');
+    const organMemberToken = await tokenHandler.signToken({
+      user: localUser, roles: ['User', 'Seller'], organs: [organ], lesser: false,
+    }, '1');
 
     const app = express();
     const specification = await Swagger.initialize(app);
 
     const all = { all: new Set<string>(['*']) };
     const own = { own: new Set<string>(['*']) };
+    const organRole = { organ: new Set<string>(['*']) };
+
     const roleManager = new RoleManager();
     roleManager.registerRole({
       name: 'Admin',
@@ -125,6 +140,9 @@ describe('PointOfSaleController', async () => {
           delete: all,
         },
         Container: {
+          get: all,
+        },
+        Transaction: {
           get: all,
         },
       },
@@ -146,6 +164,25 @@ describe('PointOfSaleController', async () => {
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_USER,
     });
 
+    roleManager.registerRole({
+      name: 'Seller',
+      permissions: {
+        Container: {
+          get: organRole,
+        },
+        PointOfSale: {
+          get: organRole,
+          create: organRole,
+          update: organRole,
+          delete: organRole,
+        },
+        Transaction: {
+          get: organRole,
+        },
+      },
+      assignmentCheck: async () => true,
+    });
+
     const controller = new PointOfSaleController({ specification, roleManager });
     app.use(json());
     app.use(new TokenMiddleware({ tokenHandler, refreshFactor: 0.5 }).getMiddleware());
@@ -158,9 +195,11 @@ describe('PointOfSaleController', async () => {
       controller,
       adminUser,
       localUser,
+      organ,
       validPOSRequest,
       adminToken,
       token,
+      organMemberToken,
     };
   });
 
@@ -248,6 +287,23 @@ describe('PointOfSaleController', async () => {
       expect((res.body as PointOfSaleResponse).id).to.equal(1);
       expect(res.status).to.equal(200);
     });
+    it('should return an HTTP 200 and the point of sale if connected via organ', async () => {
+      const pos = await PointOfSale.findOne({ where: { owner: ctx.organ } });
+      expect(pos).to.not.be.undefined;
+      const res = await request(ctx.app)
+        .get(`/pointsofsale/${pos.id}`)
+        .set('Authorization', `Bearer ${ctx.organMemberToken}`);
+
+      expect((res.body as PointOfSaleResponse).id).to.equal(pos.id);
+      expect(res.status).to.equal(200);
+    });
+    it('should return an HTTP 403 if not admin and not connected via organ', async () => {
+      const pos = await PointOfSale.findOne({ where: { owner: ctx.organ } });
+      const res = await request(ctx.app)
+        .get(`/pointsofsale/${pos.id}`)
+        .set('Authorization', `Bearer ${ctx.organ}`);
+      expect(res.status).to.equal(403);
+    });
     it('should return an HTTP 404 if the point of sale with given id does not exist', async () => {
       const res = await request(ctx.app)
         .get(`/pointsofsale/${(await PointOfSale.count()) + 1}`)
@@ -259,6 +315,71 @@ describe('PointOfSaleController', async () => {
     it('should return an HTTP 403 if not admin', async () => {
       const res = await request(ctx.app)
         .get('/pointsofsale/1')
+        .set('Authorization', `Bearer ${ctx.token}`);
+
+      expect(res.status).to.equal(403);
+      expect(res.body).to.be.empty;
+    });
+  });
+  describe('GET /pointsofsale/:id/transactions', () => {
+    it('should return correct model', async () => {
+      const res = await request(ctx.app)
+        .get('/pointsofsale/1/transactions')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'PaginatedTransactionResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
+    it('should return an HTTP 200 and the transactions if admin', async () => {
+      const res = await request(ctx.app)
+        .get('/pointsofsale/1/transactions')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(ctx.specification.validateModel(
+        'PaginatedTransactionResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+      expect(res.status).to.equal(200);
+    });
+    it('should return an HTTP 200 and the transactions if connected via organ', async () => {
+      const pos = await PointOfSale.findOne({ where: { owner: ctx.organ } });
+      expect(pos).to.not.be.undefined;
+      const res = await request(ctx.app)
+        .get(`/pointsofsale/${pos.id}/transactions`)
+        .set('Authorization', `Bearer ${ctx.organMemberToken}`);
+
+      expect(ctx.specification.validateModel(
+        'PaginatedTransactionResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+      expect(res.status).to.equal(200);
+    });
+    it('should return an HTTP 403 if not admin and not connected via organ', async () => {
+      const pos = await PointOfSale.findOne({ where: { owner: ctx.organ } });
+      const res = await request(ctx.app)
+        .get(`/pointsofsale/${pos.id}/transactions`)
+        .set('Authorization', `Bearer ${ctx.organ}`);
+      expect(res.status).to.equal(403);
+    });
+    it('should return an HTTP 404 if the point of sale with given id does not exist', async () => {
+      const res = await request(ctx.app)
+        .get(`/pointsofsale/${(await PointOfSale.count()) + 1}/transactions`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(404);
+      expect(res.body).to.equal('Point of Sale not found.');
+    });
+    it('should return an HTTP 403 if not admin', async () => {
+      const res = await request(ctx.app)
+        .get('/pointsofsale/1/transactions')
         .set('Authorization', `Bearer ${ctx.token}`);
 
       expect(res.status).to.equal(403);
@@ -418,7 +539,7 @@ describe('PointOfSaleController', async () => {
     it('should verify containers Ids', async () => {
       const invalidRequest = {
         ...ctx.validPOSRequest,
-        containers: [-1, -69],
+        containers: [-1],
       };
       await expectError(invalidRequest, `Containers: ${INVALID_CONTAINER_ID(-1).value}`);
     });
@@ -433,6 +554,7 @@ describe('PointOfSaleController', async () => {
         .post('/pointsofsale')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(ctx.validPOSRequest);
+      console.error(res.body);
       expect(ctx.specification.validateModel(
         'UpdatedPointOfSaleResponse',
         res.body,
@@ -442,6 +564,32 @@ describe('PointOfSaleController', async () => {
 
       expect(await PointOfSale.count()).to.equal(count + 1);
       pointOfSaleEq(ctx.validPOSRequest, res.body as PointOfSaleResponse);
+      const databaseProduct = await UpdatedPointOfSale.findOne(
+        (res.body as PointOfSaleResponse).id,
+      );
+      expect(databaseProduct).to.exist;
+
+      expect(res.status).to.equal(200);
+    });
+    it('should store the given POS and return an HTTP 200 if connected via organ', async () => {
+      const count = await PointOfSale.count();
+      const createPointOfSaleParams: CreatePointOfSaleParams = {
+        ...ctx.validPOSRequest,
+        ownerId: ctx.organ.id,
+      };
+      const res = await request(ctx.app)
+        .post('/pointsofsale')
+        .set('Authorization', `Bearer ${ctx.organMemberToken}`)
+        .send(createPointOfSaleParams);
+      expect(ctx.specification.validateModel(
+        'UpdatedPointOfSaleResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+
+      expect(await PointOfSale.count()).to.equal(count + 1);
+      pointOfSaleEq(createPointOfSaleParams, res.body as PointOfSaleResponse);
       const databaseProduct = await UpdatedPointOfSale.findOne(
         (res.body as PointOfSaleResponse).id,
       );

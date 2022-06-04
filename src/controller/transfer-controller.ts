@@ -24,6 +24,7 @@ import TransferService from '../service/transfer-service';
 import TransferRequest from './request/transfer-request';
 import Transfer from '../entity/transactions/transfer';
 import { parseRequestPagination } from '../helpers/pagination';
+import userTokenInOrgan from '../helpers/helper';
 
 export default class TransferController extends BaseController {
   private logger: Logger = log4js.getLogger('TransferController');
@@ -61,13 +62,16 @@ export default class TransferController extends BaseController {
 
   /**
    * Function to determine which credentials are needed to get transaction
-   * all if user is not connected to transaction
-   * own if user is connected to transaction
+   *        all if user is not connected to transaction
+   *        own if user is connected to transaction
+   *        organ if user is connected to transaction via organ
    * @param req
    * @returns whether transaction is connected to used token
    */
   static async getRelation(req: RequestWithToken): Promise<string> {
     const transaction = await Transfer.findOne(req.params.id);
+    if (!transaction) return 'all';
+    if (userTokenInOrgan(req, transaction.fromId) || userTokenInOrgan(req, transaction.toId)) return 'organ';
     if (transaction
       && (transaction.fromId === req.token.user.id
       || transaction.toId === req.token.user.id)) {
