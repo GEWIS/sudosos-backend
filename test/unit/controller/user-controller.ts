@@ -18,7 +18,7 @@
 import express, { Application } from 'express';
 import chai, { expect, request } from 'chai';
 import { SwaggerSpecification } from 'swagger-model-validator';
-import { Connection } from 'typeorm';
+import { Connection, createQueryBuilder } from 'typeorm';
 import { json } from 'body-parser';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
 import UserController from '../../../src/controller/user-controller';
@@ -38,7 +38,6 @@ import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale
 import seedDatabase from '../../seed';
 import { verifyUserResponse } from '../validators';
 import RoleManager from '../../../src/rbac/role-manager';
-import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import { TransactionResponse } from '../../../src/controller/response/transaction-response';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import { TransferResponse } from '../../../src/controller/response/transfer-response';
@@ -60,8 +59,10 @@ describe('UserController', (): void => {
     controller: UserController,
     userToken: string,
     adminToken: string,
+    organMemberToken: string,
     deletedUser: User,
     user: User,
+    organ: User,
     tokenHandler: TokenHandler,
     users: User[],
     categories: ProductCategory[],
@@ -87,7 +88,9 @@ describe('UserController', (): void => {
       controller: undefined,
       userToken: undefined,
       adminToken: undefined,
+      organMemberToken: undefined,
       deletedUser: undefined,
+      organ: undefined,
       user: {
         firstName: 'Roy',
         lastName: 'Kakkenberg',
@@ -104,7 +107,16 @@ describe('UserController', (): void => {
     } as User);
     await User.save(deletedUser);
 
+    ctx.organ = Object.assign(new User(), {
+      firstName: 'ORGAN',
+      type: UserType.ORGAN,
+      deleted: false,
+      active: true,
+    } as User);
+    await User.save(ctx.organ);
+
     ctx.users.push(deletedUser);
+    ctx.users.push(ctx.organ);
     ctx.deletedUser = deletedUser;
 
     const tokenHandler = new TokenHandler({
@@ -113,9 +125,13 @@ describe('UserController', (): void => {
     ctx.tokenHandler = tokenHandler;
     ctx.userToken = await tokenHandler.signToken({ user: ctx.users[0], roles: ['User'], lesser: false }, '1');
     ctx.adminToken = await tokenHandler.signToken({ user: ctx.users[6], roles: ['User', 'Admin'], lesser: false }, '1');
+    ctx.organMemberToken = await tokenHandler.signToken({
+      user: ctx.users[6], roles: ['User', 'Seller'], organs: [ctx.organ], lesser: false,
+    }, '1');
 
     const all = { all: new Set<string>(['*']) };
     const own = { own: new Set<string>(['*']) };
+    const organ = { organ: new Set<string>(['*']) };
     const roleManager = new RoleManager();
     roleManager.registerRole({
       name: 'Admin',
@@ -181,6 +197,15 @@ describe('UserController', (): void => {
         },
       },
       assignmentCheck: async () => true,
+    });
+    roleManager.registerRole({
+      name: 'Seller',
+      permissions: {
+        User: {
+          get: organ,
+        },
+      },
+      assignmentCheck: async () => false,
     });
 
     ctx.specification = await Swagger.initialize(ctx.app);
@@ -393,6 +418,18 @@ describe('UserController', (): void => {
       const user = res.body as UserResponse;
       const spec = await Swagger.importSpecification();
       verifyUserResponse(spec, user);
+    });
+    it('should return correct user when user connected via organ', async () => {
+      const res = await request(ctx.app)
+        .get(`/users/${ctx.organ.id}`)
+        .set('Authorization', `Bearer ${ctx.organMemberToken}`);
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'User',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
     });
     it('should give an HTTP 404 when admin requests different user that does not exist', async () => {
       const res = await request(ctx.app)
@@ -1025,18 +1062,21 @@ describe('UserController', (): void => {
 
       const transactions = res.body.records as TransactionResponse[];
 
-      const actualTransactions = await Transaction.createQueryBuilder('transaction')
-        .select('transaction.id as id')
-        .innerJoin(SubTransaction, 'subTransaction', 'transaction.id = subTransaction.transactionId')
+      const actualTransactions = await createQueryBuilder(Transaction, 'transaction')
+        .leftJoinAndSelect('transaction.from', 'from')
+        .leftJoinAndSelect('transaction.createdBy', 'createdBy')
+        .leftJoinAndSelect('transaction.pointOfSale', 'pointOfSaleRev')
+        .leftJoinAndSelect('pointOfSaleRev.pointOfSale', 'pointOfSale')
+        .leftJoin('transaction.subTransactions', 'subTransaction')
+        .leftJoin('subTransaction.subTransactionRows', 'subTransactionRow')
         .where('transaction.fromId = :userId OR transaction.createdById = :userId OR subTransaction.toId = :userId', { userId: user.id })
         .distinct(true)
         .getRawMany();
 
       expect(transactions.length).to.equal(Math.min(23, actualTransactions.length));
-      transactions.forEach((t) => {
-        const found = actualTransactions.find((at) => at.id === t.id);
-        expect(found).to.not.be.undefined;
-      });
+      expect(transactions.map((t) => t.id)).to.deep.equalInAnyOrder(
+        actualTransactions.map((t) => t.transaction_id),
+      );
     });
     it('should give an HTTP 403 when user requests transactions from someone else', async () => {
       const res = await request(ctx.app)
@@ -1053,18 +1093,21 @@ describe('UserController', (): void => {
 
       const transactions = res.body.records as TransactionResponse[];
 
-      const actualTransactions = await Transaction.createQueryBuilder('transaction')
-        .select('transaction.id as id')
-        .innerJoin(SubTransaction, 'subTransaction', 'transaction.id = subTransaction.transactionId')
+      const actualTransactions = await createQueryBuilder(Transaction, 'transaction')
+        .leftJoinAndSelect('transaction.from', 'from')
+        .leftJoinAndSelect('transaction.createdBy', 'createdBy')
+        .leftJoinAndSelect('transaction.pointOfSale', 'pointOfSaleRev')
+        .leftJoinAndSelect('pointOfSaleRev.pointOfSale', 'pointOfSale')
+        .leftJoin('transaction.subTransactions', 'subTransaction')
+        .leftJoin('subTransaction.subTransactionRows', 'subTransactionRow')
         .where('transaction.fromId = :userId OR transaction.createdById = :userId OR subTransaction.toId = :userId', { userId: user.id })
         .distinct(true)
         .getRawMany();
 
       expect(transactions.length).to.equal(Math.min(23, actualTransactions.length));
-      transactions.forEach((t) => {
-        const found = actualTransactions.find((at) => at.id === t.id);
-        expect(found).to.not.be.undefined;
-      });
+      expect(transactions.map((t) => t.id)).to.deep.equalInAnyOrder(
+        actualTransactions.map((t) => t.transaction_id),
+      );
     });
     it('should give an HTTP 404 when admin requests transactions from unknown user', async () => {
       const res = await request(ctx.app)

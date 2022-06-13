@@ -43,6 +43,8 @@ describe('TransactionController', (): void => {
     controller: TransactionController,
     userToken: string,
     adminToken: string,
+    organMemberToken: string,
+    organ: User,
     transaction: Transaction,
     users: User[],
     transactions: Transaction[],
@@ -141,11 +143,13 @@ describe('TransactionController', (): void => {
       logger,
       connection,
       app,
+      organ: undefined,
       swaggerspec: undefined,
       specification: undefined,
       controller: undefined,
       userToken: undefined,
       adminToken: undefined,
+      organMemberToken: undefined,
       transaction: undefined,
       validTransReq,
       ...database,
@@ -154,10 +158,16 @@ describe('TransactionController', (): void => {
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
+
     ctx.userToken = await tokenHandler.signToken({ user: ctx.users[0], roles: ['User'], lesser: false }, '39');
     ctx.adminToken = await tokenHandler.signToken({ user: ctx.users[6], roles: ['User', 'Admin'], lesser: false }, '39');
+    ctx.organMemberToken = await tokenHandler.signToken({
+      user: ctx.users[6], roles: ['User', 'Seller'], organs: [ctx.users[0]], lesser: false,
+    }, '1');
 
     const all = { all: new Set<string>(['*']) };
+    const organRole = { organ: new Set<string>(['*']) };
+
     const roleManager = new RoleManager();
     roleManager.registerRole({
       name: 'Admin',
@@ -173,6 +183,19 @@ describe('TransactionController', (): void => {
         },
       },
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
+    });
+
+    roleManager.registerRole({
+      name: 'Seller',
+      permissions: {
+        Transaction: {
+          get: organRole,
+        },
+        Balance: {
+          update: organRole,
+        },
+      },
+      assignmentCheck: async () => false,
     });
 
     ctx.specification = await Swagger.initialize(ctx.app);
@@ -506,7 +529,7 @@ describe('TransactionController', (): void => {
       // eslint-disable-next-line no-underscore-dangle
       const pagination = res.body._pagination as PaginationResult;
       const spec = await Swagger.importSpecification();
-      expect(transactions.length).to.equal(ctx.transactions.length - skip);
+
       transactions.forEach((transaction: BaseTransactionResponse) => {
         verifyBaseTransactionEntity(spec, transaction);
       });
@@ -522,6 +545,25 @@ describe('TransactionController', (): void => {
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .query({ skip: 'Wie dit leest trekt een bak' });
       expect(res.status).to.equal(400);
+    });
+  });
+
+  describe('GET /transactions/{id}', () => {
+    it('should return HTTP 200 and transaction if connected via organ', async () => {
+      const trans = await Transaction.findOne({ relations: ['from'], where: { from: ctx.users[0] } });
+      expect(trans).to.not.be.undefined;
+      const res = await request(ctx.app)
+        .get(`/transactions/${trans.id}`)
+        .set('Authorization', `Bearer ${ctx.organMemberToken}`);
+      expect(res.status).to.equal(200);
+    });
+    it('should return HTTP 403 if not admin and not connected via organ', async () => {
+      const trans = await Transaction.findOne({ relations: ['from'], where: { from: ctx.users[3] } });
+      expect(trans).to.not.be.undefined;
+      const res = await request(ctx.app)
+        .get(`/transactions/${trans.id}`)
+        .set('Authorization', `Bearer ${ctx.organMemberToken}`);
+      expect(res.status).to.equal(403);
     });
   });
 
