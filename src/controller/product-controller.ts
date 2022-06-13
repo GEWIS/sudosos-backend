@@ -34,7 +34,7 @@ import { parseRequestPagination } from '../helpers/pagination';
 import verifyProductRequest from './request/validators/product-request-spec';
 import { isFail } from '../helpers/specification-validation';
 import { asNumber } from '../helpers/validators';
-import userTokenInOrgan from '../helpers/helper';
+import userTokenInOrgan from '../helpers/token-helper';
 
 export default class ProductController extends BaseController {
   private logger: Logger = log4js.getLogger('ProductController');

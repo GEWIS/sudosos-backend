@@ -554,7 +554,6 @@ describe('PointOfSaleController', async () => {
         .post('/pointsofsale')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(ctx.validPOSRequest);
-      console.error(res.body);
       expect(ctx.specification.validateModel(
         'UpdatedPointOfSaleResponse',
         res.body,

@@ -36,7 +36,7 @@ import {
   UpdateContainerParams,
   UpdateContainerRequest,
 } from './request/container-request';
-import userTokenInOrgan from '../helpers/helper';
+import userTokenInOrgan from '../helpers/token-helper';
 
 export default class ContainerController extends BaseController {
   private logger: Logger = log4js.getLogger('ContainerController');

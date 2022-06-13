@@ -29,7 +29,7 @@ import { TransactionRequest } from './request/transaction-request';
 import Transaction from '../entity/transactions/transaction';
 import User from '../entity/user/user';
 import { asNumber } from '../helpers/validators';
-import userTokenInOrgan from '../helpers/helper';
+import userTokenInOrgan from '../helpers/token-helper';
 
 export default class TransactionController extends BaseController {
   private logger: Logger = log4js.getLogger('TransactionController');

@@ -40,7 +40,7 @@ import {
   verifyCreatePointOfSaleRequest,
   verifyUpdatePointOfSaleRequest,
 } from './request/validators/point-of-sale-request-spec';
-import userTokenInOrgan from '../helpers/helper';
+import userTokenInOrgan from '../helpers/token-helper';
 import TransactionService from '../service/transaction-service';
 
 export default class PointOfSaleController extends BaseController {
