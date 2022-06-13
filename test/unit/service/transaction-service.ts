@@ -37,6 +37,9 @@ import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale
 import ContainerRevision from '../../../src/entity/container/container-revision';
 import generateBalance from '../../helpers/test-helpers';
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
+import { PaginatedTransferResponse } from '../../../src/controller/response/transfer-response';
+import TransferService from '../../../src/service/transfer-service';
+import { PaginatedBaseTransactionResponse } from '../../../src/controller/response/transaction-response';
 
 describe('TransactionService', (): void => {
   let ctx: {
@@ -391,6 +394,10 @@ describe('TransactionService', (): void => {
   });
 
   describe('Get all transactions', () => {
+    it('should return the most transaction first', async () => {
+      const res: PaginatedBaseTransactionResponse = await TransactionService.getTransactions({});
+      res.records.forEach((t) => console.error(t.createdAt));
+    });
     it('should return all transactions', async () => {
       // eslint-disable-next-line @typescript-eslint/naming-convention
       const { records, _pagination } = await TransactionService.getTransactions({});

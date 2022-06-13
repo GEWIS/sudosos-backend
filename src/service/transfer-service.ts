@@ -108,6 +108,7 @@ export default class TransferService {
       relations: ['from', 'to'],
       take,
       skip,
+      order: { createdAt: 'DESC' },
     };
 
     const results = await Promise.all([

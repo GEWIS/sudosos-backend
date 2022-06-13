@@ -514,6 +514,8 @@ export default class TransactionService {
       .leftJoin('subTransaction.subTransactionRows', 'subTransactionRow')
       .distinct(true);
 
+    query.orderBy({ 'transaction.createdAt': 'DESC' });
+
     if (fromDate) query.andWhere('"transaction"."createdAt" >= :fromDate', { fromDate: fromDate.toISOString().replace('T', ' ') });
     if (tillDate) query.andWhere('"transaction"."createdAt" < :tillDate', { tillDate: tillDate.toISOString().replace('T', ' ') });
 

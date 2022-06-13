@@ -82,6 +82,10 @@ describe('TransferService', async (): Promise<void> => {
         .getTransfers({ id: ctx.transfers.length + 1 });
       expect(res.records).to.be.empty;
     });
+    it('should return the most recent transaction first', async () => {
+      const res: PaginatedTransferResponse = await TransferService.getTransfers();
+      res.records.forEach((t) => console.error(t.createdAt));
+    });
   });
   describe('postTransfer function', () => {
     it('should be able to post a new transfer', async () => {
