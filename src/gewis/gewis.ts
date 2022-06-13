@@ -111,6 +111,15 @@ export default class Gewis {
         Authenticator: {
           get: { own: star },
         },
+        Transfer: {
+          get: { own: star },
+        },
+        Transaction: {
+          get: { own: star },
+        },
+        VatGroup: {
+          get: { all: star },
+        },
       },
       assignmentCheck: async () => true,
     });
@@ -207,52 +216,52 @@ export default class Gewis {
      * Define a Seller role, which indicates that the user
      * can manage sellable products.
      */
-    const sellerUserTypes = new Set<UserType>([
-      UserType.LOCAL_ADMIN,
-      UserType.ORGAN,
-    ]);
     this.roleManager.registerRole({
       name: 'Seller',
       permissions: {
         Product: {
-          create: { own: star },
-          get: { own: star, all: star },
-          update: { own: star },
-          approve: { all: star },
+          create: { organ: star },
+          get: { own: star, organ: star, all: star },
+          update: { organ: star },
+          approve: { organ: star },
         },
         Container: {
-          create: { own: star },
-          get: { own: star, all: star },
-          update: { own: star },
-          approve: { all: star },
+          create: { organ: star },
+          get: { own: star, organ: star, all: star },
+          update: { organ: star },
+          approve: { organ: star },
         },
         PointOfSale: {
-          create: { own: star },
-          get: { own: star, all: star },
-          update: { own: star },
-          approve: { all: star },
+          create: { organ: star },
+          get: { own: star, organ: star, all: star },
+          update: { organ: star },
+          approve: { organ: star },
         },
         ProductCategory: {
-          get: { all: star },
+          get: { organ: star },
         },
         Balance: {
-          get: { own: star },
+          get: { organ: star },
         },
         Transaction: {
-          get: { own: star },
+          get: { organ: star },
         },
         Transfer: {
-          get: { own: star },
+          get: { organ: star },
         },
         PayoutRequest: {
-          create: { own: star },
-          get: { own: star },
+          create: { organ: star },
+          get: { organ: star },
         },
         User: {
-          get: { all: star, own: star },
+          get: { all: star, organ: star },
         },
       },
-      assignmentCheck: async (user: User) => sellerUserTypes.has(user.type),
+      /**
+       * This role is actually assigned during token sign for optimization.
+       * @see {AuthenticationService.makeJsonWebToken}
+       */
+      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
     });
 
     /**
@@ -341,6 +350,9 @@ export default class Gewis {
           ...admin,
         },
         Transfer: {
+          ...admin,
+        },
+        VatGroup: {
           ...admin,
         },
       },

@@ -36,6 +36,7 @@ import {
   UpdateContainerParams,
   UpdateContainerRequest,
 } from './request/container-request';
+import userTokenInOrgan from '../helpers/token-helper';
 
 export default class ContainerController extends BaseController {
   private logger: Logger = log4js.getLogger('ContainerController');
@@ -428,14 +429,21 @@ export default class ContainerController extends BaseController {
 
   /**
    * Function to determine which credentials are needed to get container
-   * all if user is not connected to container
-   * own if user is connected to container
+   *          'all' if user is not connected to container
+   *          'organ' if user is not connected to container via organ
+   *          'own' if user is connected to container
    * @param req
    * @returns whether container is connected to used token
    */
   static async getRelation(req: RequestWithToken): Promise<string> {
+    const containerId = asNumber(req.params.id);
+    const container: Container = await Container.findOne(containerId, { relations: ['owner'] });
+
+    if (!container) return 'all';
+    if (userTokenInOrgan(req, container.owner.id)) return 'organ';
+
     const containerVisibility = await ContainerService.canViewContainer(
-      req.token.user.id, asNumber(req.params.id),
+      req.token.user.id, container,
     );
     if (containerVisibility.own) return 'own';
     if (containerVisibility.public) return 'public';

@@ -15,19 +15,14 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-
-import { UserResponse } from './user-response';
+import { RequestWithToken } from '../middleware/token-middleware';
 
 /**
-  * @typedef AuthenticationResponse
-  * @property {UserResponse.model} user - The user that has authenticated.
-  * @property {Array.<string>} roles - The RBAC roles that the user has.
-  * @property {Array.<UserResponse.model>} organs - The organs that the user is a member of.
-  * @property {string} token - The JWT token that can be used as Bearer token for authentication.
-  */
-export default interface AuthenticationResponse {
-  user: UserResponse,
-  roles: string[],
-  organs: UserResponse[],
-  token: string,
+ * Checks if the given ID is part of the Token Organ List.
+ * @param req - The request with token to validate against.
+ * @param organId - The id of the organ to check.
+ */
+export default function userTokenInOrgan(req: RequestWithToken, organId: number) {
+  if (!req.token.organs) return false;
+  return (req.token.organs.find((organ) => organ.id === organId) !== undefined);
 }

@@ -34,6 +34,7 @@ import { parseRequestPagination } from '../helpers/pagination';
 import verifyProductRequest from './request/validators/product-request-spec';
 import { isFail } from '../helpers/specification-validation';
 import { asNumber } from '../helpers/validators';
+import userTokenInOrgan from '../helpers/token-helper';
 
 export default class ProductController extends BaseController {
   private logger: Logger = log4js.getLogger('ProductController');
@@ -405,13 +406,15 @@ export default class ProductController extends BaseController {
   /**
    * Function to determine which credentials are needed to post product
    *    'all' if user is not connected to product
+   *    'organ' if user is not connected to product via organ
    *    'own' if user is connected to product
    * @param req - Request with CreateProductRequest as body
    * @returns whether product is connected to user token
    */
   static postRelation(req: RequestWithToken): string {
     const request = req.body as CreateProductRequest;
-    if (request.ownerId && request.ownerId !== req.token.user.id) return 'all';
+    if (request.ownerId && userTokenInOrgan(req, request.ownerId)) return 'organ';
+    if (request.ownerId && request.ownerId === req.token.user.id) return 'all';
     return 'own';
   }
 
@@ -426,6 +429,7 @@ export default class ProductController extends BaseController {
     const productId = asNumber(req.params.id);
     const product = await Product.findOne({ where: { id: productId }, relations: ['owner'] });
     if (product && product.owner.id === req.token.user.id) return 'own';
+    if (product && userTokenInOrgan(req, product.owner.id)) return 'organ';
     return 'all';
   }
 }

@@ -29,6 +29,7 @@ import { TransactionRequest } from './request/transaction-request';
 import Transaction from '../entity/transactions/transaction';
 import User from '../entity/user/user';
 import { asNumber } from '../helpers/validators';
+import userTokenInOrgan from '../helpers/token-helper';
 
 export default class TransactionController extends BaseController {
   private logger: Logger = log4js.getLogger('TransactionController');
@@ -273,14 +274,20 @@ export default class TransactionController extends BaseController {
   /**
    * Function to determine which credentials are needed to get transactions
    *    all if user is not connected to transaction
+   *    organ if user is not connected to transaction via organ
    *    own if user is connected to transaction
    * @param req - Request with transaction id as param
    * @returns whether transaction is connected to user token
    */
   static async getRelation(req: RequestWithToken): Promise<string> {
-    const transaction = await Transaction.findOne({ where: { id: asNumber(req.params.id) }, relations: ['from', 'createdBy'] });
+    const transaction = await Transaction.findOne({
+      where: { id: asNumber(req.params.id) },
+      relations: ['from', 'createdBy', 'pointOfSale', 'pointOfSale.pointOfSale', 'pointOfSale.pointOfSale.owner'],
+    });
     if (!transaction) return 'all';
-
+    if (userTokenInOrgan(req, transaction.from.id)
+        || userTokenInOrgan(req, transaction.createdBy.id)
+        || userTokenInOrgan(req, transaction.pointOfSale.pointOfSale.owner.id)) return 'organ';
     if (transaction.from.id === req.token.user.id || transaction.createdBy.id === req.token.user.id) return 'own';
     return 'all';
   }

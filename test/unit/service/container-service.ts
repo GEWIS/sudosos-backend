@@ -305,20 +305,20 @@ describe('ContainerService', async (): Promise<void> => {
       expect(ctx.containers[0].public).to.be.true;
       const user = ctx.containers[0].owner.id + 1;
 
-      expect((await ContainerService.canViewContainer(user, ctx.containers[0].id))
+      expect((await ContainerService.canViewContainer(user, ctx.containers[0]))
         .public).to.be.true;
     });
     it('should return true if the user is the owner of private container', async () => {
       const container = await Container.findOne({ where: { public: false }, relations: ['owner'] });
       expect((await ContainerService.canViewContainer(
-        container.owner.id, container.id,
+        container.owner.id, container,
       )).own).to.be.true;
     });
     it('should return false if the user is not the owner and container is private', async () => {
       const container = await Container.findOne({ where: { public: false }, relations: ['owner'] });
-      expect(ctx.containers[1].public).to.be.false;
+      expect(container.public).to.be.false;
       const visibility = await ContainerService.canViewContainer(
-        container.owner.id + 1, container.id,
+        container.owner.id + 1, container,
       );
       expect(visibility.own).to.be.false;
       expect(visibility.public).to.be.false;
