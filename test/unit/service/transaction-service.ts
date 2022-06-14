@@ -37,7 +37,6 @@ import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale
 import ContainerRevision from '../../../src/entity/container/container-revision';
 import generateBalance from '../../helpers/test-helpers';
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
-import { PaginatedBaseTransactionResponse } from '../../../src/controller/response/transaction-response';
 
 describe('TransactionService', (): void => {
   let ctx: {
