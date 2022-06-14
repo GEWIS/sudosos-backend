@@ -33,6 +33,8 @@ import AuthenticationController from '../../controller/authentication-controller
 import Gewis from '../gewis';
 import User from '../../entity/user/user';
 import wrapInManager from '../../helpers/database';
+import UserService from '../../service/user-service';
+import UpdateUserRequest from '../../controller/request/update-user-request';
 
 /**
   * The GEWIS authentication controller is responsible for:
@@ -123,7 +125,7 @@ export default class GewisAuthenticationController extends BaseController {
             algorithms: ['HS512'],
             complete: false,
           })();
-      } catch {
+      } catch (error) {
         // Invalid token supplied.
         res.status(403).json({
           message: 'Invalid JWT signature',
@@ -132,20 +134,27 @@ export default class GewisAuthenticationController extends BaseController {
       }
       this.logger.trace('Gewisweb authentication for user with membership id', gewisweb.lidnr);
 
-      const user = await GewisUser.findOne({
+      let gewisUser = await GewisUser.findOne({
         where: { gewisId: gewisweb.lidnr },
         relations: ['user'],
       });
-      if (!user) {
-        res.status(403).json({
-          message: `User ${gewisweb.lidnr} not registered`,
-        });
-        return;
+      if (!gewisUser) {
+        // If
+        gewisUser = await wrapInManager<GewisUser>(Gewis.createUserFromWeb)(gewisweb);
+      } else {
+        //
+        const update: UpdateUserRequest = {
+          firstName: gewisweb.given_name,
+          lastName: gewisweb.family_name,
+          email: gewisweb.email,
+          ofAge: gewisweb.is_18_plus,
+        };
+        await UserService.updateUser(gewisUser.user.id, update);
       }
 
       const contents = await AuthenticationService
         .makeJsonWebToken({ roleManager: this.roleManager, tokenHandler: this.tokenHandler },
-          user.user, false);
+          gewisUser.user, false);
       const token = await this.tokenHandler.signToken(contents, body.nonce);
       const response = AuthenticationService
         .asAuthenticationResponse(contents.user, contents.roles, contents.organs, token);

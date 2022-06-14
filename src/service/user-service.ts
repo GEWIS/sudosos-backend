@@ -24,6 +24,7 @@ import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import User, { UserType } from '../entity/user/user';
 import CreateUserRequest from '../controller/request/create-user-request';
 import MemberAuthenticator from '../entity/authenticator/member-authenticator';
+import UpdateUserRequest from '../controller/request/update-user-request';
 
 /**
  * Parameters used to filter on Get Users functions.
@@ -160,5 +161,19 @@ export default class UserService {
   public static async createUser(createUserRequest: CreateUserRequest) {
     const user = await User.save(createUserRequest as User);
     return Promise.resolve(this.getSingleUser(user.id));
+  }
+
+  /**
+   * Updates the user object with the new properties.
+   * @param userId - ID of the user to update.
+   * @param updateUserRequest - The update object.
+   */
+  public static async updateUser(userId: number, updateUserRequest: UpdateUserRequest):
+  Promise<UserResponse> {
+    const user = await User.findOne(userId);
+    if (!user) return undefined;
+    Object.assign(user, updateUserRequest);
+    await user.save();
+    return this.getSingleUser(userId);
   }
 }
