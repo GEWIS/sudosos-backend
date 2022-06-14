@@ -120,7 +120,7 @@ export default class GewisAuthenticationController extends BaseController {
       try {
         gewisweb = await util.promisify(jwt.verify)
           .bind(null, body.token, this.gewiswebSecret, {
-            algorithms: ['HS256'],
+            algorithms: ['HS512'],
             complete: false,
           })();
       } catch {
