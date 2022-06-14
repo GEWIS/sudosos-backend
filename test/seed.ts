@@ -1621,7 +1621,7 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
   const { pointsOfSale, pointOfSaleRevisions, updatedPointsOfSale } = await seedAllPointsOfSale(
     users, containerRevisions, containers,
   );
-  const { transactions } = await seedTransactions(users, pointOfSaleRevisions, new Date('1950-02-12T01:57:45.271Z'), new Date('2001-02-12T01:57:45.271Z'));
+  const { transactions } = await seedTransactions(users, pointOfSaleRevisions);
   const transfers = await seedTransfers(users);
   const payoutRequests = await seedPayoutRequests(users);
   const invoices = await seedInvoices(users, transactions);
