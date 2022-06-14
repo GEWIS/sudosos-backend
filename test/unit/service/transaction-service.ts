@@ -37,8 +37,6 @@ import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale
 import ContainerRevision from '../../../src/entity/container/container-revision';
 import generateBalance from '../../helpers/test-helpers';
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
-import { PaginatedTransferResponse } from '../../../src/controller/response/transfer-response';
-import TransferService from '../../../src/service/transfer-service';
 import { PaginatedBaseTransactionResponse } from '../../../src/controller/response/transaction-response';
 
 describe('TransactionService', (): void => {
@@ -394,7 +392,7 @@ describe('TransactionService', (): void => {
   });
 
   describe('Get all transactions', () => {
-    it('should return the most transaction first', async () => {
+    it.skip('should return the most transaction first', async () => {
       const res: PaginatedBaseTransactionResponse = await TransactionService.getTransactions({});
       res.records.forEach((t) => console.error(t.createdAt));
     });
