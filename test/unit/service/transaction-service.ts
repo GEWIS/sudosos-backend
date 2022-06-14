@@ -392,10 +392,6 @@ describe('TransactionService', (): void => {
   });
 
   describe('Get all transactions', () => {
-    it.skip('should return the most transaction first', async () => {
-      const res: PaginatedBaseTransactionResponse = await TransactionService.getTransactions({});
-      res.records.forEach((t) => console.error(t.createdAt));
-    });
     it('should return all transactions', async () => {
       // eslint-disable-next-line @typescript-eslint/naming-convention
       const { records, _pagination } = await TransactionService.getTransactions({});

@@ -1482,16 +1482,23 @@ export async function seedPayoutRequests(users: User[]): Promise<PayoutRequest[]
   return Promise.all(payoutRequests);
 }
 
-export async function seedTransfers(users: User[]) : Promise<Transfer[]> {
+export async function seedTransfers(users: User[],
+  startDate?: Date, endDate?: Date) : Promise<Transfer[]> {
   const transfers: Transfer[] = [];
   const promises: Promise<any>[] = [];
 
   for (let i = 0; i < users.length; i += 1) {
+    let date = new Date();
+    if (startDate && endDate) {
+      date = new Date(startDate.getTime()
+          + Math.random() * (endDate.getTime() - startDate.getTime()));
+    }
     let newTransfer = Object.assign(new Transfer(), {
       description: '',
       amount: dinero({ amount: 100 * (i + 1) }),
       from: undefined,
       to: users[i],
+      createdAt: date,
     });
     transfers.push(newTransfer);
     promises.push(Transfer.save(newTransfer));
@@ -1501,6 +1508,7 @@ export async function seedTransfers(users: User[]) : Promise<Transfer[]> {
       amount: dinero({ amount: 50 * (i + 1) }),
       from: users[i],
       to: undefined,
+      createdAt: date,
     });
     transfers.push(newTransfer);
     promises.push(Transfer.save(newTransfer));
@@ -1613,7 +1621,7 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
   const { pointsOfSale, pointOfSaleRevisions, updatedPointsOfSale } = await seedAllPointsOfSale(
     users, containerRevisions, containers,
   );
-  const { transactions } = await seedTransactions(users, pointOfSaleRevisions);
+  const { transactions } = await seedTransactions(users, pointOfSaleRevisions, new Date('1950-02-12T01:57:45.271Z'), new Date('2001-02-12T01:57:45.271Z'));
   const transfers = await seedTransfers(users);
   const payoutRequests = await seedPayoutRequests(users);
   const invoices = await seedInvoices(users, transactions);
