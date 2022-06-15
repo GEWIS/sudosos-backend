@@ -25,6 +25,12 @@ import User, { UserType } from '../entity/user/user';
 import CreateUserRequest from '../controller/request/create-user-request';
 import MemberAuthenticator from '../entity/authenticator/member-authenticator';
 import UpdateUserRequest from '../controller/request/update-user-request';
+import TransactionService from './transaction-service';
+import {
+  FinancialMutationResponse,
+  PaginatedFinancialMutationResponse,
+} from '../controller/response/financial-mutation-response';
+import TransferService from './transfer-service';
 
 /**
  * Parameters used to filter on Get Users functions.
@@ -175,5 +181,41 @@ export default class UserService {
     Object.assign(user, updateUserRequest);
     await user.save();
     return this.getSingleUser(userId);
+  }
+
+  /**
+   * Combined query to return a users transfers and transactions from the database
+   * @param user - The user of which to get.
+   * @param paginationParameters - Pagination Parameters to adhere to.
+   */
+  public static async getUserFinancialMutations(user: User,
+    paginationParameters: PaginationParameters = {}): Promise<PaginatedFinancialMutationResponse> {
+    // Since we are combining two different queries the pagination works a bit different.
+    const take = (paginationParameters.skip ?? 0) + (paginationParameters.take ?? 0);
+    const pagination: PaginationParameters = {
+      take,
+      skip: 0,
+    };
+
+    const transactions = await TransactionService.getTransactions({}, pagination, user);
+    const transfers = await TransferService.getTransfers({}, pagination, user);
+    const financialMutations = (transactions.records as FinancialMutationResponse[])
+      .concat(transfers.records);
+
+    // Sort based on descending creation date.
+    financialMutations.sort((a, b) => (a.createdAt < b.createdAt ? -1 : 1));
+    // Apply pagination
+    const mutationRecords = financialMutations.slice(paginationParameters.skip,
+      paginationParameters.skip + paginationParameters.take);
+
+    return {
+      _pagination: {
+        take: paginationParameters.take ?? 0,
+        skip: paginationParameters.skip ?? 0,
+        // eslint-disable-next-line no-underscore-dangle
+        count: transactions._pagination.count + transfers._pagination.count,
+      },
+      records: mutationRecords,
+    };
   }
 }
