@@ -203,7 +203,7 @@ export default class UserService {
       .concat(transfers.records);
 
     // Sort based on descending creation date.
-    financialMutations.sort((a, b) => (a.createdAt < b.createdAt ? -1 : 1));
+    financialMutations.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
     // Apply pagination
     const mutationRecords = financialMutations.slice(paginationParameters.skip,
       paginationParameters.skip + paginationParameters.take);
