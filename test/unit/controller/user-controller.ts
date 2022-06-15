@@ -50,7 +50,6 @@ import { PaginatedUserResponse, UserResponse } from '../../../src/controller/res
 import RoleResponse from '../../../src/controller/response/rbac/role-response';
 import {
   FinancialMutationResponse,
-  PaginatedFinancialMutationResponse,
 } from '../../../src/controller/response/financial-mutation-response';
 
 chai.use(deepEqualInAnyOrder);
@@ -1171,14 +1170,6 @@ describe('UserController', (): void => {
         false,
         true,
       ).valid).to.be.true;
-    });
-    it('should return results in descending created at', async () => {
-      const user = ctx.users[0];
-      const res = await request(ctx.app)
-        .get(`/users/${user.id}/financialmutations`)
-        .set('Authorization', `Bearer ${ctx.userToken}`);
-      expect(res.status).to.equal(200);
-      console.error((res.body as PaginatedFinancialMutationResponse).records);
     });
     it('should adhere to pagination', async () => {
       const take = 5;

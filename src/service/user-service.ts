@@ -19,7 +19,7 @@ import { FindManyOptions, ObjectLiteral } from 'typeorm';
 import { RequestWithToken } from '../middleware/token-middleware';
 import { asBoolean, asNumber, asUserType } from '../helpers/validators';
 import { PaginationParameters } from '../helpers/pagination';
-import { BaseUserResponse, PaginatedUserResponse, UserResponse } from '../controller/response/user-response';
+import { PaginatedUserResponse, UserResponse } from '../controller/response/user-response';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import User, { UserType } from '../entity/user/user';
 import CreateUserRequest from '../controller/request/create-user-request';
@@ -31,6 +31,7 @@ import {
   PaginatedFinancialMutationResponse,
 } from '../controller/response/financial-mutation-response';
 import TransferService from './transfer-service';
+import { parseUserToResponse } from '../helpers/revision-to-response';
 
 /**
  * Parameters used to filter on Get Users functions.
@@ -65,37 +66,6 @@ export function parseGetUsersFilters(req: RequestWithToken): UserFilterParameter
   };
 
   return filters;
-}
-
-/**
- * Parses a raw user DB object to BaseUserResponse
- * @param user - User to parse
- * @param timestamps - Boolean if createdAt and UpdatedAt should be included
- */
-export function parseUserToBaseResponse(user: User, timestamps: boolean): BaseUserResponse {
-  if (!user) return undefined;
-  return {
-    id: user.id,
-    firstName: user.firstName,
-    lastName: user.lastName,
-    createdAt: timestamps ? user.createdAt.toISOString() : undefined,
-    updatedAt: timestamps ? user.updatedAt.toISOString() : undefined,
-  } as BaseUserResponse;
-}
-
-/**
- * Parses a raw User DB object to a UserResponse
- * @param user - User to parse
- * @param timestamps - Boolean if createdAt and UpdatedAt should be included
- */
-export function parseUserToResponse(user: User, timestamps = false): UserResponse {
-  if (!user) return undefined;
-  return {
-    ...parseUserToBaseResponse(user, timestamps),
-    active: user.active,
-    deleted: user.deleted,
-    type: UserType[user.type],
-  };
 }
 
 export default class UserService {

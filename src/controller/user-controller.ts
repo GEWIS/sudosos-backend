@@ -36,10 +36,11 @@ import RBACService from '../service/rbac-service';
 import { isFail } from '../helpers/specification-validation';
 import verifyUpdatePinRequest from './request/validators/update-pin-request-spec';
 import UpdatePinRequest from './request/update-pin-request';
-import UserService, { parseGetUsersFilters, parseUserToResponse, UserFilterParameters } from '../service/user-service';
+import UserService, { parseGetUsersFilters, UserFilterParameters } from '../service/user-service';
 import { asNumber } from '../helpers/validators';
 import { verifyCreateUserRequest } from './request/validators/user-request-spec';
 import userTokenInOrgan from '../helpers/token-helper';
+import { parseUserToResponse } from '../helpers/revision-to-response';
 
 export default class UserController extends BaseController {
   private logger: Logger = log4js.getLogger('UserController');
