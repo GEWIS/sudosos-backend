@@ -30,6 +30,7 @@ import Transaction from '../entity/transactions/transaction';
 import User from '../entity/user/user';
 import { asNumber } from '../helpers/validators';
 import userTokenInOrgan from '../helpers/token-helper';
+import UserService from '../service/user-service';
 
 export default class TransactionController extends BaseController {
   private logger: Logger = log4js.getLogger('TransactionController');
@@ -96,7 +97,6 @@ export default class TransactionController extends BaseController {
    * @param {integer} skip.query - How many transactions should be skipped (for pagination)
    * @returns {PaginatedBaseTransactionResponse.model} 200 - A list of all transactions
    */
-  // eslint-disable-next-line class-methods-use-this
   public async getAllTransactions(req: RequestWithToken, res: Response): Promise<void> {
     this.logger.trace('Get all transactions by user', req.token.user);
 
@@ -136,7 +136,6 @@ export default class TransactionController extends BaseController {
    * @returns {string} 403 - Insufficient balance error
    * @returns {string} 500 - Internal server error
    */
-  // eslint-disable-next-line class-methods-use-this
   public async createTransaction(req: RequestWithToken, res: Response): Promise<void> {
     const body = req.body as TransactionRequest;
     this.logger.trace('Create transaction', body, 'by user', req.token.user);
@@ -261,12 +260,19 @@ export default class TransactionController extends BaseController {
   /**
    * Function to determine which credentials are needed to post transaction
    *    all if user is not connected to transaction
+   *    other if transaction createdby is and linked via organ
    *    own if user is connected to transaction
    * @param req - Request with TransactionRequest in the body
    * @returns whether transaction is connected to user token
    */
-  static postRelation(req: RequestWithToken): string {
+  static async postRelation(req: RequestWithToken): Promise<string> {
     const request = req.body as TransactionRequest;
+    if (request.createdBy !== req.token.user.id) {
+      if (await UserService.areInSameOrgan(request.createdBy, req.token.user.id)) {
+        return 'organ';
+      }
+      return 'all';
+    }
     if (request.from === req.token.user.id) return 'own';
     return 'all';
   }
