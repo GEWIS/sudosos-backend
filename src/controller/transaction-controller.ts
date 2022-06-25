@@ -56,7 +56,7 @@ export default class TransactionController extends BaseController {
         },
         POST: {
           body: { modelName: 'TransactionRequest' },
-          policy: async (req) => this.roleManager.can(req.token.roles, 'create', TransactionController.postRelation(req), 'Transaction', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'create', await TransactionController.postRelation(req), 'Transaction', ['*']),
           handler: this.createTransaction.bind(this),
         },
       },
@@ -67,7 +67,7 @@ export default class TransactionController extends BaseController {
         },
         PATCH: {
           body: { modelName: 'TransactionRequest' },
-          policy: async (req) => this.roleManager.can(req.token.roles, 'update', TransactionController.postRelation(req), 'Transaction', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'update', await TransactionController.postRelation(req), 'Transaction', ['*']),
           handler: this.updateTransaction.bind(this),
         },
         DELETE: {
