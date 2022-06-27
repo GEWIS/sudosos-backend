@@ -29,6 +29,8 @@ import {
 import { PointOfSaleWithContainersResponse } from '../../src/controller/response/point-of-sale-response';
 import PointOfSaleRevision from '../../src/entity/point-of-sale/point-of-sale-revision';
 import PointOfSaleService from '../../src/service/point-of-sale-service';
+import ProductRevision from '../../src/entity/product/product-revision';
+import ContainerRevision from '../../src/entity/container/container-revision';
 
 function wrapGet<T>(array: T[], index: number): T {
   return array[index % array.length];
@@ -78,7 +80,7 @@ function createValidSubTransactionRequest(
 
 export async function getAPOSWithProducts(index? : number):
 Promise<PointOfSaleWithContainersResponse> {
-  const posList = (await PointOfSaleRevision.find({ relations: ['pointOfSale', 'containers', 'containers.container'] }));
+  const posList = (await PointOfSaleRevision.find({ relations: ['pointOfSale', 'containers', 'containers.container'] })).filter((p) => p.containers.length > 0);
   const pointOfSale = wrapGet(posList, index ?? 0);
   return (await PointOfSaleService.getPointsOfSale(
     {
