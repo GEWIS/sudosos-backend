@@ -21,9 +21,15 @@
  * @property {string} firstName
  * @property {string} lastName
  * @property {boolean} active
+ * @property {boolean} ofAge
+ * @property {string} email
+ * @property {boolean} deleted
  */
 export default interface UpdateUserRequest {
   firstName?: string;
   lastName?: string;
   active?: boolean;
+  ofAge?: boolean;
+  email?: string;
+  deleted?: boolean;
 }
