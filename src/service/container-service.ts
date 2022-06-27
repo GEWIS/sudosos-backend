@@ -44,6 +44,7 @@ import {
 import PointOfSaleService from './point-of-sale-service';
 // eslint-disable-next-line import/no-cycle
 import ProductService from './product-service';
+import { PointOfSaleWithContainersResponse } from '../controller/response/point-of-sale-response';
 
 interface ContainerVisibility {
   own: boolean;
@@ -503,13 +504,16 @@ export default class ContainerService {
    */
   public static async propagateContainerUpdate(containerId: number) {
     const pos = await PointOfSaleRevision.find({ where: `"PointOfSaleRevision__containers"."containerId" = ${containerId} AND ("PointOfSaleRevision__containers__container"."currentRevision" - 1) = "PointOfSaleRevision__containers"."revision"  AND "PointOfSaleRevision__pointOfSale"."currentRevision" = "PointOfSaleRevision"."revision"`, relations: ['pointOfSale', 'containers', 'containers.container'] });
-
     // The async-for loop is intentional to prevent race-conditions.
     // To fix this the good way would be shortlived, the structure of POS/Containers will be changed
     for (let i = 0; i < pos.length; i += 1) {
       const p = pos[i];
+      // eslint-disable-next-line no-await-in-loop
+      const { containers } = (await PointOfSaleService.getPointsOfSale(
+        { pointOfSaleId: pos[0].pointOfSale.id, returnContainers: true },
+      )).records[0] as PointOfSaleWithContainersResponse;
       const update: UpdatePointOfSaleParams = {
-        containers: p.containers.map((c) => c.container.id),
+        containers: containers.map((c) => c.id),
         name: p.name,
         id: p.pointOfSale.id,
       };

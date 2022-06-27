@@ -48,6 +48,9 @@ import UpdatePinRequest from '../../../src/controller/request/update-pin-request
 import { INVALID_PIN } from '../../../src/controller/request/validators/validation-errors';
 import { PaginatedUserResponse, UserResponse } from '../../../src/controller/response/user-response';
 import RoleResponse from '../../../src/controller/response/rbac/role-response';
+import {
+  FinancialMutationResponse,
+} from '../../../src/controller/response/financial-mutation-response';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -73,6 +76,7 @@ describe('UserController', (): void => {
     pointsOfSale: PointOfSale[],
     pointOfSaleRevisions: PointOfSaleRevision[],
     transactions: Transaction[],
+    transfers: Transfer[],
   };
 
   before(async () => {
@@ -1152,6 +1156,49 @@ describe('UserController', (): void => {
       });
     });
   });
+
+  describe('GET /users/:id/financialmutations', () => {
+    it('should return correct model', async () => {
+      const user = ctx.users[0];
+      const res = await request(ctx.app)
+        .get(`/users/${user.id}/financialmutations`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'PaginatedFinancialMutationResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
+    it('should adhere to pagination', async () => {
+      const take = 5;
+      const skip = 3;
+      const user = ctx.users[0];
+      const res = await request(ctx.app)
+        .get(`/users/${user.id}/financialmutations`)
+        .query({ take, skip })
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+
+      const userTransactions = ctx.transactions.filter(
+        (t) => t.from.id === user.id || t.createdBy.id === user.id,
+      );
+      const userTransfers = ctx.transfers.filter(
+        (t) => t.from?.id === user.id || t.to?.id === user.id,
+      );
+
+      const mutations = res.body.records as FinancialMutationResponse[];
+      // eslint-disable-next-line no-underscore-dangle
+      const pagination = res.body._pagination as PaginationResult;
+
+      expect(pagination.take).to.equal(take);
+      expect(pagination.skip).to.equal(skip);
+      expect(pagination.count).to.equal(userTransactions.length + userTransfers.length);
+      expect(mutations.length).to.be.at.most(take);
+    });
+  });
+
   describe('POST /users/{id}/authenticate', () => {
     it('should return an HTTP 403 if unauthorized', async () => {
       const user = ctx.users[0];

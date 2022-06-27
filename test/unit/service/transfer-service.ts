@@ -43,7 +43,8 @@ describe('TransferService', async (): Promise<void> => {
     const connection = await Database.initialize();
 
     const users = await seedUsers();
-    const transfers = await seedTransfers(users);
+    const transfers = await seedTransfers(users,
+      new Date('1950-02-12T01:57:45.271Z'), new Date('2001-02-12T01:57:45.271Z'));
 
     // start app
     const app = express();
