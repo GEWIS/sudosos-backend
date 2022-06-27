@@ -23,6 +23,7 @@ import AuthenticationService from '../service/authentication-service';
 import { asNumber } from '../helpers/validators';
 import AssignedRole from '../entity/roles/assigned-role';
 import { bindUser, LDAPUser } from '../helpers/ad';
+import GewiswebToken from './gewisweb-token';
 
 /**
  * The GEWIS-specific module with definitions and helper functions.
@@ -72,6 +73,19 @@ export default class Gewis {
     return gewisUser.user;
   }
 
+  public static async createUserFromWeb(manager: EntityManager, token: GewiswebToken):
+  Promise<GewisUser> {
+    const user = Object.assign(new User(), {
+      firstName: token.given_name,
+      lastName: token.family_name,
+      type: UserType.MEMBER,
+      active: true,
+      email: token.email,
+      ofAge: token.is_18_plus,
+    }) as User;
+    return manager.save(user).then((u) => this.createGEWISUser(manager, u, token.lidnr));
+  }
+
   /**
    * Function that turns a local User into a GEWIS User.
    * @param manager - Reference to the EntityManager needed for the transaction.
@@ -85,7 +99,7 @@ export default class Gewis {
       gewisId,
     });
 
-    await GewisUser.save(gewisUser);
+    await manager.save(gewisUser);
     // This would be the place to make a PIN Code and mail it to the user.
     // This is not meant for production code
     await AuthenticationService.setUserPINCode(user, gewisId.toString());

@@ -25,6 +25,26 @@ export default interface GewiswebToken {
    */
   lidnr: number,
   /**
+   * The user's email
+   */
+  email: string,
+  /**
+   * The given surname or last name
+   */
+  family_name: string,
+  /**
+   * The given name or first name
+   */
+  given_name: string,
+  /**
+   * Boolean whether the mebmer is 18+
+   */
+  is_18_plus: boolean,
+  /**
+   * The member's middle name
+   */
+  middle_name: string,
+  /**
    * The JWT expiration timestamp.
    */
   exp: number,
