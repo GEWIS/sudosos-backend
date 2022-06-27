@@ -26,7 +26,7 @@ import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import { PaginationParameters } from '../helpers/pagination';
 import { RequestWithToken } from '../middleware/token-middleware';
 import { asNumber } from '../helpers/validators';
-import { parseUserToBaseResponse } from './user-service';
+import { parseUserToBaseResponse } from '../helpers/revision-to-response';
 
 export interface TransferFilterParameters {
   id?: number;
@@ -108,6 +108,7 @@ export default class TransferService {
       relations: ['from', 'to'],
       take,
       skip,
+      order: { createdAt: 'DESC' },
     };
 
     const results = await Promise.all([

@@ -38,7 +38,7 @@ import {
   CreatePointOfSaleParams,
   UpdatePointOfSaleParams,
 } from '../controller/request/point-of-sale-request';
-import { parseUserToBaseResponse } from './user-service';
+import { parseUserToBaseResponse } from '../helpers/revision-to-response';
 
 /**
  * Define point of sale filtering parameters used to filter query results.

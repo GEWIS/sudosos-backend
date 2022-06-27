@@ -21,6 +21,8 @@ import { BaseContainerResponse } from '../controller/response/container-response
 import ContainerRevision from '../entity/container/container-revision';
 import { BasePointOfSaleResponse } from '../controller/response/point-of-sale-response';
 import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision';
+import User, { UserType } from '../entity/user/user';
+import { BaseUserResponse, UserResponse } from '../controller/response/user-response';
 
 export function parseProductToBaseResponse(
   product: ProductRevision, timestamps: boolean,
@@ -57,4 +59,35 @@ export function parsePOSToBasePOS(
     createdAt: timestamps ? pos.createdAt.toISOString() : undefined,
     updatedAt: timestamps ? pos.updatedAt.toISOString() : undefined,
   } as BasePointOfSaleResponse;
+}
+
+/**
+ * Parses a raw user DB object to BaseUserResponse
+ * @param user - User to parse
+ * @param timestamps - Boolean if createdAt and UpdatedAt should be included
+ */
+export function parseUserToBaseResponse(user: User, timestamps: boolean): BaseUserResponse {
+  if (!user) return undefined;
+  return {
+    id: user.id,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    createdAt: timestamps ? user.createdAt.toISOString() : undefined,
+    updatedAt: timestamps ? user.updatedAt.toISOString() : undefined,
+  } as BaseUserResponse;
+}
+
+/**
+ * Parses a raw User DB object to a UserResponse
+ * @param user - User to parse
+ * @param timestamps - Boolean if createdAt and UpdatedAt should be included
+ */
+export function parseUserToResponse(user: User, timestamps = false): UserResponse {
+  if (!user) return undefined;
+  return {
+    ...parseUserToBaseResponse(user, timestamps),
+    active: user.active,
+    deleted: user.deleted,
+    type: UserType[user.type],
+  };
 }

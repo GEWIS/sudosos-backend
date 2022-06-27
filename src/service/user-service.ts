@@ -19,12 +19,19 @@ import { FindManyOptions, ObjectLiteral } from 'typeorm';
 import { RequestWithToken } from '../middleware/token-middleware';
 import { asBoolean, asNumber, asUserType } from '../helpers/validators';
 import { PaginationParameters } from '../helpers/pagination';
-import { BaseUserResponse, PaginatedUserResponse, UserResponse } from '../controller/response/user-response';
+import { PaginatedUserResponse, UserResponse } from '../controller/response/user-response';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import User, { UserType } from '../entity/user/user';
 import CreateUserRequest from '../controller/request/create-user-request';
 import MemberAuthenticator from '../entity/authenticator/member-authenticator';
 import UpdateUserRequest from '../controller/request/update-user-request';
+import TransactionService from './transaction-service';
+import {
+  FinancialMutationResponse,
+  PaginatedFinancialMutationResponse,
+} from '../controller/response/financial-mutation-response';
+import TransferService from './transfer-service';
+import { parseUserToResponse } from '../helpers/revision-to-response';
 
 /**
  * Parameters used to filter on Get Users functions.
@@ -59,37 +66,6 @@ export function parseGetUsersFilters(req: RequestWithToken): UserFilterParameter
   };
 
   return filters;
-}
-
-/**
- * Parses a raw user DB object to BaseUserResponse
- * @param user - User to parse
- * @param timestamps - Boolean if createdAt and UpdatedAt should be included
- */
-export function parseUserToBaseResponse(user: User, timestamps: boolean): BaseUserResponse {
-  if (!user) return undefined;
-  return {
-    id: user.id,
-    firstName: user.firstName,
-    lastName: user.lastName,
-    createdAt: timestamps ? user.createdAt.toISOString() : undefined,
-    updatedAt: timestamps ? user.updatedAt.toISOString() : undefined,
-  } as BaseUserResponse;
-}
-
-/**
- * Parses a raw User DB object to a UserResponse
- * @param user - User to parse
- * @param timestamps - Boolean if createdAt and UpdatedAt should be included
- */
-export function parseUserToResponse(user: User, timestamps = false): UserResponse {
-  if (!user) return undefined;
-  return {
-    ...parseUserToBaseResponse(user, timestamps),
-    active: user.active,
-    deleted: user.deleted,
-    type: UserType[user.type],
-  };
 }
 
 export default class UserService {
@@ -175,6 +151,49 @@ export default class UserService {
     Object.assign(user, updateUserRequest);
     await user.save();
     return this.getSingleUser(userId);
+  }
+
+  /**
+   * Combined query to return a users transfers and transactions from the database
+   * @param user - The user of which to get.
+   * @param paginationParameters - Pagination Parameters to adhere to.
+   */
+  public static async getUserFinancialMutations(user: User,
+    paginationParameters: PaginationParameters = {}): Promise<PaginatedFinancialMutationResponse> {
+    // Since we are combining two different queries the pagination works a bit different.
+    const take = (paginationParameters.skip ?? 0) + (paginationParameters.take ?? 0);
+    const pagination: PaginationParameters = {
+      take,
+      skip: 0,
+    };
+
+    const transactions = await TransactionService.getTransactions({}, pagination, user);
+    const transfers = await TransferService.getTransfers({}, pagination, user);
+    const financialMutations: FinancialMutationResponse[] = [];
+
+    transactions.records.forEach((mutation) => {
+      financialMutations.push({ type: 'transaction', mutation });
+    });
+
+    transfers.records.forEach((mutation) => {
+      financialMutations.push({ type: 'transfer', mutation });
+    });
+
+    // Sort based on descending creation date.
+    financialMutations.sort((a, b) => (a.mutation.createdAt < b.mutation.createdAt ? 1 : -1));
+    // Apply pagination
+    const mutationRecords = financialMutations.slice(paginationParameters.skip,
+      paginationParameters.skip + paginationParameters.take);
+
+    return {
+      _pagination: {
+        take: paginationParameters.take ?? 0,
+        skip: paginationParameters.skip ?? 0,
+        // eslint-disable-next-line no-underscore-dangle
+        count: transactions._pagination.count + transfers._pagination.count,
+      },
+      records: mutationRecords,
+    };
   }
 
   /**

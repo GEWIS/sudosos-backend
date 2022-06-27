@@ -368,7 +368,7 @@ describe('ContainerService', async (): Promise<void> => {
   describe('propagateContainerUpdate function', () => {
     it('should update all POS that include given container', async () => {
       const ownerId = (await User.findOne({ where: { deleted: false } })).id;
-      const createContainerParams: CreateContainerParams = {
+      let createContainerParams: CreateContainerParams = {
         products: [1],
         public: true,
         name: 'New Container',
@@ -376,15 +376,23 @@ describe('ContainerService', async (): Promise<void> => {
       };
       const container = await ContainerService.createContainer(createContainerParams, true);
 
+      createContainerParams = {
+        products: [1],
+        public: true,
+        name: 'New Container #2',
+        ownerId,
+      };
+      const container2 = await ContainerService.createContainer(createContainerParams, true);
+
       const createPointOfSaleParams: CreatePointOfSaleParams = {
-        containers: [container.id],
+        containers: [container.id, container2.id],
         name: 'New POS',
         ownerId,
       };
       const pos = await PointOfSaleService.createPointOfSale(createPointOfSaleParams, true);
 
       const update: UpdateContainerParams = {
-        products: [1],
+        products: [1, 2],
         public: true,
         name: 'New name',
         id: container.id,
@@ -395,9 +403,9 @@ describe('ContainerService', async (): Promise<void> => {
       const updatedPos = await PointOfSaleRevision
         .findOne({ where: { revision: 2, pointOfSale: { id: pos.id } }, relations: ['containers', 'containers.products'] });
       expect(updatedPos).to.not.be.undefined;
-      expect(updatedPos.containers).length(1);
+      expect(updatedPos.containers).length(2);
 
-      const newContainer = updatedPos.containers[0];
+      const newContainer = updatedPos.containers.find((c) => c.container.id === container.id);
       expect(newContainer.name).to.eq(update.name);
     });
   });
