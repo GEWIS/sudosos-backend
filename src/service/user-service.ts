@@ -169,11 +169,18 @@ export default class UserService {
 
     const transactions = await TransactionService.getTransactions({}, pagination, user);
     const transfers = await TransferService.getTransfers({}, pagination, user);
-    const financialMutations = (transactions.records as FinancialMutationResponse[])
-      .concat(transfers.records);
+    const financialMutations: FinancialMutationResponse[] = [];
+
+    transactions.records.forEach((mutation) => {
+      financialMutations.push({ type: 'transaction', mutation });
+    });
+
+    transfers.records.forEach((mutation) => {
+      financialMutations.push({ type: 'transfer', mutation });
+    });
 
     // Sort based on descending creation date.
-    financialMutations.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+    financialMutations.sort((a, b) => (a.mutation.createdAt < b.mutation.createdAt ? 1 : -1));
     // Apply pagination
     const mutationRecords = financialMutations.slice(paginationParameters.skip,
       paginationParameters.skip + paginationParameters.take);

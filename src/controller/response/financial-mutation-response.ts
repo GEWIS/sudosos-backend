@@ -20,10 +20,20 @@ import { PaginationResult } from '../../helpers/pagination';
 import { TransferResponse } from './transfer-response';
 import { BaseTransactionResponse } from './transaction-response';
 
+type TransferType = {
+  type: 'transfer',
+  mutation: TransferResponse
+};
+
+type TransactionType = {
+  type: 'transaction',
+  mutation: BaseTransactionResponse
+};
+
 /**
- * @typedef {TransferResponse | BaseTransactionResponse} FinancialMutationResponse
+ * @typedef {TransferType | TransactionType} FinancialMutationResponse
  */
-export type FinancialMutationResponse = TransferResponse | BaseTransactionResponse;
+export type FinancialMutationResponse = TransferType | TransactionType;
 
 /**
  * @typedef PaginatedFinancialMutationResponse
