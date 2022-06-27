@@ -195,4 +195,20 @@ export default class UserService {
       records: mutationRecords,
     };
   }
+
+  /**
+   * Function that checks if the users have overlapping member authentications.
+   * @param left - User to check
+   * @param right - User to check
+   */
+  public static async areInSameOrgan(left: number, right: number) {
+    const leftAuth = await MemberAuthenticator.find({ where: { user: left }, relations: ['authenticateAs'] });
+    const rightAuth = await MemberAuthenticator.find({ where: { user: right }, relations: ['authenticateAs'] });
+
+    const rightIds = leftAuth.map((u) => u.authenticateAs.id);
+    const overlap = rightAuth.map((u) => u.authenticateAs.id)
+      .filter((u) => rightIds.indexOf(u) !== -1);
+
+    return overlap.length > 0;
+  }
 }
