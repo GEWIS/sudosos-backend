@@ -29,8 +29,6 @@ import {
 import { PointOfSaleWithContainersResponse } from '../../src/controller/response/point-of-sale-response';
 import PointOfSaleRevision from '../../src/entity/point-of-sale/point-of-sale-revision';
 import PointOfSaleService from '../../src/service/point-of-sale-service';
-import ProductRevision from '../../src/entity/product/product-revision';
-import ContainerRevision from '../../src/entity/container/container-revision';
 
 function wrapGet<T>(array: T[], index: number): T {
   return array[index % array.length];
