@@ -8,6 +8,5 @@ JWT_KEY_FILE=/app/config/jwt.key
 if [ ! -f "$JWT_KEY_FILE" ]; then
     echo "generating key"
 
-    SECRET=$(openssl genrsa 2048)
-    echo ${SECRET} > ${JWT_KEY_FILE}
+    openssl genrsa -out ${JWT_KEY_FILE} 2048
 fi
