@@ -17,6 +17,7 @@ COPY ./package.json ./package-lock.json ./
 RUN npm install --production
 
 COPY --from=build --chown=node /app/init_scripts /app/init_scripts
+RUN chmod +x /app/init_scripts
 COPY --from=build --chown=node /app/out/src /app/out/src
 COPY --from=build --chown=node /app/out/swagger.json /app/out/swagger.json
 
