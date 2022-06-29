@@ -32,7 +32,6 @@ import {
   bindUser, getLDAPConnection, getLDAPSettings, LDAPUser, userFromLDAP,
 } from '../helpers/ad';
 import { parseUserToResponse } from '../helpers/revision-to-response';
-import LocalAuthenticator from '../entity/authenticator/local-authenticator';
 import HashBasedAuthenticationMethod from '../entity/authenticator/hash-based-authentication-method';
 
 export interface AuthenticationContext {
