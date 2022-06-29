@@ -48,7 +48,10 @@ import InvoiceUser from '../src/entity/user/invoice-user';
 import Invoice from '../src/entity/invoices/invoice';
 import InvoiceEntry from '../src/entity/invoices/invoice-entry';
 import InvoiceStatus, { InvoiceState } from '../src/entity/invoices/invoice-status';
-import GewisUser from '../src/gewis/entity/gewis-user';
+import BorrelSchema from '../src/entity/borrel-schema/borrel-schema';
+import BorrelSchemaShift from '../src/entity/borrel-schema/borrel-schema-shift';
+import BorrelSchemaAnswer, { Availability } from '../src/entity/borrel-schema/borrel-schema-answer';
+import GewisUser from '../src/entity/user/gewis-user';
 import seedGEWISUsers from '../src/gewis/database/seed';
 import PinAuthenticator from '../src/entity/authenticator/pin-authenticator';
 import VatGroup from '../src/entity/vat-group';
@@ -250,6 +253,85 @@ export async function seedInvoices(users: User[], transactions: Transaction[]): 
   await InvoiceEntry.save(invoiceEntry);
 
   return { invoices, invoiceTransfers };
+}
+
+/**
+ * Seeds a default dataset of borrelschemas and stores them in the database
+ */
+export async function createShifts() {
+  const shifts: BorrelSchemaShift[] = [];
+  shifts.push(Object.assign(new BorrelSchemaShift(), {
+    name: 'Borrelen',
+    default: true,
+  }));
+  shifts.push(Object.assign(new BorrelSchemaShift(), {
+    name: 'Portier',
+    default: true,
+  }));
+  shifts.push(Object.assign(new BorrelSchemaShift(), {
+    name: 'Bier halen voor Job en Sjoerd',
+    default: true,
+  }));
+  shifts.push(Object.assign(new BorrelSchemaShift(), {
+    name: 'Roy slaan',
+    default: false,
+  }));
+  shifts.push(Object.assign(new BorrelSchemaShift(), {
+    name: '900 euro kwijtraken',
+    default: false,
+  }));
+  shifts.push(Object.assign(new BorrelSchemaShift(), {
+    name: 'Wassen',
+    default: true,
+  }));
+  await BorrelSchemaShift.save(shifts);
+  return shifts;
+}
+
+export function createAnswer(user: User, type: number) {
+  const answer: BorrelSchemaAnswer = Object.assign(new BorrelSchemaAnswer(), {
+    user,
+    availability: Availability[type + 1],
+    selected: false,
+    BorrelSchema: null,
+    BorrelSchemaShift: null,
+  });
+  return answer;
+}
+
+export async function seedBorrelSchema(shifts: BorrelSchemaShift[], users: User[]) {
+  const borrelSchema: BorrelSchema[] = [];
+  const borrelSchemaShift: BorrelSchemaShift[] = [];
+  const borrelSchemaAnswers: BorrelSchemaAnswer[] = [];
+  for (let i = 0; i < 5; i += 1) {
+    const schema = Object.assign(new BorrelSchema(), {
+      name: `Testborrel-${i}`,
+      createdBy: users[i],
+      startDate: new Date(),
+      endDate: new Date(),
+      shifts: null,
+      id: i,
+    });
+    const borrelShifts: BorrelSchemaShift[] = [];
+    for (let j = 0; j < ((i + 1) * 243) % 4; j += 1) {
+      const shift = shifts[(j * 37) % 6];
+      borrelShifts.push(shift);
+      borrelSchemaShift.push(shift);
+      for (let k = 0; k < users.length / 5; k += 1) {
+        const answer = createAnswer(users[k % 5], k % 5);
+        answer.borrelSchema = schema;
+        answer.shift = shift;
+        borrelSchemaAnswers.push(answer);
+      }
+    }
+    schema.shifts = borrelShifts;
+    borrelSchema.push(schema);
+  }
+  await BorrelSchemaShift.save(borrelSchemaShift);
+  await BorrelSchema.save(borrelSchema);
+  await BorrelSchemaAnswer.save(borrelSchemaAnswers);
+
+  return { borrelSchema, borrelSchemaShift, borrelSchemaAnswers };
 }
 
 /**
@@ -1775,6 +1857,9 @@ export interface DatabaseContent {
   products: Product[],
   productRevisions: ProductRevision[],
   updatedProducts: UpdatedProduct[],
+  borrelSchema: BorrelSchema[],
+  borrelSchemaShift: BorrelSchemaShift[],
+  borrelSchemaAnswers: BorrelSchemaAnswer[],
   containers: Container[],
   containerRevisions: ContainerRevision[],
   updatedContainers: UpdatedContainer[],
@@ -1810,6 +1895,10 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
   const { pointsOfSale, pointOfSaleRevisions, updatedPointsOfSale } = await seedAllPointsOfSale(
     users, containerRevisions, containers,
   );
+  const borrelShifts = await createShifts();
+  const { borrelSchema, borrelSchemaShift, borrelSchemaAnswers } = await seedBorrelSchema(
+    borrelShifts, users,
+  );
   const { transactions } = await seedTransactions(users, pointOfSaleRevisions);
   const transfers = await seedTransfers(users);
   const { fines, fineTransfers, userFineGroups } = await seedFines(users, transactions, transfers);
@@ -1842,5 +1931,8 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
     gewisUsers,
     pinUsers,
     localUsers,
+    borrelSchema,
+    borrelSchemaShift,
+    borrelSchemaAnswers,
   };
 }

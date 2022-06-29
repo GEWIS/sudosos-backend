@@ -66,6 +66,9 @@ import KeyAuthenticator from '../entity/authenticator/key-authenticator';
 import Fine from '../entity/fine/fine';
 import FineHandoutEvent from '../entity/fine/fineHandoutEvent';
 import UserFineGroup from '../entity/fine/userFineGroup';
+import BorrelSchema from '../entity/borrel-schema/borrel-schema';
+import BorrelSchemaShift from '../entity/borrel-schema/borrel-schema-shift';
+import BorrelSchemaAnswer from '../entity/borrel-schema/borrel-schema-answer';
 
 export default class Database {
   public static async initialize(): Promise<Connection> {
@@ -124,6 +127,9 @@ export default class Database {
         BannerImage,
         AssignedRole,
         ResetToken,
+        BorrelSchema,
+        BorrelSchemaShift,
+        BorrelSchemaAnswer,
       ],
     };
     return createConnection(options);
