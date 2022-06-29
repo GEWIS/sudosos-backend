@@ -17,7 +17,10 @@ COPY ./package.json ./package-lock.json ./
 RUN npm install --production
 
 COPY --from=build --chown=node /app/init_scripts /app/init_scripts
-RUN chmod a+rx /app/init_scripts
+RUN chmod +x /app/init_scripts/start.sh
+RUN chmod +x /app/init_scripts/00_make_sudosos_data_dirs.sh
+RUN chmod +x /app/init_scripts/00_regen_sudosos_secrets.sh
+
 COPY --from=build --chown=node /app/out/src /app/out/src
 COPY --from=build --chown=node /app/out/swagger.json /app/out/swagger.json
 
