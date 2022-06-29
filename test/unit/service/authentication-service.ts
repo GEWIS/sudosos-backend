@@ -178,11 +178,11 @@ describe('AuthenticationService', (): void => {
   describe('PIN Authentication', () => {
     it('should set and verify a user PIN-Code', async () => {
       await inUserContext(await UserFactory().clone(1), async (user: User) => {
-        await AuthenticationService.setUserPINCode(user, '1000');
+        await AuthenticationService.setUserAuthenticationHash(user, '1000', PinAuthenticator);
         const auth = await PinAuthenticator.findOne({ where: { user } });
         expect(auth).to.not.be.undefined;
-        expect(await AuthenticationService.compareHash('2000', auth.hashedPin)).to.be.false;
-        expect(await AuthenticationService.compareHash('1000', auth.hashedPin)).to.be.true;
+        expect(await AuthenticationService.compareHash('2000', auth.hash)).to.be.false;
+        expect(await AuthenticationService.compareHash('1000', auth.hash)).to.be.true;
       });
     });
   });

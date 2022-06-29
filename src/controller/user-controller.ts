@@ -41,6 +41,7 @@ import { asNumber } from '../helpers/validators';
 import { verifyCreateUserRequest } from './request/validators/user-request-spec';
 import userTokenInOrgan from '../helpers/token-helper';
 import { parseUserToResponse } from '../helpers/revision-to-response';
+import PinAuthenticator from '../entity/authenticator/pin-authenticator';
 
 export default class UserController extends BaseController {
   private logger: Logger = log4js.getLogger('UserController');
@@ -343,7 +344,8 @@ export default class UserController extends BaseController {
         return;
       }
 
-      await AuthenticationService.setUserPINCode(user, updatePinRequest.pin.toString());
+      await AuthenticationService.setUserAuthenticationHash(user,
+        updatePinRequest.pin.toString(), PinAuthenticator);
       res.status(200).json();
     } catch (error) {
       this.logger.error('Could not update pin:', error);

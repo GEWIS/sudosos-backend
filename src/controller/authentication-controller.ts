@@ -27,6 +27,10 @@ import AuthenticationLDAPRequest from './request/authentication-ldap-request';
 import RoleManager from '../rbac/role-manager';
 import wrapInManager from '../helpers/database';
 import { LDAPUser } from '../helpers/ad';
+import AuthenticationLocalRequest from './request/authentication-local-request';
+import PinAuthenticator from '../entity/authenticator/pin-authenticator';
+import AuthenticationPinRequest from './request/authentication-pin-request';
+import LocalAuthenticator from '../entity/authenticator/local-authenticator';
 
 /**
  * The authentication controller is responsible for:
@@ -74,7 +78,21 @@ export default class AuthenticationController extends BaseController {
         POST: {
           body: { modelName: 'AuthenticationLDAPRequest' },
           policy: async () => true,
-          handler: this.ldapLogin.bind(this),
+          handler: this.LDAPLogin.bind(this),
+        },
+      },
+      '/PIN': {
+        POST: {
+          body: { modelName: 'AuthenticationPinRequest' },
+          policy: async () => true,
+          handler: this.PINLogin.bind(this),
+        },
+      },
+      '/local': {
+        POST: {
+          body: { modelName: 'AuthenticationLocalRequest' },
+          policy: async () => true,
+          handler: this.LocalLogin.bind(this),
         },
       },
     };
@@ -98,6 +116,76 @@ export default class AuthenticationController extends BaseController {
   }
 
   /**
+   * PIN login and hand out token
+   * @route POST /authentication/PIN
+   * @group authenticate - Operations of authentication controller
+   * @param {AuthenticationPinRequest.model} req.body.required - The PIN login.
+   * @returns {AuthenticationResponse.model} 200 - The created json web token.
+   * @returns {string} 400 - Validation error.
+   * @returns {string} 403 - Authentication error.
+   */
+  public async PINLogin(req: Request, res: Response): Promise<void> {
+    const body = req.body as AuthenticationPinRequest;
+    this.logger.trace('PIN authentication for user', body.userId);
+
+    try {
+      await (AuthenticationController.PINLoginConstructor(this.roleManager,
+        this.tokenHandler, body.pin, body.userId))(req, res);
+    } catch (error) {
+      this.logger.error('Could not authenticate using PIN:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Construct a login function for PIN.
+   * This was done such that it is easily adaptable.
+   * @param roleManager
+   * @param tokenHandler
+   * @param pin - Provided PIN code
+   * @param userId - Provided User
+   * @constructor
+   */
+  public static PINLoginConstructor(roleManager: RoleManager, tokenHandler: TokenHandler,
+    pin: string, userId: number) {
+    return async (req: Request, res: Response) => {
+      const user = await User.findOne({
+        where: { id: userId, deleted: false },
+      });
+
+      if (!user) {
+        res.status(403).json({
+          message: `User ${userId} not registered`,
+        });
+        return;
+      }
+
+      const pinAuthenticator = await PinAuthenticator.findOne({ where: { user }, relations: ['user'] });
+      if (!pinAuthenticator) {
+        res.status(403).json({
+          message: 'Invalid credentials.',
+        });
+        return;
+      }
+      const context: AuthenticationContext = {
+        roleManager,
+        tokenHandler,
+      };
+
+      const result = await AuthenticationService.HashAuthentication(pin,
+        pinAuthenticator, context, true);
+
+      if (!result) {
+        res.status(403).json({
+          message: 'Invalid credentials.',
+        });
+      }
+
+      res.json(result);
+    };
+  }
+
+  /**
    * LDAP login and hand out token
    * If user has never signed in before this also creates an account.
    * @route POST /authentication/LDAP
@@ -107,12 +195,12 @@ export default class AuthenticationController extends BaseController {
    * @returns {string} 400 - Validation error.
    * @returns {string} 403 - Authentication error.
    */
-  public async ldapLogin(req: Request, res: Response): Promise<void> {
+  public async LDAPLogin(req: Request, res: Response): Promise<void> {
     const body = req.body as AuthenticationLDAPRequest;
     this.logger.trace('LDAP authentication for user', body.accountName);
 
     try {
-      await AuthenticationController.LDAPLogin(this.roleManager, this.tokenHandler,
+      await AuthenticationController.LDAPLoginConstructor(this.roleManager, this.tokenHandler,
         wrapInManager<User>(AuthenticationService.createUserAndBind))(req, res);
     } catch (error) {
       this.logger.error('Could not authenticate using LDAP:', error);
@@ -124,7 +212,7 @@ export default class AuthenticationController extends BaseController {
    * Constructor for the LDAP function to make it easily adaptable.
    * @constructor
    */
-  public static LDAPLogin(roleManager: RoleManager, tokenHandler: TokenHandler,
+  public static LDAPLoginConstructor(roleManager: RoleManager, tokenHandler: TokenHandler,
     onNewUser: (ADUser: LDAPUser) => Promise<User>) {
     return async (req: Request, res: Response) => {
       const body = req.body as AuthenticationLDAPRequest;
@@ -149,6 +237,59 @@ export default class AuthenticationController extends BaseController {
       const token = await AuthenticationService.getSaltedToken(user, context, false);
       res.json(token);
     };
+  }
+
+  /**
+   * Local login and hand out token
+   * @route POST /authentication/local
+   * @group authenticate - Operations of authentication controller
+   * @param {AuthenticationPinRequest.model} req.body.required - The local login.
+   * @returns {AuthenticationResponse.model} 200 - The created json web token.
+   * @returns {string} 400 - Validation error.
+   * @returns {string} 403 - Authentication error.
+   */
+  public async LocalLogin(req: Request, res: Response): Promise<void> {
+    const body = req.body as AuthenticationLocalRequest;
+    this.logger.trace('Local authentication for user', body.accountMail);
+
+    try {
+      const user = await User.findOne({
+        where: { email: body.accountMail, deleted: false },
+      });
+
+      if (!user) {
+        res.status(403).json({
+          message: `Email ${body.accountMail} not registered`,
+        });
+        return;
+      }
+
+      const localAuthenticator = await LocalAuthenticator.findOne({ where: { user }, relations: ['user'] });
+      if (!localAuthenticator) {
+        res.status(403).json({
+          message: 'Invalid credentials.',
+        });
+      }
+
+      const context: AuthenticationContext = {
+        roleManager: this.roleManager,
+        tokenHandler: this.tokenHandler,
+      };
+
+      const result = await AuthenticationService.HashAuthentication(body.password,
+        localAuthenticator, context, false);
+
+      if (!result) {
+        res.status(403).json({
+          message: 'Invalid credentials.',
+        });
+      }
+
+      res.json(result);
+    } catch (error) {
+      this.logger.error('Could not authenticate using Local:', error);
+      res.status(500).json('Internal server error.');
+    }
   }
 
   /**

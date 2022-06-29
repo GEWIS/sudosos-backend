@@ -25,8 +25,7 @@ import TokenHandler from '../../authentication/token-handler';
 import GewisUser from '../../entity/user/gewis-user';
 import GewiswebToken from '../gewisweb-token';
 import GewiswebAuthenticationRequest from './request/gewisweb-authentication-request';
-import AuthenticationService, { AuthenticationContext } from '../../service/authentication-service';
-import PinAuthenticator from '../../entity/authenticator/pin-authenticator';
+import AuthenticationService from '../../service/authentication-service';
 import GEWISAuthenticationPinRequest from './request/gewis-authentication-pin-request';
 import AuthenticationLDAPRequest from '../../controller/request/authentication-ldap-request';
 import AuthenticationController from '../../controller/authentication-controller';
@@ -180,7 +179,7 @@ export default class GewisAuthenticationController extends BaseController {
     this.logger.trace('GEWIS LDAP authentication for user', body.accountName);
 
     try {
-      await AuthenticationController.LDAPLogin(this.roleManager, this.tokenHandler,
+      await AuthenticationController.LDAPLoginConstructor(this.roleManager, this.tokenHandler,
         wrapInManager<User>(Gewis.findOrCreateGEWISUserAndBind))(req, res);
     } catch (error) {
       this.logger.error('Could not authenticate using LDAP:', error);
@@ -213,25 +212,10 @@ export default class GewisAuthenticationController extends BaseController {
         });
         return;
       }
-
-      const pinAuthenticator = await PinAuthenticator.findOne({ where: { user: gewisUser.user }, relations: ['user'] });
-      const context: AuthenticationContext = {
-        roleManager: this.roleManager,
-        tokenHandler: this.tokenHandler,
-      };
-
-      const result = await AuthenticationService.PINAuthentication(pin.toString(),
-        pinAuthenticator, context);
-
-      if (!result) {
-        res.status(403).json({
-          message: 'Invalid credentials.',
-        });
-      }
-
-      res.json(result);
+      await (AuthenticationController.PINLoginConstructor(this.roleManager, this.tokenHandler,
+        pin, gewisUser.user.id))(req, res);
     } catch (error) {
-      this.logger.error('Could not create token:', error);
+      this.logger.error('Could not authenticate using PIN:', error);
       res.status(500).json('Internal server error.');
     }
   }

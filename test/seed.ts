@@ -114,7 +114,7 @@ async function seedPinAuthenticators(users: User[]): Promise<PinAuthenticator[]>
     hashPassword(i.toString(), (error: any, encrypted: any) => {
       const pinUser = Object.assign(new PinAuthenticator(), {
         user: users[i],
-        hashedPin: encrypted,
+        hash: encrypted,
       });
       promises.push(PinAuthenticator.save(pinUser).then((u) => pinUsers.push(u)));
     });

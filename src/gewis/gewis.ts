@@ -24,6 +24,7 @@ import { asNumber } from '../helpers/validators';
 import AssignedRole from '../entity/roles/assigned-role';
 import { bindUser, LDAPUser } from '../helpers/ad';
 import GewiswebToken from './gewisweb-token';
+import PinAuthenticator from '../entity/authenticator/pin-authenticator';
 
 /**
  * The GEWIS-specific module with definitions and helper functions.
@@ -102,7 +103,8 @@ export default class Gewis {
     await manager.save(gewisUser);
     // This would be the place to make a PIN Code and mail it to the user.
     // This is not meant for production code
-    await AuthenticationService.setUserPINCode(user, gewisId.toString());
+    await AuthenticationService
+      .setUserAuthenticationHash<PinAuthenticator>(user, gewisId.toString(), PinAuthenticator);
 
     return gewisUser;
   }
