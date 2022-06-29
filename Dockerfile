@@ -23,6 +23,4 @@ RUN sh /app/init_scripts/00_regen_sudosos_secrets.sh
 COPY --from=build --chown=node /app/out/src /app/out/src
 COPY --from=build --chown=node /app/out/swagger.json /app/out/swagger.json
 
-RUN sh ./init_scripts/
-
 CMD ["npm", "run", "serve"]
