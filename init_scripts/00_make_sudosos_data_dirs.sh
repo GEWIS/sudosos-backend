@@ -1,6 +1,9 @@
 #!/bin/sh
 set -e
 
+mkdir -p /app/config
+chown node /app/config
+
 mkdir -p /app/out/data
 chown node /app/out/data
 
