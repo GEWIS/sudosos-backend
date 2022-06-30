@@ -23,6 +23,7 @@ import { json } from 'body-parser';
 import log4js from 'log4js';
 import sinon from 'sinon';
 import { Client } from 'ldapts';
+import { describe } from 'mocha';
 import User, { UserType } from '../../../src/entity/user/user';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Database from '../../../src/database/database';
@@ -33,6 +34,7 @@ import RoleManager from '../../../src/rbac/role-manager';
 import AuthenticationResponse from '../../../src/controller/response/authentication-response';
 import AuthenticationLDAPRequest from '../../../src/controller/request/authentication-ldap-request';
 import userIsAsExpected from '../service/authentication-service';
+import AuthenticationPinRequest from '../../../src/controller/request/authentication-pin-request';
 
 describe('AuthenticationController', async (): Promise<void> => {
   let ctx: {
@@ -97,7 +99,6 @@ describe('AuthenticationController', async (): Promise<void> => {
     ctx.app.use(json());
     ctx.app.use('/authentication', ctx.controller.getRouter());
   });
-
   afterEach(async () => {
     process.env.NODE_ENV = ctx.env;
     await ctx.connection.close();
@@ -236,5 +237,11 @@ describe('AuthenticationController', async (): Promise<void> => {
       expect(res.status).to.equal(403);
       expect(res.body.message).to.equal('Invalid credentials.');
     });
+  });
+  describe('POST /authentication/pin', () => {
+    const pinRequest: AuthenticationPinRequest = {
+      pin: '',
+      userId: 0,
+    };
   });
 });

@@ -53,6 +53,8 @@ import seedGEWISUsers from '../src/gewis/database/seed';
 import PinAuthenticator from '../src/entity/authenticator/pin-authenticator';
 import VatGroup from '../src/entity/vat-group';
 import { VatGroupRequest } from '../src/controller/request/vat-group-request';
+import HashBasedAuthenticationMethod from '../src/entity/authenticator/hash-based-authentication-method';
+import LocalAuthenticator from '../src/entity/authenticator/local-authenticator';
 
 /**
  * Defines InvoiceUsers objects for the given Users
@@ -104,24 +106,25 @@ function hashPassword(password: string, callback: any) {
 }
 
 /**
- * Seeds a default set of PIN users and stores them in the database.
+ * Seeds a default set of pass users and stores them in the database.
  */
-async function seedPinAuthenticators(users: User[]): Promise<PinAuthenticator[]> {
-  const pinUsers: PinAuthenticator[] = [];
+async function seedHashAuthenticator<T extends HashBasedAuthenticationMethod>(users: User[],
+  Type: { new(): T, save: (t: T) => Promise<T> }, count = 10): Promise<T[]> {
+  const authUsers: T[] = [];
 
   const promises: Promise<any>[] = [];
-  for (let i = 0; i < users.length; i += 1) {
-    hashPassword(i.toString(), (error: any, encrypted: any) => {
-      const pinUser = Object.assign(new PinAuthenticator(), {
+  for (let i = 0; i < Math.min(users.length, count); i += 1) {
+    hashPassword(users[i].id.toString(), (error: any, encrypted: any) => {
+      const authUser = Object.assign(new Type(), {
         user: users[i],
         hash: encrypted,
       });
-      promises.push(PinAuthenticator.save(pinUser).then((u) => pinUsers.push(u)));
+      promises.push(Type.save(authUser).then((u) => authUsers.push(u)));
     });
   }
 
   await Promise.all(promises);
-  return pinUsers;
+  return authUsers;
 }
 
 /**
@@ -1604,11 +1607,13 @@ export interface DatabaseContent {
   banners: Banner[],
   gewisUsers: GewisUser[],
   pinUsers: PinAuthenticator[],
+  localUsers: LocalAuthenticator[],
 }
 
 export default async function seedDatabase(): Promise<DatabaseContent> {
   const users = await seedUsers();
-  const pinUsers = await seedPinAuthenticators(users);
+  const pinUsers = await seedHashAuthenticator(users, PinAuthenticator);
+  const localUsers = await seedHashAuthenticator(users, LocalAuthenticator);
   const gewisUsers = await seedGEWISUsers(users);
   const categories = await seedProductCategories();
   const vatGroups = await seedVatGroups();
@@ -1647,5 +1652,6 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
     banners,
     gewisUsers,
     pinUsers,
+    localUsers,
   };
 }

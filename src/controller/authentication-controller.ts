@@ -81,7 +81,7 @@ export default class AuthenticationController extends BaseController {
           handler: this.LDAPLogin.bind(this),
         },
       },
-      '/PIN': {
+      '/pin': {
         POST: {
           body: { modelName: 'AuthenticationPinRequest' },
           policy: async () => true,
@@ -117,7 +117,7 @@ export default class AuthenticationController extends BaseController {
 
   /**
    * PIN login and hand out token
-   * @route POST /authentication/PIN
+   * @route POST /authentication/pin
    * @group authenticate - Operations of authentication controller
    * @param {AuthenticationPinRequest.model} req.body.required - The PIN login.
    * @returns {AuthenticationResponse.model} 200 - The created json web token.
