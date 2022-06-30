@@ -99,29 +99,26 @@ function defineUsers(
 }
 
 const BCRYPT_ROUNDS = 12;
-function hashPassword(password: string, callback: any) {
-  bcrypt.genSalt(BCRYPT_ROUNDS, (error, salt) => {
-    bcrypt.hash(password, salt, callback);
-  });
+async function hashPassword(password: string, callback: (encrypted: string) => any) {
+  return bcrypt.hash(password, BCRYPT_ROUNDS).then(callback);
 }
 
 /**
  * Seeds a default set of pass users and stores them in the database.
  */
-async function seedHashAuthenticator<T extends HashBasedAuthenticationMethod>(users: User[],
+export async function seedHashAuthenticator<T extends HashBasedAuthenticationMethod>(users: User[],
   Type: { new(): T, save: (t: T) => Promise<T> }, count = 10): Promise<T[]> {
   const authUsers: T[] = [];
 
   const promises: Promise<any>[] = [];
-  for (let i = 0; i < Math.min(users.length, count); i += 1) {
-    hashPassword(users[i].id.toString(), (error: any, encrypted: any) => {
-      const authUser = Object.assign(new Type(), {
-        user: users[i],
-        hash: encrypted,
-      });
-      promises.push(Type.save(authUser).then((u) => authUsers.push(u)));
+  const toMap: User[] = count >= users.length ? users : users.slice(count);
+  await Promise.all(toMap.map((user) => hashPassword(user.id.toString(), (encrypted: any) => {
+    const authUser = Object.assign(new Type(), {
+      user,
+      hash: encrypted,
     });
-  }
+    promises.push(Type.save(authUser).then((u) => authUsers.push(u)));
+  })));
 
   await Promise.all(promises);
   return authUsers;

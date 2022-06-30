@@ -35,6 +35,11 @@ import AuthenticationResponse from '../../../src/controller/response/authenticat
 import AuthenticationLDAPRequest from '../../../src/controller/request/authentication-ldap-request';
 import userIsAsExpected from '../service/authentication-service';
 import AuthenticationPinRequest from '../../../src/controller/request/authentication-pin-request';
+import PinAuthenticator from '../../../src/entity/authenticator/pin-authenticator';
+import { seedHashAuthenticator } from '../../seed';
+import AuthenticationLocalRequest from '../../../src/controller/request/authentication-local-request';
+import LocalAuthenticator from '../../../src/entity/authenticator/local-authenticator';
+import GEWISAuthenticationPinRequest from '../../../src/gewis/controller/request/gewis-authentication-pin-request';
 
 describe('AuthenticationController', async (): Promise<void> => {
   let ctx: {
@@ -64,11 +69,13 @@ describe('AuthenticationController', async (): Promise<void> => {
       roleManager: new RoleManager(),
       user: await User.save({
         firstName: 'Roy',
+        email: 'Roy@gewis.nl',
         type: UserType.LOCAL_USER,
         active: true,
       } as User),
       user2: await User.save({
         firstName: 'Roy Clone',
+        email: 'Roy39@gewis.nl',
         type: UserType.LOCAL_ADMIN,
         active: true,
       } as User),
@@ -84,6 +91,9 @@ describe('AuthenticationController', async (): Promise<void> => {
       permissions: {},
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
     });
+
+    await seedHashAuthenticator([ctx.user, ctx.user2], PinAuthenticator);
+    await seedHashAuthenticator([ctx.user, ctx.user2], LocalAuthenticator);
 
     // Silent in-dependency logs unless really wanted by the environment.
     const logger = log4js.getLogger('Console');
@@ -176,6 +186,39 @@ describe('AuthenticationController', async (): Promise<void> => {
       expect(res.status).to.equal(403);
     });
   });
+
+  async function testHashAuthentication(type: string, right: any, wrong: any) {
+    it('should return an HTTP 200 and User if correct', async () => {
+      const res = await request(ctx.app)
+        .post(`/authentication/${type}`)
+        .send(right);
+      expect((res.body as AuthenticationResponse).user.id).to.be.equal(1);
+      expect(res.status).to.equal(200);
+    });
+    it('should return an HTTP 403 if incorrect', async () => {
+      const res = await request(ctx.app)
+        .post(`/authentication/${type}`)
+        .send(wrong);
+      expect(res.status).to.equal(403);
+    });
+  }
+
+  describe('POST /authentication/pin', () => {
+    const validPinRequest: AuthenticationPinRequest = {
+      userId: 1,
+      pin: '1',
+    };
+    testHashAuthentication('pin', validPinRequest, { ...validPinRequest, pin: '2' });
+  });
+
+  describe('POST /authentication/local', () => {
+    const validLocalRequest: AuthenticationLocalRequest = {
+      accountMail: 'Roy@gewis.nl',
+      password: '1',
+    };
+    testHashAuthentication('local', validLocalRequest, { ...validLocalRequest, password: '2' });
+  });
+
   describe('POST /authentication/LDAP', () => {
     const stubs: sinon.SinonStub[] = [];
 
@@ -237,11 +280,5 @@ describe('AuthenticationController', async (): Promise<void> => {
       expect(res.status).to.equal(403);
       expect(res.body.message).to.equal('Invalid credentials.');
     });
-  });
-  describe('POST /authentication/pin', () => {
-    const pinRequest: AuthenticationPinRequest = {
-      pin: '',
-      userId: 0,
-    };
   });
 });
