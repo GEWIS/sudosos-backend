@@ -42,6 +42,9 @@ import { verifyCreateUserRequest } from './request/validators/user-request-spec'
 import userTokenInOrgan from '../helpers/token-helper';
 import { parseUserToResponse } from '../helpers/revision-to-response';
 import PinAuthenticator from '../entity/authenticator/pin-authenticator';
+import LocalAuthenticator from '../entity/authenticator/local-authenticator';
+import UpdateLocalRequest from './request/update-local-request';
+import verifyUpdateLocalRequest from './request/validators/update-local-request-spec';
 
 export default class UserController extends BaseController {
   private logger: Logger = log4js.getLogger('UserController');
@@ -99,6 +102,15 @@ export default class UserController extends BaseController {
             req.token.roles, 'update', UserController.getRelation(req), 'Authenticator', ['pin'],
           ),
           handler: this.updateUserPin.bind(this),
+        },
+      },
+      '/:id(\\d+)/local': {
+        PUT: {
+          body: { modelName: 'UpdateLocalRequest' },
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'update', UserController.getRelation(req), 'Authenticator', ['password'],
+          ),
+          handler: this.updateUserLocalPassword.bind(this),
         },
       },
       '/:id(\\d+)': {
@@ -349,6 +361,48 @@ export default class UserController extends BaseController {
       res.status(200).json();
     } catch (error) {
       this.logger.error('Could not update pin:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Put a user's local password
+   * @route PUT /users/{id}/local
+   * @group users - Operations of user controller
+   * @param {integer} id.path.required - The id of the user
+   * @param {UpdateLocalRequest.model} update.body.required -
+   *    The password update
+   * @security JWT
+   * @returns 200 - Update success
+   * @returns {string} 400 - Validation Error
+   * @returns {string} 404 - Nonexistent user id
+   */
+  public async updateUserLocalPassword(req: RequestWithToken, res: Response): Promise<void> {
+    const parameters = req.params;
+    const updateLocalRequest = req.body as UpdateLocalRequest;
+    this.logger.trace('Update user local password', parameters, 'by user', req.token.user);
+
+    try {
+      const userId = Number.parseInt(parameters.id, 10);
+      // Get the user object if it exists
+      const user = await User.findOne(userId, { where: { deleted: false } });
+      // If it does not exist, return a 404 error
+      if (user === undefined) {
+        res.status(404).json('Unknown user ID.');
+        return;
+      }
+
+      const validation = await verifyUpdateLocalRequest(updateLocalRequest);
+      if (isFail(validation)) {
+        res.status(400).json(validation.fail.value);
+        return;
+      }
+
+      await AuthenticationService.setUserAuthenticationHash(user,
+        updateLocalRequest.password, LocalAuthenticator);
+      res.status(200).json();
+    } catch (error) {
+      this.logger.error('Could not update local password:', error);
       res.status(500).json('Internal server error.');
     }
   }
