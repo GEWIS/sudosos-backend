@@ -16,7 +16,6 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  BaseEntity,
   Column,
   Entity,
   JoinColumn,
@@ -28,9 +27,10 @@ import User from '../user/user';
 import Transaction from './transaction';
 import Transfer from './transfer';
 import DineroTransformer from '../transformer/dinero-transformer';
+import BaseEntityWithoutId from '../base-entity-without-id';
 
 /**
- * @typedef {Balance} Balance
+ * @typedef {BaseEntityWithoutId} Balance
  * @property {User.model} user.required - The account which has this balance
  * @property {Dinero.model} amount.required - The amount of balance a user has.
  * @property {Transaction.model} lastTransaction - The last transaction of this
@@ -39,7 +39,7 @@ import DineroTransformer from '../transformer/dinero-transformer';
  * used to calculate this balance
  */
 @Entity()
-export default class Balance extends BaseEntity {
+export default class Balance extends BaseEntityWithoutId {
   @PrimaryColumn({ type: 'integer' })
   public readonly userId: number;
 
