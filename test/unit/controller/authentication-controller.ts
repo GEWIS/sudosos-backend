@@ -39,7 +39,6 @@ import PinAuthenticator from '../../../src/entity/authenticator/pin-authenticato
 import { seedHashAuthenticator } from '../../seed';
 import AuthenticationLocalRequest from '../../../src/controller/request/authentication-local-request';
 import LocalAuthenticator from '../../../src/entity/authenticator/local-authenticator';
-import GEWISAuthenticationPinRequest from '../../../src/gewis/controller/request/gewis-authentication-pin-request';
 
 describe('AuthenticationController', async (): Promise<void> => {
   let ctx: {
