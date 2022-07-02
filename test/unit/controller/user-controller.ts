@@ -1279,7 +1279,7 @@ describe('UserController', (): void => {
         const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
 
         const updateLocalRequest: UpdateLocalRequest = {
-          password: 'Password',
+          password: 'P4ssword1!@',
         };
         const res = await request(ctx.app)
           .put(`/users/${user.id}/local`)
