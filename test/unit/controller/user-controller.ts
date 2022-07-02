@@ -21,6 +21,7 @@ import { SwaggerSpecification } from 'swagger-model-validator';
 import { Connection, createQueryBuilder } from 'typeorm';
 import { json } from 'body-parser';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
+import { describe } from 'mocha';
 import UserController from '../../../src/controller/user-controller';
 import User, { UserType } from '../../../src/entity/user/user';
 import Product from '../../../src/entity/product/product';
@@ -51,6 +52,7 @@ import RoleResponse from '../../../src/controller/response/rbac/role-response';
 import {
   FinancialMutationResponse,
 } from '../../../src/controller/response/financial-mutation-response';
+import UpdateLocalRequest from '../../../src/controller/request/update-local-request';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -181,7 +183,7 @@ describe('UserController', (): void => {
           update: own,
         },
         Authenticator: {
-          update: { own: new Set<string>(['pin']) },
+          update: { own: new Set<string>(['pin', 'password']) },
           get: own,
         },
         Roles: {
@@ -1268,6 +1270,22 @@ describe('UserController', (): void => {
           .send(updatePinRequest);
         expect(res.body).to.be.equal(INVALID_PIN().value);
         expect(res.status).to.equal(400);
+      });
+    });
+  });
+  describe('PUT /users/{id}/local', () => {
+    it('should return an HTTP 200 if authorized', async () => {
+      await inUserContext(await UserFactory().clone(1), async (user: User) => {
+        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
+
+        const updateLocalRequest: UpdateLocalRequest = {
+          password: 'Password',
+        };
+        const res = await request(ctx.app)
+          .put(`/users/${user.id}/local`)
+          .set('Authorization', `Bearer ${userToken}`)
+          .send(updateLocalRequest);
+        expect(res.status).to.equal(200);
       });
     });
   });

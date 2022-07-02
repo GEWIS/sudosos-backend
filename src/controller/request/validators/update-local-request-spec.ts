@@ -15,19 +15,22 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+import validator from 'validator';
 import {
-  Specification, toPass, validateSpecification, ValidationError,
+  Specification, toFail, toPass, validateSpecification, ValidationError,
 } from '../../../helpers/specification-validation';
 import UpdateLocalRequest from '../update-local-request';
+import isStrongPassword = validator.isStrongPassword;
+import { WEAK_PASSWORD } from './validation-errors';
 
 /**
  * Defines rules of a good password
  * @param p
  */
-const validPassword = async (p: string) =>
-// TODO Make a good set of rules for updating passwords
-  toPass(p)
-;
+const validPassword = async (p: string) => {
+  if (!isStrongPassword(p)) return toFail(WEAK_PASSWORD());
+  return toPass(p);
+};
 
 /**
  * We make it a function since we use a SubSpecification
