@@ -217,10 +217,10 @@ export default async function createApp(): Promise<Application> {
   // Setup token handler and authentication controller.
   await setupAuthentication(tokenHandler, application);
 
-  await BalanceService.updateBalances();
+  await BalanceService.updateBalances({});
   const syncBalances = cron.schedule('*/10 * * * *', () => {
     logger.debug('Syncing balances.');
-    BalanceService.updateBalances();
+    BalanceService.updateBalances({});
     logger.debug('Synced balances.');
   });
 

@@ -22,6 +22,7 @@ import Database from './database';
 import { Application } from '../index';
 import seedDatabase from '../../test/seed';
 import initializeDiskStorage from '../files/initialize';
+import BalanceService from '../service/balance-service';
 
 export default async function createApp() {
   const application = new Application();
@@ -45,6 +46,7 @@ export default async function createApp() {
   try {
     await application.connection.synchronize();
     await seedDatabase();
+    await BalanceService.updateBalances({});
     application.logger.info('Seeding successful');
   } catch (e) {
     application.logger.error('Seeding failed', e);

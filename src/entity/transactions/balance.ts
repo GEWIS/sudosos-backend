@@ -16,38 +16,47 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
+  BaseEntity,
   Column,
   Entity,
   JoinColumn,
   ManyToOne,
   PrimaryColumn,
-  BaseEntity,
 } from 'typeorm';
-
+import { Dinero } from 'dinero.js';
 import User from '../user/user';
+import Transaction from './transaction';
+import Transfer from './transfer';
+import DineroTransformer from '../transformer/dinero-transformer';
 
 /**
  * @typedef {Balance} Balance
  * @property {User.model} user.required - The account which has this balance
- * @property {Number} amount - The amount of balance a user has.
- * @property {Date} subtransactions.required - The time of last sync with transactions
- *    to this transaction.
+ * @property {Dinero.model} amount.required - The amount of balance a user has.
+ * @property {Transaction.model} lastTransaction - The last transaction of this
+ * user, used to calculate this balance
+ * @property {Transfer.model} lastTransfer - The last transfer of this user,
+ * used to calculate this balance
  */
 @Entity()
 export default class Balance extends BaseEntity {
   @PrimaryColumn({ type: 'integer' })
-  public readonly user_id: number;
+  public readonly userId: number;
 
   @ManyToOne(() => User, { nullable: false })
-  @JoinColumn({ name: 'user_id' })
+  @JoinColumn({ name: 'userId' })
   public readonly user: User;
 
-  @Column({ type: 'integer' })
-  public readonly amount: number;
+  @Column({
+    type: 'integer',
+    transformer: DineroTransformer.Instance,
+  })
+  public readonly amount: Dinero;
 
-  @Column({ type: 'integer', nullable: true })
-  public readonly lastTransaction?: number;
+  @ManyToOne(() => Transaction, { nullable: true, onDelete: 'CASCADE' })
+  @JoinColumn()
+  public readonly lastTransaction?: Transaction;
 
-  @Column({ type: 'integer', nullable: true })
-  public readonly lastTransfer?: number;
+  @ManyToOne(() => Transfer, { nullable: true, onDelete: 'CASCADE' })
+  public readonly lastTransfer?: Transfer;
 }

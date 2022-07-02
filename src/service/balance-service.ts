@@ -19,10 +19,10 @@ import { getConnection, getManager } from 'typeorm';
 import Balance from '../entity/transactions/balance';
 import BalanceResponse from '../controller/response/balance-response';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
-import User from '../entity/user/user';
+import { dateToUTC, toMySQLString } from '../helpers/timestamps';
 
 export interface BalanceParameters {
-  ids: number[],
+  ids?: number[],
 }
 
 export default class BalanceService {
@@ -30,61 +30,63 @@ export default class BalanceService {
     return {
       id: rawBalance.id,
       amount: DineroTransformer.Instance.from(rawBalance.amount).toObject(),
-      lastTransactionId: rawBalance.lastTransaction,
-      lastTransferId: rawBalance.lastTransfer,
+      lastTransactionId: rawBalance.lastTransactionId,
+      lastTransferId: rawBalance.lastTransferId,
     };
+  }
+
+  protected static addWhereClauseForIds(
+    query: string, parameters: any[], column: string, ids?: number[],
+  ) {
+    if (ids !== undefined) {
+      // eslint-disable-next-line no-param-reassign
+      query += `AND ${column} IN ( ${(new Array(ids.length)).fill('?').toString()} ) `;
+      parameters.push(...ids);
+    }
+    return query;
   }
 
   /**
    * Update the balance cache with active values
    * Insafe Query! Safety leveraged by type safety
    */
-  public static async updateBalances(params?: BalanceParameters) {
+  public static async updateBalances(params: BalanceParameters) {
     const entityManager = getManager();
-    const lastIds: any = await entityManager.query(`select max(\`transaction\`) as transactionMax, max(transfer) as transferMax from (
-      select max(id) as "transaction", 0 as "transfer" from \`transaction\` 
-      union select 0 as "transaction", max(id) as "transfer" from \`transfer\` 
-    )`);
-    const { transactionMax, transferMax } = lastIds[0];
 
-    if (params && params.ids) {
-      const idStr = `(${params.ids.join(',')})`;
-      // eslint-disable-next-line prefer-template
-      await entityManager.query(`REPLACE INTO balance select id, sum(amount), ${transactionMax}, ${transferMax} from ( `
-          + 'select t.fromId as `id`, str.amount * pr.priceInclVat * -1 as `amount` from `transaction` as `t` '
-            + 'inner join sub_transaction st on t.id=st.transactionId '
-            + 'inner join sub_transaction_row str on st.id=str.subTransactionId '
-            + 'inner join product_revision pr on str.productRevision=pr.revision and str.productProduct=pr.productId '
-            + `where t.id <= ? and t.fromId in ${idStr} `
-          + 'UNION ALL '
-          + 'select st2.toId as `id`, str2.amount * pr2.priceInclVat as `amount` from sub_transaction st2 '
-            + 'inner join sub_transaction_row str2 on st2.id=str2.subTransactionId '
-            + 'inner join product_revision pr2 on str2.productRevision=pr2.revision and str2.productProduct=pr2.productId '
-            + `where st2.transactionId <= ? and st2.toId in ${idStr} `
-          + 'UNION ALL '
-          + `select t2.fromId as \`id\`, amount*-1 as \`amount\` from transfer t2 where t2.id <= ? and fromId in ${idStr}`
-          + 'UNION ALL '
-          + `select t2.toId as \`id\`, amount as \`amount\` from transfer t2 where t2.id <= ? and toId in ${idStr}) as moneys `
-        + 'group by moneys.id', [transactionMax, transactionMax, transferMax, transferMax]);
-    } else {
-      // eslint-disable-next-line prefer-template
-      await entityManager.query(`REPLACE INTO balance select id, sum(amount), ${transactionMax}, ${transferMax} from ( `
-          + 'select t.fromId as `id`, str.amount * pr.priceInclVat * -1 as `amount` from `transaction` as `t` '
-            + 'inner join sub_transaction st on t.id=st.transactionId '
-            + 'inner join sub_transaction_row str on st.id=str.subTransactionId '
-            + 'inner join product_revision pr on str.productRevision=pr.revision and str.productProduct=pr.productId '
-            + 'where t.id <= ? '
-          + 'UNION ALL '
-          + 'select st2.toId as `id`, str2.amount * pr2.priceInclVat as `amount` from sub_transaction st2 '
-            + 'inner join sub_transaction_row str2 on st2.id=str2.subTransactionId '
-            + 'inner join product_revision pr2 on str2.productRevision=pr2.revision and str2.productProduct=pr2.productId '
-            + 'where st2.transactionId <= ? '
-          + 'UNION ALL '
-          + 'select t2.fromId as `id`, amount*-1 as `amount` from transfer t2 where t2.id <= ? and fromId is not NULL '
-          + 'UNION ALL '
-          + 'select t3.toId as `id`, amount as `amount` from transfer t3 where t3.id <= ? and toId is not NULL) as moneys '
-        + 'group by moneys.id', [transactionMax, transactionMax, transferMax, transferMax]);
-    }
+    const parameters: any[] = [];
+
+    // eslint-disable-next-line prefer-template
+    let query = 'REPLACE INTO balance '
+      + 'select moneys2.id, max(moneys2.amount), max(t1.id), max(t2.id) from ('
+        + 'select id, sum(amount) as `amount`, max(createdAt1) as `createdAt1`, max(createdAt2) as `createdAt2` from ( '
+        + 'select t1.fromId as `id`, str.amount * pr.priceInclVat * -1 as `amount`, t1.createdAt as `createdAt1`, null as `createdAt2` from `transaction` as `t1` '
+          + 'left join `sub_transaction` st on t1.id=st.transactionId '
+          + 'left join `sub_transaction_row` str on st.id=str.subTransactionId '
+          + 'left join `product_revision` pr on str.productRevision=pr.revision and str.productProduct=pr.productId '
+          + 'where 1 ';
+    query = this.addWhereClauseForIds(query, parameters, 't1.fromId', params.ids);
+    query += 'UNION ALL '
+        + 'select st2.toId as `id`, str2.amount * pr2.priceInclVat as `amount`, t1.createdAt as `createdAt1`, null as `createdAt2` from sub_transaction st2 '
+          + 'inner join `transaction` t1 on t1.id=st2.transactionId '
+          + 'left join `sub_transaction_row` str2 on st2.id=str2.subTransactionId '
+          + 'left join `product_revision` pr2 on str2.productRevision=pr2.revision and str2.productProduct=pr2.productId '
+          + 'where 1 ';
+    query = this.addWhereClauseForIds(query, parameters, 'st2.toId', params.ids);
+    query += 'UNION ALL '
+        + 'select t2.fromId as `id`, amount*-1 as `amount`, null as `createdAt1`, t2.createdAt as `createdAt2` from `transfer` t2 where t2.fromId is not null ';
+    query = this.addWhereClauseForIds(query, parameters, 'fromId', params.ids);
+    query += 'UNION ALL '
+        + 'select t2.toId as `id`, amount as `amount`, null as `createdAt1`, t2.createdAt as `createdAt2` from `transfer` t2 where t2.toId is not null ';
+    query = this.addWhereClauseForIds(query, parameters, 'toId', params.ids);
+    query += ') as moneys '
+        + 'group by moneys.id '
+      + ') as moneys2 '
+      + 'left join ( '
+      + 'select t.id, t.fromId, t.createdAt, st.toId from `transaction` t left join `sub_transaction` st on t.id = st.transactionId '
+      + ') as t1 on (t1.createdAt = moneys2.createdAt1 and (t1.fromId = moneys2.id OR t1.toId = moneys2.id)) '
+      + 'left join `transfer` t2 on (t2.createdAt = moneys2.createdAt2 and (t2.fromId = moneys2.id OR t2.toId = moneys2.id)) '
+      + 'group by moneys2.id ';
+    await entityManager.query(query, parameters);
   }
 
   /**
@@ -102,18 +104,34 @@ export default class BalanceService {
   /**
    * Get balance of users with given IDs
    * @param ids ids of users to get balance of
+   * @param date date at which the "balance snapshot" should be taken
    * @returns the current balance of a user
    */
-  public static async getBalances(ids?: number[]): Promise<BalanceResponse[]> {
+  public static async getBalances(ids?: number[], date?: Date): Promise<BalanceResponse[]> {
     const connection = getConnection();
 
-    const parameters = [];
+    const parameters: any[] = [];
+    const d = date ? toMySQLString(dateToUTC(date)) : undefined;
+
+    const balanceSubquery = () => {
+      let result = '( '
+      + 'SELECT b.userId as userId, b.amount as amount, t1.createdAt as lastTransactionDate, t2.createdAt as lastTransferDate '
+      + 'from balance b '
+      + 'left join `transaction` t1 on b.lastTransactionId=t1.id '
+      + 'left join `transfer` t2 on b.lastTransferId=t2.id ';
+      if (d !== undefined) {
+        result += 'where t1.createdAt > ? AND t2.createdAt > ? ';
+        parameters.push(...[d, d]);
+      }
+      result += ') ';
+      return result;
+    };
 
     let query = 'SELECT moneys2.id as id, '
       + 'moneys2.totalValue + COALESCE(b5.amount, 0) as amount, '
       + 'moneys2.count as count, '
-      + 'b5.lastTransaction as lastTransaction, '
-      + 'b5.lastTransfer as lastTransfer, '
+      + 'b5.lastTransactionId as lastTransactionId, '
+      + 'b5.lastTransferId as lastTransferId, '
       + 'b5.amount as cachedAmount '
       + 'from ( '
       + 'SELECT user.id as id, '
@@ -121,50 +139,47 @@ export default class BalanceService {
       + 'count(moneys.totalValue) as count '
       + 'from user '
       + 'left join ( '
-      + 'select t.fromId as `id`, str.amount * pr.priceInclVat * -1 as `totalValue` from `transaction` as `t` '
-      + 'left join balance b1 on t.fromId=b1.user_id '
+      + 'select t.fromId as `id`, str.amount * pr.priceInclVat * -1 as `totalValue` '
+      + 'from `transaction` as `t` '
+      + `left join ${balanceSubquery()} as b on t.fromId=b.userId `
       + 'inner join sub_transaction st on t.id=st.transactionId '
       + 'inner join sub_transaction_row str on st.id=str.subTransactionId '
       + 'inner join product_revision pr on str.productRevision=pr.revision and str.productProduct=pr.productId '
-      + 'where t.id > COALESCE(b1.lastTransaction, 0) ';
-    if (ids !== undefined) {
-      query += `and t.fromId IN ( ${(new Array(ids.length)).fill('?').toString()} ) `;
-      parameters.push(...ids);
-    }
+      + 'where t.createdAt > COALESCE(b.lastTransactionDate, 0) ';
+    query = this.addWhereClauseForIds(query, parameters, 't.fromId', ids);
     query += 'UNION ALL '
       + 'select st2.toId as `id`, str2.amount * pr2.priceInclVat as `totalValue` from sub_transaction st2 '
-      + 'left join balance b2 on st2.toId=b2.user_id '
+      + `left join ${balanceSubquery()} b on st2.toId=b.userId `
+      + 'inner join `transaction` t on t.id=st2.transactionId '
       + 'inner join sub_transaction_row str2 on st2.id=str2.subTransactionId '
       + 'inner join product_revision pr2 on str2.productRevision=pr2.revision and str2.productProduct=pr2.productId '
-      + 'where st2.transactionId > COALESCE(b2.lastTransaction, 0) ';
-    if (ids !== undefined) {
-      query += `and st2.toId IN ( ${(new Array(ids.length)).fill('?').toString()} ) `;
-      parameters.push(...ids);
-    }
+      + 'where t.createdAt > COALESCE(b.lastTransactionDate, 0) ';
+    query = this.addWhereClauseForIds(query, parameters, 'st2.toId', ids);
     query += 'UNION ALL '
       + 'select t2.fromId as `id`, t2.amount*-1 as `totalValue` from transfer t2 '
-      + 'left join balance b3 on t2.fromId=b3.user_id '
-      + 'where t2.id > COALESCE(b3.lastTransfer, 0) ';
-    if (ids !== undefined) {
-      query += `and t2.fromId IN ( ${(new Array(ids.length)).fill('?').toString()} ) `;
-      parameters.push(...ids);
-    }
+      + `left join ${balanceSubquery()} b on t2.fromId=b.userId `
+      + 'where t2.createdAt > COALESCE(b.lastTransferDate, 0) ';
+    query = this.addWhereClauseForIds(query, parameters, 't2.fromId', ids);
     query += 'UNION ALL '
       + 'select t3.toId as `id`, t3.amount as `totalValue` from transfer t3 '
-      + 'left join balance b4 on t3.toId=b4.user_id '
-      + 'where t3.id > COALESCE(b4.lastTransfer, 0) ';
-    if (ids !== undefined) {
-      query += `and t3.toId IN ( ${(new Array(ids.length)).fill('?').toString()} ) `;
-      parameters.push(...ids);
-    }
-    query += ') as moneys on moneys.id=user.id ';
-    if (ids !== undefined) {
-      query += `where user.id IN ( ${(new Array(ids.length)).fill('?').toString()} ) `;
-      parameters.push(...ids);
-    }
+      + `left join ${balanceSubquery()} b on t3.toId=b.userId `
+      + 'where t3.createdAt > COALESCE(b.lastTransferDate, 0) ';
+    query = this.addWhereClauseForIds(query, parameters, 't3.toId', ids);
+    query += ') as moneys on moneys.id=user.id '
+      + 'where 1 ';
+    query = this.addWhereClauseForIds(query, parameters, 'user.id', ids);
     query += 'group by user.id '
       + ') as moneys2 '
-      + 'left join balance b5 on b5.user_id=moneys2.id';
+      + 'left join ( '
+      + 'select b.userId, b.amount, b.lastTransactionId, b.lastTransferId '
+      + 'from balance b '
+      + 'left join `transaction` t1 on b.lastTransactionId=t1.id '
+      + 'left join `transfer` t2 on b.lastTransferId=t2.id ';
+    if (date !== undefined) {
+      query += 'where t1.createdAt <= ? AND t2.createdAt <= ? ';
+      parameters.push(...[d, d]);
+    }
+    query += ') AS b5 ON b5.userId=moneys2.id';
 
     const balances = await connection.query(query, parameters);
 
@@ -201,12 +216,12 @@ export default class BalanceService {
 
       balanceArray = await entityManager.query(`select id, sum(amount) as 'amount' from (
         select id, 0 as 'amount' from user where id in (${idStr}) union 
-        select user_id as id, amount as 'amount' from balance where id in (${idStr})
+        select userId as id, amount as 'amount' from balance where id in (${idStr})
       ) group by id`, params.ids.concat(params.ids));
     } else {
       balanceArray = await entityManager.query(`select id, sum(amount) as 'amount' from (
         select id, 0 as 'amount' from user union 
-        select user_id as id, amount as 'amount' from balance
+        select userId as id, amount as 'amount' from balance
       ) group by id`);
     }
 
