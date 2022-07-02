@@ -51,6 +51,7 @@ describe('AuthenticationController', async (): Promise<void> => {
     controller: AuthenticationController,
     user: User,
     user2: User,
+    user3: User,
     request: AuthenticationMockRequest,
   };
 
@@ -75,6 +76,12 @@ describe('AuthenticationController', async (): Promise<void> => {
       user2: await User.save({
         firstName: 'Roy Clone',
         email: 'Roy39@gewis.nl',
+        type: UserType.LOCAL_ADMIN,
+        active: true,
+      } as User),
+      user3: await User.save({
+        firstName: 'Roy Clone',
+        email: 'Roy41@gewis.nl',
         type: UserType.LOCAL_ADMIN,
         active: true,
       } as User),
@@ -208,6 +215,21 @@ describe('AuthenticationController', async (): Promise<void> => {
       pin: '1',
     };
     testHashAuthentication('pin', validPinRequest, { ...validPinRequest, pin: '2' });
+    it('should return an HTTP 403 if user does not exist', async () => {
+      const userId = 0;
+      const res = await request(ctx.app)
+        .post('/authentication/pin')
+        .send({ userId, pin: '1' } as AuthenticationPinRequest);
+      expect(res.status).to.equal(403);
+      expect(res.body.message).to.equal(`User ${userId} not registered`);
+    });
+    it('should return an HTTP 403 if user does not have a pin', async () => {
+      const res = await request(ctx.app)
+        .post('/authentication/pin')
+        .send({ userId: 3, pin: '1' } as AuthenticationPinRequest);
+      expect(res.status).to.equal(403);
+      expect(res.body.message).to.equal('Invalid credentials.');
+    });
   });
 
   describe('POST /authentication/local', () => {
@@ -216,6 +238,21 @@ describe('AuthenticationController', async (): Promise<void> => {
       password: '1',
     };
     testHashAuthentication('local', validLocalRequest, { ...validLocalRequest, password: '2' });
+    it('should return an HTTP 403 if user does not exist', async () => {
+      const accountMail = 'fake@gewis.nl';
+      const res = await request(ctx.app)
+        .post('/authentication/local')
+        .send({ accountMail, password: '1' });
+      expect(res.status).to.equal(403);
+      expect(res.body.message).to.equal(`Email ${accountMail} not registered`);
+    });
+    it('should return an HTTP 403 if user does not have a pin', async () => {
+      const res = await request(ctx.app)
+        .post('/authentication/local')
+        .send({ accountMail: 'Roy41@gewis.nl', password: '1' } as AuthenticationLocalRequest);
+      expect(res.status).to.equal(403);
+      expect(res.body.message).to.equal('Invalid credentials.');
+    });
   });
 
   describe('POST /authentication/LDAP', () => {

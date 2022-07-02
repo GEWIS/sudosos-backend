@@ -269,6 +269,7 @@ export default class AuthenticationController extends BaseController {
         res.status(403).json({
           message: 'Invalid credentials.',
         });
+        return;
       }
 
       const context: AuthenticationContext = {
