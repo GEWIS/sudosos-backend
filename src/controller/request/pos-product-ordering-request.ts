@@ -16,26 +16,12 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
- import {
-  Column,
-  Entity,
-  JoinColumn,
-  OneToOne,
-} from 'typeorm';
-import BaseEntityWithoutId from '../base-entity-without-id';
-import PointOfSale from './point-of-sale';
-
 /**
- * @typedef {BaseEntityWithoutId} ProductOrdering
- * @property {PointOfSale.model} pointOfSale.required - The point of sale.
- * @property {Array.<integer>} ordering.required - The ordering for the point of sale.
+ * @typedef POSProductOrderingRequest
+ * @property {integer} pointOfSaleId.required - point of sale id
+ * @property {Array.<integer>} ordering.required - ordering of product id's
  */
-@Entity()
-export default class ProductOrdering extends BaseEntityWithoutId {
-  @OneToOne(() => PointOfSale, { primary: true })
-  @JoinColumn()
-  pointOfSale: PointOfSale;
-
-  @Column('simple-array')
-  ordering: number[];
+export interface POSProductOrderingRequest {
+  pointOfSaleId: number,
+  ordering: number[],
 }

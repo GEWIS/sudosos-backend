@@ -61,6 +61,7 @@ import RootController from './controller/root-controller';
 import ADService from './service/ad-service';
 import Bindings from './helpers/bindings';
 import VatGroupController from './controller/vat-group-controller';
+import POSProductOrderingController from './controller/pos-product-ordering-controller';
 
 export class Application {
   app: express.Express;
@@ -253,6 +254,7 @@ export default async function createApp(): Promise<Application> {
   application.app.use('/v1/products', new ProductController(options).getRouter());
   application.app.use('/v1/productcategories', new ProductCategoryController(options).getRouter());
   application.app.use('/v1/pointsofsale', new PointOfSaleController(options).getRouter());
+  application.app.use('/v1/pointsofsale', new POSProductOrderingController(options).getRouter());
   application.app.use('/v1/transactions', new TransactionController(options).getRouter());
   application.app.use('/v1/borrelkaartgroups', new BorrelkaartGroupController(options).getRouter());
   application.app.use('/v1/transfers', new TransferController(options).getRouter());
