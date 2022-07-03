@@ -22,13 +22,21 @@ import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
 import Transaction from '../../../src/entity/transactions/transaction';
 import Database from '../../../src/database/database';
-import seedDatabase from '../../seed';
+import {
+  seedContainers,
+  seedPointsOfSale,
+  seedProductCategories,
+  seedProducts, seedTransactions, seedTransfers,
+  seedUsers,
+  seedVatGroups,
+} from '../../seed';
 import Swagger from '../../../src/start/swagger';
 import TokenHandler from '../../../src/authentication/token-handler';
 import User, { UserType } from '../../../src/entity/user/user';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import RoleManager from '../../../src/rbac/role-manager';
 import BalanceController from '../../../src/controller/balance-controller';
+import Transfer from '../../../src/entity/transactions/transfer';
 
 describe('BalanceController', (): void => {
   let ctx: {
@@ -40,18 +48,26 @@ describe('BalanceController', (): void => {
     adminToken: string,
     users: User[],
     transactions: Transaction[],
+    transfers: Transfer[],
   };
 
   before(async () => {
     const connection = await Database.initialize();
     const app = express();
-    const database = await seedDatabase();
+    const users = await seedUsers();
+    const categories = await seedProductCategories();
+    const vatGroups = await seedVatGroups();
+    const { productRevisions } = await seedProducts(users, categories, vatGroups);
+    const { containerRevisions } = await seedContainers(users, productRevisions);
+    const { pointOfSaleRevisions } = await seedPointsOfSale(users, containerRevisions);
+    const { transactions } = await seedTransactions(users, pointOfSaleRevisions, new Date('2020-02-12'), new Date('2022-11-30'));
+    const transfers = await seedTransfers(users);
 
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
-    const userToken = await tokenHandler.signToken({ user: database.users[0], roles: ['User'], lesser: false }, '33');
-    const adminToken = await tokenHandler.signToken({ user: database.users[6], roles: ['User', 'Admin'], lesser: false }, '33');
+    const userToken = await tokenHandler.signToken({ user: users[0], roles: ['User'], lesser: false }, '33');
+    const adminToken = await tokenHandler.signToken({ user: users[6], roles: ['User', 'Admin'], lesser: false }, '33');
 
     const all = { all: new Set<string>(['*']) };
     const own = { own: new Set<string>(['*']) };
@@ -97,7 +113,9 @@ describe('BalanceController', (): void => {
       controller,
       userToken,
       adminToken,
-      ...database,
+      users,
+      transactions,
+      transfers,
     };
   });
 

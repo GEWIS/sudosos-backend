@@ -1599,7 +1599,7 @@ export interface DatabaseContent {
   pinUsers: PinAuthenticator[],
 }
 
-export default async function seedDatabase(beginTime?: Date, endTime?: Date): Promise<DatabaseContent> {
+export default async function seedDatabase(): Promise<DatabaseContent> {
   const users = await seedUsers();
   const pinUsers = await seedPinAuthenticators(users);
   const gewisUsers = await seedGEWISUsers(users);

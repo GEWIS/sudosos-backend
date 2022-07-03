@@ -196,39 +196,4 @@ export default class BalanceService {
   public static async getBalance(id: number): Promise<BalanceResponse> {
     return (await this.getBalances([id]))[0];
   }
-
-  /**
-   * Get balances of all specified users or everyone if no parameters are given
-   * USE ONLY IF LARGE PART OF BALANCES IS NEEDED, since call is quite inefficient
-   * it triggers a full rebuild of the balances table and returns from there
-   *
-   * If user does not exist no entry is returned for that user
-   *
-   * @returns the balances of all (specified) users
-   */
-  public static async getAllBalances(params?: BalanceParameters): Promise<Map<number, number>> {
-    await this.updateBalances(params);
-    const entityManager = getManager();
-
-    let balanceArray = [];
-    if (params && params.ids) {
-      const idStr = ',?'.repeat(params.ids.length * 2).substr(1);
-
-      balanceArray = await entityManager.query(`select id, sum(amount) as 'amount' from (
-        select id, 0 as 'amount' from user where id in (${idStr}) union 
-        select userId as id, amount as 'amount' from balance where id in (${idStr})
-      ) group by id`, params.ids.concat(params.ids));
-    } else {
-      balanceArray = await entityManager.query(`select id, sum(amount) as 'amount' from (
-        select id, 0 as 'amount' from user union 
-        select userId as id, amount as 'amount' from balance
-      ) group by id`);
-    }
-
-    const balanceMap = balanceArray.reduce((map: Map<number, number>, obj: any) => {
-      map.set(obj.id, obj.amount);
-      return map;
-    }, new Map());
-    return balanceMap;
-  }
 }

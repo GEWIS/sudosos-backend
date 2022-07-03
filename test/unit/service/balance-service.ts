@@ -24,7 +24,14 @@ import Dinero, { DineroObject } from 'dinero.js';
 import Transaction from '../../../src/entity/transactions/transaction';
 import Transfer from '../../../src/entity/transactions/transfer';
 import Database from '../../../src/database/database';
-import seedDatabase from '../../seed';
+import {
+  seedContainers,
+  seedPointsOfSale,
+  seedProductCategories,
+  seedProducts, seedTransactions, seedTransfers,
+  seedUsers,
+  seedVatGroups,
+} from '../../seed';
 import Swagger from '../../../src/start/swagger';
 import BalanceService from '../../../src/service/balance-service';
 import User from '../../../src/entity/user/user';
@@ -201,17 +208,16 @@ describe('BalanceService', (): void => {
     this.timeout(50000);
     const connection = await Database.initialize();
     const app = express();
-    const {
-      productRevisions, containerRevisions, pointOfSaleRevisions, transactions, transfers,
-    } = await seedDatabase(new Date('2020-02-12'), new Date('2022-11-30'));
+    const users = await seedUsers();
+    const categories = await seedProductCategories();
+    const vatGroups = await seedVatGroups();
+    const { productRevisions } = await seedProducts(users, categories, vatGroups);
+    const { containerRevisions } = await seedContainers(users, productRevisions);
+    const { pointOfSaleRevisions } = await seedPointsOfSale(users, containerRevisions);
+    const { transactions } = await seedTransactions(users, pointOfSaleRevisions, new Date('2020-02-12'), new Date('2022-11-30'));
+    const transfers = await seedTransfers(users);
     const subTransactions: SubTransaction[] = Array.prototype.concat(...transactions
       .map((t) => t.subTransactions));
-
-    const users = await User.find(
-      {
-        where: { deleted: false },
-      },
-    );
 
     ctx = {
       connection,
