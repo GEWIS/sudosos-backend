@@ -78,7 +78,7 @@ function createValidSubTransactionRequest(
 
 export async function getAPOSWithProducts(index? : number):
 Promise<PointOfSaleWithContainersResponse> {
-  const posList = (await PointOfSaleRevision.find({ relations: ['pointOfSale', 'containers', 'containers.container'] }));
+  const posList = (await PointOfSaleRevision.find({ relations: ['pointOfSale', 'containers', 'containers.container'] })).filter((p) => p.containers.length > 0);
   const pointOfSale = wrapGet(posList, index ?? 0);
   return (await PointOfSaleService.getPointsOfSale(
     {

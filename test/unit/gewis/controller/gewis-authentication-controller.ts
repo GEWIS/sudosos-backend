@@ -120,7 +120,7 @@ describe('GewisAuthenticationController', async (): Promise<void> => {
     it('should be able to create token', async () => {
       const req = {
         token: jwt.sign({ lidnr: ctx.gewisUser1.gewisId } as GewiswebToken, ctx.secret, {
-          algorithm: 'HS256',
+          algorithm: 'HS512',
         }),
         nonce: 'HelloWorld',
       };
@@ -145,7 +145,7 @@ describe('GewisAuthenticationController', async (): Promise<void> => {
     it('should contain the correct roles', async () => {
       let req = {
         token: jwt.sign({ lidnr: ctx.gewisUser1.gewisId } as GewiswebToken, ctx.secret, {
-          algorithm: 'HS256',
+          algorithm: 'HS512',
         }),
         nonce: 'HelloWorld',
       };
@@ -160,7 +160,7 @@ describe('GewisAuthenticationController', async (): Promise<void> => {
 
       req = {
         token: jwt.sign({ lidnr: ctx.gewisUser2.gewisId } as GewiswebToken, ctx.secret, {
-          algorithm: 'HS256',
+          algorithm: 'HS512',
         }),
         nonce: 'HelloWorld',
       };

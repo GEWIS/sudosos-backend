@@ -36,9 +36,11 @@ import RBACService from '../service/rbac-service';
 import { isFail } from '../helpers/specification-validation';
 import verifyUpdatePinRequest from './request/validators/update-pin-request-spec';
 import UpdatePinRequest from './request/update-pin-request';
-import UserService, { parseGetUsersFilters, parseUserToResponse, UserFilterParameters } from '../service/user-service';
+import UserService, { parseGetUsersFilters, UserFilterParameters } from '../service/user-service';
 import { asNumber } from '../helpers/validators';
 import { verifyCreateUserRequest } from './request/validators/user-request-spec';
+import userTokenInOrgan from '../helpers/token-helper';
+import { parseUserToResponse } from '../helpers/revision-to-response';
 
 export default class UserController extends BaseController {
   private logger: Logger = log4js.getLogger('UserController');
@@ -211,10 +213,29 @@ export default class UserController extends BaseController {
           handler: this.getUsersTransfers.bind(this),
         },
       },
+      '/:id(\\d+)/financialmutations': {
+        GET: {
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'get', UserController.getRelation(req), 'Transfer', ['*'],
+          ) && this.roleManager.can(
+            req.token.roles, 'get', UserController.getRelation(req), 'Transaction', ['*'],
+          ),
+          handler: this.getUsersFinancialMutations.bind(this),
+        },
+      },
     };
   }
 
+  /**
+   * Function to determine which credentials are needed to GET
+   *    'all' if user is not connected to User
+   *    'organ' if user is connected to User via organ
+   *    'own' if user is connected to User
+   * @param req
+   * @returns whether User is connected to used token
+   */
   static getRelation(req: RequestWithToken): string {
+    if (userTokenInOrgan(req, asNumber(req.params.id))) return 'organ';
     return req.params.id === req.token.user.id.toString() ? 'own' : 'all';
   }
 
@@ -1000,10 +1021,54 @@ export default class UserController extends BaseController {
       }
 
       const roles = await this.roleManager.getRoles(user);
+      if (req.token.organs && req.token.organs.length > 0) roles.push('SELLER');
       const definitions = this.roleManager.toRoleDefinitions(roles);
       res.status(200).json(RBACService.asRoleResponse(definitions));
     } catch (error) {
       this.logger.error('Could not get roles of user:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Get all financial mutations of a user.
+   * @route GET /users/{id}/financialmutations
+   * @group users - Operations of user controller
+   * @param {integer} id.path.required - The id of the user to get the mutations from
+   * @param {integer} take.query - How many transactions the endpoint should return
+   * @param {integer} skip.query - How many transactions should be skipped (for pagination)
+   * @security JWT
+   * @returns {PaginatedFinancialMutationResponse.model} 200 - The financial mutations of the user
+   * @returns {string} 404 - User not found error.
+   */
+  public async getUsersFinancialMutations(req: RequestWithToken, res: Response): Promise<void> {
+    const parameters = req.params;
+    this.logger.trace('Get financial mutations of user', parameters, 'by user', req.token.user);
+
+    let take;
+    let skip;
+    try {
+      const pagination = parseRequestPagination(req);
+      take = pagination.take;
+      skip = pagination.skip;
+    } catch (e) {
+      res.status(400).send(e.message);
+      return;
+    }
+
+    try {
+      // Get the user object if it exists
+      const user = await User.findOne(parameters.id, { where: { deleted: false } });
+      // If it does not exist, return a 404 error
+      if (user === undefined) {
+        res.status(404).json('Unknown user ID.');
+        return;
+      }
+
+      const mutations = await UserService.getUserFinancialMutations(user, { take, skip });
+      res.status(200).json(mutations);
+    } catch (error) {
+      this.logger.error('Could not get financial mutations of user:', error);
       res.status(500).json('Internal server error.');
     }
   }

@@ -23,6 +23,7 @@ import AuthenticationService from '../service/authentication-service';
 import { asNumber } from '../helpers/validators';
 import AssignedRole from '../entity/roles/assigned-role';
 import { bindUser, LDAPUser } from '../helpers/ad';
+import GewiswebToken from './gewisweb-token';
 
 /**
  * The GEWIS-specific module with definitions and helper functions.
@@ -72,6 +73,19 @@ export default class Gewis {
     return gewisUser.user;
   }
 
+  public static async createUserFromWeb(manager: EntityManager, token: GewiswebToken):
+  Promise<GewisUser> {
+    const user = Object.assign(new User(), {
+      firstName: token.given_name,
+      lastName: token.family_name,
+      type: UserType.MEMBER,
+      active: true,
+      email: token.email,
+      ofAge: token.is_18_plus,
+    }) as User;
+    return manager.save(user).then((u) => this.createGEWISUser(manager, u, token.lidnr));
+  }
+
   /**
    * Function that turns a local User into a GEWIS User.
    * @param manager - Reference to the EntityManager needed for the transaction.
@@ -85,7 +99,7 @@ export default class Gewis {
       gewisId,
     });
 
-    await GewisUser.save(gewisUser);
+    await manager.save(gewisUser);
     // This would be the place to make a PIN Code and mail it to the user.
     // This is not meant for production code
     await AuthenticationService.setUserPINCode(user, gewisId.toString());
@@ -110,6 +124,15 @@ export default class Gewis {
         },
         Authenticator: {
           get: { own: star },
+        },
+        Transfer: {
+          get: { own: star },
+        },
+        Transaction: {
+          get: { own: star },
+        },
+        VatGroup: {
+          get: { all: star },
         },
       },
       assignmentCheck: async () => true,
@@ -207,52 +230,52 @@ export default class Gewis {
      * Define a Seller role, which indicates that the user
      * can manage sellable products.
      */
-    const sellerUserTypes = new Set<UserType>([
-      UserType.LOCAL_ADMIN,
-      UserType.ORGAN,
-    ]);
     this.roleManager.registerRole({
       name: 'Seller',
       permissions: {
         Product: {
-          create: { own: star },
-          get: { own: star, all: star },
-          update: { own: star },
-          approve: { all: star },
+          create: { organ: star },
+          get: { own: star, organ: star, all: star },
+          update: { organ: star },
+          approve: { organ: star },
         },
         Container: {
-          create: { own: star },
-          get: { own: star, all: star },
-          update: { own: star },
-          approve: { all: star },
+          create: { organ: star },
+          get: { own: star, organ: star, all: star },
+          update: { organ: star },
+          approve: { organ: star },
         },
         PointOfSale: {
-          create: { own: star },
-          get: { own: star, all: star },
-          update: { own: star },
-          approve: { all: star },
+          create: { organ: star },
+          get: { own: star, organ: star, all: star },
+          update: { organ: star },
+          approve: { organ: star },
         },
         ProductCategory: {
-          get: { all: star },
+          get: { organ: star },
         },
         Balance: {
-          get: { own: star },
+          get: { organ: star },
         },
         Transaction: {
-          get: { own: star },
+          get: { organ: star },
         },
         Transfer: {
-          get: { own: star },
+          get: { organ: star },
         },
         PayoutRequest: {
-          create: { own: star },
-          get: { own: star },
+          create: { organ: star },
+          get: { organ: star },
         },
         User: {
-          get: { all: star, own: star },
+          get: { all: star, organ: star },
         },
       },
-      assignmentCheck: async (user: User) => sellerUserTypes.has(user.type),
+      /**
+       * This role is actually assigned during token sign for optimization.
+       * @see {AuthenticationService.makeJsonWebToken}
+       */
+      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
     });
 
     /**
@@ -341,6 +364,9 @@ export default class Gewis {
           ...admin,
         },
         Transfer: {
+          ...admin,
+        },
+        VatGroup: {
           ...admin,
         },
       },

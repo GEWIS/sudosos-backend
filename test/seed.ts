@@ -594,7 +594,8 @@ export async function seedAllProducts(
   let productRevisions: ProductRevision[] = [];
   let updatedProducts: UpdatedProduct[] = [];
 
-  const sellers = users.filter((u) => [UserType.LOCAL_ADMIN, UserType.MEMBER].includes(u.type));
+  const sellers = users.filter((u) => (
+    [UserType.LOCAL_ADMIN, UserType.MEMBER, UserType.ORGAN].includes(u.type)));
 
   const promises: Promise<any>[] = [];
   for (let i = 0; i < sellers.length; i += 1) {
@@ -1166,7 +1167,8 @@ export async function seedAllPointsOfSale(
   let pointOfSaleRevisions: PointOfSaleRevision[] = [];
   let updatedPointsOfSale: UpdatedPointOfSale[] = [];
 
-  const sellers = users.filter((u) => [UserType.LOCAL_ADMIN, UserType.MEMBER].includes(u.type));
+  const sellers = users.filter((u) => (
+    [UserType.LOCAL_ADMIN, UserType.MEMBER, UserType.ORGAN].includes(u.type)));
 
   const promises: Promise<any>[] = [];
   for (let i = 0; i < sellers.length; i += 1) {
@@ -1483,16 +1485,23 @@ export async function seedPayoutRequests(users: User[]): Promise<PayoutRequest[]
   return Promise.all(payoutRequests);
 }
 
-export async function seedTransfers(users: User[]) : Promise<Transfer[]> {
+export async function seedTransfers(users: User[],
+  startDate?: Date, endDate?: Date) : Promise<Transfer[]> {
   const transfers: Transfer[] = [];
   const promises: Promise<any>[] = [];
 
   for (let i = 0; i < users.length; i += 1) {
+    let date = new Date();
+    if (startDate && endDate) {
+      date = new Date(startDate.getTime()
+          + Math.random() * (endDate.getTime() - startDate.getTime()));
+    }
     let newTransfer = Object.assign(new Transfer(), {
       description: '',
       amount: dinero({ amount: 100 * (i + 1) }),
       from: undefined,
       to: users[i],
+      createdAt: date,
     });
     transfers.push(newTransfer);
     promises.push(Transfer.save(newTransfer));
@@ -1502,6 +1511,7 @@ export async function seedTransfers(users: User[]) : Promise<Transfer[]> {
       amount: dinero({ amount: 50 * (i + 1) }),
       from: users[i],
       to: undefined,
+      createdAt: date,
     });
     transfers.push(newTransfer);
     promises.push(Transfer.save(newTransfer));

@@ -305,20 +305,20 @@ describe('ContainerService', async (): Promise<void> => {
       expect(ctx.containers[0].public).to.be.true;
       const user = ctx.containers[0].owner.id + 1;
 
-      expect((await ContainerService.canViewContainer(user, ctx.containers[0].id))
+      expect((await ContainerService.canViewContainer(user, ctx.containers[0]))
         .public).to.be.true;
     });
     it('should return true if the user is the owner of private container', async () => {
       const container = await Container.findOne({ where: { public: false }, relations: ['owner'] });
       expect((await ContainerService.canViewContainer(
-        container.owner.id, container.id,
+        container.owner.id, container,
       )).own).to.be.true;
     });
     it('should return false if the user is not the owner and container is private', async () => {
       const container = await Container.findOne({ where: { public: false }, relations: ['owner'] });
-      expect(ctx.containers[1].public).to.be.false;
+      expect(container.public).to.be.false;
       const visibility = await ContainerService.canViewContainer(
-        container.owner.id + 1, container.id,
+        container.owner.id + 1, container,
       );
       expect(visibility.own).to.be.false;
       expect(visibility.public).to.be.false;
@@ -368,7 +368,7 @@ describe('ContainerService', async (): Promise<void> => {
   describe('propagateContainerUpdate function', () => {
     it('should update all POS that include given container', async () => {
       const ownerId = (await User.findOne({ where: { deleted: false } })).id;
-      const createContainerParams: CreateContainerParams = {
+      let createContainerParams: CreateContainerParams = {
         products: [1],
         public: true,
         name: 'New Container',
@@ -376,15 +376,23 @@ describe('ContainerService', async (): Promise<void> => {
       };
       const container = await ContainerService.createContainer(createContainerParams, true);
 
+      createContainerParams = {
+        products: [1],
+        public: true,
+        name: 'New Container #2',
+        ownerId,
+      };
+      const container2 = await ContainerService.createContainer(createContainerParams, true);
+
       const createPointOfSaleParams: CreatePointOfSaleParams = {
-        containers: [container.id],
+        containers: [container.id, container2.id],
         name: 'New POS',
         ownerId,
       };
       const pos = await PointOfSaleService.createPointOfSale(createPointOfSaleParams, true);
 
       const update: UpdateContainerParams = {
-        products: [1],
+        products: [1, 2],
         public: true,
         name: 'New name',
         id: container.id,
@@ -395,9 +403,9 @@ describe('ContainerService', async (): Promise<void> => {
       const updatedPos = await PointOfSaleRevision
         .findOne({ where: { revision: 2, pointOfSale: { id: pos.id } }, relations: ['containers', 'containers.products'] });
       expect(updatedPos).to.not.be.undefined;
-      expect(updatedPos.containers).length(1);
+      expect(updatedPos.containers).length(2);
 
-      const newContainer = updatedPos.containers[0];
+      const newContainer = updatedPos.containers.find((c) => c.container.id === container.id);
       expect(newContainer.name).to.eq(update.name);
     });
   });

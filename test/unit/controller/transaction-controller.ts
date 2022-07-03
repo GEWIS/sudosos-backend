@@ -34,6 +34,8 @@ import { verifyBaseTransactionEntity } from '../validators';
 import RoleManager from '../../../src/rbac/role-manager';
 import { TransactionRequest } from '../../../src/controller/request/transaction-request';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
+import { inUserContext, UserFactory } from '../../helpers/user-factory';
+import MemberAuthenticator from '../../../src/entity/authenticator/member-authenticator';
 
 describe('TransactionController', (): void => {
   let ctx: {
@@ -43,12 +45,15 @@ describe('TransactionController', (): void => {
     controller: TransactionController,
     userToken: string,
     adminToken: string,
+    organMemberToken: string,
+    organ: User,
     transaction: Transaction,
     users: User[],
     transactions: Transaction[],
     validTransReq: TransactionRequest,
     swaggerspec: SwaggerSpecification,
     logger: Logger,
+    tokenHandler: TokenHandler,
   };
 
   // eslint-disable-next-line func-names
@@ -141,23 +146,33 @@ describe('TransactionController', (): void => {
       logger,
       connection,
       app,
+      organ: undefined,
       swaggerspec: undefined,
       specification: undefined,
       controller: undefined,
       userToken: undefined,
       adminToken: undefined,
+      organMemberToken: undefined,
       transaction: undefined,
+      tokenHandler: undefined,
       validTransReq,
       ...database,
     };
 
-    const tokenHandler = new TokenHandler({
+    ctx.tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
-    ctx.userToken = await tokenHandler.signToken({ user: ctx.users[0], roles: ['User'], lesser: false }, '39');
-    ctx.adminToken = await tokenHandler.signToken({ user: ctx.users[6], roles: ['User', 'Admin'], lesser: false }, '39');
+
+    ctx.userToken = await ctx.tokenHandler.signToken({ user: ctx.users[0], roles: ['User'], lesser: false }, '39');
+    ctx.adminToken = await ctx.tokenHandler.signToken({ user: ctx.users[6], roles: ['User', 'Admin'], lesser: false }, '39');
+    ctx.organMemberToken = await ctx.tokenHandler.signToken({
+      user: ctx.users[6], roles: ['User', 'Seller'], organs: [ctx.users[0]], lesser: false,
+    }, '1');
 
     const all = { all: new Set<string>(['*']) };
+    const own = { own: new Set<string>(['*']), organ: new Set<string>(['*']) };
+    const organRole = { organ: new Set<string>(['*']) };
+
     const roleManager = new RoleManager();
     roleManager.registerRole({
       name: 'Admin',
@@ -175,6 +190,32 @@ describe('TransactionController', (): void => {
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
     });
 
+    roleManager.registerRole({
+      name: 'Buyer',
+      permissions: {
+        Transaction: {
+          create: own,
+        },
+        Balance: {
+          update: own,
+        },
+      },
+      assignmentCheck: async (user: User) => user.type === UserType.MEMBER,
+    });
+
+    roleManager.registerRole({
+      name: 'Seller',
+      permissions: {
+        Transaction: {
+          get: organRole,
+        },
+        Balance: {
+          update: organRole,
+        },
+      },
+      assignmentCheck: async () => false,
+    });
+
     ctx.specification = await Swagger.initialize(ctx.app);
     ctx.swaggerspec = await Swagger.importSpecification();
     ctx.controller = new TransactionController({
@@ -183,7 +224,10 @@ describe('TransactionController', (): void => {
     });
 
     ctx.app.use(json());
-    ctx.app.use(new TokenMiddleware({ tokenHandler, refreshFactor: 0.5 }).getMiddleware());
+    ctx.app.use(new TokenMiddleware({
+      tokenHandler: ctx.tokenHandler,
+      refreshFactor: 0.5,
+    }).getMiddleware());
     ctx.app.use('/transactions', ctx.controller.getRouter());
   });
 
@@ -506,7 +550,7 @@ describe('TransactionController', (): void => {
       // eslint-disable-next-line no-underscore-dangle
       const pagination = res.body._pagination as PaginationResult;
       const spec = await Swagger.importSpecification();
-      expect(transactions.length).to.equal(ctx.transactions.length - skip);
+
       transactions.forEach((transaction: BaseTransactionResponse) => {
         verifyBaseTransactionEntity(spec, transaction);
       });
@@ -525,6 +569,25 @@ describe('TransactionController', (): void => {
     });
   });
 
+  describe('GET /transactions/{id}', () => {
+    it('should return HTTP 200 and transaction if connected via organ', async () => {
+      const trans = await Transaction.findOne({ relations: ['from'], where: { from: ctx.users[0] } });
+      expect(trans).to.not.be.undefined;
+      const res = await request(ctx.app)
+        .get(`/transactions/${trans.id}`)
+        .set('Authorization', `Bearer ${ctx.organMemberToken}`);
+      expect(res.status).to.equal(200);
+    });
+    it('should return HTTP 403 if not admin and not connected via organ', async () => {
+      const trans = await Transaction.findOne({ relations: ['from'], where: { from: ctx.users[3] } });
+      expect(trans).to.not.be.undefined;
+      const res = await request(ctx.app)
+        .get(`/transactions/${trans.id}`)
+        .set('Authorization', `Bearer ${ctx.organMemberToken}`);
+      expect(res.status).to.equal(403);
+    });
+  });
+
   describe('POST /transactions', () => {
     it('should return an HTTP 200 and the saved transaction when user is admin', async () => {
       const res = await request(ctx.app)
@@ -538,6 +601,45 @@ describe('TransactionController', (): void => {
         false,
         true,
       ).valid).to.be.true;
+    });
+    it('should return an HTTP 403 if user is not connected to createdBy via organ', async () => {
+      await inUserContext(await UserFactory().clone(2), async (user: User, otherUser: User) => {
+        const canBuyToken = await ctx.tokenHandler.signToken({ user, roles: ['Buyer'], lesser: false }, '39');
+        const req : TransactionRequest = {
+          ...ctx.validTransReq,
+          createdBy: otherUser.id,
+          from: user.id,
+        };
+        const res = await request(ctx.app)
+          .post('/transactions')
+          .set('Authorization', `Bearer ${canBuyToken}`)
+          .send(req);
+        expect(res.status).to.equal(403);
+      });
+    });
+    it('should return an HTTP 200 and the saved transaction when user is connected to createdBy via organ', async () => {
+      await inUserContext(await UserFactory().clone(2), async (user: User, otherUser: User) => {
+        await (Object.assign(new MemberAuthenticator(), {
+          user,
+          authenticateAs: ctx.users[0],
+        })).save();
+        await (Object.assign(new MemberAuthenticator(), {
+          user: otherUser,
+          authenticateAs: ctx.users[0],
+        })).save();
+
+        const canBuyToken = await ctx.tokenHandler.signToken({ user, roles: ['Buyer'], lesser: false }, '39');
+        const req : TransactionRequest = {
+          ...ctx.validTransReq,
+          createdBy: otherUser.id,
+          from: user.id,
+        };
+        const res = await request(ctx.app)
+          .post('/transactions')
+          .set('Authorization', `Bearer ${canBuyToken}`)
+          .send(req);
+        expect(res.status).to.equal(200);
+      });
     });
     it('should return an HTTP 403 when user is not admin', async () => {
       const res = await request(ctx.app)

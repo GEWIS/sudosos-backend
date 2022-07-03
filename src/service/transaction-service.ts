@@ -30,7 +30,7 @@ import DineroTransformer from '../entity/transformer/dinero-transformer';
 import {
   parseContainerToBaseResponse,
   parsePOSToBasePOS,
-  parseProductToBaseResponse,
+  parseProductToBaseResponse, parseUserToBaseResponse,
 } from '../helpers/revision-to-response';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import { SubTransactionRequest, SubTransactionRowRequest, TransactionRequest } from '../controller/request/transaction-request';
@@ -44,7 +44,6 @@ import { DineroObjectResponse } from '../controller/response/dinero-response';
 import BalanceService from './balance-service';
 import { asDate, asNumber } from '../helpers/validators';
 import { PaginationParameters } from '../helpers/pagination';
-import { parseUserToBaseResponse } from './user-service';
 
 export interface TransactionFilterParameters {
   transactionId?: number | number[],
@@ -509,6 +508,8 @@ export default class TransactionService {
       .leftJoin('transaction.subTransactions', 'subTransaction')
       .leftJoin('subTransaction.subTransactionRows', 'subTransactionRow')
       .distinct(true);
+
+    query.orderBy({ 'transaction.createdAt': 'DESC' });
 
     if (fromDate) query.andWhere('"transaction"."createdAt" >= :fromDate', { fromDate: fromDate.toISOString().replace('T', ' ') });
     if (tillDate) query.andWhere('"transaction"."createdAt" < :tillDate', { tillDate: tillDate.toISOString().replace('T', ' ') });

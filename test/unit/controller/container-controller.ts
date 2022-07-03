@@ -43,6 +43,7 @@ import UpdatedProduct from '../../../src/entity/product/updated-product';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import { CreateContainerRequest, UpdateContainerRequest } from '../../../src/controller/request/container-request';
 import { INVALID_ORGAN_ID, INVALID_PRODUCT_ID } from '../../../src/controller/request/validators/validation-errors';
+import ContainerRevision from '../../../src/entity/container/container-revision';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -76,7 +77,9 @@ describe('ContainerController', async (): Promise<void> => {
     controller: ContainerController,
     adminUser: User,
     localUser: User,
+    organ: User,
     adminToken: String,
+    organMemberToken: String,
     token: String,
     validContainerReq: CreateContainerRequest,
     validContainerUpdate: UpdateContainerRequest,
@@ -126,6 +129,9 @@ describe('ContainerController', async (): Promise<void> => {
     });
     const adminToken = await tokenHandler.signToken({ user: adminUser, roles: ['Admin'], lesser: false }, 'nonce admin');
     const token = await tokenHandler.signToken({ user: localUser, roles: ['User'], lesser: false }, 'nonce');
+    const organMemberToken = await tokenHandler.signToken({
+      user: localUser, roles: ['User', 'Seller'], organs: [organ], lesser: false,
+    }, '1');
 
     const validContainerUpdate: UpdateContainerRequest = {
       products: [7, 8],
@@ -150,6 +156,7 @@ describe('ContainerController', async (): Promise<void> => {
 
     const all = { all: new Set<string>(['*']) };
     const own = { own: new Set<string>(['*']), public: new Set<string>(['*']) };
+    const organRole = { organ: new Set<string>(['*']) };
 
     const roleManager = new RoleManager();
     roleManager.registerRole({
@@ -179,6 +186,16 @@ describe('ContainerController', async (): Promise<void> => {
       assignmentCheck: async (user: User) => user.type === UserType.MEMBER,
     });
 
+    roleManager.registerRole({
+      name: 'Seller',
+      permissions: {
+        Container: {
+          get: organRole,
+        },
+      },
+      assignmentCheck: async () => true,
+    });
+
     const controller = new ContainerController({ specification, roleManager });
     app.use(json());
     app.use(new TokenMiddleware({ tokenHandler, refreshFactor: 0.5 }).getMiddleware());
@@ -186,6 +203,7 @@ describe('ContainerController', async (): Promise<void> => {
 
     // initialize context
     ctx = {
+      organ,
       connection,
       app,
       specification,
@@ -193,6 +211,7 @@ describe('ContainerController', async (): Promise<void> => {
       adminUser,
       localUser,
       adminToken,
+      organMemberToken,
       token,
       validContainerReq,
       invalidContainerReq,
@@ -295,6 +314,23 @@ describe('ContainerController', async (): Promise<void> => {
     it('should return an HTTP 200 and the container if the container is not public but the user is the owner', async () => {
       const container = await Container.findOne({ relations: ['owner'], where: { owner: ctx.localUser, public: false } });
       await getAndCheck(container, ctx.token);
+    });
+    it('should return an HTTP 200 and the container if the user is connected via organ', async () => {
+      const newContainer = Object.assign(new Container(), {
+        owner: ctx.organ,
+        public: false,
+        currentRevision: 1,
+      }) as Container;
+      await Container.save(newContainer);
+      const revision = Object.assign(new ContainerRevision(), {
+        container: newContainer,
+        name: 'ORGAN Container',
+        revision: 1,
+        products: [],
+      });
+      await ContainerRevision.save(revision);
+      const container = await Container.findOne({ relations: ['owner'], where: { owner: ctx.organ, public: false } });
+      await getAndCheck(container, ctx.organMemberToken);
     });
     it('should return an HTTP 403 if the container exist but is not visible to the user', async () => {
       const id = 2;

@@ -15,21 +15,14 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+import { RequestWithToken } from '../middleware/token-middleware';
 
 /**
- * @typedef UpdateUserRequest
- * @property {string} firstName
- * @property {string} lastName
- * @property {boolean} active
- * @property {boolean} ofAge
- * @property {string} email
- * @property {boolean} deleted
+ * Checks if the given ID is part of the Token Organ List.
+ * @param req - The request with token to validate against.
+ * @param organId - The id of the organ to check.
  */
-export default interface UpdateUserRequest {
-  firstName?: string;
-  lastName?: string;
-  active?: boolean;
-  ofAge?: boolean;
-  email?: string;
-  deleted?: boolean;
+export default function userTokenInOrgan(req: RequestWithToken, organId: number) {
+  if (!req.token.organs) return false;
+  return (req.token.organs.find((organ) => organ.id === organId) !== undefined);
 }
