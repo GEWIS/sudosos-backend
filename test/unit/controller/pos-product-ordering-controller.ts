@@ -31,6 +31,7 @@ import RoleManager from '../../../src/rbac/role-manager';
 import Swagger from '../../../src/start/swagger';
 import seedDatabase from '../../seed';
 import { POSProductOrderingRequest } from '../../../src/controller/request/pos-product-ordering-request';
+import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
 
 describe('POSProductOrderingController', (): void => {
   let ctx: {
@@ -227,6 +228,12 @@ describe('POSProductOrderingController', (): void => {
     it('should return an HTTP 404 if the ordering does not exist', async () => {
       const res = await request(ctx.app)
         .delete('/pointsofsale/2/productordering')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(404);
+    });
+    it('should return an HTTP 404 if the POS does not exist', async () => {
+      const res = await request(ctx.app)
+        .delete(`/pointsofsale/${(await PointOfSale.count() + 1)}/productordering`)
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(404);
     });
