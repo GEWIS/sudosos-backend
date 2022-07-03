@@ -78,7 +78,7 @@ export default class Gewis {
   Promise<GewisUser> {
     const user = Object.assign(new User(), {
       firstName: token.given_name,
-      lastName: token.family_name,
+      lastName: (token.middle_name.length > 0 ? `${token.middle_name} ` : '') + token.family_name,
       type: UserType.MEMBER,
       active: true,
       email: token.email,
@@ -138,6 +138,17 @@ export default class Gewis {
         },
       },
       assignmentCheck: async () => true,
+    });
+
+    this.roleManager.registerRole({
+      name: 'Local User',
+      permissions: {
+        Authenticator: {
+          update: { own: new Set(['password']) },
+          get: { own: star },
+        },
+      },
+      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_USER,
     });
 
     /**
