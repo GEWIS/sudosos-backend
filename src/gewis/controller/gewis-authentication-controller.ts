@@ -144,7 +144,7 @@ export default class GewisAuthenticationController extends BaseController {
         //
         const update: UpdateUserRequest = {
           firstName: gewisweb.given_name,
-          lastName: gewisweb.family_name,
+          lastName: (gewisweb.middle_name.length > 0 ? `${gewisweb.middle_name} ` : '') + gewisweb.family_name,
           email: gewisweb.email,
           ofAge: gewisweb.is_18_plus,
         };

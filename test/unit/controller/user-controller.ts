@@ -165,6 +165,7 @@ describe('UserController', (): void => {
         },
         Authenticator: {
           get: all,
+          update: all,
         },
         Roles: {
           get: all,
@@ -1272,6 +1273,16 @@ describe('UserController', (): void => {
         expect(res.status).to.equal(400);
       });
     });
+    it('should return an 404 if the user does not exists', async () => {
+      const updatePinRequest: UpdatePinRequest = {
+        pin: '1000',
+      };
+      const res = await request(ctx.app)
+        .put(`/users/${(await User.count()) + 1}/pin`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(updatePinRequest);
+      expect(res.status).to.equal(200);
+    });
   });
   describe('PUT /users/{id}/local', () => {
     it('should return an HTTP 200 if authorized', async () => {
@@ -1287,6 +1298,36 @@ describe('UserController', (): void => {
           .send(updateLocalRequest);
         expect(res.status).to.equal(200);
       });
+    });
+    it('should return an HTTP 400 if the password is weak', async () => {
+      const updateLocalRequest: UpdateLocalRequest = {
+        password: 'weak',
+      };
+      const res = await request(ctx.app)
+        .put(`/users/${ctx.users[6].id}/local`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(updateLocalRequest);
+      expect(res.status).to.equal(400);
+    });
+    it('should return an HTTP 404 if user does not exists', async () => {
+      const updateLocalRequest: UpdateLocalRequest = {
+        password: 'P4ssword1!@',
+      };
+      const res = await request(ctx.app)
+        .put(`/users/${(await User.count() + 1)}/local`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(updateLocalRequest);
+      expect(res.status).to.equal(404);
+    });
+    it('should return an HTTP 403 if unauthorized', async () => {
+      const updateLocalRequest: UpdateLocalRequest = {
+        password: 'P4ssword1!@',
+      };
+      const res = await request(ctx.app)
+        .put(`/users/${ctx.users[6].id}/local`)
+        .set('Authorization', `Bearer ${ctx.userToken}`)
+        .send(updateLocalRequest);
+      expect(res.status).to.equal(403);
     });
   });
   describe('GET /users/{id}/authenticate', () => {

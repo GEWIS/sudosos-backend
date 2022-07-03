@@ -280,5 +280,11 @@ describe('GewisAuthenticationController', async (): Promise<void> => {
         .send({ ...validPinRequest, pin: '1' });
       expect(res.status).to.equal(403);
     });
+    it('should return an HTTP 403 if user is not registered', async () => {
+      const res = await request(ctx.app)
+        .post('/authentication/GEWIS/pin')
+        .send({ ...validPinRequest, gewisId: 99999 } as GEWISAuthenticationPinRequest);
+      expect(res.status).to.equal(403);
+    });
   });
 });
