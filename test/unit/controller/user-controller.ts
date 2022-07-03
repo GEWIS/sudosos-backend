@@ -1281,7 +1281,7 @@ describe('UserController', (): void => {
         .put(`/users/${(await User.count()) + 1}/pin`)
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(updatePinRequest);
-      expect(res.status).to.equal(200);
+      expect(res.status).to.equal(404);
     });
   });
   describe('PUT /users/{id}/local', () => {
