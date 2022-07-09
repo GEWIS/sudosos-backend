@@ -108,6 +108,7 @@ describe('UserController', (): void => {
       type: UserType.MEMBER,
       deleted: true,
       active: true,
+      acceptedToS: TermsOfServiceStatus.ACCEPTED,
     } as User);
     await User.save(deletedUser);
 
@@ -116,6 +117,7 @@ describe('UserController', (): void => {
       type: UserType.ORGAN,
       deleted: false,
       active: true,
+      acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
     } as User);
     await User.save(ctx.organ);
 
@@ -1237,7 +1239,6 @@ describe('UserController', (): void => {
         .post('/users/acceptToS')
         .set('Authorization', `Bearer ${userNotAcceptedToken}`);
       expect(res.status).to.equal(204);
-      expect(res.body).to.equal('');
 
       user = await User.findOne({ where: { id: userNotAccepted.id } });
       expect(user.acceptedToS).to.equal(TermsOfServiceStatus.ACCEPTED);
@@ -1251,7 +1252,6 @@ describe('UserController', (): void => {
         .post('/users/acceptToS')
         .set('Authorization', `Bearer ${userNotRequiredToken}`);
       expect(res.status).to.equal(204);
-      expect(res.body).to.equal('');
 
       user = await User.findOne({ where: { id: userNotRequired.id } });
       expect(user.acceptedToS).to.equal(TermsOfServiceStatus.ACCEPTED);
@@ -1267,7 +1267,7 @@ describe('UserController', (): void => {
         .post('/users/acceptToS')
         .set('Authorization', `Bearer ${ctx.userToken}`);
       expect(res.status).to.equal(400);
-      expect(res.body).to.equal('bla bla bla');
+      expect(res.body).to.equal('User already accepted ToS.');
     });
   });
 

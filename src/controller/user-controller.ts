@@ -51,9 +51,10 @@ export default class UserController extends BaseController {
   private tokenHandler: TokenHandler;
 
   /**
-  * Create a new user controller instance.
-  * @param options - The options passed to the base controller.
-  */
+   * Create a new user controller instance.
+   * @param options - The options passed to the base controller.
+   * @param tokenHandler
+   */
   public constructor(
     options: BaseControllerOptions,
     tokenHandler: TokenHandler,
@@ -97,6 +98,7 @@ export default class UserController extends BaseController {
             req.token.roles, 'acceptToS', 'own', 'User', ['*'],
           ),
           handler: this.acceptToS.bind(this),
+          restrictions: { acceptedTOS: false },
         },
       },
       '/:id(\\d+)/pin': {
@@ -553,7 +555,7 @@ export default class UserController extends BaseController {
     const { id } = req.token.user;
     try {
       const user = await UserService.getSingleUser(id);
-      if (user !== undefined) {
+      if (user === undefined) {
         res.status(404).json('User not found.');
         return;
       }

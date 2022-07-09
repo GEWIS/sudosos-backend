@@ -21,7 +21,7 @@ import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
 import { expect, request } from 'chai';
 import StripeController from '../../../src/controller/stripe-controller';
-import User, { UserType } from '../../../src/entity/user/user';
+import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import StripeDeposit from '../../../src/entity/deposit/stripe-deposit';
 import Database from '../../../src/database/database';
 import { seedStripeDeposits } from '../../seed';
@@ -63,6 +63,7 @@ describe('StripeController', async (): Promise<void> => {
       firstName: 'Admin',
       type: UserType.LOCAL_ADMIN,
       active: true,
+      acceptedToS: TermsOfServiceStatus.ACCEPTED,
     } as User;
 
     const localUser = {
@@ -70,6 +71,7 @@ describe('StripeController', async (): Promise<void> => {
       firstName: 'User',
       type: UserType.MEMBER,
       active: true,
+      acceptedToS: TermsOfServiceStatus.ACCEPTED,
     } as User;
 
     await User.save(adminUser);

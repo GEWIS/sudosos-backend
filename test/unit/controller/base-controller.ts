@@ -139,6 +139,10 @@ describe('BaseController', (): void => {
     ctx.userTokenRestricted = await tokenHandler.signToken({ user: userNotAccepted, roles: [], lesser: true }, '39');
   });
 
+  after(async () => {
+    await ctx.connection.close();
+  });
+
   describe('#handle', () => {
     it('should give an HTTP 403 when policy implementation returns false', async () => {
       const res = await request(ctx.app)

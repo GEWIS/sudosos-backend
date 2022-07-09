@@ -23,7 +23,7 @@ import { json } from 'body-parser';
 import log4js from 'log4js';
 import sinon from 'sinon';
 import { Client } from 'ldapts';
-import User, { UserType } from '../../../src/entity/user/user';
+import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Database from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
@@ -64,11 +64,13 @@ describe('AuthenticationController', async (): Promise<void> => {
         firstName: 'Roy',
         type: UserType.LOCAL_USER,
         active: true,
+        acceptedToS: TermsOfServiceStatus.ACCEPTED,
       } as User),
       user2: await User.save({
         firstName: 'Roy Clone',
         type: UserType.LOCAL_ADMIN,
         active: true,
+        acceptedToS: TermsOfServiceStatus.ACCEPTED,
       } as User),
       request: {
         userId: 1,

@@ -20,7 +20,7 @@ import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
 import { expect, request } from 'chai';
-import User, { UserType } from '../../../src/entity/user/user';
+import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import InvoiceController from '../../../src/controller/invoice-controller';
 import Database from '../../../src/database/database';
 import {
@@ -81,6 +81,7 @@ describe('InvoiceController', async () => {
       firstName: 'Admin',
       type: UserType.LOCAL_ADMIN,
       active: true,
+      acceptedToS: TermsOfServiceStatus.ACCEPTED,
     } as User;
 
     const localUser = {
@@ -88,6 +89,7 @@ describe('InvoiceController', async () => {
       firstName: 'User',
       type: UserType.MEMBER,
       active: true,
+      acceptedToS: TermsOfServiceStatus.ACCEPTED,
     } as User;
 
     const invoiceUser = {
@@ -95,6 +97,7 @@ describe('InvoiceController', async () => {
       firstName: 'User',
       type: UserType.INVOICE,
       active: true,
+      acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
     } as User;
 
     await User.save(adminUser);
