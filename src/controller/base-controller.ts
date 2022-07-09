@@ -66,13 +66,13 @@ export default abstract class BaseController {
     methodPolicy: MethodPolicy,
     callback: (route: string, ...handler: RequestHandler[]) => void,
   ) {
-    const handlers = [];
+    const handlers: RequestHandler[] = [];
     if (methodPolicy.body) {
       const validator = new RequestValidatorMiddleware(spec, methodPolicy.body);
       handlers.push(validator.getMiddleware());
     }
     handlers.push(new PolicyMiddleware(methodPolicy.policy).getMiddleware());
-    handlers.push(new RestrictionMiddleware(() => methodPolicy.restrictions).getMiddleware());
+    handlers.push(new RestrictionMiddleware(() => methodPolicy.restrictions || {}).getMiddleware());
     handlers.push(methodPolicy.handler);
     callback(
       route,

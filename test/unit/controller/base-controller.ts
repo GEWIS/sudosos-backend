@@ -125,7 +125,7 @@ describe('BaseController', (): void => {
       lastName: 'TestUser1',
       type: UserType.MEMBER,
       active: true,
-      acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      acceptedToS: TermsOfServiceStatus.NOT_ACCEPTED,
     } as User).get();
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
