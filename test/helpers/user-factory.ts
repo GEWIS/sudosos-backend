@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import User, { UserType } from '../../src/entity/user/user';
+import User, { TermsOfServiceStatus, UserType } from '../../src/entity/user/user';
 import generateBalance from './test-helpers';
 
 export class Builder {
@@ -28,6 +28,7 @@ export class Builder {
       lastName: `Doe #${count + 1}`,
       type: UserType.MEMBER,
       active: true,
+      acceptedToS: TermsOfServiceStatus.ACCEPTED,
     } as User);
     await User.save(this.user);
     return this;

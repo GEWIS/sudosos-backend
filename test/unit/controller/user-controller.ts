@@ -22,7 +22,7 @@ import { Connection, createQueryBuilder } from 'typeorm';
 import { json } from 'body-parser';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
 import UserController from '../../../src/controller/user-controller';
-import User, { UserType } from '../../../src/entity/user/user';
+import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import Product from '../../../src/entity/product/product';
 import Transaction from '../../../src/entity/transactions/transaction';
 import TokenHandler from '../../../src/authentication/token-handler';
@@ -145,6 +145,7 @@ describe('UserController', (): void => {
           get: all,
           update: all,
           delete: all,
+          acceptToS: all,
         },
         Product: {
           get: all,
@@ -175,6 +176,7 @@ describe('UserController', (): void => {
       permissions: {
         User: {
           get: own,
+          acceptToS: own,
         },
         Product: {
           get: own,
@@ -1196,6 +1198,76 @@ describe('UserController', (): void => {
       expect(pagination.skip).to.equal(skip);
       expect(pagination.count).to.equal(userTransactions.length + userTransfers.length);
       expect(mutations.length).to.be.at.most(take);
+    });
+  });
+
+  describe('POST /users/acceptToS', () => {
+    let userNotAccepted: User;
+    let userNotAcceptedToken: string;
+    let userNotRequired: User;
+    let userNotRequiredToken: string;
+
+    before(async () => {
+      userNotAccepted = await UserFactory({
+        firstName: 'TestUser1',
+        lastName: 'TestUser1',
+        type: UserType.MEMBER,
+        active: true,
+        acceptedToS: TermsOfServiceStatus.NOT_ACCEPTED,
+      } as User).get();
+      userNotRequired = await UserFactory({
+        firstName: 'TestUser2',
+        lastName: 'TestUser2',
+        type: UserType.MEMBER,
+        active: true,
+        acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
+      } as User).get();
+      ctx.users.push(userNotAccepted, userNotRequired);
+
+      userNotAcceptedToken = await ctx.tokenHandler.signToken({ user: userNotAccepted, roles: ['User'], lesser: false }, '1');
+      userNotRequiredToken = await ctx.tokenHandler.signToken({ user: userNotRequired, roles: ['User'], lesser: false }, '1');
+    });
+
+    it('should correctly accept ToS if not accepted', async () => {
+      // Sanity check
+      let user = await User.findOne({ where: { id: userNotAccepted.id } });
+      expect(user.acceptedToS).to.equal(TermsOfServiceStatus.NOT_ACCEPTED);
+
+      const res = await request(ctx.app)
+        .post('/users/acceptToS')
+        .set('Authorization', `Bearer ${userNotAcceptedToken}`);
+      expect(res.status).to.equal(204);
+      expect(res.body).to.equal('');
+
+      user = await User.findOne({ where: { id: userNotAccepted.id } });
+      expect(user.acceptedToS).to.equal(TermsOfServiceStatus.ACCEPTED);
+    });
+    it('should correctly accept ToS if not required', async () => {
+      // Sanity check
+      let user = await User.findOne({ where: { id: userNotRequired.id } });
+      expect(user.acceptedToS).to.equal(TermsOfServiceStatus.NOT_REQUIRED);
+
+      const res = await request(ctx.app)
+        .post('/users/acceptToS')
+        .set('Authorization', `Bearer ${userNotRequiredToken}`);
+      expect(res.status).to.equal(204);
+      expect(res.body).to.equal('');
+
+      user = await User.findOne({ where: { id: userNotRequired.id } });
+      expect(user.acceptedToS).to.equal(TermsOfServiceStatus.ACCEPTED);
+    });
+    it('should return 400 if ToS already accepted', async () => {
+      const { id } = ctx.users[0];
+
+      // Sanity check
+      const user = await User.findOne({ where: { id } });
+      expect(user.acceptedToS).to.equal(TermsOfServiceStatus.ACCEPTED);
+
+      const res = await request(ctx.app)
+        .post('/users/acceptToS')
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('bla bla bla');
     });
   });
 

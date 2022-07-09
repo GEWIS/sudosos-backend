@@ -91,6 +91,14 @@ export default class UserController extends BaseController {
           handler: this.getAllUsersOfUserType.bind(this),
         },
       },
+      '/acceptTos': {
+        POST: {
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'acceptToS', 'own', 'User', ['*'],
+          ),
+          handler: this.acceptToS.bind(this),
+        },
+      },
       '/:id(\\d+)/pin': {
         PUT: {
           body: { modelName: 'UpdatePinRequest' },
@@ -527,6 +535,39 @@ export default class UserController extends BaseController {
       res.status(204).json('User deleted');
     } catch (error) {
       this.logger.error('Could not create product:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Accept the Terms of Service if you have not accepted it yet
+   * @route POST /users/acceptTos
+   * @group users - Operations of the User controller
+   * @security JWT
+   * @returns {string} 204 - ToS accepted
+   * @returns {string} 400 - ToS already accepted
+   */
+  public async acceptToS(req: RequestWithToken, res: Response): Promise<void> {
+    this.logger.trace('Accept ToS for user', req.token.user);
+
+    const { id } = req.token.user;
+    try {
+      const user = await UserService.getSingleUser(id);
+      if (user !== undefined) {
+        res.status(404).json('User not found.');
+        return;
+      }
+
+      const success = await UserService.acceptToS(id);
+      if (!success) {
+        res.status(400).json('User already accepted ToS.');
+        return;
+      }
+
+      res.status(204).json();
+      return;
+    } catch (error) {
+      this.logger.error('Could not accept ToS for user:', error);
       res.status(500).json('Internal server error.');
     }
   }
