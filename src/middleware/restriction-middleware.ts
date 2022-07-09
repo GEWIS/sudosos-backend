@@ -50,6 +50,12 @@ export default class RestrictionMiddleware {
   public async handle(req: RequestWithToken, res: Response, next: Function): Promise<void> {
     const { lesser, acceptedTOS } = this.restrictionsImpl();
 
+    // No token middleware has been processed before, so skip the restrictions below this snippet
+    if (!req.token) {
+      next();
+      return;
+    }
+
     if ((lesser !== undefined && !lesser) && req.token.lesser) {
       res.status(403).end('You have a lesser token, but this endpoint only accepts full-rights tokens.');
       return;
