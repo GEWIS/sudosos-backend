@@ -22,13 +22,21 @@ import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
 import Transaction from '../../../src/entity/transactions/transaction';
 import Database from '../../../src/database/database';
-import seedDatabase from '../../seed';
+import {
+  seedContainers,
+  seedPointsOfSale,
+  seedProductCategories,
+  seedProducts, seedTransactions, seedTransfers,
+  seedUsers,
+  seedVatGroups,
+} from '../../seed';
 import Swagger from '../../../src/start/swagger';
 import TokenHandler from '../../../src/authentication/token-handler';
 import User, { UserType } from '../../../src/entity/user/user';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import RoleManager from '../../../src/rbac/role-manager';
 import BalanceController from '../../../src/controller/balance-controller';
+import Transfer from '../../../src/entity/transactions/transfer';
 
 describe('BalanceController', (): void => {
   let ctx: {
@@ -40,18 +48,26 @@ describe('BalanceController', (): void => {
     adminToken: string,
     users: User[],
     transactions: Transaction[],
+    transfers: Transfer[],
   };
 
   before(async () => {
     const connection = await Database.initialize();
     const app = express();
-    const database = await seedDatabase();
+    const users = await seedUsers();
+    const categories = await seedProductCategories();
+    const vatGroups = await seedVatGroups();
+    const { productRevisions } = await seedProducts(users, categories, vatGroups);
+    const { containerRevisions } = await seedContainers(users, productRevisions);
+    const { pointOfSaleRevisions } = await seedPointsOfSale(users, containerRevisions);
+    const { transactions } = await seedTransactions(users, pointOfSaleRevisions, new Date('2020-02-12'), new Date('2022-11-30'));
+    const transfers = await seedTransfers(users);
 
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
-    const userToken = await tokenHandler.signToken({ user: database.users[0], roles: ['User'], lesser: false }, '33');
-    const adminToken = await tokenHandler.signToken({ user: database.users[6], roles: ['User', 'Admin'], lesser: false }, '33');
+    const userToken = await tokenHandler.signToken({ user: users[0], roles: ['User'], lesser: false }, '33');
+    const adminToken = await tokenHandler.signToken({ user: users[6], roles: ['User', 'Admin'], lesser: false }, '33');
 
     const all = { all: new Set<string>(['*']) };
     const own = { own: new Set<string>(['*']) };
@@ -97,17 +113,23 @@ describe('BalanceController', (): void => {
       controller,
       userToken,
       adminToken,
-      ...database,
+      users,
+      transactions,
+      transfers,
     };
   });
 
-  describe('GET /balances', () => {
+  describe('GET /balance/:id', () => {
     it('should return balance of self', async () => {
       const res = await request(ctx.app)
         .get('/balances')
         .set('Authorization', `Bearer ${ctx.userToken}`);
       expect(res.status).to.equal(200);
-      expect(Number.parseInt(res.body, 10)).to.not.be.NaN;
+
+      // TODO: fix model validation
+      // const validation = ctx.specification
+      // .validateModel('BalanceResponse', res.body, false, true);
+      // expect(validation.valid).to.be.true;
     });
 
     it('should return forbidden when user is not admin', async () => {
@@ -122,7 +144,19 @@ describe('BalanceController', (): void => {
         .get('/balances/2')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
-      expect(Number.parseInt(res.body, 10)).to.not.be.NaN;
+
+      // TODO: fix model validation
+      // const validation = ctx.specification
+      // .validateModel('BalanceResponse', res.body, false, true);
+      // expect(validation.valid).to.be.true;
+      expect(res.body.id).to.equal(2);
+    });
+
+    it('should return 404 when user does not exist', async () => {
+      const res = await request(ctx.app)
+        .get('/balances/999999')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(404);
     });
   });
 

@@ -124,11 +124,7 @@ export default class TransactionService {
     const totalCost = await this.getTotalCost(rows);
 
     // get user balance and compare
-    const userBalance = Dinero({
-      amount: await BalanceService.getBalance(req.from),
-      currency: 'EUR',
-      precision: 2,
-    });
+    const userBalance = Dinero((await BalanceService.getBalance(req.from)).amount as DineroObject);
 
     // return whether user balance is sufficient to complete the transaction
     return userBalance.greaterThanOrEqual(totalCost);

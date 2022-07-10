@@ -419,7 +419,7 @@ describe('InvoiceController', async () => {
         };
 
         await new Promise((f) => setTimeout(f, 500));
-        expect(await BalanceService.getBalance(debtor.id)).is.equal(-1 * cost);
+        expect((await BalanceService.getBalance(debtor.id)).amount.amount).is.equal(-1 * cost);
 
         const count = await Invoice.count();
         const res = await request(ctx.app)
@@ -427,7 +427,7 @@ describe('InvoiceController', async () => {
           .set('Authorization', `Bearer ${ctx.adminToken}`)
           .send(newRequest);
 
-        expect(await BalanceService.getBalance(debtor.id)).is.equal(0);
+        expect((await BalanceService.getBalance(debtor.id)).amount.amount).is.equal(0);
         expect(await Invoice.count()).to.equal(count + 1);
 
         expect(res.status).to.equal(200);
