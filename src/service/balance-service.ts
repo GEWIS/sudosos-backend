@@ -46,6 +46,17 @@ export default class BalanceService {
     return query;
   }
 
+  protected static addWhereClauseForDate(
+    query: string, parameters: any[], column: string, date?: string,
+  ) {
+    if (date !== undefined) {
+      // eslint-disable-next-line no-param-reassign
+      query += `AND ${column} <= ? `;
+      parameters.push(date);
+    }
+    return query;
+  }
+
   /**
    * Update the balance cache with active values
    * Insafe Query! Safety leveraged by type safety
@@ -120,7 +131,7 @@ export default class BalanceService {
       + 'left join `transaction` t1 on b.lastTransactionId=t1.id '
       + 'left join `transfer` t2 on b.lastTransferId=t2.id ';
       if (d !== undefined) {
-        result += 'where t1.createdAt > ? AND t2.createdAt > ? ';
+        result += 'where t1.createdAt <= ? AND t2.createdAt <= ? ';
         parameters.push(...[d, d]);
       }
       result += ') ';
@@ -147,6 +158,7 @@ export default class BalanceService {
       + 'inner join product_revision pr on str.productRevision=pr.revision and str.productProduct=pr.productId '
       + 'where t.createdAt > COALESCE(b.lastTransactionDate, 0) ';
     query = this.addWhereClauseForIds(query, parameters, 't.fromId', ids);
+    query = this.addWhereClauseForDate(query, parameters, 't.createdAt', d);
     query += 'UNION ALL '
       + 'select st2.toId as `id`, str2.amount * pr2.priceInclVat as `totalValue` from sub_transaction st2 '
       + `left join ${balanceSubquery()} b on st2.toId=b.userId `
@@ -155,16 +167,19 @@ export default class BalanceService {
       + 'inner join product_revision pr2 on str2.productRevision=pr2.revision and str2.productProduct=pr2.productId '
       + 'where t.createdAt > COALESCE(b.lastTransactionDate, 0) ';
     query = this.addWhereClauseForIds(query, parameters, 'st2.toId', ids);
+    query = this.addWhereClauseForDate(query, parameters, 't.createdAt', d);
     query += 'UNION ALL '
       + 'select t2.fromId as `id`, t2.amount*-1 as `totalValue` from transfer t2 '
       + `left join ${balanceSubquery()} b on t2.fromId=b.userId `
       + 'where t2.createdAt > COALESCE(b.lastTransferDate, 0) ';
     query = this.addWhereClauseForIds(query, parameters, 't2.fromId', ids);
+    query = this.addWhereClauseForDate(query, parameters, 't2.createdAt', d);
     query += 'UNION ALL '
       + 'select t3.toId as `id`, t3.amount as `totalValue` from transfer t3 '
       + `left join ${balanceSubquery()} b on t3.toId=b.userId `
       + 'where t3.createdAt > COALESCE(b.lastTransferDate, 0) ';
     query = this.addWhereClauseForIds(query, parameters, 't3.toId', ids);
+    query = this.addWhereClauseForDate(query, parameters, 't3.createdAt', d);
     query += ') as moneys on moneys.id=user.id '
       + 'where 1 ';
     query = this.addWhereClauseForIds(query, parameters, 'user.id', ids);
@@ -183,7 +198,7 @@ export default class BalanceService {
 
     const balances = await connection.query(query, parameters);
 
-    if (balances.length === 0 && balances[0].amount === undefined) {
+    if (balances.length === 0 || balances[0].amount === undefined) {
       throw new Error('No balance returned');
     }
     return balances.map((b: object) => this.asBalanceResponse(b));
@@ -192,8 +207,9 @@ export default class BalanceService {
   /**
    * Get balance for single user
    * @param id ID of user
+   * @param date Date to calculate balance for
    */
-  public static async getBalance(id: number): Promise<BalanceResponse> {
-    return (await this.getBalances([id]))[0];
+  public static async getBalance(id: number, date?: Date): Promise<BalanceResponse> {
+    return (await this.getBalances([id], date))[0];
   }
 }

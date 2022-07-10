@@ -119,7 +119,7 @@ describe('BalanceController', (): void => {
     };
   });
 
-  describe('GET /balances', () => {
+  describe('GET /balance/:id', () => {
     it('should return balance of self', async () => {
       const res = await request(ctx.app)
         .get('/balances')
@@ -150,6 +150,13 @@ describe('BalanceController', (): void => {
       // .validateModel('BalanceResponse', res.body, false, true);
       // expect(validation.valid).to.be.true;
       expect(res.body.id).to.equal(2);
+    });
+
+    it('should return 404 when user does not exist', async () => {
+      const res = await request(ctx.app)
+        .get('/balances/999999')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(404);
     });
   });
 

@@ -58,16 +58,32 @@ describe('BalanceService', (): void => {
     spec: SwaggerSpecification,
   };
 
-  const calculateBalance = (user: User): Balance => {
-    const transactionsOutgoing = ctx.transactions.filter((t) => t.from.id === user.id)
+  const calculateBalance = (user: User, date?: Date): Balance => {
+    let transactionsOutgoing = ctx.transactions.filter((t) => t.from.id === user.id)
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-    const subTransactionsIncoming = ctx.subTransactions.filter((s) => s.to.id === user.id)
-      .sort((a, b) => b.transaction.createdAt.getTime() - a.transaction.createdAt.getTime());
-    const transactionsIncoming = subTransactionsIncoming.map((s) => s.transaction);
-    const transfersOutgoing = ctx.transfers.filter((t) => t.from && t.from.id === user.id)
+    if (date) {
+      transactionsOutgoing = transactionsOutgoing
+        .filter((t) => t.createdAt.getTime() <= date.getTime());
+    }
+    let transactionsIncoming = ctx.subTransactions.filter((s) => s.to.id === user.id)
+      .sort((a, b) => b.transaction.createdAt.getTime() - a.transaction.createdAt.getTime())
+      .map((s) => s.transaction);
+    if (date) {
+      transactionsIncoming = transactionsIncoming
+        .filter((t) => t.createdAt.getTime() <= date.getTime());
+    }
+    let transfersOutgoing = ctx.transfers.filter((t) => t.from && t.from.id === user.id)
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-    const transfersIncoming = ctx.transfers.filter((t) => t.to && t.to.id === user.id)
+    if (date) {
+      transfersOutgoing = transfersOutgoing
+        .filter((t) => t.createdAt.getTime() <= date.getTime());
+    }
+    let transfersIncoming = ctx.transfers.filter((t) => t.to && t.to.id === user.id)
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    if (date) {
+      transfersIncoming = transfersIncoming
+        .filter((t) => t.createdAt.getTime() <= date.getTime());
+    }
 
     const valueTransactionsOutgoing: number = Array.prototype
       .concat(...Array.prototype.concat(...transactionsOutgoing
@@ -76,8 +92,10 @@ describe('BalanceService', (): void => {
       .reduce((prev: number, curr: SubTransactionRow) => (
         prev - (curr.amount * curr.product.priceInclVat.getAmount())
       ), 0);
-    const valueTransactionsIncoming = Array.prototype.concat(...subTransactionsIncoming
-      .map((s) => s.subTransactionRows))
+    const valueTransactionsIncoming: number = Array.prototype
+      .concat(...Array.prototype.concat(...transactionsIncoming
+        .map((t) => t.subTransactions
+          .map((s) => s.subTransactionRows))))
       .reduce((prev: number, curr: SubTransactionRow) => (
         prev + (curr.amount * curr.product.priceInclVat.getAmount())
       ), 0);
@@ -529,6 +547,47 @@ describe('BalanceService', (): void => {
       const balance = await BalanceService.getBalance(newUser.id);
       expect(balance.amount.amount).to.equal(transaction2.amount.amount
         + transfer2.amount.amount - transfer.amount.amount);
+    });
+    it('should return 0 if date before first transaction and transfer', async () => {
+      const transaction = await Transaction.findOne({ order: { createdAt: 'ASC' } });
+      const transfer = await Transfer.findOne({ order: { createdAt: 'ASC' } });
+      const date = new Date(Math.min(
+        transaction.createdAt.getTime(), transfer.createdAt.getTime(),
+      ) - 1000);
+      for (let i = 0; i < ctx.users.length; i += 1) {
+        const user = ctx.users[i];
+        const expectedBalance = calculateBalance(user, date);
+        // sanity check
+        expect(expectedBalance.amount.getAmount()).to.equal(0);
+        // eslint-disable-next-line no-await-in-loop
+        const actualBalance = await BalanceService.getBalance(user.id, date);
+        expect(actualBalance.amount.amount).to.equal(0);
+      }
+    });
+    it('should return current balance if date before first transaction and transfer', async () => {
+      const transaction = await Transaction.findOne({ order: { createdAt: 'DESC' } });
+      const transfer = await Transfer.findOne({ order: { createdAt: 'DESC' } });
+      const date = new Date(Math.max(
+        transaction.createdAt.getTime(), transfer.createdAt.getTime(),
+      ) + 1000);
+      for (let i = 0; i < ctx.users.length; i += 1) {
+        const user = ctx.users[i];
+        // eslint-disable-next-line no-await-in-loop
+        const expectedBalance = await BalanceService.getBalance(user.id);
+        // eslint-disable-next-line no-await-in-loop
+        const actualBalance = await BalanceService.getBalance(user.id, date);
+        expect(actualBalance.amount.amount).to.equal(expectedBalance.amount.amount);
+      }
+    });
+    it('should return correct balance on given date', async () => {
+      const date = new Date('2021-01-01');
+      for (let i = 0; i < ctx.users.length; i += 1) {
+        const user = ctx.users[i];
+        const expectedBalance = calculateBalance(user, date);
+        // eslint-disable-next-line no-await-in-loop
+        const actualBalance = await BalanceService.getBalance(user.id, date);
+        expect(actualBalance.amount.amount).to.equal(expectedBalance.amount.getAmount());
+      }
     });
   });
 });

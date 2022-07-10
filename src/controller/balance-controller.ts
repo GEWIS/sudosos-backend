@@ -22,7 +22,6 @@ import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import User from '../entity/user/user';
 import BalanceService from '../service/balance-service';
-import { isNumber } from '../helpers/validators';
 
 export default class BalanceController extends BaseController {
   private logger: Logger = log4js.getLogger('BannerController');
@@ -89,15 +88,11 @@ export default class BalanceController extends BaseController {
    */
   private async getBalance(req: RequestWithToken, res: Response): Promise<void> {
     try {
-      if (isNumber(req.params.id)) {
-        const userId = Number.parseInt(req.params.id, 10);
-        if (await User.findOne(userId, { where: { deleted: false } })) {
-          res.json(await BalanceService.getBalance(userId));
-        } else {
-          res.status(404).json('User does not exist');
-        }
+      const userId = Number.parseInt(req.params.id, 10);
+      if (await User.findOne(userId, { where: { deleted: false } })) {
+        res.json(await BalanceService.getBalance(userId));
       } else {
-        res.status(400).json('Invalid definition of user id');
+        res.status(404).json('User does not exist');
       }
     } catch (error) {
       const id = req?.params?.id ?? req.token.user.id;
