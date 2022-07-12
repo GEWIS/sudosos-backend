@@ -18,32 +18,50 @@
 import AbstractMailTemplate from './abstract-mail-template';
 import { signatureDutch, signatureEnglish } from './signature';
 
-export interface HelloWorldOptions {
+interface ChangedPinOptions {
   name: string;
 }
 
-export default class HelloWorld extends AbstractMailTemplate<HelloWorldOptions> {
+export default class ChangedPin extends AbstractMailTemplate<ChangedPinOptions> {
   protected getHTMLDutch(): string {
-    return `<p>Hallo wereld, ${this.contentOptions.name}!</p>`;
+    return `<p>Beste ${this.contentOptions.name},</p>
+
+<p>Je pincode van je account in SudoSOS is zojuist veranderd.</p>
+
+${signatureDutch}`;
   }
 
   protected getHTMLEnglish(): string {
-    return `<p>Hello world, ${this.contentOptions.name}!</p>`;
+    return `<p>Dear ${this.contentOptions.name},</p>
+
+<p>The PIN number of your account in SudoSOS has just been changed.</p>
+
+${signatureEnglish}`;
   }
 
   protected getTextDutch(): string {
-    return `Hallo wereld, ${this.contentOptions.name}!`;
+    return `Beste ${this.contentOptions.name},
+
+Je pincode van je account in SudoSOS is zojuist veranderd.
+
+Met vriendelijke groet,
+SudoSOS`;
   }
 
   protected getTextEnglish(): string {
-    return `Hello world, ${this.contentOptions.name}!`;
+    return `Dear ${this.contentOptions.name},
+
+The PIN number of your account in SudoSOS has just been changed.
+
+Kind regards,
+SudoSOS`;
   }
 
   protected getSubjectDutch(): string {
-    return 'Hallo wereld!';
+    return 'Je pincode is veranderd';
   }
 
   protected getSubjectEnglish(): string {
-    return 'Hello world!';
+    return 'Your PIN has changed';
   }
 }
