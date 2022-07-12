@@ -29,7 +29,7 @@ export default abstract class AbstractMailTemplate<T> {
 
   protected contentOptions: T;
 
-  protected constructor(options: T) {
+  public constructor(options: T) {
     this.contentOptions = options;
   }
 
