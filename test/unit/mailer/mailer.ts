@@ -89,7 +89,7 @@ describe('Mailer', () => {
     await ctx.mailer.send(ctx.user, new HelloWorld({ name: ctx.user.firstName }));
 
     expect(sendMailFake).to.be.calledOnceWithExactly({
-      from: 'SudoSOS <sudosos@gewis.nl>',
+      from: process.env.SMTP_FROM,
       text: 'Hello world, Admin!',
       html: '<p>Hello world, Admin!</p>',
       subject: 'Hello world!',
@@ -103,7 +103,7 @@ describe('Mailer', () => {
     await ctx.mailer.send(ctx.user, new HelloWorld({ name: ctx.user.firstName }), Language.DUTCH);
 
     expect(sendMailFake).to.be.calledOnceWithExactly({
-      from: 'SudoSOS <sudosos@gewis.nl>',
+      from: process.env.SMTP_FROM,
       text: 'Hallo wereld, Admin!',
       html: '<p>Hallo wereld, Admin!</p>',
       subject: 'Hallo wereld!',
