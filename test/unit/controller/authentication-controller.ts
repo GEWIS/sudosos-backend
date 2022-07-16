@@ -198,8 +198,8 @@ describe('AuthenticationController', async (): Promise<void> => {
       const res = await request(ctx.app)
         .post(`/authentication/${type}`)
         .send(right);
-      expect((res.body as AuthenticationResponse).user.id).to.be.equal(1);
       expect(res.status).to.equal(200);
+      expect((res.body as AuthenticationResponse).user.id).to.be.equal(1);
     });
     it('should return an HTTP 403 if incorrect', async () => {
       const res = await request(ctx.app)
@@ -244,7 +244,7 @@ describe('AuthenticationController', async (): Promise<void> => {
         .post('/authentication/local')
         .send({ accountMail, password: '1' });
       expect(res.status).to.equal(403);
-      expect(res.body.message).to.equal(`Email ${accountMail} not registered`);
+      expect(res.body.message).to.equal('Invalid credentials.');
     });
     it('should return an HTTP 403 if user does not have a pin', async () => {
       const res = await request(ctx.app)

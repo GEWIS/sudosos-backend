@@ -259,7 +259,7 @@ export default class AuthenticationController extends BaseController {
 
       if (!user) {
         res.status(403).json({
-          message: `Email ${body.accountMail} not registered`,
+          message: 'Invalid credentials.',
         });
         return;
       }

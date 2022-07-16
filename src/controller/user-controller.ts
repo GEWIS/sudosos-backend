@@ -95,7 +95,7 @@ export default class UserController extends BaseController {
           handler: this.getAllUsersOfUserType.bind(this),
         },
       },
-      '/:id(\\d+)/pin': {
+      '/:id(\\d+)/authenticator/pin': {
         PUT: {
           body: { modelName: 'UpdatePinRequest' },
           policy: async (req) => this.roleManager.can(
@@ -104,7 +104,7 @@ export default class UserController extends BaseController {
           handler: this.updateUserPin.bind(this),
         },
       },
-      '/:id(\\d+)/local': {
+      '/:id(\\d+)/authenticator/local': {
         PUT: {
           body: { modelName: 'UpdateLocalRequest' },
           policy: async (req) => this.roleManager.can(
@@ -373,7 +373,7 @@ export default class UserController extends BaseController {
    * @param {UpdateLocalRequest.model} update.body.required -
    *    The password update
    * @security JWT
-   * @returns 200 - Update success
+   * @returns 204 - Update success
    * @returns {string} 400 - Validation Error
    * @returns {string} 404 - Nonexistent user id
    */
@@ -400,7 +400,7 @@ export default class UserController extends BaseController {
 
       await AuthenticationService.setUserAuthenticationHash(user,
         updateLocalRequest.password, LocalAuthenticator);
-      res.status(200).json();
+      res.status(204).json();
     } catch (error) {
       this.logger.error('Could not update local password:', error);
       res.status(500).json('Internal server error.');

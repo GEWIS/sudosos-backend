@@ -1229,7 +1229,7 @@ describe('UserController', (): void => {
       expect(res.status).to.equal(200);
     });
   });
-  describe('PUT /users/{id}/pin', () => {
+  describe('PUT /users/{id}/authenticator/pin', () => {
     it('should return an HTTP 200 if authorized', async () => {
       await inUserContext(await UserFactory().clone(1), async (user: User) => {
         const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
@@ -1238,7 +1238,7 @@ describe('UserController', (): void => {
           pin: '1000',
         };
         const res = await request(ctx.app)
-          .put(`/users/${user.id}/pin`)
+          .put(`/users/${user.id}/authenticator/pin`)
           .set('Authorization', `Bearer ${userToken}`)
           .send(updatePinRequest);
         expect(res.status).to.equal(200);
@@ -1252,7 +1252,7 @@ describe('UserController', (): void => {
           pin: '1000',
         };
         const res = await request(ctx.app)
-          .put(`/users/${ctx.users[0].id}/pin`)
+          .put(`/users/${ctx.users[0].id}/authenticator/pin`)
           .set('Authorization', `Bearer ${userToken}`)
           .send(updatePinRequest);
         expect(res.status).to.equal(403);
@@ -1266,7 +1266,7 @@ describe('UserController', (): void => {
           pin: 'wrong',
         };
         const res = await request(ctx.app)
-          .put(`/users/${user.id}/pin`)
+          .put(`/users/${user.id}/authenticator/pin`)
           .set('Authorization', `Bearer ${userToken}`)
           .send(updatePinRequest);
         expect(res.body).to.be.equal(INVALID_PIN().value);
@@ -1278,13 +1278,13 @@ describe('UserController', (): void => {
         pin: '1000',
       };
       const res = await request(ctx.app)
-        .put(`/users/${(await User.count()) + 1}/pin`)
+        .put(`/users/${(await User.count()) + 1}/authenticator/pin`)
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(updatePinRequest);
       expect(res.status).to.equal(404);
     });
   });
-  describe('PUT /users/{id}/local', () => {
+  describe('PUT /users/{id}/authenticator/local', () => {
     it('should return an HTTP 200 if authorized', async () => {
       await inUserContext(await UserFactory().clone(1), async (user: User) => {
         const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
@@ -1293,10 +1293,10 @@ describe('UserController', (): void => {
           password: 'P4ssword1!@',
         };
         const res = await request(ctx.app)
-          .put(`/users/${user.id}/local`)
+          .put(`/users/${user.id}/authenticator/local`)
           .set('Authorization', `Bearer ${userToken}`)
           .send(updateLocalRequest);
-        expect(res.status).to.equal(200);
+        expect(res.status).to.equal(204);
       });
     });
     it('should return an HTTP 400 if the password is weak', async () => {
@@ -1304,7 +1304,7 @@ describe('UserController', (): void => {
         password: 'weak',
       };
       const res = await request(ctx.app)
-        .put(`/users/${ctx.users[6].id}/local`)
+        .put(`/users/${ctx.users[6].id}/authenticator/local`)
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(updateLocalRequest);
       expect(res.status).to.equal(400);
@@ -1314,7 +1314,7 @@ describe('UserController', (): void => {
         password: 'P4ssword1!@',
       };
       const res = await request(ctx.app)
-        .put(`/users/${(await User.count() + 1)}/local`)
+        .put(`/users/${(await User.count() + 1)}/authenticator/local`)
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(updateLocalRequest);
       expect(res.status).to.equal(404);
@@ -1324,7 +1324,7 @@ describe('UserController', (): void => {
         password: 'P4ssword1!@',
       };
       const res = await request(ctx.app)
-        .put(`/users/${ctx.users[6].id}/local`)
+        .put(`/users/${ctx.users[6].id}/authenticator/local`)
         .set('Authorization', `Bearer ${ctx.userToken}`)
         .send(updateLocalRequest);
       expect(res.status).to.equal(403);
