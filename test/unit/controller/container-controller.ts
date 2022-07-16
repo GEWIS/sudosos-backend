@@ -21,7 +21,7 @@ import chai, { request, expect } from 'chai';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
-import User, { UserType } from '../../../src/entity/user/user';
+import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import {
   seedAllContainers, seedAllProducts, seedProductCategories, seedVatGroups,
@@ -97,6 +97,7 @@ describe('ContainerController', async (): Promise<void> => {
       firstName: 'Admin',
       type: UserType.LOCAL_ADMIN,
       active: true,
+      acceptedToS: TermsOfServiceStatus.ACCEPTED,
     } as User;
 
     const localUser = {
@@ -104,6 +105,7 @@ describe('ContainerController', async (): Promise<void> => {
       firstName: 'User',
       type: UserType.MEMBER,
       active: true,
+      acceptedToS: TermsOfServiceStatus.ACCEPTED,
     } as User;
 
     const organ = {
@@ -111,6 +113,7 @@ describe('ContainerController', async (): Promise<void> => {
       firstName: 'Organ',
       type: UserType.ORGAN,
       active: true,
+      acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
     } as User;
 
     await User.save(adminUser);

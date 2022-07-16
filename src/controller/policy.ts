@@ -17,6 +17,7 @@
  */
 import { RequestHandler } from 'express';
 import { RequestWithToken } from '../middleware/token-middleware';
+import { TokenRestrictions } from '../middleware/restriction-middleware';
 
 /**
  * A custom type defining all supported HTTP methods.
@@ -66,7 +67,11 @@ export interface MethodPolicy {
   /**
    * The request handler to be executed if the policy passes.
    */
-  handler: RequestHandler
+  handler: RequestHandler,
+  /**
+   * Extra restrictions for this endpoint put upon the token.
+   */
+  restrictions?: Partial<TokenRestrictions>,
 }
 
 /**

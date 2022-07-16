@@ -25,7 +25,7 @@ import fileUpload from 'express-fileupload';
 import * as fs from 'fs';
 import path from 'path';
 import sinon from 'sinon';
-import User, { UserType } from '../../../src/entity/user/user';
+import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import { seedAllProducts, seedProductCategories, seedVatGroups } from '../../seed';
 import TokenHandler from '../../../src/authentication/token-handler';
@@ -87,6 +87,7 @@ describe('ProductController', async (): Promise<void> => {
       firstName: 'Admin',
       type: UserType.LOCAL_ADMIN,
       active: true,
+      acceptedToS: TermsOfServiceStatus.ACCEPTED,
     } as User;
 
     const localUser = {
@@ -94,6 +95,7 @@ describe('ProductController', async (): Promise<void> => {
       firstName: 'User',
       type: UserType.LOCAL_USER,
       active: true,
+      acceptedToS: TermsOfServiceStatus.ACCEPTED,
     } as User;
 
     const organ = {
@@ -101,6 +103,7 @@ describe('ProductController', async (): Promise<void> => {
       firstName: 'Organ',
       type: UserType.ORGAN,
       active: true,
+      acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
     } as User;
 
     await User.save(adminUser);

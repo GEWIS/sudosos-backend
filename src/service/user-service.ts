@@ -21,7 +21,7 @@ import { asBoolean, asNumber, asUserType } from '../helpers/validators';
 import { PaginationParameters } from '../helpers/pagination';
 import { PaginatedUserResponse, UserResponse } from '../controller/response/user-response';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
-import User, { UserType } from '../entity/user/user';
+import User, { TermsOfServiceStatus, UserType } from '../entity/user/user';
 import CreateUserRequest from '../controller/request/create-user-request';
 import MemberAuthenticator from '../entity/authenticator/member-authenticator';
 import UpdateUserRequest from '../controller/request/update-user-request';
@@ -151,6 +151,21 @@ export default class UserService {
     Object.assign(user, updateUserRequest);
     await user.save();
     return this.getSingleUser(userId);
+  }
+
+  /**
+   * Accept the ToS for the user with the given ID.
+   * @param userId - ID of the user to accept the ToS for.
+   * @returns boolean - Whether the request has successfully been processed
+   */
+  public static async acceptToS(userId: number): Promise<boolean> {
+    const user = await User.findOne({ where: { id: userId } });
+    if (!user) return false;
+
+    if (user.acceptedToS === TermsOfServiceStatus.ACCEPTED) return false;
+    user.acceptedToS = TermsOfServiceStatus.ACCEPTED;
+    await user.save();
+    return true;
   }
 
   /**

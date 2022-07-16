@@ -27,7 +27,7 @@ import { TransferResponse } from '../../../src/controller/response/transfer-resp
 import TransferController from '../../../src/controller/transfer-controller';
 import Database from '../../../src/database/database';
 import Transfer from '../../../src/entity/transactions/transfer';
-import User, { UserType } from '../../../src/entity/user/user';
+import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import RoleManager from '../../../src/rbac/role-manager';
 import Swagger from '../../../src/start/swagger';
@@ -60,6 +60,7 @@ describe('TransferController', async (): Promise<void> => {
       firstName: 'Admin',
       type: UserType.LOCAL_ADMIN,
       active: true,
+      acceptedToS: TermsOfServiceStatus.ACCEPTED,
     } as User;
 
     const localUser = {
@@ -67,6 +68,7 @@ describe('TransferController', async (): Promise<void> => {
       firstName: 'User',
       type: UserType.LOCAL_USER,
       active: true,
+      acceptedToS: TermsOfServiceStatus.ACCEPTED,
     } as User;
 
     await User.save(adminUser);

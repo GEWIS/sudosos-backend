@@ -27,7 +27,7 @@ import Database from '../../../src/database/database';
 import seedDatabase from '../../seed';
 import Swagger from '../../../src/start/swagger';
 import TokenHandler from '../../../src/authentication/token-handler';
-import User, { UserType } from '../../../src/entity/user/user';
+import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import { BaseTransactionResponse } from '../../../src/controller/response/transaction-response';
 import { verifyBaseTransactionEntity } from '../validators';
@@ -668,6 +668,7 @@ describe('TransactionController', (): void => {
         active: true,
         deleted: false,
         type: 3,
+        acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
       } as User);
 
       const borrelkaartUser = await User.findOne({ active: true, deleted: false, type: 3 });

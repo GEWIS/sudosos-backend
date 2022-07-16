@@ -20,7 +20,7 @@ import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
 import { expect, request } from 'chai';
-import User, { UserType } from '../../../src/entity/user/user';
+import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import InvoiceController from '../../../src/controller/invoice-controller';
 import Database from '../../../src/database/database';
 import {
@@ -81,6 +81,7 @@ describe('InvoiceController', async () => {
       firstName: 'Admin',
       type: UserType.LOCAL_ADMIN,
       active: true,
+      acceptedToS: TermsOfServiceStatus.ACCEPTED,
     } as User;
 
     const localUser = {
@@ -88,6 +89,7 @@ describe('InvoiceController', async () => {
       firstName: 'User',
       type: UserType.MEMBER,
       active: true,
+      acceptedToS: TermsOfServiceStatus.ACCEPTED,
     } as User;
 
     const invoiceUser = {
@@ -95,6 +97,7 @@ describe('InvoiceController', async () => {
       firstName: 'User',
       type: UserType.INVOICE,
       active: true,
+      acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
     } as User;
 
     await User.save(adminUser);
@@ -419,7 +422,7 @@ describe('InvoiceController', async () => {
         };
 
         await new Promise((f) => setTimeout(f, 500));
-        expect(await BalanceService.getBalance(debtor.id)).is.equal(-1 * cost);
+        expect((await BalanceService.getBalance(debtor.id)).amount.amount).is.equal(-1 * cost);
 
         const count = await Invoice.count();
         const res = await request(ctx.app)
@@ -427,7 +430,7 @@ describe('InvoiceController', async () => {
           .set('Authorization', `Bearer ${ctx.adminToken}`)
           .send(newRequest);
 
-        expect(await BalanceService.getBalance(debtor.id)).is.equal(0);
+        expect((await BalanceService.getBalance(debtor.id)).amount.amount).is.equal(0);
         expect(await Invoice.count()).to.equal(count + 1);
 
         expect(res.status).to.equal(200);
