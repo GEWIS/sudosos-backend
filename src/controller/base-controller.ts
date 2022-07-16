@@ -21,6 +21,7 @@ import Policy, { MethodPolicy } from './policy';
 import PolicyMiddleware from '../middleware/policy-middleware';
 import RequestValidatorMiddleware from '../middleware/request-validator-middleware';
 import RoleManager from '../rbac/role-manager';
+import RestrictionMiddleware from '../middleware/restriction-middleware';
 
 /**
  * This interface is a wrapper around all the parameters of the BaseController,
@@ -54,6 +55,7 @@ export default abstract class BaseController {
 
   /**
    * Defines a new route on the router. Private helper function to reduce code duplication.
+   * @param spec
    * @param route The route string.
    * @param methodPolicy The policy which should be added to the router.
    * @param callback The addition function of the appropiate method of the router.
@@ -64,12 +66,13 @@ export default abstract class BaseController {
     methodPolicy: MethodPolicy,
     callback: (route: string, ...handler: RequestHandler[]) => void,
   ) {
-    const handlers = [];
+    const handlers: RequestHandler[] = [];
     if (methodPolicy.body) {
       const validator = new RequestValidatorMiddleware(spec, methodPolicy.body);
       handlers.push(validator.getMiddleware());
     }
     handlers.push(new PolicyMiddleware(methodPolicy.policy).getMiddleware());
+    handlers.push(new RestrictionMiddleware(() => methodPolicy.restrictions || {}).getMiddleware());
     handlers.push(methodPolicy.handler);
     callback(
       route,

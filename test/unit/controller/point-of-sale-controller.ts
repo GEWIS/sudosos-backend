@@ -21,7 +21,7 @@ import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
 import { request, expect } from 'chai';
 import PointOfSaleController from '../../../src/controller/point-of-sale-controller';
-import User, { UserType } from '../../../src/entity/user/user';
+import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import {
   seedAllContainers, seedAllPointsOfSale, seedAllProducts, seedProductCategories, seedVatGroups,
@@ -74,6 +74,7 @@ describe('PointOfSaleController', async () => {
       firstName: 'Admin',
       type: UserType.LOCAL_ADMIN,
       active: true,
+      acceptedToS: TermsOfServiceStatus.ACCEPTED,
     } as User;
 
     const localUser = {
@@ -81,6 +82,7 @@ describe('PointOfSaleController', async () => {
       firstName: 'User',
       type: UserType.MEMBER,
       active: true,
+      acceptedToS: TermsOfServiceStatus.ACCEPTED,
     } as User;
 
     const organ = {
@@ -88,6 +90,7 @@ describe('PointOfSaleController', async () => {
       firstName: 'Organ',
       type: UserType.ORGAN,
       active: true,
+      acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
     } as User;
 
     await User.save(adminUser);

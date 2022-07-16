@@ -20,6 +20,12 @@ import {
 } from 'typeorm';
 import BaseEntity from '../base-entity';
 
+export enum TermsOfServiceStatus {
+  ACCEPTED = 'ACCEPTED',
+  NOT_ACCEPTED = 'NOT_ACCEPTED',
+  NOT_REQUIRED = 'NOT_REQUIRED',
+}
+
 export enum UserType {
   MEMBER = 1,
   ORGAN = 2,
@@ -78,4 +84,9 @@ export default class User extends BaseEntity {
     nullable: false,
   })
   public type: UserType;
+
+  @Column({
+    nullable: false, default: TermsOfServiceStatus.NOT_ACCEPTED,
+  })
+  public acceptedToS: TermsOfServiceStatus;
 }
