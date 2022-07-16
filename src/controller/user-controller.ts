@@ -99,7 +99,7 @@ export default class UserController extends BaseController {
       '/acceptTos': {
         POST: {
           policy: async (req) => this.roleManager.can(
-              req.token.roles, 'acceptToS', 'own', 'User', ['*'],
+            req.token.roles, 'acceptToS', 'own', 'User', ['*'],
           ),
           handler: this.acceptToS.bind(this),
           restrictions: { acceptedTOS: false },
