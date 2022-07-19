@@ -71,8 +71,9 @@ export default class AuthenticationService {
    * @param user - The user for which to generate the token-content
    * @param lesser - If the token should give full access rights.
    */
-  public static async makeJsonWebToken(context: AuthenticationContext, user: User, lesser: boolean):
-  Promise<JsonWebToken> {
+  public static async makeJsonWebToken(
+    context: AuthenticationContext, user: User, lesser: boolean,
+  ): Promise<JsonWebToken> {
     const organs = await this.getUserOrgans(user);
     const roles = await context.roleManager.getRoles(user);
     // If a user is part of an organ he gains seller rights.
@@ -106,6 +107,7 @@ export default class AuthenticationService {
       organs: organs.map((organ) => parseUserToResponse(organ, false)),
       roles,
       token,
+      acceptedToS: user.acceptedToS,
     };
   }
 

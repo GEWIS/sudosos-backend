@@ -26,7 +26,7 @@ import BorrelkaartGroupRequest from '../../../src/controller/request/borrelkaart
 import BorrelkaartGroupResponse from '../../../src/controller/response/borrelkaart-group-response';
 import Database from '../../../src/database/database';
 import BorrelkaartGroup from '../../../src/entity/user/borrelkaart-group';
-import User, { UserType } from '../../../src/entity/user/user';
+import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import UserBorrelkaartGroup from '../../../src/entity/user/user-borrelkaart-group';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import RoleManager from '../../../src/rbac/role-manager';
@@ -106,6 +106,7 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
       firstName: 'Admin',
       type: UserType.LOCAL_ADMIN,
       active: true,
+      acceptedToS: TermsOfServiceStatus.ACCEPTED,
     } as User;
 
     const localUser = {
@@ -113,6 +114,7 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
       firstName: 'User',
       type: UserType.LOCAL_USER,
       active: true,
+      acceptedToS: TermsOfServiceStatus.ACCEPTED,
     } as User;
 
     const localUser2 = {
@@ -120,6 +122,7 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
       firstName: 'User 2',
       type: UserType.LOCAL_USER,
       active: true,
+      acceptedToS: TermsOfServiceStatus.ACCEPTED,
     } as User;
 
     await User.save(adminUser);

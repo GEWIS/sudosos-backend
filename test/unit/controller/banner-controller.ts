@@ -30,7 +30,7 @@ import BannerRequest from '../../../src/controller/request/banner-request';
 import { BannerResponse } from '../../../src/controller/response/banner-response';
 import Database from '../../../src/database/database';
 import Banner from '../../../src/entity/banner';
-import User, { UserType } from '../../../src/entity/user/user';
+import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import RoleManager from '../../../src/rbac/role-manager';
 import Swagger from '../../../src/start/swagger';
@@ -88,6 +88,7 @@ describe('BannerController', async (): Promise<void> => {
       firstName: 'Admin',
       type: UserType.LOCAL_ADMIN,
       active: true,
+      acceptedToS: TermsOfServiceStatus.ACCEPTED,
     } as User;
 
     const localUser = {
@@ -95,6 +96,7 @@ describe('BannerController', async (): Promise<void> => {
       firstName: 'User',
       type: UserType.LOCAL_USER,
       active: true,
+      acceptedToS: TermsOfServiceStatus.ACCEPTED,
     } as User;
 
     await User.save(adminUser);

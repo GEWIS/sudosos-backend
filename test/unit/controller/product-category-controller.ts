@@ -24,7 +24,7 @@ import { expect, request } from 'chai';
 import ProductCategoryRequest from '../../../src/controller/request/product-category-request';
 import ProductCategoryController from '../../../src/controller/product-category-controller';
 import { ProductCategoryResponse } from '../../../src/controller/response/product-category-response';
-import User, { UserType } from '../../../src/entity/user/user';
+import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import { seedProductCategories } from '../../seed';
 import TokenHandler from '../../../src/authentication/token-handler';
@@ -68,6 +68,7 @@ describe('ProductCategoryController', async (): Promise<void> => {
       firstName: 'Admin',
       type: UserType.LOCAL_ADMIN,
       active: true,
+      acceptedToS: TermsOfServiceStatus.ACCEPTED,
     } as User;
 
     const localUser = {
@@ -75,6 +76,7 @@ describe('ProductCategoryController', async (): Promise<void> => {
       firstName: 'User',
       type: UserType.LOCAL_USER,
       active: true,
+      acceptedToS: TermsOfServiceStatus.ACCEPTED,
     } as User;
 
     await User.save(adminUser);

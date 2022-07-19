@@ -21,7 +21,7 @@ import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
 import { expect, request } from 'chai';
 import VatGroupController from '../../../src/controller/vat-group-controller';
-import User, { UserType } from '../../../src/entity/user/user';
+import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import Transaction from '../../../src/entity/transactions/transaction';
 import VatGroup, { VatDeclarationPeriod } from '../../../src/entity/vat-group';
 import { UpdateVatGroupRequest, VatGroupRequest } from '../../../src/controller/request/vat-group-request';
@@ -64,6 +64,7 @@ describe('VatGroupController', () => {
       firstName: 'Admin',
       type: UserType.LOCAL_ADMIN,
       active: true,
+      acceptedToS: TermsOfServiceStatus.ACCEPTED,
     } as User);
 
     const users = await seedUsers();

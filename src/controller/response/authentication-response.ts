@@ -17,6 +17,7 @@
  */
 
 import { UserResponse } from './user-response';
+import { TermsOfServiceStatus } from '../../entity/user/user';
 
 /**
   * @typedef AuthenticationResponse
@@ -24,10 +25,13 @@ import { UserResponse } from './user-response';
   * @property {Array.<string>} roles - The RBAC roles that the user has.
   * @property {Array.<UserResponse.model>} organs - The organs that the user is a member of.
   * @property {string} token - The JWT token that can be used as Bearer token for authentication.
+ *  @property {string} acceptedToS - Whether the related user has accepted the Terms of Service
+ *  or is not required to.
   */
 export default interface AuthenticationResponse {
   user: UserResponse,
   roles: string[],
   organs: UserResponse[],
   token: string,
+  acceptedToS: TermsOfServiceStatus;
 }

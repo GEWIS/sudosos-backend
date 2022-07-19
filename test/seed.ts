@@ -30,7 +30,7 @@ import ProductRevision from '../src/entity/product/product-revision';
 import SubTransaction from '../src/entity/transactions/sub-transaction';
 import SubTransactionRow from '../src/entity/transactions/sub-transaction-row';
 import Transaction from '../src/entity/transactions/transaction';
-import User, { UserType } from '../src/entity/user/user';
+import User, { TermsOfServiceStatus, UserType } from '../src/entity/user/user';
 import UpdatedProduct from '../src/entity/product/updated-product';
 import UpdatedContainer from '../src/entity/container/updated-container';
 import UpdatedPointOfSale from '../src/entity/point-of-sale/updated-point-of-sale';
@@ -91,6 +91,7 @@ function defineUsers(
       lastName: `Lastname${start + nr}`,
       type,
       active,
+      acceptedToS: TermsOfServiceStatus.ACCEPTED,
     }) as User);
   }
   return users;
