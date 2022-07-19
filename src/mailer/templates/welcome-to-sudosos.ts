@@ -36,7 +36,7 @@ export default class WelcomeToSudosos extends AbstractMailTemplate<WelcomeToSudo
 
   protected getHTMLDutch(): string {
     return `
-<p>Beste ${this.contentOptions.name}</p>,
+<p>Beste ${this.contentOptions.name},</p>
 
 <p>Er is zojuist een account voor je aangemaakt in SudoSOS. Welkom!</p>
 
@@ -49,7 +49,7 @@ ${signatureDutch}`;
 
   protected getHTMLEnglish(): string {
     return `
-<p>Dear ${this.contentOptions.name}</p>,
+<p>Dear ${this.contentOptions.name},</p>
 
 <p>An account for SudoSOS has just been created for you. Welcome!</p>
 

@@ -24,6 +24,7 @@ import UpdateUserRequest from './update-user-request';
  * @property {string} lastName
  * @property {boolean} active
  * @property {number} type.required
+ * @property {string} email
  */
 export default interface CreateUserRequest extends UpdateUserRequest {
   type: UserType;
