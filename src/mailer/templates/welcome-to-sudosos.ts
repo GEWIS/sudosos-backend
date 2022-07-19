@@ -20,10 +20,20 @@ import { signatureDutch, signatureEnglish } from './signature';
 
 interface WelcomeToSudososOptions {
   name: string;
-  url: string;
+  url?: string;
 }
 
 export default class WelcomeToSudosos extends AbstractMailTemplate<WelcomeToSudososOptions> {
+  public constructor(options: WelcomeToSudososOptions) {
+    const opt: WelcomeToSudososOptions = {
+      ...options,
+    };
+    if (!options.url) {
+      opt.url = process.env.url;
+    }
+    super(opt);
+  }
+
   protected getHTMLDutch(): string {
     return `
 <p>Beste ${this.contentOptions.name}</p>,

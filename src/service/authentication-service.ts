@@ -33,6 +33,8 @@ import {
   bindUser, getLDAPConnection, getLDAPSettings, LDAPUser, userFromLDAP,
 } from '../helpers/ad';
 import { parseUserToResponse } from '../helpers/revision-to-response';
+import ChangedPin from '../mailer/templates/changed-pin';
+import Mailer from '../mailer';
 
 export interface AuthenticationContext {
   tokenHandler: TokenHandler,
@@ -154,6 +156,9 @@ export default class AuthenticationService {
 
     // Save and return
     await PinAuthenticator.save(authenticator);
+
+    Mailer.getInstance().send(user, new ChangedPin({ name: user.firstName }));
+
     return authenticator;
   }
 
