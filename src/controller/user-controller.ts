@@ -607,9 +607,7 @@ export default class UserController extends BaseController {
         return;
       }
 
-      const products = await ProductService.getProducts({
-        ownerId: parseInt(parameters.id, 10),
-      }, { take, skip });
+      const products = await ProductService.getProducts({}, { take, skip }, owner);
       res.json(products);
     } catch (error) {
       this.logger.error('Could not return all products:', error);
@@ -650,9 +648,7 @@ export default class UserController extends BaseController {
         return;
       }
 
-      const products = await ProductService.getProducts({
-        ownerId: parseInt(parameters.id, 10),
-      }, { take, skip });
+      const products = await ProductService.getProducts({}, { take, skip }, owner);
       res.json(products);
     } catch (error) {
       this.logger.error('Could not return all products:', error);
@@ -698,7 +694,7 @@ export default class UserController extends BaseController {
       }
 
       const containers = (await ContainerService
-        .getContainers({ ownerId: user.id }, { take, skip }));
+        .getContainers({}, { take, skip }, user));
       res.json(containers);
     } catch (error) {
       this.logger.error('Could not return containers:', error);
@@ -744,7 +740,7 @@ export default class UserController extends BaseController {
       }
 
       const containers = (await ContainerService
-        .getUpdatedContainers({ ownerId: user.id }, { take, skip }));
+        .getUpdatedContainers({}, { take, skip }, user));
       res.json(containers);
     } catch (error) {
       this.logger.error('Could not return updated containers:', error);
@@ -790,7 +786,7 @@ export default class UserController extends BaseController {
       }
 
       const pointsOfSale = (await PointOfSaleService
-        .getPointsOfSale({ ownerId: user.id }, { take, skip }));
+        .getPointsOfSale({}, { take, skip }, user));
       res.json(pointsOfSale);
     } catch (error) {
       this.logger.error('Could not return point of sale:', error);
@@ -836,7 +832,7 @@ export default class UserController extends BaseController {
       }
 
       const pointsOfSale = (await PointOfSaleService
-        .getUpdatedPointsOfSale({ ownerId: user.id }, { take, skip }));
+        .getUpdatedPointsOfSale({}, { take, skip }, user));
       res.json(pointsOfSale);
     } catch (error) {
       this.logger.error('Could not return updated points of sale:', error);

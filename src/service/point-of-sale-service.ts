@@ -39,6 +39,7 @@ import {
   UpdatePointOfSaleParams,
 } from '../controller/request/point-of-sale-request';
 import { parseUserToBaseResponse } from '../helpers/revision-to-response';
+import AuthenticationService from './authentication-service';
 
 /**
  * Define point of sale filtering parameters used to filter query results.
@@ -109,8 +110,8 @@ export default class PointOfSaleService {
     };
   }
 
-  private static buildGetPointsOfSaleQuery(filters: PointOfSaleParameters = {})
-    : SelectQueryBuilder<PointOfSale> {
+  private static async buildGetPointsOfSaleQuery(filters: PointOfSaleParameters = {}, user?: User)
+    : Promise<SelectQueryBuilder<PointOfSale>> {
     const builder = createQueryBuilder()
       .from(PointOfSale, 'pos')
       .innerJoin(
@@ -140,6 +141,11 @@ export default class PointOfSaleService {
 
     QueryFilter.applyFilter(builder, filterMapping, filters);
 
+    if (user) {
+      const organIds = (await AuthenticationService.getMemberAuthenticators(user)).map((u) => u.id);
+      builder.andWhere('owner.id IN (:...organIds)', { organIds });
+    }
+
     return builder;
   }
 
@@ -147,15 +153,16 @@ export default class PointOfSaleService {
    * Query to return current point of sales.
    * @param filters - Parameters to query the point of sales with.
    * @param pagination
+   * @param user
    */
   public static async getPointsOfSale(
-    filters: PointOfSaleParameters = {}, pagination: PaginationParameters = {},
+    filters: PointOfSaleParameters = {}, pagination: PaginationParameters = {}, user?: User,
   ): Promise<PaginatedPointOfSaleResponse> {
     const { take, skip } = pagination;
 
     const results = await Promise.all([
-      this.buildGetPointsOfSaleQuery(filters).limit(take).offset(skip).getRawMany(),
-      this.buildGetPointsOfSaleQuery(filters).getCount(),
+      (await this.buildGetPointsOfSaleQuery(filters, user)).limit(take).offset(skip).getRawMany(),
+      (await this.buildGetPointsOfSaleQuery(filters, user)).getCount(),
     ]);
 
     let records;
@@ -183,9 +190,9 @@ export default class PointOfSaleService {
     };
   }
 
-  public static buildGetUpdatedPointsOfSaleQuery(
-    filters: PointOfSaleParameters = {},
-  ): SelectQueryBuilder<PointOfSale> {
+  public static async buildGetUpdatedPointsOfSaleQuery(
+    filters: PointOfSaleParameters = {}, user?: User,
+  ): Promise<SelectQueryBuilder<PointOfSale>> {
     const builder = createQueryBuilder()
       .from(PointOfSale, 'pos')
       .innerJoin(
@@ -210,6 +217,11 @@ export default class PointOfSaleService {
     };
     QueryFilter.applyFilter(builder, filterMapping, filters);
 
+    if (user) {
+      const organIds = (await AuthenticationService.getMemberAuthenticators(user)).map((u) => u.id);
+      builder.andWhere('owner.id IN (:...organIds)', { organIds });
+    }
+
     return builder;
   }
 
@@ -217,15 +229,17 @@ export default class PointOfSaleService {
    * Query to return updated (pending) point of sales.
    * @param filters - Parameters to query the point of sales with.
    * @param pagination
+   * @param user
    */
   public static async getUpdatedPointsOfSale(
-    filters: PointOfSaleParameters = {}, pagination: PaginationParameters = {},
+    filters: PointOfSaleParameters = {}, pagination: PaginationParameters = {}, user?: User,
   ): Promise<PaginatedUpdatedPointOfSaleResponse> {
     const { take, skip } = pagination;
 
     const results = await Promise.all([
-      this.buildGetUpdatedPointsOfSaleQuery(filters).limit(take).offset(skip).getRawMany(),
-      this.buildGetUpdatedPointsOfSaleQuery(filters).getCount(),
+      (await this.buildGetUpdatedPointsOfSaleQuery(filters, user))
+        .limit(take).offset(skip).getRawMany(),
+      (await this.buildGetUpdatedPointsOfSaleQuery(filters, user)).getCount(),
     ]);
     let records : (UpdatedPointOfSaleResponse | PointOfSaleWithContainersResponse)[];
     if (filters.returnContainers) {

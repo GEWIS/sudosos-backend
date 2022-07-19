@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { Connection } from 'typeorm';
+import { Connection, getManager } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
@@ -43,6 +43,8 @@ import {
   CreatePointOfSaleParams, UpdatePointOfSaleParams,
   UpdatePointOfSaleRequest,
 } from '../../../src/controller/request/point-of-sale-request';
+import AuthenticationService from '../../../src/service/authentication-service';
+import MemberAuthenticator from '../../../src/entity/authenticator/member-authenticator';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -207,6 +209,32 @@ describe('PointOfSaleService', async (): Promise<void> => {
       expect(_pagination.count).to.equal(withRevisions.length);
       expect(records.length).to.be.at.most(take);
     });
+    it('should return all points of sale involving a single user and its memberAuthenticator users', async () => {
+      const usersOwningAPos = [...new Set(ctx.pointsOfSale.map((pos) => pos.owner))];
+      const owner = usersOwningAPos[0];
+
+      // Sanity check
+      const memberAuthenticators = await MemberAuthenticator.find({ where: { user: owner } });
+      expect(memberAuthenticators.length).to.equal(0);
+
+      let pointsOfSale = await PointOfSaleService.getPointsOfSale({}, {}, owner);
+      const originalLength = pointsOfSale.records.length;
+      pointsOfSale.records.forEach((pos) => {
+        expect(pos.owner.id).to.equal(owner.id);
+      });
+
+      await AuthenticationService.setMemberAuthenticator(getManager(), [owner], usersOwningAPos[1]);
+
+      const ownerIds = [owner, usersOwningAPos[1]].map((o) => o.id);
+      pointsOfSale = await PointOfSaleService.getPointsOfSale({}, {}, owner);
+      expect(pointsOfSale.records.length).to.be.greaterThan(originalLength);
+      pointsOfSale.records.forEach((pos) => {
+        expect(ownerIds).to.include(pos.owner.id);
+      });
+
+      // Cleanup
+      await MemberAuthenticator.delete({ user: owner });
+    });
   });
   describe('getUpdatedPointsOfSale function', () => {
     it('should return all updated point of sales with no input specification', async () => {
@@ -232,6 +260,32 @@ describe('PointOfSaleService', async (): Promise<void> => {
       expect(_pagination.skip).to.equal(skip);
       expect(_pagination.count).to.equal(ctx.updatedPointsOfSale.length);
       expect(records.length).to.be.at.most(take);
+    });
+    it('should return all points of sale involving a single user and its memberAuthenticator users', async () => {
+      const usersOwningAPos = [...new Set(ctx.pointsOfSale.map((pos) => pos.owner))];
+      const owner = usersOwningAPos[0];
+
+      // Sanity check
+      const memberAuthenticators = await MemberAuthenticator.find({ where: { user: owner } });
+      expect(memberAuthenticators.length).to.equal(0);
+
+      let pointsOfSale = await PointOfSaleService.getUpdatedPointsOfSale({}, {}, owner);
+      const originalLength = pointsOfSale.records.length;
+      pointsOfSale.records.forEach((pos) => {
+        expect(pos.owner.id).to.equal(owner.id);
+      });
+
+      await AuthenticationService.setMemberAuthenticator(getManager(), [owner], usersOwningAPos[1]);
+
+      const ownerIds = [owner, usersOwningAPos[1]].map((o) => o.id);
+      pointsOfSale = await PointOfSaleService.getUpdatedPointsOfSale({}, {}, owner);
+      expect(pointsOfSale.records.length).to.be.greaterThan(originalLength);
+      pointsOfSale.records.forEach((pos) => {
+        expect(ownerIds).to.include(pos.owner.id);
+      });
+
+      // Cleanup
+      await MemberAuthenticator.delete({ user: owner });
     });
   });
   describe('createPointOfSale function', () => {

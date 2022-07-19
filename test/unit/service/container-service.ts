@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { Connection } from 'typeorm';
+import { Connection, getManager } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
@@ -40,6 +40,8 @@ import {
 } from '../../../src/controller/request/container-request';
 import PointOfSaleService from '../../../src/service/point-of-sale-service';
 import { CreatePointOfSaleParams } from '../../../src/controller/request/point-of-sale-request';
+import AuthenticationService from '../../../src/service/authentication-service';
+import MemberAuthenticator from '../../../src/entity/authenticator/member-authenticator';
 
 /**
  * Test if all the container responses are part of the container set array.
@@ -239,6 +241,34 @@ describe('ContainerService', async (): Promise<void> => {
       expect(records.map((containerResponse) => containerResponse.id))
         .to.deep.equalInAnyOrder(withRevisions.map((c) => c.id));
     });
+    it('should return all points of sale involving a single user and its memberAuthenticator users', async () => {
+      const usersOwningACont = [...new Set(ctx.containers.map((cont) => cont.owner))];
+      const owner = usersOwningACont[0];
+
+      // Sanity check
+      const memberAuthenticators = await MemberAuthenticator.find({ where: { user: owner } });
+      expect(memberAuthenticators.length).to.equal(0);
+
+      let container = await ContainerService.getContainers({}, {}, owner);
+      const originalLength = container.records.length;
+      container.records.forEach((cont) => {
+        expect(cont.owner.id).to.equal(owner.id);
+      });
+
+      await AuthenticationService.setMemberAuthenticator(
+        getManager(), [owner], usersOwningACont[1],
+      );
+
+      const ownerIds = [owner, usersOwningACont[1]].map((o) => o.id);
+      container = await ContainerService.getContainers({}, {}, owner);
+      expect(container.records.length).to.be.greaterThan(originalLength);
+      container.records.forEach((cont) => {
+        expect(ownerIds).to.include(cont.owner.id);
+      });
+
+      // Cleanup
+      await MemberAuthenticator.delete({ user: owner });
+    });
   });
 
   describe('getUpdatedContainers function', () => {
@@ -296,6 +326,34 @@ describe('ContainerService', async (): Promise<void> => {
       expect(_pagination.skip).to.equal(skip);
       expect(_pagination.count).to.equal(ctx.updatedContainers.length);
       expect(records.length).to.equal(take);
+    });
+    it('should return all points of sale involving a single user and its memberAuthenticator users', async () => {
+      const usersOwningACont = [...new Set(ctx.containers.map((cont) => cont.owner))];
+      const owner = usersOwningACont[0];
+
+      // Sanity check
+      const memberAuthenticators = await MemberAuthenticator.find({ where: { user: owner } });
+      expect(memberAuthenticators.length).to.equal(0);
+
+      let container = await ContainerService.getUpdatedContainers({}, {}, owner);
+      const originalLength = container.records.length;
+      container.records.forEach((cont) => {
+        expect(cont.owner.id).to.equal(owner.id);
+      });
+
+      await AuthenticationService.setMemberAuthenticator(
+        getManager(), [owner], usersOwningACont[1],
+      );
+
+      const ownerIds = [owner, usersOwningACont[1]].map((o) => o.id);
+      container = await ContainerService.getUpdatedContainers({}, {}, owner);
+      expect(container.records.length).to.be.greaterThan(originalLength);
+      container.records.forEach((cont) => {
+        expect(ownerIds).to.include(cont.owner.id);
+      });
+
+      // Cleanup
+      await MemberAuthenticator.delete({ user: owner });
     });
   });
 

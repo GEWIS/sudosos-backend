@@ -41,6 +41,7 @@ import { asBoolean, asDate, asNumber } from '../helpers/validators';
 import ContainerService from './container-service';
 import { UpdateContainerParams } from '../controller/request/container-request';
 import { BaseVatGroupResponse } from '../controller/response/vat-group-response';
+import AuthenticationService from './authentication-service';
 
 /**
  * Define product filtering parameters used to filter query results.
@@ -199,7 +200,7 @@ export default class ProductService {
   }
 
   public static async getProducts(filters: ProductFilterParameters = {},
-    pagination: PaginationParameters = {}): Promise<PaginatedProductResponse> {
+    pagination: PaginationParameters = {}, user?: User): Promise<PaginatedProductResponse> {
     const { take, skip } = pagination;
     const builder: SelectQueryBuilder<any> = this.getRelevantBuilder(filters).bind(this)(filters);
 
@@ -217,6 +218,11 @@ export default class ProductService {
     };
 
     QueryFilter.applyFilter(builder, filterMapping, filters);
+
+    if (user) {
+      const organIds = (await AuthenticationService.getMemberAuthenticators(user)).map((u) => u.id);
+      builder.andWhere('owner.id IN (:...organIds)', { organIds });
+    }
 
     const result = await Promise.all([
       builder.getCount(),

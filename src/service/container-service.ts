@@ -45,6 +45,7 @@ import PointOfSaleService from './point-of-sale-service';
 // eslint-disable-next-line import/no-cycle
 import ProductService from './product-service';
 import { PointOfSaleWithContainersResponse } from '../controller/response/point-of-sale-response';
+import AuthenticationService from './authentication-service';
 
 interface ContainerVisibility {
   own: boolean;
@@ -110,8 +111,8 @@ export default class ContainerService {
     };
   }
 
-  private static buildGetContainersQuery(filters: ContainerParameters = {})
-    : SelectQueryBuilder<Container> {
+  private static async buildGetContainersQuery(filters: ContainerParameters = {}, user?: User)
+    : Promise<SelectQueryBuilder<Container>> {
     const selection = [
       'container.id AS container_id',
       'container.public as container_public',
@@ -180,6 +181,11 @@ export default class ContainerService {
       builder.andWhere('container.currentRevision = containerrevision.revision');
     }
 
+    if (user) {
+      const organIds = (await AuthenticationService.getMemberAuthenticators(user)).map((u) => u.id);
+      builder.andWhere('container_owner.id IN (:...organIds)', { organIds });
+    }
+
     return builder;
   }
 
@@ -246,17 +252,16 @@ export default class ContainerService {
    * Query for getting all containers.
    * @param filters
    * @param pagination
+   * @param user
    */
   public static async getContainers(
-    filters: ContainerParameters = {}, pagination: PaginationParameters = {},
+    filters: ContainerParameters = {}, pagination: PaginationParameters = {}, user?: User,
   ): Promise<PaginatedContainerResponse | PaginatedContainerWithProductResponse> {
     const { take, skip } = pagination;
 
-    const builder = this.buildGetContainersQuery(filters);
-
     const results = await Promise.all([
-      builder.limit(take).offset(skip).getRawMany(),
-      this.buildGetContainersQuery({ ...filters, returnProducts: false }).getCount(),
+      (await this.buildGetContainersQuery(filters, user)).limit(take).offset(skip).getRawMany(),
+      (await this.buildGetContainersQuery({ ...filters, returnProducts: false }, user)).getCount(),
     ]);
 
     let records;
@@ -274,9 +279,9 @@ export default class ContainerService {
     };
   }
 
-  private static buildGetUpdatedContainersQuery(
-    filters: UpdatedContainerParameters = {},
-  ): SelectQueryBuilder<Container> {
+  private static async buildGetUpdatedContainersQuery(
+    filters: UpdatedContainerParameters = {}, user?: User,
+  ): Promise<SelectQueryBuilder<Container>> {
     const builder = createQueryBuilder()
       .from(Container, 'container')
       .innerJoinAndSelect(
@@ -312,6 +317,11 @@ export default class ContainerService {
     };
     QueryFilter.applyFilter(builder, filterMapping, filters);
 
+    if (user) {
+      const organIds = (await AuthenticationService.getMemberAuthenticators(user)).map((u) => u.id);
+      builder.andWhere('owner.id IN (:...organIds)', { organIds });
+    }
+
     return builder;
   }
 
@@ -319,17 +329,18 @@ export default class ContainerService {
    * Query to return all updated containers.
    * @param filters
    * @param pagination
+   * @param user
    */
   public static async getUpdatedContainers(
-    filters: UpdatedContainerParameters = {}, pagination: PaginationParameters = {},
+    filters: UpdatedContainerParameters = {}, pagination: PaginationParameters = {}, user?: User,
   ): Promise<PaginatedContainerResponse> {
     const { take, skip } = pagination;
 
-    const builder = this.buildGetUpdatedContainersQuery(filters);
-
     const results = await Promise.all([
-      builder.limit(take).offset(skip).getRawMany(),
-      this.buildGetUpdatedContainersQuery({ ...filters, returnProducts: false }).getCount(),
+      (await this.buildGetUpdatedContainersQuery(filters, user)).limit(take).offset(skip)
+        .getRawMany(),
+      (await this.buildGetUpdatedContainersQuery({ ...filters, returnProducts: false }, user))
+        .getCount(),
     ]);
 
     let records;

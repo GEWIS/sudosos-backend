@@ -227,6 +227,18 @@ export default class AuthenticationService {
   }
 
   /**
+   * Get a list of all users this user can authenticate as, including itself.
+   * @param user
+   */
+  public static async getMemberAuthenticators(user: User): Promise<User[]> {
+    const users = (await MemberAuthenticator.find({ where: { user }, relations: ['authenticateAs'] }))
+      .map((auth) => auth.authenticateAs);
+
+    users.push(user);
+    return users;
+  }
+
+  /**
    * Gives the array of users access to the authenticateAs user.
    * Used for shared accounts. Note that this replaces the
    * existing authentication for this authenticateAs.
