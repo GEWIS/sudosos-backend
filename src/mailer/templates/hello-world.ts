@@ -16,7 +16,6 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import AbstractMailTemplate from './abstract-mail-template';
-import { signatureDutch, signatureEnglish } from './signature';
 
 export interface HelloWorldOptions {
   name: string;
