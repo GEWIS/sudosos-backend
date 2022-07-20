@@ -27,6 +27,7 @@ import ProductCategory from '../../../entity/product/product-category';
 import stringSpec from './string-spec';
 import { INVALID_PRODUCT_PRICE } from './validation-errors';
 import VatGroup from '../../../entity/vat-group';
+import { ownerIsOrgan } from './general-validators';
 
 const validAlcohol = (p: BaseProductParams) => {
   if (p.alcoholPercentage < 0) {
@@ -64,6 +65,7 @@ const productRequestSpec: Specification<BaseProductParams, ValidationError> = [
   validCategory,
   validVatGroup,
   validAlcohol,
+  [[ownerIsOrgan], 'ownerId', new ValidationError('ownerId: ')],
 ];
 
 async function verifyProductRequest(productRequest: BaseProductParams) {

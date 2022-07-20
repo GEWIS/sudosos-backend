@@ -28,8 +28,8 @@ import {
   ContainerParams, CreateContainerParams,
 } from '../container-request';
 import stringSpec from './string-spec';
-import { INVALID_ORGAN_ID, INVALID_PRODUCT_ID } from './validation-errors';
-import User, { UserType } from '../../../entity/user/user';
+import { INVALID_PRODUCT_ID } from './validation-errors';
+import { ownerIsOrgan } from './general-validators';
 
 /**
  * Validates that param is either a valid Product ID or ProductRequest
@@ -38,12 +38,6 @@ async function validProductId(p: number) {
   const product = await Product.findOne({ where: { id: p } });
   if (!product) return toFail(INVALID_PRODUCT_ID(p));
   return toPass(p);
-}
-
-async function ownerIsOrgan(id: number) {
-  const owner = await User.findOne({ where: { id, deleted: false, type: UserType.ORGAN } });
-  if (!owner) return toFail(INVALID_ORGAN_ID());
-  return toPass(id);
 }
 
 /**

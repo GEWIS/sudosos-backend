@@ -24,11 +24,10 @@ export interface BaseProductParams {
   category: number;
   alcoholPercentage: number;
   name: string;
-}
-
-export default interface CreateProductParams extends BaseProductParams{
   ownerId: number;
 }
+
+export default interface CreateProductParams extends BaseProductParams {}
 
 export interface UpdateProductParams extends BaseProductParams {
   id: number;
@@ -46,7 +45,7 @@ export type ProductRequest = UpdateProductParams | CreateProductParams;
  * @property {number} alcoholPercentage.required  - Alcohol percentage of the product in 2 decimals
  */
 export interface CreateProductRequest extends BaseProductParams {
-  ownerId?: number,
+  ownerId: number,
 }
 
 /**
