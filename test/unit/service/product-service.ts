@@ -631,6 +631,7 @@ describe('ProductService', async (): Promise<void> => {
       const createPOS: CreatePointOfSaleParams = {
         containers: [container.id],
         name: 'POS Name',
+        useAuthentication: true,
         ownerId,
       };
 

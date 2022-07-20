@@ -24,10 +24,11 @@ export interface BaseProductParams {
   category: number;
   alcoholPercentage: number;
   name: string;
-  ownerId: number;
 }
 
-export default interface CreateProductParams extends BaseProductParams {}
+export default interface CreateProductParams extends BaseProductParams {
+  ownerId: number;
+}
 
 export interface UpdateProductParams extends BaseProductParams {
   id: number;
@@ -37,12 +38,12 @@ export type ProductRequest = UpdateProductParams | CreateProductParams;
 
 /**
  * @typedef CreateProductRequest
- * @property {number} ownerId - ID of the owner
  * @property {string} name.required - Name of the product
  * @property {DineroObjectRequest.model} priceInclVat.required - Price of the product
  * @property {number} vat.required - VAT group ID of the product
  * @property {number} category.required  - Category of the product
  * @property {number} alcoholPercentage.required  - Alcohol percentage of the product in 2 decimals
+ * @property {number} ownerId.required - ID of the owner
  */
 export interface CreateProductRequest extends BaseProductParams {
   ownerId: number,

@@ -525,6 +525,7 @@ export default class ContainerService {
       )).records[0] as PointOfSaleWithContainersResponse;
       const update: UpdatePointOfSaleParams = {
         containers: containers.map((c) => c.id),
+        useAuthentication: true,
         name: p.name,
         id: p.pointOfSale.id,
       };

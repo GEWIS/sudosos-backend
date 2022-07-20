@@ -129,6 +129,7 @@ describe('PointOfSaleService', async (): Promise<void> => {
     const validPOSParams: CreatePointOfSaleParams = {
       containers: [containers[0].id, containers[1].id, containers[2].id],
       name: 'Valid POS',
+      useAuthentication: true,
       ownerId: 1,
     };
 
@@ -314,6 +315,7 @@ describe('PointOfSaleService', async (): Promise<void> => {
       const updateParams: UpdatePointOfSaleParams = {
         containers: [1, 2, 3],
         name: 'Updated POS',
+        useAuthentication: true,
         id,
       };
 
@@ -336,6 +338,7 @@ describe('PointOfSaleService', async (): Promise<void> => {
         id,
         containers: [1, 2, 3],
         name: 'Updated POS',
+        useAuthentication: true,
       };
 
       const res: UpdatedPointOfSaleResponse = (
@@ -372,6 +375,7 @@ describe('PointOfSaleService', async (): Promise<void> => {
         containers: [3],
         id: pointOfSale.id,
         name: 'Pos Updated Name',
+        useAuthentication: true,
       };
 
       const response = await PointOfSaleService.directPointOfSaleUpdate(update);

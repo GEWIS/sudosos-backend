@@ -32,7 +32,10 @@ import TokenHandler from '../../../src/authentication/token-handler';
 import Swagger from '../../../src/start/swagger';
 import RoleManager from '../../../src/rbac/role-manager';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
-import CreateProductParams, { CreateProductRequest } from '../../../src/controller/request/product-request';
+import {
+  CreateProductRequest,
+  UpdateProductRequest,
+} from '../../../src/controller/request/product-request';
 import UpdatedProduct from '../../../src/entity/product/updated-product';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import { ProductResponse } from '../../../src/controller/response/product-response';
@@ -48,11 +51,14 @@ import VatGroup from '../../../src/entity/vat-group';
  * @param response - The received product.
  * @return true if the source and response describe the same product.
  */
-function productEq(source: CreateProductRequest, response: ProductResponse) {
+function productEq(source: CreateProductRequest | UpdateProductRequest, response: ProductResponse) {
   expect(source.name).to.eq(response.name);
   expect(source.category).to.eq(response.category.id);
   expect(source.alcoholPercentage).to.eq(response.alcoholPercentage);
   expect(source.priceInclVat.amount).to.eq(response.priceInclVat.amount);
+  if ('ownerId' in source) {
+    expect(source.ownerId).to.eq(response.owner.id);
+  }
 }
 
 describe('ProductController', async (): Promise<void> => {
@@ -70,8 +76,9 @@ describe('ProductController', async (): Promise<void> => {
     vatGroups: VatGroup[],
     tokenNoRoles: String,
     products: Product[],
-    validProductReq: CreateProductRequest,
-    invalidProductReq: CreateProductRequest,
+    validProductReq: UpdateProductRequest,
+    invalidProductReq: UpdateProductRequest,
+    validCreateProductReq: CreateProductRequest,
   };
 
   const stubs: sinon.SinonStub[] = [];
@@ -127,7 +134,7 @@ describe('ProductController', async (): Promise<void> => {
     }, 'nonce');
     const tokenNoRoles = await tokenHandler.signToken({ user: localUser, roles: [], lesser: false }, 'nonce');
 
-    const validProductReq: CreateProductRequest = {
+    const validProductReq: UpdateProductRequest = {
       name: 'Valid product',
       priceInclVat: {
         amount: 72,
@@ -139,9 +146,14 @@ describe('ProductController', async (): Promise<void> => {
       vat: 2,
     };
 
-    const invalidProductReq: CreateProductRequest = {
+    const invalidProductReq: UpdateProductRequest = {
       ...validProductReq,
       name: '',
+    };
+
+    const validCreateProductReq: CreateProductRequest = {
+      ...validProductReq,
+      ownerId: organ.id,
     };
 
     // start app
@@ -216,6 +228,7 @@ describe('ProductController', async (): Promise<void> => {
       products,
       validProductReq,
       invalidProductReq,
+      validCreateProductReq,
     };
   });
 
@@ -315,16 +328,22 @@ describe('ProductController', async (): Promise<void> => {
       expect(res.body).to.eq(error);
     }
     it('should verify Alcohol', async () => {
-      const req: CreateProductRequest = { ...ctx.validProductReq, alcoholPercentage: -1 };
+      const req: CreateProductRequest = {
+        ...ctx.validCreateProductReq,
+        alcoholPercentage: -1,
+      };
       await expectError(req, 'Alcohol percentage must be non-negative');
     });
     it('should verify Category', async () => {
-      const req: CreateProductRequest = { ...ctx.validProductReq, category: -1 };
+      const req: CreateProductRequest = {
+        ...ctx.validCreateProductReq,
+        category: -1,
+      };
       await expectError(req, '-1 is an invalid product category.');
     });
     it('should verify Price', async () => {
       const req: CreateProductRequest = {
-        ...ctx.validProductReq,
+        ...ctx.validCreateProductReq,
         priceInclVat: {
           amount: -72,
           currency: 'EUR',
@@ -334,8 +353,25 @@ describe('ProductController', async (): Promise<void> => {
       await expectError(req, 'Price must be greater than zero');
     });
     it('should verify Name', async () => {
-      const req: CreateProductRequest = { ...ctx.validProductReq, name: '' };
+      const req: CreateProductRequest = {
+        ...ctx.validCreateProductReq,
+        name: '',
+      };
       await expectError(req, 'Name must be a non-zero length string.');
+    });
+    it('should verify Vat group', async () => {
+      const req: CreateProductRequest = {
+        ...ctx.validCreateProductReq,
+        vat: 9999999,
+      };
+      await expectError(req, '');
+    });
+    it('should verify Owner', async () => {
+      const req: CreateProductRequest = {
+        ...ctx.validCreateProductReq,
+        ownerId: ctx.localUser.id,
+      };
+      await expectError(req, '');
     });
   }
   describe('POST /products', () => {
@@ -348,10 +384,10 @@ describe('ProductController', async (): Promise<void> => {
       const res = await request(ctx.app)
         .post('/products')
         .set('Authorization', `Bearer ${ctx.token}`)
-        .send(ctx.validProductReq);
+        .send(ctx.validCreateProductReq);
 
       expect(await Product.count()).to.equal(productCount + 1);
-      productEq(ctx.validProductReq, res.body as ProductResponse);
+      productEq(ctx.validCreateProductReq, res.body as ProductResponse);
       const databaseProduct = await UpdatedProduct.findOne((res.body as ProductResponse).id);
       expect(databaseProduct).to.exist;
 
@@ -365,17 +401,13 @@ describe('ProductController', async (): Promise<void> => {
     });
     it('should store the given product in the database and return an HTTP 200 and the product if organ', async () => {
       const productCount = await Product.count();
-      const createProductParams: CreateProductParams = {
-        ...ctx.validProductReq,
-        ownerId: ctx.organ.id,
-      };
       const res = await request(ctx.app)
         .post('/products')
         .set('Authorization', `Bearer ${ctx.organMemberToken}`)
-        .send(createProductParams);
+        .send(ctx.validCreateProductReq);
 
       expect(await Product.count()).to.equal(productCount + 1);
-      productEq(createProductParams, res.body as ProductResponse);
+      productEq(ctx.validCreateProductReq, res.body as ProductResponse);
       const databaseProduct = await UpdatedProduct.findOne((res.body as ProductResponse).id);
       expect(databaseProduct).to.exist;
 
@@ -392,12 +424,11 @@ describe('ProductController', async (): Promise<void> => {
       const res = await request(ctx.app)
         .post('/products')
         .set('Authorization', `Bearer ${ctx.tokenNoRoles}`)
-        .send(ctx.validProductReq);
+        .send(ctx.validCreateProductReq);
+      expect(res.status).to.equal(403);
 
       expect(await Product.count()).to.equal(productCount);
       expect(res.body).to.be.empty;
-
-      expect(res.status).to.equal(403);
     });
     it('should return HTTP 400 if VAT group is deleted', async () => {
       const vatGroup = ctx.vatGroups.find((v) => v.deleted === true);
@@ -405,12 +436,24 @@ describe('ProductController', async (): Promise<void> => {
         .post('/products')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send({
-          ...ctx.validProductReq,
+          ...ctx.validCreateProductReq,
           vat: vatGroup.id,
         } as CreateProductRequest);
 
       expect(res.status).to.equal(400);
-      expect(res.body).to.equal('5 is an invalid VAT group.');
+      expect(res.body).to.equal('vat: 5 is an invalid VAT group.');
+    });
+    it('should return an HTTP 400 if owner is not of type organ', async () => {
+      const res = await request(ctx.app)
+        .post('/products')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({
+          ...ctx.validProductReq,
+          ownerId: ctx.localUser.id,
+        } as CreateProductRequest);
+
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('ownerId: Owner must be of type ORGAN.');
     });
   });
   describe('GET /products/:id', () => {
@@ -488,12 +531,12 @@ describe('ProductController', async (): Promise<void> => {
         .patch('/products/1')
         .set('Authorization', `Bearer ${ctx.token}`)
         .send(ctx.validProductReq);
+      expect(res.status).to.equal(200);
 
       productEq(ctx.validProductReq, res.body as ProductResponse);
       const databaseProduct = await UpdatedProduct.findOne((res.body as ProductResponse).id);
       expect(databaseProduct).to.exist;
 
-      expect(res.status).to.equal(200);
       expect(ctx.specification.validateModel(
         'ProductResponse',
         res.body,
@@ -539,7 +582,7 @@ describe('ProductController', async (): Promise<void> => {
         } as CreateProductRequest);
 
       expect(res.status).to.equal(400);
-      expect(res.body).to.equal('5 is an invalid VAT group.');
+      expect(res.body).to.equal('vat: 5 is an invalid VAT group.');
     });
   });
   describe('GET /products/updated', () => {

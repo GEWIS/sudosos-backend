@@ -31,7 +31,7 @@ import Product from '../entity/product/product';
 import FileService from '../service/file-service';
 import { PRODUCT_IMAGE_LOCATION } from '../files/storage';
 import { parseRequestPagination } from '../helpers/pagination';
-import verifyProductRequest from './request/validators/product-request-spec';
+import { verifyCreateProductRequest, verifyProductRequest } from './request/validators/product-request-spec';
 import { isFail } from '../helpers/specification-validation';
 import { asNumber } from '../helpers/validators';
 import userTokenInOrgan from '../helpers/token-helper';
@@ -161,7 +161,7 @@ export default class ProductController extends BaseController {
         ownerId: body.ownerId ?? req.token.user.id,
       };
 
-      const validation = await verifyProductRequest(request);
+      const validation = await verifyCreateProductRequest(request);
       if (isFail(validation)) {
         res.status(400).json(validation.fail.value);
         return;

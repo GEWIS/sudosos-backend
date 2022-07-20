@@ -29,4 +29,12 @@ export default class BasePointOfSale extends BaseEntityWithoutId {
     length: 64,
   })
   public name: string;
+
+  /**
+   * Whether this POS requires users to authenticate themselves before making a transaction
+   */
+  @Column({
+    default: false,
+  })
+  public useAuthentication: boolean;
 }

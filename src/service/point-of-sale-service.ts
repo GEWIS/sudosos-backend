@@ -77,6 +77,7 @@ export default class PointOfSaleService {
       id: rawPointOfSale.id,
       revision: rawPointOfSale.revision,
       name: rawPointOfSale.name,
+      useAuthentication: rawPointOfSale.useAuthentication === 1,
       createdAt: rawPointOfSale.createdAt,
       updatedAt: rawPointOfSale.updatedAt,
       owner: {
@@ -126,6 +127,7 @@ export default class PointOfSaleService {
         'posrevision.revision AS revision',
         'posrevision.updatedAt AS updatedAt',
         'posrevision.name AS name',
+        'posrevision.useAuthentication AS useAuthentication',
         'owner.id AS owner_id',
         'owner.firstName AS owner_firstName',
         'owner.lastName AS owner_lastName',
@@ -206,6 +208,7 @@ export default class PointOfSaleService {
         'pos.createdAt AS createdAt',
         'updatedpos.updatedAt AS updatedAt',
         'updatedpos.name AS name',
+        'updatedpos.useAuthentication AS useAuthentication',
         'owner.id AS owner_id',
         'owner.firstName AS owner_firstName',
         'owner.lastName AS owner_lastName',
@@ -275,9 +278,10 @@ export default class PointOfSaleService {
     : UpdatedPointOfSaleResponse {
     return {
       name: updatedPointOfSale.name,
+      useAuthentication: updatedPointOfSale.useAuthentication,
       owner: parseUserToBaseResponse(updatedPointOfSale.pointOfSale.owner, false),
       id: updatedPointOfSale.pointOfSale.id,
-    } as UpdatedPointOfSaleResponse;
+    };
   }
 
   /**
@@ -365,6 +369,7 @@ export default class PointOfSaleService {
 
     const update: BasePointOfSaleParams = {
       containers: rawPointOfSaleUpdate.containers.map((c) => c.id),
+      useAuthentication: rawPointOfSaleUpdate.useAuthentication,
       name: rawPointOfSaleUpdate.name,
     };
 
@@ -416,6 +421,7 @@ export default class PointOfSaleService {
    * To confirm the revision the update has to be accepted.
    *
    * @param posRequest - The POS to be created.
+   * @param approve - Whether the POS should be automatically approved
    */
   public static async createPointOfSale(posRequest: CreatePointOfSaleParams, approve = false)
     : Promise<UpdatedPointOfSaleResponse | undefined> {

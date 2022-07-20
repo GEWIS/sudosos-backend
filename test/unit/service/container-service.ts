@@ -445,6 +445,7 @@ describe('ContainerService', async (): Promise<void> => {
       const createPointOfSaleParams: CreatePointOfSaleParams = {
         containers: [container.id, container2.id],
         name: 'New POS',
+        useAuthentication: true,
         ownerId,
       };
       const pos = await PointOfSaleService.createPointOfSale(createPointOfSaleParams, true);

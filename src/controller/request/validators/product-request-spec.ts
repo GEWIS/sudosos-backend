@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { BaseProductParams } from '../product-request';
+import CreateProductParams, { BaseProductParams } from '../product-request';
 import {
   Specification,
   toFail,
@@ -28,50 +28,60 @@ import stringSpec from './string-spec';
 import { INVALID_PRODUCT_PRICE } from './validation-errors';
 import VatGroup from '../../../entity/vat-group';
 import { ownerIsOrgan } from './general-validators';
+import { DineroObjectRequest } from '../dinero-request';
 
-const validAlcohol = (p: BaseProductParams) => {
-  if (p.alcoholPercentage < 0) {
+const validAlcohol = (alcoholPercentage: number) => {
+  if (alcoholPercentage < 0) {
     return toFail(new ValidationError('Alcohol percentage must be non-negative'));
   }
-  return toPass(p);
+  return toPass(alcoholPercentage);
 };
 
-const validCategory = async (p: BaseProductParams) => {
-  const category = await ProductCategory.findOne(p.category);
+const validCategory = async (categoryId: number) => {
+  const category = await ProductCategory.findOne(categoryId);
   if (!category) {
-    return toFail(new ValidationError(`${p.category} is an invalid product category.`));
+    return toFail(new ValidationError(`${categoryId} is an invalid product category.`));
   }
-  return toPass(p);
+  return toPass(categoryId);
 };
 
-const validVatGroup = async (p: BaseProductParams) => {
-  const vatGroup = await VatGroup.find({ where: { id: p.vat } });
+const validVatGroup = async (vat: number) => {
+  const vatGroup = await VatGroup.find({ where: { id: vat } });
   if (!vatGroup || vatGroup.length === 0 || vatGroup[0].deleted) {
-    return toFail(new ValidationError(`${p.vat} is an invalid VAT group.`));
+    return toFail(new ValidationError(`${vat} is an invalid VAT group.`));
   }
-  return toPass(p);
+  return toPass(vat);
 };
 
-const validPrice = (p: BaseProductParams) => {
-  if (p.priceInclVat.amount < 0) {
+const validPrice = (priceInclVat: DineroObjectRequest) => {
+  if (priceInclVat.amount < 0) {
     return toFail(INVALID_PRODUCT_PRICE());
   }
-  return toPass(p);
+  return toPass(priceInclVat);
 };
 
-const productRequestSpec: Specification<BaseProductParams, ValidationError> = [
+const baseProductRequestSpec: <T extends BaseProductParams>()
+=> Specification<T, ValidationError> = () => [
   [stringSpec(), 'name', new ValidationError('Name:')],
-  validPrice,
-  validCategory,
-  validVatGroup,
-  validAlcohol,
-  [[ownerIsOrgan], 'ownerId', new ValidationError('ownerId: ')],
+  [[validPrice], 'priceInclVat', new ValidationError('priceInclVat:')],
+  [[validCategory], 'category', new ValidationError('category:')],
+  [[validVatGroup], 'vat', new ValidationError('vat:')],
+  [[validAlcohol], 'alcoholPercentage', new ValidationError('alcoholPercentage:')],
 ];
 
-async function verifyProductRequest(productRequest: BaseProductParams) {
+const createProductRequestSpec: Specification<CreateProductParams, ValidationError> = [
+  ...baseProductRequestSpec<CreateProductParams>(),
+  [[ownerIsOrgan], 'ownerId', new ValidationError('ownerId:')],
+];
+
+export async function verifyProductRequest(productRequest: BaseProductParams) {
   return Promise.resolve(await validateSpecification<BaseProductParams, ValidationError>(
-    productRequest, productRequestSpec,
+    productRequest, baseProductRequestSpec<BaseProductParams>(),
   ));
 }
 
-export default verifyProductRequest;
+export async function verifyCreateProductRequest(productRequest: CreateProductParams) {
+  return Promise.resolve(await validateSpecification<CreateProductParams, ValidationError>(
+    productRequest, createProductRequestSpec,
+  ));
+}

@@ -112,6 +112,7 @@ describe('PointOfSaleController', async () => {
     const validPOSRequest: CreatePointOfSaleRequest = {
       containers: [containers[0].id, containers[1].id, containers[2].id],
       name: 'Valid POS',
+      useAuthentication: true,
       ownerId: 2,
     };
 
