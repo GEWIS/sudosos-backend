@@ -17,15 +17,18 @@
  */
 import BaseResponse from './base-response';
 import { PaginationResult } from '../../helpers/pagination';
+import { TermsOfServiceStatus } from '../../entity/user/user';
 
 /**
  * @typedef {BaseResponse} BaseUserResponse
  * @property {string} firstName.required - The name of the user.
  * @property {string} lastName - The last name of the user
+ * @property {string} acceptedTOS - Whether this user has accepted the TOS
  */
 export interface BaseUserResponse extends BaseResponse {
   firstName: string,
-  lastName: string
+  lastName: string,
+  acceptedTOS: TermsOfServiceStatus,
 }
 
 /**
