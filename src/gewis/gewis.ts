@@ -83,7 +83,7 @@ export default class Gewis {
       email: token.email,
       ofAge: token.is_18_plus,
     }) as User;
-    return manager.save(user).then((u) => this.createGEWISUser(manager, u, token.lidnr));
+    return manager.save(user).then((u) => Gewis.createGEWISUser(manager, u, token.lidnr));
   }
 
   /**
