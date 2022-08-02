@@ -53,6 +53,7 @@ export default class AuthenticationSecureController extends BaseController {
         GET: {
           policy: async () => Promise.resolve(true),
           handler: this.refreshToken.bind(this),
+          restrictions: { lesser: true, acceptedTOS: false },
         },
       },
     };
