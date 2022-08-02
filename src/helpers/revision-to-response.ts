@@ -73,7 +73,6 @@ export function parseUserToBaseResponse(user: User, timestamps: boolean): BaseUs
     id: user.id,
     firstName: user.firstName,
     lastName: user.lastName,
-    acceptedTOS: user.acceptedToS,
     createdAt: timestamps ? user.createdAt.toISOString() : undefined,
     updatedAt: timestamps ? user.updatedAt.toISOString() : undefined,
   } as BaseUserResponse;
@@ -91,5 +90,7 @@ export function parseUserToResponse(user: User, timestamps = false): UserRespons
     active: user.active,
     deleted: user.deleted,
     type: UserType[user.type],
+    acceptedToS: user.acceptedToS,
+    extensiveDataProcessing: user.extensiveDataProcessing,
   };
 }

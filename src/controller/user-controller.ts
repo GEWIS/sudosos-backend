@@ -41,6 +41,7 @@ import { asNumber } from '../helpers/validators';
 import { verifyCreateUserRequest } from './request/validators/user-request-spec';
 import userTokenInOrgan from '../helpers/token-helper';
 import { parseUserToResponse } from '../helpers/revision-to-response';
+import { AcceptTosRequest } from './request/accept-tos-request';
 
 export default class UserController extends BaseController {
   private logger: Logger = log4js.getLogger('UserController');
@@ -98,6 +99,7 @@ export default class UserController extends BaseController {
             req.token.roles, 'acceptToS', 'own', 'User', ['*'],
           ),
           handler: this.acceptToS.bind(this),
+          body: { modelName: 'AcceptTosRequest' },
           restrictions: { acceptedTOS: false },
         },
       },
@@ -545,6 +547,7 @@ export default class UserController extends BaseController {
    * Accept the Terms of Service if you have not accepted it yet
    * @route POST /users/acceptTos
    * @group users - Operations of the User controller
+   * @param {AcceptTosRequest.model} params.body.required
    * @security JWT
    * @returns {string} 204 - ToS accepted
    * @returns {string} 400 - ToS already accepted
@@ -553,6 +556,8 @@ export default class UserController extends BaseController {
     this.logger.trace('Accept ToS for user', req.token.user);
 
     const { id } = req.token.user;
+    const body = req.body as AcceptTosRequest;
+
     try {
       const user = await UserService.getSingleUser(id);
       if (user === undefined) {
@@ -560,7 +565,7 @@ export default class UserController extends BaseController {
         return;
       }
 
-      const success = await UserService.acceptToS(id);
+      const success = await UserService.acceptToS(id, body);
       if (!success) {
         res.status(400).json('User already accepted ToS.');
         return;

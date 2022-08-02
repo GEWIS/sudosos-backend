@@ -51,6 +51,7 @@ import RoleResponse from '../../../src/controller/response/rbac/role-response';
 import {
   FinancialMutationResponse,
 } from '../../../src/controller/response/financial-mutation-response';
+import { AcceptTosRequest } from '../../../src/controller/request/accept-tos-request';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -1209,6 +1210,10 @@ describe('UserController', (): void => {
     let userNotRequired: User;
     let userNotRequiredToken: string;
 
+    const body: AcceptTosRequest = {
+      extensiveDataProcessing: true,
+    };
+
     before(async () => {
       userNotAccepted = await UserFactory({
         firstName: 'TestUser1',
@@ -1237,11 +1242,13 @@ describe('UserController', (): void => {
 
       const res = await request(ctx.app)
         .post('/users/acceptToS')
-        .set('Authorization', `Bearer ${userNotAcceptedToken}`);
+        .set('Authorization', `Bearer ${userNotAcceptedToken}`)
+        .send(body);
       expect(res.status).to.equal(204);
 
       user = await User.findOne({ where: { id: userNotAccepted.id } });
       expect(user.acceptedToS).to.equal(TermsOfServiceStatus.ACCEPTED);
+      expect(user.extensiveDataProcessing).to.equal(true);
     });
     it('should correctly accept ToS if not required', async () => {
       // Sanity check
@@ -1250,11 +1257,16 @@ describe('UserController', (): void => {
 
       const res = await request(ctx.app)
         .post('/users/acceptToS')
-        .set('Authorization', `Bearer ${userNotRequiredToken}`);
+        .set('Authorization', `Bearer ${userNotRequiredToken}`)
+        .send({
+          ...body,
+          extensiveDataProcessing: false,
+        } as AcceptTosRequest);
       expect(res.status).to.equal(204);
 
       user = await User.findOne({ where: { id: userNotRequired.id } });
       expect(user.acceptedToS).to.equal(TermsOfServiceStatus.ACCEPTED);
+      expect(user.extensiveDataProcessing).to.equal(false);
     });
     it('should return 400 if ToS already accepted', async () => {
       const { id } = ctx.users[0];
@@ -1265,7 +1277,8 @@ describe('UserController', (): void => {
 
       const res = await request(ctx.app)
         .post('/users/acceptToS')
-        .set('Authorization', `Bearer ${ctx.userToken}`);
+        .set('Authorization', `Bearer ${ctx.userToken}`)
+        .send(body);
       expect(res.status).to.equal(400);
       expect(res.body).to.equal('User already accepted ToS.');
     });

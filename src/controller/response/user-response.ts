@@ -23,12 +23,10 @@ import { TermsOfServiceStatus } from '../../entity/user/user';
  * @typedef {BaseResponse} BaseUserResponse
  * @property {string} firstName.required - The name of the user.
  * @property {string} lastName - The last name of the user
- * @property {string} acceptedTOS - Whether this user has accepted the TOS
  */
 export interface BaseUserResponse extends BaseResponse {
   firstName: string,
   lastName: string,
-  acceptedTOS: TermsOfServiceStatus,
 }
 
 /**
@@ -36,12 +34,17 @@ export interface BaseUserResponse extends BaseResponse {
  * @property {boolean} active.required - Whether the user activated
  * @property {boolean} deleted.required - Whether the user is deleted
  * @property {string} type.required - The type of user
+ * @property {string} acceptedToS.required - Whether this user has accepted the TOS
+ * @property {boolean} extensiveDataProcessing.required - Whether data about this
+ * user can be used (non-anonymously) for more data science!
  */
 
 export interface UserResponse extends BaseUserResponse {
   active: boolean;
   deleted: boolean;
   type: string;
+  acceptedToS: TermsOfServiceStatus,
+  extensiveDataProcessing: boolean;
 }
 
 /**
