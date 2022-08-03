@@ -23,7 +23,7 @@ import Mailer from '../../../src/mailer';
 import User, { UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import HelloWorld from '../../../src/mailer/templates/hello-world';
-import { Language } from '../../../src/mailer/templates/abstract-mail-template';
+import { Language } from '../../../src/mailer/templates/mail-template';
 
 describe('Mailer', () => {
   let ctx: {

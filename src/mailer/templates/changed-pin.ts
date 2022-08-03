@@ -15,53 +15,51 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import AbstractMailTemplate from './abstract-mail-template';
+import MailTemplate, { Language, MailLanguageMap } from './mail-template';
 import { signatureDutch, signatureEnglish } from './signature';
+import MailContent from './mail-content';
 
 interface ChangedPinOptions {
   name: string;
 }
 
-export default class ChangedPin extends AbstractMailTemplate<ChangedPinOptions> {
-  protected getHTMLDutch(): string {
-    return `<p>Beste ${this.contentOptions.name},</p>
+const changedPinDutch = new MailContent<ChangedPinOptions>({
+  getHTML: (context) => `<p>Beste ${context.name},</p>
 
 <p>Je pincode van je account in SudoSOS is zojuist veranderd.</p>
 
-${signatureDutch}`;
-  }
-
-  protected getHTMLEnglish(): string {
-    return `<p>Dear ${this.contentOptions.name},</p>
-
-<p>The PIN number of your account in SudoSOS has just been changed.</p>
-
-${signatureEnglish}`;
-  }
-
-  protected getTextDutch(): string {
-    return `Beste ${this.contentOptions.name},
+${signatureDutch}`,
+  getSubject: () => 'Je pincode is veranderd',
+  getText: (context) => `Beste ${context.name},
 
 Je pincode van je account in SudoSOS is zojuist veranderd.
 
 Met vriendelijke groet,
-SudoSOS`;
-  }
+SudoSOS`,
+});
 
-  protected getTextEnglish(): string {
-    return `Dear ${this.contentOptions.name},
+const changedPinEnglish = new MailContent<ChangedPinOptions>({
+  getSubject: () => 'Your PIN has changed',
+  getText: (context) => `Dear ${context.name},
 
 The PIN number of your account in SudoSOS has just been changed.
 
 Kind regards,
-SudoSOS`;
-  }
+SudoSOS`,
+  getHTML: (context) => `<p>Dear ${context.name},</p>
 
-  protected getSubjectDutch(): string {
-    return 'Je pincode is veranderd';
-  }
+<p>The PIN number of your account in SudoSOS has just been changed.</p>
 
-  protected getSubjectEnglish(): string {
-    return 'Your PIN has changed';
+${signatureEnglish}`,
+});
+
+const mailContents: MailLanguageMap<ChangedPinOptions> = {
+  [Language.DUTCH]: changedPinDutch,
+  [Language.ENGLISH]: changedPinEnglish,
+};
+
+export default class ChangedPin extends MailTemplate<ChangedPinOptions> {
+  public constructor(options: ChangedPinOptions) {
+    super(options, mailContents);
   }
 }

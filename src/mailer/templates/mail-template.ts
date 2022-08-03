@@ -16,56 +16,37 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import Mail from 'nodemailer/lib/mailer';
+import MailContent from './mail-content';
 
 export enum Language {
   DUTCH = 'dutch',
   ENGLISH = 'english',
 }
 
-export default abstract class AbstractMailTemplate<T> {
+export type MailLanguageMap<T> = {
+  [key in Language]: MailContent<T>;
+};
+
+export default class MailTemplate<T> {
   protected baseMailOptions: Mail.Options = {
     from: process.env.SMTP_FROM,
   };
 
   protected contentOptions: T;
 
-  public constructor(options: T) {
+  protected mailContents: MailLanguageMap<T>;
+
+  public constructor(options: T, mailContents: MailLanguageMap<T>) {
     this.contentOptions = options;
+    this.mailContents = mailContents;
   }
-
-  protected abstract getHTMLEnglish(): string;
-
-  protected abstract getTextEnglish(): string;
-
-  protected abstract getSubjectEnglish(): string;
-
-  protected abstract getHTMLDutch(): string;
-
-  protected abstract getTextDutch(): string;
-
-  protected abstract getSubjectDutch(): string;
 
   /**
    * Get the base options
    */
   getOptions(language: Language): Mail.Options {
-    let text: string;
-    let html: string;
-    let subject: string;
-    switch (language) {
-      case Language.DUTCH:
-        text = this.getTextDutch();
-        html = this.getHTMLDutch();
-        subject = this.getSubjectDutch();
-        break;
-      case Language.ENGLISH:
-        text = this.getTextEnglish();
-        html = this.getHTMLEnglish();
-        subject = this.getSubjectEnglish();
-        break;
-      default:
-        throw new Error(`Unknown language: ${language}`);
-    }
+    if (this.mailContents[language] === undefined) throw new Error(`Unknown language: ${language}`);
+    const { text, html, subject } = this.mailContents[language].getContent(this.contentOptions);
 
     return {
       ...this.baseMailOptions,

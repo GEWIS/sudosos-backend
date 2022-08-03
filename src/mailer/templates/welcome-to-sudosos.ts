@@ -15,15 +15,71 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import AbstractMailTemplate from './abstract-mail-template';
+import MailTemplate, { Language, MailLanguageMap } from './mail-template';
 import { signatureDutch, signatureEnglish } from './signature';
+import MailContent from './mail-content';
 
 interface WelcomeToSudososOptions {
   name: string;
   url?: string;
 }
 
-export default class WelcomeToSudosos extends AbstractMailTemplate<WelcomeToSudososOptions> {
+const welcomeToSudososDutch = new MailContent<WelcomeToSudososOptions>({
+  getHTML: (content) => `
+<p>Beste ${content.name},</p>
+
+<p>Er is zojuist een account voor je aangemaakt in SudoSOS. Welkom!</p>
+
+<p>Voordat je SudoSOS écht kunt gebruiken, dien je de voorwaarden van SudoSOS te accepteren. Je kunt deze vinden en accepteren door in te loggen op ${content.url}. Vergeet ook niet gelijk wat saldo op je account te zetten!</p>
+
+<p>Tot op de borrel!</p>
+
+${signatureDutch}`,
+  getSubject: () => 'Welkom bij SudoSOS!',
+  getText: (content) => `
+Beste ${content.name},
+
+Er is zojuist een account voor je aangemaakt in SudoSOS. Welkom!
+
+Voordat je SudoSOS écht kunt gebruiken, dien je de voorwaarden van SudoSOS te accepteren. Je kunt deze vinden en accepteren door in te loggen op ${content.url}. Vergeet ook niet gelijk wat saldo op je account te zetten!
+
+Tot op de borrel!
+
+Met vriendelijke groet,
+SudoSOS`,
+});
+
+const welcomeToSudososEnglish = new MailContent<WelcomeToSudososOptions>({
+  getHTML: (content) => `
+<p>Dear ${content.name},</p>
+
+<p>An account for SudoSOS has just been created for you. Welcome!</p>
+
+<p>Before you can actually use SudoSOS, you have to accept the terms of service. You can find and accept these by logging in at ${content.url}. While you're there, don't forget to deposit some money into your account!</p>
+
+<p>See you on the borrel!</p>
+
+${signatureEnglish}`,
+  getSubject: () => 'Welcome to SudoSOS!',
+  getText: (content) => `
+Dear ${content.name},
+
+An account for SudoSOS has just been created for you. Welcome!
+
+Before you can actually use SudoSOS, you have to accept the terms of service. You can find and accept these by logging in at ${content.url}. While you're there, don't forget to deposit some money into your account!
+
+See you on the borrel!
+
+Kind regards,
+SudoSOS`,
+});
+
+const mailContents: MailLanguageMap<WelcomeToSudososOptions> = {
+  [Language.DUTCH]: welcomeToSudososDutch,
+  [Language.ENGLISH]: welcomeToSudososEnglish,
+};
+
+export default class WelcomeToSudosos extends MailTemplate<WelcomeToSudososOptions> {
   public constructor(options: WelcomeToSudososOptions) {
     const opt: WelcomeToSudososOptions = {
       ...options,
@@ -31,68 +87,6 @@ export default class WelcomeToSudosos extends AbstractMailTemplate<WelcomeToSudo
     if (!options.url) {
       opt.url = process.env.url;
     }
-    super(opt);
-  }
-
-  protected getHTMLDutch(): string {
-    return `
-<p>Beste ${this.contentOptions.name},</p>
-
-<p>Er is zojuist een account voor je aangemaakt in SudoSOS. Welkom!</p>
-
-<p>Voordat je SudoSOS écht kunt gebruiken, dien je de voorwaarden van SudoSOS te accepteren. Je kunt deze vinden en accepteren door in te loggen op ${this.contentOptions.url}. Vergeet ook niet gelijk wat saldo op je account te zetten!</p>
-
-<p>Tot op de borrel!</p>
-
-${signatureDutch}`;
-  }
-
-  protected getHTMLEnglish(): string {
-    return `
-<p>Dear ${this.contentOptions.name},</p>
-
-<p>An account for SudoSOS has just been created for you. Welcome!</p>
-
-<p>Before you can actually use SudoSOS, you have to accept the terms of service. You can find and accept these by logging in at ${this.contentOptions}. While you're there, don't forget to deposit some money into your account!</p>
-
-<p>See you on the borrel!</p>
-
-${signatureEnglish}`;
-  }
-
-  protected getTextDutch(): string {
-    return `
-Beste ${this.contentOptions.name},
-
-Er is zojuist een account voor je aangemaakt in SudoSOS. Welkom!
-
-Voordat je SudoSOS écht kunt gebruiken, dien je de voorwaarden van SudoSOS te accepteren. Je kunt deze vinden en accepteren door in te loggen op ${this.contentOptions.url}. Vergeet ook niet gelijk wat saldo op je account te zetten!
-
-Tot op de borrel!
-
-Met vriendelijke groet,
-SudoSOS`;
-  }
-
-  protected getTextEnglish(): string {
-    return `
-Dear ${this.contentOptions.name},
-
-An account for SudoSOS has just been created for you. Welcome!
-
-Before you can actually use SudoSOS, you have to accept the terms of service. You can find and accept these by logging in at ${this.contentOptions}. While you're there, don't forget to deposit some money into your account!
-
-See you on the borrel!
-
-Kind regards,
-SudoSOS`;
-  }
-
-  protected getSubjectDutch(): string {
-    return 'Welkom bij SudoSOS!';
-  }
-
-  protected getSubjectEnglish(): string {
-    return 'Welcome to SudoSOS!';
+    super(opt, mailContents);
   }
 }

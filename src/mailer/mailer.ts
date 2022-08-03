@@ -19,7 +19,7 @@ import { Transporter } from 'nodemailer';
 import log4js, { Logger } from 'log4js';
 import createSMTPTransporter from './transporter';
 import User from '../entity/user/user';
-import AbstractMailTemplate, { Language } from './templates/abstract-mail-template';
+import MailTemplate, { Language } from './templates/mail-template';
 
 export default class Mailer {
   private static instance: Mailer;
@@ -41,7 +41,7 @@ export default class Mailer {
   }
 
   async send<T>(
-    to: User, template: AbstractMailTemplate<T>, language: Language = Language.ENGLISH,
+    to: User, template: MailTemplate<T>, language: Language = Language.ENGLISH,
   ) {
     this.logger.trace('Send email', template.constructor.name, 'to user');
     try {

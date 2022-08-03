@@ -15,34 +15,32 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import AbstractMailTemplate from './abstract-mail-template';
+import MailTemplate, { Language, MailLanguageMap } from './mail-template';
+import MailContent from './mail-content';
 
 export interface HelloWorldOptions {
   name: string;
 }
 
-export default class HelloWorld extends AbstractMailTemplate<HelloWorldOptions> {
-  protected getHTMLDutch(): string {
-    return `<p>Hallo wereld, ${this.contentOptions.name}!</p>`;
-  }
+const helloWorldEnglish = new MailContent<HelloWorldOptions>({
+  getHTML: (context) => `<p>Hello world, ${context.name}!</p>`,
+  getText: (context) => `Hello world, ${context.name}!`,
+  getSubject: () => 'Hello world!',
+});
 
-  protected getHTMLEnglish(): string {
-    return `<p>Hello world, ${this.contentOptions.name}!</p>`;
-  }
+const helloWorldDutch = new MailContent<HelloWorldOptions>({
+  getHTML: (context) => `<p>Hallo wereld, ${context.name}!</p>`,
+  getText: (context) => `Hallo wereld, ${context.name}!`,
+  getSubject: () => 'Hallo wereld!',
+});
 
-  protected getTextDutch(): string {
-    return `Hallo wereld, ${this.contentOptions.name}!`;
-  }
+const mailContents: MailLanguageMap<HelloWorldOptions> = {
+  [Language.DUTCH]: helloWorldDutch,
+  [Language.ENGLISH]: helloWorldEnglish,
+};
 
-  protected getTextEnglish(): string {
-    return `Hello world, ${this.contentOptions.name}!`;
-  }
-
-  protected getSubjectDutch(): string {
-    return 'Hallo wereld!';
-  }
-
-  protected getSubjectEnglish(): string {
-    return 'Hello world!';
+export default class HelloWorld extends MailTemplate<HelloWorldOptions> {
+  public constructor(options: HelloWorldOptions) {
+    super(options, mailContents);
   }
 }
