@@ -9,11 +9,17 @@ RUN npm run build \
 
 # The target image that will be run
 FROM node:14-alpine as target
+
+RUN apk add openssl
+
 WORKDIR /app
 COPY ./package.json ./package-lock.json ./
 RUN npm install --production
+
+COPY --from=build --chown=node /app/init_scripts /app/init_scripts
+RUN chmod +x /app/init_scripts/start.sh
+
 COPY --from=build --chown=node /app/out/src /app/out/src
-RUN mkdir -p /app/out/test
-COPY --from=build --chown=node /app/out/test/seed.js /app/out/test
 COPY --from=build --chown=node /app/out/swagger.json /app/out/swagger.json
-CMD ["npm", "run", "serve"]
+
+CMD ["sh", "/app/init_scripts/start.sh"]

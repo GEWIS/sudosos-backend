@@ -56,3 +56,5 @@ export const SAME_INVOICE_STATE = () => new ValidationError('Update state is sam
 export const SUBTRANSACTION_ALREADY_INVOICED = (ids: number[]) => new ValidationError(`SubTransactions ${ids}: have already been invoiced.`);
 
 export const INVALID_PIN = () => new ValidationError('PIN is not 4 numbers');
+
+export const WEAK_PASSWORD = () => new ValidationError('Password not strong enough.');

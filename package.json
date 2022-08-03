@@ -10,7 +10,7 @@
     "schema": "node out/src/database/schema.js",
     "seed": "ts-node-dev --poll src/database/seed.ts",
     "swagger": "ts-node-dev --poll src/start/swagger.ts",
-    "test": "mocha -r ts-node/register --timeout 10000 --file ./test/setup.ts --reporter mocha-multi-reporters --reporter-options configFile=mocha.json 'test/**/*.ts' --exit",
+    "test": "mocha -r ts-node/register --timeout 50000 --file ./test/setup.ts --reporter mocha-multi-reporters --reporter-options configFile=mocha.json 'test/**/*.ts' --exit",
     "test-file": "mocha -r ts-node/register --timeout 10000 --file ./test/setup.ts",
     "coverage": "nyc npm run test",
     "lint": "eslint src test --ext .js --ext .ts",
@@ -41,7 +41,8 @@
     "stripe": "^8.201.0",
     "swagger-model-validator": "^3.0.20",
     "typeorm": "^0.2.34",
-    "uuid": "^8.3.2"
+    "uuid": "^8.3.2",
+    "validator": "^13.7.0"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.0",
@@ -59,6 +60,7 @@
     "@types/sinon": "^10.0.4",
     "@types/sinon-chai": "^3.2.5",
     "@types/uuid": "^8.3.1",
+    "@types/validator": "^13.7.3",
     "@typescript-eslint/eslint-plugin": "^4.28.4",
     "chai": "^4.3.4",
     "chai-as-promised": "^7.1.1",
@@ -74,6 +76,8 @@
     "mocha": "^9.0.2",
     "mocha-junit-reporter": "^2.0.0",
     "mocha-multi-reporters": "^1.5.1",
+    "node-gyp": "^9.0.0",
+    "node-pre-gyp": "^0.17.0",
     "nyc": "^15.1.0",
     "sinon": "^11.1.2",
     "sinon-chai": "^3.7.0",

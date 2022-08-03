@@ -59,6 +59,7 @@ import PayoutRequestStatus from '../entity/transactions/payout-request-status';
 import LDAPAuthenticator from '../entity/authenticator/ldap-authenticator';
 import AssignedRole from '../entity/roles/assigned-role';
 import VatGroup from '../entity/vat-group';
+import LocalAuthenticator from '../entity/authenticator/local-authenticator';
 
 export default class Database {
   public static async initialize(): Promise<Connection> {
@@ -94,6 +95,7 @@ export default class Database {
         MemberAuthenticator,
         NfcAuthenticator,
         PinAuthenticator,
+        LocalAuthenticator,
         LDAPAuthenticator,
         Banner,
         ProductOrdering,

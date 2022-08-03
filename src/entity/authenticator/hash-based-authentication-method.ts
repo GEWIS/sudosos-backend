@@ -15,15 +15,16 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import {
-  Entity,
-} from 'typeorm';
-import HashBasedAuthenticationMethod from './hash-based-authentication-method';
+import { Column } from 'typeorm';
+import AuthenticationMethod from './authentication-method';
 
 /**
- * @typedef {HashBasedAuthenticationMethod} PinAuthenticator
- * @property {User.model} User.required - The user this authenticator is for
- * @property {string} hash.required - The PIN code of this user (hashed)
+ * @typedef {AuthenticationMethod} HashBasedAuthenticationMethod
+ * @property {string} hash.required - The hash of the authentication
  */
-@Entity()
-export default class PinAuthenticator extends HashBasedAuthenticationMethod {}
+export default abstract class HashBasedAuthenticationMethod extends AuthenticationMethod {
+  @Column({
+    length: 128,
+  })
+  public hash: string;
+}

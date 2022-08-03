@@ -24,7 +24,6 @@ import User, { UserType } from '../entity/user/user';
 import JsonWebToken from '../authentication/json-web-token';
 import AuthenticationResponse from '../controller/response/authentication-response';
 import TokenHandler from '../authentication/token-handler';
-import PinAuthenticator from '../entity/authenticator/pin-authenticator';
 import RoleManager from '../rbac/role-manager';
 import LDAPAuthenticator from '../entity/authenticator/ldap-authenticator';
 import { asNumber } from '../helpers/validators';
@@ -33,6 +32,7 @@ import {
   bindUser, getLDAPConnection, getLDAPSettings, LDAPUser, userFromLDAP,
 } from '../helpers/ad';
 import { parseUserToResponse } from '../helpers/revision-to-response';
+import HashBasedAuthenticationMethod from '../entity/authenticator/hash-based-authentication-method';
 
 export interface AuthenticationContext {
   tokenHandler: TokenHandler,
@@ -134,29 +134,48 @@ export default class AuthenticationService {
   }
 
   /**
-   * Set the PIN code of a user.
-   * If the user has no PIN Authentication set it will create the authentication.
-   * @param user - The user for which to set the PIN
-   * @param pin - PIN Code to set, must be a valid 4 number string.
+   * Generic function that sets a hash authentication of a user.
+   * If the user has no Authentication set it will create the authentication.
+   * @param user - The user for which to set the authentication
+   * @param pass - Code to set
+   * @param Type
    */
-  public static async setUserPINCode(user: User, pin: string): Promise<PinAuthenticator> {
-    let authenticator = await PinAuthenticator.findOne({ where: { user }, relations: ['user'] });
-    const hashedPin = await this.hashPassword(pin);
+  public static async setUserAuthenticationHash<T extends HashBasedAuthenticationMethod>(user: User,
+    pass: string, Type: { new(): T, findOne: any, save: any }): Promise<T> {
+    let authenticator = await Type.findOne({ where: { user }, relations: ['user'] });
+    const hash = await this.hashPassword(pass);
 
     if (authenticator) {
       // We only need to update the PIN
-      authenticator.hashedPin = hashedPin;
+      authenticator.hash = hash;
     } else {
       // We must create the authenticator
-      authenticator = Object.assign(new PinAuthenticator(), {
+      authenticator = Object.assign(new Type(), {
         user,
-        hashedPin,
+        hash,
       });
     }
 
     // Save and return
-    await PinAuthenticator.save(authenticator);
+    await Type.save(authenticator);
     return authenticator;
+  }
+
+  /**
+   * Authenticates the account against a local password
+   * @param pass - The provided password
+   * @param authenticator - The stored authentication
+   * @param context - AuthenticationContext to use
+   * @param lesser
+   * @constructor
+   */
+  public static async HashAuthentication<T extends HashBasedAuthenticationMethod>(pass: string,
+    authenticator: T, context: AuthenticationContext, lesser = true)
+    : Promise<AuthenticationResponse | undefined> {
+    const valid = await this.compareHash(pass, authenticator.hash);
+    if (!valid) return undefined;
+
+    return this.getSaltedToken(authenticator.user, context, lesser);
   }
 
   /**
@@ -257,21 +276,6 @@ export default class AuthenticationService {
     });
 
     await Promise.all(promises);
-  }
-
-  /**
-   * Authenticates the given PIN against the stored PIN.
-   * @param pin - code to check
-   * @param authenticator - stored PinAuthenticator to check against
-   * @param context - Authentication context for roles and token signing.
-   * @constructor
-   */
-  public static async PINAuthentication(pin:string, authenticator: PinAuthenticator,
-    context: AuthenticationContext): Promise<AuthenticationResponse | undefined> {
-    const valid = await this.compareHash(pin, authenticator.hashedPin);
-    if (!valid) return undefined;
-
-    return this.getSaltedToken(authenticator.user, context, true);
   }
 
   /**
