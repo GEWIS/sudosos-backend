@@ -17,6 +17,7 @@
  */
 import BaseResponse from './base-response';
 import { PaginationResult } from '../../helpers/pagination';
+import { TermsOfServiceStatus } from '../../entity/user/user';
 
 /**
  * @typedef {BaseResponse} BaseUserResponse
@@ -25,7 +26,7 @@ import { PaginationResult } from '../../helpers/pagination';
  */
 export interface BaseUserResponse extends BaseResponse {
   firstName: string,
-  lastName: string
+  lastName: string,
 }
 
 /**
@@ -33,12 +34,17 @@ export interface BaseUserResponse extends BaseResponse {
  * @property {boolean} active.required - Whether the user activated
  * @property {boolean} deleted.required - Whether the user is deleted
  * @property {string} type.required - The type of user
+ * @property {string} acceptedToS.required - Whether this user has accepted the TOS
+ * @property {boolean} extensiveDataProcessing.required - Whether data about this
+ * user can be used (non-anonymously) for more data science!
  */
 
 export interface UserResponse extends BaseUserResponse {
   active: boolean;
   deleted: boolean;
   type: string;
+  acceptedToS: TermsOfServiceStatus,
+  extensiveDataProcessing: boolean;
 }
 
 /**

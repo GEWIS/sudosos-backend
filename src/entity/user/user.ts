@@ -89,4 +89,9 @@ export default class User extends BaseEntity {
     nullable: false, default: TermsOfServiceStatus.NOT_ACCEPTED,
   })
   public acceptedToS: TermsOfServiceStatus;
+
+  @Column({
+    default: false,
+  })
+  public extensiveDataProcessing: boolean;
 }

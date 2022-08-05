@@ -39,6 +39,7 @@ import {
   UpdatePointOfSaleParams,
 } from '../controller/request/point-of-sale-request';
 import { parseUserToBaseResponse } from '../helpers/revision-to-response';
+import AuthenticationService from './authentication-service';
 
 /**
  * Define point of sale filtering parameters used to filter query results.
@@ -76,6 +77,7 @@ export default class PointOfSaleService {
       id: rawPointOfSale.id,
       revision: rawPointOfSale.revision,
       name: rawPointOfSale.name,
+      useAuthentication: rawPointOfSale.useAuthentication === 1,
       createdAt: rawPointOfSale.createdAt,
       updatedAt: rawPointOfSale.updatedAt,
       owner: {
@@ -109,8 +111,8 @@ export default class PointOfSaleService {
     };
   }
 
-  private static buildGetPointsOfSaleQuery(filters: PointOfSaleParameters = {})
-    : SelectQueryBuilder<PointOfSale> {
+  private static async buildGetPointsOfSaleQuery(filters: PointOfSaleParameters = {}, user?: User)
+    : Promise<SelectQueryBuilder<PointOfSale>> {
     const builder = createQueryBuilder()
       .from(PointOfSale, 'pos')
       .innerJoin(
@@ -125,6 +127,7 @@ export default class PointOfSaleService {
         'posrevision.revision AS revision',
         'posrevision.updatedAt AS updatedAt',
         'posrevision.name AS name',
+        'posrevision.useAuthentication AS useAuthentication',
         'owner.id AS owner_id',
         'owner.firstName AS owner_firstName',
         'owner.lastName AS owner_lastName',
@@ -140,6 +143,11 @@ export default class PointOfSaleService {
 
     QueryFilter.applyFilter(builder, filterMapping, filters);
 
+    if (user) {
+      const organIds = (await AuthenticationService.getMemberAuthenticators(user)).map((u) => u.id);
+      builder.andWhere('owner.id IN (:...organIds)', { organIds });
+    }
+
     return builder;
   }
 
@@ -147,15 +155,16 @@ export default class PointOfSaleService {
    * Query to return current point of sales.
    * @param filters - Parameters to query the point of sales with.
    * @param pagination
+   * @param user
    */
   public static async getPointsOfSale(
-    filters: PointOfSaleParameters = {}, pagination: PaginationParameters = {},
+    filters: PointOfSaleParameters = {}, pagination: PaginationParameters = {}, user?: User,
   ): Promise<PaginatedPointOfSaleResponse> {
     const { take, skip } = pagination;
 
     const results = await Promise.all([
-      this.buildGetPointsOfSaleQuery(filters).limit(take).offset(skip).getRawMany(),
-      this.buildGetPointsOfSaleQuery(filters).getCount(),
+      (await this.buildGetPointsOfSaleQuery(filters, user)).limit(take).offset(skip).getRawMany(),
+      (await this.buildGetPointsOfSaleQuery(filters, user)).getCount(),
     ]);
 
     let records;
@@ -183,9 +192,9 @@ export default class PointOfSaleService {
     };
   }
 
-  public static buildGetUpdatedPointsOfSaleQuery(
-    filters: PointOfSaleParameters = {},
-  ): SelectQueryBuilder<PointOfSale> {
+  public static async buildGetUpdatedPointsOfSaleQuery(
+    filters: PointOfSaleParameters = {}, user?: User,
+  ): Promise<SelectQueryBuilder<PointOfSale>> {
     const builder = createQueryBuilder()
       .from(PointOfSale, 'pos')
       .innerJoin(
@@ -199,6 +208,7 @@ export default class PointOfSaleService {
         'pos.createdAt AS createdAt',
         'updatedpos.updatedAt AS updatedAt',
         'updatedpos.name AS name',
+        'updatedpos.useAuthentication AS useAuthentication',
         'owner.id AS owner_id',
         'owner.firstName AS owner_firstName',
         'owner.lastName AS owner_lastName',
@@ -210,6 +220,11 @@ export default class PointOfSaleService {
     };
     QueryFilter.applyFilter(builder, filterMapping, filters);
 
+    if (user) {
+      const organIds = (await AuthenticationService.getMemberAuthenticators(user)).map((u) => u.id);
+      builder.andWhere('owner.id IN (:...organIds)', { organIds });
+    }
+
     return builder;
   }
 
@@ -217,15 +232,17 @@ export default class PointOfSaleService {
    * Query to return updated (pending) point of sales.
    * @param filters - Parameters to query the point of sales with.
    * @param pagination
+   * @param user
    */
   public static async getUpdatedPointsOfSale(
-    filters: PointOfSaleParameters = {}, pagination: PaginationParameters = {},
+    filters: PointOfSaleParameters = {}, pagination: PaginationParameters = {}, user?: User,
   ): Promise<PaginatedUpdatedPointOfSaleResponse> {
     const { take, skip } = pagination;
 
     const results = await Promise.all([
-      this.buildGetUpdatedPointsOfSaleQuery(filters).limit(take).offset(skip).getRawMany(),
-      this.buildGetUpdatedPointsOfSaleQuery(filters).getCount(),
+      (await this.buildGetUpdatedPointsOfSaleQuery(filters, user))
+        .limit(take).offset(skip).getRawMany(),
+      (await this.buildGetUpdatedPointsOfSaleQuery(filters, user)).getCount(),
     ]);
     let records : (UpdatedPointOfSaleResponse | PointOfSaleWithContainersResponse)[];
     if (filters.returnContainers) {
@@ -261,9 +278,10 @@ export default class PointOfSaleService {
     : UpdatedPointOfSaleResponse {
     return {
       name: updatedPointOfSale.name,
+      useAuthentication: updatedPointOfSale.useAuthentication,
       owner: parseUserToBaseResponse(updatedPointOfSale.pointOfSale.owner, false),
       id: updatedPointOfSale.pointOfSale.id,
-    } as UpdatedPointOfSaleResponse;
+    };
   }
 
   /**
@@ -351,6 +369,7 @@ export default class PointOfSaleService {
 
     const update: BasePointOfSaleParams = {
       containers: rawPointOfSaleUpdate.containers.map((c) => c.id),
+      useAuthentication: rawPointOfSaleUpdate.useAuthentication,
       name: rawPointOfSaleUpdate.name,
     };
 
@@ -402,6 +421,7 @@ export default class PointOfSaleService {
    * To confirm the revision the update has to be accepted.
    *
    * @param posRequest - The POS to be created.
+   * @param approve - Whether the POS should be automatically approved
    */
   public static async createPointOfSale(posRequest: CreatePointOfSaleParams, approve = false)
     : Promise<UpdatedPointOfSaleResponse | undefined> {

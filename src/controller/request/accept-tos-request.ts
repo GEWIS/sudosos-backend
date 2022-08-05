@@ -15,26 +15,12 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import {
-  Column,
-} from 'typeorm';
-import BaseEntityWithoutId from '../base-entity-without-id';
 
 /**
- * @typedef {BaseEntityWithoutId} BasePointOfSale
- * @property {string} name.required - The unique name of the pointOfSale.
+ * @typedef AcceptTosRequest
+ * @property {boolean} extensiveDataProcessing.required - Whether data about this
+ * user can be used (non-anonymously) for more data science!
  */
-export default class BasePointOfSale extends BaseEntityWithoutId {
-  @Column({
-    length: 64,
-  })
-  public name: string;
-
-  /**
-   * Whether this POS requires users to authenticate themselves before making a transaction
-   */
-  @Column({
-    default: false,
-  })
-  public useAuthentication: boolean;
+export interface AcceptTosRequest {
+  extensiveDataProcessing: boolean;
 }

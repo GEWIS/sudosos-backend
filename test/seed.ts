@@ -989,6 +989,7 @@ function definePointOfSaleRevisions(
       pointOfSale,
       revision: rev,
       name: `PointOfSale${pointOfSale.id}-${rev}`,
+      useAuthentication: (pointOfSale.id + rev) % 2 === 0,
       containers: candidates.filter((c) => c.revision === rev),
       startDate,
       endDate,
@@ -1019,6 +1020,7 @@ function defineUpdatedPointOfSale(
   updates.push(Object.assign(new UpdatedPointOfSale(), {
     pointOfSale,
     name: `PointOfSale${pointOfSale.id}-update`,
+    useAuthentication: pointOfSale.id % 2 === 0,
     containers: candidates,
     startDate,
     endDate,

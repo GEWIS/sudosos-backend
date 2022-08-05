@@ -55,6 +55,7 @@ export function parsePOSToBasePOS(
   return {
     id: pos.pointOfSale.id,
     name: pos.name,
+    useAuthentication: pos.useAuthentication,
     revision: pos.revision,
     createdAt: timestamps ? pos.createdAt.toISOString() : undefined,
     updatedAt: timestamps ? pos.updatedAt.toISOString() : undefined,
@@ -89,5 +90,7 @@ export function parseUserToResponse(user: User, timestamps = false): UserRespons
     active: user.active,
     deleted: user.deleted,
     type: UserType[user.type],
+    acceptedToS: user.acceptedToS,
+    extensiveDataProcessing: user.extensiveDataProcessing,
   };
 }

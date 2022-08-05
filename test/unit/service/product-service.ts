@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { Connection } from 'typeorm';
+import { Connection, getManager } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import bodyParser from 'body-parser';
@@ -45,6 +45,8 @@ import { CreateContainerParams } from '../../../src/controller/request/container
 import ContainerService from '../../../src/service/container-service';
 import { CreatePointOfSaleParams } from '../../../src/controller/request/point-of-sale-request';
 import PointOfSaleService from '../../../src/service/point-of-sale-service';
+import MemberAuthenticator from '../../../src/entity/authenticator/member-authenticator';
+import AuthenticationService from '../../../src/service/authentication-service';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -389,6 +391,33 @@ describe('ProductService', async (): Promise<void> => {
 
       returnsAllRevisions(records, filteredProducts);
     });
+    it('should return all points of sale involving a single user and its memberAuthenticator users', async () => {
+      const usersOwningAProd = [...new Set(ctx.products.map((prod) => prod.owner))];
+      const owner = usersOwningAProd[0];
+
+      // Sanity check
+      const memberAuthenticators = await MemberAuthenticator.find({ where: { user: owner } });
+      expect(memberAuthenticators.length).to.equal(0);
+
+      let products = await ProductService.getProducts({}, {}, owner);
+      const originalLength = products.records.length;
+      products.records.forEach((prod) => {
+        expect(prod.owner.id).to.equal(owner.id);
+      });
+
+      await AuthenticationService
+        .setMemberAuthenticator(getManager(), [owner], usersOwningAProd[1]);
+
+      const ownerIds = [owner, usersOwningAProd[1]].map((o) => o.id);
+      products = await ProductService.getProducts({}, {}, owner);
+      expect(products.records.length).to.be.greaterThan(originalLength);
+      products.records.forEach((prod) => {
+        expect(ownerIds).to.include(prod.owner.id);
+      });
+
+      // Cleanup
+      await MemberAuthenticator.delete({ user: owner });
+    });
   });
 
   describe('updateProducts function', () => {
@@ -602,6 +631,7 @@ describe('ProductService', async (): Promise<void> => {
       const createPOS: CreatePointOfSaleParams = {
         containers: [container.id],
         name: 'POS Name',
+        useAuthentication: true,
         ownerId,
       };
 
