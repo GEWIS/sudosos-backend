@@ -21,9 +21,9 @@ import {
 import HashBasedAuthenticationMethod from './hash-based-authentication-method';
 
 /**
- * @typedef {HashBasedAuthenticationMethod} PinAuthenticator
+ * @typedef {AuthenticationMethod} LocalAuthenticator
  * @property {User.model} User.required - The user this authenticator is for
- * @property {string} hash.required - The PIN code of this user (hashed)
+ * @property {string} hash.required - The Password code of this user (hashed)
  */
 @Entity()
-export default class PinAuthenticator extends HashBasedAuthenticationMethod {}
+export default class LocalAuthenticator extends HashBasedAuthenticationMethod {}

@@ -12,8 +12,9 @@ Prerequisites:
 - Have a SQLite viewer installed (optional, you can also set it to be saved in another database, but SQLite is the default).
 
 Installing:
--	Checkout the Git to your favorite directory
+- Checkout the Git to your favorite directory
      -- If your path contains spaces you are basically begging for problems, and that is entirely your own fault
+- Copy `.env.example` to `.env`
 - Run `npm install` in this base directory
 - Run `openssl genrsa -out config/jwt.key 2048`
 - Check that there exists a jwt.key file in the config directory starting with `-----BEGIN RSA PRIVATE KEY-----`

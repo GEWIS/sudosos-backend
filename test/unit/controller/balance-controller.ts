@@ -51,7 +51,8 @@ describe('BalanceController', (): void => {
     transfers: Transfer[],
   };
 
-  before(async () => {
+  before(async function test(): Promise<void> {
+    this.timeout(50000);
     const connection = await Database.initialize();
     const app = express();
     const users = await seedUsers();

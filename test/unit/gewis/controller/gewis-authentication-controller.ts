@@ -37,6 +37,7 @@ import AuthenticationLDAPRequest from '../../../../src/controller/request/authen
 import userIsAsExpected from '../../service/authentication-service';
 import AuthenticationService from '../../../../src/service/authentication-service';
 import GEWISAuthenticationPinRequest from '../../../../src/gewis/controller/request/gewis-authentication-pin-request';
+import PinAuthenticator from '../../../../src/entity/authenticator/pin-authenticator';
 
 describe('GewisAuthenticationController', async (): Promise<void> => {
   let ctx: {
@@ -89,7 +90,7 @@ describe('GewisAuthenticationController', async (): Promise<void> => {
       secret: '42',
     };
 
-    await AuthenticationService.setUserPINCode(await User.findOne(1), '1000');
+    await AuthenticationService.setUserAuthenticationHash(await User.findOne(1), '1000', PinAuthenticator);
 
     ctx.roleManager.registerRole({
       name: 'Role',
@@ -277,6 +278,12 @@ describe('GewisAuthenticationController', async (): Promise<void> => {
       const res = await request(ctx.app)
         .post('/authentication/GEWIS/pin')
         .send({ ...validPinRequest, pin: '1' });
+      expect(res.status).to.equal(403);
+    });
+    it('should return an HTTP 403 if user is not registered', async () => {
+      const res = await request(ctx.app)
+        .post('/authentication/GEWIS/pin')
+        .send({ ...validPinRequest, gewisId: 99999 } as GEWISAuthenticationPinRequest);
       expect(res.status).to.equal(403);
     });
   });
