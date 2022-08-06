@@ -55,8 +55,10 @@ function bannerEq(a: Banner, b: BannerResponse): Boolean {
     && downloadName === b.image
     && a.duration === b.duration
     && a.active === b.active
-    && Math.round(a.startDate.getTime() / 1000) * 1000 === new Date(b.startDate).getTime()
-    && Math.round(a.endDate.getTime() / 1000) * 1000 === new Date(b.endDate).getTime();
+    && Math.round(a.startDate.getTime() / 1000)
+    === Math.round(new Date(b.startDate).getTime() / 1000)
+    && Math.round(a.endDate.getTime() / 1000)
+    === Math.round(new Date(b.endDate).getTime() / 1000);
 }
 
 describe('BannerController', async (): Promise<void> => {
