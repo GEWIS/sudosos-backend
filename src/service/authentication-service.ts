@@ -20,6 +20,7 @@ import bcrypt from 'bcrypt';
 import { filter } from 'ldap-escape';
 import log4js, { Logger } from 'log4js';
 import { EntityManager } from 'typeorm';
+import { randomBytes } from 'crypto';
 import User, { UserType } from '../entity/user/user';
 import JsonWebToken from '../authentication/json-web-token';
 import AuthenticationResponse from '../controller/response/authentication-response';
@@ -33,10 +34,17 @@ import {
 } from '../helpers/ad';
 import { parseUserToResponse } from '../helpers/revision-to-response';
 import HashBasedAuthenticationMethod from '../entity/authenticator/hash-based-authentication-method';
+import ResetToken from '../entity/authenticator/reset-token';
+import LocalAuthenticator from '../entity/authenticator/local-authenticator';
 
 export interface AuthenticationContext {
   tokenHandler: TokenHandler,
   roleManager: RoleManager,
+}
+
+export interface ResetTokenInfo {
+  resetToken: ResetToken,
+  password: string,
 }
 
 export default class AuthenticationService {
@@ -44,6 +52,11 @@ export default class AuthenticationService {
    * Amount of salt rounds to use.
    */
   private static BCRYPT_ROUNDS: number = asNumber(process.env.BCRYPT_ROUNDS) ?? 12;
+
+  /**
+   * ResetToken expiry time in seconds
+   */
+  private static RESET_TOKEN_EXPIRES: number = asNumber(process.env.RESET_TOKEN_EXPIRES) ?? 3600;
 
   /**
    * Helper function hashes the given string with salt.
@@ -146,7 +159,7 @@ export default class AuthenticationService {
     const hash = await this.hashPassword(pass);
 
     if (authenticator) {
-      // We only need to update the PIN
+      // We only need to update the hash
       authenticator.hash = hash;
     } else {
       // We must create the authenticator
@@ -288,6 +301,41 @@ export default class AuthenticationService {
     });
 
     await Promise.all(promises);
+  }
+
+  /**
+   * Resets the user local authenticator if token matches stored hash
+   * @param resetToken - The stored reset token
+   * @param token - Passcode of the reset token
+   * @param newPassword - New password to set for the authentication
+   */
+  public static async resetLocalUsingToken(resetToken: ResetToken,
+    token: string, newPassword: string): Promise<LocalAuthenticator | undefined> {
+    // Test if the hash matches the token
+    if (!await this.compareHash(token, resetToken.hash)) return undefined;
+    const auth = await this.setUserAuthenticationHash(
+      resetToken.user, newPassword, LocalAuthenticator,
+    );
+    await ResetToken.remove(resetToken);
+    return auth;
+  }
+
+  /**
+   * Creates a ResetToken for the given user.
+   * @param user
+   */
+  public static async createResetToken(user: User): Promise<ResetTokenInfo> {
+    const password = randomBytes(32).toString('hex');
+    const resetToken = await this.setUserAuthenticationHash(user, password, ResetToken);
+
+    const expiration = new Date().getTime() + this.RESET_TOKEN_EXPIRES * 1000;
+    resetToken.expires = new Date(expiration);
+    await resetToken.save();
+
+    return {
+      resetToken,
+      password,
+    };
   }
 
   /**
