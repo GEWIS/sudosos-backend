@@ -132,6 +132,7 @@ describe('ContainerService', async (): Promise<void> => {
 
   // close database connection
   after(async () => {
+    await ctx.connection.dropDatabase();
     await ctx.connection.close();
   });
 
@@ -156,9 +157,10 @@ describe('ContainerService', async (): Promise<void> => {
       const withRevisions = ctx.containers.filter((c) => c.currentRevision > 0);
       expect(records).to.be.length(withRevisions.length);
       expect(containerSuperset(records, ctx.containers)).to.be.true;
-      expect(records.every(
-        (c: ContainerResponse) => ctx.specification.validateModel('ContainerResponse', c, false, true).valid,
-      )).to.be.true;
+      records.forEach((c) => {
+        const validator = ctx.specification.validateModel('ContainerResponse', c, false, true);
+        expect(validator.valid).to.be.true;
+      });
 
       expect(_pagination.take).to.equal(undefined);
       expect(_pagination.skip).to.equal(undefined);

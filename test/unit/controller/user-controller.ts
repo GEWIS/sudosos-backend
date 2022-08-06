@@ -232,6 +232,7 @@ describe('UserController', (): void => {
   });
 
   after(async () => {
+    await ctx.connection.dropDatabase();
     await ctx.connection.close();
   });
 

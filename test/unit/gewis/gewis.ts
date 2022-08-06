@@ -90,6 +90,7 @@ describe('GEWIS Helper functions', async (): Promise<void> => {
   });
 
   after(async () => {
+    await ctx.connection.dropDatabase();
     await ctx.connection.close();
     restoreLDAPEnv(ldapEnvVariables);
   });

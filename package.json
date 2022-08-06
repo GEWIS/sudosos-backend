@@ -35,6 +35,7 @@
     "ldapts": "^3.2.2",
     "log4js": "^6.3.0",
     "mime-types": "^2.1.33",
+    "mysql2": "^2.3.3",
     "node-cron": "^3.0.0",
     "reflect-metadata": "^0.1.13",
     "sqlite3": "^5.0.2",

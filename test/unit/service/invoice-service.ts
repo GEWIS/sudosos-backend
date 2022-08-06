@@ -171,6 +171,7 @@ describe('InvoiceService', () => {
 
   // close database connection
   after(async () => {
+    await ctx.connection.dropDatabase();
     await ctx.connection.close();
   });
 

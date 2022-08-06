@@ -55,8 +55,8 @@ function bannerEq(a: Banner, b: BannerResponse): Boolean {
     && downloadName === b.image
     && a.duration === b.duration
     && a.active === b.active
-    && a.startDate.getTime() === new Date(b.startDate).getTime()
-    && a.endDate.getTime() === new Date(b.endDate).getTime();
+    && Math.round(a.startDate.getTime() / 1000) * 1000 === new Date(b.startDate).getTime()
+    && Math.round(a.endDate.getTime() / 1000) * 1000 === new Date(b.endDate).getTime();
 }
 
 describe('BannerController', async (): Promise<void> => {
@@ -175,6 +175,7 @@ describe('BannerController', async (): Promise<void> => {
 
   // close database connection
   after(async () => {
+    await ctx.connection.dropDatabase();
     await ctx.connection.close();
   });
 

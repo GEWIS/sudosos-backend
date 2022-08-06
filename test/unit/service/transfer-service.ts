@@ -61,6 +61,7 @@ describe('TransferService', async (): Promise<void> => {
     };
   });
   after(async () => {
+    await ctx.connection.dropDatabase();
     await ctx.connection.close();
   });
   describe('getTransfers function', async (): Promise<void> => {

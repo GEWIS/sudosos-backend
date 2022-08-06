@@ -150,6 +150,7 @@ describe('ProductCategoryController', async (): Promise<void> => {
 
   // close database connection
   after(async () => {
+    await ctx.connection.dropDatabase();
     await ctx.connection.close();
   });
 

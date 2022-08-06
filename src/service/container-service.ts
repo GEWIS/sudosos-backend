@@ -100,8 +100,8 @@ export default class ContainerService {
       id: rawContainer.container_id,
       revision: rawContainer.container_revision,
       name: rawContainer.container_name,
-      createdAt: rawContainer.container_createdAt,
-      updatedAt: rawContainer.container_updatedAt,
+      createdAt: rawContainer.container_createdAt.toISOString(),
+      updatedAt: rawContainer.container_updatedAt.toISOString(),
       public: !!rawContainer.container_public,
       owner: {
         id: rawContainer.owner_id,
@@ -193,7 +193,7 @@ export default class ContainerService {
    * Combines the database result products and containers into a ContainerWithProductsResponse
    * @param rawResponse - The SQL result to combine
    */
-  public static async combineProducts(rawResponse: any[])
+  private static async combineProducts(rawResponse: any[])
     : Promise<ContainerWithProductsResponse[]> {
     const collected: ContainerWithProductsResponse[] = [];
     const mapping = new Map<string, ContainerWithProductsResponse>();
@@ -211,6 +211,7 @@ export default class ContainerService {
         category_id: response.products_categoryId,
         category_name: response.category_name,
         createdAt: response.products_createdAt,
+        updatedAt: response.products_updatedAt,
         owner_id: response.product_owner_id,
         owner_firstName: response.product_owner_firstName,
         owner_lastName: response.product_owner_lastName,

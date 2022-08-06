@@ -70,6 +70,7 @@ describe('VatGroupService', () => {
   });
 
   after(async () => {
+    await ctx.connection.dropDatabase();
     await ctx.connection.close();
   });
 

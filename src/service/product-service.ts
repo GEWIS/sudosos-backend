@@ -175,12 +175,13 @@ export default class ProductService {
     return {
       id: rawProduct.id,
       revision: rawProduct.revision,
-      alcoholPercentage: rawProduct.alcoholpercentage,
+      alcoholPercentage: typeof rawProduct.alcoholpercentage === 'string' ? parseFloat(rawProduct.alcoholpercentage) : rawProduct.alcoholpercentage,
       category: {
         id: rawProduct.category_id,
         name: rawProduct.category_name,
       },
-      createdAt: rawProduct.createdAt,
+      createdAt: typeof rawProduct.createdAt === 'string' ? rawProduct.createdAt : rawProduct.createdAt.toISOString(),
+      updatedAt: typeof rawProduct.updatedAt === 'string' ? rawProduct.updatedAt : rawProduct.updatedAt.toISOString(),
       owner: {
         id: rawProduct.owner_id,
         firstName: rawProduct.owner_firstName,

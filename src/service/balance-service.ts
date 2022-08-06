@@ -16,6 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { getConnection, getManager } from 'typeorm';
+import * as Process from 'process';
 import Balance from '../entity/transactions/balance';
 import BalanceResponse from '../controller/response/balance-response';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
@@ -68,7 +69,14 @@ export default class BalanceService {
 
     // eslint-disable-next-line prefer-template
     let query = 'REPLACE INTO balance '
-      + "select datetime('now'), datetime('now'), 1, moneys2.id, max(moneys2.amount), max(t1.id), max(t2.id) from ("
+      + 'select '
+      + (Process.env.TYPEORM_CONNECTION === 'sqlite' ? "datetime('now'), " : 'NOW(), ')
+      + (Process.env.TYPEORM_CONNECTION === 'sqlite' ? "datetime('now'), " : 'NOW(), ')
+      + '1, '
+      + 'moneys2.id, '
+      + 'max(moneys2.amount), '
+      + 'max(t1.id), '
+      + 'max(t2.id) from ('
         + 'select id, sum(amount) as `amount`, max(createdAt1) as `createdAt1`, max(createdAt2) as `createdAt2` from ( '
         + 'select t1.fromId as `id`, str.amount * pr.priceInclVat * -1 as `amount`, t1.createdAt as `createdAt1`, null as `createdAt2` from `transaction` as `t1` '
           + 'left join `sub_transaction` st on t1.id=st.transactionId '

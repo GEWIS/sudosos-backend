@@ -164,6 +164,7 @@ describe('TransactionService', (): void => {
   });
 
   after(async () => {
+    await ctx.connection.dropDatabase();
     await ctx.connection.close();
   });
 

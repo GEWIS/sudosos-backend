@@ -168,6 +168,7 @@ describe('TransferController', async (): Promise<void> => {
   });
 
   after(async () => {
+    await connection.dropDatabase();
     await connection.close();
   });
 

@@ -207,9 +207,7 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
 
   // close database connection
   afterEach(async () => {
-    await UserBorrelkaartGroup.clear();
-    await User.clear();
-    await BorrelkaartGroup.clear();
+    await ctx.connection.dropDatabase();
     await ctx.connection.close();
   });
 

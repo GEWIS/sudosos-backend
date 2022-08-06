@@ -17,6 +17,7 @@
  */
 import { createQueryBuilder, FindManyOptions } from 'typeorm';
 import { DineroObject } from 'dinero.js';
+import * as Process from 'process';
 import { PaginationParameters } from '../helpers/pagination';
 import VatGroup, { VatDeclarationPeriod } from '../entity/vat-group';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
@@ -183,8 +184,12 @@ export default class VatGroupService {
         'MAX(vatgroup.percentage) as percentage',
         'MAX(vatgroup.deleted) as deleted',
         // Timezones are a bitch
-        `(STRFTIME('%m', DATETIME(str.createdAt, '${(new Date()).getTimezoneOffset()} minutes')) - 1) / ${divider} as period`,
-        'Strftime(\'%Y\', str.createdAt) as year',
+        Process.env.TYPEORM_CONNECTION === 'sqlite'
+          ? `(STRFTIME('%m', DATETIME(str.createdAt, '${-(new Date()).getTimezoneOffset()} minutes')) - 1) / ${divider} as period`
+          : `(DATE_FORMAT(DATE_ADD(str.createdAt, INTERVAL ${-(new Date()).getTimezoneOffset()} MINUTE), '%m'), - 1) / ${divider} as period`,
+        Process.env.TYPEORM_CONNECTION === 'sqlite'
+          ? 'Strftime(\'%Y\', str.createdAt) as year'
+          : 'DATE_FORMAT(str.createdAt, \'%Y\') as year',
         'SUM(ROUND((str.amount * product.priceInclVat * vatgroup.percentage) / (100 + vatgroup.percentage))) as value',
       ])
       .innerJoin(ProductRevision, 'product', 'str.productRevision = product.revision AND str.productProduct = product.productId')

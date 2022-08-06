@@ -101,6 +101,7 @@ describe('AuthenticationService', (): void => {
 
   after(async () => {
     restoreLDAPEnv(ldapEnvVariables);
+    await ctx.connection.dropDatabase();
     await ctx.connection.close();
   });
 

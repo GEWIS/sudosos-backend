@@ -78,8 +78,8 @@ export default class PointOfSaleService {
       revision: rawPointOfSale.revision,
       name: rawPointOfSale.name,
       useAuthentication: rawPointOfSale.useAuthentication === 1,
-      createdAt: rawPointOfSale.createdAt,
-      updatedAt: rawPointOfSale.updatedAt,
+      createdAt: typeof rawPointOfSale.createdAt === 'string' ? rawPointOfSale.createdAt : rawPointOfSale.createdAt.toISOString(),
+      updatedAt: typeof rawPointOfSale.updatedAt === 'string' ? rawPointOfSale.updatedAt : rawPointOfSale.updatedAt.toISOString(),
       owner: {
         id: rawPointOfSale.owner_id,
         firstName: rawPointOfSale.owner_firstName,

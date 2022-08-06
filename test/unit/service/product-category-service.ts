@@ -78,7 +78,7 @@ describe('ProductCategoryService', async (): Promise<void> => {
     });
 
     after(async () => {
-      // close database connection
+      await ctx.connection.dropDatabase();
       await ctx.connection.close();
     });
 
@@ -162,6 +162,7 @@ describe('ProductCategoryService', async (): Promise<void> => {
 
     afterEach(async () => {
       // close database connection
+      await ctx.connection.dropDatabase();
       await ctx.connection.close();
     });
 
@@ -209,6 +210,7 @@ describe('ProductCategoryService', async (): Promise<void> => {
 
     afterEach(async () => {
       // close database connection
+      await ctx.connection.dropDatabase();
       await ctx.connection.close();
     });
 
@@ -265,6 +267,7 @@ describe('ProductCategoryService', async (): Promise<void> => {
 
     afterEach(async () => {
       // close database connection
+      await ctx.connection.dropDatabase();
       await ctx.connection.close();
     });
 
