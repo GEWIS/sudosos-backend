@@ -234,6 +234,7 @@ export default class Gewis {
         },
         User: {
           get: { all: star, own: star },
+          acceptToS: { own: star },
         },
       },
       assignmentCheck: async (user: User) => authorizedBuyerUserTypes.has(user.type),
