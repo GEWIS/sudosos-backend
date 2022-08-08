@@ -27,7 +27,6 @@ import AuthenticationResponse from '../controller/response/authentication-respon
 import TokenHandler from '../authentication/token-handler';
 import RoleManager from '../rbac/role-manager';
 import LDAPAuthenticator from '../entity/authenticator/ldap-authenticator';
-import { asNumber } from '../helpers/validators';
 import MemberAuthenticator from '../entity/authenticator/member-authenticator';
 import {
   bindUser, getLDAPConnection, getLDAPSettings, LDAPUser, userFromLDAP,
@@ -57,7 +56,10 @@ export default class AuthenticationService {
    * ResetToken expiry time in seconds
    */
   private static RESET_TOKEN_EXPIRES: () => number =
-  () => parseInt(process.env.RESET_TOKEN_EXPIRES, 10) ?? 3600;
+  () => {
+    const env = parseInt(process.env.RESET_TOKEN_EXPIRES, 10);
+    return Number.isNaN(env) ? 3600 : env;
+  };
 
   /**
    * Helper function hashes the given string with salt.

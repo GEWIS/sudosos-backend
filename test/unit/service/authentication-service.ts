@@ -246,7 +246,6 @@ describe('AuthenticationService', (): void => {
       await inUserContext(await UserFactory().clone(1), async (user: User) => {
         const tokenInfo = await AuthenticationService.createResetToken(user);
         expect(tokenInfo.resetToken.user).to.eq(user);
-
         expect(tokenInfo.resetToken.expires).to.be.greaterThan(new Date());
       });
     });
