@@ -341,8 +341,6 @@ export default class AuthenticationController extends BaseController {
         return;
       }
 
-      console.error(resetToken.expires);
-      console.error(new Date());
       if (resetToken.expires <= new Date()) {
         res.status(403).json({
           message: 'Token expired.',
