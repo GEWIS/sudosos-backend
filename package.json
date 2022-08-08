@@ -37,7 +37,7 @@
     "mime-types": "^2.1.33",
     "node-cron": "^3.0.0",
     "reflect-metadata": "^0.1.13",
-    "sqlite3": "^5.0.2",
+    "sqlite3": "^5.0.11",
     "stripe": "^8.201.0",
     "swagger-model-validator": "^3.0.20",
     "typeorm": "^0.2.34",
