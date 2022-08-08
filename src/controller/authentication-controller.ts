@@ -243,7 +243,7 @@ export default class AuthenticationController extends BaseController {
    * Local login and hand out token
    * @route POST /authentication/local
    * @group authenticate - Operations of authentication controller
-   * @param {AuthenticationPinRequest.model} req.body.required - The local login.
+   * @param {AuthenticationLocalRequest.model} req.body.required - The local login.
    * @returns {AuthenticationResponse.model} 200 - The created json web token.
    * @returns {string} 400 - Validation error.
    * @returns {string} 403 - Authentication error.
