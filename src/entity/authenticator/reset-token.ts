@@ -15,13 +15,14 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { Column } from 'typeorm';
+import { Column, Entity } from 'typeorm';
 import HashBasedAuthenticationMethod from './hash-based-authentication-method';
 
 /**
  * @typedef {HashBasedAuthenticationMethod} ResetToken
  * @property {string} expires.required - The end date from which the token is expired
  */
+@Entity()
 export default class ResetToken extends HashBasedAuthenticationMethod {
   @Column({
     type: 'datetime',

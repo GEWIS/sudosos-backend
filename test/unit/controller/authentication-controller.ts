@@ -38,6 +38,10 @@ import PinAuthenticator from '../../../src/entity/authenticator/pin-authenticato
 import { seedHashAuthenticator } from '../../seed';
 import AuthenticationLocalRequest from '../../../src/controller/request/authentication-local-request';
 import LocalAuthenticator from '../../../src/entity/authenticator/local-authenticator';
+import ResetLocalRequest from '../../../src/controller/request/reset-local-request';
+import { inUserContext, UserFactory } from '../../helpers/user-factory';
+import AuthenticationService from '../../../src/service/authentication-service';
+import AuthenticationResetTokenRequest from '../../../src/controller/request/authentication-reset-token-request';
 
 describe('AuthenticationController', async (): Promise<void> => {
   let ctx: {
@@ -317,6 +321,128 @@ describe('AuthenticationController', async (): Promise<void> => {
         .send(validLDAPRequest);
       expect(res.status).to.equal(403);
       expect(res.body.message).to.equal('Invalid credentials.');
+    });
+  });
+  describe('POST /authentication/local/reset', async () => {
+    it('should return an HTTP 204', async () => {
+      await inUserContext(await UserFactory().clone(1), async (user: User) => {
+        const req: ResetLocalRequest = {
+          accountMail: user.email,
+        };
+        const res = await request(ctx.app)
+          .post('/authentication/local/reset')
+          .send(req);
+        expect(res.status).to.equal(204);
+      });
+    });
+    it('should return an HTTP 204 is user does not exist', async () => {
+      const req: ResetLocalRequest = {
+        accountMail: 'fake@sudosos.nl',
+      };
+      const res = await request(ctx.app)
+        .post('/authentication/local/reset')
+        .send(req);
+      expect(res.status).to.equal(204);
+    });
+  });
+  describe('PUT /authentication/local', () => {
+    it('should reset local if token is correct', async () => {
+      await inUserContext(await UserFactory().clone(1), async (user: User) => {
+        const resetToken = await AuthenticationService.createResetToken(user);
+        const password = 'Password2';
+        const req: AuthenticationResetTokenRequest = {
+          accountMail: user.email,
+          password,
+          token: resetToken.password,
+        };
+
+        let res = await request(ctx.app)
+          .put('/authentication/local')
+          .send(req);
+        expect(res.status).to.equal(204);
+
+        const auth: AuthenticationLocalRequest = {
+          accountMail: user.email, password,
+        };
+
+        res = await request(ctx.app)
+          .post('/authentication/local')
+          .send(auth);
+
+        expect(res.status).to.be.eq(200);
+      });
+    });
+    it('should return an HTTP 403 if user does not exist', async () => {
+      await inUserContext(await UserFactory().clone(1), async (user: User) => {
+        const resetToken = await AuthenticationService.createResetToken(user);
+        const password = 'Password2';
+        const req: AuthenticationResetTokenRequest = {
+          accountMail: 'wrong@sudosos.nl',
+          password,
+          token: resetToken.password,
+        };
+
+        const res = await request(ctx.app)
+          .put('/authentication/local')
+          .send(req);
+        expect(res.status).to.equal(403);
+        expect(res.body.message).to.equal('Invalid token.');
+      });
+    });
+    it('should return an HTTP 403 if the user has requested no reset', async () => {
+      await inUserContext(await UserFactory().clone(1), async (user: User) => {
+        const password = 'Password2';
+        const req: AuthenticationResetTokenRequest = {
+          accountMail: user.email,
+          password,
+          token: password,
+        };
+
+        const res = await request(ctx.app)
+          .put('/authentication/local')
+          .send(req);
+        expect(res.status).to.equal(403);
+        expect(res.body.message).to.equal('Invalid token.');
+      });
+    });
+    it('should return an HTTP 403 if the token is expired', async () => {
+      const { RESET_TOKEN_EXPIRES } = process.env;
+      process.env.RESET_TOKEN_EXPIRES = '0';
+      await inUserContext(await UserFactory().clone(1), async (user: User) => {
+        const resetToken = await AuthenticationService.createResetToken(user);
+        const password = 'Password2';
+        const req: AuthenticationResetTokenRequest = {
+          accountMail: user.email,
+          password,
+          token: resetToken.password,
+        };
+
+        await new Promise((f) => setTimeout(f, 100));
+
+        const res = await request(ctx.app)
+          .put('/authentication/local')
+          .send(req);
+        expect(res.status).to.equal(403);
+        expect(res.body.message).to.equal('Token expired.');
+      });
+      process.env.RESET_TOKEN_EXPIRES = RESET_TOKEN_EXPIRES;
+    });
+    it('should return an HTTP 403 if the wrong token password is provided', async () => {
+      await inUserContext(await UserFactory().clone(1), async (user: User) => {
+        await AuthenticationService.createResetToken(user);
+        const password = 'Password2';
+        const req: AuthenticationResetTokenRequest = {
+          accountMail: user.email,
+          password,
+          token: 'wrong',
+        };
+
+        const res = await request(ctx.app)
+          .put('/authentication/local')
+          .send(req);
+        expect(res.status).to.equal(403);
+        expect(res.body.message).to.equal('Invalid token.');
+      });
     });
   });
 });

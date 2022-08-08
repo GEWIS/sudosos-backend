@@ -34,6 +34,7 @@ import wrapInManager from '../../../src/helpers/database';
 import { restoreLDAPEnv, storeLDAPEnv } from '../../helpers/test-helpers';
 import HashBasedAuthenticationMethod from '../../../src/entity/authenticator/hash-based-authentication-method';
 import LocalAuthenticator from '../../../src/entity/authenticator/local-authenticator';
+import ResetToken from '../../../src/entity/authenticator/reset-token';
 
 export default function userIsAsExpected(user: User | UserResponse, ADResponse: any) {
   expect(user.firstName).to.equal(ADResponse.givenName);
@@ -116,7 +117,10 @@ describe('AuthenticationService', (): void => {
       );
       expect(DBUser).to.be.undefined;
       const clientBindStub = sinon.stub(Client.prototype, 'bind').resolves(null);
-      const clientSearchStub = sinon.stub(Client.prototype, 'search').resolves({ searchReferences: [], searchEntries: [ctx.validADUser] });
+      const clientSearchStub = sinon.stub(Client.prototype, 'search').resolves({
+        searchReferences: [],
+        searchEntries: [ctx.validADUser],
+      });
       stubs.push(clientBindStub);
       stubs.push(clientSearchStub);
 
@@ -145,7 +149,10 @@ describe('AuthenticationService', (): void => {
 
       expect(DBUser).to.be.undefined;
       const clientBindStub = sinon.stub(Client.prototype, 'bind').resolves(null);
-      const clientSearchStub = sinon.stub(Client.prototype, 'search').resolves({ searchReferences: [], searchEntries: [otherValidADUser] });
+      const clientSearchStub = sinon.stub(Client.prototype, 'search').resolves({
+        searchReferences: [],
+        searchEntries: [otherValidADUser],
+      });
       stubs.push(clientBindStub);
       stubs.push(clientSearchStub);
 
@@ -168,7 +175,10 @@ describe('AuthenticationService', (): void => {
     });
     it('should return undefined if wrong password', async () => {
       const clientBindStub = sinon.stub(Client.prototype, 'bind').resolves(null);
-      const clientSearchStub = sinon.stub(Client.prototype, 'search').resolves({ searchReferences: [], searchEntries: [] });
+      const clientSearchStub = sinon.stub(Client.prototype, 'search').resolves({
+        searchReferences: [],
+        searchEntries: [],
+      });
       stubs.push(clientBindStub);
       stubs.push(clientSearchStub);
 
@@ -189,11 +199,57 @@ describe('AuthenticationService', (): void => {
         expect(await AuthenticationService.compareHash(right, auth.hash)).to.be.true;
       });
     }
+
     it('should set and verify a user PIN-Code', async () => {
       await verifyLogin(PinAuthenticator, '2000', '1000');
     });
     it('should set and verify a user local password', async () => {
       await verifyLogin(LocalAuthenticator, 'Im so right', 'Im so wrong');
+    });
+  });
+  describe('resetLocalUsingToken function', () => {
+    it('should reset password if resetToken is correct and user has no password', async () => {
+      await inUserContext(await UserFactory().clone(1), async (user: User) => {
+        let localAuthenticator = await LocalAuthenticator.findOne({ where: { user }, relations: ['user'] });
+        expect(localAuthenticator).to.be.undefined;
+
+        const tokenInfo = await AuthenticationService.createResetToken(user);
+        const auth = await AuthenticationService.resetLocalUsingToken(tokenInfo.resetToken, tokenInfo.password, 'Password');
+        localAuthenticator = await LocalAuthenticator.findOne({ where: { user }, relations: ['user'] });
+        expect(localAuthenticator).to.not.be.undefined;
+        expect(auth).to.not.be.undefined;
+        expect(AuthenticationService.compareHash('Password', auth.hash)).to.eventually.be.true;
+      });
+    });
+    it('should reset password if resetToken is correct and user has password', async () => {
+      await inUserContext(await UserFactory().clone(1), async (user: User) => {
+        let auth = await AuthenticationService.setUserAuthenticationHash(user, 'Password2', LocalAuthenticator);
+        expect(AuthenticationService.compareHash('Password2', auth.hash)).to.eventually.be.true;
+
+        const tokenInfo = await AuthenticationService.createResetToken(user);
+        auth = await AuthenticationService.resetLocalUsingToken(tokenInfo.resetToken, tokenInfo.password, 'Password');
+
+        expect(auth).to.not.be.undefined;
+        expect(AuthenticationService.compareHash('Password', auth.hash)).to.eventually.be.true;
+        expect(AuthenticationService.compareHash('Password2', auth.hash)).to.eventually.be.false;
+      });
+    });
+    it('should return undefined if resetToken is incorrect', async () => {
+      await inUserContext(await UserFactory().clone(1), async (user: User) => {
+        const tokenInfo = await AuthenticationService.createResetToken(user);
+        const auth = await AuthenticationService.resetLocalUsingToken(tokenInfo.resetToken, 'wrong', 'Password');
+        expect(auth).to.be.undefined;
+      });
+    });
+  });
+  describe('createResetToken function', () => {
+    it('should create a reset token', async () => {
+      await inUserContext(await UserFactory().clone(1), async (user: User) => {
+        const tokenInfo = await AuthenticationService.createResetToken(user);
+        expect(tokenInfo.resetToken.user).to.eq(user);
+
+        expect(tokenInfo.resetToken.expires).to.be.greaterThan(new Date());
+      });
     });
   });
 });

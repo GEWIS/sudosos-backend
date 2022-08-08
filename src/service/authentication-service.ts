@@ -56,7 +56,8 @@ export default class AuthenticationService {
   /**
    * ResetToken expiry time in seconds
    */
-  private static RESET_TOKEN_EXPIRES: number = asNumber(process.env.RESET_TOKEN_EXPIRES) ?? 3600;
+  private static RESET_TOKEN_EXPIRES: () => number =
+  () => asNumber(process.env.RESET_TOKEN_EXPIRES) ?? 3600;
 
   /**
    * Helper function hashes the given string with salt.
@@ -312,11 +313,11 @@ export default class AuthenticationService {
   public static async resetLocalUsingToken(resetToken: ResetToken,
     token: string, newPassword: string): Promise<LocalAuthenticator | undefined> {
     // Test if the hash matches the token
-    if (!await this.compareHash(token, resetToken.hash)) return undefined;
+    if (!(await this.compareHash(token, resetToken.hash))) return undefined;
     const auth = await this.setUserAuthenticationHash(
       resetToken.user, newPassword, LocalAuthenticator,
     );
-    await ResetToken.remove(resetToken);
+    await ResetToken.delete(resetToken);
     return auth;
   }
 
@@ -328,7 +329,7 @@ export default class AuthenticationService {
     const password = randomBytes(32).toString('hex');
     const resetToken = await this.setUserAuthenticationHash(user, password, ResetToken);
 
-    const expiration = new Date().getTime() + this.RESET_TOKEN_EXPIRES * 1000;
+    const expiration = new Date().getTime() + this.RESET_TOKEN_EXPIRES() * 1000;
     resetToken.expires = new Date(expiration);
     await resetToken.save();
 

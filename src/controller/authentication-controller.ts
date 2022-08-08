@@ -333,7 +333,7 @@ export default class AuthenticationController extends BaseController {
         return;
       }
 
-      const resetToken = await ResetToken.findOne({ where: { user } });
+      const resetToken = await ResetToken.findOne({ where: { user }, relations: ['user'] });
       if (!resetToken) {
         res.status(403).json({
           message: 'Invalid token.',
@@ -341,6 +341,8 @@ export default class AuthenticationController extends BaseController {
         return;
       }
 
+      console.error(resetToken.expires);
+      console.error(new Date());
       if (resetToken.expires <= new Date()) {
         res.status(403).json({
           message: 'Token expired.',
@@ -348,7 +350,7 @@ export default class AuthenticationController extends BaseController {
         return;
       }
 
-      const auth = AuthenticationService
+      const auth = await AuthenticationService
         .resetLocalUsingToken(resetToken, body.token, body.password);
       if (!auth) {
         res.status(403).json({
@@ -357,7 +359,7 @@ export default class AuthenticationController extends BaseController {
         return;
       }
 
-      res.status(204);
+      res.status(204).send();
       return;
     } catch (error) {
       this.logger.error('Could reset using token:', error);
@@ -375,21 +377,19 @@ export default class AuthenticationController extends BaseController {
   public async createResetToken(req: Request, res: Response): Promise<void> {
     const body = req.body as ResetLocalRequest;
     this.logger.trace('Reset request for user', body.accountMail);
-
     try {
       const user = await User.findOne({
         where: { email: body.accountMail, deleted: false },
       });
-
       // If the user does not exist we simply return a success code as to not leak info.
       if (!user) {
-        res.status(204);
+        res.status(204).send();
         return;
       }
 
       await AuthenticationService.createResetToken(user);
       // send email with link.
-      res.status(204);
+      res.status(204).send();
       return;
     } catch (error) {
       this.logger.error('Could not create reset token:', error);
