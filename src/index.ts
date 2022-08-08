@@ -59,7 +59,6 @@ import InvoiceController from './controller/invoice-controller';
 import PayoutRequestController from './controller/payout-request-controller';
 import RootController from './controller/root-controller';
 import ADService from './service/ad-service';
-import Bindings from './helpers/bindings';
 import VatGroupController from './controller/vat-group-controller';
 import AuthenticationSecureController from './controller/authentication-secure-controller';
 
@@ -156,7 +155,7 @@ async function setupAuthentication(tokenHandler: TokenHandler, application: Appl
   application.app.use('/v1/authentication', gewisController.getRouter());
 
   // INJECT GEWIS BINDINGS
-  Bindings.ldapUserCreation = Gewis.findOrCreateGEWISUserAndBind;
+  Gewis.overwriteBindings();
 
   // Define middleware to be used by any other route.
   const tokenMiddleware = new TokenMiddleware({ refreshFactor: 0.5, tokenHandler });
