@@ -51,13 +51,13 @@ export default class AuthenticationService {
   /**
    * Amount of salt rounds to use.
    */
-  private static BCRYPT_ROUNDS: number = asNumber(process.env.BCRYPT_ROUNDS) ?? 12;
+  private static BCRYPT_ROUNDS: number = parseInt(process.env.BCRYPT_ROUNDS, 10) ?? 12;
 
   /**
    * ResetToken expiry time in seconds
    */
   private static RESET_TOKEN_EXPIRES: () => number =
-  () => asNumber(process.env.RESET_TOKEN_EXPIRES) ?? 3600;
+  () => parseInt(process.env.RESET_TOKEN_EXPIRES, 10) ?? 3600;
 
   /**
    * Helper function hashes the given string with salt.
