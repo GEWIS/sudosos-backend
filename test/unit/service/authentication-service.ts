@@ -34,7 +34,6 @@ import wrapInManager from '../../../src/helpers/database';
 import { restoreLDAPEnv, storeLDAPEnv } from '../../helpers/test-helpers';
 import HashBasedAuthenticationMethod from '../../../src/entity/authenticator/hash-based-authentication-method';
 import LocalAuthenticator from '../../../src/entity/authenticator/local-authenticator';
-import ResetToken from '../../../src/entity/authenticator/reset-token';
 
 export default function userIsAsExpected(user: User | UserResponse, ADResponse: any) {
   expect(user.firstName).to.equal(ADResponse.givenName);
