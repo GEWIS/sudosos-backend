@@ -257,7 +257,9 @@ describe('ProductCategoryController', async (): Promise<void> => {
         .get(`/productcategories/${productCategoryCount + 1}`)
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
-      expect(await ProductCategory.findOne(productCategoryCount + 1)).to.be.undefined;
+      expect(await ProductCategory.findOne({
+        where: { id: productCategoryCount + 1 },
+      })).to.be.null;
 
       // check if productcategory is not returned
       expect(res.body).to.equal('Productcategory not found.');
@@ -284,7 +286,9 @@ describe('ProductCategoryController', async (): Promise<void> => {
 
       expect(await ProductCategory.count()).to.equal(productCategoryCount + 1);
       expect(ctx.validRequest.name).to.equal(res.body.name);
-      const databaseEntry = await ProductCategory.findOne((res.body as ProductCategoryResponse).id);
+      const databaseEntry = await ProductCategory.findOne({
+        where: { id: (res.body as ProductCategoryResponse).id },
+      });
       expect(databaseEntry).to.exist;
     });
     it('should return an HTTP 400 if the given productcategory is invalid', async () => {
@@ -330,7 +334,9 @@ describe('ProductCategoryController', async (): Promise<void> => {
       ).valid).to.be.true;
 
       expect(ctx.validRequest2.name).to.equal(res.body.name);
-      const databaseEntry = await ProductCategory.findOne((res.body as ProductCategoryResponse).id);
+      const databaseEntry = await ProductCategory.findOne({
+        where: { id: (res.body as ProductCategoryResponse).id },
+      });
       expect(databaseEntry).to.exist;
     });
     it('should return an HTTP 400 if the update is invalid', async () => {
@@ -356,7 +362,9 @@ describe('ProductCategoryController', async (): Promise<void> => {
       expect(res.status).to.equal(404);
 
       // sanity check
-      expect(await ProductCategory.findOne(productCategoryCount + 1)).to.be.undefined;
+      expect(await ProductCategory.findOne({
+        where: { id: productCategoryCount + 1 },
+      })).to.be.null;
 
       // check if productcategory is not returned
       expect(res.body).to.equal('Productcategory not found.');

@@ -135,7 +135,7 @@ describe('AuthenticationService', (): void => {
       const auth = await LDAPAuthenticator.findOne(
         { where: { UUID: newADSharedAccount.objectGUID } },
       );
-      expect(auth).to.be.undefined;
+      expect(auth).to.be.null;
 
       const clientBindStub = sinon.stub(Client.prototype, 'bind').resolves(null);
       const clientSearchStub = sinon.stub(Client.prototype, 'search').resolves({ searchReferences: [], searchEntries: [] });
@@ -167,7 +167,7 @@ describe('AuthenticationService', (): void => {
       const auth = await LDAPAuthenticator.findOne(
         { where: { UUID: newADSharedAccount.objectGUID } },
       );
-      expect(auth).to.be.undefined;
+      expect(auth).to.be.null;
 
       const clientBindStub = sinon.stub(Client.prototype, 'bind').resolves(null);
       const clientSearchStub = sinon.stub(Client.prototype, 'search');
@@ -204,7 +204,7 @@ describe('AuthenticationService', (): void => {
       const newOrgan = (await LDAPAuthenticator.findOne({ where: { UUID: newADSharedAccount.objectGUID }, relations: ['user'] })).user;
 
       const canAuthenticateAs = await MemberAuthenticator.find(
-        { where: { authenticateAs: newOrgan }, relations: ['user'] },
+        { where: { authenticateAs: { id: newOrgan.id } }, relations: ['user'] },
       );
 
       expect(canAuthenticateAs.length).to.be.equal(1);
@@ -220,7 +220,7 @@ describe('AuthenticationService', (): void => {
       const auth = await LDAPAuthenticator.findOne(
         { where: { UUID: newADSharedAccount.objectGUID } },
       );
-      expect(auth).to.be.undefined;
+      expect(auth).to.be.null;
 
       const clientBindStub = sinon.stub(Client.prototype, 'bind').resolves(null);
       const clientSearchStub = sinon.stub(Client.prototype, 'search');
@@ -261,7 +261,7 @@ describe('AuthenticationService', (): void => {
       const newOrgan = (await LDAPAuthenticator.findOne({ where: { UUID: newADSharedAccount.objectGUID }, relations: ['user'] })).user;
 
       let canAuthenticateAsIDs = (await MemberAuthenticator.find(
-        { where: { authenticateAs: newOrgan }, relations: ['user'] },
+        { where: { authenticateAs: { id: newOrgan.id } }, relations: ['user'] },
       )).map((mAuth) => mAuth.user.id);
 
       expect(canAuthenticateAsIDs).to.deep.equalInAnyOrder(firstMembers.map((u: any) => u.id));
@@ -293,7 +293,7 @@ describe('AuthenticationService', (): void => {
       await ADService.syncSharedAccounts();
 
       canAuthenticateAsIDs = (await MemberAuthenticator.find(
-        { where: { authenticateAs: newOrgan }, relations: ['user'] },
+        { where: { authenticateAs: { id: newOrgan.id } }, relations: ['user'] },
       )).map((mAuth) => mAuth.user.id);
 
       const currentMemberIDs = secondMembers.map((u: any) => u.id);
@@ -306,7 +306,7 @@ describe('AuthenticationService', (): void => {
       // precondition.
       expect(await LDAPAuthenticator.findOne(
         { where: { UUID: adUser.objectGUID } },
-      )).to.be.undefined;
+      )).to.be.null;
 
       const userCount = await User.count();
       await wrapInManager(ADService.createAccountIfNew)([adUser]);
@@ -331,7 +331,7 @@ describe('AuthenticationService', (): void => {
       // precondition.
       expect(await LDAPAuthenticator.findOne(
         { where: { UUID: newUser.objectGUID } },
-      )).to.be.undefined;
+      )).to.be.null;
       expect(await LDAPAuthenticator.findOne(
         { where: { UUID: existingUser.objectGUID } },
       )).to.exist;
@@ -365,7 +365,7 @@ describe('AuthenticationService', (): void => {
         name: 'SudoSOS - Test',
         permissions: {
         },
-        assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: 'SudoSOS - Test', user } }) !== undefined,
+        assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: 'SudoSOS - Test', user: { id: user.id } } }) !== undefined,
       });
 
       await ADService.syncUserRoles(roleManager);
@@ -377,8 +377,8 @@ describe('AuthenticationService', (): void => {
       userIsAsExpected(user, newUser);
 
       const users = await wrapInManager(ADService.getUsers)([newUser, existingUser]);
-      expect(await AssignedRole.findOne({ where: { role: 'SudoSOS - Test', user: users[0] } })).to.exist;
-      expect(await AssignedRole.findOne({ where: { role: 'SudoSOS - Test', user: users[1] } })).to.exist;
+      expect(await AssignedRole.findOne({ where: { role: 'SudoSOS - Test', user: { id: users[0].id } } })).to.exist;
+      expect(await AssignedRole.findOne({ where: { role: 'SudoSOS - Test', user: { id: users[1].id } } })).to.exist;
     });
   });
   describe('syncUsers function', () => {

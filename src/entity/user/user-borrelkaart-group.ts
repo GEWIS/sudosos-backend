@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  BaseEntity, Entity, JoinColumn, ManyToOne, OneToOne,
+  BaseEntity, Entity, JoinColumn, ManyToOne, OneToOne, PrimaryColumn,
 } from 'typeorm';
 // eslint-disable-next-line import/no-cycle
 import User from './user';
@@ -31,8 +31,11 @@ import BorrelkaartGroup from './borrelkaart-group';
  */
 @Entity()
 export default class UserBorrelkaartGroup extends BaseEntity {
-  @OneToOne(() => User, { primary: true, nullable: false })
-  @JoinColumn()
+  @PrimaryColumn()
+  public userId: number;
+
+  @OneToOne(() => User, { nullable: false })
+  @JoinColumn({ name: 'userId' })
   public user: User;
 
   @ManyToOne(() => BorrelkaartGroup, { nullable: false })

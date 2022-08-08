@@ -15,6 +15,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+import { In } from 'typeorm';
 import {
   BaseInvoice, CreateInvoiceParams, CreateInvoiceRequest, UpdateInvoiceParams,
 } from '../invoice-request';
@@ -48,7 +49,7 @@ import Invoice from '../../../entity/invoices/invoice';
 async function validTransactionIds<T extends BaseInvoice>(p: T) {
   if (!p.transactionIDs) return toPass(p);
 
-  const transactions = await Transaction.findByIds(p.transactionIDs, { relations: ['from', 'subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice'] });
+  const transactions = await Transaction.find({ where: { id: In(p.transactionIDs) }, relations: ['from', 'subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice'] });
   const notOwnedByUser = transactions.filter((t) => t.from.id !== p.toId);
   if (notOwnedByUser.length !== 0) return toFail(INVALID_TRANSACTION_OWNER());
   if (transactions.length !== p.transactionIDs.length) return toFail(INVALID_TRANSACTION_IDS());
@@ -70,7 +71,7 @@ async function validTransactionIds<T extends BaseInvoice>(p: T) {
  * @param p
  */
 async function existsAndNotDeleted<T extends UpdateInvoiceParams>(p: T) {
-  const base: Invoice = await Invoice.findOne(p.invoiceId, { relations: ['invoiceStatus'] });
+  const base: Invoice = await Invoice.findOne({ where: { id: p.invoiceId }, relations: ['invoiceStatus'] });
 
   if (!base) return toFail(INVALID_INVOICE_ID());
   if (base.invoiceStatus[base.invoiceStatus.length - 1]
@@ -88,7 +89,7 @@ async function existsAndNotDeleted<T extends UpdateInvoiceParams>(p: T) {
 async function differentState<T extends UpdateInvoiceParams>(p: T) {
   if (!p.state) return toPass(p);
 
-  const base: Invoice = await Invoice.findOne(p.invoiceId, { relations: ['invoiceStatus'] });
+  const base: Invoice = await Invoice.findOne({ where: { id: p.invoiceId }, relations: ['invoiceStatus'] });
   if (base.invoiceStatus[base.invoiceStatus.length - 1]
     .state === p.state) {
     return toFail(SAME_INVOICE_STATE());

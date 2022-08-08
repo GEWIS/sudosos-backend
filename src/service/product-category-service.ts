@@ -110,7 +110,7 @@ export default class ProductCategoryService {
    */
   public static async patchProductCategory(id: number, request: ProductCategoryRequest)
     : Promise<ProductCategoryResponse> {
-    const productCategoryToUpdate = await ProductCategory.findOne(id);
+    const productCategoryToUpdate = await ProductCategory.findOne({ where: { id } });
     if (!productCategoryToUpdate) return null;
     const productCategory = Object.assign(productCategoryToUpdate, request);
     return ProductCategory.save(productCategory)
@@ -122,7 +122,7 @@ export default class ProductCategoryService {
    * @param id - The id of the productCategory that needs to be deleted.
    */
   public static async deleteProductCategory(id: number): Promise<ProductCategoryResponse> {
-    const productCategory = await ProductCategory.findOne(id);
+    const productCategory = await ProductCategory.findOne({ where: { id } });
     if (!productCategory) {
       return null;
     }

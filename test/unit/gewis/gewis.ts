@@ -140,7 +140,7 @@ describe('GEWIS Helper functions', async (): Promise<void> => {
         let DBUser = await User.findOne(
           { where: { firstName: ctx.validADUser.givenName, lastName: ctx.validADUser.sn } },
         );
-        expect(DBUser).to.be.undefined;
+        expect(DBUser).to.be.null;
         const userCount = await User.count();
         const gewisUserCount = await GewisUser.count();
 
@@ -159,7 +159,7 @@ describe('GEWIS Helper functions', async (): Promise<void> => {
 
         userIsAsExpected(authUser, ADuser);
 
-        const gewisUser = await GewisUser.findOne({ where: { user: authUser } });
+        const gewisUser = await GewisUser.findOne({ where: { user: { id: authUser.id } } });
         expect(gewisUser.gewisId).to.be.equal(user.id);
 
         expect(await User.count()).to.be.equal(userCount + 1);

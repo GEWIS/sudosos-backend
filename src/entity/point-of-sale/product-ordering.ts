@@ -17,8 +17,8 @@
  */
 import {
   Column,
-  Entity,
-  ManyToOne,
+  Entity, JoinColumn,
+  ManyToOne, PrimaryColumn,
   Unique,
 } from 'typeorm';
 import Product from '../product/product';
@@ -33,12 +33,20 @@ import PointOfSale from './point-of-sale';
 @Entity()
 @Unique(['pos', 'product', 'order'])
 export default class ProductOrdering {
-  @ManyToOne(() => PointOfSale, { primary: true })
-  pos: PointOfSale;
+  @PrimaryColumn()
+  public posId: number;
 
-  @ManyToOne(() => Product, { primary: true })
-  product: Product;
+  @ManyToOne(() => PointOfSale)
+  @JoinColumn({ name: 'posId' })
+  public pos: PointOfSale;
+
+  @PrimaryColumn()
+  public productId: number;
+
+  @ManyToOne(() => Product)
+  @JoinColumn({ name: 'productId' })
+  public product: Product;
 
   @Column()
-  order: number;
+  public order: number;
 }

@@ -16,7 +16,8 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  ObjectLiteral, SelectQueryBuilder,
+  FindOptionsWhere,
+  SelectQueryBuilder,
 } from 'typeorm';
 import { asNumber } from './validators';
 
@@ -74,8 +75,8 @@ export default class QueryFilter {
   public static createFilterWhereClause(
     mapping: FilterMapping,
     params: FilterParameters,
-  ): ObjectLiteral {
-    const where: ObjectLiteral = {};
+  ): FindOptionsWhere<any> {
+    const where: FindOptionsWhere<any> = {};
 
     Object.keys(mapping).forEach((param: string) => {
       const value = params[param];

@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { Connection } from 'typeorm';
+import { Connection, In } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
@@ -194,7 +194,7 @@ describe('InvoiceService', () => {
   });
   describe('createTransferFromTransactions function', () => {
     it('should return a correct Transfer', async () => {
-      const toId = (await User.findOne()).id;
+      const toId = (await User.findOne({ where: {} })).id;
       const transactions: BaseTransactionResponse[] = (
         await TransactionService.getTransactions({ fromId: toId })).records;
       let value = 0;
@@ -337,7 +337,7 @@ describe('InvoiceService', () => {
 
         const invoice = await InvoiceService.createInvoice(createInvoiceRequest);
         expect((await BalanceService.getBalance(debtor.id)).amount.amount).is.equal(0);
-        const transactions = await Transaction.findByIds(tIds, { relations: ['subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice'] });
+        const transactions = await Transaction.find({ where: { id: In(tIds) }, relations: ['subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice'] });
         transactions.forEach((t) => {
           t.subTransactions.forEach((tSub) => {
             tSub.subTransactionRows.forEach((tSubRow) => {
@@ -367,7 +367,7 @@ describe('InvoiceService', () => {
         expect(updatedInvoice.addressee).to.equal(validUpdateInvoiceParams.addressee);
 
         // Sanity check
-        const fromDB = await Invoice.findOne(invoice.id);
+        const fromDB = await Invoice.findOne({ where: { id: invoice.id } });
         expect(fromDB.description).to.equal(validUpdateInvoiceParams.description);
         expect(fromDB.addressee).to.equal(validUpdateInvoiceParams.addressee);
       });
@@ -455,7 +455,7 @@ describe('InvoiceService', () => {
         };
 
         const invoice = await InvoiceService.createInvoice(createInvoiceRequest);
-        let transactions = await Transaction.findByIds(tIds, { relations: ['subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice'] });
+        let transactions = await Transaction.find({ where: { id: In(tIds) }, relations: ['subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice'] });
         transactions.forEach((t) => {
           t.subTransactions.forEach((tSub) => {
             tSub.subTransactionRows.forEach((tSubRow) => {
@@ -476,7 +476,7 @@ describe('InvoiceService', () => {
           .updateInvoice(makeParamsState(InvoiceState.DELETED));
         expect(updatedInvoice.currentState.state).to.be.equal(InvoiceState[InvoiceState.DELETED]);
 
-        transactions = await Transaction.findByIds(tIds, { relations: ['subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice'] });
+        transactions = await Transaction.find({ where: { id: In(tIds) }, relations: ['subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice'] });
         transactions.forEach((t) => {
           t.subTransactions.forEach((tSub) => {
             tSub.subTransactionRows.forEach((tSubRow) => {

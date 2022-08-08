@@ -329,7 +329,8 @@ describe('PayoutRequestService', () => {
       expect(payoutRequest.approvedBy).to.not.be.undefined;
       expect(payoutRequest.approvedBy.id).to.equal(user.id);
 
-      const payoutRequestRaw = await PayoutRequest.findOne(payoutRequest.id, {
+      const payoutRequestRaw = await PayoutRequest.findOne({
+        where: { id: payoutRequest.id },
         relations: ['transfer'],
       });
       expect(payoutRequestRaw.transfer).to.not.be.undefined;

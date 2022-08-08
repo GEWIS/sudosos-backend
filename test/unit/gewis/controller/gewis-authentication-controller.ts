@@ -90,7 +90,7 @@ describe('GewisAuthenticationController', async (): Promise<void> => {
       secret: '42',
     };
 
-    await AuthenticationService.setUserAuthenticationHash(await User.findOne(1), '1000', PinAuthenticator);
+    await AuthenticationService.setUserAuthenticationHash(await User.findOne({ where: { id: 1 } }), '1000', PinAuthenticator);
 
     ctx.roleManager.registerRole({
       name: 'Role',

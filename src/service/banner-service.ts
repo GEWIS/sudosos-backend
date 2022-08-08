@@ -160,7 +160,7 @@ export default class BannerService {
    */
   public static async updateBanner(id: number, bannerReq: BannerRequest): Promise<BannerResponse> {
     // check if banner in database
-    const bannerFound = await Banner.findOne(id);
+    const bannerFound = await Banner.findOne({ where: { id } });
 
     // return undefined if banner not found or request is invalid
     if (!bannerFound || !this.verifyBanner(bannerReq)) {
@@ -170,7 +170,7 @@ export default class BannerService {
     // patch banner if found
     const banner = this.asBanner(bannerReq);
     await Banner.update(id, banner);
-    return this.asBannerResponse(await Banner.findOne(id, { relations: ['image'] }));
+    return this.asBannerResponse(await Banner.findOne({ where: { id }, relations: ['image'] }));
   }
 
   /**
@@ -181,7 +181,7 @@ export default class BannerService {
    */
   public static async deleteBanner(id: number, fileService: FileService): Promise<BannerResponse> {
     // check if banner in database
-    const banner = await Banner.findOne(id, { relations: ['image'] });
+    const banner = await Banner.findOne({ where: { id }, relations: ['image'] });
 
     // return undefined if not found
     if (!banner) {

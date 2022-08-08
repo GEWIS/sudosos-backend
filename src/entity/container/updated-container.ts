@@ -18,7 +18,7 @@
 import {
   Entity,
   JoinColumn, JoinTable, ManyToMany,
-  OneToOne,
+  OneToOne, PrimaryColumn,
 } from 'typeorm';
 import BaseContainer from './base-container';
 import Container from './container';
@@ -32,11 +32,13 @@ import Product from '../product/product';
  */
 @Entity()
 export default class UpdatedContainer extends BaseContainer {
+  @PrimaryColumn()
+  public containerId: number;
+
   @OneToOne(() => Container, {
-    primary: true,
     nullable: false,
   })
-  @JoinColumn()
+  @JoinColumn({ name: 'containerId' })
   public container: Container;
 
   @ManyToMany(() => Product)

@@ -323,7 +323,7 @@ describe('BannerController', async (): Promise<void> => {
       expect(count + 1).to.equal(await Banner.count());
 
       // check if posted banner is indeed in the database
-      const databaseBanner = await Banner.findOne(count + 1);
+      const databaseBanner = await Banner.findOne({ where: { id: count + 1 } });
       expect(bannerEq(databaseBanner, res.body as BannerResponse)).to.be.true;
 
       // success code
@@ -393,13 +393,13 @@ describe('BannerController', async (): Promise<void> => {
       const res = await request(ctx.app)
         .get('/banners/9999999')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
-      const databaseBanner = await Banner.findOne(9999999);
+      const databaseBanner = await Banner.findOne({ where: { id: 9999999 } });
 
       // not found code
       expect(res.status).to.equal(404);
       // check if banner is not returned
       expect(res.body).to.equal('Banner not found.');
-      expect(databaseBanner).to.be.undefined;
+      expect(databaseBanner).to.be.null;
     });
     it('should return an HTTP 403 if not admin', async () => {
       const res = await request(ctx.app)
@@ -437,7 +437,7 @@ describe('BannerController', async (): Promise<void> => {
       ).valid).to.be.true;
 
       // check if posted banner is indeed in the database
-      const databaseBanner = await Banner.findOne(1);
+      const databaseBanner = await Banner.findOne({ where: { id: 1 } });
       expect(bannerEq(databaseBanner, res.body as BannerResponse)).to.be.true;
 
       // success code
@@ -458,7 +458,7 @@ describe('BannerController', async (): Promise<void> => {
       // invalid code
       expect(res.status).to.equal(400);
       // check if banner is unaltered
-      const databaseBanner = await Banner.findOne(1, { relations: ['image'] });
+      const databaseBanner = await Banner.findOne({ where: { id: 1 }, relations: ['image'] });
       expect(bannerEq(databaseBanner, oldBanner)).to.be.true;
       expect(res.body).to.equal('Invalid banner.');
 
@@ -483,8 +483,8 @@ describe('BannerController', async (): Promise<void> => {
         .send(patchBannerReq);
 
       // check if posted banner is not in the database
-      const databaseBanner = await Banner.findOne(999999);
-      expect(databaseBanner).to.be.undefined;
+      const databaseBanner = await Banner.findOne({ where: { id: 999999 } });
+      expect(databaseBanner).to.be.null;
 
       // not found code
       expect(res.status).to.equal(404);
@@ -514,7 +514,7 @@ describe('BannerController', async (): Promise<void> => {
 
   describe('DELETE /banners/:id', () => {
     it('should delete the banner from the database and return an HTTP 200 and the banner with given id if admin', async () => {
-      const previousBannerImage = await BannerImage.findOne(3);
+      const previousBannerImage = await BannerImage.findOne({ where: { id: 3 } });
       const deleteFileStub = sinon.stub(DiskStorage.prototype, 'deleteFile').resolves(true);
       stubs.push(deleteFileStub);
 
@@ -536,11 +536,11 @@ describe('BannerController', async (): Promise<void> => {
       const banner = res.body as BannerResponse;
       // test deletion
       expect(bannerEq(ctx.banners.find((b) => b.id === 3), banner)).to.be.true;
-      expect(await Banner.findOne(3)).to.be.undefined;
+      expect(await Banner.findOne({ where: { id: 3 } })).to.be.null;
 
       // Removed image
       expect(previousBannerImage).to.not.be.undefined;
-      expect(await BannerImage.findOne(3)).to.be.undefined;
+      expect(await BannerImage.findOne({ where: { id: 3 } })).to.be.null;
     });
     it('should return an HTTP 404 if the banner with given id does not exist', async () => {
       // delete the banner
@@ -567,7 +567,7 @@ describe('BannerController', async (): Promise<void> => {
       expect(res.body).to.be.empty;
 
       // check if banner with id 1 is not deleted
-      expect(await Banner.findOne(1)).to.not.be.undefined;
+      expect(await Banner.findOne({ where: { id: 1 } })).to.not.be.undefined;
     });
   });
 
@@ -587,14 +587,14 @@ describe('BannerController', async (): Promise<void> => {
 
       expect(res.status).to.equal(204);
       expect(res.body).to.be.empty;
-      expect((await Banner.findOne(id, { relations: ['image'] })).image).to.be.not.undefined;
+      expect((await Banner.findOne({ where: { id }, relations: ['image'] })).image).to.be.not.undefined;
     });
     it('should update the banner image if admin', async () => {
       const stub = sinon.stub(DiskStorage.prototype, 'validateFileLocation');
       stubs.push(stub);
 
       const { id } = ctx.banners.filter((banner) => banner.image !== undefined)[0];
-      const { image } = await Banner.findOne(id);
+      const { image } = await Banner.findOne({ where: { id } });
 
       const res = await request(ctx.app)
         .post(`/banners/${id}/image`)
@@ -603,7 +603,7 @@ describe('BannerController', async (): Promise<void> => {
 
       expect(res.status).to.equal(204);
       expect(res.body).to.be.empty;
-      expect((await Banner.findOne(id, { relations: ['image'] })).image.id).to.not.equal(image);
+      expect((await Banner.findOne({ where: { id }, relations: ['image'] })).image.id).to.not.equal(image);
     });
     it('should return 403 if not admin', async () => {
       const { id } = ctx.banners.filter((banner) => banner.image === undefined)[0];

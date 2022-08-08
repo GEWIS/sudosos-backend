@@ -192,7 +192,7 @@ export default class VatGroupService {
           : 'DATE_FORMAT(str.createdAt, \'%Y\') as year',
         'SUM(ROUND((str.amount * product.priceInclVat * vatgroup.percentage) / (100 + vatgroup.percentage))) as value',
       ])
-      .innerJoin(ProductRevision, 'product', 'str.productRevision = product.revision AND str.productProduct = product.productId')
+      .innerJoin(ProductRevision, 'product', 'str.productRevision = product.revision AND str.productProductId = product.productId')
       .innerJoin(VatGroup, 'vatgroup', 'product.vatId = vatgroup.id')
       .where('str.invoiceId IS NULL')
       .andWhere('year = :year', { year: params.year.toString() })

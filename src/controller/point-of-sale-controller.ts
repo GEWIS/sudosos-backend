@@ -211,7 +211,7 @@ export default class PointOfSaleController extends BaseController {
     try {
       const pointOfSaleId = parseInt(id, 10);
       // Check if point of sale exists.
-      if (!await PointOfSale.findOne(pointOfSaleId)) {
+      if (!await PointOfSale.findOne({ where: { id: pointOfSaleId } })) {
         res.status(404).json('Point of Sale not found.');
         return;
       }
@@ -352,13 +352,13 @@ export default class PointOfSaleController extends BaseController {
     // handle request
     try {
       // Point of sale does not exist.
-      if (!await PointOfSale.findOne(pointOfSaleId)) {
+      if (!await PointOfSale.findOne({ where: { id: pointOfSaleId } })) {
         res.status(404).json('Point of Sale not found.');
         return;
       }
 
       // No update available.
-      if (!await UpdatedPointOfSale.findOne(pointOfSaleId)) {
+      if (!await UpdatedPointOfSale.findOne({ where: { pointOfSale: { id: pointOfSaleId } } })) {
         res.json();
         return;
       }
@@ -463,7 +463,7 @@ export default class PointOfSaleController extends BaseController {
     // handle request
     try {
       // Point of sale does not exist.
-      if (!await PointOfSale.findOne(pointOfSaleId)) {
+      if (!await PointOfSale.findOne({ where: { id: pointOfSaleId } })) {
         res.status(404).json('Point of Sale not found.');
         return;
       }
@@ -503,7 +503,7 @@ export default class PointOfSaleController extends BaseController {
    */
   static async getRelation(req: RequestWithToken): Promise<string> {
     const pointOfSaleId = asNumber(req.params.id);
-    const pos: PointOfSale = await PointOfSale.findOne(pointOfSaleId, { relations: ['owner'] });
+    const pos: PointOfSale = await PointOfSale.findOne({ where: { id: pointOfSaleId }, relations: ['owner'] });
 
     if (!pos) return 'all';
     if (userTokenInOrgan(req, pos.owner.id)) return 'organ';

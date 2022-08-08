@@ -277,6 +277,7 @@ if (require.main === module) {
   // Only execute the application directly if this is the main execution file.
   config();
   createApp().catch((e) => {
+    console.error(e);
     const logger = log4js.getLogger('index');
     logger.level = process.env.LOG_LEVEL;
     logger.fatal(e);

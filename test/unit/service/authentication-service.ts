@@ -115,7 +115,7 @@ describe('AuthenticationService', (): void => {
       let DBUser = await User.findOne(
         { where: { firstName: ctx.validADUser.givenName, lastName: ctx.validADUser.sn } },
       );
-      expect(DBUser).to.be.undefined;
+      expect(DBUser).to.be.null;
       const clientBindStub = sinon.stub(Client.prototype, 'bind').resolves(null);
       const clientSearchStub = sinon.stub(Client.prototype, 'search').resolves({ searchReferences: [], searchEntries: [ctx.validADUser] });
       stubs.push(clientBindStub);
@@ -144,7 +144,7 @@ describe('AuthenticationService', (): void => {
         { where: { firstName: otherValidADUser.givenName, lastName: otherValidADUser.sn } },
       );
 
-      expect(DBUser).to.be.undefined;
+      expect(DBUser).to.be.null;
       const clientBindStub = sinon.stub(Client.prototype, 'bind').resolves(null);
       const clientSearchStub = sinon.stub(Client.prototype, 'search').resolves({ searchReferences: [], searchEntries: [otherValidADUser] });
       stubs.push(clientBindStub);
@@ -184,8 +184,8 @@ describe('AuthenticationService', (): void => {
     ) {
       await inUserContext(await UserFactory().clone(1), async (user: User) => {
         await AuthenticationService.setUserAuthenticationHash(user, right, Type);
-        const auth = await Type.findOne({ where: { user } });
-        expect(auth).to.not.be.undefined;
+        const auth = await Type.findOne({ where: { user: { id: user.id } } });
+        expect(auth).to.not.be.null;
         expect(await AuthenticationService.compareHash(wrong, auth.hash)).to.be.false;
         expect(await AuthenticationService.compareHash(right, auth.hash)).to.be.true;
       });

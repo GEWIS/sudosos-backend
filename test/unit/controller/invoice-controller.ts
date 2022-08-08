@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { Connection } from 'typeorm';
+import { Connection, In } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
@@ -28,7 +28,6 @@ import {
   seedAllPointsOfSale,
   seedAllProducts,
   seedInvoices,
-  seedPointsOfSale,
   seedProductCategories,
   seedTransactions, seedVatGroups,
 } from '../../seed';
@@ -114,9 +113,8 @@ describe('InvoiceController', async () => {
       containers,
       containerRevisions,
     } = await seedAllContainers([adminUser, localUser], productRevisions, products);
-    await seedAllPointsOfSale([adminUser, localUser], containerRevisions, containers);
-    const { pointOfSaleRevisions } = await seedPointsOfSale(
-      [adminUser, localUser], containerRevisions,
+    const { pointOfSaleRevisions } = await seedAllPointsOfSale(
+      [adminUser, localUser], containerRevisions, containers,
     );
     const { transactions } = await seedTransactions([adminUser, localUser], pointOfSaleRevisions);
     await seedInvoices([invoiceUser], transactions);
@@ -337,7 +335,7 @@ describe('InvoiceController', async () => {
           transactionIDs: tIds,
         };
 
-        const transactions = await Transaction.findByIds(tIds, { relations: ['subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice'] });
+        const transactions = await Transaction.find({ where: { id: In(tIds) }, relations: ['subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice'] });
         const subIDs: number[] = [];
         transactions.forEach((t) => {
           t.subTransactions.forEach((tSub) => {

@@ -25,14 +25,14 @@ export const positiveNumber = async (p: number) => {
 };
 
 export const userMustExist = async (p: number) => {
-  if (await User.findOne({ id: p }) === undefined) {
+  if (await User.findOne({ where: { id: p } }) == null) {
     return toFail(INVALID_USER_ID());
   }
   return toPass(p);
 };
 
 export const activeUserMustExist = async (p: number) => {
-  if (await User.findOne({ id: p }, { where: 'active' }) === undefined) {
+  if (await User.findOne({ where: { id: p, active: true } }) == null) {
     return toFail(INVALID_ACTIVE_USER_ID());
   }
   return toPass(p);

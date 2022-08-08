@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  BaseEntity, Column, Entity, JoinColumn, OneToOne,
+  BaseEntity, Column, Entity, JoinColumn, OneToOne, PrimaryColumn,
 } from 'typeorm';
 import User from './user';
 
@@ -27,8 +27,11 @@ import User from './user';
  */
 @Entity()
 export default class LocalUser extends BaseEntity {
-  @OneToOne(() => User, { primary: true, nullable: false })
-  @JoinColumn()
+  @PrimaryColumn()
+  public userId: number;
+
+  @OneToOne(() => User, { nullable: false })
+  @JoinColumn({ name: 'userId' })
   public user: User;
 
   @Column({

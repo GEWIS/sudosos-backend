@@ -573,7 +573,7 @@ describe('TransactionController', (): void => {
 
   describe('GET /transactions/{id}', () => {
     it('should return HTTP 200 and transaction if connected via organ', async () => {
-      const trans = await Transaction.findOne({ relations: ['from'], where: { from: ctx.users[0] } });
+      const trans = await Transaction.findOne({ relations: ['from'], where: { from: { id: ctx.users[0].id } } });
       expect(trans).to.not.be.undefined;
       const res = await request(ctx.app)
         .get(`/transactions/${trans.id}`)
@@ -581,7 +581,7 @@ describe('TransactionController', (): void => {
       expect(res.status).to.equal(200);
     });
     it('should return HTTP 403 if not admin and not connected via organ', async () => {
-      const trans = await Transaction.findOne({ relations: ['from'], where: { from: ctx.users[3] } });
+      const trans = await Transaction.findOne({ relations: ['from'], where: { from: { id: ctx.users[3].id } } });
       expect(trans).to.not.be.undefined;
       const res = await request(ctx.app)
         .get(`/transactions/${trans.id}`)
@@ -672,7 +672,9 @@ describe('TransactionController', (): void => {
         acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
       } as User);
 
-      const borrelkaartUser = await User.findOne({ active: true, deleted: false, type: 3 });
+      const borrelkaartUser = await User.findOne({
+        where: { active: true, deleted: false, type: 3 },
+      });
       const badReq = {
         ...ctx.validTransReq,
         from: borrelkaartUser.id,

@@ -317,7 +317,7 @@ export default class Gewis {
           create: { all: star },
         },
       },
-      assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: 'SudoSOS - BAC', user } }) !== undefined,
+      assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: 'SudoSOS - BAC', user: { id: user.id } } }) !== undefined,
     });
 
     const admin = {
@@ -345,7 +345,7 @@ export default class Gewis {
           ...admin,
         },
       },
-      assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: 'SudoSOS - Board', user } }) !== undefined,
+      assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: 'SudoSOS - Board', user: { id: user.id } } }) !== undefined,
     });
 
     /**
@@ -383,7 +383,7 @@ export default class Gewis {
           ...admin,
         },
       },
-      assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: 'SudoSOS - BAC PM', user } }) !== undefined,
+      assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: 'SudoSOS - BAC PM', user: { id: user.id } } }) !== undefined,
     });
 
     /**
@@ -403,7 +403,7 @@ export default class Gewis {
           get: { all: star, own: star },
         },
       },
-      assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: 'SudoSOS - Audit', user } }) !== undefined,
+      assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: 'SudoSOS - Audit', user: { id: user.id } } }) !== undefined,
     });
   }
 }

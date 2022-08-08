@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { FindManyOptions, ObjectLiteral } from 'typeorm';
+import { FindManyOptions, In } from 'typeorm';
 import { RequestWithToken } from '../middleware/token-middleware';
 import { asBoolean, asNumber, asUserType } from '../helpers/validators';
 import { PaginationParameters } from '../helpers/pagination';
@@ -100,8 +100,11 @@ export default class UserService {
       // This allows us to search for organ members
       // However it does remove the other filters
       const userIds = await MemberAuthenticator
-        .find({ where: { authenticateAs: filters.organId }, relations: ['user'] });
-      (options.where as ObjectLiteral) = userIds.map((auth) => ({ id: auth.user.id }));
+        .find({ where: { authenticateAs: { id: filters.organId } }, relations: ['user'] });
+      options.where = {
+        ...options.where,
+        id: In(userIds.map((auth) => auth.user.id)),
+      };
     }
 
     const users = await User.find({ ...options, take });
@@ -147,7 +150,7 @@ export default class UserService {
    */
   public static async updateUser(userId: number, updateUserRequest: UpdateUserRequest):
   Promise<UserResponse> {
-    const user = await User.findOne(userId);
+    const user = await User.findOne({ where: { id: userId } });
     if (!user) return undefined;
     Object.assign(user, updateUserRequest);
     await user.save();
@@ -220,8 +223,8 @@ export default class UserService {
    * @param right - User to check
    */
   public static async areInSameOrgan(left: number, right: number) {
-    const leftAuth = await MemberAuthenticator.find({ where: { user: left }, relations: ['authenticateAs'] });
-    const rightAuth = await MemberAuthenticator.find({ where: { user: right }, relations: ['authenticateAs'] });
+    const leftAuth = await MemberAuthenticator.find({ where: { user: { id: left } }, relations: ['authenticateAs'] });
+    const rightAuth = await MemberAuthenticator.find({ where: { user: { id: right } }, relations: ['authenticateAs'] });
 
     const rightIds = leftAuth.map((u) => u.authenticateAs.id);
     const overlap = rightAuth.map((u) => u.authenticateAs.id)

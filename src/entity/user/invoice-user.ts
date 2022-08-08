@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  Column, Entity, JoinColumn, OneToOne,
+  Column, Entity, JoinColumn, OneToOne, PrimaryColumn,
 } from 'typeorm';
 
 import User from './user';
@@ -29,8 +29,11 @@ import BaseEntityWithoutId from '../base-entity-without-id';
  */
 @Entity()
 export default class InvoiceUser extends BaseEntityWithoutId {
-  @OneToOne(() => User, { primary: true, nullable: false })
-  @JoinColumn()
+  @PrimaryColumn()
+  public userId: number;
+
+  @OneToOne(() => User, { nullable: false })
+  @JoinColumn({ name: 'userId' })
   public user: User;
 
   @Column({

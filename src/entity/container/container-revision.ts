@@ -19,11 +19,13 @@ import {
   Entity,
   Column,
   ManyToOne,
-  BeforeUpdate, ManyToMany, JoinTable,
+  BeforeUpdate, ManyToMany, JoinTable, PrimaryColumn, JoinColumn,
 } from 'typeorm';
 import BaseContainer from './base-container';
 import Container from './container';
 import ProductRevision from '../product/product-revision';
+// eslint-disable-next-line import/no-cycle
+import PointOfSaleRevision from '../point-of-sale/point-of-sale-revision';
 
 /**
  * @typedef {BaseContainer} ContainerRevision
@@ -34,11 +36,14 @@ import ProductRevision from '../product/product-revision';
  */
 @Entity()
 export default class ContainerRevision extends BaseContainer {
+  @PrimaryColumn()
+  public readonly containerId: number;
+
   @ManyToOne(() => Container, {
-    primary: true,
     nullable: false,
     eager: true,
   })
+  @JoinColumn({ name: 'containerId' })
   public readonly container: Container;
 
   @Column({
@@ -51,6 +56,9 @@ export default class ContainerRevision extends BaseContainer {
   @ManyToMany(() => ProductRevision)
   @JoinTable()
   public products: ProductRevision[];
+
+  @ManyToMany(() => PointOfSaleRevision, (pointOfSale) => pointOfSale.containers)
+  public pointsOfSale: PointOfSaleRevision[];
 
   @BeforeUpdate()
   // eslint-disable-next-line class-methods-use-this

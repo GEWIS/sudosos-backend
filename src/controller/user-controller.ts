@@ -329,7 +329,7 @@ export default class UserController extends BaseController {
 
     try {
       req.query.type = userType;
-      this.getAllUsers(req, res);
+      await this.getAllUsers(req, res);
     } catch (error) {
       this.logger.error('Could not get users:', error);
       res.status(500).json('Internal server error.');
@@ -349,15 +349,15 @@ export default class UserController extends BaseController {
    * @returns {string} 404 - Nonexistent user id
    */
   public async updateUserPin(req: RequestWithToken, res: Response): Promise<void> {
-    const parameters = req.params;
+    const { params } = req;
     const updatePinRequest = req.body as UpdatePinRequest;
-    this.logger.trace('Update user pin', parameters, 'by user', req.token.user);
+    this.logger.trace('Update user pin', params, 'by user', req.token.user);
 
     try {
       // Get the user object if it exists
-      const user = await User.findOne(parameters.id, { where: { deleted: false } });
+      const user = await User.findOne({ where: { id: parseInt(params.id, 10), deleted: false } });
       // If it does not exist, return a 404 error
-      if (user === undefined) {
+      if (user == null) {
         res.status(404).json('Unknown user ID.');
         return;
       }
@@ -395,11 +395,11 @@ export default class UserController extends BaseController {
     this.logger.trace('Update user local password', parameters, 'by user', req.token.user);
 
     try {
-      const userId = Number.parseInt(parameters.id, 10);
+      const id = Number.parseInt(parameters.id, 10);
       // Get the user object if it exists
-      const user = await User.findOne(userId, { where: { deleted: false } });
+      const user = await User.findOne({ where: { id, deleted: false } });
       // If it does not exist, return a 404 error
-      if (user === undefined) {
+      if (user == null) {
         res.status(404).json('Unknown user ID.');
         return;
       }
@@ -438,7 +438,7 @@ export default class UserController extends BaseController {
       // Get the user object if it exists
       const user = await User.findOne({ where: { id: organId } });
       // If it does not exist, return a 404 error
-      if (user === undefined) {
+      if (user == null) {
         res.status(404).json('Unknown user ID.');
         return;
       }
@@ -473,7 +473,7 @@ export default class UserController extends BaseController {
       // Get the user object if it exists
       const user = await UserService.getSingleUser(asNumber(parameters.id));
       // If it does not exist, return a 404 error
-      if (user === undefined) {
+      if (user == null) {
         res.status(404).json('Unknown user ID.');
         return;
       }
@@ -542,10 +542,11 @@ export default class UserController extends BaseController {
     }
 
     try {
+      const id = parseInt(parameters.id, 10);
       // Get the user object if it exists
-      let user = await User.findOne(parameters.id, { where: { deleted: false } });
+      let user = await User.findOne({ where: { id, deleted: false } });
       // If it does not exist, return a 404 error
-      if (user === undefined) {
+      if (user == null) {
         res.status(404).json('Unknown user ID.');
         return;
       }
@@ -582,10 +583,11 @@ export default class UserController extends BaseController {
     }
 
     try {
+      const id = parseInt(parameters.id, 10);
       // Get the user object if it exists
-      const user = await User.findOne(parameters.id, { where: { deleted: false } });
+      const user = await User.findOne({ where: { id, deleted: false } });
       // If it does not exist, return a 404 error
-      if (user === undefined) {
+      if (user == null) {
         res.status(404).json('Unknown user ID.');
         return;
       }
@@ -616,7 +618,7 @@ export default class UserController extends BaseController {
 
     try {
       const user = await UserService.getSingleUser(id);
-      if (user === undefined) {
+      if (user == null) {
         res.status(404).json('User not found.');
         return;
       }
@@ -662,7 +664,8 @@ export default class UserController extends BaseController {
 
     // Handle request
     try {
-      const owner = await User.findOne(parameters.id);
+      const id = parseInt(parameters.id, 10);
+      const owner = await User.findOne({ where: { id, deleted: false } });
       if (owner == null) {
         res.status(404).json({});
         return;
@@ -703,7 +706,8 @@ export default class UserController extends BaseController {
 
     // Handle request
     try {
-      const owner = await User.findOne(parameters.id);
+      const id = parseInt(parameters.id, 10);
+      const owner = await User.findOne({ where: { id, deleted: false } });
       if (owner == null) {
         res.status(404).json({});
         return;
@@ -747,9 +751,9 @@ export default class UserController extends BaseController {
     // handle request
     try {
       // Get the user object if it exists
-      const user = await User.findOne(id, { where: { deleted: false } });
+      const user = await User.findOne({ where: { id: parseInt(id, 10), deleted: false } });
       // If it does not exist, return a 404 error
-      if (user === undefined) {
+      if (user == null) {
         res.status(404).json('Unknown user ID.');
         return;
       }
@@ -793,9 +797,9 @@ export default class UserController extends BaseController {
     // handle request
     try {
       // Get the user object if it exists
-      const user = await User.findOne(id, { where: { deleted: false } });
+      const user = await User.findOne({ where: { id: parseInt(id, 10), deleted: false } });
       // If it does not exist, return a 404 error
-      if (user === undefined) {
+      if (user == null) {
         res.status(404).json('Unknown user ID.');
         return;
       }
@@ -839,9 +843,9 @@ export default class UserController extends BaseController {
     // handle request
     try {
       // Get the user object if it exists
-      const user = await User.findOne(id, { where: { deleted: false } });
+      const user = await User.findOne({ where: { id: parseInt(id, 10), deleted: false } });
       // If it does not exist, return a 404 error
-      if (user === undefined) {
+      if (user == null) {
         res.status(404).json('Unknown user ID.');
         return;
       }
@@ -885,9 +889,9 @@ export default class UserController extends BaseController {
     // handle request
     try {
       // Get the user object if it exists
-      const user = await User.findOne(id, { where: { deleted: false } });
+      const user = await User.findOne({ where: { id: parseInt(id, 10), deleted: false } });
       // If it does not exist, return a 404 error
-      if (user === undefined) {
+      if (user == null) {
         res.status(404).json('Unknown user ID.');
         return;
       }
@@ -947,7 +951,7 @@ export default class UserController extends BaseController {
     }
 
     try {
-      const user = await User.findOne(id);
+      const user = await User.findOne({ where: { id: parseInt(id, 10) } });
       if (user == null) {
         res.status(404).json({});
         return;
@@ -1003,9 +1007,9 @@ export default class UserController extends BaseController {
     // handle request
     try {
       // Get the user object if it exists
-      const user = await User.findOne(id, { where: { deleted: false } });
+      const user = await User.findOne({ where: { id: parseInt(id, 10), deleted: false } });
       // If it does not exist, return a 404 error
-      if (user === undefined) {
+      if (user == null) {
         res.status(404).json('Unknown user ID.');
         return;
       }
@@ -1036,19 +1040,23 @@ export default class UserController extends BaseController {
     this.logger.trace('Authenticate as user', parameters, 'by user', req.token.user);
 
     try {
+      const id = parseInt(parameters.id, 10);
       // Get the user object if it exists
-      const authenticateAs = await User.findOne(parameters.id, { where: { deleted: false } });
+      const authenticateAs = await User.findOne({ where: { id, deleted: false } });
       // If it does not exist, return a 404 error
-      if (authenticateAs === undefined) {
+      if (authenticateAs == null) {
         res.status(404).json('Unknown user ID.');
         return;
       }
 
       // Check if user can authenticate as requested user.
       const authenticator = await MemberAuthenticator
-        .findOne({ where: { user: req.token.user, authenticateAs } });
+        .findOne({
+          where:
+            { user: { id: req.token.user.id }, authenticateAs: { id: authenticateAs.id } },
+        });
 
-      if (authenticator === undefined) {
+      if (authenticator == null) {
         res.status(403).json('Authentication error');
         return;
       }
@@ -1080,16 +1088,17 @@ export default class UserController extends BaseController {
     this.logger.trace('Get authenticatable users of user', parameters, 'by user', req.token.user);
 
     try {
+      const id = parseInt(parameters.id, 10);
       // Get the user object if it exists
-      const user = await User.findOne(parameters.id, { where: { deleted: false } });
+      const user = await User.findOne({ where: { id, deleted: false } });
       // If it does not exist, return a 404 error
-      if (user === undefined) {
+      if (user == null) {
         res.status(404).json('Unknown user ID.');
         return;
       }
 
       // Extract from member authenticator table.
-      const authenticators = await MemberAuthenticator.find({ where: { user }, relations: ['authenticateAs'] });
+      const authenticators = await MemberAuthenticator.find({ where: { user: { id: user.id } }, relations: ['authenticateAs'] });
       const users = authenticators.map((auth) => parseUserToResponse(auth.authenticateAs));
       res.status(200).json(users);
     } catch (error) {
@@ -1112,10 +1121,11 @@ export default class UserController extends BaseController {
     this.logger.trace('Get roles of user', parameters, 'by user', req.token.user);
 
     try {
+      const id = parseInt(parameters.id, 10);
       // Get the user object if it exists
-      const user = await User.findOne(parameters.id, { where: { deleted: false } });
+      const user = await User.findOne({ where: { id, deleted: false } });
       // If it does not exist, return a 404 error
-      if (user === undefined) {
+      if (user == null) {
         res.status(404).json('Unknown user ID.');
         return;
       }
@@ -1157,10 +1167,11 @@ export default class UserController extends BaseController {
     }
 
     try {
+      const id = parseInt(parameters.id, 10);
       // Get the user object if it exists
-      const user = await User.findOne(parameters.id, { where: { deleted: false } });
+      const user = await User.findOne({ where: { id, deleted: false } });
       // If it does not exist, return a 404 error
-      if (user === undefined) {
+      if (user == null) {
         res.status(404).json('Unknown user ID.');
         return;
       }

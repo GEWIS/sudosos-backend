@@ -73,6 +73,17 @@ describe('TransferService', async (): Promise<void> => {
       expect(ids.size).to.equal(0);
     });
 
+    it('should return all transfers involving a single user', async () => {
+      const user = ctx.users[0];
+      const res: PaginatedTransferResponse = await TransferService.getTransfers({}, {}, user);
+      const actualTransfers = ctx.transfers
+        .filter((t) => (t.from && t.from.id === user.id) || (t.to && t.to.id === user.id));
+      expect(res.records.length).to.equal(actualTransfers.length);
+      res.records.forEach((t) => expect(
+        (t.from && t.from.id === user.id) || (t.to && t.to.id === user.id),
+      ).to.be.true);
+    });
+
     it('should return a single transfer if id is specified', async () => {
       const res: PaginatedTransferResponse = await TransferService
         .getTransfers({ id: ctx.transfers[0].id });

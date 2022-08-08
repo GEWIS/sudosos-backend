@@ -38,7 +38,7 @@ const validAlcohol = (alcoholPercentage: number) => {
 };
 
 const validCategory = async (categoryId: number) => {
-  const category = await ProductCategory.findOne(categoryId);
+  const category = await ProductCategory.findOne({ where: { id: categoryId } });
   if (!category) {
     return toFail(new ValidationError(`${categoryId} is an invalid product category.`));
   }

@@ -15,7 +15,9 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { Connection, getManager } from 'typeorm';
+import {
+  Connection, getManager, IsNull, Not,
+} from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
@@ -181,6 +183,7 @@ describe('ContainerService', async (): Promise<void> => {
     it('should return containers of the point of sale specified', async () => {
       const pos: PointOfSaleRevision = await PointOfSaleRevision.findOne({
         relations: ['pointOfSale', 'containers'],
+        where: {},
       });
       const { records } = await ContainerService.getContainers({
         posId: pos.pointOfSale.id,
@@ -239,37 +242,45 @@ describe('ContainerService', async (): Promise<void> => {
         { returnProducts: true }, {},
       );
       expect(ctx.specification.validateModel('Array.<ContainerWithProductsResponse.model>', records, false, true).valid).to.be.true;
-      const withRevisions = await Container.find({ where: 'currentRevision' });
+      const withRevisions = await Container.find({ where: { currentRevision: Not(IsNull()) } });
       expect(records.map((containerResponse) => containerResponse.id))
         .to.deep.equalInAnyOrder(withRevisions.map((c) => c.id));
     });
     it('should return all points of sale involving a single user and its memberAuthenticator users', async () => {
       const usersOwningACont = [...new Set(ctx.containers.map((cont) => cont.owner))];
-      const owner = usersOwningACont[0];
+      const owner1 = usersOwningACont[0];
+      const owner2 = usersOwningACont[1];
 
       // Sanity check
-      const memberAuthenticators = await MemberAuthenticator.find({ where: { user: owner } });
+      const memberAuthenticators = await MemberAuthenticator.find({
+        where: { user: { id: owner1.id } },
+      });
       expect(memberAuthenticators.length).to.equal(0);
 
-      let container = await ContainerService.getContainers({}, {}, owner);
-      const originalLength = container.records.length;
-      container.records.forEach((cont) => {
-        expect(cont.owner.id).to.equal(owner.id);
+      let containers = await ContainerService.getContainers({}, {}, owner1);
+      const containersOwnedBy1 = containers.records.length;
+      containers.records.forEach((cont) => {
+        expect(cont.owner.id).to.equal(owner1.id);
+      });
+      containers = await ContainerService.getContainers({}, {}, owner2);
+      const containersOwnedBy2 = containers.records.length;
+      containers.records.forEach((cont) => {
+        expect(cont.owner.id).to.equal(owner2.id);
       });
 
       await AuthenticationService.setMemberAuthenticator(
-        getManager(), [owner], usersOwningACont[1],
+        getManager(), [owner1], owner2,
       );
 
-      const ownerIds = [owner, usersOwningACont[1]].map((o) => o.id);
-      container = await ContainerService.getContainers({}, {}, owner);
-      expect(container.records.length).to.be.greaterThan(originalLength);
-      container.records.forEach((cont) => {
+      const ownerIds = [owner1, owner2].map((o) => o.id);
+      containers = await ContainerService.getContainers({}, {}, owner1);
+      expect(containers.records.length).to.equal(containersOwnedBy1 + containersOwnedBy2);
+      containers.records.forEach((cont) => {
         expect(ownerIds).to.include(cont.owner.id);
       });
 
       // Cleanup
-      await MemberAuthenticator.delete({ user: owner });
+      await MemberAuthenticator.delete({ user: { id: owner1.id } });
     });
   });
 
@@ -334,7 +345,9 @@ describe('ContainerService', async (): Promise<void> => {
       const owner = usersOwningACont[0];
 
       // Sanity check
-      const memberAuthenticators = await MemberAuthenticator.find({ where: { user: owner } });
+      const memberAuthenticators = await MemberAuthenticator.find({
+        where: { user: { id: owner.id } },
+      });
       expect(memberAuthenticators.length).to.equal(0);
 
       let container = await ContainerService.getUpdatedContainers({}, {}, owner);
@@ -355,7 +368,7 @@ describe('ContainerService', async (): Promise<void> => {
       });
 
       // Cleanup
-      await MemberAuthenticator.delete({ user: owner });
+      await MemberAuthenticator.delete({ user: { id: owner.id } });
     });
   });
 
@@ -387,7 +400,7 @@ describe('ContainerService', async (): Promise<void> => {
 
   describe('directContainerUpdate function', () => {
     it('should revise the container without creating a UpdatedContainer', async () => {
-      const container = await Container.findOne();
+      const container = await Container.findOne({ where: {} });
       const update: UpdateContainerParams = {
         id: container.id,
         name: 'Container Update Name',
@@ -396,7 +409,7 @@ describe('ContainerService', async (): Promise<void> => {
       };
       const response = await ContainerService.directContainerUpdate(update);
       responseAsUpdate(update, response);
-      const entity = await Container.findOne({ id: container.id });
+      const entity = await Container.findOne({ where: { id: container.id } });
       const revision = await ContainerRevision.findOne({ where: { container: { id: container.id }, revision: entity.currentRevision }, relations: ['container', 'products', 'products.product'] });
       entityAsUpdate(update, revision);
     });

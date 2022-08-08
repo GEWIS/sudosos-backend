@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  Column, Entity, ManyToOne,
+  Column, Entity, JoinColumn, ManyToOne,
 } from 'typeorm';
 import { Dinero } from 'dinero.js';
 import BaseEntity from '../base-entity';
@@ -36,16 +36,22 @@ import DineroTransformer from '../transformer/dinero-transformer';
  */
 @Entity()
 export default class Transfer extends BaseEntity {
+  // These IDs are required, because TypeORM findOptions will convert the relations from LEFT JOIN
+  // to INNER JOIN when having a where clause on a relational entity.
   @Column({ nullable: true })
   public fromId?: number;
 
   @ManyToOne(() => User, { nullable: true })
+  @JoinColumn({ name: 'fromId' })
   public from?: User;
 
+  // These IDs are required, because TypeORM findOptions will convert the relations from LEFT JOIN
+  // to INNER JOIN when having a where clause on a relational entity.
   @Column({ nullable: true })
   public toId?: number;
 
   @ManyToOne(() => User, { nullable: true })
+  @JoinColumn({ name: 'toId' })
   public to?: User;
 
   @Column({

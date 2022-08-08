@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  JoinColumn, OneToOne,
+  JoinColumn, OneToOne, PrimaryColumn,
 } from 'typeorm';
 import BaseEntityWithoutId from '../base-entity-without-id';
 import User from '../user/user';
@@ -26,7 +26,10 @@ import User from '../user/user';
  * @property {User.model} user.required - The user this authenticator is for
  */
 export default class AuthenticationMethod extends BaseEntityWithoutId {
-  @OneToOne(() => User, { primary: true, nullable: false })
-  @JoinColumn()
+  @PrimaryColumn()
+  public userId: number;
+
+  @OneToOne(() => User, { nullable: false })
+  @JoinColumn({ name: 'userId' })
   public user: User;
 }

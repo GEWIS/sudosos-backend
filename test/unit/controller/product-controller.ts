@@ -16,7 +16,9 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { Connection, FindManyOptions } from 'typeorm';
+import {
+  Connection, IsNull, Not,
+} from 'typeorm';
 import express, { Application } from 'express';
 import { request, expect } from 'chai';
 import { SwaggerSpecification } from 'swagger-model-validator';
@@ -187,7 +189,6 @@ describe('ProductController', async (): Promise<void> => {
           get: all,
           update: organRole,
           delete: organRole,
-          approve: organRole,
         },
       },
       assignmentCheck: async () => true,
@@ -269,7 +270,7 @@ describe('ProductController', async (): Promise<void> => {
       const pagination = res.body._pagination as PaginationResult;
 
       // Every product that has a current revision should be returned.
-      const activeProductCount = await Product.count({ where: 'currentRevision' } as FindManyOptions);
+      const activeProductCount = await Product.count({ where: { currentRevision: Not(IsNull()) } });
       expect(products.length).to.equal(Math.min(activeProductCount, defaultPagination()));
 
       expect(pagination.take).to.equal(defaultPagination());
@@ -303,7 +304,7 @@ describe('ProductController', async (): Promise<void> => {
       const pagination = res.body._pagination as PaginationResult;
 
       // Every product that has a current revision should be returned.
-      const activeProductCount = await Product.count({ where: 'currentRevision' } as FindManyOptions);
+      const activeProductCount = await Product.count({ where: { currentRevision: Not(IsNull()) } });
 
       expect(pagination.take).to.equal(take);
       expect(pagination.skip).to.equal(skip);
@@ -389,7 +390,9 @@ describe('ProductController', async (): Promise<void> => {
 
       expect(await Product.count()).to.equal(productCount + 1);
       productEq(ctx.validCreateProductReq, res.body as ProductResponse);
-      const databaseProduct = await UpdatedProduct.findOne((res.body as ProductResponse).id);
+      const databaseProduct = await UpdatedProduct.findOne({
+        where: { product: { id: (res.body as ProductResponse).id } },
+      });
       expect(databaseProduct).to.exist;
 
       expect(res.status).to.equal(200);
@@ -407,18 +410,25 @@ describe('ProductController', async (): Promise<void> => {
         .set('Authorization', `Bearer ${ctx.organMemberToken}`)
         .send(ctx.validCreateProductReq);
 
-      expect(await Product.count()).to.equal(productCount + 1);
-      productEq(ctx.validCreateProductReq, res.body as ProductResponse);
-      const databaseProduct = await UpdatedProduct.findOne((res.body as ProductResponse).id);
-      expect(databaseProduct).to.exist;
-
       expect(res.status).to.equal(200);
+      const body = res.body as ProductResponse;
       expect(ctx.specification.validateModel(
         'UpdatedProductResponse',
         res.body,
         false,
         true,
       ).valid).to.be.true;
+      expect(await Product.count()).to.equal(productCount + 1);
+
+      productEq(ctx.validCreateProductReq, body);
+      const databaseProduct = await Product.findOne({
+        where: { id: body.id },
+      });
+      expect(databaseProduct).to.exist;
+      const databaseUpdatedProduct = await UpdatedProduct.findOne({
+        where: { product: { id: body.id } },
+      });
+      expect(databaseUpdatedProduct).to.exist;
     });
     it('should return an HTTP 403 if not admin', async () => {
       const productCount = await Product.count();
@@ -481,7 +491,7 @@ describe('ProductController', async (): Promise<void> => {
       expect(res.status).to.equal(200);
     });
     it('should return an HTTP 200 and the product with the given id if connected via organ', async () => {
-      const product = await Product.findOne({ relations: ['owner'], where: { owner: ctx.organ } });
+      const product = await Product.findOne({ relations: ['owner'], where: { owner: { id: ctx.organ.id } } });
       const res = await request(ctx.app)
         .get(`/products/${product.id}`)
         .set('Authorization', `Bearer ${ctx.organMemberToken}`);
@@ -504,7 +514,7 @@ describe('ProductController', async (): Promise<void> => {
         .get(`/products/${(await Product.count()) + 1}`)
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
-      expect(await Product.findOne((await Product.count()) + 1)).to.be.undefined;
+      expect(await Product.findOne({ where: { id: (await Product.count()) + 1 } })).to.be.null;
 
       // check if product is not returned
       expect(res.body).to.equal('Product not found.');
@@ -535,7 +545,9 @@ describe('ProductController', async (): Promise<void> => {
       expect(res.status).to.equal(200);
 
       productEq(ctx.validProductReq, res.body as ProductResponse);
-      const databaseProduct = await UpdatedProduct.findOne((res.body as ProductResponse).id);
+      const databaseProduct = await UpdatedProduct.findOne({
+        where: { product: { id: (res.body as ProductResponse).id } },
+      });
       expect(databaseProduct).to.exist;
 
       expect(ctx.specification.validateModel(
@@ -552,7 +564,7 @@ describe('ProductController', async (): Promise<void> => {
         .send(ctx.validProductReq);
 
       // sanity check
-      expect(await Product.findOne((await Product.count()) + 1)).to.be.undefined;
+      expect(await Product.findOne({ where: { id: (await Product.count()) + 1 } })).to.be.null;
 
       // check if banner is not returned
       expect(res.body).to.equal('Product not found.');
@@ -673,7 +685,7 @@ describe('ProductController', async (): Promise<void> => {
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
       // sanity check / precondition
-      expect(await UpdatedProduct.findOne(4)).to.exist;
+      expect(await UpdatedProduct.findOne({ where: { product: { id: 4 } } })).to.exist;
       expect((res.body as ProductResponse)).to.exist;
       expect(res.status).to.equal(200);
     });
@@ -683,7 +695,7 @@ describe('ProductController', async (): Promise<void> => {
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
       // sanity check
-      expect(await Product.findOne((await Product.count()) + 2)).to.be.undefined;
+      expect(await Product.findOne({ where: { id: (await Product.count()) + 2 } })).to.be.null;
 
       // check if banner is not returned
       expect(res.body).to.equal('Product not found.');
@@ -697,7 +709,7 @@ describe('ProductController', async (): Promise<void> => {
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
       // sanity check / precondition
-      expect(await UpdatedProduct.findOne(2)).to.be.undefined;
+      expect(await UpdatedProduct.findOne({ where: { product: { id: 2 } } })).to.be.null;
       expect(res.body).to.be.empty;
       expect(res.status).to.equal(200);
     });
@@ -707,7 +719,7 @@ describe('ProductController', async (): Promise<void> => {
         .set('Authorization', `Bearer ${ctx.token}`);
 
       // sanity check / precondition
-      expect(await UpdatedProduct.findOne(4)).to.exist;
+      expect(await UpdatedProduct.findOne({ where: { product: { id: 4 } } })).to.exist;
       expect(res.body).to.be.empty;
       expect(res.status).to.equal(403);
     });
@@ -715,14 +727,14 @@ describe('ProductController', async (): Promise<void> => {
   describe('POST /products/:id/approve', () => {
     it('should approve the product update if it exists and admin', async () => {
       // sanity check / precondition
-      expect(await UpdatedProduct.findOne(4)).to.exist;
+      expect(await UpdatedProduct.findOne({ where: { product: { id: 4 } } })).to.exist;
 
       const res = await request(ctx.app)
         .post('/products/4/approve')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
       // sanity check / precondition
-      expect(await UpdatedProduct.findOne(4)).to.be.undefined;
+      expect(await UpdatedProduct.findOne({ where: { product: { id: 4 } } })).to.be.null;
 
       const latest = await request(ctx.app)
         .get('/products/4')
@@ -739,8 +751,8 @@ describe('ProductController', async (): Promise<void> => {
     });
     it('should return a HTTP 404 and an empty response if the product had no pending update', async () => {
       // sanity check / precondition
-      expect(await UpdatedProduct.findOne(2)).to.be.undefined;
-      expect(await Product.findOne(2)).to.exist;
+      expect(await UpdatedProduct.findOne({ where: { product: { id: 2 } } })).to.be.null;
+      expect(await Product.findOne({ where: { id: 2 } })).to.exist;
 
       const res = await request(ctx.app)
         .post('/products/2/approve')
@@ -752,7 +764,7 @@ describe('ProductController', async (): Promise<void> => {
     it('should return an HTTP 403 if not admin', async () => {
       const id = 5;
       // sanity check / precondition
-      expect(await UpdatedProduct.findOne(id)).to.exist;
+      expect(await UpdatedProduct.findOne({ where: { product: { id } } })).to.exist;
 
       const res = await request(ctx.app)
         .post(`/products/${id}/approve`)
@@ -779,14 +791,14 @@ describe('ProductController', async (): Promise<void> => {
 
       expect(res.status).to.equal(204);
       expect(res.body).to.be.empty;
-      expect((await Product.findOne(id, { relations: ['image'] })).image).to.be.not.undefined;
+      expect((await Product.findOne({ where: { id }, relations: ['image'] })).image).to.be.not.undefined;
     });
     it('should update the product image if admin', async () => {
       const stub = sinon.stub(DiskStorage.prototype, 'validateFileLocation');
       stubs.push(stub);
 
       const { id } = ctx.products.filter((product) => product.image !== undefined)[0];
-      const { image } = await Product.findOne(id);
+      const { image } = await Product.findOne({ where: { id } });
 
       const res = await request(ctx.app)
         .post(`/products/${id}/image`)
@@ -795,7 +807,7 @@ describe('ProductController', async (): Promise<void> => {
 
       expect(res.status).to.equal(204);
       expect(res.body).to.be.empty;
-      expect((await Product.findOne(id, { relations: ['image'] })).image.id).to.not.equal(image);
+      expect((await Product.findOne({ where: { id }, relations: ['image'] })).image.id).to.not.equal(image);
     });
     it('should return 403 if not admin', async () => {
       const { id } = ctx.products.filter((product) => product.image === undefined)[0];

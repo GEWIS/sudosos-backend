@@ -17,7 +17,7 @@
  */
 
 import { Client } from 'ldapts';
-import { EntityManager } from 'typeorm';
+import { EntityManager, In } from 'typeorm';
 import LDAPAuthenticator from '../entity/authenticator/ldap-authenticator';
 import User, { UserType } from '../entity/user/user';
 import wrapInManager from '../helpers/database';
@@ -70,8 +70,9 @@ export default class ADService {
   public static async getUsers(manager: EntityManager, ldapUsers: LDAPUser[],
     createIfNew = false): Promise<User[]> {
     if (createIfNew) await ADService.createAccountIfNew(manager, ldapUsers);
-    const authenticators = (await LDAPAuthenticator.find({ where: ldapUsers.map((u) => ({ UUID: u.objectGUID })), relations: ['user'] }));
-    return authenticators.map((u) => u.user);
+    const uuids = ldapUsers.map((u) => (u.objectGUID));
+    const authenticators = (await LDAPAuthenticator.find({ where: { UUID: In(uuids) }, relations: ['user'] }));
+    return authenticators.map((u: LDAPAuthenticator) => u.user);
   }
 
   /**
@@ -91,8 +92,8 @@ export default class ADService {
    */
   private static async filterUnboundGUID(ldapResponses: LDAPResponse[]) {
     const ids = ldapResponses.map((s) => s.objectGUID);
-    const auths = (await LDAPAuthenticator.find({ where: ids.map((UUID) => ({ UUID })), relations: ['user'] }));
-    const existing = auths.map((l) => l.UUID);
+    const auths = (await LDAPAuthenticator.find({ where: { UUID: In(ids) }, relations: ['user'] }));
+    const existing = auths.map((l: LDAPAuthenticator) => l.UUID);
 
     return ldapResponses
       .filter((response) => existing.indexOf(response.objectGUID) === -1);

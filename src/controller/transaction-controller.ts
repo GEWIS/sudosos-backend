@@ -148,7 +148,7 @@ export default class TransactionController extends BaseController {
       }
 
       // verify balance if user cannot have negative balance.
-      const user = await User.findOne(body.from);
+      const user = await User.findOne({ where: { id: body.from } });
       const allowNegative = this.roleManager.can(await this.roleManager.getRoles(user), 'update', 'own', 'Balance', ['negative']);
       if (!allowNegative && !await TransactionService.verifyBalance(body)) {
         res.status(403).json('Insufficient balance.');
@@ -213,7 +213,7 @@ export default class TransactionController extends BaseController {
 
     // handle request
     try {
-      if (await Transaction.findOne(id)) {
+      if (await Transaction.findOne({ where: { id: parseInt(id, 10) } })) {
         if (await TransactionService.verifyTransaction(body, true)) {
           res.status(200).json(await TransactionService.updateTransaction(
             parseInt(id, 10), body,
@@ -246,7 +246,7 @@ export default class TransactionController extends BaseController {
 
     // handle request
     try {
-      if (await Transaction.findOne(id)) {
+      if (await Transaction.findOne({ where: { id: parseInt(id, 10) } })) {
         res.status(200).json(await TransactionService.deleteTransaction(parseInt(id, 10)));
       } else {
         res.status(404).json('Transaction not found.');

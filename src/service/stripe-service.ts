@@ -40,7 +40,8 @@ export default class StripeService {
   }
 
   public static async getStripeDeposit(id: number, relations: string[] = []) {
-    return StripeDeposit.findOne(id, {
+    return StripeDeposit.findOne({
+      where: { id },
       relations: ['depositStatus'].concat(relations),
     });
   }

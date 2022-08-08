@@ -38,10 +38,10 @@
     "mysql2": "^2.3.3",
     "node-cron": "^3.0.0",
     "reflect-metadata": "^0.1.13",
-    "sqlite3": "^5.0.2",
+    "sqlite3": "^5.0.11",
     "stripe": "^8.201.0",
     "swagger-model-validator": "^3.0.20",
-    "typeorm": "^0.2.34",
+    "typeorm": "^0.3.7",
     "uuid": "^8.3.2",
     "validator": "^13.7.0"
   },
@@ -82,7 +82,7 @@
     "nyc": "^15.1.0",
     "sinon": "^11.1.2",
     "sinon-chai": "^3.7.0",
-    "ts-node-dev": "^1.1.8",
-    "typescript": "^4.3.5"
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^4.7.4"
   }
 }

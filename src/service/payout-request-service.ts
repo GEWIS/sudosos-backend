@@ -223,11 +223,12 @@ export default class PayoutRequestService {
    */
   public static async getSinglePayoutRequest(id: number)
     : Promise<PayoutRequestResponse | undefined> {
-    const payoutRequest = await PayoutRequest.findOne(id, {
+    const payoutRequest = await PayoutRequest.findOne({
+      where: { id },
       relations: ['requestedBy', 'approvedBy', 'payoutRequestStatus'],
     });
 
-    if (payoutRequest === undefined) return undefined;
+    if (payoutRequest == null) return undefined;
 
     return PayoutRequestService.asPayoutRequestResponse(payoutRequest);
   }
@@ -317,7 +318,8 @@ export default class PayoutRequestService {
   public static async updateStatus(
     id: number, state: PayoutRequestState, user: User,
   ): Promise<PayoutRequestResponse | undefined> {
-    const payoutRequest = await PayoutRequest.findOne(id, {
+    const payoutRequest = await PayoutRequest.findOne({
+      where: { id },
       relations: ['requestedBy'],
     });
 

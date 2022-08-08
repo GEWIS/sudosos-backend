@@ -77,10 +77,10 @@ describe('TransferController', async (): Promise<void> => {
     const users = await seedUsers();
     await seedTransfers(users);
 
-    adminAccountDeposit = await Transfer.findOne({ toId: adminUser.id });
-    localAccountDeposit = await Transfer.findOne({ toId: localUser.id });
-    adminAccountWithdraw = await Transfer.findOne({ fromId: adminUser.id });
-    localAccountWithdraw = await Transfer.findOne({ fromId: localUser.id });
+    adminAccountDeposit = await Transfer.findOne({ where: { to: { id: adminUser.id } } });
+    localAccountDeposit = await Transfer.findOne({ where: { to: { id: localUser.id } } });
+    adminAccountWithdraw = await Transfer.findOne({ where: { from: { id: adminUser.id } } });
+    localAccountWithdraw = await Transfer.findOne({ where: { from: { id: localUser.id } } });
 
     // create valid and invaled request
     validRequest = {
@@ -249,7 +249,7 @@ describe('TransferController', async (): Promise<void> => {
       expect(res.status).to.equal(200);
     });
     it('should return an HTTP 200 and the transfer with the given id if connected via organ', async () => {
-      const transfer = await Transfer.findOne({ where: { toId: 1 } });
+      const transfer = await Transfer.findOne({ where: { to: { id: 1 } } });
       expect(transfer).to.not.be.undefined;
       const res = await request(app)
         .get(`/transfers/${transfer.id}`)
@@ -287,7 +287,7 @@ describe('TransferController', async (): Promise<void> => {
         .get(`/transfers/${transferCount + 1}`)
         .set('Authorization', `Bearer ${adminToken}`);
 
-      expect(await Transfer.findOne(transferCount + 1)).to.be.undefined;
+      expect(await Transfer.findOne({ where: { id: transferCount + 1 } })).to.be.null;
       expect(res.body).to.equal('Transfer not found.');
       expect(res.status).to.equal(404);
     });
@@ -297,7 +297,7 @@ describe('TransferController', async (): Promise<void> => {
         .get(`/transfers/${transferCount + 1}`)
         .set('Authorization', `Bearer ${token}`);
 
-      expect(await Transfer.findOne(transferCount + 1)).to.be.undefined;
+      expect(await Transfer.findOne({ where: { id: transferCount + 1 } })).to.be.null;
       expect(res.body).to.be.empty;
       expect(res.status).to.equal(403);
     });
@@ -319,7 +319,9 @@ describe('TransferController', async (): Promise<void> => {
         true,
       ).valid).to.be.true;
       expect(await Transfer.count()).to.equal(transferCount + 1);
-      const databaseEntry = await Transfer.findOne((res.body as TransferResponse).id);
+      const databaseEntry = await Transfer.findOne({
+        where: { id: (res.body as TransferResponse).id },
+      });
       expect(databaseEntry).to.exist;
     });
     it('should return an HTTP 400 if the given transfer is invalid', async () => {

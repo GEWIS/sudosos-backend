@@ -207,7 +207,7 @@ describe('ProductService', async (): Promise<void> => {
         } else {
           // eslint-disable-next-line no-await-in-loop
           const productRevision = await ProductRevision.findOne({
-            where: { product: p.id, revision: p.revision },
+            where: { product: { id: p.id }, revision: p.revision },
             relations: ['vat'],
           });
           const vatGroup = productRevision!.vat;
@@ -360,7 +360,7 @@ describe('ProductService', async (): Promise<void> => {
       expect(records.map((prod) => prod.id)).to.deep.equalInAnyOrder(products);
     });
     it('should return an updated container', async () => {
-      const { id } = (await UpdatedContainer.findOne({ relations: ['container'] })).container;
+      const { id } = (await UpdatedContainer.findOne({ where: {}, relations: ['container'] })).container;
       const { records }: PaginatedProductResponse = await ProductService
         .getProducts({ containerId: id, updatedContainer: true });
 
@@ -397,7 +397,9 @@ describe('ProductService', async (): Promise<void> => {
       const owner = usersOwningAProd[0];
 
       // Sanity check
-      const memberAuthenticators = await MemberAuthenticator.find({ where: { user: owner } });
+      const memberAuthenticators = await MemberAuthenticator.find({
+        where: { user: { id: owner.id } },
+      });
       expect(memberAuthenticators.length).to.equal(0);
 
       let products = await ProductService.getProducts({}, {}, owner);
@@ -417,7 +419,7 @@ describe('ProductService', async (): Promise<void> => {
       });
 
       // Cleanup
-      await MemberAuthenticator.delete({ user: owner });
+      await MemberAuthenticator.delete({ user: { id: owner.id } });
     });
   });
 
@@ -533,7 +535,7 @@ describe('ProductService', async (): Promise<void> => {
 
   describe('directProductUpdate', () => {
     it('should revise the product without creating a UpdatedProduct', async () => {
-      const product = await Product.findOne();
+      const product = await Product.findOne({ where: {} });
       const update: UpdateProductParams = {
         alcoholPercentage: 10,
         category: 1,

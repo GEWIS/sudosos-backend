@@ -518,7 +518,7 @@ describe('UserController', (): void => {
     it('should give an http 404 if provided type does not exist', async () => {
       const userId = await User.count() + 1;
       const user = await User.findOne({ where: { id: userId } });
-      expect(user).to.be.undefined;
+      expect(user).to.be.null;
 
       const res = await request(ctx.app)
         .get(`/users/${userId}/members`)
@@ -1155,7 +1155,7 @@ describe('UserController', (): void => {
 
       const actualTransfers = await Transfer.createQueryBuilder('transfer')
         .select('transfer.id as id')
-        .where('transfer.fromId = :userId  or transfer.toId = :userId', { userId: user.id })
+        .where('transfer.fromId = :userId or transfer.toId = :userId', { userId: user.id })
         .distinct(true)
         .getRawMany();
       expect(tranfers.length).to.equal(Math.min(23, actualTransfers.length));
@@ -1292,7 +1292,7 @@ describe('UserController', (): void => {
     it('should return an HTTP 403 if unauthorized', async () => {
       const user = ctx.users[0];
       expect(await MemberAuthenticator
-        .findOne({ where: { authenticateAs: user.id } })).to.be.undefined;
+        .findOne({ where: { authenticateAs: { id: user.id } } })).to.be.null;
 
       const res = await request(ctx.app)
         .post(`/users/${user.id}/authenticate`)
@@ -1303,10 +1303,10 @@ describe('UserController', (): void => {
     it('should return an HTTP 200 if authorized', async () => {
       const user = ctx.users[1];
       expect(await MemberAuthenticator
-        .find({ where: { authenticateAs: user.id } })).to.be.empty;
+        .find({ where: { authenticateAs: { id: user.id } } })).to.be.empty;
       const auth = Object.assign(new MemberAuthenticator(), {
         user: ctx.users[6],
-        authenticateAs: user.id,
+        authenticateAs: user,
       });
       await auth.save();
       const res = await request(ctx.app)
@@ -1426,7 +1426,7 @@ describe('UserController', (): void => {
           authenticateAs: ctx.users[0],
         });
         await auth.save();
-        const auths = (await MemberAuthenticator.find({ where: { user }, relations: ['authenticateAs'] })).map((u) => u.authenticateAs.id);
+        const auths = (await MemberAuthenticator.find({ where: { user: { id: user.id } }, relations: ['authenticateAs'] })).map((u) => u.authenticateAs.id);
 
         const res = await request(ctx.app)
           .get(`/users/${user.id}/authenticate`)

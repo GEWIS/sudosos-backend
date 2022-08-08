@@ -59,7 +59,7 @@ export default class AuthenticationService {
    * @param user
    */
   private static async getUserOrgans(user: User) {
-    const organs = (await MemberAuthenticator.find({ where: { user }, relations: ['authenticateAs'] })).map((organ) => organ.authenticateAs);
+    const organs = (await MemberAuthenticator.find({ where: { user: { id: user.id } }, relations: ['authenticateAs'] })).map((organ) => organ.authenticateAs);
     return organs.filter((organ) => organ.type === UserType.ORGAN);
   }
 
@@ -250,7 +250,7 @@ export default class AuthenticationService {
    * @param user
    */
   public static async getMemberAuthenticators(user: User): Promise<User[]> {
-    const users = (await MemberAuthenticator.find({ where: { user }, relations: ['authenticateAs'] }))
+    const users = (await MemberAuthenticator.find({ where: { user: { id: user.id } }, relations: ['authenticateAs'] }))
       .map((auth) => auth.authenticateAs);
 
     users.push(user);
@@ -270,7 +270,7 @@ export default class AuthenticationService {
     // First drop all rows containing authenticateAs
     // We check if there is anything to drop or else type orm will complain.
     const toRemove: MemberAuthenticator[] = await MemberAuthenticator
-      .find({ where: { authenticateAs } });
+      .find({ where: { authenticateAs: { id: authenticateAs.id } } });
 
     if (toRemove.length !== 0) {
       await manager.delete(MemberAuthenticator, { authenticateAs });
@@ -281,8 +281,8 @@ export default class AuthenticationService {
     // Create MemberAuthenticator object for each user in users.
     users.forEach((user) => {
       const authenticator = Object.assign(new MemberAuthenticator(), {
-        user,
-        authenticateAs,
+        userId: user.id,
+        authenticateAsId: authenticateAs.id,
       });
       promises.push(manager.save(authenticator));
     });

@@ -81,14 +81,14 @@ export default class BalanceService {
         + 'select t1.fromId as `id`, str.amount * pr.priceInclVat * -1 as `amount`, t1.createdAt as `createdAt1`, null as `createdAt2` from `transaction` as `t1` '
           + 'left join `sub_transaction` st on t1.id=st.transactionId '
           + 'left join `sub_transaction_row` str on st.id=str.subTransactionId '
-          + 'left join `product_revision` pr on str.productRevision=pr.revision and str.productProduct=pr.productId '
+          + 'left join `product_revision` pr on str.productRevision=pr.revision and str.productProductId=pr.productId '
           + 'where 1 ';
     query = this.addWhereClauseForIds(query, parameters, 't1.fromId', params.ids);
     query += 'UNION ALL '
         + 'select st2.toId as `id`, str2.amount * pr2.priceInclVat as `amount`, t1.createdAt as `createdAt1`, null as `createdAt2` from sub_transaction st2 '
           + 'inner join `transaction` t1 on t1.id=st2.transactionId '
           + 'left join `sub_transaction_row` str2 on st2.id=str2.subTransactionId '
-          + 'left join `product_revision` pr2 on str2.productRevision=pr2.revision and str2.productProduct=pr2.productId '
+          + 'left join `product_revision` pr2 on str2.productRevision=pr2.revision and str2.productProductId=pr2.productId '
           + 'where 1 ';
     query = this.addWhereClauseForIds(query, parameters, 'st2.toId', params.ids);
     query += 'UNION ALL '
@@ -163,7 +163,7 @@ export default class BalanceService {
       + `left join ${balanceSubquery()} as b on t.fromId=b.userId `
       + 'inner join sub_transaction st on t.id=st.transactionId '
       + 'inner join sub_transaction_row str on st.id=str.subTransactionId '
-      + 'inner join product_revision pr on str.productRevision=pr.revision and str.productProduct=pr.productId '
+      + 'inner join product_revision pr on str.productRevision=pr.revision and str.productProductId=pr.productId '
       + 'where t.createdAt > COALESCE(b.lastTransactionDate, 0) ';
     query = this.addWhereClauseForIds(query, parameters, 't.fromId', ids);
     query = this.addWhereClauseForDate(query, parameters, 't.createdAt', d);
@@ -172,7 +172,7 @@ export default class BalanceService {
       + `left join ${balanceSubquery()} b on st2.toId=b.userId `
       + 'inner join `transaction` t on t.id=st2.transactionId '
       + 'inner join sub_transaction_row str2 on st2.id=str2.subTransactionId '
-      + 'inner join product_revision pr2 on str2.productRevision=pr2.revision and str2.productProduct=pr2.productId '
+      + 'inner join product_revision pr2 on str2.productRevision=pr2.revision and str2.productProductId=pr2.productId '
       + 'where t.createdAt > COALESCE(b.lastTransactionDate, 0) ';
     query = this.addWhereClauseForIds(query, parameters, 'st2.toId', ids);
     query = this.addWhereClauseForDate(query, parameters, 't.createdAt', d);

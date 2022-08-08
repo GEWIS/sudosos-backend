@@ -44,7 +44,6 @@ import {
 import PointOfSaleService from './point-of-sale-service';
 // eslint-disable-next-line import/no-cycle
 import ProductService from './product-service';
-import { PointOfSaleWithContainersResponse } from '../controller/response/point-of-sale-response';
 import AuthenticationService from './authentication-service';
 
 interface ContainerVisibility {
@@ -432,7 +431,7 @@ export default class ContainerService {
   public static async approveContainerUpdate(containerId: number)
     : Promise<ContainerWithProductsResponse> {
     const [base, rawContainerUpdate] = (
-      await Promise.all([Container.findOne(containerId), UpdatedContainer.findOne(containerId, { relations: ['products'] })]));
+      await Promise.all([Container.findOne({ where: { id: containerId } }), UpdatedContainer.findOne({ where: { container: { id: containerId } }, relations: ['products'] })]));
 
     // return undefined if not found or request is invalid
     if (!base || !rawContainerUpdate) {
@@ -465,7 +464,7 @@ export default class ContainerService {
   public static async updateContainer(update: UpdateContainerParams)
     : Promise<ContainerWithProductsResponse> {
     // Get the base container.
-    const base: Container = await Container.findOne(update.id);
+    const base: Container = await Container.findOne({ where: { id: update.id } });
 
     // return undefined if not found.
     if (!base) {
@@ -473,12 +472,12 @@ export default class ContainerService {
     }
 
     let products: Product[] = [];
-    await Promise.all(update.products.map((id) => Product.findOne(id)))
+    await Promise.all(update.products.map((id) => Product.findOne({ where: { id } })))
       .then((result) => { products = result.filter((p) => p); });
 
     // Set base container and apply new update.
     const updatedContainer = Object.assign(new UpdatedContainer(), {
-      container: await Container.findOne(base.id),
+      container: await Container.findOne({ where: { id: base.id } }),
       name: update.name,
       products,
     });
@@ -515,17 +514,26 @@ export default class ContainerService {
    * @param containerId - The container to propagate
    */
   public static async propagateContainerUpdate(containerId: number) {
-    const pos = await PointOfSaleRevision.find({ where: `"PointOfSaleRevision__containers"."containerId" = ${containerId} AND ("PointOfSaleRevision__containers__container"."currentRevision" - 1) = "PointOfSaleRevision__containers"."revision"  AND "PointOfSaleRevision__pointOfSale"."currentRevision" = "PointOfSaleRevision"."revision"`, relations: ['pointOfSale', 'containers', 'containers.container'] });
+    const currentContainer = await Container.findOne({ where: { id: containerId } });
+    const containerRevisions = await ContainerRevision.find({
+      where: { container: { id: containerId }, revision: currentContainer.currentRevision - 1 },
+      relations: ['container', 'pointsOfSale', 'pointsOfSale.pointOfSale', 'pointsOfSale.containers', 'pointsOfSale.containers.container'],
+    });
+    const pos = containerRevisions
+      .map((c) => c.pointsOfSale)
+      .reduce((a, b) => a.concat(b), [])
+      .filter((p, index, self) => (
+        index === self.findIndex((p2) => p.pointOfSale.id === p2.pointOfSale.id)))
+      .filter((p) => p.revision === p.pointOfSale.currentRevision);
+
     // The async-for loop is intentional to prevent race-conditions.
     // To fix this the good way would be shortlived, the structure of POS/Containers will be changed
     for (let i = 0; i < pos.length; i += 1) {
       const p = pos[i];
       // eslint-disable-next-line no-await-in-loop
-      const { containers } = (await PointOfSaleService.getPointsOfSale(
-        { pointOfSaleId: pos[0].pointOfSale.id, returnContainers: true },
-      )).records[0] as PointOfSaleWithContainersResponse;
+      const { containers } = p;
       const update: UpdatePointOfSaleParams = {
-        containers: containers.map((c) => c.id),
+        containers: containers.map((c) => c.container.id),
         useAuthentication: true,
         name: p.name,
         id: p.pointOfSale.id,

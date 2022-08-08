@@ -109,7 +109,7 @@ export default class AuthenticationController extends BaseController {
     if (process.env.NODE_ENV !== 'development') return false;
 
     // Check the existence of the user
-    const user = await User.findOne({ id: body.userId });
+    const user = await User.findOne({ where: { id: body.userId } });
     if (!user) return false;
 
     return true;
@@ -160,7 +160,7 @@ export default class AuthenticationController extends BaseController {
         return;
       }
 
-      const pinAuthenticator = await PinAuthenticator.findOne({ where: { user }, relations: ['user'] });
+      const pinAuthenticator = await PinAuthenticator.findOne({ where: { user: { id: user.id } }, relations: ['user'] });
       if (!pinAuthenticator) {
         res.status(403).json({
           message: 'Invalid credentials.',
@@ -264,7 +264,7 @@ export default class AuthenticationController extends BaseController {
         return;
       }
 
-      const localAuthenticator = await LocalAuthenticator.findOne({ where: { user }, relations: ['user'] });
+      const localAuthenticator = await LocalAuthenticator.findOne({ where: { user: { id: user.id } }, relations: ['user'] });
       if (!localAuthenticator) {
         res.status(403).json({
           message: 'Invalid credentials.',
@@ -306,7 +306,7 @@ export default class AuthenticationController extends BaseController {
     this.logger.trace('Mock authentication for user', body.userId);
 
     try {
-      const user = await User.findOne({ id: body.userId });
+      const user = await User.findOne({ where: { id: body.userId } });
       const contents = await AuthenticationService.makeJsonWebToken(
         { tokenHandler: this.tokenHandler, roleManager: this.roleManager }, user, false,
       );

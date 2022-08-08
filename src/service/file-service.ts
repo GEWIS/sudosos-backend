@@ -114,7 +114,7 @@ export default class FileService {
    * Get the given simple file object and data from storage
    */
   public async getSimpleFile(id: number): Promise<DownloadFileResponse | undefined> {
-    const file = await BaseFile.findOne(id);
+    const file = await BaseFile.findOne({ where: { id } });
 
     if (!file) {
       return undefined;
@@ -128,7 +128,7 @@ export default class FileService {
    * Delete the simple file with given ID from storage and database
    */
   public async deleteSimpleFile(id: number): Promise<void> {
-    const file = await BaseFile.findOne(id);
+    const file = await BaseFile.findOne({ where: { id } });
 
     if (!file) return;
 
