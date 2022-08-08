@@ -186,7 +186,7 @@ export default class VatGroupService {
         // Timezones are a bitch
         Process.env.TYPEORM_CONNECTION === 'sqlite'
           ? `(STRFTIME('%m', DATETIME(str.createdAt, '${-(new Date()).getTimezoneOffset()} minutes')) - 1) / ${divider} as period`
-          : `(DATE_FORMAT(DATE_ADD(str.createdAt, INTERVAL ${-(new Date()).getTimezoneOffset()} MINUTE), '%m'), - 1) / ${divider} as period`,
+          : `(DATE_FORMAT(DATE_ADD(str.createdAt, INTERVAL ${-(new Date()).getTimezoneOffset()} MINUTE), '%m') - 1) / ${divider} as period`,
         Process.env.TYPEORM_CONNECTION === 'sqlite'
           ? 'Strftime(\'%Y\', str.createdAt) as year'
           : 'DATE_FORMAT(str.createdAt, \'%Y\') as year',
@@ -195,7 +195,9 @@ export default class VatGroupService {
       .innerJoin(ProductRevision, 'product', 'str.productRevision = product.revision AND str.productProductId = product.productId')
       .innerJoin(VatGroup, 'vatgroup', 'product.vatId = vatgroup.id')
       .where('str.invoiceId IS NULL')
-      .andWhere('year = :year', { year: params.year.toString() })
+      .andWhere(`${Process.env.TYPEORM_CONNECTION === 'sqlite'
+        ? 'Strftime(\'%Y\', str.createdAt)'
+        : 'DATE_FORMAT(str.createdAt, \'%Y\')'} = :year`, { year: params.year.toString() })
       .groupBy('vatgroup.id')
       .addGroupBy('period')
       .orderBy('vatgroup.id');

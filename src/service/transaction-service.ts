@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { createQueryBuilder, SelectQueryBuilder } from 'typeorm';
+import { Brackets, createQueryBuilder, SelectQueryBuilder } from 'typeorm';
 import Dinero, { DineroObject } from 'dinero.js';
 import { RequestWithToken } from '../middleware/token-middleware';
 import {
@@ -529,8 +529,8 @@ export default class TransactionService {
 
     query.orderBy({ 'transaction.createdAt': 'DESC' });
 
-    if (fromDate) query.andWhere('"transaction"."createdAt" >= :fromDate', { fromDate: fromDate.toISOString().replace('T', ' ') });
-    if (tillDate) query.andWhere('"transaction"."createdAt" < :tillDate', { tillDate: tillDate.toISOString().replace('T', ' ') });
+    if (fromDate) query.andWhere('transaction.createdAt >= :fromDate', { fromDate: fromDate.toISOString().replace('T', ' ') });
+    if (tillDate) query.andWhere('transaction.createdAt < :tillDate', { tillDate: tillDate.toISOString().replace('T', ' ') });
 
     const mapping = {
       fromId: 'transaction.fromId',
@@ -539,7 +539,11 @@ export default class TransactionService {
     QueryFilter.applyFilter(query, mapping, p);
 
     if (user) {
-      query.andWhere('("transaction"."fromId" = :userId OR "transaction"."createdById" = :userId OR "subTransaction"."toId" = :userId)', { userId: user.id });
+      query.andWhere(new Brackets((qb) => {
+        qb.where('transaction.fromId = :userId', { userId: user.id })
+          .orWhere('transaction.createdById = :userId', { userId: user.id })
+          .orWhere('subTransaction.toId = :userId', { userId: user.id });
+      }));
     }
 
     return applySubTransactionFilters(query);
