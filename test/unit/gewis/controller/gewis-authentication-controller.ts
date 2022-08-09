@@ -32,7 +32,7 @@ import RoleManager from '../../../../src/rbac/role-manager';
 import AuthenticationResponse from '../../../../src/controller/response/authentication-response';
 import GewisAuthenticationController from '../../../../src/gewis/controller/gewis-authentication-controller';
 import GewiswebToken from '../../../../src/gewis/gewisweb-token';
-import GewisUser from '../../../../src/entity/user/gewis-user';
+import GewisUser from '../../../../src/gewis/entity/gewis-user';
 import AuthenticationLDAPRequest from '../../../../src/controller/request/authentication-ldap-request';
 import userIsAsExpected from '../../service/authentication-service';
 import AuthenticationService from '../../../../src/service/authentication-service';

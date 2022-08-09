@@ -15,23 +15,31 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { expect } from 'chai';
+import { expect, request } from 'chai';
 import sinon from 'sinon';
 import { Client } from 'ldapts';
 import { Connection } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
+import { json } from 'body-parser';
 import AuthenticationService from '../../../src/service/authentication-service';
-import User from '../../../src/entity/user/user';
+import User, { UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import seedDatabase from '../../seed';
 import Swagger from '../../../src/start/swagger';
 import userIsAsExpected from '../service/authentication-service';
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
-import GewisUser from '../../../src/entity/user/gewis-user';
+import GewisUser from '../../../src/gewis/entity/gewis-user';
 import Gewis from '../../../src/gewis/gewis';
 import wrapInManager from '../../../src/helpers/database';
 import { restoreLDAPEnv, storeLDAPEnv } from '../../helpers/test-helpers';
+import Bindings from '../../../src/helpers/bindings';
+import TokenHandler from '../../../src/authentication/token-handler';
+import RoleManager from '../../../src/rbac/role-manager';
+import UserController from '../../../src/controller/user-controller';
+import TokenMiddleware from '../../../src/middleware/token-middleware';
+import { PaginatedUserResponse } from '../../../src/controller/response/user-response';
+import { GewisUserResponse } from '../../../src/gewis/entity/gewis-user-response';
 
 describe('GEWIS Helper functions', async (): Promise<void> => {
   let ctx: {
@@ -40,6 +48,7 @@ describe('GEWIS Helper functions', async (): Promise<void> => {
     users: User[],
     spec: SwaggerSpecification,
     validADUser: any,
+    adminToken: string,
   };
 
   const stubs: sinon.SinonStub[] = [];
@@ -80,12 +89,66 @@ describe('GEWIS Helper functions', async (): Promise<void> => {
       mail: 'm4141@gewis.nl',
     };
 
+    const tokenHandler = new TokenHandler({
+      algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
+    });
+    const adminToken = await tokenHandler.signToken({ user: users[0], roles: ['User', 'Admin'], lesser: false }, '1');
+
+    const all = { all: new Set<string>(['*']) };
+    const roleManager = new RoleManager();
+    roleManager.registerRole({
+      name: 'Admin',
+      permissions: {
+        User: {
+          create: all,
+          get: all,
+          update: all,
+          delete: all,
+          acceptToS: all,
+        },
+        Product: {
+          get: all,
+        },
+        Container: {
+          get: all,
+        },
+        PointOfSale: {
+          get: all,
+        },
+        Transaction: {
+          get: all,
+        },
+        Transfer: {
+          get: all,
+        },
+        Authenticator: {
+          get: all,
+          update: all,
+        },
+        Roles: {
+          get: all,
+        },
+      },
+      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
+    });
+
+    const spec = await Swagger.initialize(app);
+    const controller = new UserController({
+      specification: spec,
+      roleManager,
+    }, tokenHandler);
+
+    app.use(json());
+    app.use(new TokenMiddleware({ tokenHandler, refreshFactor: 0.5 }).getMiddleware());
+    app.use('/users', controller.getRouter());
+
     ctx = {
       connection,
       app,
       users,
       validADUser,
-      spec: await Swagger.importSpecification(),
+      spec,
+      adminToken,
     };
   });
 
@@ -167,6 +230,30 @@ describe('GEWIS Helper functions', async (): Promise<void> => {
         expect(clientBindStub).to.have.been.calledWith(
           process.env.LDAP_BIND_USER, process.env.LDAP_BIND_PW,
         );
+      });
+    });
+  });
+
+  describe('GEWIS GET /users', () => {
+    let oldBindings: any;
+    before(() => {
+      oldBindings = { ...Bindings.Users };
+      Bindings.Users = {
+        parseToResponse: Gewis.parseRawUserToGewisResponse,
+        getBuilder: Gewis.getUserBuilder,
+      };
+    });
+    after(() => {
+      Bindings.Users = { ...oldBindings };
+    });
+    it('should return the GEWIS id', async () => {
+      const res = await request(ctx.app)
+        .get('/users')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+      (res.body as PaginatedUserResponse).records.forEach((userResponse: GewisUserResponse) => {
+        const validation = ctx.spec.validateModel('GewisUserResponse', userResponse, false, true);
+        expect(validation.valid).to.be.true;
       });
     });
   });

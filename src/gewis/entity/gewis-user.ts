@@ -19,7 +19,7 @@
 import {
   BaseEntity, Column, Entity, JoinColumn, OneToOne,
 } from 'typeorm';
-import User from './user';
+import User from '../../entity/user/user';
 
 /**
  * @typedef {BaseEntity} GewisUser

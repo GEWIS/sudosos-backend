@@ -18,7 +18,7 @@
 import { createQueryBuilder, EntityManager } from 'typeorm';
 import User, { UserType } from '../entity/user/user';
 import RoleManager from '../rbac/role-manager';
-import GewisUser from '../entity/user/gewis-user';
+import GewisUser from './entity/gewis-user';
 import AuthenticationService from '../service/authentication-service';
 import { asNumber } from '../helpers/validators';
 import AssignedRole from '../entity/roles/assigned-role';
@@ -26,16 +26,8 @@ import { bindUser, LDAPUser } from '../helpers/ad';
 import GewiswebToken from './gewisweb-token';
 import PinAuthenticator from '../entity/authenticator/pin-authenticator';
 import { parseRawUserToResponse, RawUser } from '../helpers/revision-to-response';
-import { UserResponse } from '../controller/response/user-response';
 import Bindings from '../helpers/bindings';
-
-/**
- * @typedef {UserResponse} GewisUserResponse
- * @property {integer} mNumber - The m-Number of the user
- */
-export interface GewisUserResponse extends UserResponse {
-  gewisId: number
-}
+import { GewisUserResponse } from './entity/gewis-user-response';
 
 export interface RawGewisUser extends RawUser {
   gewisId: number

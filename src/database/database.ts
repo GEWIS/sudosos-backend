@@ -29,7 +29,7 @@ import Container from '../entity/container/container';
 import FlaggedTransaction from '../entity/transactions/flagged-transaction';
 import BorrelkaartGroup from '../entity/user/borrelkaart-group';
 import LocalUser from '../entity/user/local-user';
-import GewisUser from '../entity/user/gewis-user';
+import GewisUser from '../gewis/entity/gewis-user';
 import UserBorrelkaartGroup from '../entity/user/user-borrelkaart-group';
 import EanAuthenticator from '../entity/authenticator/ean-authenticator';
 import MemberAuthenticator from '../entity/authenticator/member-authenticator';
