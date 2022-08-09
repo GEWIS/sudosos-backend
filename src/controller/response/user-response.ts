@@ -34,6 +34,7 @@ export interface BaseUserResponse extends BaseResponse {
  * @property {boolean} active.required - Whether the user activated
  * @property {boolean} deleted.required - Whether the user is deleted
  * @property {string} type.required - The type of user
+ * @property {string} email - If local user, the e-mail of the user
  * @property {string} acceptedToS.required - Whether this user has accepted the TOS
  * @property {boolean} extensiveDataProcessing.required - Whether data about this
  * user can be used (non-anonymously) for more data science!
@@ -42,6 +43,7 @@ export interface UserResponse extends BaseUserResponse {
   active: boolean;
   deleted: boolean;
   type: string;
+  email?: string;
   acceptedToS: TermsOfServiceStatus,
   extensiveDataProcessing: boolean;
 }

@@ -91,6 +91,7 @@ export function parseUserToResponse(user: User, timestamps = false): UserRespons
     deleted: user.deleted,
     type: UserType[user.type],
     acceptedToS: user.acceptedToS,
+    email: user.type === UserType.LOCAL_USER ? user.email : undefined,
     extensiveDataProcessing: user.extensiveDataProcessing,
   };
 }
@@ -126,6 +127,7 @@ export function parseRawUserToResponse(user: RawUser, timestamps = false): UserR
     active: user.active === 1,
     deleted: user.deleted === 1,
     type: UserType[user.type],
+    email: user.type === UserType.LOCAL_USER ? user.email : undefined,
     acceptedToS: user.acceptedToS,
     extensiveDataProcessing: user.extensiveDataProcessing === 1,
   };
