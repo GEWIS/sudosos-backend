@@ -348,6 +348,9 @@ describe('AuthenticationController', async (): Promise<void> => {
   describe('PUT /authentication/local', () => {
     it('should reset local if token is correct', async () => {
       await inUserContext(await UserFactory().clone(1), async (user: User) => {
+        // eslint-disable-next-line no-param-reassign
+        user.type = UserType.LOCAL_USER;
+        await User.save(user);
         const resetToken = await AuthenticationService.createResetToken(user);
         const password = 'Password2';
         const req: AuthenticationResetTokenRequest = {
@@ -374,6 +377,9 @@ describe('AuthenticationController', async (): Promise<void> => {
     });
     it('should return an HTTP 403 if user does not exist', async () => {
       await inUserContext(await UserFactory().clone(1), async (user: User) => {
+        // eslint-disable-next-line no-param-reassign
+        user.type = UserType.LOCAL_USER;
+        await User.save(user);
         const resetToken = await AuthenticationService.createResetToken(user);
         const password = 'Password2';
         const req: AuthenticationResetTokenRequest = {
@@ -386,11 +392,14 @@ describe('AuthenticationController', async (): Promise<void> => {
           .put('/authentication/local')
           .send(req);
         expect(res.status).to.equal(403);
-        expect(res.body.message).to.equal('Invalid token.');
+        expect(res.body.message).to.equal('Invalid request.');
       });
     });
     it('should return an HTTP 403 if the user has requested no reset', async () => {
       await inUserContext(await UserFactory().clone(1), async (user: User) => {
+        // eslint-disable-next-line no-param-reassign
+        user.type = UserType.LOCAL_USER;
+        await User.save(user);
         const password = 'Password2';
         const req: AuthenticationResetTokenRequest = {
           accountMail: user.email,
@@ -402,13 +411,16 @@ describe('AuthenticationController', async (): Promise<void> => {
           .put('/authentication/local')
           .send(req);
         expect(res.status).to.equal(403);
-        expect(res.body.message).to.equal('Invalid token.');
+        expect(res.body.message).to.equal('Invalid request.');
       });
     });
     it('should return an HTTP 403 if the token is expired', async () => {
       const { RESET_TOKEN_EXPIRES } = process.env;
       process.env.RESET_TOKEN_EXPIRES = '0';
       await inUserContext(await UserFactory().clone(1), async (user: User) => {
+        // eslint-disable-next-line no-param-reassign
+        user.type = UserType.LOCAL_USER;
+        await User.save(user);
         const resetToken = await AuthenticationService.createResetToken(user);
         const password = 'Password2';
         const req: AuthenticationResetTokenRequest = {
@@ -429,6 +441,9 @@ describe('AuthenticationController', async (): Promise<void> => {
     });
     it('should return an HTTP 403 if the wrong token password is provided', async () => {
       await inUserContext(await UserFactory().clone(1), async (user: User) => {
+        // eslint-disable-next-line no-param-reassign
+        user.type = UserType.LOCAL_USER;
+        await User.save(user);
         await AuthenticationService.createResetToken(user);
         const password = 'Password2';
         const req: AuthenticationResetTokenRequest = {
@@ -441,7 +456,7 @@ describe('AuthenticationController', async (): Promise<void> => {
           .put('/authentication/local')
           .send(req);
         expect(res.status).to.equal(403);
-        expect(res.body.message).to.equal('Invalid token.');
+        expect(res.body.message).to.equal('Invalid request.');
       });
     });
   });
