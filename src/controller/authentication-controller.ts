@@ -32,7 +32,6 @@ import PinAuthenticator from '../entity/authenticator/pin-authenticator';
 import AuthenticationPinRequest from './request/authentication-pin-request';
 import LocalAuthenticator from '../entity/authenticator/local-authenticator';
 import ResetLocalRequest from './request/reset-local-request';
-import ResetToken from '../entity/authenticator/reset-token';
 import AuthenticationResetTokenRequest from './request/authentication-reset-token-request';
 
 /**
