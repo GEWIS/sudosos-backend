@@ -30,7 +30,6 @@ import {
   PaginatedFinancialMutationResponse,
 } from '../controller/response/financial-mutation-response';
 import TransferService from './transfer-service';
-import { parseUserToResponse } from '../helpers/revision-to-response';
 import Mailer from '../mailer';
 import WelcomeToSudosos from '../mailer/templates/welcome-to-sudosos';
 import { AcceptTosRequest } from '../controller/request/accept-tos-request';
