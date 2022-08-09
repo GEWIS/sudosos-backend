@@ -19,7 +19,7 @@ import bcrypt from 'bcrypt';
 // @ts-ignore
 import { filter } from 'ldap-escape';
 import log4js, { Logger } from 'log4js';
-import { EntityManager } from 'typeorm';
+import { EntityManager, getRepository } from 'typeorm';
 import { randomBytes } from 'crypto';
 import User, { UserType } from '../entity/user/user';
 import JsonWebToken from '../authentication/json-web-token';
@@ -157,8 +157,9 @@ export default class AuthenticationService {
    * @param Type
    */
   public static async setUserAuthenticationHash<T extends HashBasedAuthenticationMethod>(user: User,
-    pass: string, Type: { new(): T, findOne: any, save: any }): Promise<T> {
-    let authenticator = await Type.findOne({ where: { user }, relations: ['user'] });
+    pass: string, Type: new () => T): Promise<T> {
+    const repo = getRepository(Type);
+    let authenticator = await repo.findOne({ where: { user }, relations: ['user'] });
     const hash = await this.hashPassword(pass);
 
     if (authenticator) {
@@ -173,7 +174,7 @@ export default class AuthenticationService {
     }
 
     // Save and return
-    await Type.save(authenticator);
+    await repo.save(authenticator as any);
     return authenticator;
   }
 
