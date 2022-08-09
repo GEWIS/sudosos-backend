@@ -60,6 +60,7 @@ import LDAPAuthenticator from '../entity/authenticator/ldap-authenticator';
 import AssignedRole from '../entity/roles/assigned-role';
 import VatGroup from '../entity/vat-group';
 import LocalAuthenticator from '../entity/authenticator/local-authenticator';
+import ResetToken from '../entity/authenticator/reset-token';
 
 export default class Database {
   public static async initialize(): Promise<Connection> {
@@ -108,6 +109,7 @@ export default class Database {
         ProductImage,
         BannerImage,
         AssignedRole,
+        ResetToken,
       ],
     };
     return createConnection(options);
