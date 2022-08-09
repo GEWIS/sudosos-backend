@@ -19,9 +19,9 @@ import bcrypt from 'bcrypt';
 // @ts-ignore
 import { filter } from 'ldap-escape';
 import log4js, { Logger } from 'log4js';
-import { EntityManager, getRepository } from 'typeorm';
+import { EntityManager, getRepository, In } from 'typeorm';
 import { randomBytes } from 'crypto';
-import User, { UserType } from '../entity/user/user';
+import User, { LocalUserTypes, UserType } from '../entity/user/user';
 import JsonWebToken from '../authentication/json-web-token';
 import AuthenticationResponse from '../controller/response/authentication-response';
 import TokenHandler from '../authentication/token-handler';
@@ -109,7 +109,7 @@ export default class AuthenticationService {
   public static async isResetTokenRequestValid(request: AuthenticationResetTokenRequest):
   Promise<ResetToken | undefined> {
     const user = await User.findOne({
-      where: { email: request.accountMail, deleted: false, type: UserType.LOCAL_USER },
+      where: { email: request.accountMail, deleted: false, type: In(LocalUserTypes) },
     });
     if (!user) return undefined;
 

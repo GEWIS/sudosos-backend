@@ -37,6 +37,13 @@ export enum UserType {
 }
 
 /**
+ * All user types that should be allowed to have a local password.
+ */
+export const LocalUserTypes = [
+  UserType.LOCAL_USER, UserType.INVOICE, UserType.AUTOMATIC_INVOICE,
+];
+
+/**
  * @typedef {BaseEntity} User
  * @property {string} firstName.required - First name of the user.
  * @property {string} lastName - Last name of the user.
