@@ -33,8 +33,6 @@ import {
 } from '../helpers/ad';
 import { parseUserToResponse } from '../helpers/revision-to-response';
 import HashBasedAuthenticationMethod from '../entity/authenticator/hash-based-authentication-method';
-import ChangedPin from '../mailer/templates/changed-pin';
-import Mailer from '../mailer';
 
 export interface AuthenticationContext {
   tokenHandler: TokenHandler,

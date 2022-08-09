@@ -41,8 +41,8 @@ export const signatureEnglish = `
         </tr>
         <tr style="vertical-align: bottom;">
             <td style="width: 50%;">
-                <a style="text-decoration: none; color: #D40000;" href="mailto:parelpracht@gewis.nl">sudosos@gewis.nl</a> <br>
-                <a style="text-decoration: none; color: #D40000;" href="https://www.gewis.nl/">sudosos.gewis.nl</a>
+                <a style="text-decoration: none; color: #D40000;" href="mailto:sudosos@gewis.nl">sudosos@gewis.nl</a> <br>
+                <a style="text-decoration: none; color: #D40000;" href="https://sudosos.gewis.nl/">sudosos.gewis.nl</a>
             </td>
             <td style="width: 50%; color: #D40000;">
         <div style="border-left: 2px solid black;">
@@ -81,8 +81,8 @@ export const signatureDutch = `
         </tr>
         <tr style="vertical-align: bottom;">
             <td style="width: 50%;">
-                <a style="text-decoration: none; color: #D40000;" href="mailto:parelpracht@gewis.nl">sudosos@gewis.nl</a> <br>
-                <a style="text-decoration: none; color: #D40000;" href="https://www.gewis.nl/">sudosos.gewis.nl</a>
+                <a style="text-decoration: none; color: #D40000;" href="mailto:sudosos@gewis.nl">sudosos@gewis.nl</a> <br>
+                <a style="text-decoration: none; color: #D40000;" href="https://sudosos.gewis.nl/">sudosos.gewis.nl</a>
             </td>
             <td style="width: 50%; color: #D40000;">
         <div style="border-left: 2px solid black;">
