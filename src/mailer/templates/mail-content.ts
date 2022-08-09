@@ -15,17 +15,24 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { UserType } from '../../entity/user/user';
-import UpdateUserRequest from './update-user-request';
 
-/**
- * @typedef CreateUserRequest
- * @property {string} firstName.required
- * @property {string} lastName
- * @property {boolean} active
- * @property {number} type.required
- * @property {string} email
- */
-export default interface CreateUserRequest extends UpdateUserRequest {
-  type: UserType;
+export interface MailContentFunctions<T> {
+  getHTML: (context: T) => string;
+  getText: (context: T) => string;
+  getSubject: (context: T) => string;
+}
+
+export default class MailContent<T> {
+  constructor(mail: MailContentFunctions<T>) {
+    this.mail = mail;
+  }
+
+  protected mail: MailContentFunctions<T>;
+
+  public getContent(context: T) {
+    const text = this.mail.getText(context);
+    const html = this.mail.getHTML(context);
+    const subject = this.mail.getSubject(context);
+    return { text, html, subject };
+  }
 }

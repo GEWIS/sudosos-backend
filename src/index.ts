@@ -60,6 +60,7 @@ import PayoutRequestController from './controller/payout-request-controller';
 import RootController from './controller/root-controller';
 import ADService from './service/ad-service';
 import VatGroupController from './controller/vat-group-controller';
+import TestController from './controller/test-controller';
 import AuthenticationSecureController from './controller/authentication-secure-controller';
 
 export class Application {
@@ -263,6 +264,7 @@ export default async function createApp(): Promise<Application> {
   application.app.use('/v1/containers', new ContainerController(options).getRouter());
   if (process.env.NODE_ENV === 'development') {
     application.app.use('/v1/files', new SimpleFileController(options).getRouter());
+    application.app.use('/v1/test', new TestController(options).getRouter());
   }
 
   // Start express application.
