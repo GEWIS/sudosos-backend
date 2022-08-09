@@ -41,6 +41,11 @@ import { asNumber } from '../helpers/validators';
 import { verifyCreateUserRequest } from './request/validators/user-request-spec';
 import userTokenInOrgan from '../helpers/token-helper';
 import { parseUserToResponse } from '../helpers/revision-to-response';
+import { AcceptTosRequest } from './request/accept-tos-request';
+import PinAuthenticator from '../entity/authenticator/pin-authenticator';
+import LocalAuthenticator from '../entity/authenticator/local-authenticator';
+import UpdateLocalRequest from './request/update-local-request';
+import verifyUpdateLocalRequest from './request/validators/update-local-request-spec';
 
 export default class UserController extends BaseController {
   private logger: Logger = log4js.getLogger('UserController');
@@ -98,16 +103,26 @@ export default class UserController extends BaseController {
             req.token.roles, 'acceptToS', 'own', 'User', ['*'],
           ),
           handler: this.acceptToS.bind(this),
+          body: { modelName: 'AcceptTosRequest' },
           restrictions: { acceptedTOS: false },
         },
       },
-      '/:id(\\d+)/pin': {
+      '/:id(\\d+)/authenticator/pin': {
         PUT: {
           body: { modelName: 'UpdatePinRequest' },
           policy: async (req) => this.roleManager.can(
             req.token.roles, 'update', UserController.getRelation(req), 'Authenticator', ['pin'],
           ),
           handler: this.updateUserPin.bind(this),
+        },
+      },
+      '/:id(\\d+)/authenticator/local': {
+        PUT: {
+          body: { modelName: 'UpdateLocalRequest' },
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'update', UserController.getRelation(req), 'Authenticator', ['password'],
+          ),
+          handler: this.updateUserLocalPassword.bind(this),
         },
       },
       '/:id(\\d+)': {
@@ -323,7 +338,7 @@ export default class UserController extends BaseController {
 
   /**
    * Put an users pin code
-   * @route PUT /users/{id}/pin
+   * @route PUT /users/{id}/authenticator/pin
    * @group users - Operations of user controller
    * @param {integer} id.path.required - The id of the user
    * @param {UpdatePinRequest.model} update.body.required -
@@ -353,10 +368,53 @@ export default class UserController extends BaseController {
         return;
       }
 
-      await AuthenticationService.setUserPINCode(user, updatePinRequest.pin.toString());
+      await AuthenticationService.setUserAuthenticationHash(user,
+        updatePinRequest.pin.toString(), PinAuthenticator);
       res.status(200).json();
     } catch (error) {
       this.logger.error('Could not update pin:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Put a user's local password
+   * @route PUT /users/{id}/authenticator/local
+   * @group users - Operations of user controller
+   * @param {integer} id.path.required - The id of the user
+   * @param {UpdateLocalRequest.model} update.body.required -
+   *    The password update
+   * @security JWT
+   * @returns 204 - Update success
+   * @returns {string} 400 - Validation Error
+   * @returns {string} 404 - Nonexistent user id
+   */
+  public async updateUserLocalPassword(req: RequestWithToken, res: Response): Promise<void> {
+    const parameters = req.params;
+    const updateLocalRequest = req.body as UpdateLocalRequest;
+    this.logger.trace('Update user local password', parameters, 'by user', req.token.user);
+
+    try {
+      const userId = Number.parseInt(parameters.id, 10);
+      // Get the user object if it exists
+      const user = await User.findOne(userId, { where: { deleted: false } });
+      // If it does not exist, return a 404 error
+      if (user === undefined) {
+        res.status(404).json('Unknown user ID.');
+        return;
+      }
+
+      const validation = await verifyUpdateLocalRequest(updateLocalRequest);
+      if (isFail(validation)) {
+        res.status(400).json(validation.fail.value);
+        return;
+      }
+
+      await AuthenticationService.setUserAuthenticationHash(user,
+        updateLocalRequest.password, LocalAuthenticator);
+      res.status(204).json();
+    } catch (error) {
+      this.logger.error('Could not update local password:', error);
       res.status(500).json('Internal server error.');
     }
   }
@@ -549,6 +607,7 @@ export default class UserController extends BaseController {
    * Accept the Terms of Service if you have not accepted it yet
    * @route POST /users/acceptTos
    * @group users - Operations of the User controller
+   * @param {AcceptTosRequest.model} params.body.required
    * @security JWT
    * @returns {string} 204 - ToS accepted
    * @returns {string} 400 - ToS already accepted
@@ -557,6 +616,8 @@ export default class UserController extends BaseController {
     this.logger.trace('Accept ToS for user', req.token.user);
 
     const { id } = req.token.user;
+    const body = req.body as AcceptTosRequest;
+
     try {
       const user = await UserService.getSingleUser(id);
       if (user === undefined) {
@@ -564,7 +625,7 @@ export default class UserController extends BaseController {
         return;
       }
 
-      const success = await UserService.acceptToS(id);
+      const success = await UserService.acceptToS(id, body);
       if (!success) {
         res.status(400).json('User already accepted ToS.');
         return;
@@ -611,9 +672,7 @@ export default class UserController extends BaseController {
         return;
       }
 
-      const products = await ProductService.getProducts({
-        ownerId: parseInt(parameters.id, 10),
-      }, { take, skip });
+      const products = await ProductService.getProducts({}, { take, skip }, owner);
       res.json(products);
     } catch (error) {
       this.logger.error('Could not return all products:', error);
@@ -654,9 +713,7 @@ export default class UserController extends BaseController {
         return;
       }
 
-      const products = await ProductService.getProducts({
-        ownerId: parseInt(parameters.id, 10),
-      }, { take, skip });
+      const products = await ProductService.getProducts({}, { take, skip }, owner);
       res.json(products);
     } catch (error) {
       this.logger.error('Could not return all products:', error);
@@ -702,7 +759,7 @@ export default class UserController extends BaseController {
       }
 
       const containers = (await ContainerService
-        .getContainers({ ownerId: user.id }, { take, skip }));
+        .getContainers({}, { take, skip }, user));
       res.json(containers);
     } catch (error) {
       this.logger.error('Could not return containers:', error);
@@ -748,7 +805,7 @@ export default class UserController extends BaseController {
       }
 
       const containers = (await ContainerService
-        .getUpdatedContainers({ ownerId: user.id }, { take, skip }));
+        .getUpdatedContainers({}, { take, skip }, user));
       res.json(containers);
     } catch (error) {
       this.logger.error('Could not return updated containers:', error);
@@ -794,7 +851,7 @@ export default class UserController extends BaseController {
       }
 
       const pointsOfSale = (await PointOfSaleService
-        .getPointsOfSale({ ownerId: user.id }, { take, skip }));
+        .getPointsOfSale({}, { take, skip }, user));
       res.json(pointsOfSale);
     } catch (error) {
       this.logger.error('Could not return point of sale:', error);
@@ -840,7 +897,7 @@ export default class UserController extends BaseController {
       }
 
       const pointsOfSale = (await PointOfSaleService
-        .getUpdatedPointsOfSale({ ownerId: user.id }, { take, skip }));
+        .getUpdatedPointsOfSale({}, { take, skip }, user));
       res.json(pointsOfSale);
     } catch (error) {
       this.logger.error('Could not return updated points of sale:', error);

@@ -34,6 +34,7 @@ import TransferService from './transfer-service';
 import { parseUserToResponse } from '../helpers/revision-to-response';
 import Mailer from '../mailer';
 import WelcomeToSudosos from '../mailer/templates/welcome-to-sudosos';
+import { AcceptTosRequest } from '../controller/request/accept-tos-request';
 
 /**
  * Parameters used to filter on Get Users functions.
@@ -159,14 +160,16 @@ export default class UserService {
   /**
    * Accept the ToS for the user with the given ID.
    * @param userId - ID of the user to accept the ToS for.
+   * @param params
    * @returns boolean - Whether the request has successfully been processed
    */
-  public static async acceptToS(userId: number): Promise<boolean> {
+  public static async acceptToS(userId: number, params: AcceptTosRequest): Promise<boolean> {
     const user = await User.findOne({ where: { id: userId } });
     if (!user) return false;
 
     if (user.acceptedToS === TermsOfServiceStatus.ACCEPTED) return false;
     user.acceptedToS = TermsOfServiceStatus.ACCEPTED;
+    user.extensiveDataProcessing = params.extensiveDataProcessing;
     await user.save();
     return true;
   }

@@ -15,11 +15,14 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { JoinColumn, OneToOne } from 'typeorm';
+import {
+  JoinColumn, OneToOne,
+} from 'typeorm';
 import BaseEntityWithoutId from '../base-entity-without-id';
 import User from '../user/user';
+
 /**
- * @typedef {AuthenticationMethod} AuthenticationMethod
+ * @typedef {BaseEntityWithoutId} AuthenticationMethod
  * @property {User.model} user.required - The user this authenticator is for
  */
 export default class AuthenticationMethod extends BaseEntityWithoutId {

@@ -62,6 +62,7 @@ import ADService from './service/ad-service';
 import Bindings from './helpers/bindings';
 import VatGroupController from './controller/vat-group-controller';
 import TestController from './controller/test-controller';
+import AuthenticationSecureController from './controller/authentication-secure-controller';
 
 export class Application {
   app: express.Express;
@@ -247,6 +248,7 @@ export default async function createApp(): Promise<Application> {
     specification: application.specification,
     roleManager: application.roleManager,
   };
+  application.app.use('/v1/authentication', new AuthenticationSecureController(options, tokenHandler).getRouter());
   application.app.use('/v1/balances', new BalanceController(options).getRouter());
   application.app.use('/v1/banners', new BannerController(options).getRouter());
   application.app.use('/v1/users', new UserController(options, tokenHandler).getRouter());

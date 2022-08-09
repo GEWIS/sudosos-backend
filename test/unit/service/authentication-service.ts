@@ -32,6 +32,8 @@ import { UserResponse } from '../../../src/controller/response/user-response';
 import { isNumber } from '../../../src/helpers/validators';
 import wrapInManager from '../../../src/helpers/database';
 import { restoreLDAPEnv, storeLDAPEnv } from '../../helpers/test-helpers';
+import HashBasedAuthenticationMethod from '../../../src/entity/authenticator/hash-based-authentication-method';
+import LocalAuthenticator from '../../../src/entity/authenticator/local-authenticator';
 
 export default function userIsAsExpected(user: User | UserResponse, ADResponse: any) {
   expect(user.firstName).to.equal(ADResponse.givenName);
@@ -175,15 +177,23 @@ describe('AuthenticationService', (): void => {
       expect(user).to.be.undefined;
     });
   });
-  describe('PIN Authentication', () => {
-    it('should set and verify a user PIN-Code', async () => {
+  describe('Hash Authentication', () => {
+    async function verifyLogin<T extends HashBasedAuthenticationMethod>(
+      Type: { new(): T, findOne: any, save: any }, right: string, wrong: string,
+    ) {
       await inUserContext(await UserFactory().clone(1), async (user: User) => {
-        await AuthenticationService.setUserPINCode(user, '1000');
-        const auth = await PinAuthenticator.findOne({ where: { user } });
+        await AuthenticationService.setUserAuthenticationHash(user, right, Type);
+        const auth = await Type.findOne({ where: { user } });
         expect(auth).to.not.be.undefined;
-        expect(await AuthenticationService.compareHash('2000', auth.hashedPin)).to.be.false;
-        expect(await AuthenticationService.compareHash('1000', auth.hashedPin)).to.be.true;
+        expect(await AuthenticationService.compareHash(wrong, auth.hash)).to.be.false;
+        expect(await AuthenticationService.compareHash(right, auth.hash)).to.be.true;
       });
+    }
+    it('should set and verify a user PIN-Code', async () => {
+      await verifyLogin(PinAuthenticator, '2000', '1000');
+    });
+    it('should set and verify a user local password', async () => {
+      await verifyLogin(LocalAuthenticator, 'Im so right', 'Im so wrong');
     });
   });
 });

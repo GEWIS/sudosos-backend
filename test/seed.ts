@@ -53,6 +53,8 @@ import seedGEWISUsers from '../src/gewis/database/seed';
 import PinAuthenticator from '../src/entity/authenticator/pin-authenticator';
 import VatGroup from '../src/entity/vat-group';
 import { VatGroupRequest } from '../src/controller/request/vat-group-request';
+import HashBasedAuthenticationMethod from '../src/entity/authenticator/hash-based-authentication-method';
+import LocalAuthenticator from '../src/entity/authenticator/local-authenticator';
 
 /**
  * Defines InvoiceUsers objects for the given Users
@@ -98,31 +100,29 @@ function defineUsers(
 }
 
 const BCRYPT_ROUNDS = 12;
-function hashPassword(password: string, callback: any) {
-  bcrypt.genSalt(BCRYPT_ROUNDS, (error, salt) => {
-    bcrypt.hash(password, salt, callback);
-  });
+async function hashPassword(password: string, callback: (encrypted: string) => any) {
+  return bcrypt.hash(password, BCRYPT_ROUNDS).then(callback);
 }
 
 /**
- * Seeds a default set of PIN users and stores them in the database.
+ * Seeds a default set of pass users and stores them in the database.
  */
-async function seedPinAuthenticators(users: User[]): Promise<PinAuthenticator[]> {
-  const pinUsers: PinAuthenticator[] = [];
+export async function seedHashAuthenticator<T extends HashBasedAuthenticationMethod>(users: User[],
+  Type: { new(): T, save: (t: T) => Promise<T> }, count = 10): Promise<T[]> {
+  const authUsers: T[] = [];
 
   const promises: Promise<any>[] = [];
-  for (let i = 0; i < users.length; i += 1) {
-    hashPassword(i.toString(), (error: any, encrypted: any) => {
-      const pinUser = Object.assign(new PinAuthenticator(), {
-        user: users[i],
-        hashedPin: encrypted,
-      });
-      promises.push(PinAuthenticator.save(pinUser).then((u) => pinUsers.push(u)));
+  const toMap: User[] = count >= users.length ? users : users.slice(count);
+  await Promise.all(toMap.map((user) => hashPassword(user.id.toString(), (encrypted: any) => {
+    const authUser = Object.assign(new Type(), {
+      user,
+      hash: encrypted,
     });
-  }
+    promises.push(Type.save(authUser).then((u) => authUsers.push(u)));
+  })));
 
   await Promise.all(promises);
-  return pinUsers;
+  return authUsers;
 }
 
 /**
@@ -989,6 +989,7 @@ function definePointOfSaleRevisions(
       pointOfSale,
       revision: rev,
       name: `PointOfSale${pointOfSale.id}-${rev}`,
+      useAuthentication: (pointOfSale.id + rev) % 2 === 0,
       containers: candidates.filter((c) => c.revision === rev),
       startDate,
       endDate,
@@ -1019,6 +1020,7 @@ function defineUpdatedPointOfSale(
   updates.push(Object.assign(new UpdatedPointOfSale(), {
     pointOfSale,
     name: `PointOfSale${pointOfSale.id}-update`,
+    useAuthentication: pointOfSale.id % 2 === 0,
     containers: candidates,
     startDate,
     endDate,
@@ -1608,11 +1610,13 @@ export interface DatabaseContent {
   banners: Banner[],
   gewisUsers: GewisUser[],
   pinUsers: PinAuthenticator[],
+  localUsers: LocalAuthenticator[],
 }
 
 export default async function seedDatabase(): Promise<DatabaseContent> {
   const users = await seedUsers();
-  const pinUsers = await seedPinAuthenticators(users);
+  const pinUsers = await seedHashAuthenticator(users, PinAuthenticator);
+  const localUsers = await seedHashAuthenticator(users, LocalAuthenticator);
   const gewisUsers = await seedGEWISUsers(users);
   const categories = await seedProductCategories();
   const vatGroups = await seedVatGroups();
@@ -1651,5 +1655,6 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
     banners,
     gewisUsers,
     pinUsers,
+    localUsers,
   };
 }

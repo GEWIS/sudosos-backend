@@ -21,6 +21,7 @@ import { SwaggerSpecification } from 'swagger-model-validator';
 import { Connection, createQueryBuilder } from 'typeorm';
 import { json } from 'body-parser';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
+import { describe } from 'mocha';
 import UserController from '../../../src/controller/user-controller';
 import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import Product from '../../../src/entity/product/product';
@@ -51,6 +52,8 @@ import RoleResponse from '../../../src/controller/response/rbac/role-response';
 import {
   FinancialMutationResponse,
 } from '../../../src/controller/response/financial-mutation-response';
+import UpdateLocalRequest from '../../../src/controller/request/update-local-request';
+import { AcceptTosRequest } from '../../../src/controller/request/accept-tos-request';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -166,6 +169,7 @@ describe('UserController', (): void => {
         },
         Authenticator: {
           get: all,
+          update: all,
         },
         Roles: {
           get: all,
@@ -185,7 +189,7 @@ describe('UserController', (): void => {
           update: own,
         },
         Authenticator: {
-          update: { own: new Set<string>(['pin']) },
+          update: { own: new Set<string>(['pin', 'password']) },
           get: own,
         },
         Roles: {
@@ -1209,6 +1213,10 @@ describe('UserController', (): void => {
     let userNotRequired: User;
     let userNotRequiredToken: string;
 
+    const body: AcceptTosRequest = {
+      extensiveDataProcessing: true,
+    };
+
     before(async () => {
       userNotAccepted = await UserFactory({
         firstName: 'TestUser1',
@@ -1237,11 +1245,13 @@ describe('UserController', (): void => {
 
       const res = await request(ctx.app)
         .post('/users/acceptToS')
-        .set('Authorization', `Bearer ${userNotAcceptedToken}`);
+        .set('Authorization', `Bearer ${userNotAcceptedToken}`)
+        .send(body);
       expect(res.status).to.equal(204);
 
       user = await User.findOne({ where: { id: userNotAccepted.id } });
       expect(user.acceptedToS).to.equal(TermsOfServiceStatus.ACCEPTED);
+      expect(user.extensiveDataProcessing).to.equal(true);
     });
     it('should correctly accept ToS if not required', async () => {
       // Sanity check
@@ -1250,11 +1260,16 @@ describe('UserController', (): void => {
 
       const res = await request(ctx.app)
         .post('/users/acceptToS')
-        .set('Authorization', `Bearer ${userNotRequiredToken}`);
+        .set('Authorization', `Bearer ${userNotRequiredToken}`)
+        .send({
+          ...body,
+          extensiveDataProcessing: false,
+        } as AcceptTosRequest);
       expect(res.status).to.equal(204);
 
       user = await User.findOne({ where: { id: userNotRequired.id } });
       expect(user.acceptedToS).to.equal(TermsOfServiceStatus.ACCEPTED);
+      expect(user.extensiveDataProcessing).to.equal(false);
     });
     it('should return 400 if ToS already accepted', async () => {
       const { id } = ctx.users[0];
@@ -1265,7 +1280,8 @@ describe('UserController', (): void => {
 
       const res = await request(ctx.app)
         .post('/users/acceptToS')
-        .set('Authorization', `Bearer ${ctx.userToken}`);
+        .set('Authorization', `Bearer ${ctx.userToken}`)
+        .send(body);
       expect(res.status).to.equal(400);
       expect(res.body).to.equal('User already accepted ToS.');
     });
@@ -1298,7 +1314,7 @@ describe('UserController', (): void => {
       expect(res.status).to.equal(200);
     });
   });
-  describe('PUT /users/{id}/pin', () => {
+  describe('PUT /users/{id}/authenticator/pin', () => {
     it('should return an HTTP 200 if authorized', async () => {
       await inUserContext(await UserFactory().clone(1), async (user: User) => {
         const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
@@ -1307,7 +1323,7 @@ describe('UserController', (): void => {
           pin: '1000',
         };
         const res = await request(ctx.app)
-          .put(`/users/${user.id}/pin`)
+          .put(`/users/${user.id}/authenticator/pin`)
           .set('Authorization', `Bearer ${userToken}`)
           .send(updatePinRequest);
         expect(res.status).to.equal(200);
@@ -1321,7 +1337,7 @@ describe('UserController', (): void => {
           pin: '1000',
         };
         const res = await request(ctx.app)
-          .put(`/users/${ctx.users[0].id}/pin`)
+          .put(`/users/${ctx.users[0].id}/authenticator/pin`)
           .set('Authorization', `Bearer ${userToken}`)
           .send(updatePinRequest);
         expect(res.status).to.equal(403);
@@ -1335,12 +1351,68 @@ describe('UserController', (): void => {
           pin: 'wrong',
         };
         const res = await request(ctx.app)
-          .put(`/users/${user.id}/pin`)
+          .put(`/users/${user.id}/authenticator/pin`)
           .set('Authorization', `Bearer ${userToken}`)
           .send(updatePinRequest);
         expect(res.body).to.be.equal(INVALID_PIN().value);
         expect(res.status).to.equal(400);
       });
+    });
+    it('should return an 404 if the user does not exists', async () => {
+      const updatePinRequest: UpdatePinRequest = {
+        pin: '1000',
+      };
+      const res = await request(ctx.app)
+        .put(`/users/${(await User.count()) + 1}/authenticator/pin`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(updatePinRequest);
+      expect(res.status).to.equal(404);
+    });
+  });
+  describe('PUT /users/{id}/authenticator/local', () => {
+    it('should return an HTTP 200 if authorized', async () => {
+      await inUserContext(await UserFactory().clone(1), async (user: User) => {
+        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
+
+        const updateLocalRequest: UpdateLocalRequest = {
+          password: 'P4ssword1!@',
+        };
+        const res = await request(ctx.app)
+          .put(`/users/${user.id}/authenticator/local`)
+          .set('Authorization', `Bearer ${userToken}`)
+          .send(updateLocalRequest);
+        expect(res.status).to.equal(204);
+      });
+    });
+    it('should return an HTTP 400 if the password is weak', async () => {
+      const updateLocalRequest: UpdateLocalRequest = {
+        password: 'weak',
+      };
+      const res = await request(ctx.app)
+        .put(`/users/${ctx.users[6].id}/authenticator/local`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(updateLocalRequest);
+      expect(res.status).to.equal(400);
+    });
+    it('should return an HTTP 404 if user does not exists', async () => {
+      const updateLocalRequest: UpdateLocalRequest = {
+        password: 'P4ssword1!@',
+      };
+      const res = await request(ctx.app)
+        .put(`/users/${(await User.count() + 1)}/authenticator/local`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(updateLocalRequest);
+      expect(res.status).to.equal(404);
+    });
+    it('should return an HTTP 403 if unauthorized', async () => {
+      const updateLocalRequest: UpdateLocalRequest = {
+        password: 'P4ssword1!@',
+      };
+      const res = await request(ctx.app)
+        .put(`/users/${ctx.users[6].id}/authenticator/local`)
+        .set('Authorization', `Bearer ${ctx.userToken}`)
+        .send(updateLocalRequest);
+      expect(res.status).to.equal(403);
     });
   });
   describe('GET /users/{id}/authenticate', () => {

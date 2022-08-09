@@ -16,8 +16,8 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { toFail, toPass, ValidationError } from '../../../helpers/specification-validation';
-import User from '../../../entity/user/user';
-import { INVALID_ACTIVE_USER_ID, INVALID_USER_ID } from './validation-errors';
+import User, { UserType } from '../../../entity/user/user';
+import { INVALID_ACTIVE_USER_ID, INVALID_ORGAN_ID, INVALID_USER_ID } from './validation-errors';
 
 export const positiveNumber = async (p: number) => {
   if (p <= 0) return toFail(new ValidationError('Number must be positive'));
@@ -36,4 +36,10 @@ export const activeUserMustExist = async (p: number) => {
     return toFail(INVALID_ACTIVE_USER_ID());
   }
   return toPass(p);
+};
+
+export const ownerIsOrgan = async (id: number) => {
+  const owner = await User.findOne({ where: { id, deleted: false, type: UserType.ORGAN } });
+  if (!owner) return toFail(INVALID_ORGAN_ID());
+  return toPass(id);
 };
