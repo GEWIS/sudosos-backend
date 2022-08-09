@@ -24,7 +24,6 @@ import { asNumber } from '../helpers/validators';
 import AssignedRole from '../entity/roles/assigned-role';
 import { bindUser, LDAPUser } from '../helpers/ad';
 import GewiswebToken from './gewisweb-token';
-import PinAuthenticator from '../entity/authenticator/pin-authenticator';
 
 /**
  * The GEWIS-specific module with definitions and helper functions.

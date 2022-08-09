@@ -57,5 +57,5 @@ export function toLocalMySQLString(date: Date): string {
  * @param date
  */
 export function toMySQLString(date: Date): string {
-  return process.env.NODE_ENV === 'sqlite' ? toMySQLString(date) : toLocalMySQLString(date);
+  return process.env.TYPEORM_CONNECTION === 'sqlite' ? toUTCMySQLString(date) : toLocalMySQLString(date);
 }

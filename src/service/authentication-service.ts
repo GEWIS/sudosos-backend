@@ -123,13 +123,9 @@ export default class AuthenticationService {
       active: true,
     }) as User;
 
-    let user: User;
-
     account = await manager.save(account);
     const auth = await bindUser(manager, ADUser, account);
-    user = auth.user;
-    console.error(user);
-    return user;
+    return auth.user;
   }
 
   /**
