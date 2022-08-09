@@ -32,6 +32,8 @@ import {
 } from '../controller/response/financial-mutation-response';
 import TransferService from './transfer-service';
 import { parseUserToResponse } from '../helpers/revision-to-response';
+import Mailer from '../mailer';
+import WelcomeToSudosos from '../mailer/templates/welcome-to-sudosos';
 import { AcceptTosRequest } from '../controller/request/accept-tos-request';
 
 /**
@@ -137,6 +139,7 @@ export default class UserService {
    */
   public static async createUser(createUserRequest: CreateUserRequest) {
     const user = await User.save(createUserRequest as User);
+    Mailer.getInstance().send(user, new WelcomeToSudosos({ name: user.firstName }));
     return Promise.resolve(this.getSingleUser(user.id));
   }
 

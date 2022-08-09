@@ -489,6 +489,8 @@ export default class UserController extends BaseController {
    * Create a new user
    * @route POST /users
    * @group users - Operations of user controller
+   * @param {CreateUserRequest.model} user.body.required -
+   * The user which should be created
    * @security JWT
    * @returns {User.model} 200 - New user
    * @returns {string} 400 - Bad request
@@ -518,6 +520,8 @@ export default class UserController extends BaseController {
    * Update a user
    * @route PATCH /users/{id}
    * @group users - Operations of user controller
+   * @param {UpdateUserRequest.model} user.body.required -
+   * The user which should be updated
    * @security JWT
    * @returns {UpdateUserRequest.model} 200 - New user
    * @returns {string} 400 - Bad request
