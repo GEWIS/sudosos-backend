@@ -21,7 +21,7 @@ import { SwaggerSpecification } from 'swagger-model-validator';
 import { expect } from 'chai';
 import sinon from 'sinon';
 import { Client } from 'ldapts';
-import User from '../../../src/entity/user/user';
+import User, { UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import seedDatabase from '../../seed';
 import Swagger from '../../../src/start/swagger';
@@ -34,6 +34,7 @@ import wrapInManager from '../../../src/helpers/database';
 import { restoreLDAPEnv, storeLDAPEnv } from '../../helpers/test-helpers';
 import HashBasedAuthenticationMethod from '../../../src/entity/authenticator/hash-based-authentication-method';
 import LocalAuthenticator from '../../../src/entity/authenticator/local-authenticator';
+import AuthenticationResetTokenRequest from '../../../src/controller/request/authentication-reset-token-request';
 
 export default function userIsAsExpected(user: User | UserResponse, ADResponse: any) {
   expect(user.firstName).to.equal(ADResponse.givenName);
@@ -233,10 +234,43 @@ describe('AuthenticationService', (): void => {
         expect(AuthenticationService.compareHash('Password2', auth.hash)).to.eventually.be.false;
       });
     });
-    it('should return undefined if resetToken is incorrect', async () => {
+  });
+  describe('isResetTokenRequestValid function', () => {
+    it('should return false if user has no reset token requested', async () => {
       await inUserContext(await UserFactory().clone(1), async (user: User) => {
-        const tokenInfo = await AuthenticationService.createResetToken(user);
-        const auth = await AuthenticationService.resetLocalUsingToken(tokenInfo.resetToken, 'wrong', 'Password');
+        const req: AuthenticationResetTokenRequest = {
+          accountMail: user.email,
+          password: 'Password',
+          token: 'wrong',
+        };
+        const auth = await AuthenticationService.isResetTokenRequestValid(req);
+        expect(auth).to.be.undefined;
+      });
+    });
+    it('should return false if user is not local', async () => {
+      await inUserContext(await UserFactory().clone(1), async (user: User) => {
+        // eslint-disable-next-line no-param-reassign
+        user.type = UserType.MEMBER;
+        await User.save(user);
+        const resetToken = await AuthenticationService.createResetToken(user);
+        const req: AuthenticationResetTokenRequest = {
+          accountMail: user.email,
+          password: 'Password',
+          token: resetToken.password,
+        };
+        const auth = await AuthenticationService.isResetTokenRequestValid(req);
+        expect(auth).to.be.undefined;
+      });
+    });
+    it('should return false if token is incorrect', async () => {
+      await inUserContext(await UserFactory().clone(1), async (user: User) => {
+        await AuthenticationService.createResetToken(user);
+        const req: AuthenticationResetTokenRequest = {
+          accountMail: user.email,
+          password: 'Password',
+          token: 'wrong',
+        };
+        const auth = await AuthenticationService.isResetTokenRequestValid(req);
         expect(auth).to.be.undefined;
       });
     });

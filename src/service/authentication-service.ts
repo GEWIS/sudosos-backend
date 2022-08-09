@@ -35,6 +35,7 @@ import { parseUserToResponse } from '../helpers/revision-to-response';
 import HashBasedAuthenticationMethod from '../entity/authenticator/hash-based-authentication-method';
 import ResetToken from '../entity/authenticator/reset-token';
 import LocalAuthenticator from '../entity/authenticator/local-authenticator';
+import AuthenticationResetTokenRequest from '../controller/request/authentication-reset-token-request';
 
 export interface AuthenticationContext {
   tokenHandler: TokenHandler,
@@ -99,6 +100,30 @@ export default class AuthenticationService {
       organs,
       lesser,
     };
+  }
+
+  /**
+   * Function that checks if the provided request corresponds to a valid reset token in the DB.
+   * @param request
+   */
+  public static async isResetTokenRequestValid(request: AuthenticationResetTokenRequest):
+  Promise<ResetToken | undefined> {
+    const user = await User.findOne({
+      where: { email: request.accountMail, deleted: false, type: UserType.LOCAL_USER },
+    });
+    if (!user) return undefined;
+
+    const resetToken = await ResetToken.findOne({ where: { user }, relations: ['user'] });
+    if (!resetToken) return undefined;
+
+    // Test if the hash matches the token
+    if (!(await this.compareHash(request.token, resetToken.hash))) return undefined;
+
+    return resetToken;
+  }
+
+  public static isTokenExpired(resetToken: ResetToken) {
+    return (resetToken.expires <= new Date());
   }
 
   /**
@@ -314,8 +339,6 @@ export default class AuthenticationService {
    */
   public static async resetLocalUsingToken(resetToken: ResetToken,
     token: string, newPassword: string): Promise<LocalAuthenticator | undefined> {
-    // Test if the hash matches the token
-    if (!(await this.compareHash(token, resetToken.hash))) return undefined;
     const auth = await this.setUserAuthenticationHash(
       resetToken.user, newPassword, LocalAuthenticator,
     );

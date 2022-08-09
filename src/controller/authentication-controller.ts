@@ -321,46 +321,27 @@ export default class AuthenticationController extends BaseController {
     this.logger.trace('Reset using token for user', body.accountMail);
 
     try {
-      const user = await User.findOne({
-        where: { email: body.accountMail, deleted: false },
-      });
-
-      // If the user does not exist we simply return a success code as to not leak info.
-      if (!user) {
-        res.status(403).json({
-          message: 'Invalid token.',
-        });
-        return;
-      }
-
-      const resetToken = await ResetToken.findOne({ where: { user }, relations: ['user'] });
+      const resetToken = await AuthenticationService.isResetTokenRequestValid(body);
       if (!resetToken) {
         res.status(403).json({
-          message: 'Invalid token.',
+          message: 'Invalid request.',
         });
         return;
       }
 
-      if (resetToken.expires <= new Date()) {
+      if (AuthenticationService.isTokenExpired(resetToken)) {
         res.status(403).json({
           message: 'Token expired.',
         });
         return;
       }
 
-      const auth = await AuthenticationService
+      await AuthenticationService
         .resetLocalUsingToken(resetToken, body.token, body.password);
-      if (!auth) {
-        res.status(403).json({
-          message: 'Invalid token.',
-        });
-        return;
-      }
-
       res.status(204).send();
       return;
     } catch (error) {
-      this.logger.error('Could reset using token:', error);
+      this.logger.error('Could not reset using token:', error);
       res.status(500).json('Internal server error.');
     }
   }
