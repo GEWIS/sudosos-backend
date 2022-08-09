@@ -26,13 +26,13 @@ interface ChangedPinOptions {
 const changedPinDutch = new MailContent<ChangedPinOptions>({
   getHTML: (context) => `<p>Beste ${context.name},</p>
 
-<p>Je pincode van je account in SudoSOS is zojuist veranderd.</p>
+<p>De pincode van je account in SudoSOS is zojuist veranderd.</p>
 
 ${signatureDutch}`,
   getSubject: () => 'Je pincode is veranderd',
   getText: (context) => `Beste ${context.name},
 
-Je pincode van je account in SudoSOS is zojuist veranderd.
+De pincode van je account in SudoSOS is zojuist veranderd.
 
 Met vriendelijke groet,
 SudoSOS`,
