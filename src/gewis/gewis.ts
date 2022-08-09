@@ -15,16 +15,23 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { EntityManager } from 'typeorm';
+import { createQueryBuilder, EntityManager } from 'typeorm';
 import User, { UserType } from '../entity/user/user';
 import RoleManager from '../rbac/role-manager';
-import GewisUser from '../entity/user/gewis-user';
+import GewisUser from './entity/gewis-user';
 import AuthenticationService from '../service/authentication-service';
 import { asNumber } from '../helpers/validators';
 import AssignedRole from '../entity/roles/assigned-role';
 import { bindUser, LDAPUser } from '../helpers/ad';
 import GewiswebToken from './gewisweb-token';
 import PinAuthenticator from '../entity/authenticator/pin-authenticator';
+import { parseRawUserToResponse, RawUser } from '../helpers/revision-to-response';
+import Bindings from '../helpers/bindings';
+import { GewisUserResponse } from './entity/gewis-user-response';
+
+export interface RawGewisUser extends RawUser {
+  gewisId: number
+}
 
 /**
  * The GEWIS-specific module with definitions and helper functions.
@@ -74,6 +81,11 @@ export default class Gewis {
     return gewisUser.user;
   }
 
+  /**
+   * Function that creates a SudoSOS user based on the payload provided by the GEWIS Web token.
+   * @param manager
+   * @param token
+   */
   public static async createUserFromWeb(manager: EntityManager, token: GewiswebToken):
   Promise<GewisUser> {
     const user = Object.assign(new User(), {
@@ -85,6 +97,26 @@ export default class Gewis {
       ofAge: token.is_18_plus,
     }) as User;
     return manager.save(user).then((u) => Gewis.createGEWISUser(manager, u, token.lidnr));
+  }
+
+  /**
+   * Parses a raw User DB object to a UserResponse
+   * @param user - User to parse
+   * @param timestamps - Boolean if createdAt and UpdatedAt should be included
+   */
+  public static parseRawUserToGewisResponse(user: RawGewisUser, timestamps = false)
+    : GewisUserResponse {
+    if (!user) return undefined;
+    return {
+      ...parseRawUserToResponse(user, timestamps),
+      gewisId: user.gewisId,
+    };
+  }
+
+  public static getUserBuilder() {
+    return createQueryBuilder()
+      .from(User, 'user')
+      .leftJoin(GewisUser, 'gewis_user', 'userId = id');
   }
 
   /**
@@ -107,6 +139,15 @@ export default class Gewis {
       .setUserAuthenticationHash<PinAuthenticator>(user, gewisId.toString(), PinAuthenticator);
 
     return gewisUser;
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  static overwriteBindings() {
+    Bindings.ldapUserCreation = Gewis.findOrCreateGEWISUserAndBind;
+    Bindings.Users = {
+      parseToResponse: Gewis.parseRawUserToGewisResponse,
+      getBuilder: Gewis.getUserBuilder,
+    };
   }
 
   async registerRoles(): Promise<void> {

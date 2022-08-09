@@ -15,24 +15,12 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import GewisUser from '../entity/gewis-user';
-import User from '../../entity/user/user';
+import { UserResponse } from '../../controller/response/user-response';
 
 /**
- * Seeds a default dataset of GEWIS Users, and stores them in the database.
+ * @typedef {UserResponse} GewisUserResponse
+ * @property {integer} gewisId.required - The m-Number of the user
  */
-export default async function seedGEWISUsers(users: User[]): Promise<GewisUser[]> {
-  const gewisUsers: GewisUser[] = [];
-
-  const promises: Promise<any>[] = [];
-  for (let i = 0; i < users.length; i += 1) {
-    const gewisUser = Object.assign(new GewisUser(), {
-      user: users[i],
-      gewisId: 1000 + i,
-    });
-    promises.push(GewisUser.save(gewisUser).then((u) => gewisUsers.push(u)));
-  }
-
-  await Promise.all(promises);
-  return gewisUsers;
+export interface GewisUserResponse extends UserResponse {
+  gewisId: number
 }

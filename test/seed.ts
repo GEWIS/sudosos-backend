@@ -48,7 +48,7 @@ import InvoiceUser from '../src/entity/user/invoice-user';
 import Invoice from '../src/entity/invoices/invoice';
 import InvoiceEntry from '../src/entity/invoices/invoice-entry';
 import InvoiceStatus, { InvoiceState } from '../src/entity/invoices/invoice-status';
-import GewisUser from '../src/entity/user/gewis-user';
+import GewisUser from '../src/gewis/entity/gewis-user';
 import seedGEWISUsers from '../src/gewis/database/seed';
 import PinAuthenticator from '../src/entity/authenticator/pin-authenticator';
 import VatGroup from '../src/entity/vat-group';
