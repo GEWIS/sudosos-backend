@@ -29,6 +29,7 @@ export default class ProductCategory extends BaseEntity {
   @Column({
     unique: true,
     length: 64,
+    nullable: false,
   })
   public name: string;
 }

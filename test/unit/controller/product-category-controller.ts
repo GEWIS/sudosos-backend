@@ -291,12 +291,27 @@ describe('ProductCategoryController', async (): Promise<void> => {
       });
       expect(databaseEntry).to.exist;
     });
-    it('should return an HTTP 400 if the given productcategory is invalid', async () => {
+    it('should return an HTTP 400 if the given productcategory name is empty', async () => {
       const productCategoryCount = await ProductCategory.count();
       const res = await request(ctx.app)
         .post('/productcategories')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(ctx.invalidRequest);
+
+      expect(await ProductCategory.count()).to.equal(productCategoryCount);
+      expect(res.body).to.equal('Invalid productcategory.');
+
+      expect(res.status).to.equal(400);
+    });
+    it('should return an HTTP 400 if the given productcategory name is null', async () => {
+      const productCategoryCount = await ProductCategory.count();
+      const res = await request(ctx.app)
+        .post('/productcategories')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({
+          ...ctx.invalidRequest,
+          name: null,
+        });
 
       expect(await ProductCategory.count()).to.equal(productCategoryCount);
       expect(res.body).to.equal('Invalid productcategory.');

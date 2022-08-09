@@ -31,7 +31,7 @@ import LDAPAuthenticator from '../../../src/entity/authenticator/ldap-authentica
 import AuthenticationService from '../../../src/service/authentication-service';
 import wrapInManager from '../../../src/helpers/database';
 import MemberAuthenticator from '../../../src/entity/authenticator/member-authenticator';
-import { LDAPGroup, LDAPResponse } from '../../../src/helpers/ad';
+import { LDAPGroup, LDAPResponse, LDAPUser } from '../../../src/helpers/ad';
 import userIsAsExpected from './authentication-service';
 import RoleManager from '../../../src/rbac/role-manager';
 import AssignedRole from '../../../src/entity/roles/assigned-role';
@@ -39,7 +39,7 @@ import { restoreLDAPEnv, storeLDAPEnv } from '../../helpers/test-helpers';
 
 chai.use(deepEqualInAnyOrder);
 
-describe('AuthenticationService', (): void => {
+describe('AD Service', (): void => {
   let ctx: {
     connection: Connection,
     app: Application,
@@ -376,7 +376,7 @@ describe('AuthenticationService', (): void => {
       const { user } = auth;
       userIsAsExpected(user, newUser);
 
-      const users = await wrapInManager(ADService.getUsers)([newUser, existingUser]);
+      const users = await ADService.getUsers([newUser as LDAPUser, existingUser as LDAPUser]);
       expect(await AssignedRole.findOne({ where: { role: 'SudoSOS - Test', user: { id: users[0].id } } })).to.exist;
       expect(await AssignedRole.findOne({ where: { role: 'SudoSOS - Test', user: { id: users[1].id } } })).to.exist;
     });

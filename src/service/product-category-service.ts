@@ -113,8 +113,8 @@ export default class ProductCategoryService {
     const productCategoryToUpdate = await ProductCategory.findOne({ where: { id } });
     if (!productCategoryToUpdate) return null;
     const productCategory = Object.assign(productCategoryToUpdate, request);
-    return ProductCategory.save(productCategory)
-      .then(() => this.asProductCategoryResponse(productCategory));
+    await ProductCategory.save(productCategory);
+    return this.asProductCategoryResponse(productCategory);
   }
 
   /**
@@ -137,7 +137,7 @@ export default class ProductCategoryService {
    */
   public static async verifyProductCategory(request: ProductCategoryRequest):
   Promise<boolean> {
-    return request.name !== ''
+    return request.name != null && request.name !== ''
         && request.name.length <= 64
         && !(await ProductCategory.findOne({ where: { name: request.name } }));
   }

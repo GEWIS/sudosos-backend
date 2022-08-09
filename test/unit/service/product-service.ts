@@ -601,7 +601,9 @@ describe('ProductService', async (): Promise<void> => {
 
       const productInContainer = (await ContainerRevision.findOne({ where: { revision: 2, container: { id: container.id } }, relations: ['container', 'products', 'products.category'] })).products[0];
       expect(productInContainer.name).to.eq(update.name);
-      expect(productInContainer.alcoholPercentage).to.eq(update.alcoholPercentage);
+      expect(typeof productInContainer.alcoholPercentage === 'string'
+        ? parseInt(productInContainer.alcoholPercentage, 10)
+        : productInContainer.alcoholPercentage).to.eq(update.alcoholPercentage);
       expect(productInContainer.priceInclVat.getAmount()).to.eq(update.priceInclVat.amount);
       expect(productInContainer.category.id).to.eq(update.category);
     });

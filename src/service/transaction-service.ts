@@ -44,6 +44,7 @@ import { DineroObjectResponse } from '../controller/response/dinero-response';
 import BalanceService from './balance-service';
 import { asDate, asNumber } from '../helpers/validators';
 import { PaginationParameters } from '../helpers/pagination';
+import { toMySQLString } from '../helpers/timestamps';
 
 export interface TransactionFilterParameters {
   transactionId?: number | number[],
@@ -529,8 +530,8 @@ export default class TransactionService {
 
     query.orderBy({ 'transaction.createdAt': 'DESC' });
 
-    if (fromDate) query.andWhere('transaction.createdAt >= :fromDate', { fromDate: fromDate.toISOString().replace('T', ' ') });
-    if (tillDate) query.andWhere('transaction.createdAt < :tillDate', { tillDate: tillDate.toISOString().replace('T', ' ') });
+    if (fromDate) query.andWhere('transaction.createdAt >= :fromDate', { fromDate: toMySQLString(fromDate) });
+    if (tillDate) query.andWhere('transaction.createdAt < :tillDate', { tillDate: toMySQLString(tillDate) });
 
     const mapping = {
       fromId: 'transaction.fromId',

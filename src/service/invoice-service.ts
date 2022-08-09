@@ -405,6 +405,7 @@ export default class InvoiceService {
     const { toId, byId } = invoiceRequest;
     let params: TransactionFilterParameters;
 
+    const user = await User.findOne({ where: { id: toId } });
     // If transactions are specified.
     if (invoiceRequest.transactionIDs) {
       params = { transactionId: invoiceRequest.transactionIDs };
@@ -416,7 +417,6 @@ export default class InvoiceService {
       let date;
       // If no invoice exists we use the time when the account was created.
       if (!latestInvoice) {
-        const user = await User.findOne({ where: { id: toId } });
         date = user.createdAt;
       } else {
         date = latestInvoice.createdAt;
@@ -424,12 +424,12 @@ export default class InvoiceService {
       params = { fromDate: new Date(date) };
     }
 
-    const transactions = (await TransactionService.getTransactions(params)).records;
+    const transactions = (await TransactionService.getTransactions(params, {}, user)).records;
     const transfer = await this.createTransferFromTransactions(toId, transactions);
 
     // Create a new Invoice
     const newInvoice: Invoice = Object.assign(new Invoice(), {
-      to: toId,
+      toId,
       transfer: transfer.id,
       addressee: invoiceRequest.addressee,
       invoiceStatus: [],
@@ -475,7 +475,7 @@ export default class InvoiceService {
 
     const filterMapping: FilterMapping = {
       currentState: 'currentState',
-      toId: 'to',
+      toId: 'toId',
       invoiceId: 'id',
     };
 

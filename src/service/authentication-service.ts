@@ -116,7 +116,7 @@ export default class AuthenticationService {
    * @param ADUser - The user for which to create a new account.
    */
   public static async createUserAndBind(manager: EntityManager, ADUser: LDAPUser): Promise<User> {
-    const account = Object.assign(new User(), {
+    let account = Object.assign(new User(), {
       firstName: ADUser.givenName,
       lastName: ADUser.sn,
       type: UserType.MEMBER,
@@ -125,11 +125,10 @@ export default class AuthenticationService {
 
     let user: User;
 
-    await manager.save(account).then(async (acc) => {
-      const auth = await bindUser(manager, ADUser, acc);
-      user = auth.user;
-    });
-
+    account = await manager.save(account);
+    const auth = await bindUser(manager, ADUser, account);
+    user = auth.user;
+    console.error(user);
     return user;
   }
 

@@ -101,10 +101,13 @@ export default class Gewis {
     });
 
     await manager.save(gewisUser);
-    // This would be the place to make a PIN Code and mail it to the user.
-    // This is not meant for production code
-    await AuthenticationService
-      .setUserAuthenticationHash<PinAuthenticator>(user, gewisId.toString(), PinAuthenticator);
+    // 09-08-2022 (Roy): code block below (temporarily) disabled, because the huge amount of queries
+    // in this chain makes the request too slow for the test suite
+    //
+    // // This would be the place to make a PIN Code and mail it to the user.
+    // // This is not meant for production code
+    // await AuthenticationService
+    //   .setUserAuthenticationHash<PinAuthenticator>(user, gewisId.toString(), PinAuthenticator);
 
     return gewisUser;
   }

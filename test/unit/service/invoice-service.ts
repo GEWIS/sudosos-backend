@@ -108,9 +108,9 @@ export async function createInvoiceWithTransfers(debtorId: number, creditorId: n
     debtorId, creditorId, transactionCount,
   );
   expect((await BalanceService.getBalance(debtorId)).amount.amount).is.equal(0);
-  await new Promise((f) => setTimeout(f, 500));
-  const { tIds, cost } = await requestToTransaction(transactions);
   await new Promise((f) => setTimeout(f, 100));
+  const { tIds, cost } = await requestToTransaction(transactions);
+  await new Promise((f) => setTimeout(f, 1000));
   expect((await BalanceService.getBalance(debtorId)).amount.amount).is.equal(-1 * cost);
 
   const createInvoiceRequest: CreateInvoiceParams = {
@@ -260,6 +260,10 @@ describe('InvoiceService', () => {
         // If we don't wait then the user created at and transactions will be the same.
         await new Promise((f) => setTimeout(f, 1000));
 
+        // Sanity check
+        const transactionsBefore = await TransactionService.getTransactions({}, {}, debtor);
+        expect(transactionsBefore.records.length).to.equal(0);
+
         // Spent money
         const transactions: TransactionRequest[] = await createTransactionRequest(
           debtor.id, creditor.id, 2,
@@ -274,7 +278,7 @@ describe('InvoiceService', () => {
 
         const first = await requestToTransaction(transactions);
 
-        await new Promise((f) => setTimeout(f, 500));
+        await new Promise((f) => setTimeout(f, 1000));
         expect((await BalanceService.getBalance(debtor.id)).amount.amount)
           .is.equal(-1 * first.cost);
 
@@ -295,6 +299,8 @@ describe('InvoiceService', () => {
 
         const invoice = (await InvoiceService.getInvoices({ toId: debtor.id })).records[0];
         expect(invoice).to.not.be.undefined;
+        expect((await BalanceService.getBalance(debtor.id)).amount.amount)
+          .is.equal(0);
 
         const createInvoiceRequest: CreateInvoiceParams = {
           byId: creditor.id,

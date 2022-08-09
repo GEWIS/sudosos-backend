@@ -20,7 +20,7 @@ import * as Process from 'process';
 import Balance from '../entity/transactions/balance';
 import BalanceResponse from '../controller/response/balance-response';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
-import { dateToUTC, toMySQLString } from '../helpers/timestamps';
+import { toMySQLString } from '../helpers/timestamps';
 
 export interface BalanceParameters {
   ids?: number[],
@@ -130,7 +130,7 @@ export default class BalanceService {
     const connection = getConnection();
 
     const parameters: any[] = [];
-    const d = date ? toMySQLString(dateToUTC(date)) : undefined;
+    const d = date ? toMySQLString(date) : undefined;
 
     const balanceSubquery = () => {
       let result = '( '

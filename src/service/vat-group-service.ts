@@ -185,8 +185,8 @@ export default class VatGroupService {
         'MAX(vatgroup.deleted) as deleted',
         // Timezones are a bitch
         Process.env.TYPEORM_CONNECTION === 'sqlite'
-          ? `(STRFTIME('%m', DATETIME(str.createdAt, '${-(new Date()).getTimezoneOffset()} minutes')) - 1) / ${divider} as period`
-          : `(DATE_FORMAT(DATE_ADD(str.createdAt, INTERVAL ${-(new Date()).getTimezoneOffset()} MINUTE), '%m') - 1) / ${divider} as period`,
+          ? `(STRFTIME('%m', DATETIME(str.createdAt, '${(new Date()).getTimezoneOffset()} minutes')) - 1) / ${divider} as period`
+          : `FLOOR((DATE_FORMAT(DATE_ADD(str.createdAt, INTERVAL ${(new Date()).getTimezoneOffset()} MINUTE), '%m') - 1) / ${divider}) as period`,
         Process.env.TYPEORM_CONNECTION === 'sqlite'
           ? 'Strftime(\'%Y\', str.createdAt) as year'
           : 'DATE_FORMAT(str.createdAt, \'%Y\') as year',

@@ -33,7 +33,7 @@ import User, { UserType } from '../entity/user/user';
 import TransferService from './transfer-service';
 import { RequestWithToken } from '../middleware/token-middleware';
 import { asDate } from '../helpers/validators';
-import { dateToUTC, toMySQLString } from '../helpers/timestamps';
+import { toMySQLString } from '../helpers/timestamps';
 
 export interface PayoutRequestFilters {
   id?: number | number[],
@@ -144,8 +144,8 @@ export default class PayoutRequestService {
       .leftJoinAndSelect('payoutRequest.approvedBy', 'approvedBy')
       .distinct(true);
 
-    if (fromDate) builder.andWhere('"payoutRequest"."createdAt" >= :fromDate', { fromDate: toMySQLString(dateToUTC(fromDate)) });
-    if (tillDate) builder.andWhere('"payoutRequest"."createdAt" < :tillDate', { tillDate: toMySQLString(dateToUTC(tillDate)) });
+    if (fromDate) builder.andWhere('payoutRequest.createdAt >= :fromDate', { fromDate: toMySQLString(fromDate) });
+    if (tillDate) builder.andWhere('payoutRequest.createdAt < :tillDate', { tillDate: toMySQLString(tillDate) });
     const mapping = {
       id: 'payoutRequest.id',
       requestedById: 'payoutRequest.requestedById',

@@ -285,7 +285,7 @@ export default class RoleManager {
    * @param users - The users being set the role
    * @param role - The role to set
    */
-  public async setRoleUsers(users: User[], role:string) {
+  public async setRoleUsers(users: User[], role: string) {
     if (!this.roles[role]) return undefined;
 
     // Typeorm doesnt like empty deletes.
@@ -296,9 +296,10 @@ export default class RoleManager {
     }
 
     // Assign users the role
-    return Promise.resolve(Promise.all(users.map((user) => (Object.assign(new AssignedRole(), {
+    const promises = users.map((user) => (Object.assign(new AssignedRole(), {
       user,
       role,
-    })).save())));
+    })).save());
+    return Promise.all(promises);
   }
 }
