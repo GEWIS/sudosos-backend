@@ -15,17 +15,18 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { UserType } from '../../entity/user/user';
-import UpdateUserRequest from './update-user-request';
+import { Column, Entity } from 'typeorm';
+import HashBasedAuthenticationMethod from './hash-based-authentication-method';
 
 /**
- * @typedef CreateUserRequest
- * @property {string} firstName.required
- * @property {string} lastName
- * @property {boolean} active
- * @property {number} type.required
- * @property {string} email
+ * @typedef {HashBasedAuthenticationMethod} ResetToken
+ * @property {string} expires.required - The end date from which the token is expired
  */
-export default interface CreateUserRequest extends UpdateUserRequest {
-  type: UserType;
+@Entity()
+export default class ResetToken extends HashBasedAuthenticationMethod {
+  @Column({
+    type: 'datetime',
+    default: () => 'CURRENT_TIMESTAMP',
+  })
+  public expires: Date;
 }

@@ -15,10 +15,12 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { EntityManager } from 'typeorm';
+import { createQueryBuilder, EntityManager, SelectQueryBuilder } from 'typeorm';
 import User from '../entity/user/user';
 import AuthenticationService from '../service/authentication-service';
 import { LDAPUser } from './ad';
+import { parseRawUserToResponse, parseUserToResponse, RawUser } from './revision-to-response';
+import { UserResponse } from '../controller/response/user-response';
 
 /**
  * Class used for setting default functions or bindings.
@@ -31,4 +33,19 @@ export default class Bindings {
    */
   public static ldapUserCreation: (manager: EntityManager,
     ADUser: LDAPUser) => Promise<User> = AuthenticationService.createUserAndBind;
+
+  /**
+   * Function called when mapping db user entities to responses.
+   */
+  public static parseUserToResponse: (user: User,
+    timestamps: boolean) => UserResponse = parseUserToResponse;
+
+  public static Users: {
+    parseToResponse: (user: RawUser,
+      timestamps: boolean) => UserResponse
+    getBuilder: () => SelectQueryBuilder<User>
+  } = {
+      parseToResponse: parseRawUserToResponse,
+      getBuilder: () => createQueryBuilder().from(User, 'user'),
+    };
 }

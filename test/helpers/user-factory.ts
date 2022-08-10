@@ -59,6 +59,7 @@ export class Builder {
         ...user,
         firstName: `User #${count + i}`,
         lastName: `Doe #${count + i}`,
+        email: `${count + i}@sudosos.nl`,
         type: user.type ?? UserType.MEMBER,
       } as User;
       users.push(clone);

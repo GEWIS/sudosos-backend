@@ -24,6 +24,7 @@ variables:
   PAGINATION_DEFAULT: 20
   PAGINATION_MAX: 500
   FILE_STORAGE_METHOD: disk
+  SMTP_FORM: SudoSOS <sudosos@example.com>
 
 install_dependencies:
   stage: install

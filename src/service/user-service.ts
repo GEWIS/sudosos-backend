@@ -15,7 +15,6 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { FindManyOptions, In } from 'typeorm';
 import { RequestWithToken } from '../middleware/token-middleware';
 import { asBoolean, asNumber, asUserType } from '../helpers/validators';
 import { PaginationParameters } from '../helpers/pagination';
@@ -31,8 +30,10 @@ import {
   PaginatedFinancialMutationResponse,
 } from '../controller/response/financial-mutation-response';
 import TransferService from './transfer-service';
-import { parseUserToResponse } from '../helpers/revision-to-response';
+import Mailer from '../mailer';
+import WelcomeToSudosos from '../mailer/templates/welcome-to-sudosos';
 import { AcceptTosRequest } from '../controller/request/accept-tos-request';
+import Bindings from '../helpers/bindings';
 
 /**
  * Parameters used to filter on Get Users functions.
@@ -42,7 +43,7 @@ export interface UserFilterParameters {
   lastName?: string,
   active?: boolean,
   ofAge?: boolean,
-  id?: number,
+  id?: number | number[],
   email?: string,
   deleted?: boolean,
   type?: UserType,
@@ -91,25 +92,21 @@ export default class UserService {
       type: 'type',
     };
 
-    const options: FindManyOptions = {
-      where: QueryFilter.createFilterWhereClause(filterMapping, filters),
-      skip,
-    };
-
+    const f = filters;
     if (filters.organId) {
       // This allows us to search for organ members
-      // However it does remove the other filters
       const userIds = await MemberAuthenticator
         .find({ where: { authenticateAs: { id: filters.organId } }, relations: ['user'] });
-      options.where = {
-        ...options.where,
-        id: In(userIds.map((auth) => auth.user.id)),
-      };
+      f.id = userIds.map((auth) => auth.user.id);
     }
 
-    const users = await User.find({ ...options, take });
-    const count = await User.count(options);
-    const records = users.map((u) => parseUserToResponse(u, true));
+    const builder = Bindings.Users.getBuilder();
+
+    QueryFilter.applyFilter(builder, filterMapping, f);
+    const users = await builder.limit(take).offset(skip).getRawMany();
+    const count = await builder.getCount();
+
+    const records = users.map((u) => Bindings.Users.parseToResponse(u, true));
 
     return {
       _pagination: {
@@ -140,6 +137,7 @@ export default class UserService {
    */
   public static async createUser(createUserRequest: CreateUserRequest) {
     const user = await User.save(createUserRequest as User);
+    Mailer.getInstance().send(user, new WelcomeToSudosos({ name: user.firstName }));
     return Promise.resolve(this.getSingleUser(user.id));
   }
 

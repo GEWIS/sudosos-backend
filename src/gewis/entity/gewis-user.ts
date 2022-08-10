@@ -15,17 +15,28 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { UserType } from '../../entity/user/user';
-import UpdateUserRequest from './update-user-request';
+
+import {
+  BaseEntity, Column, Entity, JoinColumn, OneToOne, PrimaryColumn,
+} from 'typeorm';
+import User from '../../entity/user/user';
 
 /**
- * @typedef CreateUserRequest
- * @property {string} firstName.required
- * @property {string} lastName
- * @property {boolean} active
- * @property {number} type.required
- * @property {string} email
+ * @typedef {BaseEntity} GewisUser
+ * @property {User.model} user.required - The user.
+ * @property {integer} gewisId.required - The id of the member.
  */
-export default interface CreateUserRequest extends UpdateUserRequest {
-  type: UserType;
+@Entity()
+export default class GewisUser extends BaseEntity {
+  @PrimaryColumn()
+  public userId: number;
+
+  @OneToOne(() => User, { nullable: false })
+  @JoinColumn({ name: 'userId' })
+  public user: User;
+
+  @Column({
+    type: 'integer',
+  })
+  public gewisId: number;
 }

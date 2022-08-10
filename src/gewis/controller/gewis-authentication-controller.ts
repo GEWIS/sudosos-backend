@@ -22,7 +22,7 @@ import * as util from 'util';
 import BaseController, { BaseControllerOptions } from '../../controller/base-controller';
 import Policy from '../../controller/policy';
 import TokenHandler from '../../authentication/token-handler';
-import GewisUser from '../../entity/user/gewis-user';
+import GewisUser from '../entity/gewis-user';
 import GewiswebToken from '../gewisweb-token';
 import GewiswebAuthenticationRequest from './request/gewisweb-authentication-request';
 import AuthenticationService from '../../service/authentication-service';

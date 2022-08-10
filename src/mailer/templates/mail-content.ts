@@ -16,27 +16,23 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import {
-  BaseEntity, Column, Entity, JoinColumn, OneToOne, PrimaryColumn,
-} from 'typeorm';
-import User from './user';
+export interface MailContentFunctions<T> {
+  getHTML: (context: T) => string;
+  getText: (context: T) => string;
+  getSubject: (context: T) => string;
+}
 
-/**
- * @typedef {BaseEntity} GewisUser
- * @property {User.model} user.required - The user.
- * @property {integer} gewisId.required - The id of the member.
- */
-@Entity()
-export default class GewisUser extends BaseEntity {
-  @PrimaryColumn()
-  public userId: number;
+export default class MailContent<T> {
+  constructor(mail: MailContentFunctions<T>) {
+    this.mail = mail;
+  }
 
-  @OneToOne(() => User, { nullable: false })
-  @JoinColumn({ name: 'userId' })
-  public user: User;
+  protected mail: MailContentFunctions<T>;
 
-  @Column({
-    type: 'integer',
-  })
-  public gewisId: number;
+  public getContent(context: T) {
+    const text = this.mail.getText(context);
+    const html = this.mail.getHTML(context);
+    const subject = this.mail.getSubject(context);
+    return { text, html, subject };
+  }
 }

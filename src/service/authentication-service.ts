@@ -19,31 +19,48 @@ import bcrypt from 'bcrypt';
 // @ts-ignore
 import { filter } from 'ldap-escape';
 import log4js, { Logger } from 'log4js';
-import { EntityManager } from 'typeorm';
-import User, { UserType } from '../entity/user/user';
+import { EntityManager, FindOptionsWhere, getRepository, In } from 'typeorm';
+import { randomBytes } from 'crypto';
+import User, { LocalUserTypes, UserType } from '../entity/user/user';
 import JsonWebToken from '../authentication/json-web-token';
 import AuthenticationResponse from '../controller/response/authentication-response';
 import TokenHandler from '../authentication/token-handler';
 import RoleManager from '../rbac/role-manager';
 import LDAPAuthenticator from '../entity/authenticator/ldap-authenticator';
-import { asNumber } from '../helpers/validators';
 import MemberAuthenticator from '../entity/authenticator/member-authenticator';
 import {
   bindUser, getLDAPConnection, getLDAPSettings, LDAPUser, userFromLDAP,
 } from '../helpers/ad';
 import { parseUserToResponse } from '../helpers/revision-to-response';
 import HashBasedAuthenticationMethod from '../entity/authenticator/hash-based-authentication-method';
+import ResetToken from '../entity/authenticator/reset-token';
+import LocalAuthenticator from '../entity/authenticator/local-authenticator';
+import AuthenticationResetTokenRequest from '../controller/request/authentication-reset-token-request';
 
 export interface AuthenticationContext {
   tokenHandler: TokenHandler,
   roleManager: RoleManager,
 }
 
+export interface ResetTokenInfo {
+  resetToken: ResetToken,
+  password: string,
+}
+
 export default class AuthenticationService {
   /**
    * Amount of salt rounds to use.
    */
-  private static BCRYPT_ROUNDS: number = asNumber(process.env.BCRYPT_ROUNDS) ?? 12;
+  private static BCRYPT_ROUNDS: number = parseInt(process.env.BCRYPT_ROUNDS, 10) ?? 12;
+
+  /**
+   * ResetToken expiry time in seconds
+   */
+  private static RESET_TOKEN_EXPIRES: () => number =
+    () => {
+      const env = parseInt(process.env.RESET_TOKEN_EXPIRES, 10);
+      return Number.isNaN(env) ? 3600 : env;
+    };
 
   /**
    * Helper function hashes the given string with salt.
@@ -83,6 +100,30 @@ export default class AuthenticationService {
       organs,
       lesser,
     };
+  }
+
+  /**
+   * Function that checks if the provided request corresponds to a valid reset token in the DB.
+   * @param request
+   */
+  public static async isResetTokenRequestValid(request: AuthenticationResetTokenRequest):
+  Promise<ResetToken | undefined> {
+    const user = await User.findOne({
+      where: { email: request.accountMail, deleted: false, type: In(LocalUserTypes) },
+    });
+    if (!user) return undefined;
+
+    const resetToken = await ResetToken.findOne({ where: { user: { id: user.id } }, relations: ['user'] });
+    if (!resetToken) return undefined;
+
+    // Test if the hash matches the token
+    if (!(await this.compareHash(request.token, resetToken.hash))) return undefined;
+
+    return resetToken;
+  }
+
+  public static isTokenExpired(resetToken: ResetToken) {
+    return (resetToken.expires <= new Date());
   }
 
   /**
@@ -136,12 +177,13 @@ export default class AuthenticationService {
    * @param Type
    */
   public static async setUserAuthenticationHash<T extends HashBasedAuthenticationMethod>(user: User,
-    pass: string, Type: { new(): T, findOne: any, save: any }): Promise<T> {
-    let authenticator = await Type.findOne({ where: { user }, relations: ['user'] });
+    pass: string, Type: new () => T): Promise<T> {
+    const repo = getRepository(Type);
+    let authenticator = await repo.findOne({ where: { user: { id: user.id } } as FindOptionsWhere<T>, relations: ['user'] });
     const hash = await this.hashPassword(pass);
 
     if (authenticator) {
-      // We only need to update the PIN
+      // We only need to update the hash
       authenticator.hash = hash;
     } else {
       // We must create the authenticator
@@ -152,7 +194,7 @@ export default class AuthenticationService {
     }
 
     // Save and return
-    await Type.save(authenticator);
+    await repo.save(authenticator as any);
     return authenticator;
   }
 
@@ -283,6 +325,39 @@ export default class AuthenticationService {
     });
 
     await Promise.all(promises);
+  }
+
+  /**
+   * Resets the user local authenticator if token matches stored hash
+   * @param resetToken - The stored reset token
+   * @param token - Passcode of the reset token
+   * @param newPassword - New password to set for the authentication
+   */
+  public static async resetLocalUsingToken(resetToken: ResetToken,
+    token: string, newPassword: string): Promise<LocalAuthenticator | undefined> {
+    const auth = await this.setUserAuthenticationHash(
+      resetToken.user, newPassword, LocalAuthenticator,
+    );
+    await ResetToken.delete(resetToken.userId);
+    return auth;
+  }
+
+  /**
+   * Creates a ResetToken for the given user.
+   * @param user
+   */
+  public static async createResetToken(user: User): Promise<ResetTokenInfo> {
+    const password = randomBytes(32).toString('hex');
+    const resetToken = await this.setUserAuthenticationHash(user, password, ResetToken);
+
+    const expiration = new Date().getTime() + this.RESET_TOKEN_EXPIRES() * 1000;
+    resetToken.expires = new Date(expiration);
+    await resetToken.save();
+
+    return {
+      resetToken,
+      password,
+    };
   }
 
   /**

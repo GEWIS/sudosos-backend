@@ -59,8 +59,8 @@ import InvoiceController from './controller/invoice-controller';
 import PayoutRequestController from './controller/payout-request-controller';
 import RootController from './controller/root-controller';
 import ADService from './service/ad-service';
-import Bindings from './helpers/bindings';
 import VatGroupController from './controller/vat-group-controller';
+import TestController from './controller/test-controller';
 import AuthenticationSecureController from './controller/authentication-secure-controller';
 
 export class Application {
@@ -156,7 +156,7 @@ async function setupAuthentication(tokenHandler: TokenHandler, application: Appl
   application.app.use('/v1/authentication', gewisController.getRouter());
 
   // INJECT GEWIS BINDINGS
-  Bindings.ldapUserCreation = Gewis.findOrCreateGEWISUserAndBind;
+  Gewis.overwriteBindings();
 
   // Define middleware to be used by any other route.
   const tokenMiddleware = new TokenMiddleware({ refreshFactor: 0.5, tokenHandler });
@@ -264,6 +264,7 @@ export default async function createApp(): Promise<Application> {
   application.app.use('/v1/containers', new ContainerController(options).getRouter());
   if (process.env.NODE_ENV === 'development') {
     application.app.use('/v1/files', new SimpleFileController(options).getRouter());
+    application.app.use('/v1/test', new TestController(options).getRouter());
   }
 
   // Start express application.

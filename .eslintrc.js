@@ -20,7 +20,8 @@ module.exports = {
     '@typescript-eslint/no-empty-function': ['error', { allow: ['constructors'] }],
     '@typescript-eslint/no-unused-expressions': 'off',
     'chai-friendly/no-unused-expressions': 'error',
-    "header/header": [2, 'NOTICE']
+    "header/header": [2, 'NOTICE'],
+    'class-methods-use-this': 'off',
   },
   parserOptions: {
     project: './tsconfig.json',

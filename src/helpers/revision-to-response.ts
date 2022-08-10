@@ -21,7 +21,7 @@ import { BaseContainerResponse } from '../controller/response/container-response
 import ContainerRevision from '../entity/container/container-revision';
 import { BasePointOfSaleResponse } from '../controller/response/point-of-sale-response';
 import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision';
-import User, { UserType } from '../entity/user/user';
+import User, { TermsOfServiceStatus, UserType } from '../entity/user/user';
 import { BaseUserResponse, UserResponse } from '../controller/response/user-response';
 
 export function parseProductToBaseResponse(
@@ -79,7 +79,7 @@ export function parseUserToBaseResponse(user: User, timestamps: boolean): BaseUs
 }
 
 /**
- * Parses a raw User DB object to a UserResponse
+ * Parses a User DB entity to a UserResponse
  * @param user - User to parse
  * @param timestamps - Boolean if createdAt and UpdatedAt should be included
  */
@@ -91,6 +91,44 @@ export function parseUserToResponse(user: User, timestamps = false): UserRespons
     deleted: user.deleted,
     type: UserType[user.type],
     acceptedToS: user.acceptedToS,
+    email: user.type === UserType.LOCAL_USER ? user.email : undefined,
     extensiveDataProcessing: user.extensiveDataProcessing,
+  };
+}
+
+export interface RawUser {
+  createdAt: string,
+  updatedAt: string,
+  version: number,
+  id: number,
+  firstName: string,
+  lastName: string,
+  active: number,
+  ofAge: number,
+  email: string,
+  deleted: number,
+  type: number,
+  acceptedToS: TermsOfServiceStatus,
+  extensiveDataProcessing: number,
+}
+
+/**
+ * Parses a raw User Entity to a UserResponse
+ * @param user
+ * @param timestamps
+ */
+export function parseRawUserToResponse(user: RawUser, timestamps = false): UserResponse {
+  return {
+    id: user.id,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    createdAt: timestamps ? user.createdAt : undefined,
+    updatedAt: timestamps ? user.updatedAt : undefined,
+    active: user.active === 1,
+    deleted: user.deleted === 1,
+    type: UserType[user.type],
+    email: user.type === UserType.LOCAL_USER ? user.email : undefined,
+    acceptedToS: user.acceptedToS,
+    extensiveDataProcessing: user.extensiveDataProcessing === 1,
   };
 }

@@ -31,6 +31,8 @@ import AuthenticationLocalRequest from './request/authentication-local-request';
 import PinAuthenticator from '../entity/authenticator/pin-authenticator';
 import AuthenticationPinRequest from './request/authentication-pin-request';
 import LocalAuthenticator from '../entity/authenticator/local-authenticator';
+import ResetLocalRequest from './request/reset-local-request';
+import AuthenticationResetTokenRequest from './request/authentication-reset-token-request';
 
 /**
  * The authentication controller is responsible for:
@@ -93,6 +95,18 @@ export default class AuthenticationController extends BaseController {
           body: { modelName: 'AuthenticationLocalRequest' },
           policy: async () => true,
           handler: this.LocalLogin.bind(this),
+        },
+        PUT: {
+          body: { modelName: 'AuthenticationResetTokenRequest' },
+          policy: async () => true,
+          handler: this.resetLocalUsingToken.bind(this),
+        },
+      },
+      '/local/reset': {
+        POST: {
+          body: { modelName: 'ResetLocalRequest' },
+          policy: async () => true,
+          handler: this.createResetToken.bind(this),
         },
       },
     };
@@ -243,7 +257,7 @@ export default class AuthenticationController extends BaseController {
    * Local login and hand out token
    * @route POST /authentication/local
    * @group authenticate - Operations of authentication controller
-   * @param {AuthenticationPinRequest.model} req.body.required - The local login.
+   * @param {AuthenticationLocalRequest.model} req.body.required - The local login.
    * @returns {AuthenticationResponse.model} 200 - The created json web token.
    * @returns {string} 400 - Validation error.
    * @returns {string} 403 - Authentication error.
@@ -289,6 +303,74 @@ export default class AuthenticationController extends BaseController {
       res.json(result);
     } catch (error) {
       this.logger.error('Could not authenticate using Local:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Reset local authentication using the provided token
+   * @route PUT /authentication/local
+   * @group authenticate - Operations of authentication controller
+   * @param {AuthenticationResetTokenRequest.model} req.body.required - The reset token.
+   * @returns {string} 204 - Successfully reset
+   * @returns {string} 403 - Authentication error.
+   */
+  public async resetLocalUsingToken(req: Request, res: Response): Promise<void> {
+    const body = req.body as AuthenticationResetTokenRequest;
+    this.logger.trace('Reset using token for user', body.accountMail);
+
+    try {
+      const resetToken = await AuthenticationService.isResetTokenRequestValid(body);
+      if (!resetToken) {
+        res.status(403).json({
+          message: 'Invalid request.',
+        });
+        return;
+      }
+
+      if (AuthenticationService.isTokenExpired(resetToken)) {
+        res.status(403).json({
+          message: 'Token expired.',
+        });
+        return;
+      }
+
+      await AuthenticationService
+        .resetLocalUsingToken(resetToken, body.token, body.password);
+      res.status(204).send();
+      return;
+    } catch (error) {
+      this.logger.error('Could not reset using token:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Creates a reset token for the local authentication
+   * @route POST /authentication/local/reset
+   * @group authenticate - Operations of authentication controller
+   * @param {ResetLocalRequest.model} req.body.required - The reset info.
+   * @returns {string} 204 - Creation success
+   */
+  public async createResetToken(req: Request, res: Response): Promise<void> {
+    const body = req.body as ResetLocalRequest;
+    this.logger.trace('Reset request for user', body.accountMail);
+    try {
+      const user = await User.findOne({
+        where: { email: body.accountMail, deleted: false },
+      });
+      // If the user does not exist we simply return a success code as to not leak info.
+      if (!user) {
+        res.status(204).send();
+        return;
+      }
+
+      await AuthenticationService.createResetToken(user);
+      // send email with link.
+      res.status(204).send();
+      return;
+    } catch (error) {
+      this.logger.error('Could not create reset token:', error);
       res.status(500).json('Internal server error.');
     }
   }
