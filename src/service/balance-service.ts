@@ -16,7 +16,6 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { getConnection, getManager } from 'typeorm';
-import * as Process from 'process';
 import Balance from '../entity/transactions/balance';
 import BalanceResponse from '../controller/response/balance-response';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
@@ -70,8 +69,8 @@ export default class BalanceService {
     // eslint-disable-next-line prefer-template
     let query = 'REPLACE INTO balance '
       + 'select '
-      + (Process.env.TYPEORM_CONNECTION === 'sqlite' ? "datetime('now'), " : 'NOW(), ')
-      + (Process.env.TYPEORM_CONNECTION === 'sqlite' ? "datetime('now'), " : 'NOW(), ')
+      + (process.env.TYPEORM_CONNECTION === 'sqlite' ? "datetime('now'), " : 'NOW(), ')
+      + (process.env.TYPEORM_CONNECTION === 'sqlite' ? "datetime('now'), " : 'NOW(), ')
       + '1, '
       + 'moneys2.id, '
       + 'max(moneys2.amount), '
