@@ -22,7 +22,7 @@ export interface BasePointOfSaleParams {
   useAuthentication: boolean;
 }
 
-export interface CreatePointOfSaleParams extends BasePointOfSaleParams{
+export interface CreatePointOfSaleParams extends BasePointOfSaleParams {
   ownerId: number,
 }
 
@@ -40,7 +40,7 @@ export interface UpdatePointOfSaleParams extends BasePointOfSaleParams {
  * @property {integer} ownerId - ID of the user who will own the POS, if undefined it will
  *    default to the token ID.
  */
-export interface CreatePointOfSaleRequest extends BasePointOfSaleParams{
+export interface CreatePointOfSaleRequest extends BasePointOfSaleParams {
   ownerId?: number,
 }
 

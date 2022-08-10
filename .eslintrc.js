@@ -7,6 +7,7 @@ module.exports = {
   plugins: [
     'chai-friendly',
     'header',
+    'import',
   ],
   extends: [
     'airbnb-typescript/base',

@@ -66,6 +66,6 @@ export interface CreateInvoiceParams extends BaseInvoice {
  * @property {Array.<integer>} transactionIDs - IDs of the transactions to add to the Invoice.
  * @property {string} fromDate - For creating an Invoice for all transactions from a specific date.
  */
-export interface CreateInvoiceRequest extends BaseInvoice{
+export interface CreateInvoiceRequest extends BaseInvoice {
   byId?: number,
 }

@@ -26,7 +26,7 @@ export interface CreateContainerParams extends BaseContainerParams {
   ownerId: number,
 }
 
-export interface UpdateContainerParams extends BaseContainerParams{
+export interface UpdateContainerParams extends BaseContainerParams {
   id: number
 }
 

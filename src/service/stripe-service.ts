@@ -25,7 +25,7 @@ import StripeDepositStatus, { StripeDepositState } from '../entity/deposit/strip
 import { StripePaymentIntentResponse } from '../controller/response/stripe-response';
 import TransferService from './transfer-service';
 
-export const STRIPE_API_VERSION = '2020-08-27';
+export const STRIPE_API_VERSION = '2022-08-01';
 
 export default class StripeService {
   private stripe: Stripe;
