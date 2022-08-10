@@ -95,8 +95,9 @@ describe('RestrictionMiddleware', (): void => {
     ctx.acceptTOS = undefined;
   });
 
-  after(() => {
-    ctx.connection.close();
+  after(async () => {
+    await ctx.connection.dropDatabase();
+    await ctx.connection.close();
   });
 
   describe('Non-lesser endpoints', async () => {

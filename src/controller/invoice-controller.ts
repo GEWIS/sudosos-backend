@@ -273,7 +273,7 @@ export default class InvoiceController extends BaseController {
    * @returns whether invoice is connected to used token
    */
   static async getRelation(req: RequestWithToken): Promise<string> {
-    const invoice: Invoice = await Invoice.findOne(req.params.id, { relations: ['to'] });
+    const invoice: Invoice = await Invoice.findOne({ where: { id: parseInt(req.params.id, 10) }, relations: ['to'] });
     if (invoice.to.id === req.token.user.id) return 'own';
     return 'all';
   }

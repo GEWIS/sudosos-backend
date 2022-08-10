@@ -45,7 +45,7 @@ export default class Bindings {
       timestamps: boolean) => UserResponse
     getBuilder: () => SelectQueryBuilder<User>
   } = {
-    parseToResponse: parseRawUserToResponse,
-    getBuilder: () => createQueryBuilder().from(User, 'user'),
-  };
+      parseToResponse: parseRawUserToResponse,
+      getBuilder: () => createQueryBuilder().from(User, 'user'),
+    };
 }

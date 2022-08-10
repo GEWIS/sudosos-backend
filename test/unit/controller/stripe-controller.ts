@@ -144,6 +144,7 @@ describe('StripeController', async (): Promise<void> => {
 
   after(async () => {
     if (shouldSkip) return;
+    await ctx.connection.dropDatabase();
     await ctx.connection.close();
   });
 
@@ -167,7 +168,7 @@ describe('StripeController', async (): Promise<void> => {
       expect(await StripeDeposit.count()).to.equal(stripeDepositCount + 1);
 
       ctx.specification.validateModel('StripePaymentIntentResponse', paymentIntent);
-      const stripeDeposit = await StripeDeposit.findOne(paymentIntent.id, { relations: ['to'] });
+      const stripeDeposit = await StripeDeposit.findOne({ where: { id: paymentIntent.id }, relations: ['to'] });
       expect(ctx.localUser.id).to.equal(stripeDeposit.to.id);
     });
     it('should return an HTTP 401 if no Bearer token provided', async () => {

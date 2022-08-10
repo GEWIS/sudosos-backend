@@ -336,7 +336,7 @@ export default class ProductController extends BaseController {
 
     // handle request
     try {
-      if (await Product.findOne(productId)) {
+      if (await Product.findOne({ where: { id: productId } })) {
         res.json((await ProductService
           .getProducts({ updatedProducts: true, productId: parseInt(id, 10) })).records[0]);
       } else {
@@ -387,7 +387,7 @@ export default class ProductController extends BaseController {
 
     // handle request
     try {
-      const product = await Product.findOne(productId, { relations: ['image'] });
+      const product = await Product.findOne({ where: { id: productId }, relations: ['image'] });
       if (product) {
         await this.fileService.uploadEntityImage(
           product, file, req.token.user,

@@ -188,7 +188,7 @@ export default class BannerController extends BaseController {
     const bannerId = parseInt(id, 10);
 
     try {
-      const banner = await Banner.findOne(bannerId, { relations: ['image'] });
+      const banner = await Banner.findOne({ where: { id: bannerId }, relations: ['image'] });
       if (banner) {
         await this.fileService.uploadEntityImage(
           banner, file, req.token.user,

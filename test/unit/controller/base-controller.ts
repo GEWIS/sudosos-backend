@@ -140,6 +140,7 @@ describe('BaseController', (): void => {
   });
 
   after(async () => {
+    await ctx.connection.dropDatabase();
     await ctx.connection.close();
   });
 

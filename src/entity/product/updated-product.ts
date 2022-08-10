@@ -18,7 +18,7 @@
 import {
   Entity,
   JoinColumn,
-  OneToOne,
+  OneToOne, PrimaryColumn,
 } from 'typeorm';
 import BaseProduct from './base-product';
 import Product from './product';
@@ -29,10 +29,12 @@ import Product from './product';
  */
 @Entity()
 export default class UpdatedProduct extends BaseProduct {
+  @PrimaryColumn()
+  public productId: number;
+
   @OneToOne(() => Product, {
-    primary: true,
     nullable: false,
   })
-  @JoinColumn()
+  @JoinColumn({ name: 'productId' })
   public product: Product;
 }

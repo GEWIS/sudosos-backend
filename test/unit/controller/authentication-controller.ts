@@ -123,6 +123,7 @@ describe('AuthenticationController', async (): Promise<void> => {
   });
   afterEach(async () => {
     process.env.NODE_ENV = ctx.env;
+    await ctx.connection.dropDatabase();
     await ctx.connection.close();
   });
 

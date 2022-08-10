@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { Connection } from 'typeorm';
+import { Connection, In } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
@@ -108,9 +108,9 @@ export async function createInvoiceWithTransfers(debtorId: number, creditorId: n
     debtorId, creditorId, transactionCount,
   );
   expect((await BalanceService.getBalance(debtorId)).amount.amount).is.equal(0);
-  await new Promise((f) => setTimeout(f, 500));
-  const { tIds, cost } = await requestToTransaction(transactions);
   await new Promise((f) => setTimeout(f, 100));
+  const { tIds, cost } = await requestToTransaction(transactions);
+  await new Promise((f) => setTimeout(f, 1000));
   expect((await BalanceService.getBalance(debtorId)).amount.amount).is.equal(-1 * cost);
 
   const createInvoiceRequest: CreateInvoiceParams = {
@@ -171,6 +171,7 @@ describe('InvoiceService', () => {
 
   // close database connection
   after(async () => {
+    await ctx.connection.dropDatabase();
     await ctx.connection.close();
   });
 
@@ -193,7 +194,7 @@ describe('InvoiceService', () => {
   });
   describe('createTransferFromTransactions function', () => {
     it('should return a correct Transfer', async () => {
-      const toId = (await User.findOne()).id;
+      const toId = (await User.findOne({ where: {} })).id;
       const transactions: BaseTransactionResponse[] = (
         await TransactionService.getTransactions({ fromId: toId })).records;
       let value = 0;
@@ -259,6 +260,10 @@ describe('InvoiceService', () => {
         // If we don't wait then the user created at and transactions will be the same.
         await new Promise((f) => setTimeout(f, 1000));
 
+        // Sanity check
+        const transactionsBefore = await TransactionService.getTransactions({}, {}, debtor);
+        expect(transactionsBefore.records.length).to.equal(0);
+
         // Spent money
         const transactions: TransactionRequest[] = await createTransactionRequest(
           debtor.id, creditor.id, 2,
@@ -273,7 +278,7 @@ describe('InvoiceService', () => {
 
         const first = await requestToTransaction(transactions);
 
-        await new Promise((f) => setTimeout(f, 500));
+        await new Promise((f) => setTimeout(f, 1000));
         expect((await BalanceService.getBalance(debtor.id)).amount.amount)
           .is.equal(-1 * first.cost);
 
@@ -294,6 +299,8 @@ describe('InvoiceService', () => {
 
         const invoice = (await InvoiceService.getInvoices({ toId: debtor.id })).records[0];
         expect(invoice).to.not.be.undefined;
+        expect((await BalanceService.getBalance(debtor.id)).amount.amount)
+          .is.equal(0);
 
         const createInvoiceRequest: CreateInvoiceParams = {
           byId: creditor.id,
@@ -336,7 +343,7 @@ describe('InvoiceService', () => {
 
         const invoice = await InvoiceService.createInvoice(createInvoiceRequest);
         expect((await BalanceService.getBalance(debtor.id)).amount.amount).is.equal(0);
-        const transactions = await Transaction.findByIds(tIds, { relations: ['subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice'] });
+        const transactions = await Transaction.find({ where: { id: In(tIds) }, relations: ['subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice'] });
         transactions.forEach((t) => {
           t.subTransactions.forEach((tSub) => {
             tSub.subTransactionRows.forEach((tSubRow) => {
@@ -366,7 +373,7 @@ describe('InvoiceService', () => {
         expect(updatedInvoice.addressee).to.equal(validUpdateInvoiceParams.addressee);
 
         // Sanity check
-        const fromDB = await Invoice.findOne(invoice.id);
+        const fromDB = await Invoice.findOne({ where: { id: invoice.id } });
         expect(fromDB.description).to.equal(validUpdateInvoiceParams.description);
         expect(fromDB.addressee).to.equal(validUpdateInvoiceParams.addressee);
       });
@@ -454,7 +461,7 @@ describe('InvoiceService', () => {
         };
 
         const invoice = await InvoiceService.createInvoice(createInvoiceRequest);
-        let transactions = await Transaction.findByIds(tIds, { relations: ['subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice'] });
+        let transactions = await Transaction.find({ where: { id: In(tIds) }, relations: ['subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice'] });
         transactions.forEach((t) => {
           t.subTransactions.forEach((tSub) => {
             tSub.subTransactionRows.forEach((tSubRow) => {
@@ -475,7 +482,7 @@ describe('InvoiceService', () => {
           .updateInvoice(makeParamsState(InvoiceState.DELETED));
         expect(updatedInvoice.currentState.state).to.be.equal(InvoiceState[InvoiceState.DELETED]);
 
-        transactions = await Transaction.findByIds(tIds, { relations: ['subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice'] });
+        transactions = await Transaction.find({ where: { id: In(tIds) }, relations: ['subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice'] });
         transactions.forEach((t) => {
           t.subTransactions.forEach((tSub) => {
             tSub.subTransactionRows.forEach((tSubRow) => {

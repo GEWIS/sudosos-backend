@@ -145,6 +145,7 @@ describe('PointOfSaleService', async (): Promise<void> => {
   });
 
   after(async () => {
+    await ctx.connection.dropDatabase();
     await ctx.connection.close();
   });
 
@@ -215,7 +216,9 @@ describe('PointOfSaleService', async (): Promise<void> => {
       const owner = usersOwningAPos[0];
 
       // Sanity check
-      const memberAuthenticators = await MemberAuthenticator.find({ where: { user: owner } });
+      const memberAuthenticators = await MemberAuthenticator.find({
+        where: { user: { id: owner.id } },
+      });
       expect(memberAuthenticators.length).to.equal(0);
 
       let pointsOfSale = await PointOfSaleService.getPointsOfSale({}, {}, owner);
@@ -234,7 +237,7 @@ describe('PointOfSaleService', async (): Promise<void> => {
       });
 
       // Cleanup
-      await MemberAuthenticator.delete({ user: owner });
+      await MemberAuthenticator.delete({ user: { id: owner.id } });
     });
   });
   describe('getUpdatedPointsOfSale function', () => {
@@ -267,7 +270,9 @@ describe('PointOfSaleService', async (): Promise<void> => {
       const owner = usersOwningAPos[0];
 
       // Sanity check
-      const memberAuthenticators = await MemberAuthenticator.find({ where: { user: owner } });
+      const memberAuthenticators = await MemberAuthenticator.find({
+        where: { user: { id: owner.id } },
+      });
       expect(memberAuthenticators.length).to.equal(0);
 
       let pointsOfSale = await PointOfSaleService.getUpdatedPointsOfSale({}, {}, owner);
@@ -286,7 +291,7 @@ describe('PointOfSaleService', async (): Promise<void> => {
       });
 
       // Cleanup
-      await MemberAuthenticator.delete({ user: owner });
+      await MemberAuthenticator.delete({ user: { id: owner.id } });
     });
   });
   describe('createPointOfSale function', () => {
@@ -297,7 +302,7 @@ describe('PointOfSaleService', async (): Promise<void> => {
 
       expect(await PointOfSale.count()).to.equal(count + 1);
 
-      const updatedPointOfSale = await UpdatedPointOfSale.findOne(res.id, { relations: ['containers'] });
+      const updatedPointOfSale = await UpdatedPointOfSale.findOne({ where: { pointOfSale: { id: res.id } }, relations: ['containers'] });
       const containers = updatedPointOfSale.containers.map((container) => container.id);
       expect(ctx.validPOSParams.containers).to.deep.equalInAnyOrder(containers);
 
@@ -310,7 +315,7 @@ describe('PointOfSaleService', async (): Promise<void> => {
     it('should create a new UpdatedPointOfSale', async () => {
       const id = 1;
       // Precondition: POS has no existing update
-      expect(await UpdatedPointOfSale.findOne(id)).to.be.undefined;
+      expect(await UpdatedPointOfSale.findOne({ where: { pointOfSale: { id } } })).to.be.null;
 
       const updateParams: UpdatePointOfSaleParams = {
         containers: [1, 2, 3],
@@ -322,7 +327,7 @@ describe('PointOfSaleService', async (): Promise<void> => {
       const res: UpdatedPointOfSaleResponse = (
         await PointOfSaleService.updatePointOfSale(updateParams));
 
-      const updatedPointOfSale = await UpdatedPointOfSale.findOne(res.id, { relations: ['containers'] });
+      const updatedPointOfSale = await UpdatedPointOfSale.findOne({ where: { pointOfSale: { id: res.id } }, relations: ['containers'] });
       const containers = updatedPointOfSale.containers.map((container) => container.id);
       expect(ctx.validPOSParams.containers).to.deep.equalInAnyOrder(containers);
 
@@ -331,7 +336,7 @@ describe('PointOfSaleService', async (): Promise<void> => {
     it('should replace an old update', async () => {
       const id = 6;
       // Precondition: POS has existing update
-      const update = await UpdatedPointOfSale.findOne(id, { relations: ['containers'] });
+      const update = await UpdatedPointOfSale.findOne({ where: { pointOfSale: { id } }, relations: ['containers'] });
       expect(update).to.not.be.undefined;
 
       const updateRequest: UpdatePointOfSaleParams = {
@@ -344,7 +349,7 @@ describe('PointOfSaleService', async (): Promise<void> => {
       const res: UpdatedPointOfSaleResponse = (
         await PointOfSaleService.updatePointOfSale(updateRequest));
 
-      const updatedPointOfSale = await UpdatedPointOfSale.findOne(res.id, { relations: ['containers'] });
+      const updatedPointOfSale = await UpdatedPointOfSale.findOne({ where: { pointOfSale: { id: res.id } }, relations: ['containers'] });
       const containers = updatedPointOfSale.containers.map((container) => container.id);
       expect(ctx.validPOSParams.containers).to.deep.equalInAnyOrder(containers);
 
@@ -360,7 +365,7 @@ describe('PointOfSaleService', async (): Promise<void> => {
         (await PointOfSaleService
           .approvePointOfSaleUpdate(newPOS.id)) as any) as PointOfSaleResponse);
 
-      const pointOfSaleRevision = await PointOfSaleRevision.findOne({ revision: res.revision, pointOfSale: { id: newPOS.id } }, { relations: ['containers'] });
+      const pointOfSaleRevision = await PointOfSaleRevision.findOne({ where: { revision: res.revision, pointOfSale: { id: newPOS.id } }, relations: ['containers'] });
       const containers = pointOfSaleRevision.containers.map((container) => container.container.id);
       expect(ctx.validPOSParams.containers).to.deep.equalInAnyOrder(containers);
 
@@ -370,7 +375,7 @@ describe('PointOfSaleService', async (): Promise<void> => {
   });
   describe('directPointOfSaleUpdate function', () => {
     it('should revise the point of sale without creating a UpdatedPointOfSale', async () => {
-      const pointOfSale = await PointOfSale.findOne();
+      const pointOfSale = await PointOfSale.findOne({ where: {} });
       const update: UpdatePointOfSaleParams = {
         containers: [3],
         id: pointOfSale.id,

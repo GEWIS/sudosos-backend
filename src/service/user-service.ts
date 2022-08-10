@@ -96,7 +96,7 @@ export default class UserService {
     if (filters.organId) {
       // This allows us to search for organ members
       const userIds = await MemberAuthenticator
-        .find({ where: { authenticateAs: filters.organId }, relations: ['user'] });
+        .find({ where: { authenticateAs: { id: filters.organId } }, relations: ['user'] });
       f.id = userIds.map((auth) => auth.user.id);
     }
 
@@ -148,7 +148,7 @@ export default class UserService {
    */
   public static async updateUser(userId: number, updateUserRequest: UpdateUserRequest):
   Promise<UserResponse> {
-    const user = await User.findOne(userId);
+    const user = await User.findOne({ where: { id: userId } });
     if (!user) return undefined;
     Object.assign(user, updateUserRequest);
     await user.save();
@@ -221,8 +221,8 @@ export default class UserService {
    * @param right - User to check
    */
   public static async areInSameOrgan(left: number, right: number) {
-    const leftAuth = await MemberAuthenticator.find({ where: { user: left }, relations: ['authenticateAs'] });
-    const rightAuth = await MemberAuthenticator.find({ where: { user: right }, relations: ['authenticateAs'] });
+    const leftAuth = await MemberAuthenticator.find({ where: { user: { id: left } }, relations: ['authenticateAs'] });
+    const rightAuth = await MemberAuthenticator.find({ where: { user: { id: right } }, relations: ['authenticateAs'] });
 
     const rightIds = leftAuth.map((u) => u.authenticateAs.id);
     const overlap = rightAuth.map((u) => u.authenticateAs.id)

@@ -19,10 +19,11 @@ import {
   Entity,
   ManyToOne,
   Column,
-  BeforeUpdate, ManyToMany, JoinTable,
+  BeforeUpdate, ManyToMany, JoinTable, PrimaryColumn, JoinColumn,
 } from 'typeorm';
 import BasePointOfSale from './base-point-of-sale';
 import PointOfSale from './point-of-sale';
+// eslint-disable-next-line import/no-cycle
 import ContainerRevision from '../container/container-revision';
 
 /**
@@ -34,14 +35,17 @@ import ContainerRevision from '../container/container-revision';
  */
 @Entity()
 export default class PointOfSaleRevision extends BasePointOfSale {
+  @PrimaryColumn()
+  public readonly pointOfSaleId: number;
+
   @ManyToOne(() => PointOfSale, {
-    primary: true,
     nullable: false,
     // eager: true | I removed this because of a bug in typeorm. Typeorm prioritises
     // the eager keyword over the relations that you are trying to load additionally.
     // So once you specified eager it is not possible to get
     // PointOfSaleRevision -> PointOfSale -> User(owner). This is unfortunate. Lets wait for le fix
   })
+  @JoinColumn({ name: 'pointOfSaleId' })
   public readonly pointOfSale: PointOfSale;
 
   @Column({
@@ -51,7 +55,7 @@ export default class PointOfSaleRevision extends BasePointOfSale {
   })
   public revision: number;
 
-  @ManyToMany(() => ContainerRevision)
+  @ManyToMany(() => ContainerRevision, (container) => container.pointsOfSale)
   @JoinTable()
   public containers: ContainerRevision[];
 

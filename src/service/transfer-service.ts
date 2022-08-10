@@ -17,7 +17,9 @@
  */
 
 import dinero, { Dinero } from 'dinero.js';
-import { FindManyOptions } from 'typeorm';
+import {
+  FindManyOptions,
+} from 'typeorm';
 import Transfer from '../entity/transactions/transfer';
 import { PaginatedTransferResponse, TransferResponse } from '../controller/response/transfer-response';
 import TransferRequest from '../controller/request/transfer-request';
@@ -62,8 +64,8 @@ export default class TransferService {
     const transfer = Object.assign(new Transfer(), {
       description: request.description,
       amount: dinero(request.amount as Dinero.Options),
-      from: request.fromId ? await User.findOne(request.fromId) : undefined,
-      to: request.toId ? await User.findOne(request.toId) : undefined,
+      from: request.fromId ? await User.findOne({ where: { id: request.fromId } }) : undefined,
+      to: request.toId ? await User.findOne({ where: { id: request.toId } }) : undefined,
     });
 
     await transfer.save();
@@ -74,6 +76,7 @@ export default class TransferService {
    * Query to return transfers from the database
    * @param filters - Parameters to query the transfers with
    * @param pagination
+   * @param user
    */
   public static async getTransfers(filters: TransferFilterParameters = {},
     pagination: PaginationParameters = {}, user?: User)
@@ -136,7 +139,8 @@ export default class TransferService {
     // a transfer is always at least from a valid user OR to a valid user
     // a transfer may be from null to an user, or from an user to null
     return (request.fromId || request.toId)
-        && (await User.findOne(request.fromId) || await User.findOne(request.toId))
+        && (await User.findOne({ where: { id: request.fromId } })
+        || await User.findOne({ where: { id: request.toId } }))
         && request.amount.precision === dinero.defaultPrecision
         && request.amount.currency === dinero.defaultCurrency;
   }

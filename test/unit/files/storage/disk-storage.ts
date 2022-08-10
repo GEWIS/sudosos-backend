@@ -78,6 +78,7 @@ describe('Disk Storage', async () => {
   });
 
   after(async () => {
+    await ctx.connection.dropDatabase();
     await ctx.connection.close();
   });
 

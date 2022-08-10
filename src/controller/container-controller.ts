@@ -158,7 +158,7 @@ export default class ContainerController extends BaseController {
     // Handle request
     try {
       // Check if we should return a 404.
-      const exist = await ContainerRevision.findOne({ where: `containerId = ${containerId}` });
+      const exist = await ContainerRevision.findOne({ where: { container: { id: containerId } } });
       if (!exist) {
         res.status(404).json('Container not found.');
         return;
@@ -195,7 +195,7 @@ export default class ContainerController extends BaseController {
 
     try {
       // Check if we should return a 404.
-      const exist = await ContainerRevision.findOne({ where: `containerId = ${containerId}` });
+      const exist = await ContainerRevision.findOne({ where: { container: { id: containerId } } });
       if (!exist) {
         res.status(404).json('Container not found.');
         return;
@@ -406,13 +406,13 @@ export default class ContainerController extends BaseController {
     // handle request
     try {
       // Container does not exist.
-      if (!await Container.findOne(containerId)) {
+      if (!await Container.findOne({ where: { id: containerId } })) {
         res.status(404).json('Container not found.');
         return;
       }
 
       // No update available.
-      if (!await UpdatedContainer.findOne(containerId)) {
+      if (!await UpdatedContainer.findOne({ where: { container: { id: containerId } } })) {
         res.json();
         return;
       }
@@ -437,7 +437,7 @@ export default class ContainerController extends BaseController {
    */
   static async getRelation(req: RequestWithToken): Promise<string> {
     const containerId = asNumber(req.params.id);
-    const container: Container = await Container.findOne(containerId, { relations: ['owner'] });
+    const container: Container = await Container.findOne({ where: { id: containerId }, relations: ['owner'] });
 
     if (!container) return 'all';
     if (userTokenInOrgan(req, container.owner.id)) return 'organ';

@@ -64,8 +64,8 @@ export default class PayoutRequestController extends BaseController {
 
   static async getRelation(req: RequestWithToken): Promise<string> {
     const { id } = req.params;
-    const payoutRequest = await PayoutRequest.findOne(id, { relations: ['requestedBy'] });
-    return (payoutRequest !== undefined && payoutRequest.requestedBy.id === req.token.user.id) ? 'own' : 'all';
+    const payoutRequest = await PayoutRequest.findOne({ where: { id: parseInt(id, 10) }, relations: ['requestedBy'] });
+    return (payoutRequest != null && payoutRequest.requestedBy.id === req.token.user.id) ? 'own' : 'all';
   }
 
   /**

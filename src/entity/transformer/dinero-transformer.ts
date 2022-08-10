@@ -47,8 +47,10 @@ export default class DineroTransformer implements ValueTransformer {
    * @param value - the monetary value represented as integer.
    * @throws {TypeError} if value is non-integer.
    */
-  public from(value: number): Dinero {
-    return dinero({ amount: value });
+  public from(value: number | string | null): Dinero {
+    if (value == null) return dinero({ amount: 0 });
+    const amount = typeof value === 'string' ? parseInt(value, 10) : value;
+    return dinero({ amount });
   }
 
   /**

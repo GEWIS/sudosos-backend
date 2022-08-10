@@ -130,6 +130,7 @@ describe('VatGroupController', () => {
   });
 
   after(async () => {
+    await ctx.connection.dropDatabase();
     await ctx.connection.close();
   });
 

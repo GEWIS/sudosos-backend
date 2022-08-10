@@ -15,7 +15,9 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { Column, Entity, ManyToOne } from 'typeorm';
+import {
+  Column, Entity, JoinColumn, ManyToOne, PrimaryColumn,
+} from 'typeorm';
 import BaseEntityWithoutId from '../base-entity-without-id';
 import User from '../user/user';
 
@@ -26,7 +28,11 @@ import User from '../user/user';
  */
 @Entity()
 export default class AssignedRole extends BaseEntityWithoutId {
-  @ManyToOne(() => User, { primary: true })
+  @PrimaryColumn()
+  public userId: number;
+
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'userId' })
   public user: User;
 
   @Column({ primary: true })

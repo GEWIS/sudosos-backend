@@ -39,6 +39,9 @@ import InvoiceStatus from './invoice-status';
  */
 @Entity()
 export default class Invoice extends BaseEntity {
+  @Column({ nullable: false })
+  public toId: number;
+
   @ManyToOne(() => User, { nullable: false })
   public to: User;
 

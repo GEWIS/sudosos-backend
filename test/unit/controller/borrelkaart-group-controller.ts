@@ -19,7 +19,7 @@ import { json } from 'body-parser';
 import { expect, request } from 'chai';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
-import { Connection } from 'typeorm';
+import { Connection, In } from 'typeorm';
 import TokenHandler from '../../../src/authentication/token-handler';
 import BorrelkaartGroupController from '../../../src/controller/borrelkaart-group-controller';
 import BorrelkaartGroupRequest from '../../../src/controller/request/borrelkaart-group-request';
@@ -207,9 +207,7 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
 
   // close database connection
   afterEach(async () => {
-    await UserBorrelkaartGroup.clear();
-    await User.clear();
-    await BorrelkaartGroup.clear();
+    await ctx.connection.dropDatabase();
     await ctx.connection.close();
   });
 
@@ -371,11 +369,11 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
       const bkgRes = res.body as BorrelkaartGroupResponse;
 
       // check if borrelkaart group in database
-      const borrelkaartGroup = await BorrelkaartGroup.findOne(bkgRes.id);
+      const borrelkaartGroup = await BorrelkaartGroup.findOne({ where: { id: bkgRes.id } });
       expect(borrelkaartGroup, 'did not find borrelkaart group').to.not.be.undefined;
 
       // check if user in database
-      const bkgRelation = await UserBorrelkaartGroup.findOne(bkgRes.users[0].id, { relations: ['borrelkaartGroup'] });
+      const bkgRelation = await UserBorrelkaartGroup.findOne({ where: { user: { id: bkgRes.users[0].id } }, relations: ['borrelkaartGroup'] });
       expect(bkgRelation.borrelkaartGroup.id, 'user not linked to borrelkaart group').to.equal(bkgRes.id);
 
       // success code
@@ -393,8 +391,8 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
 
       // check if banner not in database
       const borrelkaartGroup = await BorrelkaartGroup
-        .findOne({ name: ctx.invalidBorrelkaartGroupReq.name });
-      expect(borrelkaartGroup, 'borrelkaart group in databse on invalid post').to.be.undefined;
+        .findOne({ where: { name: ctx.invalidBorrelkaartGroupReq.name } });
+      expect(borrelkaartGroup, 'borrelkaart group in databse on invalid post').to.be.null;
 
       // invalid code
       expect(res.status, 'status incorrect on invalid post').to.equal(400);
@@ -426,7 +424,7 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
         .send(ctx.conflictingBorrelkaartGroupReq);
 
       // check if request denied and borrelkaart group not posted
-      expect(await BorrelkaartGroup.findOne({ name: ctx.conflictingBorrelkaartGroupReq.name }), 'conflicting group was saved').to.be.undefined;
+      expect(await BorrelkaartGroup.findOne({ where: { name: ctx.conflictingBorrelkaartGroupReq.name } }), 'conflicting group was saved').to.be.null;
 
       // check correct message
       expect(res.body, 'incorrect return body').to.equal('Conflicting user posted.');
@@ -519,10 +517,10 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
       expect(bkgEq(ctx.conflictingBorrelkaartGroupReq, res.body as BorrelkaartGroupResponse), 'returned borrelkaart group incorrect').to.be.true;
 
       // check database
-      const bkgUpdated = await BorrelkaartGroup.findOne(1);
+      const bkgUpdated = await BorrelkaartGroup.findOne({ where: { id: 1 } });
       const users = await User.findByIds((await UserBorrelkaartGroup.find({
         relations: ['user'],
-        where: { borrelkaartGroup: 1 },
+        where: { borrelkaartGroup: { id: 1 } },
       })).map((ubkg) => ubkg.user.id));
 
       expect(bkgUpdated.name, 'updated borrelkaart group not found in database').to.equal(ctx.conflictingBorrelkaartGroupReq.name);
@@ -544,10 +542,10 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
       expect(res.body, 'borrelkaart group not invalidated').to.equal('Invalid borrelkaart group.');
 
       // check database
-      const bkgDb = await BorrelkaartGroup.findOne(1);
+      const bkgDb = await BorrelkaartGroup.findOne({ where: { id: 1 } });
       const users = await User.findByIds((await UserBorrelkaartGroup.find({
         relations: ['user'],
-        where: { borrelkaartGroup: 1 },
+        where: { borrelkaartGroup: { id: 1 } },
       })).map((ubkg) => ubkg.user.id));
 
       expect(bkgDb.name, 'borrelkaart group updated in database').to.equal(ctx.validBorrelkaartGroupReq.name);
@@ -581,10 +579,10 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
       expect(res.body, 'returned a borrelkaart group').to.be.empty;
 
       // check database
-      const bkgDb = await BorrelkaartGroup.findOne(1);
+      const bkgDb = await BorrelkaartGroup.findOne({ where: { id: 1 } });
       const users = await User.findByIds((await UserBorrelkaartGroup.find({
         relations: ['user'],
-        where: { borrelkaartGroup: 1 },
+        where: { borrelkaartGroup: { id: 1 } },
       })).map((ubkg) => ubkg.user.id));
 
       expect(bkgDb.name, 'borrelkaart group updated in database').to.equal(ctx.validBorrelkaartGroupReq.name);
@@ -604,7 +602,7 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
         .send(ctx.conflictingBorrelkaartGroupReq);
 
       // check if request denied and borrelkaart group not patched
-      expect(await BorrelkaartGroup.findOne({ name: ctx.conflictingBorrelkaartGroupReq.name }), 'conflicting group was saved').to.be.undefined;
+      expect(await BorrelkaartGroup.findOne({ where: { name: ctx.conflictingBorrelkaartGroupReq.name } }), 'conflicting group was saved').to.be.null;
 
       // conflict code
       expect(res.status, 'status incorrect on conflicting post').to.equal(409);
@@ -630,17 +628,18 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
 
       // test deletion
       expect(res.body as BorrelkaartGroupResponse, 'returned borrelkaart group incorrect').to.eql(bkgDel);
-      expect(await BorrelkaartGroup.findOne(1), 'borrelkaart group not deleted').to.be.undefined;
+      expect(await BorrelkaartGroup.findOne({ where: { id: 1 } }), 'borrelkaart group not deleted').to.be.null;
 
       // test relation deletion
       expect((await UserBorrelkaartGroup.find({
         relations: ['borrelkaartGroup'],
         where: {
-          borrelkaartGroup: bkgDel.id,
+          borrelkaartGroup: { id: bkgDel.id },
         },
       })).length, 'borrelkaart group relations not deleted').to.equal(0);
 
-      expect((await UserBorrelkaartGroup.findByIds(bkgDel.users.map((user) => user.id), {
+      expect((await UserBorrelkaartGroup.find({
+        where: { user: { id: In(bkgDel.users.map((user) => user.id)) } },
         relations: ['user'],
       })).length, 'user relations not deleted').to.equal(0);
 

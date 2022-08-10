@@ -185,7 +185,7 @@ export default class BorrelkaartGroupController extends BaseController {
     // handle request
     try {
       if (await BorrelkaartGroupService.verifyBorrelkaartGroup(body)) {
-        if (await BorrelkaartGroup.findOne(id)) {
+        if (await BorrelkaartGroup.findOne({ where: { id: parseInt(id, 10) } })) {
           if (await BorrelkaartGroupService.checkUserConflicts(body, parseInt(id, 10))) {
             res.status(200).json(await BorrelkaartGroupService.updateBorrelkaartGroup(id, body));
           } else {
@@ -218,7 +218,7 @@ export default class BorrelkaartGroupController extends BaseController {
 
     // handle request
     try {
-      if (await BorrelkaartGroup.findOne(id)) {
+      if (await BorrelkaartGroup.findOne({ where: { id: parseInt(id, 10) } })) {
         res.status(200).json(await BorrelkaartGroupService.deleteBorrelkaartGroup(id));
       } else {
         res.status(404).json('Borrelkaart group not found.');

@@ -17,7 +17,7 @@
  */
 
 import {
-  BaseEntity, Column, Entity, JoinColumn, OneToOne,
+  BaseEntity, Column, Entity, JoinColumn, OneToOne, PrimaryColumn,
 } from 'typeorm';
 import User from '../../entity/user/user';
 
@@ -28,8 +28,11 @@ import User from '../../entity/user/user';
  */
 @Entity()
 export default class GewisUser extends BaseEntity {
-  @OneToOne(() => User, { primary: true, nullable: false })
-  @JoinColumn()
+  @PrimaryColumn()
+  public userId: number;
+
+  @OneToOne(() => User, { nullable: false })
+  @JoinColumn({ name: 'userId' })
   public user: User;
 
   @Column({

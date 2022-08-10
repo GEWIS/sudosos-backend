@@ -116,6 +116,7 @@ describe('StripeWebhookController', async (): Promise<void> => {
 
   after(async () => {
     if (shouldSkip) return;
+    await ctx.connection.dropDatabase();
     await ctx.connection.close();
   });
 

@@ -78,7 +78,7 @@ describe('ProductCategoryService', async (): Promise<void> => {
     });
 
     after(async () => {
-      // close database connection
+      await ctx.connection.dropDatabase();
       await ctx.connection.close();
     });
 
@@ -162,6 +162,7 @@ describe('ProductCategoryService', async (): Promise<void> => {
 
     afterEach(async () => {
       // close database connection
+      await ctx.connection.dropDatabase();
       await ctx.connection.close();
     });
 
@@ -209,6 +210,7 @@ describe('ProductCategoryService', async (): Promise<void> => {
 
     afterEach(async () => {
       // close database connection
+      await ctx.connection.dropDatabase();
       await ctx.connection.close();
     });
 
@@ -230,17 +232,6 @@ describe('ProductCategoryService', async (): Promise<void> => {
       const c2: ProductCategoryResponse = await ProductCategoryService
         .patchProductCategory(ctx.categories.length + 1, c1);
       expect(c2).to.be.null;
-    });
-    it('should not be able to patch an invalid productCategory', async () => {
-      const c1: ProductCategoryRequest = { name: null };
-      const promise = ProductCategoryService.patchProductCategory(ctx.categories[0].id, c1);
-      await expect(promise).to.eventually.be.rejected;
-      const { records } = await ProductCategoryService
-        .getProductCategories({ id: ctx.categories[0].id });
-
-      expect(records.length).to.equal(1);
-      expect(records[0].id).to.equal(ctx.categories[0].id);
-      expect(records[0].name).to.equal(ctx.categories[0].name);
     });
   });
   describe('deleteProductCategory function', async (): Promise<void> => {
@@ -265,6 +256,7 @@ describe('ProductCategoryService', async (): Promise<void> => {
 
     afterEach(async () => {
       // close database connection
+      await ctx.connection.dropDatabase();
       await ctx.connection.close();
     });
 

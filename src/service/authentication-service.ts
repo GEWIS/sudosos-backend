@@ -19,7 +19,7 @@ import bcrypt from 'bcrypt';
 // @ts-ignore
 import { filter } from 'ldap-escape';
 import log4js, { Logger } from 'log4js';
-import { EntityManager, getRepository, In } from 'typeorm';
+import { EntityManager, FindOptionsWhere, getRepository, In } from 'typeorm';
 import { randomBytes } from 'crypto';
 import User, { LocalUserTypes, UserType } from '../entity/user/user';
 import JsonWebToken from '../authentication/json-web-token';
@@ -57,10 +57,10 @@ export default class AuthenticationService {
    * ResetToken expiry time in seconds
    */
   private static RESET_TOKEN_EXPIRES: () => number =
-  () => {
-    const env = parseInt(process.env.RESET_TOKEN_EXPIRES, 10);
-    return Number.isNaN(env) ? 3600 : env;
-  };
+    () => {
+      const env = parseInt(process.env.RESET_TOKEN_EXPIRES, 10);
+      return Number.isNaN(env) ? 3600 : env;
+    };
 
   /**
    * Helper function hashes the given string with salt.
@@ -76,7 +76,7 @@ export default class AuthenticationService {
    * @param user
    */
   private static async getUserOrgans(user: User) {
-    const organs = (await MemberAuthenticator.find({ where: { user }, relations: ['authenticateAs'] })).map((organ) => organ.authenticateAs);
+    const organs = (await MemberAuthenticator.find({ where: { user: { id: user.id } }, relations: ['authenticateAs'] })).map((organ) => organ.authenticateAs);
     return organs.filter((organ) => organ.type === UserType.ORGAN);
   }
 
@@ -113,7 +113,7 @@ export default class AuthenticationService {
     });
     if (!user) return undefined;
 
-    const resetToken = await ResetToken.findOne({ where: { user }, relations: ['user'] });
+    const resetToken = await ResetToken.findOne({ where: { user: { id: user.id } }, relations: ['user'] });
     if (!resetToken) return undefined;
 
     // Test if the hash matches the token
@@ -157,21 +157,16 @@ export default class AuthenticationService {
    * @param ADUser - The user for which to create a new account.
    */
   public static async createUserAndBind(manager: EntityManager, ADUser: LDAPUser): Promise<User> {
-    const account = Object.assign(new User(), {
+    let account = Object.assign(new User(), {
       firstName: ADUser.givenName,
       lastName: ADUser.sn,
       type: UserType.MEMBER,
       active: true,
     }) as User;
 
-    let user: User;
-
-    await manager.save(account).then(async (acc) => {
-      const auth = await bindUser(manager, ADUser, acc);
-      user = auth.user;
-    });
-
-    return user;
+    account = await manager.save(account);
+    const auth = await bindUser(manager, ADUser, account);
+    return auth.user;
   }
 
   /**
@@ -184,7 +179,7 @@ export default class AuthenticationService {
   public static async setUserAuthenticationHash<T extends HashBasedAuthenticationMethod>(user: User,
     pass: string, Type: new () => T): Promise<T> {
     const repo = getRepository(Type);
-    let authenticator = await repo.findOne({ where: { user }, relations: ['user'] });
+    let authenticator = await repo.findOne({ where: { user: { id: user.id } } as FindOptionsWhere<T>, relations: ['user'] });
     const hash = await this.hashPassword(pass);
 
     if (authenticator) {
@@ -292,7 +287,7 @@ export default class AuthenticationService {
    * @param user
    */
   public static async getMemberAuthenticators(user: User): Promise<User[]> {
-    const users = (await MemberAuthenticator.find({ where: { user }, relations: ['authenticateAs'] }))
+    const users = (await MemberAuthenticator.find({ where: { user: { id: user.id } }, relations: ['authenticateAs'] }))
       .map((auth) => auth.authenticateAs);
 
     users.push(user);
@@ -312,7 +307,7 @@ export default class AuthenticationService {
     // First drop all rows containing authenticateAs
     // We check if there is anything to drop or else type orm will complain.
     const toRemove: MemberAuthenticator[] = await MemberAuthenticator
-      .find({ where: { authenticateAs } });
+      .find({ where: { authenticateAs: { id: authenticateAs.id } } });
 
     if (toRemove.length !== 0) {
       await manager.delete(MemberAuthenticator, { authenticateAs });
@@ -323,8 +318,8 @@ export default class AuthenticationService {
     // Create MemberAuthenticator object for each user in users.
     users.forEach((user) => {
       const authenticator = Object.assign(new MemberAuthenticator(), {
-        user,
-        authenticateAs,
+        userId: user.id,
+        authenticateAsId: authenticateAs.id,
       });
       promises.push(manager.save(authenticator));
     });
@@ -343,7 +338,7 @@ export default class AuthenticationService {
     const auth = await this.setUserAuthenticationHash(
       resetToken.user, newPassword, LocalAuthenticator,
     );
-    await ResetToken.delete(resetToken);
+    await ResetToken.delete(resetToken.userId);
     return auth;
   }
 

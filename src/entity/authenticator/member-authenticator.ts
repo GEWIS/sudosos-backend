@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  Entity, ManyToOne,
+  Entity, JoinColumn, ManyToOne, PrimaryColumn,
 } from 'typeorm';
 import User from '../user/user';
 import AuthenticationMethod from './authentication-method';
@@ -29,6 +29,10 @@ import AuthenticationMethod from './authentication-method';
  */
 @Entity()
 export default class MemberAuthenticator extends AuthenticationMethod {
-  @ManyToOne(() => User, { primary: true, nullable: false })
+  @PrimaryColumn()
+  public authenticateAsId: number;
+
+  @ManyToOne(() => User, { nullable: false })
+  @JoinColumn({ name: 'authenticateAsId' })
   public authenticateAs: User;
 }

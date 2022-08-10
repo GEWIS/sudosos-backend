@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { createQueryBuilder, SelectQueryBuilder } from 'typeorm';
+import { Brackets, createQueryBuilder, SelectQueryBuilder } from 'typeorm';
 import Dinero, { DineroObject } from 'dinero.js';
 import { RequestWithToken } from '../middleware/token-middleware';
 import {
@@ -44,6 +44,7 @@ import { DineroObjectResponse } from '../controller/response/dinero-response';
 import BalanceService from './balance-service';
 import { asDate, asNumber } from '../helpers/validators';
 import { PaginationParameters } from '../helpers/pagination';
+import { toMySQLString } from '../helpers/timestamps';
 
 export interface TransactionFilterParameters {
   transactionId?: number | number[],
@@ -98,8 +99,10 @@ export default class TransactionService {
     // get costs of individual rows
     const rowCosts = await Promise.all(rows.map(async (row) => {
       const rowCost = await ProductRevision.findOne({
-        revision: row.product.revision,
-        product: { id: row.product.id },
+        where: {
+          revision: row.product.revision,
+          product: { id: row.product.id },
+        },
       }).then((product) => product.priceInclVat.multiply(row.amount));
 
       return rowCost;
@@ -164,9 +167,12 @@ export default class TransactionService {
 
     // check if product exists
     const product = await ProductRevision.findOne({
-      revision: req.product.revision,
-      product: { id: req.product.id },
-    }, { relations: ['product'] });
+      where: {
+        revision: req.product.revision,
+        product: { id: req.product.id },
+      },
+      relations: ['product'],
+    });
     if (!product) {
       return false;
     }
@@ -199,7 +205,7 @@ export default class TransactionService {
     }
 
     // check if to user exists, check if they are active in database if the call is not an update
-    const user = await User.findOne(req.to);
+    const user = await User.findOne({ where: { id: req.to } });
     if (!user || (!isUpdate && !user.active)) {
       return false;
     }
@@ -214,9 +220,12 @@ export default class TransactionService {
 
     // check if container exists in database and get products for subtransactionrow check
     const container = await ContainerRevision.findOne({
-      revision: req.container.revision,
-      container: { id: req.container.id },
-    }, { relations: ['container', 'products'] });
+      where: {
+        revision: req.container.revision,
+        container: { id: req.container.id },
+      },
+      relations: ['container', 'products'],
+    });
 
     if (!container) {
       return false;
@@ -268,9 +277,12 @@ export default class TransactionService {
 
     // check if point of sale exists in database and get containers for subtransaction check
     const pointOfSale = await PointOfSaleRevision.findOne({
-      revision: req.pointOfSale.revision,
-      pointOfSale: { id: req.pointOfSale.id },
-    }, { relations: ['pointOfSale', 'containers'] });
+      where: {
+        revision: req.pointOfSale.revision,
+        pointOfSale: { id: req.pointOfSale.id },
+      },
+      relations: ['pointOfSale', 'containers'],
+    });
 
     if (!pointOfSale) {
       return false;
@@ -303,8 +315,8 @@ export default class TransactionService {
     } : {}) as Transaction;
 
     // get users
-    transaction.from = await User.findOne(req.from);
-    transaction.createdBy = await User.findOne(req.createdBy);
+    transaction.from = await User.findOne({ where: { id: req.from } });
+    transaction.createdBy = await User.findOne({ where: { id: req.createdBy } });
 
     // set subtransactions
     transaction.subTransactions = await Promise.all(req.subTransactions.map(
@@ -313,9 +325,12 @@ export default class TransactionService {
 
     // get point of sale revision
     transaction.pointOfSale = await PointOfSaleRevision.findOne({
-      revision: req.pointOfSale.revision,
-      pointOfSale: { id: req.pointOfSale.id },
-    }, { relations: ['pointOfSale'] });
+      where: {
+        revision: req.pointOfSale.revision,
+        pointOfSale: { id: req.pointOfSale.id },
+      },
+      relations: ['pointOfSale'],
+    });
 
     return transaction;
   }
@@ -376,12 +391,14 @@ export default class TransactionService {
     const subTransaction = {} as SubTransaction;
 
     // get user
-    subTransaction.to = await User.findOne(req.to);
+    subTransaction.to = await User.findOne({ where: { id: req.to } });
 
     // get container revision
     subTransaction.container = await ContainerRevision.findOne({
-      revision: req.container.revision,
-      container: { id: req.container.id },
+      where: {
+        revision: req.container.revision,
+        container: { id: req.container.id },
+      },
     });
 
     // sub transaction rows
@@ -448,8 +465,10 @@ export default class TransactionService {
       return undefined;
     }
     const product = await ProductRevision.findOne({
-      revision: req.product.revision,
-      product: { id: req.product.id },
+      where: {
+        revision: req.product.revision,
+        product: { id: req.product.id },
+      },
     });
     return { product, amount: req.amount, subTransaction } as SubTransactionRow;
   }
@@ -478,11 +497,11 @@ export default class TransactionService {
       const mapping: FilterMapping = {
         transactionId: 'transaction.id',
         toId: 'subTransaction.toId',
-        pointOfSaleId: 'transaction.pointOfSalePointOfSale',
+        pointOfSaleId: 'transaction.pointOfSalePointOfSaleId',
         pointOfSaleRevision: 'transaction.pointOfSaleRevision',
-        containerId: 'subTransaction.containerContainer',
+        containerId: 'subTransaction.containerContainerId',
         containerRevision: 'subTransaction.containerRevision',
-        productId: 'subTransactionRow.productProduct',
+        productId: 'subTransactionRow.productProductId',
         invoiceId: 'subTransactionRow.invoice',
         productRevision: 'subTransactionRow.productRevision',
       };
@@ -511,8 +530,8 @@ export default class TransactionService {
 
     query.orderBy({ 'transaction.createdAt': 'DESC' });
 
-    if (fromDate) query.andWhere('"transaction"."createdAt" >= :fromDate', { fromDate: fromDate.toISOString().replace('T', ' ') });
-    if (tillDate) query.andWhere('"transaction"."createdAt" < :tillDate', { tillDate: tillDate.toISOString().replace('T', ' ') });
+    if (fromDate) query.andWhere('transaction.createdAt >= :fromDate', { fromDate: toMySQLString(fromDate) });
+    if (tillDate) query.andWhere('transaction.createdAt < :tillDate', { tillDate: toMySQLString(tillDate) });
 
     const mapping = {
       fromId: 'transaction.fromId',
@@ -521,7 +540,11 @@ export default class TransactionService {
     QueryFilter.applyFilter(query, mapping, p);
 
     if (user) {
-      query.andWhere('("transaction"."fromId" = :userId OR "transaction"."createdById" = :userId OR "subTransaction"."toId" = :userId)', { userId: user.id });
+      query.andWhere(new Brackets((qb) => {
+        qb.where('transaction.fromId = :userId', { userId: user.id })
+          .orWhere('transaction.createdById = :userId', { userId: user.id })
+          .orWhere('subTransaction.toId = :userId', { userId: user.id });
+      }));
     }
 
     return applySubTransactionFilters(query);
@@ -617,7 +640,8 @@ export default class TransactionService {
    * @returns {Transaction.model} - the requested transaction transaction
    */
   public static async getSingleTransaction(id: number): Promise<TransactionResponse | undefined> {
-    const transaction = await Transaction.findOne(id, {
+    const transaction = await Transaction.findOne({
+      where: { id },
       relations: [
         'from', 'createdBy', 'subTransactions', 'subTransactions.to', 'subTransactions.subTransactionRows',
         // We query a lot here, but we will parse this later to a very simple BaseResponse
@@ -639,7 +663,7 @@ export default class TransactionService {
    */
   public static async updateTransaction(id: number, req: TransactionRequest):
   Promise<TransactionResponse | undefined> {
-    const transaction = await this.asTransaction(req, await Transaction.findOne(id));
+    const transaction = await this.asTransaction(req, await Transaction.findOne({ where: { id } }));
 
     // delete old transaction
     await this.deleteTransaction(id);

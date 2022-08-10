@@ -67,7 +67,7 @@ export interface BaseInvoiceResponse extends BaseResponse {
  * @typedef {BaseInvoiceResponse} InvoiceResponse
  * @property {Array.<InvoiceEntryResponse.model>} invoiceEntries - The entries of the invoice
  */
-export interface InvoiceResponse extends BaseInvoiceResponse{
+export interface InvoiceResponse extends BaseInvoiceResponse {
   invoiceEntries: InvoiceEntryResponse[]
 }
 

@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { FindManyOptions } from 'typeorm';
+import { FindManyOptions, FindOptionsRelationByString, In } from 'typeorm';
 import dinero from 'dinero.js';
 import InvoiceStatus, { InvoiceState } from '../entity/invoices/invoice-status';
 import {
@@ -178,7 +178,8 @@ export default class InvoiceService {
     baseTransactions: BaseTransactionResponse[]) {
     // Extract Transactions from IDs.
     const ids = baseTransactions.map((t) => t.id);
-    const transactions = await Transaction.findByIds(ids, {
+    const transactions = await Transaction.find({
+      where: { id: In(ids) },
       relations: [
         'subTransactions',
         'subTransactions.subTransactionRows',
@@ -260,7 +261,7 @@ export default class InvoiceService {
   public static async deleteInvoice(invoiceId: number, byId: number)
     : Promise<BaseInvoiceResponse | undefined> {
     // Find base invoice.
-    const invoice = await Invoice.findOne(invoiceId, { relations: ['to', 'invoiceStatus', 'transfer', 'transfer.to', 'transfer.from'] });
+    const invoice = await Invoice.findOne({ where: { id: invoiceId }, relations: ['to', 'invoiceStatus', 'transfer', 'transfer.to', 'transfer.from'] });
     if (!invoice) return undefined;
 
     // Extract amount from transfer
@@ -291,7 +292,7 @@ export default class InvoiceService {
     const { records } = await TransactionService.getTransactions({ invoiceId: invoice.id });
     const tIds: number[] = records.map((t) => t.id);
     const promises: Promise<any>[] = [];
-    const transactions = await Transaction.findByIds(tIds, { relations: ['subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice'] });
+    const transactions = await Transaction.find({ where: { id: In(tIds) }, relations: ['subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice'] });
     transactions.forEach((t) => {
       t.subTransactions.forEach((tSub) => {
         tSub.subTransactionRows.forEach((tSubRow) => {
@@ -322,7 +323,7 @@ export default class InvoiceService {
    * @param update
    */
   public static async updateInvoice(update: UpdateInvoiceParams) {
-    const base: Invoice = await Invoice.findOne(update.invoiceId, { relations: ['invoiceStatus'] });
+    const base: Invoice = await Invoice.findOne({ where: { id: update.invoiceId }, relations: ['invoiceStatus'] });
 
     // Return undefined if base does not exist.
     if (!base || this.isState(base, InvoiceState.DELETED)) {
@@ -358,14 +359,14 @@ export default class InvoiceService {
 
   /**
    * Set a reference to an Invoice for all subTransactionRows of the transactions.
-   * @param transactions
    * @param invoice
+   * @param baseTransactions
    */
   static async setTransactionInvoice(invoice: Invoice,
     baseTransactions: BaseTransactionResponse[]) {
     // Extract Transactions from IDs.
     const ids = baseTransactions.map((t) => t.id);
-    const transactions = await Transaction.findByIds(ids, { relations: ['subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice'] });
+    const transactions = await Transaction.find({ where: { id: In(ids) }, relations: ['subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice'] });
     const promises: Promise<any>[] = [];
 
     // Loop through transactions
@@ -404,6 +405,7 @@ export default class InvoiceService {
     const { toId, byId } = invoiceRequest;
     let params: TransactionFilterParameters;
 
+    const user = await User.findOne({ where: { id: toId } });
     // If transactions are specified.
     if (invoiceRequest.transactionIDs) {
       params = { transactionId: invoiceRequest.transactionIDs };
@@ -415,7 +417,6 @@ export default class InvoiceService {
       let date;
       // If no invoice exists we use the time when the account was created.
       if (!latestInvoice) {
-        const user = await User.findOne(toId);
         date = user.createdAt;
       } else {
         date = latestInvoice.createdAt;
@@ -423,12 +424,12 @@ export default class InvoiceService {
       params = { fromDate: new Date(date) };
     }
 
-    const transactions = (await TransactionService.getTransactions(params)).records;
+    const transactions = (await TransactionService.getTransactions(params, {}, user)).records;
     const transfer = await this.createTransferFromTransactions(toId, transactions);
 
     // Create a new Invoice
     const newInvoice: Invoice = Object.assign(new Invoice(), {
-      to: toId,
+      toId,
       transfer: transfer.id,
       addressee: invoiceRequest.addressee,
       invoiceStatus: [],
@@ -474,13 +475,13 @@ export default class InvoiceService {
 
     const filterMapping: FilterMapping = {
       currentState: 'currentState',
-      toId: 'to',
+      toId: 'toId',
       invoiceId: 'id',
     };
 
-    const options: FindManyOptions = {
+    const relations: FindOptionsRelationByString = ['to', 'invoiceStatus', 'transfer', 'transfer.to', 'transfer.from'];
+    const options: FindManyOptions<Invoice> = {
       where: QueryFilter.createFilterWhereClause(filterMapping, params),
-      relations: ['to', 'invoiceStatus', 'transfer', 'transfer.to', 'transfer.from'],
       order: { createdAt: 'ASC' },
       skip,
     };
@@ -488,11 +489,11 @@ export default class InvoiceService {
     let records: (BaseInvoiceResponse | InvoiceResponse)[];
     // Case distinction on if we want to return entries or not.
     if (!params.returnInvoiceEntries) {
-      const invoices = await Invoice.find({ ...options, take });
+      const invoices = await Invoice.find({ ...options, relations, take });
       records = invoices.map(this.asBaseInvoiceResponse);
     } else {
-      options.relations.push('invoiceEntries');
-      const invoices = await Invoice.find({ ...options, take });
+      relations.push('invoiceEntries');
+      const invoices = await Invoice.find({ ...options, relations, take });
       records = invoices.map(this.asInvoiceResponse.bind(this));
     }
 

@@ -44,12 +44,17 @@ export default class PolicyMiddleware {
    * @param next - the express next function to continue processing of the request.
    */
   public async handle(req: RequestWithToken, res: Response, next: Function): Promise<void> {
-    if (await this.policy(req)) {
-      next();
+    try {
+      if (await this.policy(req)) {
+        next();
+        return;
+      }
+      res.status(403).end('You have insufficient permissions for the requested action.');
       return;
+    } catch (e) {
+      console.error(e);
+      res.status(500).json('Internal server error.');
     }
-
-    res.status(403).end('You have insufficient permissions for the requested action.');
   }
 
   /**

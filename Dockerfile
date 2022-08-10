@@ -1,5 +1,5 @@
 # Build in a different image to keep the target image clean
-FROM node:14-alpine as build
+FROM node:16-alpine as build
 WORKDIR /app
 COPY ./package.json ./package-lock.json ./
 RUN npm install
@@ -8,7 +8,7 @@ RUN npm run build \
  && npm run swagger
 
 # The target image that will be run
-FROM node:14-alpine as target
+FROM node:16-alpine as target
 
 RUN apk add openssl
 

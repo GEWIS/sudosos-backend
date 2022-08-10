@@ -78,8 +78,8 @@ export default class PointOfSaleService {
       revision: rawPointOfSale.revision,
       name: rawPointOfSale.name,
       useAuthentication: rawPointOfSale.useAuthentication === 1,
-      createdAt: rawPointOfSale.createdAt,
-      updatedAt: rawPointOfSale.updatedAt,
+      createdAt: rawPointOfSale.createdAt instanceof Date ? rawPointOfSale.createdAt.toISOString() : rawPointOfSale.createdAt,
+      updatedAt: rawPointOfSale.updatedAt instanceof Date ? rawPointOfSale.updatedAt.toISOString() : rawPointOfSale.updatedAt,
       owner: {
         id: rawPointOfSale.owner_id,
         firstName: rawPointOfSale.owner_firstName,
@@ -358,7 +358,8 @@ export default class PointOfSaleService {
     : Promise<PointOfSaleWithContainersResponse> {
     const [base, rawPointOfSaleUpdate] = (
       await Promise.all(
-        [PointOfSale.findOne(pointOfSaleId, { relations: ['owner'] }), UpdatedPointOfSale.findOne(pointOfSaleId, { relations: ['containers'] })],
+        [PointOfSale.findOne({ where: { id: pointOfSaleId }, relations: ['owner'] }),
+          UpdatedPointOfSale.findOne({ where: { pointOfSale: { id: pointOfSaleId } }, relations: ['containers'] })],
       )
     );
 
@@ -393,7 +394,7 @@ export default class PointOfSaleService {
   public static async updatePointOfSale(update: UpdatePointOfSaleParams)
     : Promise<UpdatedPointOfSaleResponse> {
     // Get base PointOfSale
-    const base: PointOfSale = await PointOfSale.findOne(update.id, { relations: ['owner'] });
+    const base: PointOfSale = await PointOfSale.findOne({ where: { id: update.id }, relations: ['owner'] });
 
     // Return undefined if base does not exist.
     if (!base) {
@@ -425,7 +426,7 @@ export default class PointOfSaleService {
    */
   public static async createPointOfSale(posRequest: CreatePointOfSaleParams, approve = false)
     : Promise<UpdatedPointOfSaleResponse | undefined> {
-    const owner = await User.findOne(posRequest.ownerId);
+    const owner = await User.findOne({ where: { id: posRequest.ownerId } });
 
     if (!owner) return undefined;
 

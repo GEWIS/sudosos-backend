@@ -130,6 +130,7 @@ describe('PayoutRequestController', () => {
   });
 
   after(async () => {
+    await ctx.connection.dropDatabase();
     await ctx.connection.close();
   });
 
@@ -497,7 +498,8 @@ describe('PayoutRequestController', () => {
     it('should correctly update a payout request status as admin', async () => {
       const { id } = ctx.payoutRequests.filter((req) => req.requestedBy.id !== ctx.adminUser.id
         && req.payoutRequestStatus.length === 1)[1];
-      const before = await PayoutRequest.findOne(id, {
+      const before = await PayoutRequest.findOne({
+        where: { id },
         relations: ['payoutRequestStatus'],
       });
       const res = await request(ctx.app)
@@ -543,7 +545,8 @@ describe('PayoutRequestController', () => {
         .filter((req) => req.requestedBy.id === ctx.localUser.id
           && req.payoutRequestStatus.length === 1);
       const { id } = userRequests[0];
-      const before = await PayoutRequest.findOne(id, {
+      const before = await PayoutRequest.findOne({
+        where: { id },
         relations: ['payoutRequestStatus'],
       });
       const res = await request(ctx.app)

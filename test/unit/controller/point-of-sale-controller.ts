@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { Connection } from 'typeorm';
+import { Connection, IsNull, Not } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
@@ -208,6 +208,7 @@ describe('PointOfSaleController', async () => {
   });
 
   after(async () => {
+    await ctx.connection.dropDatabase();
     await ctx.connection.close();
   });
 
@@ -235,7 +236,10 @@ describe('PointOfSaleController', async () => {
       // eslint-disable-next-line no-underscore-dangle
       const pagination = res.body._pagination as PaginationResult;
 
-      const activePointOfSaleCount = await PointOfSale.count({ where: 'currentRevision' });
+      const activePointOfSaleCount = await PointOfSale.count({
+        where:
+          { currentRevision: Not(IsNull()) },
+      });
       expect(pointsOfSale.length).to.equal(Math.min(activePointOfSaleCount, defaultPagination()));
 
       expect(pagination.take).to.equal(defaultPagination());
@@ -263,7 +267,9 @@ describe('PointOfSaleController', async () => {
       // eslint-disable-next-line no-underscore-dangle
       const pagination = res.body._pagination as PaginationResult;
 
-      const activePointOfSaleCount = await PointOfSale.count({ where: 'currentRevision' });
+      const activePointOfSaleCount = await PointOfSale.count({
+        where: { currentRevision: Not(IsNull()) },
+      });
       expect(pagination.take).to.equal(take);
       expect(pagination.skip).to.equal(skip);
       expect(pagination.count).to.equal(activePointOfSaleCount);
@@ -292,7 +298,7 @@ describe('PointOfSaleController', async () => {
       expect(res.status).to.equal(200);
     });
     it('should return an HTTP 200 and the point of sale if connected via organ', async () => {
-      const pos = await PointOfSale.findOne({ where: { owner: ctx.organ } });
+      const pos = await PointOfSale.findOne({ where: { owner: { id: ctx.organ.id } } });
       expect(pos).to.not.be.undefined;
       const res = await request(ctx.app)
         .get(`/pointsofsale/${pos.id}`)
@@ -302,7 +308,7 @@ describe('PointOfSaleController', async () => {
       expect(res.status).to.equal(200);
     });
     it('should return an HTTP 403 if not admin and not connected via organ', async () => {
-      const pos = await PointOfSale.findOne({ where: { owner: ctx.organ } });
+      const pos = await PointOfSale.findOne({ where: { owner: { id: ctx.organ.id } } });
       const res = await request(ctx.app)
         .get(`/pointsofsale/${pos.id}`)
         .set('Authorization', `Bearer ${ctx.organ}`);
@@ -352,7 +358,7 @@ describe('PointOfSaleController', async () => {
       expect(res.status).to.equal(200);
     });
     it('should return an HTTP 200 and the transactions if connected via organ', async () => {
-      const pos = await PointOfSale.findOne({ where: { owner: ctx.organ } });
+      const pos = await PointOfSale.findOne({ where: { owner: { id: ctx.organ.id } } });
       expect(pos).to.not.be.undefined;
       const res = await request(ctx.app)
         .get(`/pointsofsale/${pos.id}/transactions`)
@@ -367,7 +373,7 @@ describe('PointOfSaleController', async () => {
       expect(res.status).to.equal(200);
     });
     it('should return an HTTP 403 if not admin and not connected via organ', async () => {
-      const pos = await PointOfSale.findOne({ where: { owner: ctx.organ } });
+      const pos = await PointOfSale.findOne({ where: { owner: { id: ctx.organ.id } } });
       const res = await request(ctx.app)
         .get(`/pointsofsale/${pos.id}/transactions`)
         .set('Authorization', `Bearer ${ctx.organ}`);
@@ -444,7 +450,7 @@ describe('PointOfSaleController', async () => {
       expect(pagination.count).to.be.at.least(1);
     });
     it('should return an HTTP 200 and the containers in the given point of sale if normal user', async () => {
-      const { id } = await PointOfSale.findOne({ relations: ['owner'], where: { owner: ctx.localUser } });
+      const { id } = await PointOfSale.findOne({ relations: ['owner'], where: { owner: { id: ctx.localUser.id } } });
 
       const res = await request(ctx.app)
         .get(`/pointsofsale/${id}/containers`)
@@ -468,7 +474,7 @@ describe('PointOfSaleController', async () => {
   });
   describe('GET /pointsofsale/:id/products', async () => {
     it('should return correct model', async () => {
-      const { id } = await PointOfSale.findOne({ relations: ['owner'], where: { owner: ctx.localUser } });
+      const { id } = await PointOfSale.findOne({ relations: ['owner'], where: { owner: { id: ctx.localUser.id } } });
       const res = await request(ctx.app)
         .get(`/pointsofsale/${id}/products`)
         .set('Authorization', `Bearer ${ctx.token}`);
@@ -499,7 +505,7 @@ describe('PointOfSaleController', async () => {
       expect(pagination.count).to.be.at.least(1);
     });
     it('should return an HTTP 200 and the products in the given point of sale if owner', async () => {
-      const { id } = await PointOfSale.findOne({ relations: ['owner'], where: { owner: ctx.localUser } });
+      const { id } = await PointOfSale.findOne({ relations: ['owner'], where: { owner: { id: ctx.localUser.id } } });
 
       const res = await request(ctx.app)
         .get(`/pointsofsale/${id}/products`)
@@ -567,9 +573,9 @@ describe('PointOfSaleController', async () => {
 
       expect(await PointOfSale.count()).to.equal(count + 1);
       pointOfSaleEq(ctx.validPOSRequest, res.body as PointOfSaleResponse);
-      const databaseProduct = await UpdatedPointOfSale.findOne(
-        (res.body as PointOfSaleResponse).id,
-      );
+      const databaseProduct = await UpdatedPointOfSale.findOne({
+        where: { pointOfSale: { id: (res.body as PointOfSaleResponse).id } },
+      });
       expect(databaseProduct).to.exist;
 
       expect(res.status).to.equal(200);
@@ -593,9 +599,9 @@ describe('PointOfSaleController', async () => {
 
       expect(await PointOfSale.count()).to.equal(count + 1);
       pointOfSaleEq(createPointOfSaleParams, res.body as PointOfSaleResponse);
-      const databaseProduct = await UpdatedPointOfSale.findOne(
-        (res.body as PointOfSaleResponse).id,
-      );
+      const databaseProduct = await UpdatedPointOfSale.findOne({
+        where: { pointOfSale: { id: (res.body as PointOfSaleResponse).id } },
+      });
       expect(databaseProduct).to.exist;
 
       expect(res.status).to.equal(200);

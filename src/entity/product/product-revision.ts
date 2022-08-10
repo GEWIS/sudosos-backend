@@ -18,8 +18,8 @@
 import {
   BeforeUpdate,
   Column,
-  Entity,
-  ManyToOne,
+  Entity, JoinColumn,
+  ManyToOne, PrimaryColumn,
 } from 'typeorm';
 import BaseProduct from './base-product';
 import Product from './product';
@@ -31,11 +31,14 @@ import Product from './product';
  */
 @Entity()
 export default class ProductRevision extends BaseProduct {
+  @PrimaryColumn()
+  public readonly productId: number;
+
   @ManyToOne(() => Product, {
-    primary: true,
     nullable: false,
     eager: true,
   })
+  @JoinColumn({ name: 'productId' })
   public readonly product: Product;
 
   @Column({

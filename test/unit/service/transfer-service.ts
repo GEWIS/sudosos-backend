@@ -61,6 +61,7 @@ describe('TransferService', async (): Promise<void> => {
     };
   });
   after(async () => {
+    await ctx.connection.dropDatabase();
     await ctx.connection.close();
   });
   describe('getTransfers function', async (): Promise<void> => {
@@ -70,6 +71,17 @@ describe('TransferService', async (): Promise<void> => {
       const ids = new Set(ctx.transfers.map((obj) => obj.id));
       res.records.forEach((element) => ids.delete(element.id));
       expect(ids.size).to.equal(0);
+    });
+
+    it('should return all transfers involving a single user', async () => {
+      const user = ctx.users[0];
+      const res: PaginatedTransferResponse = await TransferService.getTransfers({}, {}, user);
+      const actualTransfers = ctx.transfers
+        .filter((t) => (t.from && t.from.id === user.id) || (t.to && t.to.id === user.id));
+      expect(res.records.length).to.equal(actualTransfers.length);
+      res.records.forEach((t) => expect(
+        (t.from && t.from.id === user.id) || (t.to && t.to.id === user.id),
+      ).to.be.true);
     });
 
     it('should return a single transfer if id is specified', async () => {

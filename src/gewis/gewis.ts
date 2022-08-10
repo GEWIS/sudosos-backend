@@ -24,7 +24,6 @@ import { asNumber } from '../helpers/validators';
 import AssignedRole from '../entity/roles/assigned-role';
 import { bindUser, LDAPUser } from '../helpers/ad';
 import GewiswebToken from './gewisweb-token';
-import PinAuthenticator from '../entity/authenticator/pin-authenticator';
 import { parseRawUserToResponse, RawUser } from '../helpers/revision-to-response';
 import Bindings from '../helpers/bindings';
 import { GewisUserResponse } from './entity/gewis-user-response';
@@ -133,10 +132,13 @@ export default class Gewis {
     });
 
     await manager.save(gewisUser);
-    // This would be the place to make a PIN Code and mail it to the user.
-    // This is not meant for production code
-    await AuthenticationService
-      .setUserAuthenticationHash<PinAuthenticator>(user, gewisId.toString(), PinAuthenticator);
+    // 09-08-2022 (Roy): code block below (temporarily) disabled, because the huge amount of queries
+    // in this chain makes the request too slow for the test suite
+    //
+    // // This would be the place to make a PIN Code and mail it to the user.
+    // // This is not meant for production code
+    // await AuthenticationService
+    //   .setUserAuthenticationHash<PinAuthenticator>(user, gewisId.toString(), PinAuthenticator);
 
     return gewisUser;
   }
@@ -359,7 +361,7 @@ export default class Gewis {
           create: { all: star },
         },
       },
-      assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: 'SudoSOS - BAC', user } }) !== undefined,
+      assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: 'SudoSOS - BAC', user: { id: user.id } } }) !== undefined,
     });
 
     const admin = {
@@ -387,7 +389,7 @@ export default class Gewis {
           ...admin,
         },
       },
-      assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: 'SudoSOS - Board', user } }) !== undefined,
+      assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: 'SudoSOS - Board', user: { id: user.id } } }) !== undefined,
     });
 
     /**
@@ -425,7 +427,7 @@ export default class Gewis {
           ...admin,
         },
       },
-      assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: 'SudoSOS - BAC PM', user } }) !== undefined,
+      assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: 'SudoSOS - BAC PM', user: { id: user.id } } }) !== undefined,
     });
 
     /**
@@ -445,7 +447,7 @@ export default class Gewis {
           get: { all: star, own: star },
         },
       },
-      assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: 'SudoSOS - Audit', user } }) !== undefined,
+      assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: 'SudoSOS - Audit', user: { id: user.id } } }) !== undefined,
     });
   }
 }

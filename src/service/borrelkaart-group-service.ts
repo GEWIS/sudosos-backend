@@ -15,6 +15,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+import { In } from 'typeorm';
 import BorrelkaartGroupRequest from '../controller/request/borrelkaart-group-request';
 import BorrelkaartGroupResponse, { PaginatedBorrelkaartGroupResponse } from '../controller/response/borrelkaart-group-response';
 import { UserResponse } from '../controller/response/user-response';
@@ -76,11 +77,10 @@ export default class BorrelkaartGroupService {
     bkgReq: BorrelkaartGroupRequest, ignoreGroupId?: number,
   ): Promise<boolean> {
     // all conflicting borrelkaart groups related to requested users
-    const conflictingEntries = await UserBorrelkaartGroup.findByIds(
-      bkgReq.users.map((user) => user.id), {
-        relations: ['borrelkaartGroup'],
-      },
-    );
+    const conflictingEntries = await UserBorrelkaartGroup.find({
+      where: { user: { id: In(bkgReq.users.map((u) => u.id)) } },
+      relations: ['borrelkaartGroup'],
+    });
 
     // return value
     if (conflictingEntries.length === 0) return true;
@@ -197,15 +197,15 @@ export default class BorrelkaartGroupService {
   public static async getBorrelkaartGroupById(id: string):
   Promise<BorrelkaartGroupResponse | undefined> {
     // find requested borrelkaart group
-    const bkg = await BorrelkaartGroup.findOne(id);
+    const bkg = await BorrelkaartGroup.findOne({ where: { id: parseInt(id, 10) } });
     if (!bkg) {
       return undefined;
     }
 
     // get users related to the borrelkaart group
     const users = (await UserBorrelkaartGroup.find({
+      where: { borrelkaartGroup: { id: parseInt(id, 10) } },
       relations: ['user'],
-      where: { borrelkaartGroup: id },
     })).map((ubkg) => ubkg.user);
 
     return this.asBorrelkaartGroupResponse(bkg, users);
@@ -228,7 +228,7 @@ export default class BorrelkaartGroupService {
 
     // create new borrelkaart group and update database
     await BorrelkaartGroup.update(id, this.asBorrelkaartGroup(bkgReq));
-    const bkg = await BorrelkaartGroup.findOne(id);
+    const bkg = await BorrelkaartGroup.findOne({ where: { id: parseInt(id, 10) } });
 
     // get the users to link to the borrelkaart group
     const users = await User.findByIds(bkgReq.users.map((user) => user.id));
@@ -236,7 +236,7 @@ export default class BorrelkaartGroupService {
     // get current user relations to delete
     const usersCurrent = (await UserBorrelkaartGroup.find({
       relations: ['user'],
-      where: { borrelkaartGroup: id },
+      where: { borrelkaartGroup: { id: parseInt(id, 10) } },
     })).map((ubkg) => ubkg.user);
 
     await UserBorrelkaartGroup.delete(usersCurrent.map((user) => user.id));
@@ -267,7 +267,7 @@ export default class BorrelkaartGroupService {
     // get user relations to delete
     const users = (await UserBorrelkaartGroup.find({
       relations: ['user'],
-      where: { borrelkaartGroup: id },
+      where: { borrelkaartGroup: { id: parseInt(id, 10) } },
     })).map((ubkg) => ubkg.user);
 
     await UserBorrelkaartGroup.delete(users.map((user) => user.id));
