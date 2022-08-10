@@ -99,8 +99,8 @@ export default class ContainerService {
       id: rawContainer.container_id,
       revision: rawContainer.container_revision,
       name: rawContainer.container_name,
-      createdAt: typeof rawContainer.container_createdAt === 'object' ? rawContainer.container_createdAt.toISOString() : rawContainer.container_createdAt,
-      updatedAt: typeof rawContainer.container_updatedAt === 'object' ? rawContainer.container_updatedAt.toISOString() : rawContainer.container_updatedAt,
+      createdAt: rawContainer.container_createdAt instanceof Date ? rawContainer.container_createdAt.toISOString() : rawContainer.container_createdAt,
+      updatedAt: rawContainer.container_updatedAt instanceof Date ? rawContainer.container_updatedAt.toISOString() : rawContainer.container_updatedAt,
       public: !!rawContainer.container_public,
       owner: {
         id: rawContainer.owner_id,

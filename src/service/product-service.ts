@@ -180,8 +180,8 @@ export default class ProductService {
         id: rawProduct.category_id,
         name: rawProduct.category_name,
       },
-      createdAt: typeof rawProduct.createdAt === 'string' ? rawProduct.createdAt : rawProduct.createdAt.toISOString(),
-      updatedAt: typeof rawProduct.updatedAt === 'string' ? rawProduct.updatedAt : rawProduct.updatedAt.toISOString(),
+      createdAt: rawProduct.createdAt instanceof Date ? rawProduct.createdAt.toISOString() : rawProduct.createdAt,
+      updatedAt: rawProduct.updatedAt instanceof Date ? rawProduct.updatedAt.toISOString() : rawProduct.updatedAt,
       owner: {
         id: rawProduct.owner_id,
         firstName: rawProduct.owner_firstName,
