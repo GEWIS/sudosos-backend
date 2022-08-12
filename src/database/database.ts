@@ -66,6 +66,9 @@ export default class Database {
   public static async initialize(): Promise<Connection> {
     const options = {
       ...await getConnectionOptions(),
+      authPlugins: {
+        mysql_clear_password: () => () => Buffer.from(`${process.env.TYPEORM_PASSWORD}\0`),
+      },
       entities: [
         ProductCategory,
         VatGroup,
