@@ -42,6 +42,8 @@ import ResetLocalRequest from '../../../src/controller/request/reset-local-reque
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import AuthenticationService from '../../../src/service/authentication-service';
 import AuthenticationResetTokenRequest from '../../../src/controller/request/authentication-reset-token-request';
+import EanAuthenticator from '../../../src/entity/authenticator/ean-authenticator';
+import AuthenticationEanRequest from '../../../src/controller/request/authentication-ean-request';
 
 describe('AuthenticationController', async (): Promise<void> => {
   let ctx: {
@@ -106,6 +108,11 @@ describe('AuthenticationController', async (): Promise<void> => {
 
     await seedHashAuthenticator([ctx.user, ctx.user2], PinAuthenticator);
     await seedHashAuthenticator([ctx.user, ctx.user2], LocalAuthenticator);
+
+    await EanAuthenticator.save({
+      userId: ctx.user.id,
+      eanCode: '39',
+    });
 
     // Silent in-dependency logs unless really wanted by the environment.
     const logger = log4js.getLogger('Console');
@@ -324,6 +331,14 @@ describe('AuthenticationController', async (): Promise<void> => {
       expect(res.body.message).to.equal('Invalid credentials.');
     });
   });
+
+  describe('POST /authentication/ean', async () => {
+    const validLocalRequest: AuthenticationEanRequest = {
+      eanCode: '39',
+    };
+    await testHashAuthentication('ean', validLocalRequest, { ...validLocalRequest, eanCode: '2' });
+  });
+
   describe('POST /authentication/local/reset', async () => {
     it('should return an HTTP 204', async () => {
       await inUserContext(await UserFactory().clone(1), async (user: User) => {

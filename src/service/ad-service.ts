@@ -123,19 +123,14 @@ export default class ADService {
    * @param sharedAccounts - Accounts to give access
    */
   private static async handleSharedGroups(client: Client, sharedAccounts: LDAPGroup[]) {
-    const promises: Promise<void>[] = [];
-
-    sharedAccounts.forEach((shared) => {
+    for (let i = 0; i < sharedAccounts.length; i += 1) {
       // Extract members
-      promises.push(ADService.getLDAPGroupMembers(client, shared.dn).then(async (result) => {
-        const members: LDAPUser[] = result.searchEntries.map((u) => userFromLDAP(u));
-        await LDAPAuthenticator.findOne({ where: { UUID: shared.objectGUID }, relations: ['user'] }).then(async (auth) => {
-          if (auth) await ADService.setSharedUsers(auth.user, members);
-        });
-      }));
-    });
-
-    await Promise.all(promises);
+      const shared = sharedAccounts[i];
+      const result = await ADService.getLDAPGroupMembers(client, shared.dn);
+      const members: LDAPUser[] = result.searchEntries.map((u) => userFromLDAP(u));
+      const auth = await LDAPAuthenticator.findOne({ where: { UUID: shared.objectGUID }, relations: ['user'] });
+      if (auth) await ADService.setSharedUsers(auth.user, members);
+    }
   }
 
   /**
@@ -179,17 +174,14 @@ export default class ADService {
    */
   private static async handleADRoles(roleManager: RoleManager,
     client: Client, roles: LDAPGroup[]) {
-    const promises: Promise<any>[] = [];
-    roles.forEach((role) => {
+    for (let i = 0; i < roles.length; i += 1) {
+      const role = roles[i];
       if (roleManager.containsRole(role.cn)) {
-        promises.push(ADService.getLDAPGroupMembers(client, role.dn).then(async (result) => {
-          const members: LDAPUser[] = result.searchEntries.map((u) => userFromLDAP(u));
-          await ADService.addUsersToRole(roleManager, role.cn, members);
-        }));
+        const result = await ADService.getLDAPGroupMembers(client, role.dn);
+        const members: LDAPUser[] = result.searchEntries.map((u) => userFromLDAP(u));
+        await ADService.addUsersToRole(roleManager, role.cn, members);
       }
-    });
-
-    await Promise.all(promises);
+    }
   }
 
   /**
