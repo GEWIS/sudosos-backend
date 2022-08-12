@@ -33,6 +33,8 @@ import AuthenticationPinRequest from './request/authentication-pin-request';
 import LocalAuthenticator from '../entity/authenticator/local-authenticator';
 import ResetLocalRequest from './request/reset-local-request';
 import AuthenticationResetTokenRequest from './request/authentication-reset-token-request';
+import AuthenticationEanRequest from './request/authentication-ean-request';
+import EanAuthenticator from '../entity/authenticator/ean-authenticator';
 
 /**
  * The authentication controller is responsible for:
@@ -107,6 +109,13 @@ export default class AuthenticationController extends BaseController {
           body: { modelName: 'ResetLocalRequest' },
           policy: async () => true,
           handler: this.createResetToken.bind(this),
+        },
+      },
+      '/ean': {
+        POST: {
+          body: { modelName: 'AuthenticationEanRequest' },
+          policy: async () => true,
+          handler: this.eanLogin.bind(this),
         },
       },
     };
@@ -371,6 +380,41 @@ export default class AuthenticationController extends BaseController {
       return;
     } catch (error) {
       this.logger.error('Could not create reset token:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * EAN login and hand out token
+   * @route POST /authentication/ean
+   * @group authenticate - Operations of authentication controller
+   * @param {AuthenticationEanRequest.model} req.body.required - The EAN login.
+   * @returns {AuthenticationResponse.model} 200 - The created json web token.
+   * @returns {string} 403 - Authentication error.
+   */
+  public async eanLogin(req: Request, res: Response): Promise<void> {
+    const body = req.body as AuthenticationEanRequest;
+    this.logger.trace('EAN authentication for ean', body.eanCode);
+
+    try {
+      const { eanCode } = body;
+      const authenticator = await EanAuthenticator.findOne({ where: { eanCode } });
+      if (authenticator == null || authenticator.user == null) {
+        res.status(403).json({
+          message: 'Invalid credentials.',
+        });
+        return;
+      }
+
+      const context: AuthenticationContext = {
+        roleManager: this.roleManager,
+        tokenHandler: this.tokenHandler,
+      };
+
+      const token = await AuthenticationService.getSaltedToken(authenticator.user, context, true);
+      res.json(token);
+    } catch (error) {
+      this.logger.error('Could not authenticate using EAN:', error);
       res.status(500).json('Internal server error.');
     }
   }

@@ -66,7 +66,7 @@ export default class AuthenticationService {
    * Helper function hashes the given string with salt.
    * @param password - password to hash
    */
-  private static async hashPassword(password: string): Promise<string> {
+  public static async hashPassword(password: string): Promise<string> {
     const salt = await bcrypt.genSalt(AuthenticationService.BCRYPT_ROUNDS);
     return Promise.resolve(bcrypt.hash(password, salt));
   }
