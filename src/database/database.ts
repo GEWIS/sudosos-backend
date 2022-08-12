@@ -61,11 +61,17 @@ import AssignedRole from '../entity/roles/assigned-role';
 import VatGroup from '../entity/vat-group';
 import LocalAuthenticator from '../entity/authenticator/local-authenticator';
 import ResetToken from '../entity/authenticator/reset-token';
+import { DataSourceOptions } from 'typeorm/data-source/DataSourceOptions';
 
 export default class Database {
   public static async initialize(): Promise<Connection> {
-    const options = {
+    const options: DataSourceOptions = {
       ...await getConnectionOptions(),
+      extra: {
+        authPlugins: {
+          mysql_clear_password: () => () => Buffer.from(`${process.env.TYPEORM_PASSWORD}\0`),
+        },
+      },
       entities: [
         ProductCategory,
         VatGroup,
