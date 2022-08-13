@@ -92,8 +92,6 @@ export default class PayoutRequestService {
         lastName: req.requestedBy.lastName,
         deleted: req.requestedBy.deleted,
         active: req.requestedBy.active,
-        acceptedToS: req.requestedBy.acceptedToS,
-        extensiveDataProcessing: req.requestedBy.extensiveDataProcessing,
       },
       approvedBy: req.approvedBy == null ? undefined : {
         id: req.approvedBy.id,
@@ -104,8 +102,6 @@ export default class PayoutRequestService {
         lastName: req.approvedBy.lastName,
         deleted: req.approvedBy.deleted,
         active: req.approvedBy.active,
-        acceptedToS: req.approvedBy.acceptedToS,
-        extensiveDataProcessing: req.approvedBy.extensiveDataProcessing,
       },
       status: req.payoutRequestStatus.map((status): PayoutRequestStatusResponse => ({
         id: status.id,
@@ -188,8 +184,6 @@ export default class PayoutRequestService {
           active: o.from_active === 1,
           deleted: o.from_deleted === 1,
           type: o.requestedBy_type,
-          acceptedToS: o.requestedBy_acceptedToS,
-          extensiveDataProcessing: o.requestedBy_extensiveDataProcessing,
         } : undefined,
         approvedBy: o.approvedBy_id ? {
           id: o.approvedBy_id,
@@ -200,8 +194,6 @@ export default class PayoutRequestService {
           active: o.from_active === 1,
           deleted: o.from_deleted === 1,
           type: o.approvedBy_type,
-          acceptedToS: o.approvedBy_acceptedToS,
-          extensiveDataProcessing: o.approvedBy_extensiveDataProcessing,
         } : undefined,
         amount: dinero.toObject(),
         status: o.status || '',

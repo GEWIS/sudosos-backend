@@ -93,6 +93,7 @@ export function parseUserToResponse(user: User, timestamps = false): UserRespons
     acceptedToS: user.acceptedToS,
     email: user.type === UserType.LOCAL_USER ? user.email : undefined,
     extensiveDataProcessing: user.extensiveDataProcessing,
+    ofAge: user.ofAge,
   };
 }
 
@@ -130,5 +131,6 @@ export function parseRawUserToResponse(user: RawUser, timestamps = false): UserR
     email: user.type === UserType.LOCAL_USER ? user.email : undefined,
     acceptedToS: user.acceptedToS,
     extensiveDataProcessing: user.extensiveDataProcessing === 1,
+    ofAge: user.ofAge === 1,
   };
 }

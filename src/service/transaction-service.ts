@@ -583,8 +583,6 @@ export default class TransactionService {
           active: o.from_active === 1,
           deleted: o.from_deleted === 1,
           type: UserType[o.from_type],
-          acceptedToS: o.from_acceptedToS,
-          extensiveDataProcessing: o.from_extensiveDataProcessing === 1,
         },
         createdBy: o.createdBy_id ? {
           id: o.createdBy_id,
@@ -595,8 +593,6 @@ export default class TransactionService {
           active: o.createdBy_active === 1,
           deleted: o.createdBy_deleted === 1,
           type: UserType[o.createdBy_type],
-          acceptedToS: o.createdBy_acceptedToS,
-          extensiveDataProcessing: o.createdBy_extensiveDataProcessing === 1,
         } : undefined,
         pointOfSale: {
           id: o.pointOfSale_id,
