@@ -209,17 +209,17 @@ describe('InvoiceService', () => {
   });
   describe('createInvoice function', () => {
     it('should create Invoice from transactions', async () => {
-      await inUserContext(await UserFactory().clone(2), async (debtor: User, creditor: User) => {
+      await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
         await createInvoiceWithTransfers(debtor.id, creditor.id, 1);
       });
     });
     it('should create Invoice from multiple transactions', async () => {
-      await inUserContext(await UserFactory().clone(2), async (debtor: User, creditor: User) => {
+      await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
         await createInvoiceWithTransfers(debtor.id, creditor.id, 20);
       });
     });
     it('should create Invoice for all transactions since date', async () => {
-      await inUserContext(await UserFactory().clone(2), async (debtor: User, creditor: User) => {
+      await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
         // Spent money and create an invoice.
         await createInvoiceWithTransfers(debtor.id, creditor.id, 3);
 
@@ -256,7 +256,7 @@ describe('InvoiceService', () => {
       });
     });
     it('should create an Invoice for transactions without prior invoice', async () => {
-      await inUserContext(await UserFactory().clone(2), async (debtor: User, creditor: User) => {
+      await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
         // If we don't wait then the user created at and transactions will be the same.
         await new Promise((f) => setTimeout(f, 1000));
 
@@ -290,7 +290,7 @@ describe('InvoiceService', () => {
       });
     });
     it('should create Invoice since latest invoice if nothing specified', async () => {
-      await inUserContext(await UserFactory().clone(2), async (debtor: User, creditor: User) => {
+      await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
         // Spent money and create an invoice.
         await createInvoiceWithTransfers(debtor.id, creditor.id, 3);
         await new Promise((f) => setTimeout(f, 1000));
@@ -327,7 +327,7 @@ describe('InvoiceService', () => {
       });
     });
     it('should set a reference to Invoice for all SubTransactionRows', async () => {
-      await inUserContext(await UserFactory().clone(2), async (debtor: User, creditor: User) => {
+      await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
         const transactionRequests: TransactionRequest[] = await createTransactionRequest(
           debtor.id, creditor.id, 2,
         );
@@ -356,7 +356,7 @@ describe('InvoiceService', () => {
   });
   describe('updateInvoice function', () => {
     it('should update an invoice description and addressee', async () => {
-      await inUserContext(await UserFactory().clone(2), async (debtor: User, creditor: User) => {
+      await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
         // First create an Invoice.
         const invoice = await createInvoiceWithTransfers(debtor.id, creditor.id, 1);
 
@@ -379,7 +379,7 @@ describe('InvoiceService', () => {
       });
     });
     it('should update an Invoice state', async () => {
-      await inUserContext(await UserFactory().clone(2), async (debtor: User, creditor: User) => {
+      await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
         // First create an Invoice.
         const invoice = await createInvoiceWithTransfers(debtor.id, creditor.id, 1);
 
@@ -398,7 +398,7 @@ describe('InvoiceService', () => {
       });
     });
     it('should update an Invoice state twice', async () => {
-      await inUserContext(await UserFactory().clone(2), async (debtor: User, creditor: User) => {
+      await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
         // First create an Invoice.
         const invoice = await createInvoiceWithTransfers(debtor.id, creditor.id, 1);
 
@@ -422,7 +422,7 @@ describe('InvoiceService', () => {
       });
     });
     it('should delete an Invoice', async () => {
-      await inUserContext(await UserFactory().clone(2), async (debtor: User, creditor: User) => {
+      await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
         // First create an Invoice.
         const invoice = await createInvoiceWithTransfers(debtor.id, creditor.id, 1);
 
@@ -446,7 +446,7 @@ describe('InvoiceService', () => {
       });
     });
     it('should delete invoice reference from subTransactions when Invoice is deleted', async () => {
-      await inUserContext(await UserFactory().clone(2), async (debtor: User, creditor: User) => {
+      await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
         const transactionRequests: TransactionRequest[] = await createTransactionRequest(
           debtor.id, creditor.id, 2,
         );

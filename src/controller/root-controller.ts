@@ -20,7 +20,6 @@ import log4js, { Logger } from 'log4js';
 import { getConnection } from 'typeorm';
 import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
-import { RequestWithToken } from '../middleware/token-middleware';
 import { parseRequestPagination } from '../helpers/pagination';
 import BannerService from '../service/banner-service';
 
@@ -70,9 +69,8 @@ export default class RootController extends BaseController {
    * @returns {string} 400 - Validation error
    * @returns {string} 500 - Internal server error
    */
-  public async returnAllBanners(req: RequestWithToken, res: Response): Promise<void> {
-    const { body } = req;
-    this.logger.trace('Get all banners', body, 'by user', req.token.user);
+  public async returnAllBanners(req: Request, res: Response): Promise<void> {
+    this.logger.trace('Get all banners by', req.ip);
 
     let take;
     let skip;

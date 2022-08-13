@@ -605,7 +605,7 @@ describe('TransactionController', (): void => {
       ).valid).to.be.true;
     });
     it('should return an HTTP 403 if user is not connected to createdBy via organ', async () => {
-      await inUserContext(await UserFactory().clone(2), async (user: User, otherUser: User) => {
+      await inUserContext((await UserFactory()).clone(2), async (user: User, otherUser: User) => {
         const canBuyToken = await ctx.tokenHandler.signToken({ user, roles: ['Buyer'], lesser: false }, '39');
         const req : TransactionRequest = {
           ...ctx.validTransReq,
@@ -620,7 +620,7 @@ describe('TransactionController', (): void => {
       });
     });
     it('should return an HTTP 200 and the saved transaction when user is connected to createdBy via organ', async () => {
-      await inUserContext(await UserFactory().clone(2), async (user: User, otherUser: User) => {
+      await inUserContext((await UserFactory()).clone(2), async (user: User, otherUser: User) => {
         await (Object.assign(new MemberAuthenticator(), {
           user,
           authenticateAs: ctx.users[0],

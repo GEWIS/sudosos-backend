@@ -192,7 +192,7 @@ describe('AuthenticationService', (): void => {
     async function verifyLogin<T extends HashBasedAuthenticationMethod>(
       Type: { new(): T, findOne: any, save: any }, right: string, wrong: string,
     ) {
-      await inUserContext(await UserFactory().clone(1), async (user: User) => {
+      await inUserContext((await UserFactory()).clone(1), async (user: User) => {
         await AuthenticationService.setUserAuthenticationHash(user, right, Type);
         const auth = await Type.findOne({ where: { user: { id: user.id } } });
         expect(auth).to.not.be.null;
@@ -210,7 +210,7 @@ describe('AuthenticationService', (): void => {
   });
   describe('resetLocalUsingToken function', () => {
     it('should reset password if resetToken is correct and user has no password', async () => {
-      await inUserContext(await UserFactory().clone(1), async (user: User) => {
+      await inUserContext((await UserFactory()).clone(1), async (user: User) => {
         let localAuthenticator = await LocalAuthenticator.findOne({ where: { user: { id: user.id } }, relations: ['user'] });
         expect(localAuthenticator).to.be.null;
 
@@ -223,7 +223,7 @@ describe('AuthenticationService', (): void => {
       });
     });
     it('should reset password if resetToken is correct and user has password', async () => {
-      await inUserContext(await UserFactory().clone(1), async (user: User) => {
+      await inUserContext((await UserFactory()).clone(1), async (user: User) => {
         let auth = await AuthenticationService.setUserAuthenticationHash(user, 'Password2', LocalAuthenticator);
         expect(AuthenticationService.compareHash('Password2', auth.hash)).to.eventually.be.true;
 
@@ -238,7 +238,7 @@ describe('AuthenticationService', (): void => {
   });
   describe('isResetTokenRequestValid function', () => {
     it('should return false if user has no reset token requested', async () => {
-      await inUserContext(await UserFactory().clone(1), async (user: User) => {
+      await inUserContext((await UserFactory()).clone(1), async (user: User) => {
         const req: AuthenticationResetTokenRequest = {
           accountMail: user.email,
           password: 'Password',
@@ -249,7 +249,7 @@ describe('AuthenticationService', (): void => {
       });
     });
     it('should return false if user is not local', async () => {
-      await inUserContext(await UserFactory().clone(1), async (user: User) => {
+      await inUserContext((await UserFactory()).clone(1), async (user: User) => {
         // eslint-disable-next-line no-param-reassign
         user.type = UserType.MEMBER;
         await User.save(user);
@@ -264,7 +264,7 @@ describe('AuthenticationService', (): void => {
       });
     });
     it('should return false if token is incorrect', async () => {
-      await inUserContext(await UserFactory().clone(1), async (user: User) => {
+      await inUserContext((await UserFactory()).clone(1), async (user: User) => {
         await AuthenticationService.createResetToken(user);
         const req: AuthenticationResetTokenRequest = {
           accountMail: user.email,
@@ -278,7 +278,7 @@ describe('AuthenticationService', (): void => {
   });
   describe('createResetToken function', () => {
     it('should create a reset token', async () => {
-      await inUserContext(await UserFactory().clone(1), async (user: User) => {
+      await inUserContext((await UserFactory()).clone(1), async (user: User) => {
         const tokenInfo = await AuthenticationService.createResetToken(user);
         expect(tokenInfo.resetToken.user).to.eq(user);
         expect(tokenInfo.resetToken.expires).to.be.greaterThan(new Date());

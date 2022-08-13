@@ -40,27 +40,27 @@ describe('RestrictionMiddleware', (): void => {
 
   before(async () => {
     const connection = await Database.initialize();
-    const userNotAccepted = await UserFactory({
+    const userNotAccepted = await (await UserFactory({
       firstName: 'TestUser1',
       lastName: 'TestUser1',
       type: UserType.MEMBER,
       active: true,
       acceptedToS: TermsOfServiceStatus.NOT_ACCEPTED,
-    } as User).get();
-    const userNotRequired = await UserFactory({
+    } as User)).get();
+    const userNotRequired = await (await UserFactory({
       firstName: 'TestUser2',
       lastName: 'TestUser2',
       type: UserType.MEMBER,
       active: true,
       acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
-    } as User).get();
-    const userAccepted = await UserFactory({
+    } as User)).get();
+    const userAccepted = await (await UserFactory({
       firstName: 'TestUser1',
       lastName: 'TestUser1',
       type: UserType.MEMBER,
       active: true,
       acceptedToS: TermsOfServiceStatus.ACCEPTED,
-    } as User).get();
+    } as User)).get();
 
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,

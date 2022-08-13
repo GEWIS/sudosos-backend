@@ -866,7 +866,7 @@ describe('TransactionService', (): void => {
 
   describe('createValidTransactionRequest function', () => {
     it('should return a valid TransactionRequest', async () => {
-      await inUserContext(await UserFactory().clone(2), async (debtor: User, creditor: User) => {
+      await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
         const transaction = await createValidTransactionRequest(
           debtor.id, creditor.id,
         );
