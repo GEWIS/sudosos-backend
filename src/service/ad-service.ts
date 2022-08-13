@@ -19,7 +19,7 @@
 import { Client } from 'ldapts';
 import { EntityManager, In } from 'typeorm';
 import LDAPAuthenticator from '../entity/authenticator/ldap-authenticator';
-import User, { UserType } from '../entity/user/user';
+import User, { TermsOfServiceStatus, UserType } from '../entity/user/user';
 import wrapInManager from '../helpers/database';
 import {
   bindUser, getLDAPConnection, LDAPGroup, LDAPResponse, LDAPUser, userFromLDAP,
@@ -40,6 +40,7 @@ export default class ADService {
       lastName: '',
       type: UserType.ORGAN,
       active: true,
+      acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
     }) as User;
 
     await manager.save(account).then(async (acc) => {

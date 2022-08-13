@@ -40,7 +40,14 @@ export enum UserType {
  * All user types that should be allowed to have a local password.
  */
 export const LocalUserTypes = [
-  UserType.LOCAL_USER, UserType.INVOICE, UserType.AUTOMATIC_INVOICE,
+  UserType.LOCAL_USER, UserType.LOCAL_ADMIN, UserType.INVOICE, UserType.AUTOMATIC_INVOICE,
+];
+
+/**
+ * All users that have required TOS restrictions.
+ */
+export const TOSRequired = [
+  UserType.MEMBER, UserType.LOCAL_USER, UserType.LOCAL_ADMIN,
 ];
 
 /**
