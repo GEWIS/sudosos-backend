@@ -227,7 +227,7 @@ export default class PointOfSaleService {
       builder.andWhere('owner.id IN (:...organIds)', { organIds });
     }
 
-    builder.orderBy({ 'updatedpos.id': 'DESC' });
+    builder.orderBy({ 'updatedpos.pointOfSaleId': 'DESC' });
 
     return builder;
   }

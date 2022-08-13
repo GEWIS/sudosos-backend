@@ -163,7 +163,7 @@ export default class ContainerService {
       builder.leftJoinAndSelect('products.category', 'category');
       builder.leftJoin(Product, 'base_product', 'base_product.id = products.productId');
       builder.leftJoinAndSelect(User, 'product_owner', 'product_owner.id = base_product.owner.id');
-      builder.innerJoinAndSelect(ProductImage, 'product_image', 'product_image.id = base_product.imageId');
+      builder.leftJoinAndSelect(ProductImage, 'product_image', 'product_image.id = base_product.imageId');
       if (filters.productId) builder.where(`products.productId = ${filters.productId}`);
     }
 

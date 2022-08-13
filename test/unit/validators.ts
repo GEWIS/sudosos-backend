@@ -41,7 +41,7 @@ export function verifyUserEntity(
 export function verifyUserResponse(
   spec: SwaggerSpecification, userResponse: UserResponse, canBeDeleted?: boolean,
 ): void {
-  const validation = spec.validateModel('UserResponse', userResponse, false, false);
+  const validation = spec.validateModel('UserResponse', userResponse, true, false);
   expect(validation.valid).to.be.true;
   expect(userResponse.id).to.be.at.least(0);
   expect(userResponse.firstName).to.be.not.empty;
@@ -104,7 +104,7 @@ export function verifyBasePOSResponse(
 export function verifyBaseTransactionEntity(
   spec: SwaggerSpecification, baseTransaction: BaseTransactionResponse,
 ): void {
-  const validation = spec.validateModel('BaseTransactionResponse', baseTransaction, false, true);
+  const validation = spec.validateModel('BaseTransactionResponse', baseTransaction, true, true);
   expect(validation.valid).to.be.true;
 
   expect(baseTransaction.id).to.be.greaterThan(-1);
