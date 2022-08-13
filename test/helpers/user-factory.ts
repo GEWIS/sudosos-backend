@@ -61,6 +61,7 @@ export class Builder {
         lastName: `Doe #${count + i}`,
         email: `${count + i}@sudosos.nl`,
         type: user.type ?? UserType.MEMBER,
+        id: count + i,
       } as User;
       users.push(clone);
     }
@@ -68,6 +69,17 @@ export class Builder {
     return users;
   }
 }
+
+export const ADMIN_USER = async () => {
+  const count = await User.count();
+  return Object.assign(new User(), {
+    firstName: `Admin #${count + 1}`,
+    lastName: `Doe #${count + 1}`,
+    type: UserType.LOCAL_ADMIN,
+    active: true,
+    acceptedToS: TermsOfServiceStatus.ACCEPTED,
+  } as User);
+};
 
 async function setInactive(users: User[]) {
   const promises: Promise<User>[] = [];
@@ -79,17 +91,18 @@ async function setInactive(users: User[]) {
   await Promise.all(promises);
 }
 
-export function UserFactory(custom?: User) {
+export async function UserFactory(custom?: User) {
   const builder = new Builder();
   if (custom) {
     builder.user = custom;
   } else {
-    builder.default();
+    await builder.default();
   }
   return builder;
 }
 
-export async function inUserContext(users: User[], func: (...arg: any) => void) {
-  await func(...users);
-  await setInactive(users);
+export async function inUserContext(users: User[] | Promise<User[]>, func: (...arg: any) => void) {
+  const u = await users;
+  await func(...u);
+  await setInactive(u);
 }

@@ -20,6 +20,8 @@ import log4js, { Logger } from 'log4js';
 import { getConnection } from 'typeorm';
 import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
+import { parseRequestPagination } from '../helpers/pagination';
+import BannerService from '../service/banner-service';
 
 export default class RootController extends BaseController {
   /**
@@ -47,7 +49,47 @@ export default class RootController extends BaseController {
           handler: this.ping.bind(this),
         },
       },
+      '/banners': {
+        GET: {
+          policy: async () => true,
+          handler: this.returnAllBanners.bind(this),
+        },
+      },
     };
+  }
+
+  /**
+   * Returns all existing banners
+   * @route GET /banners
+   * @group banners - Operations of banner controller
+   * @security JWT
+   * @param {integer} take.query - How many banners the endpoint should return
+   * @param {integer} skip.query - How many banners should be skipped (for pagination)
+   * @returns {PaginatedBannerResponse.model} 200 - All existing banners
+   * @returns {string} 400 - Validation error
+   * @returns {string} 500 - Internal server error
+   */
+  public async returnAllBanners(req: Request, res: Response): Promise<void> {
+    this.logger.trace('Get all banners by', req.ip);
+
+    let take;
+    let skip;
+    try {
+      const pagination = parseRequestPagination(req);
+      take = pagination.take;
+      skip = pagination.skip;
+    } catch (e) {
+      res.status(400).send(e.message);
+      return;
+    }
+
+    // handle request
+    try {
+      res.json(await BannerService.getBanners({}, { take, skip }));
+    } catch (error) {
+      this.logger.error('Could not return all banners:', error);
+      res.status(500).json('Internal server error.');
+    }
   }
 
   /**

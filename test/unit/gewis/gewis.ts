@@ -165,7 +165,7 @@ describe('GEWIS Helper functions', async (): Promise<void> => {
 
   describe('GEWIS LDAP Authentication', () => {
     it('should bind to GEWIS User if already exists', async () => {
-      await inUserContext(await UserFactory().clone(1), async (user: User) => {
+      await inUserContext((await UserFactory()).clone(1), async (user: User) => {
         const ADuser = {
           ...ctx.validADUser, givenName: `Sudo #${user.firstName}`, sn: `SOS #${user.lastName}`, objectGUID: user.id, employeeNumber: `${user.id}`,
         };
@@ -196,7 +196,7 @@ describe('GEWIS Helper functions', async (): Promise<void> => {
       });
     });
     it('should login and create a user + GEWIS user using LDAP ', async () => {
-      await inUserContext(await UserFactory().clone(1), async (user: User) => {
+      await inUserContext((await UserFactory()).clone(1), async (user: User) => {
         const ADuser = {
           ...ctx.validADUser, givenName: `Sudo #${user.firstName}`, sn: `SOS #${user.lastName}`, objectGUID: user.id, employeeNumber: `${user.id}`,
         };

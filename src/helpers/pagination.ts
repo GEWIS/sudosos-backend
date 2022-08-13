@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { RequestWithToken } from '../middleware/token-middleware';
+import { Request } from 'express';
 
 const PAGINATION_DEFAULT = 25;
 const PAGINATION_MAX = 500;
@@ -47,7 +47,7 @@ export interface PaginationResult {
  * Check whether the possible take and skip query parameters are valid
  * @param req
  */
-export function validateRequestPagination(req: RequestWithToken): boolean {
+export function validateRequestPagination(req: Request): boolean {
   const urlParams = req.query || {};
 
   if (urlParams.take) {
@@ -71,7 +71,7 @@ export function validateRequestPagination(req: RequestWithToken): boolean {
  * @param req
  * @throws {Error} pagination query parameters are not positive integers or undefined
  */
-export function parseRequestPagination(req: RequestWithToken): { take: number, skip: number } {
+export function parseRequestPagination(req: Request): { take: number, skip: number } {
   if (!validateRequestPagination(req)) throw Error('Invalid pagination parameters');
 
   const maxTake = maxPagination();

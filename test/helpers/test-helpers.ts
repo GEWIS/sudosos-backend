@@ -18,6 +18,56 @@
 import dinero from 'dinero.js';
 import TransferRequest from '../../src/controller/request/transfer-request';
 import TransferService from '../../src/service/transfer-service';
+import express, { Express } from 'express';
+import Swagger from '../../src/start/swagger';
+import RoleManager from '../../src/rbac/role-manager';
+import Database from '../../src/database/database';
+import TokenHandler from '../../src/authentication/token-handler';
+import { SwaggerSpecification } from 'swagger-model-validator';
+import { Connection } from 'typeorm';
+import User, { UserType } from '../../src/entity/user/user';
+import { ADMIN_USER, UserFactory } from './user-factory';
+import { RoleFactory } from './role-factory';
+
+export interface DefaultContext {
+  app: Express,
+  specification: SwaggerSpecification,
+  roleManager: RoleManager,
+  connection: Connection,
+  tokenHandler: TokenHandler,
+}
+
+export async function defaultContext() {
+  const app = express();
+  const specification = await Swagger.initialize(app);
+  const roleManager = new RoleManager();
+  const connection = await Database.initialize();
+  const tokenHandler = new TokenHandler({
+    algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
+  });
+  return {
+    app,
+    specification,
+    roleManager,
+    connection,
+    tokenHandler,
+  };
+}
+
+export async function defaultRolesAndTokens(roleManager: RoleManager, tokenHandler: TokenHandler, entities: string[]) {
+  const admin: User = await (await UserFactory(await ADMIN_USER())).get();
+  const user: User = await (await UserFactory()).get();
+
+  roleManager.registerRole(RoleFactory(entities, UserType.LOCAL_ADMIN));
+  roleManager.registerRole(RoleFactory(entities, UserType.MEMBER));
+
+  const adminToken = await tokenHandler.signToken({ user: admin, roles: [UserType[UserType.MEMBER]], lesser: false }, 'nonce admin');
+  const token = await tokenHandler.signToken({ user: user, roles: [UserType[UserType.LOCAL_ADMIN]], lesser: false }, 'nonce');
+  return {
+    admin, adminToken,
+    user, token,
+  };
+}
 
 export default async function generateBalance(amount: number, toId: number) {
   const transferRequest: TransferRequest = {

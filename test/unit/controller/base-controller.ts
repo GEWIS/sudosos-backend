@@ -113,20 +113,20 @@ describe('BaseController', (): void => {
       roleManager: new RoleManager(),
     });
 
-    const userAccepted = await UserFactory({
+    const userAccepted = await (await UserFactory({
       firstName: 'TestUser1',
       lastName: 'TestUser1',
       type: UserType.MEMBER,
       active: true,
       acceptedToS: TermsOfServiceStatus.ACCEPTED,
-    } as User).get();
-    const userNotAccepted = await UserFactory({
+    } as User)).get();
+    const userNotAccepted = await (await UserFactory({
       firstName: 'TestUser1',
       lastName: 'TestUser1',
       type: UserType.MEMBER,
       active: true,
       acceptedToS: TermsOfServiceStatus.NOT_ACCEPTED,
-    } as User).get();
+    } as User)).get();
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
