@@ -121,6 +121,7 @@ export default class BannerService {
     const options: FindManyOptions = {
       where: QueryFilter.createFilterWhereClause(mapping, filters),
       relations: ['image'],
+      order: { id: 'DESC' },
     };
 
     const banners = await Banner.find({

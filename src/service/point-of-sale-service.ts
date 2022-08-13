@@ -148,6 +148,8 @@ export default class PointOfSaleService {
       builder.andWhere('owner.id IN (:...organIds)', { organIds });
     }
 
+    builder.orderBy({ 'pos.id': 'DESC' });
+
     return builder;
   }
 
@@ -224,6 +226,8 @@ export default class PointOfSaleService {
       const organIds = (await AuthenticationService.getMemberAuthenticators(user)).map((u) => u.id);
       builder.andWhere('owner.id IN (:...organIds)', { organIds });
     }
+
+    builder.orderBy({ 'updatedpos.id': 'DESC' });
 
     return builder;
   }

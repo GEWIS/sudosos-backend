@@ -99,6 +99,7 @@ export default class VatGroupService {
 
     const options: FindManyOptions = {
       where: QueryFilter.createFilterWhereClause(mapping, filters),
+      order: { id: 'ASC' },
     };
 
     const records = await VatGroup.find({
