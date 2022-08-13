@@ -18,7 +18,7 @@
 import { toFail, toPass, ValidationError } from '../../../helpers/specification-validation';
 import User, { TermsOfServiceStatus, UserType } from '../../../entity/user/user';
 import { INVALID_ACTIVE_USER_ID, INVALID_ORGAN_ID, INVALID_USER_ID } from './validation-errors';
-import { In, Not } from 'typeorm';
+import { In } from 'typeorm';
 
 export const positiveNumber = async (p: number) => {
   if (p <= 0) return toFail(new ValidationError('Number must be positive'));
