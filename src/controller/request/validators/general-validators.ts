@@ -16,8 +16,9 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { toFail, toPass, ValidationError } from '../../../helpers/specification-validation';
-import User, { UserType } from '../../../entity/user/user';
+import User, { TermsOfServiceStatus, UserType } from '../../../entity/user/user';
 import { INVALID_ACTIVE_USER_ID, INVALID_ORGAN_ID, INVALID_USER_ID } from './validation-errors';
+import { In, Not } from 'typeorm';
 
 export const positiveNumber = async (p: number) => {
   if (p <= 0) return toFail(new ValidationError('Number must be positive'));
@@ -25,7 +26,9 @@ export const positiveNumber = async (p: number) => {
 };
 
 export const userMustExist = async (p: number) => {
-  if (await User.findOne({ where: { id: p } }) == null) {
+  if (await User.findOne({ where: {
+    id: p, acceptedToS: In([TermsOfServiceStatus.ACCEPTED, TermsOfServiceStatus.NOT_REQUIRED]),
+  } }) == null) {
     return toFail(INVALID_USER_ID());
   }
   return toPass(p);

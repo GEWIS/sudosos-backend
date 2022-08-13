@@ -20,9 +20,10 @@ import Dinero, { DineroObject } from 'dinero.js';
 import { RequestWithToken } from '../middleware/token-middleware';
 import {
   BaseTransactionResponse,
-  TransactionResponse,
+  PaginatedBaseTransactionResponse,
   SubTransactionResponse,
-  SubTransactionRowResponse, PaginatedBaseTransactionResponse,
+  SubTransactionRowResponse,
+  TransactionResponse,
 } from '../controller/response/transaction-response';
 import Transaction from '../entity/transactions/transaction';
 import SubTransaction from '../entity/transactions/sub-transaction';
@@ -30,11 +31,16 @@ import DineroTransformer from '../entity/transformer/dinero-transformer';
 import {
   parseContainerToBaseResponse,
   parsePOSToBasePOS,
-  parseProductToBaseResponse, parseUserToBaseResponse,
+  parseProductToBaseResponse,
+  parseUserToBaseResponse,
 } from '../helpers/revision-to-response';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
-import { SubTransactionRequest, SubTransactionRowRequest, TransactionRequest } from '../controller/request/transaction-request';
-import User, { UserType } from '../entity/user/user';
+import {
+  SubTransactionRequest,
+  SubTransactionRowRequest,
+  TransactionRequest,
+} from '../controller/request/transaction-request';
+import User, { TermsOfServiceStatus, UserType } from '../entity/user/user';
 import ContainerRevision from '../entity/container/container-revision';
 import SubTransactionRow from '../entity/transactions/sub-transaction-row';
 import ProductRevision from '../entity/product/product-revision';
@@ -263,7 +269,12 @@ export default class TransactionService {
     // don't check active users if verification is done on an update
     const users = await User.findByIds(ids);
     if (users.length !== ids.length
-      || (!isUpdate && !users.every((user) => user.active))) {
+      || (!isUpdate && !users.every((user) => user.active && user.acceptedToS !== TermsOfServiceStatus.NOT_ACCEPTED))) {
+      return false;
+    }
+
+    const fromUser = await User.findOne({ where: { id: req.from } });
+    if (fromUser.type === UserType.ORGAN) {
       return false;
     }
 
