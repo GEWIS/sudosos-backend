@@ -343,6 +343,7 @@ export default class PointOfSaleService {
       name: update.name,
       // Increment revision.
       revision: base.currentRevision ? base.currentRevision + 1 : 1,
+      useAuthentication: update.useAuthentication,
     });
 
     // First save revision.

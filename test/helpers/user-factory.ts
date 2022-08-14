@@ -70,6 +70,18 @@ export class Builder {
   }
 }
 
+
+export const ORGAN_USER = async () => {
+  const count = await User.count();
+  return Object.assign(new User(), {
+    firstName: `Organ #${count + 1}`,
+    lastName: `Doe #${count + 1}`,
+    type: UserType.ORGAN,
+    active: true,
+    acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
+  } as User);
+};
+
 export const ADMIN_USER = async () => {
   const count = await User.count();
   return Object.assign(new User(), {

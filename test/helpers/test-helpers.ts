@@ -54,19 +54,21 @@ export async function defaultContext() {
   };
 }
 
-export async function defaultRolesAndTokens(roleManager: RoleManager, tokenHandler: TokenHandler, entities: string[]) {
+export async function defaultTokens(tokenHandler: TokenHandler) {
   const admin: User = await (await UserFactory(await ADMIN_USER())).get();
   const user: User = await (await UserFactory()).get();
-
-  roleManager.registerRole(RoleFactory(entities, UserType.LOCAL_ADMIN));
-  roleManager.registerRole(RoleFactory(entities, UserType.MEMBER));
-
-  const adminToken = await tokenHandler.signToken({ user: admin, roles: [UserType[UserType.MEMBER]], lesser: false }, 'nonce admin');
-  const token = await tokenHandler.signToken({ user: user, roles: [UserType[UserType.LOCAL_ADMIN]], lesser: false }, 'nonce');
+  const adminToken = await tokenHandler.signToken({ user: admin, roles: [UserType[UserType.LOCAL_ADMIN]], lesser: false }, 'nonce admin');
+  const token = await tokenHandler.signToken({ user: user, roles: [UserType[UserType.MEMBER]], lesser: false }, 'nonce');
   return {
     admin, adminToken,
     user, token,
   };
+}
+
+export async function defaultRolesAndTokens(roleManager: RoleManager, tokenHandler: TokenHandler, entities: string[]) {
+  roleManager.registerRole(RoleFactory(entities, UserType.LOCAL_ADMIN));
+  roleManager.registerRole(RoleFactory(entities, UserType.MEMBER));
+  return defaultTokens(tokenHandler);
 }
 
 export default async function generateBalance(amount: number, toId: number) {
