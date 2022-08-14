@@ -54,7 +54,6 @@ function validUserType(u: CreateUserRequest) {
  */
 const updateUserSpec: <T extends UpdateUserRequest>() => Specification<T, ValidationError> = () => [
   [nameSpec(), 'firstName', new ValidationError('Firstname: ')],
-  [nameSpec(), 'firstName', new ValidationError('Firstname: ')],
   [[validEmail], 'email', new ValidationError('E-mail: ')],
   [[maxLength(64)], 'lastName', new ValidationError('Lastname: ')],
 ];

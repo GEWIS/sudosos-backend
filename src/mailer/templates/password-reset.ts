@@ -40,7 +40,7 @@ const passwordResetDutch = new MailContent<WelcomeWithResetOptions>({
 <p>Tot op de borrel!</p>
 
 ${signatureDutch}`,
-  getSubject: () => 'Welkom bij SudoSOS!',
+  getSubject: () => 'Wachtwoord resetten',
   getText: (context) => `
 Beste ${context.name},
 
@@ -69,7 +69,7 @@ const passwordResetEnglish = new MailContent<WelcomeWithResetOptions>({
 <p>See you on the borrel!</p>
 
 ${signatureEnglish}`,
-  getSubject: () => 'Welcome to SudoSOS!',
+  getSubject: () => 'Password reset',
   getText: (context) => `
 Dear ${context.name},
 
