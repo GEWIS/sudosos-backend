@@ -26,10 +26,12 @@ import { BaseVatGroupResponse } from './vat-group-response';
  * @typedef {BaseResponse} BaseProductResponse
  * @property {string} name.required - The name of the product.
  * @property {DineroObjectResponse.model} priceInclVat.required - The price of the product.
+ * @property {BaseVatGroupResponse.model} vat.required - The VAT percentage
  */
 export interface BaseProductResponse extends BaseResponse {
   name: string,
   priceInclVat: DineroObjectResponse,
+  vat: BaseVatGroupResponse,
 }
 
 /**
@@ -40,7 +42,6 @@ export interface BaseProductResponse extends BaseResponse {
  *           The category the product belongs to.
  * @property {DineroObjectResponse.model} priceExclVat.required - The price of the product
  *           excluding VAT
- * @property {BaseVatGroupResponse.model} vat.required - The VAT percentage
  * @property {ProductCategoryResponse.model} category.required
  *  - The category the product belongs to.
  * @property {string} image - The URL to the picture representing this product.
@@ -49,7 +50,6 @@ export interface BaseProductResponse extends BaseResponse {
 export interface UpdatedProductResponse extends BaseProductResponse {
   owner: BaseUserResponse,
   priceExclVat: DineroObjectResponse,
-  vat: BaseVatGroupResponse,
   category: ProductCategoryResponse,
   image: string,
   revision: number,

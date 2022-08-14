@@ -480,6 +480,7 @@ export default class TransactionService {
         revision: req.product.revision,
         product: { id: req.product.id },
       },
+      relations: ['vat'],
     });
     return { product, amount: req.amount, subTransaction } as SubTransactionRow;
   }
@@ -655,6 +656,7 @@ export default class TransactionService {
         'pointOfSale', 'pointOfSale.pointOfSale',
         'subTransactions.container', 'subTransactions.container.container',
         'subTransactions.subTransactionRows.product', 'subTransactions.subTransactionRows.product.product',
+        'subTransactions.subTransactionRows.product.vat',
       ],
     });
 

@@ -34,6 +34,11 @@ export function parseProductToBaseResponse(
     priceInclVat: product.priceInclVat.toObject(),
     createdAt: timestamps ? product.createdAt.toISOString() : undefined,
     updatedAt: timestamps ? product.updatedAt.toISOString() : undefined,
+    vat: {
+      id: product.vat.id,
+      percentage: product.vat.percentage,
+      hidden: product.vat.hidden,
+    },
   } as BaseProductResponse;
 }
 
