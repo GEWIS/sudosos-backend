@@ -46,6 +46,6 @@ export default class Bindings {
     getBuilder: () => SelectQueryBuilder<User>
   } = {
       parseToResponse: parseRawUserToResponse,
-      getBuilder: () => createQueryBuilder().from(User, 'user'),
+      getBuilder: () => createQueryBuilder().from(User, 'user').orderBy({ 'user.id': 'ASC' }),
     };
 }

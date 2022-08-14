@@ -371,7 +371,9 @@ export default class ProductService {
         'category.name AS category_name',
         'productrevision.alcoholpercentage AS alcoholpercentage',
         'image.downloadName as image',
-      ]);
+      ])
+      .orderBy({ 'productrevision.name': 'ASC' });
+
     return builder;
   }
 
@@ -414,7 +416,8 @@ export default class ProductService {
         'category.name AS category_name',
         'updatedproduct.alcoholpercentage AS alcoholpercentage',
         'image.downloadName as image',
-      ]);
+      ])
+      .orderBy('updatedproduct.name', 'ASC');
 
     return builder;
   }

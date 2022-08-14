@@ -253,7 +253,7 @@ describe('GEWIS Helper functions', async (): Promise<void> => {
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
       (res.body as PaginatedUserResponse).records.forEach((userResponse: GewisUserResponse) => {
-        const validation = ctx.spec.validateModel('GewisUserResponse', userResponse, false, true);
+        const validation = ctx.spec.validateModel('GewisUserResponse', userResponse, true, true);
         expect(validation.valid).to.be.true;
       });
     });

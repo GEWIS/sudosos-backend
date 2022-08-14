@@ -185,6 +185,8 @@ export default class ContainerService {
       builder.andWhere('container_owner.id IN (:...organIds)', { organIds });
     }
 
+    builder.orderBy({ 'container.id': 'DESC' });
+
     return builder;
   }
 
@@ -321,6 +323,8 @@ export default class ContainerService {
       const organIds = (await AuthenticationService.getMemberAuthenticators(user)).map((u) => u.id);
       builder.andWhere('owner.id IN (:...organIds)', { organIds });
     }
+
+    builder.orderBy({ 'container.id': 'DESC' });
 
     return builder;
   }

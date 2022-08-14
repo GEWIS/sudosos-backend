@@ -73,6 +73,7 @@ export default class ProductCategoryService {
     };
     const options: FindManyOptions = {
       where: QueryFilter.createFilterWhereClause(filterMapping, filters),
+      order: { id: 'ASC' },
     };
 
     const results = await Promise.all([

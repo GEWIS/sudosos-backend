@@ -115,7 +115,8 @@ export default class Gewis {
   public static getUserBuilder() {
     return createQueryBuilder()
       .from(User, 'user')
-      .leftJoin(GewisUser, 'gewis_user', 'userId = id');
+      .leftJoin(GewisUser, 'gewis_user', 'userId = id')
+      .orderBy('userId', 'ASC');
   }
 
   /**

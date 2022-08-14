@@ -29,10 +29,14 @@ import seedDatabase from '../../seed';
 import TransactionService from '../../../src/service/transaction-service';
 import { verifyBaseTransactionEntity } from '../validators';
 import Swagger from '../../../src/start/swagger';
-import { SubTransactionRequest, SubTransactionRowRequest, TransactionRequest } from '../../../src/controller/request/transaction-request';
+import {
+  SubTransactionRequest,
+  SubTransactionRowRequest,
+  TransactionRequest,
+} from '../../../src/controller/request/transaction-request';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import SubTransactionRow from '../../../src/entity/transactions/sub-transaction-row';
-import User from '../../../src/entity/user/user';
+import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import { createValidTransactionRequest } from '../../helpers/transaction-factory';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
 import ContainerRevision from '../../../src/entity/container/container-revision';
@@ -270,6 +274,48 @@ describe('TransactionService', (): void => {
         precision: 2,
       };
       expect(await TransactionService.verifyTransaction(badPriceReq), 'incorrect accepted').to.be.false;
+    });
+    it('should return false if from user is an organ', async () => {
+      const organ = ctx.users[ctx.users.findIndex((u) => u.type === UserType.ORGAN)];
+      const badFromReq: TransactionRequest = {
+        ...ctx.validTransReq,
+        from: organ.id,
+      };
+      expect(await TransactionService.verifyTransaction(badFromReq), 'organ accepted as from-user').to.be.false;
+    });
+    it('should return false if an involved user has not accepted TOS', async () => {
+      const user = Object.assign(new User(), {
+        firstName: 'Bart-jan',
+        lastName: 'van de CBC',
+        type: UserType.LOCAL_USER,
+        active: true,
+        ofAge: true,
+        acceptedToS: TermsOfServiceStatus.NOT_ACCEPTED,
+      }) as User;
+      await User.save(user);
+
+      const badFromReq: TransactionRequest = {
+        ...ctx.validTransReq,
+        from: user.id,
+      };
+      expect(await TransactionService.verifyTransaction(badFromReq)).to.be.false;
+
+      const badCreatedByReq: TransactionRequest = {
+        ...ctx.validTransReq,
+        createdBy: user.id,
+      };
+      expect(await TransactionService.verifyTransaction(badCreatedByReq)).to.be.false;
+
+      const badToReq: TransactionRequest = {
+        ...ctx.validTransReq,
+        subTransactions: [
+          {
+            ...ctx.validTransReq.subTransactions[0],
+            to: user.id,
+          },
+        ],
+      };
+      expect(await TransactionService.verifyTransaction(badToReq)).to.be.false;
     });
   });
 

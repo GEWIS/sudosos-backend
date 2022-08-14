@@ -19,8 +19,8 @@ import { UserResponse } from '../../controller/response/user-response';
 
 /**
  * @typedef {UserResponse} GewisUserResponse
- * @property {integer} gewisId.required - The m-Number of the user
+ * @property {integer} gewisId - The m-Number of the user
  */
 export interface GewisUserResponse extends UserResponse {
-  gewisId: number
+  gewisId?: number
 }
