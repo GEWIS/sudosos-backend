@@ -35,6 +35,8 @@ import ResetLocalRequest from './request/reset-local-request';
 import AuthenticationResetTokenRequest from './request/authentication-reset-token-request';
 import AuthenticationEanRequest from './request/authentication-ean-request';
 import EanAuthenticator from '../entity/authenticator/ean-authenticator';
+import Mailer from '../mailer';
+import PasswordReset from '../mailer/templates/password-reset';
 
 /**
  * The authentication controller is responsible for:
@@ -374,7 +376,8 @@ export default class AuthenticationController extends BaseController {
         return;
       }
 
-      await AuthenticationService.createResetToken(user);
+      const resetTokenInfo = await AuthenticationService.createResetToken(user);
+      Mailer.getInstance().send(user, new PasswordReset({ email: user.email, name: user.firstName, resetTokenInfo }));
       // send email with link.
       res.status(204).send();
       return;

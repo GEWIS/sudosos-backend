@@ -20,7 +20,7 @@ import { asBoolean, asNumber, asUserType } from '../helpers/validators';
 import { PaginationParameters } from '../helpers/pagination';
 import { PaginatedUserResponse, UserResponse } from '../controller/response/user-response';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
-import User, { TermsOfServiceStatus, UserType } from '../entity/user/user';
+import User, { LocalUserTypes, TermsOfServiceStatus, TOSRequired, UserType } from '../entity/user/user';
 import CreateUserRequest from '../controller/request/create-user-request';
 import MemberAuthenticator from '../entity/authenticator/member-authenticator';
 import UpdateUserRequest from '../controller/request/update-user-request';
@@ -34,6 +34,8 @@ import Mailer from '../mailer';
 import WelcomeToSudosos from '../mailer/templates/welcome-to-sudosos';
 import { AcceptTosRequest } from '../controller/request/accept-tos-request';
 import Bindings from '../helpers/bindings';
+import AuthenticationService from './authentication-service';
+import WelcomeWithReset from '../mailer/templates/welcome-with-reset';
 
 /**
  * Parameters used to filter on Get Users functions.
@@ -136,8 +138,17 @@ export default class UserService {
    * @returns The created user
    */
   public static async createUser(createUserRequest: CreateUserRequest) {
-    const user = await User.save(createUserRequest as User);
-    Mailer.getInstance().send(user, new WelcomeToSudosos({ name: user.firstName }));
+    // Check if user needs to accept TOS.
+    const acceptedToS = TOSRequired.includes(createUserRequest.type) ? TermsOfServiceStatus.NOT_ACCEPTED : TermsOfServiceStatus.NOT_REQUIRED;
+    const user = await User.save({ ...createUserRequest, acceptedToS } as User);
+
+    // Local users will receive a reset link.
+    if (LocalUserTypes.includes(user.type)) {
+      const resetTokenInfo = await AuthenticationService.createResetToken(user);
+      Mailer.getInstance().send(user, new WelcomeWithReset({ email: user.email, name: user.firstName, resetTokenInfo }));
+    } else {
+      Mailer.getInstance().send(user, new WelcomeToSudosos({ name: user.firstName }));
+    }
     return Promise.resolve(this.getSingleUser(user.id));
   }
 

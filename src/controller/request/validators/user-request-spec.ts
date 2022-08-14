@@ -23,6 +23,7 @@ import CreateUserRequest from '../create-user-request';
 import { UserType } from '../../../entity/user/user';
 import { INVALID_USER_TYPE } from './validation-errors';
 import UpdateUserRequest from '../update-user-request';
+import validator from 'validator';
 
 /**
  * Most names cannot be '' or longer than 64.
@@ -31,6 +32,12 @@ const nameSpec: () => Specification<string, ValidationError> = () => [
   nonZeroString,
   maxLength(64),
 ];
+
+function validEmail(mail: string) {
+  if (mail === undefined) return toFail(new ValidationError('invalid e-mail'));
+  if (validator.isEmail(mail)) return toPass(mail);
+  else return toFail(new ValidationError('invalid e-mail'));
+}
 
 /**
  * Checks if provided type is valid
@@ -47,6 +54,7 @@ function validUserType(u: CreateUserRequest) {
  */
 const updateUserSpec: <T extends UpdateUserRequest>() => Specification<T, ValidationError> = () => [
   [nameSpec(), 'firstName', new ValidationError('Firstname: ')],
+  [[validEmail], 'email', new ValidationError('E-mail: ')],
   [[maxLength(64)], 'lastName', new ValidationError('Lastname: ')],
 ];
 

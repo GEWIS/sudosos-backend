@@ -102,6 +102,7 @@ describe('UserController', (): void => {
         firstName: 'Roy',
         lastName: 'Kakkenberg',
         type: UserType.MEMBER,
+        email: 'spam@gewis.nl',
       } as any as User,
       ...database,
     };
