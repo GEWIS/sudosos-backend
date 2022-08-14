@@ -531,7 +531,6 @@ export default class UserController extends BaseController {
     const parameters = req.params;
     this.logger.trace('Update user', parameters.id, 'with', body, 'by user', req.token.user);
 
-    if (body.firstName !== undefined) console.log(body.firstName.length);
     if (body.firstName !== undefined && body.firstName.length === 0) {
       res.status(400).json('firstName cannot be empty');
       return;

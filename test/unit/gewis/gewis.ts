@@ -254,7 +254,6 @@ describe('GEWIS Helper functions', async (): Promise<void> => {
       expect(res.status).to.equal(200);
       (res.body as PaginatedUserResponse).records.forEach((userResponse: GewisUserResponse) => {
         const validation = ctx.spec.validateModel('GewisUserResponse', userResponse, true, true);
-        console.error(validation);
         expect(validation.valid).to.be.true;
       });
     });

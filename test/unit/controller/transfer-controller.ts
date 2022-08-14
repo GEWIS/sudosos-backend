@@ -239,8 +239,6 @@ describe('TransferController', async (): Promise<void> => {
       ).valid).to.be.true;
     });
     it('should return an HTTP 200 and the withdraw transfer with given id if admin', async () => {
-      console.log(`/transfers/${localAccountWithdraw.id}`);
-
       const res = await request(app)
         .get(`/transfers/${localAccountWithdraw.id}`)
         .set('Authorization', `Bearer ${adminToken}`);

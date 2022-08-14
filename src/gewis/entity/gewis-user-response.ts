@@ -22,5 +22,5 @@ import { UserResponse } from '../../controller/response/user-response';
  * @property {integer} gewisId - The m-Number of the user
  */
 export interface GewisUserResponse extends UserResponse {
-  gewisId: number
+  gewisId?: number
 }
