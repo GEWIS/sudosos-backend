@@ -53,4 +53,4 @@ export interface CreatePointOfSaleRequest extends BasePointOfSaleParams {
  * IDs or Requests of the containers to add to the POS
  * @property {integer} id.required - ID of the POS to update.
  */
-export type UpdatePointOfSaleRequest = BasePointOfSaleParams;
+export type UpdatePointOfSaleRequest = BasePointOfSaleParams & { id: number };

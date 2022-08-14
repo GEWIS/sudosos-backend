@@ -78,8 +78,9 @@ function updateUpdatedResponseEqual(update: UpdatePointOfSaleRequest,
  * Checks if response adheres to creation.
  */
 function requestUpdatedResponseEqual(request: CreatePointOfSaleParams,
-  response: UpdatedPointOfSaleResponse) {
-  updateUpdatedResponseEqual(request, response);
+  response: PointOfSaleWithContainersResponse) {
+  expect(request.name).to.equal(response.name);
+  if (response.containers) expect(request.containers).to.deep.equalInAnyOrder(response.containers.map((c) => c.id));
   expect(request.ownerId).to.equal(response.owner.id);
 }
 
@@ -308,7 +309,7 @@ describe('PointOfSaleService', async (): Promise<void> => {
 
       expect(updatedPointOfSale.name).to.equal(ctx.validPOSParams.name);
 
-      requestUpdatedResponseEqual(ctx.validPOSParams, res);
+      requestUpdatedResponseEqual(ctx.validPOSParams, res as PointOfSaleWithContainersResponse);
     });
   });
   describe('updatePointOfSale function', () => {
