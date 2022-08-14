@@ -29,7 +29,7 @@ import Transaction from '../../../src/entity/transactions/transaction';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Database from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
-import TokenMiddleware from '../../../src/middleware/token-middleware';
+import TokenMiddleware, { RequestWithToken } from '../../../src/middleware/token-middleware';
 import ProductCategory from '../../../src/entity/product/product-category';
 import Container from '../../../src/entity/container/container';
 import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
@@ -54,6 +54,7 @@ import {
 } from '../../../src/controller/response/financial-mutation-response';
 import UpdateLocalRequest from '../../../src/controller/request/update-local-request';
 import { AcceptTosRequest } from '../../../src/controller/request/accept-tos-request';
+import UpdateUserRequest from '../../../src/controller/request/update-user-request';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -184,6 +185,7 @@ describe('UserController', (): void => {
         User: {
           get: own,
           acceptToS: own,
+          update: { own: new Set<string>(['firstName', 'lastName']) },
         },
         Product: {
           get: own,
@@ -673,7 +675,7 @@ describe('UserController', (): void => {
       const res = await request(ctx.app)
         .patch('/users/1')
         .set('Authorization', `Bearer ${ctx.userToken}`)
-        .send({ firstName: 'Ralf' });
+        .send({ ofAge: true });
       expect(res.status).to.equal(403);
     });
     it('should correctly change firstName if requester is admin', async () => {
@@ -773,6 +775,20 @@ describe('UserController', (): void => {
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send({ active: undefined });
       expect(res.status).to.equal(400);
+    });
+    it('should allow user to update own firstName', async () => {
+      const firstName = 'Ralf';
+
+      const res = await request(ctx.app)
+        .patch(`/users/${ctx.users[0].id}`)
+        .set('Authorization', `Bearer ${ctx.userToken}`)
+        .send({ firstName });
+      expect(res.status).to.equal(200);
+
+      const user = res.body as UserResponse;
+      const spec = await Swagger.importSpecification();
+      expect(user.firstName).to.deep.equal(firstName);
+      verifyUserResponse(spec, user);
     });
   });
 
@@ -1508,6 +1524,20 @@ describe('UserController', (): void => {
           .set('Authorization', `Bearer ${userToken}`);
         expect(res.status).to.equal(403);
       });
+    });
+  });
+  describe('getAttributes function', () => {
+    it('should return all defined properties', async () => {
+      const update: UpdateUserRequest = {
+        ofAge: true,
+        email: 'test',
+        deleted: true,
+      };
+      const req = {
+        body: update,
+      } as RequestWithToken;
+      const result = UserController.getAttributes(req);
+      expect(result).to.deep.equalInAnyOrder(['ofAge', 'email', 'deleted']);
     });
   });
 });

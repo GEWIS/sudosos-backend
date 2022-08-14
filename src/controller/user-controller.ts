@@ -141,7 +141,7 @@ export default class UserController extends BaseController {
         PATCH: {
           body: { modelName: 'UpdateUserRequest' },
           policy: async (req) => this.roleManager.can(
-            req.token.roles, 'update', UserController.getRelation(req), 'User', ['*'],
+            req.token.roles, 'update', UserController.getRelation(req), 'User', UserController.getAttributes(req),
           ),
           handler: this.updateUser.bind(this),
         },
@@ -262,6 +262,17 @@ export default class UserController extends BaseController {
   static getRelation(req: RequestWithToken): string {
     if (userTokenInOrgan(req, asNumber(req.params.id))) return 'organ';
     return req.params.id === req.token.user.id.toString() ? 'own' : 'all';
+  }
+
+  static getAttributes(req: RequestWithToken): string[] {
+    const attributes: string[] = [];
+    const body = req.body as UpdateUserRequest;
+    for (const key in body) {
+      if (body.hasOwnProperty(key)) {
+        attributes.push(key);
+      }
+    }
+    return attributes;
   }
 
   /**
