@@ -631,12 +631,17 @@ describe('PointOfSaleController', async () => {
   describe('Propagating updates', () => {
     it('should propagate updates', async () => {
       let res = await request(ctx.app)
-        .get('/pointsofsale/1')
+        .post('/pointsofsale')
+        .set('Authorization', `Bearer ${ctx.superAdminToken}`)
+        .send(ctx.validPOSRequest);
+      const posid = res.body.id;
+      res = await request(ctx.app)
+        .get(`/pointsofsale/${posid}`)
         .set('Authorization', `Bearer ${ctx.superAdminToken}`);
       expect(res.status).to.equal(200);
       const oldPos = res.body as PointOfSaleWithContainersResponse;
       const containerIds = (res.body.containers as ContainerWithProductsResponse[]).map((c) => c.id);
-      const container = res.body.containers[2] as ContainerWithProductsResponse;
+      const container = res.body.containers[0] as ContainerWithProductsResponse;
       const containerId = container.id;
 
       const containerUpdate: UpdateContainerRequest = {
@@ -654,7 +659,7 @@ describe('PointOfSaleController', async () => {
       };
 
       res = await request(ctx.app)
-        .patch('/pointsofsale/1')
+        .patch(`/pointsofsale/${posid}`)
         .set('Authorization', `Bearer ${ctx.superAdminToken}`)
         .send(pointOfSaleUpdate);
       expect(res.status).to.equal(200);
@@ -671,7 +676,7 @@ describe('PointOfSaleController', async () => {
 
 
       res = await request(ctx.app)
-        .get('/pointsofsale/1')
+        .get(`/pointsofsale/${posid}`)
         .set('Authorization', `Bearer ${ctx.superAdminToken}`);
       const newerPos = res.body as PointOfSaleWithContainersResponse;
       const newContainer = newerPos.containers.find((c) => c.id === containerId);
