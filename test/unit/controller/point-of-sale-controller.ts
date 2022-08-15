@@ -34,7 +34,7 @@ import {
   PointOfSaleWithContainersResponse,
 } from '../../../src/controller/response/point-of-sale-response';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
-import { ContainerResponse } from '../../../src/controller/response/container-response';
+import { ContainerResponse, ContainerWithProductsResponse } from '../../../src/controller/response/container-response';
 import { PaginatedProductResponse, ProductResponse } from '../../../src/controller/response/product-response';
 import UpdatedPointOfSale from '../../../src/entity/point-of-sale/updated-point-of-sale';
 import {
@@ -47,6 +47,8 @@ import deepEqualInAnyOrder from 'deep-equal-in-any-order';
 import { defaultContext, DefaultContext, defaultTokens } from '../../helpers/test-helpers';
 import { ORGAN_USER, UserFactory } from '../../helpers/user-factory';
 import { allDefinition, organDefinition, ownDefintion, RoleFactory } from '../../helpers/role-factory';
+import { UpdateContainerRequest } from '../../../src/controller/request/container-request';
+import ContainerController from '../../../src/controller/container-controller';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -98,6 +100,10 @@ describe('PointOfSaleController', async () => {
           delete: { ...allDefinition, ...ownDefintion },
           approve: { ...allDefinition, ...ownDefintion },
         },
+        Container: {
+          approve: { ...allDefinition, ...ownDefintion },
+          update: { ...allDefinition, ...ownDefintion },
+        },
       },
     });
     const superAdminToken = await ctx.tokenHandler.signToken({ user: admin, roles: ['SUPER_ADMIN'], lesser: false }, 'nonce');
@@ -135,9 +141,11 @@ describe('PointOfSaleController', async () => {
     }, '1');
 
     const controller = new PointOfSaleController({ specification: ctx.specification, roleManager: ctx.roleManager });
+    const containerController = new ContainerController({ specification: ctx.specification, roleManager: ctx.roleManager });
     ctx.app.use(json());
     ctx.app.use(new TokenMiddleware({ tokenHandler: ctx.tokenHandler, refreshFactor: 0.5 }).getMiddleware());
     ctx.app.use('/pointsofsale', controller.getRouter());
+    ctx.app.use('/containers', containerController.getRouter());
 
     ctx = {
       ...ctx,
@@ -618,6 +626,58 @@ describe('PointOfSaleController', async () => {
       expect(res.body).to.be.empty;
 
       expect(res.status).to.equal(403);
+    });
+  });
+  describe('Propagating updates', () => {
+    it('should propagate updates', async () => {
+      let res = await request(ctx.app)
+        .get('/pointsofsale/1')
+        .set('Authorization', `Bearer ${ctx.superAdminToken}`);
+      expect(res.status).to.equal(200);
+      const oldPos = res.body as PointOfSaleWithContainersResponse;
+      const containerIds = (res.body.containers as ContainerWithProductsResponse[]).map((c) => c.id);
+      const container = res.body.containers[2] as ContainerWithProductsResponse;
+      const containerId = container.id;
+
+      const containerUpdate: UpdateContainerRequest = {
+        name: 'Cool new container',
+        products: [container.products[0].id],
+        public: container.public,
+      };
+
+
+      const pointOfSaleUpdate: UpdatePointOfSaleRequest = {
+        containers: containerIds,
+        id: oldPos.id,
+        name: oldPos.name,
+        useAuthentication: oldPos.useAuthentication,
+      };
+
+      res = await request(ctx.app)
+        .patch('/pointsofsale/1')
+        .set('Authorization', `Bearer ${ctx.superAdminToken}`)
+        .send(pointOfSaleUpdate);
+      expect(res.status).to.equal(200);
+
+      const newPos = res.body as PointOfSaleWithContainersResponse;
+      expect(newPos.revision).to.equal(oldPos.revision + 1);
+
+
+      res = await request(ctx.app)
+        .patch(`/containers/${containerId}`)
+        .set('Authorization', `Bearer ${ctx.superAdminToken}`)
+        .send(containerUpdate);
+      expect(res.status).to.equal(200);
+
+
+      res = await request(ctx.app)
+        .get('/pointsofsale/1')
+        .set('Authorization', `Bearer ${ctx.superAdminToken}`);
+      const newerPos = res.body as PointOfSaleWithContainersResponse;
+      const newContainer = newerPos.containers.find((c) => c.id === containerId);
+
+      expect(newContainer.name).to.eq(containerUpdate.name);
+      expect(newContainer.products.map((p) => p.id)).to.deep.equalInAnyOrder(containerUpdate.products);
     });
   });
 });

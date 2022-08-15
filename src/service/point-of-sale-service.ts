@@ -335,7 +335,6 @@ export default class PointOfSaleService {
     const containerIds: { revision: number, container: { id: number } }[] = (
       containers.map((container) => (
         ({ revision: container.currentRevision, container: { id: container.id } }))));
-
     const containerRevisions: ContainerRevision[] = await ContainerRevision.findByIds(containerIds);
     const pointOfSaleRevision: PointOfSaleRevision = Object.assign(new PointOfSaleRevision(), {
       pointOfSale: base,

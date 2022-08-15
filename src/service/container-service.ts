@@ -526,9 +526,9 @@ export default class ContainerService {
     const pos = containerRevisions
       .map((c) => c.pointsOfSale)
       .reduce((a, b) => a.concat(b), [])
+      .filter((p) => p.revision === p.pointOfSale.currentRevision)
       .filter((p, index, self) => (
-        index === self.findIndex((p2) => p.pointOfSale.id === p2.pointOfSale.id)))
-      .filter((p) => p.revision === p.pointOfSale.currentRevision);
+        index === self.findIndex((p2) => p.pointOfSale.id === p2.pointOfSale.id)));
 
     // The async-for loop is intentional to prevent race-conditions.
     // To fix this the good way would be shortlived, the structure of POS/Containers will be changed
