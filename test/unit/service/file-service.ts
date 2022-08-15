@@ -328,7 +328,7 @@ describe('FileService', async (): Promise<void> => {
 
       expect(res).to.exist;
       expect(saveFileStub).to.have.been.calledWith(
-        '',
+        'file.txt',
         uploadedFile.data,
       );
       expect(res.location).to.equal('fileLocation');
