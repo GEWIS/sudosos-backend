@@ -146,7 +146,7 @@ export default class FileService {
 
     if (entityImage == null) {
       entityImage = Object.assign(new BaseFile(), {
-        downloadName: '',
+        downloadName: uploadedFile.name,
         createdBy,
         location: '',
       });
