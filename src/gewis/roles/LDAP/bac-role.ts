@@ -45,5 +45,5 @@ export const BAC_ROLE = {
       create: { all: star },
     },
   },
-  assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: 'SudoSOS - BAC', user: { id: user.id } } }) !== undefined,
+  assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: 'SudoSOS - BAC', user: { id: user.id } } }) != undefined,
 };

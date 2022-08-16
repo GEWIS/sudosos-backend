@@ -29,7 +29,7 @@ import AuthenticationMethod from './authentication-method';
 export default class LDAPAuthenticator extends AuthenticationMethod {
   @Column({
     length: 32,
-    type: 'char',
+    type: 'character',
   })
   public UUID: string;
 }

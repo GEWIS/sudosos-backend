@@ -54,5 +54,5 @@ export const BAC_PM_ROLE = {
       ...admin,
     },
   },
-  assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: 'SudoSOS - BAC PM', user: { id: user.id } } }) !== undefined,
+  assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: 'SudoSOS - BAC PM', user: { id: user.id } } }) != undefined,
 };

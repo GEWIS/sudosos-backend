@@ -36,5 +36,5 @@ export const AUDIT_ROLE = {
       get: { all: star, own: star },
     },
   },
-  assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: 'SudoSOS - Audit', user: { id: user.id } } }) !== undefined,
+  assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: 'SudoSOS - Audit', user: { id: user.id } } }) != undefined,
 };
