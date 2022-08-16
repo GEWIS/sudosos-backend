@@ -29,7 +29,6 @@ import AuthenticationMethod from './authentication-method';
 export default class LDAPAuthenticator extends AuthenticationMethod {
   @Column({
     length: 32,
-    type: process.env.TYPEORM_CONNECTION === 'sqlite' ? 'varchar' : 'binary',
   })
   public UUID: string;
 }
