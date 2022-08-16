@@ -15,21 +15,16 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import {
-  Column, Entity,
-} from 'typeorm';
-import AuthenticationMethod from './authentication-method';
+import User, { UserType } from '../../entity/user/user';
+import { star } from './register-default-roles';
 
-/**
- * @typedef {AuthenticationMethod} LDAPAuthenticator
- * @property {User.model} User.required - The user this authenticator is for
- * @property {UUID} accountName.required - The associated AD account name
- */
-@Entity()
-export default class LDAPAuthenticator extends AuthenticationMethod {
-  @Column({
-    length: 32,
-    type: 'char',
-  })
-  public UUID: string;
-}
+export const LOCAL_USER_ROLE = {
+  name: 'Local User',
+  permissions: {
+    Authenticator: {
+      update: { own: new Set(['password']) },
+      get: { own: star },
+    },
+  },
+  assignmentCheck: async (user: User) => user.type === UserType.LOCAL_USER,
+};

@@ -15,21 +15,33 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import {
-  Column, Entity,
-} from 'typeorm';
-import AuthenticationMethod from './authentication-method';
+import User, { UserType } from '../../entity/user/user';
+import { star } from './register-default-roles';
 
 /**
- * @typedef {AuthenticationMethod} LDAPAuthenticator
- * @property {User.model} User.required - The user this authenticator is for
- * @property {UUID} accountName.required - The associated AD account name
+ * Define an Authorized Buyer role, which indicates that the user
+ * is allowed to create transactions for other people.
  */
-@Entity()
-export default class LDAPAuthenticator extends AuthenticationMethod {
-  @Column({
-    length: 32,
-    type: 'char',
-  })
-  public UUID: string;
-}
+const authorizedBuyerUserTypes = new Set<UserType>([
+  UserType.LOCAL_USER,
+  UserType.MEMBER,
+]);
+export const AUTHORIZED_BUYER_ROLE = {
+  name: 'AuthorizedBuyer',
+  permissions: {
+    Transaction: {
+      create: { all: star },
+    },
+    Balance: {
+      update: { own: star },
+    },
+    StripeDeposit: {
+      create: { own: star, all: star },
+    },
+    User: {
+      get: { all: star, own: star },
+      acceptToS: { own: star },
+    },
+  },
+  assignmentCheck: async (user: User) => authorizedBuyerUserTypes.has(user.type),
+};

@@ -15,21 +15,26 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import {
-  Column, Entity,
-} from 'typeorm';
-import AuthenticationMethod from './authentication-method';
+import User from '../../../entity/user/user';
+import AssignedRole from '../../../entity/roles/assigned-role';
+import { admin } from '../register-default-roles';
 
 /**
- * @typedef {AuthenticationMethod} LDAPAuthenticator
- * @property {User.model} User.required - The user this authenticator is for
- * @property {UUID} accountName.required - The associated AD account name
+ * Define a Board role, which indicates that the user
+ * is a member of the Board group in AD.
  */
-@Entity()
-export default class LDAPAuthenticator extends AuthenticationMethod {
-  @Column({
-    length: 32,
-    type: 'char',
-  })
-  public UUID: string;
-}
+export const BOARD_ROLE = {
+  name: 'SudoSOS - Board',
+  permissions: {
+    Banner: {
+      ...admin,
+    },
+    BorrelkaartGroup: {
+      ...admin,
+    },
+    User: {
+      ...admin,
+    },
+  },
+  assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: 'SudoSOS - Board', user: { id: user.id } } }) !== undefined,
+};
