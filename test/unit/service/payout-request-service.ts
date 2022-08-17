@@ -39,7 +39,7 @@ describe('PayoutRequestService', () => {
     const connection = await Database.initialize();
 
     const users = await seedUsers();
-    const payoutRequests = await seedPayoutRequests(users);
+    const { payoutRequests } = await seedPayoutRequests(users);
 
     const dineroTransformer = DineroTransformer.Instance;
 
