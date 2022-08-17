@@ -46,7 +46,7 @@ describe('StripeService', async (): Promise<void> => {
     const connection = await Database.initialize();
 
     const users = await seedUsers();
-    const stripeDeposits = await seedStripeDeposits(users);
+    const { stripeDeposits } = await seedStripeDeposits(users);
 
     const stripeService = new StripeService();
     const dineroTransformer = DineroTransformer.Instance;
