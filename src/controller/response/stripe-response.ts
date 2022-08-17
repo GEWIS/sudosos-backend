@@ -17,6 +17,7 @@
  */
 
 import BaseResponse from './base-response';
+import { DineroObjectResponse } from './dinero-response';
 
 /**
  * @typedef {BaseResponse} StripePaymentIntentResponse
@@ -26,4 +27,16 @@ import BaseResponse from './base-response';
 export interface StripePaymentIntentResponse extends BaseResponse {
   stripeId: string;
   clientSecret: string;
+}
+
+/**
+ * @typedef {BaseResponse} StripeDepositResponse
+ * @property {string} stripeId.required - The ID of the payment intent in Stripe
+ * @property {string} depositStatus.required - Current status of the deposit
+ * @property {DineroObjectResponse.model} amount.required - The amount deposited
+ */
+export interface StripeDepositResponse extends BaseResponse {
+  stripeId: string;
+  depositStatus: string;
+  amount: DineroObjectResponse
 }

@@ -382,12 +382,13 @@ describe('InvoiceController', async () => {
         expect(res.status).to.equal(200);
         expect(await Invoice.count()).to.equal(count + 1);
 
-        expect(ctx.specification.validateModel(
+        const validation = ctx.specification.validateModel(
           'InvoiceResponse',
           res.body,
           false,
           true,
-        ).valid).to.be.true;
+        );
+        expect(validation.valid).to.be.true;
       });
     });
     it('should return an HTTP 403 if not admin', async () => {
@@ -480,12 +481,13 @@ describe('InvoiceController', async () => {
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
       expect(res.status).to.equal(200);
-      expect(ctx.specification.validateModel(
+      const validation = ctx.specification.validateModel(
         'InvoiceResponse',
         res.body,
         false,
         true,
-      ).valid).to.be.true;
+      );
+      expect(validation.valid).to.be.true;
     });
     it('should return an HTTP 200 and the requested invoice if exists and admin', async () => {
       const invoice = (await Invoice.find())[0];
@@ -529,12 +531,13 @@ describe('InvoiceController', async () => {
         .send(updateRequest);
 
       expect(res.status).to.equal(200);
-      expect(ctx.specification.validateModel(
+      const validation = ctx.specification.validateModel(
         'BaseInvoiceResponse',
         res.body,
         false,
         true,
-      ).valid).to.be.true;
+      );
+      expect(validation.valid).to.be.true;
 
       expect(res.status).to.equal(200);
       const body = res.body as InvoiceResponse;

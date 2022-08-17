@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  BaseEntity as OrmBaseEntity, CreateDateColumn, UpdateDateColumn, VersionColumn,
+  BaseEntity as OrmBaseEntity, CreateDateColumn, Index, UpdateDateColumn, VersionColumn,
 } from 'typeorm';
 
 /**
@@ -26,6 +26,7 @@ import {
  * @property {integer} version - The current version of the object.
  */
 export default class BaseEntityWithoutId extends OrmBaseEntity {
+  @Index()
   @CreateDateColumn({ update: false })
   public readonly createdAt: Date;
 
