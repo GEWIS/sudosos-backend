@@ -46,6 +46,7 @@ import PinAuthenticator from '../entity/authenticator/pin-authenticator';
 import LocalAuthenticator from '../entity/authenticator/local-authenticator';
 import UpdateLocalRequest from './request/update-local-request';
 import verifyUpdateLocalRequest from './request/validators/update-local-request-spec';
+import StripeService from '../service/stripe-service';
 
 export default class UserController extends BaseController {
   private logger: Logger = log4js.getLogger('UserController');
@@ -246,6 +247,14 @@ export default class UserController extends BaseController {
             req.token.roles, 'get', UserController.getRelation(req), 'Transaction', ['*'],
           ),
           handler: this.getUsersFinancialMutations.bind(this),
+        },
+      },
+      '/:id(\\d+)/deposits': {
+        GET: {
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'get', UserController.getRelation(req), 'Transfer', ['*'],
+          ),
+          handler: this.getUsersProcessingDeposits.bind(this),
         },
       },
     };
@@ -1194,6 +1203,36 @@ export default class UserController extends BaseController {
       res.status(200).json(mutations);
     } catch (error) {
       this.logger.error('Could not get financial mutations of user:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Get all deposits of a user that are still being processed by Stripe
+   * @route GET /users/{id}/deposits
+   * @group users - Operations of user controller
+   * @param {integer} id.path.required - The id of the user to get the deposits from
+   * @security JWT
+   * @returns {Array.<RoleResponse>} 200 - The processing deposits of a user
+   * @returns {string} 404 - User not found error.
+   */
+  public async getUsersProcessingDeposits(req: RequestWithToken, res: Response): Promise<void> {
+    const parameters = req.params;
+    this.logger.trace('Get users processing deposits from user', parameters.id);
+
+    try {
+      const id = parseInt(parameters.id, 10);
+
+      const user = await User.findOne({ where: { id } });
+      if (user == null) {
+        res.status(404).json('Unknown user ID.');
+        return;
+      }
+
+      const deposits = await StripeService.getProcessingStripeDepositsFromUser(id);
+      res.status(200).json(deposits);
+    } catch (error) {
+      this.logger.error('Could not get processing deposits of user:', error);
       res.status(500).json('Internal server error.');
     }
   }

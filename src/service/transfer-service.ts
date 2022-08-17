@@ -29,6 +29,9 @@ import { PaginationParameters } from '../helpers/pagination';
 import { RequestWithToken } from '../middleware/token-middleware';
 import { asNumber } from '../helpers/validators';
 import { parseUserToBaseResponse } from '../helpers/revision-to-response';
+import InvoiceService from './invoice-service';
+import StripeService from './stripe-service';
+import PayoutRequestService from './payout-request-service';
 
 export interface TransferFilterParameters {
   id?: number;
@@ -57,6 +60,9 @@ export default class TransferService {
       description: transfer.description,
       createdAt: transfer.createdAt.toISOString(),
       updatedAt: transfer.updatedAt.toISOString(),
+      invoice: transfer.invoice ? InvoiceService.asInvoiceResponse(transfer.invoice) : null,
+      deposit: transfer.deposit ? StripeService.asStripeDepositResponse(transfer.deposit) : null,
+      payoutRequest: transfer.payoutRequest ? PayoutRequestService.asBasePayoutRequestResponse(transfer.payoutRequest) : null,
     };
   }
 
@@ -108,7 +114,10 @@ export default class TransferService {
 
     const options: FindManyOptions = {
       where: whereOptions,
-      relations: ['from', 'to'],
+      relations: ['from', 'to',
+        'invoice', 'invoice.invoiceStatus',
+        'deposit', 'deposit.depositStatus',
+        'payoutRequest', 'payoutRequest.payoutRequestStatus'],
       take,
       skip,
       order: { createdAt: 'DESC' },

@@ -1431,9 +1431,10 @@ export async function seedStripeDeposits(users: User[]): Promise<{
         description: `Deposit transfer for ${amount}`,
       });
       await transfer.save();
+      newDeposit.transfer = transfer;
+      await newDeposit.save();
       transfer.deposit = newDeposit;
       transfers.push(transfer);
-      newDeposit.transfer = transfer;
     }
 
     const statePromises: Promise<any>[] = [];

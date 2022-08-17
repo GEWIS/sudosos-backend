@@ -68,12 +68,12 @@ export default class Transfer extends BaseEntity {
   })
   public description?: string;
 
-  @OneToOne(() => PayoutRequest, (p) => p.transfer, { nullable: true, eager: true })
+  @OneToOne(() => PayoutRequest, (p) => p.transfer, { nullable: true })
   public payoutRequest?: PayoutRequest;
 
-  @OneToOne(() => StripeDeposit, (d) => d.transfer, { nullable: true, eager: true })
+  @OneToOne(() => StripeDeposit, (d) => d.transfer, { nullable: true })
   public deposit?: StripeDeposit;
 
-  @OneToOne(() => Invoice, (i) => i.transfer, { nullable: true, eager: true })
+  @OneToOne(() => Invoice, (i) => i.transfer, { nullable: true })
   public invoice?: Invoice;
 }

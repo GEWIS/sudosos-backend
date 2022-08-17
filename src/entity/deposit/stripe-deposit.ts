@@ -38,7 +38,7 @@ export default class StripeDeposit extends BaseEntity {
 
   @OneToMany(() => StripeDepositStatus,
     (depositStatus) => depositStatus.deposit,
-    { cascade: true })
+    { cascade: true, eager: true })
   @JoinColumn()
   public depositStatus: StripeDepositStatus[];
 

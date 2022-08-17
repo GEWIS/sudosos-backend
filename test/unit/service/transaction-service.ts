@@ -132,19 +132,19 @@ describe('TransactionService', (): void => {
           subTransactionRows: [
             {
               product: {
-                id: 5,
+                id: 2,
                 revision: 2,
               },
               amount: 4,
               totalPriceInclVat: {
-                amount: 304,
+                amount: 292,
                 currency: 'EUR',
                 precision: 2,
               },
             },
           ],
           totalPriceInclVat: {
-            amount: 304,
+            amount: 292,
             currency: 'EUR',
             precision: 2,
           },
@@ -155,7 +155,7 @@ describe('TransactionService', (): void => {
         revision: 2,
       },
       totalPriceInclVat: {
-        amount: 522,
+        amount: 510,
         currency: 'EUR',
         precision: 2,
       },
@@ -198,7 +198,7 @@ describe('TransactionService', (): void => {
   describe('Get total cost of a transaction', () => {
     it('should return the total cost of a transaction', async () => {
       const total = {
-        amount: 522,
+        amount: 510,
         currency: 'EUR',
         precision: 2,
       } as DineroObject;
@@ -493,7 +493,7 @@ describe('TransactionService', (): void => {
     });
 
     it('should return a paginated list when take and skip are set', async () => {
-      const skip = 150;
+      const skip = 120;
       const take = 50;
       // eslint-disable-next-line @typescript-eslint/naming-convention
       const { records, _pagination } = await TransactionService.getTransactions({}, { take, skip });
@@ -848,19 +848,19 @@ describe('TransactionService', (): void => {
             subTransactionRows: [
               {
                 product: {
-                  id: 5,
+                  id: 2,
                   revision: 2,
                 },
                 amount: 4,
                 totalPriceInclVat: {
-                  amount: 304,
+                  amount: 292,
                   currency: 'EUR',
                   precision: 2,
                 },
               },
             ],
             totalPriceInclVat: {
-              amount: 304,
+              amount: 292,
               currency: 'EUR',
               precision: 2,
             },
@@ -871,7 +871,7 @@ describe('TransactionService', (): void => {
           revision: 2,
         },
         totalPriceInclVat: {
-          amount: 521,
+          amount: 509,
           currency: 'EUR',
           precision: 2,
         },

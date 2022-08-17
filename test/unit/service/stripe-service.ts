@@ -66,6 +66,26 @@ describe('StripeService', async (): Promise<void> => {
     await ctx.connection.close();
   });
 
+  describe('getProcessingStripeDepositsFromUser', () => {
+    it('should return the correct deposits', async () => {
+      const processingDeposits = ctx.stripeDeposits.filter((d) => {
+        return d.depositStatus.length === 2 && d.depositStatus.some((s) => s.state === StripeDepositState.PROCESSING);
+      });
+
+      const user = processingDeposits[0].to;
+      const depositsFromUser = processingDeposits.filter((d) => d.to.id === user.id);
+
+      const deposits = await StripeService.getProcessingStripeDepositsFromUser(user.id);
+      expect(depositsFromUser.length).to.equal(deposits.length);
+      deposits.forEach((d) => {
+        expect(d.to.id).to.equal(user.id);
+        const states = d.depositStatus
+          .map((s) => s.state);
+        expect(states[states.length - 1]).to.equal(StripeDepositState.PROCESSING);
+      });
+    });
+  });
+
   describe('createStripePaymentIntent', () => {
     it('should correctly create a payment intent', async () => {
       const countBefore = await StripeDeposit.count();

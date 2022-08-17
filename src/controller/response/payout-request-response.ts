@@ -16,29 +16,29 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import BaseResponse from './base-response';
-import { UserResponse } from './user-response';
+import { BaseUserResponse } from './user-response';
 import { DineroObjectResponse } from './dinero-response';
 import { PayoutRequestState } from '../../entity/transactions/payout-request-status';
 import { PaginationResult } from '../../helpers/pagination';
 
 /**
  * @typedef {BaseResponse} BoilerPayoutRequestResponse
- * @property {UserResponse.model} requestedBy.required - The user that requested a payout
- * @property {UserResponse.model} approvedBy - The user that potentially approved the payout request
+ * @property {BaseUserResponse.model} requestedBy.required - The user that requested a payout
+ * @property {BaseUserResponse.model} approvedBy - The user that potentially approved the payout request
  * @property {DineroObjectResponse.model} amount.required - The amount requested to be paid out
  */
 interface BoilerPayoutRequestResponse extends BaseResponse {
-  requestedBy: UserResponse,
-  approvedBy?: UserResponse,
+  requestedBy: BaseUserResponse,
+  approvedBy?: BaseUserResponse,
   amount: DineroObjectResponse,
 }
 
 /**
  * @typedef {BoilerPayoutRequestResponse} BasePayoutRequestResponse
- * @property {string} status.required - The current status of the payout request
+ * @property {string} status - The current status of the payout request
  */
 export interface BasePayoutRequestResponse extends BoilerPayoutRequestResponse {
-  status: PayoutRequestState,
+  status?: PayoutRequestState,
 }
 
 /**
