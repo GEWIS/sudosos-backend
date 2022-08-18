@@ -25,7 +25,14 @@ import { DineroObject } from 'dinero.js';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
 import Transaction from '../../../src/entity/transactions/transaction';
 import Database from '../../../src/database/database';
-import seedDatabase from '../../seed';
+import {
+  seedContainers,
+  seedPointsOfSale,
+  seedProductCategories,
+  seedProducts, seedTransactions,
+  seedUsers,
+  seedVatGroups,
+} from '../../seed';
 import TransactionService from '../../../src/service/transaction-service';
 import { verifyBaseTransactionEntity } from '../validators';
 import Swagger from '../../../src/start/swagger';
@@ -63,8 +70,15 @@ describe('TransactionService', (): void => {
     const logger: Logger = log4js.getLogger('TransactionServiceTest');
     logger.level = 'ALL';
     const connection = await Database.initialize();
+
     const app = express();
-    const { transactions, users } = await seedDatabase();
+    const users = await seedUsers();
+    const vatGropus = await seedVatGroups();
+    const categories = await seedProductCategories();
+    const { productRevisions } = await seedProducts(users, categories, vatGropus);
+    const { containerRevisions } = await seedContainers(users, productRevisions);
+    const { pointOfSaleRevisions } = await seedPointsOfSale(users, containerRevisions);
+    const { transactions } = await seedTransactions(users, pointOfSaleRevisions);
 
     await generateBalance(1000, 7);
     const validTransReq = {
@@ -118,19 +132,19 @@ describe('TransactionService', (): void => {
           subTransactionRows: [
             {
               product: {
-                id: 5,
+                id: 2,
                 revision: 2,
               },
               amount: 4,
               totalPriceInclVat: {
-                amount: 304,
+                amount: 292,
                 currency: 'EUR',
                 precision: 2,
               },
             },
           ],
           totalPriceInclVat: {
-            amount: 304,
+            amount: 292,
             currency: 'EUR',
             precision: 2,
           },
@@ -141,7 +155,7 @@ describe('TransactionService', (): void => {
         revision: 2,
       },
       totalPriceInclVat: {
-        amount: 522,
+        amount: 510,
         currency: 'EUR',
         precision: 2,
       },
@@ -184,7 +198,7 @@ describe('TransactionService', (): void => {
   describe('Get total cost of a transaction', () => {
     it('should return the total cost of a transaction', async () => {
       const total = {
-        amount: 522,
+        amount: 510,
         currency: 'EUR',
         precision: 2,
       } as DineroObject;
@@ -479,7 +493,7 @@ describe('TransactionService', (): void => {
     });
 
     it('should return a paginated list when take and skip are set', async () => {
-      const skip = 150;
+      const skip = 120;
       const take = 50;
       // eslint-disable-next-line @typescript-eslint/naming-convention
       const { records, _pagination } = await TransactionService.getTransactions({}, { take, skip });
@@ -834,19 +848,19 @@ describe('TransactionService', (): void => {
             subTransactionRows: [
               {
                 product: {
-                  id: 5,
+                  id: 2,
                   revision: 2,
                 },
                 amount: 4,
                 totalPriceInclVat: {
-                  amount: 304,
+                  amount: 292,
                   currency: 'EUR',
                   precision: 2,
                 },
               },
             ],
             totalPriceInclVat: {
-              amount: 304,
+              amount: 292,
               currency: 'EUR',
               precision: 2,
             },
@@ -857,7 +871,7 @@ describe('TransactionService', (): void => {
           revision: 2,
         },
         totalPriceInclVat: {
-          amount: 521,
+          amount: 509,
           currency: 'EUR',
           precision: 2,
         },

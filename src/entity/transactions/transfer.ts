@@ -16,12 +16,15 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  Column, Entity, JoinColumn, ManyToOne,
+  Column, Entity, JoinColumn, ManyToOne, OneToOne,
 } from 'typeorm';
 import { Dinero } from 'dinero.js';
 import BaseEntity from '../base-entity';
 import User from '../user/user';
 import DineroTransformer from '../transformer/dinero-transformer';
+import PayoutRequest from './payout-request';
+import StripeDeposit from '../deposit/stripe-deposit';
+import Invoice from '../invoices/invoice';
 
 /**
  * @typedef {BaseEntity} Transfer
@@ -64,4 +67,13 @@ export default class Transfer extends BaseEntity {
     nullable: true,
   })
   public description?: string;
+
+  @OneToOne(() => PayoutRequest, (p) => p.transfer, { nullable: true })
+  public payoutRequest?: PayoutRequest;
+
+  @OneToOne(() => StripeDeposit, (d) => d.transfer, { nullable: true })
+  public deposit?: StripeDeposit;
+
+  @OneToOne(() => Invoice, (i) => i.transfer, { nullable: true })
+  public invoice?: Invoice;
 }

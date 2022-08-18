@@ -29,11 +29,12 @@ import {
   PayoutRequestStatusResponse,
 } from '../controller/response/payout-request-response';
 import PayoutRequestRequest from '../controller/request/payout-request-request';
-import User, { UserType } from '../entity/user/user';
+import User from '../entity/user/user';
 import TransferService from './transfer-service';
 import { RequestWithToken } from '../middleware/token-middleware';
 import { asDate } from '../helpers/validators';
 import { toMySQLString } from '../helpers/timestamps';
+import { parseUserToBaseResponse } from '../helpers/revision-to-response';
 
 export interface PayoutRequestFilters {
   id?: number | number[],
@@ -71,7 +72,9 @@ export function parseGetPayoutRequestsFilters(req: RequestWithToken): PayoutRequ
 }
 
 export default class PayoutRequestService {
-  private static asPayoutRequestResponse(req: PayoutRequest): PayoutRequestResponse {
+  public static asBasePayoutRequestResponse(req: PayoutRequest): BasePayoutRequestResponse {
+    const status = req.payoutRequestStatus && req.payoutRequestStatus.length > 0
+      ? req.payoutRequestStatus[req.payoutRequestStatus.length - 1].state : undefined;
     return {
       id: req.id,
       createdAt: req.createdAt.toISOString(),
@@ -81,27 +84,22 @@ export default class PayoutRequestService {
         precision: req.amount.getPrecision(),
         currency: req.amount.getCurrency(),
       },
+      requestedBy: parseUserToBaseResponse(req.requestedBy, true),
+      status,
+    };
+  }
+
+  public static asPayoutRequestResponse(req: PayoutRequest): PayoutRequestResponse {
+    return {
+      ...this.asBasePayoutRequestResponse(req),
       bankAccountNumber: req.bankAccountNumber,
       bankAccountName: req.bankAccountName,
-      requestedBy: {
-        id: req.requestedBy.id,
-        createdAt: req.requestedBy.createdAt.toISOString(),
-        updatedAt: req.requestedBy.updatedAt.toISOString(),
-        type: UserType[req.requestedBy.type],
-        firstName: req.requestedBy.firstName,
-        lastName: req.requestedBy.lastName,
-        deleted: req.requestedBy.deleted,
-        active: req.requestedBy.active,
-      },
       approvedBy: req.approvedBy == null ? undefined : {
         id: req.approvedBy.id,
         createdAt: req.approvedBy.createdAt.toISOString(),
         updatedAt: req.approvedBy.updatedAt.toISOString(),
-        type: UserType[req.approvedBy.type],
         firstName: req.approvedBy.firstName,
         lastName: req.approvedBy.lastName,
-        deleted: req.approvedBy.deleted,
-        active: req.approvedBy.active,
       },
       status: req.payoutRequestStatus.map((status): PayoutRequestStatusResponse => ({
         id: status.id,
@@ -181,9 +179,6 @@ export default class PayoutRequestService {
           updatedAt: new Date(o.requestedBy_updatedAt).toISOString(),
           firstName: o.requestedBy_firstName,
           lastName: o.requestedBy_lastName,
-          active: o.from_active === 1,
-          deleted: o.from_deleted === 1,
-          type: o.requestedBy_type,
         } : undefined,
         approvedBy: o.approvedBy_id ? {
           id: o.approvedBy_id,
@@ -191,9 +186,6 @@ export default class PayoutRequestService {
           updatedAt: new Date(o.approvedBy_updatedAt).toISOString(),
           firstName: o.approvedBy_firstName,
           lastName: o.approvedBy_lastName,
-          active: o.from_active === 1,
-          deleted: o.from_deleted === 1,
-          type: o.approvedBy_type,
         } : undefined,
         amount: dinero.toObject(),
         status: o.status || '',

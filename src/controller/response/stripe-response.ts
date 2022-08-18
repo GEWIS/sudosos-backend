@@ -17,6 +17,9 @@
  */
 
 import BaseResponse from './base-response';
+import { DineroObjectResponse } from './dinero-response';
+import { StripeDepositState } from '../../entity/deposit/stripe-deposit-status';
+import { BaseUserResponse } from './user-response';
 
 /**
  * @typedef {BaseResponse} StripePaymentIntentResponse
@@ -26,4 +29,26 @@ import BaseResponse from './base-response';
 export interface StripePaymentIntentResponse extends BaseResponse {
   stripeId: string;
   clientSecret: string;
+}
+
+/**
+ * @typedef {BaseResponse} StripeDepositStatusResponse
+ * @property {string} depositStatus.required
+ */
+export interface StripeDepositStatusResponse extends BaseResponse {
+  state: StripeDepositState;
+}
+
+/**
+ * @typedef {BaseResponse} StripeDepositResponse
+ * @property {string} stripeId.required - The ID of the payment intent in Stripe
+ * @property {Array.<StripeDepositStatus>} depositStatus.required - Current status of the deposit
+ * @property {DineroObjectResponse.model} amount.required - The amount deposited
+ * @property {BaseUserResponse.model} to.required - User that deposited money
+ */
+export interface StripeDepositResponse extends BaseResponse {
+  stripeId: string;
+  depositStatus: StripeDepositStatusResponse[];
+  amount: DineroObjectResponse;
+  to: BaseUserResponse;
 }

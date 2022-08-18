@@ -56,7 +56,7 @@ describe('PayoutRequestController', () => {
     const connection = await Database.initialize();
 
     const users = await seedUsers();
-    const payoutRequests = await seedPayoutRequests(users);
+    const { payoutRequests } = await seedPayoutRequests(users);
 
     const adminUser = users.filter((u) => u.type === UserType.LOCAL_ADMIN)[0];
     const localUser = users.filter((u) => u.type === UserType.LOCAL_USER)[0];

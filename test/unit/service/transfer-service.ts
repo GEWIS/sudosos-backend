@@ -29,7 +29,16 @@ import Transfer from '../../../src/entity/transactions/transfer';
 import User from '../../../src/entity/user/user';
 import TransferService from '../../../src/service/transfer-service';
 import Swagger from '../../../src/start/swagger';
-import { seedTransfers, seedUsers } from '../../seed';
+import {
+  seedContainers,
+  seedInvoices, seedPayoutRequests, seedPointsOfSale,
+  seedProductCategories,
+  seedProducts, seedStripeDeposits,
+  seedTransactions,
+  seedTransfers,
+  seedUsers,
+  seedVatGroups,
+} from '../../seed';
 
 describe('TransferService', async (): Promise<void> => {
   let ctx: {
@@ -42,9 +51,20 @@ describe('TransferService', async (): Promise<void> => {
   before(async () => {
     const connection = await Database.initialize();
 
+    const begin = new Date('1950-02-12T01:57:45.271Z');
+    const end = new Date('2001-02-12T01:57:45.271Z');
+
     const users = await seedUsers();
-    const transfers = await seedTransfers(users,
-      new Date('1950-02-12T01:57:45.271Z'), new Date('2001-02-12T01:57:45.271Z'));
+    const vatGropus = await seedVatGroups();
+    const categories = await seedProductCategories();
+    const { productRevisions } = await seedProducts(users, categories, vatGropus);
+    const { containerRevisions } = await seedContainers(users, productRevisions);
+    const { pointOfSaleRevisions } = await seedPointsOfSale(users, containerRevisions);
+    const transfers = await seedTransfers(users, begin, end);
+    const { transactions } = await seedTransactions(users, pointOfSaleRevisions, begin, end);
+    const { invoiceTransfers } = await seedInvoices(users, transactions);
+    const { payoutRequestTransfers } = await seedPayoutRequests(users);
+    const { stripeDepositTransfers } = await seedStripeDeposits(users);
 
     // start app
     const app = express();
@@ -57,7 +77,7 @@ describe('TransferService', async (): Promise<void> => {
       app,
       specification,
       users,
-      transfers,
+      transfers: transfers.concat(invoiceTransfers).concat(payoutRequestTransfers).concat(stripeDepositTransfers),
     };
   });
   after(async () => {
@@ -90,10 +110,35 @@ describe('TransferService', async (): Promise<void> => {
       expect(res.records.length).to.equal(1);
       expect(res.records[0].id).to.equal(ctx.transfers[0].id);
     });
+
     it('should return nothing if a wrong id is specified', async () => {
       const res: PaginatedTransferResponse = await TransferService
         .getTransfers({ id: ctx.transfers.length + 1 });
       expect(res.records).to.be.empty;
+    });
+
+    it('should return corresponding invoice if transfer has any', async () => {
+      const transfer = ctx.transfers.filter((t) => t.invoice != null)[0];
+      const res: PaginatedTransferResponse = await TransferService
+        .getTransfers({ id: transfer.id });
+      expect(res.records.length).to.equal(1);
+      expect(res.records[0].invoice).to.not.be.null;
+    });
+
+    it('should return corresponding deposit if transfer has any', async () => {
+      const transfer = ctx.transfers.filter((t) => t.deposit != null)[0];
+      const res: PaginatedTransferResponse = await TransferService
+        .getTransfers({ id: transfer.id });
+      expect(res.records.length).to.equal(1);
+      expect(res.records[0].deposit).to.not.be.null;
+    });
+
+    it('should return corresponding payoutRequest if transfer has any', async () => {
+      const transfer = ctx.transfers.filter((t) => t.payoutRequest != null)[0];
+      const res: PaginatedTransferResponse = await TransferService
+        .getTransfers({ id: transfer.id });
+      expect(res.records.length).to.equal(1);
+      expect(res.records[0].payoutRequest).to.not.be.null;
     });
   });
   describe('postTransfer function', () => {

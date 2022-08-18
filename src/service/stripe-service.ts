@@ -22,8 +22,14 @@ import User from '../entity/user/user';
 import StripeDeposit from '../entity/deposit/stripe-deposit';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
 import StripeDepositStatus, { StripeDepositState } from '../entity/deposit/stripe-deposit-status';
-import { StripePaymentIntentResponse } from '../controller/response/stripe-response';
+import {
+  StripeDepositResponse,
+  StripeDepositStatusResponse,
+  StripePaymentIntentResponse,
+} from '../controller/response/stripe-response';
 import TransferService from './transfer-service';
+import { IsNull } from 'typeorm';
+import { parseUserToBaseResponse } from '../helpers/revision-to-response';
 
 export const STRIPE_API_VERSION = '2022-08-01';
 
@@ -37,6 +43,49 @@ export default class StripeService {
       apiVersion: STRIPE_API_VERSION,
     });
     this.logger = getLogger('StripeController');
+  }
+
+  private static asStripeDepositStatusResponse(status: StripeDepositStatus): StripeDepositStatusResponse {
+    return {
+      id: status.id,
+      createdAt: status.createdAt.toISOString(),
+      updatedAt: status.updatedAt.toISOString(),
+      version: status.version,
+      state: status.state,
+    };
+  }
+
+  public static asStripeDepositResponse(deposit: StripeDeposit): StripeDepositResponse {
+    return {
+      id: deposit.id,
+      createdAt: deposit.createdAt.toISOString(),
+      updatedAt: deposit.updatedAt.toISOString(),
+      version: deposit.version,
+      stripeId: deposit.stripeId,
+      depositStatus: deposit.depositStatus.map((s) => this.asStripeDepositStatusResponse(s)),
+      amount: deposit.amount.toObject(),
+      to: parseUserToBaseResponse(deposit.to, true),
+    };
+  }
+
+  public static async getProcessingStripeDepositsFromUser(userId: number): Promise<StripeDepositResponse[]> {
+    const deposits = await StripeDeposit.find({
+      where: {
+        to: {
+          id: userId,
+        },
+        transfer: IsNull(),
+        depositStatus: {
+          state: StripeDepositState.PROCESSING,
+        },
+      },
+      relations: ['to'],
+    });
+
+    return deposits.filter((d) => !d.depositStatus.some(
+      (s) => s.state === StripeDepositState.SUCCEEDED
+        || s.state === StripeDepositState.FAILED))
+      .map((d) => this.asStripeDepositResponse(d));
   }
 
   public static async getStripeDeposit(id: number, relations: string[] = []) {

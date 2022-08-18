@@ -216,6 +216,7 @@ export async function seedInvoices(users: User[], transactions: Transaction[]): 
       }),
       description: `Invoice Transfer for ${cost}`,
     });
+    await Transfer.save(transfer);
 
     const invoice = Object.assign(new Invoice(), {
       id: i + 1,
@@ -226,6 +227,7 @@ export async function seedInvoices(users: User[], transactions: Transaction[]): 
       invoiceEntries,
       invoiceStatus: [],
     });
+    transfer.invoice = invoice;
 
     const status = Object.assign(new InvoiceStatus(), {
       id: i + 1,
@@ -238,7 +240,7 @@ export async function seedInvoices(users: User[], transactions: Transaction[]): 
     invoices = invoices.concat(invoice);
     invoiceTransfers = invoiceTransfers.concat(transfer);
   }
-  await Transfer.save(invoiceTransfers);
+
   await Invoice.save(invoices);
   await InvoiceEntry.save(invoiceEntry);
 
@@ -1396,16 +1398,22 @@ export async function seedTransactions(
  * @param users
  */
 // TODO: Increase speed with correct awaits/then/Promise.all()
-export async function seedStripeDeposits(users: User[]): Promise<StripeDeposit[]> {
+export async function seedStripeDeposits(users: User[]): Promise<{
+  stripeDeposits: StripeDeposit[],
+  stripeDepositTransfers: Transfer[],
+}> {
   const stripeDeposits: StripeDeposit[] = [];
+  const transfers: Transfer[] = [];
 
   const totalNrOfStatuses = 3;
 
   for (let i = 0; i < users.length * totalNrOfStatuses + 1; i += 1) {
+    const to = users[Math.floor(i / 4)];
+    const amount = DineroTransformer.Instance.from(3900);
     const newDeposit = Object.assign(new StripeDeposit(), {
       stripeId: `FakeStripeIDDoNotUsePleaseThankYou_${i + 1}`,
-      to: users[Math.floor(i / 4)],
-      amount: DineroTransformer.Instance.from(3900),
+      to,
+      amount,
       depositStatus: [],
     });
     // eslint-disable-next-line no-await-in-loop
@@ -1414,6 +1422,20 @@ export async function seedStripeDeposits(users: User[]): Promise<StripeDeposit[]
     const succeeded = Math.floor(((i % 8) + 1) / 4) !== 1;
     const states = [StripeDepositState.CREATED, StripeDepositState.PROCESSING,
       succeeded ? StripeDepositState.SUCCEEDED : StripeDepositState.FAILED].slice(0, i % 4);
+
+    if (succeeded) {
+      const transfer = Object.assign(new Transfer(), {
+        from: null,
+        to,
+        amount,
+        description: `Deposit transfer for ${amount}`,
+      });
+      await transfer.save();
+      newDeposit.transfer = transfer;
+      await newDeposit.save();
+      transfer.deposit = newDeposit;
+      transfers.push(transfer);
+    }
 
     const statePromises: Promise<any>[] = [];
     states.forEach((state) => {
@@ -1430,11 +1452,17 @@ export async function seedStripeDeposits(users: User[]): Promise<StripeDeposit[]
     stripeDeposits.push(newDeposit);
   }
 
-  return stripeDeposits;
+  return {
+    stripeDeposits,
+    stripeDepositTransfers: transfers,
+  };
 }
 
-export async function seedPayoutRequests(users: User[]): Promise<PayoutRequest[]> {
+export async function seedPayoutRequests(users: User[]): Promise<{
+  payoutRequests: PayoutRequest[], payoutRequestTransfers: Transfer[],
+}> {
   const payoutRequests: Promise<PayoutRequest>[] = [];
+  const transfers: Transfer[] = [];
 
   const admins = users.filter((u) => u.type === UserType.LOCAL_ADMIN);
   admins.push(undefined);
@@ -1444,9 +1472,10 @@ export async function seedPayoutRequests(users: User[]): Promise<PayoutRequest[]
 
   for (let i = 0; i < users.length * 3; i += 1) {
     const requestedBy = users[Math.floor(i / totalNrOfStatuses)];
+    const amount = DineroTransformer.Instance.from(3900);
     const newPayoutReq = Object.assign(new PayoutRequest(), {
       requestedBy,
-      amount: DineroTransformer.Instance.from(3900),
+      amount,
       bankAccountNumber: 'NL69GEWI0420042069',
       bankAccountName: `${requestedBy.firstName} ${requestedBy.lastName}`,
     });
@@ -1473,6 +1502,19 @@ export async function seedPayoutRequests(users: User[]): Promise<PayoutRequest[]
       }
     });
 
+    if (i % 5 === 0) {
+      const transfer = Object.assign(new Transfer(), {
+        from: requestedBy,
+        to: null,
+        amount,
+        description: `Payout request for ${amount}`,
+      });
+      await transfer.save();
+      transfer.payoutRequest = newPayoutReq;
+      transfers.push(transfer);
+      newPayoutReq.transfer = transfer;
+    }
+
     payoutRequests.push(newPayoutReq.save().then(async (payoutRequest) => {
       await Promise.all(statusses.map((s) => {
         // eslint-disable-next-line no-param-reassign
@@ -1485,7 +1527,10 @@ export async function seedPayoutRequests(users: User[]): Promise<PayoutRequest[]
     }));
   }
 
-  return Promise.all(payoutRequests);
+  return {
+    payoutRequests: await Promise.all(payoutRequests),
+    payoutRequestTransfers: transfers,
+  };
 }
 
 export async function seedTransfers(users: User[],
@@ -1606,6 +1651,7 @@ export interface DatabaseContent {
   transactions: Transaction[],
   transfers: Transfer[],
   payoutRequests: PayoutRequest[],
+  stripeDeposits: StripeDeposit[],
   invoices: Invoice[],
   banners: Banner[],
   gewisUsers: GewisUser[],
@@ -1631,8 +1677,9 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
   );
   const { transactions } = await seedTransactions(users, pointOfSaleRevisions);
   const transfers = await seedTransfers(users);
-  const payoutRequests = await seedPayoutRequests(users);
+  const { payoutRequests, payoutRequestTransfers } = await seedPayoutRequests(users);
   const { invoices, invoiceTransfers } = await seedInvoices(users, transactions);
+  const { stripeDeposits, stripeDepositTransfers } = await seedStripeDeposits(users);
   const { banners } = await seedBanners(users);
 
   return {
@@ -1649,8 +1696,9 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
     pointOfSaleRevisions,
     updatedPointsOfSale,
     transactions,
+    stripeDeposits,
     invoices,
-    transfers: transfers.concat(invoiceTransfers),
+    transfers: transfers.concat(payoutRequestTransfers).concat(invoiceTransfers).concat(stripeDepositTransfers),
     payoutRequests,
     banners,
     gewisUsers,

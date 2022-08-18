@@ -50,17 +50,17 @@ export interface InvoiceEntryResponse {
 /**
  * @typedef {BaseResponse} BaseInvoiceResponse
  * @property {BaseUserResponse.model} to.required - The person who was invoiced.
- * @property {string} addressee - Name of the addressed.
- * @property {string} description - Description of the invoice.
+ * @property {string} addressee.required - Name of the addressed.
+ * @property {string} description.required - Description of the invoice.
+ * @property {InvoiceStatusResponse.model} currentState.required - The current state of the invoice.
  * @property {TransferResponse.model} transfer - Transfer linked to the invoice.
- * @property {InvoiceStatusResponse.model} currentState - The current state of the invoice.
  */
 export interface BaseInvoiceResponse extends BaseResponse {
   to: BaseUserResponse,
   addressee: string,
   description: string,
-  transfer: TransferResponse,
   currentState: InvoiceStatusResponse,
+  transfer?: TransferResponse,
 }
 
 /**
@@ -68,13 +68,13 @@ export interface BaseInvoiceResponse extends BaseResponse {
  * @property {Array.<InvoiceEntryResponse.model>} invoiceEntries - The entries of the invoice
  */
 export interface InvoiceResponse extends BaseInvoiceResponse {
-  invoiceEntries: InvoiceEntryResponse[]
+  invoiceEntries: InvoiceEntryResponse[],
 }
 
 /**
  * @typedef PaginatedInvoiceResponse
  * @property {PaginationResult.model} _pagination - Pagination metadata
- * @property {Array<BaseInvoiceResponse.model | InvoiceResponse.model>} records - Returned Invoices
+ * @property {Array<BaseInvoiceResponse | InvoiceResponse>} records - Returned Invoices
  */
 export interface PaginatedInvoiceResponse {
   _pagination: PaginationResult,

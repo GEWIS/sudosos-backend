@@ -55,6 +55,8 @@ import {
 import UpdateLocalRequest from '../../../src/controller/request/update-local-request';
 import { AcceptTosRequest } from '../../../src/controller/request/accept-tos-request';
 import UpdateUserRequest from '../../../src/controller/request/update-user-request';
+import StripeDeposit from '../../../src/entity/deposit/stripe-deposit';
+import { StripeDepositResponse } from '../../../src/controller/response/stripe-response';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -81,6 +83,7 @@ describe('UserController', (): void => {
     pointOfSaleRevisions: PointOfSaleRevision[],
     transactions: Transaction[],
     transfers: Transfer[],
+    stripeDeposits: StripeDeposit[],
   };
 
   before(async () => {
@@ -1524,6 +1527,31 @@ describe('UserController', (): void => {
           .set('Authorization', `Bearer ${userToken}`);
         expect(res.status).to.equal(403);
       });
+    });
+  });
+  describe('GET /users/{id}/deposits', () => {
+    it('should return all processing deposits', async () => {
+      const res = await request(ctx.app)
+        .get(`/users/${ctx.users[0].id}/deposits`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(200);
+
+      res.body.forEach((b: StripeDepositResponse) => {
+        const validation = ctx.specification.validateModel(
+          'StripeDepositResponse',
+          b,
+          false,
+          true,
+        );
+        expect(validation.valid).to.be.true;
+      });
+    });
+    it('should return 404 if user does not exist', async () => {
+      const res = await request(ctx.app)
+        .get('/users/999999999/deposits')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(404);
+      expect(res.body).to.equal('Unknown user ID.');
     });
   });
   describe('getAttributes function', () => {

@@ -121,7 +121,7 @@ export default class InvoiceService {
       updatedAt: invoice.updatedAt.toISOString(),
       to: parseUserToBaseResponse(invoice.to, false),
       addressee: invoice.addressee,
-      transfer: TransferService.asTransferResponse(invoice.transfer),
+      transfer: invoice.transfer ? TransferService.asTransferResponse(invoice.transfer) : undefined,
       description: invoice.description,
       currentState: InvoiceService.asInvoiceStatusResponse(
         invoice.invoiceStatus[invoice.invoiceStatus.length - 1],
@@ -133,7 +133,7 @@ export default class InvoiceService {
    * Parses an Invoice Object to a InvoiceResponse
    * @param invoice - The Invoice to parse
    */
-  private static asInvoiceResponse(invoice: Invoice)
+  public static asInvoiceResponse(invoice: Invoice)
     : InvoiceResponse {
     return {
       ...this.asBaseInvoiceResponse(invoice),

@@ -77,7 +77,7 @@ describe('StripeController', async (): Promise<void> => {
     await User.save(adminUser);
     await User.save(localUser);
 
-    const stripeDeposits = await seedStripeDeposits([localUser, adminUser]);
+    const { stripeDeposits } = await seedStripeDeposits([localUser, adminUser]);
 
     // create bearer tokens
     const tokenHandler = new TokenHandler({

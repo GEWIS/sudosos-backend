@@ -231,12 +231,13 @@ describe('TransferController', async (): Promise<void> => {
         .get(`/transfers/${localAccountWithdraw.id}`)
         .set('Authorization', `Bearer ${adminToken}`);
       expect(res.status).to.equal(200);
-      expect(specification.validateModel(
+      const validation = specification.validateModel(
         'TransferResponse',
         res.body,
         false,
         true,
-      ).valid).to.be.true;
+      );
+      expect(validation.valid).to.be.true;
     });
     it('should return an HTTP 200 and the withdraw transfer with given id if admin', async () => {
       const res = await request(app)
@@ -310,12 +311,13 @@ describe('TransferController', async (): Promise<void> => {
         .send(validRequest);
 
       expect(res.status).to.equal(200);
-      expect(specification.validateModel(
+      const validation = specification.validateModel(
         'TransferResponse',
         res.body,
         false,
         true,
-      ).valid).to.be.true;
+      );
+      expect(validation.valid).to.be.true;
       expect(await Transfer.count()).to.equal(transferCount + 1);
       const databaseEntry = await Transfer.findOne({
         where: { id: (res.body as TransferResponse).id },

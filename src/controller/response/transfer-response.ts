@@ -20,20 +20,28 @@ import BaseResponse from './base-response';
 import { DineroObjectResponse } from './dinero-response';
 import { BaseUserResponse } from './user-response';
 import { PaginationResult } from '../../helpers/pagination';
+import { BaseInvoiceResponse } from './invoice-response';
+import { StripeDepositResponse } from './stripe-response';
+import { BasePayoutRequestResponse } from './payout-request-response';
 
 /**
  * @typedef {BaseResponse} TransferResponse
- * @property {string} description - Description of the transfer
- * @property {Dinero.model} amount - Amount of money being transferred
- * @property {integer} type - Type of transfer
+ * @property {string} description.required - Description of the transfer
+ * @property {Dinero.model} amount.required - Amount of money being transferred
  * @property {BaseUserResponse.model} from - from which user the money is being transferred
  * @property {BaseUserResponse.model} to - to which user the money is being transferred.
+ * @property {BaseInvoiceResponse.model} invoice - invoice belonging to this transfer
+ * @property {StripeDepositResponse.model} deposit - deposit belonging to this transfer
+ * @property {BasePayoutRequestResponse.model} payoutRequest - payout request belonging to this transfer
  */
 export interface TransferResponse extends BaseResponse {
   amount: DineroObjectResponse;
   description: string;
   from: BaseUserResponse;
   to: BaseUserResponse;
+  invoice?: BaseInvoiceResponse;
+  deposit?: StripeDepositResponse;
+  payoutRequest?: BasePayoutRequestResponse;
 }
 
 /**
