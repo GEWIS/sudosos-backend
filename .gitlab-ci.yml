@@ -25,6 +25,9 @@ variables:
   PAGINATION_MAX: 500
   FILE_STORAGE_METHOD: disk
   SMTP_FORM: SudoSOS <sudosos@example.com>
+  TYPEORM_USERNAME: $TYPEORM_USERNAME
+  TYPEORM_PASSWORD: $TYPEORM_PASSWORD
+  TYPEORM_DATABASE: $TYPEORM_DATABASE
 
 install_dependencies:
   stage: install
@@ -68,7 +71,7 @@ dockerize:
   before_script:
     - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
   script:
-    - docker build --pull -t "$CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG" .
+    - docker build --pull -t "$CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG" . --build-arg TYPEORM_USERNAME=$TYPEORM_USERNAME --build-arg TYPEORM_PASSWORD=$TYPEORM_PASSWORD --build-arg TYPEORM_DATABASE=$TYPEORM_DATABASE
     - docker push "$CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG"
   except:
     - master
@@ -76,6 +79,7 @@ dockerize:
 test:
   stage: test
   before_script:
+    - cp "$ENV_FILE" .env
     - openssl genrsa -out config/jwt.key 2048
   script: npm run coverage
   artifacts:
