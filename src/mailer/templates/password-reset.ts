@@ -28,18 +28,23 @@ interface WelcomeWithResetOptions {
 }
 
 const passwordResetDutch = new MailContent<WelcomeWithResetOptions>({
-  getHTML: (context) => `
+  getHTML: (context) => {
+    const link = context.url + '/passwordreset?token=' + context.resetTokenInfo.password + '&email=' + context.email;
+    return `
 <p>Beste ${context.name},</p>
 
 <p>Een wachtwoord reset voor dit email adres is aangevraagd. Om het proces te voltooien, gebruik de volgende link elk moment binnen de komende 60 minuten: </p>
 
-<p>${context.url + '/passwordreset?token=' + context.resetTokenInfo.password + '&email=' + context.email}</p>
+<p><a href="${link}">Reset Link</a></p>
+
+<p> Of plak de volgende link in je browser: ${link}</p>
 
 <p>Als u geen wachtwoord reset heeft aangevraagd, kunt u deze e-mail veilig negeren en uw huidige inloggegevens gebruiken.</p>
 
 <p>Tot op de borrel!</p>
 
-${signatureDutch}`,
+${signatureDutch}`;
+  },
   getSubject: () => 'Wachtwoord resetten',
   getText: (context) => `
 Beste ${context.name},
@@ -57,18 +62,23 @@ SudoSOS`,
 });
 
 const passwordResetEnglish = new MailContent<WelcomeWithResetOptions>({
-  getHTML: (context) => `
+  getHTML: (context) => {
+    const link = context.url + '/passwordreset?token=' + context.resetTokenInfo.password + '&email=' + context.email;
+    return `
 <p>Dear ${context.name},</p>
 
 <p>A password reset for this email address has been requested. To complete the process, use the following link any time within the next 60 minutes: </p>
 
-<p>${context.url + '/passwordreset?token=' + context.resetTokenInfo.password + '&email=' + context.email}</p>
+<p><a href="${link}">Reset Link</a></p>
+
+<p> Or paste the following in your browser: ${link}</p>
 
 <p>If you have not requested a password reset, you can safely ignore this email and use your current login information.</p>
 
 <p>See you on the borrel!</p>
 
-${signatureEnglish}`,
+${signatureEnglish}`;
+  },
   getSubject: () => 'Password reset',
   getText: (context) => `
 Dear ${context.name},
