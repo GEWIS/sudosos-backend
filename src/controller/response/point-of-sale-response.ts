@@ -29,7 +29,7 @@ export interface BasePointOfSaleResponse extends BaseResponse {
 }
 /**
  * @typedef {BasePointOfSaleResponse} PointOfSaleResponse
- * @property {BaseUserResponse.model} owner - The owner of the point-of-sale.
+ * @property {BaseUserResponse} owner - The owner of the point-of-sale.
  * @property {number} revision.required - Revision of the POS
  * @property {boolean} useAuthentication.required - Whether this POS requires users to
  * authenticate themselves before making a transaction
@@ -42,8 +42,8 @@ export interface PointOfSaleResponse extends BasePointOfSaleResponse {
 
 /**
  * @typedef PaginatedPointOfSaleResponse
- * @property {PaginationResult.model} _pagination - Pagination metadata
- * @property {Array<PointOfSaleResponse.model>} records - Returned points of sale
+ * @property {PaginationResult} _pagination - Pagination metadata
+ * @property {Array.<PointOfSaleResponse>} records - Returned points of sale
  */
 export interface PaginatedPointOfSaleResponse {
   _pagination: PaginationResult,
@@ -52,7 +52,7 @@ export interface PaginatedPointOfSaleResponse {
 
 /**
  * @typedef {BasePointOfSaleResponse} UpdatedPointOfSaleResponse
- * @property {BaseUserResponse.model} owner.required - The owner of the point-of-sale.
+ * @property {BaseUserResponse} owner.required - The owner of the point-of-sale.
  * @property {boolean} useAuthentication.required - Whether this POS requires users to
  * authenticate themselves before making a transaction
  */
@@ -61,12 +61,15 @@ export interface UpdatedPointOfSaleResponse extends BasePointOfSaleResponse {
   useAuthentication: boolean;
 }
 
+/**
+ * @typedef {UpdatedPointOfSaleResponse | UpdatedPointOfSaleWithContainersResponse} UpdatedPOSResponses
+ */
 type UpdatedPOSResponses = UpdatedPointOfSaleResponse | UpdatedPointOfSaleWithContainersResponse;
 
 /**
  * @typedef PaginatedUpdatedPointOfSaleResponse
- * @property {PaginationResult.model} _pagination - Pagination metadata
- * @property {Array<UpdatedPOSResponses.model>}
+ * @property {PaginationResult} _pagination - Pagination metadata
+ * @property {Array.<UpdatedPOSResponses>}
  * records - Returned points of sale
  */
 export interface PaginatedUpdatedPointOfSaleResponse {
@@ -76,7 +79,7 @@ export interface PaginatedUpdatedPointOfSaleResponse {
 
 /**
  * @typedef {PointOfSaleResponse} PointOfSaleWithContainersResponse
- * @property {Array<ContainerWithProductsResponse.model>} containers.required - The containers
+ * @property {Array.<ContainerWithProductsResponse>} containers.required - The containers
  * in the point-of-sale.
  */
 export interface PointOfSaleWithContainersResponse extends PointOfSaleResponse {
@@ -85,7 +88,7 @@ export interface PointOfSaleWithContainersResponse extends PointOfSaleResponse {
 
 /**
  * @typedef {UpdatedPointOfSaleResponse} UpdatedPointOfSaleWithContainersResponse
- * @property {Array<ContainerWithProductsResponse.model>} containers.required - The containers
+ * @property {Array.<ContainerWithProductsResponse>} containers.required - The containers
  * in the point-of-sale.
  */
 export interface UpdatedPointOfSaleWithContainersResponse extends UpdatedPointOfSaleResponse {

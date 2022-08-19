@@ -42,9 +42,9 @@ export interface StripeDepositStatusResponse extends BaseResponse {
 /**
  * @typedef {BaseResponse} StripeDepositResponse
  * @property {string} stripeId.required - The ID of the payment intent in Stripe
- * @property {Array.<StripeDepositStatus>} depositStatus.required - Current status of the deposit
- * @property {DineroObjectResponse.model} amount.required - The amount deposited
- * @property {BaseUserResponse.model} to.required - User that deposited money
+ * @property {Array.<StripeDepositStatusResponse>} depositStatus.required - Current status of the deposit
+ * @property {DineroObjectResponse} amount.required - The amount deposited
+ * @property {BaseUserResponse} to.required - User that deposited money
  */
 export interface StripeDepositResponse extends BaseResponse {
   stripeId: string;

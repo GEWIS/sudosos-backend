@@ -75,6 +75,7 @@ export default class SimpleFileController extends BaseController {
   /**
    * Upload a file with the given name.
    * @route POST /files
+   * @operationId create
    * @group files - Operations of the simple files controller
    * @consumes multipart/form-data
    * @param {file} file.formData
@@ -111,6 +112,7 @@ export default class SimpleFileController extends BaseController {
   /**
    * Download a file with the given id.
    * @route GET /files/{id}
+   * @operationId get
    * @group files - Operations of the simple files controller
    * @param {integer} id.path.required - The id of the file which should be downloaded
    * @security JWT
@@ -139,6 +141,7 @@ export default class SimpleFileController extends BaseController {
   /**
    * Delete the file with the given id.
    * @route DELETE /files/{id}
+   * @operationId delete
    * @group files - Operations of the simple files controller
    * @param {integer} id.path.required - The id of the file which should be deleted
    * @security JWT

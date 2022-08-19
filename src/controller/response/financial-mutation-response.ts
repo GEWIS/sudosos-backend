@@ -37,8 +37,8 @@ export type FinancialMutationResponse = TransferType | TransactionType;
 
 /**
  * @typedef PaginatedFinancialMutationResponse
- * @property {PaginationResult.model} _pagination - Pagination metadata
- * @property {Array<PaginatedFinancialMutationResponse.model>} records - Returned mutations
+ * @property {PaginationResult} _pagination - Pagination metadata
+ * @property {Array.<PaginatedFinancialMutationResponse>} records - Returned mutations
  */
 export interface PaginatedFinancialMutationResponse {
   _pagination: PaginationResult,

@@ -19,7 +19,7 @@ import { DineroObjectRequest } from './dinero-request';
 
 /**
  * @typedef StripeRequest
- * @property {Dinero.model} amount - Amount of money being deposited
+ * @property {Dinero} amount - Amount of money being deposited
  */
 export interface StripeRequest {
   amount: DineroObjectRequest;

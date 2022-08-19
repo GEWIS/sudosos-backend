@@ -23,7 +23,7 @@ import User from '../../entity/user/user';
 
 /**
  * @typedef {BaseEntity} GewisUser
- * @property {User.model} user.required - The user.
+ * @property {User} user.required - The user.
  * @property {integer} gewisId.required - The id of the member.
  */
 @Entity()

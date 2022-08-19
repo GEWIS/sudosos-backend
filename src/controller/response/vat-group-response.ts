@@ -32,8 +32,8 @@ export interface BaseVatGroupResponse extends BaseResponse {
 
 /**
  * @typedef PaginatedVatGroupResponse
- * @property {PaginationResult.model} _pagination.required - Pagination metadata
- * @property {Array<VatGroup>} records.required - Returned VAT groups
+ * @property {PaginationResult} _pagination.required - Pagination metadata
+ * @property {Array.<VatGroup>} records.required - Returned VAT groups
  */
 export interface PaginatedVatGroupResponse {
   _pagination: PaginationResult,
@@ -45,7 +45,7 @@ export interface PaginatedVatGroupResponse {
  * @property {number} id - ID of the VAT group
  * @property {string} name - Name of the VAT group
  * @property {number} percentage - Percentage of VAT in this group
- * @property {Array<DineroObject>} values - Amount of VAT to be paid to the tax administration
+ * @property {Array.<DineroObject>} values - Amount of VAT to be paid to the tax administration
  * per period
  */
 export interface VatDeclarationRow {
@@ -59,7 +59,7 @@ export interface VatDeclarationRow {
  * @typedef VatDeclarationResponse
  * @property {number} calendarYear - Calendar year of this result table
  * @property {string} period - The used VAT declaration period the rows below are based upon
- * @property {Array<VatDeclarationRow>} rows - The rows of the result table
+ * @property {Array.<VatDeclarationRow>} rows - The rows of the result table
  */
 export interface VatDeclarationResponse {
   calendarYear: number;

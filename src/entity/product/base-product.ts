@@ -28,7 +28,7 @@ import VatGroup from '../vat-group';
 /**
  * @typedef {BaseEntityWithoutId} BaseProduct
  * @property {string} name.required - The unique name of the product.
- * @property {Dinero.model} price.required - The price of each product.
+ * @property {Dinero} price.required - The price of each product.
  */
 export default class BaseProduct extends BaseEntityWithoutId {
   @Column({

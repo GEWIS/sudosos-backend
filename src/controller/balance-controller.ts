@@ -58,6 +58,7 @@ export default class BalanceController extends BaseController {
   /**
    * Get balance of the current user
    * @route get /balances
+   * @operationId getBalance
    * @group balance - Operations of balance controller
    * @security JWT
    * @returns {BalanceResponse.model} 200 - The requested user's balance
@@ -78,6 +79,7 @@ export default class BalanceController extends BaseController {
   /**
    * Retrieves the requested balance
    * @route get /balances/{id}
+   * @operationId getBalanceId
    * @group balance - Operations of balance controller
    * @param {integer} id.path - The id of the user for which the saldo is requested
    * @security JWT

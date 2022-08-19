@@ -89,6 +89,7 @@ export default class VatGroupController extends BaseController {
   /**
    * Get a list of all VAT groups
    * @route GET /vatgroups
+   * @operationId getAll
    * @group vatGroups - Operations of the VAT groups controller
    * @security JWT
    * @param {integer} vatGroupId.query - ID of the VAT group
@@ -129,6 +130,7 @@ export default class VatGroupController extends BaseController {
   /**
    * Returns the requested VAT group
    * @route GET /vatgroups/{id}
+   * @operationId get
    * @group vatGroups - Operations of the VAT groups controller
    * @security JWT
    * @param {integer} id.path.required - The ID of the VAT group which should be returned
@@ -158,6 +160,7 @@ export default class VatGroupController extends BaseController {
   /**
    * Create a new VAT group
    * @route POST /vatgroups
+   * @operationId create
    * @group vatGroups - Operations of the VAT group controller
    * @param {VatGroupRequest.model} vatGroup.body.required - The VAT group which should be created
    * @security JWT
@@ -190,6 +193,7 @@ export default class VatGroupController extends BaseController {
   /**
    * Create a new VAT group
    * @route PATCH /vatgroups/{id}
+   * @operationId update
    * @group vatGroups - Operations of the VAT group controller
    * @param {integer} id.path.required - The ID of the VAT group which should be updated
    * @param {UpdateVatGroupRequest.model} vatGroup.body.required - The VAT group information
@@ -237,6 +241,7 @@ export default class VatGroupController extends BaseController {
   /**
    * Get the VAT collections needed for VAT declarations
    * @route GET /vatgroups/declaration
+   * @operationId getDeclaration
    * @group vatGroups - Operations of the VAT groups controller
    * @security JWT
    * @param {number} year.query.required - Calendar year for VAT declarations

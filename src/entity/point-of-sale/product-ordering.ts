@@ -26,7 +26,7 @@ import PointOfSale from './point-of-sale';
 
 /**
  * @typedef ProductOrdering
- * @property {PointOfSale.model} pos.required - The pointOfSale the ordering belongs to.
+ * @property {PointOfSale} pos.required - The pointOfSale the ordering belongs to.
  * @property {Product} product.required - The product that should be in the ordering.
  * @property {integer} order.required - The order number of the product in the pointOfSale.
  */

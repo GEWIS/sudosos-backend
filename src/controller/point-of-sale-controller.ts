@@ -124,6 +124,7 @@ export default class PointOfSaleController extends BaseController {
   /**
    * Create a new Point of Sale.
    * @route POST /pointsofsale
+   * @operationId create
    * @group pointofsale - Operations of the point of sale controller
    * @param {CreatePointOfSaleRequest.model} pointofsale.body.required -
    * The point of sale which should be created
@@ -161,6 +162,7 @@ export default class PointOfSaleController extends BaseController {
   /**
    * Returns all existing Point of Sales
    * @route GET /pointsofsale
+   * @operationId getAll
    * @group pointofsale - Operations of the point of sale controller
    * @security JWT
    * @param {integer} take.query - How many points of sale the endpoint should return
@@ -196,6 +198,7 @@ export default class PointOfSaleController extends BaseController {
   /**
    * Returns the requested Point of Sale
    * @route GET /pointsofsale/{id}
+   * @operationId get
    * @group pointofsale - Operations of the point of sale controller
    * @param {integer} id.path.required - The id of the Point of Sale which should be returned
    * @security JWT
@@ -230,6 +233,7 @@ export default class PointOfSaleController extends BaseController {
   /**
    * Update an existing Point of Sale.
    * @route PATCH /pointsofsale/{id}
+   * @operationId update
    * @group pointofsale - Operations of the point of sale controller
    * @param {integer} id.path.required - The id of the Point of Sale which should be updated
    * @param {UpdatePointOfSaleRequest.model} pointofsale.body.required -
@@ -280,6 +284,7 @@ export default class PointOfSaleController extends BaseController {
   /**
    * Returns the containers of the requested Point of Sale, empty list if POS does not exist
    * @route GET /pointsofsale/{id}/containers
+   * @operationId getContainers
    * @group pointofsale - Operations of the point of sale controller
    * @security JWT
    * @param {integer} take.query - How many containers the endpoint should return
@@ -308,6 +313,7 @@ export default class PointOfSaleController extends BaseController {
   /**
    * Returns the products of the requested Point of Sale, empty list if POS does not exist
    * @route GET /pointsofsale/{id}/products
+   * @operationId getProducts
    * @group pointofsale - Operations of the point of sale controller
    * @security JWT
    * @param {integer} take.query - How many products the endpoint should return
@@ -336,6 +342,7 @@ export default class PointOfSaleController extends BaseController {
   /**
    * Returns a single Points of Sale update
    * @route GET /pointsofsale/{id}/update
+   * @operationId getUpdate
    * @group pointofsale - Operations of the point of sale controller
    * @param {integer} id.path.required - The id of the Point of Sale which should be returned
    * @security JWT
@@ -375,6 +382,7 @@ export default class PointOfSaleController extends BaseController {
   /**
    * Returns all updated Points of Sale
    * @route GET /pointsofsale/updated
+   * @operationId getUpdated
    * @group pointofsale - Operations of the point of sale controller
    * @security JWT
    * @param {integer} take.query - How many points of sale the endpoint should return
@@ -433,13 +441,14 @@ export default class PointOfSaleController extends BaseController {
   /**
    * Returns a Point of Sale transactions
    * @route GET /pointsofsale/{id}/transactions
+   * @operationId getTransactions
    * @group pointofsale - Operations of the point of sale controller
    * @param {integer} id.path.required -
    *          The id of the Point of Sale of which to get the transactions.
    * @param {integer} take.query - How many transactions the endpoint should return
    * @param {integer} skip.query - How many transactions should be skipped (for pagination)
    * @security JWT
-   * @returns {PaginatedTransactionResponse.model} 200 -
+   * @returns {PaginatedBaseTransactionResponse.model} 200 -
    *          The requested Point of Sale transactions
    * @returns {string} 404 - Not found error
    * @returns {string} 500 - Internal server error

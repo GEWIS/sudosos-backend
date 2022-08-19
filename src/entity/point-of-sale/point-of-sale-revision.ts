@@ -28,7 +28,7 @@ import ContainerRevision from '../container/container-revision';
 
 /**
  * @typedef {BasePointOfSale} PointOfSaleRevision
- * @property {PointOfSale.model} pointOfSale.required - The pointOfSale the revision belongs to.
+ * @property {PointOfSale} pointOfSale.required - The pointOfSale the revision belongs to.
  * @property {integer} revision.required - The revision number of this revision.
  * @property {Array.<ContainerRevision>} containers.required - The containers that are contained
  * in this revision.

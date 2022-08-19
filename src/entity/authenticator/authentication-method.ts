@@ -23,7 +23,7 @@ import User from '../user/user';
 
 /**
  * @typedef {BaseEntityWithoutId} AuthenticationMethod
- * @property {User.model} user.required - The user this authenticator is for
+ * @property {User} user.required - The user this authenticator is for
  */
 export default class AuthenticationMethod extends BaseEntityWithoutId {
   @PrimaryColumn()

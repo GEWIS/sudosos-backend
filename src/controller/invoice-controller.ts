@@ -83,6 +83,7 @@ export default class InvoiceController extends BaseController {
   /**
    * Returns all invoices in the system.
    * @route GET /invoices
+   * @operationId getAll
    * @group invoices - Operations of the invoices controller
    * @security JWT
    * @param {integer} toId.query - Filter on Id of the debtor
@@ -163,6 +164,7 @@ export default class InvoiceController extends BaseController {
   /**
    * Adds an invoice to the system.
    * @route POST /invoices
+   * @operationId create
    * @group invoices - Operations of the invoices controller
    * @security JWT
    * @param {CreateInvoiceRequest.model} invoice.body.required -
@@ -199,6 +201,7 @@ export default class InvoiceController extends BaseController {
   /**
    * Adds an invoice to the system.
    * @route PATCH /invoices/{id}
+   * @operationId update
    * @group invoices - Operations of the invoices controller
    * @security JWT
    * @param {integer} id.path.required - The id of the invoice which should be updated
@@ -239,6 +242,7 @@ export default class InvoiceController extends BaseController {
   /**
    * Deletes an invoice.
    * @route DELETE /invoices/{id}
+   * @operationId delete
    * @group invoices - Operations of the invoices controller
    * @security JWT
    * @param {integer} id.path.required - The id of the invoice which should be deleted

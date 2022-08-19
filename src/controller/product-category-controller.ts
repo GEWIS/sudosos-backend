@@ -70,6 +70,7 @@ export default class ProductCategoryController extends BaseController {
   /**
    * Returns all existing productcategories
    * @route GET /productcategories
+   * @operationId getAll
    * @group productCategories - Operations of productcategory controller
    * @security JWT
    * @param {integer} take.query - How many product categories the endpoint should return
@@ -106,6 +107,7 @@ export default class ProductCategoryController extends BaseController {
   /**
    * Post a new productCategory.
    * @route POST /productcategories
+   * @operationId create
    * @group productCategories - Operations of productcategory controller
    * @param {ProductCategoryRequest.model} productCategory.body.required
    * - The productCategory which should be created
@@ -132,6 +134,7 @@ export default class ProductCategoryController extends BaseController {
   /**
    * Returns the requested productcategory
    * @route GET /productcategories/{id}
+   * @operationId get
    * @group productCategories - Operations of productcategory controller
    * @param {integer} id.path.required - The id of the productcategory which should be returned
    * @security JWT
@@ -163,6 +166,7 @@ export default class ProductCategoryController extends BaseController {
   /**
    * Update an existing productcategory.
    * @route PATCH /productcategories/{id}
+   * @operationId update
    * @group productCategories - Operations of productcategory controller
    * @param {integer} id.path.required - The id of the productcategory which should be returned
    * @param {ProductCategoryRequest.model} productCategory.body.required

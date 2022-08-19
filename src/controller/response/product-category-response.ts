@@ -28,8 +28,8 @@ export interface ProductCategoryResponse extends BaseResponse {
 
 /**
  * @typedef PaginatedProductCategoryResponse
- * @property {PaginationResult.model} _pagination - Pagination metadata
- * @property {Array<ProductCategoryResponse.model>} records - Returned product categories
+ * @property {PaginationResult} _pagination - Pagination metadata
+ * @property {Array.<ProductCategoryResponse>} records - Returned product categories
  */
 export interface PaginatedProductCategoryResponse {
   _pagination: PaginationResult,

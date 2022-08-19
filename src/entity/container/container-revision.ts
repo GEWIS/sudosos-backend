@@ -29,7 +29,7 @@ import PointOfSaleRevision from '../point-of-sale/point-of-sale-revision';
 
 /**
  * @typedef {BaseContainer} ContainerRevision
- * @property {Container.model} container.required - The container the revision belongs to.
+ * @property {Container} container.required - The container the revision belongs to.
  * @property {integer} revision.required - The revision number of this revision.
  * @property {Array.<ProductRevision>} products.required - The products that are contained in this
  * revision.

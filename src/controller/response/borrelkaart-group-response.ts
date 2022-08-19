@@ -24,7 +24,7 @@ import { PaginationResult } from '../../helpers/pagination';
   * @property {string} name.required - Name of the borrelkaart group
   * @property {string} activeStartDate - Start date of the borrelkaart group
   * @property {string} activeEndDate.required - End date of the borrelkaart group
-  * @property {Array.<UserResponse.model>} users.required - Users in the borrelkaart group
+  * @property {Array.<UserResponse>} users.required - Users in the borrelkaart group
   */
 export default interface BorrelkaartGroupResponse extends BaseResponse {
   name: string,
@@ -35,8 +35,8 @@ export default interface BorrelkaartGroupResponse extends BaseResponse {
 
 /**
  * @typedef PaginatedBorrelkaartGroupResponse
- * @property {PaginationResult.model} _pagination - Pagination metadata
- * @property {Array<BorrelkaartGroupResponse.model>} records - Returned borrelkaart groups
+ * @property {PaginationResult} _pagination - Pagination metadata
+ * @property {Array.<BorrelkaartGroupResponse>} records - Returned borrelkaart groups
  */
 export interface PaginatedBorrelkaartGroupResponse {
   _pagination: PaginationResult,

@@ -31,9 +31,9 @@ export enum FlagStatus {
 /**
  * @typedef {FlaggedTransaction} Transaction
  * @property {integer} status.required - The status of this flag.
- * @property {User.model} flaggedBy.required - The user created this flag.
+ * @property {User} flaggedBy.required - The user created this flag.
  * @property {string} reason.required - The reason why this transaction should be changed.
- * @property {Transaction.model} transaction.required - The transaction that has been flagged.
+ * @property {Transaction} transaction.required - The transaction that has been flagged.
  */
 @Entity()
 export default class FlaggedTransaction extends BaseEntity {

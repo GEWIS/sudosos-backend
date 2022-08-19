@@ -27,7 +27,7 @@ import User from '../user/user';
  * @typedef {BaseEntity} Container
  * @property {integer} currentRevision - The current revision of the container. Can be null if no
  * revision exists.
- * @property {User.model} owner.required - The owner of the container.
+ * @property {User} owner.required - The owner of the container.
  * @property {boolean} public - Whether the container can be added to pointOfSales by everyone.
  */
 @Entity()

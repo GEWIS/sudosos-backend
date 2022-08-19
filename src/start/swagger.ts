@@ -99,6 +99,7 @@ export default class Swagger {
     // Generate Swagger specification on-demand in development environments.
     return Swagger.generateSpecification(app,
       path.join(process.cwd(), 'src/entity/*.ts'),
+      path.join(process.cwd(), 'src/entity/**/*.ts'),
       path.join(process.cwd(), 'src/gewis/entity/*.ts'),
       path.join(process.cwd(), 'src/declaration/*.ts'),
       path.join(process.cwd(), 'src/**/controller/*.ts'),

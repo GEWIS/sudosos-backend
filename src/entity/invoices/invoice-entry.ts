@@ -27,8 +27,8 @@ import BaseEntity from '../base-entity';
 
 /**
  * @typedef {BaseEntity} InvoiceEntry
- * @property {Invoice.model} invoice.required - The invoice to which this entry belongs
- * @property {Dinero.model} priceInclVat.required - The price of the item.
+ * @property {Invoice} invoice.required - The invoice to which this entry belongs
+ * @property {Dinero} priceInclVat.required - The price of the item.
  * @property {integer} amount.required - The amount of items in the invoice entry.
  * @property {string} description.required - The description of the invoice entry item.
  * @property {number} vatPercentage.required - The percentage of vat applied to this item.
