@@ -87,8 +87,8 @@ export default class InvoiceController extends BaseController {
    * @group invoices - Operations of the invoices controller
    * @security JWT
    * @param {integer} toId.query - Filter on Id of the debtor
-   * @param {invoiceId} invoiceId.query - Filter on invoice ID
-   * @param {InvoiceState} state.query - Filter based on Invoice State
+   * @param {number} invoiceId.query - Filter on invoice ID
+   * @param {enum} state.query - Filter based on Invoice State
    * @param {boolean} returnEntries.query - Boolean if invoice entries should be returned
    * @param {string} fromDate.query - Start date for selected invoices (inclusive)
    * @param {string} tillDate.query - End date for selected invoices (exclusive)

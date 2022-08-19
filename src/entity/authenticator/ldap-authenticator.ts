@@ -23,7 +23,7 @@ import AuthenticationMethod from './authentication-method';
 /**
  * @typedef {AuthenticationMethod} LDAPAuthenticator
  * @property {User} User.required - The user this authenticator is for
- * @property {UUID} accountName.required - The associated AD account name
+ * @property {string} accountName.required - The associated AD account name
  */
 @Entity()
 export default class LDAPAuthenticator extends AuthenticationMethod {
