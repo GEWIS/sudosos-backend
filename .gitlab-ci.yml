@@ -1,0 +1,97 @@
+image: node:16
+stages:
+- install
+- build
+- test
+
+cache:
+  paths:
+  - node_modules/
+
+variables:
+  API_HOST: localhost:3000
+  API_BASEPATH: /v1
+  CURRENCY_CODE: EUR
+  CURRENCY_PRECISION: 2
+  GEWISWEB_JWT_SECRET: ChangeMe
+  JWT_KEY_PATH: config/jwt.key
+  HTTP_PORT: 3000
+  TYPEORM_CONNECTION: sqlite
+  TYPEORM_DATABASE: local.sqlite
+  TYPEORM_SYNCHRONIZE: 0
+  TYPEORM_LOGGING: 1
+  LOG_LEVEL: INFO
+  PAGINATION_DEFAULT: 20
+  PAGINATION_MAX: 500
+  FILE_STORAGE_METHOD: disk
+  SMTP_FORM: SudoSOS <sudosos@example.com>
+  TYPEORM_USERNAME: $TYPEORM_USERNAME
+  TYPEORM_PASSWORD: $TYPEORM_PASSWORD
+  TYPEORM_DATABASE: $TYPEORM_DATABASE
+
+install_dependencies:
+  stage: install
+  script: npm install
+  artifacts:
+    paths:
+    - node_modules/
+
+build:
+  stage: build
+  script: npm run build
+  artifacts:
+    paths:
+    - out/
+
+swagger:
+  stage: build
+  script: npm run swagger
+  artifacts:
+    paths:
+    - out/
+
+dockerize-master:
+  image: docker:19.03
+  stage: build
+  services:
+    - docker:19.03-dind
+  before_script:
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
+  script:
+    - docker build --pull -t "$CI_REGISTRY_IMAGE" .
+    - docker push "$CI_REGISTRY_IMAGE"
+  only:
+    - master
+
+dockerize:
+  image: docker:19.03
+  stage: build
+  services:
+    - docker:19.03-dind
+  before_script:
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
+  script:
+    - docker build --pull -t "$CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG" . --build-arg TYPEORM_USERNAME=$TYPEORM_USERNAME --build-arg TYPEORM_PASSWORD=$TYPEORM_PASSWORD --build-arg TYPEORM_DATABASE=$TYPEORM_DATABASE
+    - docker push "$CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG"
+  except:
+    - master
+
+test:
+  stage: test
+  before_script:
+    - cp "$ENV_FILE" .env
+    - openssl genrsa -out config/jwt.key 2048
+  script: npm run coverage
+  artifacts:
+    when: always
+    reports:
+      junit: reports/junit.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: reports/coverage/cobertura-coverage.xml
+    paths:
+    - reports/coverage/
+
+lint:
+  stage: test
+  script: npm run lint

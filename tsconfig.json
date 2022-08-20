@@ -1,0 +1,26 @@
+{
+    "compilerOptions": {
+        "target": "ES6",
+        "module": "commonjs",
+        "noImplicitAny": true,
+        "removeComments": true,
+        "preserveConstEnums": true,
+        "outDir": "out",
+        "sourceMap": true,
+        "incremental": true,
+        "emitDecoratorMetadata": true,
+        "experimentalDecorators": true,
+        "esModuleInterop": true,
+        "typeRoots": [
+            "./node_modules/@types",
+            "./src/declaration"
+        ]
+    },
+    "include": [
+        "src/**/*",
+        "test/**/*"
+    ],
+    "exclude": [
+        "node_modules"
+    ],
+}

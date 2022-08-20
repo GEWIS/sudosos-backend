@@ -1,0 +1,20 @@
+#IDEs
+.vscode
+.idea
+
+#Linters and coverages
+.nyc_output/
+reports
+
+#Nodejs
+node_modules
+out
+
+#Local data
+*.sqlite
+config
+
+#Uploaded statics
+data/
+
+.env
