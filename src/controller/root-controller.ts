@@ -49,7 +49,7 @@ export default class RootController extends BaseController {
           handler: this.ping.bind(this),
         },
       },
-      '/banners': {
+      '/open/banners': {
         GET: {
           policy: async () => true,
           handler: this.returnAllBanners.bind(this),
@@ -60,9 +60,8 @@ export default class RootController extends BaseController {
 
   /**
    * Returns all existing banners
-   * @route GET /banners
+   * @route GET /open/banners
    * @group banners - Operations of banner controller
-   * @security JWT
    * @param {integer} take.query - How many banners the endpoint should return
    * @param {integer} skip.query - How many banners should be skipped (for pagination)
    * @returns {PaginatedBannerResponse.model} 200 - All existing banners

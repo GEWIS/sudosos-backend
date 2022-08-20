@@ -62,7 +62,7 @@ describe('RootController', async (): Promise<void> => {
   describe('GET /banners', () => {
     it('should return correct model', async () => {
       const res = await request(ctx.app)
-        .get('/banners');
+        .get('/open/banners');
       expect(res.status).to.equal(200);
       expect(ctx.specification.validateModel(
         'PaginatedBannerResponse',
@@ -73,7 +73,7 @@ describe('RootController', async (): Promise<void> => {
     });
     it('should return an HTTP 200 and all banners in the database if admin', async () => {
       const res = await request(ctx.app)
-        .get('/banners');
+        .get('/open/banners');
 
       // number of banners returned is number of banners in database
       const banners = res.body.records as BannerResponse[];
@@ -96,7 +96,7 @@ describe('RootController', async (): Promise<void> => {
       const take = 5;
       const skip = 3;
       const res = await request(ctx.app)
-        .get('/banners')
+        .get('/open/banners')
         .query({ take, skip });
 
       // number of banners returned is number of banners in database

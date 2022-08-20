@@ -49,6 +49,10 @@ export default class BannerController extends BaseController {
   public getPolicy(): Policy {
     return {
       '/': {
+        GET: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Banner', ['*']),
+          handler: this.returnAllBanners.bind(this),
+        },
         POST: {
           body: { modelName: 'BannerRequest' },
           policy: async (req) => this.roleManager.can(req.token.roles, 'create', 'all', 'Banner', ['*']),
@@ -83,6 +87,40 @@ export default class BannerController extends BaseController {
         },
       },
     };
+  }
+
+  /**
+   * Returns all existing banners
+   * @route GET /banners
+   * @group banners - Operations of banner controller
+   * @security JWT
+   * @param {integer} take.query - How many banners the endpoint should return
+   * @param {integer} skip.query - How many banners should be skipped (for pagination)
+   * @returns {PaginatedBannerResponse.model} 200 - All existing banners
+   * @returns {string} 400 - Validation error
+   * @returns {string} 500 - Internal server error
+   */
+  public async returnAllBanners(req: RequestWithToken, res: Response): Promise<void> {
+    this.logger.trace('Get all banners by', req.token.user);
+
+    let take;
+    let skip;
+    try {
+      const pagination = parseRequestPagination(req);
+      take = pagination.take;
+      skip = pagination.skip;
+    } catch (e) {
+      res.status(400).send(e.message);
+      return;
+    }
+
+    // handle request
+    try {
+      res.json(await BannerService.getBanners({}, { take, skip }));
+    } catch (error) {
+      this.logger.error('Could not return all banners:', error);
+      res.status(500).json('Internal server error.');
+    }
   }
 
   /**
