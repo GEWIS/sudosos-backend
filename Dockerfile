@@ -28,5 +28,6 @@ COPY --from=build --chown=node /app/out/swagger.json /app/out/swagger.json
 RUN apk add --no-cache python3 py3-pip mysql-client mariadb-connector-c
 RUN pip install python-dotenv mysql-connector-python==8.0.29 --quiet
 RUN (crontab -l && echo "41 2 * * * sh -c 'python3 /app/init_scripts/susos.py | mysql -h container.mysql.gewis.nl -u $TYPEORM_USERNAME -p$TYPEORM_PASSWORD $TYPEORM_DATABASE'") | crontab -
+RUN /usr/sbin/crond
 
 CMD ["sh", "/app/init_scripts/start.sh"]
