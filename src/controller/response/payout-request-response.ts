@@ -23,9 +23,9 @@ import { PaginationResult } from '../../helpers/pagination';
 
 /**
  * @typedef {BaseResponse} BoilerPayoutRequestResponse
- * @property {BaseUserResponse} requestedBy.required - The user that requested a payout
- * @property {BaseUserResponse} approvedBy - The user that potentially approved the payout request
- * @property {DineroObjectResponse} amount.required - The amount requested to be paid out
+ * @property {BaseUserResponse.model} requestedBy.required - The user that requested a payout
+ * @property {BaseUserResponse.model} approvedBy - The user that potentially approved the payout request
+ * @property {DineroObjectResponse.model} amount.required - The amount requested to be paid out
  */
 interface BoilerPayoutRequestResponse extends BaseResponse {
   requestedBy: BaseUserResponse,
@@ -64,7 +64,7 @@ export interface PayoutRequestResponse extends BoilerPayoutRequestResponse {
 
 /**
  * @typedef PaginatedBasePayoutRequestResponse
- * @property {PaginationResult} _pagination - Pagination metadata
+ * @property {PaginationResult.model} _pagination - Pagination metadata
  * @property {Array.<BasePayoutRequestResponse>} records - Returned payout requests
  */
 export interface PaginatedBasePayoutRequestResponse {

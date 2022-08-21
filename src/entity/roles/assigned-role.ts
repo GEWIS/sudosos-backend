@@ -23,7 +23,7 @@ import User from '../user/user';
 
 /**
  * @typedef {BaseEntityWithoutId} AssignedRole
- * @property {User} user.required - The user being assigned a role
+ * @property {User.model} user.required - The user being assigned a role
  * @property {string} role.required - The name of the role
  */
 @Entity()

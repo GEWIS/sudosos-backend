@@ -22,7 +22,6 @@ import HashBasedAuthenticationMethod from './hash-based-authentication-method';
 
 /**
  * @typedef {HashBasedAuthenticationMethod} PinAuthenticator
- * @property {User} User.required - The user this authenticator is for
  * @property {string} hash.required - The PIN code of this user (hashed)
  */
 @Entity()

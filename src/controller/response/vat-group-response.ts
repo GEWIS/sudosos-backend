@@ -32,7 +32,7 @@ export interface BaseVatGroupResponse extends BaseResponse {
 
 /**
  * @typedef PaginatedVatGroupResponse
- * @property {PaginationResult} _pagination.required - Pagination metadata
+ * @property {PaginationResult.model} _pagination.required - Pagination metadata
  * @property {Array.<VatGroup>} records.required - Returned VAT groups
  */
 export interface PaginatedVatGroupResponse {

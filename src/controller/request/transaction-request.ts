@@ -24,8 +24,8 @@ import RevisionRequest from './revision-request';
  * @property {integer} from.required - from user id
  * @property {integer} createdBy - createdBy user id
  * @property {Array.<SubTransactionRequest>} subTransactions.required - subtransactions
- * @property {RevisionRequest} pointOfSale.required - point of sale
- * @property {DineroObjectRequest} totalPriceInclVat.required - total price of the transaction
+ * @property {RevisionRequest.model} pointOfSale.required - point of sale
+ * @property {DineroObjectRequest.model} totalPriceInclVat.required - total price of the transaction
  */
 export interface TransactionRequest {
   from: number,
@@ -38,9 +38,9 @@ export interface TransactionRequest {
 /**
  * @typedef SubTransactionRequest
  * @property {integer} to.required - to user id
- * @property {RevisionRequest} container.required - container
+ * @property {RevisionRequest.model} container.required - container
  * @property {Array.<SubTransactionRowRequest>} subTransactionRows.required - subtransaction rows
- * @property {DineroObjectRequest} totalPriceInclVat.required - total price
+ * @property {DineroObjectRequest.model} totalPriceInclVat.required - total price
  *           of the subtransaction
  */
 export interface SubTransactionRequest {
@@ -52,9 +52,9 @@ export interface SubTransactionRequest {
 
 /**
  * @typedef SubTransactionRowRequest
- * @property {RevisionRequest} product - product
+ * @property {RevisionRequest.model} product - product
  * @property {integer} amount - amount of this product in subtransaction
- * @property {DineroObjectRequest} totalPriceInclVat.required - total price
+ * @property {DineroObjectRequest.model} totalPriceInclVat.required - total price
  *           of the subtransaction row
  */
 export interface SubTransactionRowRequest {

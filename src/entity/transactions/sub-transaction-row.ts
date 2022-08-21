@@ -25,10 +25,10 @@ import ProductRevision from '../product/product-revision';
 import Invoice from '../invoices/invoice';
 
 /**
- * @typedef {SubTransactionRow} SubTransactionRow
- * @property {Product} product.required - The product that has been bought.
+ * @typedef {BaseEntity} SubTransactionRow
+ * @property {Product.model} product.required - The product that has been bought.
  * @property {integer} amount.required - The amount that has been bought.
- * @property {SubTransaction} subTransaction - The subTransaction this row belongs to.
+ * @property {SubTransaction.model} subTransaction - The subTransaction this row belongs to.
  */
 @Entity()
 export default class SubTransactionRow extends BaseEntity {

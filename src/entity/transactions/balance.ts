@@ -31,11 +31,11 @@ import BaseEntityWithoutId from '../base-entity-without-id';
 
 /**
  * @typedef {BaseEntityWithoutId} Balance
- * @property {User} user.required - The account which has this balance
- * @property {Dinero} amount.required - The amount of balance a user has.
- * @property {Transaction} lastTransaction - The last transaction of this
+ * @property {User.model} user.required - The account which has this balance
+ * @property {Dinero.model} amount.required - The amount of balance a user has.
+ * @property {Transaction.model} lastTransaction - The last transaction of this
  * user, used to calculate this balance
- * @property {Transfer} lastTransfer - The last transfer of this user,
+ * @property {Transfer.model} lastTransfer - The last transfer of this user,
  * used to calculate this balance
  */
 @Entity()

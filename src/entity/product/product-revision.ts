@@ -26,7 +26,7 @@ import Product from './product';
 
 /**
  * @typedef {BaseProduct} ProductRevision
- * @property {Product} product.required - The product the revision belongs to.
+ * @property {Product.model} product.required - The product the revision belongs to.
  * @property {integer} revision.required - The revision number of this revision.
  */
 @Entity()

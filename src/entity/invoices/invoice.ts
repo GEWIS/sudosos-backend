@@ -29,8 +29,8 @@ import InvoiceStatus from './invoice-status';
 
 /**
  * @typedef {BaseEntity} Invoice
- * @property {User} to.required - The account for whom the invoice is
- * @property {Transfer} transfer.required - The transfer entity representing the invoice.
+ * @property {User.model} to.required - The account for whom the invoice is
+ * @property {Transfer.model} transfer.required - The transfer entity representing the invoice.
  * @property {Array.<InvoiceEntry>} invoiceEntries.required
  *                                       The entries describing this invoice.
  * @property {Array.<InvoiceStatus>} invoiceStatus.required - The status history of the invoice

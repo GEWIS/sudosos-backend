@@ -28,11 +28,11 @@ import Invoice from '../invoices/invoice';
 
 /**
  * @typedef {BaseEntity} Transfer
- * @property {User} from - The account from which the transfer is subtracted. Can be
+ * @property {User.model} from - The account from which the transfer is subtracted. Can be
  * null if money was deposited.
- * @property {User} to - The account to which the transaction is added. Can be null if
+ * @property {User.model} to - The account to which the transaction is added. Can be null if
  * money was paid out.
- * @property {Dinero} amount.required - The amount of money transferred.
+ * @property {Dinero.model} amount.required - The amount of money transferred.
  * @property {integer} type.required - The type of transfer.
  * @property {string} description - If the transfer is of type 'custom', this contains a
  * description of the transfer.

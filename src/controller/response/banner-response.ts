@@ -39,7 +39,7 @@ export interface BannerResponse extends BaseResponse {
 
 /**
  * @typedef PaginatedBannerResponse
- * @property {PaginationResult} _pagination - Pagination metadata
+ * @property {PaginationResult.model} _pagination - Pagination metadata
  * @property {Array.<BannerResponse>} records - Returned banners
  */
 export interface PaginatedBannerResponse {

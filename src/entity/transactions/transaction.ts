@@ -25,12 +25,12 @@ import BaseEntity from '../base-entity';
 import PointOfSaleRevision from '../point-of-sale/point-of-sale-revision';
 
 /**
- * @typedef {Transaction} Transaction
- * @property {User} from.required - The account from which the transaction is subtracted.
- * @property {User} createdBy.required - The user that created the transaction.
+ * @typedef {BaseEntity} Transaction
+ * @property {User.model} from.required - The account from which the transaction is subtracted.
+ * @property {User.model} createdBy.required - The user that created the transaction.
  * @property {Array.<SubTransaction>} subTransactions.required - The subTransactions belonging
  * to this transaction.
- * @property {PointOfSaleRevision} pointOfSale.required - The pointOfSale from which the
+ * @property {PointOfSaleRevision.model} pointOfSale.required - The pointOfSale from which the
  * products in the transaction are bought.
  */
 @Entity()

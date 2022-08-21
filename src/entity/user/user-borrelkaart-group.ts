@@ -25,8 +25,8 @@ import BorrelkaartGroup from './borrelkaart-group';
 
 /**
  * @typedef {BaseEntity} UserBorrelkaartGroup
- * @property {User} user.required - The user that belongs to the group.
- * @property {BorrelkaartGroup} borrelkaartGroup.required - The borrelkaartGroup the user
+ * @property {User.model} user.required - The user that belongs to the group.
+ * @property {BorrelkaartGroup.model} borrelkaartGroup.required - The borrelkaartGroup the user
  * belongs to.
  */
 @Entity()

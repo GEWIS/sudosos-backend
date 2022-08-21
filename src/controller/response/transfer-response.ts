@@ -27,12 +27,12 @@ import { BasePayoutRequestResponse } from './payout-request-response';
 /**
  * @typedef {BaseResponse} TransferResponse
  * @property {string} description.required - Description of the transfer
- * @property {Dinero} amount.required - Amount of money being transferred
- * @property {BaseUserResponse} from - from which user the money is being transferred
- * @property {BaseUserResponse} to - to which user the money is being transferred.
- * @property {BaseInvoiceResponse} invoice - invoice belonging to this transfer
- * @property {StripeDepositResponse} deposit - deposit belonging to this transfer
- * @property {BasePayoutRequestResponse} payoutRequest - payout request belonging to this transfer
+ * @property {Dinero.model} amount.required - Amount of money being transferred
+ * @property {BaseUserResponse.model} from - from which user the money is being transferred
+ * @property {BaseUserResponse.model} to - to which user the money is being transferred.
+ * @property {BaseInvoiceResponse.model} invoice - invoice belonging to this transfer
+ * @property {StripeDepositResponse.model} deposit - deposit belonging to this transfer
+ * @property {BasePayoutRequestResponse.model} payoutRequest - payout request belonging to this transfer
  */
 export interface TransferResponse extends BaseResponse {
   amount: DineroObjectResponse;
@@ -46,7 +46,7 @@ export interface TransferResponse extends BaseResponse {
 
 /**
  * @typedef PaginatedTransferResponse
- * @property {PaginationResult} _pagination - Pagination metadata
+ * @property {PaginationResult.model} _pagination - Pagination metadata
  * @property {Array.<TransferResponse>} records - Returned transfers
  */
 export interface PaginatedTransferResponse {

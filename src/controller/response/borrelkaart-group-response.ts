@@ -35,7 +35,7 @@ export default interface BorrelkaartGroupResponse extends BaseResponse {
 
 /**
  * @typedef PaginatedBorrelkaartGroupResponse
- * @property {PaginationResult} _pagination - Pagination metadata
+ * @property {PaginationResult.model} _pagination - Pagination metadata
  * @property {Array.<BorrelkaartGroupResponse>} records - Returned borrelkaart groups
  */
 export interface PaginatedBorrelkaartGroupResponse {

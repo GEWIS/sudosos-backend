@@ -26,7 +26,7 @@ import Product from '../product/product';
 
 /**
  * @typedef {BaseContainer} UpdatedContainer
- * @property {Container} container.required - The container the revision belongs to.
+ * @property {Container.model} container.required - The container the revision belongs to.
  * @property {Array.<Product>} products.required - The products that should be contained in the
  * container.
  */

@@ -26,13 +26,13 @@ import { PaginationResult } from '../../helpers/pagination';
 
 /**
  * @typedef {BaseResponse} BaseTransactionResponse
- * @property {UserResponse} from.required - The account from which the transaction
+ * @property {UserResponse.model} from.required - The account from which the transaction
  * is subtracted.
- * @property {UserResponse} createdBy - The user that created the transaction, if not
+ * @property {UserResponse.model} createdBy - The user that created the transaction, if not
  * same as 'from'..
- * @property {BasePointOfSaleResponse} pointOfSale - The POS at which this transaction
+ * @property {BasePointOfSaleResponse.model} pointOfSale - The POS at which this transaction
  * has been created
- * @property {Dinero} value - Total sum of subtransactions
+ * @property {Dinero.model} value - Total sum of subtransactions
  */
 export interface BaseTransactionResponse extends BaseResponse {
   from: UserResponse,
@@ -43,15 +43,15 @@ export interface BaseTransactionResponse extends BaseResponse {
 
 /**
  * @typedef {BaseResponse} TransactionResponse
- * @property {BaseUserResponse} from.required - The account from which the transaction
+ * @property {BaseUserResponse.model} from.required - The account from which the transaction
  * is subtracted.
- * @property {BaseUserResponse} createdBy - The user that created the transaction, if not
+ * @property {BaseUserResponse.model} createdBy - The user that created the transaction, if not
  * same as 'from'.
  * @property {Array.<SubTransactionResponse>} subTransactions.required - The subtransactions
  * belonging to this transaction.
- * @property {BasePointOfSaleResponse} pointOfSale - The POS at which this transaction
+ * @property {BasePointOfSaleResponse.model} pointOfSale - The POS at which this transaction
  * has been created
- * @property {DineroObjectResponse} totalPriceInclVat.required - The total cost of the
+ * @property {DineroObjectResponse.model} totalPriceInclVat.required - The total cost of the
  * transaction
  */
 export interface TransactionResponse extends BaseResponse {
@@ -64,12 +64,12 @@ export interface TransactionResponse extends BaseResponse {
 
 /**
  * @typedef {BaseResponse} SubTransactionResponse
- * @property {BaseUserResponse} to.required - The account that the transaction is added to.
- * @property {BaseContainerResponse} container.required - The container from which all
+ * @property {BaseUserResponse.model} to.required - The account that the transaction is added to.
+ * @property {BaseContainerResponse.model} container.required - The container from which all
  * products in the SubTransactionRows are bought
  * @property {Array.<SubTransactionRowResponse>} subTransactionsRows.required - The rows of this
  *     SubTransaction
- * @property {DineroObjectResponse} totalPriceInclVat.required - The total cost of the sub
+ * @property {DineroObjectResponse.model} totalPriceInclVat.required - The total cost of the sub
  *     transaction
  */
 export interface SubTransactionResponse extends BaseResponse {
@@ -80,10 +80,10 @@ export interface SubTransactionResponse extends BaseResponse {
 }
 
 /**
- * @typedef {SubTransactionRowResponse} SubTransactionRowResponse
- * @property {BaseProductResponse} product.required - The product that has been bought
+ * @typedef {BaseResponse} SubTransactionRowResponse
+ * @property {BaseProductResponse.model} product.required - The product that has been bought
  * @property {number} amount.required - The amount that has been bought
- * @property {DineroObjectResponse} totalPriceInclVat.required - The cost of the
+ * @property {DineroObjectResponse.model} totalPriceInclVat.required - The cost of the
  *     sub transaction row
  */
 export interface SubTransactionRowResponse extends BaseResponse {
@@ -94,7 +94,7 @@ export interface SubTransactionRowResponse extends BaseResponse {
 
 /**
  * @typedef PaginatedBaseTransactionResponse
- * @property {PaginationResult} _pagination - Pagination metadata
+ * @property {PaginationResult.model} _pagination - Pagination metadata
  * @property {Array.<BaseTransactionResponse>} records - Returned banners
  */
 export interface PaginatedBaseTransactionResponse {

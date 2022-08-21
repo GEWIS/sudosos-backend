@@ -23,8 +23,7 @@ import AuthenticationMethod from './authentication-method';
 
 /**
  * @typedef {AuthenticationMethod} MemberAuthenticator
- * @property {User} user.required - The user this authenticator is for
- * @property {User} authenticateAs.required - The user entity this user wants to
+ * @property {User.model} authenticateAs.required - The user entity this user wants to
  * authenticate as.
  */
 @Entity()

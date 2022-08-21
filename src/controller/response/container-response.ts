@@ -34,7 +34,7 @@ export interface BaseContainerResponse extends BaseResponse {
 
 /**
  * @typedef {BaseContainerResponse} ContainerResponse
- * @property {BaseUserResponse} owner.required - The owner of the container.
+ * @property {BaseUserResponse.model} owner.required - The owner of the container.
  */
 export interface ContainerResponse extends BaseContainerResponse {
   owner: BaseUserResponse,
@@ -42,7 +42,7 @@ export interface ContainerResponse extends BaseContainerResponse {
 
 /**
  * @typedef PaginatedContainerResponse
- * @property {PaginationResult} _pagination - Pagination metadata
+ * @property {PaginationResult.model} _pagination - Pagination metadata
  * @property {Array.<ContainerResponse>} records - Returned containers
  */
 export interface PaginatedContainerResponse {
@@ -52,7 +52,7 @@ export interface PaginatedContainerResponse {
 
 /**
  * @typedef PaginatedContainerWithProductResponse
- * @property {PaginationResult} _pagination - Pagination metadata
+ * @property {PaginationResult.model} _pagination - Pagination metadata
  * @property {Array.<ContainerWithProductsResponse>} records - Returned containers
  */
 export interface PaginatedContainerWithProductResponse {

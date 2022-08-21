@@ -21,11 +21,8 @@ import {
 import BaseEntityWithoutId from './base-entity-without-id';
 
 /**
- * @typedef  BaseEntity
- * @property {integer} id - The auto-generated object id.
- * @property {string} createdAt - The creation date of the object.
- * @property {string} updatedAt - The last update date of the object.
- * @property {integer} version - The current version of the object.
+ * @typedef  {BaseEntityWithoutId} BaseEntity
+ * @property {integer} id.required - The auto-generated object id.
  */
 export default class BaseEntity extends BaseEntityWithoutId {
   @PrimaryGeneratedColumn()

@@ -25,7 +25,7 @@ import Product from './product';
 
 /**
  * @typedef {BaseProduct} UpdatedProduct
- * @property {Product} product.required - The product the revision belongs to.
+ * @property {Product.model} product.required - The product the revision belongs to.
  */
 @Entity()
 export default class UpdatedProduct extends BaseProduct {

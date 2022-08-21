@@ -22,7 +22,6 @@ import AuthenticationMethod from './authentication-method';
 
 /**
  * @typedef {AuthenticationMethod} NfcAuthenticator
- * @property {User} user.required - The user this authenticator is for
  * @property {string} uid.required - The hash of the UID of the NFC chip
  */
 @Entity()

@@ -25,8 +25,8 @@ import { BaseVatGroupResponse } from './vat-group-response';
 /**
  * @typedef {BaseResponse} BaseProductResponse
  * @property {string} name.required - The name of the product.
- * @property {DineroObjectResponse} priceInclVat.required - The price of the product.
- * @property {BaseVatGroupResponse} vat.required - The VAT percentage
+ * @property {DineroObjectResponse.model} priceInclVat.required - The price of the product.
+ * @property {BaseVatGroupResponse.model} vat.required - The VAT percentage
  */
 export interface BaseProductResponse extends BaseResponse {
   name: string,
@@ -37,12 +37,12 @@ export interface BaseProductResponse extends BaseResponse {
 /**
  * @typedef {BaseProductResponse} UpdatedProductResponse
  * @property {integer} revision - The revision of the product.
- * @property {BaseUserResponse} owner.required - The owner of the product.
- * @property {ProductCategoryResponse} category.required -
+ * @property {BaseUserResponse.model} owner.required - The owner of the product.
+ * @property {ProductCategoryResponse.model} category.required -
  *           The category the product belongs to.
- * @property {DineroObjectResponse} priceExclVat.required - The price of the product
+ * @property {DineroObjectResponse.model} priceExclVat.required - The price of the product
  *           excluding VAT
- * @property {ProductCategoryResponse} category.required
+ * @property {ProductCategoryResponse.model} category.required
  *  - The category the product belongs to.
  * @property {string} image - The URL to the picture representing this product.
  * @property {number} alcoholPercentage - The percentage of alcohol in this product.
@@ -66,7 +66,7 @@ export interface ProductResponse extends UpdatedProductResponse {
 
 /**
  * @typedef PaginatedProductResponse
- * @property {PaginationResult} _pagination - Pagination metadata
+ * @property {PaginationResult.model} _pagination - Pagination metadata
  * @property {Array.<ProductResponse>} records - Returned products
  */
 export interface PaginatedProductResponse {
