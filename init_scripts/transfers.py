@@ -27,9 +27,9 @@ def sync_transfers(source, target):
                 print(f"insert into transfer(`version`, createdAt, updatedAt, fromId, toId, amount, description) SELECT 0, '2022-07-01 00:00:00.000000', '2022-07-01 00:00:00.000000', g.userId, NULL, {balance}, 'Initial transfer from SuSOS' FROM gewis_user AS g WHERE g.gewisId = {account_number};")
         elif result[3].startswith("e"):
             if balance >= 0:
-                print(f"insert into transfer(`version`, createdAt, updatedAt, fromId, toId, amount, description) SELECT 0, '2022-07-01 00:00:00.000000', '2022-07-01 00:00:00.000000', NULL, u.userId, {balance}, 'Initial transfer from SuSOS' FROM local_user AS u WHERE u.userId = {id};")
+                print(f"insert into transfer(`version`, createdAt, updatedAt, fromId, toId, amount, description) SELECT 0, '2022-07-01 00:00:00.000000', '2022-07-01 00:00:00.000000', NULL, u.userId, {balance}, 'Initial transfer from SuSOS' FROM user AS u WHERE u.id = {id};")
             else:
                 balance *= -1
-                print(f"insert into transfer(`version`, createdAt, updatedAt, fromId, toId, amount, description) SELECT 0, '2022-07-01 00:00:00.000000', '2022-07-01 00:00:00.000000', u.userId, NULL, {balance}, 'Initial transfer from SuSOS' FROM gewis_user AS u WHERE u.userId = {id};")
+                print(f"insert into transfer(`version`, createdAt, updatedAt, fromId, toId, amount, description) SELECT 0, '2022-07-01 00:00:00.000000', '2022-07-01 00:00:00.000000', u.userId, NULL, {balance}, 'Initial transfer from SuSOS' FROM user AS u WHERE u.id = {id};")
 
     #print("Finished sync, committing to database")
