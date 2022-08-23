@@ -14,7 +14,7 @@ def sync_transfers(source, target):
             int(account_number)
         except Exception:
             continue
-        if account_number == "OUDESANNEVANDERLINDEN" or int(account_number) < 1000:
+        if account_number == "OUDESANNEVANDERLINDEN" or (int(account_number) < 1000 and result[3].startswith("g")):
             continue
         balance = result[5]
         fine = result[6]
