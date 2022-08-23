@@ -209,6 +209,9 @@ export default class ContainerService {
         id: response.products_productId,
         revision: response.products_revision,
         alcoholpercentage: response.products_alcoholPercentage,
+        vat_id: response.products_vatId,
+        vat_hidden: response.products_vatHidden,
+        vat_percentage: response.products_vatPercentage,
         category_id: response.products_categoryId,
         category_name: response.category_name,
         createdAt: response.products_createdAt,
@@ -538,7 +541,7 @@ export default class ContainerService {
       const { containers } = p;
       const update: UpdatePointOfSaleParams = {
         containers: containers.map((c) => c.container.id),
-        useAuthentication: true,
+        useAuthentication: p.useAuthentication,
         name: p.name,
         id: p.pointOfSale.id,
       };
