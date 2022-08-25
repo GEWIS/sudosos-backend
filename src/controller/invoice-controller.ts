@@ -53,27 +53,27 @@ export default class InvoiceController extends BaseController {
     return {
       '/': {
         GET: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Invoices', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Invoice', ['*']),
           handler: this.getAllInvoices.bind(this),
         },
         POST: {
           body: { modelName: 'CreateInvoiceRequest' },
-          policy: async (req) => this.roleManager.can(req.token.roles, 'create', 'all', 'Invoices', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'create', 'all', 'Invoice', ['*']),
           handler: this.createInvoice.bind(this),
         },
       },
       '/:id(\\d+)': {
         GET: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'get', await InvoiceController.getRelation(req), 'Invoices', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', await InvoiceController.getRelation(req), 'Invoice', ['*']),
           handler: this.getSingleInvoice.bind(this),
         },
         PATCH: {
           body: { modelName: 'UpdateInvoiceRequest' },
-          policy: async (req) => this.roleManager.can(req.token.roles, 'update', 'all', 'Invoices', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'update', 'all', 'Invoice', ['*']),
           handler: this.updateInvoice.bind(this),
         },
         DELETE: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'delete', 'all', 'Invoices', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'delete', 'all', 'Invoice', ['*']),
           handler: this.deleteInvoice.bind(this),
         },
       },
