@@ -137,7 +137,7 @@ describe('InvoiceController', async () => {
     roleManager.registerRole({
       name: 'Admin',
       permissions: {
-        Invoices: {
+        Invoice: {
           create: all,
           get: all,
           update: all,
@@ -150,7 +150,7 @@ describe('InvoiceController', async () => {
     roleManager.registerRole({
       name: 'User',
       permissions: {
-        Invoices: {
+        Invoice: {
           get: own,
         },
       },
