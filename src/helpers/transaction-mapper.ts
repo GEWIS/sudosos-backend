@@ -76,6 +76,10 @@ export function collectProductsByCategory(categoryMap: Map<number, SubTransactio
   collectByKey<SubTransactionRow>(categoryMap, tSubRow, getKey);
 }
 
+/**
+ * Transforms an array of SubTransactionRows of a single product to TransactionReportEntries
+ * @param productMap
+ */
 export function reduceMapToReportEntries(productMap: Map<string, SubTransactionRow[]>): TransactionReportEntry[] {
   const transactionReportEntries: TransactionReportEntry[] = [];
   productMap.forEach((value) => {
@@ -91,6 +95,10 @@ export function reduceMapToReportEntries(productMap: Map<string, SubTransactionR
   return transactionReportEntries;
 }
 
+/**
+ * Transforms an array of SubTransactionRows with the same product category into TransactionReportCategoryEntries
+ * @param categoryMap
+ */
 export function reduceMapToCategoryEntries(categoryMap: Map<number, SubTransactionRow[]>): TransactionReportCategoryEntry[] {
   const transactionReportEntries: TransactionReportCategoryEntry[] = [];
   categoryMap.forEach((value) => {
@@ -112,6 +120,11 @@ export function reduceMapToCategoryEntries(categoryMap: Map<number, SubTransacti
   return transactionReportEntries;
 }
 
+/**
+ * Transforms an array of SubTransactionRows of the same product into invoice entries.
+ * @param productMap
+ * @param invoice
+ */
 export async function reduceMapToInvoiceEntries(productMap: Map<string, SubTransactionRow[]>, invoice: Invoice): Promise<InvoiceEntry[]> {
   const invoiceEntries: InvoiceEntry[] = [];
   const promises: Promise<any>[] = [];
