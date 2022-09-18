@@ -17,7 +17,6 @@
  */
 import SubTransactionRow from '../entity/transactions/sub-transaction-row';
 import Transaction from '../entity/transactions/transaction';
-import ProductRevision from '../entity/product/product-revision';
 import {
   TransactionReportCategoryEntry,
   TransactionReportEntry,
