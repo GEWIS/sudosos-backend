@@ -19,7 +19,7 @@ import SubTransactionRow from '../entity/transactions/sub-transaction-row';
 import Transaction from '../entity/transactions/transaction';
 import {
   TransactionReportCategoryEntry,
-  TransactionReportEntry,
+  TransactionReportEntry, TransactionReportVatEntry,
 } from '../controller/response/transaction-report-response';
 import Dinero from 'dinero.js';
 import InvoiceEntry from '../entity/invoices/invoice-entry';
@@ -77,6 +77,16 @@ export function collectProductsByCategory(categoryMap: Map<number, SubTransactio
 }
 
 /**
+ * Function that collects transactions by product based on their Vat group
+ * @param vatMap
+ * @param tSubRow
+ */
+export function collectProductsByVat(vatMap: Map<number, SubTransactionRow[]>, tSubRow: SubTransactionRow) {
+  const getKey = (item: SubTransactionRow) => item.product.vat.id;
+  collectByKey<SubTransactionRow>(vatMap, tSubRow, getKey);
+}
+
+/**
  * Transforms an array of SubTransactionRows of a single product to TransactionReportEntries
  * @param productMap
  */
@@ -96,20 +106,54 @@ export function reduceMapToReportEntries(productMap: Map<string, SubTransactionR
 }
 
 /**
+ * Extracts the total including and excluding vat from the given transactions
+ * @param subTransactionRows
+ */
+function extractVatInfoTransactions(subTransactionRows: SubTransactionRow[]) {
+  let totalInclVat = 0;
+  let totalExclVat = 0;
+  subTransactionRows.forEach((row) => {
+    const amountInclVat = row.product.priceInclVat.getAmount() * row.amount;
+    totalInclVat += amountInclVat;
+    const amountExclVat: number = amountInclVat / (1 + (row.product.vat.percentage / 100));
+    totalExclVat += amountExclVat;
+  });
+  return {
+    totalInclVat,
+    totalExclVat,
+  };
+}
+
+/**
+ * Transforms an array of SubTransactionRows with the same VAT group into TransactionReportVatEntries
+ * @param vatMap
+ */
+export function reduceMapToVatEntries(vatMap: Map<number, SubTransactionRow[]>): TransactionReportVatEntry[] {
+  const transactionReportEntries: TransactionReportVatEntry[] = [];
+  vatMap.forEach((value) => {
+    const info = extractVatInfoTransactions(value);
+    const totalInclVat = info.totalInclVat;
+    const totalExclVat = info.totalExclVat;
+    const entry: TransactionReportVatEntry = {
+      vat: value[0].product.vat,
+      totalExclVat,
+      totalInclVat: Dinero({ amount: totalInclVat }),
+    };
+    transactionReportEntries.push(entry);
+  });
+  return transactionReportEntries;
+}
+
+/**
  * Transforms an array of SubTransactionRows with the same product category into TransactionReportCategoryEntries
  * @param categoryMap
  */
 export function reduceMapToCategoryEntries(categoryMap: Map<number, SubTransactionRow[]>): TransactionReportCategoryEntry[] {
   const transactionReportEntries: TransactionReportCategoryEntry[] = [];
   categoryMap.forEach((value) => {
-    let totalInclVat = 0;
-    let totalExclVat = 0;
-    value.forEach((row) => {
-      const amountInclVat = row.product.priceInclVat.getAmount() * row.amount;
-      totalInclVat += amountInclVat;
-      const amountExclVat: number = amountInclVat / (1 + (row.product.vat.percentage / 100));
-      totalExclVat += amountExclVat;
-    });
+    const info = extractVatInfoTransactions(value);
+    const totalInclVat = info.totalInclVat;
+    const totalExclVat = info.totalExclVat;
     const entry: TransactionReportCategoryEntry = {
       category: value[0].product.category,
       totalExclVat,

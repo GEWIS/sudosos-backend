@@ -33,7 +33,7 @@ import {
   parseContainerToBaseResponse,
   parsePOSToBasePOS,
   parseProductToBaseResponse,
-  parseUserToBaseResponse,
+  parseUserToBaseResponse, parseVatGroupToResponse,
 } from '../helpers/revision-to-response';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import {
@@ -52,14 +52,19 @@ import BalanceService from './balance-service';
 import { asDate, asNumber } from '../helpers/validators';
 import { PaginationParameters } from '../helpers/pagination';
 import { toMySQLString } from '../helpers/timestamps';
-import { TransactionReportData } from '../controller/response/transaction-report-response';
+import {
+  TransactionReport, TransactionReportCategoryEntryResponse,
+  TransactionReportData, TransactionReportDataResponse, TransactionReportEntryResponse,
+  TransactionReportResponse, TransactionReportVatEntryResponse,
+} from '../controller/response/transaction-report-response';
 import {
   collectProductsByCategory,
-  collectProductsByRevision,
+  collectProductsByRevision, collectProductsByVat,
   reduceMapToCategoryEntries,
-  reduceMapToReportEntries,
+  reduceMapToReportEntries, reduceMapToVatEntries,
   transactionMapper,
 } from '../helpers/transaction-mapper';
+import ProductCategoryService from './product-category-service';
 
 export interface TransactionFilterParameters {
   transactionId?: number | number[],
@@ -719,6 +724,87 @@ export default class TransactionService {
   }
 
   /**
+   * Converts a transactionReport to a TransactionReportResponse
+   * @param transactionReport
+   * @private
+   */
+  private static transactionReportToResponse(transactionReport: TransactionReport): TransactionReportResponse {
+    const categories: TransactionReportCategoryEntryResponse[] = [];
+    transactionReport.data.categories.forEach((entry) => {
+      const category: TransactionReportCategoryEntryResponse = {
+        category: ProductCategoryService.asProductCategoryResponse(entry.category),
+        totalExclVat: Dinero({ amount : Math.round(entry.totalExclVat) }).toObject(),
+        totalInclVat: entry.totalInclVat.toObject() as DineroObjectResponse,
+      };
+      categories.push(category);
+    });
+
+    let totalExclVat = 0;
+    let totalInclVat = 0;
+
+    const entries: TransactionReportEntryResponse[] = [];
+    transactionReport.data.entries.forEach((productEntry) => {
+      const count = productEntry.count;
+      const amountInclVat = productEntry.product.priceInclVat.getAmount() * count;
+      const amountExclVat = amountInclVat / (1 + (productEntry.product.vat.percentage / 100));
+      totalInclVat += amountInclVat;
+      totalExclVat += amountExclVat;
+      const entry: TransactionReportEntryResponse = {
+        count,
+        product: parseProductToBaseResponse(productEntry.product, false),
+        totalExclVat: Dinero({ amount: Math.round(amountExclVat) }).toObject(),
+        totalInclVat: Dinero({ amount: amountInclVat }).toObject(),
+      };
+      entries.push(entry);
+    });
+
+    const vat: TransactionReportVatEntryResponse[] = [];
+    transactionReport.data.vat.forEach((vatEntry) => {
+      const entry: TransactionReportVatEntryResponse = {
+        totalExclVat: Dinero({ amount: Math.round(vatEntry.totalExclVat) }).toObject(),
+        totalInclVat: vatEntry.totalInclVat.toObject(),
+        vat: parseVatGroupToResponse(vatEntry.vat),
+      };
+      vat.push(entry);
+    });
+
+    const data: TransactionReportDataResponse = {
+      categories,
+      entries,
+      vat,
+    };
+
+    return {
+      data,
+      parameters: transactionReport.parameters,
+      totalExclVat: Dinero({ amount: Math.round(totalExclVat) }).toObject(),
+      totalInclVat: Dinero({ amount: totalInclVat }).toObject(),
+    };
+  }
+
+  /**
+   * Generates a transaction report object from the given transaction filter parameters
+   * @param parameters - Parameters describing what should be included in the report
+   */
+  public static async getTransactionReport(parameters: TransactionFilterParameters): Promise<TransactionReport> {
+    const baseTransactions = (await TransactionService.getTransactions(parameters)).records;
+    const transactionReportData = await this.getTransactionReportData(baseTransactions);
+    return {
+      data: transactionReportData,
+      parameters,
+    };
+  }
+
+  /**
+   * Creates a transaction report response from the given parameters
+   * @param parameters
+   */
+  public static async getTransactionReportResponse(parameters: TransactionFilterParameters): Promise<TransactionReportResponse> {
+    const transactionReport = await this.getTransactionReport(parameters);
+    return this.transactionReportToResponse(transactionReport);
+  }
+
+  /**
    * Creates TransactionReportData for the given baseTransactions
    * @param baseTransactions - Transactions to parse
    */
@@ -728,6 +814,7 @@ export default class TransactionService {
       where: { id: In(ids) },
       relations: [
         'subTransactions',
+        'subTransactions.to',
         'subTransactions.subTransactionRows',
         'subTransactions.subTransactionRows.product',
         'subTransactions.subTransactionRows.product.category',
@@ -737,16 +824,19 @@ export default class TransactionService {
     });
 
     const productEntryMap = new Map<string, SubTransactionRow[]>();
+    const vatEntryMap = new Map<number, SubTransactionRow[]>();
     const categoryEntryMap = new Map<number, SubTransactionRow[]>();
 
     transactionMapper(transactions, (tSubRow) => {
       collectProductsByRevision(productEntryMap, tSubRow);
       collectProductsByCategory(categoryEntryMap, tSubRow);
+      collectProductsByVat(vatEntryMap, tSubRow);
     });
 
     return {
       categories: reduceMapToCategoryEntries(categoryEntryMap),
       entries: reduceMapToReportEntries(productEntryMap),
+      vat: reduceMapToVatEntries(vatEntryMap),
     };
   }
 }

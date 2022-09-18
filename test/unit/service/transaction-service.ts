@@ -33,7 +33,7 @@ import {
   seedUsers,
   seedVatGroups,
 } from '../../seed';
-import TransactionService from '../../../src/service/transaction-service';
+import TransactionService, { TransactionFilterParameters } from '../../../src/service/transaction-service';
 import { verifyBaseTransactionEntity } from '../validators';
 import Swagger from '../../../src/start/swagger';
 import {
@@ -938,7 +938,8 @@ describe('TransactionService', (): void => {
   describe('getTransactionReportData function', () => {
     it('should get all data for the transaction report', async () => {
       const transaction = ctx.transactions[0];
-      const baseTransactions = (await TransactionService.getTransactions({ fromDate: new Date(2000, 0, 0), tillDate: new Date(2050, 0, 0), toId: transaction.subTransactions[0].to.id })).records;
+      const id = transaction.subTransactions[0].to.id;
+      const baseTransactions = (await TransactionService.getTransactions({ fromDate: new Date(2000, 0, 0), tillDate: new Date(2050, 0, 0), toId: id })).records;
       const transactionReportData = await TransactionService.getTransactionReportData(baseTransactions);
 
       const value = baseTransactions.reduce((sum, current) => {
@@ -950,9 +951,32 @@ describe('TransactionService', (): void => {
       const categoryValue = transactionReportData.categories.reduce((sum, current) => {
         return sum += current.totalInclVat.getAmount();
       }, 0);
+      const vatValue = transactionReportData.vat.reduce((sum, current) => {
+        return sum += current.totalInclVat.getAmount();
+      }, 0);
 
       expect(dataValue).to.equal(value);
       expect(categoryValue).to.equal(value);
+      expect(vatValue).to.equal(value);
+    });
+  });
+
+  describe('getTransactionReportResponse', () => {
+    it('should create a transaction report response', async () => {
+      const transaction = ctx.transactions[1];
+      const parameters: TransactionFilterParameters = {
+        fromDate: new Date(2000, 0, 0),
+        tillDate: new Date(2050, 0, 0),
+        toId: transaction.subTransactions[0].to.id,
+      };
+      const report = await TransactionService.getTransactionReportResponse(parameters);
+      const transactions = (await TransactionService.getTransactions(parameters)).records;
+      let total = 0;
+      transactions.forEach((t) => {
+        total += t.value.amount;
+      });
+
+      expect(report.totalInclVat.amount).to.equal(total);
     });
   });
 });

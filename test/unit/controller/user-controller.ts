@@ -57,6 +57,8 @@ import { AcceptTosRequest } from '../../../src/controller/request/accept-tos-req
 import UpdateUserRequest from '../../../src/controller/request/update-user-request';
 import StripeDeposit from '../../../src/entity/deposit/stripe-deposit';
 import { StripeDepositResponse } from '../../../src/controller/response/stripe-response';
+import { TransactionReportResponse } from '../../../src/controller/response/transaction-report-response';
+import TransactionService from '../../../src/service/transaction-service';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -1147,6 +1149,61 @@ describe('UserController', (): void => {
         .get('/users/12345/transactions')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(404);
+    });
+  });
+  describe('GET /users/:id/transactions/report', () => {
+    it.skip('should return the correct model', async () => {
+      const user = ctx.transactions[0].subTransactions[0].to;
+      const fromDate = new Date(2000, 0, 0);
+      const tillDate = new Date(2050, 0, 0);
+      const toId = user.id;
+
+      const res = await request(ctx.app)
+        .get(`/users/${user.id}/transactions/report`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query({ toId, fromDate, tillDate });
+
+      expect(res.status).to.equal(200);
+      const validation = ctx.specification.validateModel(
+        'TransactionReportResponse',
+        res.body,
+        true,
+        true,
+      );
+      expect(validation.valid).to.be.true;
+    });
+    it('should create a transaction report', async () => {
+      const user = ctx.transactions[0].subTransactions[0].to;
+      const fromDate = new Date(2000, 0, 0);
+      const tillDate = new Date(2050, 0, 0);
+      const toId = user.id;
+
+      const res = await request(ctx.app)
+        .get(`/users/${user.id}/transactions/report`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query({ toId, fromDate, tillDate });
+      const report = res.body as TransactionReportResponse;
+
+      expect(res.status).to.equal(200);
+
+      const productSum = report.data.entries.reduce((sum, current) => {
+        return sum += current.totalInclVat.amount;
+      }, 0);
+      const catSum = report.data.categories.reduce((sum, current) => {
+        return sum += current.totalInclVat.amount;
+      }, 0);
+      const vatSum = report.data.vat.reduce((sum, current) => {
+        return sum += current.totalInclVat.amount;
+      }, 0);
+
+      const transactions = (await TransactionService.getTransactions({ fromDate, tillDate, toId })).records;
+      let sum = 0;
+      transactions.forEach((t) => sum += t.value.amount);
+
+      expect(productSum).to.equal(report.totalInclVat.amount);
+      expect(catSum).to.equal(report.totalInclVat.amount);
+      expect(vatSum).to.equal(report.totalInclVat.amount);
+      expect(report.totalInclVat.amount).to.equal(sum);
     });
   });
   describe('GET /users/:id/transfers', () => {
