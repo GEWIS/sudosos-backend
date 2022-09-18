@@ -46,6 +46,7 @@ import User from '../entity/user/user';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
 import SubTransactionRow from '../entity/transactions/sub-transaction-row';
 import { parseUserToBaseResponse } from '../helpers/revision-to-response';
+import { collectProductsByRevision, reduceMapToInvoiceEntries, transactionMapper } from '../helpers/transaction-mapper';
 
 export interface InvoiceFilterParameters {
   /**
@@ -189,45 +190,14 @@ export default class InvoiceService {
       ],
     });
 
-    // Collect invoices entries and promises.
-    const invoiceEntries: InvoiceEntry[] = [];
-    const promises: Promise<any>[] = [];
-
     // Cumulative entries.
-    const entryMap = new Map<string, InvoiceEntry>();
+    const entryMap = new Map<string, SubTransactionRow[]>();
 
-    // Loop through transactions
-    transactions.forEach((t) => {
-      t.subTransactions.forEach((tSub) => {
-        tSub.subTransactionRows.forEach((tSubRow) => {
-          // Use a string of revision + id as key
-          const key = JSON.stringify({
-            revision: tSubRow.product.revision,
-            id: tSubRow.product.product.id,
-          });
-          // Increase amount
-          if (entryMap.has(key)) {
-            entryMap.get(key).amount += tSubRow.amount;
-          } else {
-            // Or create new entry
-            const entry = Object.assign(new InvoiceEntry(), {
-              invoice,
-              description: tSubRow.product.name,
-              amount: tSubRow.amount,
-              priceInclVat: tSubRow.product.priceInclVat,
-              vatPercentage: tSubRow.product.vat.percentage,
-            });
-            entryMap.set(key, entry);
-
-            // collect promises.
-            promises.push(InvoiceEntry.save(entry).then((i) => invoiceEntries.push(i)));
-          }
-        });
-      });
+    transactionMapper(transactions, (tSubRow) => {
+      collectProductsByRevision(entryMap, tSubRow);
     });
 
-    // Await and return
-    await Promise.all(promises);
+    const invoiceEntries: InvoiceEntry[] = await reduceMapToInvoiceEntries(entryMap, invoice);
     return invoiceEntries;
   }
 

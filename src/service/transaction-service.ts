@@ -15,8 +15,9 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { Brackets, createQueryBuilder, SelectQueryBuilder } from 'typeorm';
-import Dinero, { DineroObject } from 'dinero.js';
+import { Brackets, createQueryBuilder, In, SelectQueryBuilder } from 'typeorm';
+import Dinero from 'dinero.js';
+import dinero, { DineroObject } from 'dinero.js';
 import { RequestWithToken } from '../middleware/token-middleware';
 import {
   BaseTransactionResponse,
@@ -51,6 +52,14 @@ import BalanceService from './balance-service';
 import { asDate, asNumber } from '../helpers/validators';
 import { PaginationParameters } from '../helpers/pagination';
 import { toMySQLString } from '../helpers/timestamps';
+import { TransactionReportData } from '../controller/response/transaction-report-response';
+import {
+  collectProductsByCategory,
+  collectProductsByRevision,
+  reduceMapToCategoryEntries,
+  reduceMapToReportEntries,
+  transactionMapper,
+} from '../helpers/transaction-mapper';
 
 export interface TransactionFilterParameters {
   transactionId?: number | number[],
@@ -115,7 +124,10 @@ export default class TransactionService {
     }));
 
     // sum the costs
-    const totalCost = rowCosts.reduce((total, current) => total.add(current));
+    let totalCost = dinero({ amount: 0 });
+    if (rowCosts.length > 0) {
+      totalCost = rowCosts.reduce((total, current) => total.add(current));
+    }
 
     return totalCost;
   }
@@ -704,5 +716,33 @@ export default class TransactionService {
 
     // return deleted transaction
     return transaction;
+  }
+
+  public static async getTransactionReportData(baseTransactions: BaseTransactionResponse[]): Promise<TransactionReportData> {
+    const ids = baseTransactions.map((t) => t.id);
+    const transactions = await Transaction.find({
+      where: { id: In(ids) },
+      relations: [
+        'subTransactions',
+        'subTransactions.subTransactionRows',
+        'subTransactions.subTransactionRows.product',
+        'subTransactions.subTransactionRows.product.category',
+        'subTransactions.subTransactionRows.product.product',
+        'subTransactions.subTransactionRows.product.vat',
+      ],
+    });
+
+    const productEntryMap = new Map<string, SubTransactionRow[]>();
+    const categoryEntryMap = new Map<number, SubTransactionRow[]>();
+
+    transactionMapper(transactions, (tSubRow) => {
+      collectProductsByRevision(productEntryMap, tSubRow);
+      collectProductsByCategory(categoryEntryMap, tSubRow);
+    });
+
+    return {
+      categories: reduceMapToCategoryEntries(categoryEntryMap),
+      entries: reduceMapToReportEntries(productEntryMap),
+    };
   }
 }

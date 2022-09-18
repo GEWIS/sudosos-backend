@@ -934,4 +934,25 @@ describe('TransactionService', (): void => {
       });
     });
   });
+
+  describe('getTransactionReportData function', () => {
+    it('should get all data for the transaction report', async () => {
+      const transaction = ctx.transactions[0];
+      const baseTransactions = (await TransactionService.getTransactions({ fromDate: new Date(2000, 0, 0), tillDate: new Date(2050, 0, 0), toId: transaction.subTransactions[0].to.id })).records;
+      const transactionReportData = await TransactionService.getTransactionReportData(baseTransactions);
+
+      const value = baseTransactions.reduce((sum, current) => {
+        return sum += current.value.amount;
+      }, 0);
+      const dataValue = transactionReportData.entries.reduce((sum, current) => {
+        return sum += current.count * current.product.priceInclVat.getAmount();
+      }, 0);
+      const categoryValue = transactionReportData.categories.reduce((sum, current) => {
+        return sum += current.totalInclVat.getAmount();
+      }, 0);
+
+      expect(dataValue).to.equal(value);
+      expect(categoryValue).to.equal(value);
+    });
+  });
 });
