@@ -718,6 +718,10 @@ export default class TransactionService {
     return transaction;
   }
 
+  /**
+   * Creates TransactionReportData for the given baseTransactions
+   * @param baseTransactions - Transactions to parse
+   */
   public static async getTransactionReportData(baseTransactions: BaseTransactionResponse[]): Promise<TransactionReportData> {
     const ids = baseTransactions.map((t) => t.id);
     const transactions = await Transaction.find({
