@@ -44,12 +44,13 @@ export interface UpdateInvoiceRequest extends BaseUpdateInvoice {
 }
 
 export interface BaseInvoice {
-  toId: number,
+  forId: number,
   addressee: string,
   description: string,
   customEntries?: InvoiceEntryRequest[],
   transactionIDs?: number[],
   fromDate?: string,
+  isCreditInvoice: boolean,
 }
 
 export interface CreateInvoiceParams extends BaseInvoice {
@@ -58,13 +59,14 @@ export interface CreateInvoiceParams extends BaseInvoice {
 
 /**
  * @typedef CreateInvoiceRequest
- * @property {integer} toId.required - The recipient of the Invoice.
+ * @property {integer} forId.required - The recipient of the Invoice.
  * @property {integer} byId - The creator of the Invoice, defaults to the ID of the requester.
  * @property {string} addressee.required - Name of the addressed.
  * @property {string} description.required - The description of the invoice.
  * @property {Array.<InvoiceEntryRequest>} customEntries - Custom entries to be added to the invoice
  * @property {Array.<integer>} transactionIDs - IDs of the transactions to add to the Invoice.
  * @property {string} fromDate - For creating an Invoice for all transactions from a specific date.
+ * @property {boolean} isCreditInvoice.required - If the invoice is an credit Invoice
  */
 export interface CreateInvoiceRequest extends BaseInvoice {
   byId?: number,

@@ -804,30 +804,49 @@ export default class TransactionService {
     return this.transactionReportToResponse(transactionReport);
   }
 
-  /**
-   * Creates TransactionReportData for the given baseTransactions
-   * @param baseTransactions - Transactions to parse
-   */
-  public static async getTransactionReportData(baseTransactions: BaseTransactionResponse[]): Promise<TransactionReportData> {
+  public static async getTransactionsFromBaseTransactions(baseTransactions: BaseTransactionResponse[], dropInvoiced = true): Promise<Transaction[]> {
     const ids = baseTransactions.map((t) => t.id);
-    const transactions = await Transaction.find({
-      where: { id: In(ids) },
+
+    let transactions = await Transaction.find({
+      where: {
+        id: In(ids),
+      },
       relations: [
         'subTransactions',
+        'from',
         'subTransactions.to',
         'subTransactions.subTransactionRows',
         'subTransactions.subTransactionRows.product',
         'subTransactions.subTransactionRows.product.category',
         'subTransactions.subTransactionRows.product.product',
         'subTransactions.subTransactionRows.product.vat',
+        'subTransactions.subTransactionRows.invoice',
       ],
     });
+
+    // Don't consider transactions from invoice accounts
+    if (dropInvoiced) {
+      const invoiceUsers = new Set((await User.find({ where: { type: In([UserType.INVOICE, UserType.AUTOMATIC_INVOICE]) } })).map((u) => u.id));
+      transactions = transactions.filter((t) => !invoiceUsers.has(t.from.id));
+    }
+
+    return transactions;
+  }
+
+  /**
+   * Creates TransactionReportData for the given baseTransactions
+   * @param baseTransactions - Transactions to parse
+   * @param dropInvoiced - If invoiced SubTransactionRows should be ignored, defaults to true
+   */
+  public static async getTransactionReportData(baseTransactions: BaseTransactionResponse[], dropInvoiced = true): Promise<TransactionReportData> {
+    const transactions = await this.getTransactionsFromBaseTransactions(baseTransactions, dropInvoiced);
 
     const productEntryMap = new Map<string, SubTransactionRow[]>();
     const vatEntryMap = new Map<number, SubTransactionRow[]>();
     const categoryEntryMap = new Map<number, SubTransactionRow[]>();
 
     transactionMapper(transactions, (tSubRow) => {
+      if (dropInvoiced && tSubRow.invoice) return;
       collectProductsByRevision(productEntryMap, tSubRow);
       collectProductsByCategory(categoryEntryMap, tSubRow);
       collectProductsByVat(vatEntryMap, tSubRow);

@@ -31,7 +31,8 @@ import {
   seedPointsOfSale,
   seedProductCategories,
   seedTransactions,
-  seedUsers, seedVatGroups,
+  seedUsers,
+  seedVatGroups,
 } from '../../seed';
 import Swagger from '../../../src/start/swagger';
 import {
@@ -102,14 +103,17 @@ function returnsAll(response: T[], supeset: Invoice[], mapping: any) {
     .to.deep.equalInAnyOrder(supeset.map(mapping));
 }
 
-export async function createInvoiceWithTransfers(debtorId: number, creditorId: number,
-  transactionCount: number) {
+export async function createTransactions(debtorId: number, creditorId: number, transactionCount: number) {
   const transactions: TransactionRequest[] = await createTransactionRequest(
     debtorId, creditorId, transactionCount,
   );
-  expect((await BalanceService.getBalance(debtorId)).amount.amount).is.equal(0);
   await new Promise((f) => setTimeout(f, 100));
-  const { tIds, cost } = await requestToTransaction(transactions);
+  return Promise.resolve(requestToTransaction(transactions));
+}
+
+export async function createInvoiceWithTransfers(debtorId: number, creditorId: number,
+  transactionCount: number) {
+  const { tIds, cost } = await createTransactions(debtorId, creditorId, transactionCount);
   await new Promise((f) => setTimeout(f, 1000));
   expect((await BalanceService.getBalance(debtorId)).amount.amount).is.equal(-1 * cost);
 
@@ -117,8 +121,9 @@ export async function createInvoiceWithTransfers(debtorId: number, creditorId: n
     byId: creditorId,
     addressee: 'Addressee',
     description: 'Description',
-    toId: debtorId,
+    forId: debtorId,
     transactionIDs: tIds,
+    isCreditInvoice: false,
   };
 
   const invoice = await InvoiceService.createInvoice(createInvoiceRequest);
@@ -202,7 +207,7 @@ describe('InvoiceService', () => {
 
       expect(transactions).to.not.be.empty;
       const transfer: TransferResponse = (
-        await InvoiceService.createTransferFromTransactions(toId, transactions));
+        await InvoiceService.createTransferFromTransactions(toId, transactions, false));
       expect(transfer.amount.amount).to.be.equal(value);
       expect(transfer.to.id).to.be.equal(toId);
     });
@@ -234,8 +239,9 @@ describe('InvoiceService', () => {
           byId: creditor.id,
           addressee: 'Addressee',
           description: 'Description',
-          toId: debtor.id,
+          forId: debtor.id,
           fromDate: new Date().toISOString(),
+          isCreditInvoice: false,
         };
 
         await new Promise((f) => setTimeout(f, 1000));
@@ -273,7 +279,8 @@ describe('InvoiceService', () => {
           byId: creditor.id,
           addressee: 'Addressee',
           description: 'Description',
-          toId: debtor.id,
+          forId: debtor.id,
+          isCreditInvoice: false,
         };
 
         const first = await requestToTransaction(transactions);
@@ -306,7 +313,8 @@ describe('InvoiceService', () => {
           byId: creditor.id,
           addressee: 'Addressee',
           description: 'Description',
-          toId: debtor.id,
+          forId: debtor.id,
+          isCreditInvoice: false,
         };
 
         // Spent more money.
@@ -337,7 +345,8 @@ describe('InvoiceService', () => {
           byId: creditor.id,
           addressee: 'Addressee',
           description: 'Description',
-          toId: debtor.id,
+          forId: debtor.id,
+          isCreditInvoice: false,
           transactionIDs: tIds,
         };
 
@@ -456,7 +465,8 @@ describe('InvoiceService', () => {
           byId: creditor.id,
           addressee: 'Addressee',
           description: 'Description',
-          toId: debtor.id,
+          forId: debtor.id,
+          isCreditInvoice: false,
           transactionIDs: tIds,
         };
 
@@ -490,6 +500,49 @@ describe('InvoiceService', () => {
             });
           });
         });
+      });
+    });
+  });
+  describe('markInvoicePayed function', () => {
+    it('should subtract amount from sellers', async () => {
+      await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
+        const invoice = await createInvoiceWithTransfers(debtor.id, creditor.id, 1);
+        let creditorBalance = await BalanceService.getBalance(creditor.id);
+        expect(creditorBalance.amount.amount).to.equal(invoice.transfer.amount.amount);
+
+        await InvoiceService.updateInvoice({ addressee: invoice.addressee, byId: creditor.id, description: invoice.description, invoiceId: invoice.id, state: InvoiceState.PAID });
+        creditorBalance = await BalanceService.getBalance(creditor.id);
+        const debtorBalance = await BalanceService.getBalance(debtor.id);
+        expect(creditorBalance.amount.amount).to.equal(0);
+        expect(debtorBalance.amount.amount).to.equal(0);
+      });
+    });
+    it('should subtract amount from multiple sellers', async () => {
+      await inUserContext((await UserFactory()).clone(3), async (debtor: User, creditor: User, secondCreditor) => {
+        const transactions = [];
+        transactions.push(...(await createTransactions(debtor.id, creditor.id, 3)).tIds);
+        transactions.push(...(await createTransactions(debtor.id, secondCreditor.id, 2)).tIds);
+
+        const createInvoiceRequest: CreateInvoiceParams = {
+          byId: creditor.id,
+          addressee: 'Addressee',
+          description: 'Description',
+          forId: debtor.id,
+          transactionIDs: transactions,
+          isCreditInvoice: false,
+        };
+
+        const invoice = await InvoiceService.createInvoice(createInvoiceRequest);
+        let debtorBalance = await BalanceService.getBalance(debtor.id);
+        expect(debtorBalance.amount.amount).to.equal(0);
+
+        await InvoiceService.updateInvoice({ addressee: invoice.addressee, byId: creditor.id, description: invoice.description, invoiceId: invoice.id, state: InvoiceState.PAID });
+        const creditorBalance = await BalanceService.getBalance(creditor.id);
+        const secondCreditorBalance = await BalanceService.getBalance(creditor.id);
+        debtorBalance = await BalanceService.getBalance(debtor.id);
+        expect(creditorBalance.amount.amount).to.equal(0);
+        expect(secondCreditorBalance.amount.amount).to.equal(0);
+        expect(debtorBalance.amount.amount).to.equal(0);
       });
     });
   });

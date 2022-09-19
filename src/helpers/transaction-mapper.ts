@@ -24,6 +24,7 @@ import {
 import Dinero from 'dinero.js';
 import InvoiceEntry from '../entity/invoices/invoice-entry';
 import Invoice from '../entity/invoices/invoice';
+import SubTransaction from '../entity/transactions/sub-transaction';
 
 /**
  * Applies a function to all SubTransactionRows of the given transactions.
@@ -84,6 +85,16 @@ export function collectProductsByCategory(categoryMap: Map<number, SubTransactio
 export function collectProductsByVat(vatMap: Map<number, SubTransactionRow[]>, tSubRow: SubTransactionRow) {
   const getKey = (item: SubTransactionRow) => item.product.vat.id;
   collectByKey<SubTransactionRow>(vatMap, tSubRow, getKey);
+}
+
+/**
+ * Function that collects transaction by user ToId
+ * @param toIdMap
+ * @param tSub
+ */
+export function collectByToId(toIdMap: Map<number, SubTransaction[]>, tSub: SubTransaction) {
+  const getKey = (item: SubTransaction) => item.to.id;
+  collectByKey<SubTransaction>(toIdMap, tSub, getKey);
 }
 
 /**

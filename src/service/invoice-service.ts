@@ -37,16 +37,20 @@ import { DineroObjectRequest } from '../controller/request/dinero-request';
 import { TransferResponse } from '../controller/response/transfer-response';
 import { BaseTransactionResponse } from '../controller/response/transaction-response';
 import { RequestWithToken } from '../middleware/token-middleware';
-import {
-  asBoolean, asDate, asInvoiceState, asNumber,
-} from '../helpers/validators';
+import { asBoolean, asDate, asInvoiceState, asNumber } from '../helpers/validators';
 import { PaginationParameters } from '../helpers/pagination';
 import InvoiceEntryRequest from '../controller/request/invoice-entry-request';
 import User from '../entity/user/user';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
 import SubTransactionRow from '../entity/transactions/sub-transaction-row';
 import { parseUserToBaseResponse } from '../helpers/revision-to-response';
-import { collectProductsByRevision, reduceMapToInvoiceEntries, transactionMapper } from '../helpers/transaction-mapper';
+import {
+  collectByToId,
+  collectProductsByRevision,
+  reduceMapToInvoiceEntries,
+  transactionMapper,
+} from '../helpers/transaction-mapper';
+import SubTransaction from '../entity/transactions/sub-transaction';
 
 export interface InvoiceFilterParameters {
   /**
@@ -145,11 +149,12 @@ export default class InvoiceService {
 
   /**
    * Creates a Transfer for an Invoice from TransactionResponses
-   * @param toId - The user which receives the Invoice/Transfer
+   * @param forId - The user which receives the Invoice/Transfer
    * @param transactions - The array of transactions which to create the Transfer for
+   * @param isCreditInvoice - If the invoice is a credit Invoice
    */
-  public static async createTransferFromTransactions(toId: number,
-    transactions: BaseTransactionResponse[]): Promise<TransferResponse> {
+  public static async createTransferFromTransactions(forId: number,
+    transactions: BaseTransactionResponse[], isCreditInvoice: boolean): Promise<TransferResponse> {
     const dineroObjectRequest: DineroObjectRequest = {
       amount: 0,
       currency: dinero.defaultCurrency,
@@ -160,10 +165,18 @@ export default class InvoiceService {
       transactions.forEach((t) => { dineroObjectRequest.amount += t.value.amount; });
     }
 
+    // Credit Invoices
+    let fromId = 0;
+    let toId = forId;
+    if (isCreditInvoice) {
+      toId = 0;
+      fromId = forId;
+    }
+
     const transferRequest: TransferRequest = {
       amount: dineroObjectRequest,
       description: 'Invoice Transfer',
-      fromId: 0,
+      fromId,
       toId,
     };
 
@@ -228,6 +241,11 @@ export default class InvoiceService {
       .state === state);
   }
 
+  /**
+   * Deletes the given invoice and makes an undo transfer
+   * @param invoiceId
+   * @param byId
+   */
   public static async deleteInvoice(invoiceId: number, byId: number)
     : Promise<BaseInvoiceResponse | undefined> {
     // Find base invoice.
@@ -286,6 +304,60 @@ export default class InvoiceService {
   }
 
   /**
+   * When an Invoice is paid we subtract the relevant balance from the sellers
+   * @param invoiceId
+   */
+  public static async createTransfersPaidInvoice(invoiceId: number): Promise<BaseInvoiceResponse | undefined> {
+    // By marking an invoice as paid we subtract the money from the seller accounts.
+    // Find base invoice.
+    const invoice = await Invoice.findOne({ where: { id: invoiceId }, relations: ['to', 'invoiceStatus', 'transfer', 'transfer.to', 'transfer.from'] });
+    if (!invoice) return undefined;
+
+    const toIdMap = new Map<number, SubTransaction[]>();
+
+    const baseTransactions = (await TransactionService.getTransactions({ invoiceId })).records;
+    const transactions = await TransactionService.getTransactionsFromBaseTransactions(baseTransactions);
+
+    // Collect SubTransactions per Seller
+    transactions.forEach((t) => {
+      t.subTransactions.forEach((tSub) => {
+        collectByToId(toIdMap, tSub);
+      });
+    });
+
+    const transferRequests: TransferRequest[] = [];
+
+    // For every seller involved in the Invoice
+    toIdMap.forEach((value, key) => {
+      const fromId = key;
+      let totalInclVat = 0;
+
+      // Collect value of transfer
+      value.forEach((tSub) => {
+        tSub.subTransactionRows.forEach((tSubRow) => {
+          totalInclVat += tSubRow.amount * tSubRow.product.priceInclVat.getAmount();
+        });
+      });
+
+      // Create transfer
+      const transferRequest: TransferRequest = {
+        amount: {
+          amount: totalInclVat,
+          precision: dinero.defaultPrecision,
+          currency: dinero.defaultCurrency,
+        },
+        description: `Payment of Invoice #${invoice.id}`,
+        fromId,
+        toId: 0,
+      };
+
+      transferRequests.push(transferRequest);
+    });
+
+    await Promise.all(transferRequests.map((t) => TransferService.postTransfer(t)));
+  }
+
+  /**
    * Updates the Invoice
    *
    * It is not possible to change the amount or details of the transfer itself.
@@ -296,13 +368,16 @@ export default class InvoiceService {
     const base: Invoice = await Invoice.findOne({ where: { id: update.invoiceId }, relations: ['invoiceStatus'] });
 
     // Return undefined if base does not exist.
-    if (!base || this.isState(base, InvoiceState.DELETED)) {
+    if (!base || this.isState(base, InvoiceState.DELETED) || this.isState(base, InvoiceState.PAID)) {
       return undefined;
     }
 
     if (update.state) {
       // Deleting is a special case of an update.
       if (update.state === InvoiceState.DELETED) return this.deleteInvoice(base.id, update.byId);
+
+      // When setting an Invoice to Paid we also create extra transfers to correct balances.
+      if (update.state === InvoiceState.PAID) await this.createTransfersPaidInvoice(base.id);
 
       const invoiceStatus: InvoiceStatus = Object.assign(new InvoiceStatus(), {
         invoice: base,
@@ -372,10 +447,10 @@ export default class InvoiceService {
    */
   public static async createInvoice(invoiceRequest: CreateInvoiceParams)
     : Promise<InvoiceResponse> {
-    const { toId, byId } = invoiceRequest;
+    const { forId, byId, isCreditInvoice } = invoiceRequest;
     let params: TransactionFilterParameters;
 
-    const user = await User.findOne({ where: { id: toId } });
+    const user = await User.findOne({ where: { id: forId } });
     // If transactions are specified.
     if (invoiceRequest.transactionIDs) {
       params = { transactionId: invoiceRequest.transactionIDs };
@@ -383,7 +458,7 @@ export default class InvoiceService {
       params = { fromDate: asDate(invoiceRequest.fromDate) };
     } else {
       // By default we create an Invoice from all transactions since last invoice.
-      const latestInvoice = await this.getLatestValidInvoice(toId);
+      const latestInvoice = await this.getLatestValidInvoice(forId);
       let date;
       // If no invoice exists we use the time when the account was created.
       if (!latestInvoice) {
@@ -394,12 +469,18 @@ export default class InvoiceService {
       params = { fromDate: new Date(date) };
     }
 
-    const transactions = (await TransactionService.getTransactions(params, {}, user)).records;
-    const transfer = await this.createTransferFromTransactions(toId, transactions);
+    if (isCreditInvoice) {
+      params.toId = user.id;
+    } else {
+      params.fromId = user.id;
+    }
+
+    const transactions = (await TransactionService.getTransactions(params, {})).records;
+    const transfer = await this.createTransferFromTransactions(forId, transactions, isCreditInvoice);
 
     // Create a new Invoice
     const newInvoice: Invoice = Object.assign(new Invoice(), {
-      toId,
+      toId: forId,
       transfer: transfer.id,
       addressee: invoiceRequest.addressee,
       invoiceStatus: [],
