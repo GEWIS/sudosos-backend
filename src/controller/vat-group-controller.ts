@@ -241,6 +241,7 @@ export default class VatGroupController extends BaseController {
    * @security JWT
    * @param {number} year.query.required - Calendar year for VAT declarations
    * @param {string} period.query.required - Period for VAT declarations
+   * @param {boolean} vatOnly.query.required - Show VAT only of full amount
    * @returns {PaginatedVatGroupResponse.model} 200 - A list of all VAT groups with declarations
    */
   public async getVatDeclarationAmounts(req: RequestWithToken, res: Response): Promise<void> {
@@ -252,8 +253,8 @@ export default class VatGroupController extends BaseController {
       return;
     }
 
-    if (params.year === undefined || params.period === undefined) {
-      res.status(400).send('Missing year or period.');
+    if (params.year === undefined || params.period === undefined || params.vatOnly === undefined) {
+      res.status(400).send('Missing year or period or vatOnly selection.');
     }
 
     try {

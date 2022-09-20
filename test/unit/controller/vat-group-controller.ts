@@ -424,11 +424,12 @@ describe('VatGroupController', () => {
     it('should return response and HTTP 200', async () => {
       const year = 2021;
       const period = VatDeclarationPeriod.MONTHLY;
+      const vatOnly = true;
 
       const res = await request(ctx.app)
         .get('/vatgroups/declaration')
         .set('Authorization', `Bearer ${ctx.token}`)
-        .query({ year, period });
+        .query({ year, period, vatOnly });
 
       expect(res.status).to.equal(200);
 
@@ -441,34 +442,49 @@ describe('VatGroupController', () => {
     });
     it('should return HTTP 400 if year is missing', async () => {
       const period = VatDeclarationPeriod.MONTHLY;
+      const vatOnly = true;
 
       const res = await request(ctx.app)
         .get('/vatgroups/declaration')
         .set('Authorization', `Bearer ${ctx.token}`)
-        .query({ period });
+        .query({ period, vatOnly });
 
       expect(res.status).to.equal(400);
-      expect(res.text).to.equal('Missing year or period.');
+      expect(res.text).to.equal('Missing year or period or vatOnly selection.');
     });
     it('should return HTTP 400 if period is missing', async () => {
       const year = 2021;
+      const vatOnly = true;
 
       const res = await request(ctx.app)
         .get('/vatgroups/declaration')
         .set('Authorization', `Bearer ${ctx.token}`)
-        .query({ year });
+        .query({ year, vatOnly });
 
       expect(res.status).to.equal(400);
-      expect(res.text).to.equal('Missing year or period.');
+      expect(res.text).to.equal('Missing year or period or vatOnly selection.');
     });
-    it('should return HTTP 400 is year has an invalid value', async () => {
-      const year = 'Yeeeaaahhooo';
+    it('should return HTTP 400 if vatOnly is missing', async () => {
+      const year = 2021;
       const period = VatDeclarationPeriod.MONTHLY;
 
       const res = await request(ctx.app)
         .get('/vatgroups/declaration')
         .set('Authorization', `Bearer ${ctx.token}`)
         .query({ year, period });
+
+      expect(res.status).to.equal(400);
+      expect(res.text).to.equal('Missing year or period or vatOnly selection.');
+    });
+    it('should return HTTP 400 is year has an invalid value', async () => {
+      const year = 'Yeeeaaahhooo';
+      const period = VatDeclarationPeriod.MONTHLY;
+      const vatOnly = true;
+
+      const res = await request(ctx.app)
+        .get('/vatgroups/declaration')
+        .set('Authorization', `Bearer ${ctx.token}`)
+        .query({ year, period, vatOnly });
 
       expect(res.status).to.equal(400);
       expect(res.text).to.equal('"Input \'Yeeeaaahhooo\' is not a number."');
