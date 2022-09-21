@@ -1271,13 +1271,8 @@ export default class UserController extends BaseController {
     }
 
     try {
-      if (filters.toId !== undefined && filters.fromId !== undefined) {
-        res.status(400).json("Can't provide both a toID and a fromId.").send();
-        return;
-      }
-
-      if (filters.toId === undefined && filters.fromId === undefined) {
-        res.status(400).json('Need to provide either a toID and a fromId.').send();
+      if ((filters.toId !== undefined && filters.fromId !== undefined) || (filters.toId === undefined && filters.fromId === undefined)) {
+        res.status(400).json('Need to provide either a toId or a fromId.');
         return;
       }
 
@@ -1291,7 +1286,6 @@ export default class UserController extends BaseController {
 
       const report = await TransactionService.getTransactionReportResponse(filters);
       res.status(200).json(report);
-      res.send();
     } catch (e) {
       res.status(500).send();
       this.logger.error(e);

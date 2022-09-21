@@ -45,7 +45,7 @@ import {
 } from '../../../src/controller/request/invoice-request';
 import Transaction from '../../../src/entity/transactions/transaction';
 import {
-  INVALID_DATE,
+  INVALID_DATE, INVALID_TRANSACTION_OWNER,
   INVALID_USER_ID, SAME_INVOICE_STATE, SUBTRANSACTION_ALREADY_INVOICED,
   ZERO_LENGTH_STRING,
 } from '../../../src/controller/request/validators/validation-errors';
@@ -261,7 +261,12 @@ describe('InvoiceController', async () => {
     it('should verify that all transactions are owned by the debtor', async () => {
       const transactionIDs = (await Transaction.find({ relations: ['from'] })).filter((i) => i.from.id !== ctx.adminUser.id).map((t) => t.id);
       const req: CreateInvoiceRequest = { ...ctx.validInvoiceRequest, transactionIDs };
-      await expectError(req, 'Not all transactions are owned by the debtor.');
+      await expectError(req, INVALID_TRANSACTION_OWNER().value);
+    });
+    it('should verify that all transactions are owned by creditor if credit Invoice', async () => {
+      const transactionIDs = (await Transaction.find({ relations: ['from'] })).filter((i) => i.from.id === ctx.adminUser.id).map((t) => t.id);
+      const req: CreateInvoiceRequest = { ...ctx.validInvoiceRequest, forId: ctx.localUser.id, isCreditInvoice: true, transactionIDs };
+      await expectError(req, INVALID_TRANSACTION_OWNER().value);
     });
     it('should verity that forId is a valid user', async () => {
       const req: CreateInvoiceRequest = { ...ctx.validInvoiceRequest, forId: -1 };

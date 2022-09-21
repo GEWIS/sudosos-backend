@@ -1153,25 +1153,29 @@ describe('UserController', (): void => {
     });
   });
   describe('GET /users/:id/transactions/report', () => {
-    it.skip('should return the correct model', async () => {
-      const user = ctx.transactions[0].subTransactions[0].to;
-      const fromDate = new Date(2000, 0, 0);
-      const tillDate = new Date(2050, 0, 0);
-      const toId = user.id;
+    it('should return the correct model', async () => {
+      await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
+        await createTransactions(debtor.id, creditor.id, 3);
+        const parameters: TransactionFilterParameters = {
+          fromDate: new Date(2000, 0, 0),
+          tillDate: new Date(2050, 0, 0),
+          toId: creditor.id,
+        };
 
-      const res = await request(ctx.app)
-        .get(`/users/${user.id}/transactions/report`)
-        .set('Authorization', `Bearer ${ctx.adminToken}`)
-        .query({ toId, fromDate, tillDate });
-
-      expect(res.status).to.equal(200);
-      const validation = ctx.specification.validateModel(
-        'TransactionReportResponse',
-        res.body,
-        true,
-        true,
-      );
-      expect(validation.valid).to.be.true;
+        const res = await request(ctx.app)
+          .get(`/users/${creditor.id}/transactions/report`)
+          .set('Authorization', `Bearer ${ctx.adminToken}`)
+          .query(parameters);
+        expect(res.status).to.equal(200);
+        expect(res.status).to.equal(200);
+        const validation = ctx.specification.validateModel(
+          'TransactionReportResponse',
+          res.body,
+          true,
+          true,
+        );
+        expect(validation.valid).to.be.true;
+      });
     });
     it('should create a transaction report', async () => {
       await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
@@ -1204,6 +1208,50 @@ describe('UserController', (): void => {
         expect(vatSum).to.equal(report.totalInclVat.amount);
         expect(report.totalInclVat.amount).to.eq(transactions.cost);
       });
+    });
+    it('should thrown an HTTP 404 if user is undefined', async () => {
+      const parameters: TransactionFilterParameters = {
+        fromDate: new Date(2000, 0, 0),
+        tillDate: new Date(2050, 0, 0),
+        toId: 1,
+      };
+      const count = await User.count();
+      const id = count + 1;
+      const user = await User.findOne({ where: { id } });
+      expect(user).to.be.null;
+      const res = await request(ctx.app)
+        .get(`/users/${id}/transactions/report`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query(parameters);
+      expect(res.status).to.equal(404);
+    });
+    it('should thrown an HTTP 400 if to and form are both undefined', async () => {
+      const parameters: TransactionFilterParameters = {
+        fromDate: new Date(2000, 0, 0),
+        tillDate: new Date(2050, 0, 0),
+      };
+
+      const res = await request(ctx.app)
+        .get('/users/1/transactions/report')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query(parameters);
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('Need to provide either a toId or a fromId.');
+    });
+    it('should thrown an HTTP 400 if both to and from are defined', async () => {
+      const parameters: TransactionFilterParameters = {
+        fromDate: new Date(2000, 0, 0),
+        tillDate: new Date(2050, 0, 0),
+        toId: 1,
+        fromId: 1,
+      };
+
+      const res = await request(ctx.app)
+        .get('/users/1/transactions/report')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query(parameters);
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('Need to provide either a toId or a fromId.');
     });
   });
   describe('GET /users/:id/transfers', () => {

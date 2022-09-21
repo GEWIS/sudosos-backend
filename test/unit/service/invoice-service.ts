@@ -503,7 +503,7 @@ describe('InvoiceService', () => {
       });
     });
   });
-  describe('markInvoicePayed function', () => {
+  describe('markInvoicePaid function', () => {
     it('should subtract amount from sellers', async () => {
       await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
         const invoice = await createInvoiceWithTransfers(debtor.id, creditor.id, 1);

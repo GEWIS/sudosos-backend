@@ -33,7 +33,8 @@ import {
   parseContainerToBaseResponse,
   parsePOSToBasePOS,
   parseProductToBaseResponse,
-  parseUserToBaseResponse, parseVatGroupToResponse,
+  parseUserToBaseResponse,
+  parseVatGroupToResponse,
 } from '../helpers/revision-to-response';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import {
@@ -53,15 +54,21 @@ import { asDate, asNumber } from '../helpers/validators';
 import { PaginationParameters } from '../helpers/pagination';
 import { toMySQLString } from '../helpers/timestamps';
 import {
-  TransactionReport, TransactionReportCategoryEntryResponse,
-  TransactionReportData, TransactionReportDataResponse, TransactionReportEntryResponse,
-  TransactionReportResponse, TransactionReportVatEntryResponse,
+  TransactionReport,
+  TransactionReportCategoryEntryResponse,
+  TransactionReportData,
+  TransactionReportDataResponse,
+  TransactionReportEntryResponse,
+  TransactionReportResponse,
+  TransactionReportVatEntryResponse,
 } from '../controller/response/transaction-report-response';
 import {
   collectProductsByCategory,
-  collectProductsByRevision, collectProductsByVat,
+  collectProductsByRevision,
+  collectProductsByVat,
   reduceMapToCategoryEntries,
-  reduceMapToReportEntries, reduceMapToVatEntries,
+  reduceMapToReportEntries,
+  reduceMapToVatEntries,
   transactionMapper,
 } from '../helpers/transaction-mapper';
 import ProductCategoryService from './product-category-service';
@@ -129,12 +136,7 @@ export default class TransactionService {
     }));
 
     // sum the costs
-    let totalCost = dinero({ amount: 0 });
-    if (rowCosts.length > 0) {
-      totalCost = rowCosts.reduce((total, current) => total.add(current));
-    }
-
-    return totalCost;
+    return rowCosts.reduce((total, current) => total.add(current), dinero({ amount: 0 }));
   }
 
   /**
