@@ -209,9 +209,8 @@ export default class VatGroupService {
       .innerJoin(VatGroup, 'vatgroup', 'product.vatId = vatgroup.id');
     
     if (params.userId != undefined) {
-      builder.innerJoin(
-        SubTransaction, 'st', 
-        'str.subTransactionId = st.id AND WHERE st.toId = :userId', { userId: params.userId });
+      builder.innerJoin(SubTransaction, 'st', 'str.subTransactionId = st.id AND st.toId = :userId', {userId: params.userId});
+
     }
     builder.where('str.invoiceId IS NULL')
       .andWhere(`${process.env.TYPEORM_CONNECTION === 'sqlite'
@@ -221,6 +220,7 @@ export default class VatGroupService {
       .addGroupBy('period')
       .orderBy('vatgroup.id');
 
+    const query = builder.getQuery();
     const rawResults = await builder.getRawMany();
 
     const dineroTransformer = DineroTransformer.Instance;
