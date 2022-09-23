@@ -27,6 +27,8 @@ import VatGroupService, {
   parseGetVatGroupsFilters,
 } from '../service/vat-group-service';
 import { UpdateVatGroupRequest, VatGroupRequest } from './request/vat-group-request';
+import { createQueryBuilder } from 'typeorm';
+import User from '../entity/user/user';
 
 function verifyUpdateVatGroup(vr: UpdateVatGroupRequest): boolean {
   return vr.name !== ''
@@ -242,9 +244,11 @@ export default class VatGroupController extends BaseController {
    * @param {number} year.query.required - Calendar year for VAT declarations
    * @param {string} period.query.required - Period for VAT declarations
    * @param {boolean} vatOnly.query.required - Show VAT only of full amount
+   * @param {number} userId.query.optional - Show VAT declerations for a specific user
    * @returns {PaginatedVatGroupResponse.model} 200 - A list of all VAT groups with declarations
    */
   public async getVatDeclarationAmounts(req: RequestWithToken, res: Response): Promise<void> {
+    // @ts-ignore
     let params;
     try {
       params = parseGetVatCalculationValuesParams(req);
@@ -257,6 +261,25 @@ export default class VatGroupController extends BaseController {
       res.status(400).send('Missing year or period or vatOnly selection.');
     }
 
+    if (params.userId != undefined) {
+      const builder = createQueryBuilder(User, 'usr')
+        .select('usr.id');
+
+      const rawResults = await builder.getRawMany();
+
+      let correctId = false;
+      rawResults.forEach((g) => {
+        // @ts-ignore
+        if (g.usr_id === params.userId) {
+          correctId = true;
+        }
+      });
+
+      if (!correctId) {
+        res.status(400).send('The Id that was entered does not exist!');
+      }
+    }
+    
     try {
       const vatGroups = await VatGroupService.calculateVatDeclaration(params);
       res.status(200).json(vatGroups);

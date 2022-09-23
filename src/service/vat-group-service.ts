@@ -220,7 +220,6 @@ export default class VatGroupService {
       .addGroupBy('period')
       .orderBy('vatgroup.id');
 
-    const query = builder.getQuery();
     const rawResults = await builder.getRawMany();
 
     const dineroTransformer = DineroTransformer.Instance;
