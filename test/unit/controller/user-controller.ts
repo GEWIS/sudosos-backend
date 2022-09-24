@@ -1167,11 +1167,10 @@ describe('UserController', (): void => {
           .set('Authorization', `Bearer ${ctx.adminToken}`)
           .query(parameters);
         expect(res.status).to.equal(200);
-        expect(res.status).to.equal(200);
         const validation = ctx.specification.validateModel(
           'TransactionReportResponse',
           res.body,
-          true,
+          false,
           true,
         );
         expect(validation.valid).to.be.true;

@@ -362,6 +362,24 @@ describe('InvoiceService', () => {
         });
       });
     });
+    it('should create Credit Invoice from transactions', async () => {
+      await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
+        const { tIds, cost } = await createTransactions(debtor.id, creditor.id, 2);
+        const createInvoiceRequest: CreateInvoiceParams = {
+          byId: creditor.id,
+          addressee: 'Addressee',
+          description: 'Description',
+          forId: creditor.id,
+          transactionIDs: tIds,
+          isCreditInvoice: true,
+        };
+        await InvoiceService.createInvoice(createInvoiceRequest);
+        const debtorBalance = await BalanceService.getBalance(debtor.id);
+        const creditorBalance = await BalanceService.getBalance(creditor.id);
+        expect(debtorBalance.amount.amount).to.equal(-1 * cost);
+        expect(creditorBalance.amount.amount).to.equal(0);
+      });
+    });
   });
   describe('updateInvoice function', () => {
     it('should update an invoice description and addressee', async () => {
@@ -503,15 +521,11 @@ describe('InvoiceService', () => {
       });
     });
   });
-  describe('markInvoicePaid function', () => {
+  describe('createTransfersPaidInvoice function', () => {
     it('should subtract amount from sellers', async () => {
       await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
-        const invoice = await createInvoiceWithTransfers(debtor.id, creditor.id, 1);
+        await createInvoiceWithTransfers(debtor.id, creditor.id, 1);
         let creditorBalance = await BalanceService.getBalance(creditor.id);
-        expect(creditorBalance.amount.amount).to.equal(invoice.transfer.amount.amount);
-
-        await InvoiceService.updateInvoice({ addressee: invoice.addressee, byId: creditor.id, description: invoice.description, invoiceId: invoice.id, state: InvoiceState.PAID });
-        creditorBalance = await BalanceService.getBalance(creditor.id);
         const debtorBalance = await BalanceService.getBalance(debtor.id);
         expect(creditorBalance.amount.amount).to.equal(0);
         expect(debtorBalance.amount.amount).to.equal(0);
@@ -532,14 +546,10 @@ describe('InvoiceService', () => {
           isCreditInvoice: false,
         };
 
-        const invoice = await InvoiceService.createInvoice(createInvoiceRequest);
+        await InvoiceService.createInvoice(createInvoiceRequest);
         let debtorBalance = await BalanceService.getBalance(debtor.id);
-        expect(debtorBalance.amount.amount).to.equal(0);
-
-        await InvoiceService.updateInvoice({ addressee: invoice.addressee, byId: creditor.id, description: invoice.description, invoiceId: invoice.id, state: InvoiceState.PAID });
         const creditorBalance = await BalanceService.getBalance(creditor.id);
         const secondCreditorBalance = await BalanceService.getBalance(creditor.id);
-        debtorBalance = await BalanceService.getBalance(debtor.id);
         expect(creditorBalance.amount.amount).to.equal(0);
         expect(secondCreditorBalance.amount.amount).to.equal(0);
         expect(debtorBalance.amount.amount).to.equal(0);

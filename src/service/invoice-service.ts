@@ -304,18 +304,16 @@ export default class InvoiceService {
   }
 
   /**
-   * When an Invoice is paid we subtract the relevant balance from the sellers
+   * When an Invoice is created  we subtract the relevant balance from the sellers
    * @param invoiceId
    */
-  public static async createTransfersPaidInvoice(invoiceId: number): Promise<BaseInvoiceResponse | undefined> {
+  public static async createTransfersPaidInvoice(invoice: Invoice): Promise<BaseInvoiceResponse | undefined> {
     // By marking an invoice as paid we subtract the money from the seller accounts.
-    // Find base invoice.
-    const invoice = await Invoice.findOne({ where: { id: invoiceId }, relations: ['to', 'invoiceStatus', 'transfer', 'transfer.to', 'transfer.from'] });
     if (!invoice) return undefined;
 
     const toIdMap = new Map<number, SubTransaction[]>();
 
-    const baseTransactions = (await TransactionService.getTransactions({ invoiceId })).records;
+    const baseTransactions = (await TransactionService.getTransactions({ invoiceId: invoice.id })).records;
     const transactions = await TransactionService.getTransactionsFromBaseTransactions(baseTransactions);
 
     // Collect SubTransactions per Seller
@@ -375,9 +373,6 @@ export default class InvoiceService {
     if (update.state) {
       // Deleting is a special case of an update.
       if (update.state === InvoiceState.DELETED) return this.deleteInvoice(base.id, update.byId);
-
-      // When setting an Invoice to Paid we also create extra transfers to correct balances.
-      if (update.state === InvoiceState.PAID) await this.createTransfersPaidInvoice(base.id);
 
       const invoiceStatus: InvoiceStatus = Object.assign(new InvoiceStatus(), {
         invoice: base,
@@ -503,6 +498,9 @@ export default class InvoiceService {
       await this.createInvoiceEntriesTransactions(newInvoice, transactions);
       if (invoiceRequest.customEntries) {
         await this.AddCustomEntries(newInvoice, invoiceRequest.customEntries);
+      }
+      if (!invoiceRequest.isCreditInvoice) {
+        await this.createTransfersPaidInvoice(newInvoice);
       }
     });
 

@@ -54,10 +54,27 @@ export interface TransactionReport {
 }
 
 /**
+ * @typedef TransactionFilterParameters
+ * @property {Array.<number>} transactionId
+ * @property {number} fromId
+ * @property {number} createdById
+ * @property {number} toId
+ * @property {number} pointOfSaleId
+ * @property {number} pointOfSaleRevision
+ * @property {number} containerId
+ * @property {number} containerRevision
+ * @property {number} productId
+ * @property {number} productRevision
+ * @property {string} fromDate
+ * @property {string} tillDate
+ * @property {number} invoiceId
+ */
+
+/**
  * @typedef TransactionReportVatEntryResponse
- * @property {BaseVatGroupResponse} vat.required - The vat group of this entry
- * @property {DineroObjectResponse} totalInclVat.required - The price of this entry incl. vat
- * @property {DineroObjectResponse} totalExclVat.required - The price of this entry excl. vat
+ * @property {BaseVatGroupResponse.model} vat.required - The vat group of this entry
+ * @property {DineroObjectResponse.model} totalInclVat.required - The price of this entry incl. vat
+ * @property {DineroObjectResponse.model} totalExclVat.required - The price of this entry excl. vat
  */
 export interface TransactionReportVatEntryResponse {
   vat: BaseVatGroupResponse,
@@ -67,9 +84,9 @@ export interface TransactionReportVatEntryResponse {
 
 /**
  * @typedef TransactionReportCategoryEntryResponse
- * @property {ProductCategoryResponse} category.required - The category of this entry
- * @property {DineroObjectResponse} totalInclVat.required - The price of this entry incl. vat
- * @property {DineroObjectResponse} totalExclVat.required - The price of this entry excl. vat
+ * @property {ProductCategoryResponse.model} category.required - The category of this entry
+ * @property {DineroObjectResponse.model} totalInclVat.required - The price of this entry incl. vat
+ * @property {DineroObjectResponse.model} totalExclVat.required - The price of this entry excl. vat
  */
 export interface TransactionReportCategoryEntryResponse {
   category: ProductCategoryResponse,
@@ -80,9 +97,9 @@ export interface TransactionReportCategoryEntryResponse {
 /**
  * @typedef TransactionReportEntryResponse
  * @property {integer} count.required - The amount of times this product is in the report
- * @property {BaseProductResponse} product.required - The product for this entry
- * @property {DineroObjectResponse} totalInclVat.required - The price of this entry incl. vat
- * @property {DineroObjectResponse} totalExclVat.required - The price of this entry excl. vat
+ * @property {BaseProductResponse.model} product.required - The product for this entry
+ * @property {DineroObjectResponse.model} totalInclVat.required - The price of this entry incl. vat
+ * @property {DineroObjectResponse.model} totalExclVat.required - The price of this entry excl. vat
  */
 export interface TransactionReportEntryResponse {
   count: number,
@@ -105,10 +122,10 @@ export interface TransactionReportDataResponse {
 
 /**
  * @typedef TransactionReportResponse
- * @property {TransactionFilterParameters} parameters.required - The parameters used for the report
- * @property {TransactionReportDataResponse} data.required - The data that makes up the report
- * @property {DineroObjectResponse} totalExclVat.required - The total amount of money excl. vat of this report
- * @property {DineroObjectResponse} totalInclVat.required - The total amount of money inc. vat of this report
+ * @property {TransactionFilterParameters.model} parameters.required - The parameters used for the report
+ * @property {TransactionReportDataResponse.model} data.required - The data that makes up the report
+ * @property {DineroObjectResponse.model} totalExclVat.required - The total amount of money excl. vat of this report
+ * @property {DineroObjectResponse.model} totalInclVat.required - The total amount of money inc. vat of this report
  */
 export interface TransactionReportResponse {
   parameters: TransactionFilterParameters,
