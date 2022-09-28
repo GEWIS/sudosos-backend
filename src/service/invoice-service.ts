@@ -339,7 +339,7 @@ export default class InvoiceService {
         });
       });
 
-      const description = (deletion ? 'Deletion' : 'Payment') + `of Invoice #${invoice.id}`;
+      const description = (deletion ? 'Deletion' : 'Payment') + ` of Invoice #${invoice.id}`;
 
       // Create transfer
       const transferRequest: TransferRequest = {
