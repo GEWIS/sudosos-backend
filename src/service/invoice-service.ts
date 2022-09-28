@@ -499,7 +499,7 @@ export default class InvoiceService {
       if (invoiceRequest.customEntries) {
         await this.AddCustomEntries(newInvoice, invoiceRequest.customEntries);
       }
-      if (!invoiceRequest.isCreditInvoice) {
+      if (!isCreditInvoice) {
         await this.createTransfersPaidInvoice(newInvoice);
       }
     });

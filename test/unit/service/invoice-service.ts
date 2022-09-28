@@ -52,6 +52,7 @@ import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import { TransactionRequest } from '../../../src/controller/request/transaction-request';
 import { InvoiceState } from '../../../src/entity/invoices/invoice-status';
 import Transaction from '../../../src/entity/transactions/transaction';
+import Transfer from '../../../src/entity/transactions/transfer';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -378,6 +379,16 @@ describe('InvoiceService', () => {
         const creditorBalance = await BalanceService.getBalance(creditor.id);
         expect(debtorBalance.amount.amount).to.equal(-1 * cost);
         expect(creditorBalance.amount.amount).to.equal(0);
+      });
+    });
+    it('should create a seller transfer when Invoice is created', async () => {
+      await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
+        const invoice = await createInvoiceWithTransfers(debtor.id, creditor.id, 1);
+        const creditorBalance = await BalanceService.getBalance(creditor.id);
+        const transfer = await Transfer.findOne({ where: { from: { id: creditor.id } } });
+        expect(transfer).to.not.be.undefined;
+        expect(transfer.amount.getAmount()).to.eq(invoice.transfer.amount.amount);
+        expect(creditorBalance.amount.amount).to.eq(0);
       });
     });
   });
