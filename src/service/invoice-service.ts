@@ -316,9 +316,7 @@ export default class InvoiceService {
     const toIdMap = new Map<number, SubTransaction[]>();
 
     const baseTransactions = (await TransactionService.getTransactions({ invoiceId: invoice.id })).records;
-    console.error('baseTransactions: ', baseTransactions);
-    const transactions = await TransactionService.getTransactionsFromBaseTransactions(baseTransactions);
-    console.error('transactions: ', transactions);
+    const transactions = await TransactionService.getTransactionsFromBaseTransactions(baseTransactions, false);
 
     // Collect SubTransactions per Seller
     transactions.forEach((t) => {
@@ -326,7 +324,6 @@ export default class InvoiceService {
         collectByToId(toIdMap, tSub);
       });
     });
-    console.error('toIdMap: ', toIdMap);
 
     const transferRequests: TransferRequest[] = [];
 
@@ -357,7 +354,6 @@ export default class InvoiceService {
         toId: deletion ? fromId : 0,
       };
 
-      console.error('transferRequest: ', transferRequest);
       transferRequests.push(transferRequest);
     });
 
@@ -452,7 +448,6 @@ export default class InvoiceService {
   public static async createInvoice(invoiceRequest: CreateInvoiceParams)
     : Promise<InvoiceResponse> {
     const { forId, byId, isCreditInvoice } = invoiceRequest;
-    console.error('CreateInvoiceParams:', invoiceRequest);
     let params: TransactionFilterParameters;
 
     const user = await User.findOne({ where: { id: forId } });
@@ -500,7 +495,6 @@ export default class InvoiceService {
       state: InvoiceState.CREATED,
     });
 
-    console.error('isCreditInvoice:', isCreditInvoice);
     // First save the Invoice, then the status.
     await Invoice.save(newInvoice).then(async () => {
       newInvoice.invoiceStatus.push(invoiceStatus);
@@ -511,7 +505,6 @@ export default class InvoiceService {
         await this.AddCustomEntries(newInvoice, invoiceRequest.customEntries);
       }
       if (!isCreditInvoice) {
-        console.error('creating Invoices');
         await this.createTransfersInvoiceSellers(newInvoice);
       }
     });
