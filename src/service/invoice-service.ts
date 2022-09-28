@@ -251,6 +251,7 @@ export default class InvoiceService {
     // Find base invoice.
     const invoice = await Invoice.findOne({ where: { id: invoiceId }, relations: ['to', 'invoiceStatus', 'transfer', 'transfer.to', 'transfer.from'] });
     if (!invoice) return undefined;
+    await this.createTransfersInvoiceSellers(invoice, true);
 
     // Extract amount from transfer
     const amount: DineroObjectRequest = {
@@ -305,9 +306,10 @@ export default class InvoiceService {
 
   /**
    * When an Invoice is created  we subtract the relevant balance from the sellers
-   * @param invoiceId
+   * @param invoice
+   * @param deletion - If the Invoice is being deleted we add the money to the account
    */
-  public static async createTransfersPaidInvoice(invoice: Invoice): Promise<BaseInvoiceResponse | undefined> {
+  public static async createTransfersInvoiceSellers(invoice: Invoice, deletion = false): Promise<BaseInvoiceResponse | undefined> {
     // By marking an invoice as paid we subtract the money from the seller accounts.
     if (!invoice) return undefined;
 
@@ -337,6 +339,8 @@ export default class InvoiceService {
         });
       });
 
+      const description = (deletion ? 'Deletion' : 'Payment') + `of Invoice #${invoice.id}`;
+
       // Create transfer
       const transferRequest: TransferRequest = {
         amount: {
@@ -344,9 +348,10 @@ export default class InvoiceService {
           precision: dinero.defaultPrecision,
           currency: dinero.defaultCurrency,
         },
-        description: `Payment of Invoice #${invoice.id}`,
-        fromId,
-        toId: 0,
+        description,
+        // Swapping the to and from based on if it is a deletion.
+        fromId: deletion ? 0 : fromId,
+        toId: deletion ? fromId : 0,
       };
 
       transferRequests.push(transferRequest);
@@ -500,7 +505,7 @@ export default class InvoiceService {
         await this.AddCustomEntries(newInvoice, invoiceRequest.customEntries);
       }
       if (!isCreditInvoice) {
-        await this.createTransfersPaidInvoice(newInvoice);
+        await this.createTransfersInvoiceSellers(newInvoice);
       }
     });
 

@@ -459,28 +459,44 @@ describe('InvoiceService', () => {
         expect(updatedInvoice.currentState.state).to.be.equal(InvoiceState[InvoiceState.PAID]);
       });
     });
+    const makeParamsState = (addressee: string, description:string, creditor: User, invoiceId: number, state: InvoiceState) => ({
+      addressee,
+      byId: creditor.id,
+      description,
+      invoiceId,
+      state,
+    });
     it('should delete an Invoice', async () => {
       await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
         // First create an Invoice.
         const invoice = await createInvoiceWithTransfers(debtor.id, creditor.id, 1);
 
         const { addressee, description } = invoice;
-        const makeParamsState = (state: InvoiceState) => ({
-          addressee,
-          byId: creditor.id,
-          description,
-          invoiceId: invoice.id,
-          state,
-        });
 
         // Test if attributes were updated
         const updatedInvoice = await InvoiceService
-          .updateInvoice(makeParamsState(InvoiceState.DELETED));
+          .updateInvoice(makeParamsState(addressee, description, creditor, invoice.id, InvoiceState.DELETED));
         expect(updatedInvoice.currentState.state).to.be.equal(InvoiceState[InvoiceState.DELETED]);
 
         // Check if the balance has been decreased
         expect((await BalanceService.getBalance(debtor.id)).amount.amount)
           .is.equal(-1 * invoice.transfer.amount.amount);
+      });
+    });
+    it('should return money to sellers if invoice is deleted', async () => {
+      await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
+        const invoice = await createInvoiceWithTransfers(debtor.id, creditor.id, 1);
+        let creditorBalance = await BalanceService.getBalance(creditor.id);
+        let debtorBalance = await BalanceService.getBalance(debtor.id);
+        expect(creditorBalance.amount.amount).to.eq(0);
+        expect(debtorBalance.amount.amount).to.eq(0);
+
+        await InvoiceService
+          .updateInvoice(makeParamsState(invoice.addressee, invoice.description, creditor, invoice.id, InvoiceState.DELETED));
+        expect((await BalanceService.getBalance(debtor.id)).amount.amount)
+          .is.equal(-1 * invoice.transfer.amount.amount);
+        expect((await BalanceService.getBalance(creditorBalance.id)).amount.amount)
+          .is.equal(invoice.transfer.amount.amount);
       });
     });
     it('should delete invoice reference from subTransactions when Invoice is deleted', async () => {
