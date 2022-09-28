@@ -526,15 +526,8 @@ describe('InvoiceService', () => {
         });
 
         const { addressee, description } = invoice;
-        const makeParamsState = (state: InvoiceState) => ({
-          addressee,
-          byId: creditor.id,
-          description,
-          invoiceId: invoice.id,
-          state,
-        });
         const updatedInvoice = await InvoiceService
-          .updateInvoice(makeParamsState(InvoiceState.DELETED));
+          .updateInvoice(makeParamsState(addressee, description, creditor, invoice.id, InvoiceState.DELETED));
         expect(updatedInvoice.currentState.state).to.be.equal(InvoiceState[InvoiceState.DELETED]);
 
         transactions = await Transaction.find({ where: { id: In(tIds) }, relations: ['subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice'] });
