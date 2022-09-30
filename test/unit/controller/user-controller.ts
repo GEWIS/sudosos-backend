@@ -1209,17 +1209,19 @@ describe('UserController', (): void => {
       });
     });
     it('should validate transaction filters', async () => {
-      const parameters: TransactionFilterParameters = {
-        fromDate: new Date(2000, 0, 0),
-        tillDate: new Date(2050, 0, 0),
-        toId: 'test' as unknown as number,
-      };
+      await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
+        const parameters: TransactionFilterParameters = {
+          fromDate: 'string' as unknown as Date,
+          tillDate: new Date(2050, 0, 0),
+          toId: creditor.id,
+        };
 
-      const res = await request(ctx.app)
-        .get(`/users/${ctx.user.id}/transactions/report`)
-        .set('Authorization', `Bearer ${ctx.adminToken}`)
-        .query(parameters);
-      expect(res.status).to.equal(400);
+        const res = await request(ctx.app)
+          .get(`/users/${creditor.id}/transactions/report`)
+          .set('Authorization', `Bearer ${ctx.adminToken}`)
+          .query(parameters);
+        expect(res.status).to.equal(400);
+      });
     });
     it('should thrown an HTTP 404 if user is undefined', async () => {
       const parameters: TransactionFilterParameters = {
