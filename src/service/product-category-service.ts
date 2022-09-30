@@ -49,7 +49,7 @@ export default class ProductCategoryService {
    * @returns {ProductCategoryResponse.model} - a productCategoryResponse
    * created with the productCategory
    */
-  private static asProductCategoryResponse(productCategory: ProductCategory)
+  public static asProductCategoryResponse(productCategory: ProductCategory)
     : ProductCategoryResponse {
     return {
       id: productCategory.id,

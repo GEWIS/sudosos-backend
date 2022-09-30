@@ -26,7 +26,7 @@ import User from '../user/user';
  * @property {User.model} user.required - The user this authenticator is for
  */
 export default class AuthenticationMethod extends BaseEntityWithoutId {
-  @PrimaryColumn({ unique: false })
+  @PrimaryColumn()
   public userId: number;
 
   @OneToOne(() => User, { nullable: false, eager: true })

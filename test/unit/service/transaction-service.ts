@@ -29,11 +29,12 @@ import {
   seedContainers,
   seedPointsOfSale,
   seedProductCategories,
-  seedProducts, seedTransactions,
+  seedProducts,
+  seedTransactions,
   seedUsers,
   seedVatGroups,
 } from '../../seed';
-import TransactionService from '../../../src/service/transaction-service';
+import TransactionService, { TransactionFilterParameters } from '../../../src/service/transaction-service';
 import { verifyBaseTransactionEntity } from '../validators';
 import Swagger from '../../../src/start/swagger';
 import {
@@ -49,6 +50,7 @@ import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale
 import ContainerRevision from '../../../src/entity/container/container-revision';
 import generateBalance from '../../helpers/test-helpers';
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
+import { createInvoiceWithTransfers, createTransactions } from './invoice-service';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -931,6 +933,94 @@ describe('TransactionService', (): void => {
           debtor.id, creditor.id,
         );
         expect(await TransactionService.verifyTransaction(transaction)).to.be.true;
+      });
+    });
+  });
+
+  describe('getTransactionReportData function', () => {
+    it('should get all data for the transaction report', async () => {
+      await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
+        const transactions = await createTransactions(debtor.id, creditor.id, 3);
+        const parameters: TransactionFilterParameters = {
+          fromDate: new Date(2000, 0, 0),
+          tillDate: new Date(2050, 0, 0),
+          toId: creditor.id,
+        };
+        const report = await TransactionService.getTransactionReportResponse(parameters);
+        expect(report.totalInclVat.amount).to.eq(transactions.cost);
+
+        const dataValue = report.data.entries.reduce((sum, current) => {
+          return sum += current.count * current.product.priceInclVat.amount;
+        }, 0);
+        const categoryValue = report.data.categories.reduce((sum, current) => {
+          return sum += current.totalInclVat.amount;
+        }, 0);
+        const vatValue = report.data.vat.reduce((sum, current) => {
+          return sum += current.totalInclVat.amount;
+        }, 0);
+        const value = transactions.cost;
+        expect(dataValue).to.equal(value);
+        expect(categoryValue).to.equal(value);
+        expect(vatValue).to.equal(value);
+      });
+    });
+  });
+
+  describe('getTransactionReportResponse', () => {
+    it('should create a transaction report response', async () => {
+      await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
+        const transactions = await createTransactions(debtor.id, creditor.id, 3);
+        const parameters: TransactionFilterParameters = {
+          fromDate: new Date(2000, 0, 0),
+          tillDate: new Date(2050, 0, 0),
+          toId: creditor.id,
+        };
+        const report = await TransactionService.getTransactionReportResponse(parameters);
+        expect(report.totalInclVat.amount).to.eq(transactions.cost);
+      });
+    });
+    it('should ignore invoiced transactions', async () => {
+      await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
+        await createInvoiceWithTransfers(debtor.id, creditor.id, 5);
+        const transactions = await createTransactions(debtor.id, creditor.id, 3);
+        const parameters: TransactionFilterParameters = {
+          fromDate: new Date(2000, 0, 0),
+          tillDate: new Date(2050, 0, 0),
+          toId: creditor.id,
+        };
+        const report = await TransactionService.getTransactionReportResponse(parameters);
+        expect(report.totalInclVat.amount).to.eq(transactions.cost);
+      });
+    });
+    it('should ignore transactions made by invoice accounts', async () => {
+      await inUserContext((await UserFactory()).clone(3), async (debtor: User, invoiceAccount: User, creditor: User) => {
+        invoiceAccount.type = UserType.INVOICE;
+        await User.save(invoiceAccount);
+        await createInvoiceWithTransfers(invoiceAccount.id, creditor.id, 5);
+        const transactions = await createTransactions(debtor.id, creditor.id, 3);
+        const parameters: TransactionFilterParameters = {
+          fromDate: new Date(2000, 0, 0),
+          tillDate: new Date(2050, 0, 0),
+          toId: creditor.id,
+        };
+        const report = await TransactionService.getTransactionReportResponse(parameters);
+        expect(report.totalInclVat.amount).to.eq(transactions.cost);
+      });
+    });
+    it('should ignore transactions made by invoice accounts and invoiced transactions', async () => {
+      await inUserContext((await UserFactory()).clone(3), async (debtor: User, invoiceAccount: User, creditor: User) => {
+        invoiceAccount.type = UserType.INVOICE;
+        await User.save(invoiceAccount);
+        await createInvoiceWithTransfers(invoiceAccount.id, creditor.id, 5);
+        await createInvoiceWithTransfers(debtor.id, creditor.id, 3);
+        const transactions = await createTransactions(debtor.id, creditor.id, 3);
+        const parameters: TransactionFilterParameters = {
+          fromDate: new Date(2000, 0, 0),
+          tillDate: new Date(2050, 0, 0),
+          toId: creditor.id,
+        };
+        const report = await TransactionService.getTransactionReportResponse(parameters);
+        expect(report.totalInclVat.amount).to.eq(transactions.cost);
       });
     });
   });

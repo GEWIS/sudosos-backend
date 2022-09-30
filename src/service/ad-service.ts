@@ -135,6 +135,18 @@ export default class ADService {
   }
 
   /**
+   * Helper function to prevent transactions in transactions
+   * @param manager
+   * @param responses
+   * @private
+   */
+  private static async createSharedFromArray(manager: EntityManager, responses: LDAPGroup[]) {
+    const promises: Promise<void>[] = [];
+    responses.forEach((r) => promises.push(ADService.toSharedUser(manager, r)));
+    await Promise.all(promises);
+  }
+
+  /**
    * Syncs all the shared account and access with AD.
    */
   public static async syncSharedAccounts() {
@@ -145,10 +157,10 @@ export default class ADService {
       client, process.env.LDAP_SHARED_ACCOUNT_FILTER,
     );
 
-    const unexisting = await this.filterUnboundGUID(sharedAccounts);
+    const unexisting = (await this.filterUnboundGUID(sharedAccounts)) as LDAPGroup[];
 
     // Makes new Shared Users for all new shared users.
-    await this.asyncForEach<LDAPResponse>(unexisting, wrapInManager(ADService.toSharedUser));
+    await (wrapInManager(ADService.createSharedFromArray))(unexisting);
 
     // Adds users to the shared groups.
     await ADService.handleSharedGroups(client, sharedAccounts);
