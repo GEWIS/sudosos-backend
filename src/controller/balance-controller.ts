@@ -22,6 +22,7 @@ import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import User from '../entity/user/user';
 import BalanceService from '../service/balance-service';
+import UserController from './user-controller';
 
 export default class BalanceController extends BaseController {
   private logger: Logger = log4js.getLogger('BannerController');
@@ -48,7 +49,7 @@ export default class BalanceController extends BaseController {
       },
       '/:id(\\d+)': {
         GET: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Balance', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', UserController.getRelation(req), 'Balance', ['*']),
           handler: this.getBalance.bind(this),
         },
       },

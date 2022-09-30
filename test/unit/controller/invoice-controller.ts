@@ -45,7 +45,7 @@ import {
 } from '../../../src/controller/request/invoice-request';
 import Transaction from '../../../src/entity/transactions/transaction';
 import {
-  INVALID_DATE,
+  INVALID_DATE, INVALID_TRANSACTION_OWNER,
   INVALID_USER_ID, SAME_INVOICE_STATE, SUBTRANSACTION_ALREADY_INVOICED,
   ZERO_LENGTH_STRING,
 } from '../../../src/controller/request/validators/validation-errors';
@@ -137,7 +137,7 @@ describe('InvoiceController', async () => {
     roleManager.registerRole({
       name: 'Admin',
       permissions: {
-        Invoices: {
+        Invoice: {
           create: all,
           get: all,
           update: all,
@@ -150,7 +150,7 @@ describe('InvoiceController', async () => {
     roleManager.registerRole({
       name: 'User',
       permissions: {
-        Invoices: {
+        Invoice: {
           get: own,
         },
       },
@@ -167,7 +167,8 @@ describe('InvoiceController', async () => {
       addressee: 'InvoiceRequest',
       byId: adminUser.id,
       description: 'InvoiceRequest test',
-      toId: localUser.type,
+      forId: localUser.type,
+      isCreditInvoice: false,
     };
 
     ctx = {
@@ -260,11 +261,16 @@ describe('InvoiceController', async () => {
     it('should verify that all transactions are owned by the debtor', async () => {
       const transactionIDs = (await Transaction.find({ relations: ['from'] })).filter((i) => i.from.id !== ctx.adminUser.id).map((t) => t.id);
       const req: CreateInvoiceRequest = { ...ctx.validInvoiceRequest, transactionIDs };
-      await expectError(req, 'Not all transactions are owned by the debtor.');
+      await expectError(req, INVALID_TRANSACTION_OWNER().value);
     });
-    it('should verity that toId is a valid user', async () => {
-      const req: CreateInvoiceRequest = { ...ctx.validInvoiceRequest, toId: -1 };
-      await expectError(req, `toId: ${INVALID_USER_ID().value}`);
+    it('should verify that all transactions are owned by creditor if credit Invoice', async () => {
+      const transactionIDs = (await Transaction.find({ relations: ['from'] })).filter((i) => i.from.id === ctx.adminUser.id).map((t) => t.id);
+      const req: CreateInvoiceRequest = { ...ctx.validInvoiceRequest, forId: ctx.localUser.id, isCreditInvoice: true, transactionIDs };
+      await expectError(req, INVALID_TRANSACTION_OWNER().value);
+    });
+    it('should verity that forId is a valid user', async () => {
+      const req: CreateInvoiceRequest = { ...ctx.validInvoiceRequest, forId: -1 };
+      await expectError(req, `forId: ${INVALID_USER_ID().value}`);
     });
     it('should verity that fromDate is a valid date', async () => {
       const req: CreateInvoiceRequest = { ...ctx.validInvoiceRequest, fromDate: 'invalid' };
@@ -331,8 +337,9 @@ describe('InvoiceController', async () => {
           byId: creditor.id,
           addressee: 'Addressee',
           description: 'Description',
-          toId: debtor.id,
+          forId: debtor.id,
           transactionIDs: tIds,
+          isCreditInvoice: false,
         };
 
         const transactions = await Transaction.find({ where: { id: In(tIds) }, relations: ['subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice'] });
@@ -359,7 +366,7 @@ describe('InvoiceController', async () => {
         const count = await Invoice.count();
         const newRequest: CreateInvoiceRequest = {
           ...ctx.validInvoiceRequest,
-          toId: debtor.id,
+          forId: debtor.id,
           byId: creditor.id,
           customEntries: [
             {
@@ -395,14 +402,13 @@ describe('InvoiceController', async () => {
       await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
         const newRequest = {
           ...ctx.validInvoiceRequest,
-          toId: debtor.id,
+          forId: debtor.id,
           byId: creditor.id,
         };
         const res = await request(ctx.app)
           .post('/invoices')
           .set('Authorization', `Bearer ${ctx.token}`)
           .send(newRequest);
-
         expect(res.status).to.equal(403);
       });
     });
@@ -417,7 +423,7 @@ describe('InvoiceController', async () => {
         const newRequest: CreateInvoiceRequest = {
           ...ctx.validInvoiceRequest,
           transactionIDs: tIds,
-          toId: debtor.id,
+          forId: debtor.id,
           byId: creditor.id,
         };
 
@@ -441,7 +447,7 @@ describe('InvoiceController', async () => {
         const count = await Invoice.count();
         const newRequest: CreateInvoiceRequest = {
           ...ctx.validInvoiceRequest,
-          toId: debtor.id,
+          forId: debtor.id,
           byId: creditor.id,
           customEntries: [
             {

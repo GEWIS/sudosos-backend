@@ -43,14 +43,22 @@ import { InvoiceState } from '../../../entity/invoices/invoice-status';
 import Invoice from '../../../entity/invoices/invoice';
 
 /**
- * Checks whether all the transactions exists and are credited to the debtor.
- * TODO Discuss negative invoices transactions.
+ * Checks whether all the transactions exists and are credited to the debtor or sold in case of credit Invoice.
  */
 async function validTransactionIds<T extends BaseInvoice>(p: T) {
   if (!p.transactionIDs) return toPass(p);
 
-  const transactions = await Transaction.find({ where: { id: In(p.transactionIDs) }, relations: ['from', 'subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice'] });
-  const notOwnedByUser = transactions.filter((t) => t.from.id !== p.toId);
+  const transactions = await Transaction.find({ where: { id: In(p.transactionIDs) }, relations: ['from', 'subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice', 'subTransactions.to'] });
+  let notOwnedByUser = [];
+  if (p.isCreditInvoice) {
+    transactions.forEach((t) => {
+      t.subTransactions.forEach((tSub) => {
+        if (tSub.to.id !== p.forId) notOwnedByUser.push(t);
+      });
+    });
+  } else {
+    notOwnedByUser.push(...transactions.filter((t) => t.from.id !== p.forId));
+  }
   if (notOwnedByUser.length !== 0) return toFail(INVALID_TRANSACTION_OWNER());
   if (transactions.length !== p.transactionIDs.length) return toFail(INVALID_TRANSACTION_IDS());
 
@@ -112,7 +120,7 @@ const invoiceEntryRequestSpec: Specification<InvoiceEntryRequest, ValidationErro
 function baseInvoiceRequestSpec<T extends BaseInvoice>(): Specification<T, ValidationError> {
   return [
     validTransactionIds,
-    [[userMustExist], 'toId', new ValidationError('toId:')],
+    [[userMustExist], 'forId', new ValidationError('forId:')],
     [[validOrUndefinedDate], 'fromDate', new ValidationError('fromDate:')],
     [stringSpec(), 'description', new ValidationError('description:')],
     [stringSpec(), 'addressee', new ValidationError('addressee:')],

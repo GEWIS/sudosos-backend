@@ -23,6 +23,8 @@ import { BasePointOfSaleResponse } from '../controller/response/point-of-sale-re
 import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision';
 import User, { TermsOfServiceStatus, UserType } from '../entity/user/user';
 import { BaseUserResponse, UserResponse } from '../controller/response/user-response';
+import VatGroup from '../entity/vat-group';
+import { BaseVatGroupResponse } from '../controller/response/vat-group-response';
 
 export function parseProductToBaseResponse(
   product: ProductRevision, timestamps: boolean,
@@ -81,6 +83,14 @@ export function parseUserToBaseResponse(user: User, timestamps: boolean): BaseUs
     createdAt: timestamps ? user.createdAt.toISOString() : undefined,
     updatedAt: timestamps ? user.updatedAt.toISOString() : undefined,
   } as BaseUserResponse;
+}
+
+export function parseVatGroupToResponse(vatGroup: VatGroup): BaseVatGroupResponse {
+  return {
+    id: vatGroup.id,
+    percentage: vatGroup.percentage,
+    hidden: vatGroup.hidden,
+  };
 }
 
 /**
