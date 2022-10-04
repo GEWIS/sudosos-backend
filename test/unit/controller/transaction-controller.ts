@@ -791,4 +791,27 @@ describe('TransactionController', (): void => {
       expect(res.status).to.equal(403);
     });
   });
+  describe('POST /transactions/validate', () => {
+    it('should return an HTTP 200 when the transaction is valid', async () => {
+      const res = await request(ctx.app)
+        .post('/transactions/validate')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(ctx.validTransReq);
+      expect(res.status).to.equal(200);
+      expect(res.body).to.equal(true);
+    });
+    it('should return HTTP 400 if the transaction is not valid', async () => {
+      const badReq : TransactionRequest = {
+        ...ctx.validTransReq,
+        from: 0,
+      };
+      const res = await request(ctx.app)
+        .post('/transactions/validate')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(badReq);
+      expect(res.body).to.equal('Transaction is invalid');
+      expect(res.status).to.equal(400);
+    });
+
+  });
 });
