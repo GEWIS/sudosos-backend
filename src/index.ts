@@ -192,6 +192,11 @@ export default async function createApp(): Promise<Application> {
   }));
   application.app.use(fileUpload());
 
+  application.app.use((req, res, next) => {
+    res.set('Cache-Control', 'no-store');
+    next();
+  });
+
   application.app.use('/v1', new RootController({
     specification: application.specification,
     roleManager: application.roleManager,
