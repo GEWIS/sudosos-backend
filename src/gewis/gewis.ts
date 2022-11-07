@@ -430,6 +430,9 @@ export default class Gewis {
         VatGroup: {
           ...admin,
         },
+        User: {
+          ...admin,
+        },
       },
       assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: 'SudoSOS - BAC PM', user: { id: user.id } } }) != undefined,
     });
