@@ -318,7 +318,7 @@ export async function seedBorrelSchema(shifts: BorrelSchemaShift[], users: User[
       borrelShifts.push(shift);
       borrelSchemaShift.push(shift);
       for (let k = 0; k < users.length / 5; k += 1) {
-        const answer = createAnswer(users[k % 5], k % 5);
+        const answer = createAnswer(users[k], k % 5);
         answer.borrelSchema = schema;
         answer.shift = shift;
         borrelSchemaAnswers.push(answer);

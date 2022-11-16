@@ -53,10 +53,10 @@ export default class BorrelSchemaAnswer extends BaseEntity {
   public selected: boolean;
 
   @JoinColumn()
-  @ManyToOne(() => BorrelSchemaShift)
+  @ManyToOne(() => BorrelSchemaShift, { onDelete: 'RESTRICT' })
   public shift: BorrelSchemaShift;
 
   @JoinColumn()
-  @ManyToOne(() => BorrelSchema)
+  @ManyToOne(() => BorrelSchema, { onDelete: 'CASCADE' })
   public borrelSchema: BorrelSchema;
 }

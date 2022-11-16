@@ -16,17 +16,14 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  Column, Entity, ManyToMany,
+  Column, Entity,
 } from 'typeorm';
-// eslint-disable-next-line import/no-cycle
-import BorrelSchema from './borrel-schema';
 import BaseEntity from '../base-entity';
 
 /**
  * @typedef {BaseEntity} BorrelSchemaShift
  * @property {string} name - Name of the shift.
  * @property {boolean} default - Indicator whether the shift is a regular shift.
- * @property {BorrelSchema.model} borrelSchema - Related borrel-schema
  */
 
 @Entity()
@@ -36,8 +33,4 @@ export default class BorrelSchemaShift extends BaseEntity {
 
   @Column()
   public default: boolean;
-
-  // @ManyToMany(() => BorrelSchema,
-  //   (borrelSchema) => borrelSchema)
-  // public borrelSchema: BorrelSchema;
 }
