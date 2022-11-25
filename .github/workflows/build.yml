@@ -1,0 +1,98 @@
+name: Build & Test
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  lint:
+    runs-on: [self-hosted, linux, docker]
+    container:
+      image: node:16
+    steps:
+      - uses: actions/checkout@v3
+      - name: Cache and restore node_modules
+        id: cache-node
+        uses: actions/cache@v3
+        with:
+          path: ./node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('./package-lock.json') }}
+      - run: npm install
+        if: steps.cache-node.outputs.cache-hit != 'true'
+      - run: npm run lint
+  build:
+    runs-on: [self-hosted, linux, docker]
+    needs: [lint]
+    container:
+      image: node:16
+    steps:
+      - uses: actions/checkout@v3
+      - name: Cache and restore node_modules
+        id: cache-node
+        uses: actions/cache@v3
+        with:
+          path: ./node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('./package-lock.json') }}
+      - run: npm install
+        if: steps.cache-node.outputs.cache-hit != 'true'
+      - run: npm run build
+      - name: "Compress out folder"
+        run: tar -zcvf out.tar.gz out/
+      - name: "Upload /out of build"
+        uses: actions/upload-artifact@v3
+        with:
+          name: build
+          path: out.tar.gz
+          retention-days: 1
+
+  coverage:
+    runs-on: [self-hosted, linux, docker]
+    needs: [lint]
+    container:
+      image: node:16
+    env:
+      NODE_ENV: development
+      API_HOST: localhost:3000
+      API_BASEPATH: /v1
+      CURRENCY_CODE: EUR
+      CURRENCY_PRECISION: 2
+      GEWISWEB_JWT_SECRET: ChangeMe
+      JWT_KEY_PATH: ./config/jwt.key
+      HTTP_PORT: 3000
+      TYPEORM_CONNECTION: sqlite
+      TYPEORM_DATABASE: local.sqlite
+      TYPEORM_SYNCHRONIZE: 0
+      TYPEORM_LOGGING: 1
+      LOG_LEVEL: INFO
+      RESET_TOKEN_EXPIRES: 3600
+      FILE_STORAGE_METHOD: disk
+      ENABLE_LDAP: true
+      PAGINATION_DEFAULT: 20
+      PAGINATION_MAX: 500
+    steps:
+      - uses: actions/checkout@v3
+      - name: Cache and restore node_modules
+        id: cache-node
+        uses: actions/cache@v3
+        with:
+          path: ./node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('./package-lock.json') }}
+      - run: npm install
+        if: steps.cache-node.outputs.cache-hit != 'true'
+      - run: openssl genrsa -out ./config/jwt.key 2048 && chmod 0777 ./config/jwt.key
+      - run: npm run swagger
+      - run: npm run coverage
+      - name: "Comment code coverage on PR"
+        if: github.event_name == 'pull_request'
+        uses: sidx1024/report-nyc-coverage-github-action@v1.2.6
+        with:
+          comment_template_file: .github/coverage-template.md
+          coverage_file: reports/coverage/coverage-summary.json
+      - name: "Upload code coverage report"
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage
+          path: reports/coverage/
+          retention-days: 7
