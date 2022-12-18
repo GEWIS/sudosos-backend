@@ -224,7 +224,7 @@ export default async function createApp(): Promise<Application> {
   await setupAuthentication(tokenHandler, application);
 
   await BalanceService.updateBalances({});
-  const syncBalances = cron.schedule('*/10 * * * *', () => {
+  const syncBalances = cron.schedule('41 1 * * *', () => {
     logger.debug('Syncing balances.');
     BalanceService.updateBalances({});
     logger.debug('Synced balances.');
