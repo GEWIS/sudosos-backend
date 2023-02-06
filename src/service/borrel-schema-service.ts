@@ -15,6 +15,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+import { FindManyOptions } from 'typeorm';
 import {
   BorrelSchemaResponse,
   BorrelSchemaAnswerResponse,
@@ -34,25 +35,44 @@ import BorrelSchemaShift from '../entity/borrel-schema/borrel-schema-shift';
 import BorrelSchemaAnswer from '../entity/borrel-schema/borrel-schema-answer';
 import User from '../entity/user/user';
 import { parseUserToResponse } from '../helpers/revision-to-response';
+import QueryFilter, { FilterMapping } from '../helpers/query-filter';
+import { RequestWithToken } from '../middleware/token-middleware';
+import {
+  asDate, asNumber,
+} from '../helpers/validators';
 
-interface BorrelSchemaFilterParameters {
+export interface BorrelSchemaFilterParameters {
   name?: string;
+  borrelSchemaId?: number;
   createById?: number;
-  startDate?: string;
-  endDate?: string;
+  startDate?: Date;
+  endDate?: Date;
   shiftId?: number;
 }
-interface BorrelSchemaShiftFilterParameters {
+export interface BorrelSchemaShiftFilterParameters {
   name?: string;
   default?: boolean;
 }
 
-interface BorrelSchemaAnswerFilterParameters {
+export interface BorrelSchemaAnswerFilterParameters {
   userId?: number;
   availability?: number;
   selected?: boolean;
   shiftId?: number;
   borrelSchemaId?: number;
+}
+
+export function parseBorrelSchemaFilterParameters(
+  req: RequestWithToken,
+): BorrelSchemaFilterParameters {
+  return {
+    name: String(req.query.name),
+    borrelSchemaId: asNumber(req.query.borrelSchemaId),
+    createById: asNumber(req.query.createById),
+    startDate: asDate(req.query.startDate),
+    endDate: asDate(req.query.endDate),
+    shiftId: asNumber(req.query.shiftId),
+  };
 }
 
 /**
@@ -94,6 +114,32 @@ export default class BorrelSchemaService {
       shift: this.asBorrelSchemaShiftResponse(entity.shift),
       user: parseUserToResponse(entity.user, false),
     };
+  }
+
+  /**
+   * Get all borrel schemas.
+   */
+  public static async getBorrelSchemas(params: BorrelSchemaFilterParameters = {})
+    :Promise<BorrelSchemaResponse[]> {
+    const filterMapping: FilterMapping = {
+      name: 'name',
+      startDate: 'startDate',
+      borrelSchemaId: 'id',
+    };
+
+    const options: FindManyOptions = {
+      where: QueryFilter.createFilterWhereClause(filterMapping, params),
+      relations: ['createdBy', 'shifts'],
+      order: { startDate: 'ASC' },
+    };
+
+    options.relations.push('borrelSchemaShifts');
+    const borrelSchemas = await BorrelSchema.find({ ...options });
+    const records: BorrelSchemaResponse[] = borrelSchemas.map(
+      this.asBorrelSchemaResponse.bind(this),
+    );
+
+    return records;
   }
 
   /**

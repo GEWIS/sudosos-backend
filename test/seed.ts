@@ -256,7 +256,7 @@ export async function seedInvoices(users: User[], transactions: Transaction[]): 
 }
 
 /**
- * Seeds a default dataset of borrelschemas and stores them in the database
+ * Seeds a default dataset of borrelSchemaShifts and stores them in the database
  */
 export async function createShifts() {
   const shifts: BorrelSchemaShift[] = [];
