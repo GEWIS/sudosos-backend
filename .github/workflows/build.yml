@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: [ main, develop ]
 
+permissions:
+  actions: read
+  contents: read
+  pull-requests: write
+  statuses: read
+
 jobs:
   lint:
     runs-on: [self-hosted, linux, docker]
@@ -73,6 +79,8 @@ jobs:
       PAGINATION_MAX: 500
     steps:
       - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
       - name: Cache and restore node_modules
         id: cache-node
         uses: actions/cache@v3
@@ -84,12 +92,15 @@ jobs:
       - run: openssl genrsa -out ./config/jwt.key 2048 && chmod 0777 ./config/jwt.key
       - run: npm run swagger
       - run: npm run coverage
+      - run: git config --global --add safe.directory $GITHUB_WORKSPACE # To avoid dubious ownership
       - name: "Comment code coverage on PR"
         if: github.event_name == 'pull_request'
         uses: sidx1024/report-nyc-coverage-github-action@v1.2.6
         with:
           comment_template_file: .github/coverage-template.md
           coverage_file: reports/coverage/coverage-summary.json
+          base_coverage_file: ''
+          sources_base_path: "/__w/sudosos-backend/sudosos-backend" #github.action_path does not work in Docker (https://github.com/actions/runner/issues/716)
       - name: "Upload code coverage report"
         uses: actions/upload-artifact@v3
         with:
