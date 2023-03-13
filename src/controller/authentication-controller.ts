@@ -37,6 +37,8 @@ import AuthenticationEanRequest from './request/authentication-ean-request';
 import EanAuthenticator from '../entity/authenticator/ean-authenticator';
 import Mailer from '../mailer';
 import PasswordReset from '../mailer/templates/password-reset';
+import AuthenticationNfcRequest from './request/authentication-nfc-request';
+import NfcAuthenticator from '../entity/authenticator/nfc-authenticator';
 
 /**
  * The authentication controller is responsible for:
@@ -92,6 +94,13 @@ export default class AuthenticationController extends BaseController {
           body: { modelName: 'AuthenticationPinRequest' },
           policy: async () => true,
           handler: this.PINLogin.bind(this),
+        },
+      },
+      '/nfc': {
+        POST: {
+          body: { modelName: 'AuthenticationNfcRequest' },
+          policy: async () => true,
+          handler: this.nfcLogin.bind(this),
         },
       },
       '/local': {
@@ -383,6 +392,43 @@ export default class AuthenticationController extends BaseController {
       return;
     } catch (error) {
       this.logger.error('Could not create reset token:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * NFC login and hand out token
+   * @route POST /authentication/nfc
+   * @group authenticate - Operations of authentication controller
+   * @param {AuthenticationNfcRequest.model} req.body.required - The NFC login.
+   * @returns {AuthenticationResponse.model} 200 - The created json web token.
+   * @returns {string} 403 - Authentication error.
+   */
+  public async nfcLogin(req: Request, res: Response): Promise<void> {
+    const body = req.body as AuthenticationNfcRequest;
+    this.logger.trace('Atempted NFC authentication with NFC length, ', body.nfcCode.length);
+
+    try {
+      const { nfcCode } = body;
+      const authenticator = await NfcAuthenticator.findOne({ where: { nfcCode: nfcCode }  });
+      if (authenticator == null || authenticator.user == null) {
+        res.status(403).json({
+          message: 'Invalid credentials.',
+        });
+        return;
+      }
+
+      const context: AuthenticationContext = {
+        roleManager: this.roleManager,
+        tokenHandler: this.tokenHandler,
+      };
+
+      this.logger.trace('Succesfull NFC authentication for user ', authenticator.user);
+
+      const token = await AuthenticationService.getSaltedToken(authenticator.user, context, true);
+      res.json(token);
+    } catch (error) {
+      this.logger.error('Could not authenticate using NFC:', error);
       res.status(500).json('Internal server error.');
     }
   }

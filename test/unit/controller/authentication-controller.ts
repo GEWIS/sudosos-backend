@@ -44,6 +44,8 @@ import AuthenticationService from '../../../src/service/authentication-service';
 import AuthenticationResetTokenRequest from '../../../src/controller/request/authentication-reset-token-request';
 import EanAuthenticator from '../../../src/entity/authenticator/ean-authenticator';
 import AuthenticationEanRequest from '../../../src/controller/request/authentication-ean-request';
+import AuthenticationNfcRequest from '../../../src/controller/request/authentication-nfc-request';
+import NfcAuthenticator from '../../../src/entity/authenticator/nfc-authenticator';
 
 describe('AuthenticationController', async (): Promise<void> => {
   let ctx: {
@@ -112,6 +114,11 @@ describe('AuthenticationController', async (): Promise<void> => {
     await EanAuthenticator.save({
       userId: ctx.user.id,
       eanCode: '39',
+    });
+
+    await NfcAuthenticator.save({
+      userId: ctx.user.id,
+      nfcCode: 'nfcCorrectString',
     });
 
     // Silent in-dependency logs unless really wanted by the environment.
@@ -337,6 +344,40 @@ describe('AuthenticationController', async (): Promise<void> => {
       eanCode: '39',
     };
     await testHashAuthentication('ean', validLocalRequest, { ...validLocalRequest, eanCode: '2' });
+  });
+
+  describe('POST /authentication/nfc', async () => {
+
+    it('should return an HTTP 200 and User if correct', async () => {
+      const validNfcRequest: AuthenticationNfcRequest = {
+        nfcCode: 'nfcCorrectString',
+      };
+      const res = await request(ctx.app)
+        .post('/authentication/nfc')
+        .send(validNfcRequest);
+      expect(res.status).to.equal(200);
+      expect((res.body as AuthenticationResponse).user.id).to.be.equal(1);
+    });
+    it('should return an HTTP 403 if incorrect', async () => {
+      const wrongNfcRequest: AuthenticationNfcRequest = {
+        nfcCode: 'nfcwrongString',
+      };
+      const res = await request(ctx.app)
+        .post('/authentication/nfc')
+        .send(wrongNfcRequest);
+      expect(res.status).to.equal(403);
+    });
+    it('should return an HTTP 403 if user does not have a nfc', async () => {
+      const validNfcRequest: AuthenticationNfcRequest = {
+        nfcCode: 'nfcCorrectString',
+      };
+      const res = await request(ctx.app)
+        .post('/authentication/nfc')
+        .send({ ...validNfcRequest, nfcCode: 'notExistingNfcString' } as AuthenticationNfcRequest);
+      expect(res.status).to.equal(403);
+      expect(res.body.message).to.equal('Invalid credentials.');
+    });
+
   });
 
   describe('POST /authentication/local/reset', async () => {

@@ -47,6 +47,9 @@ import LocalAuthenticator from '../entity/authenticator/local-authenticator';
 import UpdateLocalRequest from './request/update-local-request';
 import verifyUpdateLocalRequest from './request/validators/update-local-request-spec';
 import StripeService from '../service/stripe-service';
+import verifyUpdateNfcRequest from './request/validators/update-nfc-request-spec';
+import UpdateNfcRequest from './request/update-nfc-request';
+import NfcAuthenticator from '../entity/authenticator/nfc-authenticator';
 
 export default class UserController extends BaseController {
   private logger: Logger = log4js.getLogger('UserController');
@@ -117,6 +120,22 @@ export default class UserController extends BaseController {
           handler: this.updateUserPin.bind(this),
         },
       },
+      '/:id(\\d+)/authenticator/nfc': {
+        PUT: {
+          body: { modelName: 'UpdateNfcRequest' },
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'update', UserController.getRelation(req), 'Authenticator', ['nfcCode'],
+          ),
+          handler: this.updateUserNfc.bind(this),
+        },
+        DELETE: {
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'delete', UserController.getRelation(req), 'Authenticator', [],
+          ),
+          handler: this.deleteUserNfc.bind(this),
+        },
+      },
+
       '/:id(\\d+)/authenticator/local': {
         PUT: {
           body: { modelName: 'UpdateLocalRequest' },
@@ -401,6 +420,84 @@ export default class UserController extends BaseController {
       res.status(200).json();
     } catch (error) {
       this.logger.error('Could not update pin:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Put a users NFC code
+   * @route PUT /users/{id}/authenticator/nfc
+   * @group users - Operations of user controller
+   * @param {integer} id.path.required - The id of the user
+   * @param {UpdateNfcRequest.model} update.body.required -
+   *    The NFC code to update to
+   * @security JWT
+   * @returns 200 - Update success
+   * @returns {string} 400 - Validation Error
+   * @returns {string} 404 - Nonexistent user id
+   */
+  public async updateUserNfc(req: RequestWithToken, res: Response): Promise<void> {
+    const { params } = req;
+    const updateNfcRequest = req.body as UpdateNfcRequest;
+    this.logger.trace('Update user NFC', params, 'by user', req.token.user);
+
+    try {
+      // Get the user object if it exists
+      const user = await User.findOne({ where: { id: parseInt(params.id, 10), deleted: false } });
+      // If it does not exist, return a 404 error
+      if (user == null) {
+        res.status(404).json('Unknown user ID.');
+        return;
+      }
+
+      const validation = await verifyUpdateNfcRequest(updateNfcRequest);
+      if (isFail(validation)) {
+        res.status(400).json(validation.fail.value);
+        return;
+      }
+
+      await AuthenticationService.setUserAuthenticationNfc(user,
+        updateNfcRequest.nfcCode.toString(), NfcAuthenticator);
+      res.status(200).json();
+    } catch (error) {
+      this.logger.error('Could not update NFC:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Delete a nfc code
+   * @route DELETE /users/{id}/authenticator/nfc
+   * @group users - Operations of user controller
+   * @param {integer} id.path.required - The id of the user
+   * @security JWT
+   * @returns 200 - Delete nfc success
+   * @returns {string} 400 - Validation Error
+   * @returns {string} 403 - Nonexistent user nfc
+   * @returns {string} 404 - Nonexistent user id
+   */
+  public async deleteUserNfc(req: RequestWithToken, res: Response): Promise<void> {
+    const parameters = req.params;
+    this.logger.trace('Delete user NFC', parameters, 'by user', req.token.user);
+
+    try {
+      // Get the user object if it exists
+      const user = await User.findOne({ where: { id: parseInt(parameters.id, 10), deleted: false } });
+      // If it does not exist, return a 404 error
+      if (user == null) {
+        res.status(404).json('Unknown user ID.');
+        return;
+      }
+
+      if (await NfcAuthenticator.count({ where: { userId:  parseInt(parameters.id, 10) } }) == 0) {
+        res.status(403).json('No saved nfc');
+        return;
+      }
+
+      await NfcAuthenticator.delete(parseInt(parameters.id, 10));
+      res.status(200).json();
+    } catch (error) {
+      this.logger.error('Could not update NFC:', error);
       res.status(500).json('Internal server error.');
     }
   }

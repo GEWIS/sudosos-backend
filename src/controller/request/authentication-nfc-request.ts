@@ -15,18 +15,11 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import {
-  Column, Entity, Index,
-} from 'typeorm';
-import AuthenticationMethod from './authentication-method';
 
 /**
- * @typedef {AuthenticationMethod} NfcAuthenticator
- * @property {string} nfcCode.required - The UID of the NFC chip
+ * @typedef AuthenticationNfcRequest
+ * @property {string} nfcCode.required
  */
-@Entity()
-export default class NfcAuthenticator extends AuthenticationMethod {
-  @Index()
-  @Column({ unique: true })
-  public nfcCode: string;
+export default interface AuthenticationNfcRequest {
+  nfcCode: string;
 }
