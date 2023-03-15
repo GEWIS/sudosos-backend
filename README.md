@@ -5,7 +5,7 @@ Hi welcome to SudoSOS. To get you quickly started follow the install steps below
 This quick start first states what software needs to be installed to be able to work with the project and then explains how to get the project started.
 
 Prerequisites:
--	Have Node.js installed. Version 16 is recommended.
+-	Have Node.js installed. Version 18 is required.
      - Note that NPM 14.16 (latest) might not run the coverage on Linux. This is probably a race condition in the package and is being addressed.
 - Have Git and possibly a Git manager installed
 - Have OpenSSL installed (if you're using Git Bash you already have OpenSSL)

@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ main, develop ]
 
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
 permissions:
   actions: read
   contents: read
@@ -14,9 +18,9 @@ permissions:
 
 jobs:
   lint:
-    runs-on: [self-hosted, linux, docker]
+    runs-on: [ self-hosted, linux, docker ]
     container:
-      image: node:16
+      image: node:18
     steps:
       - uses: actions/checkout@v3
       - name: Cache and restore node_modules
@@ -29,10 +33,10 @@ jobs:
         if: steps.cache-node.outputs.cache-hit != 'true'
       - run: npm run lint
   build:
-    runs-on: [self-hosted, linux, docker]
-    needs: [lint]
+    needs: [ lint ]
+    runs-on: [ self-hosted, linux, docker ]
     container:
-      image: node:16
+      image: node:18
     steps:
       - uses: actions/checkout@v3
       - name: Cache and restore node_modules
@@ -54,10 +58,10 @@ jobs:
           retention-days: 1
 
   coverage:
-    runs-on: [self-hosted, linux, docker]
     needs: [lint]
+    runs-on: [ self-hosted, linux, docker ]
     container:
-      image: node:16
+      image: node:18
     env:
       NODE_ENV: development
       API_HOST: localhost:3000
