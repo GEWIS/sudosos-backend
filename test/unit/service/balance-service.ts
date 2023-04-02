@@ -328,11 +328,11 @@ describe('BalanceService', (): void => {
       cachedBalance = await Balance.findOne({ where: { userId: ctx.users[1].id } });
       expect(cachedBalance).to.be.null;
 
-      const actualBalance = await calculateBalance(ctx.users[0]);
+      const actualBalance = calculateBalance(ctx.users[0]);
       const balance = await BalanceService.getBalance(ctx.users[0].id);
       expect(balance.amount.amount).to.equal(actualBalance.amount.getAmount());
 
-      const actualBalance2 = await calculateBalance(ctx.users[1]);
+      const actualBalance2 = calculateBalance(ctx.users[1]);
       const balance2 = await BalanceService.getBalance(ctx.users[1].id);
       expect(balance2.amount.amount).to.equal(actualBalance2.amount.getAmount());
     });
@@ -345,11 +345,11 @@ describe('BalanceService', (): void => {
       cachedBalance = await Balance.findOne({ where: { userId: ctx.users[1].id } });
       expect(cachedBalance).to.not.be.undefined;
 
-      const actualBalance = await calculateBalance(ctx.users[0]);
+      const actualBalance = calculateBalance(ctx.users[0]);
       const balance = await BalanceService.getBalance(ctx.users[0].id);
       expect(balance.amount.amount).to.equal(actualBalance.amount.getAmount());
 
-      const actualBalance2 = await calculateBalance(ctx.users[1]);
+      const actualBalance2 = calculateBalance(ctx.users[1]);
       const balance2 = await BalanceService.getBalance(ctx.users[1].id);
       expect(balance2.amount.amount).to.equal(actualBalance2.amount.getAmount());
     });

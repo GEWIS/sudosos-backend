@@ -489,7 +489,7 @@ describe('UserController', (): void => {
       ).valid).to.be.true;
     });
     it('should return an HTTP 200 and all the members of the organ', async () => {
-      await inUserContext((await UserFactory()).clone(3), async (...users: User[]) => {
+      await inUserContext(await (await UserFactory()).clone(3), async (...users: User[]) => {
         const organ = await User.findOne({ where: { type: UserType.ORGAN } });
         const promises: Promise<MemberAuthenticator>[] = [];
         users.forEach((user) => {
@@ -1210,7 +1210,7 @@ describe('UserController', (): void => {
         expect(productSum).to.equal(report.totalInclVat.amount);
         expect(catSum).to.equal(report.totalInclVat.amount);
         expect(vatSum).to.equal(report.totalInclVat.amount);
-        expect(report.totalInclVat.amount).to.eq(transactions.cost);
+        expect(report.totalInclVat.amount).to.eq(transactions.total);
       });
     });
     it('should validate transaction filters', async () => {
@@ -1363,7 +1363,7 @@ describe('UserController', (): void => {
     };
 
     before(async () => {
-      userNotAccepted = await(await UserFactory({
+      userNotAccepted = await (await UserFactory({
         firstName: 'TestUser1',
         lastName: 'TestUser1',
         type: UserType.MEMBER,
@@ -1461,7 +1461,7 @@ describe('UserController', (): void => {
   });
   describe('PUT /users/{id}/authenticator/pin', () => {
     it('should return an HTTP 200 if authorized', async () => {
-      await inUserContext((await UserFactory()).clone(1), async (user: User) => {
+      await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
         const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
 
         const updatePinRequest: UpdatePinRequest = {
@@ -1475,7 +1475,7 @@ describe('UserController', (): void => {
       });
     });
     it('should return an 403 if unauthorized', async () => {
-      await inUserContext((await UserFactory()).clone(1), async (user: User) => {
+      await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
         const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
 
         const updatePinRequest: UpdatePinRequest = {
@@ -1489,7 +1489,7 @@ describe('UserController', (): void => {
       });
     });
     it('should return an 400 if pin is not 4 numbers', async () => {
-      await inUserContext((await UserFactory()).clone(1), async (user: User) => {
+      await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
         const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
 
         const updatePinRequest: UpdatePinRequest = {
@@ -1649,7 +1649,7 @@ describe('UserController', (): void => {
   });
   describe('PUT /users/{id}/authenticator/local', () => {
     it('should return an HTTP 200 if authorized', async () => {
-      await inUserContext((await UserFactory()).clone(1), async (user: User) => {
+      await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
         const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
 
         const updateLocalRequest: UpdateLocalRequest = {
@@ -1695,7 +1695,7 @@ describe('UserController', (): void => {
   });
   describe('GET /users/{id}/authenticate', () => {
     it('should return an HTTP 200 and all users that user can authenticate as', async () => {
-      await inUserContext((await UserFactory()).clone(1), async (user: User) => {
+      await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
         const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
 
         const auth = Object.assign(new MemberAuthenticator(), {
@@ -1714,7 +1714,7 @@ describe('UserController', (): void => {
       });
     });
     it('should return an HTTP 404 if user does not exist', async () => {
-      await inUserContext((await UserFactory()).clone(1), async (user: User) => {
+      await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
         const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User', 'Admin'], lesser: false }, '1');
 
         const res = await request(ctx.app)
@@ -1724,7 +1724,7 @@ describe('UserController', (): void => {
       });
     });
     it('should return an HTTP 403 if insufficient rights', async () => {
-      await inUserContext((await UserFactory()).clone(1), async (user: User) => {
+      await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
         const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
 
         const res = await request(ctx.app)
@@ -1736,7 +1736,7 @@ describe('UserController', (): void => {
   });
   describe('GET /users/{id}/roles', () => {
     it('should return correct model', async () => {
-      await inUserContext((await UserFactory()).clone(1), async (user: User) => {
+      await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
         const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
 
         const res = await request(ctx.app)
@@ -1754,7 +1754,7 @@ describe('UserController', (): void => {
       });
     });
     it('should return an HTTP 200 and the users roles', async () => {
-      await inUserContext((await UserFactory()).clone(1), async (user: User) => {
+      await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
         const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
 
         const res = await request(ctx.app)
@@ -1766,7 +1766,7 @@ describe('UserController', (): void => {
       });
     });
     it('should return an HTTP 404 if user does not exist', async () => {
-      await inUserContext((await UserFactory()).clone(1), async (user: User) => {
+      await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
         const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User', 'Admin'], lesser: false }, '1');
 
         const res = await request(ctx.app)
@@ -1776,7 +1776,7 @@ describe('UserController', (): void => {
       });
     });
     it('should return an HTTP 403 if insufficient rights', async () => {
-      await inUserContext((await UserFactory()).clone(1), async (user: User) => {
+      await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
         const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
 
         const res = await request(ctx.app)

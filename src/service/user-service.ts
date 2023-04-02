@@ -145,9 +145,13 @@ export default class UserService {
     // Local users will receive a reset link.
     if (LocalUserTypes.includes(user.type)) {
       const resetTokenInfo = await AuthenticationService.createResetToken(user);
-      Mailer.getInstance().send(user, new WelcomeWithReset({ email: user.email, name: user.firstName, resetTokenInfo }));
+      Mailer.getInstance().send(user, new WelcomeWithReset({ email: user.email, name: user.firstName, resetTokenInfo })).then().catch((e) => {
+        throw e;
+      });
     } else {
-      Mailer.getInstance().send(user, new WelcomeToSudosos({ name: user.firstName }));
+      Mailer.getInstance().send(user, new WelcomeToSudosos({ name: user.firstName })).then().catch((e) => {
+        throw e;
+      });
     }
     return Promise.resolve(this.getSingleUser(user.id));
   }

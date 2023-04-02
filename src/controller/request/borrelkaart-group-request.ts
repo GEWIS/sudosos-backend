@@ -16,18 +16,30 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import User from '../../entity/user/user';
+import DineroFactory from 'dinero.js';
+import { DineroObjectRequest } from './dinero-request';
 
 /**
  * @typedef BorrelkaartGroupRequest
  * @property {string} name.required - Name of the group
  * @property {string} activeStartDate.required - Date from which the included cards are active
- * @property {string} activeEndDate - Date from which cards are no longer active
- * @property {Array.<User>} users.required - Users to be assigned to the borrelkaart group
+ * @property {string} activeEndDate.required - Date from which cards are no longer active
+ * @property {DineroObjectRequest.model} balance.required - Start balance to be assigned
+ *  to the borrelkaart users
+ * @property {number} amount.required - Amount of users to be assigned to the borrelkaart group
  */
-export default interface BorrelkaartGroupRequest {
+export interface BorrelkaartGroupRequest {
   name: string,
   activeStartDate: string,
   activeEndDate: string,
-  users: User[],
+  balance: DineroObjectRequest,
+  amount: number,
+}
+
+export interface BorrelkaartGroupParams {
+  name: string,
+  activeStartDate: Date,
+  activeEndDate: Date,
+  balance: DineroFactory.Dinero,
+  amount: number,
 }

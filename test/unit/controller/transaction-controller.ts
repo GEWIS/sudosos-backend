@@ -605,43 +605,45 @@ describe('TransactionController', (): void => {
       ).valid).to.be.true;
     });
     it('should return an HTTP 403 if user is not connected to createdBy via organ', async () => {
-      await inUserContext((await UserFactory()).clone(2), async (user: User, otherUser: User) => {
-        const canBuyToken = await ctx.tokenHandler.signToken({ user, roles: ['Buyer'], lesser: false }, '39');
-        const req : TransactionRequest = {
-          ...ctx.validTransReq,
-          createdBy: otherUser.id,
-          from: user.id,
-        };
-        const res = await request(ctx.app)
-          .post('/transactions')
-          .set('Authorization', `Bearer ${canBuyToken}`)
-          .send(req);
-        expect(res.status).to.equal(403);
-      });
+      await inUserContext(await (await UserFactory()).clone(2),
+        async (user: User, otherUser: User) => {
+          const canBuyToken = await ctx.tokenHandler.signToken({ user, roles: ['Buyer'], lesser: false }, '39');
+          const req : TransactionRequest = {
+            ...ctx.validTransReq,
+            createdBy: otherUser.id,
+            from: user.id,
+          };
+          const res = await request(ctx.app)
+            .post('/transactions')
+            .set('Authorization', `Bearer ${canBuyToken}`)
+            .send(req);
+          expect(res.status).to.equal(403);
+        });
     });
     it('should return an HTTP 200 and the saved transaction when user is connected to createdBy via organ', async () => {
-      await inUserContext((await UserFactory()).clone(2), async (user: User, otherUser: User) => {
-        await (Object.assign(new MemberAuthenticator(), {
-          user,
-          authenticateAs: ctx.users[0],
-        })).save();
-        await (Object.assign(new MemberAuthenticator(), {
-          user: otherUser,
-          authenticateAs: ctx.users[0],
-        })).save();
+      await inUserContext(await (await UserFactory()).clone(2),
+        async (user: User, otherUser: User) => {
+          await (Object.assign(new MemberAuthenticator(), {
+            user,
+            authenticateAs: ctx.users[0],
+          })).save();
+          await (Object.assign(new MemberAuthenticator(), {
+            user: otherUser,
+            authenticateAs: ctx.users[0],
+          })).save();
 
-        const canBuyToken = await ctx.tokenHandler.signToken({ user, roles: ['Buyer'], lesser: false }, '39');
-        const req : TransactionRequest = {
-          ...ctx.validTransReq,
-          createdBy: otherUser.id,
-          from: user.id,
-        };
-        const res = await request(ctx.app)
-          .post('/transactions')
-          .set('Authorization', `Bearer ${canBuyToken}`)
-          .send(req);
-        expect(res.status).to.equal(200);
-      });
+          const canBuyToken = await ctx.tokenHandler.signToken({ user, roles: ['Buyer'], lesser: false }, '39');
+          const req : TransactionRequest = {
+            ...ctx.validTransReq,
+            createdBy: otherUser.id,
+            from: user.id,
+          };
+          const res = await request(ctx.app)
+            .post('/transactions')
+            .set('Authorization', `Bearer ${canBuyToken}`)
+            .send(req);
+          expect(res.status).to.equal(200);
+        });
     });
     it('should return an HTTP 403 when user is not admin', async () => {
       const res = await request(ctx.app)

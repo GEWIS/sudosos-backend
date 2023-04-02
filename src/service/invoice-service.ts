@@ -461,10 +461,10 @@ export default class InvoiceService {
       const latestInvoice = await this.getLatestValidInvoice(forId);
       let date;
       // If no invoice exists we use the time when the account was created.
-      if (!latestInvoice) {
-        date = user.createdAt;
-      } else {
+      if (latestInvoice) {
         date = latestInvoice.createdAt;
+      } else {
+        date = user.createdAt;
       }
       params = { fromDate: new Date(date) };
     }

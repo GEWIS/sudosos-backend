@@ -386,7 +386,9 @@ export default class AuthenticationController extends BaseController {
       }
 
       const resetTokenInfo = await AuthenticationService.createResetToken(user);
-      Mailer.getInstance().send(user, new PasswordReset({ email: user.email, name: user.firstName, resetTokenInfo }));
+      Mailer.getInstance().send(user, new PasswordReset({ email: user.email, name: user.firstName, resetTokenInfo }))
+        .then()
+        .catch((error) => this.logger.error(error));
       // send email with link.
       res.status(204).send();
       return;

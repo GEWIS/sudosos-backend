@@ -15,10 +15,12 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+import { Dinero } from 'dinero.js';
 import {
   Column, Entity, OneToMany,
 } from 'typeorm';
 import BaseEntity from '../base-entity';
+import DineroTransformer from '../transformer/dinero-transformer';
 // eslint-disable-next-line import/no-cycle
 import UserBorrelkaartGroup from './user-borrelkaart-group';
 
@@ -44,10 +46,20 @@ export default class BorrelkaartGroup extends BaseEntity {
   public activeStartDate: Date;
 
   @Column({
-    nullable: true,
     type: 'datetime',
   })
-  public activeEndDate?: Date;
+  public activeEndDate: Date;
+
+  @Column({
+    type: 'integer',
+  })
+  public amount: number;
+
+  @Column({
+    type: 'integer',
+    transformer: DineroTransformer.Instance,
+  })
+  public balance: Dinero;
 
   @OneToMany(() => UserBorrelkaartGroup, (user) => user.borrelkaartGroup)
   public borrelkaarten: UserBorrelkaartGroup[];

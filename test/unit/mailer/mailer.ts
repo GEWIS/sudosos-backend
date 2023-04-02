@@ -59,9 +59,9 @@ describe('Mailer', () => {
     sandbox.resetHistory();
   });
 
-  after(() => {
+  after(async () => {
     sandbox.restore();
-    ctx.connection.close();
+    await ctx.connection.close();
   });
 
   it('should correctly create mailer', () => {
@@ -117,6 +117,6 @@ describe('Mailer', () => {
     if (!ctx.mailer) this.skip();
 
     const promise = ctx.mailer.send(ctx.user, new HelloWorld({ name: ctx.user.firstName }), 'binary' as any);
-    expect(promise).to.eventually.be.fulfilled;
+    await expect(promise).to.eventually.be.fulfilled;
   });
 });

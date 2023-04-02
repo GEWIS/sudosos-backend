@@ -109,7 +109,7 @@ async function differentState<T extends UpdateInvoiceParams>(p: T) {
 /**
  * Specification for an InvoiceEntryRequest.
  */
-const invoiceEntryRequestSpec: Specification<InvoiceEntryRequest, ValidationError> = [
+const invoiceEntryRequestSpec: () => Specification<InvoiceEntryRequest, ValidationError> = () => [
   [[positiveNumber], 'amount', new ValidationError('amount:')],
   [stringSpec(), 'description', new ValidationError('description:')],
 ];
@@ -125,7 +125,7 @@ function baseInvoiceRequestSpec<T extends BaseInvoice>(): Specification<T, Valid
     [stringSpec(), 'description', new ValidationError('description:')],
     [stringSpec(), 'addressee', new ValidationError('addressee:')],
     // We have only defined a single item rule, so we use this to apply it to an array,
-    [[createArrayRule(invoiceEntryRequestSpec)], 'customEntries', new ValidationError('Custom entries:')],
+    [[createArrayRule(invoiceEntryRequestSpec())], 'customEntries', new ValidationError('Custom entries:')],
   ];
 }
 
@@ -142,7 +142,7 @@ const updateInvoiceRequestSpec: Specification<UpdateInvoiceParams, ValidationErr
 /**
  * Specification for an CreateInvoiceParams
  */
-const createInvoiceRequestSpec: Specification<CreateInvoiceParams, ValidationError> = [
+const createInvoiceRequestSpec: () => Specification<CreateInvoiceParams, ValidationError> = () => [
   ...baseInvoiceRequestSpec<CreateInvoiceParams>(),
   [[userMustExist], 'byId', new ValidationError('byId:')],
 ];
@@ -151,7 +151,7 @@ export default async function verifyCreateInvoiceRequest(
   createInvoiceRequest: CreateInvoiceRequest,
 ) {
   return Promise.resolve(await validateSpecification(
-    createInvoiceRequest, createInvoiceRequestSpec,
+    createInvoiceRequest, createInvoiceRequestSpec(),
   ));
 }
 

@@ -168,7 +168,7 @@ describe('AuthenticationController', async (): Promise<void> => {
 
       const auth = res.body as AuthenticationResponse;
       const promise = ctx.tokenHandler.verifyToken(auth.token);
-      expect(promise).to.eventually.be.fulfilled;
+      await expect(promise).to.eventually.be.fulfilled;
 
       const token = await promise;
       expect(token.roles).to.be.empty;
@@ -214,7 +214,7 @@ describe('AuthenticationController', async (): Promise<void> => {
     });
   });
 
-  async function testHashAuthentication(type: string, right: any, wrong: any) {
+  function testHashAuthentication(type: string, right: any, wrong: any) {
     it('should return an HTTP 200 and User if correct', async () => {
       const res = await request(ctx.app)
         .post(`/authentication/${type}`)
@@ -267,7 +267,7 @@ describe('AuthenticationController', async (): Promise<void> => {
       expect(res.status).to.equal(403);
       expect(res.body.message).to.equal('Invalid credentials.');
     });
-    it('should return an HTTP 403 if user does not have a pin', async () => {
+    it('should return an HTTP 403 if user does not have a password', async () => {
       const res = await request(ctx.app)
         .post('/authentication/local')
         .send({ accountMail: 'Roy41@gewis.nl', password: '1' } as AuthenticationLocalRequest);
@@ -343,7 +343,7 @@ describe('AuthenticationController', async (): Promise<void> => {
     const validLocalRequest: AuthenticationEanRequest = {
       eanCode: '39',
     };
-    await testHashAuthentication('ean', validLocalRequest, { ...validLocalRequest, eanCode: '2' });
+    testHashAuthentication('ean', validLocalRequest, { ...validLocalRequest, eanCode: '2' });
   });
 
   describe('POST /authentication/nfc', async () => {
