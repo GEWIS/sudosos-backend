@@ -28,12 +28,14 @@ import {
   seedContainers,
   seedPointsOfSale,
   seedProductCategories,
-  seedProducts, seedTransactions, seedTransfers,
+  seedProducts,
+  seedTransactions,
+  seedTransfers,
   seedUsers,
   seedVatGroups,
 } from '../../seed';
 import Swagger from '../../../src/start/swagger';
-import BalanceService from '../../../src/service/balance-service';
+import BalanceService, { BalanceOrderColumn } from '../../../src/service/balance-service';
 import User from '../../../src/entity/user/user';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
 import Balance from '../../../src/entity/transactions/balance';
@@ -43,6 +45,83 @@ import ContainerRevision from '../../../src/entity/container/container-revision'
 import SubTransactionRow from '../../../src/entity/transactions/sub-transaction-row';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
+import { OrderingDirection } from '../../../src/helpers/ordering';
+import { defaultPagination } from '../../../src/helpers/pagination';
+
+export function calculateBalance(user: User, transactions: Transaction[], subTransactions: SubTransaction[], transfers: Transfer[], date?: Date): Balance {
+  let transactionsOutgoing = transactions.filter((t) => t.from.id === user.id)
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  if (date) {
+    transactionsOutgoing = transactionsOutgoing
+      .filter((t) => t.createdAt.getTime() <= date.getTime());
+  }
+  let transactionsIncoming = subTransactions.filter((s) => s.to.id === user.id)
+    .sort((a, b) => b.transaction.createdAt.getTime() - a.transaction.createdAt.getTime())
+    .map((s) => s.transaction);
+  if (date) {
+    transactionsIncoming = transactionsIncoming
+      .filter((t) => t.createdAt.getTime() <= date.getTime());
+  }
+  let transfersOutgoing = transfers.filter((t) => t.from && t.from.id === user.id)
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  if (date) {
+    transfersOutgoing = transfersOutgoing
+      .filter((t) => t.createdAt.getTime() <= date.getTime());
+  }
+  let transfersIncoming = transfers.filter((t) => t.to && t.to.id === user.id)
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  if (date) {
+    transfersIncoming = transfersIncoming
+      .filter((t) => t.createdAt.getTime() <= date.getTime());
+  }
+
+  const valueTransactionsOutgoing: number = Array.prototype
+    .concat(...Array.prototype.concat(...transactionsOutgoing
+      .map((t) => t.subTransactions
+        .map((s) => s.subTransactionRows))))
+    .reduce((prev: number, curr: SubTransactionRow) => (
+      prev - (curr.amount * curr.product.priceInclVat.getAmount())
+    ), 0);
+  const valueTransactionsIncoming: number = Array.prototype
+    .concat(...Array.prototype.concat(...transactionsIncoming
+      .map((t) => t.subTransactions
+        .map((s) => s.subTransactionRows))))
+    .reduce((prev: number, curr: SubTransactionRow) => (
+      prev + (curr.amount * curr.product.priceInclVat.getAmount())
+    ), 0);
+  const valueTransfersOutgoing = transfersOutgoing
+    .reduce((prev, curr) => prev - curr.amount.getAmount(), 0);
+  const valueTransfersIncoming = transfersIncoming
+    .reduce((prev, curr) => prev + curr.amount.getAmount(), 0);
+
+  // Calculate the user's personal last transaction/transfer
+  let lastTransaction: Transaction;
+  const allTransactions = transactionsIncoming.concat(transactionsOutgoing)
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  if (allTransactions.length > 0) {
+    // eslint-disable-next-line prefer-destructuring
+    lastTransaction = allTransactions
+      .filter((t) => t.createdAt.getTime() === allTransactions[0].createdAt.getTime())
+      .sort((a, b) => b.id - a.id)[0];
+  }
+  let lastTransfer: Transfer;
+  const allTransfers = transfersIncoming.concat(transfersOutgoing)
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  if (allTransfers.length > 0) {
+    // eslint-disable-next-line prefer-destructuring
+    lastTransfer = allTransfers
+      .filter((t) => t.createdAt.getTime() === allTransfers[0].createdAt.getTime())
+      .sort((a, b) => b.id - a.id)[0];
+  }
+
+  return {
+    user,
+    lastTransaction,
+    lastTransfer,
+    amount: DineroTransformer.Instance.from(valueTransactionsOutgoing + valueTransactionsIncoming
+      + valueTransfersOutgoing + valueTransfersIncoming),
+  } as Balance;
+}
 
 describe('BalanceService', (): void => {
   let ctx: {
@@ -56,81 +135,6 @@ describe('BalanceService', (): void => {
     subTransactions: SubTransaction[],
     transfers: Transfer[],
     spec: SwaggerSpecification,
-  };
-
-  const calculateBalance = (user: User, date?: Date): Balance => {
-    let transactionsOutgoing = ctx.transactions.filter((t) => t.from.id === user.id)
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-    if (date) {
-      transactionsOutgoing = transactionsOutgoing
-        .filter((t) => t.createdAt.getTime() <= date.getTime());
-    }
-    let transactionsIncoming = ctx.subTransactions.filter((s) => s.to.id === user.id)
-      .sort((a, b) => b.transaction.createdAt.getTime() - a.transaction.createdAt.getTime())
-      .map((s) => s.transaction);
-    if (date) {
-      transactionsIncoming = transactionsIncoming
-        .filter((t) => t.createdAt.getTime() <= date.getTime());
-    }
-    let transfersOutgoing = ctx.transfers.filter((t) => t.from && t.from.id === user.id)
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-    if (date) {
-      transfersOutgoing = transfersOutgoing
-        .filter((t) => t.createdAt.getTime() <= date.getTime());
-    }
-    let transfersIncoming = ctx.transfers.filter((t) => t.to && t.to.id === user.id)
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-    if (date) {
-      transfersIncoming = transfersIncoming
-        .filter((t) => t.createdAt.getTime() <= date.getTime());
-    }
-
-    const valueTransactionsOutgoing: number = Array.prototype
-      .concat(...Array.prototype.concat(...transactionsOutgoing
-        .map((t) => t.subTransactions
-          .map((s) => s.subTransactionRows))))
-      .reduce((prev: number, curr: SubTransactionRow) => (
-        prev - (curr.amount * curr.product.priceInclVat.getAmount())
-      ), 0);
-    const valueTransactionsIncoming: number = Array.prototype
-      .concat(...Array.prototype.concat(...transactionsIncoming
-        .map((t) => t.subTransactions
-          .map((s) => s.subTransactionRows))))
-      .reduce((prev: number, curr: SubTransactionRow) => (
-        prev + (curr.amount * curr.product.priceInclVat.getAmount())
-      ), 0);
-    const valueTransfersOutgoing = transfersOutgoing
-      .reduce((prev, curr) => prev - curr.amount.getAmount(), 0);
-    const valueTransfersIncoming = transfersIncoming
-      .reduce((prev, curr) => prev + curr.amount.getAmount(), 0);
-
-    // Calculate the user's personal last transaction/transfer
-    let lastTransaction: Transaction;
-    const allTransactions = transactionsIncoming.concat(transactionsOutgoing)
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-    if (allTransactions.length > 0) {
-      // eslint-disable-next-line prefer-destructuring
-      lastTransaction = allTransactions
-        .filter((t) => t.createdAt.getTime() === allTransactions[0].createdAt.getTime())
-        .sort((a, b) => b.id - a.id)[0];
-    }
-    let lastTransfer: Transfer;
-    const allTransfers = transfersIncoming.concat(transfersOutgoing)
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-    if (allTransfers.length > 0) {
-      // eslint-disable-next-line prefer-destructuring
-      lastTransfer = allTransfers
-        .filter((t) => t.createdAt.getTime() === allTransfers[0].createdAt.getTime())
-        .sort((a, b) => b.id - a.id)[0];
-    }
-
-    return {
-      user,
-      lastTransaction,
-      lastTransfer,
-      amount: DineroTransformer.Instance.from(valueTransactionsOutgoing + valueTransactionsIncoming
-        + valueTransfersOutgoing + valueTransfersIncoming),
-    } as Balance;
   };
 
   const addTransaction = async (
@@ -253,34 +257,119 @@ describe('BalanceService', (): void => {
 
   after(async () => {
     await ctx.connection.dropDatabase();
-    await ctx.connection.close();
+    await ctx.connection.destroy();
   });
 
   describe('getBalances', () => {
     it('should return balances from all users', async () => {
-      const balanceResponses = await BalanceService.getBalances();
-      expect(balanceResponses.length).to.equal(ctx.users.length);
+      const balanceResponses = await BalanceService.getBalances({});
+      expect(balanceResponses.records.length).to.equal(ctx.users.length);
 
-      balanceResponses.forEach((balance) => {
+      balanceResponses.records.forEach((balance) => {
         const user = ctx.users.find((u) => u.id === balance.id);
-        const actualBalance = calculateBalance(user);
+        expect(user).to.not.be.undefined;
+        const actualBalance = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers);
+        expect(balance.amount.amount).to.equal(actualBalance.amount.getAmount());
+      });
+    });
+    it('should return balances on certain date', async () => {
+      const date = new Date('2021-01-01');
+      const balances = await BalanceService.getBalances({ date });
+
+      balances.records.forEach((balance) => {
+        const user = ctx.users.find((u) => u.id === balance.id);
+        expect(user).to.not.be.undefined;
+        const actualBalance = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers, date);
         expect(balance.amount.amount).to.equal(actualBalance.amount.getAmount());
       });
     });
     it('should return balance from subset of users', async () => {
       const users = [ctx.users[10], ctx.users[11], ctx.users[12]];
-      const balanceResponses = await BalanceService.getBalances(users.map((u) => u.id));
-      expect(balanceResponses.length).to.equal(users.length);
+      const balanceResponses = await BalanceService.getBalances({ ids: users.map((u) => u.id) });
+      expect(balanceResponses.records.length).to.equal(users.length);
 
-      balanceResponses.forEach((balance) => {
+      balanceResponses.records.forEach((balance) => {
         const user = ctx.users.find((u) => u.id === balance.id);
-        const actualBalance = calculateBalance(user);
+        const actualBalance = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers);
         expect(balance.amount.amount).to.equal(actualBalance.amount.getAmount());
       });
     });
+    it('should only return balances more than or equal a certain amount', async () => {
+      const amount = 1039;
+      const allResponses = await BalanceService.getBalances({});
+      const filteredResponses = await BalanceService.getBalances({
+        minBalance: DineroTransformer.Instance.from(amount),
+      });
+
+      expect(filteredResponses.records.length).to.equal(allResponses.records.filter((res) => res.amount.amount >= amount).length);
+      filteredResponses.records.forEach((res) => expect(res.amount.amount).to.be.greaterThanOrEqual(amount));
+    });
+    it('should only return balances less than or equal a certain amount', async () => {
+      const amount = 1039;
+      const allResponses = await BalanceService.getBalances({});
+      const filteredResponses = await BalanceService.getBalances({
+        maxBalance: DineroTransformer.Instance.from(amount),
+      });
+
+      expect(filteredResponses.records.length).to.equal(allResponses.records.filter((res) => res.amount.amount <= amount).length);
+      filteredResponses.records.forEach((res) => expect(res.amount.amount).to.be.lessThanOrEqual(amount));
+    });
+    it('should return balances ordered by ID desc', async () => {
+      const balanceResponses = await BalanceService.getBalances({
+        orderBy: BalanceOrderColumn.ID, orderDirection: OrderingDirection.DESC,
+      });
+
+      balanceResponses.records.forEach((response, index, responses) => {
+        if (index === 0) return;
+        expect(response.id).to.be.lessThan(responses[index - 1].id);
+      });
+    });
+    it('should return balances ordered by amount asc', async () => {
+      const balanceResponses = await BalanceService.getBalances({
+        orderBy: BalanceOrderColumn.AMOUNT, orderDirection: OrderingDirection.ASC,
+      });
+
+      balanceResponses.records.forEach((response, index, responses) => {
+        if (index === 0) return;
+        expect(response.amount.amount).to.be.greaterThanOrEqual(responses[index - 1].amount.amount);
+      });
+    });
+    it('should return balances ordered ascending by default', async () => {
+      const balanceResponses = await BalanceService.getBalances({
+        orderBy: BalanceOrderColumn.AMOUNT,
+      });
+
+      balanceResponses.records.forEach((response, index, responses) => {
+        if (index === 0) return;
+        expect(response.amount.amount).to.be.greaterThanOrEqual(responses[index - 1].amount.amount);
+      });
+    });
+    it('should set pagination metadata correctly when pagination parameters are undefined', async () => {
+      const balanceResponses = await BalanceService.getBalances({}, {});
+      expect(balanceResponses._pagination.take).to.be.undefined;
+      expect(balanceResponses._pagination.skip).to.be.undefined;
+      expect(balanceResponses._pagination.count).to.equal(balanceResponses.records.length);
+    });
+    it('should adhere to pagination take', async () => {
+      const take = 10;
+      const balanceResponses = await BalanceService.getBalances({}, { take });
+      expect(balanceResponses.records.length).to.equal(take);
+      expect(balanceResponses._pagination.take).to.equal(take);
+      expect(balanceResponses._pagination.skip).to.be.undefined;
+      expect(balanceResponses._pagination.count).to.equal(ctx.users.length);
+    });
+    it('should adhere to pagination skip', async () => {
+      const take = 4;
+      const skip = ctx.users.length - take;
+      const balanceResponses = await BalanceService.getBalances({}, { skip });
+      expect(balanceResponses.records.length).to.equal(take);
+      expect(balanceResponses._pagination.take).to.equal(defaultPagination());
+      expect(balanceResponses._pagination.skip).to.equal(skip);
+      expect(balanceResponses._pagination.count).to.equal(ctx.users.length);
+    });
   });
 
-  describe('Check balance updates', async () => {
+  describe('updateBalances', async () => {
     it('should be able to get balance without cache being created', async () => {
       await BalanceService.clearBalanceCache();
       await Promise.all(ctx.users.map(
@@ -296,7 +385,7 @@ describe('BalanceService', (): void => {
       await BalanceService.updateBalances({});
       for (let i = 0; i < ctx.users.length; i += 1) {
         const user = ctx.users[i];
-        const actualBalance = calculateBalance(user);
+        const actualBalance = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers);
 
         // eslint-disable-next-line no-await-in-loop
         const cachedBalance = await Balance.findOne({ where: { userId: user.id }, relations: ['user', 'lastTransaction', 'lastTransfer'] });
@@ -328,11 +417,11 @@ describe('BalanceService', (): void => {
       cachedBalance = await Balance.findOne({ where: { userId: ctx.users[1].id } });
       expect(cachedBalance).to.be.null;
 
-      const actualBalance = calculateBalance(ctx.users[0]);
+      const actualBalance = calculateBalance(ctx.users[0], ctx.transactions, ctx.subTransactions, ctx.transfers);
       const balance = await BalanceService.getBalance(ctx.users[0].id);
       expect(balance.amount.amount).to.equal(actualBalance.amount.getAmount());
 
-      const actualBalance2 = calculateBalance(ctx.users[1]);
+      const actualBalance2 = calculateBalance(ctx.users[1], ctx.transactions, ctx.subTransactions, ctx.transfers);
       const balance2 = await BalanceService.getBalance(ctx.users[1].id);
       expect(balance2.amount.amount).to.equal(actualBalance2.amount.getAmount());
     });
@@ -345,11 +434,11 @@ describe('BalanceService', (): void => {
       cachedBalance = await Balance.findOne({ where: { userId: ctx.users[1].id } });
       expect(cachedBalance).to.not.be.undefined;
 
-      const actualBalance = calculateBalance(ctx.users[0]);
+      const actualBalance = calculateBalance(ctx.users[0], ctx.transactions, ctx.subTransactions, ctx.transfers);
       const balance = await BalanceService.getBalance(ctx.users[0].id);
       expect(balance.amount.amount).to.equal(actualBalance.amount.getAmount());
 
-      const actualBalance2 = calculateBalance(ctx.users[1]);
+      const actualBalance2 = calculateBalance(ctx.users[1], ctx.transactions, ctx.subTransactions, ctx.transfers);
       const balance2 = await BalanceService.getBalance(ctx.users[1].id);
       expect(balance2.amount.amount).to.equal(actualBalance2.amount.getAmount());
     });
@@ -557,7 +646,7 @@ describe('BalanceService', (): void => {
       ) - 1000);
       for (let i = 0; i < ctx.users.length; i += 1) {
         const user = ctx.users[i];
-        const expectedBalance = calculateBalance(user, date);
+        const expectedBalance = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers, date);
         // sanity check
         expect(expectedBalance.amount.getAmount()).to.equal(0);
         // eslint-disable-next-line no-await-in-loop
@@ -584,7 +673,7 @@ describe('BalanceService', (): void => {
       const date = new Date('2021-01-01');
       for (let i = 0; i < ctx.users.length; i += 1) {
         const user = ctx.users[i];
-        const expectedBalance = calculateBalance(user, date);
+        const expectedBalance = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers, date);
         // eslint-disable-next-line no-await-in-loop
         const actualBalance = await BalanceService.getBalance(user.id, date);
         expect(actualBalance.amount.amount).to.equal(expectedBalance.amount.getAmount());

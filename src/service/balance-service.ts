@@ -17,12 +17,42 @@
  */
 import { getConnection, getManager } from 'typeorm';
 import Balance from '../entity/transactions/balance';
-import BalanceResponse from '../controller/response/balance-response';
+import BalanceResponse, { PaginatedBalanceResponse } from '../controller/response/balance-response';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
 import { toMySQLString } from '../helpers/timestamps';
+import { Dinero } from 'dinero.js';
+import { OrderingDirection } from '../helpers/ordering';
+import { defaultPagination, PaginationParameters } from '../helpers/pagination';
 
-export interface BalanceParameters {
+export enum BalanceOrderColumn {
+  ID = 'id',
+  AMOUNT = 'amount',
+}
+
+export interface UpdateBalanceParameters {
   ids?: number[],
+}
+
+export interface GetBalanceParameters extends UpdateBalanceParameters {
+  date?: Date;
+  minBalance?: Dinero;
+  maxBalance?: Dinero;
+  orderBy?: BalanceOrderColumn;
+  orderDirection?: OrderingDirection;
+}
+
+/**
+ * Converts the input to an VatDeclarationPeriod
+ * @param input - The input which should be converted.
+ * @returns VatDeclarationPeriod - The parsed VatDeclarationPeriod.
+ * @throws TypeError - If the input is not a valid VatDeclarationPeriod
+ */
+export function asBalanceOrderColumn(input: any): BalanceOrderColumn | undefined {
+  if (!input) return undefined;
+  if (!Object.values(BalanceOrderColumn).includes(input)) {
+    throw new TypeError(`Input '${input}' is not a valid BalanceOrderColumn.`);
+  }
+  return input;
 }
 
 export default class BalanceService {
@@ -61,7 +91,7 @@ export default class BalanceService {
    * Update the balance cache with active values
    * Insafe Query! Safety leveraged by type safety
    */
-  public static async updateBalances(params: BalanceParameters) {
+  public static async updateBalances(params: UpdateBalanceParameters) {
     const entityManager = getManager();
 
     const parameters: any[] = [];
@@ -123,9 +153,16 @@ export default class BalanceService {
    * Get balance of users with given IDs
    * @param ids ids of users to get balance of
    * @param date date at which the "balance snapshot" should be taken
+   * @param minBalance return only balances which are at least this amount
+   * @param maxBalance return only balances which are at most this amount
+   * @param orderDirection column to order result at
+   * @param orderBy order direction
+   * @param pagination pagination options
    * @returns the current balance of a user
    */
-  public static async getBalances(ids?: number[], date?: Date): Promise<BalanceResponse[]> {
+  public static async getBalances({
+    ids, date, minBalance, maxBalance, orderDirection, orderBy,
+  }: GetBalanceParameters, pagination: PaginationParameters = {}): Promise<PaginatedBalanceResponse> {
     const connection = getConnection();
 
     const parameters: any[] = [];
@@ -201,14 +238,32 @@ export default class BalanceService {
       query += 'where t1.createdAt <= ? AND t2.createdAt <= ? ';
       parameters.push(...[d, d]);
     }
-    query += ') AS b5 ON b5.userId=moneys2.id';
+    query += ') AS b5 ON b5.userId=moneys2.id '
+     + 'where 1 = 1 ';
 
-    const balances = await connection.query(query, parameters);
+    if (minBalance !== undefined) query += `and moneys2.totalvalue + Coalesce(b5.amount, 0) >= ${minBalance.getAmount()} `;
+    if (maxBalance !== undefined) query += `and moneys2.totalvalue + Coalesce(b5.amount, 0) < ${maxBalance.getAmount()} `;
 
-    if (balances.length === 0 || balances[0].amount === undefined) {
+    if (orderBy !== undefined) query += `order by ${orderBy} ${orderDirection ?? ''} `;
+
+    const take = pagination.skip ? pagination.take || defaultPagination() : pagination.take;
+    const skip = pagination.skip;
+
+    let recordsQuery = `${query}`;
+    if (take) recordsQuery += `limit ${take} `;
+    if (skip) recordsQuery += `offset ${skip} `;
+
+    const balances = await connection.query(recordsQuery, parameters);
+
+    if (balances.length > 0 && balances[0].amount === undefined) {
       throw new Error('No balance returned');
     }
-    return balances.map((b: object) => this.asBalanceResponse(b));
+
+    const count = (await connection.query(query, parameters)).length;
+    return {
+      _pagination: { take, skip, count },
+      records: balances.map((b: object) => this.asBalanceResponse(b)),
+    };
   }
 
   /**
@@ -217,6 +272,6 @@ export default class BalanceService {
    * @param date Date to calculate balance for
    */
   public static async getBalance(id: number, date?: Date): Promise<BalanceResponse> {
-    return (await this.getBalances([id], date))[0];
+    return (await this.getBalances({ ids: [id], date })).records[0];
   }
 }

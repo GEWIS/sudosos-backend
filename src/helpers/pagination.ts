@@ -38,8 +38,8 @@ export interface PaginationParameters {
  * @property {integer} count Total number of resulting records
  */
 export interface PaginationResult {
-  take: number;
-  skip: number;
+  take?: number;
+  skip?: number;
   count: number;
 }
 
