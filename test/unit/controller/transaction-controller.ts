@@ -33,7 +33,7 @@ import { BaseTransactionResponse } from '../../../src/controller/response/transa
 import { verifyBaseTransactionEntity } from '../validators';
 import RoleManager from '../../../src/rbac/role-manager';
 import { TransactionRequest } from '../../../src/controller/request/transaction-request';
-import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
+import { defaultPagination, PAGINATION_DEFAULT, PaginationResult } from '../../../src/helpers/pagination';
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import MemberAuthenticator from '../../../src/entity/authenticator/member-authenticator';
 
@@ -377,7 +377,7 @@ describe('TransactionController', (): void => {
 
       let transactions = res.body.records as BaseTransactionResponse[];
       const spec = await Swagger.importSpecification();
-      const pagination = parseInt(process.env.PAGINATION_DEFAULT, 10);
+      const pagination = parseInt(process.env.PAGINATION_DEFAULT, 10) || PAGINATION_DEFAULT;
       expect(transactions.length).to.equal(pagination);
       transactions.forEach((t) => {
         verifyBaseTransactionEntity(spec, t);
@@ -413,7 +413,7 @@ describe('TransactionController', (): void => {
 
       let transactions = res.body.records as BaseTransactionResponse[];
       const spec = await Swagger.importSpecification();
-      const pagination = parseInt(process.env.PAGINATION_DEFAULT, 10);
+      const pagination = parseInt(process.env.PAGINATION_DEFAULT, 10) || PAGINATION_DEFAULT;
       expect(transactions.length).to.equal(pagination);
       transactions.map((t) => {
         verifyBaseTransactionEntity(spec, t);

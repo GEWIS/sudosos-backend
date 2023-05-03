@@ -18,8 +18,8 @@
 
 import { Request } from 'express';
 
-const PAGINATION_DEFAULT = 25;
-const PAGINATION_MAX = 500;
+export const PAGINATION_DEFAULT = 25;
+export const PAGINATION_MAX = 500;
 
 export const defaultPagination = () => (
   parseInt(process.env.PAGINATION_DEFAULT, 10) || PAGINATION_DEFAULT);
