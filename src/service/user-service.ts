@@ -41,12 +41,10 @@ import WelcomeWithReset from '../mailer/templates/welcome-with-reset';
  * Parameters used to filter on Get Users functions.
  */
 export interface UserFilterParameters {
-  firstName?: string,
-  lastName?: string,
+  search?: string,
   active?: boolean,
   ofAge?: boolean,
   id?: number | number[],
-  email?: string,
   deleted?: boolean,
   type?: UserType,
   organId?: number,
@@ -57,19 +55,15 @@ export interface UserFilterParameters {
  * @param req - Request to parse
  */
 export function parseGetUsersFilters(req: RequestWithToken): UserFilterParameters {
-  const filters: UserFilterParameters = {
-    firstName: req.query.firstName as string,
-    lastName: req.query.lastName as string,
+  return {
+    search: req.query.search as string,
     active: req.query.active ? asBoolean(req.query.active) : undefined,
     ofAge: req.query.active ? asBoolean(req.query.ofAge) : undefined,
     id: asNumber(req.query.id),
     organId: asNumber(req.query.organ),
-    email: req.query.email as string,
     deleted: req.query.active ? asBoolean(req.query.deleted) : false,
     type: asUserType(req.query.type),
   };
-
-  return filters;
 }
 
 export default class UserService {
@@ -84,12 +78,9 @@ export default class UserService {
     const { take, skip } = pagination;
 
     const filterMapping: FilterMapping = {
-      firstName: 'firstName',
-      lastName: 'lastName',
       active: 'active',
       ofAge: 'ofAge',
       id: 'id',
-      email: 'email',
       deleted: 'deleted',
       type: 'type',
     };
@@ -105,6 +96,11 @@ export default class UserService {
     const builder = Bindings.Users.getBuilder();
 
     QueryFilter.applyFilter(builder, filterMapping, f);
+    if (filters.search) {
+      builder.andWhere('(user.firstName like :search OR user.lastName like :search OR user.email like :search)', {
+        search: `%${filters.search}%`,
+      });
+    }
     const users = await builder.limit(take).offset(skip).getRawMany();
     const count = await builder.getCount();
 

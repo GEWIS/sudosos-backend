@@ -318,8 +318,7 @@ export default class UserController extends BaseController {
    * @security JWT
    * @param {integer} take.query - How many users the endpoint should return
    * @param {integer} skip.query - How many users should be skipped (for pagination)
-   * @param {string} firstName.query - Filter based on first name
-   * @param {string} lastName.query - Filter based on last name
+   * @param {string} search.query - Filter based on first name
    * @param {boolean} active.query - Filter based if the user is active
    * @param {boolean} ofAge.query - Filter based if the user is 18+
    * @param {integer} id.query - Filter based on user ID
