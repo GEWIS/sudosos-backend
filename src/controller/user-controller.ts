@@ -47,6 +47,9 @@ import LocalAuthenticator from '../entity/authenticator/local-authenticator';
 import UpdateLocalRequest from './request/update-local-request';
 import verifyUpdateLocalRequest from './request/validators/update-local-request-spec';
 import StripeService from '../service/stripe-service';
+import KeyAuthenticator from '../entity/authenticator/key-authenticator';
+import UpdateKeyResponse from './response/update-key-response';
+import { randomBytes } from 'crypto';
 import verifyUpdateNfcRequest from './request/validators/update-nfc-request-spec';
 import UpdateNfcRequest from './request/update-nfc-request';
 import NfcAuthenticator from '../entity/authenticator/nfc-authenticator';
@@ -136,6 +139,20 @@ export default class UserController extends BaseController {
         },
       },
 
+      '/:id(\\d+)/authenticator/key': {
+        POST: {
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'update', UserController.getRelation(req), 'Authenticator', ['key'],
+          ),
+          handler: this.updateUserKey.bind(this),
+        },
+        DELETE: {
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'update', UserController.getRelation(req), 'Authenticator', ['key'],
+          ),
+          handler: this.deleteUserKey.bind(this),
+        },
+      },
       '/:id(\\d+)/authenticator/local': {
         PUT: {
           body: { modelName: 'UpdateLocalRequest' },
@@ -497,6 +514,73 @@ export default class UserController extends BaseController {
       res.status(200).json();
     } catch (error) {
       this.logger.error('Could not update NFC:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * POST an users update to new key code
+   * @route POST /users/{id}/authenticator/key
+   * @group users - Operations of user controller
+   * @param {integer} id.path.required - The id of the user
+   * @security JWT
+   * @returns {UpdateKeyResponse.model} 200 - The new key
+   * @returns {string} 400 - Validation Error
+   * @returns {string} 404 - Nonexistent user id
+   */
+  public async updateUserKey(req: RequestWithToken, res: Response): Promise<void> {
+    const { params } = req;
+    this.logger.trace('Update user key', params, 'by user', req.token.user);
+
+    try {
+      const userId = parseInt(params.id, 10);
+      // Get the user object if it exists
+      const user = await User.findOne({ where: { id: userId, deleted: false } });
+      // If it does not exist, return a 404 error
+      if (user == null) {
+        res.status(404).json('Unknown user ID.');
+        return;
+      }
+
+      const generatedKey = randomBytes(128).toString('hex');
+      await AuthenticationService.setUserAuthenticationHash(user,
+        generatedKey, KeyAuthenticator);
+      const response = { key: generatedKey } as UpdateKeyResponse;
+      res.status(200).json(response);
+    } catch (error) {
+      this.logger.error('Could not update key:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Delete a users key code
+   * @route Delete /users/{id}/authenticator/key
+   * @group users - Operations of user controller
+   * @param {integer} id.path.required - The id of the user
+   * @security JWT
+   * @returns  200 - Deletion succesfull
+   * @returns {string} 400 - Validation Error
+   * @returns {string} 404 - Nonexistent user id
+   */
+  public async deleteUserKey(req: RequestWithToken, res: Response): Promise<void> {
+    const { params } = req;
+    this.logger.trace('Delete user key', params, 'by user', req.token.user);
+
+    try {
+      // Get the user object if it exists
+      const user = await User.findOne({ where: { id: parseInt(params.id, 10), deleted: false } });
+      // If it does not exist, return a 404 error
+      if (user == null) {
+        res.status(404).json('Unknown user ID.');
+        return;
+      }
+
+
+      await KeyAuthenticator.delete(parseInt(params.id, 10));
+      res.status(204).json();
+    } catch (error) {
+      this.logger.error('Could not delete key:', error);
       res.status(500).json('Internal server error.');
     }
   }
