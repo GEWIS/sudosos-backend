@@ -36,7 +36,7 @@ import {
 } from '../../seed';
 import Swagger from '../../../src/start/swagger';
 import BalanceService, { BalanceOrderColumn } from '../../../src/service/balance-service';
-import User from '../../../src/entity/user/user';
+import User, { UserType } from '../../../src/entity/user/user';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
 import Balance from '../../../src/entity/transactions/balance';
 import { UserFactory } from '../../helpers/user-factory';
@@ -313,6 +313,40 @@ describe('BalanceService', (): void => {
 
       expect(filteredResponses.records.length).to.equal(allResponses.records.filter((res) => res.amount.amount <= amount).length);
       filteredResponses.records.forEach((res) => expect(res.amount.amount).to.be.lessThanOrEqual(amount));
+    });
+    it('should return all users with certain user type', async () => {
+      const type = UserType.LOCAL_USER;
+      const users = ctx.users.filter((u) => u.type === type);
+      const balances = await BalanceService.getBalances({ userTypes: [type] });
+
+      expect(balances.records.length).to.equal(users.length);
+
+      const userIds = users.map((u) => u.id);
+      balances.records.forEach((bal) => {
+        expect(userIds).to.include(bal.id);
+      });
+
+      const balanceIds = balances.records.map((b) => b.id);
+      users.forEach((u) => {
+        expect(balanceIds).to.include(u.id);
+      });
+    });
+    it('should return all users with certain user type from set of types', async () => {
+      const userTypes = [UserType.LOCAL_USER, UserType.LOCAL_ADMIN];
+      const users = ctx.users.filter((u) => userTypes.includes(u.type));
+      const balances = await BalanceService.getBalances({ userTypes });
+
+      expect(balances.records.length).to.equal(users.length);
+
+      const userIds = users.map((u) => u.id);
+      balances.records.forEach((bal) => {
+        expect(userIds).to.include(bal.id);
+      });
+
+      const balanceIds = balances.records.map((b) => b.id);
+      users.forEach((u) => {
+        expect(balanceIds).to.include(u.id);
+      });
     });
     it('should return balances ordered by ID desc', async () => {
       const balanceResponses = await BalanceService.getBalances({

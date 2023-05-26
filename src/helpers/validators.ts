@@ -137,7 +137,18 @@ export function asUserType(input: any): UserType | undefined {
   if (!input) return undefined;
   const state: UserType = UserType[input as keyof typeof UserType];
   if (state === undefined) {
-    throw new TypeError(`Input '${input}' is not a valid InvoiceState.`);
+    throw new TypeError(`Input '${input}' is not a valid UserType.`);
   }
-  return state;
+  return input as UserType;
+}
+
+/**
+ * Converts the input to a list of UserTypes
+ * @param input
+ * @throws TypeError - If the input is not a valid UserType
+ */
+export function asArrayOfUserTypes(input: any): UserType[] | undefined {
+  if (!input) return undefined;
+  if (!Array.isArray(input)) return undefined;
+  return input.map((i) => asUserType(i));
 }

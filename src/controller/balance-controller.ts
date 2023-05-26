@@ -23,7 +23,7 @@ import { RequestWithToken } from '../middleware/token-middleware';
 import User from '../entity/user/user';
 import BalanceService, { asBalanceOrderColumn, GetBalanceParameters } from '../service/balance-service';
 import UserController from './user-controller';
-import { asDate, asDinero } from '../helpers/validators';
+import { asArrayOfUserTypes, asDate, asDinero } from '../helpers/validators';
 import { asOrderingDirection } from '../helpers/ordering';
 import { parseRequestPagination } from '../helpers/pagination';
 
@@ -93,6 +93,7 @@ export default class BalanceController extends BaseController {
    * @param {string} date.query - Timestamp to get balances for
    * @param {integer} minBalance.query - Minimum balance
    * @param {integer} maxBalance.query - Maximum balance
+   * @param {Array<integer>} userTypes.query - User types
    * @param {enum} orderBy.query - Column to order balance by - eg: id,amount
    * @param {enum} orderDirection.query - Order direction - eg: asc,desc,ASC,DESC
    * @param {integer} take.query - How many transactions the endpoint should return
@@ -112,6 +113,7 @@ export default class BalanceController extends BaseController {
         date: asDate(req.query.date),
         minBalance: asDinero(req.query.minBalance),
         maxBalance: asDinero(req.query.maxBalance),
+        userTypes: asArrayOfUserTypes(req.query.userTypes),
         orderBy: asBalanceOrderColumn(req.query.orderBy),
         orderDirection: asOrderingDirection(req.query.orderDirection),
       };
