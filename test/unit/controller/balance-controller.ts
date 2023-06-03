@@ -246,7 +246,7 @@ describe('BalanceController', (): void => {
       const res = await request(ctx.app)
         .get('/balances/all')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
-        .query({ userTypes });
+        .query({ userTypes: userTypes.map((t) => UserType[t]) });
       expect(res.status).to.equal(200);
 
       const body = res.body as PaginatedBalanceResponse;

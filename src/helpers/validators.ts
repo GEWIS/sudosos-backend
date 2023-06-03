@@ -139,7 +139,7 @@ export function asUserType(input: any): UserType | undefined {
   if (state === undefined) {
     throw new TypeError(`Input '${input}' is not a valid UserType.`);
   }
-  return input as UserType;
+  return state;
 }
 
 /**
