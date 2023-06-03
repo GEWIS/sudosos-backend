@@ -62,6 +62,8 @@ import VatGroup from '../entity/vat-group';
 import LocalAuthenticator from '../entity/authenticator/local-authenticator';
 import ResetToken from '../entity/authenticator/reset-token';
 import { DataSourceOptions } from 'typeorm/data-source/DataSourceOptions';
+import Fine from '../entity/fine/fine';
+import FineGroup from '../entity/fine/fineGroup';
 
 export default class Database {
   public static async initialize(): Promise<Connection> {
@@ -89,6 +91,8 @@ export default class Database {
         StripeDepositStatus,
         PayoutRequest,
         PayoutRequestStatus,
+        Fine,
+        FineGroup,
         Transaction,
         SubTransaction,
         SubTransactionRow,

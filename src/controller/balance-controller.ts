@@ -28,10 +28,10 @@ import { asOrderingDirection } from '../helpers/ordering';
 import { parseRequestPagination } from '../helpers/pagination';
 
 export default class BalanceController extends BaseController {
-  private logger: Logger = log4js.getLogger('BannerController');
+  private logger: Logger = log4js.getLogger('BalanceController');
 
   /**
-   * Creates a new banner controller instance.
+   * Creates a new balance controller instance.
    * @param options - The options passed to the base controller.
    */
   public constructor(options: BaseControllerOptions) {

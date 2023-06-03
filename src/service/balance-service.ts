@@ -246,7 +246,7 @@ export default class BalanceService {
       + 'where 1 = 1 ';
 
     if (minBalance !== undefined) query += `and moneys2.totalvalue + Coalesce(b5.amount, 0) >= ${minBalance.getAmount()} `;
-    if (maxBalance !== undefined) query += `and moneys2.totalvalue + Coalesce(b5.amount, 0) < ${maxBalance.getAmount()} `;
+    if (maxBalance !== undefined) query += `and moneys2.totalvalue + Coalesce(b5.amount, 0) <= ${maxBalance.getAmount()} `;
     if (userTypes !== undefined) query += `and u.type in (${userTypes.join(',')})`;
 
     if (orderBy !== undefined) query += `order by ${orderBy} ${orderDirection ?? ''} `;

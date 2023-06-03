@@ -25,6 +25,7 @@ import DineroTransformer from '../transformer/dinero-transformer';
 import PayoutRequest from './payout-request';
 import StripeDeposit from '../deposit/stripe-deposit';
 import Invoice from '../invoices/invoice';
+import Fine from '../fine/fine';
 
 /**
  * @typedef {BaseEntity} Transfer
@@ -69,11 +70,14 @@ export default class Transfer extends BaseEntity {
   public description?: string;
 
   @OneToOne(() => PayoutRequest, (p) => p.transfer, { nullable: true })
-  public payoutRequest?: PayoutRequest;
+  public payoutRequest: PayoutRequest | null;
 
   @OneToOne(() => StripeDeposit, (d) => d.transfer, { nullable: true })
-  public deposit?: StripeDeposit;
+  public deposit: StripeDeposit | null;
 
   @OneToOne(() => Invoice, (i) => i.transfer, { nullable: true })
-  public invoice?: Invoice;
+  public invoice: Invoice | null;
+
+  @OneToOne(() => Fine, (f) => f.transfer, { nullable: true })
+  public fine: Fine | null;
 }

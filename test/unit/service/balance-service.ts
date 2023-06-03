@@ -20,7 +20,6 @@ import express, { Application } from 'express';
 import { expect } from 'chai';
 import { Connection } from 'typeorm';
 import { SwaggerSpecification } from 'swagger-model-validator';
-import Dinero, { DineroObject } from 'dinero.js';
 import Transaction from '../../../src/entity/transactions/transaction';
 import Transfer from '../../../src/entity/transactions/transfer';
 import Database from '../../../src/database/database';
@@ -47,6 +46,7 @@ import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
 import { OrderingDirection } from '../../../src/helpers/ordering';
 import { defaultPagination } from '../../../src/helpers/pagination';
+import { addTransaction, addTransfer } from '../../helpers/transaction-helpers';
 
 export function calculateBalance(user: User, transactions: Transaction[], subTransactions: SubTransaction[], transfers: Transfer[], date?: Date): Balance {
   let transactionsOutgoing = transactions.filter((t) => t.from.id === user.id)
@@ -137,95 +137,6 @@ describe('BalanceService', (): void => {
     spec: SwaggerSpecification,
   };
 
-  const addTransaction = async (
-    newUser: User,
-    receivedBalance: boolean,
-    createdAt?: Date,
-  ): Promise<{
-    transaction: Transaction,
-    amount: DineroObject,
-  }> => {
-    let from: User;
-    let to: User;
-
-    const pointOfSale = ctx.pointOfSaleRevisions
-      .find((p) => p.containers.length > 0 && p.containers
-        .find((c) => c.products.length > 0) !== undefined)!;
-    const container = pointOfSale.containers
-      .find((c) => c.products.length > 0)!;
-    const product = container.products[0];
-
-    if (receivedBalance) {
-      from = product.product.owner;
-      to = newUser;
-    } else {
-      to = product.product.owner;
-      from = newUser;
-    }
-    const totalPriceInclVat = product.priceInclVat.toObject();
-    let transaction = {
-      from,
-      createdBy: newUser,
-      pointOfSale,
-      createdAt: createdAt || undefined,
-      updatedAt: createdAt || undefined,
-      subTransactions: [
-        {
-          createdAt: createdAt || undefined,
-          updatedAt: createdAt || undefined,
-          to,
-          container,
-          subTransactionRows: [
-            {
-              createdAt: createdAt || undefined,
-              updatedAt: createdAt || undefined,
-              product,
-              amount: 1,
-            },
-          ],
-        },
-      ],
-    } as any as Transaction;
-    transaction = await Transaction.save(transaction);
-    return {
-      transaction,
-      amount: totalPriceInclVat,
-    };
-  };
-
-  const addTransfer = async (newUser: User, receivedBalance: boolean, createdAt?: Date): Promise<{
-    transfer: Transfer,
-    amount: DineroObject,
-  }> => {
-    let from: User;
-    let to: User;
-    if (receivedBalance) {
-      to = newUser;
-      [from] = ctx.users;
-    } else {
-      from = newUser;
-      [to] = ctx.users;
-    }
-
-    const amount: DineroObject = {
-      amount: 1000,
-      precision: 2,
-      currency: 'EUR',
-    };
-    const transfer = await Transfer.save({
-      createdAt,
-      updatedAt: createdAt,
-      amount: Dinero(amount),
-      description: '',
-      from,
-      to,
-    } as any);
-    return {
-      transfer,
-      amount,
-    };
-  };
-
   before(async function test(): Promise<void> {
     this.timeout(50000);
     const connection = await Database.initialize();
@@ -236,8 +147,8 @@ describe('BalanceService', (): void => {
     const { productRevisions } = await seedProducts(users, categories, vatGroups);
     const { containerRevisions } = await seedContainers(users, productRevisions);
     const { pointOfSaleRevisions } = await seedPointsOfSale(users, containerRevisions);
-    const { transactions } = await seedTransactions(users, pointOfSaleRevisions, new Date('2020-02-12'), new Date('2021-11-30'));
-    const transfers = await seedTransfers(users);
+    const { transactions } = await seedTransactions(users, pointOfSaleRevisions, new Date('2020-02-12'), new Date('2021-11-30'), 10);
+    const transfers = await seedTransfers(users, new Date('2020-02-12'), new Date('2021-11-30'));
     const subTransactions: SubTransaction[] = Array.prototype.concat(...transactions
       .map((t) => t.subTransactions));
 
@@ -489,7 +400,7 @@ describe('BalanceService', (): void => {
       // Sanity check
       expect(oldBalanceCache).to.not.be.undefined;
 
-      const { transaction, amount } = await addTransaction(user, false);
+      const { transaction, amount } = await addTransaction(user, ctx.pointOfSaleRevisions, false);
       // Sanity check
       const dbTransaction = await Transaction.findOne({ where: { id: transaction.id } });
       expect(dbTransaction).to.not.be.undefined;
@@ -526,28 +437,28 @@ describe('BalanceService', (): void => {
     });
     it('should return correct balance for new user with single outgoing transaction', async () => {
       const newUser = await (await UserFactory()).get();
-      const { amount } = await addTransaction(newUser, false);
+      const { amount } = await addTransaction(newUser, ctx.pointOfSaleRevisions, false);
 
       const balance = await BalanceService.getBalance(newUser.id);
       expect(balance.amount.amount).to.equal(-amount.amount);
     });
     it('should return correct balance for new user with single incoming transaction', async () => {
       const newUser = await (await UserFactory()).get();
-      const { amount } = await addTransaction(newUser, true);
+      const { amount } = await addTransaction(newUser, ctx.pointOfSaleRevisions, true);
 
       const balance = await BalanceService.getBalance(newUser.id);
       expect(balance.amount.amount).to.equal(amount.amount);
     });
     it('should correctly return balance for new user with single outgoing transfer', async () => {
       const newUser = await (await UserFactory()).get();
-      const { amount } = await addTransfer(newUser, false);
+      const { amount } = await addTransfer(newUser, ctx.users, false);
 
       const balance = await BalanceService.getBalance(newUser.id);
       expect(balance.amount.amount).to.equal(-amount.amount);
     });
     it('should correctly return balance for new user with single incoming transfer', async () => {
       const newUser = await (await UserFactory()).get();
-      const { amount } = await addTransfer(newUser, true);
+      const { amount } = await addTransfer(newUser, ctx.users, true);
 
       const balance = await BalanceService.getBalance(newUser.id);
       expect(balance.amount.amount).to.equal(amount.amount);
@@ -556,14 +467,14 @@ describe('BalanceService', (): void => {
       const newUser = await (await UserFactory()).get();
       const {
         transaction, amount,
-      } = await addTransaction(newUser, false, new Date(new Date().getTime() - 5000));
+      } = await addTransaction(newUser, ctx.pointOfSaleRevisions, false, new Date(new Date().getTime() - 5000));
       await Balance.save([{
         userId: newUser.id,
         user: newUser,
         lastTransaction: transaction,
         amount: DineroTransformer.Instance.from(-amount.amount),
       } as any]);
-      const transaction2 = await addTransaction(newUser, false);
+      const transaction2 = await addTransaction(newUser, ctx.pointOfSaleRevisions, false);
 
       const balance = await BalanceService.getBalance(newUser.id);
       expect(balance.amount.amount).to.equal(-amount.amount - transaction2.amount.amount);
@@ -572,7 +483,7 @@ describe('BalanceService', (): void => {
       const newUser = await (await UserFactory()).get();
       const {
         transaction, amount,
-      } = await addTransaction(newUser, true, new Date(new Date().getTime() - 5000));
+      } = await addTransaction(newUser, ctx.pointOfSaleRevisions, true, new Date(new Date().getTime() - 5000));
       await Balance.save([{
         userId: newUser.id,
         user: newUser,
@@ -580,7 +491,7 @@ describe('BalanceService', (): void => {
         lastTransfer: undefined,
         amount: DineroTransformer.Instance.from(amount.amount),
       } as any]);
-      const transaction2 = await addTransaction(newUser, true);
+      const transaction2 = await addTransaction(newUser, ctx.pointOfSaleRevisions, true);
 
       const balance = await BalanceService.getBalance(newUser.id);
       expect(balance.amount.amount).to.equal(amount.amount + transaction2.amount.amount);
@@ -589,14 +500,14 @@ describe('BalanceService', (): void => {
       const newUser = await (await UserFactory()).get();
       const {
         transfer, amount,
-      } = await addTransfer(newUser, false, new Date(new Date().getTime() - 5000));
+      } = await addTransfer(newUser, ctx.users, false, new Date(new Date().getTime() - 5000));
       await Balance.save([{
         userId: newUser.id,
         user: newUser,
         lastTransfer: transfer,
         amount: DineroTransformer.Instance.from(-amount.amount),
       } as any]);
-      const transfer2 = await addTransfer(newUser, false);
+      const transfer2 = await addTransfer(newUser, ctx.users, false);
 
       const balance = await BalanceService.getBalance(newUser.id);
       expect(balance.amount.amount).to.equal(-amount.amount - transfer2.amount.amount);
@@ -605,32 +516,32 @@ describe('BalanceService', (): void => {
       const newUser = await (await UserFactory()).get();
       const {
         transfer, amount,
-      } = await addTransfer(newUser, true, new Date(new Date().getTime() - 5000));
+      } = await addTransfer(newUser, ctx.users, true, new Date(new Date().getTime() - 5000));
       await Balance.save([{
         userId: newUser.id,
         user: newUser,
         lastTransfer: transfer,
         amount: DineroTransformer.Instance.from(amount.amount),
       } as any]);
-      const transfer2 = await addTransfer(newUser, true);
+      const transfer2 = await addTransfer(newUser, ctx.users, true);
 
       const balance = await BalanceService.getBalance(newUser.id);
       expect(balance.amount.amount).to.equal(amount.amount + transfer2.amount.amount);
     });
     it('should correctly return balance for new user with incoming and outgoing transactions and transfers', async () => {
       const newUser = await (await UserFactory()).get();
-      await addTransaction(newUser, false);
-      await addTransaction(newUser, true);
-      await addTransfer(newUser, false);
-      await addTransfer(newUser, true);
+      await addTransaction(newUser, ctx.pointOfSaleRevisions, false);
+      await addTransaction(newUser, ctx.pointOfSaleRevisions, true);
+      await addTransfer(newUser, ctx.users, false);
+      await addTransfer(newUser, ctx.users, true);
 
       const balance = await BalanceService.getBalance(newUser.id);
       expect(balance.amount.amount).to.equal(0);
     });
     it('should correctly return balance for new user with incoming and outgoing transactions and transfers with cache', async () => {
       const newUser = await (await UserFactory()).get();
-      const transaction = await addTransaction(newUser, false);
-      const transfer = await addTransfer(newUser, false);
+      const transaction = await addTransaction(newUser, ctx.pointOfSaleRevisions, false);
+      const transfer = await addTransfer(newUser, ctx.users, false);
       await Balance.save([{
         userId: newUser.id,
         user: newUser,
@@ -665,8 +576,8 @@ describe('BalanceService', (): void => {
       expect(await Transfer.findOne({ where: { id: transfer.transfer.id } }))
         .to.not.be.undefined;
 
-      const transaction2 = await addTransaction(newUser, true);
-      const transfer2 = await addTransfer(newUser, true);
+      const transaction2 = await addTransaction(newUser, ctx.pointOfSaleRevisions, true);
+      const transfer2 = await addTransfer(newUser, ctx.users, true);
 
       const balance = await BalanceService.getBalance(newUser.id);
       expect(balance.amount.amount).to.equal(transaction2.amount.amount
