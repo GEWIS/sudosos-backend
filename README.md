@@ -14,13 +14,15 @@ This quick start first states what software needs to be installed to be able to 
 ### Installing:
 - Checkout the Git to your favorite directory  
      -- If your path contains spaces you are basically begging for problems, and that is entirely your own fault
-- Copy `.env.example` to `.env`
+- Copy `.env-example` to `.env`
 - Run `npm install` in this base directory
 - Run `openssl genrsa -out config/jwt.key 2048`
 - Check that there exists a jwt.key file in the config directory starting with `-----BEGIN RSA PRIVATE KEY-----`
 - Run `npm run swagger`
 - Run `npm run build`
 - Run `npm run test` - All of these should now pass
+
+You can also use `npm run dev:init` as a shortcut for the previous steps without the test.
 
 ### Running:
 - OR without seed

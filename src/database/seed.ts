@@ -24,6 +24,20 @@ import seedDatabase from '../../test/seed';
 import initializeDiskStorage from '../files/initialize';
 import BalanceService from '../service/balance-service';
 
+async function checkIfEmpty(application: Application) {
+  let totalEntities = 0;
+  const entityMetadatas = application.connection.entityMetadatas;
+
+  await Promise.all(
+    entityMetadatas.map(async (entityMetadata) => {
+      const repository = application.connection.getRepository(entityMetadata.name);
+      const count = await repository.count();
+      totalEntities += count;
+    }),
+  );
+
+  return totalEntities === 0;
+}
 export default async function createApp() {
   const application = new Application();
   application.logger = log4js.getLogger('Seeder');
@@ -45,9 +59,14 @@ export default async function createApp() {
 
   try {
     await application.connection.synchronize();
-    await seedDatabase();
-    await BalanceService.updateBalances({});
-    application.logger.info('Seeding successful');
+    const empty = await checkIfEmpty(application);
+    if (empty) {
+      await seedDatabase();
+      await BalanceService.updateBalances({});
+      application.logger.info('Seeding successful');
+    } else {
+      application.logger.error('Database is not empty, seeding aborted. You most likely want to delete the local.sqlite');
+    }
   } catch (e) {
     application.logger.error('Seeding failed', e);
   }
