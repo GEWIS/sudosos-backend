@@ -18,7 +18,7 @@
 import { UserType } from '../entity/user/user';
 import BalanceService from './balance-service';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
-import { Dinero, DineroObject } from 'dinero.js';
+import dinero, { Dinero, DineroObject } from 'dinero.js';
 import { UserToFineResponse } from '../controller/response/fine-response';
 import FineGroup from '../entity/fine/fineGroup';
 import Fine from '../entity/fine/fine';
@@ -33,7 +33,7 @@ export interface CalculateFinesParams {
 }
 
 export interface HandOutFinesParams {
-  referenceDate: Date;
+  referenceDate?: Date;
   userIds: number[];
 }
 
@@ -59,8 +59,7 @@ export default class DebtorService {
    * Return all users that had at most -5 euros balance both now and on the reference date
    * For all these users, also return their fine based on the reference date.
    * @param userTypes List of all user types fines should be calculated for
-   * @param referenceDate Date to base fines on. If undefined, the date of the previous fines will be used
-   * to calculate the new fines. If this is the first fine, use now.
+   * @param referenceDate Date to base fines on. If undefined, use now.
    */
   public static async calculateFinesOnDate({ userTypes, referenceDate }: CalculateFinesParams): Promise<UserToFineResponse[]> {
     const debtorsOnReferenceDate = await BalanceService.getBalances({
@@ -98,13 +97,16 @@ export default class DebtorService {
   public static async handOutFines({
     referenceDate, userIds,
   }: HandOutFinesParams): Promise<Fine[]> {
-    const previousFineGroup = await FineGroup.findOne({
+    const previousFineGroup = (await FineGroup.find({
       order: { id: 'desc' },
       relations: ['fines', 'fines.from'],
-    });
+      take: 1,
+    }))[0];
+
+    const date = referenceDate || previousFineGroup?.createdAt || new Date();
 
     const balances = await BalanceService.getBalances({
-      date: referenceDate || previousFineGroup.createdAt,
+      date,
       ids: userIds,
     });
     const users = await UserService.getUsers({ id: userIds });
@@ -115,7 +117,7 @@ export default class DebtorService {
 
     // Create and save the fine information
     let fines: Fine[] = balances.records.map((b) => {
-      const previousFine = previousFineGroup.fines.find((fine) => fine.from.id === b.id);
+      const previousFine = previousFineGroup?.fines.find((fine) => fine.from.id === b.id);
       const from = users.records.find((u) => u.id === b.id);
       return Object.assign(new Fine(), {
         fineGroup,
@@ -127,7 +129,7 @@ export default class DebtorService {
     await Fine.save(fines);
 
     // Create a fine transfer
-    fines = await Promise.all(fines.map(async (fine): Promise<Fine> => {
+    fines = await Promise.all(fines.map(async (fine, i): Promise<Fine> => {
       fine.transfer = await TransferService.createTransfer({
         amount: {
           amount: fine.amount.getAmount(),
@@ -135,7 +137,7 @@ export default class DebtorService {
           currency: fine.amount.getCurrency(),
         },
         fromId: fine.from.id,
-        description: '',
+        description: `Fine for balance of ${dinero({ amount: balances.records[i].amount.amount }).toFormat()} on ${date.toLocaleDateString()}.`,
         toId: undefined,
       });
       return fine.save();
