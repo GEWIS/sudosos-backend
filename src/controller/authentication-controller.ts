@@ -37,6 +37,10 @@ import AuthenticationEanRequest from './request/authentication-ean-request';
 import EanAuthenticator from '../entity/authenticator/ean-authenticator';
 import Mailer from '../mailer';
 import PasswordReset from '../mailer/templates/password-reset';
+import AuthenticationNfcRequest from './request/authentication-nfc-request';
+import NfcAuthenticator from '../entity/authenticator/nfc-authenticator';
+import AuthenticationKeyRequest from './request/authentication-key-request';
+import KeyAuthenticator from '../entity/authenticator/key-authenticator';
 
 /**
  * The authentication controller is responsible for:
@@ -92,6 +96,20 @@ export default class AuthenticationController extends BaseController {
           body: { modelName: 'AuthenticationPinRequest' },
           policy: async () => true,
           handler: this.PINLogin.bind(this),
+        },
+      },
+      '/nfc': {
+        POST: {
+          body: { modelName: 'AuthenticationNfcRequest' },
+          policy: async () => true,
+          handler: this.nfcLogin.bind(this),
+        },
+      },
+      '/key': {
+        POST: {
+          body: { modelName: 'AuthenticationKeyRequest' },
+          policy: async () => true,
+          handler: this.keyLogin.bind(this),
         },
       },
       '/local': {
@@ -180,7 +198,7 @@ export default class AuthenticationController extends BaseController {
 
       if (!user) {
         res.status(403).json({
-          message: `User ${userId} not registered`,
+          message: 'Invalid credentials.',
         });
         return;
       }
@@ -377,12 +395,51 @@ export default class AuthenticationController extends BaseController {
       }
 
       const resetTokenInfo = await AuthenticationService.createResetToken(user);
-      Mailer.getInstance().send(user, new PasswordReset({ email: user.email, name: user.firstName, resetTokenInfo }));
+      Mailer.getInstance().send(user, new PasswordReset({ email: user.email, name: user.firstName, resetTokenInfo }))
+        .then()
+        .catch((error) => this.logger.error(error));
       // send email with link.
       res.status(204).send();
       return;
     } catch (error) {
       this.logger.error('Could not create reset token:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * NFC login and hand out token
+   * @route POST /authentication/nfc
+   * @group authenticate - Operations of authentication controller
+   * @param {AuthenticationNfcRequest.model} req.body.required - The NFC login.
+   * @returns {AuthenticationResponse.model} 200 - The created json web token.
+   * @returns {string} 403 - Authentication error.
+   */
+  public async nfcLogin(req: Request, res: Response): Promise<void> {
+    const body = req.body as AuthenticationNfcRequest;
+    this.logger.trace('Atempted NFC authentication with NFC length, ', body.nfcCode.length);
+
+    try {
+      const { nfcCode } = body;
+      const authenticator = await NfcAuthenticator.findOne({ where: { nfcCode: nfcCode }  });
+      if (authenticator == null || authenticator.user == null) {
+        res.status(403).json({
+          message: 'Invalid credentials.',
+        });
+        return;
+      }
+
+      const context: AuthenticationContext = {
+        roleManager: this.roleManager,
+        tokenHandler: this.tokenHandler,
+      };
+
+      this.logger.trace('Succesfull NFC authentication for user ', authenticator.user);
+
+      const token = await AuthenticationService.getSaltedToken(authenticator.user, context, true);
+      res.json(token);
+    } catch (error) {
+      this.logger.error('Could not authenticate using NFC:', error);
       res.status(500).json('Internal server error.');
     }
   }
@@ -418,6 +475,61 @@ export default class AuthenticationController extends BaseController {
       res.json(token);
     } catch (error) {
       this.logger.error('Could not authenticate using EAN:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+
+  /**
+   * Key login and hand out token.
+   * @route POST /authentication/key
+   * @group authenticate - Operations of authentication controller
+   * @param {AuthenticationKeyRequest.model} req.body.required - The key login.
+   * @returns {AuthenticationResponse.model} 200 - The created json web token.
+   * @returns {string} 400 - Validation error.
+   * @returns {string} 403 - Authentication error.
+   */
+  public async keyLogin(req: Request, res: Response): Promise<void> {
+    const body = req.body as AuthenticationKeyRequest;
+    this.logger.trace('key authentication for user', body.userId);
+
+    try {
+      const user = await User.findOne({
+        where: { id: body.userId, deleted: false },
+      });
+
+      if (!user) {
+        res.status(403).json({
+          message: 'Invalid credentials.',
+        });
+        return;
+      }
+
+      const keyAuthenticator = await KeyAuthenticator.findOne({ where: { user: { id: body.userId } }, relations: ['user'] });
+      if (!keyAuthenticator) {
+        res.status(403).json({
+          message: 'Invalid credentials.',
+        });
+        return;
+      }
+
+      const context: AuthenticationContext = {
+        roleManager: this.roleManager,
+        tokenHandler: this.tokenHandler,
+      };
+
+      const result = await AuthenticationService.HashAuthentication(body.key,
+        keyAuthenticator, context, false);
+
+      if (!result) {
+        res.status(403).json({
+          message: 'Invalid credentials.',
+        });
+      }
+
+      res.json(result);
+    } catch (error) {
+      this.logger.error('Could not authenticate using key:', error);
       res.status(500).json('Internal server error.');
     }
   }

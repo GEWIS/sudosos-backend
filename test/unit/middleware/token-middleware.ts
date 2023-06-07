@@ -134,7 +134,7 @@ describe('TokenMiddleware', (): void => {
 
       // Verify the token in response header
       const promise = ctx.handler.verifyToken.bind(ctx.handler, res.header['set-authorization'])();
-      expect(promise).to.eventually.be.fulfilled;
+      await expect(promise).to.eventually.be.fulfilled;
 
       // eslint-disable-next-line @typescript-eslint/dot-notation
       ctx.middleware['options']['refreshFactor'] = 0.5;

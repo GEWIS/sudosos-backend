@@ -16,20 +16,17 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  Column, Entity,
+  Column, Entity, Index,
 } from 'typeorm';
 import AuthenticationMethod from './authentication-method';
 
 /**
  * @typedef {AuthenticationMethod} NfcAuthenticator
- * @property {User.model} user.required - The user this authenticator is for
- * @property {string} uid.required - The hash of the UID of the NFC chip
+ * @property {string} nfcCode.required - The UID of the NFC chip
  */
 @Entity()
 export default class NfcAuthenticator extends AuthenticationMethod {
-  @Column({
-    unique: true,
-    length: 128,
-  })
-  public uidHash: string;
+  @Index()
+  @Column({ unique: true })
+  public nfcCode: string;
 }

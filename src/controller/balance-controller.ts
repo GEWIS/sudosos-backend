@@ -21,8 +21,11 @@ import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import User from '../entity/user/user';
-import BalanceService from '../service/balance-service';
+import BalanceService, { asBalanceOrderColumn, GetBalanceParameters } from '../service/balance-service';
 import UserController from './user-controller';
+import { asDate, asDinero } from '../helpers/validators';
+import { asOrderingDirection } from '../helpers/ordering';
+import { parseRequestPagination } from '../helpers/pagination';
 
 export default class BalanceController extends BaseController {
   private logger: Logger = log4js.getLogger('BannerController');
@@ -45,6 +48,12 @@ export default class BalanceController extends BaseController {
         GET: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'own', 'Balance', ['*']),
           handler: this.getOwnBalance.bind(this),
+        },
+      },
+      '/all': {
+        GET: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Balance', ['*']),
+          handler: this.getAllBalances.bind(this),
         },
       },
       '/:id(\\d+)': {
@@ -72,6 +81,53 @@ export default class BalanceController extends BaseController {
       res.json(await BalanceService.getBalance(req.token.user.id));
     } catch (error) {
       this.logger.error(`Could not get balance of user with id ${req.token.user.id}`, error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Get balance of the current user
+   * @route GET /balances/all
+   * @group balance - Operations of balance controller
+   * @security JWT
+   * @param {string} date.query - Timestamp to get balances for
+   * @param {integer} minBalance.query - Minimum balance
+   * @param {integer} maxBalance.query - Maximum balance
+   * @param {enum} orderBy.query - Column to order balance by - eg: id,amount
+   * @param {enum} orderDirection.query - Order direction - eg: asc,desc,ASC,DESC
+   * @param {integer} take.query - How many transactions the endpoint should return
+   * @param {integer} skip.query - How many transactions should be skipped (for pagination)
+   * @returns {Array<BalanceResponse>} 200 - The requested user's balance
+   * @returns {string} 400 - Validation error
+   * @returns {string} 500 - Internal server error
+   */
+  private async getAllBalances(req: RequestWithToken, res: Response): Promise<void> {
+    this.logger.trace('Get all balances by', req.token.user);
+
+    let params: GetBalanceParameters;
+    let take;
+    let skip;
+    try {
+      params = {
+        date: asDate(req.query.date),
+        minBalance: asDinero(req.query.minBalance),
+        maxBalance: asDinero(req.query.maxBalance),
+        orderBy: asBalanceOrderColumn(req.query.orderBy),
+        orderDirection: asOrderingDirection(req.query.orderDirection),
+      };
+      const pagination = parseRequestPagination(req);
+      take = pagination.take;
+      skip = pagination.skip;
+    } catch (error) {
+      res.status(400).json(error.message);
+      return;
+    }
+
+    try {
+      const result = await BalanceService.getBalances(params, { take, skip });
+      res.json(result);
+    } catch (error) {
+      this.logger.error('Could not get balances', error);
       res.status(500).json('Internal server error.');
     }
   }

@@ -34,8 +34,8 @@ export class Builder {
     return this;
   }
 
-  public addBalance(amount: number) {
-    generateBalance(amount, this.user.id);
+  public async addBalance(amount: number) {
+    await generateBalance(amount, this.user.id);
     return this;
   }
 
@@ -69,7 +69,6 @@ export class Builder {
     return users;
   }
 }
-
 
 export const ORGAN_USER = async () => {
   const count = await User.count();
@@ -113,7 +112,9 @@ export async function UserFactory(custom?: User) {
   return builder;
 }
 
-export async function inUserContext(users: User[] | Promise<User[]>, func: (...arg: any) => void) {
+export async function inUserContext(
+  users: User[] | Promise<User[]>, func: (...arg: User[]) => Promise<void>,
+) {
   const u = await users;
   await func(...u);
   await setInactive(u);

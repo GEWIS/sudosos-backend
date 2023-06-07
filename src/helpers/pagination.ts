@@ -18,8 +18,8 @@
 
 import { Request } from 'express';
 
-const PAGINATION_DEFAULT = 25;
-const PAGINATION_MAX = 500;
+export const PAGINATION_DEFAULT = 25;
+export const PAGINATION_MAX = 500;
 
 export const defaultPagination = () => (
   parseInt(process.env.PAGINATION_DEFAULT, 10) || PAGINATION_DEFAULT);
@@ -38,8 +38,8 @@ export interface PaginationParameters {
  * @property {integer} count Total number of resulting records
  */
 export interface PaginationResult {
-  take: number;
-  skip: number;
+  take?: number;
+  skip?: number;
   count: number;
 }
 

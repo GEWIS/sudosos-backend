@@ -111,6 +111,7 @@ export default class Swagger {
 if (require.main === module) {
   // Only execute directly if this is the main execution file.
   const app = express();
+  // eslint-disable-next-line @typescript-eslint/no-floating-promises
   fs.mkdir('out', { recursive: true })
     .then(() => Swagger.initialize(app))
     .then((specification) => fs.writeFile(

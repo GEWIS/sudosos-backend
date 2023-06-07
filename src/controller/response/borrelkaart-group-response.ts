@@ -18,18 +18,24 @@
 import BaseResponse from './base-response';
 import { UserResponse } from './user-response';
 import { PaginationResult } from '../../helpers/pagination';
+import { DineroObjectResponse } from './dinero-response';
 
 /**
   * @typedef {BaseResponse} BorrelkaartGroupResponse
   * @property {string} name.required - Name of the borrelkaart group
   * @property {string} activeStartDate - Start date of the borrelkaart group
   * @property {string} activeEndDate.required - End date of the borrelkaart group
-  * @property {Array.<UserResponse.model>} users.required - Users in the borrelkaart group
+  * @property {Array.<UserResponse>} users.required - Users in the borrelkaart group
+  * @property {DineroObjectRequest.model} balance.required - Start balance to be assigned
+  *  to the borrelkaart users
+  * @property {number} amount.required - Amount of users to be assigned to the borrelkaart group
   */
 export default interface BorrelkaartGroupResponse extends BaseResponse {
   name: string,
   activeStartDate?: string,
   activeEndDate: string,
+  amount: number,
+  balance: DineroObjectResponse,
   users: UserResponse[],
 }
 

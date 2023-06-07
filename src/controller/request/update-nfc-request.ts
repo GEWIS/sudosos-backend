@@ -15,19 +15,11 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import nodemailer from 'nodemailer';
 
-export default function createSMTPTransporter() {
-  return nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT, 10),
-    secure: process.env.SMTP_TLS === 'true',
-    auth: {
-      user: process.env.SMTP_USERNAME,
-      pass: process.env.SMTP_PASSWORD,
-    },
-    from: process.env.SMTP_FROM,
-    pool: true,
-    maxConnections: parseInt(process.env.SMTP_MAX_CONNECTIONS || '', 10) || undefined,
-  });
+/**
+ * @typedef UpdateNfcRequest
+ * @property {string} nfcCode.required - The NFC code to set
+ */
+export default interface UpdateNfcRequest {
+  nfcCode: string,
 }

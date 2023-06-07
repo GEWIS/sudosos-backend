@@ -378,7 +378,7 @@ describe('ProductController', async (): Promise<void> => {
   }
   describe('POST /products', () => {
     it('should verifyProductRequest Specification', async (): Promise<void> => {
-      await testValidationOnRoute('post', '/products');
+      testValidationOnRoute('post', '/products');
     });
 
     it('should store the given product in the database and return an HTTP 200 and the product if admin', async () => {
@@ -534,7 +534,7 @@ describe('ProductController', async (): Promise<void> => {
   });
   describe('PATCH /products/:id', () => {
     it('should verifyProductRequest Specification', async (): Promise<void> => {
-      await testValidationOnRoute('patch', '/products/1');
+      testValidationOnRoute('patch', '/products/1');
     });
 
     it('should return an HTTP 200 and the product update if user', async () => {

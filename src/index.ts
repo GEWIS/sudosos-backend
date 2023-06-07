@@ -226,8 +226,11 @@ export default async function createApp(): Promise<Application> {
   await BalanceService.updateBalances({});
   const syncBalances = cron.schedule('41 1 * * *', () => {
     logger.debug('Syncing balances.');
-    BalanceService.updateBalances({});
-    logger.debug('Synced balances.');
+    BalanceService.updateBalances({}).then(() => {
+      logger.debug('Synced balances.');
+    }).catch((error => {
+      logger.error('Could not sync balances.', error);
+    }));
   });
 
   application.tasks = [syncBalances];

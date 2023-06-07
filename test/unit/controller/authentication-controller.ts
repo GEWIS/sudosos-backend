@@ -44,6 +44,10 @@ import AuthenticationService from '../../../src/service/authentication-service';
 import AuthenticationResetTokenRequest from '../../../src/controller/request/authentication-reset-token-request';
 import EanAuthenticator from '../../../src/entity/authenticator/ean-authenticator';
 import AuthenticationEanRequest from '../../../src/controller/request/authentication-ean-request';
+import KeyAuthenticator from '../../../src/entity/authenticator/key-authenticator';
+import AuthenticationKeyRequest from '../../../src/controller/request/authentication-key-request';
+import AuthenticationNfcRequest from '../../../src/controller/request/authentication-nfc-request';
+import NfcAuthenticator from '../../../src/entity/authenticator/nfc-authenticator';
 
 describe('AuthenticationController', async (): Promise<void> => {
   let ctx: {
@@ -108,10 +112,16 @@ describe('AuthenticationController', async (): Promise<void> => {
 
     await seedHashAuthenticator([ctx.user, ctx.user2], PinAuthenticator);
     await seedHashAuthenticator([ctx.user, ctx.user2], LocalAuthenticator);
+    await seedHashAuthenticator([ctx.user, ctx.user2], KeyAuthenticator);
 
     await EanAuthenticator.save({
       userId: ctx.user.id,
       eanCode: '39',
+    });
+
+    await NfcAuthenticator.save({
+      userId: ctx.user.id,
+      nfcCode: 'nfcCorrectString',
     });
 
     // Silent in-dependency logs unless really wanted by the environment.
@@ -161,7 +171,7 @@ describe('AuthenticationController', async (): Promise<void> => {
 
       const auth = res.body as AuthenticationResponse;
       const promise = ctx.tokenHandler.verifyToken(auth.token);
-      expect(promise).to.eventually.be.fulfilled;
+      await expect(promise).to.eventually.be.fulfilled;
 
       const token = await promise;
       expect(token.roles).to.be.empty;
@@ -207,7 +217,7 @@ describe('AuthenticationController', async (): Promise<void> => {
     });
   });
 
-  async function testHashAuthentication(type: string, right: any, wrong: any) {
+  function testHashAuthentication(type: string, right: any, wrong: any) {
     it('should return an HTTP 200 and User if correct', async () => {
       const res = await request(ctx.app)
         .post(`/authentication/${type}`)
@@ -235,7 +245,7 @@ describe('AuthenticationController', async (): Promise<void> => {
         .post('/authentication/pin')
         .send({ userId, pin: '1' } as AuthenticationPinRequest);
       expect(res.status).to.equal(403);
-      expect(res.body.message).to.equal(`User ${userId} not registered`);
+      expect(res.body.message).to.equal('Invalid credentials.');
     });
     it('should return an HTTP 403 if user does not have a pin', async () => {
       const res = await request(ctx.app)
@@ -260,10 +270,33 @@ describe('AuthenticationController', async (): Promise<void> => {
       expect(res.status).to.equal(403);
       expect(res.body.message).to.equal('Invalid credentials.');
     });
-    it('should return an HTTP 403 if user does not have a pin', async () => {
+    it('should return an HTTP 403 if user does not have a password', async () => {
       const res = await request(ctx.app)
         .post('/authentication/local')
         .send({ accountMail: 'Roy41@gewis.nl', password: '1' } as AuthenticationLocalRequest);
+      expect(res.status).to.equal(403);
+      expect(res.body.message).to.equal('Invalid credentials.');
+    });
+  });
+
+  describe('POST /authentication/key', () => {
+    const validKeyRequest: AuthenticationKeyRequest = {
+      userId: 1,
+      key: '1',
+    };
+    testHashAuthentication('key', validKeyRequest, { ...validKeyRequest, key: '2' });
+    it('should return an HTTP 403 if user does not exist', async () => {
+      const userId = 0;
+      const res = await request(ctx.app)
+        .post('/authentication/key')
+        .send({ userId, key: '1' } as AuthenticationKeyRequest);
+      expect(res.status).to.equal(403);
+      expect(res.body.message).to.equal('Invalid credentials.');
+    });
+    it('should return an HTTP 403 if user does not have a key', async () => {
+      const res = await request(ctx.app)
+        .post('/authentication/key')
+        .send({ userId: 3, key: '1' } as AuthenticationKeyRequest);
       expect(res.status).to.equal(403);
       expect(res.body.message).to.equal('Invalid credentials.');
     });
@@ -336,7 +369,41 @@ describe('AuthenticationController', async (): Promise<void> => {
     const validLocalRequest: AuthenticationEanRequest = {
       eanCode: '39',
     };
-    await testHashAuthentication('ean', validLocalRequest, { ...validLocalRequest, eanCode: '2' });
+    testHashAuthentication('ean', validLocalRequest, { ...validLocalRequest, eanCode: '2' });
+  });
+
+  describe('POST /authentication/nfc', async () => {
+
+    it('should return an HTTP 200 and User if correct', async () => {
+      const validNfcRequest: AuthenticationNfcRequest = {
+        nfcCode: 'nfcCorrectString',
+      };
+      const res = await request(ctx.app)
+        .post('/authentication/nfc')
+        .send(validNfcRequest);
+      expect(res.status).to.equal(200);
+      expect((res.body as AuthenticationResponse).user.id).to.be.equal(1);
+    });
+    it('should return an HTTP 403 if incorrect', async () => {
+      const wrongNfcRequest: AuthenticationNfcRequest = {
+        nfcCode: 'nfcwrongString',
+      };
+      const res = await request(ctx.app)
+        .post('/authentication/nfc')
+        .send(wrongNfcRequest);
+      expect(res.status).to.equal(403);
+    });
+    it('should return an HTTP 403 if user does not have a nfc', async () => {
+      const validNfcRequest: AuthenticationNfcRequest = {
+        nfcCode: 'nfcCorrectString',
+      };
+      const res = await request(ctx.app)
+        .post('/authentication/nfc')
+        .send({ ...validNfcRequest, nfcCode: 'notExistingNfcString' } as AuthenticationNfcRequest);
+      expect(res.status).to.equal(403);
+      expect(res.body.message).to.equal('Invalid credentials.');
+    });
+
   });
 
   describe('POST /authentication/local/reset', async () => {

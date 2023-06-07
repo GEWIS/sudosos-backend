@@ -115,19 +115,13 @@ export async function validateSpecification<T, F extends Joinable>(target: T,
 export function createArrayRule<T>(spec: Specification<T, Joinable>)
   : ValidationRule<T[], Joinable> {
   async function arrayTest(array: T[]): Promise< Fail<Joinable> | Pass<T[]>> {
-    const results: Either<Joinable, T>[] = [];
-    const promises: Promise<void>[] = [];
     if (!array) return toPass(array);
 
-    array.forEach((entry) => {
-      promises.push(validateSpecification(entry, spec).then((res) => {
-        results.push(res);
-      }));
-    });
-    await Promise.all(promises);
-    const hasFail = results.find((item) => isFail(item));
+    for (let i = 0; i < array.length; i++) {
+      const valid = await validateSpecification(array[i], spec);
+      if (isFail(valid)) return valid;
+    }
 
-    if (hasFail && isFail(hasFail)) return hasFail;
     return toPass(array);
   }
   return arrayTest;

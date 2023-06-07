@@ -447,7 +447,7 @@ describe('ContainerController', async (): Promise<void> => {
   }
   describe('POST /containers', () => {
     describe('verifyContainerRequest Specification', async () => {
-      await testValidationOnRoute('post', '/containers');
+      testValidationOnRoute('post', '/containers');
     });
     it('should store the given container in the database and return an HTTP 200 and the created container if user', async () => {
       const containerCount = await Container.count();
@@ -606,7 +606,7 @@ describe('ContainerController', async (): Promise<void> => {
   });
   describe('PATCH /containers/:id', () => {
     describe('verifyContainerRequest Specification', async () => {
-      await testValidationOnRoute('patch', '/containers/1');
+      testValidationOnRoute('patch', '/containers/1');
     });
     it('should return an HTTP 200 and the container update if user', async () => {
       const res = await request(ctx.app)

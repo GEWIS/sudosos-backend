@@ -928,12 +928,13 @@ describe('TransactionService', (): void => {
 
   describe('createValidTransactionRequest function', () => {
     it('should return a valid TransactionRequest', async () => {
-      await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
-        const transaction = await createValidTransactionRequest(
-          debtor.id, creditor.id,
-        );
-        expect(await TransactionService.verifyTransaction(transaction)).to.be.true;
-      });
+      await inUserContext(await (await UserFactory()).clone(2),
+        async (debtor: User, creditor: User) => {
+          const transaction = await createValidTransactionRequest(
+            debtor.id, creditor.id,
+          );
+          expect(await TransactionService.verifyTransaction(transaction)).to.be.true;
+        });
     });
   });
 
@@ -947,7 +948,7 @@ describe('TransactionService', (): void => {
           toId: creditor.id,
         };
         const report = await TransactionService.getTransactionReportResponse(parameters);
-        expect(report.totalInclVat.amount).to.eq(transactions.cost);
+        expect(report.totalInclVat.amount).to.eq(transactions.total);
 
         const dataValue = report.data.entries.reduce((sum, current) => {
           return sum += current.count * current.product.priceInclVat.amount;
@@ -958,7 +959,7 @@ describe('TransactionService', (): void => {
         const vatValue = report.data.vat.reduce((sum, current) => {
           return sum += current.totalInclVat.amount;
         }, 0);
-        const value = transactions.cost;
+        const value = transactions.total;
         expect(dataValue).to.equal(value);
         expect(categoryValue).to.equal(value);
         expect(vatValue).to.equal(value);
@@ -976,7 +977,7 @@ describe('TransactionService', (): void => {
           toId: creditor.id,
         };
         const report = await TransactionService.getTransactionReportResponse(parameters);
-        expect(report.totalInclVat.amount).to.eq(transactions.cost);
+        expect(report.totalInclVat.amount).to.eq(transactions.total);
       });
     });
     it('should ignore invoiced transactions', async () => {
@@ -989,7 +990,7 @@ describe('TransactionService', (): void => {
           toId: creditor.id,
         };
         const report = await TransactionService.getTransactionReportResponse(parameters);
-        expect(report.totalInclVat.amount).to.eq(transactions.cost);
+        expect(report.totalInclVat.amount).to.eq(transactions.total);
       });
     });
     it('should ignore transactions made by invoice accounts', async () => {
@@ -1004,7 +1005,7 @@ describe('TransactionService', (): void => {
           toId: creditor.id,
         };
         const report = await TransactionService.getTransactionReportResponse(parameters);
-        expect(report.totalInclVat.amount).to.eq(transactions.cost);
+        expect(report.totalInclVat.amount).to.eq(transactions.total);
       });
     });
     it('should ignore transactions made by invoice accounts and invoiced transactions', async () => {
@@ -1020,7 +1021,7 @@ describe('TransactionService', (): void => {
           toId: creditor.id,
         };
         const report = await TransactionService.getTransactionReportResponse(parameters);
-        expect(report.totalInclVat.amount).to.eq(transactions.cost);
+        expect(report.totalInclVat.amount).to.eq(transactions.total);
       });
     });
   });
