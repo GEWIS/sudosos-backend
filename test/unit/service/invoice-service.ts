@@ -104,9 +104,9 @@ function keyMapping(invoice: InvoiceResponse | Invoice) {
       amount: entry.amount,
       description: entry.description,
       priceInclVat:
-                invoice instanceof Invoice
-                  ? (entry as InvoiceEntry).priceInclVat.getAmount()
-                  : (entry as InvoiceEntryResponse).priceInclVat.amount,
+        invoice instanceof Invoice
+          ? (entry as InvoiceEntry).priceInclVat.getAmount()
+          : (entry as InvoiceEntryResponse).priceInclVat.amount,
     })),
   };
 }
@@ -141,7 +141,8 @@ createInvoiceWithTransfers(debtorId: number, creditorId: number,
   };
 
   const invoice = await InvoiceService.createInvoice(createInvoiceRequest);
-  expect(invoice.transfer.amount.amount).to.equal(total);
+  await new Promise((f) => setTimeout(f, 100));
+  expect((await BalanceService.getBalance(debtorId)).amount.amount).is.equal(0);
   return invoice;
 }
 
