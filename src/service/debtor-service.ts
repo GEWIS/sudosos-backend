@@ -22,10 +22,10 @@ import dinero, { Dinero, DineroObject } from 'dinero.js';
 import { UserToFineResponse } from '../controller/response/fine-response';
 import FineGroup from '../entity/fine/fineGroup';
 import Fine from '../entity/fine/fine';
-import UserService from './user-service';
 import TransferService from './transfer-service';
 import { DineroObjectResponse } from '../controller/response/dinero-response';
 import { DineroObjectRequest } from '../controller/request/dinero-request';
+import UserFineCollection from '../entity/fine/userFineCollection';
 
 export interface CalculateFinesParams {
   userTypes?: UserType[];
@@ -99,7 +99,7 @@ export default class DebtorService {
   }: HandOutFinesParams): Promise<Fine[]> {
     const previousFineGroup = (await FineGroup.find({
       order: { id: 'desc' },
-      relations: ['fines', 'fines.from'],
+      relations: ['fines', 'fines.userFineCollection'],
       take: 1,
     }))[0];
 
@@ -109,23 +109,32 @@ export default class DebtorService {
       date,
       ids: userIds,
     });
-    const users = await UserService.getUsers({ id: userIds });
 
     // Create a new fine group to "connect" all these fines
-    const fineGroup = new FineGroup();
+    const fineGroup = Object.assign(new FineGroup(), { referenceDate: date });
     await fineGroup.save();
 
     // Create and save the fine information
-    let fines: Fine[] = balances.records.map((b) => {
-      const previousFine = previousFineGroup?.fines.find((fine) => fine.from.id === b.id);
-      const from = users.records.find((u) => u.id === b.id);
+    let fines: Fine[] = await Promise.all(balances.records.map(async (b) => {
+      const previousFine = previousFineGroup?.fines.find((fine) => fine.userFineCollection.userId === b.id);
+
+      let userFineCollection: UserFineCollection;
+      if (previousFine == undefined) {
+        userFineCollection = Object.assign(new UserFineCollection(), {
+          userId: b.id,
+        });
+        userFineCollection = await userFineCollection.save();
+      } else {
+        userFineCollection = previousFine.userFineCollection;
+      }
+
       return Object.assign(new Fine(), {
         fineGroup,
-        from,
+        userFineCollection,
         amount: calculateFine(b.amount),
         previousFine,
       });
-    });
+    }));
     await Fine.save(fines);
 
     // Create a fine transfer
@@ -136,7 +145,7 @@ export default class DebtorService {
           precision: fine.amount.getPrecision(),
           currency: fine.amount.getCurrency(),
         },
-        fromId: fine.from.id,
+        fromId: fine.userFineCollection.userId,
         description: `Fine for balance of ${dinero({ amount: balances.records[i].amount.amount }).toFormat()} on ${date.toLocaleDateString()}.`,
         toId: undefined,
       });

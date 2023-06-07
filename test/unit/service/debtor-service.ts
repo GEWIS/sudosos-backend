@@ -41,6 +41,7 @@ import { addTransfer } from '../../helpers/transaction-helpers';
 import BalanceService from '../../../src/service/balance-service';
 import Fine from '../../../src/entity/fine/fine';
 import FineGroup from '../../../src/entity/fine/fineGroup';
+import UserFineCollection from '../../../src/entity/fine/userFineCollection';
 
 function calculateFine(balance: number): number {
   // Fine is 20%, rounded down to whole euros with a maximum of 5 euros.
@@ -168,7 +169,7 @@ describe('DebtorService', (): void => {
       balances.records.forEach((b) => {
         const user = ctx.users.find((u) => u.id === b.id);
         expect(user).to.not.be.undefined;
-        const fine = fines.find((f) => f.from.id === b.id);
+        const fine = fines.find((f) => f.userFineCollection.userId === b.id);
 
         let balance = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers).amount.getAmount();
         if (fine) balance = balance - fine.amount.getAmount();
@@ -176,20 +177,16 @@ describe('DebtorService', (): void => {
       });
     }
 
-    function checkFine(f: Fine, date: Date, fineGroup: FineGroup, previousFine?: Fine) {
-      const user = ctx.users.find((u) => u.id === f.from.id);
+    function checkFine(f: Fine, date: Date, fineGroup: FineGroup) {
+      const user = ctx.users.find((u) => u.id === f.userFineCollection.userId);
       expect(user).to.not.be.undefined;
       const b = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers, date);
 
-      if (previousFine) {
-        expect(f.previousFine.id).to.equal(previousFine.id);
-      } else {
-        expect(f.previousFine).to.be.undefined;
-      }
+      expect(f.userFineCollection).to.not.be.undefined;
       expect(f.fineGroup.id).to.equal(fineGroup.id);
       expect(f.transfer).to.not.be.null;
       expect(f.transfer).to.not.be.undefined;
-      expect(f.transfer.from.id).to.equal(f.from.id);
+      expect(f.transfer.from.id).to.equal(f.userFineCollection.userId);
       expect(f.transfer.to).to.be.undefined;
       expect(f.transfer.amount.getAmount()).to.equal(f.amount.getAmount());
       const balString = '-€' + (b.amount.getAmount() / 100).toFixed(2).substring(1);
@@ -204,9 +201,10 @@ describe('DebtorService', (): void => {
       expect(fines.length).to.equal(usersToFine.length);
 
       fines.forEach((f) => {
-        const preCalcedFine = usersToFine.find((u) => u.id === f.from.id);
+        const preCalcedFine = usersToFine.find((u) => u.id === f.userFineCollection.userId);
         expect(preCalcedFine).to.not.be.undefined;
         expect(f.amount.getAmount()).to.equal(preCalcedFine.amount.amount);
+        expect(new Date().getTime() - f.fineGroup.referenceDate.getTime()).to.be.at.most(1000);
         checkFine(f, new Date(), fines[0].fineGroup);
       });
 
@@ -224,9 +222,10 @@ describe('DebtorService', (): void => {
       expect(fines.length).to.equal(usersToFine.length);
 
       fines.forEach((f) => {
-        const preCalcedFine = usersToFine.find((u) => u.id === f.from.id);
+        const preCalcedFine = usersToFine.find((u) => u.id === f.userFineCollection.userId);
         expect(preCalcedFine).to.not.be.undefined;
         expect(f.amount.getAmount()).to.equal(preCalcedFine.amount.amount);
+        expect(f.fineGroup.referenceDate.getTime()).to.equal(referenceDate.getTime());
         checkFine(f, referenceDate, fines[0].fineGroup);
       });
 
@@ -240,10 +239,12 @@ describe('DebtorService', (): void => {
       await Object.assign(new FineGroup(), {
         createdAt: oldRef,
         updatedAt: oldRef,
+        referenceDate: oldRef,
       }).save();
       await Object.assign(new FineGroup(), {
         createdAt: referenceDate,
         updatedAt: referenceDate,
+        referenceDate,
       }).save();
 
       const usersToFine = await DebtorService.calculateFinesOnDate({
@@ -255,13 +256,40 @@ describe('DebtorService', (): void => {
       expect(fines.length).to.equal(usersToFine.length);
 
       fines.forEach((f) => {
-        const preCalcedFine = usersToFine.find((u) => u.id === f.from.id);
+        const preCalcedFine = usersToFine.find((u) => u.id === f.userFineCollection.userId);
         expect(preCalcedFine).to.not.be.undefined;
         expect(f.amount.getAmount()).to.equal(preCalcedFine.amount.amount);
+        expect(f.fineGroup.referenceDate.getTime()).to.equal(referenceDate.getTime());
         checkFine(f, referenceDate, fines[0].fineGroup);
       });
 
       await checkCorrectNewBalance(fines);
+    });
+    it('should correctly put two fines in same userFineCollection', async () => {
+      const referenceDate = new Date('2021-01-30');
+      const usersToFine = await DebtorService.calculateFinesOnDate({
+        referenceDate,
+      });
+      const user = usersToFine[0];
+      expect(user).to.not.be.undefined;
+
+      const fines1 = await DebtorService.handOutFines({
+        userIds: [user.id],
+      });
+      const fines2 = await DebtorService.handOutFines({
+        userIds: [user.id],
+      });
+
+      expect(fines1.length).to.equal(1);
+      expect(fines2.length).to.equal(1);
+      expect(fines1[0].userFineCollection.userId).to.equal(user.id);
+      expect(fines2[0].userFineCollection.userId).to.equal(user.id);
+      expect(fines1[0].userFineCollection.id).to.equal(fines2[0].userFineCollection.id);
+      const collection = await UserFineCollection.findOne({
+        where: { id: fines1[0].userFineCollection.id },
+        relations: ['fines'],
+      });
+      expect(collection.fines.length).to.equal(2);
     });
   });
 });
