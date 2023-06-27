@@ -71,14 +71,16 @@ export default class PayoutRequestController extends BaseController {
   /**
    * Returns all payout requests given the filter parameters
    * @route GET /payoutrequests
-   * @operationId getAll
+   * @operationId getAllPayoutRequests
    * @group payoutRequests - Operations of the payout request controller
    * @security JWT
    * @param {integer | Array<integer>} requestedById.query - ID of user(s) who requested a payout
    * @param {integer | Array<integer>} approvedById.query - ID of user(s) who approved a payout
    * @param {string} fromDate.query - Start date for selected transactions (inclusive)
    * @param {string} tillDate.query - End date for selected transactions (exclusive)
-   * @param {Array<string>} status.query - Status of the payout requests (OR relation)
+   * @param {string} status.query - Status of the payout requests (OR relation)
+   * @array
+   * @items.type {string}
    * @param {integer} take.query - How many payout requests the endpoint should return
    * @param {integer} skip.query - How many payout requests should be skipped (for pagination)
    * @returns {PaginatedBasePayoutRequestResponse.model} 200 - All existing payout requests
@@ -110,7 +112,7 @@ export default class PayoutRequestController extends BaseController {
   /**
    * Get a single payout request
    * @route GET /payoutrequests/{id}
-   * @operationId get
+   * @operationId getSinglePayoutRequest
    * @group payoutRequests - Operations of the payout request controller
    * @param {integer} id.path.required - The ID of the payout request object that should be returned
    * @security JWT
@@ -142,7 +144,7 @@ export default class PayoutRequestController extends BaseController {
   /**
    * Create a new payout request
    * @route POST /payoutrequests
-   * @operationId create
+   * @operationId createPayoutRequest
    * @group payoutRequests - Operations of the payout request controller
    * @param {PayoutRequestRequest.model} payoutRequest.body.required - New payout request
    * @security JWT
@@ -165,7 +167,7 @@ export default class PayoutRequestController extends BaseController {
   /**
    * Create a new status for a payout request
    * @route POST /payoutrequests/{id}/status
-   * @operationId setStatus
+   * @operationId setPayoutRequestStatus
    * @group payoutRequests - Operations of the payout request controller
    * @param {integer} id.path.required - The ID of the payout request object that should be returned
    * @param {PayoutRequestStatusRequest.model} state.body.required - New state of payout request

@@ -49,7 +49,6 @@ export default class Swagger {
         securityDefinitions: {
           JWT: {
             type: 'apiKey',
-            scheme: 'bearer',
             in: 'header',
             name: 'Authorization',
             description: '',

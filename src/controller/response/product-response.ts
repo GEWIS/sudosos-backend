@@ -42,8 +42,6 @@ export interface BaseProductResponse extends BaseResponse {
  *           The category the product belongs to.
  * @property {DineroObjectResponse.model} priceExclVat.required - The price of the product
  *           excluding VAT
- * @property {ProductCategoryResponse.model} category.required
- *  - The category the product belongs to.
  * @property {string} image - The URL to the picture representing this product.
  * @property {number} alcoholPercentage - The percentage of alcohol in this product.
  */

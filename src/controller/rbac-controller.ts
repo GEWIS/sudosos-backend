@@ -50,7 +50,7 @@ export default class RbacController extends BaseController {
   /**
    * Returns all existing roles
    * @route GET /rbac/roles
-   * @operationId getAll
+   * @operationId getAllRoles
    * @group rbac - Operations of rbac controller
    * @security JWT
    * @returns {Array.<RoleResponse>} 200 - All existing roles

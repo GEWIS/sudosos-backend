@@ -85,7 +85,7 @@ export default class TransferController extends BaseController {
   /**
    * Returns all existing transfers
    * @route GET /transfers
-   * @operationId getAll
+   * @operationId getAllTransfers
    * @group transfers - Operations of transfer controller
    * @security JWT
    * @param {integer} take.query - How many transfers the endpoint should return
@@ -120,7 +120,7 @@ export default class TransferController extends BaseController {
   /**
    * Returns the requested transfer
    * @route GET /transfers/{id}
-   * @operationId get
+   * @operationId getSingleTransfer
    * @group transfers - Operations of transfer controller
    * @param {integer} id.path.required - The id of the transfer which should be returned
    * @security JWT
@@ -149,7 +149,7 @@ export default class TransferController extends BaseController {
   /**
    * Post a new transfer.
    * @route POST /transfers
-   * @operationId create
+   * @operationId createTransfer
    * @group transfers - Operations of transfer controller
    * @param {TransferRequest.model} transfer.body.required
    * - The transfer which should be created

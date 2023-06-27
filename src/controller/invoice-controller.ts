@@ -83,12 +83,13 @@ export default class InvoiceController extends BaseController {
   /**
    * Returns all invoices in the system.
    * @route GET /invoices
-   * @operationId getAll
+   * @operationId getAllInvoices
    * @group invoices - Operations of the invoices controller
    * @security JWT
    * @param {integer} toId.query - Filter on Id of the debtor
    * @param {number} invoiceId.query - Filter on invoice ID
-   * @param {enum} state.query - Filter based on Invoice State
+   * @param {integer} state.query.enum{1,2,3,4} - Filter based on Invoice State.
+   *    Possible values: 1 (CREATED), 2 (SENT), 3 (PAID), 4 (DELETED)
    * @param {boolean} returnEntries.query - Boolean if invoice entries should be returned
    * @param {string} fromDate.query - Start date for selected invoices (inclusive)
    * @param {string} tillDate.query - End date for selected invoices (exclusive)
@@ -127,6 +128,7 @@ export default class InvoiceController extends BaseController {
   /**
    * Returns a single invoice in the system.
    * @route GET /invoices/{id}
+   * @operationId getSingleInvoice
    * @param {integer} id.path.required - The id of the requested invoice
    * @group invoices - Operations of the invoices controller
    * @security JWT
@@ -164,7 +166,7 @@ export default class InvoiceController extends BaseController {
   /**
    * Adds an invoice to the system.
    * @route POST /invoices
-   * @operationId create
+   * @operationId createInvoice
    * @group invoices - Operations of the invoices controller
    * @security JWT
    * @param {CreateInvoiceRequest.model} invoice.body.required -
@@ -201,7 +203,7 @@ export default class InvoiceController extends BaseController {
   /**
    * Adds an invoice to the system.
    * @route PATCH /invoices/{id}
-   * @operationId update
+   * @operationId updateInvoice
    * @group invoices - Operations of the invoices controller
    * @security JWT
    * @param {integer} id.path.required - The id of the invoice which should be updated
@@ -242,7 +244,7 @@ export default class InvoiceController extends BaseController {
   /**
    * Deletes an invoice.
    * @route DELETE /invoices/{id}
-   * @operationId delete
+   * @operationId deleteInvoice
    * @group invoices - Operations of the invoices controller
    * @security JWT
    * @param {integer} id.path.required - The id of the invoice which should be deleted

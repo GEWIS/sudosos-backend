@@ -138,7 +138,7 @@ export default class BalanceController extends BaseController {
    * @route get /balances/{id}
    * @operationId getBalanceId
    * @group balance - Operations of balance controller
-   * @param {integer} id.path - The id of the user for which the saldo is requested
+   * @param {integer} id.path.required - The id of the user for which the saldo is requested
    * @security JWT
    * @returns {BalanceResponse.model} 200 - The requested user's balance
    * @returns {string} 400 - Validation error

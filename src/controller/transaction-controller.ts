@@ -87,7 +87,7 @@ export default class TransactionController extends BaseController {
   /**
    * Get a list of all transactions
    * @route GET /transactions
-   * @operationId getAll
+   * @operationId getAllTransactions
    * @group transactions - Operations of the transaction controller
    * @security JWT
    * @param {integer} fromId.query - From-user for selected transactions
@@ -134,7 +134,7 @@ export default class TransactionController extends BaseController {
   /**
    * Creates a new transaction
    * @route POST /transactions
-   * @operationId create
+   * @operationId createTransaction
    * @group transactions - Operations of the transaction controller
    * @param {TransactionRequest.model} transaction.body.required -
    * The transaction which should be created
@@ -173,12 +173,12 @@ export default class TransactionController extends BaseController {
   /**
    * Get a single transaction
    * @route GET /transactions/{id}
-   * @operationId get
+   * @operationId getSingleTransaction
    * @group transactions - Operations of the transaction controller
    * @param {integer} id.path.required - The id of the transaction which should be returned
    * @security JWT
    * @returns {TransactionResponse.model} 200 - Single transaction with given id
-   * @returns {string 404} - Nonexistent transaction id
+   * @returns {string} 404 - Nonexistent transaction id
    */
   public async getTransaction(req: RequestWithToken, res: Response): Promise<TransactionResponse> {
     const parameters = req.params;
@@ -205,7 +205,7 @@ export default class TransactionController extends BaseController {
   /**
    * Updates the requested transaction
    * @route PATCH /transactions/{id}
-   * @operationId update
+   * @operationId updateTransaction
    * @group transactions - Operations of transaction controller
    * @param {integer} id.path.required - The id of the transaction which should be updated
    * @param {TransactionRequest.model} transaction.body.required -
@@ -243,7 +243,7 @@ export default class TransactionController extends BaseController {
   /**
    * Deletes a transaction
    * @route DELETE /transactions/{id}
-   * @operationId delete
+   * @operationId deleteTransaction
    * @group transactions - Operations of the transaction controller
    * @param {integer} id.path.required - The id of the transaction which should be deleted
    * @security JWT

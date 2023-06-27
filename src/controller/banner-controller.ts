@@ -208,7 +208,7 @@ export default class BannerController extends BaseController {
   /**
    * Returns the requested banner
    * @route GET /banners/{id}
-   * @operationId get
+   * @operationId getBanner
    * @group banners - Operations of banner controller
    * @param {integer} id.path.required - The id of the banner which should be returned
    * @security JWT
