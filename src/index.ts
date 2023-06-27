@@ -192,6 +192,11 @@ export default async function createApp(): Promise<Application> {
   }));
   application.app.use(fileUpload());
 
+  application.app.use((req, res, next) => {
+    res.set('Cache-Control', 'no-store');
+    next();
+  });
+
   application.app.use('/v1', new RootController({
     specification: application.specification,
     roleManager: application.roleManager,
@@ -219,10 +224,13 @@ export default async function createApp(): Promise<Application> {
   await setupAuthentication(tokenHandler, application);
 
   await BalanceService.updateBalances({});
-  const syncBalances = cron.schedule('*/10 * * * *', () => {
+  const syncBalances = cron.schedule('41 1 * * *', () => {
     logger.debug('Syncing balances.');
-    BalanceService.updateBalances({});
-    logger.debug('Synced balances.');
+    BalanceService.updateBalances({}).then(() => {
+      logger.debug('Synced balances.');
+    }).catch((error => {
+      logger.error('Could not sync balances.', error);
+    }));
   });
 
   application.tasks = [syncBalances];

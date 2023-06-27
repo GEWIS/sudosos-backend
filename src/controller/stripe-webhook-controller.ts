@@ -72,6 +72,7 @@ export default class StripeWebhookController extends BaseController {
       return;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.stripeService.handleWebhookEvent(webhookEvent);
 
     res.status(200).send();

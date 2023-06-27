@@ -106,7 +106,7 @@ describe('Disk Storage', async () => {
       const writeFileStub = sinon.stub(DiskStorage, <any>'writeFile').throwsException(new Error('Saving failed'));
       stubs.push(writeFileStub);
 
-      expect(ctx.diskStorage.saveFile(fileName, fileData))
+      await expect(ctx.diskStorage.saveFile(fileName, fileData))
         .to.eventually.be.rejected;
     });
   });

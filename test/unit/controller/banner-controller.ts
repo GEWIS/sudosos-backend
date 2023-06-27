@@ -186,6 +186,69 @@ describe('BannerController', async (): Promise<void> => {
     stubs.splice(0, stubs.length);
   });
 
+  describe('GET /banners', () => {
+    it('should return correct model', async () => {
+      const res = await request(ctx.app)
+        .get('/banners')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'PaginatedBannerResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
+    it('should return an HTTP 200 and all banners in the database if admin', async () => {
+      const res = await request(ctx.app)
+        .get('/banners')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+
+      // number of banners returned is number of banners in database
+      const banners = res.body.records as BannerResponse[];
+      // eslint-disable-next-line no-underscore-dangle
+      const pagination = res.body._pagination as PaginationResult;
+
+      expect(banners.length).to.equal(await Banner.count());
+      banners.forEach((bannerResponse) => {
+        expect(
+          bannerEq(ctx.banners.find((b) => b.id === bannerResponse.id), bannerResponse),
+          `bannerResponse ${bannerResponse.id} to be correct`,
+        ).to.be.true;
+      });
+
+      expect(pagination.take).to.equal(defaultPagination());
+      expect(pagination.skip).to.equal(0);
+      expect(pagination.count).to.equal(ctx.banners.length);
+    });
+    it('should adhere to pagination', async () => {
+      const take = 5;
+      const skip = 3;
+      const res = await request(ctx.app)
+        .get('/banners')
+        .query({ take, skip })
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+
+      // number of banners returned is number of banners in database
+      const banners = res.body.records as BannerResponse[];
+      // eslint-disable-next-line no-underscore-dangle
+      const pagination = res.body._pagination as PaginationResult;
+
+      expect(pagination.take).to.equal(take);
+      expect(pagination.skip).to.equal(skip);
+      expect(pagination.count).to.equal(ctx.banners.length);
+      expect(banners.length).to.be.at.most(take);
+    });
+    it('should return an HTTP 403 if not admin', async () => {
+      const res = await request(ctx.app)
+        .get('/banners')
+        .set('Authorization', `Bearer ${ctx.token}`);
+      expect(res.status).to.equal(403);
+    });
+  });
+
   describe('GET /banners/active', () => {
     it('should return correct model', async () => {
       const res = await request(ctx.app)

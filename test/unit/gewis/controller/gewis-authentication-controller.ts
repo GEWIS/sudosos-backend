@@ -139,7 +139,7 @@ describe('GewisAuthenticationController', async (): Promise<void> => {
 
       const auth = res.body as AuthenticationResponse;
       const promise = ctx.tokenHandler.verifyToken(auth.token);
-      expect(promise).to.eventually.be.fulfilled;
+      await expect(promise).to.eventually.be.fulfilled;
 
       const token = await promise;
       expect(token.roles).to.be.empty;

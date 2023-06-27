@@ -20,6 +20,8 @@ module.exports = {
     '@typescript-eslint/no-empty-function': ['error', { allow: ['constructors'] }],
     '@typescript-eslint/no-unused-expressions': 'off',
     'chai-friendly/no-unused-expressions': 'error',
+    '@typescript-eslint/no-floating-promises': 'error',
+    '@typescript-eslint/await-thenable' : 'warn',
     "header/header": [2, 'NOTICE'],
     'class-methods-use-this': 'off',
   },

@@ -39,11 +39,13 @@ export const ZERO_LENGTH_STRING = () => new ValidationError('must be a non-zero 
 
 export const MAX_STRING_SIZE = () => new ValidationError('is too long.');
 
+export const DUPLICATE_TOKEN = () => new ValidationError('token already in use.');
+
 export const INVALID_USER_TYPE = () => new ValidationError('type is not a valid UserType.');
 
 export const INVALID_ACTIVE_USER_ID = () => new ValidationError('must exist and be active.');
 
-export const INVALID_TRANSACTION_OWNER = () => new ValidationError('Not all transactions are owned by the debtor.');
+export const INVALID_TRANSACTION_OWNER = () => new ValidationError('Not all transactions have the correct owner.');
 
 export const INVALID_TRANSACTION_IDS = () => new ValidationError('Not all transaction IDs are valid.');
 

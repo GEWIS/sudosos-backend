@@ -19,6 +19,8 @@
 import { InvoiceState } from '../entity/invoices/invoice-status';
 import { VatDeclarationPeriod } from '../entity/vat-group';
 import { UserType } from '../entity/user/user';
+import { Dinero } from 'dinero.js';
+import DineroTransformer from '../entity/transformer/dinero-transformer';
 
 /**
  * Returns whether the given object is a number
@@ -56,10 +58,20 @@ export function isDate(date: any, canBeUndefined?: boolean): boolean {
  * @returns The parsed integer.
  * @throws TypeError - If the input is not a valid integer.
  */
-export function asNumber(input: any): number {
+export function asNumber(input: any): number | undefined {
   if (!isNumber(input, true)) throw new TypeError(`Input '${input}' is not a number.`);
-  const parsed = (input ? Number(input) : undefined);
-  return parsed;
+  return (input ? Number(input) : undefined);
+}
+
+/**
+ * Converts the input to a Dinero object.
+ * @param input - The input which should be converted.
+ * @returns The parsed dinero object.
+ * @throws TypeError - If the input is not a valid integer.
+ */
+export function asDinero(input: any): Dinero | undefined {
+  const parsed = asNumber(input);
+  return parsed !== undefined ? DineroTransformer.Instance.from(parsed) : undefined;
 }
 
 /**
@@ -67,7 +79,7 @@ export function asNumber(input: any): number {
  * @param input - The input which should be converted.
  * @returns {true} - for 1, '1', true, 'true' (case-insensitive), otherwise false.
  */
-export function asBoolean(input: any): boolean {
+export function asBoolean(input: any): boolean | undefined {
   if (input === undefined) return undefined;
   if (typeof input === 'string') {
     return input.toLowerCase() === 'true' || !!+input;
@@ -81,10 +93,9 @@ export function asBoolean(input: any): boolean {
  * @returns The parsed Date object.
  * @throws TypeError - If the input is not a valid date.
  */
-export function asDate(input: any): Date {
+export function asDate(input: any): Date | undefined {
   if (!isDate(input, true)) throw new TypeError(`Input '${input}' is not a date.`);
-  const parsed = (input ? new Date(input) : undefined);
-  return parsed;
+  return (input ? new Date(input) : undefined);
 }
 
 /**
@@ -93,7 +104,7 @@ export function asDate(input: any): Date {
  * @returns The parsed InvoiceState.
  * @throws TypeError - If the input is not a valid InvoiceState
  */
-export function asInvoiceState(input: any): InvoiceState {
+export function asInvoiceState(input: any): InvoiceState | undefined {
   if (!input) return undefined;
   const state: InvoiceState = InvoiceState[input as keyof typeof InvoiceState];
   if (state === undefined) {
@@ -108,7 +119,7 @@ export function asInvoiceState(input: any): InvoiceState {
  * @returns VatDeclarationPeriod - The parsed VatDeclarationPeriod.
  * @throws TypeError - If the input is not a valid VatDeclarationPeriod
  */
-export function asVatDeclarationPeriod(input: any): VatDeclarationPeriod {
+export function asVatDeclarationPeriod(input: any): VatDeclarationPeriod | undefined {
   if (!input) return undefined;
   if (!Object.values(VatDeclarationPeriod).includes(input)) {
     throw new TypeError(`Input '${input}' is not a valid VatDeclarationPeriod.`);
@@ -122,7 +133,7 @@ export function asVatDeclarationPeriod(input: any): VatDeclarationPeriod {
  * @returns The parsed UserType.
  * @throws TypeError - If the input is not a valid UserType
  */
-export function asUserType(input: any): UserType {
+export function asUserType(input: any): UserType | undefined {
   if (!input) return undefined;
   const state: UserType = UserType[input as keyof typeof UserType];
   if (state === undefined) {

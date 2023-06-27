@@ -16,15 +16,15 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import dinero from 'dinero.js';
+import express, { Express } from 'express';
+import { SwaggerSpecification } from 'swagger-model-validator';
+import { Connection } from 'typeorm';
 import TransferRequest from '../../src/controller/request/transfer-request';
 import TransferService from '../../src/service/transfer-service';
-import express, { Express } from 'express';
 import Swagger from '../../src/start/swagger';
 import RoleManager from '../../src/rbac/role-manager';
 import Database from '../../src/database/database';
 import TokenHandler from '../../src/authentication/token-handler';
-import { SwaggerSpecification } from 'swagger-model-validator';
-import { Connection } from 'typeorm';
 import User, { UserType } from '../../src/entity/user/user';
 import { ADMIN_USER, UserFactory } from './user-factory';
 import { RoleFactory } from './role-factory';
@@ -58,14 +58,18 @@ export async function defaultTokens(tokenHandler: TokenHandler) {
   const admin: User = await (await UserFactory(await ADMIN_USER())).get();
   const user: User = await (await UserFactory()).get();
   const adminToken = await tokenHandler.signToken({ user: admin, roles: [UserType[UserType.LOCAL_ADMIN]], lesser: false }, 'nonce admin');
-  const token = await tokenHandler.signToken({ user: user, roles: [UserType[UserType.MEMBER]], lesser: false }, 'nonce');
+  const token = await tokenHandler.signToken({ user, roles: [UserType[UserType.MEMBER]], lesser: false }, 'nonce');
   return {
-    admin, adminToken,
-    user, token,
+    admin,
+    adminToken,
+    user,
+    token,
   };
 }
 
-export async function defaultRolesAndTokens(roleManager: RoleManager, tokenHandler: TokenHandler, entities: string[]) {
+export async function defaultRolesAndTokens(
+  roleManager: RoleManager, tokenHandler: TokenHandler, entities: string[],
+) {
   roleManager.registerRole(RoleFactory(entities, UserType.LOCAL_ADMIN));
   roleManager.registerRole(RoleFactory(entities, UserType.MEMBER));
   return defaultTokens(tokenHandler);

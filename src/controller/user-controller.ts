@@ -47,6 +47,12 @@ import LocalAuthenticator from '../entity/authenticator/local-authenticator';
 import UpdateLocalRequest from './request/update-local-request';
 import verifyUpdateLocalRequest from './request/validators/update-local-request-spec';
 import StripeService from '../service/stripe-service';
+import KeyAuthenticator from '../entity/authenticator/key-authenticator';
+import UpdateKeyResponse from './response/update-key-response';
+import { randomBytes } from 'crypto';
+import verifyUpdateNfcRequest from './request/validators/update-nfc-request-spec';
+import UpdateNfcRequest from './request/update-nfc-request';
+import NfcAuthenticator from '../entity/authenticator/nfc-authenticator';
 
 export default class UserController extends BaseController {
   private logger: Logger = log4js.getLogger('UserController');
@@ -115,6 +121,36 @@ export default class UserController extends BaseController {
             req.token.roles, 'update', UserController.getRelation(req), 'Authenticator', ['pin'],
           ),
           handler: this.updateUserPin.bind(this),
+        },
+      },
+      '/:id(\\d+)/authenticator/nfc': {
+        PUT: {
+          body: { modelName: 'UpdateNfcRequest' },
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'update', UserController.getRelation(req), 'Authenticator', ['nfcCode'],
+          ),
+          handler: this.updateUserNfc.bind(this),
+        },
+        DELETE: {
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'delete', UserController.getRelation(req), 'Authenticator', [],
+          ),
+          handler: this.deleteUserNfc.bind(this),
+        },
+      },
+
+      '/:id(\\d+)/authenticator/key': {
+        POST: {
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'update', UserController.getRelation(req), 'Authenticator', ['key'],
+          ),
+          handler: this.updateUserKey.bind(this),
+        },
+        DELETE: {
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'update', UserController.getRelation(req), 'Authenticator', ['key'],
+          ),
+          handler: this.deleteUserKey.bind(this),
         },
       },
       '/:id(\\d+)/authenticator/local': {
@@ -231,6 +267,14 @@ export default class UserController extends BaseController {
           handler: this.getUsersTransactions.bind(this),
         },
       },
+      '/:id(\\d+)/transactions/report': {
+        GET: {
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'get', UserController.getRelation(req), 'Transaction', ['*'],
+          ),
+          handler: this.getUsersTransactionsReport.bind(this),
+        },
+      },
       '/:id(\\d+)/transfers': {
         GET: {
           policy: async (req) => this.roleManager.can(
@@ -292,8 +336,7 @@ export default class UserController extends BaseController {
    * @security JWT
    * @param {integer} take.query - How many users the endpoint should return
    * @param {integer} skip.query - How many users should be skipped (for pagination)
-   * @param {string} firstName.query - Filter based on first name
-   * @param {string} lastName.query - Filter based on last name
+   * @param {string} search.query - Filter based on first name
    * @param {boolean} active.query - Filter based if the user is active
    * @param {boolean} ofAge.query - Filter based if the user is 18+
    * @param {integer} id.query - Filter based on user ID
@@ -396,6 +439,151 @@ export default class UserController extends BaseController {
       res.status(200).json();
     } catch (error) {
       this.logger.error('Could not update pin:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Put a users NFC code
+   * @route PUT /users/{id}/authenticator/nfc
+   * @group users - Operations of user controller
+   * @param {integer} id.path.required - The id of the user
+   * @param {UpdateNfcRequest.model} update.body.required -
+   *    The NFC code to update to
+   * @security JWT
+   * @returns 200 - Update success
+   * @returns {string} 400 - Validation Error
+   * @returns {string} 404 - Nonexistent user id
+   */
+  public async updateUserNfc(req: RequestWithToken, res: Response): Promise<void> {
+    const { params } = req;
+    const updateNfcRequest = req.body as UpdateNfcRequest;
+    this.logger.trace('Update user NFC', params, 'by user', req.token.user);
+
+    try {
+      // Get the user object if it exists
+      const user = await User.findOne({ where: { id: parseInt(params.id, 10), deleted: false } });
+      // If it does not exist, return a 404 error
+      if (user == null) {
+        res.status(404).json('Unknown user ID.');
+        return;
+      }
+
+      const validation = await verifyUpdateNfcRequest(updateNfcRequest);
+      if (isFail(validation)) {
+        res.status(400).json(validation.fail.value);
+        return;
+      }
+
+      await AuthenticationService.setUserAuthenticationNfc(user,
+        updateNfcRequest.nfcCode.toString(), NfcAuthenticator);
+      res.status(200).json();
+    } catch (error) {
+      this.logger.error('Could not update NFC:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Delete a nfc code
+   * @route DELETE /users/{id}/authenticator/nfc
+   * @group users - Operations of user controller
+   * @param {integer} id.path.required - The id of the user
+   * @security JWT
+   * @returns 200 - Delete nfc success
+   * @returns {string} 400 - Validation Error
+   * @returns {string} 403 - Nonexistent user nfc
+   * @returns {string} 404 - Nonexistent user id
+   */
+  public async deleteUserNfc(req: RequestWithToken, res: Response): Promise<void> {
+    const parameters = req.params;
+    this.logger.trace('Delete user NFC', parameters, 'by user', req.token.user);
+
+    try {
+      // Get the user object if it exists
+      const user = await User.findOne({ where: { id: parseInt(parameters.id, 10), deleted: false } });
+      // If it does not exist, return a 404 error
+      if (user == null) {
+        res.status(404).json('Unknown user ID.');
+        return;
+      }
+
+      if (await NfcAuthenticator.count({ where: { userId:  parseInt(parameters.id, 10) } }) == 0) {
+        res.status(403).json('No saved nfc');
+        return;
+      }
+
+      await NfcAuthenticator.delete(parseInt(parameters.id, 10));
+      res.status(200).json();
+    } catch (error) {
+      this.logger.error('Could not update NFC:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * POST an users update to new key code
+   * @route POST /users/{id}/authenticator/key
+   * @group users - Operations of user controller
+   * @param {integer} id.path.required - The id of the user
+   * @security JWT
+   * @returns {UpdateKeyResponse.model} 200 - The new key
+   * @returns {string} 400 - Validation Error
+   * @returns {string} 404 - Nonexistent user id
+   */
+  public async updateUserKey(req: RequestWithToken, res: Response): Promise<void> {
+    const { params } = req;
+    this.logger.trace('Update user key', params, 'by user', req.token.user);
+
+    try {
+      const userId = parseInt(params.id, 10);
+      // Get the user object if it exists
+      const user = await User.findOne({ where: { id: userId, deleted: false } });
+      // If it does not exist, return a 404 error
+      if (user == null) {
+        res.status(404).json('Unknown user ID.');
+        return;
+      }
+
+      const generatedKey = randomBytes(128).toString('hex');
+      await AuthenticationService.setUserAuthenticationHash(user,
+        generatedKey, KeyAuthenticator);
+      const response = { key: generatedKey } as UpdateKeyResponse;
+      res.status(200).json(response);
+    } catch (error) {
+      this.logger.error('Could not update key:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Delete a users key code
+   * @route Delete /users/{id}/authenticator/key
+   * @group users - Operations of user controller
+   * @param {integer} id.path.required - The id of the user
+   * @security JWT
+   * @returns  200 - Deletion succesfull
+   * @returns {string} 400 - Validation Error
+   * @returns {string} 404 - Nonexistent user id
+   */
+  public async deleteUserKey(req: RequestWithToken, res: Response): Promise<void> {
+    const { params } = req;
+    this.logger.trace('Delete user key', params, 'by user', req.token.user);
+
+    try {
+      // Get the user object if it exists
+      const user = await User.findOne({ where: { id: parseInt(params.id, 10), deleted: false } });
+      // If it does not exist, return a 404 error
+      if (user == null) {
+        res.status(404).json('Unknown user ID.');
+        return;
+      }
+
+
+      await KeyAuthenticator.delete(parseInt(params.id, 10));
+      res.status(204).json();
+    } catch (error) {
+      this.logger.error('Could not delete key:', error);
       res.status(500).json('Internal server error.');
     }
   }
@@ -1257,6 +1445,53 @@ export default class UserController extends BaseController {
     } catch (error) {
       this.logger.error('Could not get processing deposits of user:', error);
       res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Get transaction report for the given user
+   * @route GET /users/{id}/transactions/report
+   * @group users - Operations of user controller
+   * @param {integer} id.path.required - The id of the user to get the transaction report from
+   * @security JWT
+   * @returns {Array.<TransactionReportResponse>} 200 - The transaction report of the user
+   * @param {string} fromDate.query - Start date for selected transactions (inclusive)
+   * @param {string} tillDate.query - End date for selected transactions (exclusive)
+   * @param {integer} fromId.query - From-user for selected transactions
+   * @param {integer} toId.query - To-user for selected transactions
+   * @returns {string} 404 - User not found error.
+   */
+  public async getUsersTransactionsReport(req: RequestWithToken, res: Response): Promise<void> {
+    const parameters = req.params;
+    this.logger.trace('Get transaction report for user ', req.params.id, ' by user', req.token.user);
+
+    let filters;
+    try {
+      filters = parseGetTransactionsFilters(req);
+    } catch (e) {
+      res.status(400).json(e.message);
+      return;
+    }
+
+    try {
+      if ((filters.toId !== undefined && filters.fromId !== undefined) || (filters.toId === undefined && filters.fromId === undefined)) {
+        res.status(400).json('Need to provide either a toId or a fromId.');
+        return;
+      }
+
+      const id = parseInt(parameters.id, 10);
+
+      const user = await User.findOne({ where: { id } });
+      if (user == null) {
+        res.status(404).json('Unknown user ID.');
+        return;
+      }
+
+      const report = await TransactionService.getTransactionReportResponse(filters);
+      res.status(200).json(report);
+    } catch (e) {
+      res.status(500).send();
+      this.logger.error(e);
     }
   }
 }

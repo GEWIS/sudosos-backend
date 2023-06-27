@@ -43,14 +43,22 @@ import { InvoiceState } from '../../../entity/invoices/invoice-status';
 import Invoice from '../../../entity/invoices/invoice';
 
 /**
- * Checks whether all the transactions exists and are credited to the debtor.
- * TODO Discuss negative invoices transactions.
+ * Checks whether all the transactions exists and are credited to the debtor or sold in case of credit Invoice.
  */
 async function validTransactionIds<T extends BaseInvoice>(p: T) {
   if (!p.transactionIDs) return toPass(p);
 
-  const transactions = await Transaction.find({ where: { id: In(p.transactionIDs) }, relations: ['from', 'subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice'] });
-  const notOwnedByUser = transactions.filter((t) => t.from.id !== p.toId);
+  const transactions = await Transaction.find({ where: { id: In(p.transactionIDs) }, relations: ['from', 'subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice', 'subTransactions.to'] });
+  let notOwnedByUser = [];
+  if (p.isCreditInvoice) {
+    transactions.forEach((t) => {
+      t.subTransactions.forEach((tSub) => {
+        if (tSub.to.id !== p.forId) notOwnedByUser.push(t);
+      });
+    });
+  } else {
+    notOwnedByUser.push(...transactions.filter((t) => t.from.id !== p.forId));
+  }
   if (notOwnedByUser.length !== 0) return toFail(INVALID_TRANSACTION_OWNER());
   if (transactions.length !== p.transactionIDs.length) return toFail(INVALID_TRANSACTION_IDS());
 
@@ -101,7 +109,7 @@ async function differentState<T extends UpdateInvoiceParams>(p: T) {
 /**
  * Specification for an InvoiceEntryRequest.
  */
-const invoiceEntryRequestSpec: Specification<InvoiceEntryRequest, ValidationError> = [
+const invoiceEntryRequestSpec: () => Specification<InvoiceEntryRequest, ValidationError> = () => [
   [[positiveNumber], 'amount', new ValidationError('amount:')],
   [stringSpec(), 'description', new ValidationError('description:')],
 ];
@@ -112,12 +120,12 @@ const invoiceEntryRequestSpec: Specification<InvoiceEntryRequest, ValidationErro
 function baseInvoiceRequestSpec<T extends BaseInvoice>(): Specification<T, ValidationError> {
   return [
     validTransactionIds,
-    [[userMustExist], 'toId', new ValidationError('toId:')],
+    [[userMustExist], 'forId', new ValidationError('forId:')],
     [[validOrUndefinedDate], 'fromDate', new ValidationError('fromDate:')],
     [stringSpec(), 'description', new ValidationError('description:')],
     [stringSpec(), 'addressee', new ValidationError('addressee:')],
     // We have only defined a single item rule, so we use this to apply it to an array,
-    [[createArrayRule(invoiceEntryRequestSpec)], 'customEntries', new ValidationError('Custom entries:')],
+    [[createArrayRule(invoiceEntryRequestSpec())], 'customEntries', new ValidationError('Custom entries:')],
   ];
 }
 
@@ -134,7 +142,7 @@ const updateInvoiceRequestSpec: Specification<UpdateInvoiceParams, ValidationErr
 /**
  * Specification for an CreateInvoiceParams
  */
-const createInvoiceRequestSpec: Specification<CreateInvoiceParams, ValidationError> = [
+const createInvoiceRequestSpec: () => Specification<CreateInvoiceParams, ValidationError> = () => [
   ...baseInvoiceRequestSpec<CreateInvoiceParams>(),
   [[userMustExist], 'byId', new ValidationError('byId:')],
 ];
@@ -143,7 +151,7 @@ export default async function verifyCreateInvoiceRequest(
   createInvoiceRequest: CreateInvoiceRequest,
 ) {
   return Promise.resolve(await validateSpecification(
-    createInvoiceRequest, createInvoiceRequestSpec,
+    createInvoiceRequest, createInvoiceRequestSpec(),
   ));
 }
 

@@ -56,5 +56,6 @@ export default async function createApp() {
 if (require.main === module) {
   // Only execute the application directly if this is the main execution file.
   config();
+  // eslint-disable-next-line @typescript-eslint/no-floating-promises
   createApp();
 }

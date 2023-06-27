@@ -31,7 +31,8 @@ import {
   seedPointsOfSale,
   seedProductCategories,
   seedTransactions,
-  seedUsers, seedVatGroups,
+  seedUsers,
+  seedVatGroups,
 } from '../../seed';
 import Swagger from '../../../src/start/swagger';
 import {
@@ -41,7 +42,10 @@ import {
 } from '../../../src/controller/response/invoice-response';
 import InvoiceService from '../../../src/service/invoice-service';
 import InvoiceEntry from '../../../src/entity/invoices/invoice-entry';
-import { CreateInvoiceParams, UpdateInvoiceParams } from '../../../src/controller/request/invoice-request';
+import {
+  CreateInvoiceParams,
+  UpdateInvoiceParams,
+} from '../../../src/controller/request/invoice-request';
 import { TransferResponse } from '../../../src/controller/response/transfer-response';
 import TransactionService from '../../../src/service/transaction-service';
 import { BaseTransactionResponse } from '../../../src/controller/response/transaction-response';
@@ -51,6 +55,7 @@ import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import { TransactionRequest } from '../../../src/controller/request/transaction-request';
 import { InvoiceState } from '../../../src/entity/invoices/invoice-status';
 import Transaction from '../../../src/entity/transactions/transaction';
+import Transfer from '../../../src/entity/transactions/transfer';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -66,15 +71,22 @@ export async function createTransactionRequest(debtorId: number,
   return transactions;
 }
 
-export async function requestToTransaction(transactions: TransactionRequest[]) {
-  const tIds: number[] = [];
-  let cost = 0;
-  await Promise.all(transactions.map(async (t) => {
-    const transactionResponse = await TransactionService.createTransaction(t);
-    cost += transactionResponse.totalPriceInclVat.amount;
-    tIds.push(transactionResponse.id);
-  }));
-  return { tIds, cost };
+export async function requestToTransaction(
+  transactionRequests: TransactionRequest[],
+) {
+  const transactions: Array<{ tId: number; amount: number }> = [];
+  let total = 0;
+  await Promise.all(
+    transactionRequests.map(async (t) => {
+      const transactionResponse = await TransactionService.createTransaction(t);
+      transactions.push({
+        tId: transactionResponse.id,
+        amount: transactionResponse.totalPriceInclVat.amount,
+      });
+      total += transactionResponse.totalPriceInclVat.amount;
+    }),
+  );
+  return { transactions, total };
 }
 
 function baseKeyMapping(invoice: BaseInvoiceResponse | Invoice) {
@@ -90,50 +102,52 @@ function keyMapping(invoice: InvoiceResponse | Invoice) {
     entries: invoice.invoiceEntries.map((entry) => ({
       amount: entry.amount,
       description: entry.description,
-      priceInclVat: invoice instanceof Invoice
-        ? (entry as InvoiceEntry).priceInclVat.getAmount()
-        : (entry as InvoiceEntryResponse).priceInclVat.amount,
+      priceInclVat:
+        invoice instanceof Invoice
+          ? (entry as InvoiceEntry).priceInclVat.getAmount()
+          : (entry as InvoiceEntryResponse).priceInclVat.amount,
     })),
   };
 }
 export type T = InvoiceResponse | BaseInvoiceResponse;
-function returnsAll(response: T[], supeset: Invoice[], mapping: any) {
-  expect(response.map(mapping))
-    .to.deep.equalInAnyOrder(supeset.map(mapping));
+function returnsAll(response: T[], superset: Invoice[], mapping: any) {
+  expect(response.map(mapping)).to.deep.equalInAnyOrder(superset.map(mapping));
+}
+
+export async function createTransactions(debtorId: number, creditorId: number, transactionCount: number) {
+  const transactions: TransactionRequest[] = await createTransactionRequest(
+    debtorId, creditorId, transactionCount,
+  );
+  await new Promise((f) => setTimeout(f, 100));
+  return Promise.resolve(requestToTransaction(transactions));
 }
 
 export async function createInvoiceWithTransfers(debtorId: number, creditorId: number,
   transactionCount: number) {
-  const transactions: TransactionRequest[] = await createTransactionRequest(
-    debtorId, creditorId, transactionCount,
-  );
-  expect((await BalanceService.getBalance(debtorId)).amount.amount).is.equal(0);
-  await new Promise((f) => setTimeout(f, 100));
-  const { tIds, cost } = await requestToTransaction(transactions);
+  const { transactions, total } = await createTransactions(debtorId, creditorId, transactionCount);
   await new Promise((f) => setTimeout(f, 1000));
-  expect((await BalanceService.getBalance(debtorId)).amount.amount).is.equal(-1 * cost);
 
   const createInvoiceRequest: CreateInvoiceParams = {
     byId: creditorId,
     addressee: 'Addressee',
     description: 'Description',
-    toId: debtorId,
-    transactionIDs: tIds,
+    forId: debtorId,
+    transactionIDs: transactions.map((t) => t.tId),
+    isCreditInvoice: false,
   };
 
   const invoice = await InvoiceService.createInvoice(createInvoiceRequest);
-  await new Promise((f) => setTimeout(f, 100));
-  expect((await BalanceService.getBalance(debtorId)).amount.amount).is.equal(0);
+  expect(invoice.transfer.amount.amount).to.equal(total);
   return invoice;
 }
 
 describe('InvoiceService', () => {
   let ctx: {
-    connection: Connection,
-    app: Application,
-    specification: SwaggerSpecification,
-    users: User[],
-    invoices: Invoice[],
+    connection: Connection;
+    app: Application;
+    specification: SwaggerSpecification;
+    users: User[];
+    invoices: Invoice[];
   };
 
   before(async function test(): Promise<void> {
@@ -143,15 +157,24 @@ describe('InvoiceService', () => {
     const users = await seedUsers();
     const categories = await seedProductCategories();
     const vatGroups = await seedVatGroups();
-    const {
-      products,
+    const { products, productRevisions } = await seedAllProducts(
+      users,
+      categories,
+      vatGroups,
+    );
+    const { containerRevisions } = await seedAllContainers(
+      users,
       productRevisions,
-    } = await seedAllProducts(users, categories, vatGroups);
-    const {
+      products,
+    );
+    const { pointOfSaleRevisions } = await seedPointsOfSale(
+      users,
       containerRevisions,
-    } = await seedAllContainers(users, productRevisions, products);
-    const { pointOfSaleRevisions } = await seedPointsOfSale(users, containerRevisions);
-    const { transactions } = await seedTransactions(users, pointOfSaleRevisions);
+    );
+    const { transactions } = await seedTransactions(
+      users,
+      pointOfSaleRevisions,
+    );
     const { invoices } = await seedInvoices(users, transactions);
 
     // start app
@@ -177,18 +200,21 @@ describe('InvoiceService', () => {
 
   describe('getInvoices function', () => {
     it('should return all invoices with no input specification', async () => {
-      const res: BaseInvoiceResponse[] = (await InvoiceService.getInvoices()).records;
+      const res: BaseInvoiceResponse[] = (await InvoiceService.getInvoices())
+        .records;
       returnsAll(res, ctx.invoices, baseKeyMapping);
     });
     it('should return all invoices and their entries if specified', async () => {
       const res: InvoiceResponse[] = (
-        await InvoiceService.getInvoices({ returnInvoiceEntries: true }))
-        .records as InvoiceResponse[];
+        await InvoiceService.getInvoices({ returnInvoiceEntries: true })
+      ).records as InvoiceResponse[];
       returnsAll(res, ctx.invoices, keyMapping);
     });
     it('should return a specific invoice if the ID is specified', async () => {
       const invoiceId = ctx.invoices[0].id;
-      const res: BaseInvoiceResponse[] = (await InvoiceService.getInvoices({ invoiceId })).records;
+      const res: BaseInvoiceResponse[] = (
+        await InvoiceService.getInvoices({ invoiceId })
+      ).records;
       returnsAll(res, [ctx.invoices[0]], baseKeyMapping);
     });
   });
@@ -196,300 +222,481 @@ describe('InvoiceService', () => {
     it('should return a correct Transfer', async () => {
       const toId = (await User.findOne({ where: {} })).id;
       const transactions: BaseTransactionResponse[] = (
-        await TransactionService.getTransactions({ fromId: toId })).records;
+        await TransactionService.getTransactions({ fromId: toId })
+      ).records;
       let value = 0;
-      transactions.forEach((t) => { value += t.value.amount; });
+      transactions.forEach((t) => {
+        value += t.value.amount;
+      });
 
       expect(transactions).to.not.be.empty;
       const transfer: TransferResponse = (
-        await InvoiceService.createTransferFromTransactions(toId, transactions));
+        await InvoiceService.createTransferFromTransactions(toId, transactions, false));
       expect(transfer.amount.amount).to.be.equal(value);
       expect(transfer.to.id).to.be.equal(toId);
     });
   });
   describe('createInvoice function', () => {
-    it('should create Invoice from transactions', async () => {
-      await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
-        await createInvoiceWithTransfers(debtor.id, creditor.id, 1);
-      });
+    it('should create Invoice from transaction', async () => {
+      await inUserContext(
+        await (await UserFactory()).clone(2),
+        async (debtor: User, creditor: User) => {
+          await createInvoiceWithTransfers(debtor.id, creditor.id, 1);
+        },
+      );
     });
     it('should create Invoice from multiple transactions', async () => {
-      await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
-        await createInvoiceWithTransfers(debtor.id, creditor.id, 20);
-      });
+      await inUserContext(
+        await (await UserFactory()).clone(2),
+        async (debtor: User, creditor: User) => {
+          await createInvoiceWithTransfers(debtor.id, creditor.id, 20);
+        },
+      );
     });
     it('should create Invoice for all transactions since date', async () => {
-      await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
-        // Spent money and create an invoice.
-        await createInvoiceWithTransfers(debtor.id, creditor.id, 3);
+      await inUserContext(
+        await (await UserFactory()).clone(2),
+        async (debtor: User, creditor: User) => {
+          // Spent more money.
+          const transactionRequestsBeforeDate: TransactionRequest[] =
+            await createTransactionRequest(debtor.id, creditor.id, 2);
+          const transactionsBeforeDate = await requestToTransaction(
+            transactionRequestsBeforeDate,
+          );
+          await new Promise((f) => setTimeout(f, 1000));
 
-        // Wait a bit before creating a new Invoice.
-        await new Promise((f) => setTimeout(f, 1000));
-        await createInvoiceWithTransfers(debtor.id, creditor.id, 5);
+          const createInvoiceRequest: CreateInvoiceParams = {
+            byId: creditor.id,
+            addressee: 'Addressee',
+            description: 'Description',
+            forId: debtor.id,
+            fromDate: new Date().toISOString(),
+            isCreditInvoice: false,
+          };
 
-        const invoice = (await InvoiceService.getInvoices({ toId: debtor.id })).records[0];
-        expect(invoice).to.not.be.undefined;
+          await new Promise((f) => setTimeout(f, 1000));
+          // Spent more money.
+          const transactionRequestsAfterDate: TransactionRequest[] =
+            await createTransactionRequest(debtor.id, creditor.id, 2);
+          const transactionsAfterDate = await requestToTransaction(
+            transactionRequestsAfterDate,
+          );
+          const total = transactionsAfterDate.total;
 
-        const createInvoiceRequest: CreateInvoiceParams = {
-          byId: creditor.id,
-          addressee: 'Addressee',
-          description: 'Description',
-          toId: debtor.id,
-          fromDate: new Date().toISOString(),
-        };
-
-        await new Promise((f) => setTimeout(f, 1000));
-        // Spent more money.
-        const transactions: TransactionRequest[] = await createTransactionRequest(
-          debtor.id, creditor.id, 2,
-        );
-
-        expect((await BalanceService.getBalance(debtor.id)).amount.amount)
-          .is.equal(0);
-        const first = await requestToTransaction(transactions);
-        expect((await BalanceService.getBalance(debtor.id)).amount.amount)
-          .is.equal(-1 * first.cost);
-
-        await InvoiceService.createInvoice(createInvoiceRequest);
-        expect((await BalanceService.getBalance(debtor.id)).amount.amount)
-          .is.equal(0);
-      });
+          const invoice = await InvoiceService.createInvoice(
+            createInvoiceRequest,
+          );
+          expect(invoice.transfer.amount.amount).is.equal(total);
+          expect(
+            (await BalanceService.getBalance(debtor.id)).amount.amount,
+          ).is.equal(-1 * transactionsBeforeDate.total);
+        },
+      );
     });
-    it('should create an Invoice for transactions without prior invoice', async () => {
-      await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
-        // If we don't wait then the user created at and transactions will be the same.
-        await new Promise((f) => setTimeout(f, 1000));
+    it('should create an Invoice for specific transactions', async () => {
+      await inUserContext(
+        await (await UserFactory()).clone(2),
+        async (debtor: User, creditor: User) => {
+          // Spent money
+          const transactionRequests: TransactionRequest[] =
+            await createTransactionRequest(debtor.id, creditor.id, 5);
 
-        // Sanity check
-        const transactionsBefore = await TransactionService.getTransactions({}, {}, debtor);
-        expect(transactionsBefore.records.length).to.equal(0);
+          const { transactions } = await requestToTransaction(
+            transactionRequests,
+          );
 
-        // Spent money
-        const transactions: TransactionRequest[] = await createTransactionRequest(
-          debtor.id, creditor.id, 2,
-        );
+          const chosenTransactions = transactions.slice(0, 2);
 
-        const createInvoiceRequest: CreateInvoiceParams = {
-          byId: creditor.id,
-          addressee: 'Addressee',
-          description: 'Description',
-          toId: debtor.id,
-        };
+          const createInvoiceRequest: CreateInvoiceParams = {
+            byId: creditor.id,
+            addressee: 'Addressee',
+            description: 'Description',
+            forId: debtor.id,
+            transactionIDs: chosenTransactions.map(
+              (transaction) => transaction.tId,
+            ),
+            isCreditInvoice: false,
+          };
 
-        const first = await requestToTransaction(transactions);
-
-        await new Promise((f) => setTimeout(f, 1000));
-        expect((await BalanceService.getBalance(debtor.id)).amount.amount)
-          .is.equal(-1 * first.cost);
-
-        await new Promise((f) => setTimeout(f, 1000));
-
-        await InvoiceService.createInvoice(createInvoiceRequest);
-        expect((await BalanceService.getBalance(debtor.id)).amount.amount)
-          .is.equal(0);
-      });
+          const invoice = await InvoiceService.createInvoice(
+            createInvoiceRequest,
+          );
+          expect(invoice.transfer.amount.amount).is.equal(
+            chosenTransactions.reduce(
+              (sum, current) => sum + current.amount,
+              0,
+            ),
+          );
+        },
+      );
     });
     it('should create Invoice since latest invoice if nothing specified', async () => {
-      await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
-        // Spent money and create an invoice.
-        await createInvoiceWithTransfers(debtor.id, creditor.id, 3);
-        await new Promise((f) => setTimeout(f, 1000));
-        await createInvoiceWithTransfers(debtor.id, creditor.id, 5);
-        await new Promise((f) => setTimeout(f, 1000));
+      await inUserContext(
+        await (await UserFactory()).clone(2),
+        async (debtor: User, creditor: User) => {
+          // Spent money and create an invoice.
+          await createInvoiceWithTransfers(debtor.id, creditor.id, 3);
+          await new Promise((f) => setTimeout(f, 1000));
 
-        const invoice = (await InvoiceService.getInvoices({ toId: debtor.id })).records[0];
-        expect(invoice).to.not.be.undefined;
-        expect((await BalanceService.getBalance(debtor.id)).amount.amount)
-          .is.equal(0);
+          const createInvoiceRequest: CreateInvoiceParams = {
+            byId: creditor.id,
+            addressee: 'Addressee',
+            description: 'Description',
+            forId: debtor.id,
+            isCreditInvoice: false,
+          };
 
-        const createInvoiceRequest: CreateInvoiceParams = {
-          byId: creditor.id,
-          addressee: 'Addressee',
-          description: 'Description',
-          toId: debtor.id,
-        };
+          // Spent more money.
+          const transactionRequests: TransactionRequest[] =
+            await createTransactionRequest(debtor.id, creditor.id, 2);
 
-        // Spent more money.
-        const transactions: TransactionRequest[] = await createTransactionRequest(
-          debtor.id, creditor.id, 2,
-        );
+          const { total } = await requestToTransaction(
+            transactionRequests,
+          );
 
-        const first = await requestToTransaction(transactions);
-        await new Promise((f) => setTimeout(f, 500));
-        expect((await BalanceService.getBalance(debtor.id)).amount.amount)
-          .is.equal(-1 * first.cost);
-
-        await new Promise((f) => setTimeout(f, 1000));
-
-        await InvoiceService.createInvoice(createInvoiceRequest);
-        expect((await BalanceService.getBalance(debtor.id)).amount.amount)
-          .is.equal(0);
-      });
+          const invoice = await InvoiceService.createInvoice(
+            createInvoiceRequest,
+          );
+          expect(invoice.transfer.amount.amount).is.equal(total);
+          expect(
+            (await BalanceService.getBalance(debtor.id)).amount.amount,
+            'balance after final invoice',
+          ).is.equal(0);
+        },
+      );
     });
     it('should set a reference to Invoice for all SubTransactionRows', async () => {
-      await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
-        const transactionRequests: TransactionRequest[] = await createTransactionRequest(
-          debtor.id, creditor.id, 2,
-        );
-        const { tIds } = await requestToTransaction(transactionRequests);
+      await inUserContext(
+        await (await UserFactory()).clone(2),
+        async (debtor: User, creditor: User) => {
+          const transactionRequests: TransactionRequest[] =
+            await createTransactionRequest(debtor.id, creditor.id, 2);
+          const { transactions } = await requestToTransaction(
+            transactionRequests,
+          );
 
+          const createInvoiceRequest: CreateInvoiceParams = {
+            byId: creditor.id,
+            addressee: 'Addressee',
+            description: 'Description',
+            forId: debtor.id,
+            isCreditInvoice: false,
+            transactionIDs: transactions.map((t) => t.tId),
+          };
+
+          const invoice = await InvoiceService.createInvoice(
+            createInvoiceRequest,
+          );
+          expect(
+            (await BalanceService.getBalance(debtor.id)).amount.amount,
+          ).is.equal(0);
+          const linkedTransactions = await Transaction.find({
+            where: {
+              id: In(transactions.map((transaction) => transaction.tId)),
+            },
+            relations: [
+              'subTransactions',
+              'subTransactions.subTransactionRows',
+              'subTransactions.subTransactionRows.invoice',
+            ],
+          });
+          linkedTransactions.forEach((t) => {
+            t.subTransactions.forEach((tSub) => {
+              tSub.subTransactionRows.forEach((tSubRow) => {
+                expect(tSubRow.invoice.id).to.equal(invoice.id);
+              });
+            });
+          });
+        },
+      );
+    });
+    it('should create Credit Invoice from transactions', async () => {
+      await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
+        const { transactions, total } = await createTransactions(debtor.id, creditor.id, 2);
         const createInvoiceRequest: CreateInvoiceParams = {
           byId: creditor.id,
           addressee: 'Addressee',
           description: 'Description',
-          toId: debtor.id,
-          transactionIDs: tIds,
+          forId: creditor.id,
+          transactionIDs: transactions.map((t) => t.tId),
+          isCreditInvoice: true,
         };
-
-        const invoice = await InvoiceService.createInvoice(createInvoiceRequest);
-        expect((await BalanceService.getBalance(debtor.id)).amount.amount).is.equal(0);
-        const transactions = await Transaction.find({ where: { id: In(tIds) }, relations: ['subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice'] });
-        transactions.forEach((t) => {
-          t.subTransactions.forEach((tSub) => {
-            tSub.subTransactionRows.forEach((tSubRow) => {
-              expect(tSubRow.invoice.id).to.equal(invoice.id);
-            });
-          });
-        });
+        await InvoiceService.createInvoice(createInvoiceRequest);
+        const debtorBalance = await BalanceService.getBalance(debtor.id);
+        const creditorBalance = await BalanceService.getBalance(creditor.id);
+        expect(debtorBalance.amount.amount).to.equal(-1 * total);
+        expect(creditorBalance.amount.amount).to.equal(0);
+      });
+    });
+    it('should create a seller transfer when Invoice is created', async () => {
+      await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
+        const invoice = await createInvoiceWithTransfers(debtor.id, creditor.id, 1);
+        const creditorBalance = await BalanceService.getBalance(creditor.id);
+        const transfer = await Transfer.findOne({ where: { from: { id: creditor.id } } });
+        expect(transfer).to.not.be.undefined;
+        expect(transfer.amount.getAmount()).to.eq(invoice.transfer.amount.amount);
+        expect(creditorBalance.amount.amount).to.eq(0);
       });
     });
   });
   describe('updateInvoice function', () => {
     it('should update an invoice description and addressee', async () => {
-      await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
-        // First create an Invoice.
-        const invoice = await createInvoiceWithTransfers(debtor.id, creditor.id, 1);
+      await inUserContext(
+        await (await UserFactory()).clone(2),
+        async (debtor: User, creditor: User) => {
+          // First create an Invoice.
+          const invoice = await createInvoiceWithTransfers(
+            debtor.id,
+            creditor.id,
+            1,
+          );
 
-        const validUpdateInvoiceParams: UpdateInvoiceParams = {
-          addressee: 'Updated-addressee',
-          byId: creditor.id,
-          description: 'Updated-description',
-          invoiceId: invoice.id,
-        };
+          const validUpdateInvoiceParams: UpdateInvoiceParams = {
+            addressee: 'Updated-addressee',
+            byId: creditor.id,
+            description: 'Updated-description',
+            invoiceId: invoice.id,
+          };
 
-        // Test if attributes were updated
-        const updatedInvoice = await InvoiceService.updateInvoice(validUpdateInvoiceParams);
-        expect(updatedInvoice.description).to.equal(validUpdateInvoiceParams.description);
-        expect(updatedInvoice.addressee).to.equal(validUpdateInvoiceParams.addressee);
+          // Test if attributes were updated
+          const updatedInvoice = await InvoiceService.updateInvoice(
+            validUpdateInvoiceParams,
+          );
+          expect(updatedInvoice.description).to.equal(
+            validUpdateInvoiceParams.description,
+          );
+          expect(updatedInvoice.addressee).to.equal(
+            validUpdateInvoiceParams.addressee,
+          );
 
-        // Sanity check
-        const fromDB = await Invoice.findOne({ where: { id: invoice.id } });
-        expect(fromDB.description).to.equal(validUpdateInvoiceParams.description);
-        expect(fromDB.addressee).to.equal(validUpdateInvoiceParams.addressee);
-      });
+          // Sanity check
+          const fromDB = await Invoice.findOne({ where: { id: invoice.id } });
+          expect(fromDB.description).to.equal(
+            validUpdateInvoiceParams.description,
+          );
+          expect(fromDB.addressee).to.equal(validUpdateInvoiceParams.addressee);
+        },
+      );
     });
     it('should update an Invoice state', async () => {
-      await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
-        // First create an Invoice.
-        const invoice = await createInvoiceWithTransfers(debtor.id, creditor.id, 1);
+      await inUserContext(
+        await (await UserFactory()).clone(2),
+        async (debtor: User, creditor: User) => {
+          // First create an Invoice.
+          const invoice = await createInvoiceWithTransfers(
+            debtor.id,
+            creditor.id,
+            1,
+          );
 
-        const { addressee, description } = invoice;
-        const validUpdateInvoiceParams: UpdateInvoiceParams = {
-          addressee,
-          byId: creditor.id,
-          description,
-          invoiceId: invoice.id,
-          state: InvoiceState.SENT,
-        };
+          const { addressee, description } = invoice;
+          const validUpdateInvoiceParams: UpdateInvoiceParams = {
+            addressee,
+            byId: creditor.id,
+            description,
+            invoiceId: invoice.id,
+            state: InvoiceState.SENT,
+          };
 
-        // Test if attributes were updated
-        const updatedInvoice = await InvoiceService.updateInvoice(validUpdateInvoiceParams);
-        expect(updatedInvoice.currentState.state).to.be.equal(InvoiceState[InvoiceState.SENT]);
-      });
+          // Test if attributes were updated
+          const updatedInvoice = await InvoiceService.updateInvoice(
+            validUpdateInvoiceParams,
+          );
+          expect(updatedInvoice.currentState.state).to.be.equal(
+            InvoiceState[InvoiceState.SENT],
+          );
+        },
+      );
     });
     it('should update an Invoice state twice', async () => {
-      await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
-        // First create an Invoice.
-        const invoice = await createInvoiceWithTransfers(debtor.id, creditor.id, 1);
+      await inUserContext(
+        await (await UserFactory()).clone(2),
+        async (debtor: User, creditor: User) => {
+          // First create an Invoice.
+          const invoice = await createInvoiceWithTransfers(
+            debtor.id,
+            creditor.id,
+            1,
+          );
 
-        const { addressee, description } = invoice;
-        const makeParamsState = (state: InvoiceState) => ({
-          addressee,
-          byId: creditor.id,
-          description,
-          invoiceId: invoice.id,
-          state,
-        });
+          const { addressee, description } = invoice;
+          const makeParamsState = (state: InvoiceState) => ({
+            addressee,
+            byId: creditor.id,
+            description,
+            invoiceId: invoice.id,
+            state,
+          });
 
-        // Test if attributes were updated
-        let updatedInvoice = await InvoiceService
-          .updateInvoice(makeParamsState(InvoiceState.SENT));
-        expect(updatedInvoice.currentState.state).to.be.equal(InvoiceState[InvoiceState.SENT]);
+          // Test if attributes were updated
+          let updatedInvoice = await InvoiceService.updateInvoice(
+            makeParamsState(InvoiceState.SENT),
+          );
+          expect(updatedInvoice.currentState.state).to.be.equal(
+            InvoiceState[InvoiceState.SENT],
+          );
 
-        updatedInvoice = await InvoiceService
-          .updateInvoice(makeParamsState(InvoiceState.PAID));
-        expect(updatedInvoice.currentState.state).to.be.equal(InvoiceState[InvoiceState.PAID]);
-      });
+          updatedInvoice = await InvoiceService.updateInvoice(
+            makeParamsState(InvoiceState.PAID),
+          );
+          expect(updatedInvoice.currentState.state).to.be.equal(
+            InvoiceState[InvoiceState.PAID],
+          );
+        },
+      );
+    });
+    const makeParamsState = (addressee: string, description:string, creditor: User, invoiceId: number, state: InvoiceState) => ({
+      addressee,
+      byId: creditor.id,
+      description,
+      invoiceId,
+      state,
     });
     it('should delete an Invoice', async () => {
+      await inUserContext(
+        await (await UserFactory()).clone(2),
+        async (debtor: User, creditor: User) => {
+          // First create an Invoice.
+          const invoice = await createInvoiceWithTransfers(
+            debtor.id,
+            creditor.id,
+            1,
+          );
+
+          const { addressee, description } = invoice;
+
+          // Test if attributes were updated
+          const updatedInvoice = await InvoiceService.updateInvoice(
+            makeParamsState(addressee, description, creditor, invoice.id, InvoiceState.DELETED),
+          );
+          expect(updatedInvoice.currentState.state).to.be.equal(
+            InvoiceState[InvoiceState.DELETED],
+          );
+
+          // Check if the balance has been decreased
+          expect(
+            (await BalanceService.getBalance(debtor.id)).amount.amount,
+          ).is.equal(-1 * invoice.transfer.amount.amount);
+        },
+      );
+    });
+    it('should return money to sellers if invoice is deleted', async () => {
       await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
-        // First create an Invoice.
         const invoice = await createInvoiceWithTransfers(debtor.id, creditor.id, 1);
+        let creditorBalance = await BalanceService.getBalance(creditor.id);
+        let debtorBalance = await BalanceService.getBalance(debtor.id);
+        expect(creditorBalance.amount.amount).to.eq(0);
+        expect(debtorBalance.amount.amount).to.eq(0);
 
-        const { addressee, description } = invoice;
-        const makeParamsState = (state: InvoiceState) => ({
-          addressee,
-          byId: creditor.id,
-          description,
-          invoiceId: invoice.id,
-          state,
-        });
-
-        // Test if attributes were updated
-        const updatedInvoice = await InvoiceService
-          .updateInvoice(makeParamsState(InvoiceState.DELETED));
-        expect(updatedInvoice.currentState.state).to.be.equal(InvoiceState[InvoiceState.DELETED]);
-
-        // Check if the balance has been decreased
+        await InvoiceService
+          .updateInvoice(makeParamsState(invoice.addressee, invoice.description, creditor, invoice.id, InvoiceState.DELETED));
         expect((await BalanceService.getBalance(debtor.id)).amount.amount)
           .is.equal(-1 * invoice.transfer.amount.amount);
+        expect((await BalanceService.getBalance(creditorBalance.id)).amount.amount)
+          .is.equal(invoice.transfer.amount.amount);
       });
     });
     it('should delete invoice reference from subTransactions when Invoice is deleted', async () => {
+      await inUserContext(
+        await (await UserFactory()).clone(2),
+        async (debtor: User, creditor: User) => {
+          const transactionRequests: TransactionRequest[] =
+            await createTransactionRequest(debtor.id, creditor.id, 2);
+          const { transactions } = await requestToTransaction(
+            transactionRequests,
+          );
+
+          const createInvoiceRequest: CreateInvoiceParams = {
+            byId: creditor.id,
+            addressee: 'Addressee',
+            description: 'Description',
+            forId: debtor.id,
+            isCreditInvoice: false,
+            transactionIDs: transactions.map((t) => t.tId),
+          };
+
+          const invoice = await InvoiceService.createInvoice(
+            createInvoiceRequest,
+          );
+          let invoiceTransactions = await Transaction.find({
+            where: {
+              id: In(transactions.map((transaction) => transaction.tId)),
+            },
+            relations: [
+              'subTransactions',
+              'subTransactions.subTransactionRows',
+              'subTransactions.subTransactionRows.invoice',
+            ],
+          });
+          invoiceTransactions.forEach((t) => {
+            t.subTransactions.forEach((tSub) => {
+              tSub.subTransactionRows.forEach((tSubRow) => {
+                expect(tSubRow.invoice.id).to.equal(invoice.id);
+              });
+            });
+          });
+
+          const { addressee, description } = invoice;
+          const updatedInvoice = await InvoiceService.updateInvoice(
+            makeParamsState(addressee, description, creditor, invoice.id, InvoiceState.DELETED),
+          );
+          expect(updatedInvoice.currentState.state).to.be.equal(
+            InvoiceState[InvoiceState.DELETED],
+          );
+
+          invoiceTransactions = await Transaction.find({
+            where: {
+              id: In(transactions.map((transaction) => transaction.tId)),
+            },
+            relations: [
+              'subTransactions',
+              'subTransactions.subTransactionRows',
+              'subTransactions.subTransactionRows.invoice',
+            ],
+          });
+          invoiceTransactions.forEach((t) => {
+            t.subTransactions.forEach((tSub) => {
+              tSub.subTransactionRows.forEach((tSubRow) => {
+                expect(tSubRow.invoice).to.equal(null);
+              });
+            });
+          });
+        },
+      );
+    });
+  });
+  describe('createTransfersPaidInvoice function', () => {
+    it('should subtract amount from sellers', async () => {
       await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
-        const transactionRequests: TransactionRequest[] = await createTransactionRequest(
-          debtor.id, creditor.id, 2,
-        );
-        const { tIds } = await requestToTransaction(transactionRequests);
+        await createInvoiceWithTransfers(debtor.id, creditor.id, 1);
+        let creditorBalance = await BalanceService.getBalance(creditor.id);
+        const debtorBalance = await BalanceService.getBalance(debtor.id);
+        expect(creditorBalance.amount.amount).to.equal(0);
+        expect(debtorBalance.amount.amount).to.equal(0);
+      });
+    });
+    it('should subtract amount from multiple sellers', async () => {
+      await inUserContext((await UserFactory()).clone(3), async (debtor: User, creditor: User, secondCreditor) => {
+        const transactions = [];
+        transactions.push(...(await createTransactions(debtor.id, creditor.id, 3)).transactions);
+        transactions.push(...(await createTransactions(debtor.id, secondCreditor.id, 2)).transactions);
 
         const createInvoiceRequest: CreateInvoiceParams = {
           byId: creditor.id,
           addressee: 'Addressee',
           description: 'Description',
-          toId: debtor.id,
-          transactionIDs: tIds,
+          forId: debtor.id,
+          transactionIDs: transactions.map((t) => t.tId),
+          isCreditInvoice: false,
         };
 
-        const invoice = await InvoiceService.createInvoice(createInvoiceRequest);
-        let transactions = await Transaction.find({ where: { id: In(tIds) }, relations: ['subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice'] });
-        transactions.forEach((t) => {
-          t.subTransactions.forEach((tSub) => {
-            tSub.subTransactionRows.forEach((tSubRow) => {
-              expect(tSubRow.invoice.id).to.equal(invoice.id);
-            });
-          });
-        });
-
-        const { addressee, description } = invoice;
-        const makeParamsState = (state: InvoiceState) => ({
-          addressee,
-          byId: creditor.id,
-          description,
-          invoiceId: invoice.id,
-          state,
-        });
-        const updatedInvoice = await InvoiceService
-          .updateInvoice(makeParamsState(InvoiceState.DELETED));
-        expect(updatedInvoice.currentState.state).to.be.equal(InvoiceState[InvoiceState.DELETED]);
-
-        transactions = await Transaction.find({ where: { id: In(tIds) }, relations: ['subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice'] });
-        transactions.forEach((t) => {
-          t.subTransactions.forEach((tSub) => {
-            tSub.subTransactionRows.forEach((tSubRow) => {
-              expect(tSubRow.invoice).to.equal(null);
-            });
-          });
-        });
+        await InvoiceService.createInvoice(createInvoiceRequest);
+        let debtorBalance = await BalanceService.getBalance(debtor.id);
+        const creditorBalance = await BalanceService.getBalance(creditor.id);
+        const secondCreditorBalance = await BalanceService.getBalance(creditor.id);
+        expect(creditorBalance.amount.amount).to.equal(0);
+        expect(secondCreditorBalance.amount.amount).to.equal(0);
+        expect(debtorBalance.amount.amount).to.equal(0);
       });
     });
   });

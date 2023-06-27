@@ -15,11 +15,11 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import BaseResponse from './base-response';
 import { DineroObjectResponse } from './dinero-response';
+import { PaginationResult } from '../../helpers/pagination';
 
 /**
- * @typedef {BaseResponse} BalanceResponse
+ * @typedef BalanceResponse
  * @property {number} id.required - ID of the user this balance belongs to
  * @property {DineroObjectResponse.model} amount.required - The amount of balance this user has
  * @property {number} lastTransactionId - The ID of the last transaction that was
@@ -27,8 +27,19 @@ import { DineroObjectResponse } from './dinero-response';
  * @property {number} lastTransferId - The ID of the last transfer that was
  * present when the balance was cached
  */
-export default interface BalanceResponse extends BaseResponse {
+export default interface BalanceResponse {
+  id: number;
   amount: DineroObjectResponse;
-  lastTransactionId?: number;
-  lastTransferId?: number;
+  lastTransactionId: number | null;
+  lastTransferId: number | null;
+}
+
+/**
+ * @typedef PaginatedBalanceResponse
+ * @property {PaginationResult.model} _pagination - Pagination metadata
+ * @property {Array<BalanceResponse>} records - Returned balance responses
+ */
+export interface PaginatedBalanceResponse {
+  _pagination: PaginationResult,
+  records: BalanceResponse[];
 }

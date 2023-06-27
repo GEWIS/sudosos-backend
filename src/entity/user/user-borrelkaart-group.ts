@@ -39,5 +39,6 @@ export default class UserBorrelkaartGroup extends BaseEntity {
   public user: User;
 
   @ManyToOne(() => BorrelkaartGroup, { nullable: false })
+  @JoinColumn()
   public borrelkaartGroup: BorrelkaartGroup;
 }

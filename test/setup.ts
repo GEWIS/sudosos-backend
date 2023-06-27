@@ -22,6 +22,8 @@ import { use } from 'chai';
 import chaiSwag from 'chai-swag';
 import chaiHttp from 'chai-http';
 import chaiAsPromised from 'chai-as-promised';
+import chaiSorted from 'chai-sorted';
+import deepEqualInAnyOrder from 'deep-equal-in-any-order';
 import dinero from 'dinero.js';
 import log4js from 'log4js';
 import sinonChai from 'sinon-chai';
@@ -31,6 +33,8 @@ use(chaiAsPromised);
 use(chaiHttp);
 use(chaiSwag);
 use(sinonChai);
+use(chaiSorted);
+use(deepEqualInAnyOrder);
 
 process.env.NODE_ENV = 'test';
 process.env.HTTP_PORT = '3001';

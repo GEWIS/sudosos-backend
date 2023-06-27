@@ -19,7 +19,7 @@ import { Response } from 'express';
 import log4js, { Logger } from 'log4js';
 import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
-import BorrelkaartGroupRequest from './request/borrelkaart-group-request';
+import { BorrelkaartGroupRequest } from './request/borrelkaart-group-request';
 import { RequestWithToken } from '../middleware/token-middleware';
 import BorrelkaartGroup from '../entity/user/borrelkaart-group';
 import BorrelkaartGroupService from '../service/borrelkaart-group-service';
@@ -59,10 +59,6 @@ export default class BorrelkaartGroupController extends BaseController {
           policy: async (req) => this.roleManager.can(req.token.roles, 'update', 'all', 'BorrelkaartGroup', ['*']),
           handler: this.updateBorrelkaartGroup.bind(this),
         },
-        DELETE: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'delete', 'all', 'BorrelkaartGroup', ['*']),
-          handler: this.deleteBorrelkaartGroup.bind(this),
-        },
       },
     };
   }
@@ -70,7 +66,6 @@ export default class BorrelkaartGroupController extends BaseController {
   /**
    * Returns all existing borrelkaart groups
    * @route GET /borrelkaartgroups
-   * @operationId getAll
    * @group borrelkaartgroups - Operations of borrelkaart group controller
    * @security JWT
    * @param {integer} take.query - How many borrelkaart groups the endpoint should return
@@ -96,8 +91,7 @@ export default class BorrelkaartGroupController extends BaseController {
 
     // handle request
     try {
-      res.json(await BorrelkaartGroupService
-        .getAllBorrelkaartGroups({ take, skip }));
+      res.json(await BorrelkaartGroupService.getBorrelkaartGroups({}, { take, skip }));
     } catch (error) {
       this.logger.error('Could not return all borrelkaart groups:', error);
       res.status(500).json('Internal server error.');
@@ -107,31 +101,27 @@ export default class BorrelkaartGroupController extends BaseController {
   /**
    * Creates a new borrelkaart group
    * @route POST /borrelkaartgroups
-   * @operationId create
    * @group borrelkaartgroups - Operations of borrelkaart group controller
    * @param {BorrelkaartGroupRequest.model} borrelkaartgroup.body.required -
    * The borrelkaart group which should be created
    * @security JWT
    * @returns {BorrelkaartGroupResponse.model} 200 - The created borrelkaart group entity
    * @returns {string} 400 - Validation error
-   * @returns {string} 409 - Conflict error
    * @returns {string} 500 - Internal server error
    */
   public async createBorrelkaartGroup(req: RequestWithToken, res: Response): Promise<void> {
     const body = req.body as BorrelkaartGroupRequest;
     this.logger.trace('Create borrelkaart group', body, 'by user', req.token.user);
 
+    const borrelkaartGroupParams = BorrelkaartGroupService.asBorrelkaartGroupParams(body);
+
     // handle request
     try {
-      if (await BorrelkaartGroupService.verifyBorrelkaartGroup(body)) {
-        if (await BorrelkaartGroupService.checkUserConflicts(body)) {
-          res.json(await BorrelkaartGroupService.createBorrelkaartGroup(body));
-        } else {
-          res.status(409).json('Conflicting user posted.');
-        }
-      } else {
+      if (!BorrelkaartGroupService.validateBorrelkaartGroup(borrelkaartGroupParams)) {
         res.status(400).json('Invalid borrelkaart group.');
+        return;
       }
+      res.json(await BorrelkaartGroupService.createBorrelkaartGroup(borrelkaartGroupParams));
     } catch (error) {
       this.logger.error('Could not create borrelkaart group:', error);
       res.status(500).json('Internal server error.');
@@ -141,7 +131,6 @@ export default class BorrelkaartGroupController extends BaseController {
   /**
    * Returns the requested borrelkaart group
    * @route GET /borrelkaartgroups/{id}
-   * @operationId get
    * @group borrelkaartgroups - Operations of borrelkaart group controller
    * @param {integer} id.path.required - The id of the borrelkaart group which should be returned
    * @security JWT
@@ -151,13 +140,14 @@ export default class BorrelkaartGroupController extends BaseController {
    */
   public async getBorrelkaartGroupById(req: RequestWithToken, res: Response): Promise<void> {
     const { id } = req.params;
+    const bkgId = Number.parseInt(id, 10);
     this.logger.trace('Get single borrelkaart group', id, 'by user', req.token.user);
 
     // handle request
     try {
-      const bkg = await BorrelkaartGroupService.getBorrelkaartGroupById(id);
-      if (bkg) {
-        res.json(bkg);
+      const bkg = await BorrelkaartGroupService.getBorrelkaartGroups({ bkgId });
+      if (bkg.records[0]) {
+        res.json(bkg.records[0]);
       } else {
         res.status(404).json('Borrelkaart group not found.');
       }
@@ -170,7 +160,6 @@ export default class BorrelkaartGroupController extends BaseController {
   /**
    * Updates the requested borrelkaart group
    * @route PATCH /borrelkaartgroups/{id}
-   * @operationId update
    * @group borrelkaartgroups - Operations of borrelkaart group controller
    * @param {integer} id.path.required - The id of the borrelkaart group which should be updated
    * @param {BorrelkaartGroupRequest.model} borrelkaartgroup.body.required -
@@ -184,52 +173,35 @@ export default class BorrelkaartGroupController extends BaseController {
   public async updateBorrelkaartGroup(req: RequestWithToken, res: Response): Promise<void> {
     const body = req.body as BorrelkaartGroupRequest;
     const { id } = req.params;
-    this.logger.trace('Update borrelkaart group', id, 'by user', req.token.user);
+    const bkgId = Number.parseInt(id, 10);
+    this.logger.trace('Update borrelkaart group', id, 'with', body, 'by user', req.token.user);
+
+    const borrelkaartGroupParams = BorrelkaartGroupService.asBorrelkaartGroupParams(body);
 
     // handle request
     try {
-      if (await BorrelkaartGroupService.verifyBorrelkaartGroup(body)) {
-        if (await BorrelkaartGroup.findOne({ where: { id: parseInt(id, 10) } })) {
-          if (await BorrelkaartGroupService.checkUserConflicts(body, parseInt(id, 10))) {
-            res.status(200).json(await BorrelkaartGroupService.updateBorrelkaartGroup(id, body));
-          } else {
-            res.status(409).json('Conflicting user posted.');
-          }
-        } else {
-          res.status(404).json('Borrelkaart group not found.');
-        }
-      } else {
+      if (!BorrelkaartGroupService.validateBorrelkaartGroup(borrelkaartGroupParams)) {
         res.status(400).json('Invalid borrelkaart group.');
+        return;
       }
+      const bkg = await BorrelkaartGroup.findOne({ where: { id: bkgId } });
+      if (!bkg) {
+        res.status(404).json('Borrelkaart group not found.');
+        return;
+      }
+      if (bkg.activeStartDate <= new Date()) {
+        res.status(403).json('Borrelkaart StartDate has already passed.');
+        return;
+      }
+      if (borrelkaartGroupParams.amount < bkg.amount) {
+        res.status(400).json('Cannot decrease number of BorrelkaartGroupUsers');
+        return;
+      }
+      res.status(200).json(
+        await BorrelkaartGroupService.updateBorrelkaartGroup(bkgId, borrelkaartGroupParams),
+      );
     } catch (error) {
       this.logger.error('Could not update borrelkaart group:', error);
-      res.status(500).json('Internal server error.');
-    }
-  }
-
-  /**
-   * Deletes the requested borrelkaart group
-   * @route DELETE /borrelkaartgroups/{id}
-   * @operationId delete
-   * @group borrelkaartgroups - Operations of borrelkaart group controller
-   * @param {integer} id.path.required - The id of the borrelkaart group which should be deleted
-   * @security JWT
-   * @returns {BorrelkaartGroupResponse.model} 200 - The deleted borrelkaart group entity
-   * @returns {string} 404 - Not found error
-   */
-  public async deleteBorrelkaartGroup(req: RequestWithToken, res: Response): Promise<void> {
-    const { id } = req.params;
-    this.logger.trace('Remove borrelkaart group', id, 'by user', req.token.user);
-
-    // handle request
-    try {
-      if (await BorrelkaartGroup.findOne({ where: { id: parseInt(id, 10) } })) {
-        res.status(200).json(await BorrelkaartGroupService.deleteBorrelkaartGroup(id));
-      } else {
-        res.status(404).json('Borrelkaart group not found.');
-      }
-    } catch (error) {
-      this.logger.error('Could not delete borrelkaart group:', error);
       res.status(500).json('Internal server error.');
     }
   }

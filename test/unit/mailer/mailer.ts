@@ -59,9 +59,9 @@ describe('Mailer', () => {
     sandbox.resetHistory();
   });
 
-  after(() => {
+  after(async () => {
     sandbox.restore();
-    ctx.connection.close();
+    await ctx.connection.close();
   });
 
   it('should correctly create mailer', () => {
@@ -75,6 +75,9 @@ describe('Mailer', () => {
         user: process.env.SMTP_USERNAME,
         pass: process.env.SMTP_PASSWORD,
       },
+      from: process.env.SMTP_FROM,
+      pool: true,
+      maxConnections: parseInt(process.env.SMTP_MAX_CONNECTIONS || '', 10) || undefined,
     });
   });
 
@@ -116,6 +119,6 @@ describe('Mailer', () => {
     if (!ctx.mailer) this.skip();
 
     const promise = ctx.mailer.send(ctx.user, new HelloWorld({ name: ctx.user.firstName }), 'binary' as any);
-    expect(promise).to.eventually.be.fulfilled;
+    await expect(promise).to.eventually.be.fulfilled;
   });
 });

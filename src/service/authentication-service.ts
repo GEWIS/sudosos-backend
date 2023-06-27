@@ -36,6 +36,7 @@ import HashBasedAuthenticationMethod from '../entity/authenticator/hash-based-au
 import ResetToken from '../entity/authenticator/reset-token';
 import LocalAuthenticator from '../entity/authenticator/local-authenticator';
 import AuthenticationResetTokenRequest from '../controller/request/authentication-reset-token-request';
+import NfcAuthenticator from '../entity/authenticator/nfc-authenticator';
 
 export interface AuthenticationContext {
   tokenHandler: TokenHandler,
@@ -197,6 +198,29 @@ export default class AuthenticationService {
     await repo.save(authenticator as any);
     return authenticator;
   }
+
+  public static async setUserAuthenticationNfc<T extends NfcAuthenticator>(user: User,
+    nfcCode: string, Type: new () => T): Promise<T> {
+    const repo = getRepository(Type);
+    let authenticator = await repo.findOne({ where: { user: { id: user.id } } as FindOptionsWhere<T>, relations: ['user'] });
+
+    if (authenticator) {
+      // We only need to update the nfcCode
+      authenticator.nfcCode = nfcCode;
+    } else {
+      // We must create the authenticator
+      authenticator = Object.assign(new Type(), {
+        user,
+        nfcCode: nfcCode,
+      });
+    }
+
+    // Save and return
+    await repo.save(authenticator as any);
+    return authenticator;
+  }
+
+
 
   /**
    * Authenticates the account against a local password

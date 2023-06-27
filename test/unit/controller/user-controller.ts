@@ -46,7 +46,11 @@ import Transfer from '../../../src/entity/transactions/transfer';
 import MemberAuthenticator from '../../../src/entity/authenticator/member-authenticator';
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import UpdatePinRequest from '../../../src/controller/request/update-pin-request';
-import { INVALID_PIN } from '../../../src/controller/request/validators/validation-errors';
+import {
+  DUPLICATE_TOKEN,
+  INVALID_PIN,
+  ZERO_LENGTH_STRING,
+} from '../../../src/controller/request/validators/validation-errors';
 import { PaginatedUserResponse, UserResponse } from '../../../src/controller/response/user-response';
 import RoleResponse from '../../../src/controller/response/rbac/role-response';
 import {
@@ -57,6 +61,10 @@ import { AcceptTosRequest } from '../../../src/controller/request/accept-tos-req
 import UpdateUserRequest from '../../../src/controller/request/update-user-request';
 import StripeDeposit from '../../../src/entity/deposit/stripe-deposit';
 import { StripeDepositResponse } from '../../../src/controller/response/stripe-response';
+import { TransactionReportResponse } from '../../../src/controller/response/transaction-report-response';
+import { TransactionFilterParameters } from '../../../src/service/transaction-service';
+import { createTransactions } from '../service/invoice-service';
+import UpdateNfcRequest from '../../../src/controller/request/update-nfc-request';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -195,7 +203,7 @@ describe('UserController', (): void => {
           update: own,
         },
         Authenticator: {
-          update: { own: new Set<string>(['pin', 'password']) },
+          update: { own: new Set<string>(['pin', 'password', 'nfcCode', 'key']) },
           get: own,
         },
         Roles: {
@@ -481,7 +489,7 @@ describe('UserController', (): void => {
       ).valid).to.be.true;
     });
     it('should return an HTTP 200 and all the members of the organ', async () => {
-      await inUserContext((await UserFactory()).clone(3), async (...users: User[]) => {
+      await inUserContext(await (await UserFactory()).clone(3), async (...users: User[]) => {
         const organ = await User.findOne({ where: { type: UserType.ORGAN } });
         const promises: Promise<MemberAuthenticator>[] = [];
         users.forEach((user) => {
@@ -1149,6 +1157,122 @@ describe('UserController', (): void => {
       expect(res.status).to.equal(404);
     });
   });
+  describe('GET /users/:id/transactions/report', () => {
+    it('should return the correct model', async () => {
+      await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
+        await createTransactions(debtor.id, creditor.id, 3);
+        const parameters: TransactionFilterParameters = {
+          fromDate: new Date(2000, 0, 0),
+          tillDate: new Date(2050, 0, 0),
+          toId: creditor.id,
+        };
+
+        const res = await request(ctx.app)
+          .get(`/users/${creditor.id}/transactions/report`)
+          .set('Authorization', `Bearer ${ctx.adminToken}`)
+          .query(parameters);
+        expect(res.status).to.equal(200);
+        const validation = ctx.specification.validateModel(
+          'TransactionReportResponse',
+          res.body,
+          false,
+          true,
+        );
+        expect(validation.valid).to.be.true;
+      });
+    });
+    it('should create a transaction report', async () => {
+      await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
+        const transactions = await createTransactions(debtor.id, creditor.id, 3);
+        const parameters: TransactionFilterParameters = {
+          fromDate: new Date(2000, 0, 0),
+          tillDate: new Date(2050, 0, 0),
+          toId: creditor.id,
+        };
+
+        const res = await request(ctx.app)
+          .get(`/users/${creditor.id}/transactions/report`)
+          .set('Authorization', `Bearer ${ctx.adminToken}`)
+          .query(parameters);
+        expect(res.status).to.equal(200);
+        const report = res.body as TransactionReportResponse;
+
+        const productSum = report.data.entries.reduce((sum, current) => {
+          return sum += current.totalInclVat.amount;
+        }, 0);
+        const catSum = report.data.categories.reduce((sum, current) => {
+          return sum += current.totalInclVat.amount;
+        }, 0);
+        const vatSum = report.data.vat.reduce((sum, current) => {
+          return sum += current.totalInclVat.amount;
+        }, 0);
+
+        expect(productSum).to.equal(report.totalInclVat.amount);
+        expect(catSum).to.equal(report.totalInclVat.amount);
+        expect(vatSum).to.equal(report.totalInclVat.amount);
+        expect(report.totalInclVat.amount).to.eq(transactions.total);
+      });
+    });
+    it('should validate transaction filters', async () => {
+      await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
+        const parameters: TransactionFilterParameters = {
+          fromDate: 'string' as unknown as Date,
+          tillDate: new Date(2050, 0, 0),
+          toId: creditor.id,
+        };
+
+        const res = await request(ctx.app)
+          .get(`/users/${creditor.id}/transactions/report`)
+          .set('Authorization', `Bearer ${ctx.adminToken}`)
+          .query(parameters);
+        expect(res.status).to.equal(400);
+      });
+    });
+    it('should thrown an HTTP 404 if user is undefined', async () => {
+      const parameters: TransactionFilterParameters = {
+        fromDate: new Date(2000, 0, 0),
+        tillDate: new Date(2050, 0, 0),
+        toId: 1,
+      };
+      const count = await User.count();
+      const id = count + 1;
+      const user = await User.findOne({ where: { id } });
+      expect(user).to.be.null;
+      const res = await request(ctx.app)
+        .get(`/users/${id}/transactions/report`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query(parameters);
+      expect(res.status).to.equal(404);
+    });
+    it('should thrown an HTTP 400 if to and form are both undefined', async () => {
+      const parameters: TransactionFilterParameters = {
+        fromDate: new Date(2000, 0, 0),
+        tillDate: new Date(2050, 0, 0),
+      };
+
+      const res = await request(ctx.app)
+        .get('/users/1/transactions/report')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query(parameters);
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('Need to provide either a toId or a fromId.');
+    });
+    it('should thrown an HTTP 400 if both to and from are defined', async () => {
+      const parameters: TransactionFilterParameters = {
+        fromDate: new Date(2000, 0, 0),
+        tillDate: new Date(2050, 0, 0),
+        toId: 1,
+        fromId: 1,
+      };
+
+      const res = await request(ctx.app)
+        .get('/users/1/transactions/report')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query(parameters);
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('Need to provide either a toId or a fromId.');
+    });
+  });
   describe('GET /users/:id/transfers', () => {
     it('should return correct model', async () => {
       const user = ctx.users[0];
@@ -1239,7 +1363,7 @@ describe('UserController', (): void => {
     };
 
     before(async () => {
-      userNotAccepted = await(await UserFactory({
+      userNotAccepted = await (await UserFactory({
         firstName: 'TestUser1',
         lastName: 'TestUser1',
         type: UserType.MEMBER,
@@ -1337,7 +1461,7 @@ describe('UserController', (): void => {
   });
   describe('PUT /users/{id}/authenticator/pin', () => {
     it('should return an HTTP 200 if authorized', async () => {
-      await inUserContext((await UserFactory()).clone(1), async (user: User) => {
+      await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
         const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
 
         const updatePinRequest: UpdatePinRequest = {
@@ -1351,7 +1475,7 @@ describe('UserController', (): void => {
       });
     });
     it('should return an 403 if unauthorized', async () => {
-      await inUserContext((await UserFactory()).clone(1), async (user: User) => {
+      await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
         const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
 
         const updatePinRequest: UpdatePinRequest = {
@@ -1365,7 +1489,7 @@ describe('UserController', (): void => {
       });
     });
     it('should return an 400 if pin is not 4 numbers', async () => {
-      await inUserContext((await UserFactory()).clone(1), async (user: User) => {
+      await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
         const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
 
         const updatePinRequest: UpdatePinRequest = {
@@ -1390,9 +1514,142 @@ describe('UserController', (): void => {
       expect(res.status).to.equal(404);
     });
   });
-  describe('PUT /users/{id}/authenticator/local', () => {
+  describe('PUT /users/{id}/authenticator/nfc', () => {
     it('should return an HTTP 200 if authorized', async () => {
       await inUserContext((await UserFactory()).clone(1), async (user: User) => {
+        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
+
+        const updateNfcRequest: UpdateNfcRequest = {
+          nfcCode: 'correctNfcCode',
+        };
+        const res = await request(ctx.app)
+          .put(`/users/${user.id}/authenticator/nfc`)
+          .set('Authorization', `Bearer ${userToken}`)
+          .send(updateNfcRequest);
+        expect(res.status).to.equal(200);
+      });
+    });
+    it('should return an 400 if duplicate nfc', async () => {
+      await inUserContext((await UserFactory()).clone(1), async (user: User) => {
+        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
+
+        const updateNfcRequest: UpdateNfcRequest = {
+          nfcCode: 'dupplicateNfcCode',
+        };
+        await request(ctx.app)
+          .put(`/users/${user.id}/authenticator/nfc`)
+          .set('Authorization', `Bearer ${userToken}`)
+          .send(updateNfcRequest);
+        const res = await request(ctx.app)
+          .put(`/users/${user.id}/authenticator/nfc`)
+          .set('Authorization', `Bearer ${userToken}`)
+          .send(updateNfcRequest);
+        expect(res.body).to.be.equal(DUPLICATE_TOKEN().value);
+        expect(res.status).to.equal(400);
+      });
+    });
+    it('should return an 200 if updating to a valid nfc', async () => {
+      await inUserContext((await UserFactory()).clone(1), async (user: User) => {
+        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
+
+        const updateNfcRequest1: UpdateNfcRequest = {
+          nfcCode: 'correctNfcCode1',
+        };
+        const res1 = await request(ctx.app)
+          .put(`/users/${user.id}/authenticator/nfc`)
+          .set('Authorization', `Bearer ${userToken}`)
+          .send(updateNfcRequest1);
+        expect(res1.status).to.equal(200);
+
+        const updateNfcRequest2: UpdateNfcRequest = {
+          nfcCode: 'correctNfcCode2',
+        };
+        const res2 = await request(ctx.app)
+          .put(`/users/${user.id}/authenticator/nfc`)
+          .set('Authorization', `Bearer ${userToken}`)
+          .send(updateNfcRequest2);
+        expect(res2.status).to.equal(200);
+      });
+    });
+    it('should return an 400 if empty nfc', async () => {
+      await inUserContext((await UserFactory()).clone(1), async (user: User) => {
+        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
+
+        const updateNfcRequest: UpdateNfcRequest = {
+          nfcCode: '',
+        };
+        const res = await request(ctx.app)
+          .put(`/users/${user.id}/authenticator/nfc`)
+          .set('Authorization', `Bearer ${userToken}`)
+          .send(updateNfcRequest);
+        expect(res.body).to.be.equal(ZERO_LENGTH_STRING().value);
+        expect(res.status).to.equal(400);
+      });
+    });
+    it('should return an 403 if unauthorized', async () => {
+      await inUserContext((await UserFactory()).clone(1), async (user: User) => {
+        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
+
+        const updateNfcRequest: UpdateNfcRequest = {
+          nfcCode: 'wrongNfcCode',
+        };
+        const res = await request(ctx.app)
+          .put(`/users/${ctx.users[0].id}/authenticator/nfc`)
+          .set('Authorization', `Bearer ${userToken}`)
+          .send(updateNfcRequest);
+        expect(res.status).to.equal(403);
+      });
+    });
+    it('should return an 404 if the user does not exists', async () => {
+      const updateNfcRequest: UpdateNfcRequest = {
+        nfcCode: 'validNfcRequest',
+      };
+      const res = await request(ctx.app)
+        .put(`/users/${(await User.count()) + 1}/authenticator/nfc`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(updateNfcRequest);
+      expect(res.status).to.equal(404);
+    });
+  });
+  describe('DELETE /users/{id}/authenticator/nfc', () => {
+    it('should return an HTTP 200 if authorized', async () => {
+      await inUserContext((await UserFactory()).clone(1), async (user: User) => {
+        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
+
+        const updateNfcRequest: UpdateNfcRequest = {
+          nfcCode: 'toBeDeletedNfcRequest',
+        };
+        await request(ctx.app)
+          .put(`/users/${user.id}/authenticator/nfc`)
+          .set('Authorization', `Bearer ${userToken}`)
+          .send(updateNfcRequest);
+
+        const res = await request(ctx.app)
+          .delete(`/users/${user.id}/authenticator/nfc`)
+          .set('Authorization', `Bearer ${userToken}`);
+        expect(res.status).to.equal(200);
+      });
+    });
+    it('should return an 404 if the user does not exists', async () => {
+      const res = await request(ctx.app)
+        .delete(`/users/${(await User.count()) + 1}/authenticator/nfc`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(404);
+    });
+    it('should return an HTTP 403 if user has no nfc', async () => {
+      await inUserContext((await UserFactory()).clone(1), async (user: User) => {
+        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
+
+        const res = await request(ctx.app)
+          .delete(`/users/${user.id}/authenticator/nfc`)
+          .set('Authorization', `Bearer ${userToken}`);
+        expect(res.status).to.equal(403);
+      });
+    });
+  });
+  describe('PUT /users/{id}/authenticator/local', () => {
+    it('should return an HTTP 200 if authorized', async () => {
+      await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
         const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
 
         const updateLocalRequest: UpdateLocalRequest = {
@@ -1436,9 +1693,80 @@ describe('UserController', (): void => {
       expect(res.status).to.equal(403);
     });
   });
+  describe('POST /users/{id}/authenticator/key', () => {
+    it('should return an HTTP 200 if authorized', async () => {
+      await inUserContext((await UserFactory()).clone(1), async (user: User) => {
+        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
+
+        const res = await request(ctx.app)
+          .post(`/users/${user.id}/authenticator/key`)
+          .set('Authorization', `Bearer ${userToken}`)
+          .send();
+        expect(res.status).to.equal(200);
+        expect(ctx.specification.validateModel(
+          'NfcAuthenticator',
+          res.body,
+          false,
+          true,
+        ).valid).to.be.true;
+      });
+    });
+    it('should return an 403 if unauthorized', async () => {
+      await inUserContext((await UserFactory()).clone(1), async (user: User) => {
+        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
+
+        const res = await request(ctx.app)
+          .post(`/users/${ctx.users[0].id}/authenticator/key`)
+          .set('Authorization', `Bearer ${userToken}`)
+          .send();
+        expect(res.status).to.equal(403);
+      });
+    });
+    it('should return an 404 if the user does not exists', async () => {
+
+      const res = await request(ctx.app)
+        .post(`/users/${(await User.count()) + 1}/authenticator/key`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send();
+      expect(res.status).to.equal(404);
+    });
+  });
+  describe('DELETE /users/{id}/authenticator/key', () => {
+    it('should return an HTTP 200 if authorized', async () => {
+      await inUserContext((await UserFactory()).clone(1), async (user: User) => {
+        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
+
+        const res = await request(ctx.app)
+          .delete(`/users/${user.id}/authenticator/key`)
+          .set('Authorization', `Bearer ${userToken}`)
+          .send();
+        expect(res.status).to.equal(204);
+      });
+    });
+    it('should return an 403 if unauthorized', async () => {
+      await inUserContext((await UserFactory()).clone(1), async (user: User) => {
+        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
+
+        const res = await request(ctx.app)
+          .delete(`/users/${ctx.users[0].id}/authenticator/key`)
+          .set('Authorization', `Bearer ${userToken}`)
+          .send();
+        expect(res.status).to.equal(403);
+      });
+    });
+    it('should return an 404 if the user does not exists', async () => {
+
+      const res = await request(ctx.app)
+        .delete(`/users/${(await User.count()) + 1}/authenticator/key`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send();
+      expect(res.status).to.equal(404);
+    });
+  });
+
   describe('GET /users/{id}/authenticate', () => {
     it('should return an HTTP 200 and all users that user can authenticate as', async () => {
-      await inUserContext((await UserFactory()).clone(1), async (user: User) => {
+      await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
         const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
 
         const auth = Object.assign(new MemberAuthenticator(), {
@@ -1457,7 +1785,7 @@ describe('UserController', (): void => {
       });
     });
     it('should return an HTTP 404 if user does not exist', async () => {
-      await inUserContext((await UserFactory()).clone(1), async (user: User) => {
+      await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
         const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User', 'Admin'], lesser: false }, '1');
 
         const res = await request(ctx.app)
@@ -1467,7 +1795,7 @@ describe('UserController', (): void => {
       });
     });
     it('should return an HTTP 403 if insufficient rights', async () => {
-      await inUserContext((await UserFactory()).clone(1), async (user: User) => {
+      await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
         const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
 
         const res = await request(ctx.app)
@@ -1479,7 +1807,7 @@ describe('UserController', (): void => {
   });
   describe('GET /users/{id}/roles', () => {
     it('should return correct model', async () => {
-      await inUserContext((await UserFactory()).clone(1), async (user: User) => {
+      await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
         const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
 
         const res = await request(ctx.app)
@@ -1497,7 +1825,7 @@ describe('UserController', (): void => {
       });
     });
     it('should return an HTTP 200 and the users roles', async () => {
-      await inUserContext((await UserFactory()).clone(1), async (user: User) => {
+      await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
         const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
 
         const res = await request(ctx.app)
@@ -1509,7 +1837,7 @@ describe('UserController', (): void => {
       });
     });
     it('should return an HTTP 404 if user does not exist', async () => {
-      await inUserContext((await UserFactory()).clone(1), async (user: User) => {
+      await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
         const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User', 'Admin'], lesser: false }, '1');
 
         const res = await request(ctx.app)
@@ -1519,7 +1847,7 @@ describe('UserController', (): void => {
       });
     });
     it('should return an HTTP 403 if insufficient rights', async () => {
-      await inUserContext((await UserFactory()).clone(1), async (user: User) => {
+      await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
         const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
 
         const res = await request(ctx.app)

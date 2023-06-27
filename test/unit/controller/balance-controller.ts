@@ -37,6 +37,11 @@ import TokenMiddleware from '../../../src/middleware/token-middleware';
 import RoleManager from '../../../src/rbac/role-manager';
 import BalanceController from '../../../src/controller/balance-controller';
 import Transfer from '../../../src/entity/transactions/transfer';
+import BalanceResponse, { PaginatedBalanceResponse } from '../../../src/controller/response/balance-response';
+import { calculateBalance } from '../service/balance-service';
+import SubTransaction from '../../../src/entity/transactions/sub-transaction';
+import { OrderingDirection } from '../../../src/helpers/ordering';
+import { PaginationResult } from '../../../src/helpers/pagination';
 
 describe('BalanceController', (): void => {
   let ctx: {
@@ -48,6 +53,7 @@ describe('BalanceController', (): void => {
     adminToken: string,
     users: User[],
     transactions: Transaction[],
+    subTransactions: SubTransaction[],
     transfers: Transfer[],
   };
 
@@ -62,6 +68,8 @@ describe('BalanceController', (): void => {
     const { containerRevisions } = await seedContainers(users, productRevisions);
     const { pointOfSaleRevisions } = await seedPointsOfSale(users, containerRevisions);
     const { transactions } = await seedTransactions(users, pointOfSaleRevisions, new Date('2020-02-12'), new Date('2022-11-30'));
+    const subTransactions: SubTransaction[] = Array.prototype.concat(...transactions
+      .map((t) => t.subTransactions));
     const transfers = await seedTransfers(users);
 
     const tokenHandler = new TokenHandler({
@@ -116,6 +124,7 @@ describe('BalanceController', (): void => {
       adminToken,
       users,
       transactions,
+      subTransactions,
       transfers,
     };
   });
@@ -158,6 +167,140 @@ describe('BalanceController', (): void => {
         .get('/balances/999999')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(404);
+    });
+  });
+
+  describe('GET /balance/all', () => {
+    it('should return correct model if admin', async () => {
+      const res = await request(ctx.app)
+        .get('/balances/all')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+
+      const body = res.body as PaginatedBalanceResponse;
+      body.records.forEach((balanceResponse) => {
+        const validator = ctx.specification.validateModel('BalanceResponse', balanceResponse, false, true);
+        expect(validator.valid).to.be.true;
+        const user = ctx.users.find((u) => u.id === balanceResponse.id);
+        expect(user).to.not.be.undefined;
+        const actualBalance = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers);
+        expect(balanceResponse.amount.amount).to.equal(actualBalance.amount.getAmount());
+      });
+    });
+    it('should return 403 if not admin', async () => {
+      const res = await request(ctx.app)
+        .get('/balances/all')
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(403);
+    });
+    it('should return balances based on date', async () => {
+      const date = ctx.transactions[1].createdAt;
+      const res = await request(ctx.app)
+        .get('/balances/all')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query({ date: date.toISOString() });
+      expect(res.status).to.equal(200);
+
+      const body = res.body as PaginatedBalanceResponse;
+      body.records.forEach((balanceResponse) => {
+        const user = ctx.users.find((u) => u.id === balanceResponse.id);
+        expect(user).to.not.be.undefined;
+        const actualBalance = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers, date);
+        expect(balanceResponse.amount.amount).to.equal(actualBalance.amount.getAmount());
+      });
+    });
+    it('should return only balances satisfying minimum', async () => {
+      const minBalance = 100;
+      const res = await request(ctx.app)
+        .get('/balances/all')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query({ minBalance, take: 10000 });
+      expect(res.status).to.equal(200);
+
+      const body = res.body as PaginatedBalanceResponse;
+      const actualBalances = ctx.users
+        .map((u) => calculateBalance(u, ctx.transactions, ctx.subTransactions, ctx.transfers))
+        .filter((bal) => bal.amount.getAmount() >= minBalance);
+
+      expect(body.records.length).to.equal(actualBalances.length);
+      expect(body.records.map((b) => b.id)).to.deep.equalInAnyOrder(actualBalances.map((b) => b.user.id));
+    });
+    it('should return only balances satisfying maximum', async () => {
+      const maxBalance = 100;
+      const res = await request(ctx.app)
+        .get('/balances/all')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query({ maxBalance });
+      expect(res.status).to.equal(200);
+
+      const body = res.body as PaginatedBalanceResponse;
+      const actualBalances = ctx.users
+        .map((u) => calculateBalance(u, ctx.transactions, ctx.subTransactions, ctx.transfers))
+        .filter((bal) => bal.amount.getAmount() < maxBalance);
+
+      expect(body.records.length).to.equal(actualBalances.length);
+      expect(body.records.map((b) => b.id)).to.deep.equalInAnyOrder(actualBalances.map((b) => b.user.id));
+    });
+    it('should correctly order balance results on id', async () => {
+      await Promise.all(Object.values(OrderingDirection).map(async (orderDirection: OrderingDirection) => {
+        const res = await request(ctx.app)
+          .get('/balances/all')
+          .set('Authorization', `Bearer ${ctx.adminToken}`)
+          .query({ orderBy: 'id', orderDirection });
+        expect(res.status).to.equal(200);
+
+        const body = res.body as PaginatedBalanceResponse;
+        expect(body.records).to.be.sortedBy('id', { descending: ['desc', 'DESC'].includes(orderDirection) });
+      }));
+    });
+    it('should correctly order balance results on amount', async () => {
+      await Promise.all(Object.values(OrderingDirection).map(async (orderDirection: OrderingDirection) => {
+        const res = await request(ctx.app)
+          .get('/balances/all')
+          .set('Authorization', `Bearer ${ctx.adminToken}`)
+          .query({ orderBy: 'amount', orderDirection });
+        expect(res.status).to.equal(200);
+
+        const body = res.body as PaginatedBalanceResponse;
+        expect(body.records.map((b) => b.amount)).to.be.sortedBy('amount', { descending: ['desc', 'DESC'].includes(orderDirection) });
+      }));
+    });
+    it('should correctly return wall of shame', async () => {
+      const res = await request(ctx.app)
+        .get('/balances/all')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query({ orderBy: 'amount', orderDirection: OrderingDirection.ASC, maxBalance: 0 });
+      expect(res.status).to.equal(200);
+
+      const body = res.body as PaginatedBalanceResponse;
+      const actualBalances = ctx.users
+        .map((u) => calculateBalance(u, ctx.transactions, ctx.subTransactions, ctx.transfers))
+        .filter((bal) => bal.amount.getAmount() < 0);
+
+      body.records.forEach((balanceResponse) => {
+        expect(balanceResponse.amount.amount).to.be.lessThanOrEqual(0);
+      });
+      expect(body.records.map((b) => b.id)).to.deep.equalInAnyOrder(actualBalances.map((b) => b.user.id));
+      expect(body.records.map((b) => b.amount)).to.be.ascendingBy('amount');
+    });
+    it('should adhere to pagination', async () => {
+      const take = 5;
+      const skip = 3;
+      const res = await request(ctx.app)
+        .get('/balances/all')
+        .query({ take, skip })
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      // number of banners returned is number of banners in database
+      const balances = res.body.records as BalanceResponse[];
+      // eslint-disable-next-line no-underscore-dangle
+      const pagination = res.body._pagination as PaginationResult;
+
+      const count = ctx.users.length;
+      expect(pagination.take).to.equal(take);
+      expect(pagination.skip).to.equal(skip);
+      expect(pagination.count).to.equal(count);
+      expect(balances.length).to.be.at.most(take);
     });
   });
 

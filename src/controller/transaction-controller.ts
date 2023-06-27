@@ -75,6 +75,12 @@ export default class TransactionController extends BaseController {
           handler: this.deleteTransaction.bind(this),
         },
       },
+      '/:validate': {
+        POST: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'create', await TransactionController.getRelation(req), 'Transaction', ['*']),
+          handler: this.validateTransaction.bind(this),
+        },
+      },
     };
   }
 
@@ -259,6 +265,33 @@ export default class TransactionController extends BaseController {
     } catch (error) {
       this.logger.error('Could not delete transaction:', error);
       res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Function to validate the transaction immediatly after it is created
+   * @route POST /transactions/validate
+   * @group transactions - Operations of the transaction controller
+   * @param {TransactionRequest.model} transaction.body.required -
+   * The transaction which should be validated
+   * @returns {Boolean} 200 - Transaction validated
+   * @returns {string} 400 - Validation error
+   * @returns {string} 500 - Internal server error
+   */
+  public async validateTransaction(req: RequestWithToken, res: Response): Promise<void> {
+    const body = req.body as TransactionRequest;
+    this.logger.trace('Validate transaction', body, 'by user', req.token.user);
+
+    try {
+      if (await TransactionService.verifyTransaction(body)) {
+        res.status(200).json(true);
+      } else  {
+        res.status(400).json('Transaction is invalid');
+        return;
+      }
+    } catch (error) {
+      this.logger.error('Could not validate transaction:', error);
+      res.status(500).json('Internal server error');
     }
   }
 

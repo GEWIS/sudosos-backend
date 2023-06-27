@@ -26,5 +26,8 @@ export default function createSMTPTransporter() {
       user: process.env.SMTP_USERNAME,
       pass: process.env.SMTP_PASSWORD,
     },
+    from: process.env.SMTP_FROM,
+    pool: true,
+    maxConnections: parseInt(process.env.SMTP_MAX_CONNECTIONS || '', 10) || undefined,
   });
 }

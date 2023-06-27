@@ -33,7 +33,7 @@ import { BaseTransactionResponse } from '../../../src/controller/response/transa
 import { verifyBaseTransactionEntity } from '../validators';
 import RoleManager from '../../../src/rbac/role-manager';
 import { TransactionRequest } from '../../../src/controller/request/transaction-request';
-import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
+import { defaultPagination, PAGINATION_DEFAULT, PaginationResult } from '../../../src/helpers/pagination';
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import MemberAuthenticator from '../../../src/entity/authenticator/member-authenticator';
 
@@ -377,7 +377,7 @@ describe('TransactionController', (): void => {
 
       let transactions = res.body.records as BaseTransactionResponse[];
       const spec = await Swagger.importSpecification();
-      const pagination = parseInt(process.env.PAGINATION_DEFAULT, 10);
+      const pagination = parseInt(process.env.PAGINATION_DEFAULT, 10) || PAGINATION_DEFAULT;
       expect(transactions.length).to.equal(pagination);
       transactions.forEach((t) => {
         verifyBaseTransactionEntity(spec, t);
@@ -413,7 +413,7 @@ describe('TransactionController', (): void => {
 
       let transactions = res.body.records as BaseTransactionResponse[];
       const spec = await Swagger.importSpecification();
-      const pagination = parseInt(process.env.PAGINATION_DEFAULT, 10);
+      const pagination = parseInt(process.env.PAGINATION_DEFAULT, 10) || PAGINATION_DEFAULT;
       expect(transactions.length).to.equal(pagination);
       transactions.map((t) => {
         verifyBaseTransactionEntity(spec, t);
@@ -605,43 +605,45 @@ describe('TransactionController', (): void => {
       ).valid).to.be.true;
     });
     it('should return an HTTP 403 if user is not connected to createdBy via organ', async () => {
-      await inUserContext((await UserFactory()).clone(2), async (user: User, otherUser: User) => {
-        const canBuyToken = await ctx.tokenHandler.signToken({ user, roles: ['Buyer'], lesser: false }, '39');
-        const req : TransactionRequest = {
-          ...ctx.validTransReq,
-          createdBy: otherUser.id,
-          from: user.id,
-        };
-        const res = await request(ctx.app)
-          .post('/transactions')
-          .set('Authorization', `Bearer ${canBuyToken}`)
-          .send(req);
-        expect(res.status).to.equal(403);
-      });
+      await inUserContext(await (await UserFactory()).clone(2),
+        async (user: User, otherUser: User) => {
+          const canBuyToken = await ctx.tokenHandler.signToken({ user, roles: ['Buyer'], lesser: false }, '39');
+          const req : TransactionRequest = {
+            ...ctx.validTransReq,
+            createdBy: otherUser.id,
+            from: user.id,
+          };
+          const res = await request(ctx.app)
+            .post('/transactions')
+            .set('Authorization', `Bearer ${canBuyToken}`)
+            .send(req);
+          expect(res.status).to.equal(403);
+        });
     });
     it('should return an HTTP 200 and the saved transaction when user is connected to createdBy via organ', async () => {
-      await inUserContext((await UserFactory()).clone(2), async (user: User, otherUser: User) => {
-        await (Object.assign(new MemberAuthenticator(), {
-          user,
-          authenticateAs: ctx.users[0],
-        })).save();
-        await (Object.assign(new MemberAuthenticator(), {
-          user: otherUser,
-          authenticateAs: ctx.users[0],
-        })).save();
+      await inUserContext(await (await UserFactory()).clone(2),
+        async (user: User, otherUser: User) => {
+          await (Object.assign(new MemberAuthenticator(), {
+            user,
+            authenticateAs: ctx.users[0],
+          })).save();
+          await (Object.assign(new MemberAuthenticator(), {
+            user: otherUser,
+            authenticateAs: ctx.users[0],
+          })).save();
 
-        const canBuyToken = await ctx.tokenHandler.signToken({ user, roles: ['Buyer'], lesser: false }, '39');
-        const req : TransactionRequest = {
-          ...ctx.validTransReq,
-          createdBy: otherUser.id,
-          from: user.id,
-        };
-        const res = await request(ctx.app)
-          .post('/transactions')
-          .set('Authorization', `Bearer ${canBuyToken}`)
-          .send(req);
-        expect(res.status).to.equal(200);
-      });
+          const canBuyToken = await ctx.tokenHandler.signToken({ user, roles: ['Buyer'], lesser: false }, '39');
+          const req : TransactionRequest = {
+            ...ctx.validTransReq,
+            createdBy: otherUser.id,
+            from: user.id,
+          };
+          const res = await request(ctx.app)
+            .post('/transactions')
+            .set('Authorization', `Bearer ${canBuyToken}`)
+            .send(req);
+          expect(res.status).to.equal(200);
+        });
     });
     it('should return an HTTP 403 when user is not admin', async () => {
       const res = await request(ctx.app)
@@ -790,5 +792,28 @@ describe('TransactionController', (): void => {
         .set('Authorization', `Bearer ${ctx.userToken}`);
       expect(res.status).to.equal(403);
     });
+  });
+  describe('POST /transactions/validate', () => {
+    it('should return an HTTP 200 when the transaction is valid', async () => {
+      const res = await request(ctx.app)
+        .post('/transactions/validate')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(ctx.validTransReq);
+      expect(res.status).to.equal(200);
+      expect(res.body).to.equal(true);
+    });
+    it('should return HTTP 400 if the transaction is not valid', async () => {
+      const badReq : TransactionRequest = {
+        ...ctx.validTransReq,
+        from: 0,
+      };
+      const res = await request(ctx.app)
+        .post('/transactions/validate')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(badReq);
+      expect(res.body).to.equal('Transaction is invalid');
+      expect(res.status).to.equal(400);
+    });
+
   });
 });

@@ -62,6 +62,7 @@ import VatGroup from '../entity/vat-group';
 import LocalAuthenticator from '../entity/authenticator/local-authenticator';
 import ResetToken from '../entity/authenticator/reset-token';
 import { DataSourceOptions } from 'typeorm/data-source/DataSourceOptions';
+import KeyAuthenticator from '../entity/authenticator/key-authenticator';
 
 export default class Database {
   public static async initialize(): Promise<Connection> {
@@ -101,6 +102,7 @@ export default class Database {
         EanAuthenticator,
         MemberAuthenticator,
         NfcAuthenticator,
+        KeyAuthenticator,
         PinAuthenticator,
         LocalAuthenticator,
         LDAPAuthenticator,
