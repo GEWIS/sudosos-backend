@@ -48,7 +48,6 @@ import {
   collectByToId,
   collectProductsByRevision,
   reduceMapToInvoiceEntries,
-  transactionMapper,
 } from '../helpers/transaction-mapper';
 import SubTransaction from '../entity/transactions/sub-transaction';
 
@@ -187,15 +186,17 @@ export default class InvoiceService {
    * Creates InvoiceEntries from an array of Transactions
    * @param invoice - The invoice of which the entries are.
    * @param baseTransactions - Array of transactions to parse.
+   * @param isCreditInvoice - Boolean if the invoice is a credit invoice
    */
   public static async createInvoiceEntriesTransactions(invoice: Invoice,
-    baseTransactions: BaseTransactionResponse[]) {
+    baseTransactions: BaseTransactionResponse[], isCreditInvoice: boolean) {
     // Extract Transactions from IDs.
     const ids = baseTransactions.map((t) => t.id);
-    const transactions = await Transaction.find({
-      where: { id: In(ids) },
+    let transactions = await Transaction.find({
+      where: { id: In(ids)  },
       relations: [
         'subTransactions',
+        'subTransactions.to',
         'subTransactions.subTransactionRows',
         'subTransactions.subTransactionRows.product',
         'subTransactions.subTransactionRows.product.product',
@@ -203,12 +204,19 @@ export default class InvoiceService {
       ],
     });
 
+
+    let subTransactions = transactions.reduce<SubTransaction[]>((acc, cur) => acc.concat(cur.subTransactions), []);
+
+    if (isCreditInvoice) {
+      subTransactions = subTransactions.filter((st) => st.to.id === invoice.toId);
+    }
+
+    const subTransactionRows = subTransactions.reduce<SubTransactionRow[]>((acc, cur) => acc.concat(cur.subTransactionRows), []);
+
     // Cumulative entries.
     const entryMap = new Map<string, SubTransactionRow[]>();
 
-    transactionMapper(transactions, (tSubRow) => {
-      collectProductsByRevision(entryMap, tSubRow);
-    });
+    subTransactionRows.forEach((tSubRow) => collectProductsByRevision(entryMap, tSubRow));
 
     const invoiceEntries: InvoiceEntry[] = await reduceMapToInvoiceEntries(entryMap, invoice);
     return invoiceEntries;
@@ -406,17 +414,19 @@ export default class InvoiceService {
    * Set a reference to an Invoice for all subTransactionRows of the transactions.
    * @param invoice
    * @param baseTransactions
+   * @param isCreditInvoice
    */
   static async setTransactionInvoice(invoice: Invoice,
-    baseTransactions: BaseTransactionResponse[]) {
+    baseTransactions: BaseTransactionResponse[], isCreditInvoice: boolean) {
     // Extract Transactions from IDs.
     const ids = baseTransactions.map((t) => t.id);
-    const transactions = await Transaction.find({ where: { id: In(ids) }, relations: ['subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice'] });
+    const transactions = await Transaction.find({ where: { id: In(ids) }, relations: ['subTransactions', 'subTransactions.to', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice'] });
     const promises: Promise<any>[] = [];
 
     // Loop through transactions
     transactions.forEach((t) => {
       t.subTransactions.forEach((tSub) => {
+        if (isCreditInvoice && tSub.to.id != invoice.toId) return;
         tSub.subTransactionRows.forEach((tSubRow) => {
           const row = tSubRow;
           row.invoice = invoice;
@@ -499,8 +509,8 @@ export default class InvoiceService {
     await Invoice.save(newInvoice).then(async () => {
       newInvoice.invoiceStatus.push(invoiceStatus);
       await InvoiceStatus.save(invoiceStatus);
-      await this.setTransactionInvoice(newInvoice, transactions);
-      await this.createInvoiceEntriesTransactions(newInvoice, transactions);
+      await this.setTransactionInvoice(newInvoice, transactions, isCreditInvoice);
+      await this.createInvoiceEntriesTransactions(newInvoice, transactions, isCreditInvoice);
       if (invoiceRequest.customEntries) {
         await this.AddCustomEntries(newInvoice, invoiceRequest.customEntries);
       }

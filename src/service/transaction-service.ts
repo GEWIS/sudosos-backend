@@ -50,7 +50,7 @@ import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision'
 import { DineroObjectRequest } from '../controller/request/dinero-request';
 import { DineroObjectResponse } from '../controller/response/dinero-response';
 import BalanceService from './balance-service';
-import { asDate, asNumber } from '../helpers/validators';
+import { asBoolean, asDate, asNumber } from '../helpers/validators';
 import { PaginationParameters } from '../helpers/pagination';
 import { toMySQLString } from '../helpers/timestamps';
 import {
@@ -78,6 +78,7 @@ export interface TransactionFilterParameters {
   fromId?: number,
   createdById?: number,
   toId?: number,
+  exclusiveToId?: boolean,
   pointOfSaleId?: number,
   pointOfSaleRevision?: number,
   containerId?: number,
@@ -102,6 +103,7 @@ export function parseGetTransactionsFilters(req: RequestWithToken): TransactionF
     fromId: asNumber(req.query.fromId),
     createdById: asNumber(req.query.createdById),
     toId: asNumber(req.query.toId),
+    exclusiveToId: asBoolean(req.query.exclusiveToId),
     pointOfSaleId: asNumber(req.query.pointOfSaleId),
     pointOfSaleRevision: asNumber(req.query.pointOfSaleRevision),
     containerId: asNumber(req.query.containerId),
@@ -789,8 +791,9 @@ export default class TransactionService {
    * @param parameters - Parameters describing what should be included in the report
    */
   public static async getTransactionReport(parameters: TransactionFilterParameters): Promise<TransactionReport> {
-    const baseTransactions = (await TransactionService.getTransactions(parameters)).records;
-    const transactionReportData = await this.getTransactionReportData(baseTransactions);
+    let baseTransactions = (await TransactionService.getTransactions(parameters)).records;
+
+    const transactionReportData = await this.getTransactionReportData(baseTransactions, parameters.exclusiveToId ? parameters.toId : undefined);
     return {
       data: transactionReportData,
       parameters,
@@ -838,16 +841,25 @@ export default class TransactionService {
   /**
    * Creates TransactionReportData for the given baseTransactions
    * @param baseTransactions - Transactions to parse
+   * @param exclusiveToId - If not undefined it will drop all Sub transactions with a toId different from the param.
    * @param dropInvoiced - If invoiced SubTransactionRows should be ignored, defaults to true
    */
-  public static async getTransactionReportData(baseTransactions: BaseTransactionResponse[], dropInvoiced = true): Promise<TransactionReportData> {
+  public static async getTransactionReportData(baseTransactions: BaseTransactionResponse[], exclusiveToId: number | undefined, dropInvoiced = true): Promise<TransactionReportData> {
     const transactions = await this.getTransactionsFromBaseTransactions(baseTransactions, dropInvoiced);
 
     const productEntryMap = new Map<string, SubTransactionRow[]>();
     const vatEntryMap = new Map<number, SubTransactionRow[]>();
     const categoryEntryMap = new Map<number, SubTransactionRow[]>();
 
-    transactionMapper(transactions, (tSubRow) => {
+    let subTransactions = transactions.reduce<SubTransaction[]>((acc, cur) => acc.concat(cur.subTransactions), []);
+
+    if (exclusiveToId) {
+      subTransactions = subTransactions.filter((st) => st.to.id === exclusiveToId);
+    }
+
+    const subTransactionRows = subTransactions.reduce<SubTransactionRow[]>((acc, cur) => acc.concat(cur.subTransactionRows), []);
+
+    subTransactionRows.forEach((tSubRow) => {
       if (dropInvoiced && tSubRow.invoice) return;
       collectProductsByRevision(productEntryMap, tSubRow);
       collectProductsByCategory(categoryEntryMap, tSubRow);
