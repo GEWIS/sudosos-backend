@@ -103,7 +103,7 @@ export function parseGetTransactionsFilters(req: RequestWithToken): TransactionF
     fromId: asNumber(req.query.fromId),
     createdById: asNumber(req.query.createdById),
     toId: asNumber(req.query.toId),
-    exclusiveToId: asBoolean(req.query.exclusiveToId),
+    exclusiveToId: req.query.exclusiveToId ? asBoolean(req.query.exclusiveToId) : true,
     pointOfSaleId: asNumber(req.query.pointOfSaleId),
     pointOfSaleRevision: asNumber(req.query.pointOfSaleRevision),
     containerId: asNumber(req.query.containerId),
