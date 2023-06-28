@@ -1179,7 +1179,6 @@ describe('UserController', (): void => {
           false,
           true,
         );
-        console.error(validation.errors);
         expect(validation.valid).to.be.true;
       });
     });
