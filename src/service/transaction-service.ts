@@ -69,7 +69,6 @@ import {
   reduceMapToCategoryEntries,
   reduceMapToReportEntries,
   reduceMapToVatEntries,
-  transactionMapper,
 } from '../helpers/transaction-mapper';
 import ProductCategoryService from './product-category-service';
 
