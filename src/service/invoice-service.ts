@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { FindManyOptions, FindOptionsRelationByString, In } from 'typeorm';
+import { FindManyOptions, FindOptionsRelationByString, FindOptionsWhere, In } from 'typeorm';
 import dinero from 'dinero.js';
 import InvoiceStatus, { InvoiceState } from '../entity/invoices/invoice-status';
 import {
@@ -185,32 +185,10 @@ export default class InvoiceService {
   /**
    * Creates InvoiceEntries from an array of Transactions
    * @param invoice - The invoice of which the entries are.
-   * @param baseTransactions - Array of transactions to parse.
-   * @param isCreditInvoice - Boolean if the invoice is a credit invoice
+   * @param subTransactions - Array of sub transactions to parse.
    */
   public static async createInvoiceEntriesTransactions(invoice: Invoice,
-    baseTransactions: BaseTransactionResponse[], isCreditInvoice: boolean) {
-    // Extract Transactions from IDs.
-    const ids = baseTransactions.map((t) => t.id);
-    let transactions = await Transaction.find({
-      where: { id: In(ids)  },
-      relations: [
-        'subTransactions',
-        'subTransactions.to',
-        'subTransactions.subTransactionRows',
-        'subTransactions.subTransactionRows.product',
-        'subTransactions.subTransactionRows.product.product',
-        'subTransactions.subTransactionRows.product.vat',
-      ],
-    });
-
-
-    let subTransactions = transactions.reduce<SubTransaction[]>((acc, cur) => acc.concat(cur.subTransactions), []);
-
-    if (isCreditInvoice) {
-      subTransactions = subTransactions.filter((st) => st.to.id === invoice.toId);
-    }
-
+    subTransactions: SubTransaction[]) {
     const subTransactionRows = subTransactions.reduce<SubTransactionRow[]>((acc, cur) => acc.concat(cur.subTransactionRows), []);
 
     // Cumulative entries.
@@ -410,28 +388,32 @@ export default class InvoiceService {
     )).records[0];
   }
 
+  static async getSubTransactionsInvoice(invoice: Invoice, transactions: BaseTransactionResponse[], isCreditInvoice: boolean) {
+    const ids = transactions.map((t) => t.id);
+
+    let where: FindOptionsWhere<SubTransaction> = {
+      transaction: { id: In(ids) },
+    };
+    // If we have a credit invoice we filter out all unrelated subTransactions.
+    if (isCreditInvoice) where.to = { id: invoice.toId };
+    return  SubTransaction.find({ where, relations: ['transaction', 'to', 'subTransactionRows', 'subTransactionRows.invoice', 'subTransactionRows.product', 'subTransactionRows.product.product', 'subTransactionRows.product.vat'] });
+  }
+
   /**
-   * Set a reference to an Invoice for all subTransactionRows of the transactions.
+   * Set a reference to an Invoice for all given sub Transactions.
    * @param invoice
-   * @param baseTransactions
+   * @param subTransactions
    * @param isCreditInvoice
    */
-  static async setTransactionInvoice(invoice: Invoice,
-    baseTransactions: BaseTransactionResponse[], isCreditInvoice: boolean) {
-    // Extract Transactions from IDs.
-    const ids = baseTransactions.map((t) => t.id);
-    const transactions = await Transaction.find({ where: { id: In(ids) }, relations: ['subTransactions', 'subTransactions.to', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice'] });
+  static async setSubTransactionInvoice(invoice: Invoice,
+    subTransactions: SubTransaction[]) {
     const promises: Promise<any>[] = [];
 
-    // Loop through transactions
-    transactions.forEach((t) => {
-      t.subTransactions.forEach((tSub) => {
-        if (isCreditInvoice && tSub.to.id != invoice.toId) return;
-        tSub.subTransactionRows.forEach((tSubRow) => {
-          const row = tSubRow;
-          row.invoice = invoice;
-          promises.push(SubTransactionRow.save(row));
-        });
+    subTransactions.forEach((tSub) => {
+      tSub.subTransactionRows.forEach((tSubRow) => {
+        const row = tSubRow;
+        row.invoice = invoice;
+        promises.push(SubTransactionRow.save(row));
       });
     });
 
@@ -509,8 +491,11 @@ export default class InvoiceService {
     await Invoice.save(newInvoice).then(async () => {
       newInvoice.invoiceStatus.push(invoiceStatus);
       await InvoiceStatus.save(invoiceStatus);
-      await this.setTransactionInvoice(newInvoice, transactions, isCreditInvoice);
-      await this.createInvoiceEntriesTransactions(newInvoice, transactions, isCreditInvoice);
+
+      const subTransactions = await this.getSubTransactionsInvoice(newInvoice, transactions, isCreditInvoice);
+      await this.setSubTransactionInvoice(newInvoice, subTransactions);
+
+      await this.createInvoiceEntriesTransactions(newInvoice, subTransactions);
       if (invoiceRequest.customEntries) {
         await this.AddCustomEntries(newInvoice, invoiceRequest.customEntries);
       }
