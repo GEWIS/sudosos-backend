@@ -95,7 +95,7 @@ export default class BalanceController extends BaseController {
    * @param {integer} minBalance.query - Minimum balance
    * @param {integer} maxBalance.query - Maximum balance
    * @param {enum} orderBy.query - Column to order balance by - eg: id,amount
-   * @param {enum} orderDirection.query - Order direction - eg: asc,desc,ASC,DESC
+   * @param {enum} orderDirection.query - Order direction - eg: ASC,DESC
    * @param {integer} take.query - How many transactions the endpoint should return
    * @param {integer} skip.query - How many transactions should be skipped (for pagination)
    * @returns {Array<BalanceResponse>} 200 - The requested user's balance

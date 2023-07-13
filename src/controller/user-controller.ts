@@ -681,7 +681,7 @@ export default class UserController extends BaseController {
    * @group users - Operations of user controller
    * @param {integer} id.path.required - userID
    * @security JWT
-   * @returns {User.model} 200 - Individual user
+   * @returns {UserResponse.model} 200 - Individual user
    * @returns {string} 404 - Nonexistent user id
    */
   public async getIndividualUser(req: RequestWithToken, res: Response): Promise<void> {
