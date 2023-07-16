@@ -21,11 +21,11 @@ import { TermsOfServiceStatus } from '../../entity/user/user';
 
 /**
   * @typedef AuthenticationResponse
-  * @property {UserResponse.model} user - The user that has authenticated.
-  * @property {Array.<string>} roles - The RBAC roles that the user has.
-  * @property {Array.<UserResponse>} organs - The organs that the user is a member of.
-  * @property {string} token - The JWT token that can be used as Bearer token for authentication.
- *  @property {string} acceptedToS - Whether the related user has accepted the Terms of Service
+  * @property {UserResponse.model} user.required - The user that has authenticated.
+  * @property {Array.<string>} roles.required - The RBAC roles that the user has.
+  * @property {Array.<UserResponse>} organs.required - The organs that the user is a member of.
+  * @property {string} token.required - The JWT token that can be used as Bearer token for authentication.
+ *  @property {string} acceptedToS.required - Whether the related user has accepted the Terms of Service
  *  or is not required to.
   */
 export default interface AuthenticationResponse {
