@@ -65,7 +65,7 @@ export interface BaseInvoiceResponse extends BaseResponse {
 
 /**
  * @typedef {BaseInvoiceResponse} InvoiceResponse
- * @property {Array.<InvoiceEntryResponse>} invoiceEntries - The entries of the invoice
+ * @property {Array.<InvoiceEntryResponse>} invoiceEntries.required - The entries of the invoice
  */
 export interface InvoiceResponse extends BaseInvoiceResponse {
   invoiceEntries: InvoiceEntryResponse[],
@@ -77,8 +77,8 @@ export interface InvoiceResponse extends BaseInvoiceResponse {
 
 /**
  * @typedef PaginatedInvoiceResponse
- * @property {PaginationResult.model} _pagination - Pagination metadata
- * @property {Array.<InvoiceResponseTypes>} records - Returned Invoices
+ * @property {PaginationResult.model} _pagination.required - Pagination metadata
+ * @property {Array.<InvoiceResponseTypes>} records.required - Returned Invoices
  */
 export interface PaginatedInvoiceResponse {
   _pagination: PaginationResult,

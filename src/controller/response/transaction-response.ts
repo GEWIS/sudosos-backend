@@ -30,9 +30,9 @@ import { PaginationResult } from '../../helpers/pagination';
  * is subtracted.
  * @property {UserResponse.model} createdBy - The user that created the transaction, if not
  * same as 'from'..
- * @property {BasePointOfSaleResponse.model} pointOfSale - The POS at which this transaction
+ * @property {BasePointOfSaleResponse.model} pointOfSale.required - The POS at which this transaction
  * has been created
- * @property {Dinero.model} value - Total sum of subtransactions
+ * @property {Dinero.model} value.required - Total sum of subtransactions
  */
 export interface BaseTransactionResponse extends BaseResponse {
   from: UserResponse,
@@ -49,7 +49,7 @@ export interface BaseTransactionResponse extends BaseResponse {
  * same as 'from'.
  * @property {Array.<SubTransactionResponse>} subTransactions.required - The subtransactions
  * belonging to this transaction.
- * @property {BasePointOfSaleResponse.model} pointOfSale - The POS at which this transaction
+ * @property {BasePointOfSaleResponse.model} pointOfSale.required - The POS at which this transaction
  * has been created
  * @property {DineroObjectResponse.model} totalPriceInclVat.required - The total cost of the
  * transaction
@@ -94,8 +94,8 @@ export interface SubTransactionRowResponse extends BaseResponse {
 
 /**
  * @typedef PaginatedBaseTransactionResponse
- * @property {PaginationResult.model} _pagination - Pagination metadata
- * @property {Array.<BaseTransactionResponse>} records - Returned banners
+ * @property {PaginationResult.model} _pagination.required - Pagination metadata
+ * @property {Array.<BaseTransactionResponse>} records.required - Returned banners
  */
 export interface PaginatedBaseTransactionResponse {
   _pagination: PaginationResult,

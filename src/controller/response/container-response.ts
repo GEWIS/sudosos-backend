@@ -24,7 +24,7 @@ import { PaginationResult } from '../../helpers/pagination';
  * @typedef {BaseResponse} BaseContainerResponse
  * @property {string} name.required - The name of the container.
  * @property {boolean} public.required - Public status of the container.
- * @property {integer} revision - The container revision.
+ * @property {integer} revision.required - The container revision.
  */
 export interface BaseContainerResponse extends BaseResponse {
   name: string,
@@ -42,8 +42,8 @@ export interface ContainerResponse extends BaseContainerResponse {
 
 /**
  * @typedef PaginatedContainerResponse
- * @property {PaginationResult.model} _pagination - Pagination metadata
- * @property {Array.<ContainerResponse>} records - Returned containers
+ * @property {PaginationResult.model} _pagination.required - Pagination metadata
+ * @property {Array.<ContainerResponse>} records.required - Returned containers
  */
 export interface PaginatedContainerResponse {
   _pagination: PaginationResult,
@@ -52,8 +52,8 @@ export interface PaginatedContainerResponse {
 
 /**
  * @typedef PaginatedContainerWithProductResponse
- * @property {PaginationResult.model} _pagination - Pagination metadata
- * @property {Array.<ContainerWithProductsResponse>} records - Returned containers
+ * @property {PaginationResult.model} _pagination.required - Pagination metadata
+ * @property {Array.<ContainerWithProductsResponse>} records.required - Returned containers
  */
 export interface PaginatedContainerWithProductResponse {
   _pagination: PaginationResult,

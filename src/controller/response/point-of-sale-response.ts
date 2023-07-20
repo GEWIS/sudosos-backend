@@ -42,8 +42,8 @@ export interface PointOfSaleResponse extends BasePointOfSaleResponse {
 
 /**
  * @typedef PaginatedPointOfSaleResponse
- * @property {PaginationResult.model} _pagination - Pagination metadata
- * @property {Array.<PointOfSaleResponse>} records - Returned points of sale
+ * @property {PaginationResult.model} _pagination.required - Pagination metadata
+ * @property {Array.<PointOfSaleResponse>} records.required - Returned points of sale
  */
 export interface PaginatedPointOfSaleResponse {
   _pagination: PaginationResult,
@@ -68,9 +68,8 @@ type UpdatedPOSResponses = UpdatedPointOfSaleResponse | UpdatedPointOfSaleWithCo
 
 /**
  * @typedef PaginatedUpdatedPointOfSaleResponse
- * @property {PaginationResult.model} _pagination - Pagination metadata
- * @property {Array.<UpdatedPOSResponses>}
- * records - Returned points of sale
+ * @property {PaginationResult.model} _pagination.required - Pagination metadata
+ * @property {Array.<UpdatedPOSResponses>} records.required - Returned points of sale
  */
 export interface PaginatedUpdatedPointOfSaleResponse {
   _pagination: PaginationResult,

@@ -36,14 +36,14 @@ export interface BaseProductResponse extends BaseResponse {
 
 /**
  * @typedef {BaseProductResponse} UpdatedProductResponse
- * @property {integer} revision - The revision of the product.
+ * @property {integer} revision.required - The revision of the product.
  * @property {BaseUserResponse.model} owner.required - The owner of the product.
  * @property {ProductCategoryResponse.model} category.required -
  *           The category the product belongs to.
  * @property {DineroObjectResponse.model} priceExclVat.required - The price of the product
  *           excluding VAT
- * @property {string} image - The URL to the picture representing this product.
- * @property {number} alcoholPercentage - The percentage of alcohol in this product.
+ * @property {string} image.required - The URL to the picture representing this product.
+ * @property {number} alcoholPercentage.required - The percentage of alcohol in this product.
  */
 export interface UpdatedProductResponse extends BaseProductResponse {
   owner: BaseUserResponse,
@@ -56,7 +56,7 @@ export interface UpdatedProductResponse extends BaseProductResponse {
 
 /**
  * @typedef {UpdatedProductResponse} ProductResponse
- * @property {integer} revision - The product revision ID
+ * @property {integer} revision.required - The product revision ID
  */
 export interface ProductResponse extends UpdatedProductResponse {
   revision: number,
@@ -64,8 +64,8 @@ export interface ProductResponse extends UpdatedProductResponse {
 
 /**
  * @typedef PaginatedProductResponse
- * @property {PaginationResult.model} _pagination - Pagination metadata
- * @property {Array.<ProductResponse>} records - Returned products
+ * @property {PaginationResult.model} _pagination.required - Pagination metadata
+ * @property {Array.<ProductResponse>} records.required - Returned products
  */
 export interface PaginatedProductResponse {
   _pagination: PaginationResult,

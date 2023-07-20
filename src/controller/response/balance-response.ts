@@ -22,9 +22,9 @@ import { PaginationResult } from '../../helpers/pagination';
  * @typedef BalanceResponse
  * @property {number} id.required - ID of the user this balance belongs to
  * @property {DineroObjectResponse.model} amount.required - The amount of balance this user has
- * @property {number} lastTransactionId - The ID of the last transaction that was
+ * @property {number} lastTransactionId.required - The ID of the last transaction that was
  * present when the balance was cached
- * @property {number} lastTransferId - The ID of the last transfer that was
+ * @property {number} lastTransferId.required - The ID of the last transfer that was
  * present when the balance was cached
  */
 export default interface BalanceResponse {
