@@ -413,6 +413,7 @@ export default class PointOfSaleController extends BaseController {
   /**
    * Approve a Point of Sale update.
    * @route POST /pointsofsale/{id}/approve
+   * @operationId approvePointOfSale
    * @param {integer} id.path.required - The id of the Point of Sale update to approve
    * @group pointofsale - Operations of the point of sale controller
    * @security JWT

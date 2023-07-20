@@ -230,6 +230,7 @@ export default class ProductController extends BaseController {
   /**
    * Approve a product update.
    * @route POST /products/{id}/approve
+   * @operationId approveProduct
    * @param {integer} id.path.required - The id of the product update to approve
    * @group products - Operations of product controller
    * @security JWT

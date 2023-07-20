@@ -92,6 +92,7 @@ export default class BannerController extends BaseController {
   /**
    * Returns all existing banners
    * @route GET /banners
+   * @operationId getAllBanners
    * @group banners - Operations of banner controller
    * @security JWT
    * @param {integer} take.query - How many banners the endpoint should return

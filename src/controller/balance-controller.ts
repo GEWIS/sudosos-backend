@@ -68,7 +68,7 @@ export default class BalanceController extends BaseController {
   /**
    * Get balance of the current user
    * @route get /balances
-   * @operationId getBalance
+   * @operationId getBalances
    * @group balance - Operations of balance controller
    * @security JWT
    * @returns {BalanceResponse.model} 200 - The requested user's balance
@@ -89,6 +89,7 @@ export default class BalanceController extends BaseController {
   /**
    * Get balance of the current user
    * @route GET /balances/all
+   * @operationId getAllBalance
    * @group balance - Operations of balance controller
    * @security JWT
    * @param {string} date.query - Timestamp to get balances for

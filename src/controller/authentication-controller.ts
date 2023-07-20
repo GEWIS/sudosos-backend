@@ -415,6 +415,7 @@ export default class AuthenticationController extends BaseController {
   /**
    * NFC login and hand out token
    * @route POST /authentication/nfc
+   * @operationId nfcAuthentication
    * @group authenticate - Operations of authentication controller
    * @param {AuthenticationNfcRequest.model} req.body.required - The NFC login.
    * @returns {AuthenticationResponse.model} 200 - The created json web token.
@@ -489,6 +490,7 @@ export default class AuthenticationController extends BaseController {
   /**
    * Key login and hand out token.
    * @route POST /authentication/key
+   * @operationId keyAuthentication
    * @group authenticate - Operations of authentication controller
    * @param {AuthenticationKeyRequest.model} req.body.required - The key login.
    * @returns {AuthenticationResponse.model} 200 - The created json web token.

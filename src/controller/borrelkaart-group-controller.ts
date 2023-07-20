@@ -66,6 +66,7 @@ export default class BorrelkaartGroupController extends BaseController {
   /**
    * Returns all existing borrelkaart groups
    * @route GET /borrelkaartgroups
+   * @operationId getALlBorrelkaartgroups
    * @group borrelkaartgroups - Operations of borrelkaart group controller
    * @security JWT
    * @param {integer} take.query - How many borrelkaart groups the endpoint should return
@@ -101,6 +102,7 @@ export default class BorrelkaartGroupController extends BaseController {
   /**
    * Creates a new borrelkaart group
    * @route POST /borrelkaartgroups
+   * @operationId createBorrelkaartgroup
    * @group borrelkaartgroups - Operations of borrelkaart group controller
    * @param {BorrelkaartGroupRequest.model} borrelkaartgroup.body.required -
    * The borrelkaart group which should be created
@@ -131,6 +133,7 @@ export default class BorrelkaartGroupController extends BaseController {
   /**
    * Returns the requested borrelkaart group
    * @route GET /borrelkaartgroups/{id}
+   * @operationId getBorrelkaartgroupId
    * @group borrelkaartgroups - Operations of borrelkaart group controller
    * @param {integer} id.path.required - The id of the borrelkaart group which should be returned
    * @security JWT
@@ -160,6 +163,7 @@ export default class BorrelkaartGroupController extends BaseController {
   /**
    * Updates the requested borrelkaart group
    * @route PATCH /borrelkaartgroups/{id}
+   * @operationId updateBorrelkaartGroup
    * @group borrelkaartgroups - Operations of borrelkaart group controller
    * @param {integer} id.path.required - The id of the borrelkaart group which should be updated
    * @param {BorrelkaartGroupRequest.model} borrelkaartgroup.body.required -

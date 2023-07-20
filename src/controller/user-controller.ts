@@ -1457,7 +1457,7 @@ export default class UserController extends BaseController {
   /**
    * Get transaction report for the given user
    * @route GET /users/{id}/transactions/report
-   * @operationID getUsersTransactionsReport
+   * @operationId getUsersTransactionsReport
    * @group users - Operations of user controller
    * @param {integer} id.path.required - The id of the user to get the transaction report from
    * @security JWT

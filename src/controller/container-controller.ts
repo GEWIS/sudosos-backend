@@ -251,6 +251,7 @@ export default class ContainerController extends BaseController {
   /**
    * Approve a container update.
    * @route POST /containers/{id}/approve
+   * @operationId approveContainer
    * @param {integer} id.path.required - The id of the container update to approve
    * @group containers - Operations of container controller
    * @security JWT

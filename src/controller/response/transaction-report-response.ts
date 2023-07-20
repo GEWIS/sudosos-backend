@@ -55,7 +55,7 @@ export interface TransactionReport {
 
 /**
  * @typedef TransactionFilterParameters
- * @property {Array.<number>} transactionId
+ * @property {Array<integer>} transactionId
  * @property {number} fromId
  * @property {number} createdById
  * @property {number} toId
