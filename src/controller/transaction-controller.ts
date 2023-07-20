@@ -271,10 +271,12 @@ export default class TransactionController extends BaseController {
   /**
    * Function to validate the transaction immediatly after it is created
    * @route POST /transactions/validate
+   * @operationId validateTransaction
    * @group transactions - Operations of the transaction controller
    * @param {TransactionRequest.model} transaction.body.required -
    * The transaction which should be validated
    * @returns {Boolean} 200 - Transaction validated
+   * @security JWT
    * @returns {string} 400 - Validation error
    * @returns {string} 500 - Internal server error
    */
