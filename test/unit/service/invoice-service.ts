@@ -56,11 +56,12 @@ import { TransactionRequest } from '../../../src/controller/request/transaction-
 import { InvoiceState } from '../../../src/entity/invoices/invoice-status';
 import Transaction from '../../../src/entity/transactions/transaction';
 import Transfer from '../../../src/entity/transactions/transfer';
+import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 
 chai.use(deepEqualInAnyOrder);
 
 export async function createTransactionRequest(debtorId: number,
-  creditorId:number, transactionCount: number) {
+  creditorId: number, transactionCount: number) {
   const transactions: TransactionRequest[] = [];
   await Promise.all(Array(transactionCount).fill(0, 0).map(async () => {
     const t = await createValidTransactionRequest(
@@ -109,7 +110,9 @@ function keyMapping(invoice: InvoiceResponse | Invoice) {
     })),
   };
 }
+
 export type T = InvoiceResponse | BaseInvoiceResponse;
+
 function returnsAll(response: T[], superset: Invoice[], mapping: any) {
   expect(response.map(mapping)).to.deep.equalInAnyOrder(superset.map(mapping));
 }
@@ -122,7 +125,8 @@ export async function createTransactions(debtorId: number, creditorId: number, t
   return Promise.resolve(requestToTransaction(transactions));
 }
 
-export async function createInvoiceWithTransfers(debtorId: number, creditorId: number,
+export async function
+createInvoiceWithTransfers(debtorId: number, creditorId: number,
   transactionCount: number) {
   const { transactions, total } = await createTransactions(debtorId, creditorId, transactionCount);
   await new Promise((f) => setTimeout(f, 1000));
@@ -137,7 +141,8 @@ export async function createInvoiceWithTransfers(debtorId: number, creditorId: n
   };
 
   const invoice = await InvoiceService.createInvoice(createInvoiceRequest);
-  expect(invoice.transfer.amount.amount).to.equal(total);
+  await new Promise((f) => setTimeout(f, 100));
+  expect((await BalanceService.getBalance(debtorId)).amount.amount).is.equal(0);
   return invoice;
 }
 
@@ -259,7 +264,7 @@ describe('InvoiceService', () => {
         async (debtor: User, creditor: User) => {
           // Spent more money.
           const transactionRequestsBeforeDate: TransactionRequest[] =
-            await createTransactionRequest(debtor.id, creditor.id, 2);
+                        await createTransactionRequest(debtor.id, creditor.id, 2);
           const transactionsBeforeDate = await requestToTransaction(
             transactionRequestsBeforeDate,
           );
@@ -277,7 +282,7 @@ describe('InvoiceService', () => {
           await new Promise((f) => setTimeout(f, 1000));
           // Spent more money.
           const transactionRequestsAfterDate: TransactionRequest[] =
-            await createTransactionRequest(debtor.id, creditor.id, 2);
+                        await createTransactionRequest(debtor.id, creditor.id, 2);
           const transactionsAfterDate = await requestToTransaction(
             transactionRequestsAfterDate,
           );
@@ -299,7 +304,7 @@ describe('InvoiceService', () => {
         async (debtor: User, creditor: User) => {
           // Spent money
           const transactionRequests: TransactionRequest[] =
-            await createTransactionRequest(debtor.id, creditor.id, 5);
+                        await createTransactionRequest(debtor.id, creditor.id, 5);
 
           const { transactions } = await requestToTransaction(
             transactionRequests,
@@ -348,7 +353,7 @@ describe('InvoiceService', () => {
 
           // Spent more money.
           const transactionRequests: TransactionRequest[] =
-            await createTransactionRequest(debtor.id, creditor.id, 2);
+                        await createTransactionRequest(debtor.id, creditor.id, 2);
 
           const { total } = await requestToTransaction(
             transactionRequests,
@@ -370,7 +375,7 @@ describe('InvoiceService', () => {
         await (await UserFactory()).clone(2),
         async (debtor: User, creditor: User) => {
           const transactionRequests: TransactionRequest[] =
-            await createTransactionRequest(debtor.id, creditor.id, 2);
+                        await createTransactionRequest(debtor.id, creditor.id, 2);
           const { transactions } = await requestToTransaction(
             transactionRequests,
           );
@@ -426,6 +431,51 @@ describe('InvoiceService', () => {
         const creditorBalance = await BalanceService.getBalance(creditor.id);
         expect(debtorBalance.amount.amount).to.equal(-1 * total);
         expect(creditorBalance.amount.amount).to.equal(0);
+      });
+    });
+    it('should create Credit Invoice only for transactions with relevant toId', async () => {
+      await inUserContext((await UserFactory()).clone(3), async (debtor: User, creditor: User, otherCreditor: User) => {
+        const transactionA: TransactionRequest = (await createTransactionRequest(
+          debtor.id, creditor.id, 1,
+        ))[0];
+        const transactionB: TransactionRequest = (await createTransactionRequest(
+          debtor.id, otherCreditor.id, 1,
+        ))[0];
+        const joinedTransaction: TransactionRequest = { ...transactionA,
+          totalPriceInclVat: {
+            ...transactionA.totalPriceInclVat,
+            amount: transactionA.totalPriceInclVat.amount + transactionB.totalPriceInclVat.amount,
+          },
+          subTransactions: transactionA.subTransactions.concat(transactionB.subTransactions),
+        };
+
+        const { transactions, total } = await requestToTransaction([joinedTransaction]);
+        expect(total).to.equal(transactionA.totalPriceInclVat.amount + transactionB.totalPriceInclVat.amount);
+        const createInvoiceRequest: CreateInvoiceParams = {
+          byId: creditor.id,
+          addressee: 'Addressee',
+          description: 'Description',
+          forId: creditor.id,
+          transactionIDs: transactions.map((t) => t.tId),
+          isCreditInvoice: true,
+        };
+        const invoice = await InvoiceService.createInvoice(createInvoiceRequest);
+        const debtorBalance = await BalanceService.getBalance(debtor.id);
+        const creditorBalance = await BalanceService.getBalance(creditor.id);
+        const otherCreditorBalance = await BalanceService.getBalance(otherCreditor.id);
+
+        expect(debtorBalance.amount.amount).to.equal(-1 * total);
+        expect(creditorBalance.amount.amount).to.equal(0);
+        expect(otherCreditorBalance.amount.amount).to.equal(transactionB.totalPriceInclVat.amount);
+
+        const subtrans = await SubTransaction.find({ where: { to: { id: otherCreditor.id } }, relations: ['subTransactionRows', 'subTransactionRows.invoice'] });
+        const linkedInvoice = subtrans.map((st) => st.subTransactionRows.map((str) => str.invoice?.id)).flat(1);
+
+        const entryValue = invoice.invoiceEntries.reduce((acc, curr) => acc + curr.priceInclVat.amount * curr.amount, 0);
+        expect(entryValue).to.equal(transactionA.totalPriceInclVat.amount);
+
+        // Only relevant transactions should be linked.
+        expect(linkedInvoice).to.not.include(invoice.id);
       });
     });
     it('should create a seller transfer when Invoice is created', async () => {
@@ -545,7 +595,7 @@ describe('InvoiceService', () => {
         },
       );
     });
-    const makeParamsState = (addressee: string, description:string, creditor: User, invoiceId: number, state: InvoiceState) => ({
+    const makeParamsState = (addressee: string, description: string, creditor: User, invoiceId: number, state: InvoiceState) => ({
       addressee,
       byId: creditor.id,
       description,
@@ -601,7 +651,7 @@ describe('InvoiceService', () => {
         await (await UserFactory()).clone(2),
         async (debtor: User, creditor: User) => {
           const transactionRequests: TransactionRequest[] =
-            await createTransactionRequest(debtor.id, creditor.id, 2);
+                        await createTransactionRequest(debtor.id, creditor.id, 2);
           const { transactions } = await requestToTransaction(
             transactionRequests,
           );
