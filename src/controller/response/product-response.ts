@@ -42,14 +42,14 @@ export interface BaseProductResponse extends BaseResponse {
  *           The category the product belongs to.
  * @property {DineroObjectResponse.model} priceExclVat.required - The price of the product
  *           excluding VAT
- * @property {string} image.required - The URL to the picture representing this product.
+ * @property {string} image - The URL to the picture representing this product.
  * @property {number} alcoholPercentage.required - The percentage of alcohol in this product.
  */
 export interface UpdatedProductResponse extends BaseProductResponse {
   owner: BaseUserResponse,
   priceExclVat: DineroObjectResponse,
   category: ProductCategoryResponse,
-  image: string,
+  image?: string,
   revision: number,
   alcoholPercentage: number,
 }
