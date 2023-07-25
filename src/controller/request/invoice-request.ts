@@ -67,6 +67,7 @@ export interface CreateInvoiceParams extends BaseInvoice {
  * @property {Array.<integer>} transactionIDs - IDs of the transactions to add to the Invoice.
  * @property {string} fromDate - For creating an Invoice for all transactions from a specific date.
  * @property {boolean} isCreditInvoice.required - If the invoice is an credit Invoice
+ *  If an invoice is a credit invoice the relevant subtransactions are defined as all the sub transactions which have `subTransaction.toId == forId`.
  */
 export interface CreateInvoiceRequest extends BaseInvoice {
   byId?: number,

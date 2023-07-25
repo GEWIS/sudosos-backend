@@ -59,6 +59,7 @@ export interface TransactionReport {
  * @property {number} fromId
  * @property {number} createdById
  * @property {number} toId
+ * @property {boolean} exclusiveToId
  * @property {number} pointOfSaleId
  * @property {number} pointOfSaleRevision
  * @property {number} containerId
