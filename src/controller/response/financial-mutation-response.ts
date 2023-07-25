@@ -23,7 +23,7 @@ import { BaseTransactionResponse } from './transaction-response';
 /**
  * @typedef FinancialMutationResponse
  * @property {string} type.required - Type of mutation ('transfer' or 'transaction') (Optional)
- * @property mutation - Details of mutation, this can be either of type TransferResponse or BaseTransactionResponse
+ * @property {object} mutation - Details of mutation, this can be either of type TransferResponse or BaseTransactionResponse
  */
 export interface FinancialMutationResponse {
   type: 'transfer' | 'transaction',
