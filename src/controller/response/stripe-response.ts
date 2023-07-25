@@ -33,7 +33,7 @@ export interface StripePaymentIntentResponse extends BaseResponse {
 
 /**
  * @typedef {BaseResponse} StripeDepositStatusResponse
- * @property {string} depositStatus.required
+ * @property {number} state.required - State of the Stripe deposit. It can be 1 ('CREATED'), 2 ('PROCESSING'), 3 ('SUCCEEDED'), or 4 ('FAILED')
  */
 export interface StripeDepositStatusResponse extends BaseResponse {
   state: StripeDepositState;

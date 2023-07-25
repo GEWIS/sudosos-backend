@@ -20,25 +20,20 @@ import { PaginationResult } from '../../helpers/pagination';
 import { TransferResponse } from './transfer-response';
 import { BaseTransactionResponse } from './transaction-response';
 
-type TransferType = {
-  type: 'transfer',
-  mutation: TransferResponse
-};
-
-type TransactionType = {
-  type: 'transaction',
-  mutation: BaseTransactionResponse
-};
-
 /**
- * @typedef {TransferType | TransactionType} FinancialMutationResponse
+ * @typedef FinancialMutationResponse
+ * @property {string} type.required - Type of mutation ('transfer' or 'transaction') (Optional)
+ * @property mutation - Details of mutation, this can be either of type TransferResponse or BaseTransactionResponse
  */
-export type FinancialMutationResponse = TransferType | TransactionType;
+export interface FinancialMutationResponse {
+  type: 'transfer' | 'transaction',
+  mutation: TransferResponse | BaseTransactionResponse,
+}
 
 /**
  * @typedef PaginatedFinancialMutationResponse
  * @property {PaginationResult.model} _pagination.required - Pagination metadata
- * @property {Array.<PaginatedFinancialMutationResponse>} records.required - Returned mutations
+ * @property {Array.<FinancialMutationResponse>} records.required - Returned mutations
  */
 export interface PaginatedFinancialMutationResponse {
   _pagination: PaginationResult,

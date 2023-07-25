@@ -36,7 +36,6 @@ export interface BaseProductResponse extends BaseResponse {
 
 /**
  * @typedef {BaseProductResponse} UpdatedProductResponse
- * @property {integer} revision.required - The revision of the product.
  * @property {BaseUserResponse.model} owner.required - The owner of the product.
  * @property {ProductCategoryResponse.model} category.required -
  *           The category the product belongs to.
@@ -50,7 +49,6 @@ export interface UpdatedProductResponse extends BaseProductResponse {
   priceExclVat: DineroObjectResponse,
   category: ProductCategoryResponse,
   image?: string,
-  revision: number,
   alcoholPercentage: number,
 }
 
@@ -60,6 +58,16 @@ export interface UpdatedProductResponse extends BaseProductResponse {
  */
 export interface ProductResponse extends UpdatedProductResponse {
   revision: number,
+}
+
+/**
+ * @typedef PaginatedUpdatedProductResponse
+ * @property {PaginationResult.model} _pagination.required - Pagination metadata
+ * @property {Array.<UpdatedProductResponse>} records.required - Returned products
+ */
+export interface PaginatedUpdatedProductResponse {
+  _pagination: PaginationResult,
+  records: UpdatedProductResponse[],
 }
 
 /**

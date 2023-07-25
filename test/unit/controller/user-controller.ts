@@ -408,7 +408,7 @@ describe('UserController', (): void => {
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
       expect(ctx.specification.validateModel(
-        'User',
+        'UserResponse',
         res.body,
         false,
         true,
@@ -452,7 +452,7 @@ describe('UserController', (): void => {
         .set('Authorization', `Bearer ${ctx.organMemberToken}`);
       expect(res.status).to.equal(200);
       expect(ctx.specification.validateModel(
-        'User',
+        'UserResponse',
         res.body,
         false,
         true,
@@ -1704,11 +1704,10 @@ describe('UserController', (): void => {
           .send();
         expect(res.status).to.equal(200);
         expect(ctx.specification.validateModel(
-          'NfcAuthenticator',
+          'UpdateKeyResponse',
           res.body,
           false,
-          true,
-        ).valid).to.be.true;
+          true).valid).to.be.true;
       });
     });
     it('should return an 403 if unauthorized', async () => {

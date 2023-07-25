@@ -45,7 +45,6 @@ import PointOfSaleService from './point-of-sale-service';
 // eslint-disable-next-line import/no-cycle
 import ProductService from './product-service';
 import AuthenticationService from './authentication-service';
-import VatGroup from "../entity/vat-group";
 
 interface ContainerVisibility {
   own: boolean;
@@ -314,6 +313,7 @@ export default class ContainerService {
       builder.innerJoinAndSelect('products.category', 'category');
       builder.innerJoinAndSelect(User, 'product_owner', 'product_owner.id = base_product.owner.id');
       builder.leftJoinAndSelect(ProductImage, 'product_image', 'product_image.id = base_product.imageId');
+      builder.leftJoinAndSelect('products.vat', 'vat');
       if (filters.productId) builder.where(`products.productId = ${filters.productId}`);
     }
     const filterMapping: FilterMapping = {

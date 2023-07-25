@@ -24,7 +24,7 @@ import { PaginationResult } from '../../helpers/pagination';
  * @typedef {BaseResponse} BaseContainerResponse
  * @property {string} name.required - The name of the container.
  * @property {boolean} public.required - Public status of the container.
- * @property {integer} revision.required - The container revision.
+ * @property {integer} revision - The container revision.
  */
 export interface BaseContainerResponse extends BaseResponse {
   name: string,
