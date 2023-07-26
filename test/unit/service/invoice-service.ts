@@ -112,6 +112,7 @@ function keyMapping(invoice: InvoiceResponse | Invoice) {
 }
 
 export type T = InvoiceResponse | BaseInvoiceResponse;
+
 function returnsAll(response: T[], superset: Invoice[], mapping: any) {
   expect(response.map(mapping)).to.deep.equalInAnyOrder(superset.map(mapping));
 }
@@ -140,7 +141,8 @@ createInvoiceWithTransfers(debtorId: number, creditorId: number,
   };
 
   const invoice = await InvoiceService.createInvoice(createInvoiceRequest);
-  expect(invoice.transfer.amount.amount).to.equal(total);
+  await new Promise((f) => setTimeout(f, 100));
+  expect((await BalanceService.getBalance(debtorId)).amount.amount).is.equal(0);
   return invoice;
 }
 
@@ -262,7 +264,7 @@ describe('InvoiceService', () => {
         async (debtor: User, creditor: User) => {
           // Spent more money.
           const transactionRequestsBeforeDate: TransactionRequest[] =
-            await createTransactionRequest(debtor.id, creditor.id, 2);
+                        await createTransactionRequest(debtor.id, creditor.id, 2);
           const transactionsBeforeDate = await requestToTransaction(
             transactionRequestsBeforeDate,
           );
@@ -280,7 +282,7 @@ describe('InvoiceService', () => {
           await new Promise((f) => setTimeout(f, 1000));
           // Spent more money.
           const transactionRequestsAfterDate: TransactionRequest[] =
-            await createTransactionRequest(debtor.id, creditor.id, 2);
+                        await createTransactionRequest(debtor.id, creditor.id, 2);
           const transactionsAfterDate = await requestToTransaction(
             transactionRequestsAfterDate,
           );
@@ -302,7 +304,7 @@ describe('InvoiceService', () => {
         async (debtor: User, creditor: User) => {
           // Spent money
           const transactionRequests: TransactionRequest[] =
-            await createTransactionRequest(debtor.id, creditor.id, 5);
+                        await createTransactionRequest(debtor.id, creditor.id, 5);
 
           const { transactions } = await requestToTransaction(
             transactionRequests,
@@ -351,7 +353,7 @@ describe('InvoiceService', () => {
 
           // Spent more money.
           const transactionRequests: TransactionRequest[] =
-            await createTransactionRequest(debtor.id, creditor.id, 2);
+                        await createTransactionRequest(debtor.id, creditor.id, 2);
 
           const { total } = await requestToTransaction(
             transactionRequests,
@@ -373,7 +375,7 @@ describe('InvoiceService', () => {
         await (await UserFactory()).clone(2),
         async (debtor: User, creditor: User) => {
           const transactionRequests: TransactionRequest[] =
-            await createTransactionRequest(debtor.id, creditor.id, 2);
+                        await createTransactionRequest(debtor.id, creditor.id, 2);
           const { transactions } = await requestToTransaction(
             transactionRequests,
           );
@@ -649,7 +651,7 @@ describe('InvoiceService', () => {
         await (await UserFactory()).clone(2),
         async (debtor: User, creditor: User) => {
           const transactionRequests: TransactionRequest[] =
-            await createTransactionRequest(debtor.id, creditor.id, 2);
+                        await createTransactionRequest(debtor.id, creditor.id, 2);
           const { transactions } = await requestToTransaction(
             transactionRequests,
           );
