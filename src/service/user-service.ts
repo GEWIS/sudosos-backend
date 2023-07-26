@@ -36,6 +36,7 @@ import { AcceptTosRequest } from '../controller/request/accept-tos-request';
 import Bindings from '../helpers/bindings';
 import AuthenticationService from './authentication-service';
 import WelcomeWithReset from '../mailer/templates/welcome-with-reset';
+import {getConnection} from "typeorm";
 
 /**
  * Parameters used to filter on Get Users functions.
@@ -96,8 +97,9 @@ export default class UserService {
     const builder = Bindings.Users.getBuilder();
 
     QueryFilter.applyFilter(builder, filterMapping, f);
+    // Note this is only for MySQL
     if (filters.search) {
-      builder.andWhere('(user.firstName like :search OR user.lastName like :search OR user.email like :search)', {
+      builder.andWhere('((CONCAT(user.firstName, \' \', user.lastName) LIKE :search COLLATE utf8_general_ci) OR (user.email LIKE :search COLLATE utf8_general_ci))', {
         search: `%${filters.search}%`,
       });
     }
