@@ -105,14 +105,15 @@ export async function addTransfer(
     precision: 2,
     currency: 'EUR',
   };
-  const transfer = await Transfer.save({
+  const transfer = Object.assign(new Transfer(), {
     createdAt,
     updatedAt: createdAt,
     amount: Dinero(amount),
     description: '',
     from,
     to,
-  } as any);
+  } as Transfer);
+  await transfer.save();
   return {
     transfer,
     amount,

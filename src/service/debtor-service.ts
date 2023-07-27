@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { UserType } from '../entity/user/user';
+import User, { UserType } from '../entity/user/user';
 import BalanceService from './balance-service';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
 import dinero, { Dinero, DineroObject } from 'dinero.js';
@@ -26,6 +26,7 @@ import TransferService from './transfer-service';
 import { DineroObjectResponse } from '../controller/response/dinero-response';
 import { DineroObjectRequest } from '../controller/request/dinero-request';
 import UserFineGroup from '../entity/fine/userFineGroup';
+import { id } from 'date-fns/locale';
 
 export interface CalculateFinesParams {
   userTypes?: UserType[];
@@ -99,7 +100,7 @@ export default class DebtorService {
   }: HandOutFinesParams): Promise<Fine[]> {
     const previousFineGroup = (await FineHandoutEvent.find({
       order: { id: 'desc' },
-      relations: ['fines', 'fines.userFineCollection'],
+      relations: ['fines', 'fines.userFineGroup'],
       take: 1,
     }))[0];
 
@@ -111,26 +112,27 @@ export default class DebtorService {
     });
 
     // Create a new fine group to "connect" all these fines
-    const fineGroup = Object.assign(new FineHandoutEvent(), { referenceDate: date });
-    await fineGroup.save();
+    const fineHandoutEvent = Object.assign(new FineHandoutEvent(), { referenceDate: date });
+    await fineHandoutEvent.save();
 
     // Create and save the fine information
     let fines: Fine[] = await Promise.all(balances.records.map(async (b) => {
-      const previousFine = previousFineGroup?.fines.find((fine) => fine.userFineCollection.userId === b.id);
+      const previousFine = previousFineGroup?.fines.find((fine) => fine.userFineGroup.userId === b.id);
+      const user = await User.findOne({ where: { id: b.id }, relations: ['currentFines'] });
 
-      let userFineCollection: UserFineGroup;
-      if (previousFine == undefined) {
-        userFineCollection = Object.assign(new UserFineGroup(), {
+      let userFineGroup = user.currentFines;
+      if (userFineGroup == undefined) {
+        userFineGroup = Object.assign(new UserFineGroup(), {
           userId: b.id,
         });
-        userFineCollection = await userFineCollection.save();
-      } else {
-        userFineCollection = previousFine.userFineCollection;
+        userFineGroup = await userFineGroup.save();
+        user.currentFines = userFineGroup;
+        await user.save();
       }
 
       return Object.assign(new Fine(), {
-        fineGroup,
-        userFineCollection,
+        fineHandoutEvent,
+        userFineGroup,
         amount: calculateFine(b.amount),
         previousFine,
       });
@@ -145,7 +147,7 @@ export default class DebtorService {
           precision: fine.amount.getPrecision(),
           currency: fine.amount.getCurrency(),
         },
-        fromId: fine.userFineCollection.userId,
+        fromId: fine.userFineGroup.userId,
         description: `Fine for balance of ${dinero({ amount: balances.records[i].amount.amount }).toFormat()} on ${date.toLocaleDateString()}.`,
         toId: undefined,
       });

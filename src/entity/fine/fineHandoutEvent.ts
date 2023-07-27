@@ -21,7 +21,7 @@ import Fine from './fine';
 
 @Entity()
 export default class FineHandoutEvent extends BaseEntity {
-  @OneToMany(() => Fine, (fine) => fine.fineGroup)
+  @OneToMany(() => Fine, (fine) => fine.fineHandoutEvent)
   public fines: Fine[];
 
   @Column({ type: 'datetime' })

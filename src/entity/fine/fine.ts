@@ -17,7 +17,6 @@
  */
 import { Column, Entity, JoinColumn, ManyToOne, OneToOne, Tree, TreeParent } from 'typeorm';
 import BaseEntity from '../base-entity';
-import User from '../user/user';
 import Transfer from '../transactions/transfer';
 import DineroTransformer from '../transformer/dinero-transformer';
 import { Dinero } from 'dinero.js';
@@ -29,11 +28,11 @@ import UserFineGroup from './userFineGroup';
 export default class Fine extends BaseEntity {
   @ManyToOne(() => FineHandoutEvent, { nullable: false })
   @JoinColumn()
-  public fineGroup: FineHandoutEvent;
+  public fineHandoutEvent: FineHandoutEvent;
 
   @ManyToOne(() => UserFineGroup, { nullable: false })
   @JoinColumn()
-  public userFineCollection: UserFineGroup;
+  public userFineGroup: UserFineGroup;
 
   @OneToOne(() => Transfer, { nullable: true })
   @JoinColumn()

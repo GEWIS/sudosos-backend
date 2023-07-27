@@ -16,9 +16,10 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  Column, Entity,
-} from 'typeorm';
+  Column, Entity, JoinColumn, OneToOne,
+} from "typeorm";
 import BaseEntity from '../base-entity';
+import UserFineGroup from "../fine/userFineGroup";
 
 export enum TermsOfServiceStatus {
   ACCEPTED = 'ACCEPTED',
@@ -108,4 +109,10 @@ export default class User extends BaseEntity {
     default: false,
   })
   public extensiveDataProcessing: boolean;
+
+  @OneToOne(() => UserFineGroup, {
+    nullable: true,
+  })
+  @JoinColumn()
+  public currentFines?: UserFineGroup | null;
 }

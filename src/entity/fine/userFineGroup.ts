@@ -29,6 +29,6 @@ export default class UserFineGroup extends BaseEntity {
   @JoinColumn({ name: 'userId' })
   public readonly user: User;
 
-  @OneToMany(() => Fine, (fine) => fine.userFineCollection)
+  @OneToMany(() => Fine, (fine) => fine.userFineGroup)
   public fines: Fine[];
 }

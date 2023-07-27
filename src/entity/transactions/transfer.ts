@@ -16,6 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
+  AfterInsert,
   Column, Entity, JoinColumn, ManyToOne, OneToOne,
 } from 'typeorm';
 import { Dinero } from 'dinero.js';
@@ -26,6 +27,7 @@ import PayoutRequest from './payout-request';
 import StripeDeposit from '../deposit/stripe-deposit';
 import Invoice from '../invoices/invoice';
 import Fine from '../fine/fine';
+import BalanceService from '../../service/balance-service';
 
 /**
  * @typedef {BaseEntity} Transfer
@@ -80,4 +82,21 @@ export default class Transfer extends BaseEntity {
 
   @OneToOne(() => Fine, (f) => f.transfer, { nullable: true })
   public fine: Fine | null;
+
+  @AfterInsert()
+  // NOTE: this event listener is only called when calling .save() on a new Transfer object instance,
+  // not .save() on the static method of the Transfer class
+  async validateDebtPaid() {
+    if (this.toId == null) return;
+
+    const user = await User.findOne({ where: { id: this.toId }, relations: ['currentFines'] });
+    if (user.currentFines == null) return;
+
+    // Remove currently unpaid fines when new balance is positive.
+    const balance = await BalanceService.getBalance(user.id);
+    if (balance.amount.amount >= 0) {
+      user.currentFines = null;
+      await user.save();
+    }
+  }
 }
