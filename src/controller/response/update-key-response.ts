@@ -15,15 +15,14 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { Column, Entity, OneToMany } from 'typeorm';
-import BaseEntity from '../base-entity';
-import Fine from './fine';
 
-@Entity()
-export default class FineGroup extends BaseEntity {
-  @OneToMany(() => Fine, (fine) => fine.fineGroup)
-  public fines: Fine[];
+import BaseResponse from './base-response';
 
-  @Column({ type: 'datetime' })
-  public referenceDate: Date;
+/**
+ * @typedef UpdateKeyResponse
+ * @property {string} key.required - The key to return
+ */
+export default interface UpdateKeyResponse extends BaseResponse {
+  key: string,
 }
+

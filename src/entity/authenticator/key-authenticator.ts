@@ -15,15 +15,13 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { Column, Entity, OneToMany } from 'typeorm';
-import BaseEntity from '../base-entity';
-import Fine from './fine';
+import {
+  Entity,
+} from 'typeorm';
+import HashBasedAuthenticationMethod from './hash-based-authentication-method';
 
+/**
+ * @typedef {AuthenticationMethod} KeyAuthenticator
+ */
 @Entity()
-export default class FineGroup extends BaseEntity {
-  @OneToMany(() => Fine, (fine) => fine.fineGroup)
-  public fines: Fine[];
-
-  @Column({ type: 'datetime' })
-  public referenceDate: Date;
-}
+export default class KeyAuthenticator extends HashBasedAuthenticationMethod {}

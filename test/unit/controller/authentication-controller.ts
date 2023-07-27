@@ -44,6 +44,8 @@ import AuthenticationService from '../../../src/service/authentication-service';
 import AuthenticationResetTokenRequest from '../../../src/controller/request/authentication-reset-token-request';
 import EanAuthenticator from '../../../src/entity/authenticator/ean-authenticator';
 import AuthenticationEanRequest from '../../../src/controller/request/authentication-ean-request';
+import KeyAuthenticator from '../../../src/entity/authenticator/key-authenticator';
+import AuthenticationKeyRequest from '../../../src/controller/request/authentication-key-request';
 import AuthenticationNfcRequest from '../../../src/controller/request/authentication-nfc-request';
 import NfcAuthenticator from '../../../src/entity/authenticator/nfc-authenticator';
 
@@ -110,6 +112,7 @@ describe('AuthenticationController', async (): Promise<void> => {
 
     await seedHashAuthenticator([ctx.user, ctx.user2], PinAuthenticator);
     await seedHashAuthenticator([ctx.user, ctx.user2], LocalAuthenticator);
+    await seedHashAuthenticator([ctx.user, ctx.user2], KeyAuthenticator);
 
     await EanAuthenticator.save({
       userId: ctx.user.id,
@@ -242,7 +245,7 @@ describe('AuthenticationController', async (): Promise<void> => {
         .post('/authentication/pin')
         .send({ userId, pin: '1' } as AuthenticationPinRequest);
       expect(res.status).to.equal(403);
-      expect(res.body.message).to.equal(`User ${userId} not registered`);
+      expect(res.body.message).to.equal('Invalid credentials.');
     });
     it('should return an HTTP 403 if user does not have a pin', async () => {
       const res = await request(ctx.app)
@@ -271,6 +274,29 @@ describe('AuthenticationController', async (): Promise<void> => {
       const res = await request(ctx.app)
         .post('/authentication/local')
         .send({ accountMail: 'Roy41@gewis.nl', password: '1' } as AuthenticationLocalRequest);
+      expect(res.status).to.equal(403);
+      expect(res.body.message).to.equal('Invalid credentials.');
+    });
+  });
+
+  describe('POST /authentication/key', () => {
+    const validKeyRequest: AuthenticationKeyRequest = {
+      userId: 1,
+      key: '1',
+    };
+    testHashAuthentication('key', validKeyRequest, { ...validKeyRequest, key: '2' });
+    it('should return an HTTP 403 if user does not exist', async () => {
+      const userId = 0;
+      const res = await request(ctx.app)
+        .post('/authentication/key')
+        .send({ userId, key: '1' } as AuthenticationKeyRequest);
+      expect(res.status).to.equal(403);
+      expect(res.body.message).to.equal('Invalid credentials.');
+    });
+    it('should return an HTTP 403 if user does not have a key', async () => {
+      const res = await request(ctx.app)
+        .post('/authentication/key')
+        .send({ userId: 3, key: '1' } as AuthenticationKeyRequest);
       expect(res.status).to.equal(403);
       expect(res.body.message).to.equal('Invalid credentials.');
     });
