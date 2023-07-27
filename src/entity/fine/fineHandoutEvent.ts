@@ -15,20 +15,15 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { Column, Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
-import User from '../user/user';
-import Fine from './fine';
+import { Column, Entity, OneToMany } from 'typeorm';
 import BaseEntity from '../base-entity';
+import Fine from './fine';
 
 @Entity()
-export default class UserFineCollection extends BaseEntity {
-  @Column({ type: 'integer' })
-  public readonly userId: number;
-
-  @OneToOne(() => User, { nullable: false })
-  @JoinColumn({ name: 'userId' })
-  public readonly user: User;
-
-  @OneToMany(() => Fine, (fine) => fine.userFineCollection)
+export default class FineHandoutEvent extends BaseEntity {
+  @OneToMany(() => Fine, (fine) => fine.fineGroup)
   public fines: Fine[];
+
+  @Column({ type: 'datetime' })
+  public referenceDate: Date;
 }

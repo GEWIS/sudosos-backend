@@ -40,8 +40,8 @@ import { expect } from 'chai';
 import { addTransfer } from '../../helpers/transaction-helpers';
 import BalanceService from '../../../src/service/balance-service';
 import Fine from '../../../src/entity/fine/fine';
-import FineGroup from '../../../src/entity/fine/fineGroup';
-import UserFineCollection from '../../../src/entity/fine/userFineCollection';
+import FineHandoutEvent from '../../../src/entity/fine/fineHandoutEvent';
+import UserFineGroup from '../../../src/entity/fine/userFineGroup';
 
 function calculateFine(balance: number): number {
   // Fine is 20%, rounded down to whole euros with a maximum of 5 euros.
@@ -177,7 +177,7 @@ describe('DebtorService', (): void => {
       });
     }
 
-    function checkFine(f: Fine, date: Date, fineGroup: FineGroup) {
+    function checkFine(f: Fine, date: Date, fineGroup: FineHandoutEvent) {
       const user = ctx.users.find((u) => u.id === f.userFineCollection.userId);
       expect(user).to.not.be.undefined;
       const b = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers, date);
@@ -236,12 +236,12 @@ describe('DebtorService', (): void => {
       const referenceDate = new Date('2021-01-30');
 
       // Two finegroups, so we can check that the newest one is used
-      await Object.assign(new FineGroup(), {
+      await Object.assign(new FineHandoutEvent(), {
         createdAt: oldRef,
         updatedAt: oldRef,
         referenceDate: oldRef,
       }).save();
-      await Object.assign(new FineGroup(), {
+      await Object.assign(new FineHandoutEvent(), {
         createdAt: referenceDate,
         updatedAt: referenceDate,
         referenceDate,
@@ -285,7 +285,7 @@ describe('DebtorService', (): void => {
       expect(fines1[0].userFineCollection.userId).to.equal(user.id);
       expect(fines2[0].userFineCollection.userId).to.equal(user.id);
       expect(fines1[0].userFineCollection.id).to.equal(fines2[0].userFineCollection.id);
-      const collection = await UserFineCollection.findOne({
+      const collection = await UserFineGroup.findOne({
         where: { id: fines1[0].userFineCollection.id },
         relations: ['fines'],
       });

@@ -64,8 +64,8 @@ import ResetToken from '../entity/authenticator/reset-token';
 import { DataSourceOptions } from 'typeorm/data-source/DataSourceOptions';
 import KeyAuthenticator from '../entity/authenticator/key-authenticator';
 import Fine from '../entity/fine/fine';
-import FineGroup from '../entity/fine/fineGroup';
-import UserFineCollection from '../entity/fine/userFineCollection';
+import FineHandoutEvent from '../entity/fine/fineHandoutEvent';
+import UserFineGroup from '../entity/fine/userFineGroup';
 
 export default class Database {
   public static async initialize(): Promise<Connection> {
@@ -94,8 +94,8 @@ export default class Database {
         PayoutRequest,
         PayoutRequestStatus,
         Fine,
-        FineGroup,
-        UserFineCollection,
+        FineHandoutEvent,
+        UserFineGroup,
         Transaction,
         SubTransaction,
         SubTransactionRow,

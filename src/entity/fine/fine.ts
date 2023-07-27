@@ -21,19 +21,19 @@ import User from '../user/user';
 import Transfer from '../transactions/transfer';
 import DineroTransformer from '../transformer/dinero-transformer';
 import { Dinero } from 'dinero.js';
-import FineGroup from './fineGroup';
-import UserFineCollection from './userFineCollection';
+import FineHandoutEvent from './fineHandoutEvent';
+import UserFineGroup from './userFineGroup';
 
 @Entity()
 @Tree('materialized-path')
 export default class Fine extends BaseEntity {
-  @ManyToOne(() => FineGroup, { nullable: false })
+  @ManyToOne(() => FineHandoutEvent, { nullable: false })
   @JoinColumn()
-  public fineGroup: FineGroup;
+  public fineGroup: FineHandoutEvent;
 
-  @ManyToOne(() => UserFineCollection, { nullable: false })
+  @ManyToOne(() => UserFineGroup, { nullable: false })
   @JoinColumn()
-  public userFineCollection: UserFineCollection;
+  public userFineCollection: UserFineGroup;
 
   @OneToOne(() => Transfer, { nullable: true })
   @JoinColumn()

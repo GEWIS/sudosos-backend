@@ -20,12 +20,12 @@ import BalanceService from './balance-service';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
 import dinero, { Dinero, DineroObject } from 'dinero.js';
 import { UserToFineResponse } from '../controller/response/fine-response';
-import FineGroup from '../entity/fine/fineGroup';
+import FineHandoutEvent from '../entity/fine/fineHandoutEvent';
 import Fine from '../entity/fine/fine';
 import TransferService from './transfer-service';
 import { DineroObjectResponse } from '../controller/response/dinero-response';
 import { DineroObjectRequest } from '../controller/request/dinero-request';
-import UserFineCollection from '../entity/fine/userFineCollection';
+import UserFineGroup from '../entity/fine/userFineGroup';
 
 export interface CalculateFinesParams {
   userTypes?: UserType[];
@@ -97,7 +97,7 @@ export default class DebtorService {
   public static async handOutFines({
     referenceDate, userIds,
   }: HandOutFinesParams): Promise<Fine[]> {
-    const previousFineGroup = (await FineGroup.find({
+    const previousFineGroup = (await FineHandoutEvent.find({
       order: { id: 'desc' },
       relations: ['fines', 'fines.userFineCollection'],
       take: 1,
@@ -111,16 +111,16 @@ export default class DebtorService {
     });
 
     // Create a new fine group to "connect" all these fines
-    const fineGroup = Object.assign(new FineGroup(), { referenceDate: date });
+    const fineGroup = Object.assign(new FineHandoutEvent(), { referenceDate: date });
     await fineGroup.save();
 
     // Create and save the fine information
     let fines: Fine[] = await Promise.all(balances.records.map(async (b) => {
       const previousFine = previousFineGroup?.fines.find((fine) => fine.userFineCollection.userId === b.id);
 
-      let userFineCollection: UserFineCollection;
+      let userFineCollection: UserFineGroup;
       if (previousFine == undefined) {
-        userFineCollection = Object.assign(new UserFineCollection(), {
+        userFineCollection = Object.assign(new UserFineGroup(), {
           userId: b.id,
         });
         userFineCollection = await userFineCollection.save();
