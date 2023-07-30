@@ -66,7 +66,7 @@ export default class BorrelkaartGroupController extends BaseController {
   /**
    * Returns all existing borrelkaart groups
    * @route GET /borrelkaartgroups
-   * @operationId getALlBorrelkaartgroups
+   * @operationId getAllBorrelkaartgroups
    * @group borrelkaartgroups - Operations of borrelkaart group controller
    * @security JWT
    * @param {integer} take.query - How many borrelkaart groups the endpoint should return
