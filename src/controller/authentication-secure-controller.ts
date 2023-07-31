@@ -62,6 +62,7 @@ export default class AuthenticationSecureController extends BaseController {
   /**
    * Get a new JWT token, lesser if the existing token is also lesser
    * @route get /authentication/refreshToken
+   * @operationId refreshToken
    * @group authenticate - Operations of the authentication controller
    * @security JWT
    * @returns {AuthenticationResponse.model} 200 - The created json web token.

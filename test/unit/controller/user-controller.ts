@@ -15,21 +15,21 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import express, { Application } from 'express';
-import chai, { expect, request } from 'chai';
-import { SwaggerSpecification } from 'swagger-model-validator';
-import { Connection, createQueryBuilder } from 'typeorm';
-import { json } from 'body-parser';
+import express, {Application} from 'express';
+import chai, {expect, request} from 'chai';
+import {SwaggerSpecification} from 'swagger-model-validator';
+import {Connection, createQueryBuilder} from 'typeorm';
+import {json} from 'body-parser';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
-import { describe } from 'mocha';
+import {describe} from 'mocha';
 import UserController from '../../../src/controller/user-controller';
-import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
+import User, {TermsOfServiceStatus, UserType} from '../../../src/entity/user/user';
 import Product from '../../../src/entity/product/product';
 import Transaction from '../../../src/entity/transactions/transaction';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Database from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
-import TokenMiddleware, { RequestWithToken } from '../../../src/middleware/token-middleware';
+import TokenMiddleware, {RequestWithToken} from '../../../src/middleware/token-middleware';
 import ProductCategory from '../../../src/entity/product/product-category';
 import Container from '../../../src/entity/container/container';
 import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
@@ -37,33 +37,31 @@ import ProductRevision from '../../../src/entity/product/product-revision';
 import ContainerRevision from '../../../src/entity/container/container-revision';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
 import seedDatabase from '../../seed';
-import { verifyUserResponse } from '../validators';
+import {verifyUserResponse} from '../validators';
 import RoleManager from '../../../src/rbac/role-manager';
-import { TransactionResponse } from '../../../src/controller/response/transaction-response';
-import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
-import { TransferResponse } from '../../../src/controller/response/transfer-response';
+import {TransactionResponse} from '../../../src/controller/response/transaction-response';
+import {defaultPagination, PaginationResult} from '../../../src/helpers/pagination';
+import {TransferResponse} from '../../../src/controller/response/transfer-response';
 import Transfer from '../../../src/entity/transactions/transfer';
 import MemberAuthenticator from '../../../src/entity/authenticator/member-authenticator';
-import { inUserContext, UserFactory } from '../../helpers/user-factory';
+import {inUserContext, UserFactory} from '../../helpers/user-factory';
 import UpdatePinRequest from '../../../src/controller/request/update-pin-request';
 import {
   DUPLICATE_TOKEN,
   INVALID_PIN,
   ZERO_LENGTH_STRING,
 } from '../../../src/controller/request/validators/validation-errors';
-import { PaginatedUserResponse, UserResponse } from '../../../src/controller/response/user-response';
+import {PaginatedUserResponse, UserResponse} from '../../../src/controller/response/user-response';
 import RoleResponse from '../../../src/controller/response/rbac/role-response';
-import {
-  FinancialMutationResponse,
-} from '../../../src/controller/response/financial-mutation-response';
+import {FinancialMutationResponse,} from '../../../src/controller/response/financial-mutation-response';
 import UpdateLocalRequest from '../../../src/controller/request/update-local-request';
-import { AcceptTosRequest } from '../../../src/controller/request/accept-tos-request';
+import {AcceptTosRequest} from '../../../src/controller/request/accept-tos-request';
 import UpdateUserRequest from '../../../src/controller/request/update-user-request';
 import StripeDeposit from '../../../src/entity/deposit/stripe-deposit';
-import { StripeDepositResponse } from '../../../src/controller/response/stripe-response';
-import { TransactionReportResponse } from '../../../src/controller/response/transaction-report-response';
-import { TransactionFilterParameters } from '../../../src/service/transaction-service';
-import { createTransactions } from '../service/invoice-service';
+import {StripeDepositResponse} from '../../../src/controller/response/stripe-response';
+import {TransactionReportResponse} from '../../../src/controller/response/transaction-report-response';
+import {TransactionFilterParameters} from '../../../src/service/transaction-service';
+import {createTransactions} from '../service/invoice-service';
 import UpdateNfcRequest from '../../../src/controller/request/update-nfc-request';
 
 chai.use(deepEqualInAnyOrder);
@@ -251,6 +249,19 @@ describe('UserController', (): void => {
   });
 
   describe('GET /users', () => {
+    async function queryUserBackend(searchQuery: string) {
+      const filteredUsers = (await User.find()).filter((user) => {
+        const fullName = `${user.firstName} ${user.lastName}`;
+        return (
+          user.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          user.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          user.email.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+      });
+      return filteredUsers;
+    }
+
     it('should return correct model', async () => {
       const res = await request(ctx.app)
         .get('/users')
@@ -309,6 +320,61 @@ describe('UserController', (): void => {
       expect(pagination.skip).to.equal(skip);
       expect(pagination.count).to.equal(activeUsers.length);
       expect(users.length).to.be.at.most(take);
+    });
+    it('should return correct user using search', async () => {
+      const searchQuery = 'Firstname1 Last';
+      const res = await request(ctx.app)
+        .get('/users')
+        .query({ search: searchQuery })
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+
+      const filteredUsers = await queryUserBackend(searchQuery);
+      expect(filteredUsers).length.to.gt(0);
+      const users = res.body.records as UserResponse[];
+      // eslint-disable-next-line no-underscore-dangle
+      const pagination = res.body._pagination as PaginationResult;
+      const spec = await Swagger.importSpecification();
+
+      users.forEach((user: UserResponse) => {
+        verifyUserResponse(spec, user);
+      });
+
+      const ids = users.map((u) => u.id);
+      filteredUsers.forEach((u) => {
+        expect(ids).to.includes(u.id);
+      });
+
+      expect(pagination.take).to.equal(defaultPagination());
+      expect(pagination.skip).to.equal(0);
+
+    });
+    it('should give HTTP 200 when correctly creating and searching for a user', async () => {
+      const user = {
+        firstName: 'Één bier',
+        lastName: 'is geen bier',
+        type: UserType.LOCAL_USER,
+        email: 'spam@gewis.nl',
+      };
+
+      // Create the user
+      const createUserRes = await request(ctx.app)
+        .post('/users')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(user);
+      expect(createUserRes.status).to.equal(201);
+
+      // Search for the user
+      const searchQuery = 'Één bier';
+      const searchRes = await request(ctx.app)
+        .get(`/users?search=${searchQuery}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(searchRes.status).to.equal(200);
+
+      const filteredUsers = await queryUserBackend(searchQuery);
+      console.error("found: ", filteredUsers);
+      expect(filteredUsers).length.to.be.gt(0);
+      expect(searchRes.body.records.length).to.equal(filteredUsers.length);
     });
   });
 
@@ -408,7 +474,7 @@ describe('UserController', (): void => {
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
       expect(ctx.specification.validateModel(
-        'User',
+        'UserResponse',
         res.body,
         false,
         true,
@@ -452,7 +518,7 @@ describe('UserController', (): void => {
         .set('Authorization', `Bearer ${ctx.organMemberToken}`);
       expect(res.status).to.equal(200);
       expect(ctx.specification.validateModel(
-        'User',
+        'UserResponse',
         res.body,
         false,
         true,
@@ -1647,6 +1713,42 @@ describe('UserController', (): void => {
       });
     });
   });
+  describe('DELETE /users/{id}/authenticator/nfc', () => {
+    it('should return an HTTP 200 if authorized', async () => {
+      await inUserContext((await UserFactory()).clone(1), async (user: User) => {
+        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
+
+        const updateNfcRequest: UpdateNfcRequest = {
+          nfcCode: 'toBeDeletedNfcRequest',
+        };
+        await request(ctx.app)
+          .put(`/users/${user.id}/authenticator/nfc`)
+          .set('Authorization', `Bearer ${userToken}`)
+          .send(updateNfcRequest);
+
+        const res = await request(ctx.app)
+          .delete(`/users/${user.id}/authenticator/nfc`)
+          .set('Authorization', `Bearer ${userToken}`);
+        expect(res.status).to.equal(200);
+      });
+    });
+    it('should return an 404 if the user does not exists', async () => {
+      const res = await request(ctx.app)
+        .delete(`/users/${(await User.count()) + 1}/authenticator/nfc`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(404);
+    });
+    it('should return an HTTP 403 if user has no nfc', async () => {
+      await inUserContext((await UserFactory()).clone(1), async (user: User) => {
+        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
+
+        const res = await request(ctx.app)
+          .delete(`/users/${user.id}/authenticator/nfc`)
+          .set('Authorization', `Bearer ${userToken}`);
+        expect(res.status).to.equal(403);
+      });
+    });
+  });
   describe('PUT /users/{id}/authenticator/local', () => {
     it('should return an HTTP 200 if authorized', async () => {
       await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
@@ -1704,7 +1806,7 @@ describe('UserController', (): void => {
           .send();
         expect(res.status).to.equal(200);
         expect(ctx.specification.validateModel(
-          'NfcAuthenticator',
+          'UpdateKeyResponse',
           res.body,
           false,
           true,

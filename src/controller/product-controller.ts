@@ -108,6 +108,7 @@ export default class ProductController extends BaseController {
   /**
    * Returns all existing products
    * @route GET /products
+   * @operationId getAllProducts
    * @group products - Operations of product controller
    * @security JWT
    * @param {integer} take.query - How many products the endpoint should return
@@ -143,6 +144,7 @@ export default class ProductController extends BaseController {
   /**
    * Create a new product.
    * @route POST /products
+   * @operationId createProduct
    * @group products - Operations of product controller
    * @param {CreateProductRequest.model} product.body.required - The product which should be created
    * @security JWT
@@ -178,6 +180,7 @@ export default class ProductController extends BaseController {
   /**
    * Update an existing product.
    * @route PATCH /products/{id}
+   * @operationId updateProduct
    * @group products - Operations of product controller
    * @param {integer} id.path.required - The id of the product which should be updated
    * @param {UpdateProductRequest.model} product.body.required - The product which should be updated
@@ -227,6 +230,7 @@ export default class ProductController extends BaseController {
   /**
    * Approve a product update.
    * @route POST /products/{id}/approve
+   * @operationId approveProduct
    * @param {integer} id.path.required - The id of the product update to approve
    * @group products - Operations of product controller
    * @security JWT
@@ -256,6 +260,7 @@ export default class ProductController extends BaseController {
   /**
    * Returns the requested product
    * @route GET /products/{id}
+   * @operationId getSingleProduct
    * @group products - Operations of products controller
    * @param {integer} id.path.required - The id of the product which should be returned
    * @security JWT
@@ -286,6 +291,7 @@ export default class ProductController extends BaseController {
   /**
    * Returns all updated products
    * @route GET /products/updated
+   * @operationId getUpdatedProducts
    * @group products - Operations of product controller
    * @security JWT
    * @param {integer} take.query - How many products the endpoint should return
@@ -321,6 +327,7 @@ export default class ProductController extends BaseController {
   /**
    * Returns the requested updated product
    * @route GET /products/{id}/update
+   * @operationId getUpdateProduct
    * @group products - Operations of products controller
    * @param {integer} id.path.required - The id of the product which should be returned
    * @security JWT
@@ -351,6 +358,7 @@ export default class ProductController extends BaseController {
   /**
    * Upload a new image for a product
    * @route POST /products/{id}/image
+   * @operationId updateProductImage
    * @group products - Operations of products controller
    * @consumes multipart/form-data
    * @param {integer} id.path.required - The id of the product which should be returned

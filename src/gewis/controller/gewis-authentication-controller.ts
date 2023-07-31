@@ -107,6 +107,7 @@ export default class GewisAuthenticationController extends BaseController {
     * This method verifies the validity of the gewisweb JWT token, and returns a SudoSOS
     * token if the GEWIS token is valid.
     * @route POST /authentication/gewisweb
+    * @operationId gewisWebAuthentication
     * @group authenticate - Operations of authentication controller
     * @param {GewiswebAuthenticationRequest.model} req.body.required - The mock login.
     * @returns {AuthenticationResponse.model} 200 - The created json web token.
@@ -168,6 +169,7 @@ export default class GewisAuthenticationController extends BaseController {
    * LDAP login and hand out token
    *    If user has never signed in before this also creates an GEWIS account.
    * @route POST /authentication/GEWIS/LDAP
+   * @operationId gewisLDAPAuthentication
    * @group authenticate - Operations of authentication controller
    * @param {AuthenticationLDAPRequest.model} req.body.required - The LDAP login.
    * @returns {AuthenticationResponse.model} 200 - The created json web token.
@@ -190,6 +192,7 @@ export default class GewisAuthenticationController extends BaseController {
   /**
    * PIN login and hand out token.
    * @route POST /authentication/GEWIS/pin
+   * @operationId gewisPinAuthentication
    * @group authenticate - Operations of authentication controller
    * @param {GEWISAuthenticationPinRequest.model} req.body.required - The PIN login.
    * @returns {AuthenticationResponse.model} 200 - The created json web token.

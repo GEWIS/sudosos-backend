@@ -85,11 +85,12 @@ export default class TransferController extends BaseController {
   /**
    * Returns all existing transfers
    * @route GET /transfers
+   * @operationId getAllTransfers
    * @group transfers - Operations of transfer controller
    * @security JWT
    * @param {integer} take.query - How many transfers the endpoint should return
    * @param {integer} skip.query - How many transfers should be skipped (for pagination)
-   * @returns {Array<TransferResponse.model>} 200 - All existing transfers
+   * @returns {Array.<TransferResponse>} 200 - All existing transfers
    * @returns {string} 500 - Internal server error
    */
   public async returnAllTransfers(req: RequestWithToken, res: Response): Promise<void> {
@@ -119,6 +120,7 @@ export default class TransferController extends BaseController {
   /**
    * Returns the requested transfer
    * @route GET /transfers/{id}
+   * @operationId getSingleTransfer
    * @group transfers - Operations of transfer controller
    * @param {integer} id.path.required - The id of the transfer which should be returned
    * @security JWT
@@ -147,6 +149,7 @@ export default class TransferController extends BaseController {
   /**
    * Post a new transfer.
    * @route POST /transfers
+   * @operationId createTransfer
    * @group transfers - Operations of transfer controller
    * @param {TransferRequest.model} transfer.body.required
    * - The transfer which should be created

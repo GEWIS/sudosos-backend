@@ -30,8 +30,8 @@ import { PaginationResult } from '../../helpers/pagination';
 export default interface BalanceResponse {
   id: number;
   amount: DineroObjectResponse;
-  lastTransactionId: number | null;
-  lastTransferId: number | null;
+  lastTransactionId?: number | null;
+  lastTransferId?: number | null;
 }
 
 /**

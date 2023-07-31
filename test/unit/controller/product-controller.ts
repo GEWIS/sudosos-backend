@@ -551,7 +551,7 @@ describe('ProductController', async (): Promise<void> => {
       expect(databaseProduct).to.exist;
 
       expect(ctx.specification.validateModel(
-        'ProductResponse',
+        'UpdatedProductResponse',
         res.body,
         false,
         true,
@@ -605,7 +605,7 @@ describe('ProductController', async (): Promise<void> => {
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
       expect(ctx.specification.validateModel(
-        'PaginatedProductResponse',
+        'PaginatedUpdatedProductResponse',
         res.body,
         false,
         true,
@@ -673,7 +673,7 @@ describe('ProductController', async (): Promise<void> => {
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
       expect(ctx.specification.validateModel(
-        'ProductResponse',
+        'UpdatedProductResponse',
         res.body,
         false,
         true,
