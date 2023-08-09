@@ -93,7 +93,7 @@ export default class BalanceController extends BaseController {
    * @param {string} date.query - Timestamp to get balances for
    * @param {integer} minBalance.query - Minimum balance
    * @param {integer} maxBalance.query - Maximum balance
-   * @param {Array<integer>} userTypes.query - User types (strings, not numbers)
+   * @param {Array<string>} userTypes.query - User types (strings, not numbers)
    * @param {enum} orderBy.query - Column to order balance by - eg: id,amount
    * @param {enum} orderDirection.query - Order direction - eg: asc,desc,ASC,DESC
    * @param {integer} take.query - How many transactions the endpoint should return

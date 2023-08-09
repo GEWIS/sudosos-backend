@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { Column, Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany } from 'typeorm';
 import User from '../user/user';
 import Fine from './fine';
 import BaseEntity from '../base-entity';
@@ -25,7 +25,7 @@ export default class UserFineGroup extends BaseEntity {
   @Column({ type: 'integer' })
   public readonly userId: number;
 
-  @OneToOne(() => User, { nullable: false })
+  @ManyToOne(() => User, { nullable: false })
   @JoinColumn({ name: 'userId' })
   public readonly user: User;
 

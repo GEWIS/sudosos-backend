@@ -19,14 +19,21 @@ import User, { UserType } from '../entity/user/user';
 import BalanceService from './balance-service';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
 import dinero, { Dinero, DineroObject } from 'dinero.js';
-import { UserToFineResponse } from '../controller/response/fine-response';
+import {
+  BaseFineHandoutEventResponse, FineHandoutEventResponse,
+  FineResponse,
+  PaginatedFineHandoutEventResponse,
+  UserToFineResponse,
+} from '../controller/response/debtor-response';
 import FineHandoutEvent from '../entity/fine/fineHandoutEvent';
 import Fine from '../entity/fine/fine';
 import TransferService from './transfer-service';
 import { DineroObjectResponse } from '../controller/response/dinero-response';
 import { DineroObjectRequest } from '../controller/request/dinero-request';
 import UserFineGroup from '../entity/fine/userFineGroup';
-import { id } from 'date-fns/locale';
+import { PaginationParameters } from '../helpers/pagination';
+import { parseUserToBaseResponse } from '../helpers/revision-to-response';
+import { getConnection } from 'typeorm';
 
 export interface CalculateFinesParams {
   userTypes?: UserType[];
@@ -56,6 +63,68 @@ function calculateFine(balance: DineroObject | DineroObjectResponse | DineroObje
 }
 
 export default class DebtorService {
+  static asFineResponse(fine: Fine): FineResponse {
+    return {
+      id: fine.id,
+      createdAt: fine.createdAt.toISOString(),
+      updatedAt: fine.updatedAt.toISOString(),
+      user: parseUserToBaseResponse(fine.userFineGroup.user, true),
+      amount: {
+        amount: fine.amount.getAmount(),
+        precision: fine.amount.getPrecision(),
+        currency: fine.amount.getCurrency(),
+      },
+    };
+  }
+
+  static asBaseFineHandoutEventResponse(e: FineHandoutEvent): BaseFineHandoutEventResponse {
+    return {
+      id: e.id,
+      createdAt: e.createdAt.toISOString(),
+      updatedAt: e.updatedAt.toISOString(),
+      referenceDate: e.referenceDate.toISOString(),
+    };
+  }
+
+  static asFineHandoutEventResponse(e: FineHandoutEvent): FineHandoutEventResponse {
+    return {
+      ...this.asBaseFineHandoutEventResponse(e),
+      fines: e.fines.map((fine) => this.asFineResponse(fine)),
+    };
+  }
+
+  /**
+   * Get a list of all fine handout events in chronological order
+   */
+  public static async getFineHandoutEvents(pagination: PaginationParameters = {}): Promise<PaginatedFineHandoutEventResponse> {
+    const { take, skip } = pagination;
+
+    const events = await FineHandoutEvent.find({ take, skip });
+    const count = await FineHandoutEvent.count();
+
+    const records = events.map((e) => DebtorService.asBaseFineHandoutEventResponse(e));
+
+    return {
+      _pagination: {
+        take, skip, count,
+      },
+      records,
+    };
+  }
+
+  /**
+   * Return the fine handout event with the given id. Includes all its fines with the corresponding user
+   */
+  public static async getSingleFineHandoutEvent(id: number): Promise<FineHandoutEventResponse> {
+    const fineHandoutEvent = await FineHandoutEvent.findOne({
+      where: { id },
+      relations: ['fines', 'fines.userFineGroup', 'fines.userFineGroup.user'],
+      order: { createdAt: 'DESC' },
+    });
+
+    return DebtorService.asFineHandoutEventResponse(fineHandoutEvent);
+  }
+
   /**
    * Return all users that had at most -5 euros balance both now and on the reference date
    * For all these users, also return their fine based on the reference date.
@@ -97,7 +166,7 @@ export default class DebtorService {
    */
   public static async handOutFines({
     referenceDate, userIds,
-  }: HandOutFinesParams): Promise<Fine[]> {
+  }: HandOutFinesParams): Promise<FineHandoutEventResponse> {
     const previousFineGroup = (await FineHandoutEvent.find({
       order: { id: 'desc' },
       relations: ['fines', 'fines.userFineGroup'],
@@ -111,49 +180,54 @@ export default class DebtorService {
       ids: userIds,
     });
 
-    // Create a new fine group to "connect" all these fines
-    const fineHandoutEvent = Object.assign(new FineHandoutEvent(), { referenceDate: date });
-    await fineHandoutEvent.save();
+    const { fines: fines1, fineHandoutEvent: fineHandoutEvent1 } = await getConnection().transaction(async (manager) => {
+      // Create a new fine group to "connect" all these fines
+      const fineHandoutEvent = Object.assign(new FineHandoutEvent(), { referenceDate: date });
+      await manager.save(fineHandoutEvent);
 
-    // Create and save the fine information
-    let fines: Fine[] = await Promise.all(balances.records.map(async (b) => {
-      const previousFine = previousFineGroup?.fines.find((fine) => fine.userFineGroup.userId === b.id);
-      const user = await User.findOne({ where: { id: b.id }, relations: ['currentFines'] });
+      // Create and save the fine information
+      let fines: Fine[] = await Promise.all(balances.records.map(async (b) => {
+        const previousFine = previousFineGroup?.fines.find((fine) => fine.userFineGroup.userId === b.id);
+        const user = await manager.findOne(User, { where: { id: b.id }, relations: ['currentFines', 'currentFines.user'] });
+        const amount = calculateFine(b.amount);
 
-      let userFineGroup = user.currentFines;
-      if (userFineGroup == undefined) {
-        userFineGroup = Object.assign(new UserFineGroup(), {
-          userId: b.id,
+        let userFineGroup = user.currentFines;
+        if (userFineGroup == undefined) {
+          userFineGroup = Object.assign(new UserFineGroup(), {
+            userId: b.id,
+            user: user,
+          });
+          userFineGroup = await userFineGroup.save();
+          if (amount.getAmount() > 0) {
+            user.currentFines = userFineGroup;
+            await manager.save(user);
+          }
+        }
+
+        const transfer = await TransferService.createTransfer({
+          amount: amount.toObject(),
+          fromId: user.id,
+          description: `Fine for balance of ${dinero({ amount: b.amount.amount }).toFormat()} on ${date.toLocaleDateString()}.`,
+          toId: undefined,
         });
-        userFineGroup = await userFineGroup.save();
-        user.currentFines = userFineGroup;
-        await user.save();
-      }
 
-      return Object.assign(new Fine(), {
-        fineHandoutEvent,
-        userFineGroup,
-        amount: calculateFine(b.amount),
-        previousFine,
-      });
-    }));
-    await Fine.save(fines);
+        return Object.assign(new Fine(), {
+          fineHandoutEvent,
+          userFineGroup,
+          amount: calculateFine(b.amount),
+          previousFine,
+          transfer,
+        });
+      }));
+      return { fines: await manager.save(fines), fineHandoutEvent };
+    });
 
-    // Create a fine transfer
-    fines = await Promise.all(fines.map(async (fine, i): Promise<Fine> => {
-      fine.transfer = await TransferService.createTransfer({
-        amount: {
-          amount: fine.amount.getAmount(),
-          precision: fine.amount.getPrecision(),
-          currency: fine.amount.getCurrency(),
-        },
-        fromId: fine.userFineGroup.userId,
-        description: `Fine for balance of ${dinero({ amount: balances.records[i].amount.amount }).toFormat()} on ${date.toLocaleDateString()}.`,
-        toId: undefined,
-      });
-      return fine.save();
-    }));
-
-    return fines;
+    return {
+      id: fineHandoutEvent1.id,
+      createdAt: fineHandoutEvent1.createdAt.toISOString(),
+      updatedAt: fineHandoutEvent1.updatedAt.toISOString(),
+      referenceDate: fineHandoutEvent1.referenceDate.toISOString(),
+      fines: fines1.map((f) => this.asFineResponse(f)),
+    };
   }
 }

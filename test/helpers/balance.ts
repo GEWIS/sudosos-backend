@@ -97,3 +97,8 @@ export function calculateBalance(user: User, transactions: Transaction[], subTra
       + valueTransfersOutgoing + valueTransfersIncoming),
   } as Balance;
 }
+
+export function calculateFine(balance: number): number {
+  // Fine is 20%, rounded down to whole euros with a maximum of 5 euros.
+  return Math.max(0, Math.min(Math.floor(balance * -0.2 / 100), 5) * 100);
+}

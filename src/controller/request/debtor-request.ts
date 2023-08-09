@@ -15,9 +15,13 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { DineroObjectResponse } from './dinero-response';
 
-export interface UserToFineResponse {
-  id: number;
-  amount: DineroObjectResponse;
+/**
+ * @typedef HandoutFinesRequest
+ * @property {Array<integer>} userIds.required - Users to fine. If a user is not eligible for a fine, a fine of 0,00 will be handed out.
+ * @property {string} referenceDate - Reference date on to calculate balance for (and "now")
+ */
+export interface HandoutFinesRequest {
+  userIds: number[];
+  referenceDate?: string;
 }

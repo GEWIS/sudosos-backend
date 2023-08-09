@@ -1510,7 +1510,7 @@ export async function seedSingleFines(users: User[], transactions: Transaction[]
       fromId: u.id,
       amount,
     } as Transfer);
-    return transfer.save().then((t) => {
+    return transfer.save().then(async (t) => {
       fineTransfers.push(t);
       const f = Object.assign(new Fine(), {
         fineHandoutEvent,
@@ -1522,7 +1522,12 @@ export async function seedSingleFines(users: User[], transactions: Transaction[]
     });
   }));
 
-  return { fines, fineTransfers, fineHandoutEvent, userFineGroups: Array.from(userFineGroupMap.values()) };
+  return {
+    fines: fines.filter((f) => f !== undefined),
+    fineTransfers,
+    fineHandoutEvent,
+    userFineGroups: Array.from(userFineGroupMap.values()),
+  };
 }
 
 /**
@@ -1536,19 +1541,26 @@ export async function seedFines(users: User[], transactions: Transaction[], tran
     fines: fines1,
     fineTransfers: fineTransfers1,
     userFineGroups: userFineGroups1,
+    fineHandoutEvent: fineHandoutEvent1,
   } = await seedSingleFines(users, transactions, transfers, [], new Date('2021-01-01'));
 
   const {
     fines: fines2,
     fineTransfers: fineTransfers2,
     userFineGroups: userFineGroups2,
+    fineHandoutEvent: fineHandoutEvent2,
   } = await seedSingleFines(users, transactions, [...transfers, ...fineTransfers1], userFineGroups1);
 
   // Remove duplicates
   const userFineGroups = [...userFineGroups1, ...userFineGroups2]
     .filter((g, i, groups) => groups.findIndex((g2) => g2.id === g.id) === i);
 
-  return { fines: [...fines1, ...fines2], fineTransfers: [...fineTransfers1, ...fineTransfers2], userFineGroups };
+  return {
+    fines: [...fines1, ...fines2],
+    fineTransfers: [...fineTransfers1, ...fineTransfers2],
+    userFineGroups,
+    fineHandoutEvents: [fineHandoutEvent1, fineHandoutEvent2],
+  };
 }
 
 export async function seedPayoutRequests(users: User[]): Promise<{

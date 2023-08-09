@@ -38,7 +38,7 @@ import RoleManager from '../../../src/rbac/role-manager';
 import BalanceController from '../../../src/controller/balance-controller';
 import Transfer from '../../../src/entity/transactions/transfer';
 import BalanceResponse, { PaginatedBalanceResponse } from '../../../src/controller/response/balance-response';
-import { calculateBalance } from '../service/balance-service';
+import { calculateBalance } from '../../helpers/balance';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import { OrderingDirection } from '../../../src/helpers/ordering';
 import { PaginationResult } from '../../../src/helpers/pagination';
