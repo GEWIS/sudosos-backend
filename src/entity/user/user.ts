@@ -17,9 +17,9 @@
  */
 import {
   Column, Entity, JoinColumn, OneToOne,
-} from "typeorm";
+} from 'typeorm';
 import BaseEntity from '../base-entity';
-import UserFineGroup from "../fine/userFineGroup";
+import UserFineGroup from '../fine/userFineGroup';
 
 export enum TermsOfServiceStatus {
   ACCEPTED = 'ACCEPTED',
@@ -112,6 +112,7 @@ export default class User extends BaseEntity {
 
   @OneToOne(() => UserFineGroup, {
     nullable: true,
+    onDelete: 'SET NULL',
   })
   @JoinColumn()
   public currentFines?: UserFineGroup | null;

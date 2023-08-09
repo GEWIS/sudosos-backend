@@ -29,7 +29,7 @@ import {
   seedVatGroups,
 } from '../../seed';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
-import { calculateBalance } from '../service/balance-service';
+import { calculateBalance } from '../../helpers/balance';
 import DebtorService from '../../../src/service/debtor-service';
 import { expect } from 'chai';
 import { addTransfer } from '../../helpers/transaction-helpers';

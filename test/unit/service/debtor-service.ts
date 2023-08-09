@@ -21,7 +21,7 @@ import ProductRevision from '../../../src/entity/product/product-revision';
 import ContainerRevision from '../../../src/entity/container/container-revision';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
 import {
-  seedContainers,
+  seedContainers, seedFines,
   seedPointsOfSale,
   seedProductCategories,
   seedProducts,
@@ -35,13 +35,13 @@ import Transaction from '../../../src/entity/transactions/transaction';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import Transfer from '../../../src/entity/transactions/transfer';
 import DebtorService from '../../../src/service/debtor-service';
-import { calculateBalance } from './balance-service';
 import { expect } from 'chai';
 import { addTransfer } from '../../helpers/transaction-helpers';
 import BalanceService from '../../../src/service/balance-service';
 import Fine from '../../../src/entity/fine/fine';
 import FineHandoutEvent from '../../../src/entity/fine/fineHandoutEvent';
 import UserFineGroup from '../../../src/entity/fine/userFineGroup';
+import { calculateBalance } from '../../helpers/balance';
 
 function calculateFine(balance: number): number {
   // Fine is 20%, rounded down to whole euros with a maximum of 5 euros.
@@ -58,9 +58,11 @@ describe('DebtorService', (): void => {
     transactions: Transaction[],
     subTransactions: SubTransaction[],
     transfers: Transfer[],
+    transfersInclFines: Transfer[],
+    fines: Fine[],
   };
 
-  beforeEach(async () => {
+  before(async () => {
     const connection = await Database.initialize();
 
     const users = await seedUsers();
@@ -73,6 +75,7 @@ describe('DebtorService', (): void => {
     const transfers = await seedTransfers(users, new Date('2020-02-12'), new Date('2021-11-30'));
     const subTransactions: SubTransaction[] = Array.prototype.concat(...transactions
       .map((t) => t.subTransactions));
+    const { fines, fineTransfers } = await seedFines(users, transactions, transfers);
 
     ctx = {
       connection,
@@ -83,10 +86,12 @@ describe('DebtorService', (): void => {
       transactions,
       subTransactions,
       transfers,
+      transfersInclFines: transfers.concat(fineTransfers),
+      fines,
     };
   });
 
-  afterEach(async () => {
+  after(async () => {
     await ctx.connection.dropDatabase();
     await ctx.connection.destroy();
   });
@@ -95,7 +100,7 @@ describe('DebtorService', (): void => {
     it('should return everyone who should get fined', async () => {
       const calculatedFines = await DebtorService.calculateFinesOnDate({});
       const usersToFine = ctx.users
-        .map((u) => calculateBalance(u, ctx.transactions, ctx.subTransactions, ctx.transfers))
+        .map((u) => calculateBalance(u, ctx.transactions, ctx.subTransactions, ctx.transfersInclFines))
         .filter((b) => b.amount.getAmount() <= -500);
       expect(calculatedFines.length).to.equal(usersToFine.length);
 
@@ -113,7 +118,7 @@ describe('DebtorService', (): void => {
       });
       const usersToFine = ctx.users
         .filter((u) => userTypes.includes(u.type))
-        .map((u) => calculateBalance(u, ctx.transactions, ctx.subTransactions, ctx.transfers))
+        .map((u) => calculateBalance(u, ctx.transactions, ctx.subTransactions, ctx.transfersInclFines))
         .filter((b) => b.amount.getAmount() <= -500);
       expect(calculatedFines.length).to.equal(usersToFine.length);
 
@@ -131,9 +136,9 @@ describe('DebtorService', (): void => {
         referenceDate,
       });
       const usersToFine = ctx.users
-        .map((u) => calculateBalance(u, ctx.transactions, ctx.subTransactions, ctx.transfers, referenceDate))
+        .map((u) => calculateBalance(u, ctx.transactions, ctx.subTransactions, ctx.transfersInclFines, referenceDate))
         .filter((b) => b.amount.getAmount() <= -500)
-        .filter((b) => calculateBalance(b.user, ctx.transactions, ctx.subTransactions, ctx.transfers).amount.getAmount() <= -500);
+        .filter((b) => calculateBalance(b.user, ctx.transactions, ctx.subTransactions, ctx.transfersInclFines).amount.getAmount() <= -500);
       expect(calculatedFines.length).to.equal(usersToFine.length);
 
       calculatedFines.forEach((f) => {
@@ -151,7 +156,7 @@ describe('DebtorService', (): void => {
         acceptedToS: TermsOfServiceStatus.ACCEPTED,
       });
       newUser = await newUser.save();
-      const transfer = await addTransfer(newUser, ctx.users, false, undefined, 500);
+      const { transfer } = await addTransfer(newUser, ctx.users, false, undefined, 500);
 
       const balance = await BalanceService.getBalance(newUser.id);
       expect(balance.amount.amount).to.equal(-500);
@@ -160,18 +165,42 @@ describe('DebtorService', (): void => {
       const fineForUser = fines.find((f) => f.id === newUser.id);
       expect(fineForUser).to.not.be.undefined;
       expect(fineForUser.amount.amount).to.equal(100);
+
+      await Transfer.remove(transfer);
+      await User.remove(newUser);
     });
   });
 
   describe('handOutFines', async () => {
+    async function clearFines() {
+      const fines = await Fine.find({ relations: ['transfer'] });
+      const fineTransfers = fines.map((f) => f.transfer);
+
+      await Transfer.remove(fineTransfers);
+      await Fine.clear();
+      await FineHandoutEvent.clear();
+      await UserFineGroup.clear();
+    }
+
+    before(async () => {
+      await clearFines();
+      const fineTransfers = (await Transfer.find({ relations: ['fine'] })).filter((t) => t.fine != null);
+      expect(fineTransfers.length).to.equal(0);
+    });
+
+    afterEach(async () => {
+      await clearFines();
+    });
+
     async function checkCorrectNewBalance(fines: Fine[]) {
       const balances = await BalanceService.getBalances({});
-      balances.records.forEach((b) => {
+      balances.records.map((b) => {
         const user = ctx.users.find((u) => u.id === b.id);
         expect(user).to.not.be.undefined;
         const fine = fines.find((f) => f.userFineGroup.userId === b.id);
 
         let balance = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers).amount.getAmount();
+
         if (fine) balance = balance - fine.amount.getAmount();
         expect(b.amount.amount).to.equal(balance);
       });
