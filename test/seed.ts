@@ -55,6 +55,10 @@ import VatGroup from '../src/entity/vat-group';
 import { VatGroupRequest } from '../src/controller/request/vat-group-request';
 import HashBasedAuthenticationMethod from '../src/entity/authenticator/hash-based-authentication-method';
 import LocalAuthenticator from '../src/entity/authenticator/local-authenticator';
+import UserFineGroup from '../src/entity/fine/userFineGroup';
+import FineHandoutEvent from '../src/entity/fine/fineHandoutEvent';
+import Fine from '../src/entity/fine/fine';
+import { calculateBalance } from './helpers/balance';
 
 /**
  * Defines InvoiceUsers objects for the given Users
@@ -1458,6 +1462,95 @@ export async function seedStripeDeposits(users: User[]): Promise<{
   };
 }
 
+/**
+ * Handout fines for all eligible users on the given reference date. Reuse the given user fine groups if
+ * @param users
+ * @param transactions
+ * @param transfers
+ * @param userFineGroups
+ * @param firstReferenceDate
+ */
+export async function seedSingleFines(users: User[], transactions: Transaction[], transfers: Transfer[], userFineGroups: UserFineGroup[] = [], firstReferenceDate: Date = new Date()) {
+  const subTransactions: SubTransaction[] = Array.prototype.concat(...transactions
+    .map((t) => t.subTransactions));
+  // Get all users that are in debt and should get fined
+  const debtors = users.filter((u) =>
+    calculateBalance(u, transactions, subTransactions, transfers, firstReferenceDate).amount.getAmount() < 500);
+
+  // Create a map from users to userFineGroups and initialize it with the existing userFineGroups
+  const userFineGroupMap = new Map<User, UserFineGroup>();
+  userFineGroups.forEach((g) => userFineGroupMap.set(g.user, g));
+
+  let i = 0;
+
+  const fineHandoutEvent = Object.assign(new FineHandoutEvent(), {
+    referenceDate: firstReferenceDate,
+  } as FineHandoutEvent);
+  await fineHandoutEvent.save();
+
+  const fineTransfers: Transfer[] = [];
+  const fines = await Promise.all(debtors.map(async (u) => {
+    i++;
+    if (i % 2 === 0) return;
+
+    let userFineGroup = userFineGroupMap.get(u);
+    if (userFineGroup === undefined) {
+      userFineGroup = Object.assign(new UserFineGroup(), {
+        user: u,
+        userId: u.id,
+      } as UserFineGroup);
+      await userFineGroup.save();
+      userFineGroupMap.set(u, userFineGroup);
+    }
+
+    // Fine everyone 5 euros
+    const amount = dinero({ amount: 500 });
+    const transfer = Object.assign(new Transfer(), {
+      from: u,
+      fromId: u.id,
+      amount,
+    } as Transfer);
+    return transfer.save().then((t) => {
+      fineTransfers.push(t);
+      const f = Object.assign(new Fine(), {
+        fineHandoutEvent,
+        userFineGroup,
+        transfer: t,
+        amount,
+      } as Fine);
+      return f.save();
+    });
+  }));
+
+  return { fines, fineTransfers, fineHandoutEvent, userFineGroups: Array.from(userFineGroupMap.values()) };
+}
+
+/**
+ * Add two fineHandoutEvents to the database, one on 2021-01-01 and the other at the current time.
+ * @param users
+ * @param transactions
+ * @param transfers
+ */
+export async function seedFines(users: User[], transactions: Transaction[], transfers: Transfer[]) {
+  const {
+    fines: fines1,
+    fineTransfers: fineTransfers1,
+    userFineGroups: userFineGroups1,
+  } = await seedSingleFines(users, transactions, transfers, [], new Date('2021-01-01'));
+
+  const {
+    fines: fines2,
+    fineTransfers: fineTransfers2,
+    userFineGroups: userFineGroups2,
+  } = await seedSingleFines(users, transactions, [...transfers, ...fineTransfers1], userFineGroups1);
+
+  // Remove duplicates
+  const userFineGroups = [...userFineGroups1, ...userFineGroups2]
+    .filter((g, i, groups) => groups.findIndex((g2) => g2.id === g.id) === i);
+
+  return { fines: [...fines1, ...fines2], fineTransfers: [...fineTransfers1, ...fineTransfers2], userFineGroups };
+}
+
 export async function seedPayoutRequests(users: User[]): Promise<{
   payoutRequests: PayoutRequest[], payoutRequestTransfers: Transfer[],
 }> {
@@ -1650,6 +1743,7 @@ export interface DatabaseContent {
   updatedPointsOfSale: UpdatedPointOfSale[],
   transactions: Transaction[],
   transfers: Transfer[],
+  fines: Fine[],
   payoutRequests: PayoutRequest[],
   stripeDeposits: StripeDeposit[],
   invoices: Invoice[],
@@ -1677,6 +1771,7 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
   );
   const { transactions } = await seedTransactions(users, pointOfSaleRevisions);
   const transfers = await seedTransfers(users);
+  const { fines, fineTransfers } = await seedFines(users, transactions, transfers);
   const { payoutRequests, payoutRequestTransfers } = await seedPayoutRequests(users);
   const { invoices, invoiceTransfers } = await seedInvoices(users, transactions);
   const { stripeDeposits, stripeDepositTransfers } = await seedStripeDeposits(users);
@@ -1698,7 +1793,8 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
     transactions,
     stripeDeposits,
     invoices,
-    transfers: transfers.concat(payoutRequestTransfers).concat(invoiceTransfers).concat(stripeDepositTransfers),
+    transfers: transfers.concat(fineTransfers).concat(payoutRequestTransfers).concat(invoiceTransfers).concat(stripeDepositTransfers),
+    fines,
     payoutRequests,
     banners,
     gewisUsers,

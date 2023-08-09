@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { Column, Entity, JoinColumn, ManyToOne, OneToOne, Tree, TreeParent } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
 import BaseEntity from '../base-entity';
 import Transfer from '../transactions/transfer';
 import DineroTransformer from '../transformer/dinero-transformer';
@@ -24,7 +24,6 @@ import FineHandoutEvent from './fineHandoutEvent';
 import UserFineGroup from './userFineGroup';
 
 @Entity()
-@Tree('materialized-path')
 export default class Fine extends BaseEntity {
   @ManyToOne(() => FineHandoutEvent, { nullable: false })
   @JoinColumn()
@@ -43,19 +42,4 @@ export default class Fine extends BaseEntity {
     transformer: DineroTransformer.Instance,
   })
   public amount: Dinero;
-
-  @TreeParent()
-  public previousFine: Fine | null;
-
-  /**
-   * The number of the fine that this user has received (in sequence)
-   * So, if the user has received a fine because he was in debt and
-   * is going to receive another fine, this index will be "2". If he pays
-   * off his debts, any new fines will start with "1" again.
-   *
-   * Could be removed because of FineGroups, but caching this value makes
-   * calculating new fines much, much easier
-   */
-  // @Column({ type: 'integer' })
-  // public fineIndex: number;
 }
