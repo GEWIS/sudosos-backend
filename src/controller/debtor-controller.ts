@@ -176,7 +176,7 @@ export default class DebtorController extends BaseController {
       const users = await User.find({ where: { id: In(body.userIds) } });
       if (users.length !== body.userIds.length) throw new Error('userIds is not a valid array of user IDs');
 
-      if (body.referenceDate !== undefined && typeof body.referenceDate === 'string') {
+      if (body.referenceDate !== undefined) {
         referenceDate = new Date(body.referenceDate);
         if (Number.isNaN(referenceDate.getTime())) throw new Error('referenceDate is not a valid date');
       }

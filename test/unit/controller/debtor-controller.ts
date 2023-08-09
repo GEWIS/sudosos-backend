@@ -51,7 +51,6 @@ import {
 } from '../../../src/controller/response/debtor-response';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import { calculateBalance, calculateFine } from '../../helpers/balance';
-import DebtorService from '../../../src/service/debtor-service';
 
 describe('DebtorController', () => {
   let ctx: {
@@ -168,7 +167,7 @@ describe('DebtorController', () => {
   // close database connection
   after(async () => {
     await ctx.connection.dropDatabase();
-    await ctx.connection.close();
+    await ctx.connection.destroy();
   });
 
   describe('GET /fines', () => {
@@ -365,7 +364,32 @@ describe('DebtorController', () => {
         .send({ userIds: ['WieDitLeestTrektBak'] });
       expect(res.status).to.equal(400);
     });
-    it('should return 200 and empty list of fines if no userIds given', async () => {
+    it('should return fines based on reference date', async () => {
+      const referenceDate = new Date('2021-02-12');
+      const res = await request(ctx.app)
+        .post('/fines/handout')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ userIds: ctx.users.map((u) => u.id), referenceDate });
+      expect(res.status).to.equal(200);
+
+      const fineHandoutEventResponse = res.body as FineHandoutEventResponse;
+      expect(fineHandoutEventResponse.referenceDate).to.equal(referenceDate.toISOString());
+    });
+    it('should return 400 if invalid reference date', async () => {
+      const res = await request(ctx.app)
+        .post('/fines/handout')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ userIds: ctx.users.map((u) => u.id), referenceDate: 'InvalidDate' });
+      expect(res.status).to.equal(400);
+    });
+    it('should return 400 if reference date is a list', async () => {
+      const res = await request(ctx.app)
+        .post('/fines/handout')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ userIds: ctx.users.map((u) => u.id), referenceDate: ['InvalidDate'] });
+      expect(res.status).to.equal(400);
+    });
+    it('should return empty list of fines if no userIds given', async () => {
       const res = await request(ctx.app)
         .post('/fines/handout')
         .set('Authorization', `Bearer ${ctx.adminToken}`)

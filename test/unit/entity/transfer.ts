@@ -35,6 +35,7 @@ import { expect } from 'chai';
 import { addTransfer } from '../../helpers/transaction-helpers';
 import BalanceService from '../../../src/service/balance-service';
 import dinero from 'dinero.js';
+import Fine from '../../../src/entity/fine/fine';
 
 describe('transfer', (): void => {
   let ctx: {
@@ -70,6 +71,11 @@ describe('transfer', (): void => {
     };
   });
 
+  after(async () => {
+    await ctx.connection.dropDatabase();
+    await ctx.connection.destroy();
+  });
+
   describe('validateDebtPaid', () => {
     it('should set currentFines to null when debt is paid', async () => {
       const user = ctx.usersInDebt[0];
@@ -78,8 +84,11 @@ describe('transfer', (): void => {
       const debt = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers).amount;
       expect((await BalanceService.getBalance(user.id)).amount.amount).to.equal(debt.getAmount());
 
-      const fines = await DebtorService.handOutFines({ userIds: [user.id] });
-      const fine = fines[0];
+      const { fines } = await DebtorService.handOutFines({ userIds: [user.id] });
+      const fine = await Fine.findOne({
+        where: { id: fines[0].id },
+        relations: ['userFineGroup'],
+      });
       expect(fine.userFineGroup.userId).to.equal(user.id);
       // Sanity check
 
@@ -105,8 +114,11 @@ describe('transfer', (): void => {
       const debt = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers).amount;
       expect((await BalanceService.getBalance(user.id)).amount.amount).to.equal(debt.getAmount());
 
-      const fines = await DebtorService.handOutFines({ userIds: [user.id] });
-      const fine = fines[0];
+      const { fines } = await DebtorService.handOutFines({ userIds: [user.id] });
+      const fine = await Fine.findOne({
+        where: { id: fines[0].id },
+        relations: ['userFineGroup'],
+      });
       expect(fine.userFineGroup.userId).to.equal(user.id);
       // Sanity check
 
@@ -134,8 +146,11 @@ describe('transfer', (): void => {
       const debt = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers).amount;
       expect((await BalanceService.getBalance(user.id)).amount.amount).to.equal(debt.getAmount());
 
-      const fines = await DebtorService.handOutFines({ userIds: [user.id] });
-      const fine = fines[0];
+      const { fines } = await DebtorService.handOutFines({ userIds: [user.id] });
+      const fine = await Fine.findOne({
+        where: { id: fines[0].id },
+        relations: ['userFineGroup'],
+      });
       expect(fine.userFineGroup.userId).to.equal(user.id);
       // Sanity check
 
