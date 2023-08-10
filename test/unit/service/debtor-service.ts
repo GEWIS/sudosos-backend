@@ -43,6 +43,8 @@ import FineHandoutEvent from '../../../src/entity/fine/fineHandoutEvent';
 import UserFineGroup from '../../../src/entity/fine/userFineGroup';
 import { calculateBalance, calculateFine } from '../../helpers/balance';
 import { FineHandoutEventResponse } from '../../../src/controller/response/debtor-response';
+import sinon from 'sinon';
+import nodemailer, { Transporter } from 'nodemailer';
 
 describe('DebtorService', (): void => {
   let ctx: {
@@ -58,6 +60,13 @@ describe('DebtorService', (): void => {
     fines: Fine[],
     userFineGroups: UserFineGroup[],
   };
+
+  const sandbox = sinon.createSandbox();
+
+  const sendMailFake = sandbox.spy();
+  sandbox.stub(nodemailer, 'createTransport').returns({
+    sendMail: sendMailFake,
+  } as any as Transporter);
 
   before(async () => {
     const connection = await Database.initialize();
@@ -92,6 +101,10 @@ describe('DebtorService', (): void => {
   after(async () => {
     await ctx.connection.dropDatabase();
     await ctx.connection.destroy();
+  });
+
+  afterEach(() => {
+    sendMailFake.resetHistory();
   });
 
   describe('calculateFinesOnDate', () => {
@@ -403,6 +416,16 @@ describe('DebtorService', (): void => {
       expect(calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers).amount.getAmount())
         .to.be.greaterThanOrEqual(0);
       expect(dbUser.currentFines).to.be.null;
+    });
+    it('should correctly send email', async () => {
+      const user = ctx.users[0];
+      expect(user).to.not.be.undefined;
+
+      await DebtorService.handOutFines({
+        userIds: [user.id],
+      });
+
+      expect(sendMailFake).to.be.calledOnce;
     });
   });
 });

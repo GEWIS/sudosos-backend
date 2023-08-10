@@ -35,6 +35,9 @@ import { PaginationParameters } from '../helpers/pagination';
 import { parseUserToBaseResponse } from '../helpers/revision-to-response';
 import { getConnection } from 'typeorm';
 import Transfer from '../entity/transactions/transfer';
+import Mailer from '../mailer';
+import UserGotFined from '../mailer/templates/user-got-fined';
+import MailTemplate from '../mailer/templates/mail-template';
 
 export interface CalculateFinesParams {
   userTypes?: UserType[];
@@ -181,15 +184,17 @@ export default class DebtorService {
       ids: userIds,
     });
 
-    const { fines: fines1, fineHandoutEvent: fineHandoutEvent1 } = await getConnection().transaction(async (manager) => {
+    const { fines: fines1, fineHandoutEvent: fineHandoutEvent1, emails: emails1 } = await getConnection().transaction(async (manager) => {
       // Create a new fine group to "connect" all these fines
       const fineHandoutEvent = Object.assign(new FineHandoutEvent(), { referenceDate: date });
       await manager.save(fineHandoutEvent);
 
+      const emails: { user: User, email: MailTemplate<any> }[] = [];
+
       // Create and save the fine information
       let fines: Fine[] = await Promise.all(balances.records.map(async (b) => {
         const previousFine = previousFineGroup?.fines.find((fine) => fine.userFineGroup.userId === b.id);
-        const user = await manager.findOne(User, { where: { id: b.id }, relations: ['currentFines', 'currentFines.user'] });
+        const user = await manager.findOne(User, { where: { id: b.id }, relations: ['currentFines', 'currentFines.user', 'currentFines.fines'] });
         const amount = calculateFine(b.amount);
 
         let userFineGroup = user.currentFines;
@@ -197,6 +202,7 @@ export default class DebtorService {
           userFineGroup = Object.assign(new UserFineGroup(), {
             userId: b.id,
             user: user,
+            fines: [],
           });
           userFineGroup = await userFineGroup.save();
           if (amount.getAmount() > 0) {
@@ -212,6 +218,14 @@ export default class DebtorService {
           toId: undefined,
         });
 
+        emails.push({ user, email: new UserGotFined({
+          name: user.firstName,
+          fine: amount,
+          balance: DineroTransformer.Instance.from(b.amount.amount),
+          referenceDate: date,
+          totalFine: userFineGroup.fines.reduce((sum, f) => sum.add(f.amount), dinero({ amount :0 })).add(amount),
+        }) });
+
         return Object.assign(new Fine(), {
           fineHandoutEvent,
           userFineGroup,
@@ -220,8 +234,10 @@ export default class DebtorService {
           transfer,
         });
       }));
-      return { fines: await manager.save(fines), fineHandoutEvent };
+      return { fines: await manager.save(fines), fineHandoutEvent, emails };
     });
+
+    emails1.forEach(({ user, email }) => Mailer.getInstance().send(user, email));
 
     return {
       id: fineHandoutEvent1.id,
