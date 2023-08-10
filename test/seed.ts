@@ -1535,8 +1535,12 @@ export async function seedSingleFines(users: User[], transactions: Transaction[]
  * @param users
  * @param transactions
  * @param transfers
+ * @param addCurrentFines
  */
-export async function seedFines(users: User[], transactions: Transaction[], transfers: Transfer[]) {
+export async function seedFines(users: User[], transactions: Transaction[], transfers: Transfer[], addCurrentFines = false) {
+  // Make a copy of users, so we can update currentFines
+  let newUsers = users;
+
   const {
     fines: fines1,
     fineTransfers: fineTransfers1,
@@ -1555,11 +1559,23 @@ export async function seedFines(users: User[], transactions: Transaction[], tran
   const userFineGroups = [...userFineGroups1, ...userFineGroups2]
     .filter((g, i, groups) => groups.findIndex((g2) => g2.id === g.id) === i);
 
+  if (addCurrentFines) {
+    newUsers = await Promise.all(users.map(async (user) => {
+      const userFineGroup = userFineGroups.find((g) => user.id === g.userId);
+      if (userFineGroup) {
+        user.currentFines = userFineGroup;
+        await user.save();
+      }
+      return user;
+    }));
+  }
+
   return {
     fines: [...fines1, ...fines2],
     fineTransfers: [...fineTransfers1, ...fineTransfers2],
     userFineGroups,
     fineHandoutEvents: [fineHandoutEvent1, fineHandoutEvent2],
+    users: newUsers,
   };
 }
 

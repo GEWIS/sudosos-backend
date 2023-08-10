@@ -59,11 +59,20 @@ export function asBalanceOrderColumn(input: any): BalanceOrderColumn | undefined
 
 export default class BalanceService {
   protected static asBalanceResponse(rawBalance: any): BalanceResponse {
+    let fineSince = null;
+    // SQLite returns timestamps in UTC, while MariaDB/MySQL returns timestamps in the local timezone
+    if (rawBalance.fineSince) {
+      const fineSinceUtc = process.env.TYPEORM_CONNECTION === 'sqlite' ? rawBalance.fineSince + 'Z' : rawBalance.fineSince;
+      fineSince = new Date(fineSinceUtc).toISOString();
+    }
+
     return {
       id: rawBalance.id,
       amount: DineroTransformer.Instance.from(rawBalance.amount).toObject(),
       lastTransactionId: rawBalance.lastTransactionId,
       lastTransferId: rawBalance.lastTransferId,
+      fine: rawBalance.fine ? DineroTransformer.Instance.from(rawBalance.fine).toObject() : null,
+      fineSince,
     };
   }
 
@@ -190,7 +199,9 @@ export default class BalanceService {
       + 'moneys2.count as count, '
       + 'b5.lastTransactionId as lastTransactionId, '
       + 'b5.lastTransferId as lastTransferId, '
-      + 'b5.amount as cachedAmount '
+      + 'b5.amount as cachedAmount, '
+      + 'f.fine as fine, '
+      + 'f.fineSince as fineSince '
       + 'from ( '
       + 'SELECT user.id as id, '
       + 'COALESCE(sum(moneys.totalValue), 0) as totalValue, '
@@ -243,6 +254,14 @@ export default class BalanceService {
     }
     query += ') AS b5 ON b5.userId=moneys2.id '
       + 'inner join user as u on u.id = moneys2.id '
+      + 'left join ( '
+        + 'select sum(fine.amount) as fine, max(user_fine_group.createdAt) as fineSince, user.id as id '
+        + 'from fine '
+        + 'inner join user_fine_group on fine.userFineGroupId = user_fine_group.id '
+        + 'inner join user on user_fine_group.userId = user.id '
+        + 'where user.currentFinesId = user_fine_group.id '
+        + 'group by user.id '
+      + ') as f on f.id = moneys2.id '
       + 'where 1 = 1 ';
 
     if (minBalance !== undefined) query += `and moneys2.totalvalue + Coalesce(b5.amount, 0) >= ${minBalance.getAmount()} `;

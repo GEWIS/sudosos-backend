@@ -24,7 +24,7 @@ import Transaction from '../../../src/entity/transactions/transaction';
 import Transfer from '../../../src/entity/transactions/transfer';
 import Database from '../../../src/database/database';
 import {
-  seedContainers,
+  seedContainers, seedFines,
   seedPointsOfSale,
   seedProductCategories,
   seedProducts,
@@ -48,6 +48,8 @@ import { OrderingDirection } from '../../../src/helpers/ordering';
 import { defaultPagination } from '../../../src/helpers/pagination';
 import { addTransaction, addTransfer } from '../../helpers/transaction-helpers';
 import { calculateBalance } from '../../helpers/balance';
+import Fine from '../../../src/entity/fine/fine';
+import BalanceResponse from '../../../src/controller/response/balance-response';
 
 describe('BalanceService', (): void => {
   let ctx: {
@@ -60,6 +62,7 @@ describe('BalanceService', (): void => {
     transactions: Transaction[],
     subTransactions: SubTransaction[],
     transfers: Transfer[],
+    fines: Fine[],
     spec: SwaggerSpecification,
   };
 
@@ -67,14 +70,15 @@ describe('BalanceService', (): void => {
     this.timeout(50000);
     const connection = await Database.initialize();
     const app = express();
-    const users = await seedUsers();
+    const seededUsers = await seedUsers();
     const categories = await seedProductCategories();
     const vatGroups = await seedVatGroups();
-    const { productRevisions } = await seedProducts(users, categories, vatGroups);
-    const { containerRevisions } = await seedContainers(users, productRevisions);
-    const { pointOfSaleRevisions } = await seedPointsOfSale(users, containerRevisions);
-    const { transactions } = await seedTransactions(users, pointOfSaleRevisions, new Date('2020-02-12'), new Date('2021-11-30'), 10);
-    const transfers = await seedTransfers(users, new Date('2020-02-12'), new Date('2021-11-30'));
+    const { productRevisions } = await seedProducts(seededUsers, categories, vatGroups);
+    const { containerRevisions } = await seedContainers(seededUsers, productRevisions);
+    const { pointOfSaleRevisions } = await seedPointsOfSale(seededUsers, containerRevisions);
+    const { transactions } = await seedTransactions(seededUsers, pointOfSaleRevisions, new Date('2020-02-12'), new Date('2021-11-30'), 10);
+    const transfers = await seedTransfers(seededUsers, new Date('2020-02-12'), new Date('2021-11-30'));
+    const { fines, fineTransfers, users } = await seedFines(seededUsers, transactions, transfers, true);
     const subTransactions: SubTransaction[] = Array.prototype.concat(...transactions
       .map((t) => t.subTransactions));
 
@@ -87,7 +91,8 @@ describe('BalanceService', (): void => {
       pointOfSaleRevisions,
       transactions,
       subTransactions,
-      transfers,
+      transfers: transfers.concat(fineTransfers),
+      fines,
       spec: await Swagger.importSpecification(),
     };
   });
@@ -97,39 +102,55 @@ describe('BalanceService', (): void => {
     await ctx.connection.destroy();
   });
 
+  async function checkFine(balance: BalanceResponse, user: User) {
+    if (user.currentFines == null) {
+      expect(balance.fine).to.be.null;
+      expect(balance.fineSince).to.be.null;
+    } else {
+      expect(balance.fine).to.not.be.null;
+      const fines = await Fine.find({ where: { userFineGroup: { id: user.currentFines.id } } }); // user.currentFines.fines;
+      const fineAmount = fines.reduce((sum, fine) => sum + fine.amount.getAmount(), 0);
+      expect(balance.fine.amount).to.equal(fineAmount);
+      expect(new Date(balance.fineSince).getTime()).to.equal(user.currentFines.createdAt.getTime());
+    }
+  }
+
   describe('getBalances', () => {
     it('should return balances from all users', async () => {
       const balanceResponses = await BalanceService.getBalances({});
       expect(balanceResponses.records.length).to.equal(ctx.users.length);
 
-      balanceResponses.records.forEach((balance) => {
+      await Promise.all(balanceResponses.records.map(async (balance) => {
         const user = ctx.users.find((u) => u.id === balance.id);
         expect(user).to.not.be.undefined;
         const actualBalance = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers);
         expect(balance.amount.amount).to.equal(actualBalance.amount.getAmount());
-      });
+        await checkFine(balance, user);
+      }));
     });
     it('should return balances on certain date', async () => {
       const date = new Date('2021-01-01');
       const balances = await BalanceService.getBalances({ date });
 
-      balances.records.forEach((balance) => {
+      await Promise.all(balances.records.map(async (balance) => {
         const user = ctx.users.find((u) => u.id === balance.id);
         expect(user).to.not.be.undefined;
         const actualBalance = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers, date);
         expect(balance.amount.amount).to.equal(actualBalance.amount.getAmount());
-      });
+        await checkFine(balance, user);
+      }));
     });
     it('should return balance from subset of users', async () => {
       const users = [ctx.users[10], ctx.users[11], ctx.users[12]];
       const balanceResponses = await BalanceService.getBalances({ ids: users.map((u) => u.id) });
       expect(balanceResponses.records.length).to.equal(users.length);
 
-      balanceResponses.records.forEach((balance) => {
+      await Promise.all(balanceResponses.records.map(async (balance) => {
         const user = ctx.users.find((u) => u.id === balance.id);
         const actualBalance = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers);
         expect(balance.amount.amount).to.equal(actualBalance.amount.getAmount());
-      });
+        await checkFine(balance, user);
+      }));
     });
     it('should only return balances more than or equal a certain amount', async () => {
       const amount = 1039;
@@ -360,6 +381,8 @@ describe('BalanceService', (): void => {
       const newUser = await (await UserFactory()).get();
       const balance = await BalanceService.getBalance(newUser.id);
       expect(balance.amount.amount).to.equal(0);
+      expect(balance.fine).to.be.null;
+      expect(balance.fineSince).to.be.null;
     });
     it('should return correct balance for new user with single outgoing transaction', async () => {
       const newUser = await (await UserFactory()).get();
