@@ -246,6 +246,36 @@ describe('DebtorController', () => {
     });
   });
 
+  describe('DELETE /fines/{id}', () => {
+    it('should delete fine if admin', async () => {
+      const fine = ctx.fines[0];
+      const res = await request(ctx.app)
+        .delete(`/fines/${fine.id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(204);
+      expect(res.body).to.be.empty;
+    });
+    it('should return 404 if fine does not exist', async () => {
+      const id = 9999999;
+      const fine = await Fine.findOne({ where: { id } });
+      expect(fine).to.be.null;
+
+      const res = await request(ctx.app)
+        .delete(`/fines/${id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(404);
+      expect(res.body).to.be.empty;
+    });
+    it('should return 403 if not admin', async () => {
+      const fine = ctx.fines[1];
+      const res = await request(ctx.app)
+        .delete(`/fines/${fine.id}`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(403);
+      expect(res.body).to.be.empty;
+    });
+  });
+
   describe('GET /fines/eligible', () => {
     it('should correctly return list of possible fines', async () => {
       const userTypes = [UserType.LOCAL_USER, UserType.MEMBER];

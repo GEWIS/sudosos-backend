@@ -1558,6 +1558,14 @@ export async function seedFines(users: User[], transactions: Transaction[], tran
   // Remove duplicates
   const userFineGroups = [...userFineGroups1, ...userFineGroups2]
     .filter((g, i, groups) => groups.findIndex((g2) => g2.id === g.id) === i);
+  const fines = [...fines1, ...fines2];
+
+  // Add also a reference to the fine in the UserFineGroup
+  fines.forEach((f) => {
+    const i = userFineGroups.findIndex((g) => g.id === f.userFineGroup.id);
+    if (userFineGroups[i].fines === undefined) userFineGroups[i].fines = [];
+    userFineGroups[i].fines.push(f);
+  });
 
   if (addCurrentFines) {
     newUsers = await Promise.all(users.map(async (user) => {
@@ -1571,7 +1579,7 @@ export async function seedFines(users: User[], transactions: Transaction[], tran
   }
 
   return {
-    fines: [...fines1, ...fines2],
+    fines,
     fineTransfers: [...fineTransfers1, ...fineTransfers2],
     userFineGroups,
     fineHandoutEvents: [fineHandoutEvent1, fineHandoutEvent2],

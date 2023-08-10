@@ -56,6 +56,7 @@ describe('DebtorService', (): void => {
     transfers: Transfer[],
     transfersInclFines: Transfer[],
     fines: Fine[],
+    userFineGroups: UserFineGroup[],
   };
 
   before(async () => {
@@ -71,7 +72,7 @@ describe('DebtorService', (): void => {
     const transfers = await seedTransfers(users, new Date('2020-02-12'), new Date('2021-11-30'));
     const subTransactions: SubTransaction[] = Array.prototype.concat(...transactions
       .map((t) => t.subTransactions));
-    const { fines, fineTransfers } = await seedFines(users, transactions, transfers);
+    const { fines, fineTransfers, userFineGroups } = await seedFines(users, transactions, transfers);
 
     ctx = {
       connection,
@@ -84,6 +85,7 @@ describe('DebtorService', (): void => {
       transfers,
       transfersInclFines: transfers.concat(fineTransfers),
       fines,
+      userFineGroups,
     };
   });
 
@@ -166,7 +168,51 @@ describe('DebtorService', (): void => {
       await User.remove(newUser);
     });
   });
+  describe('deleteFine', () => {
+    it('should correctly delete a single fine', async () => {
+      const userFineGroup = ctx.userFineGroups.find((g) => g.fines.length === 1);
+      let dbUserFineGroup = await UserFineGroup.findOne({ where: { id: userFineGroup.id }, relations: ['fines', 'fines.transfer'] });
+      expect(dbUserFineGroup).to.not.be.null;
+      expect(dbUserFineGroup.fines.length).to.equal(1);
 
+      const fine = dbUserFineGroup.fines[0];
+      expect(await DebtorService.deleteFine(fine.id)).to.not.throw;
+
+      const dbFine = await Fine.findOne({ where: { id: fine.id } });
+      expect(dbFine).to.be.null;
+      const dbTransfer = await Transfer.findOne({ where: { id: fine.transfer.id } });
+      expect(dbTransfer).to.be.null;
+      dbUserFineGroup = await UserFineGroup.findOne({ where: { id: userFineGroup.id } });
+      expect(dbUserFineGroup).to.be.null;
+    });
+    it('should correctly delete a single fine in a larger fineUserGroup', async () => {
+      const userFineGroup = ctx.userFineGroups.find((g) => g.fines.length > 1);
+      let dbUserFineGroup = await UserFineGroup.findOne({ where: { id: userFineGroup.id }, relations: ['fines', 'fines.transfer'] });
+      expect(dbUserFineGroup).to.not.be.null;
+      expect(dbUserFineGroup.fines.length).to.be.greaterThan(1);
+
+      const fine = dbUserFineGroup.fines[0];
+      expect(await DebtorService.deleteFine(fine.id)).to.not.throw;
+
+      const dbFine = await Fine.findOne({ where: { id: fine.id } });
+      expect(dbFine).to.be.null;
+      const dbTransfer = await Transfer.findOne({ where: { id: fine.transfer.id } });
+      expect(dbTransfer).to.be.null;
+      dbUserFineGroup = await UserFineGroup.findOne({ where: { id: userFineGroup.id } });
+      expect(dbUserFineGroup).to.not.be.null;
+    });
+    it('should not do anything when fine does not exist', async () => {
+      const id = 9999999;
+      const fine = await Fine.findOne({ where: { id } });
+      expect(fine).to.be.null;
+      expect(await DebtorService.deleteFine(id)).to.not.throw;
+    });
+  });
+
+  /**
+   * This function should be tested last, because it requires an empty Fines
+   * table. It therefore destroys the initial state
+   */
   describe('handOutFines', async () => {
     async function clearFines() {
       const fines = await Fine.find({ relations: ['transfer'] });

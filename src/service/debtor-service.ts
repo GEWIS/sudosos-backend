@@ -34,6 +34,7 @@ import UserFineGroup from '../entity/fine/userFineGroup';
 import { PaginationParameters } from '../helpers/pagination';
 import { parseUserToBaseResponse } from '../helpers/revision-to-response';
 import { getConnection } from 'typeorm';
+import Transfer from "../entity/transactions/transfer";
 
 export interface CalculateFinesParams {
   userTypes?: UserType[];
@@ -229,5 +230,20 @@ export default class DebtorService {
       referenceDate: fineHandoutEvent1.referenceDate.toISOString(),
       fines: fines1.map((f) => this.asFineResponse(f)),
     };
+  }
+
+  /**
+   * Delete a fine with its transfer, but keep the FineHandoutEvent (they can be empty)
+   * @param id
+   */
+  public static async deleteFine(id: number): Promise<void> {
+    const fine = await Fine.findOne({ where: { id }, relations: ['transfer', 'userFineGroup', 'userFineGroup.fines'] });
+    if (fine == null) return;
+
+    const { transfer, userFineGroup } = fine;
+
+    await Fine.remove(fine);
+    await Transfer.remove(transfer);
+    if (userFineGroup.fines.length === 1) await UserFineGroup.remove(userFineGroup);
   }
 }

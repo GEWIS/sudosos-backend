@@ -26,6 +26,7 @@ import User from '../entity/user/user';
 import { asArrayOfUserTypes, asDate } from '../helpers/validators';
 import { In } from 'typeorm';
 import { HandoutFinesRequest } from './request/debtor-request';
+import Fine from "../entity/fine/fine";
 
 export default class DebtorController extends BaseController {
   private logger: Logger = log4js.getLogger(' DebtorController');
@@ -47,6 +48,10 @@ export default class DebtorController extends BaseController {
         GET: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Fine', ['*']),
           handler: this.returnSingleFineHandoutEvent.bind(this),
+        },
+        DELETE: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'delete', 'all', 'Fine', ['*']),
+          handler: this.deleteFine.bind(this),
         },
       },
       '/eligible': {
@@ -109,10 +114,40 @@ export default class DebtorController extends BaseController {
    */
   public async returnSingleFineHandoutEvent(req: RequestWithToken, res: Response): Promise<void> {
     const { id } = req.params;
-    this.logger.trace('Get all fine handout events by ', req.token.user);
+    this.logger.trace('Get fine handout event', id, 'by', req.token.user);
 
     try {
       res.json(await DebtorService.getSingleFineHandoutEvent(Number.parseInt(id, 10)));
+    } catch (error) {
+      this.logger.error('Could not return fine handout event:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Delete a fine
+   * @route DELETE /fines/{id}
+   * @group debtors - Operations of the debtor controller
+   * @security JWT
+   * @param {integer} id.path.required - The id of the fine which should be deleted
+   * @returns {} 204 - Success
+   * @returns {string} 400 - Validation error
+   * @returns {string} 500 - Internal server error
+   */
+  public async deleteFine(req: RequestWithToken, res: Response): Promise<void> {
+    const { id } = req.params;
+    this.logger.trace('Delete fine', id, 'by', req.token.user);
+
+    try {
+      const parsedId = Number.parseInt(id, 10);
+      const fine = await Fine.findOne({ where: { id: parsedId } });
+      if (fine == null) {
+        res.status(404).send();
+        return;
+      }
+
+      await DebtorService.deleteFine(parsedId);
+      res.status(204).send();
     } catch (error) {
       this.logger.error('Could not return fine handout event:', error);
       res.status(500).json('Internal server error.');
