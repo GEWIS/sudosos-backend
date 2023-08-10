@@ -172,6 +172,42 @@ describe('BalanceService', (): void => {
       expect(filteredResponses.records.length).to.equal(allResponses.records.filter((res) => res.amount.amount <= amount).length);
       filteredResponses.records.forEach((res) => expect(res.amount.amount).to.be.lessThanOrEqual(amount));
     });
+    it('should only return balances without a fine', async () => {
+      const users = ctx.users.filter((u) => u.currentFines == null);
+      const balances = await BalanceService.getBalances({ hasFine: false });
+
+      expect(balances.records.length).to.equal(users.length);
+      balances.records.forEach((b) => b.fine == null && b.fineSince == null);
+    });
+    it('should only return balances with a fine', async () => {
+      const users = ctx.users.filter((u) => u.currentFines != null);
+      const balances = await BalanceService.getBalances({ hasFine: true });
+
+      expect(balances.records.length).to.equal(users.length);
+      balances.records.forEach((b) => b.fine != null && b.fineSince != null);
+    });
+    it('should only return balances starting with a certain fine amount', async () => {
+      const amount = 600;
+      const users = ctx.users.filter((u) => u.currentFines != null)
+        .filter((u) => u.currentFines.fines.reduce((sum, f) => sum + f.amount.getAmount(), 0) >= amount);
+      const balances = await BalanceService.getBalances({
+        minFine: DineroTransformer.Instance.from(amount),
+      });
+
+      expect(balances.records.length).to.equal(users.length);
+      balances.records.forEach((b) => b.fine != null && b.fine.amount >= amount);
+    });
+    it('should only return balances with at most a certain fine amount', async () => {
+      const amount = 600;
+      const users = ctx.users.filter((u) => u.currentFines != null)
+        .filter((u) => u.currentFines.fines.reduce((sum, f) => sum + f.amount.getAmount(), 0) <= amount);
+      const balances = await BalanceService.getBalances({
+        maxFine: DineroTransformer.Instance.from(amount),
+      });
+
+      expect(balances.records.length).to.equal(users.length);
+      balances.records.forEach((b) => b.fine != null && b.fine.amount <= amount);
+    });
     it('should return all users with certain user type', async () => {
       const type = UserType.LOCAL_USER;
       const users = ctx.users.filter((u) => u.type === type);
@@ -224,6 +260,24 @@ describe('BalanceService', (): void => {
       balanceResponses.records.forEach((response, index, responses) => {
         if (index === 0) return;
         expect(response.amount.amount).to.be.greaterThanOrEqual(responses[index - 1].amount.amount);
+      });
+    });
+    it('should return balances ordered by fine amount asc', async () => {
+      const balanceResponses = await BalanceService.getBalances({
+        orderBy: BalanceOrderColumn.FINEAMOUNT, orderDirection: OrderingDirection.ASC, hasFine: true,
+      });
+      balanceResponses.records.forEach((response, index, responses) => {
+        if (index === 0) return;
+        expect(response.fine.amount).to.be.greaterThanOrEqual(responses[index - 1].fine.amount);
+      });
+    });
+    it('should return balances ordered by fine date asc', async () => {
+      const balanceResponses = await BalanceService.getBalances({
+        orderBy: BalanceOrderColumn.FINESINCE, orderDirection: OrderingDirection.ASC,
+      });
+      balanceResponses.records.forEach((response, index, responses) => {
+        if (index === 0) return;
+        expect(new Date(response.fineSince).getTime()).to.be.greaterThanOrEqual(new Date(responses[index - 1].fineSince).getTime());
       });
     });
     it('should return balances ordered ascending by default', async () => {

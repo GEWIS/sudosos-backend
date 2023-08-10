@@ -28,6 +28,8 @@ import { UserType } from '../entity/user/user';
 export enum BalanceOrderColumn {
   ID = 'id',
   AMOUNT = 'amount',
+  FINEAMOUNT = 'fine',
+  FINESINCE = 'fineSince',
 }
 
 export interface UpdateBalanceParameters {
@@ -38,6 +40,9 @@ export interface GetBalanceParameters extends UpdateBalanceParameters {
   date?: Date;
   minBalance?: Dinero;
   maxBalance?: Dinero;
+  hasFine?: boolean;
+  minFine?: Dinero;
+  maxFine?: Dinero;
   userTypes?: UserType[];
   orderBy?: BalanceOrderColumn;
   orderDirection?: OrderingDirection;
@@ -166,6 +171,9 @@ export default class BalanceService {
    * @param date date at which the "balance snapshot" should be taken
    * @param minBalance return only balances which are at least this amount
    * @param maxBalance return only balances which are at most this amount
+   * @param hasFine return only balances which do (not) have a fine
+   * @param minFine return only balances which have at least this fine
+   * @param maxFine return only balances which have at most this fine
    * @param userTypes array of types of users
    * @param orderDirection column to order result at
    * @param orderBy order direction
@@ -173,7 +181,7 @@ export default class BalanceService {
    * @returns the current balance of a user
    */
   public static async getBalances({
-    ids, date, minBalance, maxBalance, userTypes, orderDirection, orderBy,
+    ids, date, minBalance, maxBalance, hasFine, minFine, maxFine, userTypes, orderDirection, orderBy,
   }: GetBalanceParameters, pagination: PaginationParameters = {}): Promise<PaginatedBalanceResponse> {
     const connection = getConnection();
 
@@ -266,7 +274,11 @@ export default class BalanceService {
 
     if (minBalance !== undefined) query += `and moneys2.totalvalue + Coalesce(b5.amount, 0) >= ${minBalance.getAmount()} `;
     if (maxBalance !== undefined) query += `and moneys2.totalvalue + Coalesce(b5.amount, 0) <= ${maxBalance.getAmount()} `;
-    if (userTypes !== undefined) query += `and u.type in (${userTypes.join(',')})`;
+    if (hasFine === false) query += 'and f.fine is null ';
+    if (hasFine === true) query += 'and f.fine is not null ';
+    if (minFine !== undefined) query += `and f.fine >= ${minFine.getAmount()} `;
+    if (maxFine !== undefined) query += `and f.fine <= ${maxFine.getAmount()} `;
+    if (userTypes !== undefined) query += `and u.type in (${userTypes.join(',')}) `;
 
     if (orderBy !== undefined) query += `order by ${orderBy} ${orderDirection ?? ''} `;
 

@@ -26,7 +26,7 @@ import User from '../entity/user/user';
 import { asArrayOfUserTypes, asDate } from '../helpers/validators';
 import { In } from 'typeorm';
 import { HandoutFinesRequest } from './request/debtor-request';
-import Fine from "../entity/fine/fine";
+import Fine from '../entity/fine/fine';
 
 export default class DebtorController extends BaseController {
   private logger: Logger = log4js.getLogger(' DebtorController');

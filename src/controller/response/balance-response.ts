@@ -23,7 +23,7 @@ import { PaginationResult } from '../../helpers/pagination';
  * @property {number} id.required - ID of the user this balance belongs to
  * @property {DineroObjectResponse.model} amount.required - The amount of balance this user has
  * @property {DineroObjectResponse.model} fine - The amount of fines this user has, if any
- * @property {DineroObjectResponse.model} fineSince - Timestamp of the first fine
+ * @property {string} fineSince - Timestamp of the first fine
  * @property {number} lastTransactionId - The ID of the last transaction that was
  * present when the balance was cached
  * @property {number} lastTransferId - The ID of the last transfer that was

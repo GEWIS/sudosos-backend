@@ -34,7 +34,7 @@ import UserFineGroup from '../entity/fine/userFineGroup';
 import { PaginationParameters } from '../helpers/pagination';
 import { parseUserToBaseResponse } from '../helpers/revision-to-response';
 import { getConnection } from 'typeorm';
-import Transfer from "../entity/transactions/transfer";
+import Transfer from '../entity/transactions/transfer';
 
 export interface CalculateFinesParams {
   userTypes?: UserType[];
