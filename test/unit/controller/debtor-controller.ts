@@ -250,7 +250,7 @@ describe('DebtorController', () => {
     it('should delete fine if admin', async () => {
       const fine = ctx.fines[0];
       const res = await request(ctx.app)
-        .delete(`/fines/${fine.id}`)
+        .delete(`/fines/single/${fine.id}`)
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(204);
       expect(res.body).to.be.empty;
@@ -261,7 +261,7 @@ describe('DebtorController', () => {
       expect(fine).to.be.null;
 
       const res = await request(ctx.app)
-        .delete(`/fines/${id}`)
+        .delete(`/fines/single/${id}`)
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(404);
       expect(res.body).to.be.empty;
@@ -269,7 +269,7 @@ describe('DebtorController', () => {
     it('should return 403 if not admin', async () => {
       const fine = ctx.fines[1];
       const res = await request(ctx.app)
-        .delete(`/fines/${fine.id}`)
+        .delete(`/fines/single/${fine.id}`)
         .set('Authorization', `Bearer ${ctx.userToken}`);
       expect(res.status).to.equal(403);
       expect(res.body).to.be.empty;

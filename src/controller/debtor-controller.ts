@@ -49,6 +49,8 @@ export default class DebtorController extends BaseController {
           policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Fine', ['*']),
           handler: this.returnSingleFineHandoutEvent.bind(this),
         },
+      },
+      '/single/:id(\\d+)': {
         DELETE: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'delete', 'all', 'Fine', ['*']),
           handler: this.deleteFine.bind(this),
