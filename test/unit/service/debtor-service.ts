@@ -43,7 +43,7 @@ import FineHandoutEvent from '../../../src/entity/fine/fineHandoutEvent';
 import UserFineGroup from '../../../src/entity/fine/userFineGroup';
 import { calculateBalance, calculateFine } from '../../helpers/balance';
 import { FineHandoutEventResponse } from '../../../src/controller/response/debtor-response';
-import sinon from 'sinon';
+import sinon, { SinonSandbox, SinonSpy } from 'sinon';
 import nodemailer, { Transporter } from 'nodemailer';
 
 describe('DebtorService', (): void => {
@@ -61,12 +61,8 @@ describe('DebtorService', (): void => {
     userFineGroups: UserFineGroup[],
   };
 
-  const sandbox = sinon.createSandbox();
-
-  const sendMailFake = sandbox.spy();
-  sandbox.stub(nodemailer, 'createTransport').returns({
-    sendMail: sendMailFake,
-  } as any as Transporter);
+  let sandbox: SinonSandbox;
+  let sendMailFake: SinonSpy;
 
   before(async () => {
     const connection = await Database.initialize();
@@ -81,11 +77,11 @@ describe('DebtorService', (): void => {
     const transfers = await seedTransfers(users, new Date('2020-02-12'), new Date('2021-11-30'));
     const subTransactions: SubTransaction[] = Array.prototype.concat(...transactions
       .map((t) => t.subTransactions));
-    const { fines, fineTransfers, userFineGroups } = await seedFines(users, transactions, transfers);
+    const { fines, fineTransfers, userFineGroups, users: usersWithFines } = await seedFines(users, transactions, transfers, true);
 
     ctx = {
       connection,
-      users,
+      users: usersWithFines,
       productRevisions,
       containerRevisions,
       pointOfSaleRevisions,
@@ -96,11 +92,18 @@ describe('DebtorService', (): void => {
       fines,
       userFineGroups,
     };
+
+    sandbox = sinon.createSandbox();
+    sendMailFake = sandbox.spy();
+    sandbox.stub(nodemailer, 'createTransport').returns({
+      sendMail: sendMailFake,
+    } as any as Transporter);
   });
 
   after(async () => {
     await ctx.connection.dropDatabase();
     await ctx.connection.destroy();
+    sandbox.restore();
   });
 
   afterEach(() => {
@@ -183,7 +186,8 @@ describe('DebtorService', (): void => {
   });
   describe('deleteFine', () => {
     it('should correctly delete a single fine', async () => {
-      const userFineGroup = ctx.userFineGroups.find((g) => g.fines.length === 1);
+      const userFineGroupIndex = ctx.userFineGroups.findIndex((g) => g.fines.length === 1);
+      const userFineGroup = ctx.userFineGroups[userFineGroupIndex];
       let dbUserFineGroup = await UserFineGroup.findOne({ where: { id: userFineGroup.id }, relations: ['fines', 'fines.transfer'] });
       expect(dbUserFineGroup).to.not.be.null;
       expect(dbUserFineGroup.fines.length).to.equal(1);
@@ -197,9 +201,13 @@ describe('DebtorService', (): void => {
       expect(dbTransfer).to.be.null;
       dbUserFineGroup = await UserFineGroup.findOne({ where: { id: userFineGroup.id } });
       expect(dbUserFineGroup).to.be.null;
+
+      // Fix state
+      ctx.userFineGroups.splice(userFineGroupIndex, 1);
     });
     it('should correctly delete a single fine in a larger fineUserGroup', async () => {
-      const userFineGroup = ctx.userFineGroups.find((g) => g.fines.length > 1);
+      const userFineGroupIndex = ctx.userFineGroups.findIndex((g) => g.fines.length > 1);
+      const userFineGroup = ctx.userFineGroups[userFineGroupIndex];
       let dbUserFineGroup = await UserFineGroup.findOne({ where: { id: userFineGroup.id }, relations: ['fines', 'fines.transfer'] });
       expect(dbUserFineGroup).to.not.be.null;
       expect(dbUserFineGroup.fines.length).to.be.greaterThan(1);
@@ -213,12 +221,55 @@ describe('DebtorService', (): void => {
       expect(dbTransfer).to.be.null;
       dbUserFineGroup = await UserFineGroup.findOne({ where: { id: userFineGroup.id } });
       expect(dbUserFineGroup).to.not.be.null;
+
+      // Fix state
+      ctx.userFineGroups[userFineGroupIndex].fines.splice(0, 1);
     });
     it('should not do anything when fine does not exist', async () => {
       const id = 9999999;
       const fine = await Fine.findOne({ where: { id } });
       expect(fine).to.be.null;
       expect(await DebtorService.deleteFine(id)).to.not.throw;
+    });
+  });
+
+  describe('waiveFines', () => {
+    it('should correctly waive fines', async () => {
+      const userFineGroupIndex = ctx.userFineGroups.findIndex((g) => g.fines.length > 1);
+      const userFineGroup = ctx.userFineGroups[userFineGroupIndex];
+      const dbUserFineGroupOld = await UserFineGroup.findOne({ where: { id: userFineGroup.id }, relations: ['fines', 'waivedTransfer', 'user', 'user.currentFines'] });
+      const amount = dbUserFineGroupOld.fines.reduce((sum, f) => sum + f.amount.getAmount(), 0);
+      expect(dbUserFineGroupOld.waivedTransfer).to.be.null;
+      expect(dbUserFineGroupOld.user.currentFines).to.not.be.null;
+      expect(dbUserFineGroupOld.fines.length).to.be.greaterThan(0);
+
+      await DebtorService.waiveFines(userFineGroup.userId);
+
+      const dbUserFineGroupNew = await UserFineGroup.findOne({ where: { id: userFineGroup.id }, relations: ['fines', 'waivedTransfer', 'user', 'user.currentFines'] });
+      expect(dbUserFineGroupNew.waivedTransfer).to.not.be.null;
+      expect(dbUserFineGroupNew.waivedTransfer.amount.getAmount()).to.equal(amount);
+      expect(dbUserFineGroupNew.user.currentFines).to.be.null;
+
+      // Cleanup
+      const transfer = dbUserFineGroupNew.waivedTransfer;
+      dbUserFineGroupNew.waivedTransfer = null;
+      await dbUserFineGroupNew.save();
+      await Transfer.remove(transfer);
+    });
+    it('should throw error when user does not exist', async () => {
+      const id = 999999;
+      const user = await User.findOne({ where: { id } });
+      expect(user).to.be.null;
+
+      await expect(DebtorService.waiveFines(id)).to.eventually.rejectedWith(`User with ID ${id} does not exist`);
+    });
+    it('should not do anything when user does not have fines', async () => {
+      const user = ctx.users.find((u) => u.currentFines == null);
+      expect(user).to.not.be.null;
+      const nrTransfers = await Transfer.count();
+
+      await DebtorService.waiveFines(user.id);
+      expect(await Transfer.count()).to.equal(nrTransfers);
     });
   });
 

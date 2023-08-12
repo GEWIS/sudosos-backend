@@ -20,7 +20,8 @@ import BalanceService from './balance-service';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
 import dinero, { Dinero, DineroObject } from 'dinero.js';
 import {
-  BaseFineHandoutEventResponse, FineHandoutEventResponse,
+  BaseFineHandoutEventResponse,
+  FineHandoutEventResponse,
   FineResponse,
   PaginatedFineHandoutEventResponse,
   UserToFineResponse,
@@ -261,5 +262,36 @@ export default class DebtorService {
     await Fine.remove(fine);
     await Transfer.remove(transfer);
     if (userFineGroup.fines.length === 1) await UserFineGroup.remove(userFineGroup);
+  }
+
+  /**
+   * Waive a user's unpaid fines by creating a transfer nullifying them
+   * @param userId
+   */
+  public static async waiveFines(userId: number): Promise<UserFineGroup> {
+    const user = await User.findOne({
+      where: { id: userId },
+      relations: ['currentFines', 'currentFines.fines'],
+    });
+    if (user == null) throw new Error(`User with ID ${userId} does not exist`);
+    if (user.currentFines == null) return;
+
+    const userFineGroup = user.currentFines;
+    const amount = userFineGroup.fines.reduce((sum, f) => sum.add(f.amount), dinero({ amount: 0 }));
+
+    // Create the waived transfer
+    userFineGroup.waivedTransfer = await TransferService.createTransfer({
+      amount: amount.toObject(),
+      toId: user.id,
+      description: 'Waived fines',
+      fromId: undefined,
+    });
+    await userFineGroup.save();
+
+    // Remove the fine from the user. This must be done manually,
+    // because the user can still have a negative balance when the
+    // fine is waived.
+    user.currentFines = null;
+    await user.save();
   }
 }

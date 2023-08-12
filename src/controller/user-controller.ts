@@ -53,6 +53,7 @@ import NfcAuthenticator from '../entity/authenticator/nfc-authenticator';
 import KeyAuthenticator from '../entity/authenticator/key-authenticator';
 import UpdateKeyResponse from './response/update-key-response';
 import { randomBytes } from 'crypto';
+import DebtorService from '../service/debtor-service';
 
 export default class UserController extends BaseController {
   private logger: Logger = log4js.getLogger('UserController');
@@ -299,6 +300,12 @@ export default class UserController extends BaseController {
             req.token.roles, 'get', UserController.getRelation(req), 'Transfer', ['*'],
           ),
           handler: this.getUsersProcessingDeposits.bind(this),
+        },
+      },
+      '/:id(\\d+)/fines/waive': {
+        POST: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'delete', 'all', 'Fine', ['*']),
+          handler: this.waiveUserFines.bind(this),
         },
       },
     };
@@ -1467,6 +1474,43 @@ export default class UserController extends BaseController {
 
       const report = await TransactionService.getTransactionReportResponse(filters);
       res.status(200).json(report);
+    } catch (e) {
+      res.status(500).send();
+      this.logger.error(e);
+    }
+  }
+
+  /**
+   * Waive all given user's fines
+   * @route POST /users/{id}/fines/waive
+   * @group users - Operations of user controller
+   * @param {integer} id.path.required - The id of the user
+   * @security JWT
+   * @returns {string} 204 - Success
+   * @returns {string} 400 - User has no fines.
+   * @returns {string} 404 - User not found error.
+   */
+  public async waiveUserFines(req: RequestWithToken, res: Response): Promise<void> {
+    const { id: rawId } = req.params;
+    this.logger.trace('Waive fines of user', rawId, 'by', req.token.user);
+
+
+    try {
+
+      const id = parseInt(rawId, 10);
+
+      const user = await User.findOne({ where: { id }, relations: ['currentFines'] });
+      if (user == null) {
+        res.status(404).json('Unknown user ID.');
+        return;
+      }
+      if (user.currentFines == null) {
+        res.status(400).json('User has no fines.');
+        return;
+      }
+
+      await DebtorService.waiveFines(id);
+      res.status(204).send();
     } catch (e) {
       res.status(500).send();
       this.logger.error(e);

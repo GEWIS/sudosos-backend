@@ -15,10 +15,11 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { Column, Entity, JoinColumn, ManyToOne, OneToMany } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany, OneToOne } from 'typeorm';
 import User from '../user/user';
 import Fine from './fine';
 import BaseEntity from '../base-entity';
+import Transfer from '../transactions/transfer';
 
 @Entity()
 export default class UserFineGroup extends BaseEntity {
@@ -27,8 +28,12 @@ export default class UserFineGroup extends BaseEntity {
 
   @ManyToOne(() => User, { nullable: false })
   @JoinColumn({ name: 'userId' })
-  public readonly user: User;
+  public user: User;
 
   @OneToMany(() => Fine, (fine) => fine.userFineGroup)
   public fines: Fine[];
+
+  @OneToOne(() => Transfer, { nullable: true })
+  @JoinColumn()
+  public waivedTransfer?: Transfer | null;
 }

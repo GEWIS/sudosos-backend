@@ -28,6 +28,7 @@ import StripeDeposit from '../deposit/stripe-deposit';
 import Invoice from '../invoices/invoice';
 import Fine from '../fine/fine';
 import BalanceService from '../../service/balance-service';
+import UserFineGroup from '../fine/userFineGroup';
 
 /**
  * @typedef {BaseEntity} Transfer
@@ -82,6 +83,9 @@ export default class Transfer extends BaseEntity {
 
   @OneToOne(() => Fine, (f) => f.transfer, { nullable: true })
   public fine: Fine | null;
+
+  @OneToOne(() => UserFineGroup, (g) => g.waivedTransfer, { nullable: true })
+  public waivedFines: UserFineGroup | null;
 
   @AfterInsert()
   // NOTE: this event listener is only called when calling .save() on a new Transfer object instance,

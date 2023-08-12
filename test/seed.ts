@@ -1780,6 +1780,7 @@ export interface DatabaseContent {
   transactions: Transaction[],
   transfers: Transfer[],
   fines: Fine[],
+  userFineGroups: UserFineGroup[],
   payoutRequests: PayoutRequest[],
   stripeDeposits: StripeDeposit[],
   invoices: Invoice[],
@@ -1807,7 +1808,7 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
   );
   const { transactions } = await seedTransactions(users, pointOfSaleRevisions);
   const transfers = await seedTransfers(users);
-  const { fines, fineTransfers } = await seedFines(users, transactions, transfers);
+  const { fines, fineTransfers, userFineGroups } = await seedFines(users, transactions, transfers);
   const { payoutRequests, payoutRequestTransfers } = await seedPayoutRequests(users);
   const { invoices, invoiceTransfers } = await seedInvoices(users, transactions);
   const { stripeDeposits, stripeDepositTransfers } = await seedStripeDeposits(users);
@@ -1831,6 +1832,7 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
     invoices,
     transfers: transfers.concat(fineTransfers).concat(payoutRequestTransfers).concat(invoiceTransfers).concat(stripeDepositTransfers),
     fines,
+    userFineGroups,
     payoutRequests,
     banners,
     gewisUsers,
