@@ -51,6 +51,8 @@ describe('Mailer', () => {
       user,
     };
 
+    Mailer.reset();
+
     sandbox = sinon.createSandbox();
     sendMailFake = sandbox.stub();
     createTransportStub = sandbox.stub(nodemailer, 'createTransport').returns({

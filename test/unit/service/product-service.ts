@@ -32,7 +32,7 @@ import Product from '../../../src/entity/product/product';
 import {
   PaginatedProductResponse,
   ProductResponse,
-  UpdatedProductResponse
+  UpdatedProductResponse,
 } from '../../../src/controller/response/product-response';
 import ProductRevision from '../../../src/entity/product/product-revision';
 import UpdatedProduct from '../../../src/entity/product/updated-product';

@@ -1509,6 +1509,7 @@ export async function seedSingleFines(users: User[], transactions: Transaction[]
       from: u,
       fromId: u.id,
       amount,
+      description: 'Seeded fine',
     } as Transfer);
     return transfer.save().then(async (t) => {
       fineTransfers.push(t);

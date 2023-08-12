@@ -45,6 +45,7 @@ import { calculateBalance, calculateFine } from '../../helpers/balance';
 import { FineHandoutEventResponse } from '../../../src/controller/response/debtor-response';
 import sinon, { SinonSandbox, SinonSpy } from 'sinon';
 import nodemailer, { Transporter } from 'nodemailer';
+import Mailer from '../../../src/mailer';
 
 describe('DebtorService', (): void => {
   let ctx: {
@@ -92,6 +93,8 @@ describe('DebtorService', (): void => {
       fines,
       userFineGroups,
     };
+
+    Mailer.reset();
 
     sandbox = sinon.createSandbox();
     sendMailFake = sandbox.spy();
