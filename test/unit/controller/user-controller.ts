@@ -15,21 +15,21 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import express, {Application} from 'express';
-import chai, {expect, request} from 'chai';
-import {SwaggerSpecification} from 'swagger-model-validator';
-import {Connection, createQueryBuilder} from 'typeorm';
-import {json} from 'body-parser';
+import express, { Application } from 'express';
+import chai, { expect, request } from 'chai';
+import { SwaggerSpecification } from 'swagger-model-validator';
+import { Connection, createQueryBuilder } from 'typeorm';
+import { json } from 'body-parser';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
-import {describe} from 'mocha';
+import { describe } from 'mocha';
 import UserController from '../../../src/controller/user-controller';
-import User, {TermsOfServiceStatus, UserType} from '../../../src/entity/user/user';
+import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import Product from '../../../src/entity/product/product';
 import Transaction from '../../../src/entity/transactions/transaction';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Database from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
-import TokenMiddleware, {RequestWithToken} from '../../../src/middleware/token-middleware';
+import TokenMiddleware, { RequestWithToken } from '../../../src/middleware/token-middleware';
 import ProductCategory from '../../../src/entity/product/product-category';
 import Container from '../../../src/entity/container/container';
 import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
@@ -37,31 +37,31 @@ import ProductRevision from '../../../src/entity/product/product-revision';
 import ContainerRevision from '../../../src/entity/container/container-revision';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
 import seedDatabase from '../../seed';
-import {verifyUserResponse} from '../validators';
+import { verifyUserResponse } from '../validators';
 import RoleManager from '../../../src/rbac/role-manager';
-import {TransactionResponse} from '../../../src/controller/response/transaction-response';
-import {defaultPagination, PaginationResult} from '../../../src/helpers/pagination';
-import {TransferResponse} from '../../../src/controller/response/transfer-response';
+import { TransactionResponse } from '../../../src/controller/response/transaction-response';
+import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
+import { TransferResponse } from '../../../src/controller/response/transfer-response';
 import Transfer from '../../../src/entity/transactions/transfer';
 import MemberAuthenticator from '../../../src/entity/authenticator/member-authenticator';
-import {inUserContext, UserFactory} from '../../helpers/user-factory';
+import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import UpdatePinRequest from '../../../src/controller/request/update-pin-request';
 import {
   DUPLICATE_TOKEN,
   INVALID_PIN,
   ZERO_LENGTH_STRING,
 } from '../../../src/controller/request/validators/validation-errors';
-import {PaginatedUserResponse, UserResponse} from '../../../src/controller/response/user-response';
+import { PaginatedUserResponse, UserResponse } from '../../../src/controller/response/user-response';
 import RoleResponse from '../../../src/controller/response/rbac/role-response';
-import {FinancialMutationResponse,} from '../../../src/controller/response/financial-mutation-response';
+import { FinancialMutationResponse } from '../../../src/controller/response/financial-mutation-response';
 import UpdateLocalRequest from '../../../src/controller/request/update-local-request';
-import {AcceptTosRequest} from '../../../src/controller/request/accept-tos-request';
+import { AcceptTosRequest } from '../../../src/controller/request/accept-tos-request';
 import UpdateUserRequest from '../../../src/controller/request/update-user-request';
 import StripeDeposit from '../../../src/entity/deposit/stripe-deposit';
-import {StripeDepositResponse} from '../../../src/controller/response/stripe-response';
-import {TransactionReportResponse} from '../../../src/controller/response/transaction-report-response';
-import {TransactionFilterParameters} from '../../../src/service/transaction-service';
-import {createTransactions} from '../service/invoice-service';
+import { StripeDepositResponse } from '../../../src/controller/response/stripe-response';
+import { TransactionReportResponse } from '../../../src/controller/response/transaction-report-response';
+import { TransactionFilterParameters } from '../../../src/service/transaction-service';
+import { createTransactions } from '../service/invoice-service';
 import UpdateNfcRequest from '../../../src/controller/request/update-nfc-request';
 
 chai.use(deepEqualInAnyOrder);
@@ -372,7 +372,6 @@ describe('UserController', (): void => {
       expect(searchRes.status).to.equal(200);
 
       const filteredUsers = await queryUserBackend(searchQuery);
-      console.error("found: ", filteredUsers);
       expect(filteredUsers).length.to.be.gt(0);
       expect(searchRes.body.records.length).to.equal(filteredUsers.length);
     });
@@ -811,12 +810,46 @@ describe('UserController', (): void => {
       expect(user.lastName).to.deep.equal(lastName);
       verifyUserResponse(spec, user);
     });
-    it('should give HTTP 400 if firstName is too long', async () => {
+    it('should give HTTP 400 if lastName is too long', async () => {
       const res = await request(ctx.app)
         .patch('/users/1')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send({ lastName: 'ThisIsAStringThatIsMuchTooLongToFitInASixtyFourCharacterStringBox' });
       expect(res.status).to.equal(400);
+    });
+    it('should correctly change nickname if requester is admin', async () => {
+      const nickname = 'SudoSOSFeut';
+
+      const res = await request(ctx.app)
+        .patch('/users/1')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ nickname });
+      expect(res.status).to.equal(200);
+
+      const user = res.body as UserResponse;
+      const spec = await Swagger.importSpecification();
+      expect(user.nickname).to.deep.equal(nickname);
+      verifyUserResponse(spec, user);
+    });
+    it('should give HTTP 400 if nickName is too long', async () => {
+      const res = await request(ctx.app)
+        .patch('/users/1')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ nickname: 'ThisIsAStringThatIsMuchTooLongToFitInASixtyFourCharacterStringBox' });
+      expect(res.status).to.equal(400);
+    });
+    it('should correctly remove nickname if set to empty string', async () => {
+      const user = ctx.users.find((u) => u.nickname != null);
+
+      const res = await request(ctx.app)
+        .patch('/users/' + user.id)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ nickname: '' });
+      expect(res.status).to.equal(200);
+
+      const userResponse = res.body as UserResponse;
+      expect(userResponse.nickname).to.be.null;
+      expect((await User.findOne({ where: { id: user.id } })).nickname).to.be.null;
     });
     it('should correctly set user inactive if requester is admin', async () => {
       const active = false;

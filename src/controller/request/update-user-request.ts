@@ -20,6 +20,7 @@
  * @typedef UpdateUserRequest
  * @property {string} firstName
  * @property {string} lastName
+ * @property {string} nickname
  * @property {boolean} active
  * @property {boolean} ofAge
  * @property {string} email
@@ -28,6 +29,7 @@
 export default interface UpdateUserRequest {
   firstName?: string;
   lastName?: string;
+  nickname?: string;
   active?: boolean;
   ofAge?: boolean;
   email?: string;

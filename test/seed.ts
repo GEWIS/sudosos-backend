@@ -91,6 +91,7 @@ function defineUsers(
       id: start + nr,
       firstName: `Firstname${start + nr}`,
       lastName: `Lastname${start + nr}`,
+      nickname: nr % 4 === 0 ? `Nickname${start + nr}` : null,
       type,
       active,
       acceptedToS: TermsOfServiceStatus.ACCEPTED,

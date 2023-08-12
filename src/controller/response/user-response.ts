@@ -23,10 +23,12 @@ import { TermsOfServiceStatus } from '../../entity/user/user';
  * @typedef {BaseResponse} BaseUserResponse
  * @property {string} firstName.required - The name of the user.
  * @property {string} lastName.required - The last name of the user
+ * @property {string} nickname - The nickname of the user
  */
 export interface BaseUserResponse extends BaseResponse {
   firstName: string,
   lastName: string,
+  nickname?: string,
 }
 
 /**
