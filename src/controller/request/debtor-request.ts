@@ -19,7 +19,7 @@
 /**
  * @typedef HandoutFinesRequest
  * @property {Array<integer>} userIds.required - Users to fine. If a user is not eligible for a fine, a fine of 0,00 will be handed out.
- * @property {string} referenceDate - Reference date on to calculate balance for (and "now")
+ * @property {string} referenceDate - Reference date to calculate the balance for (and "now", but that is always done)
  */
 export interface HandoutFinesRequest {
   userIds: number[];
