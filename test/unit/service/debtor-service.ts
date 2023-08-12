@@ -60,6 +60,7 @@ describe('DebtorService', (): void => {
     transfersInclFines: Transfer[],
     fines: Fine[],
     userFineGroups: UserFineGroup[],
+    actor: User,
   };
 
   let sandbox: SinonSandbox;
@@ -92,6 +93,7 @@ describe('DebtorService', (): void => {
       transfersInclFines: transfers.concat(fineTransfers),
       fines,
       userFineGroups,
+      actor: usersWithFines[0],
     };
 
     Mailer.reset();
@@ -341,8 +343,11 @@ describe('DebtorService', (): void => {
       const usersToFine = await DebtorService.calculateFinesOnDate({});
       const fineHandoutEvent = await DebtorService.handOutFines({
         userIds: usersToFine.map((u) => u.id),
-      });
+      }, ctx.actor);
       expect(fineHandoutEvent.fines.length).to.equal(usersToFine.length);
+      expect(new Date().getTime() - new Date(fineHandoutEvent.referenceDate).getTime())
+        .to.be.at.most(1000);
+      expect(fineHandoutEvent.createdBy.id).to.equal(ctx.actor.id);
 
       const fines = await Promise.all(fineHandoutEvent.fines.map((f) => Fine
         .findOne({ where: { id: f.id }, relations: ['transfer', 'transfer.from', 'fineHandoutEvent', 'userFineGroup', 'userFineGroup.user'] })));
@@ -365,8 +370,10 @@ describe('DebtorService', (): void => {
       const fineHandoutEvent = await DebtorService.handOutFines({
         userIds: usersToFine.map((u) => u.id),
         referenceDate,
-      });
+      }, ctx.actor);
       expect(fineHandoutEvent.fines.length).to.equal(usersToFine.length);
+      expect(fineHandoutEvent.referenceDate).to.equal(referenceDate.toISOString());
+      expect(fineHandoutEvent.createdBy.id).to.equal(ctx.actor.id);
 
       const fines = await Promise.all(fineHandoutEvent.fines.map((f) => Fine
         .findOne({ where: { id: f.id }, relations: ['transfer', 'transfer.from', 'fineHandoutEvent', 'userFineGroup', 'userFineGroup.user'] })));
@@ -402,8 +409,10 @@ describe('DebtorService', (): void => {
       });
       const fineHandoutEvent = await DebtorService.handOutFines({
         userIds: usersToFine.map((u) => u.id),
-      });
+      }, ctx.actor);
       expect(fineHandoutEvent.fines.length).to.equal(usersToFine.length);
+      expect(fineHandoutEvent.referenceDate).to.equal(referenceDate.toISOString());
+      expect(fineHandoutEvent.createdBy.id).to.equal(ctx.actor.id);
 
       const fines = await Promise.all(fineHandoutEvent.fines.map((f) => Fine
         .findOne({ where: { id: f.id }, relations: ['transfer', 'transfer.from', 'fineHandoutEvent', 'userFineGroup', 'userFineGroup.user'] })));
@@ -428,10 +437,10 @@ describe('DebtorService', (): void => {
 
       const fineHandoutEvent1 = await DebtorService.handOutFines({
         userIds: [user.id],
-      });
+      }, ctx.actor);
       const fineHandoutEvent2 = await DebtorService.handOutFines({
         userIds: [user.id],
-      });
+      }, ctx.actor);
 
       expect(fineHandoutEvent1.fines.length).to.equal(1);
       expect(fineHandoutEvent2.fines.length).to.equal(1);
@@ -450,7 +459,7 @@ describe('DebtorService', (): void => {
       expect(ids).to.include(fineHandoutEvent2.fines[0].id);
     });
     it('should create no fines if empty list of userIds is given', async () => {
-      const fineHandoutEvent = await DebtorService.handOutFines({ userIds: [] });
+      const fineHandoutEvent = await DebtorService.handOutFines({ userIds: [] }, ctx.actor);
 
       expect(fineHandoutEvent.fines.length).to.equal(0);
       expect(await Fine.count()).to.equal(0);
@@ -460,7 +469,7 @@ describe('DebtorService', (): void => {
       let dbUser = await User.findOne({ where: { id: user.id }, relations: ['currentFines'] });
       expect(dbUser.currentFines).to.be.null;
 
-      const fineHandoutEvent = await DebtorService.handOutFines({ userIds: [user.id] });
+      const fineHandoutEvent = await DebtorService.handOutFines({ userIds: [user.id] }, ctx.actor);
       expect(fineHandoutEvent.fines.length).to.equal(1);
       const fine = fineHandoutEvent.fines[0];
       expect(fine.user.id).to.equal(user.id);
@@ -477,7 +486,7 @@ describe('DebtorService', (): void => {
 
       await DebtorService.handOutFines({
         userIds: [user.id],
-      });
+      }, ctx.actor);
 
       expect(sendMailFake).to.be.calledOnce;
     });

@@ -15,9 +15,10 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { Column, Entity, OneToMany } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany } from 'typeorm';
 import BaseEntity from '../base-entity';
 import Fine from './fine';
+import User from '../user/user';
 
 @Entity()
 export default class FineHandoutEvent extends BaseEntity {
@@ -26,4 +27,8 @@ export default class FineHandoutEvent extends BaseEntity {
 
   @Column({ type: 'datetime' })
   public referenceDate: Date;
+
+  @ManyToOne(() => User)
+  @JoinColumn()
+  public readonly createdBy: User;
 }

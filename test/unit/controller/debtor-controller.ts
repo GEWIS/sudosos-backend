@@ -51,6 +51,9 @@ import {
 } from '../../../src/controller/response/debtor-response';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import { calculateBalance, calculateFine } from '../../helpers/balance';
+import Mailer from '../../../src/mailer';
+import sinon, { SinonSandbox, SinonSpy } from 'sinon';
+import nodemailer, { Transporter } from 'nodemailer';
 
 describe('DebtorController', () => {
   let ctx: {
@@ -73,6 +76,9 @@ describe('DebtorController', () => {
     fines: Fine[],
     fineHandoutEvents: FineHandoutEvent[],
   };
+
+  let sandbox: SinonSandbox;
+  let sendMailFake: SinonSpy;
 
   before(async () => {
     // initialize test database
@@ -162,12 +168,25 @@ describe('DebtorController', () => {
       fines,
       fineHandoutEvents,
     };
+
+    Mailer.reset();
+
+    sandbox = sinon.createSandbox();
+    sendMailFake = sandbox.spy();
+    sandbox.stub(nodemailer, 'createTransport').returns({
+      sendMail: sendMailFake,
+    } as any as Transporter);
   });
 
   // close database connection
   after(async () => {
     await ctx.connection.dropDatabase();
     await ctx.connection.destroy();
+    sandbox.restore();
+  });
+
+  afterEach(() => {
+    sendMailFake.resetHistory();
   });
 
   describe('GET /fines', () => {
@@ -372,6 +391,7 @@ describe('DebtorController', () => {
 
       const validation = ctx.specification.validateModel('FineHandoutResponse', fineHandoutEventResponse, false, true);
       expect(validation.valid).to.be.true;
+      expect(fineHandoutEventResponse.createdBy.id).to.equal(ctx.adminUser.id);
     });
     it('should return 403 if user is not admin', async () => {
       const res = await request(ctx.app)

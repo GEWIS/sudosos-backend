@@ -21,8 +21,8 @@ import { PaginationResult } from '../../helpers/pagination';
 import { BaseUserResponse } from './user-response';
 
 /**
- * @typedef {UserToFineResponse}
- * @property {integer} id - User ID
+ * @typedef UserToFineResponse
+ * @property {number} id - User ID
  * @property {DineroObjectResponse.model} amount - Amount to fine
  */
 export interface UserToFineResponse {
@@ -43,9 +43,11 @@ export interface FineResponse extends BaseResponse {
 /**
  * @typedef {BaseResponse} BaseFineHandoutEventResponse
  * @property {string} referenceDate.required - Reference date of fines
+ * @property {BaseUserResponse.model} createdBy - User that handed out the fines
  */
 export interface BaseFineHandoutEventResponse extends BaseResponse {
   referenceDate: string;
+  createdBy: BaseUserResponse;
 }
 
 /**

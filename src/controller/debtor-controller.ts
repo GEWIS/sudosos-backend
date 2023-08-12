@@ -208,7 +208,7 @@ export default class DebtorController extends BaseController {
 
     let referenceDate: Date;
     try {
-      // Todo: write code-consistent validator (either controller/request/validators or custom validator.js function)
+      // Todo: write code-consistent validator (either /src/controller/request/validators or custom validator.js function)
       if (!Array.isArray(body.userIds)) throw new Error('userIds is not an array');
       const users = await User.find({ where: { id: In(body.userIds) } });
       if (users.length !== body.userIds.length) throw new Error('userIds is not a valid array of user IDs');
@@ -223,7 +223,7 @@ export default class DebtorController extends BaseController {
     }
 
     try {
-      const result = await DebtorService.handOutFines({ referenceDate, userIds: body.userIds });
+      const result = await DebtorService.handOutFines({ referenceDate, userIds: body.userIds }, req.token.user);
       res.json(result);
     } catch (error) {
       this.logger.error('Could not handout fines:', error);

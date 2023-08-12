@@ -73,7 +73,7 @@ export default class DebtorService {
       id: fine.id,
       createdAt: fine.createdAt.toISOString(),
       updatedAt: fine.updatedAt.toISOString(),
-      user: parseUserToBaseResponse(fine.userFineGroup.user, true),
+      user: parseUserToBaseResponse(fine.userFineGroup.user, false),
       amount: {
         amount: fine.amount.getAmount(),
         precision: fine.amount.getPrecision(),
@@ -88,6 +88,7 @@ export default class DebtorService {
       createdAt: e.createdAt.toISOString(),
       updatedAt: e.updatedAt.toISOString(),
       referenceDate: e.referenceDate.toISOString(),
+      createdBy: parseUserToBaseResponse(e.createdBy, false),
     };
   }
 
@@ -168,10 +169,11 @@ export default class DebtorService {
    * Write fines to database for all given user ids.
    * @param referenceDate Date to base fines on. If undefined, the date of the previous fines will be used. If this is the first fine, use now.
    * @param userIds Ids of all users to fine
+   * @param createdBy User handing out fines
    */
   public static async handOutFines({
     referenceDate, userIds,
-  }: HandOutFinesParams): Promise<FineHandoutEventResponse> {
+  }: HandOutFinesParams, createdBy: User): Promise<FineHandoutEventResponse> {
     const previousFineGroup = (await FineHandoutEvent.find({
       order: { id: 'desc' },
       relations: ['fines', 'fines.userFineGroup'],
@@ -187,7 +189,10 @@ export default class DebtorService {
 
     const { fines: fines1, fineHandoutEvent: fineHandoutEvent1, emails: emails1 } = await getConnection().transaction(async (manager) => {
       // Create a new fine group to "connect" all these fines
-      const fineHandoutEvent = Object.assign(new FineHandoutEvent(), { referenceDate: date });
+      const fineHandoutEvent = Object.assign(new FineHandoutEvent(), {
+        referenceDate: date,
+        createdBy,
+      });
       await manager.save(fineHandoutEvent);
 
       const emails: { user: User, email: MailTemplate<any> }[] = [];
@@ -245,6 +250,7 @@ export default class DebtorService {
       createdAt: fineHandoutEvent1.createdAt.toISOString(),
       updatedAt: fineHandoutEvent1.updatedAt.toISOString(),
       referenceDate: fineHandoutEvent1.referenceDate.toISOString(),
+      createdBy: parseUserToBaseResponse(fineHandoutEvent1.createdBy, false),
       fines: fines1.map((f) => this.asFineResponse(f)),
     };
   }
