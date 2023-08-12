@@ -338,6 +338,7 @@ export default class UserController extends BaseController {
   /**
    * Get a list of all users
    * @route GET /users
+   * @operationId getAllUsers
    * @group users - Operations of user controller
    * @security JWT
    * @param {integer} take.query - How many users the endpoint should return
@@ -346,7 +347,8 @@ export default class UserController extends BaseController {
    * @param {boolean} active.query - Filter based if the user is active
    * @param {boolean} ofAge.query - Filter based if the user is 18+
    * @param {integer} id.query - Filter based on user ID
-   * @param {type} type.query - Filter based on user type.
+   * @param {integer} type.query.enum{1,2,3,4,5,6,7} - Filter based on user type. Possible values:
+   *      1 (MEMBER), 2 (ORGAN), 3 (BORRELKAART), 4 (LOCAL_USER), 5 (LOCAL_ADMIN), 6 (INVOICE), 7 (AUTOMATIC_INVOICE)
    * @returns {PaginatedUserResponse.model} 200 - A list of all users
    */
   public async getAllUsers(req: RequestWithToken, res: Response): Promise<void> {
@@ -377,6 +379,7 @@ export default class UserController extends BaseController {
   /**
    * Get all users of user type
    * @route GET /users/usertype/{userType}
+   * @operationId getAllUsersOfUserType
    * @group users - Operations of user controller
    * @param {string} userType.path.required - The userType of the requested users
    * @security JWT
@@ -409,6 +412,7 @@ export default class UserController extends BaseController {
   /**
    * Put an users pin code
    * @route PUT /users/{id}/authenticator/pin
+   * @operationId updateUserPin
    * @group users - Operations of user controller
    * @param {integer} id.path.required - The id of the user
    * @param {UpdatePinRequest.model} update.body.required -
@@ -450,6 +454,7 @@ export default class UserController extends BaseController {
   /**
    * Put a users NFC code
    * @route PUT /users/{id}/authenticator/nfc
+   * @operationId updateUserNfc
    * @group users - Operations of user controller
    * @param {integer} id.path.required - The id of the user
    * @param {UpdateNfcRequest.model} update.body.required -
@@ -491,6 +496,7 @@ export default class UserController extends BaseController {
   /**
    * Delete a nfc code
    * @route DELETE /users/{id}/authenticator/nfc
+   * @operationId deleteUserNfc
    * @group users - Operations of user controller
    * @param {integer} id.path.required - The id of the user
    * @security JWT
@@ -528,6 +534,7 @@ export default class UserController extends BaseController {
   /**
    * POST an users update to new key code
    * @route POST /users/{id}/authenticator/key
+   * @operationId updateUserKey
    * @group users - Operations of user controller
    * @param {integer} id.path.required - The id of the user
    * @security JWT
@@ -563,6 +570,7 @@ export default class UserController extends BaseController {
   /**
    * Delete a users key code
    * @route Delete /users/{id}/authenticator/key
+   * @operationId deleteUserKey
    * @group users - Operations of user controller
    * @param {integer} id.path.required - The id of the user
    * @security JWT
@@ -595,6 +603,7 @@ export default class UserController extends BaseController {
   /**
    * Put a user's local password
    * @route PUT /users/{id}/authenticator/local
+   * @operationId updateUserLocalPassword
    * @group users - Operations of user controller
    * @param {integer} id.path.required - The id of the user
    * @param {UpdateLocalRequest.model} update.body.required -
@@ -637,6 +646,7 @@ export default class UserController extends BaseController {
   /**
    * Get an organs members
    * @route GET /users/{id}/members
+   * @operationId getOrganMembers
    * @group users - Operations of user controller
    * @param {integer} id.path.required - The id of the user
    * @security JWT
@@ -674,10 +684,11 @@ export default class UserController extends BaseController {
   /**
    * Get an individual user
    * @route GET /users/{id}
+   * @operationId getIndividualUser
    * @group users - Operations of user controller
-   * @param {integer} id.path.required - The id of the user
+   * @param {integer} id.path.required - userID
    * @security JWT
-   * @returns {User.model} 200 - Individual user
+   * @returns {UserResponse.model} 200 - Individual user
    * @returns {string} 404 - Nonexistent user id
    */
   public async getIndividualUser(req: RequestWithToken, res: Response): Promise<void> {
@@ -703,6 +714,7 @@ export default class UserController extends BaseController {
   /**
    * Create a new user
    * @route POST /users
+   * @operationId createUser
    * @group users - Operations of user controller
    * @param {CreateUserRequest.model} user.body.required -
    * The user which should be created
@@ -734,7 +746,9 @@ export default class UserController extends BaseController {
   /**
    * Update a user
    * @route PATCH /users/{id}
+   * @operationId updateUser
    * @group users - Operations of user controller
+   * @param {integer} id.path.required - The id of the user
    * @param {UpdateUserRequest.model} user.body.required -
    * The user which should be updated
    * @security JWT
@@ -785,6 +799,7 @@ export default class UserController extends BaseController {
   /**
    * Delete a single user
    * @route DELETE /users/{id}
+   * @operationId deleteUser
    * @group users - Operations of user controller
    * @param {integer} id.path.required - The id of the user
    * @security JWT
@@ -822,8 +837,9 @@ export default class UserController extends BaseController {
   /**
    * Accept the Terms of Service if you have not accepted it yet
    * @route POST /users/acceptTos
+   * @operationId acceptTos
    * @group users - Operations of the User controller
-   * @param {AcceptTosRequest.model} params.body.required
+   * @param {AcceptTosRequest.model} params.body.required - "Tosrequest body"
    * @security JWT
    * @returns {string} 204 - ToS accepted
    * @returns {string} 400 - ToS already accepted
@@ -858,6 +874,7 @@ export default class UserController extends BaseController {
   /**
    * Get an user's products
    * @route GET /users/{id}/products
+   * @operationId getUsersProducts
    * @group users - Operations of user controller
    * @param {integer} id.path.required - The id of the user
    * @param {integer} take.query - How many products the endpoint should return
@@ -900,6 +917,7 @@ export default class UserController extends BaseController {
   /**
    * Get an user's updated products
    * @route GET /users/{id}/products/updated
+   * @operationId getUsersUpdatedProducts
    * @group users - Operations of user controller
    * @param {integer} id.path.required - The id of the user
    * @param {integer} take.query - How many products the endpoint should return
@@ -942,6 +960,7 @@ export default class UserController extends BaseController {
   /**
    * Returns the user's containers
    * @route GET /users/{id}/containers
+   * @operationId getUsersContainers
    * @group users - Operations of user controller
    * @param {integer} id.path.required - The id of the user
    * @security JWT
@@ -988,6 +1007,7 @@ export default class UserController extends BaseController {
   /**
    * Returns the user's updated containers
    * @route GET /users/{id}/containers/updated
+   * @operationId getUsersUpdatedContainers
    * @group users - Operations of user controller
    * @param {integer} id.path.required - The id of the user
    * @security JWT
@@ -1034,6 +1054,7 @@ export default class UserController extends BaseController {
   /**
    * Returns the user's Points of Sale
    * @route GET /users/{id}/pointsofsale
+   * @operationId getUsersPointsOfSale
    * @group users - Operations of user controller
    * @param {integer} id.path.required - The id of the user
    * @param {integer} take.query - How many points of sale the endpoint should return
@@ -1080,6 +1101,7 @@ export default class UserController extends BaseController {
   /**
    * Returns the user's updated Points of Sale
    * @route GET /users/{id}/pointsofsale/updated
+   * @operationId getUsersUpdatedPointsOfSale
    * @group users - Operations of user controller
    * @param {integer} id.path.required - The id of the user
    * @param {integer} take.query - How many points of sale the endpoint should return
@@ -1126,6 +1148,7 @@ export default class UserController extends BaseController {
   /**
    * Get an user's transactions (from, to or created)
    * @route GET /users/{id}/transactions
+   * @operationId getUsersTransactions
    * @group users - Operations of user controller
    * @param {integer} id.path.required - The id of the user that should be involved
    * in all returned transactions
@@ -1141,7 +1164,7 @@ export default class UserController extends BaseController {
    * @param {integer} take.query - How many transactions the endpoint should return
    * @param {integer} skip.query - How many transactions should be skipped (for pagination)
    * @security JWT
-   * @returns {PaginatedTransactionResponse.model} 200 - List of transactions.
+   * @returns {PaginatedBaseTransactionResponse.model} 200 - List of transactions.
    */
   public async getUsersTransactions(req: RequestWithToken, res: Response): Promise<void> {
     const { id } = req.params;
@@ -1186,6 +1209,7 @@ export default class UserController extends BaseController {
   /**
    * Get an user's transfers
    * @route GET /users/{id}/transfers
+   * @operationId getUsersTransfers
    * @group users - Operations of user controller
    * @param {integer} id.path.required - The id of the user that should be involved
    * in all returned transfers
@@ -1245,6 +1269,7 @@ export default class UserController extends BaseController {
   /**
    * Authenticate as another user
    * @route POST /users/{id}/authenticate
+   * @operationId authenticateAs
    * @group users - Operations of user controller
    * @param {integer} id.path.required - The id of the user that should be authenticated as
    * @security JWT
@@ -1295,11 +1320,12 @@ export default class UserController extends BaseController {
   /**
    * Get all users that the user can authenticate as
    * @route GET /users/{id}/authenticate
+   * @operationId getUserAuthenticatable
    * @group users - Operations of user controller
    * @param {integer} id.path.required - The id of the user to get authentications of
    * @security JWT
    * @returns {string} 404 - User not found error.
-   * @returns {Array.<UserResponse.model>} 200 - A list of all users the given ID can authenticate
+   * @returns {Array.<UserResponse>} 200 - A list of all users the given ID can authenticate
    */
   public async getUserAuthenticatable(req: RequestWithToken, res: Response): Promise<void> {
     const parameters = req.params;
@@ -1328,10 +1354,11 @@ export default class UserController extends BaseController {
   /**
    * Get all roles assigned to the user.
    * @route GET /users/{id}/roles
+   * @operationId getUserRoles
    * @group users - Operations of user controller
    * @param {integer} id.path.required - The id of the user to get the roles from
    * @security JWT
-   * @returns {Array.<RoleResponse.model>} 200 - The roles of the user
+   * @returns {Array.<RoleResponse>} 200 - The roles of the user
    * @returns {string} 404 - User not found error.
    */
   public async getUserRoles(req: RequestWithToken, res: Response): Promise<void> {
@@ -1361,6 +1388,7 @@ export default class UserController extends BaseController {
   /**
    * Get all financial mutations of a user.
    * @route GET /users/{id}/financialmutations
+   * @operationId getUsersFinancialMutations
    * @group users - Operations of user controller
    * @param {integer} id.path.required - The id of the user to get the mutations from
    * @param {integer} take.query - How many transactions the endpoint should return
@@ -1405,6 +1433,7 @@ export default class UserController extends BaseController {
   /**
    * Get all deposits of a user that are still being processed by Stripe
    * @route GET /users/{id}/deposits
+   * @operationId getUsersProcessingDeposits
    * @group users - Operations of user controller
    * @param {integer} id.path.required - The id of the user to get the deposits from
    * @security JWT
@@ -1435,6 +1464,7 @@ export default class UserController extends BaseController {
   /**
    * Get transaction report for the given user
    * @route GET /users/{id}/transactions/report
+   * @operationId getUsersTransactionsReport
    * @group users - Operations of user controller
    * @param {integer} id.path.required - The id of the user to get the transaction report from
    * @security JWT

@@ -164,6 +164,7 @@ export default class ContainerService {
       builder.leftJoin(Product, 'base_product', 'base_product.id = products.productId');
       builder.leftJoinAndSelect(User, 'product_owner', 'product_owner.id = base_product.owner.id');
       builder.leftJoinAndSelect(ProductImage, 'product_image', 'product_image.id = base_product.imageId');
+      builder.leftJoinAndSelect('products.vat', 'vat');
       if (filters.productId) builder.where(`products.productId = ${filters.productId}`);
     }
 
@@ -210,8 +211,8 @@ export default class ContainerService {
         revision: response.products_revision,
         alcoholpercentage: response.products_alcoholPercentage,
         vat_id: response.products_vatId,
-        vat_hidden: response.products_vatHidden,
-        vat_percentage: response.products_vatPercentage,
+        vat_hidden: response.vat_hidden,
+        vat_percentage: response.vat_percentage,
         category_id: response.products_categoryId,
         category_name: response.category_name,
         createdAt: response.products_createdAt,
@@ -312,6 +313,7 @@ export default class ContainerService {
       builder.innerJoinAndSelect('products.category', 'category');
       builder.innerJoinAndSelect(User, 'product_owner', 'product_owner.id = base_product.owner.id');
       builder.leftJoinAndSelect(ProductImage, 'product_image', 'product_image.id = base_product.imageId');
+      builder.leftJoinAndSelect('products.vat', 'vat');
       if (filters.productId) builder.where(`products.productId = ${filters.productId}`);
     }
     const filterMapping: FilterMapping = {

@@ -61,6 +61,7 @@ export default class RootController extends BaseController {
   /**
    * Returns all existing banners
    * @route GET /open/banners
+   * @operationId getAllOpenBanners
    * @group banners - Operations of banner controller
    * @param {integer} take.query - How many banners the endpoint should return
    * @param {integer} skip.query - How many banners should be skipped (for pagination)
@@ -94,6 +95,7 @@ export default class RootController extends BaseController {
   /**
    * Ping the backend to check whether everything is working correctly
    * @route GET /ping
+   * @operationId ping
    * @group root - Operations of the root controller
    * @returns {string} 200 - Success
    * @returns {string} 500 - Internal server error (database error)

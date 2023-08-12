@@ -17,6 +17,13 @@
  */
 
 /**
+ * @typedef DineroObject
+ * @property {integer} amount.required - amount
+ * @property {string} currency.required - currency
+ * @property {integer} precision.required - precision
+ */
+
+/**
 * @typedef DineroObjectRequest
 * @property {integer} amount.required - amount
 * @property {string} currency.required - currency

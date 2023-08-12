@@ -59,6 +59,7 @@ export default class StripeController extends BaseController {
   /**
    * Start the stripe deposit flow
    * @route POST /stripe/deposit
+   * @operationId deposit
    * @group Stripe - Operations of the stripe controller
    * @param {StripeRequest.model} stripe.body.required - The deposit that should be created
    * @returns {StripePaymentIntentResponse.model} 200 - Payment Intent information

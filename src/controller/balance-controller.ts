@@ -68,6 +68,7 @@ export default class BalanceController extends BaseController {
   /**
    * Get balance of the current user
    * @route get /balances
+   * @operationId getBalances
    * @group balance - Operations of balance controller
    * @security JWT
    * @returns {BalanceResponse.model} 200 - The requested user's balance
@@ -88,6 +89,7 @@ export default class BalanceController extends BaseController {
   /**
    * Get balance of the current user
    * @route GET /balances/all
+   * @operationId getAllBalance
    * @group balance - Operations of balance controller
    * @security JWT
    * @param {string} date.query - Timestamp to get balances for
@@ -98,7 +100,7 @@ export default class BalanceController extends BaseController {
    * @param {integer} maxFine.query - Maximum fine
    * @param {Array<string>} userTypes.query - User types (strings, not numbers)
    * @param {enum} orderBy.query - Column to order balance by - eg: id,amount
-   * @param {enum} orderDirection.query - Order direction - eg: asc,desc,ASC,DESC
+   * @param {enum} orderDirection.query - Order direction - eg: ASC,DESC
    * @param {integer} take.query - How many transactions the endpoint should return
    * @param {integer} skip.query - How many transactions should be skipped (for pagination)
    * @returns {Array<BalanceResponse>} 200 - The requested user's balance
@@ -143,8 +145,9 @@ export default class BalanceController extends BaseController {
   /**
    * Retrieves the requested balance
    * @route get /balances/{id}
+   * @operationId getBalanceId
    * @group balance - Operations of balance controller
-   * @param {integer} id.path - The id of the user for which the saldo is requested
+   * @param {integer} id.path.required - The id of the user for which the saldo is requested
    * @security JWT
    * @returns {BalanceResponse.model} 200 - The requested user's balance
    * @returns {string} 400 - Validation error

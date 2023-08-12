@@ -36,6 +36,7 @@ import { AcceptTosRequest } from '../controller/request/accept-tos-request';
 import Bindings from '../helpers/bindings';
 import AuthenticationService from './authentication-service';
 import WelcomeWithReset from '../mailer/templates/welcome-with-reset';
+import {Brackets, getConnection} from "typeorm";
 
 /**
  * Parameters used to filter on Get Users functions.
@@ -96,11 +97,36 @@ export default class UserService {
     const builder = Bindings.Users.getBuilder();
 
     QueryFilter.applyFilter(builder, filterMapping, f);
+    // Note this is only for MySQL
     if (filters.search) {
-      builder.andWhere('(user.firstName like :search OR user.lastName like :search OR user.email like :search)', {
-        search: `%${filters.search}%`,
-      });
+      const searchTerms = filters.search.split(' ', 2);
+
+      if (searchTerms.length > 1) {
+        let searchTerm1 = `%${searchTerms[0]}%`;
+        let searchTerm2 = `%${searchTerms[1]}%`;
+
+        builder.andWhere(new Brackets(qb => {
+          qb.where('user.firstName LIKE :searchTerm1 COLLATE utf8_general_ci')
+            .orWhere('user.lastName LIKE :searchTerm2 COLLATE utf8_general_ci')
+            .orWhere('user.firstName LIKE :searchTerm2 COLLATE utf8_general_ci')
+            .orWhere('user.lastName LIKE :searchTerm1 COLLATE utf8_general_ci');
+        }), {
+          searchTerm1: searchTerm1,
+          searchTerm2: searchTerm2,
+        });
+      } else {
+        let searchTerm = `%${filters.search}%`;
+
+        builder.andWhere(new Brackets(qb => {
+          qb.where('user.firstName LIKE :search COLLATE utf8_general_ci')
+            .orWhere('user.lastName LIKE :search COLLATE utf8_general_ci')
+            .orWhere('user.email LIKE :search COLLATE utf8_general_ci');
+        }), {
+          search: searchTerm,
+        });
+      }
     }
+
     const users = await builder.limit(take).offset(skip).getRawMany();
     const count = await builder.getCount();
 

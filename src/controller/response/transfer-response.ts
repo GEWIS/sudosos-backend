@@ -46,8 +46,8 @@ export interface TransferResponse extends BaseResponse {
 
 /**
  * @typedef PaginatedTransferResponse
- * @property {PaginationResult.model} _pagination - Pagination metadata
- * @property {Array<TransferResponse.model>} records - Returned transfers
+ * @property {PaginationResult.model} _pagination.required - Pagination metadata
+ * @property {Array.<TransferResponse>} records.required - Returned transfers
  */
 export interface PaginatedTransferResponse {
   _pagination: PaginationResult,

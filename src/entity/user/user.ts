@@ -59,7 +59,7 @@ export const TOSRequired = [
  * @property {boolean} ofAge - Whether the user is 18+ or not.
  * @property {string} email - The email of the user.
  * @property {boolean} deleted - Whether the user was deleted. Defaults to false.
- * @property {enum} type.required - The type of user.
+ * @property {string} type.required - The type of user.
  */
 @Entity()
 export default class User extends BaseEntity {
