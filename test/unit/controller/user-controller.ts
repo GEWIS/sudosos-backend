@@ -255,6 +255,7 @@ describe('UserController', (): void => {
         return (
           user.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
           user.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          user.nickname?.toLowerCase().includes(searchQuery.toLowerCase()) ||
           fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
           user.email.toLowerCase().includes(searchQuery.toLowerCase())
         );
@@ -348,6 +349,22 @@ describe('UserController', (): void => {
       expect(pagination.take).to.equal(defaultPagination());
       expect(pagination.skip).to.equal(0);
 
+    });
+    it('should return correct user using search on nickname', async () => {
+      const searchQuery = ctx.users.find((u) => u.nickname != null).nickname;
+      const res = await request(ctx.app)
+        .get('/users')
+        .query({ search: searchQuery })
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+
+      const filteredUsers = await queryUserBackend(searchQuery);
+
+      const users = res.body.records as UserResponse[];
+      const ids = users.map((u) => u.id);
+      filteredUsers.forEach((u) => {
+        expect(ids).to.includes(u.id);
+      });
     });
     it('should give HTTP 200 when correctly creating and searching for a user', async () => {
       const user = {
