@@ -75,6 +75,7 @@ export default class DebtorController extends BaseController {
    * Get all fine handout events
    * @route GET /fines
    * @group debtors - Operations of the debtor controller
+   * @operationId returnAllFineHandoutEvents
    * @security JWT
    * @param {integer} take.query - How many entries the endpoint should return
    * @param {integer} skip.query - How many entries should be skipped (for pagination)
@@ -108,6 +109,7 @@ export default class DebtorController extends BaseController {
    * Get all fine handout events
    * @route GET /fines/{id}
    * @group debtors - Operations of the debtor controller
+   * @operationId returnSingleFineHandoutEvent
    * @security JWT
    * @param {integer} id.path.required - The id of the fine handout event which should be returned
    * @returns {FineHandoutEventResponse.model} 200 - Requested fine handout event with corresponding fines
@@ -130,9 +132,10 @@ export default class DebtorController extends BaseController {
    * Delete a fine
    * @route DELETE /fines/{id}
    * @group debtors - Operations of the debtor controller
+   * @operationId deleteFine
    * @security JWT
    * @param {integer} id.path.required - The id of the fine which should be deleted
-   * @returns {} 204 - Success
+   * @returns {string} 204 - Success
    * @returns {string} 400 - Validation error
    * @returns {string} 500 - Internal server error
    */
@@ -161,10 +164,11 @@ export default class DebtorController extends BaseController {
    * For all these users, also return their fine based on the reference date.
    * @route GET /fines/eligible
    * @group debtors - Operations of the debtor controller
+   * @operationId calculateFines
    * @security JWT
    * @param {Array<string>} userTypes.query.required - List of all user types fines should be calculated for
    * @param {string} referenceDate.query - Date to base fines on. If undefined, use now.
-   * @returns {Array<UserToFineResponse.model>} 200 - List of eligible fines
+   * @returns {Array<UserToFineResponse>} 200 - List of eligible fines
    * @returns {string} 400 - Validation error
    * @returns {string} 500 - Internal server error
    */
@@ -196,6 +200,7 @@ export default class DebtorController extends BaseController {
    * Handout fines to all given users.
    * @route POST /fines/handout
    * @group debtors - Operations of the debtor controller
+   * @operationId handoutFines
    * @security JWT
    * @param {HandoutFinesRequest.model} body.body.required
    * @returns {FineHandoutEventResponse.model} 200 - Created fine handout event with corresponding fines

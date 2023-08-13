@@ -347,8 +347,7 @@ export default class UserController extends BaseController {
    * @param {boolean} active.query - Filter based if the user is active
    * @param {boolean} ofAge.query - Filter based if the user is 18+
    * @param {integer} id.query - Filter based on user ID
-   * @param {integer} type.query.enum{1,2,3,4,5,6,7} - Filter based on user type. Possible values:
-   *      1 (MEMBER), 2 (ORGAN), 3 (BORRELKAART), 4 (LOCAL_USER), 5 (LOCAL_ADMIN), 6 (INVOICE), 7 (AUTOMATIC_INVOICE)
+   * @param {string} type.query.enum{MEMBER,ORGAN,BORRELKAART,LOCAL_USER,LOCAL_ADMIN,INVOICE,AUTOMATIC_INVOICE} - Filter based on user type.
    * @returns {PaginatedUserResponse.model} 200 - A list of all users
    */
   public async getAllUsers(req: RequestWithToken, res: Response): Promise<void> {
@@ -1515,6 +1514,7 @@ export default class UserController extends BaseController {
    * @route POST /users/{id}/fines/waive
    * @group users - Operations of user controller
    * @param {integer} id.path.required - The id of the user
+   * @operationId waiveUserFines
    * @security JWT
    * @returns {string} 204 - Success
    * @returns {string} 400 - User has no fines.

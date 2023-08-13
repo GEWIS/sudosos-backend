@@ -166,7 +166,7 @@ export default class DebtorService {
   }
 
   /**
-   * Write fines to database for all given user ids.
+   * Write fines in a single database transaction to database for all given user ids.
    * @param referenceDate Date to base fines on. If undefined, the date of the previous fines will be used. If this is the first fine, use now.
    * @param userIds Ids of all users to fine
    * @param createdBy User handing out fines
@@ -187,6 +187,7 @@ export default class DebtorService {
       ids: userIds,
     });
 
+    // NOTE: executed in single transaction
     const { fines: fines1, fineHandoutEvent: fineHandoutEvent1, emails: emails1 } = await getConnection().transaction(async (manager) => {
       // Create a new fine group to "connect" all these fines
       const fineHandoutEvent = Object.assign(new FineHandoutEvent(), {
