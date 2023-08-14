@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { expect } from 'chai';
-import sinon from 'sinon';
+import sinon, { SinonSandbox, SinonStub } from 'sinon';
 import nodemailer, { Transporter } from 'nodemailer';
 import { Connection } from 'typeorm';
 import Mailer from '../../../src/mailer';
@@ -32,12 +32,9 @@ describe('Mailer', () => {
     user: User,
   };
 
-  const sandbox = sinon.createSandbox();
-
-  const sendMailFake = sandbox.spy();
-  const createTransportStub = sandbox.stub(nodemailer, 'createTransport').returns({
-    sendMail: sendMailFake,
-  } as any as Transporter);
+  let sandbox: SinonSandbox;
+  let sendMailFake: SinonStub;
+  let createTransportStub: SinonStub;
 
   before(async () => {
     const connection = await Database.initialize();
@@ -53,6 +50,14 @@ describe('Mailer', () => {
       connection,
       user,
     };
+
+    Mailer.reset();
+
+    sandbox = sinon.createSandbox();
+    sendMailFake = sandbox.stub();
+    createTransportStub = sandbox.stub(nodemailer, 'createTransport').returns({
+      sendMail: sendMailFake,
+    } as any as Transporter);
   });
 
   afterEach(() => {

@@ -63,6 +63,9 @@ import LocalAuthenticator from '../entity/authenticator/local-authenticator';
 import ResetToken from '../entity/authenticator/reset-token';
 import { DataSourceOptions } from 'typeorm/data-source/DataSourceOptions';
 import KeyAuthenticator from '../entity/authenticator/key-authenticator';
+import Fine from '../entity/fine/fine';
+import FineHandoutEvent from '../entity/fine/fineHandoutEvent';
+import UserFineGroup from '../entity/fine/userFineGroup';
 
 export default class Database {
   public static async initialize(): Promise<Connection> {
@@ -90,6 +93,9 @@ export default class Database {
         StripeDepositStatus,
         PayoutRequest,
         PayoutRequestStatus,
+        Fine,
+        FineHandoutEvent,
+        UserFineGroup,
         Transaction,
         SubTransaction,
         SubTransactionRow,

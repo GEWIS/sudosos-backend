@@ -112,7 +112,6 @@ function keyMapping(invoice: InvoiceResponse | Invoice) {
 }
 
 export type T = InvoiceResponse | BaseInvoiceResponse;
-
 function returnsAll(response: T[], superset: Invoice[], mapping: any) {
   expect(response.map(mapping)).to.deep.equalInAnyOrder(superset.map(mapping));
 }
@@ -141,8 +140,7 @@ createInvoiceWithTransfers(debtorId: number, creditorId: number,
   };
 
   const invoice = await InvoiceService.createInvoice(createInvoiceRequest);
-  await new Promise((f) => setTimeout(f, 100));
-  expect((await BalanceService.getBalance(debtorId)).amount.amount).is.equal(0);
+  expect(invoice.transfer.amount.amount).to.equal(total);
   return invoice;
 }
 

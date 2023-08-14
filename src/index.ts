@@ -62,6 +62,7 @@ import ADService from './service/ad-service';
 import VatGroupController from './controller/vat-group-controller';
 import TestController from './controller/test-controller';
 import AuthenticationSecureController from './controller/authentication-secure-controller';
+import DebtorController from './controller/debtor-controller';
 
 export class Application {
   app: express.Express;
@@ -266,6 +267,7 @@ export default async function createApp(): Promise<Application> {
   application.app.use('/v1/transactions', new TransactionController(options).getRouter());
   application.app.use('/v1/borrelkaartgroups', new BorrelkaartGroupController(options).getRouter());
   application.app.use('/v1/transfers', new TransferController(options).getRouter());
+  application.app.use('/v1/fines', new DebtorController(options).getRouter());
   application.app.use('/v1/stripe', new StripeController(options).getRouter());
   application.app.use('/v1/payoutrequests', new PayoutRequestController(options).getRouter());
   application.app.use('/v1/invoices', new InvoiceController(options).getRouter());
