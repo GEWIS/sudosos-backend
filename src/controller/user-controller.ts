@@ -47,12 +47,13 @@ import LocalAuthenticator from '../entity/authenticator/local-authenticator';
 import UpdateLocalRequest from './request/update-local-request';
 import verifyUpdateLocalRequest from './request/validators/update-local-request-spec';
 import StripeService from '../service/stripe-service';
-import KeyAuthenticator from '../entity/authenticator/key-authenticator';
-import UpdateKeyResponse from './response/update-key-response';
-import { randomBytes } from 'crypto';
 import verifyUpdateNfcRequest from './request/validators/update-nfc-request-spec';
 import UpdateNfcRequest from './request/update-nfc-request';
 import NfcAuthenticator from '../entity/authenticator/nfc-authenticator';
+import KeyAuthenticator from '../entity/authenticator/key-authenticator';
+import UpdateKeyResponse from './response/update-key-response';
+import { randomBytes } from 'crypto';
+import DebtorService from '../service/debtor-service';
 
 export default class UserController extends BaseController {
   private logger: Logger = log4js.getLogger('UserController');
@@ -301,6 +302,12 @@ export default class UserController extends BaseController {
           handler: this.getUsersProcessingDeposits.bind(this),
         },
       },
+      '/:id(\\d+)/fines/waive': {
+        POST: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'delete', 'all', 'Fine', ['*']),
+          handler: this.waiveUserFines.bind(this),
+        },
+      },
     };
   }
 
@@ -340,8 +347,7 @@ export default class UserController extends BaseController {
    * @param {boolean} active.query - Filter based if the user is active
    * @param {boolean} ofAge.query - Filter based if the user is 18+
    * @param {integer} id.query - Filter based on user ID
-   * @param {integer} type.query.enum{1,2,3,4,5,6,7} - Filter based on user type. Possible values:
-   *      1 (MEMBER), 2 (ORGAN), 3 (BORRELKAART), 4 (LOCAL_USER), 5 (LOCAL_ADMIN), 6 (INVOICE), 7 (AUTOMATIC_INVOICE)
+   * @param {string} type.query.enum{MEMBER,ORGAN,BORRELKAART,LOCAL_USER,LOCAL_ADMIN,INVOICE,AUTOMATIC_INVOICE} - Filter based on user type.
    * @returns {PaginatedUserResponse.model} 200 - A list of all users
    */
   public async getAllUsers(req: RequestWithToken, res: Response): Promise<void> {
@@ -1497,6 +1503,44 @@ export default class UserController extends BaseController {
 
       const report = await TransactionService.getTransactionReportResponse(filters);
       res.status(200).json(report);
+    } catch (e) {
+      res.status(500).send();
+      this.logger.error(e);
+    }
+  }
+
+  /**
+   * Waive all given user's fines
+   * @route POST /users/{id}/fines/waive
+   * @group users - Operations of user controller
+   * @param {integer} id.path.required - The id of the user
+   * @operationId waiveUserFines
+   * @security JWT
+   * @returns {string} 204 - Success
+   * @returns {string} 400 - User has no fines.
+   * @returns {string} 404 - User not found error.
+   */
+  public async waiveUserFines(req: RequestWithToken, res: Response): Promise<void> {
+    const { id: rawId } = req.params;
+    this.logger.trace('Waive fines of user', rawId, 'by', req.token.user);
+
+
+    try {
+
+      const id = parseInt(rawId, 10);
+
+      const user = await User.findOne({ where: { id }, relations: ['currentFines'] });
+      if (user == null) {
+        res.status(404).json('Unknown user ID.');
+        return;
+      }
+      if (user.currentFines == null) {
+        res.status(400).json('User has no fines.');
+        return;
+      }
+
+      await DebtorService.waiveFines(id);
+      res.status(204).send();
     } catch (e) {
       res.status(500).send();
       this.logger.error(e);

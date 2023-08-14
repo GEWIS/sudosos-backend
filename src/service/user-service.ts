@@ -36,7 +36,7 @@ import { AcceptTosRequest } from '../controller/request/accept-tos-request';
 import Bindings from '../helpers/bindings';
 import AuthenticationService from './authentication-service';
 import WelcomeWithReset from '../mailer/templates/welcome-with-reset';
-import {Brackets, getConnection} from "typeorm";
+import { Brackets } from 'typeorm';
 
 /**
  * Parameters used to filter on Get Users functions.

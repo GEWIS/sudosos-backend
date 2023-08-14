@@ -53,4 +53,13 @@ export default class Mailer {
       this.logger.error('Could not send email:', error.message);
     }
   }
+
+  /**
+   * TEST-ONLY FUNCTION to reset the singleton.
+   * This is required in all test suites that use this object
+   * to make sure they have the correct stubs
+   */
+  static reset() {
+    this.instance = undefined;
+  }
 }
