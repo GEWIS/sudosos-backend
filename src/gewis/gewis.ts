@@ -394,6 +394,9 @@ export default class Gewis {
     this.roleManager.registerRole({
       name: 'SudoSOS - BAC PM',
       permissions: {
+        Authenticator: {
+          ...admin,
+        },
         Container: {
           ...admin,
         },
