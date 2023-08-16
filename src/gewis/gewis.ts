@@ -459,5 +459,27 @@ export default class Gewis {
       },
       assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: 'SudoSOS - Audit', user: { id: user.id } } }) != undefined,
     });
+
+    this.roleManager.registerRole({
+      name: 'SudoSOS - Narrowcasting',
+      permissions: {
+        Balance: {
+          get: { all: star },
+        },
+        PointOfSale: {
+          get: { all: star },
+        },
+        Container: {
+          get: { all: star },
+        },
+        Product: {
+          get: { all: star },
+        },
+        User: {
+          get: { all: star, organ: star },
+        },
+      },
+      assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: 'SudoSOS - Narrowcasting', user: { id: user.id } } }) != undefined,
+    });
   }
 }
