@@ -165,7 +165,11 @@ export default class UserService {
   public static async createUser(createUserRequest: CreateUserRequest) {
     // Check if user needs to accept TOS.
     const acceptedToS = TOSRequired.includes(createUserRequest.type) ? TermsOfServiceStatus.NOT_ACCEPTED : TermsOfServiceStatus.NOT_REQUIRED;
-    const user = await User.save({ ...createUserRequest, acceptedToS } as User);
+    const user = await User.save({
+      ...createUserRequest,
+      lastName: createUserRequest.lastName || '',
+      acceptedToS,
+    } as User);
 
     // Local users will receive a reset link.
     if (LocalUserTypes.includes(user.type)) {
