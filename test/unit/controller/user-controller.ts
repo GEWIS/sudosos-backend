@@ -266,6 +266,7 @@ describe('UserController', (): void => {
         return (
           user.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
           user.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          user.nickname?.toLowerCase().includes(searchQuery.toLowerCase()) ||
           fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
           user.email.toLowerCase().includes(searchQuery.toLowerCase())
         );
@@ -359,6 +360,22 @@ describe('UserController', (): void => {
       expect(pagination.take).to.equal(defaultPagination());
       expect(pagination.skip).to.equal(0);
 
+    });
+    it('should return correct user using search on nickname', async () => {
+      const searchQuery = ctx.users.find((u) => u.nickname != null).nickname;
+      const res = await request(ctx.app)
+        .get('/users')
+        .query({ search: searchQuery })
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+
+      const filteredUsers = await queryUserBackend(searchQuery);
+
+      const users = res.body.records as UserResponse[];
+      const ids = users.map((u) => u.id);
+      filteredUsers.forEach((u) => {
+        expect(ids).to.includes(u.id);
+      });
     });
     it('should give HTTP 200 when correctly creating and searching for a user', async () => {
       const user = {
@@ -821,12 +838,46 @@ describe('UserController', (): void => {
       expect(user.lastName).to.deep.equal(lastName);
       verifyUserResponse(spec, user);
     });
-    it('should give HTTP 400 if firstName is too long', async () => {
+    it('should give HTTP 400 if lastName is too long', async () => {
       const res = await request(ctx.app)
         .patch('/users/1')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send({ lastName: 'ThisIsAStringThatIsMuchTooLongToFitInASixtyFourCharacterStringBox' });
       expect(res.status).to.equal(400);
+    });
+    it('should correctly change nickname if requester is admin', async () => {
+      const nickname = 'SudoSOSFeut';
+
+      const res = await request(ctx.app)
+        .patch('/users/1')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ nickname });
+      expect(res.status).to.equal(200);
+
+      const user = res.body as UserResponse;
+      const spec = await Swagger.importSpecification();
+      expect(user.nickname).to.deep.equal(nickname);
+      verifyUserResponse(spec, user);
+    });
+    it('should give HTTP 400 if nickName is too long', async () => {
+      const res = await request(ctx.app)
+        .patch('/users/1')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ nickname: 'ThisIsAStringThatIsMuchTooLongToFitInASixtyFourCharacterStringBox' });
+      expect(res.status).to.equal(400);
+    });
+    it('should correctly remove nickname if set to empty string', async () => {
+      const user = ctx.users.find((u) => u.nickname != null);
+
+      const res = await request(ctx.app)
+        .patch('/users/' + user.id)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ nickname: '' });
+      expect(res.status).to.equal(200);
+
+      const userResponse = res.body as UserResponse;
+      expect(userResponse.nickname).to.be.null;
+      expect((await User.findOne({ where: { id: user.id } })).nickname).to.be.null;
     });
     it('should correctly set user inactive if requester is admin', async () => {
       const active = false;

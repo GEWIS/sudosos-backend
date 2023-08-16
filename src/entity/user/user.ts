@@ -55,6 +55,7 @@ export const TOSRequired = [
  * @typedef {BaseEntity} User
  * @property {string} firstName.required - First name of the user.
  * @property {string} lastName - Last name of the user.
+ * @property {string} nickname - Nickname of the user.
  * @property {boolean} active - Whether the user has accepted the TOS. Defaults to false.
  * @property {boolean} ofAge - Whether the user is 18+ or not.
  * @property {string} email - The email of the user.
@@ -73,6 +74,12 @@ export default class User extends BaseEntity {
     default: '',
   })
   public lastName: string;
+
+  @Column({
+    length: 64,
+    nullable: true,
+  })
+  public nickname: string;
 
   @Column({
     default: false,

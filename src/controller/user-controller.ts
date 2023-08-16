@@ -771,6 +771,11 @@ export default class UserController extends BaseController {
       res.status(400).json('lastName too long');
       return;
     }
+    if (body.nickname !== undefined && body.nickname.length > 64) {
+      res.status(400).json('nickname too long');
+      return;
+    }
+    if (body.nickname === '') body.nickname = null;
 
     try {
       const id = parseInt(parameters.id, 10);
