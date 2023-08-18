@@ -21,11 +21,11 @@ import { Response } from 'express';
 import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
-import BorrelSchemaService, { BorrelSchemaFilterParameters, parseBorrelSchemaFilterParameters } from '../service/borrel-schema-service';
-import { BorrelSchemaResponse } from './response/borrel-schema-response';
+import EventService, { EventFilterParameters, parseEventFilterParameters } from '../service/event-service';
+import { EventResponse } from './response/event-response';
 
-export default class BorrelSchemaController extends BaseController {
-  private logger: Logger = log4js.getLogger('BorrelSchemaLogger');
+export default class EventController extends BaseController {
+  private logger: Logger = log4js.getLogger('EventLogger');
 
   /**
    * Create a new user controller instance.
@@ -43,22 +43,22 @@ export default class BorrelSchemaController extends BaseController {
       '/': {
         GET: {
           policy: async (req) => this.roleManager.can(
-            req.token.roles, 'get', 'all', 'BorrelSchema', ['*'],
+            req.token.roles, 'get', 'all', 'Event', ['*'],
           ),
-          handler: this.getAllBorrelSchemas.bind(this),
+          handler: this.getAllEvents.bind(this),
         },
       },
     };
   }
 
-  public async getAllBorrelSchemas(req: RequestWithToken, res: Response): Promise<void> {
-    this.logger.trace('Get all borrelSchemas by user', req.token.user);
+  public async getAllEvents(req: RequestWithToken, res: Response): Promise<void> {
+    this.logger.trace('Get all events by user', req.token.user);
 
     /* TODO add pagination */
 
-    let filters: BorrelSchemaFilterParameters;
+    let filters: EventFilterParameters;
     try {
-      filters = parseBorrelSchemaFilterParameters(req);
+      filters = parseEventFilterParameters(req);
     } catch (e) {
       res.status(400).send(e.message);
       return;
@@ -66,11 +66,11 @@ export default class BorrelSchemaController extends BaseController {
 
     // Handle request
     try {
-      const borrelSchemas: BorrelSchemaResponse[] = await
-      BorrelSchemaService.getBorrelSchemas(filters);
-      res.json(borrelSchemas);
+      const events: EventResponse[] = await
+      EventService.getEvents(filters);
+      res.json(events);
     } catch (e) {
-      this.logger.error('Could not return all Borrel Schemas:', e);
+      this.logger.error('Could not return all events:', e);
       res.status(500).json('Internal server error.');
     }
   }

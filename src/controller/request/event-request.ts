@@ -16,87 +16,87 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-export interface BaseBorrelSchema {
+export interface BaseEvent {
   name: string,
   startDate: string,
   endDate: string,
   shiftIds?: number[],
 }
 
-export interface CreateBorrelSchemaParams extends BaseBorrelSchema {
+export interface CreateEventParams extends BaseEvent {
   createdById: number,
 }
 /**
- * @typedef CreateBorrelSchemaRequest
+ * @typedef CreateEventRequest
  * @property {string} name.required - Name of the borrel.
- * @property {User.model} createdBy - Creator of the borrelschema.
+ * @property {User.model} createdBy - Creator of the event.
  * @property {string} startDate.required - The starting date of the borrel.
  * @property {string} endDate.required - The end date of the borrel.
- * @property {Array<BorrelSchemaShift.model>} shifts - Filled in availability
+ * @property {Array<EventShift.model>} shifts - Filled in availability
  * per participant per borrel.
  */
-export interface CreateBorrelSchemaRequest extends BaseBorrelSchema {
+export interface CreateEventRequest extends BaseEvent {
   createdById?: number,
 }
 
-export interface BaseUpdateBorrelSchema {
+export interface BaseUpdateEvent {
   name: string,
   startDate: string,
   endDate: string,
 }
 
-export interface UpdateBorrelSchema extends BaseUpdateBorrelSchema {
+export interface UpdateEvent extends BaseUpdateEvent {
   shifts: number[],
 }
 
-export interface BaseBorrelSchemaShift {
+export interface BaseEventShift {
   name: string,
 }
 
-export interface UpdateBorrelSchemaShift extends BaseBorrelSchemaShift {
+export interface UpdateEventShift extends BaseEventShift {
   default: boolean,
 }
 
 /**
- * @typedef CreateBorrelSchemaShiftRequest
+ * @typedef CreateEventShiftRequest
  * @property {string} name - Name of the shift.
  * @property {boolean} default - Indicator whether the shift is a regular shift.
  */
 
-export interface CreateBorrelSchemaShiftRequest extends BaseBorrelSchemaShift {
+export interface CreateEventShiftRequest extends BaseEventShift {
   default: boolean,
 }
 
-export interface BaseBorrelSchemaAnswer {
+export interface BaseEventAnswer {
   userId: number,
   shiftId: number,
-  borrelSchemaId: number,
+  eventId: number,
 }
-export interface BaseUpdateBorrelSchemaAnswer {
+export interface BaseUpdateEventAnswer {
   shiftId: number,
-  borrelSchemaId: number,
+  eventId: number,
 }
-export interface UpdateBorrelSchemaAnswerAvailability extends BaseUpdateBorrelSchemaAnswer {
+export interface UpdateEventAnswerAvailability extends BaseUpdateEventAnswer {
   availability: number,
 }
 
-export interface SelectBorrelSchemaAnswer extends BaseUpdateBorrelSchemaAnswer {
+export interface SelectEventAnswer extends BaseUpdateEventAnswer {
   selected: boolean,
 }
 
 /**
- * @typedef CreateBorrelSchemaAnswerRequest
+ * @typedef CreateEventAnswerRequest
  * @property {User.model} user - Participant that filled in their availability
  * @property {enum} availability - Filled in availability per slot.
  * @property {boolean} selected - Indicator whether the person has the related shift
  * during the related borrel.
- * @property {BorrelSchemaShift.model} shift - Shift that answers are related to.
- * @property {BorrelSchema.model} borrelSchema - Borrelschema that answers are related to
+ * @property {EventShift.model} shift - Shift that answers are related to.
+ * @property {Event.model} event - Event that answers are related to
  */
-export interface CreateBorrelSchemaAnswerRequest extends BaseBorrelSchemaAnswer {
+export interface CreateEventAnswerRequest extends BaseEventAnswer {
   availability: number,
   selected: boolean,
 }
 
-export class UpdateBorrelSchemaAnswer {
+export class UpdateEventAnswer {
 }

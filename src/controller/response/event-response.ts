@@ -20,13 +20,13 @@ import BaseResponse from './base-response';
 import { UserResponse } from './user-response';
 
 /**
- * @typedef {BaseResponse} BaseBorrelSchemaResponse
+ * @typedef {BaseResponse} BaseEventResponse
  * @property {string} name - Name of the borrel.
- * @property {UserResponse.model} createdBy - Creator of the borrelschema.
+ * @property {UserResponse.model} createdBy - Creator of the event.
  * @property {string} startDate - The starting date of the borrel.
  * @property {string} endDate - The end date of the borrel.
  */
-export interface BaseBorrelSchemaResponse extends BaseResponse {
+export interface BaseEventResponse extends BaseResponse {
   createdBy: UserResponse,
   name: string,
   startDate: string,
@@ -34,57 +34,57 @@ export interface BaseBorrelSchemaResponse extends BaseResponse {
 }
 
 /**
- * @typedef {BaseResponse} BaseBorrelSchemaShiftResponse
+ * @typedef {BaseResponse} BaseEventShiftResponse
  * @property {string} name - Name of the shift.
  */
-export interface BaseBorrelSchemaShiftResponse extends BaseResponse {
+export interface BaseEventShiftResponse extends BaseResponse {
   name: string,
 }
 
 /**
- * @typedef {BaseBorrelSchemaShiftResponse} BorrelSchemaShiftResponse
+ * @typedef {BaseEventShiftResponse} EventShiftResponse
  * @property {boolean} default - Indicator whether the shift is a regular shift.
  */
-export interface BorrelSchemaShiftResponse extends BaseBorrelSchemaShiftResponse {
+export interface EventShiftResponse extends BaseEventShiftResponse {
   default: boolean,
 }
 
 /**
- * @typedef {BaseBorrelSchemaResponse} BorrelSchemaResponse
- * @property {Array<BaseBorrelSchemaShiftResponse.name>} shifts - Filled in availability
+ * @typedef {BaseEventResponse} EventResponse
+ * @property {Array<BaseEventShiftResponse.name>} shifts - Filled in availability
  */
-export interface BorrelSchemaResponse extends BaseBorrelSchemaResponse {
-  shifts: BaseBorrelSchemaShiftResponse[],
+export interface EventResponse extends BaseEventResponse {
+  shifts: BaseEventShiftResponse[],
 }
 
 /**
- * @typedef {BorrelSchemaResponse} BaseBorrelSchemaAnswerResponse
+ * @typedef {EventResponse} BaseEventAnswerResponse
  * @property {UserResponse.model} user - Participant that filled in their availability
  * @property {string} availability - Filled in availability per slot.
  */
-export interface BaseBorrelSchemaAnswersResponse {
+export interface BaseEventAnswersResponse {
   user: UserResponse,
   availability: number,
 }
 
 /**
- * @typedef {BaseBorrelSchemaAnswerResponse} BorrelSchemaAnswerResponse
+ * @typedef {BaseEventAnswerResponse} EventAnswerResponse
  * @property {boolean} selected
- * @property {BaseBorrelSchemaShiftResponse} shift
- * @property {BorrelSchemaResponse} borrelSchema
+ * @property {BaseEventShiftResponse} shift
+ * @property {EventResponse} event
  */
-export interface BorrelSchemaAnswerResponse extends BaseBorrelSchemaAnswersResponse {
+export interface EventAnswerResponse extends BaseEventAnswersResponse {
   selected: boolean,
-  shift: BaseBorrelSchemaShiftResponse,
-  borrelSchema: BorrelSchemaResponse,
+  shift: BaseEventShiftResponse,
+  event: EventResponse,
 }
 
 /**
- * @typedef PaginatedBorrelSchemaResponse
+ * @typedef PaginatedEventResponse
  * @property {PaginationResult.model} _pagination - Pagination metadata
- * @property {Array<BorrelSchemaResponse.model>} records - Returned borrel Schemas
+ * @property {Array<EventResponse.model>} records - Returned borrel Schemas
  */
-export interface PaginatedBorrelSchemaResponse {
+export interface PaginatedEventResponse {
   _pagination: PaginationResult,
-  records: BorrelSchemaResponse[],
+  records: EventResponse[],
 }

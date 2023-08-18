@@ -16,21 +16,25 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  Column, Entity,
+  Column, Entity, ManyToMany,
 } from 'typeorm';
 import BaseEntity from '../base-entity';
+import AssignedRole from '../roles/assigned-role';
 
 /**
- * @typedef {BaseEntity} BorrelSchemaShift
+ * @typedef {BaseEntity} EventShift
  * @property {string} name - Name of the shift.
  * @property {boolean} default - Indicator whether the shift is a regular shift.
  */
 
 @Entity()
-export default class BorrelSchemaShift extends BaseEntity {
+export default class EventShift extends BaseEntity {
   @Column()
   public name: string;
 
   @Column()
   public default: boolean;
+
+  @Column({ type: 'array' })
+  public roles: string[];
 }

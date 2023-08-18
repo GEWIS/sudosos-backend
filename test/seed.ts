@@ -48,10 +48,9 @@ import InvoiceUser from '../src/entity/user/invoice-user';
 import Invoice from '../src/entity/invoices/invoice';
 import InvoiceEntry from '../src/entity/invoices/invoice-entry';
 import InvoiceStatus, { InvoiceState } from '../src/entity/invoices/invoice-status';
-import BorrelSchema from '../src/entity/borrel-schema/borrel-schema';
-import BorrelSchemaShift from '../src/entity/borrel-schema/borrel-schema-shift';
-import BorrelSchemaAnswer, { Availability } from '../src/entity/borrel-schema/borrel-schema-answer';
-import GewisUser from '../src/entity/user/gewis-user';
+import Event from '../src/entity/event/event';
+import EventShift from '../src/entity/event/event-shift';
+import EventResponse, { Availability } from '../src/entity/event/event-shift-answer';
 import seedGEWISUsers from '../src/gewis/database/seed';
 import PinAuthenticator from '../src/entity/authenticator/pin-authenticator';
 import VatGroup from '../src/entity/vat-group';
@@ -62,6 +61,8 @@ import UserFineGroup from '../src/entity/fine/userFineGroup';
 import FineHandoutEvent from '../src/entity/fine/fineHandoutEvent';
 import Fine from '../src/entity/fine/fine';
 import { calculateBalance } from './helpers/balance';
+import EventShiftAnswer from '../src/entity/event/event-shift-answer';
+import GewisUser from '../src/gewis/entity/gewis-user';
 
 /**
  * Defines InvoiceUsers objects for the given Users
@@ -258,53 +259,53 @@ export async function seedInvoices(users: User[], transactions: Transaction[]): 
 /**
  * Seeds a default dataset of borrelSchemaShifts and stores them in the database
  */
-export async function createShifts() {
-  const shifts: BorrelSchemaShift[] = [];
-  shifts.push(Object.assign(new BorrelSchemaShift(), {
+export async function createEventShifts() {
+  const shifts: EventShift[] = [];
+  shifts.push(Object.assign(new EventShift(), {
     name: 'Borrelen',
     default: true,
   }));
-  shifts.push(Object.assign(new BorrelSchemaShift(), {
+  shifts.push(Object.assign(new EventShift(), {
     name: 'Portier',
     default: true,
   }));
-  shifts.push(Object.assign(new BorrelSchemaShift(), {
+  shifts.push(Object.assign(new EventShift(), {
     name: 'Bier halen voor Job en Sjoerd',
     default: true,
   }));
-  shifts.push(Object.assign(new BorrelSchemaShift(), {
+  shifts.push(Object.assign(new EventShift(), {
     name: 'Roy slaan',
     default: false,
   }));
-  shifts.push(Object.assign(new BorrelSchemaShift(), {
+  shifts.push(Object.assign(new EventShift(), {
     name: '900 euro kwijtraken',
     default: false,
   }));
-  shifts.push(Object.assign(new BorrelSchemaShift(), {
+  shifts.push(Object.assign(new EventShift(), {
     name: 'Wassen',
     default: true,
   }));
-  await BorrelSchemaShift.save(shifts);
+  await EventShift.save(shifts);
   return shifts;
 }
 
-export function createAnswer(user: User, type: number) {
-  const answer: BorrelSchemaAnswer = Object.assign(new BorrelSchemaAnswer(), {
+export function createEventShiftAnswer(user: User, type: number) {
+  const answer: EventShiftAnswer = Object.assign(new EventShiftAnswer(), {
     user,
     availability: Availability[type + 1],
     selected: false,
-    BorrelSchema: null,
-    BorrelSchemaShift: null,
+    event: null,
+    eventShift: null,
   });
   return answer;
 }
 
-export async function seedBorrelSchema(shifts: BorrelSchemaShift[], users: User[]) {
-  const borrelSchema: BorrelSchema[] = [];
-  const borrelSchemaShift: BorrelSchemaShift[] = [];
-  const borrelSchemaAnswers: BorrelSchemaAnswer[] = [];
+export async function seedEvents(shifts: EventShift[], users: User[]) {
+  const events: Event[] = [];
+  const eventShifts: EventShift[] = [];
+  const eventShiftAnswers: EventShiftAnswer[] = [];
   for (let i = 0; i < 5; i += 1) {
-    const schema = Object.assign(new BorrelSchema(), {
+    const event = Object.assign(new Event(), {
       name: `Testborrel-${i}`,
       createdBy: users[i],
       startDate: new Date(),
@@ -312,26 +313,26 @@ export async function seedBorrelSchema(shifts: BorrelSchemaShift[], users: User[
       shifts: null,
       id: i,
     });
-    const borrelShifts: BorrelSchemaShift[] = [];
+    const eventShifts1: EventShift[] = [];
     for (let j = 0; j < ((i + 1) * 243) % 4; j += 1) {
       const shift = shifts[(j * 37) % 6];
-      borrelShifts.push(shift);
-      borrelSchemaShift.push(shift);
+      eventShifts1.push(shift);
+      eventShifts.push(shift);
       for (let k = 0; k < users.length / 5; k += 1) {
-        const answer = createAnswer(users[k], k % 5);
-        answer.borrelSchema = schema;
+        const answer = createEventShiftAnswer(users[k], k % 5);
+        answer.event = event;
         answer.shift = shift;
-        borrelSchemaAnswers.push(answer);
+        eventShiftAnswers.push(answer);
       }
     }
-    schema.shifts = borrelShifts;
-    borrelSchema.push(schema);
+    event.shifts = eventShifts1;
+    events.push(event);
   }
-  await BorrelSchemaShift.save(borrelSchemaShift);
-  await BorrelSchema.save(borrelSchema);
-  await BorrelSchemaAnswer.save(borrelSchemaAnswers);
+  await EventShift.save(eventShifts);
+  await Event.save(events);
+  await EventResponse.save(eventShiftAnswers);
 
-  return { borrelSchema, borrelSchemaShift, borrelSchemaAnswers };
+  return { events, eventShifts, eventShiftAnswers };
 }
 
 /**
@@ -1857,9 +1858,9 @@ export interface DatabaseContent {
   products: Product[],
   productRevisions: ProductRevision[],
   updatedProducts: UpdatedProduct[],
-  borrelSchema: BorrelSchema[],
-  borrelSchemaShift: BorrelSchemaShift[],
-  borrelSchemaAnswers: BorrelSchemaAnswer[],
+  events: Event[],
+  eventShifts: EventShift[],
+  eventShiftAnswers: EventShiftAnswer[],
   containers: Container[],
   containerRevisions: ContainerRevision[],
   updatedContainers: UpdatedContainer[],
@@ -1895,8 +1896,8 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
   const { pointsOfSale, pointOfSaleRevisions, updatedPointsOfSale } = await seedAllPointsOfSale(
     users, containerRevisions, containers,
   );
-  const borrelShifts = await createShifts();
-  const { borrelSchema, borrelSchemaShift, borrelSchemaAnswers } = await seedBorrelSchema(
+  const borrelShifts = await createEventShifts();
+  const { events, eventShifts, eventShiftAnswers } = await seedEvents(
     borrelShifts, users,
   );
   const { transactions } = await seedTransactions(users, pointOfSaleRevisions);
@@ -1931,8 +1932,8 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
     gewisUsers,
     pinUsers,
     localUsers,
-    borrelSchema,
-    borrelSchemaShift,
-    borrelSchemaAnswers,
+    events,
+    eventShifts,
+    eventShiftAnswers,
   };
 }

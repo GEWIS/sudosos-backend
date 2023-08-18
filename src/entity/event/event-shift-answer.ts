@@ -20,8 +20,8 @@ import {
 } from 'typeorm';
 import BaseEntity from '../base-entity';
 import User from '../user/user';
-import BorrelSchema from './borrel-schema';
-import BorrelSchemaShift from './borrel-schema-shift';
+import Event from './event';
+import EventShift from './event-shift';
 
 export enum Availability {
   YES = 1,
@@ -32,17 +32,17 @@ export enum Availability {
 }
 
 /**
- * @typedef {BaseEntity} Answers
+ * @typedef {BaseEntity} EventShiftAnswer
  * @property {User.model} user - Participant that filled in their availability
  * @property {enum} availability - Filled in availability per slot.
  * @property {boolean} selected - Indicator whether the person has the related shift
  * during the related borrel.
- * @property {BorrelSchemaShift.model} shift - Shift that answers are related to.
- * @property {BorrelSchema.model} borrelSchema - Borrelschema that answers are related to
+ * @property {EventShift.model} shift - Shift that answers are related to.
+ * @property {Event.model} event - Event that answers are related to
  */
 
 @Entity()
-export default class BorrelSchemaAnswer extends BaseEntity {
+export default class EventShiftAnswer extends BaseEntity {
   @ManyToOne(() => User, { nullable: false, eager: true })
   public user: User;
 
@@ -53,10 +53,10 @@ export default class BorrelSchemaAnswer extends BaseEntity {
   public selected: boolean;
 
   @JoinColumn()
-  @ManyToOne(() => BorrelSchemaShift, { onDelete: 'RESTRICT' })
-  public shift: BorrelSchemaShift;
+  @ManyToOne(() => EventShift, { onDelete: 'RESTRICT' })
+  public shift: EventShift;
 
   @JoinColumn()
-  @ManyToOne(() => BorrelSchema, { onDelete: 'CASCADE' })
-  public borrelSchema: BorrelSchema;
+  @ManyToOne(() => Event, { onDelete: 'CASCADE' })
+  public event: Event;
 }
