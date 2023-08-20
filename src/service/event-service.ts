@@ -16,7 +16,13 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { FindManyOptions, In, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
-import { EventAnswerResponse, EventResponse, EventShiftResponse } from '../controller/response/event-response';
+import {
+  BaseEventResponse,
+  BaseEventShiftResponse,
+  EventAnswerResponse,
+  EventResponse,
+  EventShiftResponse,
+} from '../controller/response/event-response';
 import {
   CreateEventAnswerRequest,
   CreateEventParams,
@@ -71,17 +77,23 @@ export function parseEventFilterParameters(
  * Wrapper for all Borrel-schema related logic.
  */
 export default class EventService {
-  private static asEventResponse(entity: Event): EventResponse {
+  private static asBaseEventResponse(entity: Event): BaseEventResponse {
     return {
       createdAt: entity.createdAt.toISOString(),
       createdBy: parseUserToBaseResponse(entity.createdBy, false),
       endDate: entity.endDate.toISOString(),
       id: entity.id,
       name: entity.name,
-      answers: entity.answers.map((a) => this.asEventAnswerResponse(a)),
       startDate: entity.startDate.toISOString(),
       updatedAt: entity.updatedAt.toISOString(),
       version: entity.version,
+    };
+  }
+
+  private static asEventResponse(entity: Event): EventResponse {
+    return {
+      ...this.asBaseEventResponse(entity),
+      answers: entity.answers.map((a) => this.asEventAnswerResponse(a)),
     };
   }
 
@@ -111,7 +123,7 @@ export default class EventService {
    * Get all borrel schemas.
    */
   public static async getEvents(params: EventFilterParameters = {})
-    :Promise<EventResponse[]> {
+    :Promise<BaseEventResponse[]> {
     const filterMapping: FilterMapping = {
       name: 'name',
       id: 'id',
@@ -138,9 +150,7 @@ export default class EventService {
     }
 
     const events = await Event.find({ ...options });
-    return events.map(
-      this.asEventResponse.bind(this),
-    );
+    return events.map((e) => this.asBaseEventResponse(e));
   }
 
   /**
@@ -151,6 +161,7 @@ export default class EventService {
     const event = await Event.findOne({
       where: { id },
       relations: ['createdBy', 'answers', 'answers.shift', 'answers.user'],
+      withDeleted: true,
     });
 
     return event ? this.asEventResponse(event) : undefined;
@@ -244,6 +255,33 @@ export default class EventService {
       return;
     }
     await Event.remove(event);
+  }
+
+  /**
+   * Get all event shifts
+   */
+  public static async getEventShifts(): Promise<BaseEventShiftResponse[]> {
+    const shifts = await EventShift.find();
+    return shifts.map((s) => this.asEventShiftResponse(s));
+  }
+
+  /**
+   * Delete an event shift. Soft remove it if it has at least one corresponding answer
+   */
+  public static async deleteEventShift(id: number): Promise<void> {
+    const shift = await EventShift.findOne({
+      where: { id },
+      withDeleted: true,
+    });
+    if (shift == null) return;
+
+    const answers = await EventShiftAnswer.find({ where: { shiftId: shift.id } });
+
+    if (answers.length === 0) {
+      await shift.remove();
+    } else {
+      await shift.softRemove();
+    }
   }
 
   /**

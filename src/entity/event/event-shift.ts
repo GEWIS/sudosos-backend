@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  Column, Entity,
+  Column, DeleteDateColumn, Entity,
 } from 'typeorm';
 import BaseEntity from '../base-entity';
 
@@ -28,10 +28,13 @@ import BaseEntity from '../base-entity';
 
 @Entity()
 export default class EventShift extends BaseEntity {
+  @DeleteDateColumn()
+  public deletedAt?: Date | null;
+
   @Column()
   public name: string;
 
-  @Column()
+  @Column({ default: false })
   public default: boolean;
 
   @Column({

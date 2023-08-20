@@ -25,7 +25,7 @@ import EventShiftAnswer from '../../../src/entity/event/event-shift-answer';
 import Database from '../../../src/database/database';
 import EventService from '../../../src/service/event-service';
 import { expect } from 'chai';
-import { BaseEventResponse } from '../../../src/controller/response/event-response';
+import { BaseEventResponse, BaseEventShiftResponse } from '../../../src/controller/response/event-response';
 import AssignedRole from '../../../src/entity/roles/assigned-role';
 import { CreateEventParams } from '../../../src/controller/request/event-request';
 
@@ -64,6 +64,13 @@ describe('eventService', () => {
     expect(actual.endDate).to.equal(expected.endDate.toISOString());
     expect(actual.name).to.equal(expected.name);
     expect(actual.createdBy.id).to.equal(expected.createdBy.id);
+  };
+
+  const checkEventShift = (actual: BaseEventShiftResponse, expected: EventShift) => {
+    expect(actual.id).to.equal(expected.id);
+    expect(actual.createdAt).to.equal(expected.createdAt.toISOString());
+    expect(actual.updatedAt).to.equal(expected.updatedAt.toISOString());
+    expect(actual.name).to.equal(expected.name);
   };
 
   after(async () => {
@@ -143,6 +150,14 @@ describe('eventService', () => {
   describe('getSingleEvent', () => {
     it('should return correct event', async () => {
       const actualEvent = ctx.events[0];
+      const event = await EventService.getSingleEvent(actualEvent.id);
+
+      expect(event).to.not.be.undefined;
+      checkEvent(event, actualEvent);
+    });
+    it('should return correct event with soft deleted shift', async () => {
+      const actualEvent = ctx.events.find((e) => e.answers.some((a) => a.shift.deletedAt != null));
+      expect(actualEvent).to.not.be.undefined;
       const event = await EventService.getSingleEvent(actualEvent.id);
 
       expect(event).to.not.be.undefined;
@@ -309,6 +324,102 @@ describe('eventService', () => {
     it('should return undefined if event does not exist', async () => {
       const event = await EventService.updateEvent(9999999999, { name: 'does not matter' });
       expect(event).to.be.undefined;
+    });
+  });
+
+  describe('getShifts', () => {
+    it('should return all shifts', async () => {
+      const shifts = await EventService.getEventShifts();
+      expect(shifts.length).to.equal(ctx.eventShifts.filter((s) => s.deletedAt == null).length);
+
+      shifts.forEach((s) => {
+        const actualShift = ctx.eventShifts.find((s2) => s2.id === s.id);
+        expect(actualShift).to.not.be.undefined;
+        checkEventShift(s, actualShift);
+      });
+    });
+  });
+
+  describe('deleteShift', () => {
+    it('should soft delete shift if it has answers', async () => {
+      const shift = ctx.eventShiftAnswers[0].shift;
+      const dbShift = await EventShift.findOne({ where: { id: shift.id }, withDeleted: true });
+      expect(dbShift).to.not.be.null;
+      expect(dbShift.deletedAt).to.be.null;
+      expect((await EventShiftAnswer.find({ where: { shiftId: shift.id } })).length).to.be.greaterThan(0);
+
+      await EventService.deleteEventShift(shift.id);
+
+      const dbShift2 = await EventShift.findOne({ where: { id: shift.id }, withDeleted: true });
+      expect(dbShift2).to.not.be.null;
+      expect(dbShift2.deletedAt).to.not.be.null;
+      expect(new Date().getTime() - dbShift2.deletedAt.getTime()).to.be.at.most(1000);
+
+      // Cleanup
+      dbShift2.deletedAt = null;
+      await dbShift2.save();
+    });
+    it('should delete shift if it has no answers', async () => {
+      const shift = ctx.eventShifts[3];
+      const dbShift = await EventShift.findOne({ where: { id: shift.id }, withDeleted: true });
+      expect(dbShift).to.not.be.null;
+      expect(dbShift.deletedAt).to.be.null;
+      expect((await EventShiftAnswer.find({ where: { shiftId: shift.id } })).length).to.equal(0);
+
+      await EventService.deleteEventShift(shift.id);
+
+      const dbShift2 = await EventShift.findOne({ where: { id: shift.id }, withDeleted: true });
+      expect(dbShift2).to.be.null;
+
+      // Cleanup
+      await EventShift.insert({
+        id: shift.id,
+        name: shift.name,
+        roles: [],
+      });
+    });
+    it('should delete shift if it was soft-deleted before', async () => {
+      const shift = ctx.eventShifts[3];
+      let dbShift = await EventShift.findOne({ where: { id: shift.id }, withDeleted: true });
+      expect(dbShift).to.not.be.null;
+      expect(dbShift.deletedAt).to.be.null;
+      expect((await EventShiftAnswer.find({ where: { shiftId: shift.id } })).length).to.equal(0);
+
+      await dbShift.softRemove();
+      dbShift = await EventShift.findOne({ where: { id: dbShift.id }, withDeleted: true });
+      expect(dbShift).to.not.be.null;
+      expect(dbShift.deletedAt).to.not.be.null;
+
+      await EventService.deleteEventShift(dbShift.id);
+
+      dbShift = await EventShift.findOne({ where: { id: dbShift.id }, withDeleted: true });
+      expect(dbShift).to.be.null;
+
+      // Cleanup
+      await EventShift.insert({
+        id: shift.id,
+        name: shift.name,
+        roles: [],
+      });
+    });
+  });
+
+  describe('deleteEvent', () => {
+    it('should correctly delete an event with its answer sheets', async () => {
+      const event = ctx.events[0];
+      const dbEvent = await Event.findOne({ where: { id: event.id } });
+      expect(dbEvent).to.not.be.null;
+
+      await EventService.deleteEvent(event.id);
+
+      const dbEvent2 = await Event.findOne({ where: { id: event.id } });
+      expect(dbEvent2).to.be.null;
+
+      const answers = await EventShiftAnswer.find({ where: { eventId: event.id } });
+      expect(answers.length).to.equal(0);
+    });
+    it('should simply return when event does not exist', async () => {
+      expect(await EventService.deleteEvent(9999999)).to.not.throw;
     });
   });
 });

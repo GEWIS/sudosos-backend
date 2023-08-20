@@ -18,7 +18,6 @@
 import {
   Column, Entity, JoinColumn, ManyToOne, PrimaryColumn,
 } from 'typeorm';
-import BaseEntity from '../base-entity';
 import User from '../user/user';
 import Event from './event';
 import EventShift from './event-shift';

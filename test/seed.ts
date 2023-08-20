@@ -50,7 +50,6 @@ import InvoiceEntry from '../src/entity/invoices/invoice-entry';
 import InvoiceStatus, { InvoiceState } from '../src/entity/invoices/invoice-status';
 import Event from '../src/entity/event/event';
 import EventShift from '../src/entity/event/event-shift';
-import EventResponse from '../src/entity/event/event-shift-answer';
 import EventShiftAnswer, { Availability } from '../src/entity/event/event-shift-answer';
 import seedGEWISUsers from '../src/gewis/database/seed';
 import PinAuthenticator from '../src/entity/authenticator/pin-authenticator';
@@ -312,6 +311,7 @@ export async function seedEventShifts() {
     name: 'Wassen',
     roles: ['Bestuur'],
     default: true,
+    deletedAt: new Date(),
   }));
   await EventShift.save(shifts);
   return shifts;
@@ -351,7 +351,7 @@ export async function seedEvents(rolesWithUsers: AssignedRole[]) {
 
     const eventShiftAnswers1: EventShiftAnswer[] = [];
     for (let j = 0; j < ((i + 1) * 243) % 4; j += 1) {
-      const shift = eventShifts[(j * 37) % 6];
+      const shift = eventShifts[((i + j) * 13) % 6];
       const users = rolesWithUsers.filter((r) => shift.roles.includes(r.role));
       await Promise.all(users.map(async (r, k) => {
         const answer = await createEventShiftAnswer(r.user, event, shift, k);
