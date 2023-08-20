@@ -16,10 +16,11 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  Column, Entity, JoinColumn, OneToOne,
+  Column, Entity, JoinColumn, OneToMany, OneToOne,
 } from 'typeorm';
 import BaseEntity from '../base-entity';
 import UserFineGroup from '../fine/userFineGroup';
+import AssignedRole from '../roles/assigned-role';
 
 export enum TermsOfServiceStatus {
   ACCEPTED = 'ACCEPTED',
@@ -123,4 +124,7 @@ export default class User extends BaseEntity {
   })
   @JoinColumn()
   public currentFines?: UserFineGroup | null;
+
+  @OneToMany(() => AssignedRole, (role) => role.user)
+  public roles: AssignedRole[];
 }

@@ -51,10 +51,10 @@ export interface EventShiftResponse extends BaseEventShiftResponse {
 
 /**
  * @typedef {BaseEventResponse} EventResponse
- * @property {Array<BaseEventShiftResponse.name>} shifts - Filled in availability
+ * @property {Array<EventAnswerResponse.name>} shifts - Filled in availability
  */
 export interface EventResponse extends BaseEventResponse {
-  shifts: BaseEventShiftResponse[],
+  answers: EventAnswerResponse[],
 }
 
 /**
@@ -64,7 +64,7 @@ export interface EventResponse extends BaseEventResponse {
  */
 export interface BaseEventAnswersResponse {
   user: BaseUserResponse,
-  availability: number,
+  availability: string,
 }
 
 /**
@@ -76,7 +76,6 @@ export interface BaseEventAnswersResponse {
 export interface EventAnswerResponse extends BaseEventAnswersResponse {
   selected: boolean,
   shift: BaseEventShiftResponse,
-  event: EventResponse,
 }
 
 /**

@@ -50,7 +50,8 @@ import InvoiceEntry from '../src/entity/invoices/invoice-entry';
 import InvoiceStatus, { InvoiceState } from '../src/entity/invoices/invoice-status';
 import Event from '../src/entity/event/event';
 import EventShift from '../src/entity/event/event-shift';
-import EventResponse, { Availability } from '../src/entity/event/event-shift-answer';
+import EventResponse from '../src/entity/event/event-shift-answer';
+import EventShiftAnswer, { Availability } from '../src/entity/event/event-shift-answer';
 import seedGEWISUsers from '../src/gewis/database/seed';
 import PinAuthenticator from '../src/entity/authenticator/pin-authenticator';
 import VatGroup from '../src/entity/vat-group';
@@ -61,8 +62,8 @@ import UserFineGroup from '../src/entity/fine/userFineGroup';
 import FineHandoutEvent from '../src/entity/fine/fineHandoutEvent';
 import Fine from '../src/entity/fine/fine';
 import { calculateBalance } from './helpers/balance';
-import EventShiftAnswer from '../src/entity/event/event-shift-answer';
 import GewisUser from '../src/gewis/entity/gewis-user';
+import AssignedRole from '../src/entity/roles/assigned-role';
 
 function getRandomDate(start: Date, end: Date): Date {
   return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
@@ -167,6 +168,23 @@ export async function seedUsers(): Promise<User[]> {
   await InvoiceUser.save(invoiceUsers);
 
   return users;
+}
+
+/**
+ * Seed some roles, where every user has at most one role.
+ * @param users
+ */
+export async function seedRoles(users: User[]): Promise<AssignedRole[]> {
+  const roleStrings = ['BAC', 'BAC feut', 'BAC PM', 'Bestuur', 'Kasco'];
+  return (await Promise.all(users.map(async (user, i) => {
+    if (i % 3 === 0) return undefined;
+
+    const role = Object.assign(new AssignedRole(), {
+      user,
+      role: roleStrings[i % 5],
+    });
+    return AssignedRole.save(role);
+  }))).filter((r) => r != null);
 }
 
 export function defineInvoiceEntries(invoiceId: number, startEntryId: number,
@@ -299,20 +317,22 @@ export async function seedEventShifts() {
   return shifts;
 }
 
-export function createEventShiftAnswer(user: User, type: number) {
+export async function createEventShiftAnswer(user: User, event: Event, shift: EventShift, type: number) {
+  const availabilities = [Availability.YES, Availability.MAYBE, Availability.NO, Availability.LATER, Availability.NA, null];
+
   const answer: EventShiftAnswer = Object.assign(new EventShiftAnswer(), {
     user,
-    availability: Availability[type + 1],
+    availability: availabilities[type + 1 % availabilities.length],
     selected: false,
-    event: null,
-    eventShift: null,
+    eventId: event.id,
+    shiftId: shift.id,
   });
-  return answer;
+  return EventShiftAnswer.save(answer);
 }
 
-export async function seedEvents(shifts: EventShift[], users: User[]) {
+export async function seedEvents(rolesWithUsers: AssignedRole[]) {
   const events: Event[] = [];
-  const eventShifts: EventShift[] = [];
+  const eventShifts = await seedEventShifts();
   const eventShiftAnswers: EventShiftAnswer[] = [];
   for (let i = 0; i < 5; i += 1) {
     const startDate = getRandomDate(new Date('2023-01-01'), new Date('2023-08-19'));
@@ -321,30 +341,30 @@ export async function seedEvents(shifts: EventShift[], users: User[]) {
 
     const event = Object.assign(new Event(), {
       name: `Testborrel-${i}`,
-      createdBy: users[i],
+      createdBy: rolesWithUsers[i].user,
       startDate,
       endDate,
       shifts: null,
       id: i,
     });
-    const eventShifts1: EventShift[] = [];
+    await Event.save(event);
+
+    const eventShiftAnswers1: EventShiftAnswer[] = [];
     for (let j = 0; j < ((i + 1) * 243) % 4; j += 1) {
-      const shift = shifts[(j * 37) % 6];
-      eventShifts1.push(shift);
-      eventShifts.push(shift);
-      for (let k = 0; k < users.length / 5; k += 1) {
-        const answer = createEventShiftAnswer(users[k], k % 5);
+      const shift = eventShifts[(j * 37) % 6];
+      const users = rolesWithUsers.filter((r) => shift.roles.includes(r.role));
+      await Promise.all(users.map(async (r, k) => {
+        const answer = await createEventShiftAnswer(r.user, event, shift, k);
         answer.event = event;
         answer.shift = shift;
         eventShiftAnswers.push(answer);
-      }
+        eventShiftAnswers1.push(answer);
+      }));
     }
-    event.shifts = eventShifts1;
+
+    event.answers = eventShiftAnswers1;
     events.push(event);
   }
-  await EventShift.save(eventShifts);
-  await Event.save(events);
-  await EventResponse.save(eventShiftAnswers);
 
   return { events, eventShifts, eventShiftAnswers };
 }
@@ -1867,6 +1887,7 @@ export async function seedBanners(users: User[]): Promise<{
 
 export interface DatabaseContent {
   users: User[],
+  roles: AssignedRole[],
   categories: ProductCategory[],
   vatGroups: VatGroup[],
   products: Product[],
@@ -1910,10 +1931,8 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
   const { pointsOfSale, pointOfSaleRevisions, updatedPointsOfSale } = await seedAllPointsOfSale(
     users, containerRevisions, containers,
   );
-  const borrelShifts = await seedEventShifts();
-  const { events, eventShifts, eventShiftAnswers } = await seedEvents(
-    borrelShifts, users,
-  );
+  const roles = await seedRoles(users);
+  const { events, eventShifts, eventShiftAnswers } = await seedEvents(roles);
   const { transactions } = await seedTransactions(users, pointOfSaleRevisions);
   const transfers = await seedTransfers(users);
   const { fines, fineTransfers, userFineGroups } = await seedFines(users, transactions, transfers);
@@ -1924,6 +1943,7 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
 
   return {
     users,
+    roles,
     categories,
     vatGroups,
     products,

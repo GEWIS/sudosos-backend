@@ -16,10 +16,11 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  Column, Entity, ManyToOne, JoinColumn,
+  Column, Entity, ManyToOne, JoinColumn, OneToMany,
 } from 'typeorm';
 import BaseEntity from '../base-entity';
 import User from '../user/user';
+import EventShiftAnswer from './event-shift-answer';
 
 /**
  * @typedef {BaseEntity} Event
@@ -47,4 +48,7 @@ export default class Event extends BaseEntity {
     type: 'datetime',
   })
   public endDate: Date;
+
+  @OneToMany(() => EventShiftAnswer, (a) => a.event)
+  public answers: EventShiftAnswer[];
 }

@@ -18,7 +18,7 @@
 import { describe } from 'mocha';
 import { Connection } from 'typeorm';
 import User from '../../../src/entity/user/user';
-import { seedEventShifts, seedEvents, seedUsers } from '../../seed';
+import { seedEvents, seedUsers, seedRoles } from '../../seed';
 import Event from '../../../src/entity/event/event';
 import EventShift from '../../../src/entity/event/event-shift';
 import EventShiftAnswer from '../../../src/entity/event/event-shift-answer';
@@ -26,6 +26,8 @@ import Database from '../../../src/database/database';
 import EventService from '../../../src/service/event-service';
 import { expect } from 'chai';
 import { BaseEventResponse } from '../../../src/controller/response/event-response';
+import AssignedRole from '../../../src/entity/roles/assigned-role';
+import { CreateEventParams } from '../../../src/controller/request/event-request';
 
 describe('eventService', () => {
   let ctx: {
@@ -34,14 +36,15 @@ describe('eventService', () => {
     events: Event[],
     eventShifts: EventShift[],
     eventShiftAnswers: EventShiftAnswer[],
+    roles: AssignedRole[],
   };
 
   before(async () => {
     const connection = await Database.initialize();
 
     const users = await seedUsers();
-    const shifts = await seedEventShifts();
-    const { events, eventShifts, eventShiftAnswers } = await seedEvents(shifts, users);
+    const roles = await seedRoles(users);
+    const { events, eventShifts, eventShiftAnswers } = await seedEvents(roles);
 
     ctx = {
       connection,
@@ -49,6 +52,7 @@ describe('eventService', () => {
       events,
       eventShifts,
       eventShiftAnswers,
+      roles,
     };
   });
 
@@ -133,6 +137,178 @@ describe('eventService', () => {
         expect(ids).to.include(e.id);
         expect(e.createdBy.id).to.equal(createdById);
       });
+    });
+  });
+
+  describe('getSingleEvent', () => {
+    it('should return correct event', async () => {
+      const actualEvent = ctx.events[0];
+      const event = await EventService.getSingleEvent(actualEvent.id);
+
+      expect(event).to.not.be.undefined;
+      checkEvent(event, actualEvent);
+    });
+    it('should return undefined if event does not exist', async () => {
+      const event = await EventService.getSingleEvent(99999999);
+      expect(event).to.be.undefined;
+    });
+  });
+
+  describe('createEvent', () => {
+    it('should correctly create event', async () => {
+      const shift = ctx.eventShifts[0];
+      const params: CreateEventParams = {
+        createdById: ctx.users[0].id,
+        name: 'TestEvent',
+        startDate: new Date().toISOString(),
+        endDate: new Date(new Date().getTime() + 1000 * 60 * 60).toISOString(),
+        shiftIds: [shift.id],
+      };
+      const event = await EventService.createEvent(params);
+
+      expect(event).to.not.be.undefined;
+      expect(event.name).to.equal(params.name);
+      expect(event.createdBy.id).to.equal(params.createdById);
+      expect(event.startDate).to.equal(params.startDate);
+      expect(event.endDate).to.equal(params.endDate);
+
+      const users = ctx.roles
+        .filter((r) => shift.roles.includes(r.role))
+        .map((r) => r.user);
+      const userIds = users.map((u) => u.id);
+      expect(event.answers.length).to.equal(users.length);
+      expect(event.answers.length).to.be.greaterThan(0);
+      expect(event.answers.map((a) => a.user.id)).to.deep.equalInAnyOrder(userIds);
+
+      event.answers.forEach((answer) => {
+        expect(answer.shift.id).to.equal(shift.id);
+        expect(answer.shift.name).to.equal(shift.name);
+        expect(answer.selected).to.be.false;
+        expect(answer.availability).to.be.null;
+      });
+
+      // Cleanup
+      await Event.delete(event.id);
+    });
+    it('should create event with no shifts', async () => {
+      const params: CreateEventParams = {
+        createdById: ctx.users[0].id,
+        name: 'TestEvent',
+        startDate: new Date().toISOString(),
+        endDate: new Date(new Date().getTime() + 1000 * 60 * 60).toISOString(),
+        shiftIds: [],
+      };
+      const event = await EventService.createEvent(params);
+
+      expect(event).to.not.be.undefined;
+      expect(event.answers).to.be.empty;
+
+      // Cleanup
+      await Event.delete(event.id);
+    });
+  });
+
+  describe('updateEvent', () => {
+    let originalEvent: Event;
+    let newShift: EventShift;
+
+    before(async () => {
+      originalEvent = await Event.findOne({
+        where: { id: ctx.events[0].id },
+        relations: ['answers', 'answers.shift'],
+      });
+    });
+
+    after(async () => {
+      await EventService.updateEvent(originalEvent.id, {
+        name: originalEvent.name,
+        startDate: originalEvent.startDate.toISOString(),
+        endDate: originalEvent.endDate.toISOString(),
+        shiftIds: originalEvent.answers
+          .map((a) => a.shiftId)
+          .filter((a1, i, all) => i === all
+            .findIndex((a2) => a2 === a1)),
+      });
+    });
+
+    it('should correctly update name', async () => {
+      const name = 'AViCo Centurion Marathon';
+      const event = await EventService.updateEvent(originalEvent.id, {
+        name,
+      });
+      expect(event.name).to.equal(name);
+      expect((await Event.findOne({ where: { id: originalEvent.id } })).name).to.equal(name);
+    });
+    it('should correctly update startDate', async () => {
+      const startDate = new Date('2020-07-01');
+      const event = await EventService.updateEvent(originalEvent.id, {
+        startDate: startDate.toISOString(),
+      });
+      expect(event.startDate).to.equal(startDate.toISOString());
+      expect((await Event.findOne({ where: { id: originalEvent.id } })).startDate.getTime()).to.equal(startDate.getTime());
+    });
+    it('should correctly update endDate', async () => {
+      const endDate = new Date('2020-07-01');
+      const event = await EventService.updateEvent(originalEvent.id, {
+        endDate: endDate.toISOString(),
+      });
+      expect(event.endDate).to.equal(endDate.toISOString());
+      expect((await Event.findOne({ where: { id: originalEvent.id } })).endDate.getTime()).to.equal(endDate.getTime());
+    });
+    it('should correctly update shiftIds by adding a shift', async () => {
+      const shifts = originalEvent.answers
+        .map((a) => a.shift)
+        .filter((a1, i, all) => i === all
+          .findIndex((a2) => a2.id === a1.id));
+      expect(shifts.length).to.be.greaterThan(1);
+
+      newShift = ctx.eventShifts
+        .find((s1) => !shifts.map((s2) => s2.id).includes(s1.id) && s1.roles.length > 0);
+      expect(newShift).to.not.be.undefined;
+
+      const shiftIds = [...shifts.map((s) => s.id), newShift.id];
+      const event = await EventService.updateEvent(originalEvent.id, {
+        shiftIds,
+      });
+
+      // Answer sheets should include new shift
+      const seenShiftIds = new Set<number>();
+      event.answers.forEach((a) => seenShiftIds.add(a.shift.id));
+      expect(Array.from(seenShiftIds)).to.deep.equalInAnyOrder(shiftIds);
+
+      // We should have more answer sheets than before
+      expect(event.answers.length).to.be.greaterThan(originalEvent.answers.length);
+    });
+    it('should correctly update shiftIds by removing a shift', async function () {
+      // Skip this test case if newShift is undefined, i.e. we did not run the previous test case
+      if (newShift == null) {
+        this.skip();
+        return;
+      }
+
+      const shifts = originalEvent.answers
+        .map((a) => a.shift)
+        .filter((a1, i, all) => i === all
+          .findIndex((a2) => a2.id === a1.id));
+      expect(shifts.length).to.be.greaterThan(1);
+
+      const shiftIds = [...shifts.map((s) => s.id)];
+      const event = await EventService.updateEvent(originalEvent.id, {
+        shiftIds,
+      });
+
+      // Answer sheets should no longer include new shift
+      const seenShiftIds = new Set<number>();
+      event.answers.forEach((a) => seenShiftIds.add(a.shift.id));
+      expect(Array.from(seenShiftIds)).to.deep.equalInAnyOrder(shiftIds);
+      expect(seenShiftIds.has(newShift.id)).to.be.false;
+
+      // We should have less answer sheets than before
+      expect(event.answers.length).to.equal(originalEvent.answers.length);
+    });
+    it('should return undefined if event does not exist', async () => {
+      const event = await EventService.updateEvent(9999999999, { name: 'does not matter' });
+      expect(event).to.be.undefined;
     });
   });
 });

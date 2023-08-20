@@ -16,10 +16,9 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  Column, Entity, ManyToMany,
+  Column, Entity,
 } from 'typeorm';
 import BaseEntity from '../base-entity';
-import AssignedRole from '../roles/assigned-role';
 
 /**
  * @typedef {BaseEntity} EventShift

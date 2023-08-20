@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { FindManyOptions, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
+import { FindManyOptions, In, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
 import { EventAnswerResponse, EventResponse, EventShiftResponse } from '../controller/response/event-response';
 import {
   CreateEventAnswerRequest,
@@ -30,7 +30,7 @@ import Event from '../entity/event/event';
 import EventShift from '../entity/event/event-shift';
 import EventShiftAnswer from '../entity/event/event-shift-answer';
 import User from '../entity/user/user';
-import { parseUserToBaseResponse, parseUserToResponse } from '../helpers/revision-to-response';
+import { parseUserToBaseResponse } from '../helpers/revision-to-response';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import { RequestWithToken } from '../middleware/token-middleware';
 import { asDate, asNumber } from '../helpers/validators';
@@ -78,7 +78,7 @@ export default class EventService {
       endDate: entity.endDate.toISOString(),
       id: entity.id,
       name: entity.name,
-      shifts: [],
+      answers: entity.answers.map((a) => this.asEventAnswerResponse(a)),
       startDate: entity.startDate.toISOString(),
       updatedAt: entity.updatedAt.toISOString(),
       version: entity.version,
@@ -101,10 +101,9 @@ export default class EventService {
   EventAnswerResponse {
     return {
       availability: entity.availability,
-      event: this.asEventResponse(entity.event),
       selected: entity.selected,
       shift: this.asEventShiftResponse(entity.shift),
-      user: parseUserToResponse(entity.user, false),
+      user: parseUserToBaseResponse(entity.user, false),
     };
   }
 
@@ -145,42 +144,92 @@ export default class EventService {
   }
 
   /**
-     * Create borrel schema.
+   * Get a single event with its corresponding shifts and answers
+   * @param id
+   */
+  public static async getSingleEvent(id: number): Promise<EventResponse | undefined> {
+    const event = await Event.findOne({
+      where: { id },
+      relations: ['createdBy', 'answers', 'answers.shift', 'answers.user'],
+    });
+
+    return event ? this.asEventResponse(event) : undefined;
+  }
+
+  /**
+   * Create and/or remove answer sheets given an event and a list of shifts that
+   * should belong to this event. If a shift is changed or a user loses a role
+   * that belongs to a shift, their answer sheet is removed from the database.
+   * @param event
+   * @param shiftIds
+   */
+  public static async syncEventShiftAnswers(event: Event, shiftIds: number[]) {
+    const shifts = await EventShift.find({ where: { id: In(shiftIds) } });
+
+    // Get the answer sheet for every user that can do a shift
+    // Create it if it does not exist
+    const answers = (await Promise.all(shifts.map(async (shift) => {
+      const users = await User.find({ where: { roles: { role: In(shift.roles) } } });
+      return Promise.all(users.map(async (user) => {
+        // Find the answer sheet in the database
+        const dbAnswer = await EventShiftAnswer.findOne({
+          where: { user: { id: user.id }, event: { id: event.id }, shift: { id: shift.id } },
+          relations: ['shift', 'user'],
+        });
+        // Return it if it exists. Otherwise create a new one
+        if (dbAnswer != null) return dbAnswer;
+        const newAnswer = Object.assign(new EventShiftAnswer(), {
+          user,
+          shift,
+          event,
+        });
+        return (await newAnswer.save()) as any as Promise<EventShiftAnswer>;
+      }));
+    }))).flat();
+
+    const answersToRemove = (event.answers ?? [])
+      .filter((a1) => answers
+        .findIndex((a2) => a1.userId === a2.userId && a1.eventId === a2.eventId && a1.shiftId == a2.shiftId) === -1);
+
+    await EventShiftAnswer.remove(answersToRemove);
+
+    return answers;
+  }
+
+  /**
+     * Create a new event.
      */
   public static async createEvent(eventRequest: CreateEventParams)
     : Promise<EventResponse> {
-    // Create a new Borrel-schema
     const createdBy = await User.findOne({ where: { id: eventRequest.createdById } });
-    const shifts = await Promise.all(eventRequest.shiftIds.map(async (shiftId) => {
-      return EventShift.findOne({ where: { id: shiftId } });
-    }));
-    const newEvent: Event = Object.assign(new Event(), {
+
+    const event: Event = Object.assign(new Event(), {
       name: eventRequest.name,
       createdBy,
       startDate: new Date(eventRequest.startDate),
       endDate: new Date(eventRequest.endDate),
-      shifts,
     });
-    // First save the Borrel-schema.
-    await Event.save(newEvent);
-    return this.asEventResponse(newEvent);
+    await Event.save(event);
+
+    event.answers = await this.syncEventShiftAnswers(event, eventRequest.shiftIds);
+    return this.asEventResponse(event);
   }
 
   /**
-   * Update borrel schema.
+   * Update an existing event.
    */
-  public static async updateEvent(id: number, update: UpdateEvent) {
-    const event = await Event.findOne({ where: { id } });
+  public static async updateEvent(id: number, update: Partial<UpdateEvent>) {
+    const event = await Event.findOne({
+      where: { id },
+      relations: ['answers'],
+    });
     if (!event) return undefined;
-    event.name = update.name;
-    event.startDate = new Date(update.startDate);
-    event.endDate = new Date(update.endDate);
-    // event.shifts = await Promise.all(update.shifts.map(async (shiftId) => {
-    //   const shift = await EventShift.findOne({ where: { id: shiftId } });
-    //   return shift;
-    // }));
-    await Event.save(event);
-    return this.asEventResponse(event);
+
+    const { shiftIds, ...rest } = update;
+    await Event.update(id, rest);
+    if (update.shiftIds != null) event.answers = await this.syncEventShiftAnswers(event, update.shiftIds);
+
+    return this.getSingleEvent(id);
   }
 
   /**
@@ -249,40 +298,40 @@ export default class EventService {
     return this.asEventAnswerResponse(newEventAnswer);
   }
 
-  /**
-   * Update borrel schema answer availability.
-   */
-  public static async updateEventAnswerAvailability(
-    id: number, update: UpdateEventAnswerAvailability,
-  ) {
-    const answer = await EventShiftAnswer.findOne({ where: { id } });
-    if (!answer) return undefined;
-    answer.availability = update.availability;
-    await EventShiftAnswer.save(answer);
-    return this.asEventAnswerResponse(answer);
-  }
-
-  /**
-   * Update borrel schema answer selection.
-   */
-  public static async selectEventAnswer(
-    id: number, update: SelectEventAnswer,
-  ) {
-    const answer = await EventShiftAnswer.findOne({ where: { id } });
-    if (!answer) return undefined;
-    answer.selected = update.selected;
-    await EventShiftAnswer.save(answer);
-    return this.asEventAnswerResponse(answer);
-  }
-
-  /**
-   * Delete borrel schema answer.
-   */
-  public static async deleteEventParticipantAnswers(
-    eventId: number, participantId: number,
-  ) {
-    const answers = await EventShiftAnswer.find({ where: { event: { id: eventId }, user: { id: participantId } } });
-    const answerIds = answers.map((answer) => answer.id);
-    await EventShiftAnswer.delete(answerIds);
-  }
+  // /**
+  //  * Update borrel schema answer availability.
+  //  */
+  // public static async updateEventAnswerAvailability(
+  //   id: number, update: UpdateEventAnswerAvailability,
+  // ) {
+  //   const answer = await EventShiftAnswer.findOne({ where: { id } });
+  //   if (!answer) return undefined;
+  //   answer.availability = update.availability;
+  //   await EventShiftAnswer.save(answer);
+  //   return this.asEventAnswerResponse(answer);
+  // }
+  //
+  // /**
+  //  * Update borrel schema answer selection.
+  //  */
+  // public static async selectEventAnswer(
+  //   id: number, update: SelectEventAnswer,
+  // ) {
+  //   const answer = await EventShiftAnswer.findOne({ where: { id } });
+  //   if (!answer) return undefined;
+  //   answer.selected = update.selected;
+  //   await EventShiftAnswer.save(answer);
+  //   return this.asEventAnswerResponse(answer);
+  // }
+  //
+  // /**
+  //  * Delete borrel schema answer.
+  //  */
+  // public static async deleteEventParticipantAnswers(
+  //   eventId: number, participantId: number,
+  // ) {
+  //   const answers = await EventShiftAnswer.find({ where: { event: { id: eventId }, user: { id: participantId } } });
+  //   const answerIds = answers.map((answer) => answer.id);
+  //   await EventShiftAnswer.delete(answerIds);
+  // }
 }

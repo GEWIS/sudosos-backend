@@ -15,6 +15,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+import { Availability } from '../../entity/event/event-shift-answer';
 
 export interface BaseEvent {
   name: string,
@@ -46,7 +47,7 @@ export interface BaseUpdateEvent {
 }
 
 export interface UpdateEvent extends BaseUpdateEvent {
-  shifts: number[],
+  shiftIds: number[],
 }
 
 export interface BaseEventShift {
@@ -77,7 +78,7 @@ export interface BaseUpdateEventAnswer {
   eventId: number,
 }
 export interface UpdateEventAnswerAvailability extends BaseUpdateEventAnswer {
-  availability: number,
+  availability: Availability,
 }
 
 export interface SelectEventAnswer extends BaseUpdateEventAnswer {

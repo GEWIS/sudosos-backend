@@ -16,19 +16,20 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  Column, Entity, JoinColumn, ManyToOne,
+  Column, Entity, JoinColumn, ManyToOne, PrimaryColumn,
 } from 'typeorm';
 import BaseEntity from '../base-entity';
 import User from '../user/user';
 import Event from './event';
 import EventShift from './event-shift';
+import BaseEntityWithoutId from '../base-entity-without-id';
 
 export enum Availability {
-  YES = 1,
-  MAYBE = 2,
-  LATER = 3,
-  NO = 4,
-  NAN = 5,
+  YES = 'YES',
+  MAYBE = 'MAYBE',
+  LATER = 'LATER',
+  NO = 'NO',
+  NA = 'NA',
 }
 
 /**
@@ -42,21 +43,31 @@ export enum Availability {
  */
 
 @Entity()
-export default class EventShiftAnswer extends BaseEntity {
+export default class EventShiftAnswer extends BaseEntityWithoutId {
+  @PrimaryColumn()
+  public userId: number;
+
   @ManyToOne(() => User, { nullable: false, eager: true })
+  @JoinColumn({ name: 'userId' })
   public user: User;
 
   @Column({ nullable: true })
-  public availability: Availability;
+  public availability: Availability | null;
 
-  @Column()
+  @Column({ default: false })
   public selected: boolean;
 
-  @JoinColumn()
+  @PrimaryColumn()
+  public shiftId: number;
+
   @ManyToOne(() => EventShift, { onDelete: 'RESTRICT' })
+  @JoinColumn({ name: 'shiftId' })
   public shift: EventShift;
 
-  @JoinColumn()
+  @PrimaryColumn()
+  public eventId: number;
+
   @ManyToOne(() => Event, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'eventId' })
   public event: Event;
 }
