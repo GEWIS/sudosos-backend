@@ -17,17 +17,17 @@
  */
 import { PaginationResult } from '../../helpers/pagination';
 import BaseResponse from './base-response';
-import { UserResponse } from './user-response';
+import { BaseUserResponse } from './user-response';
 
 /**
  * @typedef {BaseResponse} BaseEventResponse
  * @property {string} name - Name of the borrel.
- * @property {UserResponse.model} createdBy - Creator of the event.
+ * @property {BaseUserResponse.model} createdBy - Creator of the event.
  * @property {string} startDate - The starting date of the borrel.
  * @property {string} endDate - The end date of the borrel.
  */
 export interface BaseEventResponse extends BaseResponse {
-  createdBy: UserResponse,
+  createdBy: BaseUserResponse,
   name: string,
   startDate: string,
   endDate: string,
@@ -59,11 +59,11 @@ export interface EventResponse extends BaseEventResponse {
 
 /**
  * @typedef {EventResponse} BaseEventAnswerResponse
- * @property {UserResponse.model} user - Participant that filled in their availability
+ * @property {BaseUserResponse.model} user - Participant that filled in their availability
  * @property {string} availability - Filled in availability per slot.
  */
 export interface BaseEventAnswersResponse {
-  user: UserResponse,
+  user: BaseUserResponse,
   availability: number,
 }
 

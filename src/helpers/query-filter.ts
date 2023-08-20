@@ -82,7 +82,16 @@ export default class QueryFilter {
       const value = params[param];
       if (value !== undefined) {
         const property: string = mapping[param];
-        where[property] = value;
+        const split = property.split('.');
+        if (split.length === 1) {
+          // No dot, so no nested where clause
+          where[property] = value;
+        } else {
+          // Where clause is nested, so where clause should be an object
+          const newMapping: any = {};
+          newMapping[param] = split.slice(1).join('.');
+          where[split[0]] = this.createFilterWhereClause(newMapping, params);
+        }
       }
     });
 

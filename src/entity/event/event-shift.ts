@@ -35,6 +35,12 @@ export default class EventShift extends BaseEntity {
   @Column()
   public default: boolean;
 
-  @Column({ type: 'array' })
+  @Column({
+    type: 'varchar',
+    transformer: {
+      to: (val: string[]) => JSON.stringify(val),
+      from: (val: string) => JSON.parse(val),
+    },
+  })
   public roles: string[];
 }

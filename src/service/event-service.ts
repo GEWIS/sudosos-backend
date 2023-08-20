@@ -15,39 +15,32 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { FindManyOptions } from 'typeorm';
+import { FindManyOptions, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
+import { EventAnswerResponse, EventResponse, EventShiftResponse } from '../controller/response/event-response';
 import {
-  EventResponse,
-  EventAnswerResponse,
-  EventShiftResponse,
-} from '../controller/response/event-response';
-import {
-  UpdateEvent,
+  CreateEventAnswerRequest,
   CreateEventParams,
   CreateEventShiftRequest,
-  CreateEventAnswerRequest,
-  UpdateEventShift,
-  UpdateEventAnswerAvailability,
   SelectEventAnswer,
+  UpdateEvent,
+  UpdateEventAnswerAvailability,
+  UpdateEventShift,
 } from '../controller/request/event-request';
 import Event from '../entity/event/event';
 import EventShift from '../entity/event/event-shift';
 import EventShiftAnswer from '../entity/event/event-shift-answer';
 import User from '../entity/user/user';
-import { parseUserToResponse } from '../helpers/revision-to-response';
+import { parseUserToBaseResponse, parseUserToResponse } from '../helpers/revision-to-response';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import { RequestWithToken } from '../middleware/token-middleware';
-import {
-  asDate, asNumber,
-} from '../helpers/validators';
+import { asDate, asNumber } from '../helpers/validators';
 
 export interface EventFilterParameters {
   name?: string;
-  eventId?: number;
-  createById?: number;
-  startDate?: Date;
-  endDate?: Date;
-  shiftId?: number;
+  id?: number;
+  createdById?: number;
+  beforeDate?: Date;
+  afterDate?: Date;
 }
 export interface EventShiftFilterParameters {
   name?: string;
@@ -66,12 +59,11 @@ export function parseEventFilterParameters(
   req: RequestWithToken,
 ): EventFilterParameters {
   return {
-    name: String(req.query.name),
-    eventId: asNumber(req.query.eventId),
-    createById: asNumber(req.query.createById),
-    startDate: asDate(req.query.startDate),
-    endDate: asDate(req.query.endDate),
-    shiftId: asNumber(req.query.shiftId),
+    name: req.query.name.toString(),
+    id: asNumber(req.query.eventId),
+    createdById: asNumber(req.query.createById),
+    beforeDate: asDate(req.query.beforeDate),
+    afterDate: asDate(req.query.afterDate),
   };
 }
 
@@ -82,7 +74,7 @@ export default class EventService {
   private static asEventResponse(entity: Event): EventResponse {
     return {
       createdAt: entity.createdAt.toISOString(),
-      createdBy: parseUserToResponse(entity.createdBy, false),
+      createdBy: parseUserToBaseResponse(entity.createdBy, false),
       endDate: entity.endDate.toISOString(),
       id: entity.id,
       name: entity.name,
@@ -123,22 +115,33 @@ export default class EventService {
     :Promise<EventResponse[]> {
     const filterMapping: FilterMapping = {
       name: 'name',
-      startDate: 'startDate',
-      eventId: 'id',
+      id: 'id',
+      createdById: 'createdBy.id',
     };
 
     const options: FindManyOptions<Event> = {
       where: QueryFilter.createFilterWhereClause(filterMapping, params),
-      relations: ['createdBy', 'shifts'],
-      order: { startDate: 'ASC' },
+      relations: ['createdBy'],
+      order: { startDate: 'desc' },
     };
 
+    if (params.beforeDate) {
+      options.where = {
+        ...options.where,
+        startDate: LessThanOrEqual(params.beforeDate),
+      };
+    }
+    if (params.afterDate) {
+      options.where = {
+        ...options.where,
+        startDate: MoreThanOrEqual(params.afterDate),
+      };
+    }
+
     const events = await Event.find({ ...options });
-    const records: EventResponse[] = events.map(
+    return events.map(
       this.asEventResponse.bind(this),
     );
-
-    return records;
   }
 
   /**
@@ -149,8 +152,7 @@ export default class EventService {
     // Create a new Borrel-schema
     const createdBy = await User.findOne({ where: { id: eventRequest.createdById } });
     const shifts = await Promise.all(eventRequest.shiftIds.map(async (shiftId) => {
-      const shift = await EventShift.findOne({ where: { id: shiftId } });
-      return shift;
+      return EventShift.findOne({ where: { id: shiftId } });
     }));
     const newEvent: Event = Object.assign(new Event(), {
       name: eventRequest.name,

@@ -64,6 +64,10 @@ import { calculateBalance } from './helpers/balance';
 import EventShiftAnswer from '../src/entity/event/event-shift-answer';
 import GewisUser from '../src/gewis/entity/gewis-user';
 
+function getRandomDate(start: Date, end: Date): Date {
+  return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
+}
+
 /**
  * Defines InvoiceUsers objects for the given Users
  * @param users - List of Invoice User type
@@ -259,30 +263,36 @@ export async function seedInvoices(users: User[], transactions: Transaction[]): 
 /**
  * Seeds a default dataset of borrelSchemaShifts and stores them in the database
  */
-export async function createEventShifts() {
+export async function seedEventShifts() {
   const shifts: EventShift[] = [];
   shifts.push(Object.assign(new EventShift(), {
     name: 'Borrelen',
+    roles: ['BAC', 'BAC feut'],
     default: true,
   }));
   shifts.push(Object.assign(new EventShift(), {
     name: 'Portier',
+    roles: ['BAC', 'BAC feut'],
     default: true,
   }));
   shifts.push(Object.assign(new EventShift(), {
     name: 'Bier halen voor Job en Sjoerd',
+    roles: ['BAC feut'],
     default: true,
   }));
   shifts.push(Object.assign(new EventShift(), {
     name: 'Roy slaan',
+    roles: [],
     default: false,
   }));
   shifts.push(Object.assign(new EventShift(), {
     name: '900 euro kwijtraken',
+    roles: ['BAC PM', 'BAC'],
     default: false,
   }));
   shifts.push(Object.assign(new EventShift(), {
     name: 'Wassen',
+    roles: ['Bestuur'],
     default: true,
   }));
   await EventShift.save(shifts);
@@ -305,11 +315,15 @@ export async function seedEvents(shifts: EventShift[], users: User[]) {
   const eventShifts: EventShift[] = [];
   const eventShiftAnswers: EventShiftAnswer[] = [];
   for (let i = 0; i < 5; i += 1) {
+    const startDate = getRandomDate(new Date('2023-01-01'), new Date('2023-08-19'));
+    // Add 2,5 hours
+    const endDate = new Date(startDate.getTime() + (1000 * 60 * 60 * 2.5));
+
     const event = Object.assign(new Event(), {
       name: `Testborrel-${i}`,
       createdBy: users[i],
-      startDate: new Date(),
-      endDate: new Date(),
+      startDate,
+      endDate,
       shifts: null,
       id: i,
     });
@@ -1896,7 +1910,7 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
   const { pointsOfSale, pointOfSaleRevisions, updatedPointsOfSale } = await seedAllPointsOfSale(
     users, containerRevisions, containers,
   );
-  const borrelShifts = await createEventShifts();
+  const borrelShifts = await seedEventShifts();
   const { events, eventShifts, eventShiftAnswers } = await seedEvents(
     borrelShifts, users,
   );
