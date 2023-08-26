@@ -18,10 +18,10 @@
 import { describe } from 'mocha';
 import { Connection } from 'typeorm';
 import User from '../../../src/entity/user/user';
-import { seedEvents, seedUsers, seedRoles } from '../../seed';
+import { seedEvents, seedRoles, seedUsers } from '../../seed';
 import Event from '../../../src/entity/event/event';
 import EventShift from '../../../src/entity/event/event-shift';
-import EventShiftAnswer from '../../../src/entity/event/event-shift-answer';
+import EventShiftAnswer, { Availability } from '../../../src/entity/event/event-shift-answer';
 import Database from '../../../src/database/database';
 import EventService from '../../../src/service/event-service';
 import { expect } from 'chai';
@@ -403,6 +403,70 @@ describe('eventService', () => {
       expect(shift.roles).to.equal(roles);
       expect((await EventShift.findOne({ where: { id: originalShift.id } })).roles)
         .to.deep.equalInAnyOrder(roles);
+    });
+  });
+
+  describe('updateEventShiftAnswer', () => {
+    let originalAnswer: EventShiftAnswer;
+
+    before(async () => {
+      const answer = ctx.eventShiftAnswers.find((a) => a.availability === null && a.selected === false);
+      expect(answer).to.not.be.undefined;
+
+      const { userId, shiftId, eventId } = answer;
+      originalAnswer = await EventShiftAnswer.findOne({ where: {
+        userId, shiftId, eventId,
+      } });
+    });
+
+    after(async () => {
+      await EventShiftAnswer.update({
+        userId: ctx.eventShiftAnswers[0].userId,
+        shiftId: ctx.eventShiftAnswers[0].shiftId,
+        eventId: ctx.eventShiftAnswers[0].eventId,
+      }, {
+        availability: originalAnswer.availability,
+        selected: originalAnswer.selected,
+      });
+    });
+
+    it('should correctly update nothing', async () => {
+      const answer = await EventService.updateEventShiftAnswer(originalAnswer.eventId, originalAnswer.shiftId, originalAnswer.userId, {});
+      expect(answer.user.id).to.equal(originalAnswer.userId);
+      expect(answer.availability).to.equal(originalAnswer.availability);
+      expect(answer.selected).to.equal(originalAnswer.selected);
+    });
+    it('should correctly update availability', async () => {
+      const { eventId, shiftId, userId } = originalAnswer;
+
+      let availability = Availability.YES;
+      let answer = await EventService.updateEventShiftAnswer(originalAnswer.eventId, originalAnswer.shiftId, originalAnswer.userId, { availability });
+      expect(answer.availability).to.equal(availability);
+      expect((await EventShiftAnswer.findOne({ where: {
+        eventId, shiftId, userId,
+      } })).availability).to.equal(availability);
+
+      availability = Availability.LATER;
+      answer = await EventService.updateEventShiftAnswer(originalAnswer.eventId, originalAnswer.shiftId, originalAnswer.userId, { availability });
+      expect(answer.availability).to.equal(availability);
+      expect((await EventShiftAnswer.findOne({ where: {
+        eventId, shiftId, userId,
+      } })).availability).to.equal(availability);
+
+      // Cleanup
+      availability = originalAnswer.availability;
+      answer = await EventService.updateEventShiftAnswer(originalAnswer.eventId, originalAnswer.shiftId, originalAnswer.userId, { availability });
+      expect(answer.availability).to.equal(null);
+    });
+    it('should correctly update selection', async () => {
+      const { eventId, shiftId, userId } = originalAnswer;
+
+      let selected = true;
+      let answer = await EventService.updateEventShiftAnswer(originalAnswer.eventId, originalAnswer.shiftId, originalAnswer.userId, { selected });
+      expect(answer.selected).to.equal(selected);
+      expect((await EventShiftAnswer.findOne({ where: {
+        eventId, shiftId, userId,
+      } })).selected).to.equal(selected);
     });
   });
 

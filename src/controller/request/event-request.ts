@@ -50,12 +50,9 @@ export interface UpdateEvent extends BaseUpdateEvent {
   shiftIds: number[],
 }
 
-export interface BaseEventShift {
+export interface EventShiftRequest {
   name: string,
   roles: string[],
-}
-
-export interface UpdateEventShift extends BaseEventShift {
 }
 
 /**
@@ -63,39 +60,7 @@ export interface UpdateEventShift extends BaseEventShift {
  * @property {string} name - Name of the shift.
  */
 
-export interface CreateEventShiftRequest extends BaseEventShift {
-}
-
-export interface BaseEventAnswer {
-  userId: number,
-  shiftId: number,
-  eventId: number,
-}
-export interface BaseUpdateEventAnswer {
-  shiftId: number,
-  eventId: number,
-}
-export interface UpdateEventAnswerAvailability extends BaseUpdateEventAnswer {
+export interface EventAnswerRequest {
   availability: Availability,
-}
-
-export interface SelectEventAnswer extends BaseUpdateEventAnswer {
   selected: boolean,
-}
-
-/**
- * @typedef CreateEventAnswerRequest
- * @property {User.model} user - Participant that filled in their availability
- * @property {enum} availability - Filled in availability per slot.
- * @property {boolean} selected - Indicator whether the person has the related shift
- * during the related borrel.
- * @property {EventShift.model} shift - Shift that answers are related to.
- * @property {Event.model} event - Event that answers are related to
- */
-export interface CreateEventAnswerRequest extends BaseEventAnswer {
-  availability: number,
-  selected: boolean,
-}
-
-export class UpdateEventAnswer {
 }

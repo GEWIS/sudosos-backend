@@ -17,6 +17,7 @@
  */
 import { FindManyOptions, In, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
 import {
+  BaseEventAnswersResponse,
   BaseEventResponse,
   BaseEventShiftResponse,
   EventAnswerResponse,
@@ -24,13 +25,9 @@ import {
   EventShiftResponse,
 } from '../controller/response/event-response';
 import {
-  CreateEventAnswerRequest,
   CreateEventParams,
-  CreateEventShiftRequest,
-  SelectEventAnswer,
+  EventAnswerRequest, EventShiftRequest,
   UpdateEvent,
-  UpdateEventAnswerAvailability,
-  UpdateEventShift,
 } from '../controller/request/event-request';
 import Event from '../entity/event/event';
 import EventShift from '../entity/event/event-shift';
@@ -116,13 +113,19 @@ export default class EventService {
     };
   }
 
-  private static asEventAnswerResponse(entity: EventShiftAnswer):
-  EventAnswerResponse {
+  private static asBaseEventAnswerResponse(entity: EventShiftAnswer): BaseEventAnswersResponse {
     return {
       availability: entity.availability,
       selected: entity.selected,
-      shift: this.asBaseEventShiftResponse(entity.shift),
       user: parseUserToBaseResponse(entity.user, false),
+    };
+  }
+
+  private static asEventAnswerResponse(entity: EventShiftAnswer):
+  EventAnswerResponse {
+    return {
+      ...this.asBaseEventAnswerResponse(entity),
+      shift: this.asBaseEventShiftResponse(entity.shift),
     };
   }
 
@@ -295,7 +298,7 @@ export default class EventService {
    * Create borrel schema shift.
    */
   public static async createEventShift(eventShiftRequest
-  : CreateEventShiftRequest): Promise<EventShiftResponse> {
+  : EventShiftRequest): Promise<EventShiftResponse> {
     const newEventShift: EventShift = Object.assign(new EventShift(), {
       name: eventShiftRequest.name,
       roles: eventShiftRequest.roles,
@@ -307,7 +310,7 @@ export default class EventService {
   /**
    * Update borrel schema shift.
    */
-  public static async updateEventShift(id: number, update: Partial<UpdateEventShift>) {
+  public static async updateEventShift(id: number, update: Partial<EventShiftRequest>) {
     const shift = await EventShift.findOne({ where: { id } });
     if (!shift) return undefined;
     if (update.name) shift.name = update.name;
@@ -317,65 +320,20 @@ export default class EventService {
   }
 
   /**
-   * Create borrel schema answer.
+   * Update borrel schema answer
    */
-  public static async createEventAnswer(eventAnswerRequest
-  : CreateEventAnswerRequest): Promise<EventAnswerResponse> {
-    // Create a new Borrel-schema-answer
-    const user = await User.findOne({ where: { id: eventAnswerRequest.userId } });
-    const shift = await EventShift.findOne({
-      where:
-          { id: eventAnswerRequest.shiftId },
-    });
-    const event = await Event.findOne({
-      where:
-          { id: eventAnswerRequest.eventId },
-    });
-    const newEventAnswer: EventShiftAnswer = Object.assign(new EventShiftAnswer(), {
-      user,
-      availability: eventAnswerRequest.availability,
-      selected: eventAnswerRequest.selected,
-      shift,
-      event,
-    });
-    await EventShiftAnswer.save(newEventAnswer);
-    return this.asEventAnswerResponse(newEventAnswer);
-  }
+  public static async updateEventShiftAnswer(
+    eventId: number, shiftId: number, userId: number, update: Partial<EventAnswerRequest>,
+  ) {
+    const answer = await EventShiftAnswer.findOne({ where: {
+      userId, shiftId, eventId,
+    } });
+    if (!answer) return undefined;
 
-  // /**
-  //  * Update borrel schema answer availability.
-  //  */
-  // public static async updateEventAnswerAvailability(
-  //   id: number, update: UpdateEventAnswerAvailability,
-  // ) {
-  //   const answer = await EventShiftAnswer.findOne({ where: { id } });
-  //   if (!answer) return undefined;
-  //   answer.availability = update.availability;
-  //   await EventShiftAnswer.save(answer);
-  //   return this.asEventAnswerResponse(answer);
-  // }
-  //
-  // /**
-  //  * Update borrel schema answer selection.
-  //  */
-  // public static async selectEventAnswer(
-  //   id: number, update: SelectEventAnswer,
-  // ) {
-  //   const answer = await EventShiftAnswer.findOne({ where: { id } });
-  //   if (!answer) return undefined;
-  //   answer.selected = update.selected;
-  //   await EventShiftAnswer.save(answer);
-  //   return this.asEventAnswerResponse(answer);
-  // }
-  //
-  // /**
-  //  * Delete borrel schema answer.
-  //  */
-  // public static async deleteEventParticipantAnswers(
-  //   eventId: number, participantId: number,
-  // ) {
-  //   const answers = await EventShiftAnswer.find({ where: { event: { id: eventId }, user: { id: participantId } } });
-  //   const answerIds = answers.map((answer) => answer.id);
-  //   await EventShiftAnswer.delete(answerIds);
-  // }
+    if (update.availability !== undefined) answer.availability = update.availability;
+    if (update.selected !== undefined) answer.selected = update.selected;
+
+    await EventShiftAnswer.save(answer);
+    return this.asBaseEventAnswerResponse(answer);
+  }
 }

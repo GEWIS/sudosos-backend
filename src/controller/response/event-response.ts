@@ -65,6 +65,7 @@ export interface EventResponse extends BaseEventResponse {
 export interface BaseEventAnswersResponse {
   user: BaseUserResponse,
   availability: string,
+  selected: boolean,
 }
 
 /**
@@ -74,7 +75,6 @@ export interface BaseEventAnswersResponse {
  * @property {EventResponse} event
  */
 export interface EventAnswerResponse extends BaseEventAnswersResponse {
-  selected: boolean,
   shift: BaseEventShiftResponse,
 }
 
