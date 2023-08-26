@@ -97,10 +97,9 @@ export default class EventService {
     };
   }
 
-  private static asEventShiftResponse(entity: EventShift):
-  EventShiftResponse {
+  private static asBaseEventShiftResponse(entity: EventShift):
+  BaseEventShiftResponse {
     return {
-      default: entity.default,
       createdAt: entity.createdAt.toISOString(),
       id: entity.id,
       name: entity.name,
@@ -109,12 +108,20 @@ export default class EventService {
     };
   }
 
+  private static asEventShiftResponse(entity: EventShift):
+  EventShiftResponse {
+    return {
+      ...this.asBaseEventShiftResponse(entity),
+      roles: entity.roles,
+    };
+  }
+
   private static asEventAnswerResponse(entity: EventShiftAnswer):
   EventAnswerResponse {
     return {
       availability: entity.availability,
       selected: entity.selected,
-      shift: this.asEventShiftResponse(entity.shift),
+      shift: this.asBaseEventShiftResponse(entity.shift),
       user: parseUserToBaseResponse(entity.user, false),
     };
   }
@@ -289,10 +296,9 @@ export default class EventService {
    */
   public static async createEventShift(eventShiftRequest
   : CreateEventShiftRequest): Promise<EventShiftResponse> {
-  // Create a new Borrel-schema-shift
     const newEventShift: EventShift = Object.assign(new EventShift(), {
       name: eventShiftRequest.name,
-      default: eventShiftRequest.default,
+      roles: eventShiftRequest.roles,
     });
     await EventShift.save(newEventShift);
     return this.asEventShiftResponse(newEventShift);
@@ -301,11 +307,11 @@ export default class EventService {
   /**
    * Update borrel schema shift.
    */
-  public static async updateEventShift(id: number, update: UpdateEventShift) {
+  public static async updateEventShift(id: number, update: Partial<UpdateEventShift>) {
     const shift = await EventShift.findOne({ where: { id } });
     if (!shift) return undefined;
-    shift.name = update.name;
-    shift.default = update.default;
+    if (update.name) shift.name = update.name;
+    if (update.roles) shift.roles = update.roles;
     await EventShift.save(shift);
     return this.asEventShiftResponse(shift);
   }

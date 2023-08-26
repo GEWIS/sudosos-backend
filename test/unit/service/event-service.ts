@@ -340,6 +340,72 @@ describe('eventService', () => {
     });
   });
 
+  describe('createShift', () => {
+    it('should correctly create a new shift', async () => {
+      const name = 'Feuten op dweilen zetten';
+      const roles = ['BAC Veurzitter', 'BAC Oud-veurzitter'];
+      const shift = await EventService.createEventShift({
+        name,
+        roles,
+      });
+      expect(shift).to.not.be.undefined;
+      expect(shift.name).to.equal(name);
+      expect(shift.roles).to.deep.equalInAnyOrder(roles);
+
+      const dbShift = await EventShift.findOne({ where: { id: shift.id } });
+      expect(dbShift).to.not.be.undefined;
+      expect(dbShift.name).to.equal(name);
+
+      // Cleanup
+      await dbShift.remove();
+    });
+  });
+
+  describe('updateShift', () => {
+    let originalShift: EventShift;
+
+    before(async () => {
+      originalShift = await EventShift.findOne({
+        where: { id: ctx.eventShifts[0].id },
+      });
+    });
+
+    after(async () => {
+      await EventShift.update(originalShift.id, {
+        name: originalShift.name,
+        roles: originalShift.roles,
+      });
+    });
+
+    it('should correctly update nothing', async () => {
+      const shift = await EventService.updateEventShift(originalShift.id, {});
+      expect(shift.name).to.equal(originalShift.name);
+      expect(shift.roles).to.deep.equalInAnyOrder(originalShift.roles);
+    });
+
+    it('should correctly update name', async () => {
+      const name = 'UpdatedName';
+      const shift = await EventService.updateEventShift(originalShift.id, {
+        name,
+      });
+
+      expect(shift.name).to.equal(name);
+      expect((await EventShift.findOne({ where: { id: originalShift.id } })).name)
+        .to.equal(name);
+    });
+
+    it('should correctly update roles', async () => {
+      const roles = ['A', 'B', 'C'];
+      const shift = await EventService.updateEventShift(originalShift.id, {
+        roles,
+      });
+
+      expect(shift.roles).to.equal(roles);
+      expect((await EventShift.findOne({ where: { id: originalShift.id } })).roles)
+        .to.deep.equalInAnyOrder(roles);
+    });
+  });
+
   describe('deleteShift', () => {
     it('should soft delete shift if it has answers', async () => {
       const shift = ctx.eventShiftAnswers[0].shift;

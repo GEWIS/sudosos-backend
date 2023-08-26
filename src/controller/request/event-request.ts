@@ -52,20 +52,18 @@ export interface UpdateEvent extends BaseUpdateEvent {
 
 export interface BaseEventShift {
   name: string,
+  roles: string[],
 }
 
 export interface UpdateEventShift extends BaseEventShift {
-  default: boolean,
 }
 
 /**
  * @typedef CreateEventShiftRequest
  * @property {string} name - Name of the shift.
- * @property {boolean} default - Indicator whether the shift is a regular shift.
  */
 
 export interface CreateEventShiftRequest extends BaseEventShift {
-  default: boolean,
 }
 
 export interface BaseEventAnswer {

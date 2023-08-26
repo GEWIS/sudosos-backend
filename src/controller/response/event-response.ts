@@ -43,10 +43,10 @@ export interface BaseEventShiftResponse extends BaseResponse {
 
 /**
  * @typedef {BaseEventShiftResponse} EventShiftResponse
- * @property {boolean} default - Indicator whether the shift is a regular shift.
+ * @property {Array<string>} roles - Which roles can fill in this shift.
  */
 export interface EventShiftResponse extends BaseEventShiftResponse {
-  default: boolean,
+  roles: string[],
 }
 
 /**

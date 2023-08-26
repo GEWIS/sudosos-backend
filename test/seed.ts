@@ -285,32 +285,26 @@ export async function seedEventShifts() {
   shifts.push(Object.assign(new EventShift(), {
     name: 'Borrelen',
     roles: ['BAC', 'BAC feut'],
-    default: true,
   }));
   shifts.push(Object.assign(new EventShift(), {
     name: 'Portier',
     roles: ['BAC', 'BAC feut'],
-    default: true,
   }));
   shifts.push(Object.assign(new EventShift(), {
     name: 'Bier halen voor Job en Sjoerd',
     roles: ['BAC feut'],
-    default: true,
   }));
   shifts.push(Object.assign(new EventShift(), {
     name: 'Roy slaan',
     roles: [],
-    default: false,
   }));
   shifts.push(Object.assign(new EventShift(), {
     name: '900 euro kwijtraken',
     roles: ['BAC PM', 'BAC'],
-    default: false,
   }));
   shifts.push(Object.assign(new EventShift(), {
     name: 'Wassen',
     roles: ['Bestuur'],
-    default: true,
     deletedAt: new Date(),
   }));
   await EventShift.save(shifts);

@@ -34,9 +34,6 @@ export default class EventShift extends BaseEntity {
   @Column()
   public name: string;
 
-  @Column({ default: false })
-  public default: boolean;
-
   @Column({
     type: 'varchar',
     transformer: {
