@@ -22,12 +22,11 @@ import {
   BaseEventShiftResponse,
   EventAnswerResponse,
   EventResponse,
-  EventShiftResponse,
+  EventShiftResponse, PaginatedBaseEventResponse,
 } from '../controller/response/event-response';
 import {
-  CreateEventParams,
-  EventAnswerRequest, EventShiftRequest,
-  UpdateEvent,
+  EventAnswerRequest,
+  EventShiftRequest,
 } from '../controller/request/event-request';
 import Event from '../entity/event/event';
 import EventShift from '../entity/event/event-shift';
@@ -37,6 +36,7 @@ import { parseUserToBaseResponse } from '../helpers/revision-to-response';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import { RequestWithToken } from '../middleware/token-middleware';
 import { asDate, asNumber } from '../helpers/validators';
+import { PaginationParameters } from '../helpers/pagination';
 
 export interface EventFilterParameters {
   name?: string;
@@ -45,26 +45,25 @@ export interface EventFilterParameters {
   beforeDate?: Date;
   afterDate?: Date;
 }
-export interface EventShiftFilterParameters {
-  name?: string;
-  default?: boolean;
+
+export interface UpdateEventParams {
+  name: string,
+  startDate: Date,
+  endDate: Date,
+  shiftIds: number[],
 }
 
-export interface EventAnswerFilterParameters {
-  userId?: number;
-  availability?: number;
-  selected?: boolean;
-  shiftId?: number;
-  eventId?: number;
+export interface CreateEventParams extends UpdateEventParams {
+  createdById: number,
 }
 
 export function parseEventFilterParameters(
   req: RequestWithToken,
 ): EventFilterParameters {
   return {
-    name: req.query.name.toString(),
+    name: req.query.name?.toString(),
     id: asNumber(req.query.eventId),
-    createdById: asNumber(req.query.createById),
+    createdById: asNumber(req.query.createdById),
     beforeDate: asDate(req.query.beforeDate),
     afterDate: asDate(req.query.afterDate),
   };
@@ -132,10 +131,10 @@ export default class EventService {
   /**
    * Get all borrel schemas.
    */
-  public static async getEvents(params: EventFilterParameters = {})
-    :Promise<BaseEventResponse[]> {
+  public static async getEvents(params: EventFilterParameters = {}, { take, skip }: PaginationParameters = {})
+    :Promise<PaginatedBaseEventResponse> {
     const filterMapping: FilterMapping = {
-      name: 'name',
+      name: '%name',
       id: 'id',
       createdById: 'createdBy.id',
     };
@@ -159,8 +158,12 @@ export default class EventService {
       };
     }
 
-    const events = await Event.find({ ...options });
-    return events.map((e) => this.asBaseEventResponse(e));
+    const events = await Event.find({ ...options, take, skip });
+    const count = await Event.count(options);
+    return {
+      _pagination: { take, skip, count },
+      records: events.map((e) => this.asBaseEventResponse(e)),
+    };
   }
 
   /**
@@ -220,26 +223,26 @@ export default class EventService {
   /**
      * Create a new event.
      */
-  public static async createEvent(eventRequest: CreateEventParams)
+  public static async createEvent(params: CreateEventParams)
     : Promise<EventResponse> {
-    const createdBy = await User.findOne({ where: { id: eventRequest.createdById } });
+    const createdBy = await User.findOne({ where: { id: params.createdById } });
 
     const event: Event = Object.assign(new Event(), {
-      name: eventRequest.name,
+      name: params.name,
       createdBy,
-      startDate: new Date(eventRequest.startDate),
-      endDate: new Date(eventRequest.endDate),
+      startDate: params.startDate,
+      endDate: params.endDate,
     });
     await Event.save(event);
 
-    event.answers = await this.syncEventShiftAnswers(event, eventRequest.shiftIds);
+    event.answers = await this.syncEventShiftAnswers(event, params.shiftIds);
     return this.asEventResponse(event);
   }
 
   /**
    * Update an existing event.
    */
-  public static async updateEvent(id: number, update: Partial<UpdateEvent>) {
+  public static async updateEvent(id: number, update: Partial<UpdateEventParams>) {
     const event = await Event.findOne({
       where: { id },
       relations: ['answers'],

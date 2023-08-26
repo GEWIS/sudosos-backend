@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  FindOptionsWhere,
+  FindOptionsWhere, Like,
   SelectQueryBuilder,
 } from 'typeorm';
 import { asNumber } from './validators';
@@ -83,9 +83,13 @@ export default class QueryFilter {
       if (value !== undefined) {
         const property: string = mapping[param];
         const split = property.split('.');
-        if (split.length === 1) {
-          // No dot, so no nested where clause
+        if (split.length === 1 && property.substring(0, 1) === '%') {
+          // No dot, so no nested where clause. However, search starts with a "%"
+          where[property.substring(1)] = Like(`%${value}%`);
+        } else if (split.length === 1) {
+          // No dot, so no nested where clause and no LIKE-search
           where[property] = value;
+          // No
         } else {
           // Where clause is nested, so where clause should be an object
           const newMapping: any = {};

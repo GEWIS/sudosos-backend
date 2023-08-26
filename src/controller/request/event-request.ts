@@ -17,38 +17,21 @@
  */
 import { Availability } from '../../entity/event/event-shift-answer';
 
-export interface BaseEvent {
-  name: string,
-  startDate: string,
-  endDate: string,
-  shiftIds?: number[],
-}
-
-export interface CreateEventParams extends BaseEvent {
-  createdById: number,
-}
 /**
- * @typedef CreateEventRequest
- * @property {string} name.required - Name of the borrel.
- * @property {User.model} createdBy - Creator of the event.
- * @property {string} startDate.required - The starting date of the borrel.
- * @property {string} endDate.required - The end date of the borrel.
- * @property {Array<EventShift.model>} shifts - Filled in availability
+ * @typedef UpdateEventRequest
+ * @property {string} name.required - Name of the event.
+ * @property {string} startDate.required - The starting date of the event.
+ * @property {string} endDate.required - The end date of the event.
+ * @property {Array<integer>} shiftIds.required - IDs of shifts that are in this event
  * per participant per borrel.
  */
-export interface CreateEventRequest extends BaseEvent {
-  createdById?: number,
-}
-
-export interface BaseUpdateEvent {
+export interface UpdateEventRequest {
   name: string,
   startDate: string,
   endDate: string,
-}
-
-export interface UpdateEvent extends BaseUpdateEvent {
   shiftIds: number[],
 }
+
 
 export interface EventShiftRequest {
   name: string,

@@ -152,3 +152,13 @@ export function asArrayOfUserTypes(input: any): UserType[] | undefined {
   if (!Array.isArray(input)) return undefined;
   return input.map((i) => asUserType(i));
 }
+
+/**
+ * Converts the input to a list of numbers
+ * @param input
+ */
+export function asArrayOfNumbers(input: any): number[] | undefined {
+  if (!input) return undefined;
+  if (!Array.isArray(input)) return undefined;
+  return input.map((i) => asNumber(i));
+}

@@ -21,8 +21,17 @@ import { Response } from 'express';
 import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
-import EventService, { EventFilterParameters, parseEventFilterParameters } from '../service/event-service';
-import { EventResponse } from './response/event-response';
+import EventService, {
+  CreateEventParams,
+  EventFilterParameters,
+  parseEventFilterParameters,
+} from '../service/event-service';
+import { parseRequestPagination } from '../helpers/pagination';
+import BannerRequest from './request/banner-request';
+import { asArrayOfNumbers, asDate } from '../helpers/validators';
+import EventShift from '../entity/event/event-shift';
+import { In } from 'typeorm';
+import AssignedRole from '../entity/roles/assigned-role';
 
 export default class EventController extends BaseController {
   private logger: Logger = log4js.getLogger('EventLogger');
@@ -47,14 +56,55 @@ export default class EventController extends BaseController {
           ),
           handler: this.getAllEvents.bind(this),
         },
+        POST: {
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'create', 'all', 'Event', ['*'],
+          ),
+          handler: this.createEvent.bind(this),
+        },
+      },
+      '/:id(\\d+)': {
+        GET: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Event', ['*']),
+          handler: this.getSingleEvent.bind(this),
+        },
+        DELETE: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'delete', 'all', 'Event', ['*']),
+          handler: this.deleteSingleEvent.bind(this),
+        },
       },
     };
   }
 
+  /**
+   * Get all events
+   * @route GET /events
+   * @group events - Operations of the event controller
+   * @operationId getAllEvents
+   * @security JWT
+   * @param {string} name.query - Name of the event
+   * @param {integer} createdById.query - ID of user that created the event
+   * @param {string} beforeDate.query - Get only events that start after this date
+   * @param {string} afterDate.query - Get only events that start before this date
+   * @param {integer} take.query - How many entries the endpoint should return
+   * @param {integer} skip.query - How many entries should be skipped (for pagination)
+   * @returns {PaginatedBaseEventResponse.model} 200 - All existing events
+   * @returns {string} 400 - Validation error
+   * @returns {string} 500 - Internal server error
+   */
   public async getAllEvents(req: RequestWithToken, res: Response): Promise<void> {
     this.logger.trace('Get all events by user', req.token.user);
 
-    /* TODO add pagination */
+    let take;
+    let skip;
+    try {
+      const pagination = parseRequestPagination(req);
+      take = pagination.take;
+      skip = pagination.skip;
+    } catch (e) {
+      res.status(400).send(e.message);
+      return;
+    }
 
     let filters: EventFilterParameters;
     try {
@@ -66,11 +116,135 @@ export default class EventController extends BaseController {
 
     // Handle request
     try {
-      const events: EventResponse[] = await
-      EventService.getEvents(filters);
+      const events = await EventService.getEvents(filters, { take, skip });
       res.json(events);
     } catch (e) {
       this.logger.error('Could not return all events:', e);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Get a single event with its answers and shifts
+   * @route GET /events/{id}
+   * @group events - Operations of the event controller
+   * @operationId getSingleEvent
+   * @security JWT
+   * @param {integer} id.path.required - The id of the event which should be returned
+   * @returns {EventResponse.model} 200 - All existing events
+   * @returns {string} 400 - Validation error
+   * @returns {string} 500 - Internal server error
+   */
+  public async getSingleEvent(req: RequestWithToken, res: Response) {
+    const { id } = req.params;
+    this.logger.trace('Get single event with ID', id, 'by', req.token.user);
+
+    try {
+      const parsedId = Number.parseInt(id, 10);
+      const event = await EventService.getSingleEvent(parsedId);
+      if (event == null) {
+        res.status(404).send();
+        return;
+      }
+      res.json(event);
+    } catch (error) {
+      this.logger.error('Could not return single event:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Create an event with its corresponding answers objects
+   * @route POST /events
+   * @group events - Operations of the event controller
+   * @operationId createEvent
+   * @security JWT
+   * @param {UpdateEventRequest.model} body.body.required
+   * @returns {EventResponse.model} 200 - Created event
+   * @returns {string} 400 - Validation error
+   * @returns {string} 500 - Internal server error
+   */
+  public async createEvent(req: RequestWithToken, res: Response) {
+    const body = req.body as BannerRequest;
+    this.logger.trace('Create event', body, 'by user', req.token.user);
+
+    let params: CreateEventParams;
+    try {
+      params = {
+        name: req.body.name.toString(),
+        startDate: asDate(req.body.startDate),
+        endDate: asDate(req.body.endDate),
+        shiftIds: asArrayOfNumbers(req.body.shiftIds),
+        createdById: req.token.user.id,
+      };
+      if (
+        !params.name
+        || !params.startDate
+        || !params.endDate
+        || !params.shiftIds
+        || params.shiftIds.length === 0
+        || params.startDate.getTime() < new Date().getTime()
+        || params.endDate.getTime() < new Date().getTime()
+        || params.endDate.getTime() < params.startDate.getTime()
+      ) throw new Error();
+
+      const shifts = await EventShift.find({ where: { id: In(params.shiftIds) } });
+      if (shifts.length !== params.shiftIds.length) throw new Error();
+
+      // Check that every shift has at least 1 person to do the shift
+      // First, get an array with tuples. The first item is the ID, the second whether the shift has any users.
+      const shiftsWithUsers = await Promise.all(shifts.map(async (s) => {
+        const roles = await AssignedRole.find({ where: { role: In(s.roles) }, relations: ['user'] });
+        return [s.id, roles.length > 0];
+      }));
+      // Then, apply a filter to only get the shifts without users
+      const shiftsWithoutUsers = shiftsWithUsers.filter((s) => s[1] === false);
+      // If there is more than one, return an error.
+      if (shiftsWithoutUsers.length > 0) {
+        res.status(400).json(`Shift with ID ${shiftsWithUsers.map((s) => s[0]).join(', ')} has no users. Make sure the shift's roles are correct.`);
+        return;
+      }
+    } catch (e) {
+      res.status(400).json('Invalid event.');
+      return;
+    }
+
+    // handle request
+    try {
+      res.json(await EventService.createEvent(params));
+    } catch (error) {
+      this.logger.error('Could not create event:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Delete an event with its answers
+   * @route DELETE /events/{id}
+   * @group events - Operations of the event controller
+   * @operationId deleteSingleEvent
+   * @security JWT
+   * @param {integer} id.path.required - The id of the event which should be returned
+   * @returns {string} 204
+   * @returns {string} 400 - Validation error
+   * @returns {string} 500 - Internal server error
+   */
+  public async deleteSingleEvent(req: RequestWithToken, res: Response) {
+    const { id } = req.params;
+    this.logger.trace('Get single event with ID', id, 'by', req.token.user);
+
+    try {
+      const parsedId = Number.parseInt(id, 10);
+      const event = await EventService.getSingleEvent(parsedId);
+      if (event == null) {
+        res.status(404).send();
+        return;
+      }
+
+      await EventService.deleteEvent(parsedId);
+      res.status(204).send();
+    } catch (error) {
+      this.logger.error('Could not return single event:', error);
       res.status(500).json('Internal server error.');
     }
   }

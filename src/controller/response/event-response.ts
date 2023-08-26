@@ -51,7 +51,7 @@ export interface EventShiftResponse extends BaseEventShiftResponse {
 
 /**
  * @typedef {BaseEventResponse} EventResponse
- * @property {Array<EventAnswerResponse.name>} shifts - Filled in availability
+ * @property {Array<EventAnswerResponse.name>} answers - Filled in availability
  */
 export interface EventResponse extends BaseEventResponse {
   answers: EventAnswerResponse[],
@@ -81,9 +81,9 @@ export interface EventAnswerResponse extends BaseEventAnswersResponse {
 /**
  * @typedef PaginatedEventResponse
  * @property {PaginationResult.model} _pagination - Pagination metadata
- * @property {Array<EventResponse.model>} records - Returned borrel Schemas
+ * @property {Array<BaseEventResponse.model>} records - Returned borrel Schemas
  */
-export interface PaginatedEventResponse {
+export interface PaginatedBaseEventResponse {
   _pagination: PaginationResult,
-  records: EventResponse[],
+  records: BaseEventResponse[],
 }

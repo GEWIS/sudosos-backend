@@ -334,7 +334,7 @@ export async function seedEvents(rolesWithUsers: AssignedRole[]) {
     const endDate = new Date(startDate.getTime() + (1000 * 60 * 60 * 2.5));
 
     const event = Object.assign(new Event(), {
-      name: `Testborrel-${i}`,
+      name: `${i}-Testborrel-${i}`,
       createdBy: rolesWithUsers[i].user,
       startDate,
       endDate,

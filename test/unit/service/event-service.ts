@@ -23,11 +23,10 @@ import Event from '../../../src/entity/event/event';
 import EventShift from '../../../src/entity/event/event-shift';
 import EventShiftAnswer, { Availability } from '../../../src/entity/event/event-shift-answer';
 import Database from '../../../src/database/database';
-import EventService from '../../../src/service/event-service';
+import EventService, { CreateEventParams } from '../../../src/service/event-service';
 import { expect } from 'chai';
 import { BaseEventResponse, BaseEventShiftResponse } from '../../../src/controller/response/event-response';
 import AssignedRole from '../../../src/entity/roles/assigned-role';
-import { CreateEventParams } from '../../../src/controller/request/event-request';
 
 describe('eventService', () => {
   let ctx: {
@@ -79,7 +78,7 @@ describe('eventService', () => {
 
   describe('getEvents', () => {
     it('should return all events ordered by startDate descending', async () => {
-      const events = await EventService.getEvents();
+      const { records: events } = await EventService.getEvents();
       expect(events.length).be.greaterThan(0);
       expect(events.length).to.equal(ctx.events.length);
 
@@ -94,25 +93,42 @@ describe('eventService', () => {
     });
     it('should filter on id', async () => {
       const id = ctx.events[0].id;
-      const events = await EventService.getEvents({ id });
+      const { records: events } = await EventService.getEvents({ id });
 
       expect(events.length).to.equal(1);
       expect(events[0].id).to.equal(id);
     });
-    it('should filter on name', async () => {
+    it('should filter on exact name', async () => {
       const name = ctx.events[0].name;
       const actualEvents = ctx.events.filter((e) => e.name === name);
-      const events = await EventService.getEvents({ name });
+      const { records: events } = await EventService.getEvents({ name });
 
       expect(actualEvents.length).to.equal(events.length);
       events.forEach((e) => {
         expect(e.name).to.equal(name);
       });
     });
+    it('should filter on like name', async () => {
+      const name = ctx.events[0].name.substring(0, 6);
+      const actualEvents = ctx.events.filter((e) => e.name.substring(0, 6) === name);
+      const { records: events } = await EventService.getEvents({ name });
+
+      expect(actualEvents.length).to.equal(events.length);
+      events.forEach((e) => {
+        expect(e.name).to.include(name);
+      });
+    });
+    it('should filter on created by ID', async () => {
+      const createdById = ctx.events[0].createdBy.id;
+      const { records: events } = await EventService.getEvents({ createdById });
+
+      expect(events.length).to.equal(1);
+      expect(events[0].createdBy.id).to.equal(createdById);
+    });
     it('should filter on date (before)', async () => {
       const beforeDate = ctx.events[0].startDate;
       const actualEvents = ctx.events.filter((e) => e.startDate.getTime() <= beforeDate.getTime());
-      const events = await EventService.getEvents({ beforeDate });
+      const { records: events } = await EventService.getEvents({ beforeDate });
 
       expect(actualEvents.length).to.equal(events.length);
       const ids = actualEvents.map((e) => e.id);
@@ -124,7 +140,7 @@ describe('eventService', () => {
     it('should filter on date (after)', async () => {
       const afterDate = ctx.events[0].startDate;
       const actualEvents = ctx.events.filter((e) => e.startDate.getTime() >= afterDate.getTime());
-      const events = await EventService.getEvents({ afterDate });
+      const { records: events } = await EventService.getEvents({ afterDate });
 
       expect(actualEvents.length).to.equal(events.length);
       const ids = actualEvents.map((e) => e.id);
@@ -136,13 +152,30 @@ describe('eventService', () => {
     it('should filter on createdById', async () => {
       const createdById = ctx.events[0].createdBy.id;
       const actualEvents = ctx.events.filter((e) => e.createdBy.id === createdById);
-      const events = await EventService.getEvents({ createdById });
+      const { records: events } = await EventService.getEvents({ createdById });
 
       expect(events.length).to.equal(actualEvents.length);
       const ids = actualEvents.map((e) => e.id);
       events.forEach((e) => {
         expect(ids).to.include(e.id);
         expect(e.createdBy.id).to.equal(createdById);
+      });
+    });
+    it('should adhere to pagination', async () => {
+      const take = 3;
+      const skip = 1;
+      const events = await EventService.getEvents({}, { take, skip });
+      expect(events.records.length).to.equal(take);
+      expect(events._pagination.take).to.equal(take);
+      expect(events._pagination.skip).to.equal(skip);
+      expect(events._pagination.count).to.equal(ctx.events.length);
+
+      const ids = ctx.events
+        .sort((a, b) => b.startDate.getTime() - a.startDate.getTime())
+        .slice(skip, skip + take)
+        .map((e) => e.id);
+      events.records.forEach((event, i) => {
+        expect(event.id).to.equal(ids[i]);
       });
     });
   });
@@ -175,8 +208,8 @@ describe('eventService', () => {
       const params: CreateEventParams = {
         createdById: ctx.users[0].id,
         name: 'TestEvent',
-        startDate: new Date().toISOString(),
-        endDate: new Date(new Date().getTime() + 1000 * 60 * 60).toISOString(),
+        startDate: new Date(),
+        endDate: new Date(new Date().getTime() + 1000 * 60 * 60),
         shiftIds: [shift.id],
       };
       const event = await EventService.createEvent(params);
@@ -184,8 +217,8 @@ describe('eventService', () => {
       expect(event).to.not.be.undefined;
       expect(event.name).to.equal(params.name);
       expect(event.createdBy.id).to.equal(params.createdById);
-      expect(event.startDate).to.equal(params.startDate);
-      expect(event.endDate).to.equal(params.endDate);
+      expect(event.startDate).to.equal(params.startDate.toISOString());
+      expect(event.endDate).to.equal(params.endDate.toISOString());
 
       const users = ctx.roles
         .filter((r) => shift.roles.includes(r.role))
@@ -209,8 +242,8 @@ describe('eventService', () => {
       const params: CreateEventParams = {
         createdById: ctx.users[0].id,
         name: 'TestEvent',
-        startDate: new Date().toISOString(),
-        endDate: new Date(new Date().getTime() + 1000 * 60 * 60).toISOString(),
+        startDate: new Date(),
+        endDate: new Date(new Date().getTime() + 1000 * 60 * 60),
         shiftIds: [],
       };
       const event = await EventService.createEvent(params);
@@ -237,8 +270,8 @@ describe('eventService', () => {
     after(async () => {
       await EventService.updateEvent(originalEvent.id, {
         name: originalEvent.name,
-        startDate: originalEvent.startDate.toISOString(),
-        endDate: originalEvent.endDate.toISOString(),
+        startDate: originalEvent.startDate,
+        endDate: originalEvent.endDate,
         shiftIds: originalEvent.answers
           .map((a) => a.shiftId)
           .filter((a1, i, all) => i === all
@@ -257,7 +290,7 @@ describe('eventService', () => {
     it('should correctly update startDate', async () => {
       const startDate = new Date('2020-07-01');
       const event = await EventService.updateEvent(originalEvent.id, {
-        startDate: startDate.toISOString(),
+        startDate: startDate,
       });
       expect(event.startDate).to.equal(startDate.toISOString());
       expect((await Event.findOne({ where: { id: originalEvent.id } })).startDate.getTime()).to.equal(startDate.getTime());
@@ -265,7 +298,7 @@ describe('eventService', () => {
     it('should correctly update endDate', async () => {
       const endDate = new Date('2020-07-01');
       const event = await EventService.updateEvent(originalEvent.id, {
-        endDate: endDate.toISOString(),
+        endDate: endDate,
       });
       expect(event.endDate).to.equal(endDate.toISOString());
       expect((await Event.findOne({ where: { id: originalEvent.id } })).endDate.getTime()).to.equal(endDate.getTime());
