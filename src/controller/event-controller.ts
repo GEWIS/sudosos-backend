@@ -24,14 +24,10 @@ import { RequestWithToken } from '../middleware/token-middleware';
 import EventService, {
   CreateEventParams,
   EventFilterParameters,
-  parseEventFilterParameters,
+  parseEventFilterParameters, parseUpdateEventRequestParameters, UpdateEventParams,
 } from '../service/event-service';
 import { parseRequestPagination } from '../helpers/pagination';
-import BannerRequest from './request/banner-request';
-import { asArrayOfNumbers, asDate } from '../helpers/validators';
-import EventShift from '../entity/event/event-shift';
-import { In } from 'typeorm';
-import AssignedRole from '../entity/roles/assigned-role';
+import { UpdateEventRequest } from './request/event-request';
 
 export default class EventController extends BaseController {
   private logger: Logger = log4js.getLogger('EventLogger');
@@ -67,6 +63,10 @@ export default class EventController extends BaseController {
         GET: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Event', ['*']),
           handler: this.getSingleEvent.bind(this),
+        },
+        PATCH: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'update', 'all', 'Event', ['*']),
+          handler: this.updateEvent.bind(this),
         },
         DELETE: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'delete', 'all', 'Event', ['*']),
@@ -165,53 +165,59 @@ export default class EventController extends BaseController {
    * @returns {string} 500 - Internal server error
    */
   public async createEvent(req: RequestWithToken, res: Response) {
-    const body = req.body as BannerRequest;
+    const body = req.body as UpdateEventRequest;
     this.logger.trace('Create event', body, 'by user', req.token.user);
 
     let params: CreateEventParams;
     try {
       params = {
-        name: req.body.name.toString(),
-        startDate: asDate(req.body.startDate),
-        endDate: asDate(req.body.endDate),
-        shiftIds: asArrayOfNumbers(req.body.shiftIds),
+        ...await parseUpdateEventRequestParameters(req),
         createdById: req.token.user.id,
       };
-      if (
-        !params.name
-        || !params.startDate
-        || !params.endDate
-        || !params.shiftIds
-        || params.shiftIds.length === 0
-        || params.startDate.getTime() < new Date().getTime()
-        || params.endDate.getTime() < new Date().getTime()
-        || params.endDate.getTime() < params.startDate.getTime()
-      ) throw new Error();
-
-      const shifts = await EventShift.find({ where: { id: In(params.shiftIds) } });
-      if (shifts.length !== params.shiftIds.length) throw new Error();
-
-      // Check that every shift has at least 1 person to do the shift
-      // First, get an array with tuples. The first item is the ID, the second whether the shift has any users.
-      const shiftsWithUsers = await Promise.all(shifts.map(async (s) => {
-        const roles = await AssignedRole.find({ where: { role: In(s.roles) }, relations: ['user'] });
-        return [s.id, roles.length > 0];
-      }));
-      // Then, apply a filter to only get the shifts without users
-      const shiftsWithoutUsers = shiftsWithUsers.filter((s) => s[1] === false);
-      // If there is more than one, return an error.
-      if (shiftsWithoutUsers.length > 0) {
-        res.status(400).json(`Shift with ID ${shiftsWithUsers.map((s) => s[0]).join(', ')} has no users. Make sure the shift's roles are correct.`);
-        return;
-      }
     } catch (e) {
-      res.status(400).json('Invalid event.');
+      res.status(400).json(e.message);
       return;
     }
 
     // handle request
     try {
       res.json(await EventService.createEvent(params));
+    } catch (error) {
+      this.logger.error('Could not create event:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  public async updateEvent(req: RequestWithToken, res: Response) {
+    const { id } = req.params;
+    const body = req.body as UpdateEventRequest;
+    this.logger.trace('Update event', id, 'with body', body, 'by user', req.token.user);
+
+    let parsedId = Number.parseInt(id, 10);
+    try {
+      const event = await EventService.getSingleEvent(parsedId);
+      if (event == null) {
+        res.status(404).send();
+        return;
+      }
+    } catch (error) {
+      this.logger.error('Could not update event:', error);
+      res.status(500).json('Internal server error.');
+    }
+
+    let params: Partial<UpdateEventParams>;
+    try {
+      params = {
+        ...await parseUpdateEventRequestParameters(req, true, parsedId),
+      };
+    } catch (e) {
+      res.status(400).json(e.message);
+      return;
+    }
+
+    // handle request
+    try {
+      res.json(await EventService.updateEvent(parsedId, params));
     } catch (error) {
       this.logger.error('Could not create event:', error);
       res.status(500).json('Internal server error.');

@@ -329,7 +329,7 @@ export async function seedEvents(rolesWithUsers: AssignedRole[]) {
   const eventShifts = await seedEventShifts();
   const eventShiftAnswers: EventShiftAnswer[] = [];
   for (let i = 0; i < 5; i += 1) {
-    const startDate = getRandomDate(new Date('2023-01-01'), new Date('2023-08-19'));
+    const startDate = getRandomDate(new Date(), new Date(new Date().getTime() + 1000 * 60 * 60 * 24 * 365));
     // Add 2,5 hours
     const endDate = new Date(startDate.getTime() + (1000 * 60 * 60 * 2.5));
 

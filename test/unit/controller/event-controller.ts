@@ -332,7 +332,7 @@ describe('EventController', () => {
           name: '',
         });
       expect(res.status).to.equal(400);
-      expect(res.body).to.equal('Invalid event.');
+      expect(res.body).to.equal('Not all attributes are defined.');
     });
     it('should return 400 if startDate is invalid', async () => {
       const res = await request(ctx.app)
@@ -343,7 +343,7 @@ describe('EventController', () => {
           startDate: 'hihaho',
         });
       expect(res.status).to.equal(400);
-      expect(res.body).to.equal('Invalid event.');
+      expect(res.body).to.equal("Input 'hihaho' is not a date.");
     });
     it('should return 400 if startDate is in the past', async () => {
       const res = await request(ctx.app)
@@ -354,7 +354,7 @@ describe('EventController', () => {
           startDate: new Date('2023-08-25'),
         });
       expect(res.status).to.equal(400);
-      expect(res.body).to.equal('Invalid event.');
+      expect(res.body).to.equal('EndDate is in the past.');
     });
     it('should return 400 if endDate is invalid', async () => {
       const res = await request(ctx.app)
@@ -365,7 +365,7 @@ describe('EventController', () => {
           endDate: 'hihaho',
         });
       expect(res.status).to.equal(400);
-      expect(res.body).to.equal('Invalid event.');
+      expect(res.body).to.equal("Input 'hihaho' is not a date.");
     });
     it('should return 400 if endDate is in the past', async () => {
       const res = await request(ctx.app)
@@ -376,7 +376,7 @@ describe('EventController', () => {
           endDate: new Date('2023-08-25'),
         });
       expect(res.status).to.equal(400);
-      expect(res.body).to.equal('Invalid event.');
+      expect(res.body).to.equal('StartDate is in the past.');
     });
     it('should return 400 if endDate is before the startDate', async () => {
       const res = await request(ctx.app)
@@ -388,7 +388,7 @@ describe('EventController', () => {
           endDate: new Date('2023-08-24'),
         });
       expect(res.status).to.equal(400);
-      expect(res.body).to.equal('Invalid event.');
+      expect(res.body).to.equal('EndDate is in the past.');
     });
     it('should return 400 if shiftIds is not an array', async () => {
       const res = await request(ctx.app)
@@ -399,7 +399,7 @@ describe('EventController', () => {
           shiftIds: 'Ollie',
         });
       expect(res.status).to.equal(400);
-      expect(res.body).to.equal('Invalid event.');
+      expect(res.body).to.equal('No shifts provided.');
     });
     it('should return 400 if shiftIds is an empty array', async () => {
       const res = await request(ctx.app)
@@ -410,7 +410,7 @@ describe('EventController', () => {
           shiftIds: [],
         });
       expect(res.status).to.equal(400);
-      expect(res.body).to.equal('Invalid event.');
+      expect(res.body).to.equal('No shifts provided.');
     });
     it('should return 400 if shiftIds is an array of strings', async () => {
       const res = await request(ctx.app)
@@ -421,7 +421,7 @@ describe('EventController', () => {
           shiftIds: ['Ollie'],
         });
       expect(res.status).to.equal(400);
-      expect(res.body).to.equal('Invalid event.');
+      expect(res.body).to.equal("Input 'Ollie' is not a number.");
     });
     it('should return 400 if shiftIds has duplicates', async () => {
       const res = await request(ctx.app)
@@ -432,7 +432,7 @@ describe('EventController', () => {
           shiftIds: [1, 1],
         });
       expect(res.status).to.equal(400);
-      expect(res.body).to.equal('Invalid event.');
+      expect(res.body).to.equal('Not all given shifts exist.');
     });
     it('should return 400 if shiftIds has ids that do not exist', async () => {
       const res = await request(ctx.app)
@@ -443,7 +443,7 @@ describe('EventController', () => {
           shiftIds: [1, 99999999],
         });
       expect(res.status).to.equal(400);
-      expect(res.body).to.equal('Invalid event.');
+      expect(res.body).to.equal('Not all given shifts exist.');
     });
     it('should return 400 when shift has no users', async () => {
       const shift = ctx.eventShifts.find((s) => s.roles.length === 0);
@@ -460,6 +460,242 @@ describe('EventController', () => {
     it('should return 403 if not admin', async () => {
       const res = await request(ctx.app)
         .post('/events')
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(403);
+      expect(res.body).to.be.empty;
+    });
+  });
+
+  describe('PATCH /events/{id}', () => {
+    let req: UpdateEventRequest;
+    let originalEvent: Event;
+
+    before(async () => {
+      req = {
+        name: 'Vergadering',
+        startDate: new Date(new Date().getTime() + 1000 * 60 * 60).toISOString(),
+        endDate: new Date(new Date().getTime() + 1000 * 60 * 60 * 4).toISOString(),
+        shiftIds: ctx.eventShifts.slice(1, 3).map((s) => s.id),
+      };
+
+      originalEvent = await Event.findOne({ where: { id: ctx.events[0].id }, relations: ['answers'] });
+    });
+
+    after(async () => {
+      await EventService.updateEvent(originalEvent.id, {
+        name: originalEvent.name,
+        startDate: originalEvent.startDate,
+        endDate: originalEvent.endDate,
+        shiftIds: originalEvent.answers
+          .map((a) => a.shiftId)
+          .filter((a1, i, all) => i === all
+            .findIndex((a2) => a2 === a1)),
+      });
+    });
+
+    it('should correctly update event', async () => {
+      const res = await request(ctx.app)
+        .patch(`/events/${originalEvent.id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(req);
+      expect(res.status).to.equal(200);
+
+      const eventResponse = res.body as EventResponse;
+
+      const validation = ctx.specification.validateModel('EventResponse', eventResponse, false, true);
+      expect(validation.valid).to.be.true;
+
+      const shiftIds = new Set<number>();
+      eventResponse.answers.forEach((a) => shiftIds.add(a.shift.id));
+      expect(Array.from(shiftIds)).to.deep.equalInAnyOrder(req.shiftIds);
+      expect(eventResponse.name).to.equal(req.name);
+      expect(eventResponse.startDate).to.equal(req.startDate);
+      expect(eventResponse.endDate).to.equal(req.endDate);
+    });
+    it('should correctly update name', async () => {
+      const name: string = 'Echte vergadering';
+      const res = await request(ctx.app)
+        .patch(`/events/${originalEvent.id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ name });
+      expect(res.status).to.equal(200);
+
+      const eventResponse = res.body as EventResponse;
+      expect(eventResponse.name).to.equal(name);
+    });
+    it('should correctly update startDate', async () => {
+      const startDate = new Date(new Date().getTime() + 60000);
+      const res = await request(ctx.app)
+        .patch(`/events/${originalEvent.id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ startDate });
+      expect(res.status).to.equal(200);
+
+      const eventResponse = res.body as EventResponse;
+      expect(eventResponse.startDate).to.equal(startDate.toISOString());
+    });
+    it('should correctly update endDate', async () => {
+      const endDate = new Date(new Date().getTime() + 120000);
+      const res = await request(ctx.app)
+        .patch(`/events/${originalEvent.id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ startDate: endDate });
+      expect(res.status).to.equal(200);
+
+      const eventResponse = res.body as EventResponse;
+      expect(eventResponse.startDate).to.equal(endDate.toISOString());
+    });
+    it('should correctly update shifts', async () => {
+      const shiftIds = [1, 5];
+      const res = await request(ctx.app)
+        .patch(`/events/${originalEvent.id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ shiftIds });
+      expect(res.status).to.equal(200);
+
+      const eventResponse = res.body as EventResponse;
+      const actualIds = new Set<number>();
+      eventResponse.answers.forEach((a) => actualIds.add(a.shift.id));
+      expect(Array.from(shiftIds)).to.deep.equalInAnyOrder(shiftIds);
+    });
+    it('should return 400 if name is empty string', async () => {
+      const res = await request(ctx.app)
+        .patch(`/events/${originalEvent.id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({
+          name: '',
+        });
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('Invalid name.');
+    });
+    it('should return 400 if startDate is invalid', async () => {
+      const res = await request(ctx.app)
+        .patch(`/events/${originalEvent.id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({
+          startDate: 'hihaho',
+        });
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal("Input 'hihaho' is not a date.");
+    });
+    it('should return 400 if startDate is in the past', async () => {
+      const res = await request(ctx.app)
+        .patch(`/events/${originalEvent.id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({
+          startDate: new Date('2023-08-25'),
+        });
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('EndDate is in the past.');
+    });
+    it('should return 400 if endDate is invalid', async () => {
+      const res = await request(ctx.app)
+        .patch(`/events/${originalEvent.id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({
+          endDate: 'hihaho',
+        });
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal("Input 'hihaho' is not a date.");
+    });
+    it('should return 400 if endDate is in the past', async () => {
+      const res = await request(ctx.app)
+        .patch(`/events/${originalEvent.id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({
+          endDate: new Date('2023-08-25'),
+        });
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('StartDate is in the past.');
+    });
+    it('should return 400 if endDate is before the startDate', async () => {
+      const res = await request(ctx.app)
+        .patch(`/events/${originalEvent.id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({
+          startDate: new Date(new Date().getTime() + 60000),
+          endDate: new Date(new Date().getTime() + 30000),
+        });
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('EndDate is before startDate.');
+    });
+    it('should return 400 if endDate is before the existing startDate', async () => {
+      await Event.update(originalEvent.id, {
+        startDate: originalEvent.startDate,
+      });
+      const res = await request(ctx.app)
+        .patch(`/events/${originalEvent.id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({
+          endDate: new Date(originalEvent.startDate.getTime() - 1000),
+        });
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('EndDate is before startDate.');
+    });
+    it('should return 400 if shiftIds is not an array', async () => {
+      const res = await request(ctx.app)
+        .patch(`/events/${originalEvent.id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({
+          shiftIds: 'Ollie',
+        });
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('No shifts provided.');
+    });
+    it('should return 400 if shiftIds is an empty array', async () => {
+      const res = await request(ctx.app)
+        .patch(`/events/${originalEvent.id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({
+          shiftIds: [],
+        });
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('No shifts provided.');
+    });
+    it('should return 400 if shiftIds is an array of strings', async () => {
+      const res = await request(ctx.app)
+        .patch(`/events/${originalEvent.id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({
+          shiftIds: ['Ollie'],
+        });
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal("Input 'Ollie' is not a number.");
+    });
+    it('should return 400 if shiftIds has duplicates', async () => {
+      const res = await request(ctx.app)
+        .patch(`/events/${originalEvent.id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({
+          shiftIds: [1, 1],
+        });
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('Not all given shifts exist.');
+    });
+    it('should return 400 if shiftIds has ids that do not exist', async () => {
+      const res = await request(ctx.app)
+        .patch(`/events/${originalEvent.id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({
+          shiftIds: [1, 99999999],
+        });
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('Not all given shifts exist.');
+    });
+    it('should return 400 when shift has no users', async () => {
+      const shift = ctx.eventShifts.find((s) => s.roles.length === 0);
+      const res = await request(ctx.app)
+        .patch(`/events/${originalEvent.id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({
+          shiftIds: [shift.id],
+        });
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal(`Shift with ID ${shift.id} has no users. Make sure the shift's roles are correct.`);
+    });
+    it('should return 403 if not admin', async () => {
+      const res = await request(ctx.app)
+        .patch(`/events/${originalEvent.id}`)
         .set('Authorization', `Bearer ${ctx.userToken}`);
       expect(res.status).to.equal(403);
       expect(res.body).to.be.empty;

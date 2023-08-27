@@ -35,8 +35,9 @@ import User from '../entity/user/user';
 import { parseUserToBaseResponse } from '../helpers/revision-to-response';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import { RequestWithToken } from '../middleware/token-middleware';
-import { asDate, asNumber } from '../helpers/validators';
+import { asArrayOfNumbers, asDate, asNumber } from '../helpers/validators';
 import { PaginationParameters } from '../helpers/pagination';
+import AssignedRole from '../entity/roles/assigned-role';
 
 export interface EventFilterParameters {
   name?: string;
@@ -67,6 +68,54 @@ export function parseEventFilterParameters(
     beforeDate: asDate(req.query.beforeDate),
     afterDate: asDate(req.query.afterDate),
   };
+}
+
+/**
+ * Parse the body of a request to an UpdateEventParams object
+ * @param req
+ * @param partial - Whether all attributes are required or not
+ * @param id
+ * @throws Error - validation failed
+ */
+export async function parseUpdateEventRequestParameters(
+  req: RequestWithToken, partial = false, id?: number,
+): Promise<UpdateEventParams> {
+  const params: UpdateEventParams = {
+    name: req.body.name !== undefined ? req.body.name.toString() : undefined,
+    startDate: asDate(req.body.startDate),
+    endDate: asDate(req.body.endDate),
+    shiftIds: asArrayOfNumbers(req.body.shiftIds),
+  };
+  if (!partial && (!params.name || !params.startDate || !params.endDate)) throw new Error('Not all attributes are defined.');
+  if (req.body.shiftIds !== undefined && (params.shiftIds === undefined || params.shiftIds.length === 0)) throw new Error('No shifts provided.');
+
+  if (params.name === '') throw new Error('Invalid name.');
+  if (params.startDate && params.startDate.getTime() < new Date().getTime()) throw new Error('EndDate is in the past.');
+  if (params.endDate && params.endDate.getTime() < new Date().getTime()) throw new Error('StartDate is in the past.');
+  if (params.startDate && params.endDate && params.endDate.getTime() < params.startDate.getTime()) throw new Error('EndDate is before startDate.');
+  if (!params.startDate && params.endDate && id) {
+    const event = await Event.findOne({ where: { id } });
+    if (event.startDate.getTime() > params.endDate.getTime()) throw new Error('EndDate is before startDate.');
+  }
+
+  if (params.shiftIds !== undefined) {
+    const shifts = await EventShift.find({ where: { id: In(params.shiftIds) } });
+    if (shifts.length !== params.shiftIds.length) throw new Error('Not all given shifts exist.');
+
+    // Check that every shift has at least 1 person to do the shift
+    // First, get an array with tuples. The first item is the ID, the second whether the shift has any users.
+    const shiftsWithUsers = await Promise.all(shifts.map(async (s) => {
+      const roles = await AssignedRole.find({ where: { role: In(s.roles) }, relations: ['user'] });
+      return [s.id, roles.length > 0];
+    }));
+    // Then, apply a filter to only get the shifts without users
+    const shiftsWithoutUsers = shiftsWithUsers.filter((s) => s[1] === false);
+    // If there is more than one, return an error.
+    if (shiftsWithoutUsers.length > 0) {
+      throw new Error(`Shift with ID ${shiftsWithUsers.map((s) => s[0]).join(', ')} has no users. Make sure the shift's roles are correct.`);
+    }
+  }
+  return params;
 }
 
 /**
