@@ -22,6 +22,12 @@ import BaseEntity from '../base-entity';
 import User from '../user/user';
 import EventShiftAnswer from './event-shift-answer';
 
+export enum EventType {
+  BORREL = 'BORREL', // Weekly GEWIS borrel, both normal borrels and extended borrels
+  EXTERNAL_BORREL = 'EXTERNAL_BORREL', // Borrel with/for external party
+  OTHER = 'OTHER', // All other activities
+}
+
 /**
  * @typedef {BaseEntity} Event
  * @property {string} name - Name of the event.
@@ -48,6 +54,11 @@ export default class Event extends BaseEntity {
     type: 'datetime',
   })
   public endDate: Date;
+
+  @Column({
+    nullable: false,
+  })
+  public type: EventType;
 
   @OneToMany(() => EventShiftAnswer, (a) => a.event)
   public answers: EventShiftAnswer[];

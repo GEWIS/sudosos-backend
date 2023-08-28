@@ -22,6 +22,7 @@ import { Availability } from '../../entity/event/event-shift-answer';
  * @property {string} name.required - Name of the event.
  * @property {string} startDate.required - The starting date of the event.
  * @property {string} endDate.required - The end date of the event.
+ * @property {string} type - The type of the event.
  * @property {Array<integer>} shiftIds.required - IDs of shifts that are in this event
  * per participant per borrel.
  */
@@ -31,6 +32,7 @@ import { Availability } from '../../entity/event/event-shift-answer';
  * @property {string} name - Name of the event.
  * @property {string} startDate - The starting date of the event.
  * @property {string} endDate - The end date of the event.
+ * @property {string} type - The type of the event.
  * @property {Array<integer>} shiftIds - IDs of shifts that are in this event
  * per participant per borrel.
  */
@@ -38,6 +40,7 @@ export interface EventRequest {
   name: string,
   startDate: string,
   endDate: string,
+  type: string,
   shiftIds: number[],
 }
 
@@ -58,11 +61,17 @@ export interface EventShiftRequest {
 }
 
 /**
- * @typedef CreateEventShiftRequest
- * @property {string} name - Name of the shift.
+ * @typedef EventAnswerAssignmentRequest
+ * @property {boolean} selected.required - Whether this user is selected for the given shift at the given event
  */
-
-export interface EventAnswerRequest {
-  availability: Availability,
+export interface EventAnswerAssignmentRequest {
   selected: boolean,
+}
+
+/**
+ * @typedef EventAnswerAvailabilityRequest
+ * @property {string} availability.required - New availability of the given user for the given event (YES, NO, LATER, NA)
+ */
+export interface EventAnswerAvailabilityRequest {
+  availability: Availability,
 }

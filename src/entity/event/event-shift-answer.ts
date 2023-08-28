@@ -43,7 +43,7 @@ export enum Availability {
 
 @Entity()
 export default class EventShiftAnswer extends BaseEntityWithoutId {
-  @PrimaryColumn()
+  @PrimaryColumn({ nullable: false })
   public userId: number;
 
   @ManyToOne(() => User, { nullable: false, eager: true })
@@ -56,14 +56,14 @@ export default class EventShiftAnswer extends BaseEntityWithoutId {
   @Column({ default: false })
   public selected: boolean;
 
-  @PrimaryColumn()
+  @PrimaryColumn({ nullable: false })
   public shiftId: number;
 
   @ManyToOne(() => EventShift, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'shiftId' })
   public shift: EventShift;
 
-  @PrimaryColumn()
+  @PrimaryColumn({ nullable: false })
   public eventId: number;
 
   @ManyToOne(() => Event, { onDelete: 'CASCADE' })

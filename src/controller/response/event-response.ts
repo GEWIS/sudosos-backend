@@ -18,19 +18,22 @@
 import { PaginationResult } from '../../helpers/pagination';
 import BaseResponse from './base-response';
 import { BaseUserResponse } from './user-response';
+import { EventType } from '../../entity/event/event';
 
 /**
  * @typedef {BaseResponse} BaseEventResponse
  * @property {string} name.required - Name of the borrel.
  * @property {BaseUserResponse.model} createdBy.required - Creator of the event.
- * @property {string} startDate.required - The starting date of the borrel.
- * @property {string} endDate.required - The end date of the borrel.
+ * @property {string} startDate.required - The starting date of the event.
+ * @property {string} endDate.required - The end date of the event.
+ * @property {string} type.required - The tpye of event.
  */
 export interface BaseEventResponse extends BaseResponse {
   createdBy: BaseUserResponse,
   name: string,
   startDate: string,
   endDate: string,
+  type: EventType,
 }
 
 /**

@@ -25,17 +25,17 @@ import {
   EventShiftResponse, PaginatedBaseEventResponse, PaginatedEventShiftResponse,
 } from '../controller/response/event-response';
 import {
-  EventAnswerRequest,
+  EventAnswerAssignmentRequest, EventAnswerAvailabilityRequest,
   EventShiftRequest,
 } from '../controller/request/event-request';
-import Event from '../entity/event/event';
+import Event, { EventType } from '../entity/event/event';
 import EventShift from '../entity/event/event-shift';
 import EventShiftAnswer from '../entity/event/event-shift-answer';
 import User from '../entity/user/user';
 import { parseUserToBaseResponse } from '../helpers/revision-to-response';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import { RequestWithToken } from '../middleware/token-middleware';
-import { asArrayOfNumbers, asDate, asNumber } from '../helpers/validators';
+import { asArrayOfNumbers, asDate, asEventType, asNumber } from '../helpers/validators';
 import { PaginationParameters } from '../helpers/pagination';
 import AssignedRole from '../entity/roles/assigned-role';
 
@@ -45,6 +45,7 @@ export interface EventFilterParameters {
   createdById?: number;
   beforeDate?: Date;
   afterDate?: Date;
+  type?: EventType;
 }
 
 export interface UpdateEventParams {
@@ -52,11 +53,14 @@ export interface UpdateEventParams {
   startDate: Date,
   endDate: Date,
   shiftIds: number[],
+  type: EventType,
 }
 
 export interface CreateEventParams extends UpdateEventParams {
   createdById: number,
 }
+
+export interface UpdateEventAnswerParams extends EventAnswerAssignmentRequest, EventAnswerAvailabilityRequest {}
 
 export function parseEventFilterParameters(
   req: RequestWithToken,
@@ -67,6 +71,7 @@ export function parseEventFilterParameters(
     createdById: asNumber(req.query.createdById),
     beforeDate: asDate(req.query.beforeDate),
     afterDate: asDate(req.query.afterDate),
+    type: asEventType(req.query.type),
   };
 }
 
@@ -85,6 +90,7 @@ export async function parseUpdateEventRequestParameters(
     startDate: asDate(req.body.startDate),
     endDate: asDate(req.body.endDate),
     shiftIds: asArrayOfNumbers(req.body.shiftIds),
+    type: asEventType(req.body.type),
   };
   if (!partial && (!params.name || !params.startDate || !params.endDate)) throw new Error('Not all attributes are defined.');
   if (req.body.shiftIds !== undefined && (params.shiftIds === undefined || params.shiftIds.length === 0)) throw new Error('No shifts provided.');
@@ -124,14 +130,15 @@ export async function parseUpdateEventRequestParameters(
 export default class EventService {
   private static asBaseEventResponse(entity: Event): BaseEventResponse {
     return {
-      createdAt: entity.createdAt.toISOString(),
-      createdBy: parseUserToBaseResponse(entity.createdBy, false),
-      endDate: entity.endDate.toISOString(),
       id: entity.id,
-      name: entity.name,
-      startDate: entity.startDate.toISOString(),
+      createdAt: entity.createdAt.toISOString(),
       updatedAt: entity.updatedAt.toISOString(),
       version: entity.version,
+      createdBy: parseUserToBaseResponse(entity.createdBy, false),
+      name: entity.name,
+      endDate: entity.endDate.toISOString(),
+      startDate: entity.startDate.toISOString(),
+      type: entity.type,
     };
   }
 
@@ -186,6 +193,7 @@ export default class EventService {
       name: '%name',
       id: 'id',
       createdById: 'createdBy.id',
+      type: 'type',
     };
 
     const options: FindManyOptions<Event> = {
@@ -238,6 +246,7 @@ export default class EventService {
    */
   public static async syncEventShiftAnswers(event: Event, shiftIds: number[]) {
     const shifts = await EventShift.find({ where: { id: In(shiftIds) } });
+    if (shifts.length != shiftIds.length) throw new Error('Invalid shift IDs provided');
 
     // Get the answer sheet for every user that can do a shift
     // Create it if it does not exist
@@ -281,6 +290,7 @@ export default class EventService {
       createdBy,
       startDate: params.startDate,
       endDate: params.endDate,
+      type: params.type,
     });
     await Event.save(event);
 
@@ -379,7 +389,7 @@ export default class EventService {
    * Update borrel schema answer
    */
   public static async updateEventShiftAnswer(
-    eventId: number, shiftId: number, userId: number, update: Partial<EventAnswerRequest>,
+    eventId: number, shiftId: number, userId: number, update: Partial<UpdateEventAnswerParams>,
   ) {
     const answer = await EventShiftAnswer.findOne({ where: {
       userId, shiftId, eventId,
@@ -389,7 +399,7 @@ export default class EventService {
     if (update.availability !== undefined) answer.availability = update.availability;
     if (update.selected !== undefined) answer.selected = update.selected;
 
-    await EventShiftAnswer.save(answer);
+    await answer.save();
     return this.asBaseEventAnswerResponse(answer);
   }
 }

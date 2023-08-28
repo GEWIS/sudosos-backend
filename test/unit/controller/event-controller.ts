@@ -20,9 +20,9 @@ import { Connection } from 'typeorm';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import EventController from '../../../src/controller/event-controller';
 import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
-import Event from '../../../src/entity/event/event';
+import Event, { EventType } from '../../../src/entity/event/event';
 import EventShift from '../../../src/entity/event/event-shift';
-import EventShiftAnswer from '../../../src/entity/event/event-shift-answer';
+import EventShiftAnswer, { Availability } from '../../../src/entity/event/event-shift-answer';
 import AssignedRole from '../../../src/entity/roles/assigned-role';
 import Database from '../../../src/database/database';
 import { seedEvents, seedRoles, seedUsers } from '../../seed';
@@ -33,7 +33,11 @@ import fileUpload from 'express-fileupload';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import RoleManager from '../../../src/rbac/role-manager';
 import { expect, request } from 'chai';
-import { BaseEventResponse, EventResponse } from '../../../src/controller/response/event-response';
+import {
+  BaseEventAnswerResponse,
+  BaseEventResponse,
+  EventResponse,
+} from '../../../src/controller/response/event-response';
 import EventService from '../../../src/service/event-service';
 import { EventRequest } from '../../../src/controller/request/event-request';
 
@@ -106,6 +110,7 @@ describe('EventController', () => {
         },
         EventAnswer: {
           update: all,
+          assign: all,
         },
       },
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
@@ -203,6 +208,31 @@ describe('EventController', () => {
         expect(e.createdBy.id).to.equal(createdById);
       });
     });
+    it('should get events by type', async () => {
+      const type = EventType.OTHER;
+
+      const res = await request(ctx.app)
+        .get('/events')
+        .query({ type })
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+
+      const records = res.body.records as BaseEventResponse[];
+      expect(records.length).to.equal(ctx.events.filter((e) => e.type === type).length);
+      records.forEach((e) => {
+        expect(e.type).to.equal(type);
+      });
+    });
+    it('should return 400 when filtering by invalid type', async () => {
+      const type = 'AAAAAAAAAA';
+
+      const res = await request(ctx.app)
+        .get('/events')
+        .query({ type })
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('Input \'AAAAAAAAAA\' is not a valid EventType.');
+    });
     it('should get events before date', async () => {
       const beforeDate = new Date('2020-07-01');
 
@@ -295,6 +325,7 @@ describe('EventController', () => {
         name: 'Vergadering',
         startDate: new Date(new Date().getTime() + 1000 * 60 * 60).toISOString(),
         endDate: new Date(new Date().getTime() + 1000 * 60 * 60 * 4).toISOString(),
+        type: EventType.EXTERNAL_BORREL,
         shiftIds: ctx.eventShifts.slice(1, 3).map((s) => s.id),
       };
     });
@@ -466,6 +497,237 @@ describe('EventController', () => {
     });
   });
 
+  describe('PUT /events/{eventId}/shift/{shiftId}/user/{userId}/assign', async () => {
+    it('should correctly change shift assignment', async () => {
+      const answer = ctx.eventShiftAnswers[0];
+      const { eventId, shiftId, userId } = answer;
+
+      let res = await request(ctx.app)
+        .put(`/events/${eventId}/shift/${shiftId}/user/${userId}/assign`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ selected: !answer.selected });
+      expect(res.status).to.equal(200);
+
+      let answerResponse = res.body as BaseEventAnswerResponse;
+
+      const validation = ctx.specification.validateModel('BaseEventAnswerResponse', answerResponse, false, true);
+      expect(validation.valid).to.be.true;
+      expect(answerResponse.selected).to.equal(!answer.selected);
+      expect(answerResponse.availability).to.equal(answer.availability);
+      expect((await EventShiftAnswer.findOne({ where: { eventId, shiftId, userId } })).selected).to.equal(!answer.selected);
+
+      res = await request(ctx.app)
+        .put(`/events/${eventId}/shift/${shiftId}/user/${userId}/assign`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ selected: answer.selected });
+      expect(res.status).to.equal(200);
+
+      answerResponse = res.body as BaseEventAnswerResponse;
+
+      expect(answerResponse.selected).to.equal(answer.selected);
+      expect(answerResponse.availability).to.equal(answer.availability);
+      expect((await EventShiftAnswer.findOne({ where: { eventId, shiftId, userId } })).selected).to.equal(answer.selected);
+    });
+    it('should return 400 if selected is missing', async () => {
+      const answer = ctx.eventShiftAnswers[0];
+      const { eventId, shiftId, userId } = answer;
+
+      let res = await request(ctx.app)
+        .put(`/events/${eventId}/shift/${shiftId}/user/${userId}/assign`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({});
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('Invalid event assignment.');
+    });
+    it('should return 400 if selected is not a boolean', async () => {
+      const answer = ctx.eventShiftAnswers[0];
+      const { eventId, shiftId, userId } = answer;
+
+      let res = await request(ctx.app)
+        .put(`/events/${eventId}/shift/${shiftId}/user/${userId}/assign`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ selected: 'AAAAAAAA' });
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('Invalid event assignment.');
+    });
+    it('should return 400 if event has expired', async () => {
+      const event = ctx.events[0];
+      const dbEvent = await Event.findOne({ where: { id: event.id }, relations: ['answers', 'answers.shift'] });
+      const answer = event.answers[0];
+      const { eventId, shiftId, userId } = answer;
+
+      await Event.update(event.id, { startDate: new Date(new Date().getTime() - 1000) });
+
+      let res = await request(ctx.app)
+        .put(`/events/${eventId}/shift/${shiftId}/user/${userId}/assign`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({});
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('Event has already started or is already over.');
+
+      // Cleanup
+      await Event.update(event.id, { startDate: event.startDate });
+    });
+    it('should return 404 if event does not exist', async () => {
+      const answer = ctx.eventShiftAnswers[0];
+      const { shiftId, userId } = answer;
+
+      let res = await request(ctx.app)
+        .put(`/events/${999999}/shift/${shiftId}/user/${userId}/assign`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({});
+      expect(res.status).to.equal(404);
+      expect(res.body).to.be.empty;
+    });
+    it('should return 404 if shift does not exist', async () => {
+      const answer = ctx.eventShiftAnswers[0];
+      const { eventId, userId } = answer;
+
+      let res = await request(ctx.app)
+        .put(`/events/${eventId}/shift/${9999999}/user/${userId}/assign`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({});
+      expect(res.status).to.equal(404);
+      expect(res.body).to.be.empty;
+    });
+    it('should return 404 if user does not exist', async () => {
+      const answer = ctx.eventShiftAnswers[0];
+      const { eventId, shiftId } = answer;
+
+      let res = await request(ctx.app)
+        .put(`/events/${eventId}/shift/${shiftId}/user/${999999}/assign`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({});
+      expect(res.status).to.equal(404);
+      expect(res.body).to.be.empty;
+    });
+    it('should return 403 if not admin', async () => {
+      const answer = ctx.eventShiftAnswers[0];
+      const { eventId, shiftId, userId } = answer;
+
+      let res = await request(ctx.app)
+        .put(`/events/${eventId}/shift/${shiftId}/user/${userId}/assign`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(403);
+      expect(res.body).to.be.empty;
+    });
+  });
+
+  describe('PUT /events/{eventId}/shift/{shiftId}/user/{userId}/availability', async () => {
+    it('should correctly change shift assignment', async () => {
+      const answer = ctx.eventShiftAnswers[0];
+      const { eventId, shiftId, userId } = answer;
+
+      const availability = Availability.YES;
+      let res = await request(ctx.app)
+        .put(`/events/${eventId}/shift/${shiftId}/user/${userId}/availability`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ availability });
+      expect(res.status).to.equal(200);
+
+      let answerResponse = res.body as BaseEventAnswerResponse;
+
+      const validation = ctx.specification.validateModel('BaseEventAnswerResponse', answerResponse, false, true);
+      expect(validation.valid).to.be.true;
+      expect(answerResponse.selected).to.equal(answer.selected);
+      expect(answerResponse.availability).to.equal(availability);
+      expect((await EventShiftAnswer.findOne({ where: { eventId, shiftId, userId } })).availability).to.equal(availability);
+    });
+    it('should return 400 if availability is missing', async () => {
+      const answer = ctx.eventShiftAnswers[0];
+      const { eventId, shiftId, userId } = answer;
+
+      let res = await request(ctx.app)
+        .put(`/events/${eventId}/shift/${shiftId}/user/${userId}/availability`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({});
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('Invalid event availability.');
+    });
+    it('should return 400 if availability is not valid', async () => {
+      const answer = ctx.eventShiftAnswers[0];
+      const { eventId, shiftId, userId } = answer;
+
+      let res = await request(ctx.app)
+        .put(`/events/${eventId}/shift/${shiftId}/user/${userId}/availability`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ availability: 'AAAAAAAA' });
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('Invalid event availability.');
+    });
+    it('should return 400 if availability is null', async () => {
+      const answer = ctx.eventShiftAnswers[0];
+      const { eventId, shiftId, userId } = answer;
+
+      let res = await request(ctx.app)
+        .put(`/events/${eventId}/shift/${shiftId}/user/${userId}/availability`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ availability: null });
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('Invalid event availability.');
+    });
+    it('should return 400 if event has expired', async () => {
+      const event = ctx.events[0];
+      const answer = event.answers[0];
+      const { eventId, shiftId, userId } = answer;
+
+      await Event.update(event.id, { startDate: new Date(new Date().getTime() - 1000) });
+
+      let res = await request(ctx.app)
+        .put(`/events/${eventId}/shift/${shiftId}/user/${userId}/availability`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({});
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('Event has already started or is already over.');
+
+      // Cleanup
+      await Event.update(event.id, { startDate: event.startDate });
+    });
+    it('should return 404 if event does not exist', async () => {
+      const answer = ctx.eventShiftAnswers[0];
+      const { shiftId, userId } = answer;
+
+      let res = await request(ctx.app)
+        .put(`/events/${999999}/shift/${shiftId}/user/${userId}/availability`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({});
+      expect(res.status).to.equal(404);
+      expect(res.body).to.be.empty;
+    });
+    it('should return 404 if shift does not exist', async () => {
+      const answer = ctx.eventShiftAnswers[0];
+      const { eventId, userId } = answer;
+
+      let res = await request(ctx.app)
+        .put(`/events/${eventId}/shift/${9999999}/user/${userId}/availability`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({});
+      expect(res.status).to.equal(404);
+      expect(res.body).to.be.empty;
+    });
+    it('should return 404 if user does not exist', async () => {
+      const answer = ctx.eventShiftAnswers[0];
+      const { eventId, shiftId } = answer;
+
+      let res = await request(ctx.app)
+        .put(`/events/${eventId}/shift/${shiftId}/user/${999999}/availability`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({});
+      expect(res.status).to.equal(404);
+      expect(res.body).to.be.empty;
+    });
+    it('should return 403 if not admin', async () => {
+      const answer = ctx.eventShiftAnswers[0];
+      const { eventId, shiftId, userId } = answer;
+
+      let res = await request(ctx.app)
+        .put(`/events/${eventId}/shift/${shiftId}/user/${userId}/availability`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(403);
+      expect(res.body).to.be.empty;
+    });
+  });
+
   describe('PATCH /events/{id}', () => {
     let req: EventRequest;
     let originalEvent: Event;
@@ -476,9 +738,13 @@ describe('EventController', () => {
         startDate: new Date(new Date().getTime() + 1000 * 60 * 60).toISOString(),
         endDate: new Date(new Date().getTime() + 1000 * 60 * 60 * 4).toISOString(),
         shiftIds: ctx.eventShifts.slice(1, 3).map((s) => s.id),
+        type: EventType.OTHER,
       };
 
-      originalEvent = await Event.findOne({ where: { id: ctx.events[0].id }, relations: ['answers'] });
+      originalEvent = await Event.findOne({
+        where: { answers: { shift: { deletedAt: null } } },
+        relations: ['answers', 'answers.shift'],
+      });
     });
 
     after(async () => {
@@ -544,6 +810,17 @@ describe('EventController', () => {
 
       const eventResponse = res.body as EventResponse;
       expect(eventResponse.startDate).to.equal(endDate.toISOString());
+    });
+    it('should correctly update type', async () => {
+      const type = EventType.EXTERNAL_BORREL;
+      const res = await request(ctx.app)
+        .patch(`/events/${originalEvent.id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ type });
+      expect(res.status).to.equal(200);
+
+      const eventResponse = res.body as EventResponse;
+      expect(eventResponse.type).to.equal(type);
     });
     it('should correctly update shifts', async () => {
       const shiftIds = [1, 5];
@@ -627,7 +904,7 @@ describe('EventController', () => {
         .patch(`/events/${originalEvent.id}`)
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send({
-          endDate: new Date(originalEvent.startDate.getTime() - 1000),
+          endDate: new Date(originalEvent.startDate.getTime() - 100000),
         });
       expect(res.status).to.equal(400);
       expect(res.body).to.equal('EndDate is before startDate.');

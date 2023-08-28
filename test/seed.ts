@@ -48,7 +48,7 @@ import InvoiceUser from '../src/entity/user/invoice-user';
 import Invoice from '../src/entity/invoices/invoice';
 import InvoiceEntry from '../src/entity/invoices/invoice-entry';
 import InvoiceStatus, { InvoiceState } from '../src/entity/invoices/invoice-status';
-import Event from '../src/entity/event/event';
+import Event, { EventType } from '../src/entity/event/event';
 import EventShift from '../src/entity/event/event-shift';
 import EventShiftAnswer, { Availability } from '../src/entity/event/event-shift-answer';
 import seedGEWISUsers from '../src/gewis/database/seed';
@@ -329,7 +329,8 @@ export async function seedEvents(rolesWithUsers: AssignedRole[]) {
   const eventShifts = await seedEventShifts();
   const eventShiftAnswers: EventShiftAnswer[] = [];
   for (let i = 0; i < 5; i += 1) {
-    const startDate = getRandomDate(new Date(), new Date(new Date().getTime() + 1000 * 60 * 60 * 24 * 365));
+    // const startDate = getRandomDate(new Date(), new Date(new Date().getTime() + 1000 * 60 * 60 * 24 * 365));
+    const startDate = new Date(new Date().getTime() + ((i * 1000000) % (3600 * 24 * 365)) * 1000 + 60000);
     // Add 2,5 hours
     const endDate = new Date(startDate.getTime() + (1000 * 60 * 60 * 2.5));
 
@@ -338,14 +339,14 @@ export async function seedEvents(rolesWithUsers: AssignedRole[]) {
       createdBy: rolesWithUsers[i].user,
       startDate,
       endDate,
-      shifts: null,
+      type: EventType.BORREL,
       id: i,
     });
     await Event.save(event);
 
     const eventShiftAnswers1: EventShiftAnswer[] = [];
     for (let j = 0; j < ((i + 1) * 243) % 4; j += 1) {
-      const shift = eventShifts[((i + j) * 13) % 6];
+      const shift = eventShifts[((i + j) * 13) % (eventShifts.length)];
       const users = rolesWithUsers.filter((r) => shift.roles.includes(r.role));
       await Promise.all(users.map(async (r, k) => {
         const answer = await createEventShiftAnswer(r.user, event, shift, k);

@@ -19,7 +19,7 @@ import { describe } from 'mocha';
 import { Connection } from 'typeorm';
 import User from '../../../src/entity/user/user';
 import { seedEvents, seedRoles, seedUsers } from '../../seed';
-import Event from '../../../src/entity/event/event';
+import Event, { EventType } from '../../../src/entity/event/event';
 import EventShift from '../../../src/entity/event/event-shift';
 import EventShiftAnswer, { Availability } from '../../../src/entity/event/event-shift-answer';
 import Database from '../../../src/database/database';
@@ -34,6 +34,7 @@ describe('eventService', () => {
     users: User[],
     events: Event[],
     eventShifts: EventShift[],
+    deletedEventShifts: EventShift[],
     eventShiftAnswers: EventShiftAnswer[],
     roles: AssignedRole[],
   };
@@ -43,13 +44,17 @@ describe('eventService', () => {
 
     const users = await seedUsers();
     const roles = await seedRoles(users);
-    const { events, eventShifts, eventShiftAnswers } = await seedEvents(roles);
+    const { events, eventShifts: allEventShifts, eventShiftAnswers } = await seedEvents(roles);
+
+    const eventShifts = allEventShifts.filter((s) => s.deletedAt == null);
+    const deletedEventShifts = allEventShifts.filter((s) => s.deletedAt != null);
 
     ctx = {
       connection,
       users,
       events,
       eventShifts,
+      deletedEventShifts,
       eventShiftAnswers,
       roles,
     };
@@ -62,6 +67,7 @@ describe('eventService', () => {
     expect(actual.startDate).to.equal(expected.startDate.toISOString());
     expect(actual.endDate).to.equal(expected.endDate.toISOString());
     expect(actual.name).to.equal(expected.name);
+    expect(actual.type).to.equal(expected.type);
     expect(actual.createdBy.id).to.equal(expected.createdBy.id);
   };
 
@@ -211,6 +217,7 @@ describe('eventService', () => {
         startDate: new Date(),
         endDate: new Date(new Date().getTime() + 1000 * 60 * 60),
         shiftIds: [shift.id],
+        type: EventType.BORREL,
       };
       const event = await EventService.createEvent(params);
 
@@ -245,6 +252,7 @@ describe('eventService', () => {
         startDate: new Date(),
         endDate: new Date(new Date().getTime() + 1000 * 60 * 60),
         shiftIds: [],
+        type: EventType.BORREL,
       };
       const event = await EventService.createEvent(params);
 
@@ -262,7 +270,7 @@ describe('eventService', () => {
 
     before(async () => {
       originalEvent = await Event.findOne({
-        where: { id: ctx.events[0].id },
+        where: { answers: { shift: { deletedAt: null } } },
         relations: ['answers', 'answers.shift'],
       });
     });

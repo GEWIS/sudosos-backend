@@ -24,10 +24,12 @@ import { RequestWithToken } from '../middleware/token-middleware';
 import EventService, {
   CreateEventParams,
   EventFilterParameters,
-  parseEventFilterParameters, parseUpdateEventRequestParameters, UpdateEventParams,
+  parseEventFilterParameters, parseUpdateEventRequestParameters, UpdateEventAnswerParams, UpdateEventParams,
 } from '../service/event-service';
 import { parseRequestPagination } from '../helpers/pagination';
-import { EventRequest } from './request/event-request';
+import { EventAnswerAssignmentRequest, EventAnswerAvailabilityRequest, EventRequest } from './request/event-request';
+import EventShiftAnswer from '../entity/event/event-shift-answer';
+import { asShiftAvailability } from '../helpers/validators';
 
 export default class EventController extends BaseController {
   private logger: Logger = log4js.getLogger('EventLogger');
@@ -73,6 +75,18 @@ export default class EventController extends BaseController {
           handler: this.deleteEvent.bind(this),
         },
       },
+      '/:eventId(\\d+)/shift/:shiftId(\\d+)/user/:userId(\\d+)/assign': {
+        PUT: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'assign', 'all', 'EventAnswer', ['*']),
+          handler: this.assignEventShift.bind(this),
+        },
+      },
+      '/:eventId(\\d+)/shift/:shiftId(\\d+)/user/:userId(\\d+)/availability': {
+        PUT: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'assign', 'all', 'EventAnswer', ['*']),
+          handler: this.updateShiftAvailability.bind(this),
+        },
+      },
     };
   }
 
@@ -86,6 +100,7 @@ export default class EventController extends BaseController {
    * @param {integer} createdById.query - ID of user that created the event
    * @param {string} beforeDate.query - Get only events that start after this date
    * @param {string} afterDate.query - Get only events that start before this date
+   * @param {string} type.query - Get only events that are this type
    * @param {integer} take.query - How many entries the endpoint should return
    * @param {integer} skip.query - How many entries should be skipped (for pagination)
    * @returns {PaginatedBaseEventResponse.model} 200 - All existing events
@@ -102,7 +117,7 @@ export default class EventController extends BaseController {
       take = pagination.take;
       skip = pagination.skip;
     } catch (e) {
-      res.status(400).send(e.message);
+      res.status(400).json(e.message);
       return;
     }
 
@@ -110,7 +125,7 @@ export default class EventController extends BaseController {
     try {
       filters = parseEventFilterParameters(req);
     } catch (e) {
-      res.status(400).send(e.message);
+      res.status(400).json(e.message);
       return;
     }
 
@@ -263,6 +278,126 @@ export default class EventController extends BaseController {
       res.status(204).send();
     } catch (error) {
       this.logger.error('Could not delete event:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Change the assignment of users to shifts on an event
+   * @route PUT /events/{eventId}/shift/{shiftId}/user/{userId}/assign
+   * @group events - Operations of the event controller
+   * @operationId assignEventShift
+   * @security JWT
+   * @param {integer} eventId.path.required - The id of the event
+   * @param {integer} shiftId.path.required - The id of the shift
+   * @param {integer} userId.path.required - The id of the user
+   * @param {EventAnswerAssignmentRequest.model} body.body.required
+   * @returns {BaseEventAnswerResponse.model} 200 - Created event
+   * @returns {string} 400 - Validation error
+   * @returns {string} 500 - Internal server error
+   */
+  public async assignEventShift(req: RequestWithToken, res: Response) {
+    const { eventId: rawEventId, shiftId: rawShiftId, userId: rawUserId } = req.params;
+    const body = req.body as EventAnswerAssignmentRequest;
+    this.logger.trace('Update event shift selection for event', rawEventId, 'for shift', rawShiftId, 'for user', rawUserId, 'by', req.token.user);
+
+    let eventId = Number.parseInt(rawEventId, 10);
+    let shiftId = Number.parseInt(rawShiftId, 10);
+    let userId = Number.parseInt(rawUserId, 10);
+    try {
+      const answer = await EventShiftAnswer.findOne({ where: { eventId, shiftId, userId }, relations: ['event'] });
+      if (answer == null) {
+        res.status(404).send();
+        return;
+      }
+      if (answer.event.startDate.getTime() < new Date().getTime()) {
+        res.status(400).json('Event has already started or is already over.');
+        return;
+      }
+    } catch (error) {
+      this.logger.error('Could not update event:', error);
+      res.status(500).json('Internal server error.');
+      return;
+    }
+
+    if (body.selected === undefined || (body.selected !== true && body.selected !== false)) {
+      res.status(400).json('Invalid event assignment.');
+      return;
+    }
+
+    let params: Partial<UpdateEventAnswerParams> = {
+      selected: body.selected,
+    };
+
+    // handle request
+    try {
+      const answer = await EventService.updateEventShiftAnswer(eventId, shiftId, userId, params);
+      res.json(answer);
+    } catch (error) {
+      this.logger.error('Could not update event:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Update the availability of a user for a shift in an event
+   * @route POST /events/{eventId}/shift/{shiftId}/user/{userId}/availability
+   * @group events - Operations of the event controller
+   * @operationId updateEventShiftAvailability
+   * @security JWT
+   * @param {integer} eventId.path.required - The id of the event
+   * @param {integer} shiftId.path.required - The id of the shift
+   * @param {integer} userId.path.required - The id of the user
+   * @param {EventAnswerAvailabilityRequest.model} body.body.required
+   * @returns {BaseEventAnswerResponse.model} 200 - Created event
+   * @returns {string} 400 - Validation error
+   * @returns {string} 500 - Internal server error
+   */
+  public async updateShiftAvailability(req: RequestWithToken, res: Response) {
+    const { userId: rawUserId, shiftId: rawShiftId, eventId: rawEventId } = req.params;
+    const body = req.body as EventAnswerAvailabilityRequest;
+    this.logger.trace('Update event shift availability for user', rawUserId, 'for shift', rawShiftId, 'for event', rawEventId, 'by', req.token.user);
+
+    let userId = Number.parseInt(rawUserId, 10);
+    let shiftId = Number.parseInt(rawShiftId, 10);
+    let eventId = Number.parseInt(rawEventId, 10);
+    try {
+      const answer = await EventShiftAnswer.findOne({ where: { eventId, shiftId, userId }, relations: ['event'] });
+      if (answer == null) {
+        res.status(404).send();
+        return;
+      }
+      if (answer.event.startDate.getTime() < new Date().getTime()) {
+        res.status(400).json('Event has already started or is already over.');
+        return;
+      }
+    } catch (error) {
+      this.logger.error('Could not update event:', error);
+      res.status(500).json('Internal server error.');
+      return;
+    }
+
+    if (body.availability == null) {
+      res.status(400).json('Invalid event availability.');
+      return;
+    }
+
+    let params: Partial<UpdateEventAnswerParams>;
+    try {
+      params = {
+        availability: asShiftAvailability(body.availability),
+      };
+    } catch (e) {
+      res.status(400).json('Invalid event availability.');
+      return;
+    }
+
+    // handle request
+    try {
+      const answer = await EventService.updateEventShiftAnswer(eventId, shiftId, userId, params);
+      res.json(answer);
+    } catch (error) {
+      this.logger.error('Could not update event:', error);
       res.status(500).json('Internal server error.');
     }
   }
