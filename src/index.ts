@@ -63,6 +63,9 @@ import VatGroupController from './controller/vat-group-controller';
 import TestController from './controller/test-controller';
 import AuthenticationSecureController from './controller/authentication-secure-controller';
 import DebtorController from './controller/debtor-controller';
+import EventController from './controller/event-controller';
+import EventShiftController from './controller/event-shift-controller';
+import EventService from './service/event-service';
 
 export class Application {
   app: express.Express;
@@ -233,8 +236,20 @@ export default async function createApp(): Promise<Application> {
       logger.error('Could not sync balances.', error);
     }));
   });
+  const syncEventShiftAnswers = cron.schedule('39 2 * * *', () => {
+    logger.debug('Syncing event shift answers.');
+    EventService.syncAllEventShiftAnswers()
+      .then(() => logger.debug('Synced event shift answers.'))
+      .catch((error) => logger.error('Could not sync event shift answers.', error));
+  });
+  const sendEventPlanningReminders = cron.schedule('39 13 * * *', () => {
+    logger.debug('Send event planning reminder emails.');
+    EventService.sendEventPlanningReminders()
+      .then(() => logger.debug('Sent event planning reminder emails.'))
+      .catch((error) => logger.error('Could not send event planning reminder emails.', error));
+  });
 
-  application.tasks = [syncBalances];
+  application.tasks = [syncBalances, syncEventShiftAnswers, sendEventPlanningReminders];
 
   if (process.env.ENABLE_LDAP === 'true') {
     await ADService.syncUsers();
@@ -260,6 +275,8 @@ export default async function createApp(): Promise<Application> {
   application.app.use('/v1/balances', new BalanceController(options).getRouter());
   application.app.use('/v1/banners', new BannerController(options).getRouter());
   application.app.use('/v1/users', new UserController(options, tokenHandler).getRouter());
+  application.app.use('/v1/events', new EventController(options).getRouter());
+  application.app.use('/v1/eventshifts', new EventShiftController(options).getRouter());
   application.app.use('/v1/vatgroups', new VatGroupController(options).getRouter());
   application.app.use('/v1/products', new ProductController(options).getRouter());
   application.app.use('/v1/productcategories', new ProductCategoryController(options).getRouter());

@@ -59,6 +59,7 @@ export default class EventController extends BaseController {
           policy: async (req) => this.roleManager.can(
             req.token.roles, 'create', 'all', 'Event', ['*'],
           ),
+          body: { modelName: 'CreateEventRequest' },
           handler: this.createEvent.bind(this),
         },
       },
@@ -70,6 +71,7 @@ export default class EventController extends BaseController {
         PATCH: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'update', 'all', 'Event', ['*']),
           handler: this.updateEvent.bind(this),
+          body: { modelName: 'UpdateEventRequest' },
         },
         DELETE: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'delete', 'all', 'Event', ['*']),
@@ -86,15 +88,21 @@ export default class EventController extends BaseController {
         PUT: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'assign', 'all', 'EventAnswer', ['*']),
           handler: this.assignEventShift.bind(this),
+          body: { modelName: 'EventAnswerAssignmentRequest' },
         },
       },
       '/:eventId(\\d+)/shift/:shiftId(\\d+)/user/:userId(\\d+)/availability': {
         PUT: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'assign', 'all', 'EventAnswer', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'assign', EventController.getRelation(req), 'EventAnswer', ['*']),
           handler: this.updateShiftAvailability.bind(this),
+          body: { modelName: 'EventAnswerAvailabilityRequest' },
         },
       },
     };
+  }
+
+  private static getRelation(req: RequestWithToken): string {
+    return req.params.userId === req.token.user.id.toString() ? 'own' : 'all';
   }
 
   /**

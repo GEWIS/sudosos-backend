@@ -250,6 +250,14 @@ export default class EventService {
   }
 
   /**
+   * Synchronize all answer sheets with the corresponding users and shifts
+   */
+  public static async syncAllEventShiftAnswers() {
+    const events = await Event.find({ where: { startDate: MoreThanOrEqual(new Date()) }, relations: ['answers'] });
+    await Promise.all(events.map((e) => this.syncEventShiftAnswers(e)));
+  }
+
+  /**
    * Create and/or remove answer sheets given an event and a list of shifts that
    * should belong to this event. If a shift is changed or a user loses a role
    * that belongs to a shift, their answer sheet is removed from the database.

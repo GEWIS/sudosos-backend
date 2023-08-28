@@ -430,7 +430,8 @@ describe('EventController', () => {
           shiftIds: 'Ollie',
         });
       expect(res.status).to.equal(400);
-      expect(res.body).to.equal('No shifts provided.');
+      // Swagger validation fail
+      expect(res.body.valid).to.equal(false);
     });
     it('should return 400 if shiftIds is an empty array', async () => {
       const res = await request(ctx.app)
@@ -452,7 +453,8 @@ describe('EventController', () => {
           shiftIds: ['Ollie'],
         });
       expect(res.status).to.equal(400);
-      expect(res.body).to.equal("Input 'Ollie' is not a number.");
+      // Swagger validation fail
+      expect(res.body.valid).to.equal(false);
     });
     it('should return 400 if shiftIds has duplicates', async () => {
       const res = await request(ctx.app)
@@ -491,7 +493,8 @@ describe('EventController', () => {
     it('should return 403 if not admin', async () => {
       const res = await request(ctx.app)
         .post('/events')
-        .set('Authorization', `Bearer ${ctx.userToken}`);
+        .set('Authorization', `Bearer ${ctx.userToken}`)
+        .send(req);
       expect(res.status).to.equal(403);
       expect(res.body).to.be.empty;
     });
@@ -537,7 +540,8 @@ describe('EventController', () => {
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send({});
       expect(res.status).to.equal(400);
-      expect(res.body).to.equal('Invalid event assignment.');
+      // Swagger validation fail
+      expect(res.body.valid).to.equal(false);
     });
     it('should return 400 if selected is not a boolean', async () => {
       const answer = ctx.eventShiftAnswers[0];
@@ -548,7 +552,6 @@ describe('EventController', () => {
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send({ selected: 'AAAAAAAA' });
       expect(res.status).to.equal(400);
-      expect(res.body).to.equal('Invalid event assignment.');
     });
     it('should return 400 if event has expired', async () => {
       const event = ctx.events[0];
@@ -560,7 +563,7 @@ describe('EventController', () => {
       let res = await request(ctx.app)
         .put(`/events/${eventId}/shift/${shiftId}/user/${userId}/assign`)
         .set('Authorization', `Bearer ${ctx.adminToken}`)
-        .send({});
+        .send({ selected: true });
       expect(res.status).to.equal(400);
       expect(res.body).to.equal('Event has already started or is already over.');
 
@@ -574,7 +577,7 @@ describe('EventController', () => {
       let res = await request(ctx.app)
         .put(`/events/${999999}/shift/${shiftId}/user/${userId}/assign`)
         .set('Authorization', `Bearer ${ctx.adminToken}`)
-        .send({});
+        .send({ selected: true });
       expect(res.status).to.equal(404);
       expect(res.body).to.be.empty;
     });
@@ -585,7 +588,7 @@ describe('EventController', () => {
       let res = await request(ctx.app)
         .put(`/events/${eventId}/shift/${9999999}/user/${userId}/assign`)
         .set('Authorization', `Bearer ${ctx.adminToken}`)
-        .send({});
+        .send({ selected: true });
       expect(res.status).to.equal(404);
       expect(res.body).to.be.empty;
     });
@@ -596,7 +599,7 @@ describe('EventController', () => {
       let res = await request(ctx.app)
         .put(`/events/${eventId}/shift/${shiftId}/user/${999999}/assign`)
         .set('Authorization', `Bearer ${ctx.adminToken}`)
-        .send({});
+        .send({ selected: true });
       expect(res.status).to.equal(404);
       expect(res.body).to.be.empty;
     });
@@ -606,7 +609,8 @@ describe('EventController', () => {
 
       let res = await request(ctx.app)
         .put(`/events/${eventId}/shift/${shiftId}/user/${userId}/assign`)
-        .set('Authorization', `Bearer ${ctx.userToken}`);
+        .set('Authorization', `Bearer ${ctx.userToken}`)
+        .send({ selected: true });
       expect(res.status).to.equal(403);
       expect(res.body).to.be.empty;
     });
@@ -641,7 +645,8 @@ describe('EventController', () => {
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send({});
       expect(res.status).to.equal(400);
-      expect(res.body).to.equal('Invalid event availability.');
+      // Swagger validation fail
+      expect(res.body.valid).to.equal(false);
     });
     it('should return 400 if availability is not valid', async () => {
       const answer = ctx.eventShiftAnswers[0];
@@ -663,7 +668,8 @@ describe('EventController', () => {
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send({ availability: null });
       expect(res.status).to.equal(400);
-      expect(res.body).to.equal('Invalid event availability.');
+      // Swagger validation fail
+      expect(res.body.valid).to.equal(false);
     });
     it('should return 400 if event has expired', async () => {
       const event = ctx.events[0];
@@ -675,7 +681,7 @@ describe('EventController', () => {
       let res = await request(ctx.app)
         .put(`/events/${eventId}/shift/${shiftId}/user/${userId}/availability`)
         .set('Authorization', `Bearer ${ctx.adminToken}`)
-        .send({});
+        .send({ availability: Availability.NO });
       expect(res.status).to.equal(400);
       expect(res.body).to.equal('Event has already started or is already over.');
 
@@ -689,7 +695,7 @@ describe('EventController', () => {
       let res = await request(ctx.app)
         .put(`/events/${999999}/shift/${shiftId}/user/${userId}/availability`)
         .set('Authorization', `Bearer ${ctx.adminToken}`)
-        .send({});
+        .send({ availability: Availability.NO });
       expect(res.status).to.equal(404);
       expect(res.body).to.be.empty;
     });
@@ -700,7 +706,7 @@ describe('EventController', () => {
       let res = await request(ctx.app)
         .put(`/events/${eventId}/shift/${9999999}/user/${userId}/availability`)
         .set('Authorization', `Bearer ${ctx.adminToken}`)
-        .send({});
+        .send({ availability: Availability.NO });
       expect(res.status).to.equal(404);
       expect(res.body).to.be.empty;
     });
@@ -711,7 +717,7 @@ describe('EventController', () => {
       let res = await request(ctx.app)
         .put(`/events/${eventId}/shift/${shiftId}/user/${999999}/availability`)
         .set('Authorization', `Bearer ${ctx.adminToken}`)
-        .send({});
+        .send({ availability: Availability.NO });
       expect(res.status).to.equal(404);
       expect(res.body).to.be.empty;
     });
@@ -721,7 +727,8 @@ describe('EventController', () => {
 
       let res = await request(ctx.app)
         .put(`/events/${eventId}/shift/${shiftId}/user/${userId}/availability`)
-        .set('Authorization', `Bearer ${ctx.userToken}`);
+        .set('Authorization', `Bearer ${ctx.userToken}`)
+        .send({ availability: Availability.NO });
       expect(res.status).to.equal(403);
       expect(res.body).to.be.empty;
     });
@@ -926,7 +933,8 @@ describe('EventController', () => {
           shiftIds: 'Ollie',
         });
       expect(res.status).to.equal(400);
-      expect(res.body).to.equal('No shifts provided.');
+      // Swagger validation fail
+      expect(res.body.valid).to.equal(false);
     });
     it('should return 400 if shiftIds is an empty array', async () => {
       const res = await request(ctx.app)
@@ -946,7 +954,8 @@ describe('EventController', () => {
           shiftIds: ['Ollie'],
         });
       expect(res.status).to.equal(400);
-      expect(res.body).to.equal("Input 'Ollie' is not a number.");
+      // Swagger validation fail
+      expect(res.body.valid).to.equal(false);
     });
     it('should return 400 if shiftIds has duplicates', async () => {
       const res = await request(ctx.app)
@@ -982,7 +991,8 @@ describe('EventController', () => {
     it('should return 403 if not admin', async () => {
       const res = await request(ctx.app)
         .patch(`/events/${originalEvent.id}`)
-        .set('Authorization', `Bearer ${ctx.userToken}`);
+        .set('Authorization', `Bearer ${ctx.userToken}`)
+        .send({ name: 'yeeee' });
       expect(res.status).to.equal(403);
       expect(res.body).to.be.empty;
     });
