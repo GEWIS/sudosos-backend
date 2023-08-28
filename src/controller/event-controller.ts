@@ -27,7 +27,7 @@ import EventService, {
   parseEventFilterParameters, parseUpdateEventRequestParameters, UpdateEventParams,
 } from '../service/event-service';
 import { parseRequestPagination } from '../helpers/pagination';
-import { UpdateEventRequest } from './request/event-request';
+import { EventRequest } from './request/event-request';
 
 export default class EventController extends BaseController {
   private logger: Logger = log4js.getLogger('EventLogger');
@@ -70,7 +70,7 @@ export default class EventController extends BaseController {
         },
         DELETE: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'delete', 'all', 'Event', ['*']),
-          handler: this.deleteSingleEvent.bind(this),
+          handler: this.deleteEvent.bind(this),
         },
       },
     };
@@ -159,13 +159,13 @@ export default class EventController extends BaseController {
    * @group events - Operations of the event controller
    * @operationId createEvent
    * @security JWT
-   * @param {UpdateEventRequest.model} body.body.required
+   * @param {CreateEventRequest.model} body.body.required
    * @returns {EventResponse.model} 200 - Created event
    * @returns {string} 400 - Validation error
    * @returns {string} 500 - Internal server error
    */
   public async createEvent(req: RequestWithToken, res: Response) {
-    const body = req.body as UpdateEventRequest;
+    const body = req.body as EventRequest;
     this.logger.trace('Create event', body, 'by user', req.token.user);
 
     let params: CreateEventParams;
@@ -188,9 +188,21 @@ export default class EventController extends BaseController {
     }
   }
 
+  /**
+   * Update an event with its corresponding answers objects
+   * @route PATCH /events/{id}
+   * @group events - Operations of the event controller
+   * @operationId updateEvent
+   * @security JWT
+   * @param {integer} id.path.required - The id of the event which should be returned
+   * @param {UpdateEventRequest.model} body.body.required
+   * @returns {EventResponse.model} 200 - Created event
+   * @returns {string} 400 - Validation error
+   * @returns {string} 500 - Internal server error
+   */
   public async updateEvent(req: RequestWithToken, res: Response) {
     const { id } = req.params;
-    const body = req.body as UpdateEventRequest;
+    const body = req.body as EventRequest;
     this.logger.trace('Update event', id, 'with body', body, 'by user', req.token.user);
 
     let parsedId = Number.parseInt(id, 10);
@@ -219,7 +231,7 @@ export default class EventController extends BaseController {
     try {
       res.json(await EventService.updateEvent(parsedId, params));
     } catch (error) {
-      this.logger.error('Could not create event:', error);
+      this.logger.error('Could not update event:', error);
       res.status(500).json('Internal server error.');
     }
   }
@@ -228,14 +240,14 @@ export default class EventController extends BaseController {
    * Delete an event with its answers
    * @route DELETE /events/{id}
    * @group events - Operations of the event controller
-   * @operationId deleteSingleEvent
+   * @operationId deleteEvent
    * @security JWT
-   * @param {integer} id.path.required - The id of the event which should be returned
-   * @returns {string} 204
+   * @param {integer} id.path.required - The id of the event which should be deleted
+   * @returns {string} 204 - Success
    * @returns {string} 400 - Validation error
    * @returns {string} 500 - Internal server error
    */
-  public async deleteSingleEvent(req: RequestWithToken, res: Response) {
+  public async deleteEvent(req: RequestWithToken, res: Response) {
     const { id } = req.params;
     this.logger.trace('Get single event with ID', id, 'by', req.token.user);
 
@@ -250,7 +262,7 @@ export default class EventController extends BaseController {
       await EventService.deleteEvent(parsedId);
       res.status(204).send();
     } catch (error) {
-      this.logger.error('Could not return single event:', error);
+      this.logger.error('Could not delete event:', error);
       res.status(500).json('Internal server error.');
     }
   }

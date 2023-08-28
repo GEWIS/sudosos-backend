@@ -362,7 +362,8 @@ describe('eventService', () => {
 
   describe('getShifts', () => {
     it('should return all shifts', async () => {
-      const shifts = await EventService.getEventShifts();
+      // eslint-disable-next-line @typescript-eslint/naming-convention
+      const { records: shifts, _pagination } = await EventService.getEventShifts({});
       expect(shifts.length).to.equal(ctx.eventShifts.filter((s) => s.deletedAt == null).length);
 
       shifts.forEach((s) => {
@@ -370,6 +371,9 @@ describe('eventService', () => {
         expect(actualShift).to.not.be.undefined;
         checkEventShift(s, actualShift);
       });
+
+      expect(_pagination.count).to.equal(shifts.length);
+      expect(_pagination.take).to.be.undefined;
     });
   });
 

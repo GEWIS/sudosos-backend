@@ -18,21 +18,40 @@
 import { Availability } from '../../entity/event/event-shift-answer';
 
 /**
- * @typedef UpdateEventRequest
+ * @typedef CreateEventRequest
  * @property {string} name.required - Name of the event.
  * @property {string} startDate.required - The starting date of the event.
  * @property {string} endDate.required - The end date of the event.
  * @property {Array<integer>} shiftIds.required - IDs of shifts that are in this event
  * per participant per borrel.
  */
-export interface UpdateEventRequest {
+
+/**
+ * @typedef UpdateEventRequest
+ * @property {string} name - Name of the event.
+ * @property {string} startDate - The starting date of the event.
+ * @property {string} endDate - The end date of the event.
+ * @property {Array<integer>} shiftIds - IDs of shifts that are in this event
+ * per participant per borrel.
+ */
+export interface EventRequest {
   name: string,
   startDate: string,
   endDate: string,
   shiftIds: number[],
 }
 
+/**
+ * @typedef CreateShiftRequest
+ * @property {string} name.required - Name of the event
+ * @property {Array<string>} roles.required - Roles that (can) have this shift
+ */
 
+/**
+ * @typedef UpdateShiftRequest
+ * @property {string} name - Name of the event
+ * @property {Array<string>} roles - Roles that (can) have this shift
+ */
 export interface EventShiftRequest {
   name: string,
   roles: string[],

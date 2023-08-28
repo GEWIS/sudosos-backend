@@ -35,7 +35,7 @@ import RoleManager from '../../../src/rbac/role-manager';
 import { expect, request } from 'chai';
 import { BaseEventResponse, EventResponse } from '../../../src/controller/response/event-response';
 import EventService from '../../../src/service/event-service';
-import { UpdateEventRequest } from '../../../src/controller/request/event-request';
+import { EventRequest } from '../../../src/controller/request/event-request';
 
 describe('EventController', () => {
   let ctx: {
@@ -158,7 +158,7 @@ describe('EventController', () => {
       expect(res.status).to.equal(200);
 
       const records = res.body.records as BaseEventResponse[];
-      const validation = ctx.specification.validateModel('PaginatedBaseEventResponse', records, false, true);
+      const validation = ctx.specification.validateModel('PaginatedBaseEventResponse', res.body, false, true);
       expect(validation.valid).to.be.true;
 
       expect(records.length).to.be.at.most(res.body._pagination.take);
@@ -288,7 +288,7 @@ describe('EventController', () => {
   });
 
   describe('POST /events', () => {
-    let req: UpdateEventRequest;
+    let req: EventRequest;
 
     before(() => {
       req = {
@@ -467,7 +467,7 @@ describe('EventController', () => {
   });
 
   describe('PATCH /events/{id}', () => {
-    let req: UpdateEventRequest;
+    let req: EventRequest;
     let originalEvent: Event;
 
     before(async () => {

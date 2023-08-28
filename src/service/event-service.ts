@@ -17,12 +17,12 @@
  */
 import { FindManyOptions, In, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
 import {
-  BaseEventAnswersResponse,
+  BaseEventAnswerResponse,
   BaseEventResponse,
   BaseEventShiftResponse,
   EventAnswerResponse,
   EventResponse,
-  EventShiftResponse, PaginatedBaseEventResponse,
+  EventShiftResponse, PaginatedBaseEventResponse, PaginatedEventShiftResponse,
 } from '../controller/response/event-response';
 import {
   EventAnswerRequest,
@@ -161,7 +161,7 @@ export default class EventService {
     };
   }
 
-  private static asBaseEventAnswerResponse(entity: EventShiftAnswer): BaseEventAnswersResponse {
+  private static asBaseEventAnswerResponse(entity: EventShiftAnswer): BaseEventAnswerResponse {
     return {
       availability: entity.availability,
       selected: entity.selected,
@@ -322,9 +322,13 @@ export default class EventService {
   /**
    * Get all event shifts
    */
-  public static async getEventShifts(): Promise<BaseEventShiftResponse[]> {
-    const shifts = await EventShift.find();
-    return shifts.map((s) => this.asEventShiftResponse(s));
+  public static async getEventShifts({ take, skip }: PaginationParameters): Promise<PaginatedEventShiftResponse> {
+    const shifts = await EventShift.find({ take, skip });
+    const count = await EventShift.count();
+    return {
+      _pagination: { take, skip, count },
+      records: shifts.map((s) => this.asEventShiftResponse(s)),
+    };
   }
 
   /**

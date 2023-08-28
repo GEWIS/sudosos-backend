@@ -1,0 +1,374 @@
+/**
+ *  SudoSOS back-end API service.
+ *  Copyright (C) 2020  Study association GEWIS
+ *
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU Affero General Public License as published
+ *  by the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU Affero General Public License for more details.
+ *
+ *  You should have received a copy of the GNU Affero General Public License
+ *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+import express, { Application } from 'express';
+import { Connection } from 'typeorm';
+import { SwaggerSpecification } from 'swagger-model-validator';
+import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
+import EventShift from '../../../src/entity/event/event-shift';
+import EventShiftAnswer from '../../../src/entity/event/event-shift-answer';
+import AssignedRole from '../../../src/entity/roles/assigned-role';
+import Database from '../../../src/database/database';
+import { seedEventShifts, seedRoles, seedUsers } from '../../seed';
+import TokenHandler from '../../../src/authentication/token-handler';
+import Swagger from '../../../src/start/swagger';
+import { json } from 'body-parser';
+import fileUpload from 'express-fileupload';
+import TokenMiddleware from '../../../src/middleware/token-middleware';
+import RoleManager from '../../../src/rbac/role-manager';
+import { expect, request } from 'chai';
+import {
+  EventShiftResponse,
+  PaginatedEventShiftResponse,
+} from '../../../src/controller/response/event-response';
+import { EventShiftRequest } from '../../../src/controller/request/event-request';
+import EventShiftController from '../../../src/controller/event-shift-controller';
+
+describe('EventShiftController', () => {
+  let ctx: {
+    connection: Connection,
+    app: Application
+    specification: SwaggerSpecification,
+    controller: EventShiftController,
+    adminUser: User,
+    localUser: User,
+    adminToken: string;
+    userToken: string;
+    users: User[],
+    eventShifts: EventShift[],
+    roles: AssignedRole[],
+  };
+
+  before(async () => {
+    const connection = await Database.initialize();
+
+    // create dummy users
+    const adminUser = {
+      id: 1,
+      firstName: 'Admin',
+      type: UserType.LOCAL_ADMIN,
+      active: true,
+      acceptedToS: TermsOfServiceStatus.ACCEPTED,
+    } as User;
+
+    const localUser = {
+      id: 2,
+      firstName: 'User',
+      type: UserType.LOCAL_USER,
+      active: true,
+      acceptedToS: TermsOfServiceStatus.ACCEPTED,
+    } as User;
+
+    await User.save(adminUser);
+    await User.save(localUser);
+
+    const users = await seedUsers();
+    const roles = await seedRoles(users);
+    const eventShifts = await seedEventShifts();
+
+    // create bearer tokens
+    const tokenHandler = new TokenHandler({
+      algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
+    });
+    const adminToken = await tokenHandler.signToken({ user: adminUser, roles: ['Admin'], lesser: false }, 'nonce admin');
+    const userToken = await tokenHandler.signToken({ user: localUser, roles: [], lesser: false }, 'nonce');
+
+    // start app
+    const app = express();
+    const specification = await Swagger.initialize(app);
+
+    const all = { all: new Set<string>(['*']) };
+    const own = { all: new Set<string>(['*']) };
+    const roleManager = new RoleManager();
+    roleManager.registerRole({
+      name: 'Admin',
+      permissions: {
+        Event: {
+          create: all,
+          get: all,
+          update: all,
+          delete: all,
+        },
+        EventAnswer: {
+          update: all,
+        },
+      },
+      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
+    });
+    roleManager.registerRole({
+      name: 'User',
+      permissions: {
+        Event: {
+          get: own,
+        },
+        EventAnswer: {
+          update: own,
+        },
+      },
+      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_USER,
+    });
+
+    const controller = new EventShiftController({ specification, roleManager });
+    app.use(json());
+    app.use(fileUpload());
+    app.use(new TokenMiddleware({ tokenHandler, refreshFactor: 0.5 }).getMiddleware());
+    app.use('/eventshifts', controller.getRouter());
+
+    ctx = {
+      connection,
+      app,
+      controller,
+      specification,
+      adminUser,
+      localUser,
+      adminToken,
+      userToken,
+      users,
+      eventShifts,
+      roles,
+    };
+  });
+
+  after(async () => {
+    await ctx.connection.destroy();
+  });
+
+  describe('GET /eventshifts', () => {
+    it('should correctly return list of events', async () => {
+      const res = await request(ctx.app)
+        .get('/eventshifts')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+
+      const records = res.body.records as EventShiftResponse[];
+      const validation = ctx.specification.validateModel('PaginatedEventShiftResponse', res.body, false, true);
+      expect(validation.valid).to.be.true;
+
+      expect(records.length).to.be.at.most(res.body._pagination.take);
+    });
+    it('should adhere to pagination', async () => {
+      const take = 3;
+      const skip = 1;
+      const response = await request(ctx.app)
+        .get('/eventshifts')
+        .query({ take, skip })
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      const shifts = response.body as PaginatedEventShiftResponse;
+      expect(shifts.records.length).to.equal(take);
+      expect(shifts._pagination.take).to.equal(take);
+      expect(shifts._pagination.skip).to.equal(skip);
+      expect(shifts._pagination.count).to
+        .equal(ctx.eventShifts.filter((s) => s.deletedAt == null).length);
+    });
+    it('should return 403 if not admin', async () => {
+      const res = await request(ctx.app)
+        .get('/eventshifts')
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(403);
+      expect(res.body).to.be.empty;
+    });
+  });
+
+  describe('POST /eventshifts', () => {
+    let req: EventShiftRequest;
+
+    before(() => {
+      req = {
+        name: 'Zitten',
+        roles: ['BAC', 'Bestuur'],
+      };
+    });
+
+    it('should correctly create shift', async () => {
+      const res = await request(ctx.app)
+        .post('/eventshifts')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(req);
+      expect(res.status).to.equal(200);
+
+      const shiftResponse = res.body as EventShiftResponse;
+
+      const validation = ctx.specification.validateModel('EventShiftResponse', shiftResponse, false, true);
+      expect(validation.valid).to.be.true;
+
+      expect(shiftResponse.name).to.equal(req.name);
+      expect(shiftResponse.roles).to.deep.equalInAnyOrder(req.roles);
+
+      // Cleanup
+      await EventShiftAnswer.delete({ eventId: shiftResponse.id });
+      await EventShift.delete(shiftResponse.id);
+    });
+    it('should return 400 if empty name', async () => {
+      const res = await request(ctx.app)
+        .post('/eventshifts')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({
+          ...req,
+          name: '',
+        });
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('Invalid shift.');
+    });
+    it('should return 400 if roles is not a list', async () => {
+      const res = await request(ctx.app)
+        .post('/eventshifts')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({
+          ...req,
+          roles: 'Role1',
+        });
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('Invalid shift.');
+    });
+    it('should return 200 if roles is an empty list', async () => {
+      const res = await request(ctx.app)
+        .post('/eventshifts')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({
+          ...req,
+          roles: [],
+        });
+      expect(res.status).to.equal(200);
+
+      const shiftResponse = res.body as EventShiftResponse;
+
+      const validation = ctx.specification.validateModel('EventShiftResponse', shiftResponse, false, true);
+      expect(validation.valid).to.be.true;
+
+      // Cleanup
+      await EventShiftAnswer.delete({ eventId: shiftResponse.id });
+      await EventShift.delete(shiftResponse.id);
+    });
+    it('should return 403 if not admin', async () => {
+      const res = await request(ctx.app)
+        .post('/eventshifts')
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(403);
+      expect(res.body).to.be.empty;
+    });
+  });
+
+  describe('PATCH /eventshifts/{id}', () => {
+    let req: Partial<EventShiftRequest>;
+    let originalShift: EventShift;
+
+    before(async () => {
+      req = {
+        name: 'Penningmeesteren',
+        roles: ['Oud-BAC', 'Sjaars'],
+      };
+
+      originalShift = await EventShift.findOne({ where: { id: ctx.eventShifts[0].id } });
+    });
+
+    after(async () => {
+      await EventShift.update(originalShift.id, {
+        name: originalShift.name,
+        roles: originalShift.roles,
+      });
+    });
+
+    it('should correctly update shift', async () => {
+      const res = await request(ctx.app)
+        .patch(`/eventshifts/${originalShift.id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(req);
+      expect(res.status).to.equal(200);
+
+      const shiftResponse = res.body as EventShiftResponse;
+
+      const validation = ctx.specification.validateModel('EventShiftResponse', shiftResponse, false, true);
+      expect(validation.valid).to.be.true;
+
+      expect(shiftResponse.name).to.equal(req.name);
+      expect(shiftResponse.roles).to.deep.equalInAnyOrder(req.roles);
+    });
+    it('should return 400 if empty name', async () => {
+      const res = await request(ctx.app)
+        .patch(`/eventshifts/${originalShift.id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({
+          ...req,
+          name: '',
+        });
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('Invalid shift.');
+    });
+    it('should return 400 if roles is not a list', async () => {
+      const res = await request(ctx.app)
+        .patch(`/eventshifts/${originalShift.id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({
+          ...req,
+          roles: 'Role1',
+        });
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('Invalid shift.');
+    });
+    it('should return 200 if roles is an empty list', async () => {
+      const res = await request(ctx.app)
+        .patch(`/eventshifts/${originalShift.id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({
+          ...req,
+          roles: [],
+        });
+      expect(res.status).to.equal(200);
+
+      const shiftResponse = res.body as EventShiftResponse;
+
+      const validation = ctx.specification.validateModel('EventShiftResponse', shiftResponse, false, true);
+      expect(validation.valid).to.be.true;
+    });
+    it('should return 403 if not admin', async () => {
+      const res = await request(ctx.app)
+        .patch(`/eventshifts/${originalShift.id}`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(403);
+      expect(res.body).to.be.empty;
+    });
+  });
+
+  describe('DELETE /eventshifts/{id}', () => {
+    it('should correctly delete single shift', async () => {
+      const event = ctx.eventShifts[0];
+      const res = await request(ctx.app)
+        .delete(`/eventshifts/${event.id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(204);
+      expect(res.body).to.be.empty;
+
+      expect(await EventShift.findOne({ where: { id: event.id } })).to.be.null;
+    });
+    it('should return 404 if event does not exist', async () => {
+      const res = await request(ctx.app)
+        .delete('/eventshifts/999999')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(404);
+      expect(res.body).to.be.empty;
+    });
+    it('should return 403 if not admin', async () => {
+      const event = ctx.eventShifts[0];
+      const res = await request(ctx.app)
+        .delete(`/eventshifts/${event.id}`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(403);
+      expect(res.body).to.be.empty;
+    });
+  });
+});

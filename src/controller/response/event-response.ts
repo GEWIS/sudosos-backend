@@ -21,10 +21,10 @@ import { BaseUserResponse } from './user-response';
 
 /**
  * @typedef {BaseResponse} BaseEventResponse
- * @property {string} name - Name of the borrel.
- * @property {BaseUserResponse.model} createdBy - Creator of the event.
- * @property {string} startDate - The starting date of the borrel.
- * @property {string} endDate - The end date of the borrel.
+ * @property {string} name.required - Name of the borrel.
+ * @property {BaseUserResponse.model} createdBy.required - Creator of the event.
+ * @property {string} startDate.required - The starting date of the borrel.
+ * @property {string} endDate.required - The end date of the borrel.
  */
 export interface BaseEventResponse extends BaseResponse {
   createdBy: BaseUserResponse,
@@ -35,7 +35,7 @@ export interface BaseEventResponse extends BaseResponse {
 
 /**
  * @typedef {BaseResponse} BaseEventShiftResponse
- * @property {string} name - Name of the shift.
+ * @property {string} name.required - Name of the shift.
  */
 export interface BaseEventShiftResponse extends BaseResponse {
   name: string,
@@ -43,26 +43,37 @@ export interface BaseEventShiftResponse extends BaseResponse {
 
 /**
  * @typedef {BaseEventShiftResponse} EventShiftResponse
- * @property {Array<string>} roles - Which roles can fill in this shift.
+ * @property {Array<string>} roles.required - Which roles can fill in this shift.
  */
 export interface EventShiftResponse extends BaseEventShiftResponse {
   roles: string[],
 }
 
 /**
+ * @typedef PaginatedEventShiftResponse
+ * @property {PaginationResult.model} _pagination.required - Pagination metadata
+ * @property {Array<EventShiftResponse>} records.required - Returned event shifts
+ */
+export interface PaginatedEventShiftResponse {
+  _pagination: PaginationResult,
+  records: EventShiftResponse[],
+}
+
+/**
  * @typedef {BaseEventResponse} EventResponse
- * @property {Array<EventAnswerResponse.name>} answers - Filled in availability
+ * @property {Array<EventAnswerResponse>} answers.required - Filled in availability
  */
 export interface EventResponse extends BaseEventResponse {
   answers: EventAnswerResponse[],
 }
 
 /**
- * @typedef {EventResponse} BaseEventAnswerResponse
- * @property {BaseUserResponse.model} user - Participant that filled in their availability
+ * @typedef BaseEventAnswerResponse
+ * @property {BaseUserResponse.model} user.required - Participant that filled in their availability
  * @property {string} availability - Filled in availability per slot.
+ * @property {boolean} selected.required - Whether this user is selected for the shift in the event
  */
-export interface BaseEventAnswersResponse {
+export interface BaseEventAnswerResponse {
   user: BaseUserResponse,
   availability: string,
   selected: boolean,
@@ -70,18 +81,16 @@ export interface BaseEventAnswersResponse {
 
 /**
  * @typedef {BaseEventAnswerResponse} EventAnswerResponse
- * @property {boolean} selected
- * @property {BaseEventShiftResponse} shift
- * @property {EventResponse} event
+ * @property {BaseEventShiftResponse.model} shift.required - Shift object
  */
-export interface EventAnswerResponse extends BaseEventAnswersResponse {
+export interface EventAnswerResponse extends BaseEventAnswerResponse {
   shift: BaseEventShiftResponse,
 }
 
 /**
- * @typedef PaginatedEventResponse
- * @property {PaginationResult.model} _pagination - Pagination metadata
- * @property {Array<BaseEventResponse.model>} records - Returned borrel Schemas
+ * @typedef PaginatedBaseEventResponse
+ * @property {PaginationResult.model} _pagination.required - Pagination metadata
+ * @property {Array<BaseEventResponse>} records.required - Returned borrel Schemas
  */
 export interface PaginatedBaseEventResponse {
   _pagination: PaginationResult,
