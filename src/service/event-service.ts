@@ -15,17 +15,20 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { FindManyOptions, In, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
+import { Between, FindManyOptions, In, IsNull, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
 import {
   BaseEventAnswerResponse,
   BaseEventResponse,
   BaseEventShiftResponse,
   EventAnswerResponse,
   EventResponse,
-  EventShiftResponse, PaginatedBaseEventResponse, PaginatedEventShiftResponse,
+  EventShiftResponse,
+  PaginatedBaseEventResponse,
+  PaginatedEventShiftResponse,
 } from '../controller/response/event-response';
 import {
-  EventAnswerAssignmentRequest, EventAnswerAvailabilityRequest,
+  EventAnswerAssignmentRequest,
+  EventAnswerAvailabilityRequest,
   EventShiftRequest,
 } from '../controller/request/event-request';
 import Event, { EventType } from '../entity/event/event';
@@ -38,6 +41,9 @@ import { RequestWithToken } from '../middleware/token-middleware';
 import { asArrayOfNumbers, asDate, asEventType, asNumber } from '../helpers/validators';
 import { PaginationParameters } from '../helpers/pagination';
 import AssignedRole from '../entity/roles/assigned-role';
+import Mailer from '../mailer';
+import ForgotEventPlanning from '../mailer/templates/forgot-event-planning';
+import { Language } from '../mailer/templates/mail-template';
 
 export interface EventFilterParameters {
   name?: string;
@@ -99,7 +105,7 @@ export async function parseUpdateEventRequestParameters(
   if (params.startDate && params.startDate.getTime() < new Date().getTime()) throw new Error('EndDate is in the past.');
   if (params.endDate && params.endDate.getTime() < new Date().getTime()) throw new Error('StartDate is in the past.');
   if (params.startDate && params.endDate && params.endDate.getTime() < params.startDate.getTime()) throw new Error('EndDate is before startDate.');
-  if (!params.startDate && params.endDate && id) {
+  if (!params.startDate && params.endDate !== undefined && id !== undefined) {
     const event = await Event.findOne({ where: { id } });
     if (event.startDate.getTime() > params.endDate.getTime()) throw new Error('EndDate is before startDate.');
   }
@@ -214,6 +220,12 @@ export default class EventService {
         startDate: MoreThanOrEqual(params.afterDate),
       };
     }
+    if (params.beforeDate && params.afterDate) {
+      options.where = {
+        ...options.where,
+        startDate: Between(params.afterDate, params.beforeDate),
+      };
+    }
 
     const events = await Event.find({ ...options, take, skip });
     const count = await Event.count(options);
@@ -244,7 +256,13 @@ export default class EventService {
    * @param event
    * @param shiftIds
    */
-  public static async syncEventShiftAnswers(event: Event, shiftIds: number[]) {
+  public static async syncEventShiftAnswers(event: Event, shiftIds?: number[]) {
+    if (!shiftIds) {
+      const shiftIdsSet = new Set<number>();
+      event.answers.forEach((a) => shiftIdsSet.add(a.shiftId));
+      shiftIds = Array.from(shiftIdsSet);
+    }
+
     const shifts = await EventShift.find({ where: { id: In(shiftIds) } });
     if (shifts.length != shiftIds.length) throw new Error('Invalid shift IDs provided');
 
@@ -401,5 +419,28 @@ export default class EventService {
 
     await answer.save();
     return this.asBaseEventAnswerResponse(answer);
+  }
+
+  /**
+   * Send a reminder
+   * @param date
+   */
+  public static async sendEventPlanningReminders(date = new Date()) {
+    const inTwoDays = new Date(date.getTime() + 1000 * 3600 * 24 * 2);
+    const inThreeDays = new Date(date.getTime() + 1000 * 3600 * 24 * 3);
+    const events = await EventService.getEvents({ beforeDate: inThreeDays, afterDate: inTwoDays });
+
+    await Promise.all(events.records.map(async (event) => {
+      const answers = await EventShiftAnswer.find({ where: { eventId: event.id, availability: IsNull() }, relations: ['user'] });
+      // Get all users and remove duplicates
+      const users = answers
+        .map((a) => a.user)
+        .filter((user, i, all) => i === all.findIndex((u) => u.id === user.id));
+
+      // Send every user an email
+      return Promise.all(users.map(async (user) => Mailer.getInstance().send(user,
+        new ForgotEventPlanning({ name: user.firstName, eventName: event.name }), Language.DUTCH),
+      ));
+    }));
   }
 }

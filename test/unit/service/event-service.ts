@@ -27,6 +27,9 @@ import EventService, { CreateEventParams } from '../../../src/service/event-serv
 import { expect } from 'chai';
 import { BaseEventResponse, BaseEventShiftResponse } from '../../../src/controller/response/event-response';
 import AssignedRole from '../../../src/entity/roles/assigned-role';
+import sinon, { SinonSandbox, SinonSpy } from 'sinon';
+import Mailer from '../../../src/mailer';
+import nodemailer, { Transporter } from 'nodemailer';
 
 describe('eventService', () => {
   let ctx: {
@@ -155,6 +158,19 @@ describe('eventService', () => {
         expect(new Date(e.startDate)).to.be.greaterThanOrEqual(afterDate);
       });
     });
+    it('should filter based on date range', async () => {
+      const afterDate = ctx.events[0].startDate;
+      const beforeDate = ctx.events[1].startDate;
+      const actualEvents = ctx.events.filter((e) => e.startDate.getTime() >= afterDate.getTime() && e.startDate.getTime() <= beforeDate.getTime());
+      const { records: events } = await EventService.getEvents({ beforeDate, afterDate });
+
+      expect(actualEvents.length).to.equal(events.length);
+      const ids = actualEvents.map((e) => e.id);
+      events.forEach((e) => {
+        expect(ids).to.include(e.id);
+        expect(new Date(e.startDate)).to.be.greaterThanOrEqual(afterDate);
+      });
+    });
     it('should filter on createdById', async () => {
       const createdById = ctx.events[0].createdBy.id;
       const actualEvents = ctx.events.filter((e) => e.createdBy.id === createdById);
@@ -205,6 +221,81 @@ describe('eventService', () => {
     it('should return undefined if event does not exist', async () => {
       const event = await EventService.getSingleEvent(99999999);
       expect(event).to.be.undefined;
+    });
+  });
+
+  describe('sendEventPlanningReminders', () => {
+    let sandbox: SinonSandbox;
+    let sendMailFake: SinonSpy;
+
+    before(() => {
+      Mailer.reset();
+
+      sandbox = sinon.createSandbox();
+      sendMailFake = sandbox.spy();
+      sandbox.stub(nodemailer, 'createTransport').returns({
+        sendMail: sendMailFake,
+      } as any as Transporter);
+    });
+
+    after(() => {
+      sandbox.restore();
+    });
+
+    afterEach(() => {
+      sendMailFake.resetHistory();
+    });
+
+    it('should send a reminder to all users that have not given up their availability', async () => {
+      const { startDate, answers } = ctx.events[0];
+      const users = Array.from(new Set(answers.filter((a) => a.availability == null).map((a) => a.user)));
+      const referenceDate = new Date(startDate.getTime() - 1000 * 3600 * 24 * 2.5);
+      // const events = ctx.events.filter((e) => e.startDate.getTime() >= referenceDate.getTime() && e.startDate.getTime() <= inThreeDays.getTime());
+      // const users = events.map((e) => Array.from(new Set(e.answers.map((a) => a.user)))).flat();
+
+      await EventService.sendEventPlanningReminders(referenceDate);
+
+      expect(sendMailFake.callCount).to.equal(users.length);
+    });
+  });
+
+  describe('syncEventShiftAnswers', () => {
+    it('should correctly change answers when users change role', async () => {
+      const event = ctx.events.find((e) => e.answers.length > 0 && e.answers.every((a) => ctx.eventShifts.map((s) => s.id).includes(a.shiftId)));
+      const answer = event.answers[event.answers.length - 1];
+      const shiftIds = Array.from(new Set(event.answers.map((a) => a.shiftId)));
+      const roleWithUsers = ctx.roles.filter((r) => r.userId === answer.userId);
+      const roleWithUser = roleWithUsers[0];
+      expect(event).to.not.be.undefined;
+      expect(roleWithUsers).to.not.be.undefined;
+      expect(roleWithUsers.length).to.equal(1);
+      expect(await EventShiftAnswer.findOne({ where: { eventId: event.id, shiftId: answer.shiftId, userId: answer.userId } })).to.not.be.null;
+
+      const eventResponse1 = await EventService.getSingleEvent(event.id);
+      const answers1 = await EventService.syncEventShiftAnswers(event);
+      expect(eventResponse1.answers.length).to.equal(answers1.length);
+
+      await AssignedRole.delete({ userId: roleWithUser.userId, role: roleWithUser.role });
+
+      const answers2 = await EventService.syncEventShiftAnswers(event);
+      const removedAnswers = eventResponse1.answers.filter((a1) => answers2.findIndex((a2) => a2.userId === a1.user.id) === -1);
+
+      expect(removedAnswers.length).to.be.greaterThan(0);
+      removedAnswers.forEach((r) => {
+        expect(r.user.id).to.equal(roleWithUser.userId);
+      });
+
+      expect(await EventShiftAnswer.findOne({ where: { eventId: event.id, userId: roleWithUser.userId } })).to.be.null;
+
+      // Cleanup
+      await AssignedRole.insert({
+        userId: roleWithUser.userId,
+        role: roleWithUser.role,
+        createdAt: roleWithUser.createdAt,
+        updatedAt: roleWithUser.updatedAt,
+        version: roleWithUser.version,
+      });
+      await EventService.syncEventShiftAnswers(event, shiftIds);
     });
   });
 

@@ -64,10 +64,6 @@ import { calculateBalance } from './helpers/balance';
 import GewisUser from '../src/gewis/entity/gewis-user';
 import AssignedRole from '../src/entity/roles/assigned-role';
 
-function getRandomDate(start: Date, end: Date): Date {
-  return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
-}
-
 /**
  * Defines InvoiceUsers objects for the given Users
  * @param users - List of Invoice User type

@@ -28,6 +28,7 @@ import EventService, {
 } from '../service/event-service';
 import { parseRequestPagination } from '../helpers/pagination';
 import { EventAnswerAssignmentRequest, EventAnswerAvailabilityRequest, EventRequest } from './request/event-request';
+import Event from '../entity/event/event';
 import EventShiftAnswer from '../entity/event/event-shift-answer';
 import { asShiftAvailability } from '../helpers/validators';
 
@@ -73,6 +74,12 @@ export default class EventController extends BaseController {
         DELETE: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'delete', 'all', 'Event', ['*']),
           handler: this.deleteEvent.bind(this),
+        },
+      },
+      '/:id(\\d+)/sync': {
+        POST: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'update', 'all', 'Event', ['*']),
+          handler: this.syncEventShiftAnswers.bind(this),
         },
       },
       '/:eventId(\\d+)/shift/:shiftId(\\d+)/user/:userId(\\d+)/assign': {
@@ -278,6 +285,38 @@ export default class EventController extends BaseController {
       res.status(204).send();
     } catch (error) {
       this.logger.error('Could not delete event:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Synchronize an event, so that EventShiftAnswers are created/deleted
+   * for users that are (no longer) part of a shift
+   * @route GET /events/{id}
+   * @group events - Operations of the event controller
+   * @operationId syncEventShiftAnswers
+   * @security JWT
+   * @param {integer} id.path.required - The id of the event which should be returned
+   * @returns {EventResponse.model} 200 - All existing events
+   * @returns {string} 400 - Validation error
+   * @returns {string} 500 - Internal server error
+   */
+  public async syncEventShiftAnswers(req: RequestWithToken, res: Response) {
+    const { id } = req.params;
+    this.logger.trace('Synchronise single event with ID', id, 'by', req.token.user);
+
+    try {
+      const parsedId = Number.parseInt(id, 10);
+      const event = await Event.findOne({ where: { id: parsedId }, relations: ['answers'] });
+      if (event == null) {
+        res.status(404).send();
+        return;
+      }
+
+      await EventService.syncEventShiftAnswers(event);
+      res.status(200).json(await EventService.getSingleEvent(parsedId));
+    } catch (error) {
+      this.logger.error('Could not synchronize event answers:', error);
       res.status(500).json('Internal server error.');
     }
   }

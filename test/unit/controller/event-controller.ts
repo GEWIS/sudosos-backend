@@ -552,7 +552,6 @@ describe('EventController', () => {
     });
     it('should return 400 if event has expired', async () => {
       const event = ctx.events[0];
-      const dbEvent = await Event.findOne({ where: { id: event.id }, relations: ['answers', 'answers.shift'] });
       const answer = event.answers[0];
       const { eventId, shiftId, userId } = answer;
 
@@ -799,6 +798,11 @@ describe('EventController', () => {
 
       const eventResponse = res.body as EventResponse;
       expect(eventResponse.startDate).to.equal(startDate.toISOString());
+
+      // Cleanup
+      await Event.update(originalEvent.id, {
+        startDate: originalEvent.startDate,
+      });
     });
     it('should correctly update endDate', async () => {
       const endDate = new Date(new Date().getTime() + 120000);
@@ -810,6 +814,11 @@ describe('EventController', () => {
 
       const eventResponse = res.body as EventResponse;
       expect(eventResponse.startDate).to.equal(endDate.toISOString());
+
+      // Cleanup
+      await Event.update(originalEvent.id, {
+        endDate: originalEvent.endDate,
+      });
     });
     it('should correctly update type', async () => {
       const type = EventType.EXTERNAL_BORREL;
@@ -904,7 +913,7 @@ describe('EventController', () => {
         .patch(`/events/${originalEvent.id}`)
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send({
-          endDate: new Date(originalEvent.startDate.getTime() - 100000),
+          endDate: new Date(originalEvent.startDate.getTime() - 10),
         });
       expect(res.status).to.equal(400);
       expect(res.body).to.equal('EndDate is before startDate.');
@@ -973,6 +982,36 @@ describe('EventController', () => {
     it('should return 403 if not admin', async () => {
       const res = await request(ctx.app)
         .patch(`/events/${originalEvent.id}`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(403);
+      expect(res.body).to.be.empty;
+    });
+  });
+
+  describe('POST /events/{id}/sync', () => {
+    it('should correctly sync event shift answers', async () => {
+      const event = ctx.events.filter((e) => e.answers.length > 0 && e.answers.every((a) => a.availability != null))[0];
+      const res = await request(ctx.app)
+        .post(`/events/${event.id}/sync`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+
+      const eventResponse = res.body as EventResponse;
+
+      const validation = ctx.specification.validateModel('EventResponse', eventResponse, false, true);
+      expect(validation.valid).to.be.true;
+    });
+    it('should return 404 if event does not exist', async () => {
+      const res = await request(ctx.app)
+        .post('/events/999999/sync')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(404);
+      expect(res.body).to.be.empty;
+    });
+    it('should return 403 if not admin', async () => {
+      const event = ctx.events[0];
+      const res = await request(ctx.app)
+        .post(`/events/${event.id}/sync`)
         .set('Authorization', `Bearer ${ctx.userToken}`);
       expect(res.status).to.equal(403);
       expect(res.body).to.be.empty;
