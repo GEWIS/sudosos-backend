@@ -39,9 +39,11 @@ import Transfer from '../entity/transactions/transfer';
 import Mailer from '../mailer';
 import UserGotFined from '../mailer/templates/user-got-fined';
 import MailTemplate from '../mailer/templates/mail-template';
+import UserWillGetFined from '../mailer/templates/user-will-get-fined';
 
 export interface CalculateFinesParams {
   userTypes?: UserType[];
+  userIds?: number[];
   referenceDate?: Date;
 }
 
@@ -135,18 +137,21 @@ export default class DebtorService {
    * Return all users that had at most -5 euros balance both now and on the reference date
    * For all these users, also return their fine based on the reference date.
    * @param userTypes List of all user types fines should be calculated for
+   * @param userIds List of all user IDs fines should be calculated for
    * @param referenceDate Date to base fines on. If undefined, use now.
    */
-  public static async calculateFinesOnDate({ userTypes, referenceDate }: CalculateFinesParams): Promise<UserToFineResponse[]> {
+  public static async calculateFinesOnDate({ userTypes, userIds, referenceDate }: CalculateFinesParams): Promise<UserToFineResponse[]> {
     const debtorsOnReferenceDate = await BalanceService.getBalances({
       maxBalance: DineroTransformer.Instance.from(-500),
       date: referenceDate,
       userTypes,
+      ids: userIds,
     });
 
     const debtorsNow = await BalanceService.getBalances({
       maxBalance: DineroTransformer.Instance.from(-500),
       userTypes,
+      ids: userIds,
     });
     const debtorsNowIds = debtorsNow.records.map((b) => b.id);
 
@@ -300,5 +305,45 @@ export default class DebtorService {
     // fine is waived.
     user.currentFines = null;
     await user.save();
+  }
+
+  /**
+   * Send an email to all users with the given ID, notifying them that they will get fined a certain amount. The date
+   * the fine and email will be based on is the reference date, the date of the last fine handout event or the current
+   * date (in this order if one is undefined). However, users only receive an email when they have a debt both on the
+   * reference date and now.
+   * If a user has no debt, they will be skipped and not sent an email.
+   * @param referenceDate
+   * @param userIds
+   */
+  public static async sendFineWarnings({
+    referenceDate, userIds,
+  }: HandOutFinesParams): Promise<void> {
+    const previousFineGroup = (await FineHandoutEvent.find({
+      order: { id: 'desc' },
+      relations: ['fines', 'fines.userFineGroup'],
+      take: 1,
+    }))[0];
+
+    const date = referenceDate || previousFineGroup?.createdAt || new Date();
+
+    const balances = await BalanceService.getBalances({
+      date,
+      ids: userIds,
+    });
+
+    const fines = await this.calculateFinesOnDate({ userIds, referenceDate });
+
+    await Promise.all(fines.map(async (f) => {
+      const user = await User.findOne({ where: { id: f.id } });
+      const balance = balances.records.find((b) => b.id === f.id);
+      if (balance == null) throw new Error('Missing balance');
+      return Mailer.getInstance().send(user, new UserWillGetFined({
+        name: user.firstName,
+        referenceDate: date,
+        fine: dinero(f.amount as any),
+        balance: dinero(balance.amount as any),
+      }));
+    }));
   }
 }

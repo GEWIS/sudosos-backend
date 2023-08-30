@@ -189,6 +189,32 @@ describe('DebtorService', (): void => {
       await User.remove(newUser);
     });
   });
+
+  describe('sendFineWarnings', () => {
+    it('should notify all given users', async () => {
+      const users = ctx.users.slice(8);
+      const usersWithDebt = users.filter((u) => calculateBalance(u, ctx.transactions, ctx.subTransactions, ctx.transfersInclFines).amount.getAmount() <= -500);
+      const userIds = usersWithDebt.map((u) => u.id);
+
+      await DebtorService.sendFineWarnings({ referenceDate: new Date(), userIds });
+
+      expect(sendMailFake.callCount).to.equal(usersWithDebt.length);
+    });
+    it('should notify all given users based on reference date', async () => {
+      const referenceDate = new Date('2021-01-01');
+      const users = ctx.users.slice(8);
+      const usersWithDebt = users.filter((u) =>
+        calculateBalance(u, ctx.transactions, ctx.subTransactions, ctx.transfers, referenceDate).amount.getAmount() <= -500
+        && calculateBalance(u, ctx.transactions, ctx.subTransactions, ctx.transfers).amount.getAmount() <= -500);
+      const userIds = usersWithDebt.map((u) => u.id);
+      expect(userIds.length).to.be.at.least(0);
+
+      await DebtorService.sendFineWarnings({ referenceDate, userIds });
+
+      expect(sendMailFake.callCount).to.equal(usersWithDebt.length);
+    });
+  });
+
   describe('deleteFine', () => {
     it('should correctly delete a single fine', async () => {
       const userFineGroupIndex = ctx.userFineGroups.findIndex((g) => g.fines.length === 1);

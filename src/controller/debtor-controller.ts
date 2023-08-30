@@ -64,8 +64,16 @@ export default class DebtorController extends BaseController {
       },
       '/handout': {
         POST: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Fine', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'create', 'all', 'Fine', ['*']),
           handler: this.handoutFines.bind(this),
+          body: { modelName: 'HandoutFinesRequest' },
+        },
+      },
+      '/notify': {
+        POST: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'notify', 'all', 'Fine', ['*']),
+          handler: this.notifyAboutFutureFines.bind(this),
+          body: { modelName: 'HandoutFinesRequest' },
         },
       },
     };
@@ -232,6 +240,46 @@ export default class DebtorController extends BaseController {
       res.json(result);
     } catch (error) {
       this.logger.error('Could not handout fines:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Send an email to all given users about their possible future fine.
+   * @route POST /fines/notify
+   * @group debtors - Operations of the debtor controller
+   * @operationId notifyAboutFutureFines
+   * @security JWT
+   * @param {HandoutFinesRequest.model} body.body.required
+   * @returns {string} 204 - Success
+   * @returns {string} 400 - Validation error
+   * @returns {string} 500 - Internal server error
+   */
+  public async notifyAboutFutureFines(req: RequestWithToken, res: Response): Promise<void> {
+    const body = req.body as HandoutFinesRequest;
+    this.logger.trace('Send future fine notification emails', body, 'by user', req.token.user);
+
+    let referenceDate: Date;
+    try {
+      // Todo: write code-consistent validator (either /src/controller/request/validators or custom validator.js function)
+      if (!Array.isArray(body.userIds)) throw new Error('userIds is not an array');
+      const users = await User.find({ where: { id: In(body.userIds) } });
+      if (users.length !== body.userIds.length) throw new Error('userIds is not a valid array of user IDs');
+
+      if (body.referenceDate !== undefined) {
+        referenceDate = new Date(body.referenceDate);
+        if (Number.isNaN(referenceDate.getTime())) throw new Error('referenceDate is not a valid date');
+      }
+    } catch (e) {
+      res.status(400).send(e.message);
+      return;
+    }
+
+    try {
+      await DebtorService.sendFineWarnings({ referenceDate, userIds: body.userIds });
+      res.status(204).send();
+    } catch (error) {
+      this.logger.error('Could not send future fine notification emails:', error);
       res.status(500).json('Internal server error.');
     }
   }

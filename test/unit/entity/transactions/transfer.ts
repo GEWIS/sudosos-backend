@@ -16,10 +16,10 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { Connection } from 'typeorm';
-import User from '../../../src/entity/user/user';
-import Transaction from '../../../src/entity/transactions/transaction';
-import Transfer from '../../../src/entity/transactions/transfer';
-import Database from '../../../src/database/database';
+import User from '../../../../src/entity/user/user';
+import Transaction from '../../../../src/entity/transactions/transaction';
+import Transfer from '../../../../src/entity/transactions/transfer';
+import Database from '../../../../src/database/database';
 import {
   seedContainers,
   seedPointsOfSale,
@@ -27,15 +27,15 @@ import {
   seedProducts, seedTransactions, seedTransfers,
   seedUsers,
   seedVatGroups,
-} from '../../seed';
-import SubTransaction from '../../../src/entity/transactions/sub-transaction';
-import { calculateBalance } from '../../helpers/balance';
-import DebtorService from '../../../src/service/debtor-service';
+} from '../../../seed';
+import SubTransaction from '../../../../src/entity/transactions/sub-transaction';
+import { calculateBalance } from '../../../helpers/balance';
+import DebtorService from '../../../../src/service/debtor-service';
 import { expect } from 'chai';
-import { addTransfer } from '../../helpers/transaction-helpers';
-import BalanceService from '../../../src/service/balance-service';
+import { addTransfer } from '../../../helpers/transaction-helpers';
+import BalanceService from '../../../../src/service/balance-service';
 import dinero from 'dinero.js';
-import Fine from '../../../src/entity/fine/fine';
+import Fine from '../../../../src/entity/fine/fine';
 
 describe('transfer', (): void => {
   let ctx: {

@@ -339,11 +339,11 @@ export default class TransactionService {
     }
 
     // init transaction
-    const transaction = ((update) ? {
+    const transaction = ((update) ? Object.assign(new Transaction(), {
       ...update,
       version: update.version + 1,
       updatedAt: new Date(),
-    } : {}) as Transaction;
+    }) : Object.assign(new Transaction(), {})) as Transaction;
 
     // get users
     transaction.from = await User.findOne({ where: { id: req.from } });
@@ -654,8 +654,10 @@ export default class TransactionService {
   Promise<TransactionResponse | undefined> {
     const transaction = await this.asTransaction(req);
 
+    await transaction.save();
+
     // save the transaction and invalidate user balance cache
-    const savedTransaction = await this.asTransactionResponse(await Transaction.save(transaction));
+    const savedTransaction = await this.asTransactionResponse(transaction);
     await this.invalidateBalanceCache(savedTransaction);
 
     // save transaction and return response

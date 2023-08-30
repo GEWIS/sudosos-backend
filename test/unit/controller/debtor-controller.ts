@@ -137,6 +137,7 @@ describe('DebtorController', () => {
           get: all,
           update: all,
           delete: all,
+          notify: all,
         },
       },
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
@@ -448,6 +449,55 @@ describe('DebtorController', () => {
 
       const fineHandoutEventResponse = res.body as FineHandoutEventResponse;
       expect(fineHandoutEventResponse.fines.length).to.equal(0);
+    });
+  });
+
+  describe('POST /fines/notify', () => {
+    it('should notify users with given ID', async () => {
+      const res = await request(ctx.app)
+        .post('/fines/notify')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ userIds: ctx.users.map((u) => u.id) });
+      expect(res.status).to.equal(204);
+
+      const body = res.body as FineHandoutEventResponse;
+      expect(body).to.be.empty;
+      expect(sendMailFake.callCount).to.be.at.least(1);
+    });
+    it('should return 403 if user is not admin', async () => {
+      const res = await request(ctx.app)
+        .post('/fines/notify')
+        .set('Authorization', `Bearer ${ctx.userToken}`)
+        .send({ userIds: ctx.users.map((u) => u.id) });
+      expect(res.status).to.equal(403);
+    });
+    it('should return 400 if userIds is not a list', async () => {
+      const res = await request(ctx.app)
+        .post('/fines/notify')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ userIds: '39Vooo' });
+      expect(res.status).to.equal(400);
+    });
+    it('should return 400 if list of userIds is invalid', async () => {
+      const res = await request(ctx.app)
+        .post('/fines/notify')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ userIds: ['WieDitLeestTrektBak'] });
+      expect(res.status).to.equal(400);
+    });
+    it('should return 400 if invalid reference date', async () => {
+      const res = await request(ctx.app)
+        .post('/fines/notify')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ userIds: ctx.users.map((u) => u.id), referenceDate: 'InvalidDate' });
+      expect(res.status).to.equal(400);
+    });
+    it('should return 400 if reference date is a list', async () => {
+      const res = await request(ctx.app)
+        .post('/fines/notify')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ userIds: ctx.users.map((u) => u.id), referenceDate: ['InvalidDate'] });
+      expect(res.status).to.equal(400);
     });
   });
 });
