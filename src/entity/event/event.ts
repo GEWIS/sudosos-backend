@@ -16,11 +16,12 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  Column, Entity, ManyToOne, JoinColumn, OneToMany,
+  Column, Entity, ManyToOne, JoinColumn, OneToMany, ManyToMany, JoinTable,
 } from 'typeorm';
 import BaseEntity from '../base-entity';
 import User from '../user/user';
 import EventShiftAnswer from './event-shift-answer';
+import EventShift from './event-shift';
 
 export enum EventType {
   BORREL = 'BORREL', // Weekly GEWIS borrel, both normal borrels and extended borrels
@@ -59,6 +60,10 @@ export default class Event extends BaseEntity {
     nullable: false,
   })
   public type: EventType;
+
+  @ManyToMany(() => EventShift)
+  @JoinTable()
+  public shifts: EventShift[];
 
   @OneToMany(() => EventShiftAnswer, (a) => a.event)
   public answers: EventShiftAnswer[];

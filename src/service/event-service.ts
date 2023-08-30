@@ -20,7 +20,7 @@ import {
   BaseEventAnswerResponse,
   BaseEventResponse,
   BaseEventShiftResponse,
-  EventAnswerResponse,
+  EventInShiftResponse,
   EventResponse,
   EventShiftResponse,
   PaginatedBaseEventResponse,
@@ -151,7 +151,7 @@ export default class EventService {
   private static asEventResponse(entity: Event): EventResponse {
     return {
       ...this.asBaseEventResponse(entity),
-      answers: entity.answers.map((a) => this.asEventAnswerResponse(a)),
+      shifts: entity.shifts.map((s) => this.asShiftInEventResponse(entity, s, entity.answers)),
     };
   }
 
@@ -174,19 +174,22 @@ export default class EventService {
     };
   }
 
+  private static asShiftInEventResponse(
+    event: Event, shift: EventShift, answers: EventShiftAnswer[],
+  ): EventInShiftResponse {
+    return {
+      ...this.asEventShiftResponse(shift),
+      answers: answers
+        .filter((a) => a.eventId === event.id && a.shiftId === shift.id)
+        .map((a) => this.asBaseEventAnswerResponse(a)),
+    };
+  }
+
   private static asBaseEventAnswerResponse(entity: EventShiftAnswer): BaseEventAnswerResponse {
     return {
       availability: entity.availability,
       selected: entity.selected,
       user: parseUserToBaseResponse(entity.user, false),
-    };
-  }
-
-  private static asEventAnswerResponse(entity: EventShiftAnswer):
-  EventAnswerResponse {
-    return {
-      ...this.asBaseEventAnswerResponse(entity),
-      shift: this.asBaseEventShiftResponse(entity.shift),
     };
   }
 
@@ -242,7 +245,7 @@ export default class EventService {
   public static async getSingleEvent(id: number): Promise<EventResponse | undefined> {
     const event = await Event.findOne({
       where: { id },
-      relations: ['createdBy', 'answers', 'answers.shift', 'answers.user'],
+      relations: ['createdBy', 'shifts', 'answers', 'answers.user'],
       withDeleted: true,
     });
 
@@ -253,7 +256,7 @@ export default class EventService {
    * Synchronize all answer sheets with the corresponding users and shifts
    */
   public static async syncAllEventShiftAnswers() {
-    const events = await Event.find({ where: { startDate: MoreThanOrEqual(new Date()) }, relations: ['answers'] });
+    const events = await Event.find({ where: { startDate: MoreThanOrEqual(new Date()) }, relations: ['answers', 'shifts'] });
     await Promise.all(events.map((e) => this.syncEventShiftAnswers(e)));
   }
 
@@ -266,9 +269,7 @@ export default class EventService {
    */
   public static async syncEventShiftAnswers(event: Event, shiftIds?: number[]) {
     if (!shiftIds) {
-      const shiftIdsSet = new Set<number>();
-      event.answers.forEach((a) => shiftIdsSet.add(a.shiftId));
-      shiftIds = Array.from(shiftIdsSet);
+      shiftIds = event.shifts.map((s) => s.id);
     }
 
     const shifts = await EventShift.find({ where: { id: In(shiftIds) } });
@@ -310,6 +311,9 @@ export default class EventService {
   public static async createEvent(params: CreateEventParams)
     : Promise<EventResponse> {
     const createdBy = await User.findOne({ where: { id: params.createdById } });
+    const shifts = await EventShift.find({ where: { id: In(params.shiftIds) } });
+
+    if (shifts.length !== params.shiftIds.length) throw new Error('Invalid list of shiftIds provided.');
 
     const event: Event = Object.assign(new Event(), {
       name: params.name,
@@ -317,6 +321,7 @@ export default class EventService {
       startDate: params.startDate,
       endDate: params.endDate,
       type: params.type,
+      shifts,
     });
     await Event.save(event);
 
@@ -327,16 +332,25 @@ export default class EventService {
   /**
    * Update an existing event.
    */
-  public static async updateEvent(id: number, update: Partial<UpdateEventParams>) {
+  public static async updateEvent(id: number, params: Partial<UpdateEventParams>) {
     const event = await Event.findOne({
       where: { id },
-      relations: ['answers'],
+      relations: { answers: true, shifts: true },
     });
     if (!event) return undefined;
 
-    const { shiftIds, ...rest } = update;
+    const { shiftIds, ...rest } = params;
+
     await Event.update(id, rest);
-    if (update.shiftIds != null) event.answers = await this.syncEventShiftAnswers(event, update.shiftIds);
+    // await event.reload();
+    if (params.shiftIds != null) {
+      const shifts = await EventShift.find({ where: { id: In(params.shiftIds) } });
+      if (shifts.length !== params.shiftIds.length) throw new Error('Invalid list of shiftIds provided.');
+      event.answers = await this.syncEventShiftAnswers(event, params.shiftIds);
+      event.shifts = shifts;
+
+      await Event.save(event);
+    }
 
     return this.getSingleEvent(id);
   }

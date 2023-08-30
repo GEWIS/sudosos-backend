@@ -250,8 +250,6 @@ describe('eventService', () => {
       const { startDate, answers } = ctx.events[0];
       const users = Array.from(new Set(answers.filter((a) => a.availability == null).map((a) => a.user)));
       const referenceDate = new Date(startDate.getTime() - 1000 * 3600 * 24 * 2.5);
-      // const events = ctx.events.filter((e) => e.startDate.getTime() >= referenceDate.getTime() && e.startDate.getTime() <= inThreeDays.getTime());
-      // const users = events.map((e) => Array.from(new Set(e.answers.map((a) => a.user)))).flat();
 
       await EventService.sendEventPlanningReminders(referenceDate);
 
@@ -263,7 +261,7 @@ describe('eventService', () => {
     it('should correctly change answers when users change role', async () => {
       const event = ctx.events.find((e) => e.answers.length > 0 && e.answers.every((a) => ctx.eventShifts.map((s) => s.id).includes(a.shiftId)));
       const answer = event.answers[event.answers.length - 1];
-      const shiftIds = Array.from(new Set(event.answers.map((a) => a.shiftId)));
+      const shiftIds = event.shifts.map((a) => a.id);
       const roleWithUsers = ctx.roles.filter((r) => r.userId === answer.userId);
       const roleWithUser = roleWithUsers[0];
       expect(event).to.not.be.undefined;
@@ -273,12 +271,12 @@ describe('eventService', () => {
 
       const eventResponse1 = await EventService.getSingleEvent(event.id);
       const answers1 = await EventService.syncEventShiftAnswers(event);
-      expect(eventResponse1.answers.length).to.equal(answers1.length);
+      expect(eventResponse1.shifts.reduce((t, e) => t + e.answers.length, 0)).to.equal(answers1.length);
 
       await AssignedRole.delete({ userId: roleWithUser.userId, role: roleWithUser.role });
 
       const answers2 = await EventService.syncEventShiftAnswers(event);
-      const removedAnswers = eventResponse1.answers.filter((a1) => answers2.findIndex((a2) => a2.userId === a1.user.id) === -1);
+      const removedAnswers = answers1.filter((a1) => answers2.findIndex((a2) => a2.userId === a1.user.id) === -1);
 
       expect(removedAnswers.length).to.be.greaterThan(0);
       removedAnswers.forEach((r) => {
@@ -317,21 +315,17 @@ describe('eventService', () => {
       expect(event.createdBy.id).to.equal(params.createdById);
       expect(event.startDate).to.equal(params.startDate.toISOString());
       expect(event.endDate).to.equal(params.endDate.toISOString());
+      expect(event.shifts.length).to.equal(params.shiftIds.length);
 
       const users = ctx.roles
         .filter((r) => shift.roles.includes(r.role))
         .map((r) => r.user);
       const userIds = users.map((u) => u.id);
-      expect(event.answers.length).to.equal(users.length);
-      expect(event.answers.length).to.be.greaterThan(0);
-      expect(event.answers.map((a) => a.user.id)).to.deep.equalInAnyOrder(userIds);
-
-      event.answers.forEach((answer) => {
-        expect(answer.shift.id).to.equal(shift.id);
-        expect(answer.shift.name).to.equal(shift.name);
-        expect(answer.selected).to.be.false;
-        expect(answer.availability).to.be.null;
-      });
+      const actualUserIds = Array.from(new Set(
+        event.shifts.map((s) => s.answers.map((a) => a.user.id)).flat(),
+      ));
+      expect(actualUserIds.length).to.be.greaterThan(0);
+      expect(actualUserIds).to.deep.equalInAnyOrder(userIds);
 
       // Cleanup
       await Event.delete(event.id);
@@ -348,7 +342,7 @@ describe('eventService', () => {
       const event = await EventService.createEvent(params);
 
       expect(event).to.not.be.undefined;
-      expect(event.answers).to.be.empty;
+      expect(event.shifts).to.be.empty;
 
       // Cleanup
       await Event.delete(event.id);
@@ -419,12 +413,11 @@ describe('eventService', () => {
       });
 
       // Answer sheets should include new shift
-      const seenShiftIds = new Set<number>();
-      event.answers.forEach((a) => seenShiftIds.add(a.shift.id));
-      expect(Array.from(seenShiftIds)).to.deep.equalInAnyOrder(shiftIds);
+      expect(event.shifts.map((s) => s.id)).to.deep.equalInAnyOrder(shiftIds);
+      event.shifts.forEach((s) => {
+        expect(s.answers).to.be.greaterThan(0);
+      });
 
-      // We should have more answer sheets than before
-      expect(event.answers.length).to.be.greaterThan(originalEvent.answers.length);
     });
     it('should correctly update shiftIds by removing a shift', async function () {
       // Skip this test case if newShift is undefined, i.e. we did not run the previous test case
@@ -445,13 +438,9 @@ describe('eventService', () => {
       });
 
       // Answer sheets should no longer include new shift
-      const seenShiftIds = new Set<number>();
-      event.answers.forEach((a) => seenShiftIds.add(a.shift.id));
-      expect(Array.from(seenShiftIds)).to.deep.equalInAnyOrder(shiftIds);
-      expect(seenShiftIds.has(newShift.id)).to.be.false;
-
-      // We should have less answer sheets than before
-      expect(event.answers.length).to.equal(originalEvent.answers.length);
+      const actualIds = event.shifts.map((s) => s.id);
+      expect(actualIds).to.deep.equalInAnyOrder(shiftIds);
+      expect(actualIds.findIndex((i) => i === newShift.id)).to.equal(-1);
     });
     it('should return undefined if event does not exist', async () => {
       const event = await EventService.updateEvent(9999999999, { name: 'does not matter' });

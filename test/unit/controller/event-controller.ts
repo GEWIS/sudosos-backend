@@ -343,9 +343,7 @@ describe('EventController', () => {
       expect(validation.valid).to.be.true;
       expect(eventResponse.createdBy.id).to.equal(ctx.adminUser.id);
 
-      const shiftIds = new Set();
-      eventResponse.answers.forEach((a) => shiftIds.add(a.shift.id));
-      expect(Array.from(shiftIds)).to.deep.equalInAnyOrder(req.shiftIds);
+      expect(eventResponse.shifts.map((s) => s.id)).to.deep.equalInAnyOrder(req.shiftIds);
       expect(eventResponse.name).to.equal(req.name);
       expect(eventResponse.startDate).to.equal(req.startDate);
       expect(eventResponse.endDate).to.equal(req.endDate);
@@ -777,9 +775,7 @@ describe('EventController', () => {
       const validation = ctx.specification.validateModel('EventResponse', eventResponse, false, true);
       expect(validation.valid).to.be.true;
 
-      const shiftIds = new Set<number>();
-      eventResponse.answers.forEach((a) => shiftIds.add(a.shift.id));
-      expect(Array.from(shiftIds)).to.deep.equalInAnyOrder(req.shiftIds);
+      expect(eventResponse.shifts.map((s) => s.id)).to.deep.equalInAnyOrder(req.shiftIds);
       expect(eventResponse.name).to.equal(req.name);
       expect(eventResponse.startDate).to.equal(req.startDate);
       expect(eventResponse.endDate).to.equal(req.endDate);
@@ -847,9 +843,7 @@ describe('EventController', () => {
       expect(res.status).to.equal(200);
 
       const eventResponse = res.body as EventResponse;
-      const actualIds = new Set<number>();
-      eventResponse.answers.forEach((a) => actualIds.add(a.shift.id));
-      expect(Array.from(shiftIds)).to.deep.equalInAnyOrder(shiftIds);
+      expect(eventResponse.shifts.map((s) => s.id)).to.deep.equalInAnyOrder(shiftIds);
     });
     it('should return 400 if name is empty string', async () => {
       const res = await request(ctx.app)

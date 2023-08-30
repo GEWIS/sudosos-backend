@@ -53,6 +53,14 @@ export interface EventShiftResponse extends BaseEventShiftResponse {
 }
 
 /**
+ * @typedef {EventShiftResponse} EventInShiftResponse
+ * @property {Array<BaseEventAnswerResponse>} answers - Answers for this shift.
+ */
+export interface EventInShiftResponse extends EventShiftResponse {
+  answers: BaseEventAnswerResponse[];
+}
+
+/**
  * @typedef PaginatedEventShiftResponse
  * @property {PaginationResult.model} _pagination.required - Pagination metadata
  * @property {Array<EventShiftResponse>} records.required - Returned event shifts
@@ -64,10 +72,10 @@ export interface PaginatedEventShiftResponse {
 
 /**
  * @typedef {BaseEventResponse} EventResponse
- * @property {Array<EventAnswerResponse>} answers.required - Filled in availability
+ * @property {Array<EventInShiftResponse>} shifts.required - Shifts for this event
  */
 export interface EventResponse extends BaseEventResponse {
-  answers: EventAnswerResponse[],
+  shifts: EventInShiftResponse[],
 }
 
 /**
@@ -80,14 +88,6 @@ export interface BaseEventAnswerResponse {
   user: BaseUserResponse,
   availability: string,
   selected: boolean,
-}
-
-/**
- * @typedef {BaseEventAnswerResponse} EventAnswerResponse
- * @property {BaseEventShiftResponse.model} shift.required - Shift object
- */
-export interface EventAnswerResponse extends BaseEventAnswerResponse {
-  shift: BaseEventShiftResponse,
 }
 
 /**

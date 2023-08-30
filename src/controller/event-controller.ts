@@ -315,7 +315,7 @@ export default class EventController extends BaseController {
 
     try {
       const parsedId = Number.parseInt(id, 10);
-      const event = await Event.findOne({ where: { id: parsedId }, relations: ['answers'] });
+      const event = await Event.findOne({ where: { id: parsedId }, relations: ['answers', 'shifts'] });
       if (event == null) {
         res.status(404).send();
         return;

@@ -336,10 +336,12 @@ export async function seedEvents(rolesWithUsers: AssignedRole[]) {
       startDate,
       endDate,
       type: EventType.BORREL,
+      shifts: [],
       id: i,
     });
     await Event.save(event);
 
+    const eventShifts1: EventShift[] = [];
     const eventShiftAnswers1: EventShiftAnswer[] = [];
     for (let j = 0; j < ((i + 1) * 243) % 4; j += 1) {
       const shift = eventShifts[((i + j) * 13) % (eventShifts.length)];
@@ -348,10 +350,14 @@ export async function seedEvents(rolesWithUsers: AssignedRole[]) {
         const answer = await createEventShiftAnswer(r.user, event, shift, k);
         answer.event = event;
         answer.shift = shift;
+        eventShifts1.push(shift);
         eventShiftAnswers.push(answer);
         eventShiftAnswers1.push(answer);
       }));
     }
+
+    event.shifts = eventShifts1.filter((s, j, all) => j === all.findIndex((s2) => s.id === s2.id));
+    await event.save();
 
     event.answers = eventShiftAnswers1;
     events.push(event);
