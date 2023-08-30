@@ -6,6 +6,7 @@
   "scripts": {
     "build": "tsc",
     "watch": "ts-node-dev --poll src/index.ts",
+    "cron": "ts-node-dev --poll src/cron.ts",
     "serve": "node out/src/index.js",
     "schema": "node out/src/database/schema.js",
     "seed": "ts-node-dev --poll src/database/seed.ts",

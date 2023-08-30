@@ -27,7 +27,6 @@ import { config } from 'dotenv';
 import express from 'express';
 import log4js, { Logger } from 'log4js';
 import { Connection } from 'typeorm';
-import cron from 'node-cron';
 import fileUpload from 'express-fileupload';
 import Database from './database/database';
 import Swagger from './start/swagger';
@@ -43,7 +42,6 @@ import ProductController from './controller/product-controller';
 import ProductCategoryController from './controller/product-category-controller';
 import TransactionController from './controller/transaction-controller';
 import BorrelkaartGroupController from './controller/borrelkaart-group-controller';
-import BalanceService from './service/balance-service';
 import BalanceController from './controller/balance-controller';
 import RbacController from './controller/rbac-controller';
 import GewisAuthenticationController from './gewis/controller/gewis-authentication-controller';
@@ -58,7 +56,6 @@ import { extractRawBody } from './helpers/raw-body';
 import InvoiceController from './controller/invoice-controller';
 import PayoutRequestController from './controller/payout-request-controller';
 import RootController from './controller/root-controller';
-import ADService from './service/ad-service';
 import VatGroupController from './controller/vat-group-controller';
 import TestController from './controller/test-controller';
 import AuthenticationSecureController from './controller/authentication-secure-controller';
@@ -77,12 +74,9 @@ export class Application {
 
   logger: Logger;
 
-  tasks: cron.ScheduledTask[];
-
   public async stop(): Promise<void> {
     this.logger.info('Stopping application instance...');
     await util.promisify(this.server.close).bind(this.server)();
-    this.tasks.forEach((task) => task.stop());
     await this.connection.close();
     this.logger.info('Application stopped.');
   }
@@ -177,7 +171,7 @@ export default async function createApp(): Promise<Application> {
   application.connection = await Database.initialize();
 
   // Silent in-dependency logs unless really wanted by the environment.
-  const logger = log4js.getLogger('Console');
+  const logger = log4js.getLogger('Console (index)');
   logger.level = process.env.LOG_LEVEL;
   console.log = (message: any, ...additional: any[]) => logger.debug(message, ...additional);
 
@@ -223,33 +217,6 @@ export default async function createApp(): Promise<Application> {
   const tokenHandler = await createTokenHandler();
   // Setup token handler and authentication controller.
   await setupAuthentication(tokenHandler, application);
-
-  await BalanceService.updateBalances({});
-  const syncBalances = cron.schedule('41 1 * * *', () => {
-    logger.debug('Syncing balances.');
-    BalanceService.updateBalances({}).then(() => {
-      logger.debug('Synced balances.');
-    }).catch((error => {
-      logger.error('Could not sync balances.', error);
-    }));
-  });
-
-  application.tasks = [syncBalances];
-
-  if (process.env.ENABLE_LDAP === 'true') {
-    await ADService.syncUsers();
-    await ADService.syncSharedAccounts().then(
-      () => ADService.syncUserRoles(application.roleManager),
-    );
-    const syncADGroups = cron.schedule('*/10 * * * *', async () => {
-      logger.debug('Syncing AD.');
-      await ADService.syncSharedAccounts().then(
-        () => ADService.syncUserRoles(application.roleManager),
-      );
-      logger.debug('Synced AD');
-    });
-    application.tasks.push(syncADGroups);
-  }
 
   // REMOVE LATER
   const options: BaseControllerOptions = {
