@@ -25,7 +25,7 @@ import ProductRevision from '../product/product-revision';
 import Invoice from '../invoices/invoice';
 
 /**
- * @typedef {SubTransactionRow} SubTransactionRow
+ * @typedef {BaseEntity} SubTransactionRow
  * @property {Product.model} product.required - The product that has been bought.
  * @property {integer} amount.required - The amount that has been bought.
  * @property {SubTransaction.model} subTransaction - The subTransaction this row belongs to.

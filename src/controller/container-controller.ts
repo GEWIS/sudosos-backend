@@ -113,6 +113,7 @@ export default class ContainerController extends BaseController {
   /**
    * Returns all existing containers
    * @route GET /containers
+   * @operationId getAllContainers
    * @group containers - Operations of container controller
    * @security JWT
    * @param {integer} take.query - How many containers the endpoint should return
@@ -141,6 +142,7 @@ export default class ContainerController extends BaseController {
   /**
    * Returns the requested container
    * @route GET /containers/{id}
+   * @operationId getSingleContainer
    * @group containers - Operations of container controller
    * @param {integer} id.path.required - The id of the container which should be returned
    * @security JWT
@@ -176,6 +178,7 @@ export default class ContainerController extends BaseController {
   /**
    * Returns all the products in the container
    * @route GET /containers/{id}/products
+   * @operationId getProductsContainer
    * @group containers - Operations of container controller
    * @param {integer} id.path.required - The id of the container which should be returned
    * @security JWT
@@ -211,6 +214,7 @@ export default class ContainerController extends BaseController {
   /**
    * Create a new container.
    * @route POST /containers
+   * @operationId createContainer
    * @group containers - Operations of container controller
    * @param {CreateContainerRequest.model} container.body.required -
    *    The container which should be created
@@ -247,6 +251,7 @@ export default class ContainerController extends BaseController {
   /**
    * Approve a container update.
    * @route POST /containers/{id}/approve
+   * @operationId approveContainer
    * @param {integer} id.path.required - The id of the container update to approve
    * @group containers - Operations of container controller
    * @security JWT
@@ -277,6 +282,7 @@ export default class ContainerController extends BaseController {
   /**
    * Returns all public container
    * @route GET /containers/public
+   * @operationId getPublicContainers
    * @group containers - Operations of container controller
    * @security JWT
    * @param {integer} take.query - How many containers the endpoint should return
@@ -305,6 +311,7 @@ export default class ContainerController extends BaseController {
   /**
    * Update an existing container.
    * @route PATCH /containers/{id}
+   * @operationId updateContainer
    * @group containers - Operations of container controller
    * @param {integer} id.path.required - The id of the container which should be updated
    * @param {UpdateContainerRequest.model} container.body.required -
@@ -355,6 +362,7 @@ export default class ContainerController extends BaseController {
   /**
    * Returns all updated containers
    * @route GET /containers/updated
+   * @operationId getUpdatedContainers
    * @group containers - Operations of containers controller
    * @security JWT
    * @param {integer} take.query - How many containers the endpoint should return
@@ -391,6 +399,7 @@ export default class ContainerController extends BaseController {
   /**
    * Returns the requested updated container
    * @route GET /containers/{id}/update
+   * @operationId getSingleUpdatedContainer
    * @group containers - Operations of containers controller
    * @param {integer} id.path.required - The id of the container which should be returned
    * @security JWT

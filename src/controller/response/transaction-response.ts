@@ -30,9 +30,9 @@ import { PaginationResult } from '../../helpers/pagination';
  * is subtracted.
  * @property {UserResponse.model} createdBy - The user that created the transaction, if not
  * same as 'from'..
- * @property {BasePointOfSaleResponse.model} pointOfSale - The POS at which this transaction
+ * @property {BasePointOfSaleResponse.model} pointOfSale.required - The POS at which this transaction
  * has been created
- * @property {Dinero.model} value - Total sum of subtransactions
+ * @property {Dinero.model} value.required - Total sum of subtransactions
  */
 export interface BaseTransactionResponse extends BaseResponse {
   from: UserResponse,
@@ -47,9 +47,9 @@ export interface BaseTransactionResponse extends BaseResponse {
  * is subtracted.
  * @property {BaseUserResponse.model} createdBy - The user that created the transaction, if not
  * same as 'from'.
- * @property {Array.<SubTransactionResponse.model>} subTransactions.required - The subtransactions
+ * @property {Array.<SubTransactionResponse>} subTransactions.required - The subtransactions
  * belonging to this transaction.
- * @property {BasePointOfSaleResponse.model} pointOfSale - The POS at which this transaction
+ * @property {BasePointOfSaleResponse.model} pointOfSale.required - The POS at which this transaction
  * has been created
  * @property {DineroObjectResponse.model} totalPriceInclVat.required - The total cost of the
  * transaction
@@ -67,7 +67,7 @@ export interface TransactionResponse extends BaseResponse {
  * @property {BaseUserResponse.model} to.required - The account that the transaction is added to.
  * @property {BaseContainerResponse.model} container.required - The container from which all
  * products in the SubTransactionRows are bought
- * @property {Array.<SubTransactionRowResponse>} subTransactionsRows.required - The rows of this
+ * @property {Array.<SubTransactionRowResponse>} subTransactionRows.required - The rows of this
  *     SubTransaction
  * @property {DineroObjectResponse.model} totalPriceInclVat.required - The total cost of the sub
  *     transaction
@@ -80,8 +80,8 @@ export interface SubTransactionResponse extends BaseResponse {
 }
 
 /**
- * @typedef {SubTransactionRowResponse} SubTransactionRowResponse
- * @property {BaseProductResponse} product.required - The product that has been bought
+ * @typedef {BaseResponse} SubTransactionRowResponse
+ * @property {BaseProductResponse.model} product.required - The product that has been bought
  * @property {number} amount.required - The amount that has been bought
  * @property {DineroObjectResponse.model} totalPriceInclVat.required - The cost of the
  *     sub transaction row
@@ -94,8 +94,8 @@ export interface SubTransactionRowResponse extends BaseResponse {
 
 /**
  * @typedef PaginatedBaseTransactionResponse
- * @property {PaginationResult.model} _pagination - Pagination metadata
- * @property {Array.<BaseTransactionResponse.model>} records - Returned banners
+ * @property {PaginationResult.model} _pagination.required - Pagination metadata
+ * @property {Array.<BaseTransactionResponse>} records.required - Returned banners
  */
 export interface PaginatedBaseTransactionResponse {
   _pagination: PaginationResult,

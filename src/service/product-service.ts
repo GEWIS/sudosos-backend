@@ -162,6 +162,7 @@ export default class ProductService {
   public static asProductResponse(rawProduct: any): ProductResponse {
     const priceInclVat = DineroTransformer.Instance.from(rawProduct.priceInclVat).toObject();
     const vatPercentage = rawProduct.vat_percentage as number; // percentage
+
     const priceExclVat: DineroObject = {
       ...priceInclVat,
       amount: Math.round(priceInclVat.amount / (1 + (vatPercentage / 100))),

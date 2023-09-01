@@ -29,7 +29,11 @@ import {
   seedUsers, seedAllPointsOfSale, seedVatGroups,
 } from '../../seed';
 import Product from '../../../src/entity/product/product';
-import { PaginatedProductResponse, ProductResponse } from '../../../src/controller/response/product-response';
+import {
+  PaginatedProductResponse,
+  ProductResponse,
+  UpdatedProductResponse,
+} from '../../../src/controller/response/product-response';
 import ProductRevision from '../../../src/entity/product/product-revision';
 import UpdatedProduct from '../../../src/entity/product/updated-product';
 import UpdatedContainer from '../../../src/entity/container/updated-container';
@@ -101,7 +105,7 @@ function productRevisionToProductWithRevision(product: ProductRevision): Product
   };
 }
 
-function validateProductProperties(response: ProductResponse,
+function validateProductProperties(response: ProductResponse | UpdatedProductResponse,
   productParams: CreateProductParams | UpdateProductParams) {
   Object.keys(productParams).forEach((key: keyof CreateProductParams) => {
     if (key === 'priceInclVat') {
@@ -461,7 +465,7 @@ describe('ProductService', async (): Promise<void> => {
         ownerId: ctx.users[0].id,
       };
 
-      const res: ProductResponse = await ProductService.createProduct(productParams);
+      const res: UpdatedProductResponse = await ProductService.createProduct(productParams);
 
       validateProductProperties(res, productParams);
       expect(res).to.exist;
@@ -488,7 +492,7 @@ describe('ProductService', async (): Promise<void> => {
         vat: 1,
       };
 
-      const res: ProductResponse = await ProductService.createProduct(productParams);
+      const res: UpdatedProductResponse = await ProductService.createProduct(productParams);
 
       const updateParams: UpdateProductParams = {
         alcoholPercentage: 10,

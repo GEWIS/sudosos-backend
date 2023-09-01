@@ -34,7 +34,7 @@ export enum InvoiceState {
  * @typedef {BaseEntity} InvoiceStatus
  * @property {Invoice.model} invoice.required - The invoice to which this state belongs.
  * @property {User.model} changedBy.required - The user that changed the invoice status.
- * @property {enum} state.required - The state of the Invoice
+ * @property {string} state.required - The state of the Invoice
  */
 @Entity()
 export default class InvoiceStatus extends BaseEntity {

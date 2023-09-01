@@ -80,6 +80,7 @@ export function parseUserToBaseResponse(user: User, timestamps: boolean): BaseUs
     id: user.id,
     firstName: user.firstName,
     lastName: user.lastName,
+    nickname: user.nickname,
     createdAt: timestamps ? user.createdAt.toISOString() : undefined,
     updatedAt: timestamps ? user.updatedAt.toISOString() : undefined,
   } as BaseUserResponse;
@@ -119,6 +120,7 @@ export interface RawUser {
   id: number,
   firstName: string,
   lastName: string,
+  nickname: string,
   active: number,
   ofAge: number,
   email: string,
@@ -138,6 +140,7 @@ export function parseRawUserToResponse(user: RawUser, timestamps = false): UserR
     id: user.id,
     firstName: user.firstName,
     lastName: user.lastName,
+    nickname: user.nickname,
     createdAt: timestamps ? user.createdAt : undefined,
     updatedAt: timestamps ? user.updatedAt : undefined,
     active: user.active === 1,

@@ -47,6 +47,7 @@ export function verifyUserResponse(
   expect(userResponse.firstName).to.be.not.empty;
   expect(userResponse.lastName).to.be.not.undefined;
   expect(userResponse.lastName).to.be.not.null;
+  expect(userResponse.nickname).to.satisfy((nick: string) => nick == null || nick.length >= 1);
   expect(userResponse.active).to.not.be.null;
   if (canBeDeleted) {
     expect(userResponse.deleted).to.be.a('boolean');
