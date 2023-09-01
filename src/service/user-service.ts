@@ -106,12 +106,12 @@ export default class UserService {
         let searchTerm2 = `%${searchTerms[1]}%`;
 
         builder.andWhere(new Brackets(qb => {
-          qb.where('user.firstName LIKE :searchTerm1 COLLATE utf8_general_ci')
-            .orWhere('user.lastName LIKE :searchTerm2 COLLATE utf8_general_ci')
-            .orWhere('user.firstName LIKE :searchTerm2 COLLATE utf8_general_ci')
-            .orWhere('user.lastName LIKE :searchTerm1 COLLATE utf8_general_ci')
-            .orWhere('user.nickname LIKE :searchTerm2 COLLATE utf8_general_ci')
-            .orWhere('user.nickname LIKE :searchTerm1 COLLATE utf8_general_ci');
+          qb.where('user.firstName LIKE :searchTerm1')
+            .orWhere('user.lastName LIKE :searchTerm2')
+            .orWhere('user.firstName LIKE :searchTerm2')
+            .orWhere('user.lastName LIKE :searchTerm1')
+            .orWhere('user.nickname LIKE :searchTerm2')
+            .orWhere('user.nickname LIKE :searchTerm1');
         }), {
           searchTerm1: searchTerm1,
           searchTerm2: searchTerm2,
@@ -120,10 +120,10 @@ export default class UserService {
         let searchTerm = `%${filters.search}%`;
 
         builder.andWhere(new Brackets(qb => {
-          qb.where('user.firstName LIKE :search COLLATE utf8_general_ci')
-            .orWhere('user.lastName LIKE :search COLLATE utf8_general_ci')
-            .orWhere('user.nickname LIKE :search COLLATE utf8_general_ci')
-            .orWhere('user.email LIKE :search COLLATE utf8_general_ci');
+          qb.where('user.firstName LIKE :search')
+            .orWhere('user.lastName LIKE :search')
+            .orWhere('user.nickname LIKE :search')
+            .orWhere('user.email LIKE :search');
         }), {
           search: searchTerm,
         });
