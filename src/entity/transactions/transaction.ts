@@ -28,6 +28,7 @@ import BalanceService from '../../service/balance-service';
 import Mailer from '../../mailer';
 import UserDebtNotification from '../../mailer/templates/user-debt-notification';
 import DineroTransformer from '../transformer/dinero-transformer';
+import { getLogger } from 'log4js';
 
 /**
  * @typedef {BaseEntity} Transaction
@@ -75,10 +76,10 @@ export default class Transaction extends BaseEntity {
     if (balanceBefore.amount.amount < 0) return;
     // User was not in debt before this new transaction
 
-    await Mailer.getInstance().send(user, new UserDebtNotification({
+    Mailer.getInstance().send(user, new UserDebtNotification({
       name: user.firstName,
       balance: DineroTransformer.Instance.from(currentBalance),
       url: '',
-    }));
+    })).catch((e) => getLogger('Transaction').error(e));
   }
 }
