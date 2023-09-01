@@ -60,7 +60,7 @@ const userGotFinedEnglish = new MailContent<UserGotFinedOptions>({
   getHTML: (context) => `
 <p>Dear ${context.name},</p>
 
-<p>On ${context.referenceDate.toLocaleString('nl-NL')} you had a balance of <span style="color: red; font-weight: bold;">${context.balance.toFormat()}</span>.<br>
+<p>On ${context.referenceDate.toLocaleString('en-US')} you had a balance of <span style="color: red; font-weight: bold;">${context.balance.toFormat()}</span>.<br>
 For your debt, you have been fined for an amount of ${context.fine.toFormat()}.<br>
 This brings your total fine to:<br>
 <span style="color: red; font-weight: bold; font-size: 20px;">${context.totalFine.toFormat()}</span>.</p>

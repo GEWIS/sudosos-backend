@@ -435,6 +435,7 @@ export default class Gewis {
         },
         Fine: {
           ...admin,
+          notify: { all: star },
         },
       },
       assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: 'SudoSOS - BAC PM', user: { id: user.id } } }) != undefined,
