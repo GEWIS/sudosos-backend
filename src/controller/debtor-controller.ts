@@ -174,8 +174,8 @@ export default class DebtorController extends BaseController {
    * @group debtors - Operations of the debtor controller
    * @operationId calculateFines
    * @security JWT
-   * @param {Array<string>} userTypes.query.required - List of all user types fines should be calculated for
-   * @param {string} referenceDate.query - Date to base fines on. If undefined, use now.
+   * @param {Array<string>} userTypes[].query.required - List of all user types fines should be calculated for
+   * @param {string} referenceDate.query - Date to base fines on. If undefined, use the date of the last fine handout event. If that one also does not exist, use now.
    * @returns {Array<UserToFineResponse>} 200 - List of eligible fines
    * @returns {string} 400 - Validation error
    * @returns {string} 500 - Internal server error
