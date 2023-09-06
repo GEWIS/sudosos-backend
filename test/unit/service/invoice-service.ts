@@ -128,7 +128,7 @@ export async function createTransactions(debtorId: number, creditorId: number, t
 export async function
 createInvoiceWithTransfers(debtorId: number, creditorId: number,
   transactionCount: number) {
-  const { transactions, total } = await createTransactions(debtorId, creditorId, transactionCount);
+  const { transactions } = await createTransactions(debtorId, creditorId, transactionCount);
   await new Promise((f) => setTimeout(f, 1000));
 
   const createInvoiceRequest: CreateInvoiceParams = {

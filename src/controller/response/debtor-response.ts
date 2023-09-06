@@ -67,3 +67,11 @@ export interface PaginatedFineHandoutEventResponse {
   _pagination: PaginationResult,
   records: BaseFineHandoutEventResponse[],
 }
+
+/**
+ * @typedef UserFineGroupResponse
+ * @property {Array<FineResponse>} fines - Fines that have been handed out
+ */
+export interface UserFineGroupResponse {
+  fines: FineResponse[];
+}
