@@ -18,6 +18,7 @@
 
 import dinero, { Dinero } from 'dinero.js';
 import {
+  EntityManager,
   FindManyOptions,
 } from 'typeorm';
 import Transfer from '../entity/transactions/transfer';
@@ -69,7 +70,7 @@ export default class TransferService {
     };
   }
 
-  public static async createTransfer(request: TransferRequest) : Promise<Transfer> {
+  public static async createTransfer(request: TransferRequest, manager?: EntityManager) : Promise<Transfer> {
     const transfer = Object.assign(new Transfer(), {
       description: request.description,
       amount: dinero(request.amount as Dinero.Options),
@@ -77,7 +78,11 @@ export default class TransferService {
       to: request.toId ? await User.findOne({ where: { id: request.toId } }) : undefined,
     });
 
-    await transfer.save();
+    if (manager) {
+      await manager.save(transfer);
+    } else {
+      await transfer.save();
+    }
     return transfer;
   }
 
