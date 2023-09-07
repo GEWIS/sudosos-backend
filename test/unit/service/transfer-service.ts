@@ -30,7 +30,7 @@ import User from '../../../src/entity/user/user';
 import TransferService from '../../../src/service/transfer-service';
 import Swagger from '../../../src/start/swagger';
 import {
-  seedContainers,
+  seedContainers, seedFines,
   seedInvoices, seedPayoutRequests, seedPointsOfSale,
   seedProductCategories,
   seedProducts, seedStripeDeposits,
@@ -39,6 +39,7 @@ import {
   seedUsers,
   seedVatGroups,
 } from '../../seed';
+import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
 
 describe('TransferService', async (): Promise<void> => {
   let ctx: {
@@ -66,6 +67,10 @@ describe('TransferService', async (): Promise<void> => {
     const { payoutRequestTransfers } = await seedPayoutRequests(users);
     const { stripeDepositTransfers } = await seedStripeDeposits(users);
 
+    const transfers2 = transfers.concat(invoiceTransfers).concat(payoutRequestTransfers).concat(stripeDepositTransfers);
+
+    const { users: users2, fineTransfers } = await seedFines(users, transactions, transfers, true);
+
     // start app
     const app = express();
     const specification = await Swagger.initialize(app);
@@ -76,8 +81,8 @@ describe('TransferService', async (): Promise<void> => {
       connection,
       app,
       specification,
-      users,
-      transfers: transfers.concat(invoiceTransfers).concat(payoutRequestTransfers).concat(stripeDepositTransfers),
+      users: users2,
+      transfers: transfers2.concat(fineTransfers),
     };
   });
   after(async () => {
@@ -119,6 +124,7 @@ describe('TransferService', async (): Promise<void> => {
 
     it('should return corresponding invoice if transfer has any', async () => {
       const transfer = ctx.transfers.filter((t) => t.invoice != null)[0];
+      expect(transfer).to.not.be.undefined;
       const res: PaginatedTransferResponse = await TransferService
         .getTransfers({ id: transfer.id });
       expect(res.records.length).to.equal(1);
@@ -127,6 +133,7 @@ describe('TransferService', async (): Promise<void> => {
 
     it('should return corresponding deposit if transfer has any', async () => {
       const transfer = ctx.transfers.filter((t) => t.deposit != null)[0];
+      expect(transfer).to.not.be.undefined;
       const res: PaginatedTransferResponse = await TransferService
         .getTransfers({ id: transfer.id });
       expect(res.records.length).to.equal(1);
@@ -135,10 +142,42 @@ describe('TransferService', async (): Promise<void> => {
 
     it('should return corresponding payoutRequest if transfer has any', async () => {
       const transfer = ctx.transfers.filter((t) => t.payoutRequest != null)[0];
+      expect(transfer).to.not.be.undefined;
       const res: PaginatedTransferResponse = await TransferService
         .getTransfers({ id: transfer.id });
       expect(res.records.length).to.equal(1);
       expect(res.records[0].payoutRequest).to.not.be.null;
+    });
+
+    it('should return corresponding fine if transfer has any', async () => {
+      const transfer = ctx.transfers.filter((t) => t.fine != null)[0];
+      expect(transfer).to.not.be.undefined;
+      const res: PaginatedTransferResponse = await TransferService
+        .getTransfers({ id: transfer.id });
+      expect(res.records.length).to.equal(1);
+      expect(res.records[0].fine).to.not.be.null;
+    });
+
+    it('should return corresponding waived fines if transfer has any', async () => {
+      const user = ctx.users.find((u) => u.currentFines != null);
+      const userFineGroup = user.currentFines;
+      const amount = userFineGroup.fines.reduce((sum, f) => sum.add(f.amount), DineroTransformer.Instance.from(0));
+
+      const t = await Transfer.save({
+        toId: user.id,
+        version: 1,
+        description: '',
+        amount,
+        waivedFines: userFineGroup,
+      } as Transfer);
+
+      const res: PaginatedTransferResponse = await TransferService
+        .getTransfers({ id: t.id });
+      expect(res.records.length).to.equal(1);
+      expect(res.records[0].waivedFines).to.not.be.null;
+
+      // Cleanup
+      await Transfer.delete(t.id);
     });
   });
   describe('postTransfer function', () => {
