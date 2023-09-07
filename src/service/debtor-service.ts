@@ -228,7 +228,7 @@ export default class DebtorService {
           fromId: user.id,
           description: `Fine for balance of ${dinero({ amount: b.amount.amount }).toFormat()} on ${date.toLocaleDateString()}.`,
           toId: undefined,
-        });
+        }, manager);
 
         emails.push({ user, email: new UserGotFined({
           name: user.firstName,
