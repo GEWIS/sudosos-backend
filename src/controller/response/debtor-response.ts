@@ -52,7 +52,7 @@ export interface BaseFineHandoutEventResponse extends BaseResponse {
 
 /**
  * @typedef {BaseFineHandoutEventResponse} FineHandoutEventResponse
- * @property {Array<FineResponse>} fines - Fines that have been handed out
+ * @property {Array.<FineResponse>} fines - Fines that have been handed out
  */
 export interface FineHandoutEventResponse extends BaseFineHandoutEventResponse {
   fines: FineResponse[];
@@ -61,9 +61,17 @@ export interface FineHandoutEventResponse extends BaseFineHandoutEventResponse {
 /**
  * @typedef PaginatedFineHandoutEventResponse
  * @property {PaginationResult.model} _pagination - Pagination metadata
- * @property {Array<BaseFineHandoutEventResponse>} records - Returned fine handout events
+ * @property {Array.<BaseFineHandoutEventResponse>} records - Returned fine handout events
  */
 export interface PaginatedFineHandoutEventResponse {
   _pagination: PaginationResult,
   records: BaseFineHandoutEventResponse[],
+}
+
+/**
+ * @typedef UserFineGroupResponse
+ * @property {Array.<FineResponse>} fines - Fines that have been handed out
+ */
+export interface UserFineGroupResponse {
+  fines: FineResponse[];
 }

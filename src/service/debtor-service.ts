@@ -23,7 +23,7 @@ import {
   BaseFineHandoutEventResponse,
   FineHandoutEventResponse,
   FineResponse,
-  PaginatedFineHandoutEventResponse,
+  PaginatedFineHandoutEventResponse, UserFineGroupResponse,
   UserToFineResponse,
 } from '../controller/response/debtor-response';
 import FineHandoutEvent from '../entity/fine/fineHandoutEvent';
@@ -98,6 +98,12 @@ export default class DebtorService {
     return {
       ...this.asBaseFineHandoutEventResponse(e),
       fines: e.fines.map((fine) => this.asFineResponse(fine)),
+    };
+  }
+
+  static asUserFineGroupResponse(e: UserFineGroup): UserFineGroupResponse {
+    return {
+      fines: e.fines.map((f) => this.asFineResponse(f)),
     };
   }
 

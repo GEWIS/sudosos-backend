@@ -1512,8 +1512,7 @@ export async function seedSingleFines(users: User[], transactions: Transaction[]
       amount,
       description: 'Seeded fine',
     } as Transfer);
-    return transfer.save().then(async (t) => {
-      fineTransfers.push(t);
+    const fine = await transfer.save().then(async (t) => {
       const f = Object.assign(new Fine(), {
         fineHandoutEvent,
         userFineGroup,
@@ -1522,6 +1521,9 @@ export async function seedSingleFines(users: User[], transactions: Transaction[]
       } as Fine);
       return f.save();
     });
+    transfer.fine = fine;
+    fineTransfers.push(transfer);
+    return fine;
   }));
 
   return {

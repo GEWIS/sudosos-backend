@@ -33,7 +33,7 @@ export default class UserFineGroup extends BaseEntity {
   @OneToMany(() => Fine, (fine) => fine.userFineGroup)
   public fines: Fine[];
 
-  @OneToOne(() => Transfer, { nullable: true })
+  @OneToOne(() => Transfer, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn()
   public waivedTransfer?: Transfer | null;
 }
