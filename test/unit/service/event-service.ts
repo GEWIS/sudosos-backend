@@ -256,6 +256,77 @@ describe('eventService', () => {
 
       expect(sendMailFake.callCount).to.equal(users.length);
     });
+    it('should send a reminder to events starting between two to three days when no date given', async () => {
+      const event = ctx.events[0];
+      const users = Array.from(new Set(event.answers.filter((a) => a.availability == null).map((a) => a.user)));
+      // Add a second to the two days to account for running time of the test case
+      const startDate = new Date(new Date().getTime() + 1000 * 3600 * 24 * 2.5);
+      await EventService.updateEvent(event.id, {
+        startDate,
+      });
+
+      await EventService.sendEventPlanningReminders();
+
+      expect(sendMailFake.callCount).to.equal(users.length);
+
+      // Cleanup
+      await EventService.updateEvent(event.id, {
+        startDate: event.startDate,
+      });
+    });
+    it('should send a reminder to events starting in two days from now', async () => {
+      const event = ctx.events[0];
+      const now = new Date();
+      const users = Array.from(new Set(event.answers.filter((a) => a.availability == null).map((a) => a.user)));
+      const startDate = new Date(now.getTime() + 1000 * 3600 * 24 * 2);
+      await EventService.updateEvent(event.id, {
+        startDate,
+      });
+
+      await EventService.sendEventPlanningReminders(now);
+
+      expect(sendMailFake.callCount).to.equal(users.length);
+
+      // Cleanup
+      await EventService.updateEvent(event.id, {
+        startDate: event.startDate,
+      });
+    });
+    it('should send a reminder to events starting in three days from now', async () => {
+      const event = ctx.events[0];
+      const now = new Date();
+      const users = Array.from(new Set(event.answers.filter((a) => a.availability == null).map((a) => a.user)));
+      const startDate = new Date(now.getTime() + 1000 * 3600 * 24 * 3);
+      await EventService.updateEvent(event.id, {
+        startDate,
+      });
+
+      await EventService.sendEventPlanningReminders(now);
+
+      expect(sendMailFake.callCount).to.equal(users.length);
+
+      // Cleanup
+      await EventService.updateEvent(event.id, {
+        startDate: event.startDate,
+      });
+    });
+    it('should not send a reminder to events starting in three days and one millisecond from now', async () => {
+      const event = ctx.events[0];
+      const now = new Date();
+      const startDate = new Date(now.getTime() + 1000 * 3600 * 24 * 3 + 1);
+      await EventService.updateEvent(event.id, {
+        startDate,
+      });
+
+      await EventService.sendEventPlanningReminders(now);
+
+      expect(sendMailFake.callCount).to.equal(0);
+
+      // Cleanup
+      await EventService.updateEvent(event.id, {
+        startDate: event.startDate,
+      });
+    });
   });
 
   describe('syncEventShiftAnswers', () => {
@@ -284,6 +355,42 @@ describe('eventService', () => {
         expect(r.user.id).to.equal(roleWithUser.userId);
       });
 
+      expect(await EventShiftAnswer.findOne({ where: { eventId: event.id, userId: roleWithUser.userId } })).to.be.null;
+
+      // Cleanup
+      await AssignedRole.insert({
+        userId: roleWithUser.userId,
+        role: roleWithUser.role,
+        createdAt: roleWithUser.createdAt,
+        updatedAt: roleWithUser.updatedAt,
+        version: roleWithUser.version,
+      });
+      await EventService.syncEventShiftAnswers(event, shiftIds);
+    });
+    it('should throw an error when a non-existent shift is provided', async () => {
+      await expect(EventService.syncEventShiftAnswers(ctx.events[0], [9999999]))
+        .to.eventually.be.rejectedWith('Invalid list of shiftIds provided.');
+    });
+  });
+
+  describe('syncAllEventShiftAnswers', () => {
+    it('should correctly change answers when users change role', async () => {
+      const event = ctx.events.find((e) => e.answers.length > 0 && e.answers.every((a) => ctx.eventShifts.map((s) => s.id).includes(a.shiftId)));
+      const answer = event.answers[event.answers.length - 1];
+      const shiftIds = event.shifts.map((a) => a.id);
+      const roleWithUsers = ctx.roles.filter((r) => r.userId === answer.userId);
+      const roleWithUser = roleWithUsers[0];
+      expect(event).to.not.be.undefined;
+      expect(roleWithUsers).to.not.be.undefined;
+      expect(roleWithUsers.length).to.equal(1);
+      expect(await EventShiftAnswer.findOne({ where: { eventId: event.id, shiftId: answer.shiftId, userId: answer.userId } })).to.not.be.null;
+
+      await EventService.syncAllEventShiftAnswers();
+      expect(await EventShiftAnswer.findOne({ where: { eventId: event.id, shiftId: answer.shiftId, userId: answer.userId } })).to.not.be.null;
+
+      await AssignedRole.delete({ userId: roleWithUser.userId, role: roleWithUser.role });
+
+      await EventService.syncAllEventShiftAnswers();
       expect(await EventShiftAnswer.findOne({ where: { eventId: event.id, userId: roleWithUser.userId } })).to.be.null;
 
       // Cleanup
@@ -347,6 +454,17 @@ describe('eventService', () => {
 
       // Cleanup
       await Event.delete(event.id);
+    });
+    it('should throw an error when a non-existent shift is provided', async () => {
+      const params: CreateEventParams = {
+        createdById: ctx.users[0].id,
+        name: 'TestEvent',
+        startDate: new Date(),
+        endDate: new Date(new Date().getTime() + 1000 * 60 * 60),
+        shiftIds: [9999999],
+        type: EventType.BORREL,
+      };
+      await expect(EventService.createEvent(params)).to.eventually.be.rejectedWith('Invalid list of shiftIds provided.');
     });
   });
 
@@ -443,6 +561,11 @@ describe('eventService', () => {
       expect(actualIds).to.deep.equalInAnyOrder(shiftIds);
       expect(actualIds.findIndex((i) => i === newShift.id)).to.equal(-1);
     });
+    it('should throw an error when a non-existent shift is provided', async () => {
+      await expect(EventService.updateEvent(originalEvent.id, {
+        shiftIds: [9999999],
+      })).to.eventually.be.rejectedWith('Invalid list of shiftIds provided.');
+    });
     it('should return undefined if event does not exist', async () => {
       const event = await EventService.updateEvent(9999999999, { name: 'does not matter' });
       expect(event).to.be.undefined;
@@ -530,6 +653,10 @@ describe('eventService', () => {
       expect((await EventShift.findOne({ where: { id: originalShift.id } })).roles)
         .to.deep.equalInAnyOrder(roles);
     });
+    it('should return undefined if shift does not exist', async () => {
+      const shift = await EventService.updateEventShift(99999, {});
+      expect(shift).to.be.undefined;
+    });
   });
 
   describe('updateEventShiftAnswer', () => {
@@ -594,6 +721,10 @@ describe('eventService', () => {
         eventId, shiftId, userId,
       } })).selected).to.equal(selected);
     });
+    it('should return undefined if answer does not exist', async () => {
+      const answer = await EventService.updateEventShiftAnswer(99999, 99999, 99999, {});
+      expect(answer).to.be.undefined;
+    });
   });
 
   describe('deleteShift', () => {
@@ -657,6 +788,9 @@ describe('eventService', () => {
         name: shift.name,
         roles: [],
       });
+    });
+    it('should simply return when shift does not exist', async () => {
+      await expect(EventService.deleteEventShift(9999999)).to.eventually.not.throw;
     });
   });
 

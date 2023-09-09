@@ -367,11 +367,6 @@ export default class EventController extends BaseController {
       return;
     }
 
-    if (body.selected === undefined || (body.selected !== true && body.selected !== false)) {
-      res.status(400).json('Invalid event assignment.');
-      return;
-    }
-
     let params: Partial<UpdateEventAnswerParams> = {
       selected: body.selected,
     };
@@ -421,11 +416,6 @@ export default class EventController extends BaseController {
     } catch (error) {
       this.logger.error('Could not update event:', error);
       res.status(500).json('Internal server error.');
-      return;
-    }
-
-    if (body.availability == null) {
-      res.status(400).json('Invalid event availability.');
       return;
     }
 

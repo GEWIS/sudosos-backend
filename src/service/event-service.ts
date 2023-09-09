@@ -107,7 +107,7 @@ export async function parseUpdateEventRequestParameters(
   if (params.startDate && params.endDate && params.endDate.getTime() < params.startDate.getTime()) throw new Error('EndDate is before startDate.');
   if (!params.startDate && params.endDate !== undefined && id !== undefined) {
     const event = await Event.findOne({ where: { id } });
-    if (event.startDate.getTime() > params.endDate.getTime()) throw new Error('EndDate is before startDate.');
+    if (event.startDate.getTime() > params.endDate.getTime()) throw new Error('EndDate is before existing startDate.');
   }
 
   if (params.shiftIds !== undefined) {
@@ -273,7 +273,7 @@ export default class EventService {
     }
 
     const shifts = await EventShift.find({ where: { id: In(shiftIds) } });
-    if (shifts.length != shiftIds.length) throw new Error('Invalid shift IDs provided');
+    if (shifts.length != shiftIds.length) throw new Error('Invalid list of shiftIds provided.');
 
     // Get the answer sheet for every user that can do a shift
     // Create it if it does not exist

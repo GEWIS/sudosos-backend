@@ -907,17 +907,19 @@ describe('EventController', () => {
       expect(res.body).to.equal('EndDate is before startDate.');
     });
     it('should return 400 if endDate is before the existing startDate', async () => {
+      const startDate = new Date(new Date().getTime() + 1000 * 3600 * 24 * 2);
+      const endDate = new Date(new Date().getTime() + 1000 * 3600 * 24);
       await Event.update(originalEvent.id, {
-        startDate: originalEvent.startDate,
+        startDate,
       });
       const res = await request(ctx.app)
         .patch(`/events/${originalEvent.id}`)
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send({
-          endDate: new Date(originalEvent.startDate.getTime() - 10),
+          endDate,
         });
       expect(res.status).to.equal(400);
-      expect(res.body).to.equal('EndDate is before startDate.');
+      expect(res.body).to.equal('EndDate is before existing startDate.');
     });
     it('should return 400 if shiftIds is not an array', async () => {
       const res = await request(ctx.app)
@@ -981,6 +983,14 @@ describe('EventController', () => {
         });
       expect(res.status).to.equal(400);
       expect(res.body).to.equal(`Shift with ID ${shift.id} has no users. Make sure the shift's roles are correct.`);
+    });
+    it('should return 404 if event does not exist', async () => {
+      const res = await request(ctx.app)
+        .patch('/events/999999')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(req);
+      expect(res.status).to.equal(404);
+      expect(res.body).to.be.empty;
     });
     it('should return 403 if not admin', async () => {
       const res = await request(ctx.app)
