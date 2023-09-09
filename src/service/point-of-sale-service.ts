@@ -20,7 +20,6 @@ import {
   PaginatedPointOfSaleResponse,
   PointOfSaleResponse,
   PointOfSaleWithContainersResponse,
-  UpdatedPointOfSaleResponse,
 } from '../controller/response/point-of-sale-response';
 import PointOfSale from '../entity/point-of-sale/point-of-sale';
 import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision';
@@ -93,12 +92,12 @@ export default class PointOfSaleService {
    * @param pointOfSale - The point of sale to decorate
    */
   private static async asPointOfSaleResponseWithContainers(
-    pointOfSale: PointOfSaleResponse | UpdatedPointOfSaleResponse,
+    pointOfSale: PointOfSaleResponse,
   ): Promise<PointOfSaleWithContainersResponse> {
-    const filters: any = { posId: pointOfSale.id };
-    if (Object.prototype.hasOwnProperty.call(pointOfSale, 'revision')) {
-      filters.posRevision = (pointOfSale as PointOfSaleResponse).revision;
-    }
+    const filters: any = {
+      posId: pointOfSale.id,
+      posRevision: pointOfSale.revision,
+    };
 
     const containers = (await ContainerService
       .getContainers({ ...filters, returnProducts: true }))

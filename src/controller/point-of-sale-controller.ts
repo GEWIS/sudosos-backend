@@ -216,7 +216,7 @@ export default class PointOfSaleController extends BaseController {
    * @param {UpdatePointOfSaleRequest.model} pointofsale.body.required -
    *    The Point of Sale which should be updated
    * @security JWT
-   * @returns {UpdatedPointOfSaleResponse.model} 200 - The updated Point of Sale entity
+   * @returns {PointOfSaleWithContainersResponse.model} 200 - The updated Point of Sale entity
    * @returns {string} 400 - Validation error
    * @returns {string} 404 - Product not found error
    * @returns {string} 500 - Internal server error

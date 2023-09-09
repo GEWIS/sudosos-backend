@@ -51,30 +51,10 @@ export interface PaginatedPointOfSaleResponse {
 }
 
 /**
- * @typedef {BasePointOfSaleResponse} UpdatedPointOfSaleResponse
- * @property {BaseUserResponse.model} owner.required - The owner of the point-of-sale.
- * @property {boolean} useAuthentication.required - Whether this POS requires users to
- * authenticate themselves before making a transaction
- */
-export interface UpdatedPointOfSaleResponse extends BasePointOfSaleResponse {
-  owner: BaseUserResponse,
-  useAuthentication: boolean;
-}
-
-/**
  * @typedef {PointOfSaleResponse} PointOfSaleWithContainersResponse
  * @property {Array.<ContainerWithProductsResponse>} containers.required - The containers
  * in the point-of-sale.
  */
 export interface PointOfSaleWithContainersResponse extends PointOfSaleResponse {
-  containers: ContainerWithProductsResponse[],
-}
-
-/**
- * @typedef {UpdatedPointOfSaleResponse} UpdatedPointOfSaleWithContainersResponse
- * @property {Array.<ContainerWithProductsResponse>} containers.required - The containers
- * in the point-of-sale.
- */
-export interface UpdatedPointOfSaleWithContainersResponse extends UpdatedPointOfSaleResponse {
   containers: ContainerWithProductsResponse[],
 }

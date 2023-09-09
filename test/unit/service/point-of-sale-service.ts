@@ -34,7 +34,6 @@ import Swagger from '../../../src/start/swagger';
 import {
   PaginatedPointOfSaleResponse,
   PointOfSaleResponse, PointOfSaleWithContainersResponse,
-  UpdatedPointOfSaleResponse,
 } from '../../../src/controller/response/point-of-sale-response';
 import PointOfSaleService from '../../../src/service/point-of-sale-service';
 import {
@@ -51,8 +50,7 @@ chai.use(deepEqualInAnyOrder);
  * @param response
  * @param superset
  */
-function pointOfSaleSuperset(response: PointOfSaleResponse[] | UpdatedPointOfSaleResponse[],
-  superset: PointOfSale[]): Boolean {
+function pointOfSaleSuperset(response: PointOfSaleResponse[], superset: PointOfSale[]): Boolean {
   return response.every((searchPOS: PointOfSaleResponse) => (
     superset.find((supersetPOS: PointOfSale) => (
       supersetPOS.id === searchPOS.id

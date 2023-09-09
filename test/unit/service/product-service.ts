@@ -31,7 +31,6 @@ import {
 import Product from '../../../src/entity/product/product';
 import {
   ProductResponse,
-  UpdatedProductResponse,
 } from '../../../src/controller/response/product-response';
 import ProductRevision from '../../../src/entity/product/product-revision';
 import Container from '../../../src/entity/container/container';
@@ -101,8 +100,7 @@ function productRevisionToProductWithRevision(product: ProductRevision): Product
   };
 }
 
-function validateProductProperties(response: ProductResponse | UpdatedProductResponse,
-  productParams: CreateProductParams | UpdateProductParams) {
+function validateProductProperties(response: ProductResponse, productParams: CreateProductParams | UpdateProductParams) {
   Object.keys(productParams).forEach((key: keyof CreateProductParams) => {
     if (key === 'priceInclVat') {
       expect((productParams[key] as any).amount).to.be.equal((response.priceInclVat.amount));
