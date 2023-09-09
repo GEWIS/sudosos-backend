@@ -62,21 +62,6 @@ export interface UpdatedPointOfSaleResponse extends BasePointOfSaleResponse {
 }
 
 /**
- * @typedef {UpdatedPointOfSaleResponse | UpdatedPointOfSaleWithContainersResponse} UpdatedPOSResponses
- */
-type UpdatedPOSResponses = UpdatedPointOfSaleResponse | UpdatedPointOfSaleWithContainersResponse;
-
-/**
- * @typedef PaginatedUpdatedPointOfSaleResponse
- * @property {PaginationResult.model} _pagination.required - Pagination metadata
- * @property {Array.<UpdatedPOSResponses>} records.required - Returned points of sale
- */
-export interface PaginatedUpdatedPointOfSaleResponse {
-  _pagination: PaginationResult,
-  records: (UpdatedPOSResponses)[],
-}
-
-/**
  * @typedef {PointOfSaleResponse} PointOfSaleWithContainersResponse
  * @property {Array.<ContainerWithProductsResponse>} containers.required - The containers
  * in the point-of-sale.

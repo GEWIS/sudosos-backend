@@ -28,19 +28,21 @@ export function dateToUTC(date: Date): Date {
 }
 
 /**
+ * Pad a string of the given integer
+ * @param i
+ * @param pad
+ */
+function ts(i: number, pad = 2): string {
+  return i.toString().padStart(pad, '0');
+}
+
+/**
  * Print the date to a string in MySQL format (YYYY-MM-DD mm:hh:ss), but convert it to UTC
  * @param date
  */
 export function toUTCMySQLString(date: Date): string {
-  return date.toJSON().slice(0, 19).replace('T', ' ');
-}
-
-/**
- * Return a two digit string of the given integer
- * @param i
- */
-function ts(i: number): string {
-  return i.toString().padStart(2, '0');
+  return date.toJSON().slice(0, 19)
+    .replace('T', ' ') + '.' + ts(date.getMilliseconds(), 3);
 }
 
 /**
@@ -49,7 +51,7 @@ function ts(i: number): string {
  * @param date
  */
 export function toLocalMySQLString(date: Date): string {
-  return `${date.getFullYear()}-${ts(date.getMonth() + 1)}-${ts(date.getDate())} ${ts(date.getHours())}:${ts(date.getMinutes())}:${ts(date.getSeconds())}`;
+  return `${date.getFullYear()}-${ts(date.getMonth() + 1)}-${ts(date.getDate())} ${ts(date.getHours())}:${ts(date.getMinutes())}:${ts(date.getSeconds())}.${ts(date.getMilliseconds(), 3)}`;
 }
 
 /**

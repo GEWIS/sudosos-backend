@@ -25,8 +25,8 @@ import User from '../../../src/entity/user/user';
 import Invoice from '../../../src/entity/invoices/invoice';
 import Database from '../../../src/database/database';
 import {
-  seedAllContainers,
-  seedAllProducts,
+  seedContainers,
+  seedProducts,
   seedInvoices,
   seedPointsOfSale,
   seedProductCategories,
@@ -162,15 +162,14 @@ describe('InvoiceService', () => {
     const users = await seedUsers();
     const categories = await seedProductCategories();
     const vatGroups = await seedVatGroups();
-    const { products, productRevisions } = await seedAllProducts(
+    const { productRevisions } = await seedProducts(
       users,
       categories,
       vatGroups,
     );
-    const { containerRevisions } = await seedAllContainers(
+    const { containerRevisions } = await seedContainers(
       users,
       productRevisions,
-      products,
     );
     const { pointOfSaleRevisions } = await seedPointsOfSale(
       users,

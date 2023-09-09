@@ -200,7 +200,8 @@ describe('BalanceController', (): void => {
       expect(res.status).to.equal(403);
     });
     it('should return balances based on date', async () => {
-      const date = ctx.transactions[1].createdAt;
+      const date = new Date(Math.ceil(
+        ctx.transactions[Math.round(ctx.transactions.length / 2)].createdAt.getTime() / 1000) * 1000);
       const res = await request(ctx.app)
         .get('/balances/all')
         .set('Authorization', `Bearer ${ctx.adminToken}`)

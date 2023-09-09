@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  Connection, In, IsNull, Not,
+  Connection, IsNull, Not,
 } from 'typeorm';
 import express, { Application } from 'express';
 import chai, { request, expect } from 'chai';
@@ -26,7 +26,7 @@ import deepEqualInAnyOrder from 'deep-equal-in-any-order';
 import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import {
-  seedAllContainers, seedAllProducts, seedProductCategories, seedVatGroups,
+  seedContainers, seedProductCategories, seedProducts, seedVatGroups,
 } from '../../seed';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Swagger from '../../../src/start/swagger';
@@ -41,7 +41,6 @@ import {
 } from '../../../src/controller/response/container-response';
 import { ProductResponse } from '../../../src/controller/response/product-response';
 import UpdatedContainer from '../../../src/entity/container/updated-container';
-import UpdatedProduct from '../../../src/entity/product/updated-product';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import { CreateContainerRequest, UpdateContainerRequest } from '../../../src/controller/request/container-request';
 import { INVALID_ORGAN_ID, INVALID_PRODUCT_ID } from '../../../src/controller/request/validators/validation-errors';
@@ -124,9 +123,9 @@ describe('ContainerController', async (): Promise<void> => {
 
     const categories = await seedProductCategories();
     const vatGroups = await seedVatGroups();
-    const { products, productRevisions } = (
-      await seedAllProducts([adminUser, localUser], categories, vatGroups));
-    await seedAllContainers([adminUser, localUser], productRevisions, products);
+    const { productRevisions } = (
+      await seedProducts([adminUser, localUser], categories, vatGroups));
+    await seedContainers([adminUser, localUser], productRevisions);
 
     // create bearer tokens
     const tokenHandler = new TokenHandler({
@@ -468,9 +467,8 @@ describe('ContainerController', async (): Promise<void> => {
       expect(await Container.count()).to.equal(containerCount + 1);
       containerProductsEq(ctx.validContainerReq, containerResponse);
 
-      const databaseProduct = await UpdatedContainer.findOne({
-        where:
-          { container: { id: (res.body as ContainerResponse).id } },
+      const databaseProduct = await Container.findOne({
+        where: { id: (res.body as ContainerResponse).id },
       });
       expect(databaseProduct).to.exist;
     });
@@ -512,98 +510,6 @@ describe('ContainerController', async (): Promise<void> => {
       expect(res.status).to.equal(400);
     });
   });
-  describe('POST /containers/:id/approve', () => {
-    it('should approve the container update if it exists and admin', async () => {
-      const owner = await User.findOne({ where: { deleted: false, type: UserType.ORGAN } });
-      const containerApprovedProducts: CreateContainerRequest = {
-        products: [1],
-        public: true,
-        name: 'Valid container',
-        ownerId: owner.id,
-      };
-
-      const newContainer = await request(ctx.app)
-        .post('/containers')
-        .set('Authorization', `Bearer ${ctx.token}`)
-        .send(containerApprovedProducts);
-
-      expect(ctx.specification.validateModel(
-        'ContainerWithProductsResponse',
-        newContainer.body,
-        false,
-        true,
-      ).valid).to.be.true;
-
-      const { id } = newContainer.body;
-
-      // sanity check / precondition
-      expect(await UpdatedContainer.findOne({ where: { container: { id } } })).to.exist;
-
-      const res = await request(ctx.app)
-        .post(`/containers/${id}/approve`)
-        .set('Authorization', `Bearer ${ctx.adminToken}`);
-
-      // sanity check
-      expect(await UpdatedContainer.findOne({ where: { container: { id } } })).to.be.null;
-
-      const latest = await request(ctx.app)
-        .get(`/containers/${id}`)
-        .set('Authorization', `Bearer ${ctx.adminToken}`);
-
-      expect(latest.body).to.deep.equal(res.body);
-      expect(res.status).to.equal(200);
-    });
-    it('should return an HTTP 200 if the container has unapproved products', async () => {
-      // precondition
-      const productId = 4;
-      expect(await UpdatedProduct.findOne({ where: { product: { id: productId } } })).to.exist;
-
-      const owner = await User.findOne({ where: { deleted: false, type: UserType.ORGAN } });
-      const container: CreateContainerRequest = {
-        name: 'Container with unapproved products.',
-        products: [productId],
-        public: true,
-        ownerId: owner.id,
-      };
-
-      const newContainer = (await request(ctx.app)
-        .post('/containers')
-        .set('Authorization', `Bearer ${ctx.token}`)
-        .send(container)).body as ContainerWithProductsResponse;
-
-      const res = await request(ctx.app)
-        .post(`/containers/${newContainer.id}/approve`)
-        .set('Authorization', `Bearer ${ctx.adminToken}`);
-
-      expect(res.status).to.equal(200);
-    });
-    it('should return an HTTP 404 and an empty response if the product has no pending update', async () => {
-      const id = 3;
-
-      // sanity check / precondition
-      expect(await UpdatedContainer.findOne({ where: { container: { id } } })).to.be.null;
-      expect(await Container.findOne({ where: { id } })).to.exist;
-
-      const res = await request(ctx.app)
-        .post(`/containers/${id}/approve`)
-        .set('Authorization', `Bearer ${ctx.adminToken}`);
-
-      expect(res.status).to.equal(404);
-      expect(res.body).to.equal('Container update not found.');
-    });
-    it('should return an HTTP 403 if not admin', async () => {
-      const id = 5;
-      // sanity check / precondition
-      expect(await UpdatedContainer.findOne({ where: { container: { id } } })).to.exist;
-
-      const res = await request(ctx.app)
-        .post(`/containers/${id}/approve`)
-        .set('Authorization', `Bearer ${ctx.token}`);
-
-      expect(res.body).to.be.empty;
-      expect(res.status).to.equal(403);
-    });
-  });
   describe('PATCH /containers/:id', () => {
     describe('verifyContainerRequest Specification', async () => {
       testValidationOnRoute('patch', '/containers/1');
@@ -622,11 +528,11 @@ describe('ContainerController', async (): Promise<void> => {
         true,
       ).valid).to.be.true;
 
+      const body = res.body as ContainerWithProductsResponse;
       containerProductsEq(ctx.validContainerReq, res.body as ContainerWithProductsResponse);
 
-      const databaseContainer = await UpdatedContainer.findOne({
-        where:
-          { container: { id: (res.body as ContainerResponse).id } },
+      const databaseContainer = await Container.findOne({
+        where: { id: body.id, currentRevision: body.revision },
       });
       expect(databaseContainer).to.exist;
     });
@@ -644,11 +550,11 @@ describe('ContainerController', async (): Promise<void> => {
         true,
       ).valid).to.be.true;
 
+      const body = res.body as ContainerWithProductsResponse;
       containerProductsEq(ctx.validContainerReq, res.body as ContainerWithProductsResponse);
 
-      const databaseContainer = await UpdatedContainer.findOne({
-        where:
-          { container: { id: (res.body as ContainerResponse).id } },
+      const databaseContainer = await Container.findOne({
+        where: { id: body.id, currentRevision: body.revision },
       });
       expect(databaseContainer).to.exist;
     });
@@ -741,162 +647,6 @@ describe('ContainerController', async (): Promise<void> => {
         async (container) => (expect(container.public).true),
       );
       expect(res.status).to.equal(200);
-    });
-  });
-  describe('GET /containers/:id/update', () => {
-    it('should return correct model', async () => {
-      const res = await request(ctx.app)
-        .get('/containers/4/update')
-        .set('Authorization', `Bearer ${ctx.adminToken}`);
-      expect(res.status).to.equal(200);
-      expect(ctx.specification.validateModel(
-        'ContainerWithProductsResponse',
-        res.body,
-        false,
-        true,
-      ).valid).to.be.true;
-    });
-    it('should return an HTTP 200 and the updated container if exists and if admin', async () => {
-      const res = await request(ctx.app)
-        .get('/containers/4/update')
-        .set('Authorization', `Bearer ${ctx.adminToken}`);
-
-      // sanity check / precondition
-      expect(await UpdatedContainer.findOne({ where: { container: { id: 4 } } })).to.exist;
-      expect((res.body as ContainerWithProductsResponse)).to.exist;
-      expect(res.status).to.equal(200);
-    });
-    it('should return an HTTP 200 and the updated container if container is own', async () => {
-      const updatedContainers = (await UpdatedContainer.find({ relations: ['container'] })).map((c) => c.container.id);
-      const { id } = (await Container.find({
-        relations: ['owner'],
-        where: {
-          id: In(updatedContainers),
-          owner: { id: ctx.localUser.id },
-          public: true,
-        },
-      }))[0];
-
-      const res = await request(ctx.app)
-        .get(`/containers/${id}/update`)
-        .set('Authorization', `Bearer ${ctx.adminToken}`);
-
-      expect((res.body as ContainerWithProductsResponse)).to.exist;
-      expect(res.status).to.equal(200);
-    });
-    it('should return an HTTP 404 if the container with the given id does not exist', async () => {
-      const res = await request(ctx.app)
-        .get(`/containers/${(await Container.count()) + 2}/update`)
-        .set('Authorization', `Bearer ${ctx.adminToken}`);
-
-      // sanity check
-      expect(await Container.findOne({
-        where:
-          { id: (await Container.count()) + 2 },
-      })).to.be.null;
-
-      // check if banner is not returned
-      expect(res.body).to.equal('Container not found.');
-
-      // success code
-      expect(res.status).to.equal(404);
-    });
-    it('should return an empty response if the container with the given id has no update', async () => {
-      const res = await request(ctx.app)
-        .get('/containers/2/update')
-        .set('Authorization', `Bearer ${ctx.adminToken}`);
-
-      // sanity check / precondition
-      expect(await UpdatedContainer.findOne({ where: { container: { id: 2 } } })).to.be.null;
-      expect(res.body).to.be.empty;
-      expect(res.status).to.equal(200);
-    });
-    it('should return an HTTP 403 if not visible', async () => {
-      const { id } = await Container.findOne({ relations: ['owner'], where: { owner: { id: ctx.adminUser.id }, public: false } });
-
-      const res = await request(ctx.app)
-        .get(`/containers/${id}/update`)
-        .set('Authorization', `Bearer ${ctx.token}`);
-
-      expect(res.status).to.equal(403);
-    });
-  });
-  describe('GET /containers/updated', () => {
-    it('should return correct model', async () => {
-      const res = await request(ctx.app)
-        .get('/containers/updated')
-        .set('Authorization', `Bearer ${ctx.adminToken}`);
-      expect(res.status).to.equal(200);
-      expect(ctx.specification.validateModel(
-        'PaginatedContainerResponse',
-        res.body,
-        false,
-        true,
-      ).valid).to.be.true;
-    });
-    it('should return an HTTP 200 and all updated containers if admin', async () => {
-      const res = await request(ctx.app)
-        .get('/containers/updated')
-        .set('Authorization', `Bearer ${ctx.adminToken}`);
-
-      const containers = res.body.records as ContainerResponse[];
-      // eslint-disable-next-line no-underscore-dangle
-      const pagination = res.body._pagination as PaginationResult;
-
-      const ids = (containers).map((c) => c.id);
-      const exist = ids.every(async (id) => UpdatedContainer.findOne({
-        where: { container: { id } },
-      }));
-
-      const count = await UpdatedContainer.count();
-      expect(exist).to.be.true;
-      expect(ids.length).to.equal(count);
-      expect(res.status).to.equal(200);
-
-      expect(pagination.take).to.equal(defaultPagination());
-      expect(pagination.skip).to.equal(0);
-      expect(pagination.count).to.equal(count);
-    });
-    it('should return an HTTP 403 and no containers if not admin', async () => {
-      const res = await request(ctx.app)
-        .get('/containers/updated')
-        .set('Authorization', `Bearer ${ctx.token}`);
-
-      expect(res.status).to.equal(403);
-    });
-    it('should return an HTTP 200 and all the visible updated containers if admin', async () => {
-      const res = await request(ctx.app)
-        .get('/containers/updated')
-        .set('Authorization', `Bearer ${ctx.adminToken}`);
-
-      const containers = res.body.records as ContainerResponse[];
-      const ids = containers.map((c) => c.id);
-
-      const exist = ids.every(async (id) => UpdatedContainer.findOne({
-        where:
-          { container: { id } },
-      }));
-      expect(exist).to.be.true;
-      expect(res.status).to.equal(200);
-    });
-    it('should adhere to pagination', async () => {
-      const take = 5;
-      const skip = 3;
-      const res = await request(ctx.app)
-        .get('/containers/updated')
-        .query({ take, skip })
-        .set('Authorization', `Bearer ${ctx.adminToken}`);
-
-      // number of banners returned is number of banners in database
-      const containers = res.body.records as ContainerResponse[];
-      // eslint-disable-next-line no-underscore-dangle
-      const pagination = res.body._pagination as PaginationResult;
-
-      const count = await UpdatedContainer.count();
-      expect(pagination.take).to.equal(take);
-      expect(pagination.skip).to.equal(skip);
-      expect(pagination.count).to.equal(count);
-      expect(containers.length).to.be.at.most(take);
     });
   });
 });
