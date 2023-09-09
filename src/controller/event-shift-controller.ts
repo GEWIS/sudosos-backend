@@ -20,10 +20,11 @@ import { Response } from 'express';
 import log4js, { Logger } from 'log4js';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
-import EventService from '../service/event-service';
+import EventService, { ShiftSelectedCountParams } from '../service/event-service';
 import { EventShiftRequest } from './request/event-request';
 import EventShift from '../entity/event/event-shift';
 import { parseRequestPagination } from '../helpers/pagination';
+import { asDate, asEventType } from '../helpers/validators';
 
 export default class EventShiftController extends BaseController {
   private logger: Logger = log4js.getLogger('EventShiftLogger');
@@ -63,6 +64,12 @@ export default class EventShiftController extends BaseController {
         DELETE: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'delete', 'all', 'Event', ['*']),
           handler: this.deleteShift.bind(this),
+        },
+      },
+      '/:id(\\d+)/counts': {
+        GET: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'update', 'all', 'Event', ['*']),
+          handler: this.getShiftSelectedCount.bind(this),
         },
       },
     };
@@ -222,6 +229,51 @@ export default class EventShiftController extends BaseController {
       res.status(204).send();
     } catch (error) {
       this.logger.error('Could not delete event shift:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Get the number of times a user has been selected for the given shift
+   * @route GET /eventshifts/{id}/counts
+   * @group events - Operations of the event controller
+   * @operationId getAllEventShifts
+   * @security JWT
+   * @param {string} eventType.query - Only include events of this type
+   * @param {string} afterDate.query - Only include events after this date
+   * @param {string} beforeDate.query - Only include events before this date
+   * @returns {PaginatedEventShiftResponse.model} 200 - All existing event shifts
+   * @returns {string} 400 - Validation error
+   * @returns {string} 500 - Internal server error
+   */
+  public async getShiftSelectedCount(req: RequestWithToken, res: Response) {
+    const { id: rawId } = req.params;
+    this.logger.trace('Delete shift with ID', rawId, 'by user', req.token.user);
+
+    try {
+      const id = Number.parseInt(rawId, 10);
+      const shift = await EventShift.findOne({ where: { id } });
+      if (shift == null) {
+        res.status(404).send();
+        return;
+      }
+
+      let params: ShiftSelectedCountParams;
+      try {
+        params = {
+          eventType: asEventType(req.query.eventType),
+          afterDate: asDate(req.query.afterDate),
+          beforeDate: asDate(req.query.beforeDate),
+        };
+      } catch (e) {
+        res.status(400).send(e.message);
+        return;
+      }
+
+      const counts = await EventService.getShiftSelectedCount(id, params);
+      res.json(counts);
+    } catch (error) {
+      this.logger.error('Could not get event shift counts:', error);
       res.status(500).json('Internal server error.');
     }
   }

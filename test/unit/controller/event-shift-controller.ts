@@ -23,7 +23,7 @@ import EventShift from '../../../src/entity/event/event-shift';
 import EventShiftAnswer from '../../../src/entity/event/event-shift-answer';
 import AssignedRole from '../../../src/entity/roles/assigned-role';
 import Database from '../../../src/database/database';
-import { seedEventShifts, seedRoles, seedUsers } from '../../seed';
+import { seedEvents, seedEventShifts, seedRoles, seedUsers } from '../../seed';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Swagger from '../../../src/start/swagger';
 import { json } from 'body-parser';
@@ -32,11 +32,15 @@ import TokenMiddleware from '../../../src/middleware/token-middleware';
 import RoleManager from '../../../src/rbac/role-manager';
 import { expect, request } from 'chai';
 import {
+  EventPlanningSelectedCount,
   EventShiftResponse,
   PaginatedEventShiftResponse,
 } from '../../../src/controller/response/event-response';
 import { EventShiftRequest } from '../../../src/controller/request/event-request';
 import EventShiftController from '../../../src/controller/event-shift-controller';
+import { describe } from 'mocha';
+import EventService from '../../../src/service/event-service';
+import Event, { EventType } from '../../../src/entity/event/event';
 
 describe('EventShiftController', () => {
   let ctx: {
@@ -49,7 +53,9 @@ describe('EventShiftController', () => {
     adminToken: string;
     userToken: string;
     users: User[],
+    events: Event[],
     eventShifts: EventShift[],
+    eventShiftAnswers: EventShiftAnswer[],
     roles: AssignedRole[],
   };
 
@@ -78,7 +84,7 @@ describe('EventShiftController', () => {
 
     const users = await seedUsers();
     const roles = await seedRoles(users);
-    const eventShifts = await seedEventShifts();
+    const { events, eventShifts, eventShiftAnswers } = await seedEvents(roles);
 
     // create bearer tokens
     const tokenHandler = new TokenHandler({
@@ -138,7 +144,9 @@ describe('EventShiftController', () => {
       adminToken,
       userToken,
       users,
+      events,
       eventShifts,
+      eventShiftAnswers,
       roles,
     };
   });
@@ -338,6 +346,146 @@ describe('EventShiftController', () => {
     it('should return 403 if not admin', async () => {
       const res = await request(ctx.app)
         .patch(`/eventshifts/${originalShift.id}`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(403);
+      expect(res.body).to.be.empty;
+    });
+  });
+
+  describe('GET /eventshifts/{id}/counts', () => {
+    let answersSelected: EventShiftAnswer[];
+
+    before(async () => {
+      expect(await EventShiftAnswer.count({ where: { selected: true } })).to.equal(0);
+
+      const users = Array.from(new Set(ctx.eventShiftAnswers.map((a) => a.userId))).slice(0, 2);
+
+      const answers = ctx.eventShiftAnswers.filter((a) => users.includes(a.userId));
+      answersSelected = await Promise.all(answers.map(async (a) => {
+        a.selected = true;
+        return a.save();
+      }));
+    });
+
+    after(async () => {
+      await Promise.all(answersSelected.map(async (a) => {
+        a.selected = false;
+        return a.save();
+      }));
+      expect(await EventShiftAnswer.count({ where: { selected: true } })).to.equal(0);
+    });
+
+    it('should correctly give the number of times a user is selected for a shift', async () => {
+      const shiftsIds = Array.from(new Set(answersSelected.map((a) => a.shiftId)));
+
+      await Promise.all(shiftsIds.map(async (shiftId) => {
+        const shiftAnswers = answersSelected.filter((a) => a.shiftId === shiftId);
+        const userIds = Array.from(new Set(shiftAnswers.map((a) => a.userId)));
+        const res = await request(ctx.app)
+          .get(`/eventshifts/${shiftId}/counts`)
+          .set('Authorization', `Bearer ${ctx.adminToken}`);
+        expect(res.status).to.equal(200);
+
+        const counts = res.body as EventPlanningSelectedCount[];
+
+        expect(counts.length).to.equal(userIds.length);
+        counts.forEach((c) => {
+          const validation = ctx.specification.validateModel('EventPlanningSelectedCount', c, false, true);
+          expect(validation.valid).to.be.true;
+          expect(c.count).to.equal(shiftAnswers.filter((a)  => a.userId === c.id).length);
+        });
+      }));
+    });
+    it('should correctly only account for certain event types', async () => {
+      const event = ctx.events[0];
+      await Event.update(event.id, {
+        type: EventType.OTHER,
+      });
+
+      const shiftsIds = Array.from(new Set(answersSelected
+        .filter((a) => a.eventId === event.id)
+        .map((a) => a.shiftId)));
+      expect(shiftsIds.length).to.be.at.least(1);
+
+      const eventType = EventType.OTHER;
+      await Promise.all(shiftsIds.map(async (shiftId) => {
+        const res = await request(ctx.app)
+          .get(`/eventshifts/${shiftId}/counts`)
+          .set('Authorization', `Bearer ${ctx.adminToken}`)
+          .query({ eventType });
+        expect(res.status).to.equal(200);
+
+        const counts = res.body as EventPlanningSelectedCount[];
+        counts.forEach((c) => {
+          expect(c.count).to.equal(1);
+        });
+      }));
+
+      // Cleanup
+      await Event.update(event.id, {
+        type: event.type,
+      });
+    });
+    it('should correctly only account for event after a certain date', async () => {
+      const events = answersSelected
+        .map((a) => a.event)
+        .filter((e, i, all) => all.findIndex((e2) => e2.id === e.id) === i)
+        .sort((e1, e2) => e2.startDate.getTime() - e1.startDate.getTime());
+
+      const shiftsIds = Array.from(new Set(answersSelected
+        .filter((a) => a.eventId === events[0].id)
+        .map((a) => a.shiftId)));
+      expect(shiftsIds.length).to.be.at.least(1);
+
+      const afterDate = new Date(events[0].startDate.getTime() - 1000);
+      await Promise.all(shiftsIds.map(async (shiftId) => {
+        const res = await request(ctx.app)
+          .get(`/eventshifts/${shiftId}/counts`)
+          .set('Authorization', `Bearer ${ctx.adminToken}`)
+          .query({ afterDate });
+        expect(res.status).to.equal(200);
+
+        const counts = res.body as EventPlanningSelectedCount[];
+        counts.forEach((c) => {
+          expect(c.count).to.equal(1);
+        });
+      }));
+    });
+    it('should correctly only account for event before a certain date', async () => {
+      const events = answersSelected
+        .map((a) => a.event)
+        .filter((e, i, all) => all.findIndex((e2) => e2.id === e.id) === i)
+        .sort((e1, e2) => e1.startDate.getTime() - e2.startDate.getTime());
+
+      const shiftsIds = Array.from(new Set(answersSelected
+        .filter((a) => a.eventId === events[0].id)
+        .map((a) => a.shiftId)));
+      expect(shiftsIds.length).to.be.at.least(1);
+
+      const beforeDate = new Date(events[0].startDate.getTime() + 1000);
+      await Promise.all(shiftsIds.map(async (shiftId) => {
+        const res = await request(ctx.app)
+          .get(`/eventshifts/${shiftId}/counts`)
+          .set('Authorization', `Bearer ${ctx.adminToken}`)
+          .query({ beforeDate });
+        expect(res.status).to.equal(200);
+
+        const counts = res.body as EventPlanningSelectedCount[];
+        counts.forEach((c) => {
+          expect(c.count).to.equal(1);
+        });
+      }));
+    });
+    it('should return 404 if shift does not exist', async () => {
+      const res = await request(ctx.app)
+        .get('/eventshifts/999999/counts')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(404);
+      expect(res.body).to.be.empty;
+    });
+    it('should return 403 if not admin', async () => {
+      const res = await request(ctx.app)
+        .get(`/eventshifts/${ctx.eventShifts[0].id}/counts`)
         .set('Authorization', `Bearer ${ctx.userToken}`);
       expect(res.status).to.equal(403);
       expect(res.body).to.be.empty;

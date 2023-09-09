@@ -720,10 +720,113 @@ describe('eventService', () => {
       expect((await EventShiftAnswer.findOne({ where: {
         eventId, shiftId, userId,
       } })).selected).to.equal(selected);
+
+      // Cleanup
+      await EventService.updateEventShiftAnswer(originalAnswer.eventId, originalAnswer.shiftId, originalAnswer.userId, { selected: !selected });
     });
     it('should return undefined if answer does not exist', async () => {
       const answer = await EventService.updateEventShiftAnswer(99999, 99999, 99999, {});
       expect(answer).to.be.undefined;
+    });
+  });
+
+  describe('getShiftSelectedCount', () => {
+    let answersSelected: EventShiftAnswer[];
+
+    before(async () => {
+      expect(await EventShiftAnswer.count({ where: { selected: true } })).to.equal(0);
+
+      const users = Array.from(new Set(ctx.eventShiftAnswers.map((a) => a.userId))).slice(0, 2);
+
+      const answers = ctx.eventShiftAnswers.filter((a) => users.includes(a.userId));
+      answersSelected = await Promise.all(answers.map(async (a) => {
+        a.selected = true;
+        return a.save();
+      }));
+    });
+
+    after(async () => {
+      await Promise.all(answersSelected.map(async (a) => {
+        a.selected = false;
+        return a.save();
+      }));
+      expect(await EventShiftAnswer.count({ where: { selected: true } })).to.equal(0);
+    });
+
+    it('should correctly give the number of times a user is selected for a shift', async () => {
+      const shiftsIds = Array.from(new Set(answersSelected.map((a) => a.shiftId)));
+
+      await Promise.all(shiftsIds.map(async (shiftId) => {
+        const shiftAnswers = answersSelected.filter((a) => a.shiftId === shiftId);
+        const userIds = Array.from(new Set(shiftAnswers.map((a) => a.userId)));
+        const counts = await EventService.getShiftSelectedCount(shiftId);
+        expect(counts.length).to.equal(userIds.length);
+        counts.forEach((c) => {
+          expect(c.count).to.equal(shiftAnswers.filter((a)  => a.userId === c.id).length);
+        });
+      }));
+    });
+    it('should correctly only account for certain event types', async () => {
+      const event = ctx.events[0];
+      await Event.update(event.id, {
+        type: EventType.OTHER,
+      });
+
+      const shiftsIds = Array.from(new Set(answersSelected
+        .filter((a) => a.eventId === event.id)
+        .map((a) => a.shiftId)));
+      expect(shiftsIds.length).to.be.at.least(1);
+
+      const eventType = EventType.OTHER;
+      await Promise.all(shiftsIds.map(async (shiftId) => {
+        const counts = await EventService.getShiftSelectedCount(shiftId, { eventType });
+        counts.forEach((c) => {
+          expect(c.count).to.equal(1);
+        });
+      }));
+
+      // Cleanup
+      await Event.update(event.id, {
+        type: event.type,
+      });
+    });
+    it('should correctly only account for event after a certain date', async () => {
+      const events = answersSelected
+        .map((a) => a.event)
+        .filter((e, i, all) => all.findIndex((e2) => e2.id === e.id) === i)
+        .sort((e1, e2) => e2.startDate.getTime() - e1.startDate.getTime());
+
+      const shiftsIds = Array.from(new Set(answersSelected
+        .filter((a) => a.eventId === events[0].id)
+        .map((a) => a.shiftId)));
+      expect(shiftsIds.length).to.be.at.least(1);
+
+      const afterDate = new Date(events[0].startDate.getTime() - 1000);
+      await Promise.all(shiftsIds.map(async (shiftId) => {
+        const counts = await EventService.getShiftSelectedCount(shiftId, { afterDate });
+        counts.forEach((c) => {
+          expect(c.count).to.equal(1);
+        });
+      }));
+    });
+    it('should correctly only account for event before a certain date', async () => {
+      const events = answersSelected
+        .map((a) => a.event)
+        .filter((e, i, all) => all.findIndex((e2) => e2.id === e.id) === i)
+        .sort((e1, e2) => e1.startDate.getTime() - e2.startDate.getTime());
+
+      const shiftsIds = Array.from(new Set(answersSelected
+        .filter((a) => a.eventId === events[0].id)
+        .map((a) => a.shiftId)));
+      expect(shiftsIds.length).to.be.at.least(1);
+
+      const beforeDate = new Date(events[0].startDate.getTime() + 1000);
+      await Promise.all(shiftsIds.map(async (shiftId) => {
+        const counts = await EventService.getShiftSelectedCount(shiftId, { beforeDate });
+        counts.forEach((c) => {
+          expect(c.count).to.equal(1);
+        });
+      }));
     });
   });
 

@@ -99,3 +99,11 @@ export interface PaginatedBaseEventResponse {
   _pagination: PaginationResult,
   records: BaseEventResponse[],
 }
+
+/**
+ * @typedef {BaseUserResponse} EventPlanningSelectedCount
+ * @property {integer} count.required - Number of times this user was selected for this shift
+ */
+export interface EventPlanningSelectedCount extends BaseUserResponse {
+  count: number;
+}

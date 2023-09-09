@@ -15,12 +15,12 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { Between, FindManyOptions, In, IsNull, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
+import { Between, createQueryBuilder, FindManyOptions, In, IsNull, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
 import {
   BaseEventAnswerResponse,
   BaseEventResponse,
   BaseEventShiftResponse,
-  EventInShiftResponse,
+  EventInShiftResponse, EventPlanningSelectedCount,
   EventResponse,
   EventShiftResponse,
   PaginatedBaseEventResponse,
@@ -67,6 +67,12 @@ export interface CreateEventParams extends UpdateEventParams {
 }
 
 export interface UpdateEventAnswerParams extends EventAnswerAssignmentRequest, EventAnswerAvailabilityRequest {}
+
+export interface ShiftSelectedCountParams {
+  eventType?: EventType;
+  afterDate?: Date;
+  beforeDate?: Date;
+}
 
 export function parseEventFilterParameters(
   req: RequestWithToken,
@@ -462,6 +468,40 @@ export default class EventService {
       return Promise.all(users.map(async (user) => Mailer.getInstance().send(user,
         new ForgotEventPlanning({ name: user.firstName, eventName: event.name }), Language.DUTCH),
       ));
+    }));
+  }
+
+  /**
+   * Get amount of times a user was selected for the given shift in the given time interval
+   * @param shiftId
+   * @param eventType
+   * @param afterDate
+   * @param beforeDate
+   */
+  public static async getShiftSelectedCount(
+    shiftId: number, { eventType, afterDate, beforeDate }: ShiftSelectedCountParams = {},
+  ): Promise<EventPlanningSelectedCount[]> {
+    let query = createQueryBuilder()
+      .select('user.id', 'id')
+      .addSelect('count(event.id)', 'count')
+      .addSelect('max(user.firstName)', 'firstName')
+      .addSelect('max(user.lastName)', 'lastName')
+      .addSelect('max(user.nickname)', 'nickname')
+      .from(EventShiftAnswer, 'answer')
+      .innerJoin(Event, 'event', 'event.id = answer.eventId')
+      .innerJoin(User, 'user', 'user.id = answer.userId')
+      .where('answer.shiftId = :shiftId', { shiftId })
+      .andWhere('answer.selected = 1')
+      .groupBy('user.id');
+    if (eventType) query = query.andWhere('event.type = :eventType', { eventType });
+    if (afterDate) query = query.andWhere('event.startDate >= :afterDate', { afterDate });
+    if (beforeDate) query = query.andWhere('event.startDate <= :afterDate', { beforeDate });
+
+    const result = await query.getRawMany();
+
+    return result.map((r: any) => ({
+      ...parseUserToBaseResponse(r, false),
+      count: r.count,
     }));
   }
 }
