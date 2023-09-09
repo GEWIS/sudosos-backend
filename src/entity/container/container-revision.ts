@@ -21,21 +21,22 @@ import {
   ManyToOne,
   BeforeUpdate, ManyToMany, JoinTable, PrimaryColumn, JoinColumn,
 } from 'typeorm';
-import BaseContainer from './base-container';
 import Container from './container';
 import ProductRevision from '../product/product-revision';
 // eslint-disable-next-line import/no-cycle
 import PointOfSaleRevision from '../point-of-sale/point-of-sale-revision';
+import BaseEntityWithoutId from '../base-entity-without-id';
 
 /**
- * @typedef {BaseContainer} ContainerRevision
+ * @typedef {BaseEntityWithoutId} ContainerRevision
  * @property {Container.model} container.required - The container the revision belongs to.
  * @property {integer} revision.required - The revision number of this revision.
  * @property {Array.<ProductRevision>} products.required - The products that are contained in this
  * revision.
+ * @property {string} name.required - The name of the container.
  */
 @Entity()
-export default class ContainerRevision extends BaseContainer {
+export default class ContainerRevision extends BaseEntityWithoutId {
   @PrimaryColumn()
   public readonly containerId: number;
 
@@ -52,6 +53,11 @@ export default class ContainerRevision extends BaseContainer {
     nullable: false,
   })
   public revision: number;
+
+  @Column({
+    length: 64,
+  })
+  public name: string;
 
   @ManyToMany(() => ProductRevision)
   @JoinTable()

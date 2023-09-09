@@ -21,16 +21,22 @@ import {
   Entity, JoinColumn,
   ManyToOne, PrimaryColumn,
 } from 'typeorm';
-import BaseProduct from './base-product';
 import Product from './product';
+import DineroTransformer from '../transformer/dinero-transformer';
+import { Dinero } from 'dinero.js';
+import VatGroup from '../vat-group';
+import ProductCategory from './product-category';
+import BaseEntityWithoutId from '../base-entity-without-id';
 
 /**
- * @typedef {BaseProduct} ProductRevision
+ * @typedef {BaseEntityWithoutId} ProductRevision
  * @property {Product.model} product.required - The product the revision belongs to.
  * @property {integer} revision.required - The revision number of this revision.
+ * @property {string} name.required - The unique name of the product.
+ * @property {Dinero.model} price.required - The price of each product.
  */
 @Entity()
-export default class ProductRevision extends BaseProduct {
+export default class ProductRevision extends BaseEntityWithoutId {
   @PrimaryColumn()
   public readonly productId: number;
 
@@ -47,6 +53,29 @@ export default class ProductRevision extends BaseProduct {
     nullable: false,
   })
   public revision: number;
+
+  @Column({
+    length: 64,
+  })
+  public name: string;
+
+  @Column({
+    type: 'integer',
+    transformer: DineroTransformer.Instance,
+  })
+  public priceInclVat: Dinero;
+
+  @ManyToOne(() => VatGroup, { nullable: false })
+  public vat: VatGroup;
+
+  @ManyToOne(() => ProductCategory, { nullable: false })
+  public category: ProductCategory;
+
+  @Column({
+    type: 'decimal',
+    scale: 2,
+  })
+  public alcoholPercentage: number;
 
   @BeforeUpdate()
   // eslint-disable-next-line class-methods-use-this

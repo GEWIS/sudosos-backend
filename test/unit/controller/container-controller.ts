@@ -40,7 +40,6 @@ import {
   PaginatedContainerResponse,
 } from '../../../src/controller/response/container-response';
 import { ProductResponse } from '../../../src/controller/response/product-response';
-import UpdatedContainer from '../../../src/entity/container/updated-container';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import { CreateContainerRequest, UpdateContainerRequest } from '../../../src/controller/request/container-request';
 import { INVALID_ORGAN_ID, INVALID_PRODUCT_ID } from '../../../src/controller/request/validators/validation-errors';
@@ -471,31 +470,6 @@ describe('ContainerController', async (): Promise<void> => {
         where: { id: (res.body as ContainerResponse).id },
       });
       expect(databaseProduct).to.exist;
-    });
-    it('should store the given container in the database and return an HTTP 200 and the created container if admin', async () => {
-      const containerCount = await Container.count();
-      const res = await request(ctx.app)
-        .post('/containers')
-        .set('Authorization', `Bearer ${ctx.adminToken}`)
-        .send(ctx.validContainerReq);
-
-      expect(res.status).to.equal(200);
-      const containerResponse = res.body as ContainerWithProductsResponse;
-      expect(ctx.specification.validateModel(
-        'ContainerWithProductsResponse',
-        containerResponse,
-        false,
-        true,
-      ).valid).to.be.true;
-
-      expect(await Container.count()).to.equal(containerCount + 1);
-      containerProductsEq(ctx.validContainerReq, containerResponse);
-
-      const databaseProduct = await UpdatedContainer.findOne({
-        where:
-          { container: { id: (res.body as ContainerResponse).id } },
-      });
-      expect(databaseProduct).to.not.exist;
     });
     it('should return an HTTP 400 if the given product is invalid', async () => {
       const containerCounter = await Container.count();

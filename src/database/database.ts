@@ -41,9 +41,6 @@ import ProductRevision from '../entity/product/product-revision';
 import ContainerRevision from '../entity/container/container-revision';
 import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision';
 import ProductOrdering from '../entity/point-of-sale/product-ordering';
-import UpdatedProduct from '../entity/product/updated-product';
-import UpdatedContainer from '../entity/container/updated-container';
-import UpdatedPointOfSale from '../entity/point-of-sale/updated-point-of-sale';
 import Balance from '../entity/transactions/balance';
 import InvoiceUser from '../entity/user/invoice-user';
 import InvoiceEntry from '../entity/invoices/invoice-entry';
@@ -81,13 +78,10 @@ export default class Database {
         VatGroup,
         Product,
         ProductRevision,
-        UpdatedProduct,
         Container,
         ContainerRevision,
-        UpdatedContainer,
         PointOfSale,
         PointOfSaleRevision,
-        UpdatedPointOfSale,
         Transfer,
         StripeDeposit,
         StripeDepositStatus,
