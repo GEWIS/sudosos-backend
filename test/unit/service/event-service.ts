@@ -82,6 +82,7 @@ describe('eventService', () => {
   };
 
   after(async () => {
+    await ctx.connection.dropDatabase();
     await ctx.connection.destroy();
   });
 
@@ -415,7 +416,7 @@ describe('eventService', () => {
       // Answer sheets should include new shift
       expect(event.shifts.map((s) => s.id)).to.deep.equalInAnyOrder(shiftIds);
       event.shifts.forEach((s) => {
-        expect(s.answers).to.be.greaterThan(0);
+        expect(s.answers.length).to.be.greaterThan(0);
       });
 
     });

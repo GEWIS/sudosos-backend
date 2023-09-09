@@ -335,21 +335,20 @@ export default class EventService {
   public static async updateEvent(id: number, params: Partial<UpdateEventParams>) {
     const event = await Event.findOne({
       where: { id },
-      relations: { answers: true, shifts: true },
     });
     if (!event) return undefined;
 
     const { shiftIds, ...rest } = params;
-
     await Event.update(id, rest);
-    // await event.reload();
+    await event.reload();
+
     if (params.shiftIds != null) {
       const shifts = await EventShift.find({ where: { id: In(params.shiftIds) } });
       if (shifts.length !== params.shiftIds.length) throw new Error('Invalid list of shiftIds provided.');
-      event.answers = await this.syncEventShiftAnswers(event, params.shiftIds);
       event.shifts = shifts;
-
       await Event.save(event);
+
+      await this.syncEventShiftAnswers(event, params.shiftIds);
     }
 
     return this.getSingleEvent(id);
