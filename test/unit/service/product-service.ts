@@ -25,24 +25,19 @@ import Database from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
 import ProductService, { ProductFilterParameters } from '../../../src/service/product-service';
 import {
-  seedAllProducts, seedAllContainers, seedProductCategories,
-  seedUsers, seedAllPointsOfSale, seedVatGroups,
+  seedProducts, seedContainers, seedProductCategories,
+  seedUsers, seedPointsOfSale, seedVatGroups,
 } from '../../seed';
 import Product from '../../../src/entity/product/product';
 import {
-  PaginatedProductResponse,
   ProductResponse,
-  UpdatedProductResponse,
 } from '../../../src/controller/response/product-response';
 import ProductRevision from '../../../src/entity/product/product-revision';
-import UpdatedProduct from '../../../src/entity/product/updated-product';
-import UpdatedContainer from '../../../src/entity/container/updated-container';
 import Container from '../../../src/entity/container/container';
 import ContainerRevision from '../../../src/entity/container/container-revision';
 import CreateProductParams, { UpdateProductParams } from '../../../src/controller/request/product-request';
 import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
-import UpdatedPointOfSale from '../../../src/entity/point-of-sale/updated-point-of-sale';
 import ProductImage from '../../../src/entity/file/product-image';
 import User from '../../../src/entity/user/user';
 import { CreateContainerParams } from '../../../src/controller/request/container-request';
@@ -105,8 +100,7 @@ function productRevisionToProductWithRevision(product: ProductRevision): Product
   };
 }
 
-function validateProductProperties(response: ProductResponse | UpdatedProductResponse,
-  productParams: CreateProductParams | UpdateProductParams) {
+function validateProductProperties(response: ProductResponse, productParams: CreateProductParams | UpdateProductParams) {
   Object.keys(productParams).forEach((key: keyof CreateProductParams) => {
     if (key === 'priceInclVat') {
       expect((productParams[key] as any).amount).to.be.equal((response.priceInclVat.amount));
@@ -133,13 +127,10 @@ describe('ProductService', async (): Promise<void> => {
     products: Product[],
     productImages: ProductImage[],
     productRevisions: ProductRevision[],
-    updatedProducts: UpdatedProduct[],
     containers: Container[],
     containerRevisions: ContainerRevision[],
-    updatedContainers: UpdatedContainer[],
     pointsOfSale: PointOfSale[],
     pointOfSaleRevisions: PointOfSaleRevision[],
-    updatedPointsOfSale: UpdatedPointOfSale[],
   };
 
   before(async () => {
@@ -153,18 +144,15 @@ describe('ProductService', async (): Promise<void> => {
       products,
       productImages,
       productRevisions,
-      updatedProducts,
-    } = await seedAllProducts(users, categories, vatGroups);
+    } = await seedProducts(users, categories, vatGroups);
     const {
       containers,
       containerRevisions,
-      updatedContainers,
-    } = await seedAllContainers(users, productRevisions, products);
+    } = await seedContainers(users, productRevisions);
     const {
       pointsOfSale,
       pointOfSaleRevisions,
-      updatedPointsOfSale,
-    } = await seedAllPointsOfSale(users, containerRevisions, containers);
+    } = await seedPointsOfSale(users, containerRevisions);
 
     // start app
     const app = express();
@@ -180,13 +168,10 @@ describe('ProductService', async (): Promise<void> => {
       products,
       productImages,
       productRevisions,
-      updatedProducts,
       containers,
       containerRevisions,
-      updatedContainers,
       pointsOfSale,
       pointOfSaleRevisions,
-      updatedPointsOfSale,
     };
   });
 
@@ -222,14 +207,6 @@ describe('ProductService', async (): Promise<void> => {
       expect(_pagination.take).to.be.undefined;
       expect(_pagination.skip).to.be.undefined;
       expect(_pagination.count).to.equal(products.length);
-    });
-    it('should return all updated products', async () => {
-      const updatedProducts: PaginatedProductResponse = await ProductService.getProducts(
-        { updatedProducts: true },
-      );
-      const products = ctx.updatedProducts.map((prod) => prod.product);
-
-      returnsAll(updatedProducts.records, products);
     });
     it('should return product with the ownerId specified', async () => {
       const owner = ctx.products[0].owner.id;
@@ -298,80 +275,34 @@ describe('ProductService', async (): Promise<void> => {
 
       returnsAll(records, products);
     });
-    it('should return the updated products belonging to a container', async () => {
-      const params: ProductFilterParameters = {
-        containerId: 3,
-        updatedProducts: true,
-      };
-      const { records } = await ProductService.getProducts(params);
-
-      const products = ctx.containerRevisions.filter((rev) => {
-        const container = ctx.containers.filter((cont) => cont.id === 3)[0];
-        return rev.container.id === container.id && rev.revision === container.currentRevision;
-      }).map((rev) => rev.products.map((prod) => prod.product))[0]
-        .filter((prod) => (
-          ctx.updatedProducts.map((upd) => upd.product).includes(prod)
-        ));
-
-      returnsAll(records, products);
-    });
-    it('should return the updated products belonging to an updatedContainer', async () => {
-      const params: ProductFilterParameters = {
-        containerId: 4,
-        updatedContainer: true,
-        updatedProducts: true,
-      };
-      const { records } = await ProductService.getProducts(params);
-
-      const products = ctx.updatedContainers
-        .filter((upd) => upd.container.id === 4)
-        .map((upd) => upd.products)[0]
-        .filter((prod) => ctx.updatedProducts
-          .map((updprod) => updprod.product).includes(prod));
-
-      // const products = ctx.containerRevisions.filter((rev) => {
-      //   const container = ctx.containers.filter((cont) => cont.id === 3)[0];
-      //   return rev.container.id === container.id && rev.revision === container.currentRevision;
-      // }).map((rev) => rev.products.map((prod) => prod.product))[0]
-      //   .filter((prod) => (ctx.updatedProducts
-      //     .map((upd) => upd.product).includes(prod)));
-
-      returnsAll(records, products);
-    });
     it('should adhere to pagination', async () => {
       const take = 5;
       const skip = 3;
 
       // eslint-disable-next-line @typescript-eslint/naming-convention
       const { records, _pagination } = await ProductService
-        .getProducts({ updatedProducts: true }, { take, skip });
-      const products = ctx.updatedProducts.map((prod) => prod.product);
+        .getProducts({  }, { take, skip });
 
       expect(_pagination.take).to.equal(take);
       expect(_pagination.skip).to.equal(skip);
-      expect(_pagination.count).to.equal(products.length);
+      expect(_pagination.count).to.equal(ctx.products.length);
       expect(records.length).to.be.at.most(take);
     });
     it('should return the products belonging to a container revision that is not current', async () => {
+      const revision = ctx.containerRevisions.find((r) => {
+        const container = ctx.containers.find((c) => c.id === r.containerId);
+        expect(container).to.not.be.undefined;
+        return r.revision < container.currentRevision && r.products.length > 0;
+      });
       const params: ProductFilterParameters = {
-        containerId: 1,
-        containerRevision: 2,
+        containerId: revision.containerId,
+        containerRevision: revision.revision,
       };
 
       const { records } = await ProductService.getProducts(params);
+      const products = revision.products.map((p) => p.product.id);
 
-      const products = [1, 2, 5];
       expect(records.map((prod) => prod.id)).to.deep.equalInAnyOrder(products);
-    });
-    it('should return an updated container', async () => {
-      const { id } = (await UpdatedContainer.findOne({ where: {}, relations: ['container'] })).container;
-      const { records }: PaginatedProductResponse = await ProductService
-        .getProducts({ containerId: id, updatedContainer: true });
-
-      const { products } = ctx.updatedContainers
-        .filter((cnt) => cnt.container.id === id)[0];
-
-      returnsAll(records, products);
     });
     it('should return the products belonging to a point of sale', async () => {
       const { records } = await ProductService
@@ -427,94 +358,6 @@ describe('ProductService', async (): Promise<void> => {
     });
   });
 
-  describe('updateProducts function', () => {
-    it('should update a product by ID', async () => {
-      const updateParams: UpdateProductParams = {
-        category: 3,
-        vat: 1,
-        id: 2,
-        alcoholPercentage: 8,
-        name: 'Product2-update',
-        priceInclVat: {
-          amount: 72,
-          currency: 'EUR',
-          precision: 2,
-        },
-      };
-
-      const res: ProductResponse = await ProductService.updateProduct(updateParams);
-
-      validateProductProperties(res, updateParams);
-
-      expect(res).to.exist;
-    });
-
-    it('should create a new product', async () => {
-      const amount = 77;
-
-      const productParams: CreateProductParams = {
-        alcoholPercentage: 9,
-        name: 'Product77-update',
-        priceInclVat: {
-          amount,
-          currency: 'EUR',
-          precision: 2,
-        },
-        category: 1,
-        vat: 1,
-        ownerId: ctx.users[0].id,
-      };
-
-      const res: UpdatedProductResponse = await ProductService.createProduct(productParams);
-
-      validateProductProperties(res, productParams);
-      expect(res).to.exist;
-
-      // Hard Clean up
-      await UpdatedProduct.delete(res.id);
-      await Product.delete(res.id);
-    });
-
-    it('should confirm an updated product', async () => {
-      // Create a new product.
-      const amount = 77;
-
-      const productParams: CreateProductParams = {
-        alcoholPercentage: 9,
-        ownerId: ctx.users[0].id,
-        name: 'Product77-update',
-        priceInclVat: {
-          amount: amount - 1,
-          currency: 'EUR',
-          precision: 2,
-        },
-        category: 1,
-        vat: 1,
-      };
-
-      const res: UpdatedProductResponse = await ProductService.createProduct(productParams);
-
-      const updateParams: UpdateProductParams = {
-        alcoholPercentage: 10,
-        name: 'Product77-update',
-        priceInclVat: {
-          amount,
-          currency: 'EUR',
-          precision: 2,
-        },
-        category: 2,
-        vat: 1,
-        id: res.id,
-      };
-
-      await ProductService.updateProduct(updateParams);
-      const product = await ProductService.approveProductUpdate(res.id);
-
-      validateProductProperties(product, updateParams);
-      expect(product).to.exist;
-    });
-  });
-
   describe('createProduct function', () => {
     it('should create the product without update if approve is true', async () => {
       const creation: CreateProductParams = {
@@ -530,7 +373,7 @@ describe('ProductService', async (): Promise<void> => {
         },
       };
 
-      const response = await ProductService.createProduct(creation, true);
+      const response = await ProductService.createProduct(creation);
       validateProductProperties(response, creation);
       const entity = await Product.findOne({ where: { id: response.id } });
       expect(entity.currentRevision).to.eq(1);
@@ -573,7 +416,7 @@ describe('ProductService', async (): Promise<void> => {
         },
       };
 
-      const product = await ProductService.createProduct(createProduct, true);
+      const product = await ProductService.createProduct(createProduct);
 
       const createContainer: CreateContainerParams = {
         name: 'Container Name',
@@ -582,7 +425,7 @@ describe('ProductService', async (): Promise<void> => {
         public: true,
       };
 
-      const container = await ContainerService.createContainer(createContainer, true);
+      const container = await ContainerService.createContainer(createContainer);
 
       const update: UpdateProductParams = {
         id: product.id,
@@ -626,7 +469,7 @@ describe('ProductService', async (): Promise<void> => {
         },
       };
 
-      const product = await ProductService.createProduct(createProduct, true);
+      const product = await ProductService.createProduct(createProduct);
 
       const createContainer: CreateContainerParams = {
         name: 'Container Name',
@@ -635,7 +478,7 @@ describe('ProductService', async (): Promise<void> => {
         public: true,
       };
 
-      const container = await ContainerService.createContainer(createContainer, true);
+      const container = await ContainerService.createContainer(createContainer);
 
       const createPOS: CreatePointOfSaleParams = {
         containers: [container.id],
@@ -644,7 +487,7 @@ describe('ProductService', async (): Promise<void> => {
         ownerId,
       };
 
-      const pos = await PointOfSaleService.createPointOfSale(createPOS, true);
+      const pos = await PointOfSaleService.createPointOfSale(createPOS);
 
       const productUpdate: UpdateProductParams = {
         alcoholPercentage: 1,

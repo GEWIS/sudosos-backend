@@ -220,14 +220,6 @@ export default class UserController extends BaseController {
           handler: this.getUserRoles.bind(this),
         },
       },
-      '/:id(\\d+)/products/updated': {
-        GET: {
-          policy: async (req) => this.roleManager.can(
-            req.token.roles, 'get', UserController.getRelation(req), 'Product', ['*'],
-          ),
-          handler: this.getUsersUpdatedProducts.bind(this),
-        },
-      },
       '/:id(\\d+)/containers': {
         GET: {
           policy: async (req) => this.roleManager.can(
@@ -236,28 +228,12 @@ export default class UserController extends BaseController {
           handler: this.getUsersContainers.bind(this),
         },
       },
-      '/:id(\\d+)/containers/updated': {
-        GET: {
-          policy: async (req) => this.roleManager.can(
-            req.token.roles, 'get', UserController.getRelation(req), 'Container', ['*'],
-          ),
-          handler: this.getUsersUpdatedContainers.bind(this),
-        },
-      },
       '/:id(\\d+)/pointsofsale': {
         GET: {
           policy: async (req) => this.roleManager.can(
             req.token.roles, 'get', UserController.getRelation(req), 'PointOfSale', ['*'],
           ),
           handler: this.getUsersPointsOfSale.bind(this),
-        },
-      },
-      '/:id(\\d+)/pointsofsale/updated': {
-        GET: {
-          policy: async (req) => this.roleManager.can(
-            req.token.roles, 'get', UserController.getRelation(req), 'PointOfSale', ['*'],
-          ),
-          handler: this.getUsersUpdatedPointsOfSale.bind(this),
         },
       },
       '/:id(\\d+)/transactions': {
@@ -919,49 +895,6 @@ export default class UserController extends BaseController {
   }
 
   /**
-   * Get an user's updated products
-   * @route GET /users/{id}/products/updated
-   * @operationId getUsersUpdatedProducts
-   * @group users - Operations of user controller
-   * @param {integer} id.path.required - The id of the user
-   * @param {integer} take.query - How many products the endpoint should return
-   * @param {integer} skip.query - How many products should be skipped (for pagination)
-   * @security JWT
-   * @returns {PaginatedProductResponse.model} 200 - List of products.
-   */
-  public async getUsersUpdatedProducts(req: RequestWithToken, res: Response): Promise<void> {
-    const parameters = req.params;
-    this.logger.trace("Get user's updated products", parameters, 'by user', req.token.user);
-
-    let take;
-    let skip;
-    try {
-      const pagination = parseRequestPagination(req);
-      take = pagination.take;
-      skip = pagination.skip;
-    } catch (e) {
-      res.status(400).send(e.message);
-      return;
-    }
-
-    // Handle request
-    try {
-      const id = parseInt(parameters.id, 10);
-      const owner = await User.findOne({ where: { id, deleted: false } });
-      if (owner == null) {
-        res.status(404).json({});
-        return;
-      }
-
-      const products = await ProductService.getProducts({}, { take, skip }, owner);
-      res.json(products);
-    } catch (error) {
-      this.logger.error('Could not return all products:', error);
-      res.status(500).json('Internal server error.');
-    }
-  }
-
-  /**
    * Returns the user's containers
    * @route GET /users/{id}/containers
    * @operationId getUsersContainers
@@ -1009,53 +942,6 @@ export default class UserController extends BaseController {
   }
 
   /**
-   * Returns the user's updated containers
-   * @route GET /users/{id}/containers/updated
-   * @operationId getUsersUpdatedContainers
-   * @group users - Operations of user controller
-   * @param {integer} id.path.required - The id of the user
-   * @security JWT
-   * @param {integer} take.query - How many containers the endpoint should return
-   * @param {integer} skip.query - How many containers should be skipped (for pagination)
-   * @returns {PaginatedContainerResponse.model} 200 - All users updated containers
-   * @returns {string} 404 - Not found error
-   * @returns {string} 500 - Internal server error
-   */
-  public async getUsersUpdatedContainers(req: RequestWithToken, res: Response): Promise<void> {
-    const { id } = req.params;
-    this.logger.trace("Get user's updated containers", id, 'by user', req.token.user);
-
-    let take;
-    let skip;
-    try {
-      const pagination = parseRequestPagination(req);
-      take = pagination.take;
-      skip = pagination.skip;
-    } catch (e) {
-      res.status(400).send(e.message);
-      return;
-    }
-
-    // handle request
-    try {
-      // Get the user object if it exists
-      const user = await User.findOne({ where: { id: parseInt(id, 10), deleted: false } });
-      // If it does not exist, return a 404 error
-      if (user == null) {
-        res.status(404).json('Unknown user ID.');
-        return;
-      }
-
-      const containers = (await ContainerService
-        .getUpdatedContainers({}, { take, skip }, user));
-      res.json(containers);
-    } catch (error) {
-      this.logger.error('Could not return updated containers:', error);
-      res.status(500).json('Internal server error.');
-    }
-  }
-
-  /**
    * Returns the user's Points of Sale
    * @route GET /users/{id}/pointsofsale
    * @operationId getUsersPointsOfSale
@@ -1098,53 +984,6 @@ export default class UserController extends BaseController {
       res.json(pointsOfSale);
     } catch (error) {
       this.logger.error('Could not return point of sale:', error);
-      res.status(500).json('Internal server error.');
-    }
-  }
-
-  /**
-   * Returns the user's updated Points of Sale
-   * @route GET /users/{id}/pointsofsale/updated
-   * @operationId getUsersUpdatedPointsOfSale
-   * @group users - Operations of user controller
-   * @param {integer} id.path.required - The id of the user
-   * @param {integer} take.query - How many points of sale the endpoint should return
-   * @param {integer} skip.query - How many points of sale should be skipped (for pagination)
-   * @security JWT
-   * @returns {PaginatedUpdatedPointOfSaleResponse.model} 200 - All users updated point of sales
-   * @returns {string} 404 - Not found error
-   * @returns {string} 500 - Internal server error
-   */
-  public async getUsersUpdatedPointsOfSale(req: RequestWithToken, res: Response): Promise<void> {
-    const { id } = req.params;
-    this.logger.trace("Get user's updated points of sale", id, 'by user', req.token.user);
-
-    let take;
-    let skip;
-    try {
-      const pagination = parseRequestPagination(req);
-      take = pagination.take;
-      skip = pagination.skip;
-    } catch (e) {
-      res.status(400).send(e.message);
-      return;
-    }
-
-    // handle request
-    try {
-      // Get the user object if it exists
-      const user = await User.findOne({ where: { id: parseInt(id, 10), deleted: false } });
-      // If it does not exist, return a 404 error
-      if (user == null) {
-        res.status(404).json('Unknown user ID.');
-        return;
-      }
-
-      const pointsOfSale = (await PointOfSaleService
-        .getUpdatedPointsOfSale({}, { take, skip }, user));
-      res.json(pointsOfSale);
-    } catch (error) {
-      this.logger.error('Could not return updated points of sale:', error);
       res.status(500).json('Internal server error.');
     }
   }

@@ -1072,51 +1072,6 @@ describe('UserController', (): void => {
     });
   });
 
-  describe('GET /users/:id/containers/updated', () => {
-    it('should return correct model', async () => {
-      const res = await request(ctx.app)
-        .get(`/users/${ctx.users[0].id}/containers/updated`)
-        .set('Authorization', `Bearer ${ctx.userToken}`);
-      expect(res.status).to.equal(200);
-      expect(ctx.specification.validateModel(
-        'PaginatedContainerResponse',
-        res.body,
-        false,
-        true,
-      ).valid).to.be.true;
-    });
-    it('should give an HTTP 200 when requesting own updated containers', async () => {
-      const res = await request(ctx.app)
-        .get(`/users/${ctx.users[0].id}/containers/updated`)
-        .set('Authorization', `Bearer ${ctx.userToken}`);
-      expect(res.status).to.equal(200);
-    });
-    it('should give an HTTP 403 when user requests updated containers (s)he does not own', async () => {
-      const res = await request(ctx.app)
-        .get('/users/2/containers/updated')
-        .set('Authorization', `Bearer ${ctx.userToken}`);
-      expect(res.status).to.equal(403);
-    });
-    it('should give an HTTP 403 when user requests updated containers from unknown user', async () => {
-      const res = await request(ctx.app)
-        .get('/users/1234/containers/updated')
-        .set('Authorization', `Bearer ${ctx.userToken}`);
-      expect(res.status).to.equal(403);
-    });
-    it('should give correct owned updated containers for admin', async () => {
-      const res = await request(ctx.app)
-        .get('/users/2/containers/updated')
-        .set('Authorization', `Bearer ${ctx.adminToken}`);
-      expect(res.status).to.equal(200);
-    });
-    it('should give an HTTP 404 when admin requests updated containers from unknown user', async () => {
-      const res = await request(ctx.app)
-        .get('/users/1234/containers/updated')
-        .set('Authorization', `Bearer ${ctx.adminToken}`);
-      expect(res.status).to.equal(404);
-    });
-  });
-
   describe('GET /users/:id/pointsofsale', () => {
     it('should return correct model', async () => {
       const res = await request(ctx.app)
@@ -1157,51 +1112,6 @@ describe('UserController', (): void => {
     it('should give an HTTP 404 when admin requests points of sale from unknown user', async () => {
       const res = await request(ctx.app)
         .get('/users/1234/pointsofsale')
-        .set('Authorization', `Bearer ${ctx.adminToken}`);
-      expect(res.status).to.equal(404);
-    });
-  });
-
-  describe('GET /users/:id/pointsofsale/updated', () => {
-    it('should return correct model', async () => {
-      const res = await request(ctx.app)
-        .get(`/users/${ctx.users[0].id}/pointsofsale/updated`)
-        .set('Authorization', `Bearer ${ctx.userToken}`);
-      expect(res.status).to.equal(200);
-      expect(ctx.specification.validateModel(
-        'PaginatedUpdatedPointOfSaleResponse',
-        res.body,
-        false,
-        true,
-      ).valid).to.be.true;
-    });
-    it('should give an HTTP 200 when requesting own updated points of sale', async () => {
-      const res = await request(ctx.app)
-        .get(`/users/${ctx.users[0].id}/pointsofsale/updated`)
-        .set('Authorization', `Bearer ${ctx.userToken}`);
-      expect(res.status).to.equal(200);
-    });
-    it('should give an HTTP 403 when user requests updated points of sale (s)he does not own', async () => {
-      const res = await request(ctx.app)
-        .get('/users/2/pointsofsale/updated')
-        .set('Authorization', `Bearer ${ctx.userToken}`);
-      expect(res.status).to.equal(403);
-    });
-    it('should give an HTTP 403 when user requests updated points of sale from unknown user', async () => {
-      const res = await request(ctx.app)
-        .get('/users/1234/pointsofsale/updated')
-        .set('Authorization', `Bearer ${ctx.userToken}`);
-      expect(res.status).to.equal(403);
-    });
-    it('should give correct owned updated points of sale for admin', async () => {
-      const res = await request(ctx.app)
-        .get('/users/2/pointsofsale/updated')
-        .set('Authorization', `Bearer ${ctx.adminToken}`);
-      expect(res.status).to.equal(200);
-    });
-    it('should give an HTTP 404 when admin requests updated points of sale from unknown user', async () => {
-      const res = await request(ctx.app)
-        .get('/users/1234/pointsofsale/updated')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(404);
     });

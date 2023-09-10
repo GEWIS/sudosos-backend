@@ -21,10 +21,8 @@ import chai, { expect, request } from 'chai';
 import PointOfSaleController from '../../../src/controller/point-of-sale-controller';
 import User, { UserType } from '../../../src/entity/user/user';
 import {
-  seedAllContainers,
-  seedAllPointsOfSale,
-  seedAllProducts,
-  seedProductCategories,
+  seedContainers, seedPointsOfSale,
+  seedProductCategories, seedProducts,
   seedVatGroups,
 } from '../../seed';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
@@ -36,7 +34,6 @@ import {
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import { ContainerResponse, ContainerWithProductsResponse } from '../../../src/controller/response/container-response';
 import { PaginatedProductResponse, ProductResponse } from '../../../src/controller/response/product-response';
-import UpdatedPointOfSale from '../../../src/entity/point-of-sale/updated-point-of-sale';
 import {
   CreatePointOfSaleParams,
   CreatePointOfSaleRequest,
@@ -49,6 +46,7 @@ import { ORGAN_USER, UserFactory } from '../../helpers/user-factory';
 import { allDefinition, organDefinition, ownDefintion, RoleFactory } from '../../helpers/role-factory';
 import { UpdateContainerRequest } from '../../../src/controller/request/container-request';
 import ContainerController from '../../../src/controller/container-controller';
+import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -76,6 +74,8 @@ describe('PointOfSaleController', async () => {
     admin: User,
     user: User,
     organ: User,
+    pointsOfSale: PointOfSale[],
+    pointOfSaleRevisions: PointOfSaleRevision[],
     validPOSRequest: CreatePointOfSaleRequest,
     adminToken: string,
     superAdminToken: string,
@@ -119,15 +119,9 @@ describe('PointOfSaleController', async () => {
 
     const categories = await seedProductCategories();
     const vatGroups = await seedVatGroups();
-    const {
-      products,
-      productRevisions,
-    } = await seedAllProducts([admin, user], categories, vatGroups);
-    const {
-      containers,
-      containerRevisions,
-    } = await seedAllContainers([admin, user], productRevisions, products);
-    await seedAllPointsOfSale([admin, user, organ], containerRevisions, containers);
+    const { productRevisions } = await seedProducts([admin, user], categories, vatGroups);
+    const { containers, containerRevisions } = await seedContainers([admin, user], productRevisions);
+    const { pointsOfSale, pointOfSaleRevisions } = await seedPointsOfSale([admin, user, organ], containerRevisions);
 
     const validPOSRequest: CreatePointOfSaleRequest = {
       containers: [containers[0].id, containers[1].id, containers[2].id],
@@ -151,6 +145,8 @@ describe('PointOfSaleController', async () => {
       ...ctx,
       controller,
       organ,
+      pointsOfSale,
+      pointOfSaleRevisions,
       validPOSRequest,
       adminToken,
       token,
@@ -405,30 +401,6 @@ describe('PointOfSaleController', async () => {
       expect(res.body).to.be.empty;
     });
   });
-  describe('GET /pointsofsale/:id/update', async () => {
-    it('should return correct model', async () => {
-      const { id } = (await UpdatedPointOfSale.find({ relations: ['pointOfSale'] }))[0].pointOfSale;
-      const res = await request(ctx.app)
-        .get(`/pointsofsale/${id}/update`)
-        .set('Authorization', `Bearer ${ctx.adminToken}`);
-      expect(ctx.specification.validateModel(
-        'UpdatedPointOfSaleWithContainersResponse',
-        res.body,
-        false,
-        true,
-      ).valid).to.be.true;
-    });
-    it('should return an HTTP 200 and the update if admin', async () => {
-      const { id } = (await UpdatedPointOfSale.find({ relations: ['pointOfSale'] }))[0].pointOfSale;
-
-      const res = await request(ctx.app)
-        .get(`/pointsofsale/${id}/update`)
-        .set('Authorization', `Bearer ${ctx.adminToken}`);
-
-      expect(res.status).to.equal(200);
-      expect(res.body.id).to.be.equal(id);
-    });
-  });
   describe('GET /pointsofsale/:id/containers', async () => {
     it('should return correct model', async () => {
       const res = await request(ctx.app)
@@ -573,17 +545,20 @@ describe('PointOfSaleController', async () => {
         .post('/pointsofsale')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(ctx.validPOSRequest);
-      expect(ctx.specification.validateModel(
-        'UpdatedPointOfSaleResponse',
+
+      const validation = ctx.specification.validateModel(
+        'PointOfSaleWithContainersResponse',
         res.body,
         false,
         true,
-      ).valid).to.be.true;
+      );
+      expect(validation.valid).to.be.true;
 
       expect(await PointOfSale.count()).to.equal(count + 1);
-      pointOfSaleEq(ctx.validPOSRequest, res.body as PointOfSaleResponse);
-      const databaseProduct = await UpdatedPointOfSale.findOne({
-        where: { pointOfSale: { id: (res.body as PointOfSaleResponse).id } },
+      const body = res.body as PointOfSaleWithContainersResponse;
+      pointOfSaleEq(ctx.validPOSRequest, body);
+      const databaseProduct = await PointOfSale.findOne({
+        where: { id: body.id, currentRevision: body.revision },
       });
       expect(databaseProduct).to.exist;
 
@@ -599,17 +574,20 @@ describe('PointOfSaleController', async () => {
         .post('/pointsofsale')
         .set('Authorization', `Bearer ${ctx.organMemberToken}`)
         .send(createPointOfSaleParams);
-      expect(ctx.specification.validateModel(
-        'UpdatedPointOfSaleResponse',
+
+      const validation = ctx.specification.validateModel(
+        'PointOfSaleWithContainersResponse',
         res.body,
         false,
         true,
-      ).valid).to.be.true;
+      );
+      expect(validation.valid).to.be.true;
 
       expect(await PointOfSale.count()).to.equal(count + 1);
-      pointOfSaleEq(createPointOfSaleParams, res.body as PointOfSaleResponse);
-      const databaseProduct = await UpdatedPointOfSale.findOne({
-        where: { pointOfSale: { id: (res.body as PointOfSaleResponse).id } },
+      const body = res.body as PointOfSaleWithContainersResponse;
+      pointOfSaleEq(createPointOfSaleParams, body);
+      const databaseProduct = await PointOfSale.findOne({
+        where: { id: body.id, currentRevision: body.revision },
       });
       expect(databaseProduct).to.exist;
 

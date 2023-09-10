@@ -24,7 +24,6 @@ import ContainerService from '../service/container-service';
 import { PaginatedContainerResponse } from './response/container-response';
 import ContainerRevision from '../entity/container/container-revision';
 import ProductService from '../service/product-service';
-import UpdatedContainer from '../entity/container/updated-container';
 import Container from '../entity/container/container';
 import { asNumber } from '../helpers/validators';
 import { parseRequestPagination } from '../helpers/pagination';
@@ -83,28 +82,10 @@ export default class ContainerController extends BaseController {
           handler: this.getProductsContainer.bind(this),
         },
       },
-      '/:id(\\d+)/update': {
-        GET: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'get', await ContainerController.getRelation(req), 'Container', ['*']),
-          handler: this.getSingleUpdatedContainer.bind(this),
-        },
-      },
-      '/updated': {
-        GET: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Container', ['*']),
-          handler: this.getUpdatedContainers.bind(this),
-        },
-      },
       '/public': {
         GET: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'public', 'Container', ['*']),
           handler: this.getPublicContainers.bind(this),
-        },
-      },
-      '/:id(\\d+)/approve': {
-        POST: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'approve', await ContainerController.getRelation(req), 'Container', ['*']),
-          handler: this.approveUpdate.bind(this),
         },
       },
     };
@@ -240,41 +221,9 @@ export default class ContainerController extends BaseController {
         return;
       }
 
-      const approve = this.roleManager.can(req.token.roles, 'approve', await ContainerController.getRelation(req), 'Container', ['*']);
-      res.json(await ContainerService.createContainer(request, approve));
+      res.json(await ContainerService.createContainer(request));
     } catch (error) {
       this.logger.error('Could not create container:', error);
-      res.status(500).json('Internal server error.');
-    }
-  }
-
-  /**
-   * Approve a container update.
-   * @route POST /containers/{id}/approve
-   * @operationId approveContainer
-   * @param {integer} id.path.required - The id of the container update to approve
-   * @group containers - Operations of container controller
-   * @security JWT
-   * @returns {ContainerWithProductsResponse.model} 200 - The approved container entity
-   * @returns {string} 404 - Not found error
-   * @returns {string} 500 - Internal server error
-   */
-  public async approveUpdate(req: RequestWithToken, res: Response): Promise<void> {
-    const { id } = req.params;
-    this.logger.trace('Update accepted', id, 'by user', req.token.user);
-
-    const containerId = Number.parseInt(id, 10);
-    // Handle
-    try {
-      const container = await ContainerService.approveContainerUpdate(containerId);
-      if (!container) {
-        res.status(404).json('Container update not found.');
-        return;
-      }
-
-      res.json(container);
-    } catch (error) {
-      this.logger.error('Could not approve update: ', error);
       res.status(500).json('Internal server error.');
     }
   }
@@ -347,91 +296,9 @@ export default class ContainerController extends BaseController {
         return;
       }
 
-      const approve = this.roleManager.can(req.token.roles, 'approve', await ContainerController.getRelation(req), 'Container', ['*']);
-      if (approve) {
-        res.json(await ContainerService.directContainerUpdate(request));
-      } else {
-        res.json(await ContainerService.updateContainer(request));
-      }
+      res.json(await ContainerService.directContainerUpdate(request));
     } catch (error) {
       this.logger.error('Could not update container:', error);
-      res.status(500).json('Internal server error.');
-    }
-  }
-
-  /**
-   * Returns all updated containers
-   * @route GET /containers/updated
-   * @operationId getUpdatedContainers
-   * @group containers - Operations of containers controller
-   * @security JWT
-   * @param {integer} take.query - How many containers the endpoint should return
-   * @param {integer} skip.query - How many containers should be skipped (for pagination)
-   * @returns {PaginatedContainerResponse.model} 200 - All updated containers
-   * @returns {string} 500 - Internal server error
-   */
-  public async getUpdatedContainers(req: RequestWithToken, res: Response): Promise<void> {
-    const { body } = req;
-    this.logger.trace('Get all updated containers', body, 'by user', req.token.user);
-
-    let take;
-    let skip;
-    try {
-      const pagination = parseRequestPagination(req);
-      take = pagination.take;
-      skip = pagination.skip;
-    } catch (e) {
-      res.status(400).send(e.message);
-      return;
-    }
-
-    // Handle request
-    try {
-      const containers = await ContainerService.getUpdatedContainers({}, { take, skip });
-
-      res.json(containers);
-    } catch (error) {
-      this.logger.error('Could not return all updated containers:', error);
-      res.status(500).json('Internal server error.');
-    }
-  }
-
-  /**
-   * Returns the requested updated container
-   * @route GET /containers/{id}/update
-   * @operationId getSingleUpdatedContainer
-   * @group containers - Operations of containers controller
-   * @param {integer} id.path.required - The id of the container which should be returned
-   * @security JWT
-   * @returns {ContainerWithProductsResponse.model} 200 - The requested updated container entity
-   * @returns {string} 404 - Not found error
-   * @returns {string} 500 - Internal server error
-   */
-  public async getSingleUpdatedContainer(req: RequestWithToken, res: Response): Promise<void> {
-    const { id } = req.params;
-    const containerId = parseInt(id, 10);
-    this.logger.trace('Get single updated container', id, 'by user', req.token.user);
-
-    // handle request
-    try {
-      // Container does not exist.
-      if (!await Container.findOne({ where: { id: containerId } })) {
-        res.status(404).json('Container not found.');
-        return;
-      }
-
-      // No update available.
-      if (!await UpdatedContainer.findOne({ where: { container: { id: containerId } } })) {
-        res.json();
-        return;
-      }
-
-      const updatedContainer = (await ContainerService
-        .getUpdatedContainers({ containerId, returnProducts: true })).records[0];
-
-      res.json(updatedContainer);
-    } catch (error) {
-      this.logger.error('Could not return container:', error);
       res.status(500).json('Internal server error.');
     }
   }
