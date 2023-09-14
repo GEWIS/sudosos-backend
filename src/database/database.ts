@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  createConnection, Connection, getConnectionOptions,
+  createConnection, Connection,
 } from 'typeorm';
 import User from '../entity/user/user';
 import Product from '../entity/product/product';
@@ -67,12 +67,20 @@ import UserFineGroup from '../entity/fine/userFineGroup';
 export default class Database {
   public static async initialize(): Promise<Connection> {
     const options: DataSourceOptions = {
-      ...await getConnectionOptions(),
+      host: process.env.TYPEORM_HOST,
+      port: parseInt(process.env.TYPEORM_PORT || '3001'),
+      database: process.env.TYPEORM_DATABASE,
+      type: process.env.TYPEORM_CONNECTION as 'postgres' | 'mariadb' | 'mysql',
+      username: process.env.TYPEORM_USERNAME,
+      password: process.env.TYPEORM_PASSWORD,
+      synchronize: process.env.TYPEORM_SYNCHRONIZE === 'true',
+      logging: process.env.TYPEORM_LOGGING === 'true',
       extra: {
         authPlugins: {
           mysql_clear_password: () => () => Buffer.from(`${process.env.TYPEORM_PASSWORD}\0`),
         },
       },
+      poolSize: 4,
       entities: [
         ProductCategory,
         VatGroup,
