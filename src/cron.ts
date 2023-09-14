@@ -71,8 +71,6 @@ async function createCronTasks(): Promise<void> {
     }));
   });
 
-  cron.schedule('* * * * *', () => logger.error('Test at ' + new Date().toLocaleString()));
-
   application.tasks = [syncBalances];
 
   if (process.env.ENABLE_LDAP === 'true') {
