@@ -138,7 +138,7 @@ export default class DebtorController extends BaseController {
 
   /**
    * Delete a fine
-   * @route DELETE /fines/{id}
+   * @route DELETE /fines/single/{id}
    * @group debtors - Operations of the debtor controller
    * @operationId deleteFine
    * @security JWT
