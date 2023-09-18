@@ -86,21 +86,4 @@ export default class Transfer extends BaseEntity {
 
   @OneToOne(() => UserFineGroup, (g) => g.waivedTransfer, { nullable: true })
   public waivedFines: UserFineGroup | null;
-
-  @AfterInsert()
-  // NOTE: this event listener is only called when calling .save() on a new Transfer object instance,
-  // not .save() on the static method of the Transfer class
-  async validateDebtPaid() {
-    if (this.toId == null) return;
-
-    const user = await User.findOne({ where: { id: this.toId }, relations: ['currentFines'] });
-    if (user.currentFines == null) return;
-
-    // Remove currently unpaid fines when new balance is positive.
-    const balance = await BalanceService.getBalance(user.id);
-    if (balance.amount.amount >= 0) {
-      user.currentFines = null;
-      await user.save();
-    }
-  }
 }

@@ -16,11 +16,11 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { Connection } from 'typeorm';
-import User, { TermsOfServiceStatus, UserType } from '../../../../src/entity/user/user';
-import Transaction from '../../../../src/entity/transactions/transaction';
-import SubTransaction from '../../../../src/entity/transactions/sub-transaction';
-import Transfer from '../../../../src/entity/transactions/transfer';
-import Database from '../../../../src/database/database';
+import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
+import Transaction from '../../../src/entity/transactions/transaction';
+import SubTransaction from '../../../src/entity/transactions/sub-transaction';
+import Transfer from '../../../src/entity/transactions/transfer';
+import Database from '../../../src/database/database';
 import {
   seedContainers,
   seedPointsOfSale,
@@ -28,19 +28,19 @@ import {
   seedProducts, seedTransactions, seedTransfers,
   seedUsers,
   seedVatGroups,
-} from '../../../seed';
-import { calculateBalance } from '../../../helpers/balance';
-import ProductRevision from '../../../../src/entity/product/product-revision';
-import ContainerRevision from '../../../../src/entity/container/container-revision';
-import PointOfSaleRevision from '../../../../src/entity/point-of-sale/point-of-sale-revision';
-import Mailer from '../../../../src/mailer';
+} from '../../seed';
+import { calculateBalance } from '../../helpers/balance';
+import ProductRevision from '../../../src/entity/product/product-revision';
+import ContainerRevision from '../../../src/entity/container/container-revision';
+import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
+import Mailer from '../../../src/mailer';
 import sinon, { SinonSandbox, SinonSpy } from 'sinon';
 import nodemailer, { Transporter } from 'nodemailer';
 import { expect } from 'chai';
-import TransactionService from '../../../../src/service/transaction-service';
-import BalanceService from '../../../../src/service/balance-service';
+import TransactionService from '../../../src/service/transaction-service';
+import BalanceService from '../../../src/service/balance-service';
 
-describe('Transaction', () => {
+describe('TransactionSubscriber', () => {
   let ctx: {
     connection: Connection,
     adminUser: User,
@@ -121,7 +121,7 @@ describe('Transaction', () => {
     sendMailFake.resetHistory();
   });
 
-  describe('sendEmailNotificationIfNowInDebt', () => {
+  describe('afterInsert', () => {
     it('should send an email if someone gets into debt', async () => {
       const user = ctx.usersNotInDebt[0];
       const currentBalance = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers).amount;
