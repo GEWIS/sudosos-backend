@@ -297,31 +297,24 @@ describe('DebtorController', () => {
   });
 
   describe('GET /fines/eligible', () => {
-    it('should correctly return list of possible fines', async () => {
+    it('should return list of fines', async () => {
       const userTypes = [UserType.LOCAL_USER, UserType.MEMBER];
+      const referenceDates = [new Date('2021-02-12')];
       const res = await request(ctx.app)
         .get('/fines/eligible')
-        .query({ userTypes: userTypes.map((t) => UserType[t]) })
-        .set('Authorization', `Bearer ${ctx.adminToken}`);
-      expect(res.status).to.equal(200);
-
-      const fines = res.body as UserToFineResponse[];
-      fines.forEach((fine) => {
-        const validation = ctx.specification.validateModel('UserToFineResponse', fine, false, true);
-        expect(validation.valid).to.be.true;
-      });
-    });
-    it('should correctly return list of possible fines for user types', async () => {
-      const userTypes = [UserType.LOCAL_USER, UserType.MEMBER];
-      const res = await request(ctx.app)
-        .get('/fines/eligible')
-        .query({ userTypes: userTypes.map((t) => UserType[t]) })
+        .query({
+          userTypes: userTypes.map((t) => UserType[t]),
+          referenceDates,
+        })
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
 
       const fines = res.body as UserToFineResponse[];
       fines.forEach((f) => {
         const user = ctx.users.find((u) => u.id === f.id);
+        expect(user).to.not.be.undefined;
+        const balance = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers, referenceDates[0]).amount.getAmount();
+        expect(f.fineAmount.amount).to.equal(calculateFine(balance));
         expect(userTypes).to.include(user.type);
       });
     });
@@ -338,26 +331,6 @@ describe('DebtorController', () => {
         .query({ userTypes: ['39Voooo'] })
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(400);
-    });
-    it('should return list of fines based on reference date', async () => {
-      const userTypes = [UserType.LOCAL_USER, UserType.MEMBER];
-      const referenceDate = new Date('2021-02-12');
-      const res = await request(ctx.app)
-        .get('/fines/eligible')
-        .query({
-          userTypes: userTypes.map((t) => UserType[t]),
-          referenceDate: referenceDate.toISOString(),
-        })
-        .set('Authorization', `Bearer ${ctx.adminToken}`);
-      expect(res.status).to.equal(200);
-
-      const fines = res.body as UserToFineResponse[];
-      fines.forEach((f) => {
-        const user = ctx.users.find((u) => u.id === f.id);
-        expect(user).to.not.be.undefined;
-        const balance = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers, referenceDate).amount.getAmount();
-        expect(f.amount.amount).to.equal(calculateFine(balance));
-      });
     });
     it('should return 400 when referenceDate is not a valid date', async () => {
       const userTypes = [UserType.LOCAL_USER, UserType.MEMBER];
@@ -385,7 +358,7 @@ describe('DebtorController', () => {
       const res = await request(ctx.app)
         .post('/fines/handout')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
-        .send({ userIds: ctx.users.map((u) => u.id) });
+        .send({ userIds: ctx.users.map((u) => u.id), referenceDate: new Date() });
       expect(res.status).to.equal(200);
 
       const fineHandoutEventResponse = res.body as FineHandoutEventResponse;
@@ -398,7 +371,7 @@ describe('DebtorController', () => {
       const res = await request(ctx.app)
         .post('/fines/handout')
         .set('Authorization', `Bearer ${ctx.userToken}`)
-        .send({ userIds: ctx.users.map((u) => u.id) });
+        .send({ userIds: ctx.users.map((u) => u.id), referenceDate: new Date() });
       expect(res.status).to.equal(403);
     });
     it('should return 400 if userIds is not a list', async () => {
@@ -426,6 +399,13 @@ describe('DebtorController', () => {
       const fineHandoutEventResponse = res.body as FineHandoutEventResponse;
       expect(fineHandoutEventResponse.referenceDate).to.equal(referenceDate.toISOString());
     });
+    it('should return 400 if no reference date', async () => {
+      const res = await request(ctx.app)
+        .post('/fines/handout')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ userIds: ctx.users.map((u) => u.id) });
+      expect(res.status).to.equal(400);
+    });
     it('should return 400 if invalid reference date', async () => {
       const res = await request(ctx.app)
         .post('/fines/handout')
@@ -444,7 +424,7 @@ describe('DebtorController', () => {
       const res = await request(ctx.app)
         .post('/fines/handout')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
-        .send({ userIds: [] });
+        .send({ userIds: [], referenceDate: new Date()  });
       expect(res.status).to. equal(200);
 
       const fineHandoutEventResponse = res.body as FineHandoutEventResponse;
@@ -457,7 +437,7 @@ describe('DebtorController', () => {
       const res = await request(ctx.app)
         .post('/fines/notify')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
-        .send({ userIds: ctx.users.map((u) => u.id) });
+        .send({ userIds: ctx.users.map((u) => u.id), referenceDate: new Date() });
       expect(res.status).to.equal(204);
 
       const body = res.body as FineHandoutEventResponse;
@@ -468,7 +448,7 @@ describe('DebtorController', () => {
       const res = await request(ctx.app)
         .post('/fines/notify')
         .set('Authorization', `Bearer ${ctx.userToken}`)
-        .send({ userIds: ctx.users.map((u) => u.id) });
+        .send({ userIds: ctx.users.map((u) => u.id), referenceDate: new Date() });
       expect(res.status).to.equal(403);
     });
     it('should return 400 if userIds is not a list', async () => {
@@ -483,6 +463,13 @@ describe('DebtorController', () => {
         .post('/fines/notify')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send({ userIds: ['WieDitLeestTrektBak'] });
+      expect(res.status).to.equal(400);
+    });
+    it('should return 400 if no reference date', async () => {
+      const res = await request(ctx.app)
+        .post('/fines/notify')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ userIds: ctx.users.map((u) => u.id) });
       expect(res.status).to.equal(400);
     });
     it('should return 400 if invalid reference date', async () => {

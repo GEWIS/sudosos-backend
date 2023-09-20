@@ -19,15 +19,18 @@ import { DineroObjectResponse } from './dinero-response';
 import BaseResponse from './base-response';
 import { PaginationResult } from '../../helpers/pagination';
 import { BaseUserResponse } from './user-response';
+import BalanceResponse from './balance-response';
 
 /**
  * @typedef UserToFineResponse
  * @property {integer} id - User ID
- * @property {DineroObjectResponse.model} amount - Amount to fine
+ * @property {DineroObjectResponse.model} fineAmount - Amount to fine
+ * @property {Array.<BalanceResponse>} balances - Balances at the given reference dates
  */
 export interface UserToFineResponse {
   id: number;
-  amount: DineroObjectResponse;
+  fineAmount: DineroObjectResponse;
+  balances: BalanceResponse[]
 }
 
 /**

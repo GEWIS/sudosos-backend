@@ -63,7 +63,7 @@ export function asBalanceOrderColumn(input: any): BalanceOrderColumn | undefined
 }
 
 export default class BalanceService {
-  protected static asBalanceResponse(rawBalance: any): BalanceResponse {
+  protected static asBalanceResponse(rawBalance: any, date: Date): BalanceResponse {
     let fineSince = null;
     // SQLite returns timestamps in UTC, while MariaDB/MySQL returns timestamps in the local timezone
     if (rawBalance.fineSince) {
@@ -73,6 +73,7 @@ export default class BalanceService {
 
     return {
       id: rawBalance.id,
+      date: date.toISOString(),
       amount: DineroTransformer.Instance.from(rawBalance.amount).toObject(),
       lastTransactionId: rawBalance.lastTransactionId,
       lastTransferId: rawBalance.lastTransferId,
@@ -298,7 +299,7 @@ export default class BalanceService {
     const count = (await connection.query(query, parameters)).length;
     return {
       _pagination: { take, skip, count },
-      records: balances.map((b: object) => this.asBalanceResponse(b)),
+      records: balances.map((b: object) => this.asBalanceResponse(b, date ?? new Date())),
     };
   }
 

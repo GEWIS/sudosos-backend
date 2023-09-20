@@ -23,7 +23,7 @@ import { RequestWithToken } from '../middleware/token-middleware';
 import { parseRequestPagination } from '../helpers/pagination';
 import DebtorService from '../service/debtor-service';
 import User from '../entity/user/user';
-import { asArrayOfUserTypes, asDate } from '../helpers/validators';
+import { asArrayOfDates, asArrayOfUserTypes, asDate } from '../helpers/validators';
 import { In } from 'typeorm';
 import { HandoutFinesRequest } from './request/debtor-request';
 import Fine from '../entity/fine/fine';
@@ -101,7 +101,7 @@ export default class DebtorController extends BaseController {
       take = pagination.take;
       skip = pagination.skip;
     } catch (e) {
-      res.status(400).send(e.message);
+      res.status(400).json(e.message);
       return;
     }
 
@@ -174,8 +174,9 @@ export default class DebtorController extends BaseController {
    * @group debtors - Operations of the debtor controller
    * @operationId calculateFines
    * @security JWT
-   * @param {Array<string>} userTypes[].query.required - List of all user types fines should be calculated for
-   * @param {string} referenceDate.query - Date to base fines on. If undefined, use the date of the last fine handout event. If that one also does not exist, use now.
+   * @param {Array<string>} userTypes[].query - List of all user types fines should be calculated for
+   * @param {Array<string>} referenceDates[].query.required - Dates to base the fines on. Every returned user has at
+   * least five euros debt on every reference date. The height of the fine is based on the first date in the array.
    * @returns {Array<UserToFineResponse>} 200 - List of eligible fines
    * @returns {string} 400 - Validation error
    * @returns {string} 500 - Internal server error
@@ -185,14 +186,16 @@ export default class DebtorController extends BaseController {
 
     let params;
     try {
+      const referenceDates = asArrayOfDates(req.query.referenceDate);
+      if (referenceDates === undefined && req.query.referenceDates === undefined) throw new Error('referenceDates is required');
+      if (referenceDates === undefined && req.query.referenceDates !== undefined) throw new Error('referenceDates is not a valid array');
       params = {
         userTypes: asArrayOfUserTypes(req.query.userTypes),
-        referenceDate: asDate(req.query.referenceDate),
+        referenceDates,
       };
       if (params.userTypes === undefined) throw new Error('userTypes is not a valid array of UserTypes');
-      if (params.referenceDate === undefined && req.query.referenceDate !== undefined) throw new Error('referenceDate is not a valid date');
     } catch (e) {
-      res.status(400).send(e.message);
+      res.status(400).json(e.message);
       return;
     }
 
@@ -205,7 +208,7 @@ export default class DebtorController extends BaseController {
   }
 
   /**
-   * Handout fines to all given users.
+   * Handout fines to all given users. Fines will be handed out "now" to prevent rewriting history.
    * @route POST /fines/handout
    * @group debtors - Operations of the debtor controller
    * @operationId handoutFines
@@ -227,11 +230,10 @@ export default class DebtorController extends BaseController {
       if (users.length !== body.userIds.length) throw new Error('userIds is not a valid array of user IDs');
 
       if (body.referenceDate !== undefined) {
-        referenceDate = new Date(body.referenceDate);
-        if (Number.isNaN(referenceDate.getTime())) throw new Error('referenceDate is not a valid date');
+        referenceDate = asDate(body.referenceDate);
       }
     } catch (e) {
-      res.status(400).send(e.message);
+      res.status(400).json(e.message);
       return;
     }
 
@@ -267,11 +269,10 @@ export default class DebtorController extends BaseController {
       if (users.length !== body.userIds.length) throw new Error('userIds is not a valid array of user IDs');
 
       if (body.referenceDate !== undefined) {
-        referenceDate = new Date(body.referenceDate);
-        if (Number.isNaN(referenceDate.getTime())) throw new Error('referenceDate is not a valid date');
+        referenceDate = asDate(body.referenceDate);
       }
     } catch (e) {
-      res.status(400).send(e.message);
+      res.status(400).json(e.message);
       return;
     }
 

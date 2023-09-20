@@ -44,11 +44,11 @@ import UserWillGetFined from '../mailer/templates/user-will-get-fined';
 export interface CalculateFinesParams {
   userTypes?: UserType[];
   userIds?: number[];
-  referenceDate?: Date;
+  referenceDates: Date[];
 }
 
 export interface HandOutFinesParams {
-  referenceDate?: Date;
+  referenceDate: Date;
   userIds: number[];
 }
 
@@ -144,41 +144,41 @@ export default class DebtorService {
    * For all these users, also return their fine based on the reference date.
    * @param userTypes List of all user types fines should be calculated for
    * @param userIds List of all user IDs fines should be calculated for
-   * @param referenceDate Date to base fines on. If undefined, use now.
+   * @param referenceDates Dates at which a user needs to have a negative balance. The first
+   * date will be used to determine the size of the fine
    */
-  public static async calculateFinesOnDate({ userTypes, userIds, referenceDate }: CalculateFinesParams): Promise<UserToFineResponse[]> {
-    const debtorsOnReferenceDate = await BalanceService.getBalances({
+  public static async calculateFinesOnDate({ userTypes, userIds, referenceDates }: CalculateFinesParams): Promise<UserToFineResponse[]> {
+    if (referenceDates.length === 0) throw new Error('No reference dates given.');
+
+    const balances = await Promise.all(referenceDates.map((date) => BalanceService.getBalances({
       maxBalance: DineroTransformer.Instance.from(-500),
-      date: referenceDate,
+      date,
       userTypes,
       ids: userIds,
-    });
+    })));
 
-    const debtorsNow = await BalanceService.getBalances({
-      maxBalance: DineroTransformer.Instance.from(-500),
-      userTypes,
-      ids: userIds,
-    });
-    const debtorsNowIds = debtorsNow.records.map((b) => b.id);
-
-    const userBalancesToFine = debtorsOnReferenceDate.records.filter((b) => debtorsNowIds.includes(b.id));
+    const [debtorsOnReferenceDate, ...debtors] = balances;
+    const userBalancesToFine = debtorsOnReferenceDate.records
+      .filter((d1) => debtors.every((b) => b.records
+        .some((d2) => d1.id === d2.id)));
 
     return userBalancesToFine.map((u) => {
       const fine = calculateFine(u.amount);
       return {
         id: u.id,
-        amount: {
+        fineAmount: {
           amount: fine.getAmount(),
           currency: fine.getCurrency(),
           precision: fine.getPrecision(),
         },
+        balances: balances.map((balance) => balance.records.find((b) => b.id === u.id)),
       };
     });
   }
 
   /**
    * Write fines in a single database transaction to database for all given user ids.
-   * @param referenceDate Date to base fines on. If undefined, the date of the previous fines will be used. If this is the first fine, use now.
+   * @param referenceDate Date to base fines on
    * @param userIds Ids of all users to fine
    * @param createdBy User handing out fines
    */
@@ -191,10 +191,8 @@ export default class DebtorService {
       take: 1,
     }))[0];
 
-    const date = referenceDate || previousFineGroup?.createdAt || new Date();
-
     const balances = await BalanceService.getBalances({
-      date,
+      date: referenceDate,
       ids: userIds,
     });
 
@@ -202,7 +200,7 @@ export default class DebtorService {
     const { fines: fines1, fineHandoutEvent: fineHandoutEvent1, emails: emails1 } = await getConnection().transaction(async (manager) => {
       // Create a new fine group to "connect" all these fines
       const fineHandoutEvent = Object.assign(new FineHandoutEvent(), {
-        referenceDate: date,
+        referenceDate,
         createdBy,
       });
       await manager.save(fineHandoutEvent);
@@ -232,7 +230,7 @@ export default class DebtorService {
         const transfer = await TransferService.createTransfer({
           amount: amount.toObject(),
           fromId: user.id,
-          description: `Fine for balance of ${dinero({ amount: b.amount.amount }).toFormat()} on ${date.toLocaleDateString()}.`,
+          description: `Fine for balance of ${dinero({ amount: b.amount.amount }).toFormat()} on ${referenceDate.toLocaleDateString()}.`,
           toId: undefined,
         }, manager);
 
@@ -240,7 +238,7 @@ export default class DebtorService {
           name: user.firstName,
           fine: amount,
           balance: DineroTransformer.Instance.from(b.amount.amount),
-          referenceDate: date,
+          referenceDate,
           totalFine: userFineGroup.fines.reduce((sum, f) => sum.add(f.amount), dinero({ amount :0 })).add(amount),
         }) });
 
@@ -325,29 +323,16 @@ export default class DebtorService {
   public static async sendFineWarnings({
     referenceDate, userIds,
   }: HandOutFinesParams): Promise<void> {
-    const previousFineGroup = (await FineHandoutEvent.find({
-      order: { id: 'desc' },
-      relations: ['fines', 'fines.userFineGroup'],
-      take: 1,
-    }))[0];
-
-    const date = referenceDate || previousFineGroup?.createdAt || new Date();
-
-    const balances = await BalanceService.getBalances({
-      date,
-      ids: userIds,
-    });
-
-    const fines = await this.calculateFinesOnDate({ userIds, referenceDate });
+    const fines = await this.calculateFinesOnDate({ userIds, referenceDates: [referenceDate] });
 
     await Promise.all(fines.map(async (f) => {
       const user = await User.findOne({ where: { id: f.id } });
-      const balance = balances.records.find((b) => b.id === f.id);
+      const balance = f.balances[0];
       if (balance == null) throw new Error('Missing balance');
       return Mailer.getInstance().send(user, new UserWillGetFined({
         name: user.firstName,
-        referenceDate: date,
-        fine: dinero(f.amount as any),
+        referenceDate: referenceDate,
+        fine: dinero(f.fineAmount as any),
         balance: dinero(balance.amount as any),
       }));
     }));

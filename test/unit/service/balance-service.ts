@@ -125,6 +125,7 @@ describe('BalanceService', (): void => {
         expect(user).to.not.be.undefined;
         const actualBalance = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers);
         expect(balance.amount.amount).to.equal(actualBalance.amount.getAmount());
+        expect(new Date().getTime() - new Date(balance.date).getTime()).to.be.at.most(1000);
         await checkFine(balance, user);
       }));
     });
@@ -137,6 +138,7 @@ describe('BalanceService', (): void => {
         expect(user).to.not.be.undefined;
         const actualBalance = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers, date);
         expect(balance.amount.amount).to.equal(actualBalance.amount.getAmount());
+        expect(balance.date).to.equal(date.toISOString());
         await checkFine(balance, user);
       }));
     });
