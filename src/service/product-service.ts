@@ -20,23 +20,20 @@ import { DineroObject } from 'dinero.js';
 import {
   PaginatedProductResponse,
   ProductResponse,
-  UpdatedProductResponse,
 } from '../controller/response/product-response';
 import Product from '../entity/product/product';
 import ProductRevision from '../entity/product/product-revision';
-import UpdatedProduct from '../entity/product/updated-product';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import ContainerRevision from '../entity/container/container-revision';
 import Container from '../entity/container/container';
-import UpdatedContainer from '../entity/container/updated-container';
 import User from '../entity/user/user';
 import CreateProductParams, { UpdateProductParams, UpdateProductRequest } from '../controller/request/product-request';
 import PointOfSale from '../entity/point-of-sale/point-of-sale';
 import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision';
 import { PaginationParameters } from '../helpers/pagination';
 import { RequestWithToken } from '../middleware/token-middleware';
-import { asBoolean, asDate, asNumber } from '../helpers/validators';
+import { asDate, asNumber } from '../helpers/validators';
 // eslint-disable-next-line import/no-cycle
 import ContainerService from './container-service';
 import { UpdateContainerParams } from '../controller/request/container-request';
@@ -68,10 +65,6 @@ export interface ProductFilterParameters {
    */
   containerRevision?: number;
   /**
-   * Filter based on if the updated container should be used.
-   */
-  updatedContainer?: boolean;
-  /**
    * Filter based on point of sale id.
    */
   pointOfSaleId?: number;
@@ -79,14 +72,6 @@ export interface ProductFilterParameters {
    * Filter based on a specific point of sale revision.
    */
   pointOfSaleRevision?: number;
-  /**
-   * Filter based on if the updated point of sale should be used.
-   */
-  updatedPointOfSale?: boolean;
-  /**
-   * If the query should return updated products.
-   */
-  updatedProducts?: boolean;
   /**
    * Filter based on the product category id.
    */
@@ -135,10 +120,8 @@ export function parseGetProductFilters(req: RequestWithToken): ProductFilterPara
     ownerId: asNumber(req.query.fromId),
     containerId: asNumber(req.query.containerId),
     containerRevision: asNumber(req.query.containerRevision),
-    updatedContainer: asBoolean(req.query.containerRevision),
     pointOfSaleId: asNumber(req.query.pointOfSaleId),
     pointOfSaleRevision: asNumber(req.query.pointOfSaleRevision),
-    updatedProducts: asBoolean(req.query.updatedProducts),
     categoryId: asNumber(req.query.categoryId),
     // categoryName: asString(req.query.categoryName),
     createdAt: asDate(req.query.createdAt),
@@ -196,15 +179,10 @@ export default class ProductService {
     };
   }
 
-  static getRelevantBuilder(params: ProductFilterParameters = {}): () => SelectQueryBuilder<any> {
-    if (params.updatedProducts) return this.getUpdatedProducts;
-    return this.getCurrentProducts;
-  }
-
   public static async getProducts(filters: ProductFilterParameters = {},
     pagination: PaginationParameters = {}, user?: User): Promise<PaginatedProductResponse> {
     const { take, skip } = pagination;
-    const builder: SelectQueryBuilder<any> = this.getRelevantBuilder(filters).bind(this)(filters);
+    const builder: SelectQueryBuilder<any> = this.getCurrentProducts(filters);
 
     const filterMapping: FilterMapping = {
       productId: 'product.id',
@@ -246,30 +224,21 @@ export default class ProductService {
    * Filter the products on container ID.
    * @param builder - The query builder being used.
    * @param containerId - The ID of the container.
-   * @param isUpdatedProduct - If we are getting updated products.
-   * @param isUpdatedContainer - If the container is an updated container.
    * @param containerRevision - If we are getting a specific container revision.
    * @private
    */
   private static addContainerFilter(
     builder: SelectQueryBuilder<Product>,
     containerId?: number,
-    isUpdatedProduct?: boolean,
-    isUpdatedContainer?: boolean,
     containerRevision?: number,
   ): void {
     // Case distinction for the inner join condition.
     function condition() {
-      if (isUpdatedProduct) return 'updatedproduct.product = containerproducts.productId';
-      if (isUpdatedContainer) {
-        return 'productrevision.product = containerproducts.productId';
-      }
       return 'productrevision.product = containerproducts.productId AND productrevision.revision = containerproducts.productRevision';
     }
 
     // Case distinction for the inner join.
     function innerJoin() {
-      if (isUpdatedContainer) return 'container.id = containeralias.containerId';
       if (containerRevision) {
         return `container.id = containeralias.containerId AND ${containerRevision} = containeralias.revision`;
       }
@@ -282,14 +251,12 @@ export default class ProductService {
         qb
           .from(Container, 'container')
           .innerJoinAndSelect(
-            isUpdatedContainer ? UpdatedContainer : ContainerRevision,
+            ContainerRevision,
             'containeralias',
             innerJoin(),
           )
           .innerJoinAndSelect('containeralias.products', 'product')
-          .select(isUpdatedContainer
-            ? ['productId']
-            : ['product.productId AS productId', 'product.revision as productRevision']);
+          .select(['product.productId AS productId', 'product.revision as productRevision']);
         if (containerId) qb.where('container.id = :id', { id: containerId });
         return qb;
       }, 'containerproducts', condition());
@@ -332,7 +299,7 @@ export default class ProductService {
       // we only want the last revision, otherwise all revisions.
       // This is needed since containers or POS can contain older revisions,
       // Whilst updatedContainer contain the latest revisions.
-      return (params.updatedContainer || (!params.containerId && !params.pointOfSaleId))
+      return (!params.containerId && !params.pointOfSaleId)
         ? `product.id = productrevision.product AND ${latest} = productrevision.revision`
         : 'product.id = productrevision.product';
     }
@@ -342,8 +309,7 @@ export default class ProductService {
       .innerJoinAndSelect(ProductRevision, 'productrevision', condition());
 
     if (params.containerId) {
-      this.addContainerFilter(builder, params.containerId, false,
-        params.updatedContainer, params.containerRevision);
+      this.addContainerFilter(builder, params.containerId, params.containerRevision);
     }
 
     if (params.pointOfSaleId) {
@@ -379,105 +345,6 @@ export default class ProductService {
   }
 
   /**
-   * Query for getting all updated products following the ProductParameters.
-   * @param params - The product query parameters.
-   */
-  public static getUpdatedProducts(params: ProductFilterParameters = {})
-    : SelectQueryBuilder<any> {
-    const builder = createQueryBuilder()
-      .from(Product, 'product')
-      .innerJoinAndSelect(
-        UpdatedProduct,
-        'updatedproduct',
-        'product.id = updatedproduct.product',
-      );
-
-    if (params.containerId || params.pointOfSaleId) {
-      this.addContainerFilter(builder, params.containerId, true, params.updatedContainer);
-    }
-
-    builder
-      .innerJoinAndSelect('product.owner', 'owner')
-      .innerJoinAndSelect('updatedproduct.category', 'category')
-      .innerJoinAndSelect('updatedproduct.vat', 'vatgroup')
-      .leftJoinAndSelect('product.image', 'image')
-      .select([
-        'product.id AS id',
-        'product.createdAt AS createdAt',
-        'updatedproduct.updatedAt AS updatedAt',
-        'updatedproduct.name AS name',
-        'updatedproduct.priceInclVat AS priceInclVat',
-        'vatgroup.id AS vat_id',
-        'vatgroup.percentage AS vat_percentage',
-        'vatgroup.hidden AS vat_hidden',
-        'owner.id AS owner_id',
-        'owner.firstName AS owner_firstName',
-        'owner.lastName AS owner_lastName',
-        'category.id AS category_id',
-        'category.name AS category_name',
-        'updatedproduct.alcoholpercentage AS alcoholpercentage',
-        'image.downloadName as image',
-      ])
-      .orderBy('updatedproduct.name', 'ASC');
-
-    return builder;
-  }
-
-  /**
-   * Function that returns all the products based on parameters.
-   * This is used for POS or containers which are not solely
-   * the latest revision products.
-   * @param params - The product parameters to adhere to.
-   */
-  public static async getAllProducts(params: ProductFilterParameters = {}) {
-    // We get the products by first getting the updated products and then merge them with the
-    // normal products.
-    const updatedProducts: ProductResponse[] = (await this.getProducts(
-      { ...params, updatedProducts: true },
-    )).records;
-
-    const updatedProductIds = updatedProducts.map((prod) => prod.id);
-
-    // Get the remaining products.
-    const products: ProductResponse[] = (await this.getProducts(params)).records;
-
-    const filteredProducts = products.filter(
-      (prod) => !updatedProductIds.includes(prod.id),
-    );
-
-    // Return the products.
-    return filteredProducts.concat(updatedProducts);
-  }
-
-  /**
-   * Creates a product update.
-   * @param update - The product variables.
-   */
-  public static async updateProduct(update: UpdateProductParams)
-    : Promise<ProductResponse> {
-    // Get the base product.
-    const base: Product = await Product.findOne({ where: { id: update.id } });
-
-    // return undefined if not found or request is invalid
-    if (!base) {
-      return undefined;
-    }
-
-    // Set base product, then the oldest settings and then the newest.
-    const updatedProduct = Object.assign(new UpdatedProduct(), {
-      product: base,
-      ...update,
-      priceInclVat: DineroTransformer.Instance.from(update.priceInclVat.amount),
-    });
-
-    // Save the product.
-    await updatedProduct.save();
-
-    // Pull the just created product from the database to fix the formatting.
-    return (await this.getProducts({ updatedProducts: true, productId: update.id })).records[0];
-  }
-
-  /**
    * Creates a new product.
    *
    * If approve is false, then the newly created product resides in the
@@ -486,8 +353,8 @@ export default class ProductService {
    *
    * @param product - The product to be created.
    */
-  public static async createProduct(product: CreateProductParams, approve = false)
-    : Promise<UpdatedProductResponse> {
+  public static async createProduct(product: CreateProductParams)
+    : Promise<ProductResponse> {
     const owner = await User.findOne({ where: { id: product.ownerId } });
 
     if (!owner) return undefined;
@@ -509,11 +376,7 @@ export default class ProductService {
     };
 
     let createdProduct: ProductResponse;
-    if (approve) {
-      createdProduct = await this.directProductUpdate(update);
-    } else {
-      createdProduct = await this.updateProduct(update);
-    }
+    createdProduct = await this.directProductUpdate(update);
 
     return createdProduct;
   }
@@ -542,41 +405,6 @@ export default class ProductService {
 
     await this.propagateProductUpdate(base.id);
     return productRevision;
-  }
-
-  /**
-   * Confirms a product update and creates a product revision.
-   * @param productId - The product update to confirm.
-   */
-  public static async approveProductUpdate(productId: number)
-    : Promise<ProductResponse> {
-    const base: Product = await Product.findOne({ where: { id: productId } });
-    const rawUpdateProduct = await UpdatedProduct.findOne({ where: { product: { id: productId } }, relations: ['category', 'vat'] });
-
-    // return undefined if not found or request is invalid
-    if (!base || !rawUpdateProduct) {
-      return undefined;
-    }
-
-    const updateRequest = {
-      priceInclVat: {
-        amount: rawUpdateProduct.priceInclVat.getAmount(),
-        currency: rawUpdateProduct.priceInclVat.getCurrency(),
-        precision: rawUpdateProduct.priceInclVat.getPrecision(),
-      },
-      category: rawUpdateProduct.category.id,
-      vat: rawUpdateProduct.vat.id,
-      alcoholPercentage: rawUpdateProduct.alcoholPercentage,
-      name: rawUpdateProduct.name,
-    } as UpdateProductRequest;
-
-    await this.applyProductUpdate(base, updateRequest);
-
-    // Remove update after revision is created.
-    await UpdatedProduct.delete(productId);
-
-    // Return the new product.
-    return (await this.getProducts({ productId })).records[0];
   }
 
   public static async directProductUpdate(updateRequest: UpdateProductParams)

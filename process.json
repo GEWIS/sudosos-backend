@@ -1,0 +1,10 @@
+{
+  "apps": [{
+    "name": "http-worker",
+    "script": "./out/src/index.js",
+    "instances": 4
+  }, {
+    "name": "cron",
+    "script": "./out/src/cron.js"
+  }]
+}

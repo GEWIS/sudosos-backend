@@ -21,20 +21,23 @@ import {
   Column,
   BeforeUpdate, ManyToMany, JoinTable, PrimaryColumn, JoinColumn,
 } from 'typeorm';
-import BasePointOfSale from './base-point-of-sale';
 import PointOfSale from './point-of-sale';
 // eslint-disable-next-line import/no-cycle
 import ContainerRevision from '../container/container-revision';
+import BaseEntityWithoutId from '../base-entity-without-id';
 
 /**
- * @typedef {BasePointOfSale} PointOfSaleRevision
+ * @typedef {BaseEntityWithoutId} PointOfSaleRevision
  * @property {PointOfSale.model} pointOfSale.required - The pointOfSale the revision belongs to.
  * @property {integer} revision.required - The revision number of this revision.
  * @property {Array.<ContainerRevision>} containers.required - The containers that are contained
  * in this revision.
+ * @property {string} name.required - The name of the pointOfSale.
+ * @property {boolean} useAuthentication.required - Whether this POS requires users to authenticate
+ * themselves before making a transaction
  */
 @Entity()
-export default class PointOfSaleRevision extends BasePointOfSale {
+export default class PointOfSaleRevision extends BaseEntityWithoutId {
   @PrimaryColumn()
   public readonly pointOfSaleId: number;
 
@@ -54,6 +57,16 @@ export default class PointOfSaleRevision extends BasePointOfSale {
     nullable: false,
   })
   public revision: number;
+
+  @Column({
+    length: 64,
+  })
+  public name: string;
+
+  @Column({
+    default: false,
+  })
+  public useAuthentication: boolean;
 
   @ManyToMany(() => ContainerRevision, (container) => container.pointsOfSale)
   @JoinTable()

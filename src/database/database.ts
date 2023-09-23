@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  createConnection, Connection, getConnectionOptions,
+  createConnection, Connection,
 } from 'typeorm';
 import User from '../entity/user/user';
 import Product from '../entity/product/product';
@@ -41,9 +41,6 @@ import ProductRevision from '../entity/product/product-revision';
 import ContainerRevision from '../entity/container/container-revision';
 import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision';
 import ProductOrdering from '../entity/point-of-sale/product-ordering';
-import UpdatedProduct from '../entity/product/updated-product';
-import UpdatedContainer from '../entity/container/updated-container';
-import UpdatedPointOfSale from '../entity/point-of-sale/updated-point-of-sale';
 import Balance from '../entity/transactions/balance';
 import InvoiceUser from '../entity/user/invoice-user';
 import InvoiceEntry from '../entity/invoices/invoice-entry';
@@ -73,24 +70,29 @@ import EventShift from '../entity/event/event-shift';
 export default class Database {
   public static async initialize(): Promise<Connection> {
     const options: DataSourceOptions = {
-      ...await getConnectionOptions(),
+      host: process.env.TYPEORM_HOST,
+      port: parseInt(process.env.TYPEORM_PORT || '3001'),
+      database: process.env.TYPEORM_DATABASE,
+      type: process.env.TYPEORM_CONNECTION as 'postgres' | 'mariadb' | 'mysql',
+      username: process.env.TYPEORM_USERNAME,
+      password: process.env.TYPEORM_PASSWORD,
+      synchronize: process.env.TYPEORM_SYNCHRONIZE === 'true',
+      logging: process.env.TYPEORM_LOGGING === 'true',
       extra: {
         authPlugins: {
           mysql_clear_password: () => () => Buffer.from(`${process.env.TYPEORM_PASSWORD}\0`),
         },
       },
+      poolSize: 4,
       entities: [
         ProductCategory,
         VatGroup,
         Product,
         ProductRevision,
-        UpdatedProduct,
         Container,
         ContainerRevision,
-        UpdatedContainer,
         PointOfSale,
         PointOfSaleRevision,
-        UpdatedPointOfSale,
         Transfer,
         StripeDeposit,
         StripeDepositStatus,

@@ -24,11 +24,9 @@ import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/u
 import InvoiceController from '../../../src/controller/invoice-controller';
 import Database from '../../../src/database/database';
 import {
-  seedAllContainers,
-  seedAllPointsOfSale,
-  seedAllProducts,
-  seedInvoices,
-  seedProductCategories,
+  seedContainers,
+  seedInvoices, seedPointsOfSale,
+  seedProductCategories, seedProducts,
   seedTransactions, seedVatGroups,
 } from '../../seed';
 import TokenHandler from '../../../src/authentication/token-handler';
@@ -105,16 +103,10 @@ describe('InvoiceController', async () => {
 
     const categories = await seedProductCategories();
     const vatGroups = await seedVatGroups();
-    const {
-      products,
-      productRevisions,
-    } = await seedAllProducts([adminUser, localUser], categories, vatGroups);
-    const {
-      containers,
-      containerRevisions,
-    } = await seedAllContainers([adminUser, localUser], productRevisions, products);
-    const { pointOfSaleRevisions } = await seedAllPointsOfSale(
-      [adminUser, localUser], containerRevisions, containers,
+    const { productRevisions } = await seedProducts([adminUser, localUser], categories, vatGroups);
+    const { containerRevisions } = await seedContainers([adminUser, localUser], productRevisions);
+    const { pointOfSaleRevisions } = await seedPointsOfSale(
+      [adminUser, localUser], containerRevisions,
     );
     const { transactions } = await seedTransactions([adminUser, localUser], pointOfSaleRevisions);
     await seedInvoices([invoiceUser], transactions);

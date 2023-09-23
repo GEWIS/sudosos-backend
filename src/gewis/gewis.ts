@@ -292,22 +292,13 @@ export default class Gewis {
       name: 'Seller',
       permissions: {
         Product: {
-          create: { organ: star },
           get: { own: star, organ: star, all: star },
-          update: { organ: star },
-          approve: { organ: star },
         },
         Container: {
-          create: { organ: star },
           get: { own: star, organ: star, all: star },
-          update: { organ: star },
-          approve: { organ: star },
         },
         PointOfSale: {
-          create: { organ: star },
           get: { own: star, organ: star, all: star },
-          update: { organ: star },
-          approve: { organ: star },
         },
         ProductCategory: {
           get: { organ: star },
@@ -403,6 +394,9 @@ export default class Gewis {
     this.roleManager.registerRole({
       name: 'SudoSOS - BAC PM',
       permissions: {
+        Authenticator: {
+          ...admin,
+        },
         Container: {
           ...admin,
         },
