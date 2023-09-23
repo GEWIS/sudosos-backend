@@ -893,7 +893,7 @@ describe('eventService', () => {
       });
     });
     it('should simply return when shift does not exist', async () => {
-      await expect(EventService.deleteEventShift(9999999)).to.eventually.not.throw;
+      expect(EventService.deleteEventShift(9999999)).to.eventually.not.throw;
     });
   });
 

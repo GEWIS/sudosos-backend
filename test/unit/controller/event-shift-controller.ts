@@ -23,7 +23,7 @@ import EventShift from '../../../src/entity/event/event-shift';
 import EventShiftAnswer from '../../../src/entity/event/event-shift-answer';
 import AssignedRole from '../../../src/entity/roles/assigned-role';
 import Database from '../../../src/database/database';
-import { seedEvents, seedEventShifts, seedRoles, seedUsers } from '../../seed';
+import { seedEvents, seedRoles, seedUsers } from '../../seed';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Swagger from '../../../src/start/swagger';
 import { json } from 'body-parser';
@@ -39,7 +39,6 @@ import {
 import { EventShiftRequest } from '../../../src/controller/request/event-request';
 import EventShiftController from '../../../src/controller/event-shift-controller';
 import { describe } from 'mocha';
-import EventService from '../../../src/service/event-service';
 import Event, { EventType } from '../../../src/entity/event/event';
 
 describe('EventShiftController', () => {
