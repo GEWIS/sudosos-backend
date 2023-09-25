@@ -12,7 +12,7 @@
     "seed": "ts-node-dev --poll src/database/seed.ts",
     "swagger": "ts-node-dev --poll src/start/swagger.ts",
     "test": "mocha -r ts-node/register --parallel --timeout 50000 --require ./test/setup.ts 'test/**/*.ts' --exit",
-    "test-ci": "mocha -r ts-node/register --parallel --jobs 4 --timeout 50000 --require ./test/setup.ts 'test/**/*.ts' --exit",
+    "test-ci": "mocha -r ts-node/register --parallel --jobs 8 --timeout 50000 --require ./test/setup.ts 'test/**/*.ts' --exit",
     "test-file": "mocha -r ts-node/register --timeout 10000 --require ./test/setup.ts",
     "coverage": "nyc npm run test",
     "coverage-ci": "nyc npm run test-ci",
