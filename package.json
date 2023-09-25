@@ -11,9 +11,11 @@
     "schema": "node out/src/database/schema.js",
     "seed": "ts-node-dev --poll src/database/seed.ts",
     "swagger": "ts-node-dev --poll src/start/swagger.ts",
-    "test": "mocha -r ts-node/register --timeout 50000 --file ./test/setup.ts --reporter mocha-multi-reporters --reporter-options configFile=mocha.json 'test/**/*.ts' --exit",
-    "test-file": "mocha -r ts-node/register --timeout 10000 --file ./test/setup.ts",
+    "test": "mocha -r ts-node/register --parallel --timeout 50000 --require ./test/setup.ts 'test/**/*.ts' --exit",
+    "test-ci": "mocha -r ts-node/register --parallel --jobs 8 --timeout 50000 --require ./test/setup.ts 'test/**/*.ts' --exit",
+    "test-file": "mocha -r ts-node/register --timeout 10000 --require ./test/setup.ts",
     "coverage": "nyc npm run test",
+    "coverage-ci": "nyc npm run test-ci",
     "lint": "eslint",
     "lint-fix": "eslint src test --ext .js --ext .ts --fix",
     "typeorm": "node --require ts-node/register ./node_modules/typeorm/cli.js"
