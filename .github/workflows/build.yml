@@ -95,7 +95,7 @@ jobs:
         if: steps.cache-node.outputs.cache-hit != 'true'
       - run: openssl genrsa -out ./config/jwt.key 2048 && chmod 0777 ./config/jwt.key
       - run: npm run swagger
-      - run: npm run coverage
+      - run: npm run coverage-ci # Separate command to limit the number of workers to prevent timeouts
       - run: git config --global --add safe.directory $GITHUB_WORKSPACE # To avoid dubious ownership
       - name: "Comment code coverage on PR"
         if: github.event_name == 'pull_request'
