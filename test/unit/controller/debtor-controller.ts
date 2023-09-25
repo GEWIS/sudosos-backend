@@ -298,6 +298,58 @@ describe('DebtorController', () => {
 
   describe('GET /fines/eligible', () => {
     it('should return list of fines', async () => {
+      const referenceDates = [new Date('2021-02-12')];
+      const res = await request(ctx.app)
+        .get('/fines/eligible')
+        .query({
+          referenceDates,
+        })
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+
+      const fines = res.body as UserToFineResponse[];
+      fines.forEach((f) => {
+        const user = ctx.users.find((u) => u.id === f.id);
+        expect(user).to.not.be.undefined;
+        const balance = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfersInclFines, referenceDates[0]).amount.getAmount();
+        expect(f.fineAmount.amount).to.equal(calculateFine(balance));
+        expect(f.balances.length).to.equal(1);
+        expect(f.balances[0].amount.amount).to.equal(balance);
+        expect(f.balances[0].date).to.equal(referenceDates[0].toISOString());
+      });
+    });
+    it('should return list of fines having multiple reference dates', async () => {
+      const referenceDates = [new Date('2021-02-12'), new Date()];
+      const res = await request(ctx.app)
+        .get('/fines/eligible')
+        .query({
+          referenceDates,
+        })
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+
+      const fines = res.body as UserToFineResponse[];
+      const actualUsers = ctx.users.filter((u) => referenceDates.every((date) =>
+        calculateBalance(u, ctx.transactions, ctx.subTransactions, ctx.transfers, date).amount.getAmount() < -500));
+      expect(fines.length).to.equal(actualUsers.length);
+      expect(fines.map((f) => f.id)).to.deep.equalInAnyOrder(actualUsers.map((u) => u.id));
+
+      fines.forEach((f) => {
+        const user = ctx.users.find((u) => u.id === f.id);
+        expect(user).to.not.be.undefined;
+
+        referenceDates.forEach((date, i) => {
+          const balance = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfersInclFines, date).amount.getAmount();
+          expect(f.balances[i].date).to.equal(date.toISOString());
+          expect(f.balances[i].amount.amount).to.equal(balance);
+
+          if (i === 0) {
+            expect(f.fineAmount.amount).to.equal(calculateFine(balance));
+          }
+        });
+      });
+    });
+    it('should return list of fines for users of given userType', async () => {
       const userTypes = [UserType.LOCAL_USER, UserType.MEMBER];
       const referenceDates = [new Date('2021-02-12')];
       const res = await request(ctx.app)
@@ -310,10 +362,15 @@ describe('DebtorController', () => {
       expect(res.status).to.equal(200);
 
       const fines = res.body as UserToFineResponse[];
+      const actualUsers = ctx.users.filter((u) => userTypes.includes(u.type) && referenceDates.every((date) =>
+        calculateBalance(u, ctx.transactions, ctx.subTransactions, ctx.transfers, date).amount.getAmount() < -500));
+      expect(fines.length).to.equal(actualUsers.length);
+      expect(fines.map((f) => f.id)).to.deep.equalInAnyOrder(actualUsers.map((u) => u.id));
+
       fines.forEach((f) => {
         const user = ctx.users.find((u) => u.id === f.id);
         expect(user).to.not.be.undefined;
-        const balance = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers, referenceDates[0]).amount.getAmount();
+        const balance = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfersInclFines, referenceDates[0]).amount.getAmount();
         expect(f.fineAmount.amount).to.equal(calculateFine(balance));
         expect(userTypes).to.include(user.type);
       });

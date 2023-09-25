@@ -202,8 +202,8 @@ export function asArrayOfNumbers(input: any): number[] | undefined {
  */
 export function asArrayOfDates(input: any): Date[] | undefined {
   if (!input) return undefined;
-  if (!Array.isArray(input)) return undefined;
-  const dates = input.map((i) => asDate(i));
-  if (dates.some((d) => d === undefined)) throw new TypeError('Array contains invalid date');
+  if (!Array.isArray(input)) input = [input];
+  const dates = input.map((i: any[]) => asDate(i));
+  if (dates.some((d: (Date | undefined)[]) => d === undefined)) throw new TypeError('Array contains invalid date');
   return dates;
 }

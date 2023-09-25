@@ -186,14 +186,14 @@ export default class DebtorController extends BaseController {
 
     let params;
     try {
-      const referenceDates = asArrayOfDates(req.query.referenceDate);
+      const referenceDates = asArrayOfDates(req.query.referenceDates);
       if (referenceDates === undefined && req.query.referenceDates === undefined) throw new Error('referenceDates is required');
       if (referenceDates === undefined && req.query.referenceDates !== undefined) throw new Error('referenceDates is not a valid array');
       params = {
         userTypes: asArrayOfUserTypes(req.query.userTypes),
         referenceDates,
       };
-      if (params.userTypes === undefined) throw new Error('userTypes is not a valid array of UserTypes');
+      if (params.userTypes === undefined && req.query.userTypes !== undefined) throw new Error('userTypes is not a valid array of UserTypes');
     } catch (e) {
       res.status(400).json(e.message);
       return;

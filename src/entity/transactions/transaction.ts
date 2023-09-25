@@ -16,7 +16,6 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  AfterInsert,
   Entity, ManyToOne, OneToMany,
 } from 'typeorm';
 // eslint-disable-next-line import/no-cycle
@@ -24,11 +23,6 @@ import SubTransaction from './sub-transaction';
 import User from '../user/user';
 import BaseEntity from '../base-entity';
 import PointOfSaleRevision from '../point-of-sale/point-of-sale-revision';
-import BalanceService from '../../service/balance-service';
-import Mailer from '../../mailer';
-import UserDebtNotification from '../../mailer/templates/user-debt-notification';
-import DineroTransformer from '../transformer/dinero-transformer';
-import { getLogger } from 'log4js';
 
 /**
  * @typedef {BaseEntity} Transaction

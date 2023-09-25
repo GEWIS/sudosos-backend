@@ -16,7 +16,6 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  AfterInsert,
   Column, Entity, JoinColumn, ManyToOne, OneToOne,
 } from 'typeorm';
 import { Dinero } from 'dinero.js';
@@ -27,7 +26,6 @@ import PayoutRequest from './payout-request';
 import StripeDeposit from '../deposit/stripe-deposit';
 import Invoice from '../invoices/invoice';
 import Fine from '../fine/fine';
-import BalanceService from '../../service/balance-service';
 import UserFineGroup from '../fine/userFineGroup';
 
 /**
