@@ -188,6 +188,36 @@ export function asEventType(input: any): EventType | undefined {
 }
 
 /**
+ * Converts the input to a shift availability
+ * @param input - The input which should be converted.
+ * @returns The parsed shift Availability.
+ * @throws TypeError - If the input is not a valid Availability
+ */
+export function asShiftAvailability(input: any): Availability | undefined {
+  if (!input) return undefined;
+  const state: Availability = Availability[input as keyof typeof Availability];
+  if (state === undefined) {
+    throw new TypeError(`Input '${input}' is not a valid shift Availability.`);
+  }
+  return state;
+}
+
+/**
+ * Converts the input to an EventType
+ * @param input - The input which should be converted.
+ * @returns The parsed EventType.
+ * @throws TypeError - If the input is not a valid EventType
+ */
+export function asEventType(input: any): EventType | undefined {
+  if (!input) return undefined;
+  const state: EventType = EventType[input as keyof typeof EventType];
+  if (state === undefined) {
+    throw new TypeError(`Input '${input}' is not a valid EventType.`);
+  }
+  return state;
+}
+
+/**
  * Converts the input to a list of UserTypes
  * @param input
  * @throws TypeError - If the input is not a valid UserType
@@ -220,4 +250,14 @@ export function asArrayOfDates(input: any): Date[] | undefined {
   const dates = input.map((i: any[]) => asDate(i));
   if (dates.some((d: (Date | undefined)[]) => d === undefined)) throw new TypeError('Array contains invalid date');
   return dates;
+}
+
+/**
+ * Converts the input to a list of numbers
+ * @param input
+ */
+export function asArrayOfNumbers(input: any): number[] | undefined {
+  if (!input) return undefined;
+  if (!Array.isArray(input)) return undefined;
+  return input.map((i) => asNumber(i));
 }
