@@ -147,7 +147,6 @@ export default class AuthenticationController extends BaseController {
    */
   static async canPerformMock(req: Request): Promise<boolean> {
     const body = req.body as AuthenticationMockRequest;
-
     // Only allow in development setups
     if (process.env.NODE_ENV !== 'development') return false;
 
