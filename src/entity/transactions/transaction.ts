@@ -59,7 +59,7 @@ export default class Transaction extends BaseEntity {
   // NOTE: this event listener is only called when calling .save() on a new Transaction object instance,
   // not .save() on the static method of the Transaction class
   async sendEmailNotificationIfNowInDebt() {
-    if (process.env.NODE_ENV === 'test') return;
+    if (process.env.NODE_ENV === 'test' || process.env.NODE_ENV === 'development') return;
 
     const user = await User.findOne({ where: { id: this.from.id } });
     const balance = await BalanceService.getBalance(user.id);

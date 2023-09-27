@@ -22,6 +22,8 @@ Installing:
 - Run `npm run build`
 - Run `npm run test` - All of these should now pass
 
+You can also use `npm run dev:init` as a shortcut for the previous steps without the test.
+
 Running:
 - OR without seed
   - Run `npm run schema`
