@@ -15,18 +15,25 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import {
-  Column,
-} from 'typeorm';
-import BaseEntityWithoutId from '../base-entity-without-id';
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany, OneToOne } from 'typeorm';
+import User from '../user/user';
+import Fine from './fine';
+import BaseEntity from '../base-entity';
+import Transfer from '../transactions/transfer';
 
-/**
- * @typedef {BaseEntityWithoutId} BaseContainer
- * @property {string} name.required - The unique name of the container.
- */
-export default class BaseContainer extends BaseEntityWithoutId {
-  @Column({
-    length: 64,
-  })
-  public name: string;
+@Entity()
+export default class UserFineGroup extends BaseEntity {
+  @Column({ type: 'integer' })
+  public readonly userId: number;
+
+  @ManyToOne(() => User, { nullable: false })
+  @JoinColumn({ name: 'userId' })
+  public user: User;
+
+  @OneToMany(() => Fine, (fine) => fine.userFineGroup)
+  public fines: Fine[];
+
+  @OneToOne(() => Transfer, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn()
+  public waivedTransfer?: Transfer | null;
 }

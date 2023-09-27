@@ -22,11 +22,13 @@ import { TermsOfServiceStatus } from '../../entity/user/user';
 /**
  * @typedef {BaseResponse} BaseUserResponse
  * @property {string} firstName.required - The name of the user.
- * @property {string} lastName - The last name of the user
+ * @property {string} lastName.required - The last name of the user
+ * @property {string} nickname - The nickname of the user
  */
 export interface BaseUserResponse extends BaseResponse {
   firstName: string,
   lastName: string,
+  nickname?: string,
 }
 
 /**
@@ -52,8 +54,8 @@ export interface UserResponse extends BaseUserResponse {
 
 /**
  * @typedef PaginatedUserResponse
- * @property {PaginationResult.model} _pagination - Pagination metadata
- * @property {Array<UserResponse.model>} records - Returned users
+ * @property {PaginationResult.model} _pagination.required - Pagination metadata
+ * @property {Array.<UserResponse>} records.required - Returned users
  */
 export interface PaginatedUserResponse {
   _pagination: PaginationResult,

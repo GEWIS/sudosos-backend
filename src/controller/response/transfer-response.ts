@@ -23,6 +23,7 @@ import { PaginationResult } from '../../helpers/pagination';
 import { BaseInvoiceResponse } from './invoice-response';
 import { StripeDepositResponse } from './stripe-response';
 import { BasePayoutRequestResponse } from './payout-request-response';
+import { FineResponse, UserFineGroupResponse } from './debtor-response';
 
 /**
  * @typedef {BaseResponse} TransferResponse
@@ -33,6 +34,8 @@ import { BasePayoutRequestResponse } from './payout-request-response';
  * @property {BaseInvoiceResponse.model} invoice - invoice belonging to this transfer
  * @property {StripeDepositResponse.model} deposit - deposit belonging to this transfer
  * @property {BasePayoutRequestResponse.model} payoutRequest - payout request belonging to this transfer
+ * @property {FineResponse.model} fine - fine belonging to this transfer
+ * @property {UserFineGroupResponse.model} waivedFines - fines that have been waived by this transfer
  */
 export interface TransferResponse extends BaseResponse {
   amount: DineroObjectResponse;
@@ -42,12 +45,14 @@ export interface TransferResponse extends BaseResponse {
   invoice?: BaseInvoiceResponse;
   deposit?: StripeDepositResponse;
   payoutRequest?: BasePayoutRequestResponse;
+  fine?: FineResponse;
+  waivedFines?: UserFineGroupResponse;
 }
 
 /**
  * @typedef PaginatedTransferResponse
- * @property {PaginationResult.model} _pagination - Pagination metadata
- * @property {Array<TransferResponse.model>} records - Returned transfers
+ * @property {PaginationResult.model} _pagination.required - Pagination metadata
+ * @property {Array.<TransferResponse>} records.required - Returned transfers
  */
 export interface PaginatedTransferResponse {
   _pagination: PaginationResult,

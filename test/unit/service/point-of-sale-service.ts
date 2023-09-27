@@ -23,11 +23,10 @@ import chai, { expect } from 'chai';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
 import User from '../../../src/entity/user/user';
 import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
-import UpdatedPointOfSale from '../../../src/entity/point-of-sale/updated-point-of-sale';
 import Database from '../../../src/database/database';
 import {
-  seedAllContainers, seedAllPointsOfSale,
-  seedAllProducts,
+  seedContainers, seedPointsOfSale,
+  seedProducts,
   seedProductCategories,
   seedUsers, seedVatGroups,
 } from '../../seed';
@@ -35,16 +34,14 @@ import Swagger from '../../../src/start/swagger';
 import {
   PaginatedPointOfSaleResponse,
   PointOfSaleResponse, PointOfSaleWithContainersResponse,
-  UpdatedPointOfSaleResponse,
 } from '../../../src/controller/response/point-of-sale-response';
 import PointOfSaleService from '../../../src/service/point-of-sale-service';
-import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
 import {
   CreatePointOfSaleParams, UpdatePointOfSaleParams,
-  UpdatePointOfSaleRequest,
 } from '../../../src/controller/request/point-of-sale-request';
 import AuthenticationService from '../../../src/service/authentication-service';
 import MemberAuthenticator from '../../../src/entity/authenticator/member-authenticator';
+import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -53,25 +50,13 @@ chai.use(deepEqualInAnyOrder);
  * @param response
  * @param superset
  */
-function pointOfSaleSuperset(response: PointOfSaleResponse[] | UpdatedPointOfSaleResponse[],
-  superset: PointOfSale[]): Boolean {
+function pointOfSaleSuperset(response: PointOfSaleResponse[], superset: PointOfSale[]): Boolean {
   return response.every((searchPOS: PointOfSaleResponse) => (
     superset.find((supersetPOS: PointOfSale) => (
       supersetPOS.id === searchPOS.id
           && supersetPOS.owner.id === searchPOS.owner.id
     )) !== undefined
   ));
-}
-
-/**
- * Check if response adheres to update.
- */
-function updateUpdatedResponseEqual(update: UpdatePointOfSaleRequest,
-  response: UpdatedPointOfSaleResponse) {
-  const attributes: (keyof UpdatedPointOfSaleResponse)[] = ['name'];
-  attributes.forEach((attr) => (
-    (expect(update[attr as keyof UpdatePointOfSaleRequest])
-      .to.equal(response[attr as keyof UpdatedPointOfSaleResponse]))));
 }
 
 /**
@@ -98,7 +83,6 @@ describe('PointOfSaleService', async (): Promise<void> => {
     specification: SwaggerSpecification,
     users: User[],
     pointsOfSale: PointOfSale[],
-    updatedPointsOfSale: UpdatedPointOfSale[],
     validPOSParams: CreatePointOfSaleParams,
   };
 
@@ -111,17 +95,15 @@ describe('PointOfSaleService', async (): Promise<void> => {
     const categories = await seedProductCategories();
     const vatGroups = await seedVatGroups();
     const {
-      products,
       productRevisions,
-    } = await seedAllProducts(users, categories, vatGroups);
+    } = await seedProducts(users, categories, vatGroups);
     const {
       containers,
       containerRevisions,
-    } = await seedAllContainers(users, productRevisions, products);
+    } = await seedContainers(users, productRevisions);
     const {
       pointsOfSale,
-      updatedPointsOfSale,
-    } = await seedAllPointsOfSale(users, containerRevisions, containers);
+    } = await seedPointsOfSale(users, containerRevisions);
 
     const app = express();
     const specification = await Swagger.initialize(app);
@@ -140,7 +122,6 @@ describe('PointOfSaleService', async (): Promise<void> => {
       specification,
       users,
       pointsOfSale,
-      updatedPointsOfSale,
       validPOSParams,
     };
   });
@@ -241,137 +222,21 @@ describe('PointOfSaleService', async (): Promise<void> => {
       await MemberAuthenticator.delete({ user: { id: owner.id } });
     });
   });
-  describe('getUpdatedPointsOfSale function', () => {
-    it('should return all updated point of sales with no input specification', async () => {
-      // eslint-disable-next-line @typescript-eslint/naming-convention
-      const { records, _pagination } = (await PointOfSaleService
-        .getUpdatedPointsOfSale() as PaginatedPointOfSaleResponse);
-      expect(records.map((p) => p.id))
-        .to.deep.equalInAnyOrder(ctx.updatedPointsOfSale.map((p) => p.pointOfSale.id));
-
-      expect(_pagination.take).to.be.undefined;
-      expect(_pagination.skip).to.be.undefined;
-      expect(_pagination.count).to.equal(ctx.updatedPointsOfSale.length);
-    });
-    it('should adhere to pagination', async () => {
-      const take = 3;
-      const skip = 2;
-      // eslint-disable-next-line @typescript-eslint/naming-convention
-      const { records, _pagination } = (await PointOfSaleService.getUpdatedPointsOfSale({}, {
-        take, skip,
-      }) as PaginatedPointOfSaleResponse);
-
-      expect(_pagination.take).to.equal(take);
-      expect(_pagination.skip).to.equal(skip);
-      expect(_pagination.count).to.equal(ctx.updatedPointsOfSale.length);
-      expect(records.length).to.be.at.most(take);
-    });
-    it('should return all points of sale involving a single user and its memberAuthenticator users', async () => {
-      const usersOwningAPos = [...new Set(ctx.pointsOfSale.map((pos) => pos.owner))];
-      const owner = usersOwningAPos[0];
-
-      // Sanity check
-      const memberAuthenticators = await MemberAuthenticator.find({
-        where: { user: { id: owner.id } },
-      });
-      expect(memberAuthenticators.length).to.equal(0);
-
-      let pointsOfSale = await PointOfSaleService.getUpdatedPointsOfSale({}, {}, owner);
-      const originalLength = pointsOfSale.records.length;
-      pointsOfSale.records.forEach((pos) => {
-        expect(pos.owner.id).to.equal(owner.id);
-      });
-
-      await AuthenticationService.setMemberAuthenticator(getManager(), [owner], usersOwningAPos[1]);
-
-      const ownerIds = [owner, usersOwningAPos[1]].map((o) => o.id);
-      pointsOfSale = await PointOfSaleService.getUpdatedPointsOfSale({}, {}, owner);
-      expect(pointsOfSale.records.length).to.be.greaterThan(originalLength);
-      pointsOfSale.records.forEach((pos) => {
-        expect(ownerIds).to.include(pos.owner.id);
-      });
-
-      // Cleanup
-      await MemberAuthenticator.delete({ user: { id: owner.id } });
-    });
-  });
   describe('createPointOfSale function', () => {
     it('should create a new PointOfSale', async () => {
       const count = await PointOfSale.count();
-      const res: UpdatedPointOfSaleResponse = (
+      const res = (
         await PointOfSaleService.createPointOfSale(ctx.validPOSParams));
 
       expect(await PointOfSale.count()).to.equal(count + 1);
 
-      const updatedPointOfSale = await UpdatedPointOfSale.findOne({ where: { pointOfSale: { id: res.id } }, relations: ['containers'] });
-      const containers = updatedPointOfSale.containers.map((container) => container.id);
+      const updatedPointOfSale = await PointOfSaleRevision.findOne({ where: { pointOfSale: { id: res.id }, revision: res.revision }, relations: ['containers'] });
+      const containers = updatedPointOfSale.containers.map((container) => container.container.id);
       expect(ctx.validPOSParams.containers).to.deep.equalInAnyOrder(containers);
 
       expect(updatedPointOfSale.name).to.equal(ctx.validPOSParams.name);
 
       requestUpdatedResponseEqual(ctx.validPOSParams, res as PointOfSaleWithContainersResponse);
-    });
-  });
-  describe('updatePointOfSale function', () => {
-    it('should create a new UpdatedPointOfSale', async () => {
-      const id = 1;
-      // Precondition: POS has no existing update
-      expect(await UpdatedPointOfSale.findOne({ where: { pointOfSale: { id } } })).to.be.null;
-
-      const updateParams: UpdatePointOfSaleParams = {
-        containers: [1, 2, 3],
-        name: 'Updated POS',
-        useAuthentication: true,
-        id,
-      };
-
-      const res: UpdatedPointOfSaleResponse = (
-        await PointOfSaleService.updatePointOfSale(updateParams));
-
-      const updatedPointOfSale = await UpdatedPointOfSale.findOne({ where: { pointOfSale: { id: res.id } }, relations: ['containers'] });
-      const containers = updatedPointOfSale.containers.map((container) => container.id);
-      expect(ctx.validPOSParams.containers).to.deep.equalInAnyOrder(containers);
-
-      updateUpdatedResponseEqual(updateParams, res);
-    });
-    it('should replace an old update', async () => {
-      const id = 6;
-      // Precondition: POS has existing update
-      const update = await UpdatedPointOfSale.findOne({ where: { pointOfSale: { id } }, relations: ['containers'] });
-      expect(update).to.not.be.undefined;
-
-      const updateRequest: UpdatePointOfSaleParams = {
-        id,
-        containers: [1, 2, 3],
-        name: 'Updated POS',
-        useAuthentication: true,
-      };
-
-      const res: UpdatedPointOfSaleResponse = (
-        await PointOfSaleService.updatePointOfSale(updateRequest));
-
-      const updatedPointOfSale = await UpdatedPointOfSale.findOne({ where: { pointOfSale: { id: res.id } }, relations: ['containers'] });
-      const containers = updatedPointOfSale.containers.map((container) => container.id);
-      expect(ctx.validPOSParams.containers).to.deep.equalInAnyOrder(containers);
-
-      updateUpdatedResponseEqual(updateRequest, res);
-    });
-  });
-  describe('approvePointOfSaleUpdate function', () => {
-    it('should approve a new PointOfSale update', async () => {
-      const newPOS: UpdatedPointOfSaleResponse = (
-        await PointOfSaleService.createPointOfSale(ctx.validPOSParams));
-
-      const res = ((
-        (await PointOfSaleService
-          .approvePointOfSaleUpdate(newPOS.id)) as any) as PointOfSaleResponse);
-
-      const pointOfSaleRevision = await PointOfSaleRevision.findOne({ where: { revision: res.revision, pointOfSale: { id: newPOS.id } }, relations: ['containers'] });
-      const containers = pointOfSaleRevision.containers.map((container) => container.container.id);
-      expect(ctx.validPOSParams.containers).to.deep.equalInAnyOrder(containers);
-
-      expect(res.name).to.equal(pointOfSaleRevision.name);
-      expect(res.revision).to.equal(pointOfSaleRevision.revision);
     });
   });
   describe('directPointOfSaleUpdate function', () => {

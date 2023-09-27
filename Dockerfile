@@ -14,12 +14,14 @@ RUN apk add openssl
 
 WORKDIR /app
 COPY ./package.json ./package-lock.json ./
-RUN npm install --production
+RUN npm ci
+RUN npm install pm2 -g
 ARG TYPEORM_USERNAME
 ARG TYPEORM_PASSWORD
 ARG TYPEORM_DATABASE
 
 COPY --from=build --chown=node /app/init_scripts /app/init_scripts
+COPY --from=build --chown=node /app/process.json /app/process.json
 RUN chmod +x /app/init_scripts/start.sh
 
 COPY --from=build --chown=node /app/out/src /app/out/src

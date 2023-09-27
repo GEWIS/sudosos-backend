@@ -53,9 +53,7 @@ import {
 } from '../../../src/controller/request/validators/validation-errors';
 import { PaginatedUserResponse, UserResponse } from '../../../src/controller/response/user-response';
 import RoleResponse from '../../../src/controller/response/rbac/role-response';
-import {
-  FinancialMutationResponse,
-} from '../../../src/controller/response/financial-mutation-response';
+import { FinancialMutationResponse } from '../../../src/controller/response/financial-mutation-response';
 import UpdateLocalRequest from '../../../src/controller/request/update-local-request';
 import { AcceptTosRequest } from '../../../src/controller/request/accept-tos-request';
 import UpdateUserRequest from '../../../src/controller/request/update-user-request';
@@ -65,6 +63,7 @@ import { TransactionReportResponse } from '../../../src/controller/response/tran
 import { TransactionFilterParameters } from '../../../src/service/transaction-service';
 import { createTransactions } from '../service/invoice-service';
 import UpdateNfcRequest from '../../../src/controller/request/update-nfc-request';
+import UserFineGroup from '../../../src/entity/fine/userFineGroup';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -92,6 +91,7 @@ describe('UserController', (): void => {
     transactions: Transaction[],
     transfers: Transfer[],
     stripeDeposits: StripeDeposit[],
+    userFineGroups: UserFineGroup[],
   };
 
   before(async () => {
@@ -187,6 +187,10 @@ describe('UserController', (): void => {
         Roles: {
           get: all,
         },
+        Fine: {
+          get: all,
+          delete: all,
+        },
       },
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
     });
@@ -243,6 +247,11 @@ describe('UserController', (): void => {
     ctx.app.use(json());
     ctx.app.use(new TokenMiddleware({ tokenHandler, refreshFactor: 0.5 }).getMiddleware());
     ctx.app.use('/users', ctx.controller.getRouter());
+
+    await Promise.all(ctx.userFineGroups.map(async (g) => {
+      g.user.currentFines = g;
+      await g.user.save();
+    }));
   });
 
   after(async () => {
@@ -251,6 +260,20 @@ describe('UserController', (): void => {
   });
 
   describe('GET /users', () => {
+    async function queryUserBackend(searchQuery: string) {
+      const filteredUsers = (await User.find()).filter((user) => {
+        const fullName = `${user.firstName} ${user.lastName}`;
+        return (
+          user.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          user.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          user.nickname?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          user.email.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+      });
+      return filteredUsers;
+    }
+
     it('should return correct model', async () => {
       const res = await request(ctx.app)
         .get('/users')
@@ -309,6 +332,76 @@ describe('UserController', (): void => {
       expect(pagination.skip).to.equal(skip);
       expect(pagination.count).to.equal(activeUsers.length);
       expect(users.length).to.be.at.most(take);
+    });
+    it('should return correct user using search', async () => {
+      const searchQuery = 'Firstname1 Last';
+      const res = await request(ctx.app)
+        .get('/users')
+        .query({ search: searchQuery })
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+
+      const filteredUsers = await queryUserBackend(searchQuery);
+      expect(filteredUsers).length.to.gt(0);
+      const users = res.body.records as UserResponse[];
+      // eslint-disable-next-line no-underscore-dangle
+      const pagination = res.body._pagination as PaginationResult;
+      const spec = await Swagger.importSpecification();
+
+      users.forEach((user: UserResponse) => {
+        verifyUserResponse(spec, user);
+      });
+
+      const ids = users.map((u) => u.id);
+      filteredUsers.forEach((u) => {
+        expect(ids).to.includes(u.id);
+      });
+
+      expect(pagination.take).to.equal(defaultPagination());
+      expect(pagination.skip).to.equal(0);
+
+    });
+    it('should return correct user using search on nickname', async () => {
+      const searchQuery = ctx.users.find((u) => u.nickname != null).nickname;
+      const res = await request(ctx.app)
+        .get('/users')
+        .query({ search: searchQuery })
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+
+      const filteredUsers = await queryUserBackend(searchQuery);
+
+      const users = res.body.records as UserResponse[];
+      const ids = users.map((u) => u.id);
+      filteredUsers.forEach((u) => {
+        expect(ids).to.includes(u.id);
+      });
+    });
+    it('should give HTTP 200 when correctly creating and searching for a user', async () => {
+      const user = {
+        firstName: 'Één bier',
+        lastName: 'is geen bier',
+        type: UserType.LOCAL_USER,
+        email: 'spam@gewis.nl',
+      };
+
+      // Create the user
+      const createUserRes = await request(ctx.app)
+        .post('/users')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(user);
+      expect(createUserRes.status).to.equal(201);
+
+      // Search for the user
+      const searchQuery = 'Één bier';
+      const searchRes = await request(ctx.app)
+        .get(`/users?search=${searchQuery}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(searchRes.status).to.equal(200);
+
+      const filteredUsers = await queryUserBackend(searchQuery);
+      expect(filteredUsers).length.to.be.gt(0);
+      expect(searchRes.body.records.length).to.equal(filteredUsers.length);
     });
   });
 
@@ -408,7 +501,7 @@ describe('UserController', (): void => {
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
       expect(ctx.specification.validateModel(
-        'User',
+        'UserResponse',
         res.body,
         false,
         true,
@@ -452,7 +545,7 @@ describe('UserController', (): void => {
         .set('Authorization', `Bearer ${ctx.organMemberToken}`);
       expect(res.status).to.equal(200);
       expect(ctx.specification.validateModel(
-        'User',
+        'UserResponse',
         res.body,
         false,
         true,
@@ -745,12 +838,46 @@ describe('UserController', (): void => {
       expect(user.lastName).to.deep.equal(lastName);
       verifyUserResponse(spec, user);
     });
-    it('should give HTTP 400 if firstName is too long', async () => {
+    it('should give HTTP 400 if lastName is too long', async () => {
       const res = await request(ctx.app)
         .patch('/users/1')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send({ lastName: 'ThisIsAStringThatIsMuchTooLongToFitInASixtyFourCharacterStringBox' });
       expect(res.status).to.equal(400);
+    });
+    it('should correctly change nickname if requester is admin', async () => {
+      const nickname = 'SudoSOSFeut';
+
+      const res = await request(ctx.app)
+        .patch('/users/1')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ nickname });
+      expect(res.status).to.equal(200);
+
+      const user = res.body as UserResponse;
+      const spec = await Swagger.importSpecification();
+      expect(user.nickname).to.deep.equal(nickname);
+      verifyUserResponse(spec, user);
+    });
+    it('should give HTTP 400 if nickName is too long', async () => {
+      const res = await request(ctx.app)
+        .patch('/users/1')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ nickname: 'ThisIsAStringThatIsMuchTooLongToFitInASixtyFourCharacterStringBox' });
+      expect(res.status).to.equal(400);
+    });
+    it('should correctly remove nickname if set to empty string', async () => {
+      const user = ctx.users.find((u) => u.nickname != null);
+
+      const res = await request(ctx.app)
+        .patch('/users/' + user.id)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ nickname: '' });
+      expect(res.status).to.equal(200);
+
+      const userResponse = res.body as UserResponse;
+      expect(userResponse.nickname).to.be.null;
+      expect((await User.findOne({ where: { id: user.id } })).nickname).to.be.null;
     });
     it('should correctly set user inactive if requester is admin', async () => {
       const active = false;
@@ -945,51 +1072,6 @@ describe('UserController', (): void => {
     });
   });
 
-  describe('GET /users/:id/containers/updated', () => {
-    it('should return correct model', async () => {
-      const res = await request(ctx.app)
-        .get(`/users/${ctx.users[0].id}/containers/updated`)
-        .set('Authorization', `Bearer ${ctx.userToken}`);
-      expect(res.status).to.equal(200);
-      expect(ctx.specification.validateModel(
-        'PaginatedContainerResponse',
-        res.body,
-        false,
-        true,
-      ).valid).to.be.true;
-    });
-    it('should give an HTTP 200 when requesting own updated containers', async () => {
-      const res = await request(ctx.app)
-        .get(`/users/${ctx.users[0].id}/containers/updated`)
-        .set('Authorization', `Bearer ${ctx.userToken}`);
-      expect(res.status).to.equal(200);
-    });
-    it('should give an HTTP 403 when user requests updated containers (s)he does not own', async () => {
-      const res = await request(ctx.app)
-        .get('/users/2/containers/updated')
-        .set('Authorization', `Bearer ${ctx.userToken}`);
-      expect(res.status).to.equal(403);
-    });
-    it('should give an HTTP 403 when user requests updated containers from unknown user', async () => {
-      const res = await request(ctx.app)
-        .get('/users/1234/containers/updated')
-        .set('Authorization', `Bearer ${ctx.userToken}`);
-      expect(res.status).to.equal(403);
-    });
-    it('should give correct owned updated containers for admin', async () => {
-      const res = await request(ctx.app)
-        .get('/users/2/containers/updated')
-        .set('Authorization', `Bearer ${ctx.adminToken}`);
-      expect(res.status).to.equal(200);
-    });
-    it('should give an HTTP 404 when admin requests updated containers from unknown user', async () => {
-      const res = await request(ctx.app)
-        .get('/users/1234/containers/updated')
-        .set('Authorization', `Bearer ${ctx.adminToken}`);
-      expect(res.status).to.equal(404);
-    });
-  });
-
   describe('GET /users/:id/pointsofsale', () => {
     it('should return correct model', async () => {
       const res = await request(ctx.app)
@@ -1030,51 +1112,6 @@ describe('UserController', (): void => {
     it('should give an HTTP 404 when admin requests points of sale from unknown user', async () => {
       const res = await request(ctx.app)
         .get('/users/1234/pointsofsale')
-        .set('Authorization', `Bearer ${ctx.adminToken}`);
-      expect(res.status).to.equal(404);
-    });
-  });
-
-  describe('GET /users/:id/pointsofsale/updated', () => {
-    it('should return correct model', async () => {
-      const res = await request(ctx.app)
-        .get(`/users/${ctx.users[0].id}/pointsofsale/updated`)
-        .set('Authorization', `Bearer ${ctx.userToken}`);
-      expect(res.status).to.equal(200);
-      expect(ctx.specification.validateModel(
-        'PaginatedUpdatedPointOfSaleResponse',
-        res.body,
-        false,
-        true,
-      ).valid).to.be.true;
-    });
-    it('should give an HTTP 200 when requesting own updated points of sale', async () => {
-      const res = await request(ctx.app)
-        .get(`/users/${ctx.users[0].id}/pointsofsale/updated`)
-        .set('Authorization', `Bearer ${ctx.userToken}`);
-      expect(res.status).to.equal(200);
-    });
-    it('should give an HTTP 403 when user requests updated points of sale (s)he does not own', async () => {
-      const res = await request(ctx.app)
-        .get('/users/2/pointsofsale/updated')
-        .set('Authorization', `Bearer ${ctx.userToken}`);
-      expect(res.status).to.equal(403);
-    });
-    it('should give an HTTP 403 when user requests updated points of sale from unknown user', async () => {
-      const res = await request(ctx.app)
-        .get('/users/1234/pointsofsale/updated')
-        .set('Authorization', `Bearer ${ctx.userToken}`);
-      expect(res.status).to.equal(403);
-    });
-    it('should give correct owned updated points of sale for admin', async () => {
-      const res = await request(ctx.app)
-        .get('/users/2/pointsofsale/updated')
-        .set('Authorization', `Bearer ${ctx.adminToken}`);
-      expect(res.status).to.equal(200);
-    });
-    it('should give an HTTP 404 when admin requests updated points of sale from unknown user', async () => {
-      const res = await request(ctx.app)
-        .get('/users/1234/pointsofsale/updated')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(404);
     });
@@ -1280,12 +1317,13 @@ describe('UserController', (): void => {
         .get(`/users/${user.id}/transfers`)
         .set('Authorization', `Bearer ${ctx.userToken}`);
       expect(res.status).to.equal(200);
-      expect(ctx.specification.validateModel(
+      const validation = ctx.specification.validateModel(
         'PaginatedTransferResponse',
         res.body,
         false,
         true,
-      ).valid).to.be.true;
+      );
+      expect(validation.valid).to.be.true;
     });
     it('should give correct transfers from/to/created by user', async () => {
       const user = ctx.users[0];
@@ -1647,6 +1685,78 @@ describe('UserController', (): void => {
       });
     });
   });
+  describe('DELETE /users/{id}/authenticator/nfc', () => {
+    it('should return an HTTP 200 if authorized', async () => {
+      await inUserContext((await UserFactory()).clone(1), async (user: User) => {
+        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
+
+        const updateNfcRequest: UpdateNfcRequest = {
+          nfcCode: 'toBeDeletedNfcRequest',
+        };
+        await request(ctx.app)
+          .put(`/users/${user.id}/authenticator/nfc`)
+          .set('Authorization', `Bearer ${userToken}`)
+          .send(updateNfcRequest);
+
+        const res = await request(ctx.app)
+          .delete(`/users/${user.id}/authenticator/nfc`)
+          .set('Authorization', `Bearer ${userToken}`);
+        expect(res.status).to.equal(200);
+      });
+    });
+    it('should return an 404 if the user does not exists', async () => {
+      const res = await request(ctx.app)
+        .delete(`/users/${(await User.count()) + 1}/authenticator/nfc`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(404);
+    });
+    it('should return an HTTP 403 if user has no nfc', async () => {
+      await inUserContext((await UserFactory()).clone(1), async (user: User) => {
+        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
+
+        const res = await request(ctx.app)
+          .delete(`/users/${user.id}/authenticator/nfc`)
+          .set('Authorization', `Bearer ${userToken}`);
+        expect(res.status).to.equal(403);
+      });
+    });
+  });
+  describe('PUT /users/{id}/authenticator/local', () => {
+    it('should return an HTTP 200 if authorized', async () => {
+      await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
+        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
+
+        const updateNfcRequest: UpdateNfcRequest = {
+          nfcCode: 'toBeDeletedNfcRequest',
+        };
+        await request(ctx.app)
+          .put(`/users/${user.id}/authenticator/nfc`)
+          .set('Authorization', `Bearer ${userToken}`)
+          .send(updateNfcRequest);
+
+        const res = await request(ctx.app)
+          .delete(`/users/${user.id}/authenticator/nfc`)
+          .set('Authorization', `Bearer ${userToken}`);
+        expect(res.status).to.equal(200);
+      });
+    });
+    it('should return an 404 if the user does not exists', async () => {
+      const res = await request(ctx.app)
+        .delete(`/users/${(await User.count()) + 1}/authenticator/nfc`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(404);
+    });
+    it('should return an HTTP 403 if user has no nfc', async () => {
+      await inUserContext((await UserFactory()).clone(1), async (user: User) => {
+        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
+
+        const res = await request(ctx.app)
+          .delete(`/users/${user.id}/authenticator/nfc`)
+          .set('Authorization', `Bearer ${userToken}`);
+        expect(res.status).to.equal(403);
+      });
+    });
+  });
   describe('PUT /users/{id}/authenticator/local', () => {
     it('should return an HTTP 200 if authorized', async () => {
       await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
@@ -1704,7 +1814,7 @@ describe('UserController', (): void => {
           .send();
         expect(res.status).to.equal(200);
         expect(ctx.specification.validateModel(
-          'NfcAuthenticator',
+          'UpdateKeyResponse',
           res.body,
           false,
           true,
@@ -1894,6 +2004,41 @@ describe('UserController', (): void => {
       } as RequestWithToken;
       const result = UserController.getAttributes(req);
       expect(result).to.deep.equalInAnyOrder(['ofAge', 'email', 'deleted']);
+    });
+  });
+  describe('POST /users/{id}/fines/waive', () => {
+    it("should correctly waive a user's fines", async () => {
+      const user = ctx.users.find((u) => u.currentFines != null);
+      expect((await User.findOne({ where: { id: user.id }, relations: ['currentFines'] })).currentFines).to.not.be.null;
+      const res = await request(ctx.app)
+        .post(`/users/${user.id}/fines/waive`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(204);
+      expect(res.body).to.be.empty;
+      expect((await User.findOne({ where: { id: user.id }, relations: ['currentFines'] })).currentFines).to.be.null;
+    });
+    it('should return 400 if user has no fines', async () => {
+      const user = ctx.users.find((u) => u.currentFines == null);
+      expect((await User.findOne({ where: { id: user.id }, relations: ['currentFines'] })).currentFines).to.be.null;
+      const res = await request(ctx.app)
+        .post(`/users/${user.id}/fines/waive`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('User has no fines.');
+    });
+    it('should return 404 if user does not exist', async () => {
+      const res = await request(ctx.app)
+        .post('/users/999999999/fines/waive')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(404);
+      expect(res.body).to.equal('Unknown user ID.');
+    });
+    it('should return 404 if user is not admin', async () => {
+      const user = ctx.users.find((u) => u.currentFines != null);
+      const res = await request(ctx.app)
+        .post(`/users/${user.id}/fines/waive`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(403);
     });
   });
 });

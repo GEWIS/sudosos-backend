@@ -16,9 +16,11 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  Column, Entity,
+  Column, Entity, JoinColumn, OneToMany, OneToOne,
 } from 'typeorm';
 import BaseEntity from '../base-entity';
+import UserFineGroup from '../fine/userFineGroup';
+import AssignedRole from '../roles/assigned-role';
 
 export enum TermsOfServiceStatus {
   ACCEPTED = 'ACCEPTED',
@@ -54,11 +56,12 @@ export const TOSRequired = [
  * @typedef {BaseEntity} User
  * @property {string} firstName.required - First name of the user.
  * @property {string} lastName - Last name of the user.
+ * @property {string} nickname - Nickname of the user.
  * @property {boolean} active - Whether the user has accepted the TOS. Defaults to false.
  * @property {boolean} ofAge - Whether the user is 18+ or not.
  * @property {string} email - The email of the user.
  * @property {boolean} deleted - Whether the user was deleted. Defaults to false.
- * @property {enum} type.required - The type of user.
+ * @property {string} type.required - The type of user.
  */
 @Entity()
 export default class User extends BaseEntity {
@@ -72,6 +75,12 @@ export default class User extends BaseEntity {
     default: '',
   })
   public lastName: string;
+
+  @Column({
+    length: 64,
+    nullable: true,
+  })
+  public nickname: string;
 
   @Column({
     default: false,
@@ -108,4 +117,14 @@ export default class User extends BaseEntity {
     default: false,
   })
   public extensiveDataProcessing: boolean;
+
+  @OneToOne(() => UserFineGroup, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  public currentFines?: UserFineGroup | null;
+
+  @OneToMany(() => AssignedRole, (role) => role.user)
+  public roles: AssignedRole[];
 }

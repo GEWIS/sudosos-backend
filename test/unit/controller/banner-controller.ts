@@ -192,12 +192,13 @@ describe('BannerController', async (): Promise<void> => {
         .get('/banners')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
-      expect(ctx.specification.validateModel(
+      const validator = ctx.specification.validateModel(
         'PaginatedBannerResponse',
         res.body,
         false,
         true,
-      ).valid).to.be.true;
+      );
+      expect(validator.valid).to.be.true;
     });
     it('should return an HTTP 200 and all banners in the database if admin', async () => {
       const res = await request(ctx.app)

@@ -18,6 +18,7 @@
 
 import dinero, { Dinero } from 'dinero.js';
 import {
+  EntityManager,
   FindManyOptions,
 } from 'typeorm';
 import Transfer from '../entity/transactions/transfer';
@@ -32,6 +33,7 @@ import { parseUserToBaseResponse } from '../helpers/revision-to-response';
 import InvoiceService from './invoice-service';
 import StripeService from './stripe-service';
 import PayoutRequestService from './payout-request-service';
+import DebtorService from './debtor-service';
 
 export interface TransferFilterParameters {
   id?: number;
@@ -63,10 +65,12 @@ export default class TransferService {
       invoice: transfer.invoice ? InvoiceService.asInvoiceResponse(transfer.invoice) : null,
       deposit: transfer.deposit ? StripeService.asStripeDepositResponse(transfer.deposit) : null,
       payoutRequest: transfer.payoutRequest ? PayoutRequestService.asBasePayoutRequestResponse(transfer.payoutRequest) : null,
+      fine: transfer.fine ? DebtorService.asFineResponse(transfer.fine) : null,
+      waivedFines: transfer.waivedFines ? DebtorService.asUserFineGroupResponse(transfer.waivedFines) : null,
     };
   }
 
-  public static async createTransfer(request: TransferRequest) : Promise<Transfer> {
+  public static async createTransfer(request: TransferRequest, manager?: EntityManager) : Promise<Transfer> {
     const transfer = Object.assign(new Transfer(), {
       description: request.description,
       amount: dinero(request.amount as Dinero.Options),
@@ -74,7 +78,11 @@ export default class TransferService {
       to: request.toId ? await User.findOne({ where: { id: request.toId } }) : undefined,
     });
 
-    await transfer.save();
+    if (manager) {
+      await manager.save(transfer);
+    } else {
+      await transfer.save();
+    }
     return transfer;
   }
 
@@ -117,7 +125,10 @@ export default class TransferService {
       relations: ['from', 'to',
         'invoice', 'invoice.invoiceStatus',
         'deposit', 'deposit.depositStatus',
-        'payoutRequest', 'payoutRequest.payoutRequestStatus'],
+        'payoutRequest', 'payoutRequest.payoutRequestStatus',
+        'fine', 'fine.userFineGroup',
+        'waivedFines', 'waivedFines.fines', 'waivedFines.fines.userFineGroup',
+      ],
       take,
       skip,
       order: { createdAt: 'DESC' },

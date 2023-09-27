@@ -16,32 +16,30 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  Entity,
-  JoinColumn, JoinTable, ManyToMany,
-  OneToOne, PrimaryColumn,
+  Column, DeleteDateColumn, Entity,
 } from 'typeorm';
-import BasePointOfSale from './base-point-of-sale';
-import PointOfSale from './point-of-sale';
-import Container from '../container/container';
+import BaseEntity from '../base-entity';
 
 /**
- * @typedef {BasePointOfSale} UpdatedPointOfSale
- * @property {PointOfSale.model} pointOfSale.required - The pointOfSale the revision belongs to.
- * @property {Array.<Container.model>} containers.required - The containers that should be contained
- * in the pointOfSale.
+ * @typedef {BaseEntity} EventShift
+ * @property {string} name - Name of the shift.
+ * @property {boolean} default - Indicator whether the shift is a regular shift.
  */
+
 @Entity()
-export default class UpdatedPointOfSale extends BasePointOfSale {
-  @PrimaryColumn()
-  public pointOfSaleId: number;
+export default class EventShift extends BaseEntity {
+  @DeleteDateColumn()
+  public deletedAt?: Date | null;
 
-  @OneToOne(() => PointOfSale, {
-    nullable: false,
+  @Column()
+  public name: string;
+
+  @Column({
+    type: 'varchar',
+    transformer: {
+      to: (val: string[]) => JSON.stringify(val),
+      from: (val: string) => JSON.parse(val),
+    },
   })
-  @JoinColumn({ name: 'pointOfSaleId' })
-  public pointOfSale: PointOfSale;
-
-  @ManyToMany(() => Container)
-  @JoinTable()
-  public containers: Container[];
+  public roles: string[];
 }

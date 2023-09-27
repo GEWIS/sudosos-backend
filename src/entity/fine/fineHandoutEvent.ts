@@ -15,26 +15,20 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import {
-  Entity,
-  JoinColumn,
-  OneToOne, PrimaryColumn,
-} from 'typeorm';
-import BaseProduct from './base-product';
-import Product from './product';
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany } from 'typeorm';
+import BaseEntity from '../base-entity';
+import Fine from './fine';
+import User from '../user/user';
 
-/**
- * @typedef {BaseProduct} UpdatedProduct
- * @property {Product.model} product.required - The product the revision belongs to.
- */
 @Entity()
-export default class UpdatedProduct extends BaseProduct {
-  @PrimaryColumn()
-  public productId: number;
+export default class FineHandoutEvent extends BaseEntity {
+  @OneToMany(() => Fine, (fine) => fine.fineHandoutEvent)
+  public fines: Fine[];
 
-  @OneToOne(() => Product, {
-    nullable: false,
-  })
-  @JoinColumn({ name: 'productId' })
-  public product: Product;
+  @Column({ type: 'datetime' })
+  public referenceDate: Date;
+
+  @ManyToOne(() => User)
+  @JoinColumn()
+  public readonly createdBy: User;
 }

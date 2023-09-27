@@ -19,11 +19,11 @@ import { createQueryBuilder, SelectQueryBuilder } from 'typeorm';
 import {
   ContainerResponse,
   ContainerWithProductsResponse,
-  PaginatedContainerResponse, PaginatedContainerWithProductResponse,
+  PaginatedContainerResponse,
+  PaginatedContainerWithProductResponse,
 } from '../controller/response/container-response';
 import Container from '../entity/container/container';
 import ContainerRevision from '../entity/container/container-revision';
-import UpdatedContainer from '../entity/container/updated-container';
 import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import PointOfSale from '../entity/point-of-sale/point-of-sale';
@@ -37,9 +37,7 @@ import {
 } from '../controller/request/container-request';
 import ProductImage from '../entity/file/product-image';
 import User from '../entity/user/user';
-import {
-  UpdatePointOfSaleParams,
-} from '../controller/request/point-of-sale-request';
+import { UpdatePointOfSaleParams } from '../controller/request/point-of-sale-request';
 // eslint-disable-next-line import/no-cycle
 import PointOfSaleService from './point-of-sale-service';
 // eslint-disable-next-line import/no-cycle
@@ -164,6 +162,7 @@ export default class ContainerService {
       builder.leftJoin(Product, 'base_product', 'base_product.id = products.productId');
       builder.leftJoinAndSelect(User, 'product_owner', 'product_owner.id = base_product.owner.id');
       builder.leftJoinAndSelect(ProductImage, 'product_image', 'product_image.id = base_product.imageId');
+      builder.leftJoinAndSelect('products.vat', 'vat');
       if (filters.productId) builder.where(`products.productId = ${filters.productId}`);
     }
 
@@ -210,8 +209,8 @@ export default class ContainerService {
         revision: response.products_revision,
         alcoholpercentage: response.products_alcoholPercentage,
         vat_id: response.products_vatId,
-        vat_hidden: response.products_vatHidden,
-        vat_percentage: response.products_vatPercentage,
+        vat_hidden: response.vat_hidden,
+        vat_percentage: response.vat_percentage,
         category_id: response.products_categoryId,
         category_name: response.category_name,
         createdAt: response.products_createdAt,
@@ -284,87 +283,6 @@ export default class ContainerService {
     };
   }
 
-  private static async buildGetUpdatedContainersQuery(
-    filters: UpdatedContainerParameters = {}, user?: User,
-  ): Promise<SelectQueryBuilder<Container>> {
-    const builder = createQueryBuilder()
-      .from(Container, 'container')
-      .innerJoinAndSelect(
-        UpdatedContainer,
-        'updatedcontainer',
-        'container.id = updatedcontainer.containerId',
-      )
-      .innerJoinAndSelect('container.owner', 'owner')
-      .select([
-        'container.id AS container_id',
-        'container.public as container_public',
-        'container.createdAt AS container_createdAt',
-        'updatedcontainer.updatedAt AS container_updatedAt',
-        'updatedcontainer.name AS container_name',
-        'owner.id AS owner_id',
-        'owner.firstName AS owner_firstName',
-        'owner.lastName AS owner_lastName',
-      ]);
-
-    if (filters.returnProducts || filters.productId) {
-      builder.innerJoinAndSelect('updatedcontainer.products', 'base_product');
-      builder.innerJoinAndSelect(ProductRevision, 'products', 'base_product.id = products.productId AND base_product.currentRevision = products.revision');
-      builder.innerJoinAndSelect('products.category', 'category');
-      builder.innerJoinAndSelect(User, 'product_owner', 'product_owner.id = base_product.owner.id');
-      builder.leftJoinAndSelect(ProductImage, 'product_image', 'product_image.id = base_product.imageId');
-      if (filters.productId) builder.where(`products.productId = ${filters.productId}`);
-    }
-    const filterMapping: FilterMapping = {
-      containerId: 'container.id',
-      containerRevision: 'containerrevision.revision',
-      ownerId: 'owner.id',
-      public: 'container.public',
-    };
-    QueryFilter.applyFilter(builder, filterMapping, filters);
-
-    if (user) {
-      const organIds = (await AuthenticationService.getMemberAuthenticators(user)).map((u) => u.id);
-      builder.andWhere('owner.id IN (:...organIds)', { organIds });
-    }
-
-    builder.orderBy({ 'container.id': 'DESC' });
-
-    return builder;
-  }
-
-  /**
-   * Query to return all updated containers.
-   * @param filters
-   * @param pagination
-   * @param user
-   */
-  public static async getUpdatedContainers(
-    filters: UpdatedContainerParameters = {}, pagination: PaginationParameters = {}, user?: User,
-  ): Promise<PaginatedContainerResponse> {
-    const { take, skip } = pagination;
-
-    const results = await Promise.all([
-      (await this.buildGetUpdatedContainersQuery(filters, user)).limit(take).offset(skip)
-        .getRawMany(),
-      (await this.buildGetUpdatedContainersQuery({ ...filters, returnProducts: false }, user))
-        .getCount(),
-    ]);
-
-    let records;
-    if (filters.returnProducts) {
-      records = await this.combineProducts(results[0]);
-    } else {
-      records = results[0].map((rawContainer) => this.asContainerResponse(rawContainer));
-    }
-
-    return {
-      _pagination: {
-        take, skip, count: results[1],
-      },
-      records,
-    };
-  }
-
   /**
    * Creates a new container.
    *
@@ -372,9 +290,8 @@ export default class ContainerService {
    * current revision. To confirm the revision the update has to be accepted.
    *
    * @param container - The params that describe the container to be created.
-   * @param approve - If the container should be instantly approved.
    */
-  public static async createContainer(container: CreateContainerParams, approve = false)
+  public static async createContainer(container: CreateContainerParams)
     : Promise<ContainerWithProductsResponse> {
     const base = Object.assign(new Container(), {
       public: container.public,
@@ -389,14 +306,7 @@ export default class ContainerService {
       id: base.id,
     };
 
-    let createdContainer;
-    if (approve) {
-      createdContainer = await this.directContainerUpdate(update);
-    } else {
-      createdContainer = await this.updateContainer(update);
-    }
-
-    return createdContainer;
+    return this.directContainerUpdate(update);
   }
 
   public static async applyContainerUpdate(base: Container, updateRequest: UpdateContainerRequest) {
@@ -429,75 +339,6 @@ export default class ContainerService {
     base.public = updateRequest.public;
     await base.save();
     await this.propagateContainerUpdate(base.id);
-  }
-
-  /**
-   * Confirms a container update and creates a container revision.
-   * @param containerId - The container update to confirm.
-   */
-  public static async approveContainerUpdate(containerId: number)
-    : Promise<ContainerWithProductsResponse> {
-    const [base, rawContainerUpdate] = (
-      await Promise.all([Container.findOne({ where: { id: containerId } }), UpdatedContainer.findOne({ where: { container: { id: containerId } }, relations: ['products'] })]));
-
-    // return undefined if not found or request is invalid
-    if (!base || !rawContainerUpdate) {
-      return undefined;
-    }
-
-    const updateRequest: UpdateContainerRequest = {
-      products: rawContainerUpdate.products.map((p) => p.id),
-      public: base.public,
-      name: rawContainerUpdate.name,
-    };
-
-    await this.applyContainerUpdate(base, updateRequest);
-
-    // Remove update after revision is created.
-    await UpdatedContainer.delete(containerId);
-
-    const container = (await this.getContainers(
-      { containerId, returnProducts: true },
-    ) as PaginatedContainerWithProductResponse).records[0];
-
-    // Return the new container with products.
-    return container;
-  }
-
-  /**
-   * Creates a container update.
-   * @param update - The container update request to progress
-   */
-  public static async updateContainer(update: UpdateContainerParams)
-    : Promise<ContainerWithProductsResponse> {
-    // Get the base container.
-    const base: Container = await Container.findOne({ where: { id: update.id } });
-
-    // return undefined if not found.
-    if (!base) {
-      return undefined;
-    }
-
-    let products: Product[] = [];
-    await Promise.all(update.products.map((id) => Product.findOne({ where: { id } })))
-      .then((result) => { products = result.filter((p) => p); });
-
-    // Set base container and apply new update.
-    const updatedContainer = Object.assign(new UpdatedContainer(), {
-      container: await Container.findOne({ where: { id: base.id } }),
-      name: update.name,
-      products,
-    });
-
-    // Save update
-    await updatedContainer.save();
-
-    const container = (await this.getUpdatedContainers(
-      { containerId: base.id, returnProducts: true },
-    )).records[0] as ContainerWithProductsResponse;
-
-    // Return container with products.
-    return container;
   }
 
   /**

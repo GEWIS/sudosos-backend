@@ -31,9 +31,6 @@ import SubTransaction from '../src/entity/transactions/sub-transaction';
 import SubTransactionRow from '../src/entity/transactions/sub-transaction-row';
 import Transaction from '../src/entity/transactions/transaction';
 import User, { TermsOfServiceStatus, UserType } from '../src/entity/user/user';
-import UpdatedProduct from '../src/entity/product/updated-product';
-import UpdatedContainer from '../src/entity/container/updated-container';
-import UpdatedPointOfSale from '../src/entity/point-of-sale/updated-point-of-sale';
 import Transfer from '../src/entity/transactions/transfer';
 import ProductImage from '../src/entity/file/product-image';
 import Banner from '../src/entity/banner';
@@ -48,13 +45,28 @@ import InvoiceUser from '../src/entity/user/invoice-user';
 import Invoice from '../src/entity/invoices/invoice';
 import InvoiceEntry from '../src/entity/invoices/invoice-entry';
 import InvoiceStatus, { InvoiceState } from '../src/entity/invoices/invoice-status';
-import GewisUser from '../src/gewis/entity/gewis-user';
+import Event, { EventType } from '../src/entity/event/event';
+import EventShift from '../src/entity/event/event-shift';
+import EventShiftAnswer, { Availability } from '../src/entity/event/event-shift-answer';
 import seedGEWISUsers from '../src/gewis/database/seed';
 import PinAuthenticator from '../src/entity/authenticator/pin-authenticator';
 import VatGroup from '../src/entity/vat-group';
 import { VatGroupRequest } from '../src/controller/request/vat-group-request';
 import HashBasedAuthenticationMethod from '../src/entity/authenticator/hash-based-authentication-method';
 import LocalAuthenticator from '../src/entity/authenticator/local-authenticator';
+import UserFineGroup from '../src/entity/fine/userFineGroup';
+import FineHandoutEvent from '../src/entity/fine/fineHandoutEvent';
+import Fine from '../src/entity/fine/fine';
+import { calculateBalance } from './helpers/balance';
+import GewisUser from '../src/gewis/entity/gewis-user';
+import AssignedRole from '../src/entity/roles/assigned-role';
+
+function getDate(startDate: Date, endDate: Date, i: number): Date {
+  const diff = endDate.getTime() - startDate.getTime();
+  if (diff <= 0) throw new Error('startDate should be before endDate');
+
+  return new Date(startDate.getTime() + (startDate.getTime() * i ) % diff);
+}
 
 /**
  * Defines InvoiceUsers objects for the given Users
@@ -91,6 +103,7 @@ function defineUsers(
       id: start + nr,
       firstName: `Firstname${start + nr}`,
       lastName: `Lastname${start + nr}`,
+      nickname: nr % 4 === 0 ? `Nickname${start + nr}` : null,
       type,
       active,
       acceptedToS: TermsOfServiceStatus.ACCEPTED,
@@ -154,6 +167,23 @@ export async function seedUsers(): Promise<User[]> {
   await InvoiceUser.save(invoiceUsers);
 
   return users;
+}
+
+/**
+ * Seed some roles, where every user has at most one role.
+ * @param users
+ */
+export async function seedRoles(users: User[]): Promise<AssignedRole[]> {
+  const roleStrings = ['BAC', 'BAC feut', 'BAC PM', 'Bestuur', 'Kasco'];
+  return (await Promise.all(users.map(async (user, i) => {
+    if (i % 3 === 0) return undefined;
+
+    const role = Object.assign(new AssignedRole(), {
+      user,
+      role: roleStrings[i % 5],
+    });
+    return AssignedRole.save(role);
+  }))).filter((r) => r != null);
 }
 
 export function defineInvoiceEntries(invoiceId: number, startEntryId: number,
@@ -245,6 +275,99 @@ export async function seedInvoices(users: User[], transactions: Transaction[]): 
   await InvoiceEntry.save(invoiceEntry);
 
   return { invoices, invoiceTransfers };
+}
+
+/**
+ * Seeds a default dataset of borrelSchemaShifts and stores them in the database
+ */
+export async function seedEventShifts() {
+  const shifts: EventShift[] = [];
+  shifts.push(Object.assign(new EventShift(), {
+    name: 'Borrelen',
+    roles: ['BAC', 'BAC feut'],
+  }));
+  shifts.push(Object.assign(new EventShift(), {
+    name: 'Portier',
+    roles: ['BAC', 'BAC feut'],
+  }));
+  shifts.push(Object.assign(new EventShift(), {
+    name: 'Bier halen voor Job en Sjoerd',
+    roles: ['BAC feut'],
+  }));
+  shifts.push(Object.assign(new EventShift(), {
+    name: 'Roy slaan',
+    roles: [],
+  }));
+  shifts.push(Object.assign(new EventShift(), {
+    name: '900 euro kwijtraken',
+    roles: ['BAC PM', 'BAC'],
+  }));
+  shifts.push(Object.assign(new EventShift(), {
+    name: 'Wassen',
+    roles: ['Bestuur'],
+    deletedAt: new Date(),
+  }));
+  await EventShift.save(shifts);
+  return shifts;
+}
+
+export async function createEventShiftAnswer(user: User, event: Event, shift: EventShift, type: number) {
+  const availabilities = [Availability.YES, Availability.MAYBE, Availability.NO, Availability.LATER, Availability.NA, null];
+
+  const answer: EventShiftAnswer = Object.assign(new EventShiftAnswer(), {
+    user,
+    availability: availabilities[type + 1 % availabilities.length],
+    selected: false,
+    eventId: event.id,
+    shiftId: shift.id,
+  });
+  return EventShiftAnswer.save(answer);
+}
+
+export async function seedEvents(rolesWithUsers: AssignedRole[]) {
+  const events: Event[] = [];
+  const eventShifts = await seedEventShifts();
+  const eventShiftAnswers: EventShiftAnswer[] = [];
+  for (let i = 0; i < 5; i += 1) {
+    // const startDate = getRandomDate(new Date(), new Date(new Date().getTime() + 1000 * 60 * 60 * 24 * 365));
+    const startDate = new Date(new Date().getTime() + ((i * 1000000) % (3600 * 24 * 365)) * 1000 + 60000);
+    // Add 2,5 hours
+    const endDate = new Date(startDate.getTime() + (1000 * 60 * 60 * 2.5));
+
+    const event = Object.assign(new Event(), {
+      name: `${i}-Testborrel-${i}`,
+      createdBy: rolesWithUsers[i].user,
+      startDate,
+      endDate,
+      type: EventType.BORREL,
+      shifts: [],
+      id: i,
+    });
+    await Event.save(event);
+
+    const eventShifts1: EventShift[] = [];
+    const eventShiftAnswers1: EventShiftAnswer[] = [];
+    for (let j = 0; j < ((i + 1) * 243) % 4; j += 1) {
+      const shift = eventShifts[((i + j) * 13) % (eventShifts.length)];
+      const users = rolesWithUsers.filter((r) => shift.roles.includes(r.role));
+      await Promise.all(users.map(async (r, k) => {
+        const answer = await createEventShiftAnswer(r.user, event, shift, k);
+        answer.event = event;
+        answer.shift = shift;
+        eventShifts1.push(shift);
+        eventShiftAnswers.push(answer);
+        eventShiftAnswers1.push(answer);
+      }));
+    }
+
+    event.shifts = eventShifts1.filter((s, j, all) => j === all.findIndex((s2) => s.id === s2.id));
+    await event.save();
+
+    event.answers = eventShiftAnswers1;
+    events.push(event);
+  }
+
+  return { events, eventShifts, eventShiftAnswers };
 }
 
 /**
@@ -396,38 +519,6 @@ function defineProductRevisions(
 }
 
 /**
- * Defines product revision objects based on the parameters passed.
- *
- * @param start - The number of product updates that already exist.
- * @param product - The product that the product updates belong to.
- * @param category - The category generated product updates will belong to.
- * @param vat - The VAT group these product revisions will belong to
- * @param priceMultiplier - Multiplier to apply to the product price
- */
-function defineUpdatedProducts(
-  start: number,
-  product: Product,
-  category: ProductCategory,
-  vat: VatGroup,
-  priceMultiplier: number = 1,
-): UpdatedProduct[] {
-  const updates: UpdatedProduct[] = [];
-
-  updates.push(Object.assign(new UpdatedProduct(), {
-    product,
-    name: `Product${product.id}-update`,
-    category,
-    vat,
-    priceInclVat: dinero({
-      amount: (42 + product.id) * priceMultiplier,
-    }),
-    alcoholPercentage: product.id,
-  }));
-
-  return updates;
-}
-
-/**
  * Seeds a default dataset of product revisions,
  * based on the supplied user and product category dataset.
  * Every user of type local admin and organ will get products.
@@ -457,14 +548,14 @@ export async function seedProducts(
   for (let i = 0; i < sellers.length; i += 1) {
     const prod = defineProducts(
       products.length,
-      3,
+      6,
       sellers[i],
     );
 
     let img: ProductImage[] = [];
     for (let o = 0; o < prod.length; o += 1) {
       let image;
-      if (i % 2 === 0) {
+      if (o % 2 === 0) {
         image = defineProductImage(prod[o], sellers[i]);
         img = img.concat(image);
       }
@@ -498,182 +589,6 @@ export async function seedProducts(
   await Promise.all(promises);
 
   return { products, productImages, productRevisions };
-}
-
-/**
- * Seeds a default dataset of updated products
- * based on the supplied user and product category dataset.
- * Every user of type local admin and organ will get products.
- *
- * @param users - The dataset of users to base the product dataset on.
- * @param categories - The dataset of product categories to base the product dataset on.
- * @param vatGroups - The dataset of VAT groups to base the product dataset on.
- * @param priceMultiplier - Multiplier to apply to the product price
- */
-export async function seedUpdatedProducts(
-  users: User[],
-  categories: ProductCategory[],
-  vatGroups: VatGroup[],
-  priceMultiplier: number = 1,
-): Promise<{
-    products: Product[],
-    productRevisions: ProductRevision[],
-    updatedProducts: UpdatedProduct[],
-  }> {
-  let products: Product[] = [];
-  let productRevisions: ProductRevision[] = [];
-  let updatedProducts: UpdatedProduct[] = [];
-
-  const sellers = users.filter((u) => [UserType.LOCAL_ADMIN, UserType.MEMBER].includes(u.type));
-
-  const promises: Promise<any>[] = [];
-
-  for (let i = 0; i < sellers.length; i += 1) {
-    const prod = defineProducts(
-      products.length,
-      3,
-      sellers[i],
-    );
-    let rev: ProductRevision[] = [];
-    let upd: UpdatedProduct[] = [];
-    for (let o = 0; o < prod.length; o += 1) {
-      const category = categories[o % categories.length];
-      const vatGroup = vatGroups[o % vatGroups.length];
-      const currentRevision = (prod[o].id % 3);
-      if (currentRevision > 0) {
-        prod[o].currentRevision = currentRevision;
-        rev = rev.concat(defineProductRevisions(
-          prod[o].currentRevision,
-          prod[o],
-          category,
-          vatGroup,
-          priceMultiplier,
-        ));
-      }
-      upd = upd.concat(defineUpdatedProducts(
-        updatedProducts.length,
-        prod[o],
-        category,
-        vatGroup,
-      ));
-    }
-
-    // Revisions can only be saved AFTER the products themselves.
-    promises.push(Product.save(prod).then(() => ProductRevision.save(rev))
-      .then(() => UpdatedProduct.save(upd)));
-
-    products = products.concat(prod);
-    productRevisions = productRevisions.concat(rev);
-    updatedProducts = updatedProducts.concat(upd);
-  }
-  await Promise.all(promises);
-
-  return { products, productRevisions, updatedProducts };
-}
-
-/**
- * Seeds a default dataset of product revisions and updated products,
- * based on the supplied user and product category dataset.
- * Every user of type local admin and organ will get products and UpdatedProducts.
- *
- * @param users - The dataset of users to base the product dataset on.
- * @param categories - The dataset of product categories to base the product dataset on.
- * @param vatGroups - The dataset of VAT groups to base the product dataset on.
- * @param priceMultiplier - Multiplier to apply to the product price
- */
-export async function seedAllProducts(
-  users: User[],
-  categories: ProductCategory[],
-  vatGroups: VatGroup[],
-  priceMultiplier: number = 1,
-): Promise<{
-    products: Product[],
-    productImages: ProductImage[],
-    productRevisions: ProductRevision[],
-    updatedProducts: UpdatedProduct[],
-  }> {
-  let products: Product[] = [];
-  let productImages: ProductImage[] = [];
-  let productRevisions: ProductRevision[] = [];
-  let updatedProducts: UpdatedProduct[] = [];
-
-  const sellers = users.filter((u) => (
-    [UserType.LOCAL_ADMIN, UserType.MEMBER, UserType.ORGAN].includes(u.type)));
-
-  const promises: Promise<any>[] = [];
-  for (let i = 0; i < sellers.length; i += 1) {
-    const prod = defineProducts(
-      products.length,
-      6,
-      sellers[i],
-    );
-
-    let img: ProductImage[] = [];
-    for (let o = 0; o < prod.length; o += 1) {
-      let image;
-      if (o % 2 === 0) {
-        image = defineProductImage(prod[o], sellers[i]);
-        img = img.concat(image);
-        prod[o].image = image;
-      } else {
-        prod[o].image = undefined;
-      }
-    }
-
-    let rev: ProductRevision[] = [];
-    for (let o = 0; o < prod.length / 2; o += 1) {
-      const category = categories[o % categories.length];
-      const vatGroup = vatGroups[o % vatGroups.length];
-      prod[o].currentRevision = (prod[o].id % 3) + 1;
-      rev = rev.concat(defineProductRevisions(
-        prod[o].currentRevision,
-        prod[o],
-        category,
-        vatGroup,
-        priceMultiplier,
-      ));
-    }
-
-    let upd: UpdatedProduct[] = [];
-    for (let o = prod.length / 2; o < prod.length; o += 1) {
-      const category = categories[o % categories.length];
-      const vatGroup = vatGroups[o % vatGroups.length];
-      const currentRevision = (prod[o].id % 3);
-      if (currentRevision > 0) {
-        prod[o].currentRevision = currentRevision;
-        rev = rev.concat(defineProductRevisions(
-          prod[o].currentRevision,
-          prod[o],
-          category,
-          vatGroup,
-          priceMultiplier,
-        ));
-      }
-      upd = upd.concat(defineUpdatedProducts(
-        updatedProducts.length,
-        prod[o],
-        category,
-        vatGroup,
-        priceMultiplier,
-      ));
-    }
-
-    // Revisions can only be saved AFTER the products themselves.
-    promises.push(ProductImage.save(img)
-      .then(() => Product.save(prod)
-        .then(() => ProductRevision.save(rev))
-        .then(() => UpdatedProduct.save(upd))));
-
-    products = products.concat(prod);
-    productImages = productImages.concat(img);
-    productRevisions = productRevisions.concat(rev);
-    updatedProducts = updatedProducts.concat(upd);
-  }
-  await Promise.all(promises);
-
-  return {
-    products, productImages, productRevisions, updatedProducts,
-  };
 }
 
 /**
@@ -730,30 +645,6 @@ function defineContainerRevisions(
 }
 
 /**
- * Defines container revisions based on the parameters passed.
- *
- * @param start - The number of updated containers that already exist.
- * @param container - The container that the updated containers belong to.
- * @param products - The products that will be added to the updated containers.
- */
-function defineUpdatedContainers(
-  start: number,
-  container: Container,
-  products: Product[],
-): UpdatedContainer[] {
-  const updates: UpdatedContainer[] = [];
-  const candidates = products.filter((p) => p.owner === container.owner);
-
-  updates.push(Object.assign(new UpdatedContainer(), {
-    container,
-    name: `Container${container.id}-update`,
-    products: candidates,
-  }));
-
-  return updates;
-}
-
-/**
  * Seeds a default dataset of container revisions,
  * based on the supplied user and product dataset.
  * Every user of type local admin and organ will get containers.
@@ -800,144 +691,6 @@ export async function seedContainers(
   await Promise.all(promises);
 
   return { containers, containerRevisions };
-}
-
-/**
- * Seeds a default dataset of updated containers,
- * based on the supplied user and product dataset.
- * Every user of type local admin and organ will get containers.
- *
- * @param users - The dataset of users to base the container dataset on.
- * @param productRevisions - The dataset of product revisions to base the container dataset on.
- * @param products - The dataset of products to base the container dataset on.
- */
-export async function seedUpdatedContainers(
-  users: User[],
-  productRevisions: ProductRevision[],
-  products: Product[],
-): Promise<{
-    containers: Container[],
-    containerRevisions: ContainerRevision[],
-    updatedContainers: UpdatedContainer[],
-  }> {
-  let containers: Container[] = [];
-  let containerRevisions: ContainerRevision[] = [];
-  let updatedContainers: UpdatedContainer[] = [];
-
-  const sellers = users.filter((u) => [UserType.LOCAL_ADMIN, UserType.MEMBER].includes(u.type));
-
-  const promises: Promise<any>[] = [];
-  for (let i = 0; i < sellers.length; i += 1) {
-    const con = defineContainers(
-      containers.length,
-      3,
-      sellers[i],
-    );
-    let rev: ContainerRevision[] = [];
-    let upd: UpdatedContainer[] = [];
-    for (let o = 0; o < con.length; o += 1) {
-      const currentRevision = (con[o].id % 3);
-      if (currentRevision > 1) {
-        con[o].currentRevision = currentRevision;
-        rev = rev.concat(defineContainerRevisions(
-          containerRevisions.length,
-          con[o].currentRevision,
-          con[o],
-          productRevisions,
-        ));
-      }
-      upd = upd.concat(defineUpdatedContainers(
-        updatedContainers.length,
-        con[o],
-        products,
-      ));
-    }
-
-    // Revisions can only be saved AFTER the containers themselves.
-    promises.push(Container.save(con).then(() => ContainerRevision.save(rev))
-      .then(() => UpdatedContainer.save(upd)));
-
-    containers = containers.concat(con);
-    containerRevisions = containerRevisions.concat(rev);
-    updatedContainers = updatedContainers.concat(upd);
-  }
-  await Promise.all(promises);
-
-  return { containers, containerRevisions, updatedContainers };
-}
-
-/**
- * Seeds a default dataset of container revisions and updated containers,
- * based on the supplied user and product dataset.
- * Every user of type local admin and organ will get containers.
- *
- * @param users - The dataset of users to base the container dataset on.
- * @param productRevisions - The dataset of product revisions to base the container dataset on.
- * @param products - The dataset of products to base the container dataset on.
- */
-export async function seedAllContainers(
-  users: User[],
-  productRevisions: ProductRevision[],
-  products: Product[],
-): Promise<{
-    containers: Container[],
-    containerRevisions: ContainerRevision[],
-    updatedContainers: UpdatedContainer[],
-  }> {
-  let containers: Container[] = [];
-  let containerRevisions: ContainerRevision[] = [];
-  let updatedContainers: UpdatedContainer[] = [];
-
-  const sellers = users.filter((u) => [UserType.LOCAL_ADMIN, UserType.MEMBER].includes(u.type));
-  const revision = products.filter((p) => p.currentRevision != null);
-
-  const promises: Promise<any>[] = [];
-  for (let i = 0; i < sellers.length; i += 1) {
-    const con = defineContainers(
-      containers.length,
-      6,
-      sellers[i],
-    );
-    let rev: ContainerRevision[] = [];
-    let upd: UpdatedContainer[] = [];
-    for (let o = 0; o < con.length / 2; o += 1) {
-      con[o].currentRevision = (con[o].id % 3) + 1;
-      rev = rev.concat(defineContainerRevisions(
-        containerRevisions.length,
-        con[o].currentRevision,
-        con[o],
-        productRevisions,
-      ));
-    }
-    for (let o = con.length / 2; o < con.length; o += 1) {
-      const currentRevision = (con[o].id % 3);
-      if (currentRevision > 1) {
-        con[o].currentRevision = currentRevision;
-        rev = rev.concat(defineContainerRevisions(
-          containerRevisions.length,
-          con[o].currentRevision,
-          con[o],
-          productRevisions,
-        ));
-      }
-      upd = upd.concat(defineUpdatedContainers(
-        updatedContainers.length,
-        con[o],
-        revision,
-      ));
-    }
-
-    // Revisions can only be saved AFTER the containers themselves.
-    promises.push(Container.save(con).then(() => ContainerRevision.save(rev))
-      .then(() => UpdatedContainer.save(upd)));
-
-    containers = containers.concat(con);
-    containerRevisions = containerRevisions.concat(rev);
-    updatedContainers = updatedContainers.concat(upd);
-  }
-  await Promise.all(promises);
-
-  return { containers, containerRevisions, updatedContainers };
 }
 
 /**
@@ -1001,37 +754,6 @@ function definePointOfSaleRevisions(
 }
 
 /**
- * Defines updated pointsofsale based on the parameters passed.
- *
- * @param start - The number of updated pointsofsale that already exist.
- * @param dateOffset - The date offset from 2000-1-1, where 0 is before, 1 is during, 2 is after.
- * @param pointOfSale - The pointsofsale that the updated pointsofsale belong to.
- * @param containers - The containers that will be added to the updated pointsofsale.
- */
-function defineUpdatedPointOfSale(
-  start: number,
-  dateOffset: number,
-  pointOfSale: PointOfSale,
-  containers: Container[],
-): UpdatedPointOfSale[] {
-  const updates: UpdatedPointOfSale[] = [];
-  const candidates = containers.filter((c) => c.owner === pointOfSale.owner);
-  const startDate = addDays(new Date(2000, 0, 1), 2 - (dateOffset * 2));
-  const endDate = addDays(new Date(2000, 0, 1), 3 - (dateOffset * 2));
-
-  updates.push(Object.assign(new UpdatedPointOfSale(), {
-    pointOfSale,
-    name: `PointOfSale${pointOfSale.id}-update`,
-    useAuthentication: pointOfSale.id % 2 === 0,
-    containers: candidates,
-    startDate,
-    endDate,
-  }));
-
-  return updates;
-}
-
-/**
  * Seeds a default dataset of pointsofsale revisions,
  * based on the supplied user and container revision dataset.
  * Every user of type local admin and organ will get containers.
@@ -1050,7 +772,7 @@ export async function seedPointsOfSale(
   let pointsOfSale: PointOfSale[] = [];
   let pointOfSaleRevisions: PointOfSaleRevision[] = [];
 
-  const sellers = users.filter((u) => [UserType.LOCAL_ADMIN, UserType.MEMBER].includes(u.type));
+  const sellers = users.filter((u) => [UserType.LOCAL_ADMIN, UserType.MEMBER, UserType.ORGAN].includes(u.type));
 
   const promises: Promise<any>[] = [];
   for (let i = 0; i < sellers.length; i += 1) {
@@ -1080,151 +802,6 @@ export async function seedPointsOfSale(
   await Promise.all(promises);
 
   return { pointsOfSale, pointOfSaleRevisions };
-}
-
-/**
- * Seeds a default dataset of updated pointsofsale,
- * based on the supplied user and container revision dataset.
- * Every user of type local admin and organ will get containers.
- *
- * @param users - The dataset of users to base the pointsofsale dataset on.
- * @param containerRevisions - The dataset of container revisions to base
- * the pointsofsale dataset on.
- * @param containers - The dataset of containers to base the pointsofsale dataset on.
- */
-export async function seedUpdatedPointsOfSale(
-  users: User[],
-  containerRevisions: ContainerRevision[],
-  containers: Container[],
-): Promise<{
-    pointsOfSale: PointOfSale[],
-    pointOfSaleRevisions: PointOfSaleRevision[],
-    updatedPointsOfSale: UpdatedPointOfSale[],
-  }> {
-  let pointsOfSale: PointOfSale[] = [];
-  let pointOfSaleRevisions: PointOfSaleRevision[] = [];
-  let updatedPointsOfSale: UpdatedPointOfSale[] = [];
-
-  const sellers = users.filter((u) => [UserType.LOCAL_ADMIN, UserType.MEMBER].includes(u.type));
-
-  const promises: Promise<any>[] = [];
-  for (let i = 0; i < sellers.length; i += 1) {
-    const pos = definePointsOfSale(
-      pointsOfSale.length,
-      3,
-      sellers[i],
-    );
-    let rev: PointOfSaleRevision[] = [];
-    let upd: UpdatedPointOfSale[] = [];
-    for (let o = 0; o < pos.length; o += 1) {
-      const currentRevision = (pos[o].id % 3);
-      if (currentRevision > 1) {
-        pos[o].currentRevision = currentRevision;
-        rev = rev.concat(definePointOfSaleRevisions(
-          pointOfSaleRevisions.length,
-          pos[o].currentRevision,
-          currentRevision,
-          pos[o],
-          containerRevisions,
-        ));
-      }
-      upd = upd.concat(defineUpdatedPointOfSale(
-        updatedPointsOfSale.length,
-        currentRevision,
-        pos[o],
-        containers,
-      ));
-    }
-
-    // Revisions can only be saved AFTER the containers themselves.
-    promises.push(PointOfSale.save(pos).then(() => PointOfSaleRevision.save(rev))
-      .then(() => UpdatedPointOfSale.save(upd)));
-
-    pointsOfSale = pointsOfSale.concat(pos);
-    pointOfSaleRevisions = pointOfSaleRevisions.concat(rev);
-    updatedPointsOfSale = updatedPointsOfSale.concat(upd);
-  }
-  await Promise.all(promises);
-
-  return { pointsOfSale, pointOfSaleRevisions, updatedPointsOfSale };
-}
-
-/**
- * Seeds a default dataset of pointsofsale revisions and updated pointsofsale,
- * based on the supplied user and container dataset.
- * Every user of type local admin and organ will get containers.
- *
- * @param users - The dataset of users to base the pointsofsale dataset on.
- * @param containerRevisions - The dataset of container revisions to base
- * the pointsofsale dataset on.
- * @param containers - The dataset of containers to base the pointsofsale dataset on.
- */
-export async function seedAllPointsOfSale(
-  users: User[],
-  containerRevisions: ContainerRevision[],
-  containers: Container[],
-): Promise<{
-    pointsOfSale: PointOfSale[],
-    pointOfSaleRevisions: PointOfSaleRevision[],
-    updatedPointsOfSale: UpdatedPointOfSale[],
-  }> {
-  let pointsOfSale: PointOfSale[] = [];
-  let pointOfSaleRevisions: PointOfSaleRevision[] = [];
-  let updatedPointsOfSale: UpdatedPointOfSale[] = [];
-
-  const sellers = users.filter((u) => (
-    [UserType.LOCAL_ADMIN, UserType.MEMBER, UserType.ORGAN].includes(u.type)));
-
-  const promises: Promise<any>[] = [];
-  for (let i = 0; i < sellers.length; i += 1) {
-    const pos = definePointsOfSale(
-      pointsOfSale.length,
-      6,
-      sellers[i],
-    );
-    let rev: PointOfSaleRevision[] = [];
-    let upd: UpdatedPointOfSale[] = [];
-    for (let o = 0; o < pos.length / 2; o += 1) {
-      pos[o].currentRevision = (pos[o].id % 3) + 1;
-      rev = rev.concat(definePointOfSaleRevisions(
-        pointOfSaleRevisions.length,
-        pos[o].currentRevision,
-        pos[o].currentRevision - 1,
-        pos[o],
-        containerRevisions,
-      ));
-    }
-    for (let o = pos.length / 2; o < pos.length; o += 1) {
-      const currentRevision = (pos[o].id % 3);
-      if (currentRevision > 1) {
-        pos[o].currentRevision = currentRevision;
-        rev = rev.concat(definePointOfSaleRevisions(
-          pointOfSaleRevisions.length,
-          pos[o].currentRevision,
-          currentRevision,
-          pos[o],
-          containerRevisions,
-        ));
-      }
-      upd = upd.concat(defineUpdatedPointOfSale(
-        updatedPointsOfSale.length,
-        currentRevision,
-        pos[o],
-        containers,
-      ));
-    }
-
-    // Revisions can only be saved AFTER the containers themselves.
-    promises.push(PointOfSale.save(pos).then(() => PointOfSaleRevision.save(rev))
-      .then(() => UpdatedPointOfSale.save(upd)));
-
-    pointsOfSale = pointsOfSale.concat(pos);
-    pointOfSaleRevisions = pointOfSaleRevisions.concat(rev);
-    updatedPointsOfSale = updatedPointsOfSale.concat(upd);
-  }
-  await Promise.all(promises);
-
-  return { pointsOfSale, pointOfSaleRevisions, updatedPointsOfSale };
 }
 
 /**
@@ -1326,13 +903,6 @@ export async function seedTransactions(
   let startSubTransaction = 0;
   let startRow = 0;
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const totalTransactions = pointOfSaleRevisions.length * Math.round(2 * nrMultiplier);
-  let diff: number;
-  if (beginDate && endDate) {
-    diff = endDate.getTime() - beginDate.getTime();
-  }
-
   const promises: Promise<any>[] = [];
   for (let i = 0; i < pointOfSaleRevisions.length; i += 1) {
     const pos = pointOfSaleRevisions[i];
@@ -1342,7 +912,7 @@ export async function seedTransactions(
       ? from
       : users[(i * 5 + pos.pointOfSale.id * 7 + pos.revision) % users.length];
     let createdAt: Date;
-    if (diff) createdAt = new Date(beginDate.getTime() + Math.round(Math.random() * diff));
+    if (beginDate && endDate) createdAt = getDate(beginDate, endDate, i);
     const trans = defineTransactions(
       transactions.length,
       startSubTransaction,
@@ -1458,6 +1028,134 @@ export async function seedStripeDeposits(users: User[]): Promise<{
   };
 }
 
+/**
+ * Handout fines for all eligible users on the given reference date. Reuse the given user fine groups if
+ * @param users
+ * @param transactions
+ * @param transfers
+ * @param userFineGroups
+ * @param firstReferenceDate
+ */
+export async function seedSingleFines(users: User[], transactions: Transaction[], transfers: Transfer[], userFineGroups: UserFineGroup[] = [], firstReferenceDate: Date = new Date()) {
+  const subTransactions: SubTransaction[] = Array.prototype.concat(...transactions
+    .map((t) => t.subTransactions));
+  // Get all users that are in debt and should get fined
+  const debtors = users.filter((u) =>
+    calculateBalance(u, transactions, subTransactions, transfers, firstReferenceDate).amount.getAmount() < 500);
+
+  // Create a map from users to userFineGroups and initialize it with the existing userFineGroups
+  const userFineGroupMap = new Map<User, UserFineGroup>();
+  userFineGroups.forEach((g) => userFineGroupMap.set(g.user, g));
+
+  let i = 0;
+
+  const fineHandoutEvent = Object.assign(new FineHandoutEvent(), {
+    referenceDate: firstReferenceDate,
+  } as FineHandoutEvent);
+  await fineHandoutEvent.save();
+
+  const fineTransfers: Transfer[] = [];
+  const fines = await Promise.all(debtors.map(async (u) => {
+    i++;
+    if (i % 2 === 0) return;
+
+    let userFineGroup = userFineGroupMap.get(u);
+    if (userFineGroup === undefined) {
+      userFineGroup = Object.assign(new UserFineGroup(), {
+        user: u,
+        userId: u.id,
+      } as UserFineGroup);
+      await userFineGroup.save();
+      userFineGroupMap.set(u, userFineGroup);
+    }
+
+    // Fine everyone 5 euros
+    const amount = dinero({ amount: 500 });
+    const transfer = Object.assign(new Transfer(), {
+      from: u,
+      fromId: u.id,
+      amount,
+      description: 'Seeded fine',
+    } as Transfer);
+    const fine = await transfer.save().then(async (t) => {
+      const f = Object.assign(new Fine(), {
+        fineHandoutEvent,
+        userFineGroup,
+        transfer: t,
+        amount,
+      } as Fine);
+      return f.save();
+    });
+    transfer.fine = fine;
+    fineTransfers.push(transfer);
+    return fine;
+  }));
+
+  return {
+    fines: fines.filter((f) => f !== undefined),
+    fineTransfers,
+    fineHandoutEvent,
+    userFineGroups: Array.from(userFineGroupMap.values()),
+  };
+}
+
+/**
+ * Add two fineHandoutEvents to the database, one on 2021-01-01 and the other at the current time.
+ * @param users
+ * @param transactions
+ * @param transfers
+ * @param addCurrentFines
+ */
+export async function seedFines(users: User[], transactions: Transaction[], transfers: Transfer[], addCurrentFines = false) {
+  // Make a copy of users, so we can update currentFines
+  let newUsers = users;
+
+  const {
+    fines: fines1,
+    fineTransfers: fineTransfers1,
+    userFineGroups: userFineGroups1,
+    fineHandoutEvent: fineHandoutEvent1,
+  } = await seedSingleFines(users, transactions, transfers, [], new Date('2021-01-01'));
+
+  const {
+    fines: fines2,
+    fineTransfers: fineTransfers2,
+    userFineGroups: userFineGroups2,
+    fineHandoutEvent: fineHandoutEvent2,
+  } = await seedSingleFines(users, transactions, [...transfers, ...fineTransfers1], userFineGroups1);
+
+  // Remove duplicates
+  const userFineGroups = [...userFineGroups1, ...userFineGroups2]
+    .filter((g, i, groups) => groups.findIndex((g2) => g2.id === g.id) === i);
+  const fines = [...fines1, ...fines2];
+
+  // Add also a reference to the fine in the UserFineGroup
+  fines.forEach((f) => {
+    const i = userFineGroups.findIndex((g) => g.id === f.userFineGroup.id);
+    if (userFineGroups[i].fines === undefined) userFineGroups[i].fines = [];
+    userFineGroups[i].fines.push(f);
+  });
+
+  if (addCurrentFines) {
+    newUsers = await Promise.all(users.map(async (user) => {
+      const userFineGroup = userFineGroups.find((g) => user.id === g.userId);
+      if (userFineGroup) {
+        user.currentFines = userFineGroup;
+        await user.save();
+      }
+      return user;
+    }));
+  }
+
+  return {
+    fines,
+    fineTransfers: [...fineTransfers1, ...fineTransfers2],
+    userFineGroups,
+    fineHandoutEvents: [fineHandoutEvent1, fineHandoutEvent2],
+    users: newUsers,
+  };
+}
+
 export async function seedPayoutRequests(users: User[]): Promise<{
   payoutRequests: PayoutRequest[], payoutRequestTransfers: Transfer[],
 }> {
@@ -1541,8 +1239,7 @@ export async function seedTransfers(users: User[],
   for (let i = 0; i < users.length; i += 1) {
     let date = new Date();
     if (startDate && endDate) {
-      date = new Date(startDate.getTime()
-          + Math.random() * (endDate.getTime() - startDate.getTime()));
+      date = getDate(startDate, endDate, i);
     }
     let newTransfer = Object.assign(new Transfer(), {
       description: '',
@@ -1637,19 +1334,22 @@ export async function seedBanners(users: User[]): Promise<{
 
 export interface DatabaseContent {
   users: User[],
+  roles: AssignedRole[],
   categories: ProductCategory[],
   vatGroups: VatGroup[],
   products: Product[],
   productRevisions: ProductRevision[],
-  updatedProducts: UpdatedProduct[],
+  events: Event[],
+  eventShifts: EventShift[],
+  eventShiftAnswers: EventShiftAnswer[],
   containers: Container[],
   containerRevisions: ContainerRevision[],
-  updatedContainers: UpdatedContainer[],
   pointsOfSale: PointOfSale[],
   pointOfSaleRevisions: PointOfSaleRevision[],
-  updatedPointsOfSale: UpdatedPointOfSale[],
   transactions: Transaction[],
   transfers: Transfer[],
+  fines: Fine[],
+  userFineGroups: UserFineGroup[],
   payoutRequests: PayoutRequest[],
   stripeDeposits: StripeDeposit[],
   invoices: Invoice[],
@@ -1667,16 +1367,19 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
   const categories = await seedProductCategories();
   const vatGroups = await seedVatGroups();
   const {
-    products, productRevisions, updatedProducts,
-  } = await seedAllProducts(users, categories, vatGroups);
-  const { containers, containerRevisions, updatedContainers } = await seedAllContainers(
-    users, productRevisions, products,
+    products, productRevisions,
+  } = await seedProducts(users, categories, vatGroups);
+  const { containers, containerRevisions } = await seedContainers(
+    users, productRevisions,
   );
-  const { pointsOfSale, pointOfSaleRevisions, updatedPointsOfSale } = await seedAllPointsOfSale(
-    users, containerRevisions, containers,
+  const { pointsOfSale, pointOfSaleRevisions } = await seedPointsOfSale(
+    users, containerRevisions,
   );
+  const roles = await seedRoles(users);
+  const { events, eventShifts, eventShiftAnswers } = await seedEvents(roles);
   const { transactions } = await seedTransactions(users, pointOfSaleRevisions);
   const transfers = await seedTransfers(users);
+  const { fines, fineTransfers, userFineGroups } = await seedFines(users, transactions, transfers);
   const { payoutRequests, payoutRequestTransfers } = await seedPayoutRequests(users);
   const { invoices, invoiceTransfers } = await seedInvoices(users, transactions);
   const { stripeDeposits, stripeDepositTransfers } = await seedStripeDeposits(users);
@@ -1684,25 +1387,28 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
 
   return {
     users,
+    roles,
     categories,
     vatGroups,
     products,
     productRevisions,
-    updatedProducts,
     containers,
     containerRevisions,
-    updatedContainers,
     pointsOfSale,
     pointOfSaleRevisions,
-    updatedPointsOfSale,
     transactions,
     stripeDeposits,
     invoices,
-    transfers: transfers.concat(payoutRequestTransfers).concat(invoiceTransfers).concat(stripeDepositTransfers),
+    transfers: transfers.concat(fineTransfers).concat(payoutRequestTransfers).concat(invoiceTransfers).concat(stripeDepositTransfers),
+    fines,
+    userFineGroups,
     payoutRequests,
     banners,
     gewisUsers,
     pinUsers,
     localUsers,
+    events,
+    eventShifts,
+    eventShiftAnswers,
   };
 }

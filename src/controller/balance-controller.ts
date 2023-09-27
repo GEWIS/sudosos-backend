@@ -23,15 +23,15 @@ import { RequestWithToken } from '../middleware/token-middleware';
 import User from '../entity/user/user';
 import BalanceService, { asBalanceOrderColumn, GetBalanceParameters } from '../service/balance-service';
 import UserController from './user-controller';
-import { asDate, asDinero } from '../helpers/validators';
+import { asArrayOfUserTypes, asBoolean, asDate, asDinero } from '../helpers/validators';
 import { asOrderingDirection } from '../helpers/ordering';
 import { parseRequestPagination } from '../helpers/pagination';
 
 export default class BalanceController extends BaseController {
-  private logger: Logger = log4js.getLogger('BannerController');
+  private logger: Logger = log4js.getLogger('BalanceController');
 
   /**
-   * Creates a new banner controller instance.
+   * Creates a new balance controller instance.
    * @param options - The options passed to the base controller.
    */
   public constructor(options: BaseControllerOptions) {
@@ -68,6 +68,7 @@ export default class BalanceController extends BaseController {
   /**
    * Get balance of the current user
    * @route get /balances
+   * @operationId getBalances
    * @group balance - Operations of balance controller
    * @security JWT
    * @returns {BalanceResponse.model} 200 - The requested user's balance
@@ -88,13 +89,18 @@ export default class BalanceController extends BaseController {
   /**
    * Get balance of the current user
    * @route GET /balances/all
+   * @operationId getAllBalance
    * @group balance - Operations of balance controller
    * @security JWT
    * @param {string} date.query - Timestamp to get balances for
    * @param {integer} minBalance.query - Minimum balance
    * @param {integer} maxBalance.query - Maximum balance
+   * @param {boolean} hasFine.query - Only users with(out) fines
+   * @param {integer} minFine.query - Minimum fine
+   * @param {integer} maxFine.query - Maximum fine
+   * @param {string} userType[].query.enum{MEMBER,ORGAN,BORRELKAART,LOCAL_USER,LOCAL_ADMIN,INVOICE,AUTOMATIC_INVOICE} - Filter based on user type.
    * @param {enum} orderBy.query - Column to order balance by - eg: id,amount
-   * @param {enum} orderDirection.query - Order direction - eg: asc,desc,ASC,DESC
+   * @param {enum} orderDirection.query - Order direction - eg: ASC,DESC
    * @param {integer} take.query - How many transactions the endpoint should return
    * @param {integer} skip.query - How many transactions should be skipped (for pagination)
    * @returns {Array<BalanceResponse>} 200 - The requested user's balance
@@ -112,6 +118,10 @@ export default class BalanceController extends BaseController {
         date: asDate(req.query.date),
         minBalance: asDinero(req.query.minBalance),
         maxBalance: asDinero(req.query.maxBalance),
+        hasFine: asBoolean(req.query.hasFine),
+        minFine: asDinero(req.query.minFine),
+        maxFine: asDinero(req.query.maxFine),
+        userTypes: asArrayOfUserTypes(req.query.userTypes),
         orderBy: asBalanceOrderColumn(req.query.orderBy),
         orderDirection: asOrderingDirection(req.query.orderDirection),
       };
@@ -135,8 +145,9 @@ export default class BalanceController extends BaseController {
   /**
    * Retrieves the requested balance
    * @route get /balances/{id}
+   * @operationId getBalanceId
    * @group balance - Operations of balance controller
-   * @param {integer} id.path - The id of the user for which the saldo is requested
+   * @param {integer} id.path.required - The id of the user for which the saldo is requested
    * @security JWT
    * @returns {BalanceResponse.model} 200 - The requested user's balance
    * @returns {string} 400 - Validation error

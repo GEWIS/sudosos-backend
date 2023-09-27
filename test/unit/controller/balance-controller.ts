@@ -23,7 +23,7 @@ import { json } from 'body-parser';
 import Transaction from '../../../src/entity/transactions/transaction';
 import Database from '../../../src/database/database';
 import {
-  seedContainers,
+  seedContainers, seedFines,
   seedPointsOfSale,
   seedProductCategories,
   seedProducts, seedTransactions, seedTransfers,
@@ -38,10 +38,12 @@ import RoleManager from '../../../src/rbac/role-manager';
 import BalanceController from '../../../src/controller/balance-controller';
 import Transfer from '../../../src/entity/transactions/transfer';
 import BalanceResponse, { PaginatedBalanceResponse } from '../../../src/controller/response/balance-response';
-import { calculateBalance } from '../service/balance-service';
+import { calculateBalance } from '../../helpers/balance';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import { OrderingDirection } from '../../../src/helpers/ordering';
 import { PaginationResult } from '../../../src/helpers/pagination';
+import Fine from '../../../src/entity/fine/fine';
+import UserFineGroup from '../../../src/entity/fine/userFineGroup';
 
 describe('BalanceController', (): void => {
   let ctx: {
@@ -55,6 +57,8 @@ describe('BalanceController', (): void => {
     transactions: Transaction[],
     subTransactions: SubTransaction[],
     transfers: Transfer[],
+    fines: Fine[],
+    userFineGroups: UserFineGroup[],
   };
 
   before(async function test(): Promise<void> {
@@ -77,6 +81,8 @@ describe('BalanceController', (): void => {
     });
     const userToken = await tokenHandler.signToken({ user: users[0], roles: ['User'], lesser: false }, '33');
     const adminToken = await tokenHandler.signToken({ user: users[6], roles: ['User', 'Admin'], lesser: false }, '33');
+
+    const { fines, fineTransfers, userFineGroups, users: usersWithFines } = await seedFines(users, transactions, transfers, true);
 
     const all = { all: new Set<string>(['*']) };
     const own = { own: new Set<string>(['*']) };
@@ -122,10 +128,12 @@ describe('BalanceController', (): void => {
       controller,
       userToken,
       adminToken,
-      users,
+      users: usersWithFines,
       transactions,
       subTransactions,
-      transfers,
+      transfers: transfers.concat(fineTransfers),
+      fines,
+      userFineGroups,
     };
   });
 
@@ -136,10 +144,9 @@ describe('BalanceController', (): void => {
         .set('Authorization', `Bearer ${ctx.userToken}`);
       expect(res.status).to.equal(200);
 
-      // TODO: fix model validation
-      // const validation = ctx.specification
-      // .validateModel('BalanceResponse', res.body, false, true);
-      // expect(validation.valid).to.be.true;
+      const validation = ctx.specification
+        .validateModel('BalanceResponse', res.body, false, true);
+      expect(validation.valid).to.be.true;
     });
 
     it('should return forbidden when user is not admin', async () => {
@@ -155,10 +162,9 @@ describe('BalanceController', (): void => {
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
 
-      // TODO: fix model validation
-      // const validation = ctx.specification
-      // .validateModel('BalanceResponse', res.body, false, true);
-      // expect(validation.valid).to.be.true;
+      const validation = ctx.specification
+        .validateModel('BalanceResponse', res.body, false, true);
+      expect(validation.valid).to.be.true;
       expect(res.body.id).to.equal(2);
     });
 
@@ -194,7 +200,8 @@ describe('BalanceController', (): void => {
       expect(res.status).to.equal(403);
     });
     it('should return balances based on date', async () => {
-      const date = ctx.transactions[1].createdAt;
+      const date = new Date(Math.ceil(
+        ctx.transactions[Math.round(ctx.transactions.length / 2)].createdAt.getTime() / 1000) * 1000);
       const res = await request(ctx.app)
         .get('/balances/all')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
@@ -240,6 +247,63 @@ describe('BalanceController', (): void => {
 
       expect(body.records.length).to.equal(actualBalances.length);
       expect(body.records.map((b) => b.id)).to.deep.equalInAnyOrder(actualBalances.map((b) => b.user.id));
+    });
+    it('should return only balances having fines', async () => {
+      const res = await request(ctx.app)
+        .get('/balances/all')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query({ hasFine: true });
+      expect(res.status).to.equal(200);
+
+      const body = res.body as PaginatedBalanceResponse;
+      const actualBalances = ctx.users
+        .filter((u) => u.currentFines != null);
+
+      expect(body.records.length).to.equal(actualBalances.length);
+      expect(body.records.map((b) => b.id)).to.deep.equalInAnyOrder(actualBalances.map((u)=> u.id));
+    });
+    it('should return only balances satisfying minimum fine', async () => {
+      const minFine = 600;
+      const res = await request(ctx.app)
+        .get('/balances/all')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query({ minFine, take: 10000 });
+      expect(res.status).to.equal(200);
+
+      const body = res.body as PaginatedBalanceResponse;
+      const users = ctx.userFineGroups
+        .filter((u) => u.fines.reduce((sum, f) => sum + f.amount.getAmount(), 0) >= minFine);
+
+      expect(body.records.length).to.equal(users.length);
+      expect(body.records.map((b) => b.id)).to.deep.equalInAnyOrder(users.map((u) => u.user.id));
+    });
+    it('should return only balances satisfying maximum fine', async () => {
+      const maxFine = 600;
+      const res = await request(ctx.app)
+        .get('/balances/all')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query({ maxFine, take: 10000 });
+      expect(res.status).to.equal(200);
+
+      const body = res.body as PaginatedBalanceResponse;
+      const users = ctx.userFineGroups
+        .filter((u) => u.fines.reduce((sum, f) => sum + f.amount.getAmount(), 0) <= maxFine);
+
+      expect(body.records.length).to.equal(users.length);
+      expect(body.records.map((b) => b.id)).to.deep.equalInAnyOrder(users.map((u) => u.user.id));
+    });
+    it('should return only balances from certain user types', async () => {
+      const userTypes = [UserType.LOCAL_USER, UserType.LOCAL_ADMIN];
+      const res = await request(ctx.app)
+        .get('/balances/all')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query({ userTypes: userTypes.map((t) => UserType[t]) });
+      expect(res.status).to.equal(200);
+
+      const body = res.body as PaginatedBalanceResponse;
+      const users = ctx.users.filter((u) => userTypes.includes(u.type));
+      expect(body.records.length).to.equal(users.length);
+      expect(body.records.map((b) => b.id)).to.deep.equalInAnyOrder(users.map((u) => u.id));
     });
     it('should correctly order balance results on id', async () => {
       await Promise.all(Object.values(OrderingDirection).map(async (orderDirection: OrderingDirection) => {

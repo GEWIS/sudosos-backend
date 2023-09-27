@@ -15,26 +15,13 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import {
-  Column,
-} from 'typeorm';
-import BaseEntityWithoutId from '../base-entity-without-id';
 
 /**
- * @typedef {BaseEntityWithoutId} BasePointOfSale
- * @property {string} name.required - The unique name of the pointOfSale.
+ * @typedef HandoutFinesRequest
+ * @property {Array<integer>} userIds.required - Users to fine. If a user is not eligible for a fine, a fine of 0,00 will be handed out.
+ * @property {string} referenceDate - Reference date to calculate the balance and fine for (and "now", but that is always done and doesn't have to be explicitly specified)
  */
-export default class BasePointOfSale extends BaseEntityWithoutId {
-  @Column({
-    length: 64,
-  })
-  public name: string;
-
-  /**
-   * Whether this POS requires users to authenticate themselves before making a transaction
-   */
-  @Column({
-    default: false,
-  })
-  public useAuthentication: boolean;
+export interface HandoutFinesRequest {
+  userIds: number[];
+  referenceDate?: string;
 }

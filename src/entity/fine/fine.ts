@@ -15,42 +15,31 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import {
-  Column,
-  ManyToOne,
-} from 'typeorm';
-import { Dinero } from 'dinero.js';
+import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
+import BaseEntity from '../base-entity';
+import Transfer from '../transactions/transfer';
 import DineroTransformer from '../transformer/dinero-transformer';
-import BaseEntityWithoutId from '../base-entity-without-id';
-import ProductCategory from './product-category';
-import VatGroup from '../vat-group';
+import { Dinero } from 'dinero.js';
+import FineHandoutEvent from './fineHandoutEvent';
+import UserFineGroup from './userFineGroup';
 
-/**
- * @typedef {BaseEntityWithoutId} BaseProduct
- * @property {string} name.required - The unique name of the product.
- * @property {Dinero.model} price.required - The price of each product.
- */
-export default class BaseProduct extends BaseEntityWithoutId {
-  @Column({
-    length: 64,
-  })
-  public name: string;
+@Entity()
+export default class Fine extends BaseEntity {
+  @ManyToOne(() => FineHandoutEvent, { nullable: false })
+  @JoinColumn()
+  public fineHandoutEvent: FineHandoutEvent;
+
+  @ManyToOne(() => UserFineGroup, { nullable: false })
+  @JoinColumn()
+  public userFineGroup: UserFineGroup;
+
+  @OneToOne(() => Transfer, { nullable: true })
+  @JoinColumn()
+  public transfer: Transfer | null;
 
   @Column({
     type: 'integer',
     transformer: DineroTransformer.Instance,
   })
-  public priceInclVat: Dinero;
-
-  @ManyToOne(() => VatGroup, { nullable: false })
-  public vat: VatGroup;
-
-  @ManyToOne(() => ProductCategory, { nullable: false })
-  public category: ProductCategory;
-
-  @Column({
-    type: 'decimal',
-    scale: 2,
-  })
-  public alcoholPercentage: number;
+  public amount: Dinero;
 }

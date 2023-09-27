@@ -21,6 +21,8 @@ import { VatDeclarationPeriod } from '../entity/vat-group';
 import { UserType } from '../entity/user/user';
 import { Dinero } from 'dinero.js';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
+import { Availability } from '../entity/event/event-shift-answer';
+import { EventType } from '../entity/event/event';
 
 /**
  * Returns whether the given object is a number
@@ -137,7 +139,58 @@ export function asUserType(input: any): UserType | undefined {
   if (!input) return undefined;
   const state: UserType = UserType[input as keyof typeof UserType];
   if (state === undefined) {
-    throw new TypeError(`Input '${input}' is not a valid InvoiceState.`);
+    throw new TypeError(`Input '${input}' is not a valid UserType.`);
   }
   return state;
+}
+
+/**
+ * Converts the input to a shift availability
+ * @param input - The input which should be converted.
+ * @returns The parsed shift Availability.
+ * @throws TypeError - If the input is not a valid Availability
+ */
+export function asShiftAvailability(input: any): Availability | undefined {
+  if (!input) return undefined;
+  const state: Availability = Availability[input as keyof typeof Availability];
+  if (state === undefined) {
+    throw new TypeError(`Input '${input}' is not a valid shift Availability.`);
+  }
+  return state;
+}
+
+/**
+ * Converts the input to an EventType
+ * @param input - The input which should be converted.
+ * @returns The parsed EventType.
+ * @throws TypeError - If the input is not a valid EventType
+ */
+export function asEventType(input: any): EventType | undefined {
+  if (!input) return undefined;
+  const state: EventType = EventType[input as keyof typeof EventType];
+  if (state === undefined) {
+    throw new TypeError(`Input '${input}' is not a valid EventType.`);
+  }
+  return state;
+}
+
+/**
+ * Converts the input to a list of UserTypes
+ * @param input
+ * @throws TypeError - If the input is not a valid UserType
+ */
+export function asArrayOfUserTypes(input: any): UserType[] | undefined {
+  if (!input) return undefined;
+  if (!Array.isArray(input)) return undefined;
+  return input.map((i) => asUserType(i));
+}
+
+/**
+ * Converts the input to a list of numbers
+ * @param input
+ */
+export function asArrayOfNumbers(input: any): number[] | undefined {
+  if (!input) return undefined;
+  if (!Array.isArray(input)) return undefined;
+  return input.map((i) => asNumber(i));
 }

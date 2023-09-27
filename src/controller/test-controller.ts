@@ -55,6 +55,7 @@ export default class TestController extends BaseController {
   /**
    * Get a beautiful Hello World email to your inbox
    * @route POST /test/helloworld
+   * @operationId helloworld
    * @group test- Operations of the test controller
    * @security JWT
    * @returns {string} 204 - Success

@@ -78,24 +78,6 @@ export default class ProductController extends BaseController {
           handler: this.updateProduct.bind(this),
         },
       },
-      '/updated': {
-        GET: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Product', ['*']),
-          handler: this.getAllUpdatedProducts.bind(this),
-        },
-      },
-      '/:id(\\d+)/update': {
-        GET: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'get', await ProductController.getRelation(req), 'Product', ['*']),
-          handler: this.getSingleUpdatedProduct.bind(this),
-        },
-      },
-      '/:id(\\d+)/approve': {
-        POST: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'approve', await ProductController.getRelation(req), 'Product', ['*']),
-          handler: this.approveUpdate.bind(this),
-        },
-      },
       '/:id(\\d+)/image': {
         POST: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'create', await ProductController.getRelation(req), 'Product', ['*']),
@@ -108,6 +90,7 @@ export default class ProductController extends BaseController {
   /**
    * Returns all existing products
    * @route GET /products
+   * @operationId getAllProducts
    * @group products - Operations of product controller
    * @security JWT
    * @param {integer} take.query - How many products the endpoint should return
@@ -143,10 +126,11 @@ export default class ProductController extends BaseController {
   /**
    * Create a new product.
    * @route POST /products
+   * @operationId createProduct
    * @group products - Operations of product controller
    * @param {CreateProductRequest.model} product.body.required - The product which should be created
    * @security JWT
-   * @returns {UpdatedProductResponse.model} 200 - The created product entity
+   * @returns {ProductResponse.model} 200 - The created product entity
    * @returns {string} 400 - Validation error
    * @returns {string} 500 - Internal server error
    */
@@ -167,8 +151,7 @@ export default class ProductController extends BaseController {
         return;
       }
 
-      const approve = this.roleManager.can(req.token.roles, 'approve', await ProductController.getRelation(req), 'Product', ['*']);
-      res.json(await ProductService.createProduct(request, approve));
+      res.json(await ProductService.createProduct(request));
     } catch (error) {
       this.logger.error('Could not create product:', error);
       res.status(500).json('Internal server error.');
@@ -178,6 +161,7 @@ export default class ProductController extends BaseController {
   /**
    * Update an existing product.
    * @route PATCH /products/{id}
+   * @operationId updateProduct
    * @group products - Operations of product controller
    * @param {integer} id.path.required - The id of the product which should be updated
    * @param {UpdateProductRequest.model} product.body.required - The product which should be updated
@@ -212,12 +196,7 @@ export default class ProductController extends BaseController {
         return;
       }
 
-      const approve = this.roleManager.can(req.token.roles, 'approve', await ProductController.getRelation(req), 'Product', ['*']);
-      if (approve) {
-        res.json(await ProductService.directProductUpdate(params));
-      } else {
-        res.json(await ProductService.updateProduct(params));
-      }
+      res.json(await ProductService.directProductUpdate(params));
     } catch (error) {
       this.logger.error('Could not update product:', error);
       res.status(500).json('Internal server error.');
@@ -225,37 +204,9 @@ export default class ProductController extends BaseController {
   }
 
   /**
-   * Approve a product update.
-   * @route POST /products/{id}/approve
-   * @param {integer} id.path.required - The id of the product update to approve
-   * @group products - Operations of product controller
-   * @security JWT
-   * @returns {ProductResponse.model} 200 - The approved product entity
-   * @returns {string} 404 - Not found error
-   * @returns {string} 500 - Internal server error
-   */
-  public async approveUpdate(req: RequestWithToken, res: Response): Promise<void> {
-    const { id } = req.params;
-    this.logger.trace('Update accepted', id, 'by user', req.token.user);
-
-    const productId = Number.parseInt(id, 10);
-    // Handle
-    try {
-      const product = await ProductService.approveProductUpdate(productId);
-      if (product) {
-        res.json(product);
-      } else {
-        res.status(404).json('Product update not found.');
-      }
-    } catch (error) {
-      this.logger.error('Could not approve update: ', error);
-      res.status(500).json('Internal server error.');
-    }
-  }
-
-  /**
    * Returns the requested product
    * @route GET /products/{id}
+   * @operationId getSingleProduct
    * @group products - Operations of products controller
    * @param {integer} id.path.required - The id of the product which should be returned
    * @security JWT
@@ -284,73 +235,9 @@ export default class ProductController extends BaseController {
   }
 
   /**
-   * Returns all updated products
-   * @route GET /products/updated
-   * @group products - Operations of product controller
-   * @security JWT
-   * @param {integer} take.query - How many products the endpoint should return
-   * @param {integer} skip.query - How many products should be skipped (for pagination)
-   * @returns {PaginatedProductResponse.model} 200 - All existing updated products
-   * @returns {string} 500 - Internal server error
-   */
-  public async getAllUpdatedProducts(req: RequestWithToken, res: Response): Promise<void> {
-    const { body } = req;
-    this.logger.trace('Get all updated products', body, 'by user', req.token.user);
-
-    let take;
-    let skip;
-    try {
-      const pagination = parseRequestPagination(req);
-      take = pagination.take;
-      skip = pagination.skip;
-    } catch (e) {
-      res.status(400).send(e.message);
-      return;
-    }
-
-    // Handle request
-    try {
-      const products = await ProductService.getProducts({ updatedProducts: true }, { take, skip });
-      res.json(products);
-    } catch (error) {
-      this.logger.error('Could not return all products:', error);
-      res.status(500).json('Internal server error.');
-    }
-  }
-
-  /**
-   * Returns the requested updated product
-   * @route GET /products/{id}/update
-   * @group products - Operations of products controller
-   * @param {integer} id.path.required - The id of the product which should be returned
-   * @security JWT
-   * @returns {ProductResponse.model} 200 - The requested updated product entity
-   * @returns {string} 404 - Not found error
-   * @returns {string} 500 - Internal server error
-   */
-  public async getSingleUpdatedProduct(req: RequestWithToken, res: Response): Promise<void> {
-    const { id } = req.params;
-    this.logger.trace('Get single product', id, 'by user', req.token.user);
-
-    const productId = parseInt(id, 10);
-
-    // handle request
-    try {
-      if (await Product.findOne({ where: { id: productId } })) {
-        res.json((await ProductService
-          .getProducts({ updatedProducts: true, productId: parseInt(id, 10) })).records[0]);
-      } else {
-        res.status(404).json('Product not found.');
-      }
-    } catch (error) {
-      this.logger.error('Could not return product:', error);
-      res.status(500).json('Internal server error.');
-    }
-  }
-
-  /**
    * Upload a new image for a product
    * @route POST /products/{id}/image
+   * @operationId updateProductImage
    * @group products - Operations of products controller
    * @consumes multipart/form-data
    * @param {integer} id.path.required - The id of the product which should be returned

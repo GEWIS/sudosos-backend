@@ -92,6 +92,7 @@ export default class BannerController extends BaseController {
   /**
    * Returns all existing banners
    * @route GET /banners
+   * @operationId getAllBanners
    * @group banners - Operations of banner controller
    * @security JWT
    * @param {integer} take.query - How many banners the endpoint should return
@@ -126,6 +127,7 @@ export default class BannerController extends BaseController {
   /**
    * Saves a banner to the database
    * @route POST /banners
+   * @operationId create
    * @group banners - Operations of banner controller
    * @param {BannerRequest.model} banner.body.required - The banner which should be created
    * @security JWT
@@ -153,6 +155,7 @@ export default class BannerController extends BaseController {
   /**
    * Uploads a banner image to the given banner
    * @route POST /banners/{id}/image
+   * @operationId updateImage
    * @group banners - Operations of banner controller
    * @param {integer} id.path.required - The id of the banner
    * @param {file} file.formData
@@ -206,6 +209,7 @@ export default class BannerController extends BaseController {
   /**
    * Returns the requested banner
    * @route GET /banners/{id}
+   * @operationId getBanner
    * @group banners - Operations of banner controller
    * @param {integer} id.path.required - The id of the banner which should be returned
    * @security JWT
@@ -235,6 +239,7 @@ export default class BannerController extends BaseController {
   /**
    * Updates the requested banner
    * @route PATCH /banners/{id}
+   * @operationId update
    * @group banners - Operations of banner controller
    * @param {integer} id.path.required - The id of the banner which should be updated
    * @param {BannerRequest.model} banner.body.required - The updated banner
@@ -271,6 +276,7 @@ export default class BannerController extends BaseController {
   /**
    * Deletes the requested banner
    * @route DELETE /banners/{id}
+   * @operationId delete
    * @group banners - Operations of banner controller
    * @param {integer} id.path.required - The id of the banner which should be deleted
    * @security JWT
@@ -299,6 +305,7 @@ export default class BannerController extends BaseController {
   /**
    * Returns all active banners
    * @route GET /banners/active
+   * @operationId getActive
    * @group banners - Operations of banner controller
    * @security JWT
    * @param {integer} take.query - How many banners the endpoint should return
