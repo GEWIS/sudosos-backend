@@ -37,8 +37,8 @@ export default interface BalanceResponse {
   amount: DineroObjectResponse;
   fine?: DineroObjectResponse | null;
   fineSince?: string | null;
-  lastTransactionId?: number | null;
-  lastTransferId?: number | null;
+  lastTransactionId: number;
+  lastTransferId: number;
 }
 
 /**
