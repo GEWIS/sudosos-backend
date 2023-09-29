@@ -25,7 +25,7 @@ import { UserResponse } from '../controller/response/user-response';
 import Transfer from '../entity/transactions/transfer';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
 import BorrelkaartGroup from '../entity/user/borrelkaart-group';
-import User, { UserType } from '../entity/user/user';
+import User, { TermsOfServiceStatus, UserType } from '../entity/user/user';
 import UserBorrelkaartGroup from '../entity/user/user-borrelkaart-group';
 import { PaginationParameters } from '../helpers/pagination';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
@@ -196,7 +196,8 @@ export default class BorrelkaartGroupService {
           active: active,
           type: UserType.BORRELKAART,
           ofAge: true,
-        }),
+          acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
+        } as User),
       );
     }
     // create borrelkaart users

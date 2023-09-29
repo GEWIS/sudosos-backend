@@ -23,7 +23,7 @@ import { BorrelkaartGroupParams, BorrelkaartGroupRequest } from '../../../src/co
 import BorrelkaartGroupResponse from '../../../src/controller/response/borrelkaart-group-response';
 import Database from '../../../src/database/database';
 import Transfer from '../../../src/entity/transactions/transfer';
-import User, { UserType } from '../../../src/entity/user/user';
+import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import RoleManager from '../../../src/rbac/role-manager';
 import BorrelkaartGroupService from '../../../src/service/borrelkaart-group-service';
 
@@ -243,6 +243,7 @@ describe('BorrelkaartGroupService', async (): Promise<void> => {
       bkgEq(params, bkgRes);
       await Promise.all(bkgRes.users.map(async (user) => {
         expect(user.active, 'user inactive').to.equal(false);
+        expect(user.acceptedToS).to.equal(TermsOfServiceStatus.NOT_REQUIRED);
         const transfers = await Transfer.find({ where: { toId: user.id } });
         const balanceAmounts = transfers.map((transfer) => transfer.amount.getAmount());
         const balance = balanceAmounts.reduce((a, b) => a + b);
