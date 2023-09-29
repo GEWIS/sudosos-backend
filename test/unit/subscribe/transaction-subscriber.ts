@@ -123,14 +123,18 @@ describe('TransactionSubscriber', () => {
 
   describe('afterInsert', () => {
     it('should send an email if someone gets into debt', async () => {
-      const user = ctx.usersNotInDebt[0];
+      const user = ctx.usersNotInDebt[1];
       const currentBalance = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers).amount;
       expect(currentBalance.getAmount()).to.be.at.least(0);
       expect((await BalanceService.getBalance(user.id)).amount.amount).to.equal(currentBalance.getAmount());
 
-      const pos = ctx.pointOfSales[0];
-      const container = ctx.containers[0];
-      const product = ctx.products[0];
+      const pos = ctx.pointOfSales.find((p) => p.pointOfSale.owner.id !== user.id);
+      const container = ctx.containers.find((c) => c.container.owner.id !== user.id);
+      const product = ctx.products.find((p) => p.product.owner.id !== user.id);
+
+      expect(pos).to.not.be.undefined;
+      expect(container).to.not.be.undefined;
+      expect(product).to.not.be.undefined;
 
       const amount = Math.ceil(currentBalance.getAmount() / product.priceInclVat.getAmount()) + 1 ;
       const totalPriceInclVat = product.priceInclVat.multiply(amount).toObject();
@@ -163,7 +167,7 @@ describe('TransactionSubscriber', () => {
       expect(sendMailFake).to.be.calledOnce;
     });
     it('should not send email if someone does not go into debt', async () => {
-      const user = ctx.usersNotInDebt[1];
+      const user = ctx.usersNotInDebt[2];
       const currentBalance = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers).amount;
       expect(currentBalance.getAmount()).to.be.at.least(0);
       expect((await BalanceService.getBalance(user.id)).amount.amount).to.equal(currentBalance.getAmount());
@@ -172,8 +176,8 @@ describe('TransactionSubscriber', () => {
       const container = ctx.containers[0];
       const product = ctx.products[0];
 
-      const amount = Math.floor(currentBalance.getAmount() / product.priceInclVat.getAmount()) - 1;
-      expect(amount).to.be.at.least(0);
+      const amount = Math.floor(currentBalance.getAmount() / product.priceInclVat.getAmount());
+      expect(amount).to.be.at.least(1);
       const totalPriceInclVat = product.priceInclVat.multiply(amount).toObject();
       await TransactionService.createTransaction({
         from: user.id,

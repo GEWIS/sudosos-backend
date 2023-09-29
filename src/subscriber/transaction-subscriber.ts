@@ -44,8 +44,11 @@ export default class TransactionSubscriber implements EntitySubscriberInterface 
 
     const user = await event.manager.findOne(User, { where: { id: entity.from.id } });
     const balance = await BalanceService.getBalance(user.id);
-    const currentBalance = balance.amount.amount - entity.subTransactions[0].subTransactionRows[0].amount * entity.subTransactions[0].subTransactionRows[0].product.priceInclVat.getAmount();
 
+    let currentBalance = balance.amount.amount;
+    if (balance.lastTransactionId < event.entity.id) {
+      currentBalance -= entity.subTransactions[0].subTransactionRows[0].amount * entity.subTransactions[0].subTransactionRows[0].product.priceInclVat.getAmount();
+    }
 
     if (currentBalance >= 0) return;
     // User is now in debt

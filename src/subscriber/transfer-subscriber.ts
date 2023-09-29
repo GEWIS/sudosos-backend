@@ -32,9 +32,16 @@ export default class TransferSubscriber implements EntitySubscriberInterface {
     const user = await event.manager.findOne(User, { where: { id: event.entity.toId }, relations: ['currentFines'] });
     if (user.currentFines == null) return;
 
-    // Remove currently unpaid fines when new balance is positive.
     const balance = await BalanceService.getBalance(user.id);
-    if (balance.amount.amount >= 0) {
+
+    // If the new transfer is not included in the balance calculation, add it manually
+    let currentBalance = balance.amount.amount;
+    if (balance.lastTransferId < event.entity.id) {
+      currentBalance += event.entity.amount.getAmount();
+    }
+
+    // Remove currently unpaid fines when new balance is positive.
+    if (currentBalance >= 0) {
       user.currentFines = null;
       await user.save();
     }
