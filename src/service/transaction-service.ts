@@ -612,9 +612,6 @@ export default class TransactionService {
           updatedAt: new Date(o.from_updatedAt).toISOString(),
           firstName: o.from_firstName,
           lastName: o.from_lastName,
-          active: o.from_active === 1,
-          deleted: o.from_deleted === 1,
-          type: UserType[o.from_type],
         },
         createdBy: o.createdBy_id ? {
           id: o.createdBy_id,
@@ -622,9 +619,6 @@ export default class TransactionService {
           updatedAt: new Date(o.createdBy_updatedAt).toISOString(),
           firstName: o.createdBy_firstName,
           lastName: o.createdBy_lastName,
-          active: o.createdBy_active === 1,
-          deleted: o.createdBy_deleted === 1,
-          type: UserType[o.createdBy_type],
         } : undefined,
         pointOfSale: {
           id: o.pointOfSale_id,

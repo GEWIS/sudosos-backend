@@ -110,6 +110,7 @@ export function parseUserToResponse(user: User, timestamps = false): UserRespons
     email: user.type === UserType.LOCAL_USER ? user.email : undefined,
     extensiveDataProcessing: user.extensiveDataProcessing,
     ofAge: user.ofAge,
+    canGoIntoDebt: user.canGoIntoDebt,
   };
 }
 
@@ -128,6 +129,7 @@ export interface RawUser {
   type: number,
   acceptedToS: TermsOfServiceStatus,
   extensiveDataProcessing: number,
+  canGoIntoDebt: number,
 }
 
 /**
@@ -150,5 +152,6 @@ export function parseRawUserToResponse(user: RawUser, timestamps = false): UserR
     acceptedToS: user.acceptedToS,
     extensiveDataProcessing: user.extensiveDataProcessing === 1,
     ofAge: user.ofAge === 1,
+    canGoIntoDebt: user.canGoIntoDebt === 1,
   };
 }

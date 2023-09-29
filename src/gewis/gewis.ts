@@ -94,7 +94,8 @@ export default class Gewis {
       active: true,
       email: token.email,
       ofAge: token.is_18_plus,
-    }) as User;
+      canGoIntoDebt: true,
+    } as User) as User;
     return manager.save(user).then((u) => Gewis.createGEWISUser(manager, u, token.lidnr));
   }
 

@@ -163,7 +163,9 @@ export default class AuthenticationService {
       lastName: ADUser.sn,
       type: UserType.MEMBER,
       active: true,
-    }) as User;
+      canGoIntoDebt: true,
+      ofAge: false,
+    } as User) as User;
 
     account = await manager.save(account);
     const auth = await bindUser(manager, ADUser, account);

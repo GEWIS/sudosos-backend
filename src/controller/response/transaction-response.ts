@@ -26,17 +26,17 @@ import { PaginationResult } from '../../helpers/pagination';
 
 /**
  * @typedef {BaseResponse} BaseTransactionResponse
- * @property {UserResponse.model} from.required - The account from which the transaction
+ * @property {BaseUserResponse.model} from.required - The account from which the transaction
  * is subtracted.
- * @property {UserResponse.model} createdBy - The user that created the transaction, if not
+ * @property {BaseUserResponse.model} createdBy - The user that created the transaction, if not
  * same as 'from'..
  * @property {BasePointOfSaleResponse.model} pointOfSale.required - The POS at which this transaction
  * has been created
  * @property {Dinero.model} value.required - Total sum of subtransactions
  */
 export interface BaseTransactionResponse extends BaseResponse {
-  from: UserResponse,
-  createdBy?: UserResponse,
+  from: BaseUserResponse,
+  createdBy?: BaseUserResponse,
   pointOfSale: BasePointOfSaleResponse,
   value: DineroObject,
 }
