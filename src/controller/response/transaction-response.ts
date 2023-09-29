@@ -20,7 +20,7 @@ import BaseResponse from './base-response';
 import { BasePointOfSaleResponse } from './point-of-sale-response';
 import { BaseContainerResponse } from './container-response';
 import { BaseProductResponse } from './product-response';
-import { BaseUserResponse, UserResponse } from './user-response';
+import { BaseUserResponse } from './user-response';
 import { DineroObjectResponse } from './dinero-response';
 import { PaginationResult } from '../../helpers/pagination';
 
