@@ -669,7 +669,7 @@ describe('TransactionController', (): void => {
         .send(badReq);
       expect(res.status).to.equal(400);
     });
-    it('should return an HTTP 403 if the user is a voucher and has insufficient balance', async () => {
+    it('should return an HTTP 403 if the user has insufficient balance and cannot go into debt', async () => {
       // create voucher user
       await User.save({
         firstName: 'voucher',
@@ -678,6 +678,7 @@ describe('TransactionController', (): void => {
         deleted: false,
         type: 3,
         acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
+        canGoIntoDebt: false,
       } as User);
 
       const voucherUser = await User.findOne({
@@ -693,6 +694,7 @@ describe('TransactionController', (): void => {
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(badReq);
       expect(res.status).to.equal(403);
+      expect(res.body).to.equal('Insufficient balance.');
     });
   });
 
