@@ -19,11 +19,10 @@ import {
   Specification, toFail, toPass, validateSpecification, ValidationError,
 } from '../../../helpers/specification-validation';
 import { maxLength, nonZeroString } from './string-spec';
-import CreateUserRequest from '../create-user-request';
 import { UserType } from '../../../entity/user/user';
 import { INVALID_USER_TYPE } from './validation-errors';
-import UpdateUserRequest from '../update-user-request';
 import validator from 'validator';
+import BaseUserRequest, { CreateUserRequest } from '../user-request';
 
 /**
  * Most names cannot be '' or longer than 64.
@@ -52,7 +51,7 @@ function validUserType(u: CreateUserRequest) {
 /**
  * When updating we check firstName and lastName.
  */
-const updateUserSpec: <T extends UpdateUserRequest>() => Specification<T, ValidationError> = () => [
+const updateUserSpec: <T extends BaseUserRequest>() => Specification<T, ValidationError> = () => [
   [nameSpec(), 'firstName', new ValidationError('Firstname: ')],
   [[validEmail], 'email', new ValidationError('E-mail: ')],
   [[maxLength(64)], 'lastName', new ValidationError('Lastname: ')],
@@ -70,6 +69,6 @@ export async function verifyCreateUserRequest(createUserRequest: CreateUserReque
   return Promise.resolve(await validateSpecification(createUserRequest, createUserSpec()));
 }
 
-export async function verifyUpdateUserRequest(createUserRequest: UpdateUserRequest) {
+export async function verifyUpdateUserRequest(createUserRequest: CreateUserRequest) {
   return Promise.resolve(await validateSpecification(createUserRequest, updateUserSpec()));
 }

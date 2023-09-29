@@ -21,8 +21,7 @@ import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import User, { UserType } from '../entity/user/user';
-import CreateUserRequest from './request/create-user-request';
-import UpdateUserRequest from './request/update-user-request';
+import BaseUserRequest, { CreateUserRequest, UpdateUserRequest } from './request/user-request';
 import { parseRequestPagination } from '../helpers/pagination';
 import ProductService from '../service/product-service';
 import PointOfSaleService from '../service/point-of-sale-service';
@@ -302,7 +301,7 @@ export default class UserController extends BaseController {
 
   static getAttributes(req: RequestWithToken): string[] {
     const attributes: string[] = [];
-    const body = req.body as UpdateUserRequest;
+    const body = req.body as BaseUserRequest;
     for (const key in body) {
       if (body.hasOwnProperty(key)) {
         attributes.push(key);
@@ -724,10 +723,10 @@ export default class UserController extends BaseController {
    * @operationId updateUser
    * @group users - Operations of user controller
    * @param {integer} id.path.required - The id of the user
-   * @param {UpdateUserRequest.model} user.body.required -
+   * @param {UserRequest.model} user.body.required -
    * The user which should be updated
    * @security JWT
-   * @returns {UpdateUserRequest.model} 200 - New user
+   * @returns {UserRequest.model} 200 - New user
    * @returns {string} 400 - Bad request
    */
   public async updateUser(req: RequestWithToken, res: Response): Promise<void> {

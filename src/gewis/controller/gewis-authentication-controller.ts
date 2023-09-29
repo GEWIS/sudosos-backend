@@ -33,7 +33,7 @@ import Gewis from '../gewis';
 import User from '../../entity/user/user';
 import wrapInManager from '../../helpers/database';
 import UserService from '../../service/user-service';
-import UpdateUserRequest from '../../controller/request/update-user-request';
+import { UpdateUserRequest } from '../../controller/request/user-request';
 
 /**
   * The GEWIS authentication controller is responsible for:

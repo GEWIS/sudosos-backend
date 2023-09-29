@@ -15,17 +15,44 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
 import { UserType } from '../../entity/user/user';
-import UpdateUserRequest from './update-user-request';
+
+export default interface BaseUserRequest {
+  firstName: string;
+  lastName?: string;
+  nickname?: string;
+  canGoIntoDebt: boolean;
+  ofAge: boolean;
+  email: string;
+}
 
 /**
  * @typedef CreateUserRequest
  * @property {string} firstName.required
  * @property {string} lastName
- * @property {boolean} active
+ * @property {string} nickname
+ * @property {boolean} canGoIntoDebt.required
+ * @property {boolean} ofAge.required
+ * @property {string} email.required
  * @property {number} type.required
- * @property {string} email
  */
-export default interface CreateUserRequest extends UpdateUserRequest {
+export interface CreateUserRequest extends BaseUserRequest {
   type: UserType;
+}
+
+/**
+ * @typedef UpdateUserRequest
+ * @property {string} firstName
+ * @property {string} lastName
+ * @property {string} nickname
+ * @property {boolean} canGoIntoDebt
+ * @property {boolean} ofAge
+ * @property {string} email
+ * @property {boolean} deleted
+ * @property {boolean} active
+ */
+export interface UpdateUserRequest extends Partial<BaseUserRequest> {
+  active?: boolean;
+  deleted?: boolean;
 }

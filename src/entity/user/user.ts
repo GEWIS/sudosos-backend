@@ -58,6 +58,7 @@ export const TOSRequired = [
  * @property {string} lastName - Last name of the user.
  * @property {string} nickname - Nickname of the user.
  * @property {boolean} active - Whether the user has accepted the TOS. Defaults to false.
+ * @property {boolean} canGoIntoDebt - Whether the user can have a negative balance. Defaults to true
  * @property {boolean} ofAge - Whether the user is 18+ or not.
  * @property {string} email - The email of the user.
  * @property {boolean} deleted - Whether the user was deleted. Defaults to false.
@@ -86,6 +87,14 @@ export default class User extends BaseEntity {
     default: false,
   })
   public active: boolean;
+
+  /**
+   * Whether this user can have a negative balance
+   */
+  @Column({
+    default: true,
+  })
+  public canGoIntoDebt: boolean;
 
   @Column({
     default: false,

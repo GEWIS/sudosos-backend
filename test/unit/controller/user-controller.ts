@@ -56,7 +56,7 @@ import RoleResponse from '../../../src/controller/response/rbac/role-response';
 import { FinancialMutationResponse } from '../../../src/controller/response/financial-mutation-response';
 import UpdateLocalRequest from '../../../src/controller/request/update-local-request';
 import { AcceptTosRequest } from '../../../src/controller/request/accept-tos-request';
-import UpdateUserRequest from '../../../src/controller/request/update-user-request';
+import { CreateUserRequest, UpdateUserRequest } from '../../../src/controller/request/user-request';
 import StripeDeposit from '../../../src/entity/deposit/stripe-deposit';
 import { StripeDepositResponse } from '../../../src/controller/response/stripe-response';
 import { TransactionReportResponse } from '../../../src/controller/response/transaction-report-response';
@@ -77,7 +77,7 @@ describe('UserController', (): void => {
     adminToken: string,
     organMemberToken: string,
     deletedUser: User,
-    user: User,
+    user: CreateUserRequest,
     organ: User,
     tokenHandler: TokenHandler,
     users: User[],
@@ -115,7 +115,9 @@ describe('UserController', (): void => {
         lastName: 'Kakkenberg',
         type: UserType.MEMBER,
         email: 'spam@gewis.nl',
-      } as any as User,
+        canGoIntoDebt: true,
+        ofAge: true,
+      } as CreateUserRequest,
       ...database,
     };
     const deletedUser = Object.assign(new User(), {
@@ -378,11 +380,13 @@ describe('UserController', (): void => {
       });
     });
     it('should give HTTP 200 when correctly creating and searching for a user', async () => {
-      const user = {
+      const user: CreateUserRequest = {
         firstName: 'Één bier',
         lastName: 'is geen bier',
         type: UserType.LOCAL_USER,
         email: 'spam@gewis.nl',
+        canGoIntoDebt: true,
+        ofAge: true,
       };
 
       // Create the user
@@ -743,34 +747,6 @@ describe('UserController', (): void => {
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(userObj);
       expect(res.status).to.equal(400);
-    });
-
-    it('should create user when active is true', async () => {
-      const userObj = { ...ctx.user, active: true };
-
-      const res = await request(ctx.app)
-        .post('/users')
-        .set('Authorization', `Bearer ${ctx.adminToken}`)
-        .send(userObj);
-      expect(res.status).to.equal(201);
-
-      const user = res.body as UserResponse;
-      const spec = await Swagger.importSpecification();
-      verifyUserResponse(spec, user);
-    });
-
-    it('should create user when active is false', async () => {
-      const userObj = { ...ctx.user, active: false };
-
-      const res = await request(ctx.app)
-        .post('/users')
-        .set('Authorization', `Bearer ${ctx.adminToken}`)
-        .send(userObj);
-      expect(res.status).to.equal(201);
-
-      const user = res.body as UserResponse;
-      const spec = await Swagger.importSpecification();
-      verifyUserResponse(spec, user);
     });
   });
 
