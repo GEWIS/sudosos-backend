@@ -22,17 +22,17 @@ import {
 import BaseEntity from '../base-entity';
 import DineroTransformer from '../transformer/dinero-transformer';
 // eslint-disable-next-line import/no-cycle
-import UserBorrelkaartGroup from './user-borrelkaart-group';
+import UserVoucherGroup from './user-voucher-group';
 
 /**
- * @typedef {BaseEntity} BorrelkaartGroup
+ * @typedef {BaseEntity} VoucherGroup
  * @property {string} name.required - Name of the group.
  * @property {string} activeStartDate.required - Date after which the included cards are active.
  * @property {string} activeEndDate - Date after which cards are no longer active.
- * @property {Array.<User>} borrelkaarten.required - Cards included in this group.
+ * @property {Array.<User>} vouchers.required - Cards included in this group.
  */
 @Entity()
-export default class BorrelkaartGroup extends BaseEntity {
+export default class VoucherGroup extends BaseEntity {
   @Column({
     unique: true,
     length: 64,
@@ -61,6 +61,6 @@ export default class BorrelkaartGroup extends BaseEntity {
   })
   public balance: Dinero;
 
-  @OneToMany(() => UserBorrelkaartGroup, (user) => user.borrelkaartGroup)
-  public borrelkaarten: UserBorrelkaartGroup[];
+  @OneToMany(() => UserVoucherGroup, (user) => user.voucherGroup)
+  public vouchers: UserVoucherGroup[];
 }

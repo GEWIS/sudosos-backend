@@ -27,10 +27,10 @@ import SubTransactionRow from '../entity/transactions/sub-transaction-row';
 import PointOfSale from '../entity/point-of-sale/point-of-sale';
 import Container from '../entity/container/container';
 import FlaggedTransaction from '../entity/transactions/flagged-transaction';
-import BorrelkaartGroup from '../entity/user/borrelkaart-group';
+import VoucherGroup from '../entity/user/voucher-group';
 import LocalUser from '../entity/user/local-user';
 import GewisUser from '../gewis/entity/gewis-user';
-import UserBorrelkaartGroup from '../entity/user/user-borrelkaart-group';
+import UserVoucherGroup from '../entity/user/user-voucher-group';
 import EanAuthenticator from '../entity/authenticator/ean-authenticator';
 import MemberAuthenticator from '../entity/authenticator/member-authenticator';
 import NfcAuthenticator from '../entity/authenticator/nfc-authenticator';
@@ -105,11 +105,11 @@ export default class Database {
         SubTransaction,
         SubTransactionRow,
         FlaggedTransaction,
-        BorrelkaartGroup,
+        VoucherGroup,
         User,
         LocalUser,
         GewisUser,
-        UserBorrelkaartGroup,
+        UserVoucherGroup,
         EanAuthenticator,
         MemberAuthenticator,
         NfcAuthenticator,

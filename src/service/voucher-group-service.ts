@@ -17,31 +17,31 @@
  */
 import { FindManyOptions } from 'typeorm';
 import DineroFactory from 'dinero.js';
-import { BorrelkaartGroupParams, BorrelkaartGroupRequest } from '../controller/request/borrelkaart-group-request';
-import BorrelkaartGroupResponse, {
-  PaginatedBorrelkaartGroupResponse,
-} from '../controller/response/borrelkaart-group-response';
+import { VoucherGroupParams, VoucherGroupRequest } from '../controller/request/voucher-group-request';
+import VoucherGroupResponse, {
+  PaginatedVoucherGroupResponse,
+} from '../controller/response/voucher-group-response';
 import { UserResponse } from '../controller/response/user-response';
 import Transfer from '../entity/transactions/transfer';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
-import BorrelkaartGroup from '../entity/user/borrelkaart-group';
+import VoucherGroup from '../entity/user/voucher-group';
 import User, { TermsOfServiceStatus, UserType } from '../entity/user/user';
-import UserBorrelkaartGroup from '../entity/user/user-borrelkaart-group';
+import UserVoucherGroup from '../entity/user/user-voucher-group';
 import { PaginationParameters } from '../helpers/pagination';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import { parseUserToResponse } from '../helpers/revision-to-response';
 
-export interface BorrelkaartGroupFilterParameters {
+export interface VoucherGroupFilterParameters {
   bkgId?: number,
 }
 
-export default class BorrelkaartGroupService {
+export default class VoucherGroupService {
   /**
-   * Verifies whether the borrelkaart group request translates to a valid object
-   * @returns {BorrelkaartGroupParams.model} The parameter object from the request
+   * Verifies whether the voucher group request translates to a valid object
+   * @returns {VoucherGroupParams.model} The parameter object from the request
    * @param req
    */
-  static asBorrelkaartGroupParams(req: BorrelkaartGroupRequest): BorrelkaartGroupParams {
+  static asVoucherGroupParams(req: VoucherGroupRequest): VoucherGroupParams {
     const startDate = new Date(req.activeStartDate);
     startDate.setHours(0, 0, 0, 0);
     const endDate = new Date(req.activeEndDate);
@@ -55,11 +55,11 @@ export default class BorrelkaartGroupService {
   }
 
   /**
-   * Verifies whether the borrelkaart group request translates to a valid object
-   * @param {BorrelkaartGroupParams.model} bkgReq - The borrelkaart group request
-   * @returns {boolean} whether the borrelkaart group is ok
+   * Verifies whether the voucher group request translates to a valid object
+   * @param {VoucherGroupParams.model} bkgReq - The voucher group request
+   * @returns {boolean} whether the voucher group is ok
    */
-  static validateBorrelkaartGroup(bkgReq: BorrelkaartGroupParams): boolean {
+  static validateVoucherGroup(bkgReq: VoucherGroupParams): boolean {
     return bkgReq.name !== ''
       && bkgReq.activeEndDate instanceof Date
       && bkgReq.activeStartDate instanceof Date
@@ -71,7 +71,7 @@ export default class BorrelkaartGroupService {
       && bkgReq.activeEndDate.getTime() > bkgReq.activeStartDate.getTime()
       && bkgReq.balance.isPositive()
       && !bkgReq.balance.isZero()
-      // borrelkaart group must contain users
+      // voucher group must contain users
       && bkgReq.amount > 0;
   }
 
@@ -85,10 +85,10 @@ export default class BorrelkaartGroupService {
     return Transfer.save(transfers);
   }
 
-  static asBorrelkaartGroup(
-    bkgReq: BorrelkaartGroupParams,
-  ): BorrelkaartGroup {
-    return Object.assign(new BorrelkaartGroup(), {
+  static asVoucherGroup(
+    bkgReq: VoucherGroupParams,
+  ): VoucherGroup {
+    return Object.assign(new VoucherGroup(), {
       name: bkgReq.name,
       activeStartDate: bkgReq.activeStartDate,
       activeEndDate: bkgReq.activeEndDate,
@@ -98,15 +98,15 @@ export default class BorrelkaartGroupService {
   }
 
   /**
-   * Creates a borrelkaart group from the request
-   * @param {BorrelkaartGroup.model} bkg - borrelkaart group
-   * @param {Array.<User>} users - users in the borrelkaart group
-   * @returns {BorrelkaartGroupResponse.model} a borrelkaart group response
+   * Creates a voucher group from the request
+   * @param {VoucherGroup.model} bkg - voucher group
+   * @param {Array.<User>} users - users in the voucher group
+   * @returns {VoucherGroupResponse.model} a voucher group response
    */
-  public static asBorrelkaartGroupResponse(
-    bkg: BorrelkaartGroup,
+  public static asVoucherGroupResponse(
+    bkg: VoucherGroup,
     users: User[],
-  ): BorrelkaartGroupResponse | undefined {
+  ): VoucherGroupResponse | undefined {
     // parse users to user responses if users in request
     const userResponses: UserResponse[] = [];
     if (users) {
@@ -115,7 +115,7 @@ export default class BorrelkaartGroupService {
       });
     }
 
-    // return as borrelkaart group response
+    // return as voucher group response
     return {
       id: bkg.id,
       amount: bkg.amount,
@@ -130,14 +130,14 @@ export default class BorrelkaartGroupService {
   }
 
   /**
-   * Returns all borrelkaart groups without users
+   * Returns all voucher groups without users
    * @param filters
    * @param {PaginationParameters.model} params - find options
-   * @returns {PaginatedBorrelkaartGroupResponse} borrelkaart groups without users
+   * @returns {PaginatedVoucherGroupResponse} voucher groups without users
    */
-  public static async getBorrelkaartGroups(
-    filters: BorrelkaartGroupFilterParameters, params: PaginationParameters = {},
-  ): Promise<PaginatedBorrelkaartGroupResponse> {
+  public static async getVoucherGroups(
+    filters: VoucherGroupFilterParameters, params: PaginationParameters = {},
+  ): Promise<PaginatedVoucherGroupResponse> {
     const { take, skip } = params;
 
     const mapping: FilterMapping = {
@@ -146,47 +146,47 @@ export default class BorrelkaartGroupService {
 
     const options: FindManyOptions = {
       where: QueryFilter.createFilterWhereClause(mapping, filters),
-      relations: ['borrelkaarten.user'],
+      relations: ['vouchers.user'],
     };
-    const bkgs: BorrelkaartGroup[] = await BorrelkaartGroup.find({ ...options, take, skip });
-    const records = bkgs.map((bkg) => this.asBorrelkaartGroupResponse(bkg, bkg.borrelkaarten.map((borrelkaart) => borrelkaart.user)));
+    const bkgs: VoucherGroup[] = await VoucherGroup.find({ ...options, take, skip });
+    const records = bkgs.map((bkg) => this.asVoucherGroupResponse(bkg, bkg.vouchers.map((voucher) => voucher.user)));
 
     return {
       _pagination: {
         take,
         skip,
-        count: await BorrelkaartGroup.count(),
+        count: await VoucherGroup.count(),
       },
       records,
     };
   }
 
   /**
-   * Saves a borrelkaart group and its user relations to the database
-   * @param {BorrelkaartGroupRequest.model} bkgReq - borrelkaart group request
-   * @returns {BorrelkaartGroupResponse.model} saved borrelkaart group
+   * Saves a voucher group and its user relations to the database
+   * @param {VoucherGroupRequest.model} bkgReq - voucher group request
+   * @returns {VoucherGroupResponse.model} saved voucher group
    */
-  public static async createBorrelkaartGroup(
-    bkgReq: BorrelkaartGroupParams,
-  ): Promise<BorrelkaartGroupResponse> {
-    const users = await BorrelkaartGroupService.createBorrelkaartUsers(bkgReq.name, bkgReq.activeStartDate <= new Date(), bkgReq.amount);
+  public static async createVoucherGroup(
+    bkgReq: VoucherGroupParams,
+  ): Promise<VoucherGroupResponse> {
+    const users = await VoucherGroupService.createVoucherUsers(bkgReq.name, bkgReq.activeStartDate <= new Date(), bkgReq.amount);
 
-    // save the borrelkaart group
-    const bkg = await BorrelkaartGroup.save(this.asBorrelkaartGroup(bkgReq));
+    // save the voucher group
+    const bkg = await VoucherGroup.save(this.asVoucherGroup(bkgReq));
 
-    // create and save user borrelkaart group links
+    // create and save user voucher group links
     const userLinks = users.map(
-      (user) => ({ user, borrelkaartGroup: bkg } as UserBorrelkaartGroup),
+      (user) => ({ user, voucherGroup: bkg } as UserVoucherGroup),
     );
-    await UserBorrelkaartGroup.save(userLinks);
+    await UserVoucherGroup.save(userLinks);
 
     await this.updateBalance(users, bkgReq.balance);
 
-    // return borrelkaart group response with posted borrelkaart group
-    return this.asBorrelkaartGroupResponse(bkg, users);
+    // return voucher group response with posted voucher group
+    return this.asVoucherGroupResponse(bkg, users);
   }
 
-  public static async createBorrelkaartUsers(namePrefix: string, active: Boolean, amount: number, offset: number = 0): Promise<User[]> {
+  public static async createVoucherUsers(namePrefix: string, active: Boolean, amount: number, offset: number = 0): Promise<User[]> {
     const userObjects = [];
     for (let i = offset; i < amount; i += 1) {
       const firstName = `${namePrefix}_${i}`;
@@ -194,41 +194,41 @@ export default class BorrelkaartGroupService {
         Object.assign(new User(), {
           firstName,
           active: active,
-          type: UserType.BORRELKAART,
+          type: UserType.VOUCHER,
           ofAge: true,
           acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
         } as User),
       );
     }
-    // create borrelkaart users
+    // create voucher users
     return User.save(userObjects);
   }
 
   /**
-   * Updates a borrelkaart group and its user relations in the database
-   * @param {string} id - requested borrelkaart group id
-   * @param {BorrelkaartGroupRequest.model} bkgReq - new borrelkaart group request
-   * @returns {BorrelkaartGroupResponse.model} updated borrelkaart group
-   * @returns {undefined} undefined when borrelkaart group not found
+   * Updates a voucher group and its user relations in the database
+   * @param {string} id - requested voucher group id
+   * @param {VoucherGroupRequest.model} bkgReq - new voucher group request
+   * @returns {VoucherGroupResponse.model} updated voucher group
+   * @returns {undefined} undefined when voucher group not found
    */
-  public static async updateBorrelkaartGroup(
+  public static async updateVoucherGroup(
     id: number,
-    bkgReq: BorrelkaartGroupParams,
-  ): Promise<BorrelkaartGroupResponse | undefined> {
-    // current borrelkaart group
-    const bkgCurrent = await BorrelkaartGroup.findOne({ where: { id } });
+    bkgReq: VoucherGroupParams,
+  ): Promise<VoucherGroupResponse | undefined> {
+    // current voucher group
+    const bkgCurrent = await VoucherGroup.findOne({ where: { id } });
     if (!bkgCurrent) {
       return undefined;
     }
 
-    // create new borrelkaart group and update database
-    await BorrelkaartGroup.update(id, this.asBorrelkaartGroup(bkgReq));
-    const bkg = await BorrelkaartGroup.findOne({ where: { id } });
+    // create new voucher group and update database
+    await VoucherGroup.update(id, this.asVoucherGroup(bkgReq));
+    const bkg = await VoucherGroup.findOne({ where: { id } });
 
     let usersCurrent = (
-      await UserBorrelkaartGroup.find({
+      await UserVoucherGroup.find({
         relations: ['user'],
-        where: { borrelkaartGroup: { id } },
+        where: { voucherGroup: { id } },
       })
     ).map((ubkg) => ubkg.user);
 
@@ -247,18 +247,18 @@ export default class BorrelkaartGroupService {
     }
 
     if (bkgCurrent.amount < bkgReq.amount) {
-      const users = await this.createBorrelkaartUsers(bkgReq.name, bkgReq.activeStartDate <= new Date(), bkgReq.amount, bkgCurrent.amount);
+      const users = await this.createVoucherUsers(bkgReq.name, bkgReq.activeStartDate <= new Date(), bkgReq.amount, bkgCurrent.amount);
       // save new user relations
       const userLinks = users.map(
-        (user) => ({ user, borrelkaartGroup: bkg } as UserBorrelkaartGroup),
+        (user) => ({ user, voucherGroup: bkg } as UserVoucherGroup),
       );
-      await UserBorrelkaartGroup.save(userLinks);
+      await UserVoucherGroup.save(userLinks);
 
       await this.updateBalance(users, bkgReq.balance);
       usersCurrent.push(...users);
     }
 
-    // return created borrelkaart group with users
-    return this.asBorrelkaartGroupResponse(bkg, usersCurrent);
+    // return created voucher group with users
+    return this.asVoucherGroupResponse(bkg, usersCurrent);
   }
 }

@@ -20,15 +20,15 @@ import DineroFactory from 'dinero.js';
 import { DineroObjectRequest } from './dinero-request';
 
 /**
- * @typedef BorrelkaartGroupRequest
+ * @typedef VoucherGroupRequest
  * @property {string} name.required - Name of the group
  * @property {string} activeStartDate.required - Date from which the included cards are active
  * @property {string} activeEndDate.required - Date from which cards are no longer active
  * @property {DineroObjectRequest.model} balance.required - Start balance to be assigned
- *  to the borrelkaart users
- * @property {number} amount.required - Amount of users to be assigned to the borrelkaart group
+ *  to the voucher users
+ * @property {number} amount.required - Amount of users to be assigned to the voucher group
  */
-export interface BorrelkaartGroupRequest {
+export interface VoucherGroupRequest {
   name: string,
   activeStartDate: string,
   activeEndDate: string,
@@ -36,7 +36,7 @@ export interface BorrelkaartGroupRequest {
   amount: number,
 }
 
-export interface BorrelkaartGroupParams {
+export interface VoucherGroupParams {
   name: string,
   activeStartDate: Date,
   activeEndDate: Date,

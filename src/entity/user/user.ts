@@ -31,7 +31,7 @@ export enum TermsOfServiceStatus {
 export enum UserType {
   MEMBER = 1,
   ORGAN = 2,
-  BORRELKAART = 3,
+  VOUCHER = 3,
   LOCAL_USER = 4,
   LOCAL_ADMIN = 5,
   INVOICE = 6,

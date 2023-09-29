@@ -19,15 +19,15 @@
 import { expect } from 'chai';
 import Sinon from 'sinon';
 import { Connection } from 'typeorm';
-import { BorrelkaartGroupParams, BorrelkaartGroupRequest } from '../../../src/controller/request/borrelkaart-group-request';
-import BorrelkaartGroupResponse from '../../../src/controller/response/borrelkaart-group-response';
+import { VoucherGroupParams, VoucherGroupRequest } from '../../../src/controller/request/voucher-group-request';
+import VoucherGroupResponse from '../../../src/controller/response/voucher-group-response';
 import Database from '../../../src/database/database';
 import Transfer from '../../../src/entity/transactions/transfer';
 import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import RoleManager from '../../../src/rbac/role-manager';
-import BorrelkaartGroupService from '../../../src/service/borrelkaart-group-service';
+import VoucherGroupService from '../../../src/service/voucher-group-service';
 
-export function bkgEq(req: BorrelkaartGroupParams, res: BorrelkaartGroupResponse): void {
+export function bkgEq(req: VoucherGroupParams, res: VoucherGroupResponse): void {
   // check if non user fields are equal
   expect(res.name).to.equal(req.name);
   expect(res.activeStartDate).to.equal(req.activeStartDate.toISOString());
@@ -36,11 +36,11 @@ export function bkgEq(req: BorrelkaartGroupParams, res: BorrelkaartGroupResponse
   expect(res.balance.amount).to.equal(req.balance.getAmount());
 }
 
-export async function seedBorrelkaartGroups(): Promise<{ paramss: BorrelkaartGroupParams[], bkgIds: number[] }> {
-  const paramss: BorrelkaartGroupParams[] = [];
+export async function seedVoucherGroups(): Promise<{ paramss: VoucherGroupParams[], bkgIds: number[] }> {
+  const paramss: VoucherGroupParams[] = [];
   const bkgIds: number[] = [];
   await Promise.all([...Array(5).keys()].map(async (i) => {
-    const bkgReq: BorrelkaartGroupRequest = {
+    const bkgReq: VoucherGroupRequest = {
       name: `test ${i}`,
       activeStartDate: '2000-01-02T00:00:00Z',
       activeEndDate: '2000-01-03T00:00:00Z',
@@ -51,8 +51,8 @@ export async function seedBorrelkaartGroups(): Promise<{ paramss: BorrelkaartGro
       },
       amount: 4,
     };
-    const params = BorrelkaartGroupService.asBorrelkaartGroupParams(bkgReq);
-    const bkgRes = await BorrelkaartGroupService.createBorrelkaartGroup(params);
+    const params = VoucherGroupService.asVoucherGroupParams(bkgReq);
+    const bkgRes = await VoucherGroupService.createVoucherGroup(params);
     // paramss.push(params);
     bkgIds[bkgRes.id - 1] = bkgRes.id;
     paramss[bkgRes.id - 1] = params;
@@ -60,7 +60,7 @@ export async function seedBorrelkaartGroups(): Promise<{ paramss: BorrelkaartGro
   return { paramss, bkgIds };
 }
 
-describe('BorrelkaartGroupService', async (): Promise<void> => {
+describe('VoucherGroupService', async (): Promise<void> => {
   let ctx: {
     connection: Connection,
     clock: Sinon.SinonFakeTimers
@@ -77,7 +77,7 @@ describe('BorrelkaartGroupService', async (): Promise<void> => {
     roleManager.registerRole({
       name: 'Admin',
       permissions: {
-        BorrelkaartGroup: {
+        VoucherGroup: {
           create: all,
           get: all,
           update: all,
@@ -101,9 +101,9 @@ describe('BorrelkaartGroupService', async (): Promise<void> => {
     ctx.clock.restore();
   });
 
-  describe('validate borrelkaart group', () => {
-    it('should return true when the borrelkaart is valid', async () => {
-      const req: BorrelkaartGroupRequest = {
+  describe('validate voucher group', () => {
+    it('should return true when the voucher is valid', async () => {
+      const req: VoucherGroupRequest = {
         name: 'test',
         activeStartDate: '2000-01-02T00:00:00Z',
         activeEndDate: '2000-01-03T00:00:00Z',
@@ -114,11 +114,11 @@ describe('BorrelkaartGroupService', async (): Promise<void> => {
         },
         amount: 4,
       };
-      const params = BorrelkaartGroupService.asBorrelkaartGroupParams(req);
-      expect(BorrelkaartGroupService.validateBorrelkaartGroup(params)).to.be.true;
+      const params = VoucherGroupService.asVoucherGroupParams(req);
+      expect(VoucherGroupService.validateVoucherGroup(params)).to.be.true;
     });
-    it('should return false when the borrelkaart has an invalid name', async () => {
-      const req: BorrelkaartGroupRequest = {
+    it('should return false when the voucher has an invalid name', async () => {
+      const req: VoucherGroupRequest = {
         name: '',
         activeStartDate: '2000-01-02T00:00:00Z',
         activeEndDate: '2000-01-03T00:00:00Z',
@@ -129,11 +129,11 @@ describe('BorrelkaartGroupService', async (): Promise<void> => {
         },
         amount: 4,
       };
-      const params = BorrelkaartGroupService.asBorrelkaartGroupParams(req);
-      expect(BorrelkaartGroupService.validateBorrelkaartGroup(params)).to.be.false;
+      const params = VoucherGroupService.asVoucherGroupParams(req);
+      expect(VoucherGroupService.validateVoucherGroup(params)).to.be.false;
     });
-    it('should return false when the borrelkaart has an invalid startDate', async () => {
-      const req: BorrelkaartGroupRequest = {
+    it('should return false when the voucher has an invalid startDate', async () => {
+      const req: VoucherGroupRequest = {
         name: 'test',
         activeStartDate: 'aasdfasd',
         activeEndDate: '2000-01-03T00:00:00Z',
@@ -144,12 +144,12 @@ describe('BorrelkaartGroupService', async (): Promise<void> => {
         },
         amount: 4,
       };
-      const params = BorrelkaartGroupService.asBorrelkaartGroupParams(req);
+      const params = VoucherGroupService.asVoucherGroupParams(req);
       expect(params.activeStartDate.valueOf()).to.NaN;
-      expect(BorrelkaartGroupService.validateBorrelkaartGroup(params)).to.be.false;
+      expect(VoucherGroupService.validateVoucherGroup(params)).to.be.false;
     });
-    it('should return false when the borrelkaart has an invalid endDate', async () => {
-      const req: BorrelkaartGroupRequest = {
+    it('should return false when the voucher has an invalid endDate', async () => {
+      const req: VoucherGroupRequest = {
         name: 'test',
         activeStartDate: '2000-01-02T00:00:00Z',
         activeEndDate: 'asdafasd',
@@ -160,11 +160,11 @@ describe('BorrelkaartGroupService', async (): Promise<void> => {
         },
         amount: 4,
       };
-      const params = BorrelkaartGroupService.asBorrelkaartGroupParams(req);
-      expect(BorrelkaartGroupService.validateBorrelkaartGroup(params)).to.be.false;
+      const params = VoucherGroupService.asVoucherGroupParams(req);
+      expect(VoucherGroupService.validateVoucherGroup(params)).to.be.false;
     });
-    it('should return false when the borrelkaart endDate is before startDate', async () => {
-      const req: BorrelkaartGroupRequest = {
+    it('should return false when the voucher endDate is before startDate', async () => {
+      const req: VoucherGroupRequest = {
         name: 'test',
         activeStartDate: '2000-01-03T00:00:00Z',
         activeEndDate: '2000-01-01T00:00:00Z',
@@ -175,11 +175,11 @@ describe('BorrelkaartGroupService', async (): Promise<void> => {
         },
         amount: 4,
       };
-      const params = BorrelkaartGroupService.asBorrelkaartGroupParams(req);
-      expect(BorrelkaartGroupService.validateBorrelkaartGroup(params)).to.be.false;
+      const params = VoucherGroupService.asVoucherGroupParams(req);
+      expect(VoucherGroupService.validateVoucherGroup(params)).to.be.false;
     });
-    it('should return false when the borrelkaart endDate is in the past', async () => {
-      const req: BorrelkaartGroupRequest = {
+    it('should return false when the voucher endDate is in the past', async () => {
+      const req: VoucherGroupRequest = {
         name: 'test',
         activeStartDate: '2000-01-02T00:00:00Z',
         activeEndDate: '1999-12-31T00:00:00Z',
@@ -190,11 +190,11 @@ describe('BorrelkaartGroupService', async (): Promise<void> => {
         },
         amount: 4,
       };
-      const params = BorrelkaartGroupService.asBorrelkaartGroupParams(req);
-      expect(BorrelkaartGroupService.validateBorrelkaartGroup(params)).to.be.false;
+      const params = VoucherGroupService.asVoucherGroupParams(req);
+      expect(VoucherGroupService.validateVoucherGroup(params)).to.be.false;
     });
-    it('should return false when the borrelkaart has an invalid balance', async () => {
-      const req: BorrelkaartGroupRequest = {
+    it('should return false when the voucher has an invalid balance', async () => {
+      const req: VoucherGroupRequest = {
         name: 'test',
         activeStartDate: '2000-01-02T00:00:00Z',
         activeEndDate: '2000-01-03T00:00:00Z',
@@ -205,11 +205,11 @@ describe('BorrelkaartGroupService', async (): Promise<void> => {
         },
         amount: 4,
       };
-      const params = BorrelkaartGroupService.asBorrelkaartGroupParams(req);
-      expect(BorrelkaartGroupService.validateBorrelkaartGroup(params)).to.be.false;
+      const params = VoucherGroupService.asVoucherGroupParams(req);
+      expect(VoucherGroupService.validateVoucherGroup(params)).to.be.false;
     });
-    it('should return false when the borrelkaart has an invalid amount of users', async () => {
-      const req: BorrelkaartGroupRequest = {
+    it('should return false when the voucher has an invalid amount of users', async () => {
+      const req: VoucherGroupRequest = {
         name: 'test',
         activeStartDate: '2000-01-02T00:00:00Z',
         activeEndDate: '2000-01-03T00:00:00Z',
@@ -220,14 +220,14 @@ describe('BorrelkaartGroupService', async (): Promise<void> => {
         },
         amount: 0,
       };
-      const params = BorrelkaartGroupService.asBorrelkaartGroupParams(req);
-      expect(BorrelkaartGroupService.validateBorrelkaartGroup(params)).to.be.false;
+      const params = VoucherGroupService.asVoucherGroupParams(req);
+      expect(VoucherGroupService.validateVoucherGroup(params)).to.be.false;
     });
   });
 
-  describe('create borrelkaart group', () => {
-    it('should create a borrelkaart group with inactive members', async () => {
-      const req: BorrelkaartGroupRequest = {
+  describe('create voucher group', () => {
+    it('should create a voucher group with inactive members', async () => {
+      const req: VoucherGroupRequest = {
         name: 'test',
         activeStartDate: '2000-01-02T00:00:00Z',
         activeEndDate: '2000-01-03T00:00:00Z',
@@ -238,8 +238,8 @@ describe('BorrelkaartGroupService', async (): Promise<void> => {
         },
         amount: 4,
       };
-      const params = BorrelkaartGroupService.asBorrelkaartGroupParams(req);
-      const bkgRes = await BorrelkaartGroupService.createBorrelkaartGroup(params);
+      const params = VoucherGroupService.asVoucherGroupParams(req);
+      const bkgRes = await VoucherGroupService.createVoucherGroup(params);
       bkgEq(params, bkgRes);
       await Promise.all(bkgRes.users.map(async (user) => {
         expect(user.active, 'user inactive').to.equal(false);
@@ -250,8 +250,8 @@ describe('BorrelkaartGroupService', async (): Promise<void> => {
         expect(balance, 'correct transfers').to.equal(params.balance.getAmount());
       }));
     });
-    it('should create a borrelkaart group with active members', async () => {
-      const req: BorrelkaartGroupRequest = {
+    it('should create a voucher group with active members', async () => {
+      const req: VoucherGroupRequest = {
         name: 'test',
         activeStartDate: '1999-12-31T00:00:00Z',
         activeEndDate: '2000-01-03T00:00:00Z',
@@ -262,8 +262,8 @@ describe('BorrelkaartGroupService', async (): Promise<void> => {
         },
         amount: 4,
       };
-      const params = BorrelkaartGroupService.asBorrelkaartGroupParams(req);
-      const bkgRes = await BorrelkaartGroupService.createBorrelkaartGroup(params);
+      const params = VoucherGroupService.asVoucherGroupParams(req);
+      const bkgRes = await VoucherGroupService.createVoucherGroup(params);
       bkgEq(params, bkgRes);
       await Promise.all(bkgRes.users.map(async (user) => {
         expect(user.active, 'user active').to.equal(true);
@@ -275,10 +275,10 @@ describe('BorrelkaartGroupService', async (): Promise<void> => {
     });
   });
 
-  describe('update borrelkaart group', () => {
+  describe('update voucher group', () => {
     let bkgId: number;
     beforeEach(async () => {
-      const req: BorrelkaartGroupRequest = {
+      const req: VoucherGroupRequest = {
         name: 'test',
         activeStartDate: '2000-01-02T00:00:00Z',
         activeEndDate: '2000-01-03T00:00:00Z',
@@ -289,13 +289,13 @@ describe('BorrelkaartGroupService', async (): Promise<void> => {
         },
         amount: 4,
       };
-      const params = BorrelkaartGroupService.asBorrelkaartGroupParams(req);
-      const bkgRes = await BorrelkaartGroupService.createBorrelkaartGroup(params);
+      const params = VoucherGroupService.asVoucherGroupParams(req);
+      const bkgRes = await VoucherGroupService.createVoucherGroup(params);
       bkgId = bkgRes.id;
     });
 
-    it('should update an existing borrelkaart groups name', async () => {
-      const req: BorrelkaartGroupRequest = {
+    it('should update an existing voucher groups name', async () => {
+      const req: VoucherGroupRequest = {
         name: 'newTest',
         activeStartDate: '2000-01-02T00:00:00Z',
         activeEndDate: '2000-01-03T00:00:00Z',
@@ -306,8 +306,8 @@ describe('BorrelkaartGroupService', async (): Promise<void> => {
         },
         amount: 4,
       };
-      const params = BorrelkaartGroupService.asBorrelkaartGroupParams(req);
-      const bkgRes = await BorrelkaartGroupService.updateBorrelkaartGroup(bkgId, params);
+      const params = VoucherGroupService.asVoucherGroupParams(req);
+      const bkgRes = await VoucherGroupService.updateVoucherGroup(bkgId, params);
       bkgEq(params, bkgRes);
       await Promise.all(bkgRes.users.map(async (user) => {
         expect(user.active, 'user inactive').to.equal(false);
@@ -318,8 +318,8 @@ describe('BorrelkaartGroupService', async (): Promise<void> => {
       }));
     });
 
-    it('should update an existing borrelkaart groups active start date', async () => {
-      const req: BorrelkaartGroupRequest = {
+    it('should update an existing voucher groups active start date', async () => {
+      const req: VoucherGroupRequest = {
         name: 'test',
         activeStartDate: '2000-01-03T00:00:00Z',
         activeEndDate: '2000-01-03T00:00:00Z',
@@ -330,8 +330,8 @@ describe('BorrelkaartGroupService', async (): Promise<void> => {
         },
         amount: 4,
       };
-      const params = BorrelkaartGroupService.asBorrelkaartGroupParams(req);
-      const bkgRes = await BorrelkaartGroupService.updateBorrelkaartGroup(bkgId, params);
+      const params = VoucherGroupService.asVoucherGroupParams(req);
+      const bkgRes = await VoucherGroupService.updateVoucherGroup(bkgId, params);
       bkgEq(params, bkgRes);
       await Promise.all(bkgRes.users.map(async (user) => {
         expect(user.active, 'user inactive').to.equal(false);
@@ -342,8 +342,8 @@ describe('BorrelkaartGroupService', async (): Promise<void> => {
       }));
     });
 
-    it('should update an existing borrelkaart groups active end date', async () => {
-      const req: BorrelkaartGroupRequest = {
+    it('should update an existing voucher groups active end date', async () => {
+      const req: VoucherGroupRequest = {
         name: 'test',
         activeStartDate: '2000-01-02T00:00:00Z',
         activeEndDate: '2000-01-04T00:00:00Z',
@@ -354,8 +354,8 @@ describe('BorrelkaartGroupService', async (): Promise<void> => {
         },
         amount: 4,
       };
-      const params = BorrelkaartGroupService.asBorrelkaartGroupParams(req);
-      const bkgRes = await BorrelkaartGroupService.updateBorrelkaartGroup(bkgId, params);
+      const params = VoucherGroupService.asVoucherGroupParams(req);
+      const bkgRes = await VoucherGroupService.updateVoucherGroup(bkgId, params);
       bkgEq(params, bkgRes);
       await Promise.all(bkgRes.users.map(async (user) => {
         expect(user.active, 'user inactive').to.equal(false);
@@ -366,8 +366,8 @@ describe('BorrelkaartGroupService', async (): Promise<void> => {
       }));
     });
 
-    it('should update an existing borrelkaart groups passed active start date', async () => {
-      const req: BorrelkaartGroupRequest = {
+    it('should update an existing voucher groups passed active start date', async () => {
+      const req: VoucherGroupRequest = {
         name: 'test',
         activeStartDate: '1999-12-31T00:00:00Z',
         activeEndDate: '2000-01-03T00:00:00Z',
@@ -378,8 +378,8 @@ describe('BorrelkaartGroupService', async (): Promise<void> => {
         },
         amount: 4,
       };
-      const params = BorrelkaartGroupService.asBorrelkaartGroupParams(req);
-      const bkgRes = await BorrelkaartGroupService.updateBorrelkaartGroup(bkgId, params);
+      const params = VoucherGroupService.asVoucherGroupParams(req);
+      const bkgRes = await VoucherGroupService.updateVoucherGroup(bkgId, params);
       bkgEq(params, bkgRes);
       await Promise.all(bkgRes.users.map(async (user) => {
         expect(user.active, 'user active').to.equal(true);
@@ -390,8 +390,8 @@ describe('BorrelkaartGroupService', async (): Promise<void> => {
       }));
     });
 
-    it('should update an existing borrelkaart groups increased user amount', async () => {
-      const req: BorrelkaartGroupRequest = {
+    it('should update an existing voucher groups increased user amount', async () => {
+      const req: VoucherGroupRequest = {
         name: 'test',
         activeStartDate: '2000-01-02T00:00:00Z',
         activeEndDate: '2000-01-03T00:00:00Z',
@@ -402,8 +402,8 @@ describe('BorrelkaartGroupService', async (): Promise<void> => {
         },
         amount: 5,
       };
-      const params = BorrelkaartGroupService.asBorrelkaartGroupParams(req);
-      const bkgRes = await BorrelkaartGroupService.updateBorrelkaartGroup(bkgId, params);
+      const params = VoucherGroupService.asVoucherGroupParams(req);
+      const bkgRes = await VoucherGroupService.updateVoucherGroup(bkgId, params);
       bkgEq(params, bkgRes);
       await Promise.all(bkgRes.users.map(async (user) => {
         expect(user.active, 'user active').to.equal(false);
@@ -414,8 +414,8 @@ describe('BorrelkaartGroupService', async (): Promise<void> => {
       }));
     });
 
-    it('should update an existing borrelkaart groups increased balance', async () => {
-      const req: BorrelkaartGroupRequest = {
+    it('should update an existing voucher groups increased balance', async () => {
+      const req: VoucherGroupRequest = {
         name: 'test',
         activeStartDate: '2000-01-02T00:00:00Z',
         activeEndDate: '2000-01-03T00:00:00Z',
@@ -426,8 +426,8 @@ describe('BorrelkaartGroupService', async (): Promise<void> => {
         },
         amount: 4,
       };
-      const params = BorrelkaartGroupService.asBorrelkaartGroupParams(req);
-      const bkgRes = await BorrelkaartGroupService.updateBorrelkaartGroup(bkgId, params);
+      const params = VoucherGroupService.asVoucherGroupParams(req);
+      const bkgRes = await VoucherGroupService.updateVoucherGroup(bkgId, params);
       bkgEq(params, bkgRes);
       await Promise.all(bkgRes.users.map(async (user) => {
         expect(user.active, 'user active').to.equal(false);
@@ -438,8 +438,8 @@ describe('BorrelkaartGroupService', async (): Promise<void> => {
       }));
     });
 
-    it('should update an existing borrelkaart groups decreased balance', async () => {
-      const req: BorrelkaartGroupRequest = {
+    it('should update an existing voucher groups decreased balance', async () => {
+      const req: VoucherGroupRequest = {
         name: 'test',
         activeStartDate: '2000-01-02T00:00:00Z',
         activeEndDate: '2000-01-03T00:00:00Z',
@@ -450,8 +450,8 @@ describe('BorrelkaartGroupService', async (): Promise<void> => {
         },
         amount: 4,
       };
-      const params = BorrelkaartGroupService.asBorrelkaartGroupParams(req);
-      const bkgRes = await BorrelkaartGroupService.updateBorrelkaartGroup(bkgId, params);
+      const params = VoucherGroupService.asVoucherGroupParams(req);
+      const bkgRes = await VoucherGroupService.updateVoucherGroup(bkgId, params);
       bkgEq(params, bkgRes);
       await Promise.all(bkgRes.users.map(async (user) => {
         expect(user.active, 'user active').to.equal(false);
@@ -467,7 +467,7 @@ describe('BorrelkaartGroupService', async (): Promise<void> => {
     });
 
     it('should return undefined when given an invalid id', async () => {
-      const req: BorrelkaartGroupRequest = {
+      const req: VoucherGroupRequest = {
         name: 'test',
         activeStartDate: '2000-01-02T00:00:00Z',
         activeEndDate: '2000-01-03T00:00:00Z',
@@ -478,23 +478,23 @@ describe('BorrelkaartGroupService', async (): Promise<void> => {
         },
         amount: 4,
       };
-      const params = BorrelkaartGroupService.asBorrelkaartGroupParams(req);
-      const bkgRes = await BorrelkaartGroupService.updateBorrelkaartGroup(bkgId + 1, params);
+      const params = VoucherGroupService.asVoucherGroupParams(req);
+      const bkgRes = await VoucherGroupService.updateVoucherGroup(bkgId + 1, params);
       expect(bkgRes).to.be.undefined;
     });
   });
 
-  describe('get borrelkaart groups', () => {
-    let paramss: BorrelkaartGroupParams[];
+  describe('get voucher groups', () => {
+    let paramss: VoucherGroupParams[];
     let bkgIds: number[];
     beforeEach(async () => {
-      const bkgs = await seedBorrelkaartGroups();
+      const bkgs = await seedVoucherGroups();
       paramss = bkgs.paramss;
       bkgIds = bkgs.bkgIds;
     });
 
-    it('should get an borrelkaart group by id', async () => {
-      const bkgRes = (await BorrelkaartGroupService.getBorrelkaartGroups({ bkgId: bkgIds[0] }))
+    it('should get an voucher group by id', async () => {
+      const bkgRes = (await VoucherGroupService.getVoucherGroups({ bkgId: bkgIds[0] }))
         .records[0];
       bkgEq(paramss[0], bkgRes);
       await Promise.all(bkgRes.users.map(async (user) => {
@@ -507,13 +507,13 @@ describe('BorrelkaartGroupService', async (): Promise<void> => {
     });
 
     it('should return undefined when given a wrong id', async () => {
-      const bkgRes = (await BorrelkaartGroupService.getBorrelkaartGroups({ bkgId: bkgIds.length + 1 }))
+      const bkgRes = (await VoucherGroupService.getVoucherGroups({ bkgId: bkgIds.length + 1 }))
         .records[0];
       expect(bkgRes).to.be.undefined;
     });
 
-    it('should get all borrelkaart groups', async () => {
-      const bkgRes = (await BorrelkaartGroupService.getBorrelkaartGroups({})).records;
+    it('should get all voucher groups', async () => {
+      const bkgRes = (await VoucherGroupService.getVoucherGroups({})).records;
       await Promise.all(bkgRes.map(async (res, i) => {
         bkgEq(paramss[i], res);
         await Promise.all(res.users.map(async (user) => {

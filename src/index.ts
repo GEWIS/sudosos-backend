@@ -42,7 +42,7 @@ import UserController from './controller/user-controller';
 import ProductController from './controller/product-controller';
 import ProductCategoryController from './controller/product-category-controller';
 import TransactionController from './controller/transaction-controller';
-import BorrelkaartGroupController from './controller/borrelkaart-group-controller';
+import VoucherGroupController from './controller/voucher-group-controller';
 import BalanceService from './service/balance-service';
 import BalanceController from './controller/balance-controller';
 import RbacController from './controller/rbac-controller';
@@ -282,7 +282,7 @@ export default async function createApp(): Promise<Application> {
   application.app.use('/v1/productcategories', new ProductCategoryController(options).getRouter());
   application.app.use('/v1/pointsofsale', new PointOfSaleController(options).getRouter());
   application.app.use('/v1/transactions', new TransactionController(options).getRouter());
-  application.app.use('/v1/borrelkaartgroups', new BorrelkaartGroupController(options).getRouter());
+  application.app.use('/v1/vouchergroups', new VoucherGroupController(options).getRouter());
   application.app.use('/v1/transfers', new TransferController(options).getRouter());
   application.app.use('/v1/fines', new DebtorController(options).getRouter());
   application.app.use('/v1/stripe', new StripeController(options).getRouter());
