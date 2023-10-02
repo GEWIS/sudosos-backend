@@ -2,9 +2,12 @@
   "apps": [{
     "name": "http-worker",
     "script": "./out/src/index.js",
-    "instances": 4
+    "instances": 4,
+    "exec_mode": "cluster"
   }, {
     "name": "cron",
-    "script": "./out/src/cron.js"
+    "script": "./out/src/cron.js",
+    "instances": 1,
+    "exec_mode": "cluster"
   }]
 }
