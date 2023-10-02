@@ -170,6 +170,13 @@ async function setupAuthentication(tokenHandler: TokenHandler, application: Appl
 
 export default async function createApp(): Promise<Application> {
   const application = new Application();
+  log4js.configure({
+    pm2: true,
+    appenders: {
+      out: { type: 'stdout' },
+    },
+    categories: { default: { appenders: ['out'], level: 'all' } },
+  });
   application.logger = log4js.getLogger('Application');
   application.logger.level = process.env.LOG_LEVEL;
   application.logger.info('Starting application instance...');
