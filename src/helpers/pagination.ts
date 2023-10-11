@@ -33,9 +33,9 @@ export interface PaginationParameters {
 
 /**
  * @typedef PaginationResult
- * @property {integer} take Number of records queried
- * @property {integer} skip Number of skipped records
- * @property {integer} count Total number of resulting records
+ * @property {integer} take.required Number of records queried
+ * @property {integer} skip.required Number of skipped records
+ * @property {integer} count.required Total number of resulting records
  */
 export interface PaginationResult {
   take?: number;

@@ -174,8 +174,8 @@ export default class DebtorController extends BaseController {
    * @group debtors - Operations of the debtor controller
    * @operationId calculateFines
    * @security JWT
-   * @param {Array<string>} userTypes[].query - List of all user types fines should be calculated for
-   * @param {Array<string>} referenceDates[].query.required - Dates to base the fines on. Every returned user has at
+   * @param {Array.<string>} userTypes[].query - List of all user types fines should be calculated for
+   * @param {Array.<string>} referenceDates[].query.required - Dates to base the fines on. Every returned user has at
    * least five euros debt on every reference date. The height of the fine is based on the first date in the array.
    * @returns {Array<UserToFineResponse>} 200 - List of eligible fines
    * @returns {string} 400 - Validation error
@@ -186,9 +186,9 @@ export default class DebtorController extends BaseController {
 
     let params;
     try {
+      if (req.query.referenceDates === undefined) throw new Error('referenceDates is required');
       const referenceDates = asArrayOfDates(req.query.referenceDates);
-      if (referenceDates === undefined && req.query.referenceDates === undefined) throw new Error('referenceDates is required');
-      if (referenceDates === undefined && req.query.referenceDates !== undefined) throw new Error('referenceDates is not a valid array');
+      if (referenceDates === undefined) throw new Error('referenceDates is not a valid array');
       params = {
         userTypes: asArrayOfUserTypes(req.query.userTypes),
         referenceDates,
