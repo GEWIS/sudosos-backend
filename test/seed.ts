@@ -60,6 +60,7 @@ import Fine from '../src/entity/fine/fine';
 import { calculateBalance } from './helpers/balance';
 import GewisUser from '../src/gewis/entity/gewis-user';
 import AssignedRole from '../src/entity/roles/assigned-role';
+import MemberAuthenticator from '../src/entity/authenticator/member-authenticator';
 
 function getDate(startDate: Date, endDate: Date, i: number): Date {
   const diff = endDate.getTime() - startDate.getTime();
@@ -184,6 +185,27 @@ export async function seedRoles(users: User[]): Promise<AssignedRole[]> {
     });
     return AssignedRole.save(role);
   }))).filter((r) => r != null);
+}
+
+/**
+ * Seed some member authenticators
+ * @param users Users that can authenticate as organs
+ * @param authenticateAs
+ */
+export async function seedMemberAuthenticators(users: User[], authenticateAs: User[]): Promise<MemberAuthenticator[]> {
+  const memberAuthenticators: MemberAuthenticator[] = [];
+  await Promise.all(authenticateAs.map(async (as, i) => {
+    return Promise.all(users.map(async (user, j) => {
+      if ((i + j) % 7 > 1) return;
+      const authenticator = Object.assign(new MemberAuthenticator(), {
+        userId: user.id,
+        authenticateAsId: as.id,
+      } as MemberAuthenticator);
+      await authenticator.save();
+      memberAuthenticators.push(authenticator);
+    }));
+  }));
+  return memberAuthenticators;
 }
 
 export function defineInvoiceEntries(invoiceId: number, startEntryId: number,
@@ -1361,6 +1383,10 @@ export interface DatabaseContent {
 
 export default async function seedDatabase(): Promise<DatabaseContent> {
   const users = await seedUsers();
+  await seedMemberAuthenticators(
+    users.filter((u) => u.type !== UserType.ORGAN),
+    [users.filter((u) => u.type === UserType.ORGAN)[0]],
+  );
   const pinUsers = await seedHashAuthenticator(users, PinAuthenticator);
   const localUsers = await seedHashAuthenticator(users, LocalAuthenticator);
   const gewisUsers = await seedGEWISUsers(users);

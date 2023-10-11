@@ -578,12 +578,14 @@ describe('UserController', (): void => {
         .get(`/users/${user.id}/members`)
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
-      expect(ctx.specification.validateModel(
+      const validation = ctx.specification.validateModel(
         'PaginatedUserResponse',
         res.body,
         false,
         true,
-      ).valid).to.be.true;
+      );
+      expect(validation.valid).to.be.true;
+      expect(res.body.records.length).to.be.greaterThan(0);
     });
     it('should return an HTTP 200 and all the members of the organ', async () => {
       await inUserContext(await (await UserFactory()).clone(3), async (...users: User[]) => {
