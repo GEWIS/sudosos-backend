@@ -21,9 +21,8 @@ import { PaginationParameters } from '../helpers/pagination';
 import { PaginatedUserResponse, UserResponse } from '../controller/response/user-response';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import User, { LocalUserTypes, TermsOfServiceStatus, TOSRequired, UserType } from '../entity/user/user';
-import CreateUserRequest from '../controller/request/create-user-request';
 import MemberAuthenticator from '../entity/authenticator/member-authenticator';
-import UpdateUserRequest from '../controller/request/update-user-request';
+import { CreateUserRequest, UpdateUserRequest } from '../controller/request/user-request';
 import TransactionService from './transaction-service';
 import {
   FinancialMutationResponse,

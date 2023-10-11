@@ -29,6 +29,7 @@ export class Builder {
       type: UserType.MEMBER,
       active: true,
       acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      canGoIntoDebt: true,
     } as User);
     await User.save(this.user);
     return this;

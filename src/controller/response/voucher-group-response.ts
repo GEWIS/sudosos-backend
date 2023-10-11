@@ -21,16 +21,16 @@ import { PaginationResult } from '../../helpers/pagination';
 import { DineroObjectResponse } from './dinero-response';
 
 /**
-  * @typedef {BaseResponse} BorrelkaartGroupResponse
-  * @property {string} name.required - Name of the borrelkaart group
-  * @property {string} activeStartDate - Start date of the borrelkaart group
-  * @property {string} activeEndDate.required - End date of the borrelkaart group
-  * @property {Array.<UserResponse>} users.required - Users in the borrelkaart group
+  * @typedef {BaseResponse} VoucherGroupResponse
+  * @property {string} name.required - Name of the voucher group
+  * @property {string} activeStartDate - Start date of the voucher group
+  * @property {string} activeEndDate.required - End date of the voucher group
+  * @property {Array.<UserResponse>} users.required - Users in the voucher group
   * @property {DineroObjectRequest.model} balance.required - Start balance to be assigned
-  *  to the borrelkaart users
-  * @property {number} amount.required - Amount of users to be assigned to the borrelkaart group
+  *  to the voucher users
+  * @property {number} amount.required - Amount of users to be assigned to the voucher group
   */
-export default interface BorrelkaartGroupResponse extends BaseResponse {
+export default interface VoucherGroupResponse extends BaseResponse {
   name: string,
   activeStartDate?: string,
   activeEndDate: string,
@@ -40,11 +40,11 @@ export default interface BorrelkaartGroupResponse extends BaseResponse {
 }
 
 /**
- * @typedef PaginatedBorrelkaartGroupResponse
+ * @typedef PaginatedVoucherGroupResponse
  * @property {PaginationResult.model} _pagination.required - Pagination metadata
- * @property {Array.<BorrelkaartGroupResponse>} records.required - Returned borrelkaart groups
+ * @property {Array.<VoucherGroupResponse>} records.required - Returned voucher groups
  */
-export interface PaginatedBorrelkaartGroupResponse {
+export interface PaginatedVoucherGroupResponse {
   _pagination: PaginationResult,
-  records: BorrelkaartGroupResponse[],
+  records: VoucherGroupResponse[],
 }

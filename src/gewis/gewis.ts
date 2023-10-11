@@ -94,7 +94,8 @@ export default class Gewis {
       active: true,
       email: token.email,
       ofAge: token.is_18_plus,
-    }) as User;
+      canGoIntoDebt: true,
+    } as User) as User;
     return manager.save(user).then((u) => Gewis.createGEWISUser(manager, u, token.lidnr));
   }
 
@@ -202,7 +203,7 @@ export default class Gewis {
     const buyerUserTypes = new Set<UserType>([
       UserType.LOCAL_USER,
       UserType.MEMBER,
-      UserType.BORRELKAART,
+      UserType.VOUCHER,
       UserType.INVOICE,
       UserType.AUTOMATIC_INVOICE,
     ]);
@@ -340,7 +341,7 @@ export default class Gewis {
           update: { own: star, all: star },
           delete: { own: star, all: star },
         },
-        BorrelkaartGroup: {
+        VoucherGroup: {
           get: { all: star },
           update: { all: star },
           delete: { all: star },
@@ -377,7 +378,7 @@ export default class Gewis {
         Banner: {
           ...admin,
         },
-        BorrelkaartGroup: {
+        VoucherGroup: {
           ...admin,
         },
         User: {

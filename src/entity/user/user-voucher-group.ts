@@ -21,16 +21,16 @@ import {
 // eslint-disable-next-line import/no-cycle
 import User from './user';
 // eslint-disable-next-line import/no-cycle
-import BorrelkaartGroup from './borrelkaart-group';
+import VoucherGroup from './voucher-group';
 
 /**
- * @typedef {BaseEntity} UserBorrelkaartGroup
+ * @typedef {BaseEntity} UserVoucherGroup
  * @property {User.model} user.required - The user that belongs to the group.
- * @property {BorrelkaartGroup.model} borrelkaartGroup.required - The borrelkaartGroup the user
+ * @property {VoucherGroup.model} voucherGroup.required - The voucherGroup the user
  * belongs to.
  */
 @Entity()
-export default class UserBorrelkaartGroup extends BaseEntity {
+export default class UserVoucherGroup extends BaseEntity {
   @PrimaryColumn()
   public userId: number;
 
@@ -38,7 +38,7 @@ export default class UserBorrelkaartGroup extends BaseEntity {
   @JoinColumn({ name: 'userId' })
   public user: User;
 
-  @ManyToOne(() => BorrelkaartGroup, { nullable: false })
+  @ManyToOne(() => VoucherGroup, { nullable: false })
   @JoinColumn()
-  public borrelkaartGroup: BorrelkaartGroup;
+  public voucherGroup: VoucherGroup;
 }

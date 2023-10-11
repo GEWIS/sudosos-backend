@@ -21,36 +21,36 @@ import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { Connection } from 'typeorm';
 import TokenHandler from '../../../src/authentication/token-handler';
-import BorrelkaartGroupController from '../../../src/controller/borrelkaart-group-controller';
-import { BorrelkaartGroupRequest } from '../../../src/controller/request/borrelkaart-group-request';
-import BorrelkaartGroupResponse from '../../../src/controller/response/borrelkaart-group-response';
+import VoucherGroupController from '../../../src/controller/voucher-group-controller';
+import { VoucherGroupRequest } from '../../../src/controller/request/voucher-group-request';
+import VoucherGroupResponse from '../../../src/controller/response/voucher-group-response';
 import Database from '../../../src/database/database';
-import BorrelkaartGroup from '../../../src/entity/user/borrelkaart-group';
+import VoucherGroup from '../../../src/entity/user/voucher-group';
 import User, {
   TermsOfServiceStatus,
   UserType,
 } from '../../../src/entity/user/user';
-import UserBorrelkaartGroup from '../../../src/entity/user/user-borrelkaart-group';
+import UserVoucherGroup from '../../../src/entity/user/user-voucher-group';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import RoleManager from '../../../src/rbac/role-manager';
-import BorrelkaartGroupService from '../../../src/service/borrelkaart-group-service';
+import VoucherGroupService from '../../../src/service/voucher-group-service';
 import Swagger from '../../../src/start/swagger';
 import {
   defaultPagination,
   PaginationResult,
 } from '../../../src/helpers/pagination';
-import { bkgEq } from '../service/borrelkaart-group-service';
+import { bkgEq } from '../service/voucher-group-service';
 import Sinon from 'sinon';
 import { DineroObjectRequest } from '../../../src/controller/request/dinero-request';
 
 async function saveBKG(
-  bkgReq: BorrelkaartGroupRequest,
-): Promise<BorrelkaartGroupResponse> {
-  // save borrelkaart group
-  const params = BorrelkaartGroupService.asBorrelkaartGroupParams(bkgReq);
-  const bkgParams = BorrelkaartGroupService.asBorrelkaartGroup(params);
-  const bkg = await BorrelkaartGroup.save(bkgParams);
-  const users = await BorrelkaartGroupService.createBorrelkaartUsers(
+  bkgReq: VoucherGroupRequest,
+): Promise<VoucherGroupResponse> {
+  // save voucher group
+  const params = VoucherGroupService.asVoucherGroupParams(bkgReq);
+  const bkgParams = VoucherGroupService.asVoucherGroup(params);
+  const bkg = await VoucherGroup.save(bkgParams);
+  const users = await VoucherGroupService.createVoucherUsers(
     bkgParams.name,
     bkgParams.activeStartDate <= new Date(),
     bkgParams.amount,
@@ -58,26 +58,26 @@ async function saveBKG(
 
   // save new user relations
   const userLinks = users.map(
-    (user) => ({ user, borrelkaartGroup: bkg } as UserBorrelkaartGroup),
+    (user) => ({ user, voucherGroup: bkg } as UserVoucherGroup),
   );
-  await UserBorrelkaartGroup.save(userLinks);
+  await UserVoucherGroup.save(userLinks);
 
-  return BorrelkaartGroupService.asBorrelkaartGroupResponse(bkgParams, users);
+  return VoucherGroupService.asVoucherGroupResponse(bkgParams, users);
 }
 
-describe('BorrelkaartGroupController', async (): Promise<void> => {
+describe('VoucherGroupController', async (): Promise<void> => {
   let ctx: {
     connection: Connection;
     clock: Sinon.SinonFakeTimers,
     app: Application;
     specification: SwaggerSpecification;
-    controller: BorrelkaartGroupController;
+    controller: VoucherGroupController;
     adminUser: User;
     localUser: User;
     adminToken: String;
     token: String;
-    validBorrelkaartGroupReq: BorrelkaartGroupRequest;
-    invalidBorrelkaartGroupReq: BorrelkaartGroupRequest;
+    validVoucherGroupReq: VoucherGroupRequest;
+    invalidVoucherGroupReq: VoucherGroupRequest;
   };
 
   // initialize context
@@ -131,8 +131,8 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
       'nonce',
     );
 
-    // test borrelkaart groups
-    const validBorrelkaartGroupReq: BorrelkaartGroupRequest = {
+    // test voucher groups
+    const validVoucherGroupReq: VoucherGroupRequest = {
       name: 'test',
       activeStartDate: '2000-01-02T00:00:00Z',
       activeEndDate: '2000-01-03T00:00:00Z',
@@ -144,8 +144,8 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
       amount: 4,
     };
 
-    const invalidBorrelkaartGroupReq: BorrelkaartGroupRequest = {
-      ...validBorrelkaartGroupReq,
+    const invalidVoucherGroupReq: VoucherGroupRequest = {
+      ...validVoucherGroupReq,
       name: '',
     };
 
@@ -158,7 +158,7 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
     roleManager.registerRole({
       name: 'Admin',
       permissions: {
-        BorrelkaartGroup: {
+        VoucherGroup: {
           create: all,
           get: all,
           update: all,
@@ -168,7 +168,7 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
     });
 
-    const controller = new BorrelkaartGroupController({
+    const controller = new VoucherGroupController({
       specification,
       roleManager,
     });
@@ -176,7 +176,7 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
     app.use(
       new TokenMiddleware({ tokenHandler, refreshFactor: 0.5 }).getMiddleware(),
     );
-    app.use('/borrelkaartgroups', controller.getRouter());
+    app.use('/vouchergroups', controller.getRouter());
 
     // initialize context
     ctx = {
@@ -189,8 +189,8 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
       localUser,
       adminToken,
       token,
-      validBorrelkaartGroupReq,
-      invalidBorrelkaartGroupReq,
+      validVoucherGroupReq,
+      invalidVoucherGroupReq,
     };
   });
 
@@ -201,56 +201,56 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
     ctx.clock.restore();
   });
 
-  describe('GET /borrelkaartgroups', () => {
+  describe('GET /vouchergroups', () => {
     it('should return correct model', async () => {
-      // save borrelkaart group
-      await saveBKG(ctx.validBorrelkaartGroupReq);
+      // save voucher group
+      await saveBKG(ctx.validVoucherGroupReq);
 
-      // get borrelkaart groups
+      // get voucher groups
       const res = await request(ctx.app)
-        .get('/borrelkaartgroups')
+        .get('/vouchergroups')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
       expect(
         ctx.specification.validateModel(
-          'PaginatedBorrelkaartGroupResponse',
+          'PaginatedVoucherGroupResponse',
           res.body,
           false,
           true,
         ).valid,
       ).to.be.true;
     });
-    it('should return an HTTP 200 and all borrelkaart groups without users in the database if admin', async () => {
-      // save borrelkaart group
-      await saveBKG(ctx.validBorrelkaartGroupReq);
+    it('should return an HTTP 200 and all voucher groups without users in the database if admin', async () => {
+      // save voucher group
+      await saveBKG(ctx.validVoucherGroupReq);
 
-      // get borrelkaart groups
+      // get voucher groups
       const res = await request(ctx.app)
-        .get('/borrelkaartgroups')
+        .get('/vouchergroups')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
-      // check if borrelkaart groups are returned without users
-      const borrelkaartGroups = res.body.records as BorrelkaartGroup[];
+      // check if voucher groups are returned without users
+      const voucherGroups = res.body.records as VoucherGroup[];
       // eslint-disable-next-line no-underscore-dangle
       const pagination = res.body._pagination as PaginationResult;
       expect(
-        borrelkaartGroups.length,
+        voucherGroups.length,
         'size of response not equal to size of database',
-      ).to.equal(await BorrelkaartGroup.count());
+      ).to.equal(await VoucherGroup.count());
 
       // success code
       expect(res.status, 'incorrect status on get').to.equal(200);
 
       expect(pagination.take).to.equal(defaultPagination());
       expect(pagination.skip).to.equal(0);
-      expect(pagination.count).to.equal(await BorrelkaartGroup.count());
+      expect(pagination.count).to.equal(await VoucherGroup.count());
     });
     it('should return an HTTP 403 if not admin', async () => {
-      // save borrelkaart group
-      await saveBKG(ctx.validBorrelkaartGroupReq);
+      // save voucher group
+      await saveBKG(ctx.validVoucherGroupReq);
 
       const res = await request(ctx.app)
-        .get('/borrelkaartgroups')
+        .get('/vouchergroups')
         .set('Authorization', `Bearer ${ctx.token}`);
 
       // check no response body
@@ -261,56 +261,56 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
     });
   });
 
-  describe('POST /borrelkaartgroups', () => {
+  describe('POST /vouchergroups', () => {
     it('should return correct model', async () => {
-      // post borrelkaart group
+      // post voucher group
       const res = await request(ctx.app)
-        .post('/borrelkaartgroups')
+        .post('/vouchergroups')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
-        .send(ctx.validBorrelkaartGroupReq);
+        .send(ctx.validVoucherGroupReq);
       expect(res.status).to.equal(200);
 
       const validation =
         ctx.specification.validateModel(
-          'BorrelkaartGroupResponse',
+          'VoucherGroupResponse',
           res.body,
           false,
           true,
         );
       expect(validation.valid).to.be.true;
     });
-    it('should store the given borrelkaart group and its users in the database and return an HTTP 200 and the borrelkaart group with users if admin', async () => {
-      // post borrelkaart group
+    it('should store the given voucher group and its users in the database and return an HTTP 200 and the voucher group with users if admin', async () => {
+      // post voucher group
       const res = await request(ctx.app)
-        .post('/borrelkaartgroups')
+        .post('/vouchergroups')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
-        .send(ctx.validBorrelkaartGroupReq);
+        .send(ctx.validVoucherGroupReq);
 
       // success code
       expect(res.status, 'status incorrect on valid post').to.equal(200);
-      bkgEq(BorrelkaartGroupService.asBorrelkaartGroupParams(ctx.validBorrelkaartGroupReq), res.body);
+      bkgEq(VoucherGroupService.asVoucherGroupParams(ctx.validVoucherGroupReq), res.body);
     });
-    it('should return an HTTP 400 if the given borrelkaart group is invalid', async () => {
-      // post invalid borrelkaart group
+    it('should return an HTTP 400 if the given voucher group is invalid', async () => {
+      // post invalid voucher group
       const res = await request(ctx.app)
-        .post('/borrelkaartgroups')
+        .post('/vouchergroups')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
-        .send(ctx.invalidBorrelkaartGroupReq);
+        .send(ctx.invalidVoucherGroupReq);
 
-      // invalid borrelkaart group response response
-      expect(res.body, 'borrelkaart group not invalidated').to.equal(
-        'Invalid borrelkaart group.',
+      // invalid voucher group response response
+      expect(res.body, 'voucher group not invalidated').to.equal(
+        'Invalid voucher group.',
       );
 
       // invalid code
       expect(res.status, 'status incorrect on invalid post').to.equal(400);
     });
     it('should return an HTTP 403 if not admin', async () => {
-      // post borrelkaart group
+      // post voucher group
       const res = await request(ctx.app)
-        .post('/borrelkaartgroups')
+        .post('/vouchergroups')
         .set('Authorization', `Bearer ${ctx.token}`)
-        .send(ctx.validBorrelkaartGroupReq);
+        .send(ctx.validVoucherGroupReq);
 
       // forbidden code
       expect(res.status, 'status incorrect on forbidden post').to.equal(403);
@@ -320,46 +320,46 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
     });
   });
 
-  describe('GET /borrelkaartgroups/:id', () => {
+  describe('GET /vouchergroups/:id', () => {
     it('should return correct model', async () => {
-      // save borrelkaart group
-      await saveBKG(ctx.validBorrelkaartGroupReq);
-      // get borrelkaart group by id
+      // save voucher group
+      await saveBKG(ctx.validVoucherGroupReq);
+      // get voucher group by id
       const res = await request(ctx.app)
-        .get('/borrelkaartgroups/1')
+        .get('/vouchergroups/1')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
 
       const validation =
         ctx.specification.validateModel(
-          'BorrelkaartGroupResponse',
+          'VoucherGroupResponse',
           res.body,
           false,
           true,
         );
       expect(validation.valid).to.be.true;
     });
-    it('should return an HTTP 200 and the borrelkaart group and users with given id if admin', async () => {
-      // save borrelkaart group
-      await saveBKG(ctx.validBorrelkaartGroupReq);
+    it('should return an HTTP 200 and the voucher group and users with given id if admin', async () => {
+      // save voucher group
+      await saveBKG(ctx.validVoucherGroupReq);
 
-      // get borrelkaart group by id
+      // get voucher group by id
       const res = await request(ctx.app)
-        .get('/borrelkaartgroups/1')
+        .get('/vouchergroups/1')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
       // success code
       expect(res.status).to.equal(200);
 
-      const bkgRes = res.body as BorrelkaartGroupResponse;
+      const bkgRes = res.body as VoucherGroupResponse;
 
-      expect(bkgRes, 'borrelkaart group not found').to.not.be.empty;
-      bkgEq(BorrelkaartGroupService.asBorrelkaartGroupParams(ctx.validBorrelkaartGroupReq), bkgRes);
+      expect(bkgRes, 'voucher group not found').to.not.be.empty;
+      bkgEq(VoucherGroupService.asVoucherGroupParams(ctx.validVoucherGroupReq), bkgRes);
     });
-    it('should return an HTTP 404 if the borrelkaart group with given id does not exist', async () => {
-      // get borrelkaart group by id
+    it('should return an HTTP 404 if the voucher group with given id does not exist', async () => {
+      // get voucher group by id
       const res = await request(ctx.app)
-        .get('/borrelkaartgroups/1')
+        .get('/vouchergroups/1')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
       // not found code
@@ -367,102 +367,102 @@ describe('BorrelkaartGroupController', async (): Promise<void> => {
 
       expect(
         res.body,
-        'borrelkaart group found while id not in database',
-      ).to.equal('Borrelkaart group not found.');
+        'voucher group found while id not in database',
+      ).to.equal('Voucher group not found.');
     });
     it('should return an HTTP 403 if not admin', async () => {
-      // save borrelkaart group
-      await saveBKG(ctx.validBorrelkaartGroupReq);
+      // save voucher group
+      await saveBKG(ctx.validVoucherGroupReq);
 
-      // get borrelkaart group by id
+      // get voucher group by id
       const res = await request(ctx.app)
-        .get('/borrelkaartgroups/1')
+        .get('/vouchergroups/1')
         .set('Authorization', `Bearer ${ctx.token}`);
 
       // forbidden code
       expect(res.status).to.equal(403);
 
-      const bkgRes = res.body as BorrelkaartGroupResponse;
+      const bkgRes = res.body as VoucherGroupResponse;
 
-      expect(bkgRes, 'borrelkaart group returned').to.be.empty;
+      expect(bkgRes, 'voucher group returned').to.be.empty;
     });
   });
 
-  describe('PATCH /borrelkaartgroups/:id', () => {
-    it('should update and return an HTTP 200 and the borrelkaart group and users if admin', async () => {
-      await saveBKG(ctx.validBorrelkaartGroupReq);
+  describe('PATCH /vouchergroups/:id', () => {
+    it('should update and return an HTTP 200 and the voucher group and users if admin', async () => {
+      await saveBKG(ctx.validVoucherGroupReq);
 
-      // update borrelkaart group by id
+      // update voucher group by id
       const res = await request(ctx.app)
-        .patch('/borrelkaartgroups/1')
+        .patch('/vouchergroups/1')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
-        .send(ctx.validBorrelkaartGroupReq);
+        .send(ctx.validVoucherGroupReq);
 
       // success code
       expect(res.status).to.equal(200);
 
       expect(
         ctx.specification.validateModel(
-          'BorrelkaartGroupResponse',
+          'VoucherGroupResponse',
           res.body,
           false,
           true,
         ).valid,
       ).to.be.true;
 
-      // check returned borrelkaart group
+      // check returned voucher group
       bkgEq(
-        BorrelkaartGroupService.asBorrelkaartGroupParams(ctx.validBorrelkaartGroupReq),
-        res.body as BorrelkaartGroupResponse,
+        VoucherGroupService.asVoucherGroupParams(ctx.validVoucherGroupReq),
+        res.body as VoucherGroupResponse,
       );
     });
-    it('should return an HTTP 400 if given borrelkaart group is invalid', async () => {
-      await saveBKG(ctx.validBorrelkaartGroupReq);
+    it('should return an HTTP 400 if given voucher group is invalid', async () => {
+      await saveBKG(ctx.validVoucherGroupReq);
 
-      // update borrelkaart group by id
+      // update voucher group by id
       const res = await request(ctx.app)
-        .patch('/borrelkaartgroups/1')
+        .patch('/vouchergroups/1')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
-        .send(ctx.invalidBorrelkaartGroupReq);
+        .send(ctx.invalidVoucherGroupReq);
 
       // invalid code
       expect(res.status).to.equal(400);
 
       // check empty body
-      expect(res.body, 'borrelkaart group not invalidated').to.equal(
-        'Invalid borrelkaart group.',
+      expect(res.body, 'voucher group not invalidated').to.equal(
+        'Invalid voucher group.',
       );
     });
-    it('should return an HTTP 404 if the borrelkaart group with given id does not exist', async () => {
-      // patch borrelkaart by id
+    it('should return an HTTP 404 if the voucher group with given id does not exist', async () => {
+      // patch voucher by id
       const res = await request(ctx.app)
-        .patch('/borrelkaartgroups/1')
+        .patch('/vouchergroups/1')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
-        .send(ctx.validBorrelkaartGroupReq);
+        .send(ctx.validVoucherGroupReq);
 
       // not found code
       expect(res.status).to.equal(404);
 
       expect(
         res.body,
-        'borrelkaart group found while id not in database',
-      ).to.equal('Borrelkaart group not found.');
+        'voucher group found while id not in database',
+      ).to.equal('Voucher group not found.');
 
     });
     it('should return an HTTP 403 if not admin', async () => {
-      await saveBKG(ctx.validBorrelkaartGroupReq);
+      await saveBKG(ctx.validVoucherGroupReq);
 
-      // update borrelkaart group by id
+      // update voucher group by id
       const res = await request(ctx.app)
-        .patch('/borrelkaartgroups/1')
+        .patch('/vouchergroups/1')
         .set('Authorization', `Bearer ${ctx.token}`)
-        .send(ctx.validBorrelkaartGroupReq);
+        .send(ctx.validVoucherGroupReq);
 
       // forbidden code
       expect(res.status).to.equal(403);
 
       // check empty body
-      expect(res.body, 'returned a borrelkaart group').to.be.empty;
+      expect(res.body, 'returned a voucher group').to.be.empty;
     });
   });
 });

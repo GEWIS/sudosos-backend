@@ -22,7 +22,7 @@ import ProductRevision from '../../src/entity/product/product-revision';
 import ContainerRevision from '../../src/entity/container/container-revision';
 import PointOfSaleRevision from '../../src/entity/point-of-sale/point-of-sale-revision';
 import { BaseTransactionResponse } from '../../src/controller/response/transaction-response';
-import { UserResponse } from '../../src/controller/response/user-response';
+import { BaseUserResponse, UserResponse } from '../../src/controller/response/user-response';
 import { BasePointOfSaleResponse } from '../../src/controller/response/point-of-sale-response';
 
 export function verifyUserEntity(
@@ -36,6 +36,18 @@ export function verifyUserEntity(
   expect(user.active).to.not.be.null;
   expect(user.deleted).to.be.false;
   expect(Object.values(UserType)).to.include(user.type);
+}
+
+export function verifyBaseUserResponse(
+  spec: SwaggerSpecification, userResponse: BaseUserResponse,
+): void {
+  const validation = spec.validateModel('BaseUserResponse', userResponse, true, false);
+  expect(validation.valid).to.be.true;
+  expect(userResponse.id).to.be.at.least(0);
+  expect(userResponse.firstName).to.be.not.empty;
+  expect(userResponse.lastName).to.be.not.undefined;
+  expect(userResponse.lastName).to.be.not.null;
+  expect(userResponse.nickname).to.satisfy((nick: string) => nick == null || nick.length >= 1);
 }
 
 export function verifyUserResponse(
@@ -112,7 +124,7 @@ export function verifyBaseTransactionEntity(
   expect(baseTransaction.value.amount).to.be.at.least(0);
   expect(baseTransaction.createdAt).to.be.not.undefined;
   expect(baseTransaction.createdAt).to.be.not.null;
-  verifyUserResponse(spec, baseTransaction.from, true);
-  verifyUserResponse(spec, baseTransaction.createdBy, true);
+  verifyBaseUserResponse(spec, baseTransaction.from);
+  verifyBaseUserResponse(spec, baseTransaction.createdBy);
   verifyBasePOSResponse(spec, baseTransaction.pointOfSale);
 }

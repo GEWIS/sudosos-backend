@@ -21,8 +21,7 @@ import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import User, { UserType } from '../entity/user/user';
-import CreateUserRequest from './request/create-user-request';
-import UpdateUserRequest from './request/update-user-request';
+import BaseUserRequest, { CreateUserRequest, UpdateUserRequest } from './request/user-request';
 import { parseRequestPagination } from '../helpers/pagination';
 import ProductService from '../service/product-service';
 import PointOfSaleService from '../service/point-of-sale-service';
@@ -302,7 +301,7 @@ export default class UserController extends BaseController {
 
   static getAttributes(req: RequestWithToken): string[] {
     const attributes: string[] = [];
-    const body = req.body as UpdateUserRequest;
+    const body = req.body as BaseUserRequest;
     for (const key in body) {
       if (body.hasOwnProperty(key)) {
         attributes.push(key);
@@ -323,7 +322,7 @@ export default class UserController extends BaseController {
    * @param {boolean} active.query - Filter based if the user is active
    * @param {boolean} ofAge.query - Filter based if the user is 18+
    * @param {integer} id.query - Filter based on user ID
-   * @param {string} type.query.enum{MEMBER,ORGAN,BORRELKAART,LOCAL_USER,LOCAL_ADMIN,INVOICE,AUTOMATIC_INVOICE} - Filter based on user type.
+   * @param {string} type.query.enum{MEMBER,ORGAN,VOUCHER,LOCAL_USER,LOCAL_ADMIN,INVOICE,AUTOMATIC_INVOICE} - Filter based on user type.
    * @returns {PaginatedUserResponse.model} 200 - A list of all users
    */
   public async getAllUsers(req: RequestWithToken, res: Response): Promise<void> {
@@ -724,10 +723,10 @@ export default class UserController extends BaseController {
    * @operationId updateUser
    * @group users - Operations of user controller
    * @param {integer} id.path.required - The id of the user
-   * @param {UpdateUserRequest.model} user.body.required -
+   * @param {UserRequest.model} user.body.required -
    * The user which should be updated
    * @security JWT
-   * @returns {UpdateUserRequest.model} 200 - New user
+   * @returns {UserRequest.model} 200 - New user
    * @returns {string} 400 - Bad request
    */
   public async updateUser(req: RequestWithToken, res: Response): Promise<void> {
