@@ -136,4 +136,15 @@ export default class User extends BaseEntity {
 
   @OneToMany(() => AssignedRole, (role) => role.user)
   public roles: AssignedRole[];
+
+  public fullName(): string {
+    let name = this.firstName;
+    if (this.nickname) name += ` "${this.nickname}"`;
+    if (this.lastName) name += ` ${this.lastName}`;
+    return name;
+  }
+
+  public toString(): string {
+    return `${this.fullName()} (SudoSOS ID: ${this.id})`;
+  }
 }

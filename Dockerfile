@@ -15,13 +15,13 @@ RUN apk add openssl
 WORKDIR /app
 COPY ./package.json ./package-lock.json ./
 RUN npm ci
-RUN npm install pm2 -g
+RUN npm install pm2 pm2-graceful-intercom -g
 ARG TYPEORM_USERNAME
 ARG TYPEORM_PASSWORD
 ARG TYPEORM_DATABASE
 
 COPY --from=build --chown=node /app/init_scripts /app/init_scripts
-COPY --from=build --chown=node /app/process.json /app/process.json
+COPY --from=build --chown=node /app/pm2.json /app/pm2.json
 RUN chmod +x /app/init_scripts/start.sh
 
 COPY --from=build --chown=node /app/out/src /app/out/src
