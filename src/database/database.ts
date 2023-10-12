@@ -66,6 +66,7 @@ import UserFineGroup from '../entity/fine/userFineGroup';
 import Event from '../entity/event/event';
 import EventShiftAnswer from '../entity/event/event-shift-answer';
 import EventShift from '../entity/event/event-shift';
+import { TransactionSubscriber, TransferSubscriber } from '../subscriber';
 
 export default class Database {
   public static async initialize(): Promise<Connection> {
@@ -132,6 +133,10 @@ export default class Database {
         Event,
         EventShift,
         EventShiftAnswer,
+      ],
+      subscribers: [
+        TransactionSubscriber,
+        TransferSubscriber,
       ],
     };
     return createConnection(options);

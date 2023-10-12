@@ -194,3 +194,16 @@ export function asArrayOfNumbers(input: any): number[] | undefined {
   if (!Array.isArray(input)) return undefined;
   return input.map((i) => asNumber(i));
 }
+
+/**
+ * Converts the input to a list of dates
+ * @param input
+ * @throws TypeError - If array contains one or more invalid or undefined dates
+ */
+export function asArrayOfDates(input: any): Date[] | undefined {
+  if (!input) return undefined;
+  if (!Array.isArray(input)) input = [input];
+  const dates = input.map((i: any[]) => asDate(i));
+  if (dates.some((d: (Date | undefined)[]) => d === undefined)) throw new TypeError('Array contains invalid date');
+  return dates;
+}

@@ -16,11 +16,11 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { Connection } from 'typeorm';
-import User, { TermsOfServiceStatus, UserType } from '../../../../src/entity/user/user';
-import Transaction from '../../../../src/entity/transactions/transaction';
-import SubTransaction from '../../../../src/entity/transactions/sub-transaction';
-import Transfer from '../../../../src/entity/transactions/transfer';
-import Database from '../../../../src/database/database';
+import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
+import Transaction from '../../../src/entity/transactions/transaction';
+import SubTransaction from '../../../src/entity/transactions/sub-transaction';
+import Transfer from '../../../src/entity/transactions/transfer';
+import Database from '../../../src/database/database';
 import {
   seedContainers,
   seedPointsOfSale,
@@ -28,19 +28,19 @@ import {
   seedProducts, seedTransactions, seedTransfers,
   seedUsers,
   seedVatGroups,
-} from '../../../seed';
-import { calculateBalance } from '../../../helpers/balance';
-import ProductRevision from '../../../../src/entity/product/product-revision';
-import ContainerRevision from '../../../../src/entity/container/container-revision';
-import PointOfSaleRevision from '../../../../src/entity/point-of-sale/point-of-sale-revision';
-import Mailer from '../../../../src/mailer';
+} from '../../seed';
+import { calculateBalance } from '../../helpers/balance';
+import ProductRevision from '../../../src/entity/product/product-revision';
+import ContainerRevision from '../../../src/entity/container/container-revision';
+import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
+import Mailer from '../../../src/mailer';
 import sinon, { SinonSandbox, SinonSpy } from 'sinon';
 import nodemailer, { Transporter } from 'nodemailer';
 import { expect } from 'chai';
-import TransactionService from '../../../../src/service/transaction-service';
-import BalanceService from '../../../../src/service/balance-service';
+import TransactionService from '../../../src/service/transaction-service';
+import BalanceService from '../../../src/service/balance-service';
 
-describe('Transaction', () => {
+describe('TransactionSubscriber', () => {
   let ctx: {
     connection: Connection,
     adminUser: User,
@@ -121,16 +121,20 @@ describe('Transaction', () => {
     sendMailFake.resetHistory();
   });
 
-  describe('sendEmailNotificationIfNowInDebt', () => {
+  describe('afterInsert', () => {
     it('should send an email if someone gets into debt', async () => {
-      const user = ctx.usersNotInDebt[0];
+      const user = ctx.usersNotInDebt[1];
       const currentBalance = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers).amount;
       expect(currentBalance.getAmount()).to.be.at.least(0);
       expect((await BalanceService.getBalance(user.id)).amount.amount).to.equal(currentBalance.getAmount());
 
-      const pos = ctx.pointOfSales[0];
-      const container = ctx.containers[0];
-      const product = ctx.products[0];
+      const pos = ctx.pointOfSales.find((p) => p.pointOfSale.owner.id !== user.id);
+      const container = ctx.containers.find((c) => c.container.owner.id !== user.id);
+      const product = ctx.products.find((p) => p.product.owner.id !== user.id);
+
+      expect(pos).to.not.be.undefined;
+      expect(container).to.not.be.undefined;
+      expect(product).to.not.be.undefined;
 
       const amount = Math.ceil(currentBalance.getAmount() / product.priceInclVat.getAmount()) + 1 ;
       const totalPriceInclVat = product.priceInclVat.multiply(amount).toObject();
@@ -163,7 +167,7 @@ describe('Transaction', () => {
       expect(sendMailFake).to.be.calledOnce;
     });
     it('should not send email if someone does not go into debt', async () => {
-      const user = ctx.usersNotInDebt[1];
+      const user = ctx.usersNotInDebt[2];
       const currentBalance = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers).amount;
       expect(currentBalance.getAmount()).to.be.at.least(0);
       expect((await BalanceService.getBalance(user.id)).amount.amount).to.equal(currentBalance.getAmount());
@@ -172,8 +176,8 @@ describe('Transaction', () => {
       const container = ctx.containers[0];
       const product = ctx.products[0];
 
-      const amount = Math.floor(currentBalance.getAmount() / product.priceInclVat.getAmount()) - 1;
-      expect(amount).to.be.at.least(0);
+      const amount = Math.floor(currentBalance.getAmount() / product.priceInclVat.getAmount());
+      expect(amount).to.be.at.least(1);
       const totalPriceInclVat = product.priceInclVat.multiply(amount).toObject();
       await TransactionService.createTransaction({
         from: user.id,
