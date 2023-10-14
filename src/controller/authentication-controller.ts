@@ -15,18 +15,18 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { Request, Response } from 'express';
-import log4js, { Logger } from 'log4js';
-import BaseController, { BaseControllerOptions } from './base-controller';
+import {Request, Response} from 'express';
+import log4js, {Logger} from 'log4js';
+import BaseController, {BaseControllerOptions} from './base-controller';
 import Policy from './policy';
-import User from '../entity/user/user';
+import User, {UserType} from '../entity/user/user';
 import AuthenticationMockRequest from './request/authentication-mock-request';
 import TokenHandler from '../authentication/token-handler';
-import AuthenticationService, { AuthenticationContext } from '../service/authentication-service';
+import AuthenticationService, {AuthenticationContext} from '../service/authentication-service';
 import AuthenticationLDAPRequest from './request/authentication-ldap-request';
 import RoleManager from '../rbac/role-manager';
 import wrapInManager from '../helpers/database';
-import { LDAPUser } from '../helpers/ad';
+import {LDAPUser} from '../helpers/ad';
 import AuthenticationLocalRequest from './request/authentication-local-request';
 import PinAuthenticator from '../entity/authenticator/pin-authenticator';
 import AuthenticationPinRequest from './request/authentication-pin-request';
@@ -391,7 +391,7 @@ export default class AuthenticationController extends BaseController {
     this.logger.trace('Reset request for user', body.accountMail);
     try {
       const user = await User.findOne({
-        where: { email: body.accountMail, deleted: false },
+        where: { email: body.accountMail, deleted: false, type: UserType.LOCAL_USER },
       });
       // If the user does not exist we simply return a success code as to not leak info.
       if (!user) {
