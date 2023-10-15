@@ -16,10 +16,10 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  Entity, JoinColumn, ManyToOne, PrimaryColumn,
+  Entity, Index, JoinColumn, ManyToOne, PrimaryColumn,
 } from 'typeorm';
 import User from '../user/user';
-import AuthenticationMethod from './authentication-method';
+import BaseEntityWithoutId from '../base-entity-without-id';
 
 /**
  * @typedef {AuthenticationMethod} MemberAuthenticator
@@ -27,11 +27,19 @@ import AuthenticationMethod from './authentication-method';
  * authenticate as.
  */
 @Entity()
-export default class MemberAuthenticator extends AuthenticationMethod {
-  @PrimaryColumn()
+export default class MemberAuthenticator extends BaseEntityWithoutId {
+  @PrimaryColumn({ unique:false })
   public authenticateAsId: number;
 
   @ManyToOne(() => User, { nullable: false })
   @JoinColumn({ name: 'authenticateAsId' })
   public authenticateAs: User;
+
+  @PrimaryColumn({ unique:false })
+  @Index({ unique: false })
+  public userId: number;
+
+  @ManyToOne(() => User, { nullable: false, eager: true })
+  @JoinColumn({ name: 'userId' })
+  public user: User;
 }

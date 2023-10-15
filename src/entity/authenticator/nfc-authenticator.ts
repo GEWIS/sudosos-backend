@@ -16,17 +16,25 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  Column, Entity, Index,
+  Entity, Index, JoinColumn, OneToOne, PrimaryColumn,
 } from 'typeorm';
-import AuthenticationMethod from './authentication-method';
+import User from '../user/user';
+import BaseEntityWithoutId from '../base-entity-without-id';
 
 /**
  * @typedef {AuthenticationMethod} NfcAuthenticator
  * @property {string} nfcCode.required - The UID of the NFC chip
  */
 @Entity()
-export default class NfcAuthenticator extends AuthenticationMethod {
-  @Index()
-  @Column({ unique: true })
+export default class NfcAuthenticator extends BaseEntityWithoutId {
+  @Index({ unique: true })
+  @PrimaryColumn({ unique: true })
   public nfcCode: string;
+
+  @PrimaryColumn({ unique: true })
+  public userId: number;
+
+  @OneToOne(() => User, { nullable: false, eager: true })
+  @JoinColumn({ name: 'userId' })
+  public user: User;
 }
