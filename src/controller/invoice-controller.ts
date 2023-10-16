@@ -93,6 +93,8 @@ export default class InvoiceController extends BaseController {
    * @param {boolean} returnEntries.query - Boolean if invoice entries should be returned
    * @param {string} fromDate.query - Start date for selected invoices (inclusive)
    * @param {string} tillDate.query - End date for selected invoices (exclusive)
+   * @param {integer} take.query - How many entries the endpoint should return
+   * @param {integer} skip.query - How many entries should be skipped (for pagination)
    * @returns {PaginatedInvoiceResponse.model} 200 - All existing invoices
    * @returns {string} 500 - Internal server error
    */
