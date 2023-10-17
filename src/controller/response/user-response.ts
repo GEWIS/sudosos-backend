@@ -32,6 +32,16 @@ export interface BaseUserResponse extends BaseResponse {
 }
 
 /**
+ * @typedef PaginatedBaseUserResponse
+ * @property {PaginationResult.model} _pagination.required - Pagination metadata
+ * @property {Array.<BaseUserResponse>} records.required - Returned users
+ */
+export interface PaginatedBaseUserResponse {
+  _pagination: PaginationResult,
+  records: BaseUserResponse[],
+}
+
+/**
  * @typedef {BaseUserResponse} UserResponse
  * @property {boolean} active.required - Whether the user activated
  * @property {boolean} deleted.required - Whether the user is deleted

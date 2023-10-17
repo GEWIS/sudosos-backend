@@ -241,6 +241,7 @@ describe('GEWIS Helper functions', async (): Promise<void> => {
       oldBindings = { ...Bindings.Users };
       Bindings.Users = {
         parseToResponse: Gewis.parseRawUserToGewisResponse,
+        parseToBaseResponse: oldBindings.parseUserToBaseResponse,
         getBuilder: Gewis.getUserBuilder,
       };
     });

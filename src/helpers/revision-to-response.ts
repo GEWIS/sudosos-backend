@@ -155,3 +155,19 @@ export function parseRawUserToResponse(user: RawUser, timestamps = false): UserR
     canGoIntoDebt: user.canGoIntoDebt === 1,
   };
 }
+
+/**
+ * Parses a raw User Entity to a BaseUserResponse
+ * @param user
+ * @param timestamps
+ */
+export function parseRawBaseUserToResponse(user: RawUser, timestamps = false): BaseUserResponse {
+  return {
+    id: user.id,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    nickname: user.nickname,
+    createdAt: timestamps ? user.createdAt : undefined,
+    updatedAt: timestamps ? user.updatedAt : undefined,
+  };
+}
