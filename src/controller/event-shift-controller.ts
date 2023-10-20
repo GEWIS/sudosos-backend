@@ -116,7 +116,7 @@ export default class EventShiftController extends BaseController {
    * @group events - Operations of the event controller
    * @operationId createEventShift
    * @security JWT
-   * @param {CreateEventShiftRequest.model} body.body.required
+   * @param {CreateShiftRequest.model} body.body.required
    * @returns {EventShiftResponse.model} 200 - Created event shift
    * @returns {string} 400 - Validation error
    * @returns {string} 500 - Internal server error
@@ -156,7 +156,7 @@ export default class EventShiftController extends BaseController {
    * @operationId updateEventShift
    * @security JWT
    * @param {integer} id.path.required - The id of the event which should be returned
-   * @param {UpdateEventShiftRequest.model} body.body.required
+   * @param {UpdateShiftRequest.model} body.body.required
    * @returns {EventShiftResponse.model} 200 - Created event shift
    * @returns {string} 400 - Validation error
    * @returns {string} 500 - Internal server error
@@ -237,12 +237,13 @@ export default class EventShiftController extends BaseController {
    * Get the number of times a user has been selected for the given shift
    * @route GET /eventshifts/{id}/counts
    * @group events - Operations of the event controller
-   * @operationId getAllEventShifts
+   * @operationId getShiftSelectedCount
    * @security JWT
+   * @param {integer} id.path.required - The id of the event which should be deleted
    * @param {string} eventType.query - Only include events of this type
    * @param {string} afterDate.query - Only include events after this date
    * @param {string} beforeDate.query - Only include events before this date
-   * @returns {PaginatedEventShiftResponse.model} 200 - All existing event shifts
+   * @returns {Array.<EventPlanningSelectedCount>} 200 - Users with how many times they did this shift
    * @returns {string} 400 - Validation error
    * @returns {string} 500 - Internal server error
    */
