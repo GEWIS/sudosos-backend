@@ -300,7 +300,7 @@ export default class EventController extends BaseController {
   /**
    * Synchronize an event, so that EventShiftAnswers are created/deleted
    * for users that are (no longer) part of a shift
-   * @route GET /events/{id}
+   * @route POST /events/{id}/sync
    * @group events - Operations of the event controller
    * @operationId syncEventShiftAnswers
    * @security JWT
