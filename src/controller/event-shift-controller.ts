@@ -116,7 +116,7 @@ export default class EventShiftController extends BaseController {
    * @group events - Operations of the event controller
    * @operationId createEventShift
    * @security JWT
-   * @param {CreateEventShiftRequest.model} body.body.required
+   * @param {CreateShiftRequest.model} body.body.required
    * @returns {EventShiftResponse.model} 200 - Created event shift
    * @returns {string} 400 - Validation error
    * @returns {string} 500 - Internal server error
@@ -156,7 +156,7 @@ export default class EventShiftController extends BaseController {
    * @operationId updateEventShift
    * @security JWT
    * @param {integer} id.path.required - The id of the event which should be returned
-   * @param {UpdateEventShiftRequest.model} body.body.required
+   * @param {UpdateShiftRequest.model} body.body.required
    * @returns {EventShiftResponse.model} 200 - Created event shift
    * @returns {string} 400 - Validation error
    * @returns {string} 500 - Internal server error
