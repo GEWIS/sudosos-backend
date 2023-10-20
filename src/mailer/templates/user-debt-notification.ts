@@ -45,7 +45,7 @@ Volgens onze administratie heb je momenteel een schuld bij SudoSOS.
 Het gaat hierbij om een bedrag van:
 ${context.balance.toFormat()}
 
-Ga snel naar de SudoSOS website om je saldo op te hogen! Zo voorkom je dat je een boete krijgt.
+Ga snel naar de SudoSOS website(https://sudosos.gewis.nl) om je saldo op te hogen! Zo voorkom je dat je een boete krijgt.
 
 Tot op de borrel!
 
@@ -68,7 +68,7 @@ Dear ${context.name},
 
 Accoring to our administration, you currently have a balance of ${context.balance.toFormat()}.
 
-Go to the SudoSOS website to deposit money into your account. With this you prevent getting fined into the future.
+Go to the  <a href="https://sudosos.gewis.nl">SudoSOS website</a> to deposit money into your account. With this you prevent getting fined into the future.
 
 See you at the borel!
 
