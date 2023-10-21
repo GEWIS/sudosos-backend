@@ -356,6 +356,12 @@ export default class Gewis {
         Balance: {
           get: { all: star },
         },
+        Event : {
+          get: { all: star },
+          update: { all: star },
+          delete: { all: star },
+          create: { all: star },
+        },
       },
       assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: 'SudoSOS - BAC', user: { id: user.id } } }) != undefined,
     });
