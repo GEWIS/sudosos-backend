@@ -1,12 +1,10 @@
-name: Docker
+name: Docker Build & Push
 
 on:
   push:
     branches: [ main, develop ]
     # Publish semver tags as releases.
     tags: [ 'v*.*.*' ]
-  pull_request:
-    branches: [ main, develop ]
 
 concurrency:
     group: ${{ github.workflow }}-${{ github.ref }}
@@ -55,7 +53,7 @@ jobs:
         with:
           context: .
           platforms: linux/amd64 #SudoSOS does not run on linux/arm64
-          push: ${{ github.event_name != 'pull_request' }}
+          push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
