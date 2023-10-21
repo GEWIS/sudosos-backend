@@ -43,9 +43,9 @@ export default class DineroTransformer implements ValueTransformer {
   }
 
   /**
-   * Converts a monetary value to it's Dinero object representation.
-   * @param value - the monetary value represented as integer.
-   * @throws {TypeError} if value is non-integer.
+   * Converts a monetary value to its Dinero object representation.
+   * @param {Number} value - The monetary value represented as an integer.
+   * @throws {TypeError} If value is non-integer.
    */
   public from(value: number | string | null): Dinero {
     if (value == null) return dinero({ amount: 0 });
