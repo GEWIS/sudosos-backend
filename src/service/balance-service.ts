@@ -203,11 +203,13 @@ export default class BalanceService {
       return result;
     };
 
+    const greatest = process.env.TYPEORM_CONNECTION === 'sqlite' ? 'max' : 'greatest';
+
     let query = 'SELECT moneys2.id as id, '
       + 'moneys2.totalValue + COALESCE(b5.amount, 0) as amount, '
       + 'moneys2.count as count, '
-      + 'max(coalesce(b5.lasttransactionid, -1), coalesce(moneys2.lastTransactionId, -1)) as lastTransactionId, '
-      + 'max(coalesce(b5.lasttransferid, -1), coalesce(moneys2.lastTransferId, -1)) as lastTransferId, '
+      + `${greatest}(coalesce(b5.lasttransactionid, -1), coalesce(moneys2.lastTransactionId, -1)) as lastTransactionId, `
+      + `${greatest}(coalesce(b5.lasttransferid, -1), coalesce(moneys2.lastTransferId, -1)) as lastTransferId, `
       + 'b5.amount as cachedAmount, '
       + 'f.fine as fine, '
       + 'f.fineSince as fineSince '
