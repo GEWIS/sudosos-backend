@@ -421,14 +421,50 @@ describe('VatGroupController', () => {
   });
 
   describe('GET /vatgroups/declaration', () => {
-    it('should return response and HTTP 200', async () => {
+    const checkUserId = (userId: number): boolean => {
+      let correctId: boolean = false;
+      ctx.users.forEach((g) => {
+        if (g.id === userId) {
+          correctId = true;
+        }
+      });
+      return  correctId;
+    };
+
+    it('should return response and HTTP 200 without user Id', async () => {
       const year = 2021;
       const period = VatDeclarationPeriod.MONTHLY;
+      const vatOnly = true;
+      const userId: number = undefined;
 
       const res = await request(ctx.app)
         .get('/vatgroups/declaration')
         .set('Authorization', `Bearer ${ctx.token}`)
-        .query({ year, period });
+        .query({ year, period, vatOnly, userId });
+
+      expect(res.status).to.equal(200);
+
+      const response = res.body as VatDeclarationResponse;
+      const validation = ctx.specification.validateModel('VatDeclarationResponse', response, false, true);
+
+      expect(validation.valid).to.be.true;
+      expect(response.period).to.equal(period);
+      expect(response.calendarYear).to.equal(year);
+    });
+    it('should return response and HTTP 200 with user Id', async () => {
+      const year = 2021;
+      const period = VatDeclarationPeriod.MONTHLY;
+      const vatOnly = true;
+      const userId = 18;
+
+      const res = await request(ctx.app)
+        .get('/vatgroups/declaration')
+        .set('Authorization', `Bearer ${ctx.token}`)
+        .query({ year, period, vatOnly, userId });
+
+      const userIdCorrect = checkUserId(userId);
+
+      expect(userIdCorrect).to.equal(true);
 
       expect(res.status).to.equal(200);
 
@@ -441,34 +477,49 @@ describe('VatGroupController', () => {
     });
     it('should return HTTP 400 if year is missing', async () => {
       const period = VatDeclarationPeriod.MONTHLY;
+      const vatOnly = true;
 
       const res = await request(ctx.app)
         .get('/vatgroups/declaration')
         .set('Authorization', `Bearer ${ctx.token}`)
-        .query({ period });
+        .query({ period, vatOnly });
 
       expect(res.status).to.equal(400);
-      expect(res.text).to.equal('Missing year or period.');
+      expect(res.text).to.equal('Missing year or period or vatOnly selection.');
     });
     it('should return HTTP 400 if period is missing', async () => {
       const year = 2021;
+      const vatOnly = true;
 
       const res = await request(ctx.app)
         .get('/vatgroups/declaration')
         .set('Authorization', `Bearer ${ctx.token}`)
-        .query({ year });
+        .query({ year, vatOnly });
 
       expect(res.status).to.equal(400);
-      expect(res.text).to.equal('Missing year or period.');
+      expect(res.text).to.equal('Missing year or period or vatOnly selection.');
     });
-    it('should return HTTP 400 is year has an invalid value', async () => {
-      const year = 'Yeeeaaahhooo';
+    it('should return HTTP 400 if vatOnly is missing', async () => {
+      const year = 2021;
       const period = VatDeclarationPeriod.MONTHLY;
 
       const res = await request(ctx.app)
         .get('/vatgroups/declaration')
         .set('Authorization', `Bearer ${ctx.token}`)
         .query({ year, period });
+
+      expect(res.status).to.equal(400);
+      expect(res.text).to.equal('Missing year or period or vatOnly selection.');
+    });
+    it('should return HTTP 400 is year has an invalid value', async () => {
+      const year = 'Yeeeaaahhooo';
+      const period = VatDeclarationPeriod.MONTHLY;
+      const vatOnly = true;
+
+      const res = await request(ctx.app)
+        .get('/vatgroups/declaration')
+        .set('Authorization', `Bearer ${ctx.token}`)
+        .query({ year, period, vatOnly });
 
       expect(res.status).to.equal(400);
       expect(res.text).to.equal('"Input \'Yeeeaaahhooo\' is not a number."');
@@ -484,6 +535,23 @@ describe('VatGroupController', () => {
 
       expect(res.status).to.equal(400);
       expect(res.text).to.equal('"Input \'Yeeeaaahhooo\' is not a valid VatDeclarationPeriod."');
+    });
+    it('should return HTTP 400 if userId does not exist', async () => {
+      const year = 2021;
+      const period = VatDeclarationPeriod.MONTHLY;
+      const vatOnly = true;
+      const userId = 35;
+
+      const res = await request(ctx.app)
+        .get('/vatgroups/declaration')
+        .set('Authorization', `Bearer ${ctx.token}`)
+        .query({ year, period, vatOnly, userId });
+
+      const userIdCorrect = checkUserId(userId);
+
+      expect(userIdCorrect).to.equal(false);
+      expect(res.status).to.equal(400);
+      expect(res.text).to.equal('The Id that was entered does not exist!');
     });
   });
 });

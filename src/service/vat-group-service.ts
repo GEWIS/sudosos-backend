@@ -32,6 +32,7 @@ import SubTransactionRow from '../entity/transactions/sub-transaction-row';
 import ProductRevision from '../entity/product/product-revision';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
 import ProductService from './product-service';
+import SubTransaction from '../entity/transactions/sub-transaction';
 
 interface VatGroupFilterParameters {
   vatGroupId?: number;
@@ -54,6 +55,14 @@ interface VatDeclarationParams {
    * Calendar year
    */
   year: number;
+  /**
+   * Do you want to see VAT only or all expenses
+   */
+  vatOnly: boolean;
+  /**
+   * User whose expenses you want to see
+   */
+  userId: number;
 }
 
 export async function canSetVatGroupToDeleted(vatGroupId: number): Promise<boolean> {
@@ -76,6 +85,8 @@ export function parseGetVatCalculationValuesParams(req: RequestWithToken): VatDe
   return {
     period: asVatDeclarationPeriod(req.query.period),
     year: asNumber(req.query.year),
+    vatOnly: asBoolean(req.query.vatOnly),
+    userId: asNumber(req.query.userId),
   };
 }
 
@@ -190,11 +201,18 @@ export default class VatGroupService {
         process.env.TYPEORM_CONNECTION === 'sqlite'
           ? 'Strftime(\'%Y\', str.createdAt) as year'
           : 'DATE_FORMAT(str.createdAt, \'%Y\') as year',
-        'SUM(ROUND((str.amount * product.priceInclVat * vatgroup.percentage) / (100 + vatgroup.percentage))) as value',
+        params.vatOnly === true
+          ? 'SUM(ROUND((str.amount * product.priceInclVat * vatgroup.percentage) / (100 + vatgroup.percentage))) as value'
+          : 'SUM(ROUND((str.amount * product.priceInclVat))) as value',
       ])
       .innerJoin(ProductRevision, 'product', 'str.productRevision = product.revision AND str.productProductId = product.productId')
-      .innerJoin(VatGroup, 'vatgroup', 'product.vatId = vatgroup.id')
-      .where('str.invoiceId IS NULL')
+      .innerJoin(VatGroup, 'vatgroup', 'product.vatId = vatgroup.id');
+    
+    if (params.userId != undefined) {
+      builder.innerJoin(SubTransaction, 'st', 'str.subTransactionId = st.id AND st.toId = :userId', {userId: params.userId});
+
+    }
+    builder.where('str.invoiceId IS NULL')
       .andWhere(`${process.env.TYPEORM_CONNECTION === 'sqlite'
         ? 'Strftime(\'%Y\', str.createdAt)'
         : 'DATE_FORMAT(str.createdAt, \'%Y\')'} = :year`, { year: params.year.toString() })

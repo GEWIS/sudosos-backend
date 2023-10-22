@@ -34,6 +34,8 @@ import {
 import VatGroupService from '../../../src/service/vat-group-service';
 import { VatDeclarationResponse } from '../../../src/controller/response/vat-group-response';
 
+
+
 describe('VatGroupService', () => {
   let ctx: {
     connection: Connection,
@@ -124,22 +126,45 @@ describe('VatGroupService', () => {
   });
 
   describe('calculateVatDeclaration', async () => {
-    const calculateVatValues = (year: number, period: number): any => {
+    const calculateVatValues = (year: number, period: number, vatOnly: boolean, userId: number): any => {
       const actualValues: any = {};
       ctx.vatGroups.forEach((g) => {
         actualValues[g.id] = new Array(Math.ceil(12 / period)).fill(0);
       });
-      ctx.transactions.forEach((g) => g.subTransactions
+
+      let result: Transaction[] = [];
+
+      if (userId != undefined) {
+        ctx.transactions.forEach((g) => g.subTransactions
+          .forEach((s) => {
+            if (s.to.id === userId) {
+              if (ctx.transactions[g.id] != undefined) {
+                result.push(ctx.transactions[g.id]);
+              }
+            }
+          }),
+        );
+      } else {
+        result = ctx.transactions;
+      }
+
+      result.forEach((g) => g.subTransactions
         .forEach((s) => s.subTransactionRows
           .forEach((r) => {
             const { vat } = r.product;
             const y = g.createdAt.getFullYear();
             const m = Math.floor(g.createdAt.getMonth() / period);
             if (y === year) {
-              actualValues[vat.id][m] += Math.round(
-                (r.amount * r.product.priceInclVat.getAmount() * vat.percentage)
-                / (100 + vat.percentage),
-              );
+              if (vatOnly == true) {
+                actualValues[vat.id][m] += Math.round(
+                  (r.amount * r.product.priceInclVat.getAmount() * vat.percentage)
+                      / (100 + vat.percentage),
+                );
+              } else {
+                actualValues[vat.id][m] += Math.round(
+                  (r.amount * r.product.priceInclVat.getAmount()),
+                );
+              }
             }
           })));
 
@@ -155,7 +180,7 @@ describe('VatGroupService', () => {
     };
 
     const testVatCalculations = async (
-      year: number, period: VatDeclarationPeriod,
+      year: number, period: VatDeclarationPeriod, vatOnly: boolean, userId: number,
     ): Promise<VatDeclarationResponse> => {
       let p: number;
       switch (period) {
@@ -164,11 +189,13 @@ describe('VatGroupService', () => {
         case VatDeclarationPeriod.ANNUALLY: p = 12; break;
         default: throw new Error();
       }
-      const actualValues = calculateVatValues(year, p);
+      const actualValues = calculateVatValues(year, p, vatOnly, userId);
 
       const result = await VatGroupService.calculateVatDeclaration({
         year,
         period,
+        vatOnly,
+        userId,
       });
 
       const actualIds = Object.keys(actualValues);
@@ -185,7 +212,7 @@ describe('VatGroupService', () => {
     };
 
     const testPeriodConsistency = async (
-      response: VatDeclarationResponse, newPeriod: VatDeclarationPeriod,
+      response: VatDeclarationResponse, newPeriod: VatDeclarationPeriod, vatOnly: boolean, userId: number,
     ): Promise<void> => {
       let p1: number;
       switch (response.period) {
@@ -205,6 +232,8 @@ describe('VatGroupService', () => {
       const newResponse = await VatGroupService.calculateVatDeclaration({
         year: response.calendarYear,
         period: newPeriod,
+        vatOnly: vatOnly,
+        userId: userId,
       });
 
       expect(response.rows.length).to.equal(newResponse.rows.length);
@@ -252,33 +281,79 @@ describe('VatGroupService', () => {
       ctx.vatGroups.push(extraVatGroup);
     });
 
-    it('should correctly calculate monthly VAT declaration 2021', async () => {
-      await testVatCalculations(2021, VatDeclarationPeriod.MONTHLY);
+    it('should correctly only calculate monthly VAT declaration 2021', async () => {
+      await testVatCalculations(2021, VatDeclarationPeriod.MONTHLY, true, undefined);
     });
 
-    it('should correctly calculate monthly VAT declaration 2022', async () => {
-      await testVatCalculations(2022, VatDeclarationPeriod.MONTHLY);
+    it('should correctly only calculate monthly VAT declaration 2022', async () => {
+      await testVatCalculations(2022, VatDeclarationPeriod.MONTHLY, true, undefined);
     });
 
-    it('should correctly calculate quarterly VAT declaration 2021', async () => {
-      const response = await testVatCalculations(2021, VatDeclarationPeriod.QUARTERLY);
-      await testPeriodConsistency(response, VatDeclarationPeriod.MONTHLY);
+    it('should correctly only calculate quarterly VAT declaration 2021', async () => {
+      const response = await testVatCalculations(2021, VatDeclarationPeriod.QUARTERLY, true, undefined);
+      await testPeriodConsistency(response, VatDeclarationPeriod.MONTHLY, true, undefined);
     });
 
-    it('should correctly calculate quarterly VAT declaration 2022', async () => {
-      const response = await testVatCalculations(2022, VatDeclarationPeriod.QUARTERLY);
-      await testPeriodConsistency(response, VatDeclarationPeriod.MONTHLY);
+    it('should correctly only calculate quarterly VAT declaration 2022', async () => {
+      const response = await testVatCalculations(2022, VatDeclarationPeriod.QUARTERLY, true, undefined);
+      await testPeriodConsistency(response, VatDeclarationPeriod.MONTHLY, true, undefined);
     });
 
-    it('should correctly calculate annual VAT declaration 2021', async () => {
-      const response = await testVatCalculations(2021, VatDeclarationPeriod.ANNUALLY);
-      await testPeriodConsistency(response, VatDeclarationPeriod.QUARTERLY);
+    it('should correctly only calculate annual VAT declaration 2021', async () => {
+      const response = await testVatCalculations(2021, VatDeclarationPeriod.ANNUALLY, true, undefined);
+      await testPeriodConsistency(response, VatDeclarationPeriod.QUARTERLY, true, undefined);
     });
 
-    it('should correctly calculate annual VAT declaration 2022', async () => {
-      const response = await testVatCalculations(2022, VatDeclarationPeriod.ANNUALLY);
-      await testPeriodConsistency(response, VatDeclarationPeriod.QUARTERLY);
+    it('should correctly only calculate annual VAT declaration 2022', async () => {
+      const response = await testVatCalculations(2022, VatDeclarationPeriod.ANNUALLY, true, undefined);
+      await testPeriodConsistency(response, VatDeclarationPeriod.QUARTERLY, true, undefined);
     });
+
+    it('should correctly calculate monthly all earnings 2021', async () => {
+      await testVatCalculations(2021, VatDeclarationPeriod.MONTHLY, false, undefined);
+    });
+
+    it('should correctly calculate monthly all earnings 2022', async () => {
+      await testVatCalculations(2022, VatDeclarationPeriod.MONTHLY, false, undefined);
+    });
+
+    it('should correctly calculate quarterly all earnings 2021', async () => {
+      const response = await testVatCalculations(2021, VatDeclarationPeriod.QUARTERLY, false, undefined);
+      await testPeriodConsistency(response, VatDeclarationPeriod.MONTHLY, false, undefined);
+    });
+
+    it('should correctly calculate quarterly all earnings 2022', async () => {
+      const response = await testVatCalculations(2022, VatDeclarationPeriod.QUARTERLY, false, undefined);
+      await testPeriodConsistency(response, VatDeclarationPeriod.MONTHLY, false, undefined);
+    });
+
+    it('should correctly calculate annual all expenses 2021', async () => {
+      const response = await testVatCalculations(2021, VatDeclarationPeriod.ANNUALLY, false, undefined);
+      await testPeriodConsistency(response, VatDeclarationPeriod.QUARTERLY, false, undefined);
+    });
+
+    it('should correctly calculate annual all earnings 2022', async () => {
+      const response = await testVatCalculations(2022, VatDeclarationPeriod.ANNUALLY, false, undefined);
+      await testPeriodConsistency(response, VatDeclarationPeriod.QUARTERLY, false, undefined);
+    });
+
+    it('should correctly only calculate monthly VAT declaration 2021 for ID 18', async () => {
+      await testVatCalculations(2021, VatDeclarationPeriod.MONTHLY, true, 18);
+    });
+
+    it('should not return any VAT decleration for ID 5', async () => {
+      await testVatCalculations(2021, VatDeclarationPeriod.MONTHLY, true, 5);
+    });
+
+    it('should correctly calculate all monthly earnings 2021 for ID 18', async () => {
+      await testVatCalculations(2021, VatDeclarationPeriod.MONTHLY, false, 18);
+    });
+
+    it('should not return any earnings for ID 5', async () => {
+      await testVatCalculations(2021, VatDeclarationPeriod.MONTHLY, false, 5);
+    });
+
+
   });
 
   describe('create VAT groups', () => {
