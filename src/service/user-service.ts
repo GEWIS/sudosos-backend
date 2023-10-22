@@ -18,7 +18,7 @@
 import { RequestWithToken } from '../middleware/token-middleware';
 import { asBoolean, asNumber, asUserType } from '../helpers/validators';
 import { PaginationParameters } from '../helpers/pagination';
-import { PaginatedUserResponse, UserResponse } from '../controller/response/user-response';
+import { PaginatedBaseUserResponse, PaginatedUserResponse, UserResponse } from '../controller/response/user-response';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import User, { LocalUserTypes, TermsOfServiceStatus, TOSRequired, UserType } from '../entity/user/user';
 import MemberAuthenticator from '../entity/authenticator/member-authenticator';
@@ -35,7 +35,7 @@ import { AcceptTosRequest } from '../controller/request/accept-tos-request';
 import Bindings from '../helpers/bindings';
 import AuthenticationService from './authentication-service';
 import WelcomeWithReset from '../mailer/templates/welcome-with-reset';
-import { Brackets } from 'typeorm';
+import { Brackets, SelectQueryBuilder } from 'typeorm';
 
 /**
  * Parameters used to filter on Get Users functions.
@@ -76,7 +76,53 @@ export default class UserService {
     filters: UserFilterParameters = {}, pagination: PaginationParameters = {},
   ): Promise<PaginatedUserResponse> {
     const { take, skip } = pagination;
+    const builder = await this.getUsersBuilder(filters);
 
+    const users = await builder.limit(take).offset(skip).getRawMany();
+    const count = await builder.getCount();
+
+    const records = users.map((u) => Bindings.Users.parseToResponse(u, true));
+
+    return {
+      _pagination: {
+        take, skip, count,
+      },
+      records,
+    };
+  }
+
+  /**
+   * Function for getting al Users with limited information.
+   * @param filters - Query filters to apply
+   * @param pagination - Pagination to adhere to
+   */
+  public static async getBaseUsers(
+    filters: UserFilterParameters = {}, pagination: PaginationParameters = {},
+  ): Promise<PaginatedBaseUserResponse> {
+    const { take, skip } = pagination;
+    const builder = await this.getUsersBuilder(filters);
+
+    const users = await builder.limit(take).offset(skip).getRawMany();
+    const count = await builder.getCount();
+
+    const records = users.map((u) => Bindings.Users.parseToBaseResponse(u, true));
+
+    return {
+      _pagination: {
+        take, skip, count,
+      },
+      records,
+    };
+  }
+
+  /**
+   * Function for getting al Users
+   * @param filters - Query filters to apply
+   * @param pagination - Pagination to adhere to
+   */
+  private static async getUsersBuilder(
+    filters: UserFilterParameters = {},
+  ): Promise<SelectQueryBuilder<User>> {
     const filterMapping: FilterMapping = {
       active: 'active',
       ofAge: 'ofAge',
@@ -129,17 +175,7 @@ export default class UserService {
       }
     }
 
-    const users = await builder.limit(take).offset(skip).getRawMany();
-    const count = await builder.getCount();
-
-    const records = users.map((u) => Bindings.Users.parseToResponse(u, true));
-
-    return {
-      _pagination: {
-        take, skip, count,
-      },
-      records,
-    };
+    return builder;
   }
 
   /**

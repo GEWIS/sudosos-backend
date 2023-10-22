@@ -148,8 +148,10 @@ export default class Gewis {
   // eslint-disable-next-line class-methods-use-this
   static overwriteBindings() {
     Bindings.ldapUserCreation = Gewis.findOrCreateGEWISUserAndBind;
+    const oldBindings = { ...Bindings.Users };
     Bindings.Users = {
       parseToResponse: Gewis.parseRawUserToGewisResponse,
+      parseToBaseResponse: oldBindings.parseToBaseResponse,
       getBuilder: Gewis.getUserBuilder,
     };
   }

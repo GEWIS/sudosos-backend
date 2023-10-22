@@ -167,6 +167,9 @@ describe('UserController', (): void => {
           delete: all,
           acceptToS: all,
         },
+        BaseUser: {
+          get: all,
+        },
         Product: {
           get: all,
         },
@@ -406,6 +409,21 @@ describe('UserController', (): void => {
       const filteredUsers = await queryUserBackend(searchQuery);
       expect(filteredUsers).length.to.be.gt(0);
       expect(searchRes.body.records.length).to.equal(filteredUsers.length);
+    });
+  });
+
+  describe('GET /users/base', () => {
+    it('should return correct model', async () => {
+      const res = await request(ctx.app)
+        .get('/users/base')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'PaginatedBaseUserResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
     });
   });
 

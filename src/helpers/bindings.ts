@@ -19,8 +19,8 @@ import { createQueryBuilder, EntityManager, SelectQueryBuilder } from 'typeorm';
 import User from '../entity/user/user';
 import AuthenticationService from '../service/authentication-service';
 import { LDAPUser } from './ad';
-import { parseRawUserToResponse, parseUserToResponse, RawUser } from './revision-to-response';
-import { UserResponse } from '../controller/response/user-response';
+import { parseRawBaseUserToResponse, parseRawUserToResponse, parseUserToResponse, RawUser } from './revision-to-response';
+import { BaseUserResponse, UserResponse } from '../controller/response/user-response';
 
 /**
  * Class used for setting default functions or bindings.
@@ -41,11 +41,12 @@ export default class Bindings {
     timestamps: boolean) => UserResponse = parseUserToResponse;
 
   public static Users: {
-    parseToResponse: (user: RawUser,
-      timestamps: boolean) => UserResponse
+    parseToResponse: (user: RawUser, timestamps: boolean) => UserResponse
+    parseToBaseResponse: (user: RawUser, timestamps: boolean) => BaseUserResponse
     getBuilder: () => SelectQueryBuilder<User>
   } = {
       parseToResponse: parseRawUserToResponse,
+      parseToBaseResponse: parseRawBaseUserToResponse,
       getBuilder: () => createQueryBuilder().from(User, 'user').orderBy({ 'user.id': 'ASC' }),
     };
 }

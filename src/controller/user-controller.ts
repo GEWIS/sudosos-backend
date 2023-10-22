@@ -96,6 +96,14 @@ export default class UserController extends BaseController {
           handler: this.createUser.bind(this),
         },
       },
+      '/base': {
+        GET: {
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'get', 'all', 'BaseUser', ['*'],
+          ),
+          handler: this.getAllBaseUsers.bind(this),
+        },
+      },
       '/usertype/:userType': {
         GET: {
           policy: async (req) => this.roleManager.can(
@@ -343,6 +351,46 @@ export default class UserController extends BaseController {
 
     try {
       const users = await UserService.getUsers(filters, { take, skip });
+      res.status(200).json(users);
+    } catch (error) {
+      this.logger.error('Could not get users:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * Get a list of all users whilst exposing minimal information about the users.
+   * @route GET /users/base
+   * @operationId getAllUsers
+   * @group users - Operations of user controller
+   * @security JWT
+   * @param {integer} take.query - How many users the endpoint should return
+   * @param {integer} skip.query - How many users should be skipped (for pagination)
+   * @param {string} search.query - Filter based on first name
+   * @param {boolean} active.query - Filter based if the user is active
+   * @param {boolean} ofAge.query - Filter based if the user is 18+
+   * @param {integer} id.query - Filter based on user ID
+   * @param {string} type.query.enum{MEMBER,ORGAN,VOUCHER,LOCAL_USER,LOCAL_ADMIN,INVOICE,AUTOMATIC_INVOICE} - Filter based on user type.
+   * @returns {PaginatedBaseUserResponse.model} 200 - A list of all users
+   */
+  public async getAllBaseUsers(req: RequestWithToken, res: Response): Promise<void> {
+    this.logger.trace('Get all users by user', req.token.user);
+
+    let take;
+    let skip;
+    let filters: UserFilterParameters;
+    try {
+      const pagination = parseRequestPagination(req);
+      filters = parseGetUsersFilters(req);
+      take = pagination.take;
+      skip = pagination.skip;
+    } catch (e) {
+      res.status(400).send(e.message);
+      return;
+    }
+
+    try {
+      const users = await UserService.getBaseUsers(filters, { take, skip });
       res.status(200).json(users);
     } catch (error) {
       this.logger.error('Could not get users:', error);
