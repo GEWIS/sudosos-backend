@@ -32,7 +32,7 @@ describe('Swagger', (): void => {
     };
   });
 
-  after('stop app', async () => {
+  after(async () => {
     await ctx.app.stop();
   });
 

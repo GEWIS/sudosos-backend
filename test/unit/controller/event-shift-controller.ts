@@ -151,6 +151,7 @@ describe('EventShiftController', () => {
   });
 
   after(async () => {
+    await ctx.connection.dropDatabase();
     await ctx.connection.destroy();
   });
 

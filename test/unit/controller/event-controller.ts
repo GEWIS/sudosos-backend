@@ -152,6 +152,7 @@ describe('EventController', () => {
   });
 
   after(async () => {
+    await ctx.connection.dropDatabase();
     await ctx.connection.destroy();
   });
 
