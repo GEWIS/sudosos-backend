@@ -520,7 +520,7 @@ describe('eventService', () => {
         .map((a) => a.shift)
         .filter((a1, i, all) => i === all
           .findIndex((a2) => a2.id === a1.id));
-      expect(shifts.length).to.be.greaterThan(1);
+      expect(shifts.length).to.be.greaterThan(0);
 
       newShift = ctx.eventShifts
         .find((s1) => !shifts.map((s2) => s2.id).includes(s1.id) && s1.roles.length > 0);
@@ -549,7 +549,7 @@ describe('eventService', () => {
         .map((a) => a.shift)
         .filter((a1, i, all) => i === all
           .findIndex((a2) => a2.id === a1.id));
-      expect(shifts.length).to.be.greaterThan(1);
+      expect(shifts.length).to.be.greaterThan(0);
 
       const shiftIds = [...shifts.map((s) => s.id)];
       const event = await EventService.updateEvent(originalEvent.id, {

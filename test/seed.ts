@@ -350,7 +350,7 @@ export async function seedEvents(rolesWithUsers: AssignedRole[]) {
   const events: Event[] = [];
   const eventShifts = await seedEventShifts();
   const eventShiftAnswers: EventShiftAnswer[] = [];
-  for (let i = 0; i < 5; i += 1) {
+  for (let i = 1; i <= 5; i += 1) {
     // const startDate = getRandomDate(new Date(), new Date(new Date().getTime() + 1000 * 60 * 60 * 24 * 365));
     const startDate = new Date(new Date().getTime() + ((i * 1000000) % (3600 * 24 * 365)) * 1000 + 60000);
     // Add 2,5 hours
@@ -369,7 +369,7 @@ export async function seedEvents(rolesWithUsers: AssignedRole[]) {
 
     const eventShifts1: EventShift[] = [];
     const eventShiftAnswers1: EventShiftAnswer[] = [];
-    for (let j = 0; j < ((i + 1) * 243) % 4; j += 1) {
+    for (let j = 1; j <= ((i + 1) * 243) % 4; j += 1) {
       const shift = eventShifts[((i + j) * 13) % (eventShifts.length)];
       const users = rolesWithUsers.filter((r) => shift.roles.includes(r.role));
       await Promise.all(users.map(async (r, k) => {

@@ -41,12 +41,14 @@ export default class VoucherGroup extends BaseEntity {
 
   @Column({
     type: 'datetime',
-    default: () => 'CURRENT_TIMESTAMP',
+    precision: 6,
+    default: () => 'CURRENT_TIMESTAMP(6)',
   })
   public activeStartDate: Date;
 
   @Column({
     type: 'datetime',
+    precision: 6,
   })
   public activeEndDate: Date;
 

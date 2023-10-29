@@ -495,13 +495,13 @@ export default class EventService {
       .groupBy('user.id');
     if (eventType) query = query.andWhere('event.type = :eventType', { eventType });
     if (afterDate) query = query.andWhere('event.startDate >= :afterDate', { afterDate });
-    if (beforeDate) query = query.andWhere('event.startDate <= :afterDate', { beforeDate });
+    if (beforeDate) query = query.andWhere('event.startDate <= :beforeDate', { beforeDate });
 
     const result = await query.getRawMany();
 
     return result.map((r: any) => ({
       ...parseUserToBaseResponse(r, false),
-      count: r.count,
+      count: parseInt(r.count, 10),
     }));
   }
 }

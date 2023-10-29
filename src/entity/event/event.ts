@@ -48,11 +48,13 @@ export default class Event extends BaseEntity {
 
   @Column({
     type: 'datetime',
+    precision: 6,
   })
   public startDate: Date;
 
   @Column({
     type: 'datetime',
+    precision: 6,
   })
   public endDate: Date;
 
