@@ -997,6 +997,7 @@ export async function seedStripeDeposits(users: User[]): Promise<{
   const stripeDeposits: StripeDeposit[] = [];
   const transfers: Transfer[] = [];
 
+  const date = new Date('2022-12-10');
   const totalNrOfStatuses = 3;
 
   for (let i = 0; i < users.length * totalNrOfStatuses + 1; i += 1) {
@@ -1004,6 +1005,8 @@ export async function seedStripeDeposits(users: User[]): Promise<{
     const amount = DineroTransformer.Instance.from(3900);
     const newDeposit = Object.assign(new StripeDeposit(), {
       stripeId: `FakeStripeIDDoNotUsePleaseThankYou_${i + 1}`,
+      createdAt: date,
+      updatedAt: date,
       to,
       amount,
       depositStatus: [],
@@ -1032,6 +1035,8 @@ export async function seedStripeDeposits(users: User[]): Promise<{
     const statePromises: Promise<any>[] = [];
     states.forEach((state) => {
       const newState = Object.assign(new StripeDepositStatus(), {
+        createdAt: date,
+        updatedAt: date,
         state,
         deposit: newDeposit,
       });

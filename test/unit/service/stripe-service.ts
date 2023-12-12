@@ -24,7 +24,7 @@ import { seedStripeDeposits, seedUsers } from '../../seed';
 import StripeDeposit from '../../../src/entity/deposit/stripe-deposit';
 import StripeService, { STRIPE_API_VERSION } from '../../../src/service/stripe-service';
 import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
-import { StripeDepositState } from '../../../src/entity/deposit/stripe-deposit-status';
+import StripeDepositStatus, { StripeDepositState } from '../../../src/entity/deposit/stripe-deposit-status';
 
 describe('StripeService', async (): Promise<void> => {
   let shouldSkip: boolean;
@@ -75,7 +75,7 @@ describe('StripeService', async (): Promise<void> => {
       const user = processingDeposits[0].to;
       const depositsFromUser = processingDeposits.filter((d) => d.to.id === user.id);
 
-      const deposits = await StripeService.getProcessingStripeDepositsFromUser(user.id);
+      const deposits = await StripeService.getUnfinishedStripeDeposits(user.id);
       expect(depositsFromUser.length).to.equal(deposits.length);
       deposits.forEach((d) => {
         expect(d.to.id).to.equal(user.id);
@@ -125,6 +125,9 @@ describe('StripeService', async (): Promise<void> => {
 
       await expect(StripeService.createNewDepositStatus(id, state))
         .to.eventually.be.rejectedWith(`Status ${state} already exists.`);
+
+      // Cleanup
+      await StripeDepositStatus.delete(status.id);
     };
     it('should correctly create only one created status', async () => {
       const { id } = (ctx.stripeDeposits.filter((d) => d.depositStatus.length === 0))[0];
@@ -216,7 +219,11 @@ describe('StripeService', async (): Promise<void> => {
       const afterStripeDeposit = await StripeService.getStripeDeposit(id);
       expect(afterStripeDeposit.depositStatus.length)
         .to.equal(beforeStripeDeposit.depositStatus.length + 1);
-      expect(afterStripeDeposit.depositStatus.some((s) => s.state === state)).to.be.true;
+      const newStatus = afterStripeDeposit.depositStatus.filter((s) => s.state === state);
+      expect(newStatus.length).to.equal(1);
+
+      // Cleanup
+      await StripeDepositStatus.delete(newStatus[0].id);
     };
 
     it('should correctly handle payment_intent.created', async () => {
@@ -256,6 +263,15 @@ describe('StripeService', async (): Promise<void> => {
         .to.equal(beforeStripeDeposit.depositStatus.length);
       expect(afterStripeDeposit.updatedAt.getTime())
         .to.equal(beforeStripeDeposit.updatedAt.getTime());
+    });
+  });
+
+  describe('cancelAbandonedPaymentIntents', () => {
+    it('should correctly cancel and return abandoned payment intents', async () => {
+      const actualDeposits = ctx.stripeDeposits.filter((d) => d.depositStatus.length > 1);
+      const deposits = await new StripeService().cancelAbandonedPaymentIntents();
+      expect(actualDeposits.length).to.equal(deposits.length);
+      expect(actualDeposits.map((d) => d.id)).to.deep.equalInAnyOrder(deposits.map((d) => d.id));
     });
   });
 });

@@ -24,6 +24,7 @@ import BalanceService from './service/balance-service';
 import ADService from './service/ad-service';
 import RoleManager from './rbac/role-manager';
 import Gewis from './gewis/gewis';
+import StripeService from './service/stripe-service';
 
 class CronApplication {
   logger: Logger;
@@ -71,7 +72,16 @@ async function createCronTasks(): Promise<void> {
     }));
   });
 
-  application.tasks = [syncBalances];
+  const removeAbandonedStripeDeposits = cron.schedule('39 4 * * *', () => {
+    logger.debug('Canceling abandoned Stripe deposits...');
+    new StripeService().cancelAbandonedPaymentIntents().then((res) => {
+      logger.debug(`Canceled ${res.length} abandoned Stripe deposits.`);
+    }).catch((error) => {
+      logger.error('Could not cancel abandoned Stripe deposits. ', error);
+    });
+  });
+
+  application.tasks = [syncBalances, removeAbandonedStripeDeposits];
 
   if (process.env.ENABLE_LDAP === 'true') {
     await ADService.syncUsers();

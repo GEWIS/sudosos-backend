@@ -31,6 +31,7 @@ import TransferService from './transfer-service';
 import { IsNull } from 'typeorm';
 import { parseUserToBaseResponse } from '../helpers/revision-to-response';
 import Database from '../database/database';
+import PaymentIntentCancelParams = module;
 
 export const STRIPE_API_VERSION = '2022-08-01';
 
@@ -69,23 +70,19 @@ export default class StripeService {
     };
   }
 
-  public static async getProcessingStripeDepositsFromUser(userId: number): Promise<StripeDepositResponse[]> {
+  public static async getUnfinishedStripeDeposits(userId?: number): Promise<StripeDepositResponse[]> {
     const deposits = await StripeDeposit.find({
       where: {
         to: {
           id: userId,
         },
         transfer: IsNull(),
-        depositStatus: {
-          state: StripeDepositState.PROCESSING,
-        },
       },
       relations: ['to'],
     });
 
-    return deposits.filter((d) => !d.depositStatus.some(
-      (s) => s.state === StripeDepositState.SUCCEEDED
-        || s.state === StripeDepositState.FAILED))
+    return deposits.filter((d) => d.depositStatus.every(
+      (s) => s.state === StripeDepositState.CREATED))
       .map((d) => this.asStripeDepositResponse(d));
   }
 
@@ -128,6 +125,43 @@ export default class StripeService {
   }
 
   /**
+   * Cancel a stripe deposit, only if it has the current state "CREATED"
+   * For example when a user starts a deposit but does not actually finish it
+   * @param id
+   * @param cancellation_reason
+   */
+  public async cancelStripeDeposit(id: number, cancellation_reason: PaymentIntentCancelParams) {
+    const deposit = await StripeService.getStripeDeposit(id);
+    if (deposit.depositStatus.length > 1) {
+      throw new Error('Stripe deposit can no longer be canceled, because it is already processing, has succeeded or has failed');
+    }
+
+    await this.stripe.paymentIntents.cancel(deposit.stripeId, { cancellation_reason });
+
+    // Stripe will send the CANCELED state once they have processed the cancellation via the webhook
+    return;
+  }
+
+  /**
+   * Cancel all payment intents in Stripe deposits that have no new state for at least 24 hours
+   * @return Array of all deposits that have been canceled
+   */
+  public async cancelAbandonedPaymentIntents(): Promise<StripeDepositResponse[]> {
+    const deposits = await StripeService.getUnfinishedStripeDeposits();
+    const abandonedDeposits = deposits.filter((d) => {
+      const lastChange = d.depositStatus.reduce((date, s) => {
+        const msSinceEpoch = new Date(s.updatedAt).getTime();
+        return new Date(Math.max(msSinceEpoch, date.getTime()));
+      }, new Date(0));
+      // If more than 24 hours no activity
+      return (new Date().getTime() - lastChange.getTime()) > 1000 * 60 * 60 * 24;
+    });
+
+    await Promise.all(abandonedDeposits.map(async (d) => this.cancelStripeDeposit(d.id)));
+    return abandonedDeposits;
+  }
+
+  /**
    * Validate a Stripe webhook event
    * @param body
    * @param signature
@@ -151,11 +185,14 @@ export default class StripeService {
 
       const states = deposit.depositStatus.map((status) => status.state);
       if (states.includes(state)) throw new Error(`Status ${state} already exists.`);
-      if (state === StripeDepositState.SUCCEEDED && states.includes(StripeDepositState.FAILED)) {
-        throw new Error('Cannot create status SUCCEEDED, because FAILED already exists');
+      if (state === StripeDepositState.SUCCEEDED && (states.includes(StripeDepositState.FAILED) || states.includes(StripeDepositState.CANCELED))) {
+        throw new Error('Cannot create status SUCCEEDED, because FAILED or CANCELED already exists');
       }
-      if (state === StripeDepositState.FAILED && states.includes(StripeDepositState.SUCCEEDED)) {
-        throw new Error('Cannot create status FAILED, because SUCCEEDED already exists');
+      if (state === StripeDepositState.FAILED && (states.includes(StripeDepositState.SUCCEEDED) || states.includes(StripeDepositState.CANCELED))) {
+        throw new Error('Cannot create status FAILED, because SUCCEEDED or CANCELED already exists');
+      }
+      if (state === StripeDepositState.CANCELED && (states.includes(StripeDepositState.SUCCEEDED) || states.includes(StripeDepositState.FAILED))) {
+        throw new Error('Cannot create status CANCELED, because SUCCEEDED or FAILED already exists');
       }
 
       const depositStatus = Object.assign(new StripeDepositStatus(), { deposit, state });

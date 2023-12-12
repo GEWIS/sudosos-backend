@@ -27,6 +27,7 @@ export enum StripeDepositState {
   PROCESSING = 2,
   SUCCEEDED = 3,
   FAILED = 4,
+  CANCELED = 5,
 }
 
 @Entity()

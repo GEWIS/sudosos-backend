@@ -1308,7 +1308,7 @@ export default class UserController extends BaseController {
         return;
       }
 
-      const deposits = await StripeService.getProcessingStripeDepositsFromUser(id);
+      const deposits = await StripeService.getUnfinishedStripeDeposits(id);
       res.status(200).json(deposits);
     } catch (error) {
       this.logger.error('Could not get processing deposits of user:', error);
