@@ -30,6 +30,7 @@ import {
 import TransferService from './transfer-service';
 import { IsNull } from 'typeorm';
 import { parseUserToBaseResponse } from '../helpers/revision-to-response';
+import Database from '../database/database';
 
 export const STRIPE_API_VERSION = '2022-08-01';
 
@@ -145,38 +146,40 @@ export default class StripeService {
   public static async createNewDepositStatus(
     depositId: number, state: StripeDepositState,
   ): Promise<StripeDepositStatus> {
-    let deposit = await StripeService.getStripeDeposit(depositId);
+    return Database.dataSource.transaction(async (entityManager) => {
+      let deposit = await StripeService.getStripeDeposit(depositId);
 
-    const states = deposit.depositStatus.map((status) => status.state);
-    if (states.includes(state)) throw new Error(`Status ${state} already exists.`);
-    if (state === StripeDepositState.SUCCEEDED && states.includes(StripeDepositState.FAILED)) {
-      throw new Error('Cannot create status SUCCEEDED, because FAILED already exists');
-    }
-    if (state === StripeDepositState.FAILED && states.includes(StripeDepositState.SUCCEEDED)) {
-      throw new Error('Cannot create status FAILED, because SUCCEEDED already exists');
-    }
+      const states = deposit.depositStatus.map((status) => status.state);
+      if (states.includes(state)) throw new Error(`Status ${state} already exists.`);
+      if (state === StripeDepositState.SUCCEEDED && states.includes(StripeDepositState.FAILED)) {
+        throw new Error('Cannot create status SUCCEEDED, because FAILED already exists');
+      }
+      if (state === StripeDepositState.FAILED && states.includes(StripeDepositState.SUCCEEDED)) {
+        throw new Error('Cannot create status FAILED, because SUCCEEDED already exists');
+      }
 
-    const depositStatus = Object.assign(new StripeDepositStatus(), { deposit, state });
-    await depositStatus.save();
+      const depositStatus = Object.assign(new StripeDepositStatus(), { deposit, state });
+      await entityManager.save<StripeDepositStatus>(depositStatus);
 
-    // If payment has succeeded, create the transfer
-    if (state === StripeDepositState.SUCCEEDED) {
-      deposit = await StripeService.getStripeDeposit(depositId, ['to']);
-      deposit.transfer = await TransferService.createTransfer({
-        amount: {
-          amount: deposit.amount.getAmount(),
-          precision: deposit.amount.getPrecision(),
-          currency: deposit.amount.getCurrency(),
-        },
-        toId: deposit.to.id,
-        description: deposit.stripeId,
-        fromId: undefined,
-      });
+      // If payment has succeeded, create the transfer
+      if (state === StripeDepositState.SUCCEEDED) {
+        deposit = await StripeService.getStripeDeposit(depositId, ['to']);
+        deposit.transfer = await TransferService.createTransfer({
+          amount: {
+            amount: deposit.amount.getAmount(),
+            precision: deposit.amount.getPrecision(),
+            currency: deposit.amount.getCurrency(),
+          },
+          toId: deposit.to.id,
+          description: deposit.stripeId,
+          fromId: undefined,
+        }, entityManager);
 
-      await deposit.save();
-    }
+        await deposit.save();
+      }
 
-    return depositStatus;
+      return depositStatus;
+    });
   }
 
   /**

@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  createConnection, Connection,
+  createConnection, Connection, DataSource,
 } from 'typeorm';
 import User from '../entity/user/user';
 import Product from '../entity/product/product';
@@ -69,6 +69,8 @@ import EventShift from '../entity/event/event-shift';
 import { TransactionSubscriber, TransferSubscriber } from '../subscriber';
 
 export default class Database {
+  static dataSource: DataSource;
+
   public static async initialize(): Promise<Connection> {
     const options: DataSourceOptions = {
       host: process.env.TYPEORM_HOST,
@@ -139,6 +141,7 @@ export default class Database {
         TransferSubscriber,
       ],
     };
-    return createConnection(options);
+    Database.dataSource = await createConnection(options);
+    return Database.dataSource;
   }
 }
