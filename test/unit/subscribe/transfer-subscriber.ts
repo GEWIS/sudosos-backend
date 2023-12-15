@@ -16,10 +16,10 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { Connection } from 'typeorm';
-import User from '../../../../src/entity/user/user';
-import Transaction from '../../../../src/entity/transactions/transaction';
-import Transfer from '../../../../src/entity/transactions/transfer';
-import Database from '../../../../src/database/database';
+import User from '../../../src/entity/user/user';
+import Transaction from '../../../src/entity/transactions/transaction';
+import Transfer from '../../../src/entity/transactions/transfer';
+import Database from '../../../src/database/database';
 import {
   seedContainers,
   seedPointsOfSale,
@@ -27,17 +27,17 @@ import {
   seedProducts, seedTransactions, seedTransfers,
   seedUsers,
   seedVatGroups,
-} from '../../../seed';
-import SubTransaction from '../../../../src/entity/transactions/sub-transaction';
-import { calculateBalance } from '../../../helpers/balance';
-import DebtorService from '../../../../src/service/debtor-service';
+} from '../../seed';
+import SubTransaction from '../../../src/entity/transactions/sub-transaction';
+import { calculateBalance } from '../../helpers/balance';
+import DebtorService from '../../../src/service/debtor-service';
 import { expect } from 'chai';
-import { addTransfer } from '../../../helpers/transaction-helpers';
-import BalanceService from '../../../../src/service/balance-service';
+import { addTransfer } from '../../helpers/transaction-helpers';
+import BalanceService from '../../../src/service/balance-service';
 import dinero from 'dinero.js';
-import Fine from '../../../../src/entity/fine/fine';
+import Fine from '../../../src/entity/fine/fine';
 
-describe('transfer', (): void => {
+describe('TransferSubscriber', (): void => {
   let ctx: {
     connection: Connection,
     users: User[],
@@ -76,15 +76,16 @@ describe('transfer', (): void => {
     await ctx.connection.destroy();
   });
 
-  describe('validateDebtPaid', () => {
+  describe('afterInsert', () => {
     it('should set currentFines to null when debt is paid', async () => {
       const user = ctx.usersInDebt[0];
       expect(user).to.not.be.undefined;
 
       const debt = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers).amount;
+      expect(debt.getAmount()).to.be.lessThan(0);
       expect((await BalanceService.getBalance(user.id)).amount.amount).to.equal(debt.getAmount());
 
-      const { fines } = await DebtorService.handOutFines({ userIds: [user.id] }, ctx.users[0]);
+      const { fines } = await DebtorService.handOutFines({ userIds: [user.id], referenceDate: new Date() }, ctx.users[0]);
       const fine = await Fine.findOne({
         where: { id: fines[0].id },
         relations: ['userFineGroup'],
@@ -103,7 +104,7 @@ describe('transfer', (): void => {
       await addTransfer(user, [], true, undefined, transferAmount.getAmount());
 
       const newBalance = await BalanceService.getBalance(user.id);
-      expect(newBalance.amount.amount).to.be.greaterThanOrEqual(0);
+      expect(newBalance.amount.amount).to.equal(0);
       dbUser = await User.findOne({ where: { id: user.id }, relations: ['currentFines'] });
       expect(dbUser.currentFines).to.be.null;
     });
@@ -114,7 +115,7 @@ describe('transfer', (): void => {
       const debt = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers).amount;
       expect((await BalanceService.getBalance(user.id)).amount.amount).to.equal(debt.getAmount());
 
-      const { fines } = await DebtorService.handOutFines({ userIds: [user.id] }, ctx.users[0]);
+      const { fines } = await DebtorService.handOutFines({ userIds: [user.id], referenceDate: new Date() }, ctx.users[0]);
       const fine = await Fine.findOne({
         where: { id: fines[0].id },
         relations: ['userFineGroup'],
@@ -146,7 +147,7 @@ describe('transfer', (): void => {
       const debt = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers).amount;
       expect((await BalanceService.getBalance(user.id)).amount.amount).to.equal(debt.getAmount());
 
-      const { fines } = await DebtorService.handOutFines({ userIds: [user.id] }, ctx.users[0]);
+      const { fines } = await DebtorService.handOutFines({ userIds: [user.id], referenceDate: new Date() }, ctx.users[0]);
       const fine = await Fine.findOne({
         where: { id: fines[0].id },
         relations: ['userFineGroup'],

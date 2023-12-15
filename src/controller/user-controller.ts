@@ -21,8 +21,7 @@ import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import User, { UserType } from '../entity/user/user';
-import CreateUserRequest from './request/create-user-request';
-import UpdateUserRequest from './request/update-user-request';
+import BaseUserRequest, { CreateUserRequest, UpdateUserRequest } from './request/user-request';
 import { parseRequestPagination } from '../helpers/pagination';
 import ProductService from '../service/product-service';
 import PointOfSaleService from '../service/point-of-sale-service';
@@ -302,7 +301,7 @@ export default class UserController extends BaseController {
 
   static getAttributes(req: RequestWithToken): string[] {
     const attributes: string[] = [];
-    const body = req.body as UpdateUserRequest;
+    const body = req.body as BaseUserRequest;
     for (const key in body) {
       if (body.hasOwnProperty(key)) {
         attributes.push(key);
@@ -323,7 +322,7 @@ export default class UserController extends BaseController {
    * @param {boolean} active.query - Filter based if the user is active
    * @param {boolean} ofAge.query - Filter based if the user is 18+
    * @param {integer} id.query - Filter based on user ID
-   * @param {string} type.query.enum{MEMBER,ORGAN,BORRELKAART,LOCAL_USER,LOCAL_ADMIN,INVOICE,AUTOMATIC_INVOICE} - Filter based on user type.
+   * @param {string} type.query.enum{MEMBER,ORGAN,VOUCHER,LOCAL_USER,LOCAL_ADMIN,INVOICE,AUTOMATIC_INVOICE} - Filter based on user type.
    * @returns {PaginatedUserResponse.model} 200 - A list of all users
    */
   public async getAllUsers(req: RequestWithToken, res: Response): Promise<void> {
@@ -624,6 +623,8 @@ export default class UserController extends BaseController {
    * @operationId getOrganMembers
    * @group users - Operations of user controller
    * @param {integer} id.path.required - The id of the user
+   * @param {integer} take.query - How many members the endpoint should return
+   * @param {integer} skip.query - How many members should be skipped (for pagination)
    * @security JWT
    * @returns {PaginatedUserResponse.model} 200 - All members of the organ
    * @returns {string} 404 - Nonexistent user id
@@ -632,6 +633,17 @@ export default class UserController extends BaseController {
   public async getOrganMembers(req: RequestWithToken, res: Response): Promise<void> {
     const parameters = req.params;
     this.logger.trace('Get organ members', parameters, 'by user', req.token.user);
+
+    let take;
+    let skip;
+    try {
+      const pagination = parseRequestPagination(req);
+      take = pagination.take;
+      skip = pagination.skip;
+    } catch (e) {
+      res.status(400).send(e.message);
+      return;
+    }
 
     try {
       const organId = asNumber(parameters.id);
@@ -648,7 +660,7 @@ export default class UserController extends BaseController {
         return;
       }
 
-      const members = await UserService.getUsers({ organId });
+      const members = await UserService.getUsers({ organId }, { take, skip });
       res.status(200).json(members);
     } catch (error) {
       this.logger.error('Could not get organ members:', error);

@@ -16,12 +16,5 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/**
- * @typedef HandoutFinesRequest
- * @property {Array<integer>} userIds.required - Users to fine. If a user is not eligible for a fine, a fine of 0,00 will be handed out.
- * @property {string} referenceDate.required - Reference date to calculate the balance and thus the height of the fine for.
- */
-export interface HandoutFinesRequest {
-  userIds: number[];
-  referenceDate: string;
-}
+export { default as TransactionSubscriber } from './transaction-subscriber';
+export { default as TransferSubscriber } from './transfer-subscriber';

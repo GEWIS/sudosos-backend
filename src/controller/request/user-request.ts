@@ -16,22 +16,43 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import { UserType } from '../../entity/user/user';
+
+export default interface BaseUserRequest {
+  firstName: string;
+  lastName?: string;
+  nickname?: string;
+  canGoIntoDebt: boolean;
+  ofAge: boolean;
+  email: string;
+}
+
+/**
+ * @typedef CreateUserRequest
+ * @property {string} firstName.required
+ * @property {string} lastName
+ * @property {string} nickname
+ * @property {boolean} canGoIntoDebt.required
+ * @property {boolean} ofAge.required
+ * @property {string} email.required
+ * @property {number} type.required
+ */
+export interface CreateUserRequest extends BaseUserRequest {
+  type: UserType;
+}
+
 /**
  * @typedef UpdateUserRequest
  * @property {string} firstName
  * @property {string} lastName
  * @property {string} nickname
- * @property {boolean} active
+ * @property {boolean} canGoIntoDebt
  * @property {boolean} ofAge
  * @property {string} email
  * @property {boolean} deleted
+ * @property {boolean} active
  */
-export default interface UpdateUserRequest {
-  firstName?: string;
-  lastName?: string;
-  nickname?: string;
+export interface UpdateUserRequest extends Partial<BaseUserRequest> {
   active?: boolean;
-  ofAge?: boolean;
-  email?: string;
   deleted?: boolean;
 }

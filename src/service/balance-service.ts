@@ -63,7 +63,7 @@ export function asBalanceOrderColumn(input: any): BalanceOrderColumn | undefined
 }
 
 export default class BalanceService {
-  protected static asBalanceResponse(rawBalance: any): BalanceResponse {
+  protected static asBalanceResponse(rawBalance: any, date: Date): BalanceResponse {
     let fineSince = null;
     // SQLite returns timestamps in UTC, while MariaDB/MySQL returns timestamps in the local timezone
     if (rawBalance.fineSince) {
@@ -73,6 +73,7 @@ export default class BalanceService {
 
     return {
       id: rawBalance.id,
+      date: date.toISOString(),
       amount: DineroTransformer.Instance.from(rawBalance.amount).toObject(),
       lastTransactionId: rawBalance.lastTransactionId,
       lastTransferId: rawBalance.lastTransferId,
@@ -202,21 +203,25 @@ export default class BalanceService {
       return result;
     };
 
+    const greatest = process.env.TYPEORM_CONNECTION === 'sqlite' ? 'max' : 'greatest';
+
     let query = 'SELECT moneys2.id as id, '
       + 'moneys2.totalValue + COALESCE(b5.amount, 0) as amount, '
       + 'moneys2.count as count, '
-      + 'b5.lastTransactionId as lastTransactionId, '
-      + 'b5.lastTransferId as lastTransferId, '
+      + `${greatest}(coalesce(b5.lasttransactionid, -1), coalesce(moneys2.lastTransactionId, -1)) as lastTransactionId, `
+      + `${greatest}(coalesce(b5.lasttransferid, -1), coalesce(moneys2.lastTransferId, -1)) as lastTransferId, `
       + 'b5.amount as cachedAmount, '
       + 'f.fine as fine, '
       + 'f.fineSince as fineSince '
       + 'from ( '
       + 'SELECT user.id as id, '
       + 'COALESCE(sum(moneys.totalValue), 0) as totalValue, '
-      + 'count(moneys.totalValue) as count '
+      + 'count(moneys.totalValue) as count, '
+      + 'max(moneys.transactionId) as lastTransactionId, '
+      + 'max(moneys.transferId) as lastTransferId '
       + 'from user '
       + 'left join ( '
-      + 'select t.fromId as `id`, str.amount * pr.priceInclVat * -1 as `totalValue` '
+      + 'select t.fromId as `id`, str.amount * pr.priceInclVat * -1 as `totalValue`, t.id as `transactionId`, null as `transferId` '
       + 'from `transaction` as `t` '
       + `left join ${balanceSubquery()} as b on t.fromId=b.userId `
       + 'inner join sub_transaction st on t.id=st.transactionId '
@@ -226,7 +231,7 @@ export default class BalanceService {
     query = this.addWhereClauseForIds(query, parameters, 't.fromId', ids);
     query = this.addWhereClauseForDate(query, parameters, 't.createdAt', d);
     query += 'UNION ALL '
-      + 'select st2.toId as `id`, str2.amount * pr2.priceInclVat as `totalValue` from sub_transaction st2 '
+      + 'select st2.toId as `id`, str2.amount * pr2.priceInclVat as `totalValue`, t.id as `transactionId`, null as `transferId` from sub_transaction st2 '
       + `left join ${balanceSubquery()} b on st2.toId=b.userId `
       + 'inner join `transaction` t on t.id=st2.transactionId '
       + 'inner join sub_transaction_row str2 on st2.id=str2.subTransactionId '
@@ -235,13 +240,13 @@ export default class BalanceService {
     query = this.addWhereClauseForIds(query, parameters, 'st2.toId', ids);
     query = this.addWhereClauseForDate(query, parameters, 't.createdAt', d);
     query += 'UNION ALL '
-      + 'select t2.fromId as `id`, t2.amount*-1 as `totalValue` from transfer t2 '
+      + 'select t2.fromId as `id`, t2.amount*-1 as `totalValue`, null as `transactionId`, t2.id as `transferId` from transfer t2 '
       + `left join ${balanceSubquery()} b on t2.fromId=b.userId `
       + 'where t2.createdAt > COALESCE(b.lastTransferDate, 0) ';
     query = this.addWhereClauseForIds(query, parameters, 't2.fromId', ids);
     query = this.addWhereClauseForDate(query, parameters, 't2.createdAt', d);
     query += 'UNION ALL '
-      + 'select t3.toId as `id`, t3.amount as `totalValue` from transfer t3 '
+      + 'select t3.toId as `id`, t3.amount as `totalValue`, null as `transactionId`, t3.id as `transferId` from transfer t3 '
       + `left join ${balanceSubquery()} b on t3.toId=b.userId `
       + 'where t3.createdAt > COALESCE(b.lastTransferDate, 0) ';
     query = this.addWhereClauseForIds(query, parameters, 't3.toId', ids);
@@ -298,7 +303,7 @@ export default class BalanceService {
     const count = (await connection.query(query, parameters)).length;
     return {
       _pagination: { take, skip, count },
-      records: balances.map((b: object) => this.asBalanceResponse(b)),
+      records: balances.map((b: object) => this.asBalanceResponse(b, date ?? new Date())),
     };
   }
 

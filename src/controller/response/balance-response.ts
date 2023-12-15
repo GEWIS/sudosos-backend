@@ -21,8 +21,10 @@ import { PaginationResult } from '../../helpers/pagination';
 /**
  * @typedef BalanceResponse
  * @property {number} id.required - ID of the user this balance belongs to
+ * @property {string} date.required - Date at which this user had this balance
  * @property {DineroObjectResponse.model} amount.required - The amount of balance this user has
- * @property {DineroObjectResponse.model} fine - The amount of fines this user has, if any
+ * @property {DineroObjectResponse.model} fine - The amount of fines this user has at the current point in time,
+ * aka "now" (if any). Should be ignored if date is not now.
  * @property {string} fineSince - Timestamp of the first fine
  * @property {number} lastTransactionId - The ID of the last transaction that was
  * present when the balance was cached
@@ -31,11 +33,12 @@ import { PaginationResult } from '../../helpers/pagination';
  */
 export default interface BalanceResponse {
   id: number;
+  date: string;
   amount: DineroObjectResponse;
   fine?: DineroObjectResponse | null;
   fineSince?: string | null;
-  lastTransactionId?: number | null;
-  lastTransferId?: number | null;
+  lastTransactionId: number;
+  lastTransferId: number;
 }
 
 /**

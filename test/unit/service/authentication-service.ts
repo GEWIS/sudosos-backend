@@ -42,6 +42,7 @@ export default function userIsAsExpected(user: User | UserResponse, ADResponse: 
   if (isNumber(user.type)) expect(user.type).to.equal(1);
   expect(user.active).to.equal(true);
   expect(user.deleted).to.equal(false);
+  expect(user.canGoIntoDebt).to.equal(true);
 }
 
 describe('AuthenticationService', (): void => {

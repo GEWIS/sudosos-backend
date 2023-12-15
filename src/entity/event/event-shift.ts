@@ -15,17 +15,31 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { UserType } from '../../entity/user/user';
-import UpdateUserRequest from './update-user-request';
+import {
+  Column, DeleteDateColumn, Entity,
+} from 'typeorm';
+import BaseEntity from '../base-entity';
 
 /**
- * @typedef CreateUserRequest
- * @property {string} firstName.required
- * @property {string} lastName
- * @property {boolean} active
- * @property {number} type.required
- * @property {string} email
+ * @typedef {BaseEntity} EventShift
+ * @property {string} name - Name of the shift.
+ * @property {boolean} default - Indicator whether the shift is a regular shift.
  */
-export default interface CreateUserRequest extends UpdateUserRequest {
-  type: UserType;
+
+@Entity()
+export default class EventShift extends BaseEntity {
+  @DeleteDateColumn()
+  public deletedAt?: Date | null;
+
+  @Column()
+  public name: string;
+
+  @Column({
+    type: 'varchar',
+    transformer: {
+      to: (val: string[]) => JSON.stringify(val),
+      from: (val: string) => JSON.parse(val),
+    },
+  })
+  public roles: string[];
 }

@@ -45,7 +45,9 @@ import InvoiceUser from '../src/entity/user/invoice-user';
 import Invoice from '../src/entity/invoices/invoice';
 import InvoiceEntry from '../src/entity/invoices/invoice-entry';
 import InvoiceStatus, { InvoiceState } from '../src/entity/invoices/invoice-status';
-import GewisUser from '../src/gewis/entity/gewis-user';
+import Event, { EventType } from '../src/entity/event/event';
+import EventShift from '../src/entity/event/event-shift';
+import EventShiftAnswer, { Availability } from '../src/entity/event/event-shift-answer';
 import seedGEWISUsers from '../src/gewis/database/seed';
 import PinAuthenticator from '../src/entity/authenticator/pin-authenticator';
 import VatGroup from '../src/entity/vat-group';
@@ -56,6 +58,9 @@ import UserFineGroup from '../src/entity/fine/userFineGroup';
 import FineHandoutEvent from '../src/entity/fine/fineHandoutEvent';
 import Fine from '../src/entity/fine/fine';
 import { calculateBalance } from './helpers/balance';
+import GewisUser from '../src/gewis/entity/gewis-user';
+import AssignedRole from '../src/entity/roles/assigned-role';
+import MemberAuthenticator from '../src/entity/authenticator/member-authenticator';
 
 function getDate(startDate: Date, endDate: Date, i: number): Date {
   const diff = endDate.getTime() - startDate.getTime();
@@ -165,6 +170,44 @@ export async function seedUsers(): Promise<User[]> {
   return users;
 }
 
+/**
+ * Seed some roles, where every user has at most one role.
+ * @param users
+ */
+export async function seedRoles(users: User[]): Promise<AssignedRole[]> {
+  const roleStrings = ['BAC', 'BAC feut', 'BAC PM', 'Bestuur', 'Kasco'];
+  return (await Promise.all(users.map(async (user, i) => {
+    if (i % 3 === 0) return undefined;
+
+    const role = Object.assign(new AssignedRole(), {
+      user,
+      role: roleStrings[i % 5],
+    });
+    return AssignedRole.save(role);
+  }))).filter((r) => r != null);
+}
+
+/**
+ * Seed some member authenticators
+ * @param users Users that can authenticate as organs
+ * @param authenticateAs
+ */
+export async function seedMemberAuthenticators(users: User[], authenticateAs: User[]): Promise<MemberAuthenticator[]> {
+  const memberAuthenticators: MemberAuthenticator[] = [];
+  await Promise.all(authenticateAs.map(async (as, i) => {
+    return Promise.all(users.map(async (user, j) => {
+      if ((i + j) % 7 > 1) return;
+      const authenticator = Object.assign(new MemberAuthenticator(), {
+        userId: user.id,
+        authenticateAsId: as.id,
+      } as MemberAuthenticator);
+      await authenticator.save();
+      memberAuthenticators.push(authenticator);
+    }));
+  }));
+  return memberAuthenticators;
+}
+
 export function defineInvoiceEntries(invoiceId: number, startEntryId: number,
   transactions: Transaction[]): { invoiceEntries: InvoiceEntry[], cost: number } {
   const invoiceEntries: InvoiceEntry[] = [];
@@ -254,6 +297,99 @@ export async function seedInvoices(users: User[], transactions: Transaction[]): 
   await InvoiceEntry.save(invoiceEntry);
 
   return { invoices, invoiceTransfers };
+}
+
+/**
+ * Seeds a default dataset of borrelSchemaShifts and stores them in the database
+ */
+export async function seedEventShifts() {
+  const shifts: EventShift[] = [];
+  shifts.push(Object.assign(new EventShift(), {
+    name: 'Borrelen',
+    roles: ['BAC', 'BAC feut'],
+  }));
+  shifts.push(Object.assign(new EventShift(), {
+    name: 'Portier',
+    roles: ['BAC', 'BAC feut'],
+  }));
+  shifts.push(Object.assign(new EventShift(), {
+    name: 'Bier halen voor Job en Sjoerd',
+    roles: ['BAC feut'],
+  }));
+  shifts.push(Object.assign(new EventShift(), {
+    name: 'Roy slaan',
+    roles: [],
+  }));
+  shifts.push(Object.assign(new EventShift(), {
+    name: '900 euro kwijtraken',
+    roles: ['BAC PM', 'BAC'],
+  }));
+  shifts.push(Object.assign(new EventShift(), {
+    name: 'Wassen',
+    roles: ['Bestuur'],
+    deletedAt: new Date(),
+  }));
+  await EventShift.save(shifts);
+  return shifts;
+}
+
+export async function createEventShiftAnswer(user: User, event: Event, shift: EventShift, type: number) {
+  const availabilities = [Availability.YES, Availability.MAYBE, Availability.NO, Availability.LATER, Availability.NA, null];
+
+  const answer: EventShiftAnswer = Object.assign(new EventShiftAnswer(), {
+    user,
+    availability: availabilities[type + 1 % availabilities.length],
+    selected: false,
+    eventId: event.id,
+    shiftId: shift.id,
+  });
+  return EventShiftAnswer.save(answer);
+}
+
+export async function seedEvents(rolesWithUsers: AssignedRole[]) {
+  const events: Event[] = [];
+  const eventShifts = await seedEventShifts();
+  const eventShiftAnswers: EventShiftAnswer[] = [];
+  for (let i = 0; i < 5; i += 1) {
+    // const startDate = getRandomDate(new Date(), new Date(new Date().getTime() + 1000 * 60 * 60 * 24 * 365));
+    const startDate = new Date(new Date().getTime() + ((i * 1000000) % (3600 * 24 * 365)) * 1000 + 60000);
+    // Add 2,5 hours
+    const endDate = new Date(startDate.getTime() + (1000 * 60 * 60 * 2.5));
+
+    const event = Object.assign(new Event(), {
+      name: `${i}-Testborrel-${i}`,
+      createdBy: rolesWithUsers[i].user,
+      startDate,
+      endDate,
+      type: EventType.BORREL,
+      shifts: [],
+      id: i,
+    });
+    await Event.save(event);
+
+    const eventShifts1: EventShift[] = [];
+    const eventShiftAnswers1: EventShiftAnswer[] = [];
+    for (let j = 0; j < ((i + 1) * 243) % 4; j += 1) {
+      const shift = eventShifts[((i + j) * 13) % (eventShifts.length)];
+      const users = rolesWithUsers.filter((r) => shift.roles.includes(r.role));
+      await Promise.all(users.map(async (r, k) => {
+        const answer = await createEventShiftAnswer(r.user, event, shift, k);
+        answer.event = event;
+        answer.shift = shift;
+        eventShifts1.push(shift);
+        eventShiftAnswers.push(answer);
+        eventShiftAnswers1.push(answer);
+      }));
+    }
+
+    event.shifts = eventShifts1.filter((s, j, all) => j === all.findIndex((s2) => s.id === s2.id));
+    await event.save();
+
+    event.answers = eventShiftAnswers1;
+    events.push(event);
+  }
+
+  return { events, eventShifts, eventShiftAnswers };
 }
 
 /**
@@ -1220,10 +1356,14 @@ export async function seedBanners(users: User[]): Promise<{
 
 export interface DatabaseContent {
   users: User[],
+  roles: AssignedRole[],
   categories: ProductCategory[],
   vatGroups: VatGroup[],
   products: Product[],
   productRevisions: ProductRevision[],
+  events: Event[],
+  eventShifts: EventShift[],
+  eventShiftAnswers: EventShiftAnswer[],
   containers: Container[],
   containerRevisions: ContainerRevision[],
   pointsOfSale: PointOfSale[],
@@ -1243,6 +1383,10 @@ export interface DatabaseContent {
 
 export default async function seedDatabase(): Promise<DatabaseContent> {
   const users = await seedUsers();
+  await seedMemberAuthenticators(
+    users.filter((u) => u.type !== UserType.ORGAN),
+    [users.filter((u) => u.type === UserType.ORGAN)[0]],
+  );
   const pinUsers = await seedHashAuthenticator(users, PinAuthenticator);
   const localUsers = await seedHashAuthenticator(users, LocalAuthenticator);
   const gewisUsers = await seedGEWISUsers(users);
@@ -1257,6 +1401,8 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
   const { pointsOfSale, pointOfSaleRevisions } = await seedPointsOfSale(
     users, containerRevisions,
   );
+  const roles = await seedRoles(users);
+  const { events, eventShifts, eventShiftAnswers } = await seedEvents(roles);
   const { transactions } = await seedTransactions(users, pointOfSaleRevisions);
   const transfers = await seedTransfers(users);
   const { fines, fineTransfers, userFineGroups } = await seedFines(users, transactions, transfers);
@@ -1267,6 +1413,7 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
 
   return {
     users,
+    roles,
     categories,
     vatGroups,
     products,
@@ -1286,5 +1433,8 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
     gewisUsers,
     pinUsers,
     localUsers,
+    events,
+    eventShifts,
+    eventShiftAnswers,
   };
 }

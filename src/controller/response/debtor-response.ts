@@ -19,21 +19,24 @@ import { DineroObjectResponse } from './dinero-response';
 import BaseResponse from './base-response';
 import { PaginationResult } from '../../helpers/pagination';
 import { BaseUserResponse } from './user-response';
+import BalanceResponse from './balance-response';
 
 /**
  * @typedef UserToFineResponse
- * @property {integer} id - User ID
- * @property {DineroObjectResponse.model} amount - Amount to fine
+ * @property {integer} id.required - User ID
+ * @property {DineroObjectResponse.model} fineAmount.required - Amount to fine
+ * @property {Array.<BalanceResponse>} balances.required - Balances at the given reference dates
  */
 export interface UserToFineResponse {
   id: number;
-  amount: DineroObjectResponse;
+  fineAmount: DineroObjectResponse;
+  balances: BalanceResponse[]
 }
 
 /**
  * @typedef {BaseResponse} FineResponse
- * @property {DineroObjectResponse.model} amount - Fine amount
- * @property {BaseUserResponse.model} user - User that got the fine
+ * @property {DineroObjectResponse.model} amount.required - Fine amount
+ * @property {BaseUserResponse.model} user.required - User that got the fine
  */
 export interface FineResponse extends BaseResponse {
   amount: DineroObjectResponse;
@@ -43,7 +46,7 @@ export interface FineResponse extends BaseResponse {
 /**
  * @typedef {BaseResponse} BaseFineHandoutEventResponse
  * @property {string} referenceDate.required - Reference date of fines
- * @property {BaseUserResponse.model} createdBy - User that handed out the fines
+ * @property {BaseUserResponse.model} createdBy.required - User that handed out the fines
  */
 export interface BaseFineHandoutEventResponse extends BaseResponse {
   referenceDate: string;
@@ -52,7 +55,7 @@ export interface BaseFineHandoutEventResponse extends BaseResponse {
 
 /**
  * @typedef {BaseFineHandoutEventResponse} FineHandoutEventResponse
- * @property {Array.<FineResponse>} fines - Fines that have been handed out
+ * @property {Array.<FineResponse>} fines.required - Fines that have been handed out
  */
 export interface FineHandoutEventResponse extends BaseFineHandoutEventResponse {
   fines: FineResponse[];
@@ -60,8 +63,8 @@ export interface FineHandoutEventResponse extends BaseFineHandoutEventResponse {
 
 /**
  * @typedef PaginatedFineHandoutEventResponse
- * @property {PaginationResult.model} _pagination - Pagination metadata
- * @property {Array.<BaseFineHandoutEventResponse>} records - Returned fine handout events
+ * @property {PaginationResult.model} _pagination.required - Pagination metadata
+ * @property {Array.<BaseFineHandoutEventResponse>} records.required - Returned fine handout events
  */
 export interface PaginatedFineHandoutEventResponse {
   _pagination: PaginationResult,
@@ -70,7 +73,7 @@ export interface PaginatedFineHandoutEventResponse {
 
 /**
  * @typedef UserFineGroupResponse
- * @property {Array.<FineResponse>} fines - Fines that have been handed out
+ * @property {Array.<FineResponse>} fines.required - Fines that have been handed out
  */
 export interface UserFineGroupResponse {
   fines: FineResponse[];

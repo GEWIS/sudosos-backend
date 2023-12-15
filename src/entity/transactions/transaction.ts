@@ -16,7 +16,6 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  AfterInsert,
   Entity, ManyToOne, OneToMany,
 } from 'typeorm';
 // eslint-disable-next-line import/no-cycle
@@ -24,11 +23,6 @@ import SubTransaction from './sub-transaction';
 import User from '../user/user';
 import BaseEntity from '../base-entity';
 import PointOfSaleRevision from '../point-of-sale/point-of-sale-revision';
-import BalanceService from '../../service/balance-service';
-import Mailer from '../../mailer';
-import UserDebtNotification from '../../mailer/templates/user-debt-notification';
-import DineroTransformer from '../transformer/dinero-transformer';
-import { getLogger } from 'log4js';
 
 /**
  * @typedef {BaseEntity} Transaction
@@ -54,32 +48,4 @@ export default class Transaction extends BaseEntity {
 
   @ManyToOne(() => PointOfSaleRevision)
   public pointOfSale: PointOfSaleRevision;
-
-  @AfterInsert()
-  // NOTE: this event listener is only called when calling .save() on a new Transaction object instance,
-  // not .save() on the static method of the Transaction class
-  async sendEmailNotificationIfNowInDebt() {
-    if (process.env.NODE_ENV === 'test') return;
-
-    const user = await User.findOne({ where: { id: this.from.id } });
-    const balance = await BalanceService.getBalance(user.id);
-    const currentBalance = balance.amount.amount - this.subTransactions[0].subTransactionRows[0].amount * this.subTransactions[0].subTransactionRows[0].product.priceInclVat.getAmount();
-
-    if (currentBalance >= 0) return;
-    // User is now in debt
-
-    const balanceBefore = await BalanceService.getBalance(
-      user.id,
-      new Date(this.createdAt.getTime() - 1),
-    );
-
-    if (balanceBefore.amount.amount < 0) return;
-    // User was not in debt before this new transaction
-
-    Mailer.getInstance().send(user, new UserDebtNotification({
-      name: user.firstName,
-      balance: DineroTransformer.Instance.from(currentBalance),
-      url: '',
-    })).catch((e) => getLogger('Transaction').error(e));
-  }
 }

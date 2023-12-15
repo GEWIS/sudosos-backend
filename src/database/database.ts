@@ -27,10 +27,10 @@ import SubTransactionRow from '../entity/transactions/sub-transaction-row';
 import PointOfSale from '../entity/point-of-sale/point-of-sale';
 import Container from '../entity/container/container';
 import FlaggedTransaction from '../entity/transactions/flagged-transaction';
-import BorrelkaartGroup from '../entity/user/borrelkaart-group';
+import VoucherGroup from '../entity/user/voucher-group';
 import LocalUser from '../entity/user/local-user';
 import GewisUser from '../gewis/entity/gewis-user';
-import UserBorrelkaartGroup from '../entity/user/user-borrelkaart-group';
+import UserVoucherGroup from '../entity/user/user-voucher-group';
 import EanAuthenticator from '../entity/authenticator/ean-authenticator';
 import MemberAuthenticator from '../entity/authenticator/member-authenticator';
 import NfcAuthenticator from '../entity/authenticator/nfc-authenticator';
@@ -63,6 +63,10 @@ import KeyAuthenticator from '../entity/authenticator/key-authenticator';
 import Fine from '../entity/fine/fine';
 import FineHandoutEvent from '../entity/fine/fineHandoutEvent';
 import UserFineGroup from '../entity/fine/userFineGroup';
+import Event from '../entity/event/event';
+import EventShiftAnswer from '../entity/event/event-shift-answer';
+import EventShift from '../entity/event/event-shift';
+import { TransactionSubscriber, TransferSubscriber } from '../subscriber';
 
 export default class Database {
   public static async initialize(): Promise<Connection> {
@@ -102,11 +106,11 @@ export default class Database {
         SubTransaction,
         SubTransactionRow,
         FlaggedTransaction,
-        BorrelkaartGroup,
+        VoucherGroup,
         User,
         LocalUser,
         GewisUser,
-        UserBorrelkaartGroup,
+        UserVoucherGroup,
         EanAuthenticator,
         MemberAuthenticator,
         NfcAuthenticator,
@@ -126,6 +130,13 @@ export default class Database {
         BannerImage,
         AssignedRole,
         ResetToken,
+        Event,
+        EventShift,
+        EventShiftAnswer,
+      ],
+      subscribers: [
+        TransactionSubscriber,
+        TransferSubscriber,
       ],
     };
     return createConnection(options);
