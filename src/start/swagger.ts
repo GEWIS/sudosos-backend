@@ -83,6 +83,7 @@ export default class Swagger {
         './controller/container-controller.ts',
         './controller/debtor-controller.ts',
         './controller/event-controller.ts',
+        './controller/event-shift-controller.ts',
 
         './helpers/pagination.ts',
 
