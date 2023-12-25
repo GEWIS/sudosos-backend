@@ -17,7 +17,7 @@
  */
 
 /**
- * @typedef AuthenticationNfcRequest
+ * @typedef {object} AuthenticationNfcRequest
  * @property {string} nfcCode.required
  */
 export default interface AuthenticationNfcRequest {

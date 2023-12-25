@@ -15,18 +15,18 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { Request, Response } from 'express';
-import log4js, { Logger } from 'log4js';
-import BaseController, { BaseControllerOptions } from './base-controller';
+import {Request, Response} from 'express';
+import log4js, {Logger} from 'log4js';
+import BaseController, {BaseControllerOptions} from './base-controller';
 import Policy from './policy';
 import User from '../entity/user/user';
 import AuthenticationMockRequest from './request/authentication-mock-request';
 import TokenHandler from '../authentication/token-handler';
-import AuthenticationService, { AuthenticationContext } from '../service/authentication-service';
+import AuthenticationService, {AuthenticationContext} from '../service/authentication-service';
 import AuthenticationLDAPRequest from './request/authentication-ldap-request';
 import RoleManager from '../rbac/role-manager';
 import wrapInManager from '../helpers/database';
-import { LDAPUser } from '../helpers/ad';
+import {LDAPUser} from '../helpers/ad';
 import AuthenticationLocalRequest from './request/authentication-local-request';
 import PinAuthenticator from '../entity/authenticator/pin-authenticator';
 import AuthenticationPinRequest from './request/authentication-pin-request';
@@ -79,61 +79,61 @@ export default class AuthenticationController extends BaseController {
     return {
       '/mock': {
         POST: {
-          body: { modelName: 'AuthenticationMockRequest' },
+          body: {modelName: 'AuthenticationMockRequest'},
           policy: AuthenticationController.canPerformMock.bind(this),
           handler: this.mockLogin.bind(this),
         },
       },
       '/LDAP': {
         POST: {
-          body: { modelName: 'AuthenticationLDAPRequest' },
+          body: {modelName: 'AuthenticationLDAPRequest'},
           policy: async () => true,
           handler: this.LDAPLogin.bind(this),
         },
       },
       '/pin': {
         POST: {
-          body: { modelName: 'AuthenticationPinRequest' },
+          body: {modelName: 'AuthenticationPinRequest'},
           policy: async () => true,
           handler: this.PINLogin.bind(this),
         },
       },
       '/nfc': {
         POST: {
-          body: { modelName: 'AuthenticationNfcRequest' },
+          body: {modelName: 'AuthenticationNfcRequest'},
           policy: async () => true,
           handler: this.nfcLogin.bind(this),
         },
       },
       '/key': {
         POST: {
-          body: { modelName: 'AuthenticationKeyRequest' },
+          body: {modelName: 'AuthenticationKeyRequest'},
           policy: async () => true,
           handler: this.keyLogin.bind(this),
         },
       },
       '/local': {
         POST: {
-          body: { modelName: 'AuthenticationLocalRequest' },
+          body: {modelName: 'AuthenticationLocalRequest'},
           policy: async () => true,
           handler: this.LocalLogin.bind(this),
         },
         PUT: {
-          body: { modelName: 'AuthenticationResetTokenRequest' },
+          body: {modelName: 'AuthenticationResetTokenRequest'},
           policy: async () => true,
           handler: this.resetLocalUsingToken.bind(this),
         },
       },
       '/local/reset': {
         POST: {
-          body: { modelName: 'ResetLocalRequest' },
+          body: {modelName: 'ResetLocalRequest'},
           policy: async () => true,
           handler: this.createResetToken.bind(this),
         },
       },
       '/ean': {
         POST: {
-          body: { modelName: 'AuthenticationEanRequest' },
+          body: {modelName: 'AuthenticationEanRequest'},
           policy: async () => true,
           handler: this.eanLogin.bind(this),
         },
@@ -152,21 +152,21 @@ export default class AuthenticationController extends BaseController {
     if (process.env.NODE_ENV !== 'development') return false;
 
     // Check the existence of the user
-    const user = await User.findOne({ where: { id: body.userId } });
+    const user = await User.findOne({where: {id: body.userId}});
     if (!user) return false;
 
     return true;
   }
 
   /**
-   * PIN login and hand out token
-   * @route POST /authentication/pin
+   * POST /authentication/pin
+   * @summary PIN login and hand out token
    * @operationId pinAuthentication
-   * @group authenticate - Operations of authentication controller
-   * @param {AuthenticationPinRequest.model} req.body.required - The PIN login.
-   * @returns {AuthenticationResponse.model} 200 - The created json web token.
-   * @returns {string} 400 - Validation error.
-   * @returns {string} 403 - Authentication error.
+   * @tags authenticate - Operations of authentication controller
+   * @param {AuthenticationPinRequest} request.body.required - The PIN login.
+   * @return {AuthenticationResponse} 200 - The created json web token.
+   * @return {string} 400 - Validation error.
+   * @return {string} 403 - Authentication error.
    */
   public async PINLogin(req: Request, res: Response): Promise<void> {
     const body = req.body as AuthenticationPinRequest;
@@ -191,10 +191,10 @@ export default class AuthenticationController extends BaseController {
    * @constructor
    */
   public static PINLoginConstructor(roleManager: RoleManager, tokenHandler: TokenHandler,
-    pin: string, userId: number) {
+                                    pin: string, userId: number) {
     return async (req: Request, res: Response) => {
       const user = await User.findOne({
-        where: { id: userId, deleted: false },
+        where: {id: userId, deleted: false},
       });
 
       if (!user) {
@@ -204,7 +204,7 @@ export default class AuthenticationController extends BaseController {
         return;
       }
 
-      const pinAuthenticator = await PinAuthenticator.findOne({ where: { user: { id: user.id } }, relations: ['user'] });
+      const pinAuthenticator = await PinAuthenticator.findOne({where: {user: {id: user.id}}, relations: ['user']});
       if (!pinAuthenticator) {
         res.status(403).json({
           message: 'Invalid credentials.',
@@ -234,11 +234,11 @@ export default class AuthenticationController extends BaseController {
    * If user has never signed in before this also creates an account.
    * @route POST /authentication/LDAP
    * @operationId ldapAuthentication
-   * @group authenticate - Operations of authentication controller
-   * @param {AuthenticationLDAPRequest.model} req.body.required - The LDAP login.
-   * @returns {AuthenticationResponse.model} 200 - The created json web token.
-   * @returns {string} 400 - Validation error.
-   * @returns {string} 403 - Authentication error.
+   * @tags authenticate - Operations of authentication controller
+   * @param {AuthenticationLDAPRequest} request.body.required - The LDAP login.
+   * @return {AuthenticationResponse} 200 - The created json web token.
+   * @return {string} 400 - Validation error.
+   * @return {string} 403 - Authentication error.
    */
   public async LDAPLogin(req: Request, res: Response): Promise<void> {
     const body = req.body as AuthenticationLDAPRequest;
@@ -258,7 +258,7 @@ export default class AuthenticationController extends BaseController {
    * @constructor
    */
   public static LDAPLoginConstructor(roleManager: RoleManager, tokenHandler: TokenHandler,
-    onNewUser: (ADUser: LDAPUser) => Promise<User>) {
+                                     onNewUser: (ADUser: LDAPUser) => Promise<User>) {
     return async (req: Request, res: Response) => {
       const body = req.body as AuthenticationLDAPRequest;
       const user = await AuthenticationService.LDAPAuthentication(
@@ -285,14 +285,14 @@ export default class AuthenticationController extends BaseController {
   }
 
   /**
-   * Local login and hand out token
-   * @route POST /authentication/local
+   * POST /authentication/local
+   * @summary Local login and hand out token
    * @operationId localAuthentication
-   * @group authenticate - Operations of authentication controller
-   * @param {AuthenticationLocalRequest.model} req.body.required - The local login.
-   * @returns {AuthenticationResponse.model} 200 - The created json web token.
-   * @returns {string} 400 - Validation error.
-   * @returns {string} 403 - Authentication error.
+   * @tags authenticate - Operations of authentication controller
+   * @param {AuthenticationLocalRequest} request.body.required - The local login.
+   * @return {AuthenticationResponse} 200 - The created json web token.
+   * @return {string} 400 - Validation error.
+   * @return {string} 403 - Authentication error.
    */
   public async LocalLogin(req: Request, res: Response): Promise<void> {
     const body = req.body as AuthenticationLocalRequest;
@@ -300,7 +300,7 @@ export default class AuthenticationController extends BaseController {
 
     try {
       const user = await User.findOne({
-        where: { email: body.accountMail, deleted: false },
+        where: {email: body.accountMail, deleted: false},
       });
 
       if (!user) {
@@ -310,7 +310,7 @@ export default class AuthenticationController extends BaseController {
         return;
       }
 
-      const localAuthenticator = await LocalAuthenticator.findOne({ where: { user: { id: user.id } }, relations: ['user'] });
+      const localAuthenticator = await LocalAuthenticator.findOne({where: {user: {id: user.id}}, relations: ['user']});
       if (!localAuthenticator) {
         res.status(403).json({
           message: 'Invalid credentials.',
@@ -340,13 +340,13 @@ export default class AuthenticationController extends BaseController {
   }
 
   /**
-   * Reset local authentication using the provided token
-   * @route PUT /authentication/local
+   * PUT /authentication/local
+   * @summary Reset local authentication using the provided token
    * @operationId resetLocalWithToken
-   * @group authenticate - Operations of authentication controller
-   * @param {AuthenticationResetTokenRequest.model} req.body.required - The reset token.
-   * @returns {string} 204 - Successfully reset
-   * @returns {string} 403 - Authentication error.
+   * @tags authenticate - Operations of authentication controller
+   * @param {AuthenticationResetTokenRequest} request.body.required - The reset token.
+   * @return {string} 204 - Successfully reset
+   * @return {string} 403 - Authentication error.
    */
   public async resetLocalUsingToken(req: Request, res: Response): Promise<void> {
     const body = req.body as AuthenticationResetTokenRequest;
@@ -379,19 +379,19 @@ export default class AuthenticationController extends BaseController {
   }
 
   /**
-   * Creates a reset token for the local authentication
-   * @route POST /authentication/local/reset
+   * POST /authentication/local/reset
+   * @summary Creates a reset token for the local authentication
    * @operationId resetLocal
-   * @group authenticate - Operations of authentication controller
-   * @param {ResetLocalRequest.model} req.body.required - The reset info.
-   * @returns {string} 204 - Creation success
+   * @tags authenticate - Operations of authentication controller
+   * @param {ResetLocalRequest} request.body.required - The reset info.
+   * @return {string} 204 - Creation success
    */
   public async createResetToken(req: Request, res: Response): Promise<void> {
     const body = req.body as ResetLocalRequest;
     this.logger.trace('Reset request for user', body.accountMail);
     try {
       const user = await User.findOne({
-        where: { email: body.accountMail, deleted: false },
+        where: {email: body.accountMail, deleted: false},
       });
       // If the user does not exist we simply return a success code as to not leak info.
       if (!user) {
@@ -400,7 +400,7 @@ export default class AuthenticationController extends BaseController {
       }
 
       const resetTokenInfo = await AuthenticationService.createResetToken(user);
-      Mailer.getInstance().send(user, new PasswordReset({ email: user.email, name: user.firstName, resetTokenInfo }))
+      Mailer.getInstance().send(user, new PasswordReset({email: user.email, name: user.firstName, resetTokenInfo}))
         .then()
         .catch((error) => this.logger.error(error));
       // send email with link.
@@ -413,21 +413,21 @@ export default class AuthenticationController extends BaseController {
   }
 
   /**
-   * NFC login and hand out token
-   * @route POST /authentication/nfc
+   * POST /authentication/nfc
+   * @summary NFC login and hand out token
    * @operationId nfcAuthentication
-   * @group authenticate - Operations of authentication controller
-   * @param {AuthenticationNfcRequest.model} req.body.required - The NFC login.
-   * @returns {AuthenticationResponse.model} 200 - The created json web token.
-   * @returns {string} 403 - Authentication error.
+   * @tags authenticate - Operations of authentication controller
+   * @param {AuthenticationNfcRequest} request.body.required - The NFC login.
+   * @return {AuthenticationResponse} 200 - The created json web token.
+   * @return {string} 403 - Authentication error.
    */
   public async nfcLogin(req: Request, res: Response): Promise<void> {
     const body = req.body as AuthenticationNfcRequest;
     this.logger.trace('Atempted NFC authentication with NFC length, ', body.nfcCode.length);
 
     try {
-      const { nfcCode } = body;
-      const authenticator = await NfcAuthenticator.findOne({ where: { nfcCode: nfcCode }  });
+      const {nfcCode} = body;
+      const authenticator = await NfcAuthenticator.findOne({where: {nfcCode: nfcCode}});
       if (authenticator == null || authenticator.user == null) {
         res.status(403).json({
           message: 'Invalid credentials.',
@@ -451,21 +451,21 @@ export default class AuthenticationController extends BaseController {
   }
 
   /**
-   * EAN login and hand out token
-   * @route POST /authentication/ean
+   * POST /authentication/ean
+   * @summary EAN login and hand out token
    * @operationId eanAuthentication
-   * @group authenticate - Operations of authentication controller
-   * @param {AuthenticationEanRequest.model} req.body.required - The EAN login.
-   * @returns {AuthenticationResponse.model} 200 - The created json web token.
-   * @returns {string} 403 - Authentication error.
+   * @tags authenticate - Operations of authentication controller
+   * @param {AuthenticationEanRequest} request.body.required - The EAN login.
+   * @return {AuthenticationResponse} 200 - The created json web token.
+   * @return {string} 403 - Authentication error.
    */
   public async eanLogin(req: Request, res: Response): Promise<void> {
     const body = req.body as AuthenticationEanRequest;
     this.logger.trace('EAN authentication for ean', body.eanCode);
 
     try {
-      const { eanCode } = body;
-      const authenticator = await EanAuthenticator.findOne({ where: { eanCode } });
+      const {eanCode} = body;
+      const authenticator = await EanAuthenticator.findOne({where: {eanCode}});
       if (authenticator == null || authenticator.user == null) {
         res.status(403).json({
           message: 'Invalid credentials.',
@@ -488,14 +488,14 @@ export default class AuthenticationController extends BaseController {
 
 
   /**
-   * Key login and hand out token.
-   * @route POST /authentication/key
+   * POST /authentication/key
+   * @summary Key login and hand out token.
    * @operationId keyAuthentication
-   * @group authenticate - Operations of authentication controller
-   * @param {AuthenticationKeyRequest.model} req.body.required - The key login.
-   * @returns {AuthenticationResponse.model} 200 - The created json web token.
-   * @returns {string} 400 - Validation error.
-   * @returns {string} 403 - Authentication error.
+   * @tags authenticate - Operations of authentication controller
+   * @param {AuthenticationKeyRequest} request.body.required - The key login.
+   * @return {AuthenticationResponse} 200 - The created json web token.
+   * @return {string} 400 - Validation error.
+   * @return {string} 403 - Authentication error.
    */
   public async keyLogin(req: Request, res: Response): Promise<void> {
     const body = req.body as AuthenticationKeyRequest;
@@ -503,7 +503,7 @@ export default class AuthenticationController extends BaseController {
 
     try {
       const user = await User.findOne({
-        where: { id: body.userId, deleted: false },
+        where: {id: body.userId, deleted: false},
       });
 
       if (!user) {
@@ -513,7 +513,7 @@ export default class AuthenticationController extends BaseController {
         return;
       }
 
-      const keyAuthenticator = await KeyAuthenticator.findOne({ where: { user: { id: body.userId } }, relations: ['user'] });
+      const keyAuthenticator = await KeyAuthenticator.findOne({where: {user: {id: body.userId}}, relations: ['user']});
       if (!keyAuthenticator) {
         res.status(403).json({
           message: 'Invalid credentials.',
@@ -543,22 +543,22 @@ export default class AuthenticationController extends BaseController {
   }
 
   /**
-   * Mock login and hand out token.
-   * @route POST /authentication/mock
+   * POST /authentication/mock
+   * @summary Mock login and hand out token.
    * @operationId mockAuthentication
-   * @group authenticate - Operations of authentication controller
-   * @param {AuthenticationMockRequest.model} req.body.required - The mock login.
-   * @returns {AuthenticationResponse.model} 200 - The created json web token.
-   * @returns {string} 400 - Validation error.
+   * @tags authenticate - Operations of authentication controller
+   * @param {AuthenticationMockRequest} request.body.required - The mock login.
+   * @return {AuthenticationResponse} 200 - The created json web token.
+   * @return {string} 400 - Validation error.
    */
   public async mockLogin(req: Request, res: Response): Promise<void> {
     const body = req.body as AuthenticationMockRequest;
     this.logger.trace('Mock authentication for user', body.userId);
 
     try {
-      const user = await User.findOne({ where: { id: body.userId } });
+      const user = await User.findOne({where: {id: body.userId}});
       const contents = await AuthenticationService.makeJsonWebToken(
-        { tokenHandler: this.tokenHandler, roleManager: this.roleManager }, user, false,
+        {tokenHandler: this.tokenHandler, roleManager: this.roleManager}, user, false,
       );
       const token = await this.tokenHandler.signToken(contents, body.nonce);
       const response = AuthenticationService

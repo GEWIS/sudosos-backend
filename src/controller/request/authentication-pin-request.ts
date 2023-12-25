@@ -17,7 +17,7 @@
  */
 
 /**
- * @typedef AuthenticationPinRequest
+ * @typedef {object} AuthenticationPinRequest
  * @property {number} userId.required
  * @property {string} pin.required
  */

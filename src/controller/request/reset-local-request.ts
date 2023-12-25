@@ -17,7 +17,7 @@
  */
 
 /**
- * @typedef ResetLocalRequest
+ * @typedef {object} ResetLocalRequest
  * @property {string} accountMail.required - The mail of the user
  */
 export default interface ResetLocalRequest {
