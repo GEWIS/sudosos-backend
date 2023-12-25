@@ -76,6 +76,7 @@ export default class Swagger {
       // Glob pattern to find your jsdoc files
       filesPattern: [
         './controller/root-controller.ts',
+        './controller/balance-controller.ts',
         './controller/response/banner-response.ts',
         './helpers/pagination.ts',
         './controller/response/base-response.ts',
@@ -85,6 +86,12 @@ export default class Swagger {
         './controller/request/authentication-*.ts',
         './controller/request/reset-local-request.ts',
         './controller/authentication-secure-controller.ts',
+        './controller/response/balance-response.ts',
+        './controller/response/*.ts',
+        './controller/request/dinero-request.ts',
+        './entity/vat-group.ts',
+        './entity/base-entity-without-id.ts',
+        './entity/base-entity.ts',
       ],
       swaggerUIPath: '/api-docs',
       exposeSwaggerUI: true, // Expose Swagger UI

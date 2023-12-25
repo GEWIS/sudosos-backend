@@ -20,7 +20,7 @@ import {
 } from 'typeorm';
 
 /**
- * @typedef BaseEntityWithoutId
+ * @typedef {object} BaseEntityWithoutId
  * @property {string} createdAt - The creation date of the object.
  * @property {string} updatedAt - The last update date of the object.
  * @property {integer} version - The current version of the object.

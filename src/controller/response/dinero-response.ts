@@ -17,7 +17,7 @@
  */
 
 /**
-* @typedef DineroObjectResponse
+* @typedef {object} DineroObjectResponse
 * @property {integer} amount.required - amount
 * @property {string} currency.required - currency
 * @property {integer} precision.required - precision

@@ -22,10 +22,10 @@ import { PayoutRequestState } from '../../entity/transactions/payout-request-sta
 import { PaginationResult } from '../../helpers/pagination';
 
 /**
- * @typedef {BaseResponse} BoilerPayoutRequestResponse
- * @property {BaseUserResponse.model} requestedBy.required - The user that requested a payout
- * @property {BaseUserResponse.model} approvedBy - The user that potentially approved the payout request
- * @property {DineroObjectResponse.model} amount.required - The amount requested to be paid out
+ * @typedef {allOf|BaseResponse} BoilerPayoutRequestResponse
+ * @property {BaseUserResponse} requestedBy.required - The user that requested a payout
+ * @property {BaseUserResponse} approvedBy - The user that potentially approved the payout request
+ * @property {DineroObjectResponse} amount.required - The amount requested to be paid out
  */
 interface BoilerPayoutRequestResponse extends BaseResponse {
   requestedBy: BaseUserResponse,
@@ -34,7 +34,7 @@ interface BoilerPayoutRequestResponse extends BaseResponse {
 }
 
 /**
- * @typedef {BoilerPayoutRequestResponse} BasePayoutRequestResponse
+ * @typedef {allOf|BoilerPayoutRequestResponse} BasePayoutRequestResponse
  * @property {string} status - The current status of the payout request
  */
 export interface BasePayoutRequestResponse extends BoilerPayoutRequestResponse {
@@ -42,7 +42,7 @@ export interface BasePayoutRequestResponse extends BoilerPayoutRequestResponse {
 }
 
 /**
- * @typedef {BaseResponse} PayoutRequestStatusResponse
+ * @typedef {allOf|BaseResponse} PayoutRequestStatusResponse
  * @property {string} state.required - The state of this status change
  */
 export interface PayoutRequestStatusResponse extends BaseResponse {
@@ -50,8 +50,8 @@ export interface PayoutRequestStatusResponse extends BaseResponse {
 }
 
 /**
- * @typedef {BoilerPayoutRequestResponse} PayoutRequestResponse
- * @property {Array.<PayoutRequestStatusResponse>} status.required - Statuses of this
+ * @typedef {allOf|BoilerPayoutRequestResponse} PayoutRequestResponse
+ * @property {Array<PayoutRequestStatusResponse>} status.required - Statuses of this
  * payout response over time
  * @property {string} bankAccountNumber.required - Bank account number
  * @property {string} bankAccountName.required - Name of the account owner
@@ -63,9 +63,9 @@ export interface PayoutRequestResponse extends BoilerPayoutRequestResponse {
 }
 
 /**
- * @typedef PaginatedBasePayoutRequestResponse
- * @property {PaginationResult.model} _pagination.required - Pagination metadata
- * @property {Array.<BasePayoutRequestResponse>} records.required - Returned payout requests
+ * @typedef {object} PaginatedBasePayoutRequestResponse
+ * @property {PaginationResult} _pagination.required - Pagination metadata
+ * @property {Array<BasePayoutRequestResponse>} records.required - Returned payout requests
  */
 export interface PaginatedBasePayoutRequestResponse {
   _pagination: PaginationResult,

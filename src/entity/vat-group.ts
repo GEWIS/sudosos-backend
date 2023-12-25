@@ -19,7 +19,7 @@ import { Column, Entity } from 'typeorm';
 import BaseEntity from './base-entity';
 
 /**
- * @typedef {BaseEntity} VatGroup
+ * @typedef {allOf|BaseEntity} VatGroup
  * @property {string} name - Name of the VAT group
  * @property {number} percentage - VAT percentage
  * @property {boolean} deleted - Whether this group is soft-deleted

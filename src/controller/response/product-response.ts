@@ -23,10 +23,10 @@ import { DineroObjectResponse } from './dinero-response';
 import { BaseVatGroupResponse } from './vat-group-response';
 
 /**
- * @typedef {BaseResponse} BaseProductResponse
+ * @typedef {allOf|BaseResponse} BaseProductResponse
  * @property {string} name.required - The name of the product.
- * @property {DineroObjectResponse.model} priceInclVat.required - The price of the product.
- * @property {BaseVatGroupResponse.model} vat.required - The VAT percentage
+ * @property {DineroObjectResponse} priceInclVat.required - The price of the product.
+ * @property {BaseVatGroupResponse} vat.required - The VAT percentage
  */
 export interface BaseProductResponse extends BaseResponse {
   name: string,
@@ -35,12 +35,12 @@ export interface BaseProductResponse extends BaseResponse {
 }
 
 /**
- * @typedef {BaseProductResponse} ProductResponse
+ * @typedef {allOf|BaseProductResponse} ProductResponse
  * @property {integer} revision.required - The product revision ID
- * @property {BaseUserResponse.model} owner.required - The owner of the product.
- * @property {ProductCategoryResponse.model} category.required -
+ * @property {BaseUserResponse} owner.required - The owner of the product.
+ * @property {ProductCategoryResponse} category.required -
  *           The category the product belongs to.
- * @property {DineroObjectResponse.model} priceExclVat.required - The price of the product
+ * @property {DineroObjectResponse} priceExclVat.required - The price of the product
  *           excluding VAT
  * @property {string} image - The URL to the picture representing this product.
  * @property {number} alcoholPercentage.required - The percentage of alcohol in this product.
@@ -55,9 +55,9 @@ export interface ProductResponse extends BaseProductResponse {
 }
 
 /**
- * @typedef PaginatedProductResponse
- * @property {PaginationResult.model} _pagination.required - Pagination metadata
- * @property {Array.<ProductResponse>} records.required - Returned products
+ * @typedef {object} PaginatedProductResponse
+ * @property {PaginationResult} _pagination.required - Pagination metadata
+ * @property {Array<ProductResponse>} records.required - Returned products
  */
 export interface PaginatedProductResponse {
   _pagination: PaginationResult,

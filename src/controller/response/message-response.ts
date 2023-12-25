@@ -17,7 +17,7 @@
  */
 
 /**
- * @typedef MessageResponse
+ * @typedef {object} MessageResponse
  * @property {string} message.required - The message response text.
  */
 export default interface MessageResponse {

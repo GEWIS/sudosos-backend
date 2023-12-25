@@ -21,9 +21,9 @@ import { BaseUserResponse } from './user-response';
 import { EventType } from '../../entity/event/event';
 
 /**
- * @typedef {BaseResponse} BaseEventResponse
+ * @typedef {allOf|BaseResponse} BaseEventResponse
  * @property {string} name.required - Name of the borrel.
- * @property {BaseUserResponse.model} createdBy.required - Creator of the event.
+ * @property {BaseUserResponse} createdBy.required - Creator of the event.
  * @property {string} startDate.required - The starting date of the event.
  * @property {string} endDate.required - The end date of the event.
  * @property {string} type.required - The tpye of event.
@@ -37,7 +37,7 @@ export interface BaseEventResponse extends BaseResponse {
 }
 
 /**
- * @typedef {BaseResponse} BaseEventShiftResponse
+ * @typedef {allOf|BaseResponse} BaseEventShiftResponse
  * @property {string} name.required - Name of the shift.
  */
 export interface BaseEventShiftResponse extends BaseResponse {
@@ -45,7 +45,7 @@ export interface BaseEventShiftResponse extends BaseResponse {
 }
 
 /**
- * @typedef {BaseEventShiftResponse} EventShiftResponse
+ * @typedef {allOf|BaseEventShiftResponse} EventShiftResponse
  * @property {Array<string>} roles.required - Which roles can fill in this shift.
  */
 export interface EventShiftResponse extends BaseEventShiftResponse {
@@ -53,7 +53,7 @@ export interface EventShiftResponse extends BaseEventShiftResponse {
 }
 
 /**
- * @typedef {EventShiftResponse} EventInShiftResponse
+ * @typedef {allOf|EventShiftResponse} EventInShiftResponse
  * @property {Array<BaseEventAnswerResponse>} answers - Answers for this shift.
  */
 export interface EventInShiftResponse extends EventShiftResponse {
@@ -61,8 +61,8 @@ export interface EventInShiftResponse extends EventShiftResponse {
 }
 
 /**
- * @typedef PaginatedEventShiftResponse
- * @property {PaginationResult.model} _pagination.required - Pagination metadata
+ * @typedef {object} PaginatedEventShiftResponse
+ * @property {PaginationResult} _pagination.required - Pagination metadata
  * @property {Array<EventShiftResponse>} records.required - Returned event shifts
  */
 export interface PaginatedEventShiftResponse {
@@ -71,7 +71,7 @@ export interface PaginatedEventShiftResponse {
 }
 
 /**
- * @typedef {BaseEventResponse} EventResponse
+ * @typedef {allOf|BaseEventResponse} EventResponse
  * @property {Array<EventInShiftResponse>} shifts.required - Shifts for this event
  */
 export interface EventResponse extends BaseEventResponse {
@@ -79,8 +79,8 @@ export interface EventResponse extends BaseEventResponse {
 }
 
 /**
- * @typedef BaseEventAnswerResponse
- * @property {BaseUserResponse.model} user.required - Participant that filled in their availability
+ * @typedef {object} BaseEventAnswerResponse
+ * @property {BaseUserResponse} user.required - Participant that filled in their availability
  * @property {string} availability - Filled in availability per slot.
  * @property {boolean} selected.required - Whether this user is selected for the shift in the event
  */
@@ -91,8 +91,8 @@ export interface BaseEventAnswerResponse {
 }
 
 /**
- * @typedef PaginatedBaseEventResponse
- * @property {PaginationResult.model} _pagination.required - Pagination metadata
+ * @typedef {object} PaginatedBaseEventResponse
+ * @property {PaginationResult} _pagination.required - Pagination metadata
  * @property {Array<BaseEventResponse>} records.required - Returned borrel Schemas
  */
 export interface PaginatedBaseEventResponse {
@@ -101,7 +101,7 @@ export interface PaginatedBaseEventResponse {
 }
 
 /**
- * @typedef {BaseUserResponse} EventPlanningSelectedCount
+ * @typedef {allOf|BaseUserResponse} EventPlanningSelectedCount
  * @property {integer} count.required - Number of times this user was selected for this shift
  */
 export interface EventPlanningSelectedCount extends BaseUserResponse {

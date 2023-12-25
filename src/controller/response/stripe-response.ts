@@ -22,7 +22,7 @@ import { StripeDepositState } from '../../entity/deposit/stripe-deposit-status';
 import { BaseUserResponse } from './user-response';
 
 /**
- * @typedef {BaseResponse} StripePaymentIntentResponse
+ * @typedef {allOf|BaseResponse} StripePaymentIntentResponse
  * @property {string} stripeId.required - ID of the intent in Stripe.
  * @property {string} clientSecret.required - The client secret of the created Payment Intent.
  */
@@ -32,19 +32,19 @@ export interface StripePaymentIntentResponse extends BaseResponse {
 }
 
 /**
- * @typedef {BaseResponse} StripeDepositStatusResponse
- * @property {number} state.required - State of the Stripe deposit. It can be 1 ('CREATED'), 2 ('PROCESSING'), 3 ('SUCCEEDED'), or 4 ('FAILED')
+ * @typedef {allOf|BaseResponse} StripeDepositStatusResponse
+ * @property {number} state.required - enum:1,2,3,4 - State of the Stripe deposit. It can be 1 ('CREATED'), 2 ('PROCESSING'), 3 ('SUCCEEDED'), or 4 ('FAILED')
  */
 export interface StripeDepositStatusResponse extends BaseResponse {
   state: StripeDepositState;
 }
 
 /**
- * @typedef {BaseResponse} StripeDepositResponse
+ * @typedef {allOf|BaseResponse} StripeDepositResponse
  * @property {string} stripeId.required - The ID of the payment intent in Stripe
- * @property {Array.<StripeDepositStatusResponse>} depositStatus.required - Current status of the deposit
- * @property {DineroObjectResponse.model} amount.required - The amount deposited
- * @property {BaseUserResponse.model} to.required - User that deposited money
+ * @property {Array<StripeDepositStatusResponse>} depositStatus.required - Current status of the deposit
+ * @property {DineroObjectResponse} amount.required - The amount deposited
+ * @property {BaseUserResponse} to.required - User that deposited money
  */
 export interface StripeDepositResponse extends BaseResponse {
   stripeId: string;

@@ -21,7 +21,7 @@ import {
 import BaseEntityWithoutId from './base-entity-without-id';
 
 /**
- * @typedef  {BaseEntityWithoutId} BaseEntity
+ * @typedef  {allOf|BaseEntityWithoutId} BaseEntity
  * @property {integer} id.required - The auto-generated object id.
  */
 export default class BaseEntity extends BaseEntityWithoutId {
