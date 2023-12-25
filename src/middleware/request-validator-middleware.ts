@@ -43,7 +43,7 @@ export default class RequestValidatorMiddleware {
     this.specification = specification;
     this.validator = validator;
 
-    if (!specification.definitions[validator.modelName]) {
+    if (!specification.components.schemas[validator.modelName]) {
       throw new Error(`Model '${validator.modelName}' not defined.`);
     }
   }

@@ -241,7 +241,7 @@ export default class ProductController extends BaseController {
    * @tags products - Operations of products controller
    * @consumes multipart/form-data
    * @param {integer} id.path.required - The id of the product which should be returned
-   * @param {File} request.body.required - product image - multipart/form-data
+   * @param {FileRequest} request.body.required - product image - multipart/form-data
    * @security JWT
    * @return 204 - Success
    * @return {string} 400 - Validation error

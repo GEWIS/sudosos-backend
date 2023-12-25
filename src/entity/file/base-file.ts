@@ -20,7 +20,7 @@ import BaseEntity from '../base-entity';
 import User from '../user/user';
 
 /**
- * @typedef {object} File
+ * @typedef {object} FileRequest
  * @property {string} file - file - binary
  */
 

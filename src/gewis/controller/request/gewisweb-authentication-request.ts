@@ -17,7 +17,7 @@
  */
 
 /**
- * @typedef GewiswebAuthenticationRequest
+ * @typedef {object} GewiswebAuthenticationRequest
  * @property {string} token.required The gewisweb JWT token.
  * @property {string} nonce.required The nonce used in the newly signed JWT token.
  */

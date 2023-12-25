@@ -17,7 +17,7 @@
  */
 
 /**
- * @typedef GEWISAuthenticationPinRequest
+ * @typedef {object} GEWISAuthenticationPinRequest
  * @property {number} gewisId.required
  * @property {string} pin.required
  */

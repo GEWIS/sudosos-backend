@@ -237,13 +237,13 @@ export default class EventShiftController extends BaseController {
    * GET /eventshifts/{id}/counts
    * @summary Get the number of times a user has been selected for the given shift
    * @tags events - Operations of the event controller
-   * @operationId getShiftSelectedCount
+   * @operationId getEventShiftCount
    * @security JWT
-   * @param {integer} id.path.required - The id of the event which should be deleted
+   * @param {integer} id.path.required - The id of the event shift
    * @param {string} eventType.query - Only include events of this type
    * @param {string} afterDate.query - Only include events after this date
    * @param {string} beforeDate.query - Only include events before this date
-   * @return {Array<>PaginatedEventShiftResponse>} 200 - All existing event shifts
+   * @return {Array<PaginatedEventShiftResponse>} 200 - All existing event shifts
    * @return {string} 400 - Validation error
    * @return {string} 500 - Internal server error
    */

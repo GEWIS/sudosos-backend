@@ -65,45 +65,71 @@ export default class Swagger {
     return swaggerSpec;
   }
 
-  public static generateNewSpecification(app: express.Application) {
-    const options = {
-      info: {
-        version: process.env.npm_package_version,
-        title: process.env.npm_package_name,
-        description: process.env.npm_package_description,
-      },
-      baseDir: 'C:\\Users\\Samuel\\WebstormProjects\\GEWIS\\SudoSOS\\sudosos-backend\\src\\',
-      // Glob pattern to find your jsdoc files
-      filesPattern: [
-        './controller/*.ts',
-        './helpers/pagination.ts',
+  public static generateNewSpecification(app: express.Application): Promise<SwaggerSpecification> {
+    return new Promise((resolve, reject) => {
+      const options = {
+        info: {
+          version: process.env.npm_package_version,
+          title: process.env.npm_package_name,
+          description: process.env.npm_package_description,
+        },
+        "schemes": [
+          "http",
+          "https"
+        ],
+        servers: [
+          {
+            url: `http://${process.env.API_HOST}${process.env.API_BASEPATH}`,
+            description: 'Development server',
+          },
+        ],
+        security: {
+          JWT: {
+            type: 'http',
+            scheme: 'bearer',
+            bearerFormat: 'JWT',
+          },
+        },
+        baseDir: 'C:\\Users\\Samuel\\WebstormProjects\\GEWIS\\SudoSOS\\sudosos-backend\\src\\',
+        // Glob pattern to find your jsdoc files
+        filesPattern: [
+          './controller/*.ts',
+          './helpers/pagination.ts',
 
-        './controller/request/*.ts',
+          './controller/request/*.ts',
 
-        './controller/response/*.ts',
-        './controller/response/**/*.ts',
+          './controller/response/*.ts',
+          './controller/response/**/*.ts',
+          './gewis/controller/**/*.ts',
+          './entity/vat-group.ts',
+          './entity/base-entity-without-id.ts',
+          './entity/base-entity.ts',
+          './entity/user/*.ts',
+          './entity/file/base-file.ts',
+        ],
+        swaggerUIPath: '/api-docs',
+        exposeSwaggerUI: true, // Expose Swagger UI
+        exposeApiDocs: true, // Expose API Docs JSON
+        apiDocsPath: '/api-docs.json',
+      };
 
-        './entity/vat-group.ts',
-        './entity/base-entity-without-id.ts',
-        './entity/base-entity.ts',
-        './entity/user/*.ts',
-        './entity/file/base-file.ts',
-      ],
-      swaggerUIPath: '/api-docs',
-      exposeSwaggerUI: true, // Expose Swagger UI
-      exposeApiDocs: true, // Expose API Docs JSON
-      apiDocsPath: '/api-docs.json',
-    };
+      const instance = expressJSDocSwagger(app)(options);
 
-    const instance = expressJSDocSwagger(app)(options);
+      instance.on('finish', (swaggerObject) => {
+        console.error('Swagger specification generation finished');
+        new Validator(swaggerObject);
+        void fs.writeFile(
+          path.join(process.cwd(), 'out/swagger.json'),
+          JSON.stringify(swaggerObject),
+          {encoding: 'utf-8'},
+        );
+        resolve(swaggerObject); // Resolve the promise with the swaggerObject
+      });
 
-    instance.on('finish', (swaggerObject) => {
-      console.log('Finish');
-      void fs.writeFile(
-        path.join(process.cwd(), 'out/swagger.json'),
-        JSON.stringify(swaggerObject),
-        { encoding: 'utf-8' },
-      );
+      instance.on('error', (error) => {
+        console.error('Error generating Swagger specification:', error);
+        reject(error); // Reject the promise in case of an error
+      });
     });
   }
 
@@ -138,16 +164,7 @@ export default class Swagger {
       return specification;
     }
 
-    // Generate Swagger specification on-demand in development environments.
-    return Swagger.generateSpecification(app,
-      path.join(process.cwd(), 'src/entity/*.ts'),
-      path.join(process.cwd(), 'src/entity/**/*.ts'),
-      path.join(process.cwd(), 'src/gewis/entity/*.ts'),
-      path.join(process.cwd(), 'src/declaration/*.ts'),
-      path.join(process.cwd(), 'src/**/controller/*.ts'),
-      path.join(process.cwd(), 'src/**/controller/response/**/*.ts'),
-      path.join(process.cwd(), 'src/**/controller/request/**/*.ts'),
-      path.join(process.cwd(), 'src/**/helpers/pagination.ts'));
+    return Swagger.generateNewSpecification(app);
   }
 }
 
