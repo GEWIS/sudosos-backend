@@ -78,6 +78,7 @@ export default class Swagger {
         './controller/authentication-controller.ts',
         './controller/authentication-secure-controller.ts',
         './controller/root-controller.ts',
+        './controller/banner-controller.ts',
         './controller/balance-controller.ts',
 
         './helpers/pagination.ts',
