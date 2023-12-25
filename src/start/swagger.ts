@@ -126,11 +126,13 @@ export default class Swagger {
           JSON.stringify(swaggerObject),
           { encoding: 'utf-8' },
         );
+        instance.removeAllListeners();
         resolve(swaggerObject); // Resolve the promise with the swaggerObject
       });
 
       instance.on('error', (error) => {
         Swagger.logger.error('Error generating Swagger specification:', error);
+        instance.removeAllListeners();
         reject(error); // Reject the promise in case of an error
       });
     });
