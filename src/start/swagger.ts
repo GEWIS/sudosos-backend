@@ -80,6 +80,7 @@ export default class Swagger {
         './controller/root-controller.ts',
         './controller/banner-controller.ts',
         './controller/balance-controller.ts',
+        './controller/container-controller.ts',
 
         './helpers/pagination.ts',
 
