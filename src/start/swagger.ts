@@ -83,7 +83,8 @@ export default class Swagger {
         './controller/response/authentication-response.ts',
         './controller/response/user-response.ts',
         './controller/request/authentication-*.ts',
-        './controller/request/reset-local-request.ts'
+        './controller/request/reset-local-request.ts',
+        './controller/authentication-secure-controller.ts',
       ],
       swaggerUIPath: '/api-docs',
       exposeSwaggerUI: true, // Expose Swagger UI

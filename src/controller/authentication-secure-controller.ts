@@ -16,11 +16,11 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { Response } from 'express';
-import log4js, { Logger } from 'log4js';
-import BaseController, { BaseControllerOptions } from './base-controller';
+import {Response} from 'express';
+import log4js, {Logger} from 'log4js';
+import BaseController, {BaseControllerOptions} from './base-controller';
 import Policy from './policy';
-import { RequestWithToken } from '../middleware/token-middleware';
+import {RequestWithToken} from '../middleware/token-middleware';
 import AuthenticationService from '../service/authentication-service';
 import TokenHandler from '../authentication/token-handler';
 import User from '../entity/user/user';
@@ -53,25 +53,25 @@ export default class AuthenticationSecureController extends BaseController {
         GET: {
           policy: async () => Promise.resolve(true),
           handler: this.refreshToken.bind(this),
-          restrictions: { lesser: true, acceptedTOS: false },
+          restrictions: {lesser: true, acceptedTOS: false},
         },
       },
     };
   }
 
   /**
-   * Get a new JWT token, lesser if the existing token is also lesser
-   * @route get /authentication/refreshToken
+   * GET /authentication/refreshToken
+   * @summary Get a new JWT token, lesser if the existing token is also lesser
    * @operationId refreshToken
-   * @group authenticate - Operations of the authentication controller
+   * @tags authenticate - Operations of the authentication controller
    * @security JWT
-   * @returns {AuthenticationResponse.model} 200 - The created json web token.
+   * @returns {AuthenticationResponse} 200 - The created json web token.
    */
   private async refreshToken(req: RequestWithToken, res: Response): Promise<void> {
     this.logger.trace('Refresh token for user', req.token.user.id);
 
     try {
-      const user = await User.findOne({ where: { id: req.token.user.id } });
+      const user = await User.findOne({where: {id: req.token.user.id}});
       const token = await AuthenticationService.getSaltedToken(user, {
         roleManager: this.roleManager,
         tokenHandler: this.tokenHandler,
