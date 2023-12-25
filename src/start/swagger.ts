@@ -16,12 +16,13 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 /* eslint-disable no-new */
-import { promises as fs } from 'fs';
+import {promises as fs} from 'fs';
 import * as path from 'path';
 import express from 'express';
 import swaggerUi from 'express-swaggerize-ui';
-import Validator, { SwaggerSpecification } from 'swagger-model-validator';
+import Validator, {SwaggerSpecification} from 'swagger-model-validator';
 import generateSpecAndMount from 'express-swagger-generator';
+import expressJSDocSwagger from 'express-jsdoc-swagger';
 
 export default class Swagger {
   /**
@@ -62,6 +63,34 @@ export default class Swagger {
     const swaggerSpec = swagger(swaggerOptions) as SwaggerSpecification;
     new Validator(swaggerSpec);
     return swaggerSpec;
+  }
+
+  public static generateNewSpecification(app: express.Application) {
+    const options = {
+      info: {
+        version: process.env.npm_package_version,
+        title: process.env.npm_package_name,
+        description: process.env.npm_package_description,
+      },
+      baseDir: 'C:\\Users\\Samuel\\WebstormProjects\\GEWIS\\SudoSOS\\sudosos-backend\\src\\',
+      // Glob pattern to find your jsdoc files
+      filesPattern: ['.\\controller\\root-controller.ts'],
+      swaggerUIPath: '/api-docs',
+      exposeSwaggerUI: true, // Expose Swagger UI
+      exposeApiDocs: true, // Expose API Docs JSON
+      apiDocsPath: '/api-docs.json',
+    };
+
+    const instance = expressJSDocSwagger(app)(options);
+
+    instance.on('finish', (swaggerObject) => {
+      console.log('Finish');
+      void fs.writeFile(
+        path.join(process.cwd(), 'out/swagger.json'),
+        JSON.stringify(swaggerObject),
+        {encoding: 'utf-8'},
+      );
+    });
   }
 
   /**
@@ -111,12 +140,16 @@ export default class Swagger {
 if (require.main === module) {
   // Only execute directly if this is the main execution file.
   const app = express();
+
+  fs.mkdir('out', {recursive: true})
+    .then(() => Swagger.generateNewSpecification(app));
+
   // eslint-disable-next-line @typescript-eslint/no-floating-promises
-  fs.mkdir('out', { recursive: true })
-    .then(() => Swagger.initialize(app))
-    .then((specification) => fs.writeFile(
-      path.join(process.cwd(), 'out/swagger.json'),
-      JSON.stringify(specification),
-      { encoding: 'utf-8' },
-    ));
+  // fs.mkdir('out', { recursive: true })
+  //   .then(() => Swagger.initialize(app))
+  //   .then((specification) => fs.writeFile(
+  //     path.join(process.cwd(), 'out/swagger.json'),
+  //     JSON.stringify(specification),
+  //     { encoding: 'utf-8' },
+  //   ));
 }
