@@ -122,12 +122,12 @@ export default abstract class BaseController {
   /**
    * Gets the policy defined by child classes. This policy includes all routes that the controller
    * accepts, the authorization middleware, and the final handler function for every route.
-   * @returns The policy of this controller.
+   * @return The policy of this controller.
    */
   public abstract getPolicy(): Policy;
 
   /**
-   * @returns the router used by this controller.
+   * @return the router used by this controller.
    */
   public getRouter(): Router {
     return this.router;

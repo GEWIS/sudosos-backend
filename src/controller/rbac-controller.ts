@@ -48,13 +48,13 @@ export default class RbacController extends BaseController {
   }
 
   /**
-   * Returns all existing roles
-   * @route GET /rbac/roles
+   * GET /rbac/roles
+   * @summary Returns all existing roles
    * @operationId getAllRoles
-   * @group rbac - Operations of rbac controller
+   * @tags rbac - Operations of rbac controller
    * @security JWT
-   * @returns {Array.<RoleResponse>} 200 - All existing roles
-   * @returns {string} 500 - Internal server error
+   * @return {Array.<RoleResponse>} 200 - All existing roles
+   * @return {string} 500 - Internal server error
    */
   public async returnAllRoles(req: Request, res: Response): Promise<void> {
     const { body } = req;

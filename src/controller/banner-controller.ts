@@ -153,17 +153,12 @@ export default class BannerController extends BaseController {
   }
 
   /**
-   * @typedef {object} Image
-   * @property {string} file - file - binary
-   */
-
-  /**
    * POST /banners/{id}/image
    * @summary Uploads a banner image to the given banner
    * @operationId updateImage
    * @tags banners - Operations of banner controller
    * @param {integer} id.path.required - The id of the banner
-   * @param {Image} request.body.required - banner image - multipart/form-data
+   * @param {File} request.body.required - banner image - multipart/form-data
    * @security JWT
    * @return 204 - Success
    * @return {string} 400 - Validation error

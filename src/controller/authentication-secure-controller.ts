@@ -65,7 +65,7 @@ export default class AuthenticationSecureController extends BaseController {
    * @operationId refreshToken
    * @tags authenticate - Operations of the authentication controller
    * @security JWT
-   * @returns {AuthenticationResponse} 200 - The created json web token.
+   * @return {AuthenticationResponse} 200 - The created json web token.
    */
   private async refreshToken(req: RequestWithToken, res: Response): Promise<void> {
     this.logger.trace('Refresh token for user', req.token.user.id);

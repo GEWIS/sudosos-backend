@@ -85,10 +85,10 @@ export default class TransactionController extends BaseController {
   }
 
   /**
-   * Get a list of all transactions
-   * @route GET /transactions
+   * GET /transactions
+   * @summary Get a list of all transactions
    * @operationId getAllTransactions
-   * @group transactions - Operations of the transaction controller
+   * @tags transactions - Operations of the transaction controller
    * @security JWT
    * @param {integer} fromId.query - From-user for selected transactions
    * @param {integer} createdById.query - User that created selected transaction
@@ -102,7 +102,7 @@ export default class TransactionController extends BaseController {
    * @param {string} tillDate.query - End date for selected transactions (exclusive)
    * @param {integer} take.query - How many transactions the endpoint should return
    * @param {integer} skip.query - How many transactions should be skipped (for pagination)
-   * @returns {PaginatedBaseTransactionResponse.model} 200 - A list of all transactions
+   * @return {PaginatedBaseTransactionResponse} 200 - A list of all transactions
    */
   public async getAllTransactions(req: RequestWithToken, res: Response): Promise<void> {
     this.logger.trace('Get all transactions by user', req.token.user);
@@ -132,17 +132,17 @@ export default class TransactionController extends BaseController {
   }
 
   /**
-   * Creates a new transaction
-   * @route POST /transactions
+   * POST /transactions
+   * @summary Creates a new transaction
    * @operationId createTransaction
-   * @group transactions - Operations of the transaction controller
-   * @param {TransactionRequest.model} transaction.body.required -
+   * @tags transactions - Operations of the transaction controller
+   * @param {TransactionRequest} request.body.requried -
    * The transaction which should be created
    * @security JWT
-   * @returns {TransactionResponse.model} 200 - The created transaction entity
-   * @returns {string} 400 - Validation error
-   * @returns {string} 403 - Insufficient balance error
-   * @returns {string} 500 - Internal server error
+   * @return {TransactionResponse} 200 - The created transaction entity
+   * @return {string} 400 - Validation error
+   * @return {string} 403 - Insufficient balance error
+   * @return {string} 500 - Internal server error
    */
   public async createTransaction(req: RequestWithToken, res: Response): Promise<void> {
     const body = req.body as TransactionRequest;
@@ -170,14 +170,14 @@ export default class TransactionController extends BaseController {
   }
 
   /**
-   * Get a single transaction
-   * @route GET /transactions/{id}
+   * GET /transactions/{id}
+   * @summary Get a single transaction
    * @operationId getSingleTransaction
-   * @group transactions - Operations of the transaction controller
+   * @tags transactions - Operations of the transaction controller
    * @param {integer} id.path.required - The id of the transaction which should be returned
    * @security JWT
-   * @returns {TransactionResponse.model} 200 - Single transaction with given id
-   * @returns {string} 404 - Nonexistent transaction id
+   * @return {TransactionResponse} 200 - Single transaction with given id
+   * @return {string} 404 - Nonexistent transaction id
    */
   public async getTransaction(req: RequestWithToken, res: Response): Promise<TransactionResponse> {
     const parameters = req.params;
@@ -202,18 +202,18 @@ export default class TransactionController extends BaseController {
   }
 
   /**
-   * Updates the requested transaction
-   * @route PATCH /transactions/{id}
+   * PATCH /transactions/{id}
+   * @summary Updates the requested transaction
    * @operationId updateTransaction
-   * @group transactions - Operations of transaction controller
+   * @tags transactions - Operations of transaction controller
    * @param {integer} id.path.required - The id of the transaction which should be updated
-   * @param {TransactionRequest.model} transaction.body.required -
+   * @param {TransactionRequest} request.body.requried -
    * The updated transaction
    * @security JWT
-   * @returns {TransactionResponse.model} 200 - The requested transaction entity
-   * @returns {string} 400 - Validation error
-   * @returns {string} 404 - Not found error
-   * @returns {string} 500 - Internal server error
+   * @return {TransactionResponse} 200 - The requested transaction entity
+   * @return {string} 400 - Validation error
+   * @return {string} 404 - Not found error
+   * @return {string} 500 - Internal server error
    */
   public async updateTransaction(req: RequestWithToken, res: Response): Promise<void> {
     const body = req.body as TransactionRequest;
@@ -240,14 +240,14 @@ export default class TransactionController extends BaseController {
   }
 
   /**
-   * Deletes a transaction
-   * @route DELETE /transactions/{id}
+   * DELETE /transactions/{id}
+   * @summary Deletes a transaction
    * @operationId deleteTransaction
-   * @group transactions - Operations of the transaction controller
+   * @tags transactions - Operations of the transaction controller
    * @param {integer} id.path.required - The id of the transaction which should be deleted
    * @security JWT
-   * @returns {TransactionResponse.model} 200 - The deleted transaction
-   * @returns {string} 404 - Nonexistent transaction id
+   * @return {TransactionResponse} 200 - The deleted transaction
+   * @return {string} 404 - Nonexistent transaction id
    */
   // eslint-disable-next-line class-methods-use-this
   public async deleteTransaction(req: RequestWithToken, res: Response): Promise<void> {
@@ -268,16 +268,16 @@ export default class TransactionController extends BaseController {
   }
 
   /**
-   * Function to validate the transaction immediatly after it is created
-   * @route POST /transactions/validate
+   * POST /transactions/validate
+   * @summary Function to validate the transaction immediatly after it is created
    * @operationId validateTransaction
-   * @group transactions - Operations of the transaction controller
-   * @param {TransactionRequest.model} transaction.body.required -
+   * @tags transactions - Operations of the transaction controller
+   * @param {TransactionRequest} request.body.requried -
    * The transaction which should be validated
-   * @returns {Boolean} 200 - Transaction validated
+   * @return {boolean} 200 - Transaction validated
    * @security JWT
-   * @returns {string} 400 - Validation error
-   * @returns {string} 500 - Internal server error
+   * @return {string} 400 - Validation error
+   * @return {string} 500 - Internal server error
    */
   public async validateTransaction(req: RequestWithToken, res: Response): Promise<void> {
     const body = req.body as TransactionRequest;
@@ -302,7 +302,7 @@ export default class TransactionController extends BaseController {
    *    other if transaction createdby is and linked via organ
    *    own if user is connected to transaction
    * @param req - Request with TransactionRequest in the body
-   * @returns whether transaction is connected to user token
+   * @return whether transaction is connected to user token
    */
   static async postRelation(req: RequestWithToken): Promise<string> {
     const request = req.body as TransactionRequest;
@@ -322,7 +322,7 @@ export default class TransactionController extends BaseController {
    *    organ if user is not connected to transaction via organ
    *    own if user is connected to transaction
    * @param req - Request with transaction id as param
-   * @returns whether transaction is connected to user token
+   * @return whether transaction is connected to user token
    */
   static async getRelation(req: RequestWithToken): Promise<string> {
     const transaction = await Transaction.findOne({

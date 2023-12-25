@@ -100,16 +100,16 @@ export default class PointOfSaleController extends BaseController {
   }
 
   /**
-   * Create a new Point of Sale.
-   * @route POST /pointsofsale
+   * POST /pointsofsale
+   * @summary Create a new Point of Sale.
    * @operationId createPointOfSale
-   * @group pointofsale - Operations of the point of sale controller
-   * @param {CreatePointOfSaleRequest.model} pointofsale.body.required -
+   * @tags pointofsale - Operations of the point of sale controller
+   * @param {CreatePointOfSaleRequest} request.body.requried -
    * The point of sale which should be created
    * @security JWT
-   * @returns {PointOfSaleWithContainersResponse.model} 200 - The created point of sale entity
-   * @returns {string} 400 - Validation error
-   * @returns {string} 500 - Internal server error
+   * @return {PointOfSaleWithContainersResponse} 200 - The created point of sale entity
+   * @return {string} 400 - Validation error
+   * @return {string} 500 - Internal server error
    */
   public async createPointOfSale(req: RequestWithToken, res: Response): Promise<void> {
     const body = req.body as CreatePointOfSaleRequest;
@@ -137,15 +137,15 @@ export default class PointOfSaleController extends BaseController {
   }
 
   /**
-   * Returns all existing Point of Sales
-   * @route GET /pointsofsale
+   * GET /pointsofsale
+   * @summary Returns all existing Point of Sales
    * @operationId getAllPointsOfSale
-   * @group pointofsale - Operations of the point of sale controller
+   * @tags pointofsale - Operations of the point of sale controller
    * @security JWT
    * @param {integer} take.query - How many points of sale the endpoint should return
    * @param {integer} skip.query - How many points of sale should be skipped (for pagination)
-   * @returns {PaginatedPointOfSaleResponse.model} 200 - All existing point of sales
-   * @returns {string} 500 - Internal server error
+   * @return {PaginatedPointOfSaleResponse} 200 - All existing point of sales
+   * @return {string} 500 - Internal server error
    */
   public async returnAllPointsOfSale(req: RequestWithToken, res: Response): Promise<void> {
     const { body } = req;
@@ -173,15 +173,15 @@ export default class PointOfSaleController extends BaseController {
   }
 
   /**
-   * Returns the requested Point of Sale
-   * @route GET /pointsofsale/{id}
+   * GET /pointsofsale/{id}
+   * @summary Returns the requested Point of Sale
    * @operationId getSinglePointOfSale
-   * @group pointofsale - Operations of the point of sale controller
+   * @tags pointofsale - Operations of the point of sale controller
    * @param {integer} id.path.required - The id of the Point of Sale which should be returned
    * @security JWT
-   * @returns {PointOfSaleWithContainersResponse.model} 200 - The requested point of sale entity
-   * @returns {string} 404 - Not found error
-   * @returns {string} 500 - Internal server error
+   * @return {PointOfSaleWithContainersResponse} 200 - The requested point of sale entity
+   * @return {string} 404 - Not found error
+   * @return {string} 500 - Internal server error
    */
   public async returnSinglePointOfSale(req: RequestWithToken, res: Response): Promise<void> {
     const { id } = req.params;
@@ -208,18 +208,18 @@ export default class PointOfSaleController extends BaseController {
   }
 
   /**
-   * Update an existing Point of Sale.
-   * @route PATCH /pointsofsale/{id}
+   * PATCH /pointsofsale/{id}
+   * @summary Update an existing Point of Sale.
    * @operationId updatePointOfSale
-   * @group pointofsale - Operations of the point of sale controller
+   * @tags pointofsale - Operations of the point of sale controller
    * @param {integer} id.path.required - The id of the Point of Sale which should be updated
-   * @param {UpdatePointOfSaleRequest.model} pointofsale.body.required -
+   * @param {UpdatePointOfSaleRequest} request.body.requried -
    *    The Point of Sale which should be updated
    * @security JWT
-   * @returns {PointOfSaleWithContainersResponse.model} 200 - The updated Point of Sale entity
-   * @returns {string} 400 - Validation error
-   * @returns {string} 404 - Product not found error
-   * @returns {string} 500 - Internal server error
+   * @return {PointOfSaleWithContainersResponse} 200 - The updated Point of Sale entity
+   * @return {string} 400 - Validation error
+   * @return {string} 404 - Product not found error
+   * @return {string} 500 - Internal server error
    */
   public async updatePointOfSale(req: RequestWithToken, res: Response): Promise<void> {
     const body = req.body as UpdatePointOfSaleRequest;
@@ -254,16 +254,16 @@ export default class PointOfSaleController extends BaseController {
   }
 
   /**
-   * Returns the containers of the requested Point of Sale, empty list if POS does not exist
-   * @route GET /pointsofsale/{id}/containers
+   * GET /pointsofsale/{id}/containers
+   * @summary Returns the containers of the requested Point of Sale, empty list if POS does not exist
    * @operationId getAllPointOfSaleContainers
-   * @group pointofsale - Operations of the point of sale controller
+   * @tags pointofsale - Operations of the point of sale controller
    * @security JWT
    * @param {integer} id.path.required - The id of the point of sale
    * @param {integer} take.query - How many containers the endpoint should return
    * @param {integer} skip.query - How many containers should be skipped (for pagination)
-   * @returns {PaginatedContainerResponse.model} 200 - All containers of the requested Point of Sale
-   * @returns {string} 500 - Internal server error
+   * @return {PaginatedContainerResponse} 200 - All containers of the requested Point of Sale
+   * @return {string} 500 - Internal server error
    */
   public async returnAllPointOfSaleContainers(req: RequestWithToken, res: Response): Promise<void> {
     const { id } = req.params;
@@ -284,16 +284,16 @@ export default class PointOfSaleController extends BaseController {
   }
 
   /**
-   * Returns the products of the requested Point of Sale, empty list if POS does not exist
-   * @route GET /pointsofsale/{id}/products
+   * GET /pointsofsale/{id}/products
+   * @summary Returns the products of the requested Point of Sale, empty list if POS does not exist
    * @operationId getAllPointOfSaleProducts
-   * @group pointofsale - Operations of the point of sale controller
+   * @tags pointofsale - Operations of the point of sale controller
    * @security JWT
    * @param {integer} id.path.required - The id of the point of sale
    * @param {integer} take.query - How many products the endpoint should return
    * @param {integer} skip.query - How many products should be skipped (for pagination)
-   * @returns {PaginatedProductResponse.model} 200 - All products of the requested Point of Sale
-   * @returns {string} 500 - Internal server error
+   * @return {PaginatedProductResponse} 200 - All products of the requested Point of Sale
+   * @return {string} 500 - Internal server error
    */
   public async returnAllPointOfSaleProducts(req: RequestWithToken, res: Response): Promise<void> {
     const { id } = req.params;
@@ -314,19 +314,17 @@ export default class PointOfSaleController extends BaseController {
   }
 
   /**
-   * Returns a Point of Sale transactions
-   * @route GET /pointsofsale/{id}/transactions
+   * GET /pointsofsale/{id}/transactions
+   * @summary Returns a Point of Sale transactions
    * @operationId getTransactions
-   * @group pointofsale - Operations of the point of sale controller
-   * @param {integer} id.path.required -
-   *          The id of the Point of Sale of which to get the transactions.
+   * @tags pointofsale - Operations of the point of sale controller
+   * @param {integer} id.path.required - The id of the Point of Sale of which to get the transactions.
    * @param {integer} take.query - How many transactions the endpoint should return
    * @param {integer} skip.query - How many transactions should be skipped (for pagination)
    * @security JWT
-   * @returns {PaginatedBaseTransactionResponse.model} 200 -
-   *          The requested Point of Sale transactions
-   * @returns {string} 404 - Not found error
-   * @returns {string} 500 - Internal server error
+   * @return {PaginatedBaseTransactionResponse} 200 - The requested Point of Sale transactions
+   * @return {string} 404 - Not found error
+   * @return {string} 500 - Internal server error
    */
   public async returnPointOfSaleTransactions(req: RequestWithToken, res: Response): Promise<void> {
     const { id } = req.params;
@@ -368,7 +366,7 @@ export default class PointOfSaleController extends BaseController {
    *    'organ' if user is connected to POS via organ
    *    'own' if user is connected to POS
    * @param req - Request with CreatePointOfSaleRequest as body
-   * @returns whether POS is connected to user token
+   * @return whether POS is connected to user token
    */
   static postRelation(req: RequestWithToken): string {
     const request = req.body as CreatePointOfSaleRequest;
@@ -383,7 +381,7 @@ export default class PointOfSaleController extends BaseController {
    *    'organ' if user is connected to POS via organ
    *    'own' if user is connected to POS
    * @param req
-   * @returns whether POS is connected to used token
+   * @return whether POS is connected to used token
    */
   static async getRelation(req: RequestWithToken): Promise<string> {
     const pointOfSaleId = asNumber(req.params.id);

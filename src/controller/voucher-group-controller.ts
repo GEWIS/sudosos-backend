@@ -64,16 +64,16 @@ export default class VoucherGroupController extends BaseController {
   }
 
   /**
-   * Returns all existing voucher groups
-   * @route GET /vouchergroups
+   * GET /vouchergroups
+   * @summary Returns all existing voucher groups
    * @operationId getAllVouchergroups
-   * @group vouchergroups - Operations of voucher group controller
+   * @tags vouchergroups - Operations of voucher group controller
    * @security JWT
    * @param {integer} take.query - How many voucher groups the endpoint should return
    * @param {integer} skip.query - How many voucher groups should be skipped (for pagination)
-   * @returns {PaginatedVoucherGroupResponse.model} 200 - All existingvoucher
+   * @return {PaginatedVoucherGroupResponse} 200 - All existingvoucher
    * groups without users
-   * @returns {string} 500 - Internal server error
+   * @return {string} 500 - Internal server error
    */
   public async getAllVoucherGroups(req: RequestWithToken, res: Response): Promise<void> {
     const { body } = req;
@@ -100,16 +100,16 @@ export default class VoucherGroupController extends BaseController {
   }
 
   /**
-   * Creates a new voucher group
-   * @route POST /vouchergroups
+   * POST /vouchergroups
+   * @summary Creates a new voucher group
    * @operationId createVouchergroup
-   * @group vouchergroups - Operations of voucher group controller
-   * @param {VoucherGroupRequest.model} vouchergroup.body.required -
+   * @tags vouchergroups - Operations of voucher group controller
+   * @param {VoucherGroupRequest} request.body.requried -
    * The voucher group which should be created
    * @security JWT
-   * @returns {VoucherGroupResponse.model} 200 - The created voucher group entity
-   * @returns {string} 400 - Validation error
-   * @returns {string} 500 - Internal server error
+   * @return {VoucherGroupResponse} 200 - The created voucher group entity
+   * @return {string} 400 - Validation error
+   * @return {string} 500 - Internal server error
    */
   public async createVoucherGroup(req: RequestWithToken, res: Response): Promise<void> {
     const body = req.body as VoucherGroupRequest;
@@ -131,15 +131,15 @@ export default class VoucherGroupController extends BaseController {
   }
 
   /**
-   * Returns the requested voucher group
-   * @route GET /vouchergroups/{id}
+   * GET /vouchergroups/{id}
+   * @summary Returns the requested voucher group
    * @operationId getVouchergroupId
-   * @group vouchergroups - Operations of voucher group controller
+   * @tags vouchergroups - Operations of voucher group controller
    * @param {integer} id.path.required - The id of the voucher group which should be returned
    * @security JWT
-   * @returns {VoucherGroupResponse.model} 200 - The requested voucher group entity
-   * @returns {string} 404 - Not found error
-   * @returns {string} 500 - Internal server error
+   * @return {VoucherGroupResponse} 200 - The requested voucher group entity
+   * @return {string} 404 - Not found error
+   * @return {string} 500 - Internal server error
    */
   public async getVoucherGroupById(req: RequestWithToken, res: Response): Promise<void> {
     const { id } = req.params;
@@ -161,18 +161,18 @@ export default class VoucherGroupController extends BaseController {
   }
 
   /**
-   * Updates the requested voucher group
-   * @route PATCH /vouchergroups/{id}
+   * PATCH /vouchergroups/{id}
+   * @summary Updates the requested voucher group
    * @operationId updateVoucherGroup
-   * @group vouchergroups - Operations of voucher group controller
+   * @tags vouchergroups - Operations of voucher group controller
    * @param {integer} id.path.required - The id of the voucher group which should be updated
-   * @param {VoucherGroupRequest.model} vouchergroup.body.required -
+   * @param {VoucherGroupRequest} request.body.requried -
    * The updated voucher group
    * @security JWT
-   * @returns {VoucherGroupResponse.model} 200 - The requested voucher group entity
-   * @returns {string} 400 - Validation error
-   * @returns {string} 404 - Not found error
-   * @returns {string} 500 - Internal server error
+   * @return {VoucherGroupResponse} 200 - The requested voucher group entity
+   * @return {string} 400 - Validation error
+   * @return {string} 404 - Not found error
+   * @return {string} 500 - Internal server error
    */
   public async updateVoucherGroup(req: RequestWithToken, res: Response): Promise<void> {
     const body = req.body as VoucherGroupRequest;

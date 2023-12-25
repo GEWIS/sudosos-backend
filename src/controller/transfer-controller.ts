@@ -66,7 +66,7 @@ export default class TransferController extends BaseController {
    *        own if user is connected to transaction
    *        organ if user is connected to transaction via organ
    * @param req
-   * @returns whether transaction is connected to used token
+   * @return whether transaction is connected to used token
    */
   static async getRelation(req: RequestWithToken): Promise<string> {
     const transfer = await Transfer.findOne({ where: { id: parseInt(req.params.id, 10) }, relations: ['to', 'from'] });
@@ -83,15 +83,15 @@ export default class TransferController extends BaseController {
   }
 
   /**
-   * Returns all existing transfers
-   * @route GET /transfers
+   * GET /transfers
+   * @summary Returns all existing transfers
    * @operationId getAllTransfers
-   * @group transfers - Operations of transfer controller
+   * @tags transfers - Operations of transfer controller
    * @security JWT
    * @param {integer} take.query - How many transfers the endpoint should return
    * @param {integer} skip.query - How many transfers should be skipped (for pagination)
-   * @returns {Array.<TransferResponse>} 200 - All existing transfers
-   * @returns {string} 500 - Internal server error
+   * @return {Array.<TransferResponse>} 200 - All existing transfers
+   * @return {string} 500 - Internal server error
    */
   public async returnAllTransfers(req: RequestWithToken, res: Response): Promise<void> {
     const { body } = req;
@@ -118,15 +118,15 @@ export default class TransferController extends BaseController {
   }
 
   /**
-   * Returns the requested transfer
-   * @route GET /transfers/{id}
+   * GET /transfers/{id}
+   * @summary Returns the requested transfer
    * @operationId getSingleTransfer
-   * @group transfers - Operations of transfer controller
+   * @tags transfers - Operations of transfer controller
    * @param {integer} id.path.required - The id of the transfer which should be returned
    * @security JWT
-   * @returns {TransferResponse.model} 200 - The requested transfer entity
-   * @returns {string} 404 - Not found error
-   * @returns {string} 500 - Internal server error
+   * @return {TransferResponse} 200 - The requested transfer entity
+   * @return {string} 404 - Not found error
+   * @return {string} 500 - Internal server error
    */
   public async returnTransfer(req: RequestWithToken, res: Response): Promise<void> {
     const { id } = req.params;
@@ -147,16 +147,16 @@ export default class TransferController extends BaseController {
   }
 
   /**
-   * Post a new transfer.
-   * @route POST /transfers
+   * POST /transfers
+   * @summary Post a new transfer.
    * @operationId createTransfer
-   * @group transfers - Operations of transfer controller
-   * @param {TransferRequest.model} transfer.body.required
+   * @tags transfers - Operations of transfer controller
+   * @param {TransferRequest} request.body.requried
    * - The transfer which should be created
    * @security JWT
-   * @returns {TransferResponse.model} 200 - The created transfer entity
-   * @returns {string} 400 - Validation error
-   * @returns {string} 500 - Internal server error
+   * @return {TransferResponse} 200 - The created transfer entity
+   * @return {string} 400 - Validation error
+   * @return {string} 500 - Internal server error
    */
   public async postTransfer(req: RequestWithToken, res: Response) : Promise<void> {
     const request = req.body as TransferRequest;

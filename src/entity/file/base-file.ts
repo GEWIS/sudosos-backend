@@ -20,10 +20,15 @@ import BaseEntity from '../base-entity';
 import User from '../user/user';
 
 /**
- * @typedef {BaseEntity} BaseFile
+ * @typedef {object} File
+ * @property {string} file - file - binary
+ */
+
+/**
+ * @typedef {allOf|BaseEntity} BaseFile
  * @property {string} downloadName.required - The filename when the file is downloaded
  * @property {string} location.required - The location of the file, including filename in storage
- * @property {User.model} createdBy.required - The user that created this file
+ * @property {User} createdBy.required - The user that created this file
  */
 @Entity()
 export default class BaseFile extends BaseEntity {

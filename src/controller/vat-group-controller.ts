@@ -87,10 +87,10 @@ export default class VatGroupController extends BaseController {
   }
 
   /**
-   * Get a list of all VAT groups
-   * @route GET /vatgroups
+   * GET /vatgroups
+   * @summary Get a list of all VAT groups
    * @operationId getAllVatGroups
-   * @group vatGroups - Operations of the VAT groups controller
+   * @tags vatGroups - Operations of the VAT groups controller
    * @security JWT
    * @param {integer} vatGroupId.query - ID of the VAT group
    * @param {string} name.query - Name of the VAT group
@@ -98,7 +98,7 @@ export default class VatGroupController extends BaseController {
    * @param {boolean} deleted.query - Whether the VAT groups should be hidden if zero
    * @param {integer} take.query - How many transactions the endpoint should return
    * @param {integer} skip.query - How many transactions should be skipped (for pagination)
-   * @returns {PaginatedVatGroupResponse.model} 200 - A list of all VAT groups
+   * @return {PaginatedVatGroupResponse} 200 - A list of all VAT groups
    */
   public async getAllVatGroups(req: RequestWithToken, res: Response): Promise<void> {
     this.logger.trace('Get all VAT groups by user', req.token.user);
@@ -128,15 +128,15 @@ export default class VatGroupController extends BaseController {
   }
 
   /**
-   * Returns the requested VAT group
-   * @route GET /vatgroups/{id}
+   * GET /vatgroups/{id}
+   * @summary Returns the requested VAT group
    * @operationId getSingleVatGroup
-   * @group vatGroups - Operations of the VAT groups controller
+   * @tags vatGroups - Operations of the VAT groups controller
    * @security JWT
    * @param {integer} id.path.required - The ID of the VAT group which should be returned
-   * @returns {VatGroup.model} 200 - The requested VAT group entity
-   * @returns {string} 404 - Not found error
-   * @returns {string} 500 - Internal server error
+   * @return {VatGroup} 200 - The requested VAT group entity
+   * @return {string} 404 - Not found error
+   * @return {string} 500 - Internal server error
    */
   public async getSingleVatGroup(req: RequestWithToken, res: Response): Promise<void> {
     const { id } = req.params;
@@ -158,15 +158,15 @@ export default class VatGroupController extends BaseController {
   }
 
   /**
-   * Create a new VAT group
-   * @route POST /vatgroups
+   * POST /vatgroups
+   * @summary Create a new VAT group
    * @operationId createVatGroup
-   * @group vatGroups - Operations of the VAT group controller
-   * @param {VatGroupRequest.model} vatGroup.body.required - The VAT group which should be created
+   * @tags vatGroups - Operations of the VAT group controller
+   * @param {VatGroupRequest} request.body.requried - The VAT group which should be created
    * @security JWT
-   * @returns {VatGroup.model} 200 - The created VAT group entity
-   * @returns {string} 400 - Validation error
-   * @returns {string} 500 - Internal server error
+   * @return {VatGroup} 200 - The created VAT group entity
+   * @return {string} 400 - Validation error
+   * @return {string} 500 - Internal server error
    */
   public async createVatGroup(req: RequestWithToken, res: Response): Promise<void> {
     const body = req.body as VatGroupRequest;
@@ -191,17 +191,17 @@ export default class VatGroupController extends BaseController {
   }
 
   /**
-   * Create a new VAT group
-   * @route PATCH /vatgroups/{id}
+   * PATCH /vatgroups/{id}
+   * @summary Create a new VAT group
    * @operationId updateVatGroup
-   * @group vatGroups - Operations of the VAT group controller
+   * @tags vatGroups - Operations of the VAT group controller
    * @param {integer} id.path.required - The ID of the VAT group which should be updated
-   * @param {UpdateVatGroupRequest.model} vatGroup.body.required - The VAT group information
+   * @param {UpdateVatGroupRequest} request.body.requried - The VAT group information
    * @security JWT
-   * @returns {VatGroup.model} 200 - The created VAT group entity
-   * @returns {string} 400 - Validation error
-   * @returns {string} 404 - Not found error
-   * @returns {string} 500 - Internal server error
+   * @return {VatGroup} 200 - The created VAT group entity
+   * @return {string} 400 - Validation error
+   * @return {string} 404 - Not found error
+   * @return {string} 500 - Internal server error
    */
   public async updateVatGroup(req: RequestWithToken, res: Response): Promise<void> {
     const body = req.body as UpdateVatGroupRequest;
@@ -239,14 +239,14 @@ export default class VatGroupController extends BaseController {
   }
 
   /**
-   * Get the VAT collections needed for VAT declarations
-   * @route GET /vatgroups/declaration
+   * GET /vatgroups/declaration
+   * @summary Get the VAT collections needed for VAT declarations
    * @operationId getVatDeclarationAmounts
-   * @group vatGroups - Operations of the VAT groups controller
+   * @tags vatGroups - Operations of the VAT groups controller
    * @security JWT
    * @param {number} year.query.required - Calendar year for VAT declarations
    * @param {string} period.query.required - Period for VAT declarations
-   * @returns {PaginatedVatGroupResponse.model} 200 - A list of all VAT groups with declarations
+   * @return {PaginatedVatGroupResponse} 200 - A list of all VAT groups with declarations
    */
   public async getVatDeclarationAmounts(req: RequestWithToken, res: Response): Promise<void> {
     let params;
