@@ -75,20 +75,18 @@ export default class Swagger {
       baseDir: 'C:\\Users\\Samuel\\WebstormProjects\\GEWIS\\SudoSOS\\sudosos-backend\\src\\',
       // Glob pattern to find your jsdoc files
       filesPattern: [
+        './controller/authentication-controller.ts',
+        './controller/authentication-secure-controller.ts',
         './controller/root-controller.ts',
         './controller/balance-controller.ts',
-        './controller/response/banner-response.ts',
+
         './helpers/pagination.ts',
-        './controller/response/base-response.ts',
-        './controller/authentication-controller.ts',
-        './controller/response/authentication-response.ts',
-        './controller/response/user-response.ts',
-        './controller/request/authentication-*.ts',
-        './controller/request/reset-local-request.ts',
-        './controller/authentication-secure-controller.ts',
-        './controller/response/balance-response.ts',
+
+        './controller/request/*.ts',
+
         './controller/response/*.ts',
-        './controller/request/dinero-request.ts',
+        './controller/response/**/*.ts',
+
         './entity/vat-group.ts',
         './entity/base-entity-without-id.ts',
         './entity/base-entity.ts',

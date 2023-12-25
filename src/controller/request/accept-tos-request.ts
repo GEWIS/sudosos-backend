@@ -17,7 +17,7 @@
  */
 
 /**
- * @typedef AcceptTosRequest
+ * @typedef {object} AcceptTosRequest
  * @property {boolean} extensiveDataProcessing.required - Whether data about this
  * user can be used (non-anonymously) for more data science!
  */

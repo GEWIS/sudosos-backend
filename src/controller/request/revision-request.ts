@@ -17,9 +17,9 @@
  */
 
 /**
- * @typedef RevisionRequest
- * @property {integer} id - revision id
- * @property {integer} revision - revision number
+ * @typedef {object} RevisionRequest
+ * @property {integer} id.required - revision id
+ * @property {integer} revision.required - revision number
  */
 export default interface RevisionRequest {
   id: number,

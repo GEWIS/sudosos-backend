@@ -17,7 +17,7 @@
  */
 
 /**
- * @typedef BannerRequest
+ * @typedef {object} BannerRequest
  * @property {string} name - Name/label of the banner
  * @property {number} duration - How long the banner should be shown (in seconds)
  * @property {boolean} active - Whether the banner is active. Overrides start and end date

@@ -18,8 +18,8 @@
 import { DineroObjectRequest } from './dinero-request';
 
 /**
- * @typedef PayoutRequestRequest
- * @property {DineroObjectRequest.model} amount.required - The requested amount to be paid out
+ * @typedef {object} PayoutRequestRequest
+ * @property {DineroObjectRequest} amount.required - The requested amount to be paid out
  * @property {string} bankAccountNumber.required - The bank account number to transfer the money to
  * @property {string} bankAccountName.required - The name of the owner of the bank account
  */
