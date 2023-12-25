@@ -579,12 +579,13 @@ describe('TransactionController', (): void => {
         .get(`/transactions/${trans.id}`)
         .set('Authorization', `Bearer ${ctx.organMemberToken}`);
       expect(res.status).to.equal(200);
-      expect(ctx.specification.validateModel(
+      const valid = ctx.specification.validateModel(
         'TransactionResponse',
         res.body,
         false,
-        true,
-      ).valid).to.be.true;
+        true);
+      console.error(JSON.stringify(res.body, null, ''), valid);
+      expect(valid.valid).to.be.true;
     });
     it('should return HTTP 403 if not admin and not connected via organ', async () => {
       const trans = await Transaction.findOne({ relations: ['from'], where: { from: { id: ctx.users[3].id } } });
