@@ -23,8 +23,11 @@ import swaggerUi from 'express-swaggerize-ui';
 import Validator, { SwaggerSpecification } from 'swagger-model-validator';
 import generateSpecAndMount from 'express-swagger-generator';
 import expressJSDocSwagger from 'express-jsdoc-swagger';
+import log4js, { Logger } from 'log4js';
 
 export default class Swagger {
+  private static logger: Logger = log4js.getLogger('SwaggerGenerator');
+
   /**
    * Generate Swagger specification on-demand and serve it.
    * @param app - The express application to mount on.
@@ -73,9 +76,9 @@ export default class Swagger {
           title: process.env.npm_package_name,
           description: process.env.npm_package_description,
         },
-        "schemes": [
-          "http",
-          "https"
+        'schemes': [
+          'http',
+          'https',
         ],
         servers: [
           {
@@ -116,18 +119,18 @@ export default class Swagger {
       const instance = expressJSDocSwagger(app)(options);
 
       instance.on('finish', (swaggerObject) => {
-        console.error('Swagger specification generation finished');
+        Swagger.logger.trace('Swagger specification generation finished');
         new Validator(swaggerObject);
         void fs.writeFile(
           path.join(process.cwd(), 'out/swagger.json'),
           JSON.stringify(swaggerObject),
-          {encoding: 'utf-8'},
+          { encoding: 'utf-8' },
         );
         resolve(swaggerObject); // Resolve the promise with the swaggerObject
       });
 
       instance.on('error', (error) => {
-        console.error('Error generating Swagger specification:', error);
+        Swagger.logger.error('Error generating Swagger specification:', error);
         reject(error); // Reject the promise in case of an error
       });
     });
