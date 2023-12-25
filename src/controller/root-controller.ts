@@ -15,12 +15,12 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { Request, Response } from 'express';
-import log4js, { Logger } from 'log4js';
-import { getConnection } from 'typeorm';
-import BaseController, { BaseControllerOptions } from './base-controller';
+import {Request, Response} from 'express';
+import log4js, {Logger} from 'log4js';
+import {getConnection} from 'typeorm';
+import BaseController, {BaseControllerOptions} from './base-controller';
 import Policy from './policy';
-import { parseRequestPagination } from '../helpers/pagination';
+import {parseRequestPagination} from '../helpers/pagination';
 import BannerService from '../service/banner-service';
 
 export default class RootController extends BaseController {
@@ -59,15 +59,15 @@ export default class RootController extends BaseController {
   }
 
   /**
-   * Returns all existing banners
-   * @route GET /open/banners
+   * GET /open/banners
+   * @summary Returns all existing banners
    * @operationId getAllOpenBanners
-   * @group banners - Operations of banner controller
+   * @tags banners - Operations of banner controller
    * @param {integer} take.query - How many banners the endpoint should return
    * @param {integer} skip.query - How many banners should be skipped (for pagination)
-   * @returns {PaginatedBannerResponse.model} 200 - All existing banners
-   * @returns {string} 400 - Validation error
-   * @returns {string} 500 - Internal server error
+   * @return {PaginatedBannerResponse} 200 - All existing banners
+   * @return {string} 400 - Validation error
+   * @return {string} 500 - Internal server error
    */
   public async returnAllBanners(req: Request, res: Response): Promise<void> {
     this.logger.trace('Get all banners by', req.ip);
@@ -85,7 +85,7 @@ export default class RootController extends BaseController {
 
     // handle request
     try {
-      res.json(await BannerService.getBanners({}, { take, skip }));
+      res.json(await BannerService.getBanners({}, {take, skip}));
     } catch (error) {
       this.logger.error('Could not return all banners:', error);
       res.status(500).json('Internal server error.');
@@ -93,12 +93,12 @@ export default class RootController extends BaseController {
   }
 
   /**
-   * Ping the backend to check whether everything is working correctly
-   * @route GET /ping
+   * GET /ping
+   * @summary Ping the backend to check whether everything is working correctly
    * @operationId ping
-   * @group root - Operations of the root controller
-   * @returns {string} 200 - Success
-   * @returns {string} 500 - Internal server error (database error)
+   * @tags root - Operations of the root controller
+   * @return {string} 200 - Success
+   * @return {string} 500 - Internal server error (database error)
    */
   public async ping(req: Request, res: Response): Promise<void> {
     this.logger.trace('Ping by', req.ip);

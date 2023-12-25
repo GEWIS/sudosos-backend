@@ -16,11 +16,11 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 /* eslint-disable no-new */
-import {promises as fs} from 'fs';
+import { promises as fs } from 'fs';
 import * as path from 'path';
 import express from 'express';
 import swaggerUi from 'express-swaggerize-ui';
-import Validator, {SwaggerSpecification} from 'swagger-model-validator';
+import Validator, { SwaggerSpecification } from 'swagger-model-validator';
 import generateSpecAndMount from 'express-swagger-generator';
 import expressJSDocSwagger from 'express-jsdoc-swagger';
 
@@ -74,7 +74,12 @@ export default class Swagger {
       },
       baseDir: 'C:\\Users\\Samuel\\WebstormProjects\\GEWIS\\SudoSOS\\sudosos-backend\\src\\',
       // Glob pattern to find your jsdoc files
-      filesPattern: ['.\\controller\\root-controller.ts'],
+      filesPattern: [
+        '.\\controller\\root-controller.ts',
+        './controller/response/banner-response.ts',
+        './helpers/pagination.ts',
+        './controller/response/base-response.ts'
+      ],
       swaggerUIPath: '/api-docs',
       exposeSwaggerUI: true, // Expose Swagger UI
       exposeApiDocs: true, // Expose API Docs JSON
@@ -88,7 +93,7 @@ export default class Swagger {
       void fs.writeFile(
         path.join(process.cwd(), 'out/swagger.json'),
         JSON.stringify(swaggerObject),
-        {encoding: 'utf-8'},
+        { encoding: 'utf-8' },
       );
     });
   }
@@ -141,7 +146,7 @@ if (require.main === module) {
   // Only execute directly if this is the main execution file.
   const app = express();
 
-  fs.mkdir('out', {recursive: true})
+  fs.mkdir('out', { recursive: true })
     .then(() => Swagger.generateNewSpecification(app));
 
   // eslint-disable-next-line @typescript-eslint/no-floating-promises
