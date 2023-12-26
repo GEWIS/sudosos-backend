@@ -32,7 +32,6 @@
     "express": "^4.18.2",
     "express-fileupload": "^1.4.0",
     "express-jsdoc-swagger": "^1.8.0",
-    "express-swagger-generator": "^1.1.17",
     "express-swaggerize-ui": "^1.1.0",
     "jsonwebtoken": "^9.0.0",
     "ldap-escape": "^2.0.6",

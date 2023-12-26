@@ -15,13 +15,11 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-/* eslint-disable no-new */
 import { promises as fs } from 'fs';
 import * as path from 'path';
 import express from 'express';
 import swaggerUi from 'express-swaggerize-ui';
 import Validator, { SwaggerSpecification } from 'swagger-model-validator';
-import generateSpecAndMount from 'express-swagger-generator';
 import expressJSDocSwagger from 'express-jsdoc-swagger';
 import log4js, { Logger } from 'log4js';
 
@@ -31,50 +29,15 @@ export default class Swagger {
   /**
    * Generate Swagger specification on-demand and serve it.
    * @param app - The express application to mount on.
-   * @param files - The files that need to be parsed.
    * @returns The Swagger specification with model validator.
    */
-  public static generateSpecification(app: express.Application, ...files: string[])
-    : SwaggerSpecification {
-    const swagger = generateSpecAndMount(app);
-    const swaggerOptions = {
-      swaggerDefinition: {
-        info: {
-          title: process.env.npm_package_name,
-          description: process.env.npm_package_description,
-          version: process.env.npm_package_version,
-        },
-        host: process.env.API_HOST,
-        basePath: process.env.API_BASEPATH,
-        produces: [
-          'application/json',
-        ],
-        schemes: ['http', 'https'],
-        securityDefinitions: {
-          JWT: {
-            type: 'apiKey',
-            in: 'header',
-            name: 'Authorization',
-            description: '',
-          },
-        },
-      },
-      basedir: __dirname, // app absolute path
-      files,
-    };
-
-    const swaggerSpec = swagger(swaggerOptions) as SwaggerSpecification;
-    new Validator(swaggerSpec);
-    return swaggerSpec;
-  }
-
-  public static generateNewSpecification(app: express.Application): Promise<SwaggerSpecification> {
+  public static generateSpecification(app: express.Application): Promise<SwaggerSpecification> {
     return new Promise((resolve, reject) => {
       const options = {
         info: {
           version: process.env.npm_package_version ? process.env.npm_package_version : 'v1.0.0',
           title: process.env.npm_package_name ? process.env.npm_package_name : 'SudoSOS',
-          description: process.env.npm_package_description,
+          description: process.env.npm_package_description ? process.env.npm_package_description : 'SudoSOS',
         },
         'schemes': [
           'http',
@@ -126,7 +89,6 @@ export default class Swagger {
           JSON.stringify(swaggerObject),
           { encoding: 'utf-8' },
         );
-        console.error('finsihed generation');
         instance.removeAllListeners();
         resolve(swaggerObject); // Resolve the promise with the swaggerObject
       });
@@ -170,7 +132,7 @@ export default class Swagger {
       return specification;
     }
 
-    return Swagger.generateNewSpecification(app);
+    return Swagger.generateSpecification(app);
   }
 }
 
@@ -179,15 +141,5 @@ if (require.main === module) {
   const app = express();
 
   fs.mkdir('out', { recursive: true })
-    .then(async () => { await Swagger.generateNewSpecification(app); });
-  console.error('finished code');
-
-  // eslint-disable-next-line @typescript-eslint/no-floating-promises
-  // fs.mkdir('out', { recursive: true })
-  //   .then(() => Swagger.initialize(app))
-  //   .then((specification) => fs.writeFile(
-  //     path.join(process.cwd(), 'out/swagger.json'),
-  //     JSON.stringify(specification),
-  //     { encoding: 'utf-8' },
-  //   ));
+    .then(async () => { await Swagger.generateSpecification(app); });
 }
