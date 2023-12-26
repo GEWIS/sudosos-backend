@@ -51,6 +51,7 @@
     "validator": "^13.9.0"
   },
   "devDependencies": {
+    "@apidevtools/swagger-cli": "^4.0.4",
     "@types/bcrypt": "^5.0.0",
     "@types/body-parser": "^1.19.2",
     "@types/chai": "^4.3.4",
