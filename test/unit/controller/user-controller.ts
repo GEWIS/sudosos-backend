@@ -1193,7 +1193,7 @@ describe('UserController', (): void => {
           'TransactionReportResponse',
           res.body,
           false,
-          true,
+          false,
         );
         expect(validation.valid).to.be.true;
       });
@@ -1339,7 +1339,7 @@ describe('UserController', (): void => {
         'PaginatedFinancialMutationResponse',
         res.body,
         false,
-        true,
+        false,
       ).valid).to.be.true;
     });
     it('should adhere to pagination', async () => {
@@ -1959,7 +1959,7 @@ describe('UserController', (): void => {
           'StripeDepositResponse',
           b,
           false,
-          true,
+          false,
         );
         expect(validation.valid).to.be.true;
       });

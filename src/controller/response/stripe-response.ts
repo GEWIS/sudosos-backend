@@ -31,9 +31,11 @@ export interface StripePaymentIntentResponse extends BaseResponse {
   clientSecret: string;
 }
 
+// TODO find a fix for integer enums.
+//  * @property {integer} state.required - enum:1,2,3,4 - State of the Stripe deposit. It can be 1 ('CREATED'), 2 ('PROCESSING'), 3 ('SUCCEEDED'), or 4 ('FAILED')
 /**
  * @typedef {allOf|BaseResponse} StripeDepositStatusResponse
- * @property {number} state.required - enum:1,2,3,4 - State of the Stripe deposit. It can be 1 ('CREATED'), 2 ('PROCESSING'), 3 ('SUCCEEDED'), or 4 ('FAILED')
+ * @property {integer} state.required - State of the Stripe deposit. It can be 1 ('CREATED'), 2 ('PROCESSING'), 3 ('SUCCEEDED'), or 4 ('FAILED')
  */
 export interface StripeDepositStatusResponse extends BaseResponse {
   state: StripeDepositState;

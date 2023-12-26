@@ -72,8 +72,8 @@ export default class Swagger {
     return new Promise((resolve, reject) => {
       const options = {
         info: {
-          version: process.env.npm_package_version,
-          title: process.env.npm_package_name,
+          version: process.env.npm_package_version ? process.env.npm_package_version : 'v1.0.0',
+          title: process.env.npm_package_name ? process.env.npm_package_name : 'SudoSOS',
           description: process.env.npm_package_description,
         },
         'schemes': [

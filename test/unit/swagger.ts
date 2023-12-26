@@ -42,7 +42,7 @@ describe('Swagger', (): void => {
 
     const app = express();
     const specification = await Swagger.initialize(app);
-    expect(specification.definitions).to.exist;
+    expect(specification.components.schemas).to.exist;
     const res = await request(app)
       .get('/api-docs.json');
     expect(res.status).to.equal(200);
@@ -56,7 +56,7 @@ describe('Swagger', (): void => {
 
     const app = express();
     const specification = await Swagger.initialize(app);
-    expect(specification.definitions).to.exist;
+    expect(specification.components.schemas).to.exist;
     const res = await request(app)
       .get('/api-docs.json');
     expect(res.status).to.equal(200);

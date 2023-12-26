@@ -125,7 +125,7 @@ export default class TransferService {
       relations: ['from', 'to',
         'invoice', 'invoice.invoiceStatus',
         'deposit', 'deposit.depositStatus',
-        'payoutRequest', 'payoutRequest.payoutRequestStatus',
+        'payoutRequest', 'payoutRequest.payoutRequestStatus', 'payoutRequest.requestedBy',
         'fine', 'fine.userFineGroup',
         'waivedFines', 'waivedFines.fines', 'waivedFines.fines.userFineGroup',
       ],
