@@ -42,7 +42,9 @@ export default class RequestValidatorMiddleware {
   public constructor(specification: SwaggerSpecification, validator: BodyValidator) {
     this.specification = specification;
     this.validator = validator;
-    if (!specification.components?.schemas[validator.modelName] && !specification.definitions[validator.modelName]) {
+
+    if (!specification.components?.schemas) throw new Error(`Model '${validator.modelName}' not defined.`);
+    if (!specification.components.schemas[validator.modelName]) {
       throw new Error(`Model '${validator.modelName}' not defined.`);
     }
   }
