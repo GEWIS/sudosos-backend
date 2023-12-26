@@ -18,7 +18,6 @@
 import * as express from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import Swagger from '../../../../src/start/swagger';
-import { sourceFile } from '../../../setup';
 
 /**
  * @typedef TestModel
@@ -32,5 +31,5 @@ export class TestModel {
 }
 
 export async function getSpecification(app: express.Application): Promise<SwaggerSpecification> {
-  return Swagger.generateSpecification(app, sourceFile(__filename));
+  return Swagger.generateSpecification(app);
 }
