@@ -126,6 +126,7 @@ export default class Swagger {
           JSON.stringify(swaggerObject),
           { encoding: 'utf-8' },
         );
+        console.error('finsihed generation');
         instance.removeAllListeners();
         resolve(swaggerObject); // Resolve the promise with the swaggerObject
       });
@@ -178,7 +179,8 @@ if (require.main === module) {
   const app = express();
 
   fs.mkdir('out', { recursive: true })
-    .then(() => Swagger.generateNewSpecification(app));
+    .then(async () => { await Swagger.generateNewSpecification(app); });
+  console.error('finished code');
 
   // eslint-disable-next-line @typescript-eslint/no-floating-promises
   // fs.mkdir('out', { recursive: true })
