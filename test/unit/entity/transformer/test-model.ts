@@ -20,7 +20,7 @@ import { SwaggerSpecification } from 'swagger-model-validator';
 import Swagger from '../../../../src/start/swagger';
 
 /**
- * @typedef TestModel
+ * @typedef {object} TestModel
  * @property {string} name.required - The name of the model.
  * @property {number} value.required - A test value.
  */
