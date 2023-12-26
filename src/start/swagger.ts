@@ -88,7 +88,9 @@ export default class Swagger {
           path.join(process.cwd(), 'out/swagger.json'),
           JSON.stringify(swaggerObject),
           { encoding: 'utf-8' },
-        );
+        ).catch((e) => {
+          console.error(e);
+        });
         instance.removeAllListeners();
         resolve(swaggerObject); // Resolve the promise with the swaggerObject
       });
