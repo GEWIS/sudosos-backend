@@ -72,7 +72,7 @@ export default class Swagger {
           '../entity/base-entity.ts',
           '../entity/user/*.ts',
           '../entity/file/base-file.ts',
-          '../../unit/entity/transformer/test-model.ts',
+          '../../test/unit/entity/transformer/test-model.ts',
         ],
         swaggerUIPath: '/api-docs',
         exposeSwaggerUI: true, // Expose Swagger UI
