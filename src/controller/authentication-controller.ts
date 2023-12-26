@@ -15,18 +15,18 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import {Request, Response} from 'express';
-import log4js, {Logger} from 'log4js';
-import BaseController, {BaseControllerOptions} from './base-controller';
+import { Request, Response } from 'express';
+import log4js, { Logger } from 'log4js';
+import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import User from '../entity/user/user';
 import AuthenticationMockRequest from './request/authentication-mock-request';
 import TokenHandler from '../authentication/token-handler';
-import AuthenticationService, {AuthenticationContext} from '../service/authentication-service';
+import AuthenticationService, { AuthenticationContext } from '../service/authentication-service';
 import AuthenticationLDAPRequest from './request/authentication-ldap-request';
 import RoleManager from '../rbac/role-manager';
 import wrapInManager from '../helpers/database';
-import {LDAPUser} from '../helpers/ad';
+import { LDAPUser } from '../helpers/ad';
 import AuthenticationLocalRequest from './request/authentication-local-request';
 import PinAuthenticator from '../entity/authenticator/pin-authenticator';
 import AuthenticationPinRequest from './request/authentication-pin-request';
@@ -79,61 +79,61 @@ export default class AuthenticationController extends BaseController {
     return {
       '/mock': {
         POST: {
-          body: {modelName: 'AuthenticationMockRequest'},
+          body: { modelName: 'AuthenticationMockRequest' },
           policy: AuthenticationController.canPerformMock.bind(this),
           handler: this.mockLogin.bind(this),
         },
       },
       '/LDAP': {
         POST: {
-          body: {modelName: 'AuthenticationLDAPRequest'},
+          body: { modelName: 'AuthenticationLDAPRequest' },
           policy: async () => true,
           handler: this.LDAPLogin.bind(this),
         },
       },
       '/pin': {
         POST: {
-          body: {modelName: 'AuthenticationPinRequest'},
+          body: { modelName: 'AuthenticationPinRequest' },
           policy: async () => true,
           handler: this.PINLogin.bind(this),
         },
       },
       '/nfc': {
         POST: {
-          body: {modelName: 'AuthenticationNfcRequest'},
+          body: { modelName: 'AuthenticationNfcRequest' },
           policy: async () => true,
           handler: this.nfcLogin.bind(this),
         },
       },
       '/key': {
         POST: {
-          body: {modelName: 'AuthenticationKeyRequest'},
+          body: { modelName: 'AuthenticationKeyRequest' },
           policy: async () => true,
           handler: this.keyLogin.bind(this),
         },
       },
       '/local': {
         POST: {
-          body: {modelName: 'AuthenticationLocalRequest'},
+          body: { modelName: 'AuthenticationLocalRequest' },
           policy: async () => true,
           handler: this.LocalLogin.bind(this),
         },
         PUT: {
-          body: {modelName: 'AuthenticationResetTokenRequest'},
+          body: { modelName: 'AuthenticationResetTokenRequest' },
           policy: async () => true,
           handler: this.resetLocalUsingToken.bind(this),
         },
       },
       '/local/reset': {
         POST: {
-          body: {modelName: 'ResetLocalRequest'},
+          body: { modelName: 'ResetLocalRequest' },
           policy: async () => true,
           handler: this.createResetToken.bind(this),
         },
       },
       '/ean': {
         POST: {
-          body: {modelName: 'AuthenticationEanRequest'},
+          body: { modelName: 'AuthenticationEanRequest' },
           policy: async () => true,
           handler: this.eanLogin.bind(this),
         },
@@ -152,7 +152,7 @@ export default class AuthenticationController extends BaseController {
     if (process.env.NODE_ENV !== 'development') return false;
 
     // Check the existence of the user
-    const user = await User.findOne({where: {id: body.userId}});
+    const user = await User.findOne({ where: { id: body.userId } });
     if (!user) return false;
 
     return true;
@@ -191,10 +191,10 @@ export default class AuthenticationController extends BaseController {
    * @constructor
    */
   public static PINLoginConstructor(roleManager: RoleManager, tokenHandler: TokenHandler,
-                                    pin: string, userId: number) {
+    pin: string, userId: number) {
     return async (req: Request, res: Response) => {
       const user = await User.findOne({
-        where: {id: userId, deleted: false},
+        where: { id: userId, deleted: false },
       });
 
       if (!user) {
@@ -204,7 +204,7 @@ export default class AuthenticationController extends BaseController {
         return;
       }
 
-      const pinAuthenticator = await PinAuthenticator.findOne({where: {user: {id: user.id}}, relations: ['user']});
+      const pinAuthenticator = await PinAuthenticator.findOne({ where: { user: { id: user.id } }, relations: ['user'] });
       if (!pinAuthenticator) {
         res.status(403).json({
           message: 'Invalid credentials.',
@@ -230,9 +230,9 @@ export default class AuthenticationController extends BaseController {
   }
 
   /**
-   * LDAP login and hand out token
+   * POST /authentication/LDAP
+   * @summary LDAP login and hand out token
    * If user has never signed in before this also creates an account.
-   * @route POST /authentication/LDAP
    * @operationId ldapAuthentication
    * @tags authenticate - Operations of authentication controller
    * @param {AuthenticationLDAPRequest} request.body.required - The LDAP login.
@@ -258,7 +258,7 @@ export default class AuthenticationController extends BaseController {
    * @constructor
    */
   public static LDAPLoginConstructor(roleManager: RoleManager, tokenHandler: TokenHandler,
-                                     onNewUser: (ADUser: LDAPUser) => Promise<User>) {
+    onNewUser: (ADUser: LDAPUser) => Promise<User>) {
     return async (req: Request, res: Response) => {
       const body = req.body as AuthenticationLDAPRequest;
       const user = await AuthenticationService.LDAPAuthentication(
@@ -300,7 +300,7 @@ export default class AuthenticationController extends BaseController {
 
     try {
       const user = await User.findOne({
-        where: {email: body.accountMail, deleted: false},
+        where: { email: body.accountMail, deleted: false },
       });
 
       if (!user) {
@@ -310,7 +310,7 @@ export default class AuthenticationController extends BaseController {
         return;
       }
 
-      const localAuthenticator = await LocalAuthenticator.findOne({where: {user: {id: user.id}}, relations: ['user']});
+      const localAuthenticator = await LocalAuthenticator.findOne({ where: { user: { id: user.id } }, relations: ['user'] });
       if (!localAuthenticator) {
         res.status(403).json({
           message: 'Invalid credentials.',
@@ -391,7 +391,7 @@ export default class AuthenticationController extends BaseController {
     this.logger.trace('Reset request for user', body.accountMail);
     try {
       const user = await User.findOne({
-        where: {email: body.accountMail, deleted: false},
+        where: { email: body.accountMail, deleted: false },
       });
       // If the user does not exist we simply return a success code as to not leak info.
       if (!user) {
@@ -400,7 +400,7 @@ export default class AuthenticationController extends BaseController {
       }
 
       const resetTokenInfo = await AuthenticationService.createResetToken(user);
-      Mailer.getInstance().send(user, new PasswordReset({email: user.email, name: user.firstName, resetTokenInfo}))
+      Mailer.getInstance().send(user, new PasswordReset({ email: user.email, name: user.firstName, resetTokenInfo }))
         .then()
         .catch((error) => this.logger.error(error));
       // send email with link.
@@ -426,8 +426,8 @@ export default class AuthenticationController extends BaseController {
     this.logger.trace('Atempted NFC authentication with NFC length, ', body.nfcCode.length);
 
     try {
-      const {nfcCode} = body;
-      const authenticator = await NfcAuthenticator.findOne({where: {nfcCode: nfcCode}});
+      const { nfcCode } = body;
+      const authenticator = await NfcAuthenticator.findOne({ where: { nfcCode: nfcCode } });
       if (authenticator == null || authenticator.user == null) {
         res.status(403).json({
           message: 'Invalid credentials.',
@@ -464,8 +464,8 @@ export default class AuthenticationController extends BaseController {
     this.logger.trace('EAN authentication for ean', body.eanCode);
 
     try {
-      const {eanCode} = body;
-      const authenticator = await EanAuthenticator.findOne({where: {eanCode}});
+      const { eanCode } = body;
+      const authenticator = await EanAuthenticator.findOne({ where: { eanCode } });
       if (authenticator == null || authenticator.user == null) {
         res.status(403).json({
           message: 'Invalid credentials.',
@@ -503,7 +503,7 @@ export default class AuthenticationController extends BaseController {
 
     try {
       const user = await User.findOne({
-        where: {id: body.userId, deleted: false},
+        where: { id: body.userId, deleted: false },
       });
 
       if (!user) {
@@ -513,7 +513,7 @@ export default class AuthenticationController extends BaseController {
         return;
       }
 
-      const keyAuthenticator = await KeyAuthenticator.findOne({where: {user: {id: body.userId}}, relations: ['user']});
+      const keyAuthenticator = await KeyAuthenticator.findOne({ where: { user: { id: body.userId } }, relations: ['user'] });
       if (!keyAuthenticator) {
         res.status(403).json({
           message: 'Invalid credentials.',
@@ -556,9 +556,9 @@ export default class AuthenticationController extends BaseController {
     this.logger.trace('Mock authentication for user', body.userId);
 
     try {
-      const user = await User.findOne({where: {id: body.userId}});
+      const user = await User.findOne({ where: { id: body.userId } });
       const contents = await AuthenticationService.makeJsonWebToken(
-        {tokenHandler: this.tokenHandler, roleManager: this.roleManager}, user, false,
+        { tokenHandler: this.tokenHandler, roleManager: this.roleManager }, user, false,
       );
       const token = await this.tokenHandler.signToken(contents, body.nonce);
       const response = AuthenticationService
