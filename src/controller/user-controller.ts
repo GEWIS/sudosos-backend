@@ -706,7 +706,7 @@ export default class UserController extends BaseController {
    * @param {CreateUserRequest} request.body.requried -
    * The user which should be created
    * @security JWT
-   * @return {User} 200 - New user
+   * @return {UserResponse} 200 - New user
    * @return {string} 400 - Bad request
    */
   // eslint-disable-next-line class-methods-use-this

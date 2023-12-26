@@ -126,16 +126,9 @@ export default class Swagger {
       '../helpers/pagination.ts',
 
       '../controller/request/*.ts',
-
       '../controller/response/*.ts',
       '../controller/response/**/*.ts',
       '../gewis/controller/**/*.ts',
-      '../entity/vat-group.ts',
-      '../entity/base-entity-without-id.ts',
-      '../entity/base-entity.ts',
-      '../entity/user/*.ts',
-      '../entity/file/base-file.ts',
-      '../../test/unit/entity/transformer/test-model.ts',
     ]);
   }
 }

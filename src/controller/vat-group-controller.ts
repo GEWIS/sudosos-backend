@@ -134,7 +134,7 @@ export default class VatGroupController extends BaseController {
    * @tags vatGroups - Operations of the VAT groups controller
    * @security JWT
    * @param {integer} id.path.required - The ID of the VAT group which should be returned
-   * @return {VatGroup} 200 - The requested VAT group entity
+   * @return {VatGroupResponse} 200 - The requested VAT group entity
    * @return {string} 404 - Not found error
    * @return {string} 500 - Internal server error
    */
@@ -164,7 +164,7 @@ export default class VatGroupController extends BaseController {
    * @tags vatGroups - Operations of the VAT group controller
    * @param {VatGroupRequest} request.body.requried - The VAT group which should be created
    * @security JWT
-   * @return {VatGroup} 200 - The created VAT group entity
+   * @return {VatGroupResponse} 200 - The created VAT group entity
    * @return {string} 400 - Validation error
    * @return {string} 500 - Internal server error
    */
@@ -198,7 +198,7 @@ export default class VatGroupController extends BaseController {
    * @param {integer} id.path.required - The ID of the VAT group which should be updated
    * @param {UpdateVatGroupRequest} request.body.requried - The VAT group information
    * @security JWT
-   * @return {VatGroup} 200 - The created VAT group entity
+   * @return {VatGroupResponse} 200 - The created VAT group entity
    * @return {string} 400 - Validation error
    * @return {string} 404 - Not found error
    * @return {string} 500 - Internal server error

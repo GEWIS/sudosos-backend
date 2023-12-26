@@ -15,30 +15,8 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { Column, Entity } from 'typeorm';
-import BaseEntity from './base-entity';
-
-export enum VatDeclarationPeriod {
-  MONTHLY = 'monthly',
-  QUARTERLY = 'quarterly',
-  ANNUALLY = 'annually',
-}
-
-@Entity()
-export default class VatGroup extends BaseEntity {
-  @Column()
-  public name: string;
-
-  // The Dutch tax system does not have VAT brackets with decimals in them, but
-  // that might still happen (because politics), even though every programmer
-  // in the country will probably hang themselves (including the Belastingdienst).
-  // Better be prepared.
-  @Column({ update: false, type: 'double' })
-  public readonly percentage: number;
-
-  @Column({ default: false })
-  public deleted: boolean;
-
-  @Column({ default: false })
-  public hidden: boolean;
-}
+// TODO This is most likely not the way to go, but im not sure how to deal with file uploading in express-jsdoc-swagger.
+/**
+ * @typedef {object} FileRequest
+ * @property {string} file - file - binary
+ */

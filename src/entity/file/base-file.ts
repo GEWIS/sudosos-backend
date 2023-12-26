@@ -20,11 +20,6 @@ import BaseEntity from '../base-entity';
 import User from '../user/user';
 
 /**
- * @typedef {object} FileRequest
- * @property {string} file - file - binary
- */
-
-/**
  * @typedef {allOf|BaseEntity} BaseFile
  * @property {string} downloadName.required - The filename when the file is downloaded
  * @property {string} location.required - The location of the file, including filename in storage
