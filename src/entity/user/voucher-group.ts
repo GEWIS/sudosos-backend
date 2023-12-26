@@ -25,11 +25,11 @@ import DineroTransformer from '../transformer/dinero-transformer';
 import UserVoucherGroup from './user-voucher-group';
 
 /**
- * @typedef {allOf|BaseEntity} VoucherGroup
+ * @typedef {BaseEntity} VoucherGroup
  * @property {string} name.required - Name of the group.
  * @property {string} activeStartDate.required - Date after which the included cards are active.
  * @property {string} activeEndDate - Date after which cards are no longer active.
- * @property {Array<User>} vouchers.required - Cards included in this group.
+ * @property {Array.<User>} vouchers.required - Cards included in this group.
  */
 @Entity()
 export default class VoucherGroup extends BaseEntity {

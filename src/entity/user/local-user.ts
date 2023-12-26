@@ -21,8 +21,8 @@ import {
 import User from './user';
 
 /**
- * @typedef {allOf|BaseEntity} LocalUser
- * @property {User} user.required - The user.
+ * @typedef {BaseEntity} LocalUser
+ * @property {User.model} user.required - The user.
  * @property {string} passwordHash.required - The hashed password of the user.
  */
 @Entity()

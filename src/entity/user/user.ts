@@ -53,7 +53,7 @@ export const TOSRequired = [
 ];
 
 /**
- * @typedef {allOf|BaseEntity} User
+ * @typedef {BaseEntity} User
  * @property {string} firstName.required - First name of the user.
  * @property {string} lastName - Last name of the user.
  * @property {string} nickname - Nickname of the user.
@@ -62,7 +62,7 @@ export const TOSRequired = [
  * @property {boolean} ofAge - Whether the user is 18+ or not.
  * @property {string} email - The email of the user.
  * @property {boolean} deleted - Whether the user was deleted. Defaults to false.
- * @property {string} type.required - enum:1,2,3,4,5,6,7 - The type of user 1 (MEMBER), 2 (ORGAN), 3 (VOUCHER), 4 (LOCAL_USER), 5 (LOCAL_ADMIN), 6 (INVOICE), 7 (AUTOMATIC_INVOICE).
+ * @property {string} type.required - The type of user.
  */
 @Entity()
 export default class User extends BaseEntity {

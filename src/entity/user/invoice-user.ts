@@ -23,8 +23,8 @@ import User from './user';
 import BaseEntityWithoutId from '../base-entity-without-id';
 
 /**
- * @typedef {allOf|BaseEntity} InvoiceUser
- * @property {User} user.required - The user that is an invoice account
+ * @typedef {BaseEntity} InvoiceUser
+ * @property {User.model} user.required - The user that is an invoice account
  * @property {boolean} automatic - Whether the user gets automatic invoices
  */
 @Entity()

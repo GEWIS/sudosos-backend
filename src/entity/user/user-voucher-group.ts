@@ -24,9 +24,9 @@ import User from './user';
 import VoucherGroup from './voucher-group';
 
 /**
- * @typedef {allOf|BaseEntity} UserVoucherGroup
- * @property {User} user.required - The user that belongs to the group.
- * @property {VoucherGroup} voucherGroup.required - The voucherGroup the user
+ * @typedef {BaseEntity} UserVoucherGroup
+ * @property {User.model} user.required - The user that belongs to the group.
+ * @property {VoucherGroup.model} voucherGroup.required - The voucherGroup the user
  * belongs to.
  */
 @Entity()
