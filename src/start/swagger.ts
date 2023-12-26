@@ -29,9 +29,10 @@ export default class Swagger {
   /**
    * Generate Swagger specification on-demand and serve it.
    * @param app - The express application to mount on.
+   * @param filesPattern - Glob pattern to find your jsdoc files
    * @returns The Swagger specification with model validator.
    */
-  public static generateSpecification(app: express.Application): Promise<SwaggerSpecification> {
+  public static generateSpecification(app: express.Application, filesPattern: string[]): Promise<SwaggerSpecification> {
     return new Promise((resolve, reject) => {
       const options = {
         info: {
@@ -58,22 +59,7 @@ export default class Swagger {
         },
         baseDir: __dirname,
         // Glob pattern to find your jsdoc files
-        filesPattern: [
-          '../controller/*.ts',
-          '../helpers/pagination.ts',
-
-          '../controller/request/*.ts',
-
-          '../controller/response/*.ts',
-          '../controller/response/**/*.ts',
-          '../gewis/controller/**/*.ts',
-          '../entity/vat-group.ts',
-          '../entity/base-entity-without-id.ts',
-          '../entity/base-entity.ts',
-          '../entity/user/*.ts',
-          '../entity/file/base-file.ts',
-          '../../test/unit/entity/transformer/test-model.ts',
-        ],
+        filesPattern,
         swaggerUIPath: '/api-docs',
         exposeSwaggerUI: true, // Expose Swagger UI
         exposeApiDocs: true, // Expose API Docs JSON
@@ -135,7 +121,22 @@ export default class Swagger {
       return specification;
     }
 
-    return Swagger.generateSpecification(app);
+    return Swagger.generateSpecification(app, [
+      '../controller/*.ts',
+      '../helpers/pagination.ts',
+
+      '../controller/request/*.ts',
+
+      '../controller/response/*.ts',
+      '../controller/response/**/*.ts',
+      '../gewis/controller/**/*.ts',
+      '../entity/vat-group.ts',
+      '../entity/base-entity-without-id.ts',
+      '../entity/base-entity.ts',
+      '../entity/user/*.ts',
+      '../entity/file/base-file.ts',
+      '../../test/unit/entity/transformer/test-model.ts',
+    ]);
   }
 }
 
@@ -144,5 +145,5 @@ if (require.main === module) {
   const app = express();
 
   fs.mkdir('out', { recursive: true })
-    .then(async () => { await Swagger.generateSpecification(app); });
+    .then(async () => { await Swagger.initialize(app); });
 }

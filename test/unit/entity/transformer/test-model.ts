@@ -31,5 +31,5 @@ export class TestModel {
 }
 
 export async function getSpecification(app: express.Application): Promise<SwaggerSpecification> {
-  return Swagger.generateSpecification(app);
+  return Swagger.generateSpecification(app,  ['../../test/unit/entity/transformer/test-model.ts']);
 }

@@ -37,13 +37,16 @@ export default class RequestValidatorMiddleware {
 
   /**
    * Creates a new request model validator middleware instance.
+   * @param specification - the swagger specification.
    * @param validator - the validator properties.
    */
   public constructor(specification: SwaggerSpecification, validator: BodyValidator) {
     this.specification = specification;
     this.validator = validator;
 
+    // Edge case if there are no models.
     if (!specification.components?.schemas) throw new Error(`Model '${validator.modelName}' not defined.`);
+
     if (!specification.components.schemas[validator.modelName]) {
       throw new Error(`Model '${validator.modelName}' not defined.`);
     }
