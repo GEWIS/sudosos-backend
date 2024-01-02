@@ -60,7 +60,7 @@ export default class StripeController extends BaseController {
    * POST /stripe/deposit
    * @summary Start the stripe deposit flow
    * @operationId deposit
-   * @tags Stripe - Operations of the stripe controller
+   * @tags stripe - Operations of the stripe controller
    * @param {StripeRequest} request.body.required - The deposit that should be created
    * @return {StripePaymentIntentResponse} 200 - Payment Intent information
    * @return {string} 500 - Internal server error
