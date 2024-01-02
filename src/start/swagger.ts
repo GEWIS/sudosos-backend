@@ -60,6 +60,8 @@ export default class Swagger {
         baseDir: __dirname,
         // Glob pattern to find your jsdoc files
         filesPattern,
+        exposeApiDocs: true, // Expose API Docs JSON
+        apiDocsPath: '/api-docs.json',
       };
 
       const instance = expressJSDocSwagger(app)(options);
