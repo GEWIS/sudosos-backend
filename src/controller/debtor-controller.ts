@@ -168,15 +168,15 @@ export default class DebtorController extends BaseController {
   }
 
   /**
-   * Return all users that had at most -5 euros balance both now and on the reference date
-   * For all these users, also return their fine based on the reference date.
-   * @route GET /fines/eligible
+   * GET /fines/eligible
+   * @summary Return all users that had at most -5 euros balance both now and on the reference date.
+   *    For all these users, also return their fine based on the reference date.
    * @tags debtors - Operations of the debtor controller
    * @operationId calculateFines
    * @security JWT
-   * @param {Array.<string>} userTypes[].query - List of all user types fines should be calculated for
-   * @param {Array.<string>} referenceDates[].query.required - Dates to base the fines on. Every returned user has at
-   * least five euros debt on every reference date. The height of the fine is based on the first date in the array.
+   * @param {Array<integer>} userTypes.query - List of all user types fines should be calculated for 1 (MEMBER), 2 (ORGAN), 3 (VOUCHER), 4 (LOCAL_USER), 5 (LOCAL_ADMIN), 6 (INVOICE), 7 (AUTOMATIC_INVOICE).
+   * @param {Array<string>} referenceDates.query.required - Dates to base the fines on. Every returned user has at
+   *    least five euros debt on every reference date. The height of the fine is based on the first date in the array.
    * @return {Array<UserToFineResponse>} 200 - List of eligible fines
    * @return {string} 400 - Validation error
    * @return {string} 500 - Internal server error
