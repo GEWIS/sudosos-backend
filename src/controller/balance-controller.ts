@@ -98,7 +98,7 @@ export default class BalanceController extends BaseController {
    * @param {boolean} hasFine.query - Only users with(out) fines
    * @param {integer} minFine.query - Minimum fine
    * @param {integer} maxFine.query - Maximum fine
-   * @param {string} userType.query - enum:MEMBER,ORGAN,VOUCHER,LOCAL_USER,LOCAL_ADMIN,INVOICE,AUTOMATIC_INVOICE - Filter based on user type.
+   * @param {Array<string|number>} userType.query - enum:MEMBER,ORGAN,VOUCHER,LOCAL_USER,LOCAL_ADMIN,INVOICE,AUTOMATIC_INVOICE - Filter based on user type.
    * @param {string} orderBy.query - Column to order balance by - eg: id,amount
    * @param {string} orderDirection.query - enum:ASC,DESC - Order direction
    * @param {integer} take.query - How many transactions the endpoint should return
