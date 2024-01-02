@@ -15,10 +15,10 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { UserResponse } from '../../controller/response/user-response';
+import { UserResponse } from '../../../controller/response/user-response';
 
 /**
- * @typedef {UserResponse} GewisUserResponse
+ * @typedef {allOf|UserResponse} GewisUserResponse
  * @property {integer} gewisId - The m-Number of the user
  */
 export interface GewisUserResponse extends UserResponse {

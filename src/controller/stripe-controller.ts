@@ -57,13 +57,13 @@ export default class StripeController extends BaseController {
   }
 
   /**
-   * Start the stripe deposit flow
-   * @route POST /stripe/deposit
+   * POST /stripe/deposit
+   * @summary Start the stripe deposit flow
    * @operationId deposit
-   * @group Stripe - Operations of the stripe controller
-   * @param {StripeRequest.model} stripe.body.required - The deposit that should be created
-   * @returns {StripePaymentIntentResponse.model} 200 - Payment Intent information
-   * @returns {string} 500 - Internal server error
+   * @tags Stripe - Operations of the stripe controller
+   * @param {StripeRequest} request.body.required - The deposit that should be created
+   * @return {StripePaymentIntentResponse} 200 - Payment Intent information
+   * @return {string} 500 - Internal server error
    * @security JWT
    */
   public async createStripeDeposit(req: RequestWithToken, res: Response): Promise<void> {

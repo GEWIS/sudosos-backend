@@ -17,7 +17,7 @@
  */
 
 /**
- * @typedef AuthenticationKeyRequest
+ * @typedef {object} AuthenticationKeyRequest
  * @property {number} userId.required
  * @property {string} key.required - The password
  *

@@ -17,7 +17,7 @@
  */
 
 /**
- * @typedef SimpleFileRequest
+ * @typedef {object} SimpleFileRequest
  * @property {string} name - Name of the file
  */
 export default interface SimpleFileRequest {

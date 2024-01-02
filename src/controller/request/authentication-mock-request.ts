@@ -17,7 +17,7 @@
  */
 
 /**
- * @typedef AuthenticationMockRequest
+ * @typedef {object} AuthenticationMockRequest
  * @property {number} userId.required
  * @property {string} nonce.required
  */

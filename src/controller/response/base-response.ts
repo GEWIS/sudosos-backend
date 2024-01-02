@@ -17,7 +17,7 @@
  */
 
 /**
- * @typedef BaseResponse
+ * @typedef {object} BaseResponse
  * @property {integer} id.required - The unique id of the entity.
  * @property {string} createdAt - The creation Date of the entity.
  * @property {string} updatedAt - The last update Date of the entity.

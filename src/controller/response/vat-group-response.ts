@@ -21,7 +21,7 @@ import VatGroup, { VatDeclarationPeriod } from '../../entity/vat-group';
 import BaseResponse from './base-response';
 
 /**
- * @typedef {BaseResponse} BaseVatGroupResponse
+ * @typedef {allOf|BaseResponse} BaseVatGroupResponse
  * @property {number} percentage.required - Percentage of VAT
  * @property {boolean} hidden.required - Whether VAT should be hidden
  */
@@ -31,9 +31,15 @@ export interface BaseVatGroupResponse extends BaseResponse {
 }
 
 /**
- * @typedef PaginatedVatGroupResponse
- * @property {PaginationResult.model} _pagination.required - Pagination metadata
- * @property {Array.<VatGroup>} records.required - Returned VAT groups
+ * @typedef {allOf|BaseVatGroupResponse} VatGroupResponse
+ * @property {string} name.rquired - Name of the VAT group
+ * @property {boolean} deleted.required - Whether this group is soft-deleted
+ */
+
+/**
+ * @typedef {object} PaginatedVatGroupResponse
+ * @property {PaginationResult} _pagination.required - Pagination metadata
+ * @property {Array<VatGroupResponse>} records.required - Returned VAT groups
  */
 export interface PaginatedVatGroupResponse {
   _pagination: PaginationResult,
@@ -41,11 +47,11 @@ export interface PaginatedVatGroupResponse {
 }
 
 /**
- * @typedef VatDeclarationRow
+ * @typedef {object} VatDeclarationRow
  * @property {number} id.required - ID of the VAT group
  * @property {string} name.required - Name of the VAT group
  * @property {number} percentage.required - Percentage of VAT in this group
- * @property {Array.<DineroObject>} values.required - Amount of VAT to be paid to the tax administration
+ * @property {Array<DineroObject>} values.required - Amount of VAT to be paid to the tax administration
  * per period
  */
 export interface VatDeclarationRow {
@@ -56,10 +62,10 @@ export interface VatDeclarationRow {
 }
 
 /**
- * @typedef VatDeclarationResponse
+ * @typedef {object} VatDeclarationResponse
  * @property {number} calendarYear.required - Calendar year of this result table
  * @property {string} period.required - The used VAT declaration period the rows below are based upon
- * @property {Array.<VatDeclarationRow>} rows.required - The rows of the result table
+ * @property {Array<VatDeclarationRow>} rows.required - The rows of the result table
  */
 export interface VatDeclarationResponse {
   calendarYear: number;

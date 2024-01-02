@@ -21,12 +21,12 @@ import { PaginationResult } from '../../helpers/pagination';
 import { DineroObjectResponse } from './dinero-response';
 
 /**
-  * @typedef {BaseResponse} VoucherGroupResponse
+  * @typedef {allOf|BaseResponse} VoucherGroupResponse
   * @property {string} name.required - Name of the voucher group
   * @property {string} activeStartDate - Start date of the voucher group
   * @property {string} activeEndDate.required - End date of the voucher group
-  * @property {Array.<UserResponse>} users.required - Users in the voucher group
-  * @property {DineroObjectRequest.model} balance.required - Start balance to be assigned
+  * @property {Array<UserResponse>} users.required - Users in the voucher group
+  * @property {DineroObjectRequest} balance.required - Start balance to be assigned
   *  to the voucher users
   * @property {number} amount.required - Amount of users to be assigned to the voucher group
   */
@@ -40,9 +40,9 @@ export default interface VoucherGroupResponse extends BaseResponse {
 }
 
 /**
- * @typedef PaginatedVoucherGroupResponse
- * @property {PaginationResult.model} _pagination.required - Pagination metadata
- * @property {Array.<VoucherGroupResponse>} records.required - Returned voucher groups
+ * @typedef {object} PaginatedVoucherGroupResponse
+ * @property {PaginationResult} _pagination.required - Pagination metadata
+ * @property {Array<VoucherGroupResponse>} records.required - Returned voucher groups
  */
 export interface PaginatedVoucherGroupResponse {
   _pagination: PaginationResult,

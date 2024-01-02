@@ -31,12 +31,11 @@ export interface UpdateInvoiceParams extends BaseUpdateInvoice {
 }
 
 /**
- * @typedef UpdateInvoiceRequest
+ * @typedef{object}  UpdateInvoiceRequest
  * @property {integer} byId - The user who updates the Invoice, defaults to the ID of the requester.
  * @property {string} addressee.required - Name of the addressed.
  * @property {string} description.required - The description of the invoice.
- * @property {string} state - The state to set of the invoice,
- *    can be either CREATED, SENT, PAID or DELETED.
+ * @property {string} state - enum:CREATED,SENT,PAID,DELETED - The state to set of the invoice,
  */
 export interface UpdateInvoiceRequest extends BaseUpdateInvoice {
   byId?: number,
@@ -58,13 +57,13 @@ export interface CreateInvoiceParams extends BaseInvoice {
 }
 
 /**
- * @typedef CreateInvoiceRequest
+ * @typedef {object} CreateInvoiceRequest
  * @property {integer} forId.required - The recipient of the Invoice.
  * @property {integer} byId - The creator of the Invoice, defaults to the ID of the requester.
  * @property {string} addressee.required - Name of the addressed.
  * @property {string} description.required - The description of the invoice.
- * @property {Array.<InvoiceEntryRequest>} customEntries - Custom entries to be added to the invoice
- * @property {Array.<integer>} transactionIDs - IDs of the transactions to add to the Invoice.
+ * @property {Array<InvoiceEntryRequest>} customEntries - Custom entries to be added to the invoice
+ * @property {Array<integer>} transactionIDs - IDs of the transactions to add to the Invoice.
  * @property {string} fromDate - For creating an Invoice for all transactions from a specific date.
  * @property {boolean} isCreditInvoice.required - If the invoice is an credit Invoice
  *  If an invoice is a credit invoice the relevant subtransactions are defined as all the sub transactions which have `subTransaction.toId == forId`.

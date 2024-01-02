@@ -209,7 +209,7 @@ export default class ContainerService {
         revision: response.products_revision,
         alcoholpercentage: response.products_alcoholPercentage,
         vat_id: response.products_vatId,
-        vat_hidden: response.vat_hidden,
+        vat_hidden: !!response.vat_hidden,
         vat_percentage: response.vat_percentage,
         category_id: response.products_categoryId,
         category_name: response.category_name,

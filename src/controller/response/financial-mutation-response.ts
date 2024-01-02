@@ -21,9 +21,9 @@ import { TransferResponse } from './transfer-response';
 import { BaseTransactionResponse } from './transaction-response';
 
 /**
- * @typedef FinancialMutationResponse
- * @property {string} type.required - Type of mutation ('transfer' or 'transaction') (Optional)
- * @property {object} mutation - Details of mutation, this can be either of type TransferResponse or BaseTransactionResponse
+ * @typedef {object} FinancialMutationResponse
+ * @property {string} type.required - enum:transfer,transaction - Type of mutation ('transfer' or 'transaction') (Optional)
+ * @property {oneOf|TransferResponse|BaseTransactionResponse} mutation - Details of mutation, this can be either of type TransferResponse or BaseTransactionResponse
  */
 export interface FinancialMutationResponse {
   type: 'transfer' | 'transaction',
@@ -31,9 +31,9 @@ export interface FinancialMutationResponse {
 }
 
 /**
- * @typedef PaginatedFinancialMutationResponse
- * @property {PaginationResult.model} _pagination.required - Pagination metadata
- * @property {Array.<FinancialMutationResponse>} records.required - Returned mutations
+ * @typedef {object} PaginatedFinancialMutationResponse
+ * @property {PaginationResult} _pagination.required - Pagination metadata
+ * @property {Array<FinancialMutationResponse>} records.required - Returned mutations
  */
 export interface PaginatedFinancialMutationResponse {
   _pagination: PaginationResult,

@@ -21,15 +21,15 @@ import { BaseUserResponse } from './user-response';
 import { PaginationResult } from '../../helpers/pagination';
 
 /**
- * @typedef {BaseResponse} BasePointOfSaleResponse
+ * @typedef {allOf|BaseResponse} BasePointOfSaleResponse
  * @property {string} name.required - The name of the point-of-sale.
  */
 export interface BasePointOfSaleResponse extends BaseResponse {
   name: string,
 }
 /**
- * @typedef {BasePointOfSaleResponse} PointOfSaleResponse
- * @property {BaseUserResponse.model} owner - The owner of the point-of-sale.
+ * @typedef {allOf|BasePointOfSaleResponse} PointOfSaleResponse
+ * @property {BaseUserResponse} owner - The owner of the point-of-sale.
  * @property {number} revision.required - Revision of the POS
  * @property {boolean} useAuthentication.required - Whether this POS requires users to
  * authenticate themselves before making a transaction
@@ -41,9 +41,9 @@ export interface PointOfSaleResponse extends BasePointOfSaleResponse {
 }
 
 /**
- * @typedef PaginatedPointOfSaleResponse
- * @property {PaginationResult.model} _pagination.required - Pagination metadata
- * @property {Array.<PointOfSaleResponse>} records.required - Returned points of sale
+ * @typedef {object} PaginatedPointOfSaleResponse
+ * @property {PaginationResult} _pagination.required - Pagination metadata
+ * @property {Array<PointOfSaleResponse>} records.required - Returned points of sale
  */
 export interface PaginatedPointOfSaleResponse {
   _pagination: PaginationResult,
@@ -51,8 +51,8 @@ export interface PaginatedPointOfSaleResponse {
 }
 
 /**
- * @typedef {PointOfSaleResponse} PointOfSaleWithContainersResponse
- * @property {Array.<ContainerWithProductsResponse>} containers.required - The containers
+ * @typedef {allOf|PointOfSaleResponse} PointOfSaleWithContainersResponse
+ * @property {Array<ContainerWithProductsResponse>} containers.required - The containers
  * in the point-of-sale.
  */
 export interface PointOfSaleWithContainersResponse extends PointOfSaleResponse {

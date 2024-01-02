@@ -106,9 +106,9 @@ export default class EventController extends BaseController {
   }
 
   /**
-   * Get all events
-   * @route GET /events
-   * @group events - Operations of the event controller
+   * GET /events
+   * @summary Get all events
+   * @tags events - Operations of the event controller
    * @operationId getAllEvents
    * @security JWT
    * @param {string} name.query - Name of the event
@@ -118,9 +118,9 @@ export default class EventController extends BaseController {
    * @param {string} type.query - Get only events that are this type
    * @param {integer} take.query - How many entries the endpoint should return
    * @param {integer} skip.query - How many entries should be skipped (for pagination)
-   * @returns {PaginatedBaseEventResponse.model} 200 - All existing events
-   * @returns {string} 400 - Validation error
-   * @returns {string} 500 - Internal server error
+   * @return {PaginatedBaseEventResponse} 200 - All existing events
+   * @return {string} 400 - Validation error
+   * @return {string} 500 - Internal server error
    */
   public async getAllEvents(req: RequestWithToken, res: Response): Promise<void> {
     this.logger.trace('Get all events by user', req.token.user);
@@ -155,15 +155,15 @@ export default class EventController extends BaseController {
   }
 
   /**
-   * Get a single event with its answers and shifts
-   * @route GET /events/{id}
-   * @group events - Operations of the event controller
+   * GET /events/{id}
+   * @summary Get a single event with its answers and shifts
+   * @tags events - Operations of the event controller
    * @operationId getSingleEvent
    * @security JWT
    * @param {integer} id.path.required - The id of the event which should be returned
-   * @returns {EventResponse.model} 200 - All existing events
-   * @returns {string} 400 - Validation error
-   * @returns {string} 500 - Internal server error
+   * @return {EventResponse} 200 - All existing events
+   * @return {string} 400 - Validation error
+   * @return {string} 500 - Internal server error
    */
   public async getSingleEvent(req: RequestWithToken, res: Response) {
     const { id } = req.params;
@@ -184,15 +184,15 @@ export default class EventController extends BaseController {
   }
 
   /**
-   * Create an event with its corresponding answers objects
-   * @route POST /events
-   * @group events - Operations of the event controller
+   * POST /events
+   * @summary Create an event with its corresponding answers objects
+   * @tags events - Operations of the event controller
    * @operationId createEvent
    * @security JWT
-   * @param {CreateEventRequest.model} body.body.required
-   * @returns {EventResponse.model} 200 - Created event
-   * @returns {string} 400 - Validation error
-   * @returns {string} 500 - Internal server error
+   * @param {CreateEventRequest} request.body.required
+   * @return {EventResponse} 200 - Created event
+   * @return {string} 400 - Validation error
+   * @return {string} 500 - Internal server error
    */
   public async createEvent(req: RequestWithToken, res: Response) {
     const body = req.body as EventRequest;
@@ -219,16 +219,16 @@ export default class EventController extends BaseController {
   }
 
   /**
-   * Update an event with its corresponding answers objects
-   * @route PATCH /events/{id}
-   * @group events - Operations of the event controller
+   * PATCH /events/{id}
+   * @summary Update an event with its corresponding answers objects
+   * @tags events - Operations of the event controller
    * @operationId updateEvent
    * @security JWT
    * @param {integer} id.path.required - The id of the event which should be returned
-   * @param {UpdateEventRequest.model} body.body.required
-   * @returns {EventResponse.model} 200 - Created event
-   * @returns {string} 400 - Validation error
-   * @returns {string} 500 - Internal server error
+   * @param {UpdateEventRequest} request.body.required
+   * @return {EventResponse} 200 - Created event
+   * @return {string} 400 - Validation error
+   * @return {string} 500 - Internal server error
    */
   public async updateEvent(req: RequestWithToken, res: Response) {
     const { id } = req.params;
@@ -267,15 +267,15 @@ export default class EventController extends BaseController {
   }
 
   /**
-   * Delete an event with its answers
-   * @route DELETE /events/{id}
-   * @group events - Operations of the event controller
+   * DELETE /events/{id}
+   * @summary Delete an event with its answers
+   * @tags events - Operations of the event controller
    * @operationId deleteEvent
    * @security JWT
    * @param {integer} id.path.required - The id of the event which should be deleted
-   * @returns {string} 204 - Success
-   * @returns {string} 400 - Validation error
-   * @returns {string} 500 - Internal server error
+   * @return {string} 204 - Success
+   * @return {string} 400 - Validation error
+   * @return {string} 500 - Internal server error
    */
   public async deleteEvent(req: RequestWithToken, res: Response) {
     const { id } = req.params;
@@ -300,14 +300,14 @@ export default class EventController extends BaseController {
   /**
    * Synchronize an event, so that EventShiftAnswers are created/deleted
    * for users that are (no longer) part of a shift
-   * @route POST /events/{id}/sync
-   * @group events - Operations of the event controller
+   * @route GET /events/{id}/sync
+   * @tags events - Operations of the event controller
    * @operationId syncEventShiftAnswers
    * @security JWT
    * @param {integer} id.path.required - The id of the event which should be returned
-   * @returns {EventResponse.model} 200 - All existing events
-   * @returns {string} 400 - Validation error
-   * @returns {string} 500 - Internal server error
+   * @return {EventResponse} 200 - All existing events
+   * @return {string} 400 - Validation error
+   * @return {string} 500 - Internal server error
    */
   public async syncEventShiftAnswers(req: RequestWithToken, res: Response) {
     const { id } = req.params;
@@ -330,18 +330,18 @@ export default class EventController extends BaseController {
   }
 
   /**
-   * Change the assignment of users to shifts on an event
-   * @route PUT /events/{eventId}/shift/{shiftId}/user/{userId}/assign
-   * @group events - Operations of the event controller
+   * PUT /events/{eventId}/shift/{shiftId}/user/{userId}/assign
+   * @summary Change the assignment of users to shifts on an event
+   * @tags events - Operations of the event controller
    * @operationId assignEventShift
    * @security JWT
    * @param {integer} eventId.path.required - The id of the event
    * @param {integer} shiftId.path.required - The id of the shift
    * @param {integer} userId.path.required - The id of the user
-   * @param {EventAnswerAssignmentRequest.model} body.body.required
-   * @returns {BaseEventAnswerResponse.model} 200 - Created event
-   * @returns {string} 400 - Validation error
-   * @returns {string} 500 - Internal server error
+   * @param {EventAnswerAssignmentRequest} request.body.required
+   * @return {BaseEventAnswerResponse} 200 - Created event
+   * @return {string} 400 - Validation error
+   * @return {string} 500 - Internal server error
    */
   public async assignEventShift(req: RequestWithToken, res: Response) {
     const { eventId: rawEventId, shiftId: rawShiftId, userId: rawUserId } = req.params;
@@ -382,18 +382,18 @@ export default class EventController extends BaseController {
   }
 
   /**
-   * Update the availability of a user for a shift in an event
-   * @route POST /events/{eventId}/shift/{shiftId}/user/{userId}/availability
-   * @group events - Operations of the event controller
+   * POST /events/{eventId}/shift/{shiftId}/user/{userId}/availability
+   * @summary Update the availability of a user for a shift in an event
+   * @tags events - Operations of the event controller
    * @operationId updateEventShiftAvailability
    * @security JWT
    * @param {integer} eventId.path.required - The id of the event
    * @param {integer} shiftId.path.required - The id of the shift
    * @param {integer} userId.path.required - The id of the user
-   * @param {EventAnswerAvailabilityRequest.model} body.body.required
-   * @returns {BaseEventAnswerResponse.model} 200 - Created event
-   * @returns {string} 400 - Validation error
-   * @returns {string} 500 - Internal server error
+   * @param {EventAnswerAvailabilityRequest} request.body.required
+   * @return {BaseEventAnswerResponse} 200 - Created event
+   * @return {string} 400 - Validation error
+   * @return {string} 500 - Internal server error
    */
   public async updateShiftAvailability(req: RequestWithToken, res: Response) {
     const { userId: rawUserId, shiftId: rawShiftId, eventId: rawEventId } = req.params;

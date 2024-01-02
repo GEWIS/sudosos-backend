@@ -80,16 +80,16 @@ export default class DebtorController extends BaseController {
   }
 
   /**
-   * Get all fine handout events
-   * @route GET /fines
-   * @group debtors - Operations of the debtor controller
+   * GET /fines
+   * @summary Get all fine handout events
+   * @tags debtors - Operations of the debtor controller
    * @operationId returnAllFineHandoutEvents
    * @security JWT
    * @param {integer} take.query - How many entries the endpoint should return
    * @param {integer} skip.query - How many entries should be skipped (for pagination)
-   * @returns {PaginatedFineHandoutEventResponse.model} 200 - All existing fine handout events
-   * @returns {string} 400 - Validation error
-   * @returns {string} 500 - Internal server error
+   * @return {PaginatedFineHandoutEventResponse} 200 - All existing fine handout events
+   * @return {string} 400 - Validation error
+   * @return {string} 500 - Internal server error
    */
   public async returnAllFineHandoutEvents(req: RequestWithToken, res: Response): Promise<void> {
     this.logger.trace('Get all fine handout events by ', req.token.user);
@@ -114,15 +114,15 @@ export default class DebtorController extends BaseController {
   }
 
   /**
-   * Get all fine handout events
-   * @route GET /fines/{id}
-   * @group debtors - Operations of the debtor controller
+   * GET /fines/{id}
+   * @summary Get all fine handout events
+   * @tags debtors - Operations of the debtor controller
    * @operationId returnSingleFineHandoutEvent
    * @security JWT
    * @param {integer} id.path.required - The id of the fine handout event which should be returned
-   * @returns {FineHandoutEventResponse.model} 200 - Requested fine handout event with corresponding fines
-   * @returns {string} 400 - Validation error
-   * @returns {string} 500 - Internal server error
+   * @return {FineHandoutEventResponse} 200 - Requested fine handout event with corresponding fines
+   * @return {string} 400 - Validation error
+   * @return {string} 500 - Internal server error
    */
   public async returnSingleFineHandoutEvent(req: RequestWithToken, res: Response): Promise<void> {
     const { id } = req.params;
@@ -137,15 +137,15 @@ export default class DebtorController extends BaseController {
   }
 
   /**
-   * Delete a fine
-   * @route DELETE /fines/single/{id}
-   * @group debtors - Operations of the debtor controller
+   * DELETE /fines/single/{id}
+   * @summary Delete a fine
+   * @tags debtors - Operations of the debtor controller
    * @operationId deleteFine
    * @security JWT
    * @param {integer} id.path.required - The id of the fine which should be deleted
-   * @returns {string} 204 - Success
-   * @returns {string} 400 - Validation error
-   * @returns {string} 500 - Internal server error
+   * @return {string} 204 - Success
+   * @return {string} 400 - Validation error
+   * @return {string} 500 - Internal server error
    */
   public async deleteFine(req: RequestWithToken, res: Response): Promise<void> {
     const { id } = req.params;
@@ -171,15 +171,15 @@ export default class DebtorController extends BaseController {
    * Return all users that had at most -5 euros balance both now and on the reference date
    * For all these users, also return their fine based on the reference date.
    * @route GET /fines/eligible
-   * @group debtors - Operations of the debtor controller
+   * @tags debtors - Operations of the debtor controller
    * @operationId calculateFines
    * @security JWT
    * @param {Array.<string>} userTypes[].query - List of all user types fines should be calculated for
    * @param {Array.<string>} referenceDates[].query.required - Dates to base the fines on. Every returned user has at
    * least five euros debt on every reference date. The height of the fine is based on the first date in the array.
-   * @returns {Array<UserToFineResponse>} 200 - List of eligible fines
-   * @returns {string} 400 - Validation error
-   * @returns {string} 500 - Internal server error
+   * @return {Array<UserToFineResponse>} 200 - List of eligible fines
+   * @return {string} 400 - Validation error
+   * @return {string} 500 - Internal server error
    */
   public async calculateFines(req: RequestWithToken, res: Response): Promise<void> {
     this.logger.trace('Get all possible fines by ', req.token.user);
@@ -208,15 +208,15 @@ export default class DebtorController extends BaseController {
   }
 
   /**
-   * Handout fines to all given users. Fines will be handed out "now" to prevent rewriting history.
-   * @route POST /fines/handout
-   * @group debtors - Operations of the debtor controller
+   * POST /fines/handout
+   * @summary Handout fines to all given users. Fines will be handed out "now" to prevent rewriting history.
+   * @tags debtors - Operations of the debtor controller
    * @operationId handoutFines
    * @security JWT
-   * @param {HandoutFinesRequest.model} body.body.required
-   * @returns {FineHandoutEventResponse.model} 200 - Created fine handout event with corresponding fines
-   * @returns {string} 400 - Validation error
-   * @returns {string} 500 - Internal server error
+   * @param {HandoutFinesRequest} request.body.required
+   * @return {FineHandoutEventResponse} 200 - Created fine handout event with corresponding fines
+   * @return {string} 400 - Validation error
+   * @return {string} 500 - Internal server error
    */
   public async handoutFines(req: RequestWithToken, res: Response): Promise<void> {
     const body = req.body as HandoutFinesRequest;
@@ -247,15 +247,15 @@ export default class DebtorController extends BaseController {
   }
 
   /**
-   * Send an email to all given users about their possible future fine.
-   * @route POST /fines/notify
-   * @group debtors - Operations of the debtor controller
+   * POST /fines/notify
+   * @summary Send an email to all given users about their possible future fine.
+   * @tags debtors - Operations of the debtor controller
    * @operationId notifyAboutFutureFines
    * @security JWT
-   * @param {HandoutFinesRequest.model} body.body.required
-   * @returns {string} 204 - Success
-   * @returns {string} 400 - Validation error
-   * @returns {string} 500 - Internal server error
+   * @param {HandoutFinesRequest} request.body.required
+   * @return {string} 204 - Success
+   * @return {string} 400 - Validation error
+   * @return {string} 500 - Internal server error
    */
   public async notifyAboutFutureFines(req: RequestWithToken, res: Response): Promise<void> {
     const body = req.body as HandoutFinesRequest;

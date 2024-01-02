@@ -21,29 +21,29 @@ import { BaseUserResponse } from './user-response';
 import { PaginationResult } from '../../helpers/pagination';
 
 /**
- * @typedef {BaseResponse} BaseContainerResponse
+ * @typedef {allOf|BaseResponse} BaseContainerResponse
  * @property {string} name.required - The name of the container.
- * @property {boolean} public.required - Public status of the container.
+ * @property {boolean} public - Public status of the container.
  * @property {integer} revision - The container revision.
  */
 export interface BaseContainerResponse extends BaseResponse {
   name: string,
-  public: boolean,
+  public?: boolean,
   revision?: number,
 }
 
 /**
- * @typedef {BaseContainerResponse} ContainerResponse
- * @property {BaseUserResponse.model} owner.required - The owner of the container.
+ * @typedef {allOf|BaseContainerResponse} ContainerResponse
+ * @property {BaseUserResponse} owner.required - The owner of the container.
  */
 export interface ContainerResponse extends BaseContainerResponse {
   owner: BaseUserResponse,
 }
 
 /**
- * @typedef PaginatedContainerResponse
- * @property {PaginationResult.model} _pagination.required - Pagination metadata
- * @property {Array.<ContainerResponse>} records.required - Returned containers
+ * @typedef {object} PaginatedContainerResponse
+ * @property {PaginationResult} _pagination.required - Pagination metadata
+ * @property {Array<ContainerResponse>} records.required - Returned containers
  */
 export interface PaginatedContainerResponse {
   _pagination: PaginationResult,
@@ -51,9 +51,9 @@ export interface PaginatedContainerResponse {
 }
 
 /**
- * @typedef PaginatedContainerWithProductResponse
- * @property {PaginationResult.model} _pagination.required - Pagination metadata
- * @property {Array.<ContainerWithProductsResponse>} records.required - Returned containers
+ * @typedef {object} PaginatedContainerWithProductResponse
+ * @property {PaginationResult} _pagination.required - Pagination metadata
+ * @property {Array<ContainerWithProductsResponse>} records.required - Returned containers
  */
 export interface PaginatedContainerWithProductResponse {
   _pagination: PaginationResult,
@@ -61,8 +61,8 @@ export interface PaginatedContainerWithProductResponse {
 }
 
 /**
- * @typedef {ContainerResponse} ContainerWithProductsResponse
- * @property {Array.<ProductResponse>} products.required - The products in the container.
+ * @typedef {allOf|ContainerResponse} ContainerWithProductsResponse
+ * @property {Array<ProductResponse>} products.required - The products in the container.
  */
 export interface ContainerWithProductsResponse extends ContainerResponse {
   products: ProductResponse[],

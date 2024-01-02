@@ -28,7 +28,7 @@ export default interface BaseUserRequest {
 }
 
 /**
- * @typedef CreateUserRequest
+ * @typedef {object} CreateUserRequest
  * @property {string} firstName.required
  * @property {string} lastName
  * @property {string} nickname
@@ -42,7 +42,7 @@ export interface CreateUserRequest extends BaseUserRequest {
 }
 
 /**
- * @typedef UpdateUserRequest
+ * @typedef {object} UpdateUserRequest
  * @property {string} firstName
  * @property {string} lastName
  * @property {string} nickname

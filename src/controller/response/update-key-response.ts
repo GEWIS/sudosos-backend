@@ -19,7 +19,7 @@
 import BaseResponse from './base-response';
 
 /**
- * @typedef UpdateKeyResponse
+ * @typedef {object} UpdateKeyResponse
  * @property {string} key.required - The key to return
  */
 export default interface UpdateKeyResponse extends BaseResponse {

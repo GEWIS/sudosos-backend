@@ -37,9 +37,9 @@ export type ContainerParams = UpdateContainerParams | CreateContainerParams;
 // strict type checker later down the line.
 
 /**
- * @typedef CreateContainerRequest
+ * @typedef {object} CreateContainerRequest
  * @property {string} name.required - Name of the container
- * @property {Array.<integer>} products.required -
+ * @property {Array<integer>} products.required -
  *    IDs or requests of the products to add to the container
  * @property {boolean} public.required - Whether the container is public or not
  * @property {integer} ownerId - Id of the user who will own the container, if undefined it will
@@ -50,9 +50,9 @@ export interface CreateContainerRequest extends BaseContainerParams {
 }
 
 /**
- * @typedef UpdateContainerRequest
+ * @typedef {object} UpdateContainerRequest
  * @property {string} name.required - Name of the container
- * @property {Array.<integer>} products.required -
+ * @property {Array<integer>} products.required -
  *    IDs or requests of the products to add to the container
  * @property {boolean} public.required - Whether the container is public or not
  */

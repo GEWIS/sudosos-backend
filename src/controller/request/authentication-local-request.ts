@@ -17,7 +17,7 @@
  */
 
 /**
- * @typedef AuthenticationLocalRequest
+ * @typedef {object} AuthenticationLocalRequest
  * @property {string} accountMail.required - The users mail to authenticate
  * @property {string} password.required - The password
  */

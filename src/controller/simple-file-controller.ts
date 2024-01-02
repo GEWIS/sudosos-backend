@@ -72,18 +72,24 @@ export default class SimpleFileController extends BaseController {
     };
   }
 
+
   /**
-   * Upload a file with the given name.
-   * @route POST /files
+   * @typedef {object} FileUpload
+   * @property {string} name.required - The name of the file
+   * @property {string} file - file - binary
+   */
+
+  /**
+   * POST /files
+   * @summary Upload a file with the given name.
    * @operationId createFile
-   * @group files - Operations of the simple files controller
+   * @tags files - Operations of the simple files controller
    * @consumes multipart/form-data
-   * @param {file} file.formData
-   * @param {string} name.formData
+   * @param {FileUpload} request.body.required - simple file - multipart/form-data
    * @security JWT
-   * @returns {SimpleFileResponse.model} 200 - The uploaded file entity
-   * @returns {string} 400 - Validation error
-   * @returns {string} 500 - Internal server error
+   * @return {SimpleFileResponse} 200 - The uploaded file entity
+   * @return {string} 400 - Validation error
+   * @return {string} 500 - Internal server error
    */
   public async uploadFile(req: RequestWithToken, res: Response): Promise<void> {
     this.logger.trace('Upload simple file by user', req.token.user);
@@ -110,15 +116,15 @@ export default class SimpleFileController extends BaseController {
   }
 
   /**
-   * Download a file with the given id.
-   * @route GET /files/{id}
+   * GET /files/{id}
+   * @summary Download a file with the given id.
    * @operationId getFile
-   * @group files - Operations of the simple files controller
+   * @tags files - Operations of the simple files controller
    * @param {integer} id.path.required - The id of the file which should be downloaded
    * @security JWT
-   * @returns {Buffer} 200 - The requested file
-   * @returns {string} 404 - File not found
-   * @returns {string} 500 - Internal server error
+   * @return {string} 200 - The requested file
+   * @return {string} 404 - File not found
+   * @return {string} 500 - Internal server error
    */
   public async downloadFile(req: RequestWithToken, res: Response): Promise<void> {
     const { id } = req.params;
@@ -139,15 +145,15 @@ export default class SimpleFileController extends BaseController {
   }
 
   /**
-   * Delete the file with the given id.
-   * @route DELETE /files/{id}
+   * DELETE /files/{id}
+   * @summary Delete the file with the given id.
    * @operationId deleteFile
-   * @group files - Operations of the simple files controller
+   * @tags files - Operations of the simple files controller
    * @param {integer} id.path.required - The id of the file which should be deleted
    * @security JWT
-   * @returns {Buffer} 204 - Success
-   * @returns {string} 404 - File not found
-   * @returns {string} 500 - Internal server error
+   * @return {string} 204 - Success
+   * @return {string} 404 - File not found
+   * @return {string} 500 - Internal server error
    */
   public async deleteFile(req: RequestWithToken, res: Response): Promise<void> {
     const { id } = req.params;

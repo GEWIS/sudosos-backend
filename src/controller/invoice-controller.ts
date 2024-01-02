@@ -81,10 +81,10 @@ export default class InvoiceController extends BaseController {
   }
 
   /**
-   * Returns all invoices in the system.
-   * @route GET /invoices
+   * GET /invoices
+   * @summary Returns all invoices in the system.
    * @operationId getAllInvoices
-   * @group invoices - Operations of the invoices controller
+   * @tags invoices - Operations of the invoices controller
    * @security JWT
    * @param {integer} toId.query - Filter on Id of the debtor
    * @param {number} invoiceId.query - Filter on invoice ID
@@ -95,8 +95,8 @@ export default class InvoiceController extends BaseController {
    * @param {string} tillDate.query - End date for selected invoices (exclusive)
    * @param {integer} take.query - How many entries the endpoint should return
    * @param {integer} skip.query - How many entries should be skipped (for pagination)
-   * @returns {PaginatedInvoiceResponse.model} 200 - All existing invoices
-   * @returns {string} 500 - Internal server error
+   * @return {PaginatedInvoiceResponse} 200 - All existing invoices
+   * @return {string} 500 - Internal server error
    */
   public async getAllInvoices(req: RequestWithToken, res: Response): Promise<void> {
     const { body } = req;
@@ -128,17 +128,17 @@ export default class InvoiceController extends BaseController {
   }
 
   /**
-   * Returns a single invoice in the system.
-   * @route GET /invoices/{id}
+   * GET /invoices/{id}
+   * @summary Returns a single invoice in the system.
    * @operationId getSingleInvoice
    * @param {integer} id.path.required - The id of the requested invoice
-   * @group invoices - Operations of the invoices controller
+   * @tags invoices - Operations of the invoices controller
    * @security JWT
    * @param {boolean} returnEntries.query -
    * Boolean if invoice entries should be returned, defaults to true.
-   * @returns {InvoiceResponse.model} 200 - All existing invoices
-   * @returns {string} 404 - Invoice not found
-   * @returns {string} 500 - Internal server error
+   * @return {InvoiceResponse} 200 - All existing invoices
+   * @return {string} 404 - Invoice not found
+   * @return {string} 500 - Internal server error
    */
   public async getSingleInvoice(req: RequestWithToken, res: Response): Promise<void> {
     const { id } = req.params;
@@ -166,16 +166,16 @@ export default class InvoiceController extends BaseController {
   }
 
   /**
-   * Adds an invoice to the system.
-   * @route POST /invoices
+   * POST /invoices
+   * @summary Adds an invoice to the system.
    * @operationId createInvoice
-   * @group invoices - Operations of the invoices controller
+   * @tags invoices - Operations of the invoices controller
    * @security JWT
-   * @param {CreateInvoiceRequest.model} invoice.body.required -
+   * @param {CreateInvoiceRequest} request.body.required -
    * The invoice which should be created
-   * @returns {InvoiceResponse.model} 200 - The created invoice entity
-   * @returns {string} 400 - Validation error
-   * @returns {string} 500 - Internal server error
+   * @return {InvoiceResponse} 200 - The created invoice entity
+   * @return {string} 400 - Validation error
+   * @return {string} 500 - Internal server error
    */
   public async createInvoice(req: RequestWithToken, res: Response): Promise<void> {
     const body = req.body as CreateInvoiceRequest;
@@ -203,17 +203,17 @@ export default class InvoiceController extends BaseController {
   }
 
   /**
-   * Adds an invoice to the system.
-   * @route PATCH /invoices/{id}
+   * PATCH /invoices/{id}
+   * @summary Adds an invoice to the system.
    * @operationId updateInvoice
-   * @group invoices - Operations of the invoices controller
+   * @tags invoices - Operations of the invoices controller
    * @security JWT
    * @param {integer} id.path.required - The id of the invoice which should be updated
-   * @param {UpdateInvoiceRequest.model} invoice.body.required -
+   * @param {UpdateInvoiceRequest} request.body.required -
    * The invoice update to process
-   * @returns {BaseInvoiceResponse.model} 200 - The updated invoice entity
-   * @returns {string} 400 - Validation error
-   * @returns {string} 500 - Internal server error
+   * @return {BaseInvoiceResponse} 200 - The updated invoice entity
+   * @return {string} 400 - Validation error
+   * @return {string} 500 - Internal server error
    */
   public async updateInvoice(req: RequestWithToken, res: Response): Promise<void> {
     const body = req.body as UpdateInvoiceRequest;
@@ -244,15 +244,15 @@ export default class InvoiceController extends BaseController {
   }
 
   /**
-   * Deletes an invoice.
-   * @route DELETE /invoices/{id}
+   * DELETE /invoices/{id}
+   * @summary Deletes an invoice.
    * @operationId deleteInvoice
-   * @group invoices - Operations of the invoices controller
+   * @tags invoices - Operations of the invoices controller
    * @security JWT
    * @param {integer} id.path.required - The id of the invoice which should be deleted
    * @return {string} 404 - Invoice not found
-   * @return {BaseInvoiceResponse.model} 200 - The deleted invoice.
-   * @returns {string} 500 - Internal server error
+   * @return {BaseInvoiceResponse} 200 - The deleted invoice.
+   * @return {string} 500 - Internal server error
    */
   // TODO Deleting of invoices that are not of state CREATED?
   public async deleteInvoice(req: RequestWithToken, res: Response): Promise<void> {
@@ -278,7 +278,7 @@ export default class InvoiceController extends BaseController {
    * all if user is not connected to invoice
    * own if user is connected to invoice
    * @param req
-   * @returns whether invoice is connected to used token
+   * @return whether invoice is connected to used token
    */
   static async getRelation(req: RequestWithToken): Promise<string> {
     const invoice: Invoice = await Invoice.findOne({ where: { id: parseInt(req.params.id, 10) }, relations: ['to'] });

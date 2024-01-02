@@ -29,7 +29,10 @@ declare module 'swagger-model-validator' {
   }
 
   export interface SwaggerSpecification {
-    definitions: any;
+    test? : string
+    components?: {
+      schemas: any
+    };
     validateModel(
       modelName: string,
       object: object,

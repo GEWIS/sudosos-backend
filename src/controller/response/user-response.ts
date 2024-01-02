@@ -20,7 +20,7 @@ import { PaginationResult } from '../../helpers/pagination';
 import { TermsOfServiceStatus } from '../../entity/user/user';
 
 /**
- * @typedef {BaseResponse} BaseUserResponse
+ * @typedef {allOf|BaseResponse} BaseUserResponse
  * @property {string} firstName.required - The name of the user.
  * @property {string} lastName.required - The last name of the user
  * @property {string} nickname - The nickname of the user
@@ -32,7 +32,7 @@ export interface BaseUserResponse extends BaseResponse {
 }
 
 /**
- * @typedef {BaseUserResponse} UserResponse
+ * @typedef {allOf|BaseUserResponse} UserResponse
  * @property {boolean} active.required - Whether the user activated
  * @property {boolean} deleted.required - Whether the user is deleted
  * @property {string} type.required - The type of user
@@ -55,9 +55,9 @@ export interface UserResponse extends BaseUserResponse {
 }
 
 /**
- * @typedef PaginatedUserResponse
- * @property {PaginationResult.model} _pagination.required - Pagination metadata
- * @property {Array.<UserResponse>} records.required - Returned users
+ * @typedef {object} PaginatedUserResponse
+ * @property {PaginationResult} _pagination.required - Pagination metadata
+ * @property {Array<UserResponse>} records.required - Returned users
  */
 export interface PaginatedUserResponse {
   _pagination: PaginationResult,

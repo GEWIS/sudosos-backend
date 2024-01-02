@@ -76,16 +76,16 @@ export default class EventShiftController extends BaseController {
   }
 
   /**
-   * Get all event shifts
-   * @route GET /eventshifts
-   * @group events - Operations of the event controller
+   * GET /eventshifts
+   * @summary Get all event shifts
+   * @tags events - Operations of the event controller
    * @operationId getAllEventShifts
    * @security JWT
    * @param {integer} take.query - How many entries the endpoint should return
    * @param {integer} skip.query - How many entries should be skipped (for pagination)
-   * @returns {PaginatedEventShiftResponse.model} 200 - All existing event shifts
-   * @returns {string} 400 - Validation error
-   * @returns {string} 500 - Internal server error
+   * @return {PaginatedEventShiftResponse} 200 - All existing event shifts
+   * @return {string} 400 - Validation error
+   * @return {string} 500 - Internal server error
    */
   public async getAllShifts(req: RequestWithToken, res: Response) {
     this.logger.trace('Get all shifts by user', req.token.user);
@@ -111,15 +111,15 @@ export default class EventShiftController extends BaseController {
   }
 
   /**
-   * Create an event shift
-   * @route POST /eventshifts
-   * @group events - Operations of the event controller
+   * POST /eventshifts
+   * @summary Create an event shift
+   * @tags events - Operations of the event controller
    * @operationId createEventShift
    * @security JWT
-   * @param {CreateShiftRequest.model} body.body.required
-   * @returns {EventShiftResponse.model} 200 - Created event shift
-   * @returns {string} 400 - Validation error
-   * @returns {string} 500 - Internal server error
+   * @param {CreateShiftRequest} request.body.required
+   * @return {EventShiftResponse} 200 - Created event shift
+   * @return {string} 400 - Validation error
+   * @return {string} 500 - Internal server error
    */
   public async createShift(req: RequestWithToken, res: Response) {
     const body = req.body as EventShiftRequest;
@@ -150,16 +150,16 @@ export default class EventShiftController extends BaseController {
   }
 
   /**
-   * Update an event shift
-   * @route PATCH /eventshifts/{id}
-   * @group events - Operations of the event controller
+   * PATCH /eventshifts/{id}
+   * @summary Update an event shift
+   * @tags events - Operations of the event controller
    * @operationId updateEventShift
    * @security JWT
    * @param {integer} id.path.required - The id of the event which should be returned
-   * @param {UpdateShiftRequest.model} body.body.required
-   * @returns {EventShiftResponse.model} 200 - Created event shift
-   * @returns {string} 400 - Validation error
-   * @returns {string} 500 - Internal server error
+   * @param {UpdateShiftRequest} request.body.required
+   * @return {EventShiftResponse} 200 - Created event shift
+   * @return {string} 400 - Validation error
+   * @return {string} 500 - Internal server error
    */
   public async updateShift(req: RequestWithToken, res: Response) {
     const { id: rawId } = req.params;
@@ -203,15 +203,15 @@ export default class EventShiftController extends BaseController {
   }
 
   /**
-   * Delete an event shift with its answers
-   * @route DELETE /eventshifts/{id}
-   * @group events - Operations of the event controller
+   * DELETE /eventshifts/{id}
+   * @summary Delete an event shift with its answers
+   * @tags events - Operations of the event controller
    * @operationId deleteEventShift
    * @security JWT
    * @param {integer} id.path.required - The id of the event which should be deleted
-   * @returns {string} 204 - Success
-   * @returns {string} 400 - Validation error
-   * @returns {string} 500 - Internal server error
+   * @return {string} 204 - Success
+   * @return {string} 400 - Validation error
+   * @return {string} 500 - Internal server error
    */
   public async deleteShift(req: RequestWithToken, res: Response) {
     const { id: rawId } = req.params;
@@ -234,18 +234,18 @@ export default class EventShiftController extends BaseController {
   }
 
   /**
-   * Get the number of times a user has been selected for the given shift
-   * @route GET /eventshifts/{id}/counts
-   * @group events - Operations of the event controller
-   * @operationId getShiftSelectedCount
+   * GET /eventshifts/{id}/counts
+   * @summary Get the number of times a user has been selected for the given shift
+   * @tags events - Operations of the event controller
+   * @operationId getEventShiftCount
    * @security JWT
-   * @param {integer} id.path.required - The id of the event which should be deleted
+   * @param {integer} id.path.required - The id of the event shift
    * @param {string} eventType.query - Only include events of this type
    * @param {string} afterDate.query - Only include events after this date
    * @param {string} beforeDate.query - Only include events before this date
-   * @returns {Array.<EventPlanningSelectedCount>} 200 - Users with how many times they did this shift
-   * @returns {string} 400 - Validation error
-   * @returns {string} 500 - Internal server error
+   * @return {Array<PaginatedEventShiftResponse>} 200 - All existing event shifts
+   * @return {string} 400 - Validation error
+   * @return {string} 500 - Internal server error
    */
   public async getShiftSelectedCount(req: RequestWithToken, res: Response) {
     const { id: rawId } = req.params;

@@ -17,7 +17,7 @@
  */
 
 /**
- * @typedef UpdateNfcRequest
+ * @typedef {object} UpdateNfcRequest
  * @property {string} nfcCode.required - The NFC code to set
  */
 export default interface UpdateNfcRequest {

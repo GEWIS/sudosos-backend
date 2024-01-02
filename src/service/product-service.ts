@@ -153,7 +153,7 @@ export default class ProductService {
     const vat: BaseVatGroupResponse = {
       id: rawProduct.vat_id,
       percentage: rawProduct.vat_percentage,
-      hidden: rawProduct.vat_hidden,
+      hidden: !!rawProduct.vat_hidden,
     };
 
     return {

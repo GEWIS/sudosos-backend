@@ -20,7 +20,7 @@ import BaseResponse from './base-response';
 import { PaginationResult } from '../../helpers/pagination';
 
 /**
- * @typedef {BaseResponse} BannerResponse
+ * @typedef {allOf|BaseResponse} BannerResponse
  * @property {string} name.required - Name/label of the banner
  * @property {string} image - Location of the image
  * @property {number} duration.required - How long the banner should be shown (in seconds)
@@ -38,9 +38,9 @@ export interface BannerResponse extends BaseResponse {
 }
 
 /**
- * @typedef PaginatedBannerResponse
- * @property {PaginationResult.model} _pagination - Pagination metadata
- * @property {Array.<BannerResponse>} records - Returned banners
+ * @typedef {object} PaginatedBannerResponse
+ * @property {PaginationResult} _pagination - Pagination metadata
+ * @property {Array<BannerResponse>} records - Returned banners
  */
 export interface PaginatedBannerResponse {
   _pagination: PaginationResult,

@@ -17,7 +17,7 @@
  */
 
 /**
- * @typedef ProductCategoryRequest
+ * @typedef {object} ProductCategoryRequest
  * @property {string} name - Name/label of the productCategory
  */
 export default interface ProductCategoryRequest {
