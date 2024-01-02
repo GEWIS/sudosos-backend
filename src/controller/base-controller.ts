@@ -46,7 +46,7 @@ export default abstract class BaseController {
   /**
    * A reference to the swagger specification passed in the base controller options.
    */
-  protected specification: SwaggerSpecification;
+  public specification: SwaggerSpecification;
 
   /**
    * A reference to the role manager passed in the base controller options.

@@ -33,6 +33,7 @@ export interface StripePaymentIntentResponse extends BaseResponse {
 
 // TODO find a fix for integer enums.
 //  * @property {integer} state.required - enum:1,2,3,4 - State of the Stripe deposit. It can be 1 ('CREATED'), 2 ('PROCESSING'), 3 ('SUCCEEDED'), or 4 ('FAILED')
+//  @see https://github.com/BRIKEV/express-jsdoc-swagger/issues/257
 /**
  * @typedef {allOf|BaseResponse} StripeDepositStatusResponse
  * @property {integer} state.required - State of the Stripe deposit. It can be 1 ('CREATED'), 2 ('PROCESSING'), 3 ('SUCCEEDED'), or 4 ('FAILED')

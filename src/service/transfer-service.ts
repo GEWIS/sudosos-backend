@@ -126,7 +126,7 @@ export default class TransferService {
         'invoice', 'invoice.invoiceStatus',
         'deposit', 'deposit.depositStatus',
         'payoutRequest', 'payoutRequest.payoutRequestStatus', 'payoutRequest.requestedBy',
-        'fine', 'fine.userFineGroup',
+        'fine', 'fine.userFineGroup', 'fine.userFineGroup.user',
         'waivedFines', 'waivedFines.fines', 'waivedFines.fines.userFineGroup',
       ],
       take,

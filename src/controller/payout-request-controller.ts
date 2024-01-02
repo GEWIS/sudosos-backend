@@ -146,7 +146,7 @@ export default class PayoutRequestController extends BaseController {
    * @summary Create a new payout request
    * @operationId createPayoutRequest
    * @tags payoutRequests - Operations of the payout request controller
-   * @param {PayoutRequestRequest} request.body.requried - New payout request
+   * @param {PayoutRequestRequest} request.body.required - New payout request
    * @security JWT
    * @return {PayoutRequestResponse} 200 - The created payout request.
    * @return {string} 400 - Validation error
@@ -170,7 +170,7 @@ export default class PayoutRequestController extends BaseController {
    * @operationId setPayoutRequestStatus
    * @tags payoutRequests - Operations of the payout request controller
    * @param {integer} id.path.required - The ID of the payout request object that should be returned
-   * @param {PayoutRequestStatusRequest} request.body.requried - New state of payout request
+   * @param {PayoutRequestStatusRequest} request.body.required - New state of payout request
    * @security JWT
    * @return {PayoutRequestResponse} 200 - The updated payout request
    * @return {string} 400 - Validation error

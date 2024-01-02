@@ -17,7 +17,7 @@
  */
 import { DineroObject } from 'dinero.js';
 import BaseResponse from './base-response';
-import { BasePointOfSaleResponse } from './point-of-sale-response';
+import {BasePointOfSaleResponse, PointOfSaleResponse} from './point-of-sale-response';
 import { BaseContainerResponse } from './container-response';
 import { BaseProductResponse } from './product-response';
 import { BaseUserResponse } from './user-response';
@@ -49,7 +49,7 @@ export interface BaseTransactionResponse extends BaseResponse {
  * same as 'from'.
  * @property {Array<SubTransactionResponse>} subTransactions.required - The subtransactions
  * belonging to this transaction.
- * @property {BasePointOfSaleResponse} pointOfSale.required - The POS at which this transaction
+ * @property {PointOfSaleResponse} pointOfSale.required - The POS at which this transaction
  * has been created
  * @property {DineroObjectResponse} totalPriceInclVat.required - The total cost of the
  * transaction
@@ -58,7 +58,7 @@ export interface TransactionResponse extends BaseResponse {
   from: BaseUserResponse,
   createdBy?: BaseUserResponse,
   subTransactions: SubTransactionResponse[],
-  pointOfSale: BasePointOfSaleResponse,
+  pointOfSale: PointOfSaleResponse,
   totalPriceInclVat: DineroObjectResponse,
 }
 

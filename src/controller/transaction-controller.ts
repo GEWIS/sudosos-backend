@@ -136,7 +136,7 @@ export default class TransactionController extends BaseController {
    * @summary Creates a new transaction
    * @operationId createTransaction
    * @tags transactions - Operations of the transaction controller
-   * @param {TransactionRequest} request.body.requried -
+   * @param {TransactionRequest} request.body.required -
    * The transaction which should be created
    * @security JWT
    * @return {TransactionResponse} 200 - The created transaction entity
@@ -207,7 +207,7 @@ export default class TransactionController extends BaseController {
    * @operationId updateTransaction
    * @tags transactions - Operations of transaction controller
    * @param {integer} id.path.required - The id of the transaction which should be updated
-   * @param {TransactionRequest} request.body.requried -
+   * @param {TransactionRequest} request.body.required -
    * The updated transaction
    * @security JWT
    * @return {TransactionResponse} 200 - The requested transaction entity
@@ -272,7 +272,7 @@ export default class TransactionController extends BaseController {
    * @summary Function to validate the transaction immediatly after it is created
    * @operationId validateTransaction
    * @tags transactions - Operations of the transaction controller
-   * @param {TransactionRequest} request.body.requried -
+   * @param {TransactionRequest} request.body.required -
    * The transaction which should be validated
    * @return {boolean} 200 - Transaction validated
    * @security JWT

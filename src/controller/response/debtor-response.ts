@@ -36,7 +36,7 @@ export interface UserToFineResponse {
 /**
  * @typedef {allOf|BaseResponse} FineResponse
  * @property {DineroObjectResponse} amount.required - Fine amount
- * @property {BaseUserResponse} user - User that got the fine
+ * @property {BaseUserResponse} user.required - User that got the fine
  */
 export interface FineResponse extends BaseResponse {
   amount: DineroObjectResponse;

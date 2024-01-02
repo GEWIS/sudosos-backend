@@ -389,7 +389,7 @@ export default class UserController extends BaseController {
    * @operationId updateUserPin
    * @tags users - Operations of user controller
    * @param {integer} id.path.required - The id of the user
-   * @param {UpdatePinRequest} request.body.requried -
+   * @param {UpdatePinRequest} request.body.required -
    *    The PIN code to update to
    * @security JWT
    * @return 200 - Update success
@@ -431,7 +431,7 @@ export default class UserController extends BaseController {
    * @operationId updateUserNfc
    * @tags users - Operations of user controller
    * @param {integer} id.path.required - The id of the user
-   * @param {UpdateNfcRequest} request.body.requried -
+   * @param {UpdateNfcRequest} request.body.required -
    *    The NFC code to update to
    * @security JWT
    * @return 200 - Update success
@@ -580,7 +580,7 @@ export default class UserController extends BaseController {
    * @operationId updateUserLocalPassword
    * @tags users - Operations of user controller
    * @param {integer} id.path.required - The id of the user
-   * @param {UpdateLocalRequest} request.body.requried -
+   * @param {UpdateLocalRequest} request.body.required -
    *    The password update
    * @security JWT
    * @return 204 - Update success
@@ -703,7 +703,7 @@ export default class UserController extends BaseController {
    * @summary Create a new user
    * @operationId createUser
    * @tags users - Operations of user controller
-   * @param {CreateUserRequest} request.body.requried -
+   * @param {CreateUserRequest} request.body.required -
    * The user which should be created
    * @security JWT
    * @return {UserResponse} 200 - New user
@@ -729,7 +729,6 @@ export default class UserController extends BaseController {
     }
   }
 
-  // TODO make a specification that can handle undefined attributes.
   /**
    * PATCH /users/{id}
    * @summary Update a user
@@ -738,7 +737,7 @@ export default class UserController extends BaseController {
    * @param {integer} id.path.required - The id of the user
    * @param {UpdateUserRequest} request.body.required - The user which should be updated
    * @security JWT
-   * @return {UpdateUserRequest} 200 - New user
+   * @return {UserResponse} 200 - New user
    * @return {string} 400 - Bad request
    */
   public async updateUser(req: RequestWithToken, res: Response): Promise<void> {
@@ -830,7 +829,7 @@ export default class UserController extends BaseController {
    * @summary Accept the Terms of Service if you have not accepted it yet
    * @operationId acceptTos
    * @tags users - Operations of the User controller
-   * @param {AcceptTosRequest} request.body.requried - "Tosrequest body"
+   * @param {AcceptTosRequest} request.body.required - "Tosrequest body"
    * @security JWT
    * @return {string} 204 - ToS accepted
    * @return {string} 400 - ToS already accepted

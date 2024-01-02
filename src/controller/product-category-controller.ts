@@ -109,7 +109,7 @@ export default class ProductCategoryController extends BaseController {
    * @summary Post a new productCategory.
    * @operationId createProductCategory
    * @tags productCategories - Operations of productcategory controller
-   * @param {ProductCategoryRequest} request.body.requried
+   * @param {ProductCategoryRequest} request.body.required
    * - The productCategory which should be created
    * @security JWT
    * @return {ProductCategoryResponse} 200 - The created productcategory entity
@@ -169,7 +169,7 @@ export default class ProductCategoryController extends BaseController {
    * @operationId updateProductCategory
    * @tags productCategories - Operations of productcategory controller
    * @param {integer} id.path.required - The id of the productcategory which should be returned
-   * @param {ProductCategoryRequest} request.body.requried
+   * @param {ProductCategoryRequest} request.body.required
    * - The productcategory which should be created
    * @security JWT
    * @return {ProductCategoryResponse} 200 - The patched productcategory entity

@@ -39,7 +39,7 @@ import RoleManager from '../../../src/rbac/role-manager';
 import UserController from '../../../src/controller/user-controller';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import { PaginatedUserResponse } from '../../../src/controller/response/user-response';
-import { GewisUserResponse } from '../../../src/gewis/entity/gewis-user-response';
+import { GewisUserResponse } from '../../../src/gewis/controller/response/gewis-user-response';
 
 describe('GEWIS Helper functions', async (): Promise<void> => {
   let ctx: {

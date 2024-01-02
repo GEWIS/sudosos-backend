@@ -104,7 +104,7 @@ export default class PointOfSaleController extends BaseController {
    * @summary Create a new Point of Sale.
    * @operationId createPointOfSale
    * @tags pointofsale - Operations of the point of sale controller
-   * @param {CreatePointOfSaleRequest} request.body.requried -
+   * @param {CreatePointOfSaleRequest} request.body.required -
    * The point of sale which should be created
    * @security JWT
    * @return {PointOfSaleWithContainersResponse} 200 - The created point of sale entity
@@ -213,7 +213,7 @@ export default class PointOfSaleController extends BaseController {
    * @operationId updatePointOfSale
    * @tags pointofsale - Operations of the point of sale controller
    * @param {integer} id.path.required - The id of the Point of Sale which should be updated
-   * @param {UpdatePointOfSaleRequest} request.body.requried -
+   * @param {UpdatePointOfSaleRequest} request.body.required -
    *    The Point of Sale which should be updated
    * @security JWT
    * @return {PointOfSaleWithContainersResponse} 200 - The updated Point of Sale entity

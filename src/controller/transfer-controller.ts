@@ -151,7 +151,7 @@ export default class TransferController extends BaseController {
    * @summary Post a new transfer.
    * @operationId createTransfer
    * @tags transfers - Operations of transfer controller
-   * @param {TransferRequest} request.body.requried
+   * @param {TransferRequest} request.body.required
    * - The transfer which should be created
    * @security JWT
    * @return {TransferResponse} 200 - The created transfer entity

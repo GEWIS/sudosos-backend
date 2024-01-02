@@ -128,7 +128,7 @@ export default class ProductController extends BaseController {
    * @summary Create a new product.
    * @operationId createProduct
    * @tags products - Operations of product controller
-   * @param {CreateProductRequest} request.body.requried - The product which should be created
+   * @param {CreateProductRequest} request.body.required - The product which should be created
    * @security JWT
    * @return {ProductResponse} 200 - The created product entity
    * @return {string} 400 - Validation error
@@ -164,7 +164,7 @@ export default class ProductController extends BaseController {
    * @operationId updateProduct
    * @tags products - Operations of product controller
    * @param {integer} id.path.required - The id of the product which should be updated
-   * @param {UpdateProductRequest} request.body.requried - The product which should be updated
+   * @param {UpdateProductRequest} request.body.required - The product which should be updated
    * @security JWT
    * @return {ProductResponse} 200 - The created product entity
    * @return {string} 400 - Validation error

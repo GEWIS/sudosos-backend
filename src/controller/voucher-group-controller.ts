@@ -104,7 +104,7 @@ export default class VoucherGroupController extends BaseController {
    * @summary Creates a new voucher group
    * @operationId createVouchergroup
    * @tags vouchergroups - Operations of voucher group controller
-   * @param {VoucherGroupRequest} request.body.requried -
+   * @param {VoucherGroupRequest} request.body.required -
    * The voucher group which should be created
    * @security JWT
    * @return {VoucherGroupResponse} 200 - The created voucher group entity
@@ -166,7 +166,7 @@ export default class VoucherGroupController extends BaseController {
    * @operationId updateVoucherGroup
    * @tags vouchergroups - Operations of voucher group controller
    * @param {integer} id.path.required - The id of the voucher group which should be updated
-   * @param {VoucherGroupRequest} request.body.requried -
+   * @param {VoucherGroupRequest} request.body.required -
    * The updated voucher group
    * @security JWT
    * @return {VoucherGroupResponse} 200 - The requested voucher group entity

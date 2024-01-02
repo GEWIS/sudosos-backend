@@ -171,7 +171,7 @@ export default class InvoiceController extends BaseController {
    * @operationId createInvoice
    * @tags invoices - Operations of the invoices controller
    * @security JWT
-   * @param {CreateInvoiceRequest} request.body.requried -
+   * @param {CreateInvoiceRequest} request.body.required -
    * The invoice which should be created
    * @return {InvoiceResponse} 200 - The created invoice entity
    * @return {string} 400 - Validation error
@@ -209,7 +209,7 @@ export default class InvoiceController extends BaseController {
    * @tags invoices - Operations of the invoices controller
    * @security JWT
    * @param {integer} id.path.required - The id of the invoice which should be updated
-   * @param {UpdateInvoiceRequest} request.body.requried -
+   * @param {UpdateInvoiceRequest} request.body.required -
    * The invoice update to process
    * @return {BaseInvoiceResponse} 200 - The updated invoice entity
    * @return {string} 400 - Validation error

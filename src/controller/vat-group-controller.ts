@@ -162,7 +162,7 @@ export default class VatGroupController extends BaseController {
    * @summary Create a new VAT group
    * @operationId createVatGroup
    * @tags vatGroups - Operations of the VAT group controller
-   * @param {VatGroupRequest} request.body.requried - The VAT group which should be created
+   * @param {VatGroupRequest} request.body.required - The VAT group which should be created
    * @security JWT
    * @return {VatGroupResponse} 200 - The created VAT group entity
    * @return {string} 400 - Validation error
@@ -196,7 +196,7 @@ export default class VatGroupController extends BaseController {
    * @operationId updateVatGroup
    * @tags vatGroups - Operations of the VAT group controller
    * @param {integer} id.path.required - The ID of the VAT group which should be updated
-   * @param {UpdateVatGroupRequest} request.body.requried - The VAT group information
+   * @param {UpdateVatGroupRequest} request.body.required - The VAT group information
    * @security JWT
    * @return {VatGroupResponse} 200 - The created VAT group entity
    * @return {string} 400 - Validation error
