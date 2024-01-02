@@ -581,7 +581,8 @@ describe('TransactionController', (): void => {
         .get(`/transactions/${trans.id}`)
         .set('Authorization', `Bearer ${ctx.organMemberToken}`);
       expect(res.status).to.equal(200);
-      // TODO Fix the BasePointOfSaleResponse; it always contains a revision and useAuth but this is not reflected in the swagger.
+      // TODO Fix disallowExtraProperties to be `true`
+      //  See https://github.com/GEWIS/sudosos-backend/issues/117
       const valid = ctx.specification.validateModel(
         'TransactionResponse',
         res.body,
