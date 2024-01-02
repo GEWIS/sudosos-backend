@@ -18,7 +18,7 @@
 import { promises as fs } from 'fs';
 import * as path from 'path';
 import express from 'express';
-import swaggerUi from 'express-swaggerize-ui';
+import swaggerUi from 'swagger-ui-express';
 import Validator, { SwaggerSpecification } from 'swagger-model-validator';
 import expressJSDocSwagger from 'express-jsdoc-swagger';
 import log4js, { Logger } from 'log4js';
@@ -60,10 +60,6 @@ export default class Swagger {
         baseDir: __dirname,
         // Glob pattern to find your jsdoc files
         filesPattern,
-        swaggerUIPath: '/api-docs',
-        exposeSwaggerUI: true, // Expose Swagger UI
-        exposeApiDocs: true, // Expose API Docs JSON
-        apiDocsPath: '/api-docs.json',
       };
 
       const instance = expressJSDocSwagger(app)(options);
@@ -98,10 +94,6 @@ export default class Swagger {
     const contents = await fs.readFile(file, 'utf-8');
     const swaggerSpec = JSON.parse(contents);
 
-    // Override settings from environment variables
-    swaggerSpec.host = process.env.API_HOST;
-    swaggerSpec.basePath = process.env.API_BASEPATH;
-
     new Validator(swaggerSpec);
     return swaggerSpec;
   }
@@ -116,8 +108,19 @@ export default class Swagger {
     if (process.env.NODE_ENV === 'production') {
       // Serve pre-generated Swagger specification in production environments.
       const specification = await Swagger.importSpecification();
+      specification.info = {
+        version: process.env.npm_package_version ? process.env.npm_package_version : 'v1.0.0',
+        title: process.env.npm_package_name ? process.env.npm_package_name : 'SudoSOS',
+        description: process.env.npm_package_description ? process.env.npm_package_description : 'SudoSOS',
+      };
+      specification.servers = [
+        {
+          url: `https://${process.env.API_HOST}${process.env.API_BASEPATH}`,
+          description: 'Production server',
+        },
+      ];
       app.use('/api-docs.json', (_, res) => res.json(specification));
-      app.use('/api-docs', swaggerUi());
+      app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specification));
       return specification;
     }
 

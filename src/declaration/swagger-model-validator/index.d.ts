@@ -29,7 +29,7 @@ declare module 'swagger-model-validator' {
   }
 
   export interface SwaggerSpecification {
-    test? : string
+    [key: string]: any,
     components?: {
       schemas: any
     };

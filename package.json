@@ -32,7 +32,6 @@
     "express": "^4.18.2",
     "express-fileupload": "^1.4.0",
     "express-jsdoc-swagger": "^1.8.0",
-    "express-swaggerize-ui": "^1.1.0",
     "jsonwebtoken": "^9.0.0",
     "ldap-escape": "^2.0.6",
     "ldapts": "^4.2.4",
@@ -45,6 +44,7 @@
     "sqlite3": "^5.1.5",
     "stripe": "^10.1.0",
     "swagger-model-validator": "^3.0.21",
+    "swagger-ui-express": "^5.0.0",
     "typeorm": "^0.3.12",
     "uuid": "^9.0.0",
     "validator": "^13.9.0"
