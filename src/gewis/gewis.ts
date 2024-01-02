@@ -26,7 +26,7 @@ import { bindUser, LDAPUser } from '../helpers/ad';
 import GewiswebToken from './gewisweb-token';
 import { parseRawUserToResponse, RawUser } from '../helpers/revision-to-response';
 import Bindings from '../helpers/bindings';
-import { GewisUserResponse } from './entity/gewis-user-response';
+import { GewisUserResponse } from './controller/response/gewis-user-response';
 
 export interface RawGewisUser extends RawUser {
   gewisId: number

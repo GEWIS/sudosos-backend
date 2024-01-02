@@ -40,8 +40,8 @@ export default class BalanceController extends BaseController {
   }
 
   /**
-     * @inheritdoc
-     */
+   * @inheritdoc
+   */
   public getPolicy(): Policy {
     return {
       '/': {
@@ -66,15 +66,15 @@ export default class BalanceController extends BaseController {
   }
 
   /**
-   * Get balance of the current user
-   * @route get /balances
+   * GET /balances
+   * @summary Get balance of the current user
    * @operationId getBalances
-   * @group balance - Operations of balance controller
+   * @tags balance - Operations of balance controller
    * @security JWT
-   * @returns {BalanceResponse.model} 200 - The requested user's balance
-   * @returns {string} 400 - Validation error
-   * @returns {string} 404 - Not found error
-   * @returns {string} 500 - Internal server error
+   * @return {BalanceResponse} 200 - The requested user's balance
+   * @return {string} 400 - Validation error
+   * @return {string} 404 - Not found error
+   * @return {string} 500 - Internal server error
    */
   // eslint-disable-next-line class-methods-use-this
   private async getOwnBalance(req: RequestWithToken, res: Response): Promise<void> {
@@ -87,10 +87,10 @@ export default class BalanceController extends BaseController {
   }
 
   /**
-   * Get balance of the current user
-   * @route GET /balances/all
+   * GET /balances/all
+   * @summary Get balance of the current user
    * @operationId getAllBalance
-   * @group balance - Operations of balance controller
+   * @tags balance - Operations of balance controller
    * @security JWT
    * @param {string} date.query - Timestamp to get balances for
    * @param {integer} minBalance.query - Minimum balance
@@ -98,14 +98,14 @@ export default class BalanceController extends BaseController {
    * @param {boolean} hasFine.query - Only users with(out) fines
    * @param {integer} minFine.query - Minimum fine
    * @param {integer} maxFine.query - Maximum fine
-   * @param {string} userType[].query.enum{MEMBER,ORGAN,VOUCHER,LOCAL_USER,LOCAL_ADMIN,INVOICE,AUTOMATIC_INVOICE} - Filter based on user type.
-   * @param {enum} orderBy.query - Column to order balance by - eg: id,amount
-   * @param {enum} orderDirection.query - Order direction - eg: ASC,DESC
+   * @param {string} userType.query - enum:MEMBER,ORGAN,VOUCHER,LOCAL_USER,LOCAL_ADMIN,INVOICE,AUTOMATIC_INVOICE - Filter based on user type.
+   * @param {string} orderBy.query - Column to order balance by - eg: id,amount
+   * @param {string} orderDirection.query - enum:ASC,DESC - Order direction
    * @param {integer} take.query - How many transactions the endpoint should return
    * @param {integer} skip.query - How many transactions should be skipped (for pagination)
-   * @returns {Array<BalanceResponse>} 200 - The requested user's balance
-   * @returns {string} 400 - Validation error
-   * @returns {string} 500 - Internal server error
+   * @return {Array<BalanceResponse>} 200 - The requested user's balance
+   * @return {string} 400 - Validation error
+   * @return {string} 500 - Internal server error
    */
   private async getAllBalances(req: RequestWithToken, res: Response): Promise<void> {
     this.logger.trace('Get all balances by', req.token.user);
@@ -143,16 +143,16 @@ export default class BalanceController extends BaseController {
   }
 
   /**
-   * Retrieves the requested balance
-   * @route get /balances/{id}
+   * GET /balances/{id}
+   * @summary Retrieves the requested balance
    * @operationId getBalanceId
-   * @group balance - Operations of balance controller
+   * @tags balance - Operations of balance controller
    * @param {integer} id.path.required - The id of the user for which the saldo is requested
    * @security JWT
-   * @returns {BalanceResponse.model} 200 - The requested user's balance
-   * @returns {string} 400 - Validation error
-   * @returns {string} 404 - Not found error
-   * @returns {string} 500 - Internal server error
+   * @return {BalanceResponse} 200 - The requested user's balance
+   * @return {string} 400 - Validation error
+   * @return {string} 404 - Not found error
+   * @return {string} 500 - Internal server error
    */
   private async getBalance(req: RequestWithToken, res: Response): Promise<void> {
     try {

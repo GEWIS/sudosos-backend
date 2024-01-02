@@ -17,7 +17,7 @@
  */
 
 /**
- * @typedef UpdateLocalRequest
+ * @typedef {object} UpdateLocalRequest
  * @property {string} password.required - The password to set
  */
 export default interface UpdateLocalRequest {

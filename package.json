@@ -11,6 +11,7 @@
     "schema": "node out/src/database/schema.js",
     "seed": "ts-node-dev --poll src/database/seed.ts",
     "swagger": "ts-node-dev --poll src/start/swagger.ts",
+    "swagger:validate": "ts-node-dev --poll src/start/swagger.ts && swagger-cli validate ./out/swagger.json",
     "test": "mocha -r ts-node/register --parallel --timeout 50000 --require ./test/setup.ts 'test/**/*.ts' --exit",
     "test-ci": "mocha -r ts-node/register --parallel --jobs 4 --timeout 50000 --require ./test/setup.ts 'test/**/*.ts' --exit",
     "test-file": "mocha -r ts-node/register --timeout 10000 --require ./test/setup.ts",
@@ -30,7 +31,7 @@
     "dotenv": "^16.0.3",
     "express": "^4.18.2",
     "express-fileupload": "^1.4.0",
-    "express-swagger-generator": "^1.1.17",
+    "express-jsdoc-swagger": "^1.8.0",
     "express-swaggerize-ui": "^1.1.0",
     "jsonwebtoken": "^9.0.0",
     "ldap-escape": "^2.0.6",
@@ -49,6 +50,7 @@
     "validator": "^13.9.0"
   },
   "devDependencies": {
+    "@apidevtools/swagger-cli": "^4.0.4",
     "@types/bcrypt": "^5.0.0",
     "@types/body-parser": "^1.19.2",
     "@types/chai": "^4.3.4",
@@ -66,6 +68,7 @@
     "@types/nodemailer": "^6.4.7",
     "@types/sinon": "^10.0.13",
     "@types/sinon-chai": "^3.2.9",
+    "@types/swagger-ui-express": "^4.1.6",
     "@types/uuid": "^9.0.1",
     "@types/validator": "^13.7.13",
     "@typescript-eslint/eslint-plugin": "^5.55.0",

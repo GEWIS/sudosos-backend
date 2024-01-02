@@ -15,53 +15,79 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-/* eslint-disable no-new */
 import { promises as fs } from 'fs';
 import * as path from 'path';
 import express from 'express';
 import swaggerUi from 'express-swaggerize-ui';
 import Validator, { SwaggerSpecification } from 'swagger-model-validator';
-import generateSpecAndMount from 'express-swagger-generator';
+import expressJSDocSwagger from 'express-jsdoc-swagger';
+import log4js, { Logger } from 'log4js';
 
 export default class Swagger {
+  private static logger: Logger = log4js.getLogger('SwaggerGenerator');
+
   /**
    * Generate Swagger specification on-demand and serve it.
    * @param app - The express application to mount on.
-   * @param files - The files that need to be parsed.
+   * @param filesPattern - Glob pattern to find your jsdoc files
    * @returns The Swagger specification with model validator.
    */
-  public static generateSpecification(app: express.Application, ...files: string[])
-    : SwaggerSpecification {
-    const swagger = generateSpecAndMount(app);
-    const swaggerOptions = {
-      swaggerDefinition: {
+  public static generateSpecification(app: express.Application, filesPattern: string[]): Promise<SwaggerSpecification> {
+    return new Promise((resolve, reject) => {
+      const options = {
         info: {
-          title: process.env.npm_package_name,
-          description: process.env.npm_package_description,
-          version: process.env.npm_package_version,
+          version: process.env.npm_package_version ? process.env.npm_package_version : 'v1.0.0',
+          title: process.env.npm_package_name ? process.env.npm_package_name : 'SudoSOS',
+          description: process.env.npm_package_description ? process.env.npm_package_description : 'SudoSOS',
         },
-        host: process.env.API_HOST,
-        basePath: process.env.API_BASEPATH,
-        produces: [
-          'application/json',
+        'schemes': [
+          'http',
+          'https',
         ],
-        schemes: ['http', 'https'],
-        securityDefinitions: {
+        servers: [
+          {
+            url: `http://${process.env.API_HOST}${process.env.API_BASEPATH}`,
+            description: 'Development server',
+          },
+        ],
+        security: {
           JWT: {
-            type: 'apiKey',
-            in: 'header',
-            name: 'Authorization',
-            description: '',
+            type: 'http',
+            scheme: 'bearer',
+            bearerFormat: 'JWT',
           },
         },
-      },
-      basedir: __dirname, // app absolute path
-      files,
-    };
+        baseDir: __dirname,
+        // Glob pattern to find your jsdoc files
+        filesPattern,
+        swaggerUIPath: '/api-docs',
+        exposeSwaggerUI: true, // Expose Swagger UI
+        exposeApiDocs: true, // Expose API Docs JSON
+        apiDocsPath: '/api-docs.json',
+      };
 
-    const swaggerSpec = swagger(swaggerOptions) as SwaggerSpecification;
-    new Validator(swaggerSpec);
-    return swaggerSpec;
+      const instance = expressJSDocSwagger(app)(options);
+
+      instance.on('finish', (swaggerObject) => {
+        Swagger.logger.trace('Swagger specification generation finished');
+        new Validator(swaggerObject);
+        void fs.writeFile(
+          path.join(process.cwd(), 'out/swagger.json'),
+          JSON.stringify(swaggerObject),
+          { encoding: 'utf-8' },
+        ).catch((e) => {
+          console.error(e);
+        });
+        instance.removeAllListeners();
+        resolve(swaggerObject); // Resolve the promise with the swaggerObject
+      });
+
+      instance.on('error', (error) => {
+        Swagger.logger.error('Error generating Swagger specification:', error);
+        instance.removeAllListeners();
+        reject(error); // Reject the promise in case of an error
+      });
+    });
   }
 
   /**
@@ -95,28 +121,22 @@ export default class Swagger {
       return specification;
     }
 
-    // Generate Swagger specification on-demand in development environments.
-    return Swagger.generateSpecification(app,
-      path.join(process.cwd(), 'src/entity/*.ts'),
-      path.join(process.cwd(), 'src/entity/**/*.ts'),
-      path.join(process.cwd(), 'src/gewis/entity/*.ts'),
-      path.join(process.cwd(), 'src/declaration/*.ts'),
-      path.join(process.cwd(), 'src/**/controller/*.ts'),
-      path.join(process.cwd(), 'src/**/controller/response/**/*.ts'),
-      path.join(process.cwd(), 'src/**/controller/request/**/*.ts'),
-      path.join(process.cwd(), 'src/**/helpers/pagination.ts'));
+    return Swagger.generateSpecification(app, [
+      '../controller/*.ts',
+      '../helpers/pagination.ts',
+
+      '../controller/request/*.ts',
+      '../controller/response/*.ts',
+      '../controller/response/**/*.ts',
+      '../gewis/controller/**/*.ts',
+    ]);
   }
 }
 
 if (require.main === module) {
   // Only execute directly if this is the main execution file.
   const app = express();
-  // eslint-disable-next-line @typescript-eslint/no-floating-promises
+
   fs.mkdir('out', { recursive: true })
-    .then(() => Swagger.initialize(app))
-    .then((specification) => fs.writeFile(
-      path.join(process.cwd(), 'out/swagger.json'),
-      JSON.stringify(specification),
-      { encoding: 'utf-8' },
-    ));
+    .then(async () => { await Swagger.initialize(app); });
 }

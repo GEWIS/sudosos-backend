@@ -31,11 +31,11 @@ export interface UpdatePointOfSaleParams extends BasePointOfSaleParams {
 }
 
 /**
- * @typedef CreatePointOfSaleRequest
+ * @typedef {object} CreatePointOfSaleRequest
  * @property {string} name.required - Name of the POS
  * @property {boolean} useAuthentication.required - Whether this POS requires users to
  * authenticate themselves before making a transaction
- * @property {Array.<integer>} containers -
+ * @property {Array<integer>} containers -
  * IDs or Requests of the containers to add to the POS
  * @property {integer} ownerId - ID of the user who will own the POS, if undefined it will
  *    default to the token ID.
@@ -45,11 +45,11 @@ export interface CreatePointOfSaleRequest extends BasePointOfSaleParams {
 }
 
 /**
- * @typedef UpdatePointOfSaleRequest
+ * @typedef {object} UpdatePointOfSaleRequest
  * @property {string} name.required - Name of the POS
  * @property {boolean} useAuthentication.required - Whether this POS requires users to
  * authenticate themselves before making a transaction
- * @property {Array.<integer>} containers -
+ * @property {Array<integer>} containers -
  * IDs or Requests of the containers to add to the POS
  * @property {integer} id.required - ID of the POS to update.
  */

@@ -20,10 +20,10 @@ import { UserResponse } from './user-response';
 import { TermsOfServiceStatus } from '../../entity/user/user';
 
 /**
-  * @typedef AuthenticationResponse
-  * @property {UserResponse.model} user.required - The user that has authenticated.
-  * @property {Array.<string>} roles.required - The RBAC roles that the user has.
-  * @property {Array.<UserResponse>} organs.required - The organs that the user is a member of.
+  * @typedef {object} AuthenticationResponse
+  * @property {UserResponse} user.required - The user that has authenticated.
+  * @property {Array<string>} roles.required - The RBAC roles that the user has.
+  * @property {Array<UserResponse>} organs.required - The organs that the user is a member of.
   * @property {string} token.required - The JWT token that can be used as Bearer token for authentication.
  *  @property {string} acceptedToS.required - Whether the related user has accepted the Terms of Service
  *  or is not required to.

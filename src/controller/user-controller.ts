@@ -292,7 +292,7 @@ export default class UserController extends BaseController {
    *    'organ' if user is connected to User via organ
    *    'own' if user is connected to User
    * @param req
-   * @returns whether User is connected to used token
+   * @return whether User is connected to used token
    */
   static getRelation(req: RequestWithToken): string {
     if (userTokenInOrgan(req, asNumber(req.params.id))) return 'organ';
@@ -311,10 +311,10 @@ export default class UserController extends BaseController {
   }
 
   /**
-   * Get a list of all users
-   * @route GET /users
+   * GET /users
+   * @summary Get a list of all users
    * @operationId getAllUsers
-   * @group users - Operations of user controller
+   * @tags users - Operations of user controller
    * @security JWT
    * @param {integer} take.query - How many users the endpoint should return
    * @param {integer} skip.query - How many users should be skipped (for pagination)
@@ -322,8 +322,8 @@ export default class UserController extends BaseController {
    * @param {boolean} active.query - Filter based if the user is active
    * @param {boolean} ofAge.query - Filter based if the user is 18+
    * @param {integer} id.query - Filter based on user ID
-   * @param {string} type.query.enum{MEMBER,ORGAN,VOUCHER,LOCAL_USER,LOCAL_ADMIN,INVOICE,AUTOMATIC_INVOICE} - Filter based on user type.
-   * @returns {PaginatedUserResponse.model} 200 - A list of all users
+   * @param {string} type.query - enum:MEMBER,ORGAN,VOUCHER,LOCAL_USER,LOCAL_ADMIN,INVOICE,AUTOMATIC_INVOICE - Filter based on user type.
+   * @return {PaginatedUserResponse} 200 - A list of all users
    */
   public async getAllUsers(req: RequestWithToken, res: Response): Promise<void> {
     this.logger.trace('Get all users by user', req.token.user);
@@ -351,16 +351,16 @@ export default class UserController extends BaseController {
   }
 
   /**
-   * Get all users of user type
-   * @route GET /users/usertype/{userType}
+   * GET /users/usertype/{userType}
+   * @summary Get all users of user type
    * @operationId getAllUsersOfUserType
-   * @group users - Operations of user controller
+   * @tags users - Operations of user controller
    * @param {string} userType.path.required - The userType of the requested users
    * @security JWT
    * @param {integer} take.query - How many users the endpoint should return
    * @param {integer} skip.query - How many users should be skipped (for pagination)
-   * @returns {PaginatedUserResponse.model} 200 - A list of all users
-   * @returns {string} 404 - Nonexistent usertype
+   * @return {PaginatedUserResponse} 200 - A list of all users
+   * @return {string} 404 - Nonexistent usertype
    */
   public async getAllUsersOfUserType(req: RequestWithToken, res: Response): Promise<void> {
     const parameters = req.params;
@@ -384,17 +384,17 @@ export default class UserController extends BaseController {
   }
 
   /**
-   * Put an users pin code
-   * @route PUT /users/{id}/authenticator/pin
+   * PUT /users/{id}/authenticator/pin
+   * @summary Put an users pin code
    * @operationId updateUserPin
-   * @group users - Operations of user controller
+   * @tags users - Operations of user controller
    * @param {integer} id.path.required - The id of the user
-   * @param {UpdatePinRequest.model} update.body.required -
+   * @param {UpdatePinRequest} request.body.required -
    *    The PIN code to update to
    * @security JWT
-   * @returns 200 - Update success
-   * @returns {string} 400 - Validation Error
-   * @returns {string} 404 - Nonexistent user id
+   * @return 200 - Update success
+   * @return {string} 400 - Validation Error
+   * @return {string} 404 - Nonexistent user id
    */
   public async updateUserPin(req: RequestWithToken, res: Response): Promise<void> {
     const { params } = req;
@@ -426,17 +426,17 @@ export default class UserController extends BaseController {
   }
 
   /**
-   * Put a users NFC code
-   * @route PUT /users/{id}/authenticator/nfc
+   * PUT /users/{id}/authenticator/nfc
+   * @summary Put a users NFC code
    * @operationId updateUserNfc
-   * @group users - Operations of user controller
+   * @tags users - Operations of user controller
    * @param {integer} id.path.required - The id of the user
-   * @param {UpdateNfcRequest.model} update.body.required -
+   * @param {UpdateNfcRequest} request.body.required -
    *    The NFC code to update to
    * @security JWT
-   * @returns 200 - Update success
-   * @returns {string} 400 - Validation Error
-   * @returns {string} 404 - Nonexistent user id
+   * @return 200 - Update success
+   * @return {string} 400 - Validation Error
+   * @return {string} 404 - Nonexistent user id
    */
   public async updateUserNfc(req: RequestWithToken, res: Response): Promise<void> {
     const { params } = req;
@@ -468,16 +468,16 @@ export default class UserController extends BaseController {
   }
 
   /**
-   * Delete a nfc code
-   * @route DELETE /users/{id}/authenticator/nfc
+   * DELETE /users/{id}/authenticator/nfc
+   * @summary Delete a nfc code
    * @operationId deleteUserNfc
-   * @group users - Operations of user controller
+   * @tags users - Operations of user controller
    * @param {integer} id.path.required - The id of the user
    * @security JWT
-   * @returns 200 - Delete nfc success
-   * @returns {string} 400 - Validation Error
-   * @returns {string} 403 - Nonexistent user nfc
-   * @returns {string} 404 - Nonexistent user id
+   * @return 200 - Delete nfc success
+   * @return {string} 400 - Validation Error
+   * @return {string} 403 - Nonexistent user nfc
+   * @return {string} 404 - Nonexistent user id
    */
   public async deleteUserNfc(req: RequestWithToken, res: Response): Promise<void> {
     const parameters = req.params;
@@ -506,15 +506,15 @@ export default class UserController extends BaseController {
   }
 
   /**
-   * POST an users update to new key code
-   * @route POST /users/{id}/authenticator/key
+   * POST /users/{id}/authenticator/key
+   * @summary POST an users update to new key code
    * @operationId updateUserKey
-   * @group users - Operations of user controller
+   * @tags users - Operations of user controller
    * @param {integer} id.path.required - The id of the user
    * @security JWT
-   * @returns {UpdateKeyResponse.model} 200 - The new key
-   * @returns {string} 400 - Validation Error
-   * @returns {string} 404 - Nonexistent user id
+   * @return {UpdateKeyResponse} 200 - The new key
+   * @return {string} 400 - Validation Error
+   * @return {string} 404 - Nonexistent user id
    */
   public async updateUserKey(req: RequestWithToken, res: Response): Promise<void> {
     const { params } = req;
@@ -542,15 +542,15 @@ export default class UserController extends BaseController {
   }
 
   /**
-   * Delete a users key code
-   * @route Delete /users/{id}/authenticator/key
+   * Delete /users/{id}/authenticator/key
+   * @summary Delete a users key code
    * @operationId deleteUserKey
-   * @group users - Operations of user controller
+   * @tags users - Operations of user controller
    * @param {integer} id.path.required - The id of the user
    * @security JWT
-   * @returns  200 - Deletion succesfull
-   * @returns {string} 400 - Validation Error
-   * @returns {string} 404 - Nonexistent user id
+   * @return  200 - Deletion succesfull
+   * @return {string} 400 - Validation Error
+   * @return {string} 404 - Nonexistent user id
    */
   public async deleteUserKey(req: RequestWithToken, res: Response): Promise<void> {
     const { params } = req;
@@ -575,17 +575,17 @@ export default class UserController extends BaseController {
   }
 
   /**
-   * Put a user's local password
-   * @route PUT /users/{id}/authenticator/local
+   * PUT /users/{id}/authenticator/local
+   * @summary Put a user's local password
    * @operationId updateUserLocalPassword
-   * @group users - Operations of user controller
+   * @tags users - Operations of user controller
    * @param {integer} id.path.required - The id of the user
-   * @param {UpdateLocalRequest.model} update.body.required -
+   * @param {UpdateLocalRequest} request.body.required -
    *    The password update
    * @security JWT
-   * @returns 204 - Update success
-   * @returns {string} 400 - Validation Error
-   * @returns {string} 404 - Nonexistent user id
+   * @return 204 - Update success
+   * @return {string} 400 - Validation Error
+   * @return {string} 404 - Nonexistent user id
    */
   public async updateUserLocalPassword(req: RequestWithToken, res: Response): Promise<void> {
     const parameters = req.params;
@@ -618,17 +618,17 @@ export default class UserController extends BaseController {
   }
 
   /**
-   * Get an organs members
-   * @route GET /users/{id}/members
+   * GET /users/{id}/members
+   * @summary Get an organs members
    * @operationId getOrganMembers
-   * @group users - Operations of user controller
+   * @tags users - Operations of user controller
    * @param {integer} id.path.required - The id of the user
    * @param {integer} take.query - How many members the endpoint should return
    * @param {integer} skip.query - How many members should be skipped (for pagination)
    * @security JWT
-   * @returns {PaginatedUserResponse.model} 200 - All members of the organ
-   * @returns {string} 404 - Nonexistent user id
-   * @returns {string} 400 - User is not an organ
+   * @return {PaginatedUserResponse} 200 - All members of the organ
+   * @return {string} 404 - Nonexistent user id
+   * @return {string} 400 - User is not an organ
    */
   public async getOrganMembers(req: RequestWithToken, res: Response): Promise<void> {
     const parameters = req.params;
@@ -669,14 +669,14 @@ export default class UserController extends BaseController {
   }
 
   /**
-   * Get an individual user
-   * @route GET /users/{id}
+   * GET /users/{id}
+   * @summary Get an individual user
    * @operationId getIndividualUser
-   * @group users - Operations of user controller
+   * @tags users - Operations of user controller
    * @param {integer} id.path.required - userID
    * @security JWT
-   * @returns {UserResponse.model} 200 - Individual user
-   * @returns {string} 404 - Nonexistent user id
+   * @return {UserResponse} 200 - Individual user
+   * @return {string} 404 - Nonexistent user id
    */
   public async getIndividualUser(req: RequestWithToken, res: Response): Promise<void> {
     const parameters = req.params;
@@ -699,15 +699,15 @@ export default class UserController extends BaseController {
   }
 
   /**
-   * Create a new user
-   * @route POST /users
+   * POST /users
+   * @summary Create a new user
    * @operationId createUser
-   * @group users - Operations of user controller
-   * @param {CreateUserRequest.model} user.body.required -
+   * @tags users - Operations of user controller
+   * @param {CreateUserRequest} request.body.required -
    * The user which should be created
    * @security JWT
-   * @returns {User.model} 200 - New user
-   * @returns {string} 400 - Bad request
+   * @return {UserResponse} 200 - New user
+   * @return {string} 400 - Bad request
    */
   // eslint-disable-next-line class-methods-use-this
   public async createUser(req: RequestWithToken, res: Response): Promise<void> {
@@ -729,18 +729,16 @@ export default class UserController extends BaseController {
     }
   }
 
-  // TODO make a specification that can handle undefined attributes.
   /**
-   * Update a user
-   * @route PATCH /users/{id}
+   * PATCH /users/{id}
+   * @summary Update a user
    * @operationId updateUser
-   * @group users - Operations of user controller
+   * @tags users - Operations of user controller
    * @param {integer} id.path.required - The id of the user
-   * @param {UpdateUserRequest.model} user.body.required -
-   * The user which should be updated
+   * @param {UpdateUserRequest} request.body.required - The user which should be updated
    * @security JWT
-   * @returns {UpdateUserRequest.model} 200 - New user
-   * @returns {string} 400 - Bad request
+   * @return {UserResponse} 200 - New user
+   * @return {string} 400 - Bad request
    */
   public async updateUser(req: RequestWithToken, res: Response): Promise<void> {
     const body = req.body as UpdateUserRequest;
@@ -789,14 +787,14 @@ export default class UserController extends BaseController {
   }
 
   /**
-   * Delete a single user
-   * @route DELETE /users/{id}
+   * DELETE /users/{id}
+   * @summary Delete a single user
    * @operationId deleteUser
-   * @group users - Operations of user controller
+   * @tags users - Operations of user controller
    * @param {integer} id.path.required - The id of the user
    * @security JWT
-   * @returns {string} 204 - User successfully deleted
-   * @returns {string} 400 - Cannot delete yourself
+   * @return {string} 204 - User successfully deleted
+   * @return {string} 400 - Cannot delete yourself
    */
   public async deleteUser(req: RequestWithToken, res: Response): Promise<void> {
     const parameters = req.params;
@@ -827,14 +825,14 @@ export default class UserController extends BaseController {
   }
 
   /**
-   * Accept the Terms of Service if you have not accepted it yet
-   * @route POST /users/acceptTos
+   * POST /users/acceptTos
+   * @summary Accept the Terms of Service if you have not accepted it yet
    * @operationId acceptTos
-   * @group users - Operations of the User controller
-   * @param {AcceptTosRequest.model} params.body.required - "Tosrequest body"
+   * @tags users - Operations of the User controller
+   * @param {AcceptTosRequest} request.body.required - "Tosrequest body"
    * @security JWT
-   * @returns {string} 204 - ToS accepted
-   * @returns {string} 400 - ToS already accepted
+   * @return {string} 204 - ToS accepted
+   * @return {string} 400 - ToS already accepted
    */
   public async acceptToS(req: RequestWithToken, res: Response): Promise<void> {
     this.logger.trace('Accept ToS for user', req.token.user);
@@ -864,15 +862,15 @@ export default class UserController extends BaseController {
   }
 
   /**
-   * Get an user's products
-   * @route GET /users/{id}/products
+   * GET /users/{id}/products
+   * @summary Get an user's products
    * @operationId getUsersProducts
-   * @group users - Operations of user controller
+   * @tags users - Operations of user controller
    * @param {integer} id.path.required - The id of the user
    * @param {integer} take.query - How many products the endpoint should return
    * @param {integer} skip.query - How many products should be skipped (for pagination)
    * @security JWT
-   * @returns {PaginatedProductResponse.model} 200 - List of products.
+   * @return {PaginatedProductResponse} 200 - List of products.
    */
   public async getUsersProducts(req: RequestWithToken, res: Response): Promise<void> {
     const parameters = req.params;
@@ -907,17 +905,17 @@ export default class UserController extends BaseController {
   }
 
   /**
-   * Returns the user's containers
-   * @route GET /users/{id}/containers
+   * GET /users/{id}/containers
+   * @summary Returns the user's containers
    * @operationId getUsersContainers
-   * @group users - Operations of user controller
+   * @tags users - Operations of user controller
    * @param {integer} id.path.required - The id of the user
    * @security JWT
    * @param {integer} take.query - How many containers the endpoint should return
    * @param {integer} skip.query - How many containers should be skipped (for pagination)
-   * @returns {PaginatedContainerResponse.model} 200 - All users updated containers
-   * @returns {string} 404 - Not found error
-   * @returns {string} 500 - Internal server error
+   * @return {PaginatedContainerResponse} 200 - All users updated containers
+   * @return {string} 404 - Not found error
+   * @return {string} 500 - Internal server error
    */
   public async getUsersContainers(req: RequestWithToken, res: Response): Promise<void> {
     const { id } = req.params;
@@ -954,17 +952,17 @@ export default class UserController extends BaseController {
   }
 
   /**
-   * Returns the user's Points of Sale
-   * @route GET /users/{id}/pointsofsale
+   * GET /users/{id}/pointsofsale
+   * @summary Returns the user's Points of Sale
    * @operationId getUsersPointsOfSale
-   * @group users - Operations of user controller
+   * @tags users - Operations of user controller
    * @param {integer} id.path.required - The id of the user
    * @param {integer} take.query - How many points of sale the endpoint should return
    * @param {integer} skip.query - How many points of sale should be skipped (for pagination)
    * @security JWT
-   * @returns {PaginatedPointOfSaleResponse.model} 200 - All users updated point of sales
-   * @returns {string} 404 - Not found error
-   * @returns {string} 500 - Internal server error
+   * @return {PaginatedPointOfSaleResponse} 200 - All users updated point of sales
+   * @return {string} 404 - Not found error
+   * @return {string} 500 - Internal server error
    */
   public async getUsersPointsOfSale(req: RequestWithToken, res: Response): Promise<void> {
     const { id } = req.params;
@@ -1001,10 +999,10 @@ export default class UserController extends BaseController {
   }
 
   /**
-   * Get an user's transactions (from, to or created)
-   * @route GET /users/{id}/transactions
+   * GET /users/{id}/transactions
+   * @summary Get an user's transactions (from, to or created)
    * @operationId getUsersTransactions
-   * @group users - Operations of user controller
+   * @tags users - Operations of user controller
    * @param {integer} id.path.required - The id of the user that should be involved
    * in all returned transactions
    * @param {integer} fromId.query - From-user for selected transactions
@@ -1019,7 +1017,7 @@ export default class UserController extends BaseController {
    * @param {integer} take.query - How many transactions the endpoint should return
    * @param {integer} skip.query - How many transactions should be skipped (for pagination)
    * @security JWT
-   * @returns {PaginatedBaseTransactionResponse.model} 200 - List of transactions.
+   * @return {PaginatedBaseTransactionResponse} 200 - List of transactions.
    */
   public async getUsersTransactions(req: RequestWithToken, res: Response): Promise<void> {
     const { id } = req.params;
@@ -1062,10 +1060,10 @@ export default class UserController extends BaseController {
   }
 
   /**
-   * Get an user's transfers
-   * @route GET /users/{id}/transfers
+   * GET /users/{id}/transfers
+   * @summary Get an user's transfers
    * @operationId getUsersTransfers
-   * @group users - Operations of user controller
+   * @tags users - Operations of user controller
    * @param {integer} id.path.required - The id of the user that should be involved
    * in all returned transfers
    * @param {integer} take.query - How many transfers the endpoint should return
@@ -1074,7 +1072,7 @@ export default class UserController extends BaseController {
    * @param {integer} toId.query - To-user for selected transfers
    * @param {integer} id.query - ID of selected transfers
    * @security JWT
-   * @returns {PaginatedTransferResponse.model} 200 - List of transfers.
+   * @return {PaginatedTransferResponse} 200 - List of transfers.
    */
   public async getUsersTransfers(req: RequestWithToken, res: Response): Promise<void> {
     const { id } = req.params;
@@ -1122,16 +1120,16 @@ export default class UserController extends BaseController {
   }
 
   /**
-   * Authenticate as another user
-   * @route POST /users/{id}/authenticate
+   * POST /users/{id}/authenticate
+   * @summary Authenticate as another user
    * @operationId authenticateAs
-   * @group users - Operations of user controller
+   * @tags users - Operations of user controller
    * @param {integer} id.path.required - The id of the user that should be authenticated as
    * @security JWT
-   * @returns {AuthenticationResponse.model} 200 - The created json web token.
-   * @returns {string} 400 - Validation error.
-   * @returns {string} 404 - User not found error.
-   * @returns {string} 403 - Authentication error.
+   * @return {AuthenticationResponse} 200 - The created json web token.
+   * @return {string} 400 - Validation error.
+   * @return {string} 404 - User not found error.
+   * @return {string} 403 - Authentication error.
    */
   public async authenticateAsUser(req: RequestWithToken, res: Response): Promise<void> {
     const parameters = req.params;
@@ -1173,14 +1171,14 @@ export default class UserController extends BaseController {
   }
 
   /**
-   * Get all users that the user can authenticate as
-   * @route GET /users/{id}/authenticate
+   * GET /users/{id}/authenticate
+   * @summary Get all users that the user can authenticate as
    * @operationId getUserAuthenticatable
-   * @group users - Operations of user controller
+   * @tags users - Operations of user controller
    * @param {integer} id.path.required - The id of the user to get authentications of
    * @security JWT
-   * @returns {string} 404 - User not found error.
-   * @returns {Array.<UserResponse>} 200 - A list of all users the given ID can authenticate
+   * @return {string} 404 - User not found error.
+   * @return {Array.<UserResponse>} 200 - A list of all users the given ID can authenticate
    */
   public async getUserAuthenticatable(req: RequestWithToken, res: Response): Promise<void> {
     const parameters = req.params;
@@ -1207,14 +1205,14 @@ export default class UserController extends BaseController {
   }
 
   /**
-   * Get all roles assigned to the user.
-   * @route GET /users/{id}/roles
+   * GET /users/{id}/roles
+   * @summary Get all roles assigned to the user.
    * @operationId getUserRoles
-   * @group users - Operations of user controller
+   * @tags users - Operations of user controller
    * @param {integer} id.path.required - The id of the user to get the roles from
    * @security JWT
-   * @returns {Array.<RoleResponse>} 200 - The roles of the user
-   * @returns {string} 404 - User not found error.
+   * @return {Array.<RoleResponse>} 200 - The roles of the user
+   * @return {string} 404 - User not found error.
    */
   public async getUserRoles(req: RequestWithToken, res: Response): Promise<void> {
     const parameters = req.params;
@@ -1241,16 +1239,16 @@ export default class UserController extends BaseController {
   }
 
   /**
-   * Get all financial mutations of a user.
-   * @route GET /users/{id}/financialmutations
+   * GET /users/{id}/financialmutations
+   * @summary Get all financial mutations of a user.
    * @operationId getUsersFinancialMutations
-   * @group users - Operations of user controller
+   * @tags users - Operations of user controller
    * @param {integer} id.path.required - The id of the user to get the mutations from
    * @param {integer} take.query - How many transactions the endpoint should return
    * @param {integer} skip.query - How many transactions should be skipped (for pagination)
    * @security JWT
-   * @returns {PaginatedFinancialMutationResponse.model} 200 - The financial mutations of the user
-   * @returns {string} 404 - User not found error.
+   * @return {PaginatedFinancialMutationResponse} 200 - The financial mutations of the user
+   * @return {string} 404 - User not found error.
    */
   public async getUsersFinancialMutations(req: RequestWithToken, res: Response): Promise<void> {
     const parameters = req.params;
@@ -1286,14 +1284,14 @@ export default class UserController extends BaseController {
   }
 
   /**
-   * Get all deposits of a user that are still being processed by Stripe
-   * @route GET /users/{id}/deposits
+   * GET /users/{id}/deposits
+   * @summary Get all deposits of a user that are still being processed by Stripe
    * @operationId getUsersProcessingDeposits
-   * @group users - Operations of user controller
+   * @tags users - Operations of user controller
    * @param {integer} id.path.required - The id of the user to get the deposits from
    * @security JWT
-   * @returns {Array.<RoleResponse>} 200 - The processing deposits of a user
-   * @returns {string} 404 - User not found error.
+   * @return {Array.<RoleResponse>} 200 - The processing deposits of a user
+   * @return {string} 404 - User not found error.
    */
   public async getUsersProcessingDeposits(req: RequestWithToken, res: Response): Promise<void> {
     const parameters = req.params;
@@ -1317,19 +1315,19 @@ export default class UserController extends BaseController {
   }
 
   /**
-   * Get transaction report for the given user
-   * @route GET /users/{id}/transactions/report
+   * GET /users/{id}/transactions/report
+   * @summary Get transaction report for the given user
    * @operationId getUsersTransactionsReport
-   * @group users - Operations of user controller
+   * @tags users - Operations of user controller
    * @param {integer} id.path.required - The id of the user to get the transaction report from
    * @security JWT
-   * @returns {Array.<TransactionReportResponse>} 200 - The transaction report of the user
+   * @return {Array.<TransactionReportResponse>} 200 - The transaction report of the user
    * @param {string} fromDate.query - Start date for selected transactions (inclusive)
    * @param {string} tillDate.query - End date for selected transactions (exclusive)
    * @param {integer} fromId.query - From-user for selected transactions
    * @param {integer} toId.query - To-user for selected transactions
    * @param {boolean} exclusiveToId.query - If all sub-transactions should be to the toId user, default true
-   * @returns {string} 404 - User not found error.
+   * @return {string} 404 - User not found error.
    */
   public async getUsersTransactionsReport(req: RequestWithToken, res: Response): Promise<void> {
     const parameters = req.params;
@@ -1366,15 +1364,15 @@ export default class UserController extends BaseController {
   }
 
   /**
-   * Waive all given user's fines
-   * @route POST /users/{id}/fines/waive
-   * @group users - Operations of user controller
+   * POST /users/{id}/fines/waive
+   * @summary Waive all given user's fines
+   * @tags users - Operations of user controller
    * @param {integer} id.path.required - The id of the user
    * @operationId waiveUserFines
    * @security JWT
-   * @returns {string} 204 - Success
-   * @returns {string} 400 - User has no fines.
-   * @returns {string} 404 - User not found error.
+   * @return {string} 204 - Success
+   * @return {string} 400 - User has no fines.
+   * @return {string} 404 - User not found error.
    */
   public async waiveUserFines(req: RequestWithToken, res: Response): Promise<void> {
     const { id: rawId } = req.params;

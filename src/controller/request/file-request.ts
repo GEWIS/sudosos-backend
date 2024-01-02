@@ -15,13 +15,8 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-
+// TODO This is most likely not the way to go, but im not sure how to deal with file uploading in express-jsdoc-swagger.
 /**
- * @typedef {object} RevisionRequest
- * @property {integer} id.required - revision id
- * @property {integer} revision.required - revision number
+ * @typedef {object} FileRequest
+ * @property {string} file - file - binary
  */
-export default interface RevisionRequest {
-  id: number,
-  revision: number,
-}

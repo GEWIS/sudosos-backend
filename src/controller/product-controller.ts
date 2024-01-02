@@ -88,15 +88,15 @@ export default class ProductController extends BaseController {
   }
 
   /**
-   * Returns all existing products
-   * @route GET /products
+   * GET /products
+   * @summary Returns all existing products
    * @operationId getAllProducts
-   * @group products - Operations of product controller
+   * @tags products - Operations of product controller
    * @security JWT
    * @param {integer} take.query - How many products the endpoint should return
    * @param {integer} skip.query - How many products should be skipped (for pagination)
-   * @returns {PaginatedProductResponse.model} 200 - All existing products
-   * @returns {string} 500 - Internal server error
+   * @return {PaginatedProductResponse} 200 - All existing products
+   * @return {string} 500 - Internal server error
    */
   public async getAllProducts(req: RequestWithToken, res: Response): Promise<void> {
     const { body } = req;
@@ -124,15 +124,15 @@ export default class ProductController extends BaseController {
   }
 
   /**
-   * Create a new product.
-   * @route POST /products
+   * POST /products
+   * @summary Create a new product.
    * @operationId createProduct
-   * @group products - Operations of product controller
-   * @param {CreateProductRequest.model} product.body.required - The product which should be created
+   * @tags products - Operations of product controller
+   * @param {CreateProductRequest} request.body.required - The product which should be created
    * @security JWT
-   * @returns {ProductResponse.model} 200 - The created product entity
-   * @returns {string} 400 - Validation error
-   * @returns {string} 500 - Internal server error
+   * @return {ProductResponse} 200 - The created product entity
+   * @return {string} 400 - Validation error
+   * @return {string} 500 - Internal server error
    */
   public async createProduct(req: RequestWithToken, res: Response): Promise<void> {
     const body = req.body as CreateProductRequest;
@@ -159,17 +159,17 @@ export default class ProductController extends BaseController {
   }
 
   /**
-   * Update an existing product.
-   * @route PATCH /products/{id}
+   * PATCH /products/{id}
+   * @summary Update an existing product.
    * @operationId updateProduct
-   * @group products - Operations of product controller
+   * @tags products - Operations of product controller
    * @param {integer} id.path.required - The id of the product which should be updated
-   * @param {UpdateProductRequest.model} product.body.required - The product which should be updated
+   * @param {UpdateProductRequest} request.body.required - The product which should be updated
    * @security JWT
-   * @returns {ProductResponse.model} 200 - The created product entity
-   * @returns {string} 400 - Validation error
-   * @returns {string} 404 - Product not found error
-   * @returns {string} 500 - Internal server error
+   * @return {ProductResponse} 200 - The created product entity
+   * @return {string} 400 - Validation error
+   * @return {string} 404 - Product not found error
+   * @return {string} 500 - Internal server error
    */
   public async updateProduct(req: RequestWithToken, res: Response): Promise<void> {
     const body = req.body as UpdateProductRequest;
@@ -204,15 +204,15 @@ export default class ProductController extends BaseController {
   }
 
   /**
-   * Returns the requested product
-   * @route GET /products/{id}
+   * GET /products/{id}
+   * @summary Returns the requested product
    * @operationId getSingleProduct
-   * @group products - Operations of products controller
+   * @tags products - Operations of products controller
    * @param {integer} id.path.required - The id of the product which should be returned
    * @security JWT
-   * @returns {ProductResponse.model} 200 - The requested product entity
-   * @returns {string} 404 - Not found error
-   * @returns {string} 500 - Internal server error
+   * @return {ProductResponse} 200 - The requested product entity
+   * @return {string} 404 - Not found error
+   * @return {string} 500 - Internal server error
    */
   public async getSingleProduct(req: RequestWithToken, res: Response): Promise<void> {
     const { id } = req.params;
@@ -235,17 +235,17 @@ export default class ProductController extends BaseController {
   }
 
   /**
-   * Upload a new image for a product
-   * @route POST /products/{id}/image
+   * POST /products/{id}/image
+   * @summary Upload a new image for a product
    * @operationId updateProductImage
-   * @group products - Operations of products controller
+   * @tags products - Operations of products controller
    * @consumes multipart/form-data
    * @param {integer} id.path.required - The id of the product which should be returned
-   * @param {file} file.formData
+   * @param {FileRequest} request.body.required - product image - multipart/form-data
    * @security JWT
-   * @returns 204 - Success
-   * @returns {string} 400 - Validation error
-   * @returns {string} 500 - Internal server error
+   * @return 204 - Success
+   * @return {string} 400 - Validation error
+   * @return {string} 500 - Internal server error
    */
   public async updateProductImage(req: RequestWithToken, res: Response): Promise<void> {
     const { id } = req.params;
@@ -296,7 +296,7 @@ export default class ProductController extends BaseController {
    *    'organ' if user is not connected to product via organ
    *    'own' if user is connected to product
    * @param req - Request with CreateProductRequest as body
-   * @returns whether product is connected to user token
+   * @return whether product is connected to user token
    */
   static postRelation(req: RequestWithToken): string {
     const request = req.body as CreateProductRequest;
@@ -310,7 +310,7 @@ export default class ProductController extends BaseController {
    *    'all' if user is not connected to product
    *    'own' if user is connected to product
    * @param req - Request with product id as param
-   * @returns whether product is connected to user token
+   * @return whether product is connected to user token
    */
   static async getRelation(req: RequestWithToken): Promise<string> {
     const productId = asNumber(req.params.id);

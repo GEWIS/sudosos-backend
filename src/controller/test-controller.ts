@@ -53,13 +53,13 @@ export default class TestController extends BaseController {
   }
 
   /**
-   * Get a beautiful Hello World email to your inbox
-   * @route POST /test/helloworld
+   * POST /test/helloworld
+   * @summary Get a beautiful Hello World email to your inbox
    * @operationId helloworld
-   * @group test- Operations of the test controller
+   * @tags test- Operations of the test controller
    * @security JWT
-   * @returns {string} 204 - Success
-   * @returns {string} 500 - Internal server error
+   * @return {string} 204 - Success
+   * @return {string} 500 - Internal server error
    */
   public async helloWorld(req: RequestWithToken, res: Response): Promise<void> {
     this.logger.trace('Hello world email by', req.token.user.id);

@@ -18,7 +18,7 @@
 import { Availability } from '../../entity/event/event-shift-answer';
 
 /**
- * @typedef CreateEventRequest
+ * @typedef {object} CreateEventRequest
  * @property {string} name.required - Name of the event.
  * @property {string} startDate.required - The starting date of the event.
  * @property {string} endDate.required - The end date of the event.
@@ -28,7 +28,7 @@ import { Availability } from '../../entity/event/event-shift-answer';
  */
 
 /**
- * @typedef UpdateEventRequest
+ * @typedef {object} UpdateEventRequest
  * @property {string} name - Name of the event.
  * @property {string} startDate - The starting date of the event.
  * @property {string} endDate - The end date of the event.
@@ -45,13 +45,13 @@ export interface EventRequest {
 }
 
 /**
- * @typedef CreateShiftRequest
+ * @typedef {object} CreateShiftRequest
  * @property {string} name.required - Name of the event
  * @property {Array<string>} roles.required - Roles that (can) have this shift
  */
 
 /**
- * @typedef UpdateShiftRequest
+ * @typedef {object} UpdateShiftRequest
  * @property {string} name - Name of the event
  * @property {Array<string>} roles - Roles that (can) have this shift
  */
@@ -61,7 +61,7 @@ export interface EventShiftRequest {
 }
 
 /**
- * @typedef EventAnswerAssignmentRequest
+ * @typedef {object} EventAnswerAssignmentRequest
  * @property {boolean} selected.required - Whether this user is selected for the given shift at the given event
  */
 export interface EventAnswerAssignmentRequest {
@@ -69,7 +69,7 @@ export interface EventAnswerAssignmentRequest {
 }
 
 /**
- * @typedef EventAnswerAvailabilityRequest
+ * @typedef {object} EventAnswerAvailabilityRequest
  * @property {string} availability.required - New availability of the given user for the given event (YES, NO, LATER, NA)
  */
 export interface EventAnswerAvailabilityRequest {

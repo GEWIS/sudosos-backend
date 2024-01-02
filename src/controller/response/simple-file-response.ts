@@ -19,10 +19,10 @@ import BaseResponse from './base-response';
 import { UserResponse } from './user-response';
 
 /**
- * @typedef {BaseResponse} SimpleFileResponse
+ * @typedef {allOf|BaseResponse} SimpleFileResponse
  * @property {string} downloadName.required - The filename of the file
  * @property {string} location.required - The location of the file in storage
- * @property {UserResponse.model} createdBy.required - The user who created this file
+ * @property {UserResponse} createdBy.required - The user who created this file
  */
 export interface SimpleFileResponse extends BaseResponse {
   downloadName: string;

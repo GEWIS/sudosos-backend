@@ -92,15 +92,15 @@ export default class ContainerController extends BaseController {
   }
 
   /**
-   * Returns all existing containers
-   * @route GET /containers
+   * GET /containers
+   * @summary Returns all existing containers
    * @operationId getAllContainers
-   * @group containers - Operations of container controller
+   * @tags containers - Operations of container controller
    * @security JWT
    * @param {integer} take.query - How many containers the endpoint should return
    * @param {integer} skip.query - How many containers should be skipped (for pagination)
-   * @returns {PaginatedContainerResponse.model} 200 - All existing containers
-   * @returns {string} 500 - Internal server error
+   * @return {PaginatedContainerResponse} 200 - All existing containers
+   * @return {string} 500 - Internal server error
    */
   public async getAllContainers(req: RequestWithToken, res: Response): Promise<void> {
     const { body } = req;
@@ -121,16 +121,16 @@ export default class ContainerController extends BaseController {
   }
 
   /**
-   * Returns the requested container
-   * @route GET /containers/{id}
+   * GET /containers/{id}
+   * @summary Returns the requested container
    * @operationId getSingleContainer
-   * @group containers - Operations of container controller
+   * @tags containers - Operations of container controller
    * @param {integer} id.path.required - The id of the container which should be returned
    * @security JWT
-   * @returns {ContainerWithProductsResponse.model} 200 - The requested container
-   * @returns {string} 404 - Not found error
-   * @returns {string} 403 - Incorrect permissions
-   * @returns {string} 500 - Internal server error
+   * @return {ContainerWithProductsResponse} 200 - The requested container
+   * @return {string} 404 - Not found error
+   * @return {string} 403 - Incorrect permissions
+   * @return {string} 500 - Internal server error
    */
   public async getSingleContainer(req: RequestWithToken, res: Response): Promise<void> {
     const { id } = req.params;
@@ -157,17 +157,17 @@ export default class ContainerController extends BaseController {
   }
 
   /**
-   * Returns all the products in the container
-   * @route GET /containers/{id}/products
+   * GET /containers/{id}/products
+   * @summary Returns all the products in the container
    * @operationId getProductsContainer
-   * @group containers - Operations of container controller
+   * @tags containers - Operations of container controller
    * @param {integer} id.path.required - The id of the container which should be returned
    * @security JWT
    * @param {integer} take.query - How many products the endpoint should return
    * @param {integer} skip.query - How many products should be skipped (for pagination)
-   * @returns {PaginatedProductResponse.model} 200 - All products in the container
-   * @returns {string} 404 - Not found error
-   * @returns {string} 500 - Internal server error
+   * @return {PaginatedProductResponse} 200 - All products in the container
+   * @return {string} 404 - Not found error
+   * @return {string} 500 - Internal server error
    */
   public async getProductsContainer(req: RequestWithToken, res: Response): Promise<void> {
     const { id } = req.params;
@@ -193,16 +193,16 @@ export default class ContainerController extends BaseController {
   }
 
   /**
-   * Create a new container.
-   * @route POST /containers
+   * POST /containers
+   * @summary Create a new container.
    * @operationId createContainer
-   * @group containers - Operations of container controller
-   * @param {CreateContainerRequest.model} container.body.required -
+   * @tags containers - Operations of container controller
+   * @param {CreateContainerRequest} request.body.required -
    *    The container which should be created
    * @security JWT
-   * @returns {ContainerWithProductsResponse.model} 200 - The created container entity
-   * @returns {string} 400 - Validation error
-   * @returns {string} 500 - Internal server error
+   * @return {ContainerWithProductsResponse} 200 - The created container entity
+   * @return {string} 400 - Validation error
+   * @return {string} 500 - Internal server error
    */
   public async createContainer(req: RequestWithToken, res: Response): Promise<void> {
     const body = req.body as CreateContainerRequest;
@@ -229,15 +229,15 @@ export default class ContainerController extends BaseController {
   }
 
   /**
-   * Returns all public container
-   * @route GET /containers/public
+   * GET /containers/public
+   * @summary Returns all public container
    * @operationId getPublicContainers
-   * @group containers - Operations of container controller
+   * @tags containers - Operations of container controller
    * @security JWT
    * @param {integer} take.query - How many containers the endpoint should return
    * @param {integer} skip.query - How many containers should be skipped (for pagination)
-   * @returns {PaginatedContainerResponse.model} 200 - All existing public containers
-   * @returns {string} 500 - Internal server error
+   * @return {PaginatedContainerResponse} 200 - All existing public containers
+   * @return {string} 500 - Internal server error
    */
   public async getPublicContainers(req: RequestWithToken, res: Response): Promise<void> {
     const { body } = req;
@@ -258,18 +258,18 @@ export default class ContainerController extends BaseController {
   }
 
   /**
-   * Update an existing container.
-   * @route PATCH /containers/{id}
+   * PATCH /containers/{id}
+   * @summary Update an existing container.
    * @operationId updateContainer
-   * @group containers - Operations of container controller
+   * @tags containers - Operations of container controller
    * @param {integer} id.path.required - The id of the container which should be updated
-   * @param {UpdateContainerRequest.model} container.body.required -
+   * @param {UpdateContainerRequest} request.body.required -
    *    The container which should be updated
    * @security JWT
-   * @returns {ContainerWithProductsResponse.model} 200 - The created container entity
-   * @returns {string} 400 - Validation error
-   * @returns {string} 404 - Product not found error
-   * @returns {string} 500 - Internal server error
+   * @return {ContainerWithProductsResponse} 200 - The created container entity
+   * @return {string} 400 - Validation error
+   * @return {string} 404 - Product not found error
+   * @return {string} 500 - Internal server error
    */
   public async updateContainer(req: RequestWithToken, res: Response): Promise<void> {
     const body = req.body as UpdateContainerRequest;
@@ -309,7 +309,7 @@ export default class ContainerController extends BaseController {
    *          'organ' if user is not connected to container via organ
    *          'own' if user is connected to container
    * @param req
-   * @returns whether container is connected to used token
+   * @return whether container is connected to used token
    */
   static async getRelation(req: RequestWithToken): Promise<string> {
     const containerId = asNumber(req.params.id);

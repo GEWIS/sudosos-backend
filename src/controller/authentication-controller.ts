@@ -159,14 +159,14 @@ export default class AuthenticationController extends BaseController {
   }
 
   /**
-   * PIN login and hand out token
-   * @route POST /authentication/pin
+   * POST /authentication/pin
+   * @summary PIN login and hand out token
    * @operationId pinAuthentication
-   * @group authenticate - Operations of authentication controller
-   * @param {AuthenticationPinRequest.model} req.body.required - The PIN login.
-   * @returns {AuthenticationResponse.model} 200 - The created json web token.
-   * @returns {string} 400 - Validation error.
-   * @returns {string} 403 - Authentication error.
+   * @tags authenticate - Operations of authentication controller
+   * @param {AuthenticationPinRequest} request.body.required - The PIN login.
+   * @return {AuthenticationResponse} 200 - The created json web token.
+   * @return {string} 400 - Validation error.
+   * @return {string} 403 - Authentication error.
    */
   public async PINLogin(req: Request, res: Response): Promise<void> {
     const body = req.body as AuthenticationPinRequest;
@@ -230,15 +230,15 @@ export default class AuthenticationController extends BaseController {
   }
 
   /**
-   * LDAP login and hand out token
+   * POST /authentication/LDAP
+   * @summary LDAP login and hand out token
    * If user has never signed in before this also creates an account.
-   * @route POST /authentication/LDAP
    * @operationId ldapAuthentication
-   * @group authenticate - Operations of authentication controller
-   * @param {AuthenticationLDAPRequest.model} req.body.required - The LDAP login.
-   * @returns {AuthenticationResponse.model} 200 - The created json web token.
-   * @returns {string} 400 - Validation error.
-   * @returns {string} 403 - Authentication error.
+   * @tags authenticate - Operations of authentication controller
+   * @param {AuthenticationLDAPRequest} request.body.required - The LDAP login.
+   * @return {AuthenticationResponse} 200 - The created json web token.
+   * @return {string} 400 - Validation error.
+   * @return {string} 403 - Authentication error.
    */
   public async LDAPLogin(req: Request, res: Response): Promise<void> {
     const body = req.body as AuthenticationLDAPRequest;
@@ -285,14 +285,14 @@ export default class AuthenticationController extends BaseController {
   }
 
   /**
-   * Local login and hand out token
-   * @route POST /authentication/local
+   * POST /authentication/local
+   * @summary Local login and hand out token
    * @operationId localAuthentication
-   * @group authenticate - Operations of authentication controller
-   * @param {AuthenticationLocalRequest.model} req.body.required - The local login.
-   * @returns {AuthenticationResponse.model} 200 - The created json web token.
-   * @returns {string} 400 - Validation error.
-   * @returns {string} 403 - Authentication error.
+   * @tags authenticate - Operations of authentication controller
+   * @param {AuthenticationLocalRequest} request.body.required - The local login.
+   * @return {AuthenticationResponse} 200 - The created json web token.
+   * @return {string} 400 - Validation error.
+   * @return {string} 403 - Authentication error.
    */
   public async LocalLogin(req: Request, res: Response): Promise<void> {
     const body = req.body as AuthenticationLocalRequest;
@@ -340,13 +340,13 @@ export default class AuthenticationController extends BaseController {
   }
 
   /**
-   * Reset local authentication using the provided token
-   * @route PUT /authentication/local
+   * PUT /authentication/local
+   * @summary Reset local authentication using the provided token
    * @operationId resetLocalWithToken
-   * @group authenticate - Operations of authentication controller
-   * @param {AuthenticationResetTokenRequest.model} req.body.required - The reset token.
-   * @returns {string} 204 - Successfully reset
-   * @returns {string} 403 - Authentication error.
+   * @tags authenticate - Operations of authentication controller
+   * @param {AuthenticationResetTokenRequest} request.body.required - The reset token.
+   * @return {string} 204 - Successfully reset
+   * @return {string} 403 - Authentication error.
    */
   public async resetLocalUsingToken(req: Request, res: Response): Promise<void> {
     const body = req.body as AuthenticationResetTokenRequest;
@@ -379,12 +379,12 @@ export default class AuthenticationController extends BaseController {
   }
 
   /**
-   * Creates a reset token for the local authentication
-   * @route POST /authentication/local/reset
+   * POST /authentication/local/reset
+   * @summary Creates a reset token for the local authentication
    * @operationId resetLocal
-   * @group authenticate - Operations of authentication controller
-   * @param {ResetLocalRequest.model} req.body.required - The reset info.
-   * @returns {string} 204 - Creation success
+   * @tags authenticate - Operations of authentication controller
+   * @param {ResetLocalRequest} request.body.required - The reset info.
+   * @return {string} 204 - Creation success
    */
   public async createResetToken(req: Request, res: Response): Promise<void> {
     const body = req.body as ResetLocalRequest;
@@ -413,13 +413,13 @@ export default class AuthenticationController extends BaseController {
   }
 
   /**
-   * NFC login and hand out token
-   * @route POST /authentication/nfc
+   * POST /authentication/nfc
+   * @summary NFC login and hand out token
    * @operationId nfcAuthentication
-   * @group authenticate - Operations of authentication controller
-   * @param {AuthenticationNfcRequest.model} req.body.required - The NFC login.
-   * @returns {AuthenticationResponse.model} 200 - The created json web token.
-   * @returns {string} 403 - Authentication error.
+   * @tags authenticate - Operations of authentication controller
+   * @param {AuthenticationNfcRequest} request.body.required - The NFC login.
+   * @return {AuthenticationResponse} 200 - The created json web token.
+   * @return {string} 403 - Authentication error.
    */
   public async nfcLogin(req: Request, res: Response): Promise<void> {
     const body = req.body as AuthenticationNfcRequest;
@@ -427,7 +427,7 @@ export default class AuthenticationController extends BaseController {
 
     try {
       const { nfcCode } = body;
-      const authenticator = await NfcAuthenticator.findOne({ where: { nfcCode: nfcCode }  });
+      const authenticator = await NfcAuthenticator.findOne({ where: { nfcCode: nfcCode } });
       if (authenticator == null || authenticator.user == null) {
         res.status(403).json({
           message: 'Invalid credentials.',
@@ -451,13 +451,13 @@ export default class AuthenticationController extends BaseController {
   }
 
   /**
-   * EAN login and hand out token
-   * @route POST /authentication/ean
+   * POST /authentication/ean
+   * @summary EAN login and hand out token
    * @operationId eanAuthentication
-   * @group authenticate - Operations of authentication controller
-   * @param {AuthenticationEanRequest.model} req.body.required - The EAN login.
-   * @returns {AuthenticationResponse.model} 200 - The created json web token.
-   * @returns {string} 403 - Authentication error.
+   * @tags authenticate - Operations of authentication controller
+   * @param {AuthenticationEanRequest} request.body.required - The EAN login.
+   * @return {AuthenticationResponse} 200 - The created json web token.
+   * @return {string} 403 - Authentication error.
    */
   public async eanLogin(req: Request, res: Response): Promise<void> {
     const body = req.body as AuthenticationEanRequest;
@@ -488,14 +488,14 @@ export default class AuthenticationController extends BaseController {
 
 
   /**
-   * Key login and hand out token.
-   * @route POST /authentication/key
+   * POST /authentication/key
+   * @summary Key login and hand out token.
    * @operationId keyAuthentication
-   * @group authenticate - Operations of authentication controller
-   * @param {AuthenticationKeyRequest.model} req.body.required - The key login.
-   * @returns {AuthenticationResponse.model} 200 - The created json web token.
-   * @returns {string} 400 - Validation error.
-   * @returns {string} 403 - Authentication error.
+   * @tags authenticate - Operations of authentication controller
+   * @param {AuthenticationKeyRequest} request.body.required - The key login.
+   * @return {AuthenticationResponse} 200 - The created json web token.
+   * @return {string} 400 - Validation error.
+   * @return {string} 403 - Authentication error.
    */
   public async keyLogin(req: Request, res: Response): Promise<void> {
     const body = req.body as AuthenticationKeyRequest;
@@ -543,13 +543,13 @@ export default class AuthenticationController extends BaseController {
   }
 
   /**
-   * Mock login and hand out token.
-   * @route POST /authentication/mock
+   * POST /authentication/mock
+   * @summary Mock login and hand out token.
    * @operationId mockAuthentication
-   * @group authenticate - Operations of authentication controller
-   * @param {AuthenticationMockRequest.model} req.body.required - The mock login.
-   * @returns {AuthenticationResponse.model} 200 - The created json web token.
-   * @returns {string} 400 - Validation error.
+   * @tags authenticate - Operations of authentication controller
+   * @param {AuthenticationMockRequest} request.body.required - The mock login.
+   * @return {AuthenticationResponse} 200 - The created json web token.
+   * @return {string} 400 - Validation error.
    */
   public async mockLogin(req: Request, res: Response): Promise<void> {
     const body = req.body as AuthenticationMockRequest;

@@ -18,10 +18,9 @@
 import * as express from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import Swagger from '../../../../src/start/swagger';
-import { sourceFile } from '../../../setup';
 
 /**
- * @typedef TestModel
+ * @typedef {object} TestModel
  * @property {string} name.required - The name of the model.
  * @property {number} value.required - A test value.
  */
@@ -32,5 +31,5 @@ export class TestModel {
 }
 
 export async function getSpecification(app: express.Application): Promise<SwaggerSpecification> {
-  return Swagger.generateSpecification(app, sourceFile(__filename));
+  return Swagger.generateSpecification(app,  ['../../test/unit/entity/transformer/test-model.ts']);
 }

@@ -300,7 +300,6 @@ export default async function createApp(): Promise<Application> {
     application.app.use('/v1/files', new SimpleFileController(options).getRouter());
     application.app.use('/v1/test', new TestController(options).getRouter());
   }
-
   // Start express application.
   logger.info(`Server listening on port ${process.env.HTTP_PORT}.`);
   application.server = application.app.listen(process.env.HTTP_PORT);

@@ -17,7 +17,7 @@
  */
 
 /**
- * @typedef UpdatePinRequest
+ * @typedef {object} UpdatePinRequest
  * @property {string} pin.required - The PIN code to set
  */
 export default interface UpdatePinRequest {

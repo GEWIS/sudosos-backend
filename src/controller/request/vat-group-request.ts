@@ -17,7 +17,7 @@
  */
 
 /**
- * @typedef UpdateVatGroupRequest
+ * @typedef {object} UpdateVatGroupRequest
  * @property {string} name.required - Name of the VAT group
  * @property {boolean} deleted.required - Whether this group should be hidden
  * in the financial overviews when its value is zero
@@ -31,7 +31,7 @@ export interface UpdateVatGroupRequest {
 }
 
 /**
- * @typedef {UpdateVatGroupRequest} VatGroupRequest
+ * @typedef {allOf|UpdateVatGroupRequest} VatGroupRequest
  * @property {number} percentage.required - VAT percentage
  */
 export interface VatGroupRequest extends UpdateVatGroupRequest {

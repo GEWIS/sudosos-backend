@@ -19,12 +19,12 @@
 import { AllowedAttribute } from '../../../rbac/role-manager';
 
 /**
- * @typedef RelationResponse -
+ * @typedef {object} RelationResponse -
  * The relation response contains the name of the ownership relation towards the entity,
  * and the list of attributes for which the role gives access.
  * Typical ownership relations are 'own', 'created', and 'all'.
- * @property {string} relation - The the ownership relation towards the entity.
- * @property {Array.<string>} attributes - The attributes of the entity for which there is access.
+ * @property {string} relation.required - The the ownership relation towards the entity.
+ * @property {Array<string>} attributes.required - The attributes of the entity for which there is access.
  */
 export default interface RelationResponse {
   relation: string;

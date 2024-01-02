@@ -19,7 +19,7 @@ import BaseResponse from './base-response';
 import { PaginationResult } from '../../helpers/pagination';
 
 /**
- * @typedef {BaseResponse} ProductCategoryResponse
+ * @typedef {allOf|BaseResponse} ProductCategoryResponse
  * @property {string} name.required - The name of the productCategory.
  */
 export interface ProductCategoryResponse extends BaseResponse {
@@ -27,9 +27,9 @@ export interface ProductCategoryResponse extends BaseResponse {
 }
 
 /**
- * @typedef PaginatedProductCategoryResponse
- * @property {PaginationResult.model} _pagination.required - Pagination metadata
- * @property {Array.<ProductCategoryResponse>} records.required - Returned product categories
+ * @typedef {object} PaginatedProductCategoryResponse
+ * @property {PaginationResult} _pagination.required - Pagination metadata
+ * @property {Array<ProductCategoryResponse>} records.required - Returned product categories
  */
 export interface PaginatedProductCategoryResponse {
   _pagination: PaginationResult,

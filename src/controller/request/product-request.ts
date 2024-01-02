@@ -37,9 +37,9 @@ export interface UpdateProductParams extends BaseProductParams {
 export type ProductRequest = UpdateProductParams | CreateProductParams;
 
 /**
- * @typedef CreateProductRequest
+ * @typedef {object} CreateProductRequest
  * @property {string} name.required - Name of the product
- * @property {DineroObjectRequest.model} priceInclVat.required - Price of the product
+ * @property {DineroObjectRequest} priceInclVat.required - Price of the product
  * @property {number} vat.required - VAT group ID of the product
  * @property {number} category.required  - Category of the product
  * @property {number} alcoholPercentage.required  - Alcohol percentage of the product in 2 decimals
@@ -50,9 +50,9 @@ export interface CreateProductRequest extends BaseProductParams {
 }
 
 /**
- * @typedef UpdateProductRequest
+ * @typedef {object} UpdateProductRequest
  * @property {string} name.required - Name of the product
- * @property {DineroObjectRequest.model} priceInclVat.required - Price of the product
+ * @property {DineroObjectRequest} priceInclVat.required - Price of the product
  * @property {number} vat.required - VAT group ID of the product
  * @property {number} category.required  - Category of the product
  * @property {number} alcoholPercentage.required  - Alcohol percentage of the product in 2 decimals

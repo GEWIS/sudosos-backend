@@ -300,12 +300,13 @@ describe('ContainerController', async (): Promise<void> => {
       // success code
       expect(res.status).to.equal(200);
       asRequested(container, res.body);
-      expect(ctx.specification.validateModel(
+      const valid = (ctx.specification.validateModel(
         'ContainerWithProductsResponse',
         res.body,
         false,
         true,
-      ).valid).to.be.true;
+      ));
+      expect(valid.valid).to.be.true;
     }
     it('should return an HTTP 200 and the container with the given id if admin', async () => {
       const container = await Container.findOne({ where: { id: 1 }, relations: ['owner'] });
@@ -376,12 +377,13 @@ describe('ContainerController', async (): Promise<void> => {
         .get('/containers/1/products')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
-      expect(ctx.specification.validateModel(
+      const valid = ctx.specification.validateModel(
         'PaginatedProductResponse',
         res.body,
         false,
         true,
-      ).valid).to.be.true;
+      );
+      expect(valid.valid).to.be.true;
     });
     it('should return an HTTP 200 and all the products in the container if admin', async () => {
       const res = await request(ctx.app)

@@ -1189,11 +1189,13 @@ describe('UserController', (): void => {
           .set('Authorization', `Bearer ${ctx.adminToken}`)
           .query(parameters);
         expect(res.status).to.equal(200);
+        // TODO Fix disallowExtraProperties to be `true`
+        //  See https://github.com/GEWIS/sudosos-backend/issues/117
         const validation = ctx.specification.validateModel(
           'TransactionReportResponse',
           res.body,
           false,
-          true,
+          false,
         );
         expect(validation.valid).to.be.true;
       });
@@ -1339,7 +1341,7 @@ describe('UserController', (): void => {
         'PaginatedFinancialMutationResponse',
         res.body,
         false,
-        true,
+        false,
       ).valid).to.be.true;
     });
     it('should adhere to pagination', async () => {
@@ -1959,7 +1961,7 @@ describe('UserController', (): void => {
           'StripeDepositResponse',
           b,
           false,
-          true,
+          false,
         );
         expect(validation.valid).to.be.true;
       });

@@ -69,10 +69,10 @@ export default class PayoutRequestController extends BaseController {
   }
 
   /**
-   * Returns all payout requests given the filter parameters
-   * @route GET /payoutrequests
+   * GET /payoutrequests
+   * @summary Returns all payout requests given the filter parameters
    * @operationId getAllPayoutRequests
-   * @group payoutRequests - Operations of the payout request controller
+   * @tags payoutRequests - Operations of the payout request controller
    * @security JWT
    * @param {integer | Array<integer>} requestedById.query - ID of user(s) who requested a payout
    * @param {integer | Array<integer>} approvedById.query - ID of user(s) who approved a payout
@@ -83,9 +83,9 @@ export default class PayoutRequestController extends BaseController {
    * @items.type {string}
    * @param {integer} take.query - How many payout requests the endpoint should return
    * @param {integer} skip.query - How many payout requests should be skipped (for pagination)
-   * @returns {PaginatedBasePayoutRequestResponse.model} 200 - All existing payout requests
-   * @returns {string} 400 - Validation error
-   * @returns {string} 500 - Internal server error
+   * @return {PaginatedBasePayoutRequestResponse} 200 - All existing payout requests
+   * @return {string} 400 - Validation error
+   * @return {string} 500 - Internal server error
    */
   public async returnAllPayoutRequests(req: RequestWithToken, res: Response): Promise<void> {
     this.logger.trace('Get all payout requests by user', req.token.user);
@@ -110,14 +110,14 @@ export default class PayoutRequestController extends BaseController {
   }
 
   /**
-   * Get a single payout request
-   * @route GET /payoutrequests/{id}
+   * GET /payoutrequests/{id}
+   * @summary Get a single payout request
    * @operationId getSinglePayoutRequest
-   * @group payoutRequests - Operations of the payout request controller
+   * @tags payoutRequests - Operations of the payout request controller
    * @param {integer} id.path.required - The ID of the payout request object that should be returned
    * @security JWT
-   * @returns {PayoutRequestResponse.model} 200 - Single payout request with given id
-   * @returns {string} 404 - Nonexistent payout request id
+   * @return {PayoutRequestResponse} 200 - Single payout request with given id
+   * @return {string} 404 - Nonexistent payout request id
    */
   public async returnSinglePayoutRequest(req: RequestWithToken, res: Response): Promise<void> {
     const parameters = req.params;
@@ -142,14 +142,14 @@ export default class PayoutRequestController extends BaseController {
   }
 
   /**
-   * Create a new payout request
-   * @route POST /payoutrequests
+   * POST /payoutrequests
+   * @summary Create a new payout request
    * @operationId createPayoutRequest
-   * @group payoutRequests - Operations of the payout request controller
-   * @param {PayoutRequestRequest.model} payoutRequest.body.required - New payout request
+   * @tags payoutRequests - Operations of the payout request controller
+   * @param {PayoutRequestRequest} request.body.required - New payout request
    * @security JWT
-   * @returns {PayoutRequestResponse.model} 200
-   * @returns {string} 400 - Validation error
+   * @return {PayoutRequestResponse} 200 - The created payout request.
+   * @return {string} 400 - Validation error
    */
   public async createPayoutRequest(req: RequestWithToken, res: Response): Promise<void> {
     const body = req.body as PayoutRequestRequest;
@@ -165,16 +165,16 @@ export default class PayoutRequestController extends BaseController {
   }
 
   /**
-   * Create a new status for a payout request
-   * @route POST /payoutrequests/{id}/status
+   * POST /payoutrequests/{id}/status
+   * @summary Create a new status for a payout request
    * @operationId setPayoutRequestStatus
-   * @group payoutRequests - Operations of the payout request controller
+   * @tags payoutRequests - Operations of the payout request controller
    * @param {integer} id.path.required - The ID of the payout request object that should be returned
-   * @param {PayoutRequestStatusRequest.model} state.body.required - New state of payout request
+   * @param {PayoutRequestStatusRequest} request.body.required - New state of payout request
    * @security JWT
-   * @returns {PayoutRequestResponse.model} 200
-   * @returns {string} 400 - Validation error
-   * @returns {string} 404 - Nonexistent payout request id
+   * @return {PayoutRequestResponse} 200 - The updated payout request
+   * @return {string} 400 - Validation error
+   * @return {string} 404 - Nonexistent payout request id
    */
   public async updatePayoutRequestStatus(req: RequestWithToken, res: Response): Promise<void> {
     const parameters = req.params;

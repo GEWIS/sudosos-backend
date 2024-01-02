@@ -103,16 +103,16 @@ export default class GewisAuthenticationController extends BaseController {
   }
 
   /**
-    * GEWIS login verification based on gewisweb JWT tokens.
+    * POST /authentication/gewisweb
+    * @summary GEWIS login verification based on gewisweb JWT tokens.
     * This method verifies the validity of the gewisweb JWT token, and returns a SudoSOS
     * token if the GEWIS token is valid.
-    * @route POST /authentication/gewisweb
     * @operationId gewisWebAuthentication
-    * @group authenticate - Operations of authentication controller
-    * @param {GewiswebAuthenticationRequest.model} req.body.required - The mock login.
-    * @returns {AuthenticationResponse.model} 200 - The created json web token.
-    * @returns {MessageResponse.model} 403 - The created json web token.
-    * @returns {string} 400 - Validation error.
+    * @tags authenticate - Operations of authentication controller
+    * @param {GewiswebAuthenticationRequest} request.body.required - The mock login.
+    * @return {AuthenticationResponse} 200 - The created json web token.
+    * @return {MessageResponse} 403 - The created json web token.
+    * @return {string} 400 - Validation error.
     */
   public async gewiswebLogin(req: Request, res: Response): Promise<void> {
     const body = req.body as GewiswebAuthenticationRequest;
@@ -166,15 +166,15 @@ export default class GewisAuthenticationController extends BaseController {
   }
 
   /**
-   * LDAP login and hand out token
+   * POST /authentication/GEWIS/LDAP
+   * @summary LDAP login and hand out token
    *    If user has never signed in before this also creates an GEWIS account.
-   * @route POST /authentication/GEWIS/LDAP
    * @operationId gewisLDAPAuthentication
-   * @group authenticate - Operations of authentication controller
-   * @param {AuthenticationLDAPRequest.model} req.body.required - The LDAP login.
-   * @returns {AuthenticationResponse.model} 200 - The created json web token.
-   * @returns {string} 400 - Validation error.
-   * @returns {string} 403 - Authentication error.
+   * @tags authenticate - Operations of authentication controller
+   * @param {AuthenticationLDAPRequest} request.body.required - The LDAP login.
+   * @return {AuthenticationResponse} 200 - The created json web token.
+   * @return {string} 400 - Validation error.
+   * @return {string} 403 - Authentication error.
    */
   public async ldapLogin(req: Request, res: Response): Promise<void> {
     const body = req.body as AuthenticationLDAPRequest;
@@ -190,14 +190,14 @@ export default class GewisAuthenticationController extends BaseController {
   }
 
   /**
-   * PIN login and hand out token.
-   * @route POST /authentication/GEWIS/pin
+   * POST /authentication/GEWIS/pin
+   * @summary PIN login and hand out token.
    * @operationId gewisPinAuthentication
-   * @group authenticate - Operations of authentication controller
-   * @param {GEWISAuthenticationPinRequest.model} req.body.required - The PIN login.
-   * @returns {AuthenticationResponse.model} 200 - The created json web token.
-   * @returns {string} 400 - Validation error.
-   * @returns {string} 403 - Authentication error.
+   * @tags authenticate - Operations of authentication controller
+   * @param {GEWISAuthenticationPinRequest} request.body.required - The PIN login.
+   * @return {AuthenticationResponse} 200 - The created json web token.
+   * @return {string} 400 - Validation error.
+   * @return {string} 403 - Authentication error.
    */
   public async gewisPINLogin(req: Request, res: Response): Promise<void> {
     const { pin, gewisId } = req.body as GEWISAuthenticationPinRequest;

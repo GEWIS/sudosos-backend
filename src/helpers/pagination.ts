@@ -32,7 +32,7 @@ export interface PaginationParameters {
 }
 
 /**
- * @typedef PaginationResult
+ * @typedef {object} PaginationResult
  * @property {integer} take.required Number of records queried
  * @property {integer} skip.required Number of skipped records
  * @property {integer} count.required Total number of resulting records

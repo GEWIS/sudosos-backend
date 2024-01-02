@@ -17,7 +17,7 @@
  */
 
 /**
- * @typedef AuthenticationResetTokenRequest
+ * @typedef {object} AuthenticationResetTokenRequest
  * @property {string} accountMail.required - The mail of the user
  * @property {string} token.required - The reset token passcode
  * @property {string} password.required - The new password to set

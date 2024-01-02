@@ -19,11 +19,11 @@ import { DineroObjectResponse } from './dinero-response';
 import { PaginationResult } from '../../helpers/pagination';
 
 /**
- * @typedef BalanceResponse
+ * @typedef {object} BalanceResponse
  * @property {number} id.required - ID of the user this balance belongs to
  * @property {string} date.required - Date at which this user had this balance
- * @property {DineroObjectResponse.model} amount.required - The amount of balance this user has
- * @property {DineroObjectResponse.model} fine - The amount of fines this user has at the current point in time,
+ * @property {DineroObjectResponse} amount.required - The amount of balance this user has
+ * @property {DineroObjectResponse} fine - The amount of fines this user has at the current point in time,
  * aka "now" (if any). Should be ignored if date is not now.
  * @property {string} fineSince - Timestamp of the first fine
  * @property {number} lastTransactionId - The ID of the last transaction that was
@@ -42,8 +42,8 @@ export default interface BalanceResponse {
 }
 
 /**
- * @typedef PaginatedBalanceResponse
- * @property {PaginationResult.model} _pagination - Pagination metadata
+ * @typedef {object} PaginatedBalanceResponse
+ * @property {PaginationResult} _pagination - Pagination metadata
  * @property {Array<BalanceResponse>} records - Returned balance responses
  */
 export interface PaginatedBalanceResponse {

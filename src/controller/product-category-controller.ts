@@ -68,15 +68,15 @@ export default class ProductCategoryController extends BaseController {
   }
 
   /**
-   * Returns all existing productcategories
-   * @route GET /productcategories
+   * GET /productcategories
+   * @summary Returns all existing productcategories
    * @operationId getAllProductCategories
-   * @group productCategories - Operations of productcategory controller
+   * @tags productCategories - Operations of productcategory controller
    * @security JWT
    * @param {integer} take.query - How many product categories the endpoint should return
    * @param {integer} skip.query - How many product categories should be skipped (for pagination)
-   * @returns {PaginatedProductCategoryResponse.model} 200 - All existing productcategories
-   * @returns {string} 500 - Internal server error
+   * @return {PaginatedProductCategoryResponse} 200 - All existing productcategories
+   * @return {string} 500 - Internal server error
    */
   public async returnAllProductCategories(req: RequestWithToken, res: Response): Promise<void> {
     const { body } = req;
@@ -105,16 +105,16 @@ export default class ProductCategoryController extends BaseController {
   }
 
   /**
-   * Post a new productCategory.
-   * @route POST /productcategories
+   * POST /productcategories
+   * @summary Post a new productCategory.
    * @operationId createProductCategory
-   * @group productCategories - Operations of productcategory controller
-   * @param {ProductCategoryRequest.model} productCategory.body.required
+   * @tags productCategories - Operations of productcategory controller
+   * @param {ProductCategoryRequest} request.body.required
    * - The productCategory which should be created
    * @security JWT
-   * @returns {ProductCategoryResponse.model} 200 - The created productcategory entity
-   * @returns {string} 400 - Validation error
-   * @returns {string} 500 - Internal server error
+   * @return {ProductCategoryResponse} 200 - The created productcategory entity
+   * @return {string} 400 - Validation error
+   * @return {string} 500 - Internal server error
    */
   public async postProductCategory(req: RequestWithToken, res: Response): Promise<void> {
     const body = req.body as ProductCategoryRequest;
@@ -132,15 +132,15 @@ export default class ProductCategoryController extends BaseController {
   }
 
   /**
-   * Returns the requested productcategory
-   * @route GET /productcategories/{id}
+   * GET /productcategories/{id}
+   * @summary Returns the requested productcategory
    * @operationId getSingleProductCategory
-   * @group productCategories - Operations of productcategory controller
+   * @tags productCategories - Operations of productcategory controller
    * @param {integer} id.path.required - The id of the productcategory which should be returned
    * @security JWT
-   * @returns {ProductCategoryResponse.model} 200 - The requested productcategory entity
-   * @returns {string} 404 - Not found error
-   * @returns {string} 500 - Internal server error
+   * @return {ProductCategoryResponse} 200 - The requested productcategory entity
+   * @return {string} 404 - Not found error
+   * @return {string} 500 - Internal server error
    */
   public async returnSingleProductCategory(req: RequestWithToken, res: Response): Promise<void> {
     const { id } = req.params;
@@ -164,18 +164,18 @@ export default class ProductCategoryController extends BaseController {
   }
 
   /**
-   * Update an existing productcategory.
-   * @route PATCH /productcategories/{id}
+   * PATCH /productcategories/{id}
+   * @summary Update an existing productcategory.
    * @operationId updateProductCategory
-   * @group productCategories - Operations of productcategory controller
+   * @tags productCategories - Operations of productcategory controller
    * @param {integer} id.path.required - The id of the productcategory which should be returned
-   * @param {ProductCategoryRequest.model} productCategory.body.required
+   * @param {ProductCategoryRequest} request.body.required
    * - The productcategory which should be created
    * @security JWT
-   * @returns {ProductCategoryResponse.model} 200 - The patched productcategory entity
-   * @returns {string} 400 - Validation error
-   * @returns {string} 404 - Not found error
-   * @returns {string} 500 - Internal server error
+   * @return {ProductCategoryResponse} 200 - The patched productcategory entity
+   * @return {string} 400 - Validation error
+   * @return {string} 404 - Not found error
+   * @return {string} 500 - Internal server error
    */
   public async updateProductCategory(req: RequestWithToken, res: Response): Promise<void> {
     const body = req.body as ProductCategoryRequest;

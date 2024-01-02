@@ -17,7 +17,7 @@
  */
 
 /**
- * @typedef AuthenticationLDAPRequest
+ * @typedef {object} AuthenticationLDAPRequest
  * @property {string} accountName.required - The AD account name to authenticate
  * @property {string} password.required - The password
  */

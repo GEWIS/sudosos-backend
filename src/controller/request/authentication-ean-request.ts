@@ -17,7 +17,7 @@
  */
 
 /**
- * @typedef AuthenticationEanRequest
+ * @typedef {object} AuthenticationEanRequest
  * @property {string} eanCode.required
  */
 export default interface AuthenticationEanRequest {

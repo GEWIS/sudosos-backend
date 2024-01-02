@@ -19,11 +19,11 @@
 import RelationResponse from './relation-response';
 
 /**
- * @typedef ActionResponse -
+ * @typedef {object} ActionResponse -
  * The action contains the name of the action and a list of permissions per action.
  * Typically the action name is one of the CRUD values 'create', 'read', 'update', and 'delete'.
- * @property {string} action - The name of the action performed on the entity.
- * @property {Array.<RelationResponse>} relations - The ownership relations with permissions.
+ * @property {string} action.required - The name of the action performed on the entity.
+ * @property {Array<RelationResponse>} relations.required - The ownership relations with permissions.
  */
 export default interface ActionResponse {
   action: string;

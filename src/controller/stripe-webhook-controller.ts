@@ -56,9 +56,9 @@ export default class StripeWebhookController extends BaseController {
    *
    * @route POST /stripe/webhook
    * @operationId webhook
-   * @group Stripe - Operations of the stripe controller
-   * @returns 200 - Success
-   * @returns 400 - Not
+   * @tags Stripe - Operations of the stripe controller
+   * @return 200 - Success
+   * @return 400 - Not
    */
   public async handleWebhookEvent(req: RequestWithRawBody, res: Response): Promise<void> {
     const { rawBody } = req;
