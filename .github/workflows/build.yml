@@ -34,7 +34,7 @@ jobs:
       - run: npm run lint
   build:
     needs: [ lint ]
-    runs-on: [ self-hosted, linux, docker ]
+    runs-on: ubuntu-latest
     container:
       image: node:18
     steps:
@@ -60,7 +60,7 @@ jobs:
   coverage:
     name: "coverage-${{ matrix.typeorm-connection }}"
     needs: [ lint ]
-    runs-on: [ self-hosted, linux, docker ]
+    runs-on: ubuntu-latest
     container:
       image: node:18
     services:
