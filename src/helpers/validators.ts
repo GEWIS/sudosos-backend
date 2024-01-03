@@ -132,15 +132,28 @@ export function asVatDeclarationPeriod(input: any): VatDeclarationPeriod | undef
 /**
  * Converts the input to a UserType
  * @param input - The input which should be converted.
- * @returns The parsed UserType.
+ * @returns The parsed UserType as a number representation.
  * @throws TypeError - If the input is not a valid UserType
  */
 export function asUserType(input: any): UserType | undefined {
-  if (!input) return undefined;
+  if (input === undefined || input === null) return undefined;
+
+  // Convert input to a number if it's a string representation of a number
+  if (typeof input === 'string' && !isNaN(Number(input))) {
+    input = Number(input);
+  }
+
+  // Check if input is now a number and a valid enum value
+  if (typeof input === 'number' && UserType[input] !== undefined) {
+    return input;
+  }
+
+  // Check if input is a string and a valid enum key
   const state: UserType = UserType[input as keyof typeof UserType];
   if (state === undefined) {
     throw new TypeError(`Input '${input}' is not a valid UserType.`);
   }
+
   return state;
 }
 
@@ -181,8 +194,9 @@ export function asEventType(input: any): EventType | undefined {
  */
 export function asArrayOfUserTypes(input: any): UserType[] | undefined {
   if (!input) return undefined;
-  if (!Array.isArray(input)) return undefined;
-  return input.map((i) => asUserType(i));
+  let arr = input;
+  if (!Array.isArray(input)) arr = [input];
+  return arr.map((i: any) => asUserType(i));
 }
 
 /**

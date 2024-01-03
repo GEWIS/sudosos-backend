@@ -305,6 +305,30 @@ describe('BalanceController', (): void => {
       expect(body.records.length).to.equal(users.length);
       expect(body.records.map((b) => b.id)).to.deep.equalInAnyOrder(users.map((u) => u.id));
     });
+    it('should return only balances from ADMIN type', async () => {
+      const userTypes = [UserType.LOCAL_ADMIN];
+      const res = await request(ctx.app)
+        .get('/balances/all')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query({ userTypes: userTypes });
+      expect(res.status).to.equal(200);
+      const body = res.body as PaginatedBalanceResponse;
+      const users = ctx.users.filter((u) => userTypes.includes(u.type));
+      expect(body.records.length).to.equal(users.length);
+      expect(body.records.map((b) => b.id)).to.deep.equalInAnyOrder(users.map((u) => u.id));
+    });
+    it('should return only balances from ADMIN type as string input', async () => {
+      const userTypes = [UserType.LOCAL_ADMIN];
+      const res = await request(ctx.app)
+        .get('/balances/all')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query({ userTypes: ['LOCAL_ADMIN'] });
+      expect(res.status).to.equal(200);
+      const body = res.body as PaginatedBalanceResponse;
+      const users = ctx.users.filter((u) => userTypes.includes(u.type));
+      expect(body.records.length).to.equal(users.length);
+      expect(body.records.map((b) => b.id)).to.deep.equalInAnyOrder(users.map((u) => u.id));
+    });
     it('should correctly order balance results on id', async () => {
       await Promise.all(Object.values(OrderingDirection).map(async (orderDirection: OrderingDirection) => {
         const res = await request(ctx.app)
