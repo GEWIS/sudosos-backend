@@ -18,7 +18,7 @@ permissions:
 
 jobs:
   lint:
-    runs-on: [ self-hosted, linux, docker ]
+    runs-on: ubuntu-latest
     container:
       image: node:18
     steps:

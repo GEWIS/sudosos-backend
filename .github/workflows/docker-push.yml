@@ -12,13 +12,13 @@ concurrency:
 
 jobs:
   dockerize:
-    runs-on: [self-hosted, linux, docker]
+    runs-on: ubuntu-latest
     container:
       image: docker:dind
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-        
+
       - name: Get Docker meta (for tags)
         id: meta
         uses: docker/metadata-action@v4
@@ -46,7 +46,7 @@ jobs:
           registry: ${{ vars.DOCKER_REGISTRY }}
           username: ${{ secrets.SVC_GH_SUDOSOS_USERNAME }}
           password: ${{ secrets.SVC_GH_SUDOSOS_PWD }}
-      
+
       # Build and push Docker image with Buildx (don't push on PR)
       - name: Build and push
         uses: docker/build-push-action@v3
