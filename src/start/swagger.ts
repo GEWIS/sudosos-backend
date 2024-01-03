@@ -66,10 +66,10 @@ export default class Swagger {
 
       const instance = expressJSDocSwagger(app)(options);
 
-      instance.on('finish', (swaggerObject) => {
+      instance.on('finish', async (swaggerObject) => {
         Swagger.logger.trace('Swagger specification generation finished');
         new Validator(swaggerObject);
-        void fs.writeFile(
+        await fs.writeFile(
           path.join(process.cwd(), 'out/swagger.json'),
           JSON.stringify(swaggerObject),
           { encoding: 'utf-8' },
@@ -142,6 +142,6 @@ if (require.main === module) {
   // Only execute directly if this is the main execution file.
   const app = express();
 
-  fs.mkdir('out', { recursive: true })
+  void fs.mkdir('out', { recursive: true })
     .then(async () => { await Swagger.initialize(app); });
 }
