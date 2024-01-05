@@ -89,7 +89,7 @@ export default class StripeService {
       .map((d) => this.asStripeDepositResponse(d));
   }
 
-  public static async getStripeDeposit(id: number, relations: string[] = []) {
+  public static async getStripeDeposit(id: number, relations: string[] = []): Promise<StripeDeposit> {
     return StripeDeposit.findOne({
       where: { id },
       relations: ['depositStatus'].concat(relations),
@@ -158,12 +158,13 @@ export default class StripeService {
       throw new Error('Cannot create status FAILED, because SUCCEEDED already exists');
     }
 
-    const depositStatus = Object.assign(new StripeDepositStatus(), { deposit: { id: deposit.id }, state });
-    await manager.save(depositStatus);
+    const depositStatus = Object.assign(new StripeDepositStatus(), { deposit, state });
+    await manager.save(depositStatus).then((depositState) => {
+      deposit.depositStatus.push(depositState);
+    });
 
     // If payment has succeeded, create the transfer
     if (state === StripeDepositState.SUCCEEDED) {
-      deposit = await StripeService.getStripeDeposit(depositId, ['to']);
       deposit.transfer = await TransferService.createTransfer({
         amount: {
           amount: deposit.amount.getAmount(),
