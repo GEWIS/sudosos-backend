@@ -43,7 +43,7 @@ export default class TransferSubscriber implements EntitySubscriberInterface {
     // Remove currently unpaid fines when new balance is positive.
     if (currentBalance >= 0) {
       user.currentFines = null;
-      await user.save();
+      await event.manager.save(user);
     }
   }
 }
