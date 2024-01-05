@@ -58,7 +58,7 @@ export default class TestController extends BaseController {
    * @operationId helloworld
    * @tags test- Operations of the test controller
    * @security JWT
-   * @return {string} 204 - Success
+   * @return 204 - Success
    * @return {string} 500 - Internal server error
    */
   public async helloWorld(req: RequestWithToken, res: Response): Promise<void> {

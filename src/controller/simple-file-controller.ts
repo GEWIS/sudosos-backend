@@ -151,7 +151,7 @@ export default class SimpleFileController extends BaseController {
    * @tags files - Operations of the simple files controller
    * @param {integer} id.path.required - The id of the file which should be deleted
    * @security JWT
-   * @return {string} 204 - Success
+   * @return 204 - Success
    * @return {string} 404 - File not found
    * @return {string} 500 - Internal server error
    */

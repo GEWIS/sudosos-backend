@@ -345,7 +345,7 @@ export default class AuthenticationController extends BaseController {
    * @operationId resetLocalWithToken
    * @tags authenticate - Operations of authentication controller
    * @param {AuthenticationResetTokenRequest} request.body.required - The reset token.
-   * @return {string} 204 - Successfully reset
+   * @return 204 - Successfully reset
    * @return {string} 403 - Authentication error.
    */
   public async resetLocalUsingToken(req: Request, res: Response): Promise<void> {
@@ -384,7 +384,7 @@ export default class AuthenticationController extends BaseController {
    * @operationId resetLocal
    * @tags authenticate - Operations of authentication controller
    * @param {ResetLocalRequest} request.body.required - The reset info.
-   * @return {string} 204 - Creation success
+   * @return 204 - Creation success
    */
   public async createResetToken(req: Request, res: Response): Promise<void> {
     const body = req.body as ResetLocalRequest;

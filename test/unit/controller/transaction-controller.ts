@@ -768,26 +768,18 @@ describe('TransactionController', (): void => {
   });
 
   describe('DELETE /transactions', () => {
-    it('should return an HTTP 200 and the deleted transaction if the transaction exists and user is admin', async () => {
+    it('should return an HTTP 204 if the transaction exists and user is admin', async () => {
       let res = await request(ctx.app)
         .get('/transactions/1')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
-      const deletedTransaction = res.body;
 
       // delete the first transaction in the database
       res = await request(ctx.app)
         .delete('/transactions/1')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
-      expect(ctx.specification.validateModel(
-        'TransactionResponse',
-        res.body,
-        false,
-        false,
-      ).valid).to.be.true;
-
-      expect(res.body).to.eql(deletedTransaction);
-      expect(res.status).to.equal(200);
+      expect(res.body).to.be.empty;
+      expect(res.status).to.equal(204);
     });
     it('should return an HTTP 404 if the transaction does not exist', async () => {
       // delete a nonexistent transaction in the database

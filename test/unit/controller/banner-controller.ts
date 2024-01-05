@@ -38,6 +38,7 @@ import { seedBanners } from '../../seed';
 import BannerImage from '../../../src/entity/file/banner-image';
 import { DiskStorage } from '../../../src/files/storage';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
+import deleteResponseMiddleware from '../../../src/middleware/test-middleware';
 
 export function bannerEq(a: Banner, b: BannerResponse): Boolean {
   const aEmpty = a === {} as Banner || a === undefined;
@@ -511,7 +512,7 @@ describe('BannerController', async (): Promise<void> => {
   });
 
   describe('DELETE /banners/:id', () => {
-    it('should delete the banner from the database and return an HTTP 200 and the banner with given id if admin', async () => {
+    it('should delete the banner from the database and return an HTTP 204 if admin', async () => {
       const previousBannerImage = await BannerImage.findOne({ where: { id: 3 } });
       const deleteFileStub = sinon.stub(DiskStorage.prototype, 'deleteFile').resolves(true);
       stubs.push(deleteFileStub);
@@ -521,19 +522,13 @@ describe('BannerController', async (): Promise<void> => {
         .delete('/banners/3')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
-      expect(ctx.specification.validateModel(
-        'BannerResponse',
-        res.body,
-        false,
-        true,
-      ).valid).to.be.true;
+      // No content
+      expect(res.body).to.be.empty;
 
       // success code
-      expect(res.status).to.equal(200);
+      expect(res.status).to.equal(204);
 
-      const banner = res.body as BannerResponse;
       // test deletion
-      expect(bannerEq(ctx.banners.find((b) => b.id === 3), banner)).to.be.true;
       expect(await Banner.findOne({ where: { id: 3 } })).to.be.null;
 
       // Removed image
