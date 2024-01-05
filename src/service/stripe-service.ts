@@ -28,8 +28,9 @@ import {
   StripePaymentIntentResponse,
 } from '../controller/response/stripe-response';
 import TransferService from './transfer-service';
-import { IsNull } from 'typeorm';
+import {EntityManager, IsNull} from 'typeorm';
 import { parseUserToBaseResponse } from '../helpers/revision-to-response';
+import wrapInManager from "../helpers/database";
 
 export const STRIPE_API_VERSION = '2022-08-01';
 
@@ -139,11 +140,12 @@ export default class StripeService {
 
   /**
    * Create a new deposit status
+   * @param manager
    * @param depositId
    * @param state
    */
   public static async createNewDepositStatus(
-    depositId: number, state: StripeDepositState,
+    manager: EntityManager, depositId: number, state: StripeDepositState,
   ): Promise<StripeDepositStatus> {
     let deposit = await StripeService.getStripeDeposit(depositId);
 
@@ -157,7 +159,7 @@ export default class StripeService {
     }
 
     const depositStatus = Object.assign(new StripeDepositStatus(), { deposit, state });
-    await depositStatus.save();
+    await manager.save(depositStatus);
 
     // If payment has succeeded, create the transfer
     if (state === StripeDepositState.SUCCEEDED) {
@@ -173,7 +175,7 @@ export default class StripeService {
         fromId: undefined,
       });
 
-      await deposit.save();
+      await manager.save(deposit);
     }
 
     return depositStatus;
@@ -192,16 +194,16 @@ export default class StripeService {
 
       switch (event.type) {
         case 'payment_intent.created':
-          await StripeService.createNewDepositStatus(deposit.id, StripeDepositState.CREATED);
+          await wrapInManager(StripeService.createNewDepositStatus)(deposit.id, StripeDepositState.CREATED);
           break;
         case 'payment_intent.processing':
-          await StripeService.createNewDepositStatus(deposit.id, StripeDepositState.PROCESSING);
+          await wrapInManager(StripeService.createNewDepositStatus)(deposit.id, StripeDepositState.PROCESSING);
           break;
         case 'payment_intent.succeeded':
-          await StripeService.createNewDepositStatus(deposit.id, StripeDepositState.SUCCEEDED);
+          await wrapInManager(StripeService.createNewDepositStatus)(deposit.id, StripeDepositState.SUCCEEDED);
           break;
         case 'payment_intent.payment_failed':
-          await StripeService.createNewDepositStatus(deposit.id, StripeDepositState.FAILED);
+          await wrapInManager(StripeService.createNewDepositStatus)(deposit.id, StripeDepositState.FAILED);
           break;
         default:
           this.logger.warn('Tried to process event', event.type, 'but processing method is not defined');
