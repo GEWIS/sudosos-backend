@@ -1480,7 +1480,7 @@ describe('UserController', (): void => {
     });
   });
   describe('PUT /users/{id}/authenticator/pin', () => {
-    it('should return an HTTP 200 if authorized', async () => {
+    it('should return an HTTP 204 if authorized', async () => {
       await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
         const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
 
@@ -1491,7 +1491,7 @@ describe('UserController', (): void => {
           .put(`/users/${user.id}/authenticator/pin`)
           .set('Authorization', `Bearer ${userToken}`)
           .send(updatePinRequest);
-        expect(res.status).to.equal(200);
+        expect(res.status).to.equal(204);
       });
     });
     it('should return an 403 if unauthorized', async () => {
@@ -1535,7 +1535,7 @@ describe('UserController', (): void => {
     });
   });
   describe('PUT /users/{id}/authenticator/nfc', () => {
-    it('should return an HTTP 200 if authorized', async () => {
+    it('should return an HTTP 204 if authorized', async () => {
       await inUserContext((await UserFactory()).clone(1), async (user: User) => {
         const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
 
@@ -1546,7 +1546,7 @@ describe('UserController', (): void => {
           .put(`/users/${user.id}/authenticator/nfc`)
           .set('Authorization', `Bearer ${userToken}`)
           .send(updateNfcRequest);
-        expect(res.status).to.equal(200);
+        expect(res.status).to.equal(204);
       });
     });
     it('should return an 400 if duplicate nfc', async () => {
@@ -1579,7 +1579,7 @@ describe('UserController', (): void => {
           .put(`/users/${user.id}/authenticator/nfc`)
           .set('Authorization', `Bearer ${userToken}`)
           .send(updateNfcRequest1);
-        expect(res1.status).to.equal(200);
+        expect(res1.status).to.equal(204);
 
         const updateNfcRequest2: UpdateNfcRequest = {
           nfcCode: 'correctNfcCode2',
@@ -1588,7 +1588,7 @@ describe('UserController', (): void => {
           .put(`/users/${user.id}/authenticator/nfc`)
           .set('Authorization', `Bearer ${userToken}`)
           .send(updateNfcRequest2);
-        expect(res2.status).to.equal(200);
+        expect(res2.status).to.equal(204);
       });
     });
     it('should return an 400 if empty nfc', async () => {
@@ -1632,7 +1632,7 @@ describe('UserController', (): void => {
     });
   });
   describe('DELETE /users/{id}/authenticator/nfc', () => {
-    it('should return an HTTP 200 if authorized', async () => {
+    it('should return an HTTP 204 if authorized', async () => {
       await inUserContext((await UserFactory()).clone(1), async (user: User) => {
         const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
 
@@ -1647,7 +1647,7 @@ describe('UserController', (): void => {
         const res = await request(ctx.app)
           .delete(`/users/${user.id}/authenticator/nfc`)
           .set('Authorization', `Bearer ${userToken}`);
-        expect(res.status).to.equal(200);
+        expect(res.status).to.equal(204);
       });
     });
     it('should return an 404 if the user does not exists', async () => {
@@ -1668,7 +1668,7 @@ describe('UserController', (): void => {
     });
   });
   describe('DELETE /users/{id}/authenticator/nfc', () => {
-    it('should return an HTTP 200 if authorized', async () => {
+    it('should return an HTTP 204 if authorized', async () => {
       await inUserContext((await UserFactory()).clone(1), async (user: User) => {
         const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
 
@@ -1683,7 +1683,7 @@ describe('UserController', (): void => {
         const res = await request(ctx.app)
           .delete(`/users/${user.id}/authenticator/nfc`)
           .set('Authorization', `Bearer ${userToken}`);
-        expect(res.status).to.equal(200);
+        expect(res.status).to.equal(204);
       });
     });
     it('should return an 404 if the user does not exists', async () => {
@@ -1719,7 +1719,7 @@ describe('UserController', (): void => {
         const res = await request(ctx.app)
           .delete(`/users/${user.id}/authenticator/nfc`)
           .set('Authorization', `Bearer ${userToken}`);
-        expect(res.status).to.equal(200);
+        expect(res.status).to.equal(204);
       });
     });
     it('should return an 404 if the user does not exists', async () => {
@@ -1740,7 +1740,7 @@ describe('UserController', (): void => {
     });
   });
   describe('PUT /users/{id}/authenticator/local', () => {
-    it('should return an HTTP 200 if authorized', async () => {
+    it('should return an HTTP 204 if authorized', async () => {
       await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
         const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
 

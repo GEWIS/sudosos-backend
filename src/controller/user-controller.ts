@@ -392,7 +392,7 @@ export default class UserController extends BaseController {
    * @param {UpdatePinRequest} request.body.required -
    *    The PIN code to update to
    * @security JWT
-   * @return 200 - Update success
+   * @return 204 - Update success
    * @return {string} 400 - Validation Error
    * @return {string} 404 - Nonexistent user id
    */
@@ -418,7 +418,7 @@ export default class UserController extends BaseController {
 
       await AuthenticationService.setUserAuthenticationHash(user,
         updatePinRequest.pin.toString(), PinAuthenticator);
-      res.status(200).json();
+      res.status(204).json();
     } catch (error) {
       this.logger.error('Could not update pin:', error);
       res.status(500).json('Internal server error.');
@@ -434,7 +434,7 @@ export default class UserController extends BaseController {
    * @param {UpdateNfcRequest} request.body.required -
    *    The NFC code to update to
    * @security JWT
-   * @return 200 - Update success
+   * @return 204 - Update success
    * @return {string} 400 - Validation Error
    * @return {string} 404 - Nonexistent user id
    */
@@ -460,7 +460,7 @@ export default class UserController extends BaseController {
 
       await AuthenticationService.setUserAuthenticationNfc(user,
         updateNfcRequest.nfcCode.toString(), NfcAuthenticator);
-      res.status(200).json();
+      res.status(204).json();
     } catch (error) {
       this.logger.error('Could not update NFC:', error);
       res.status(500).json('Internal server error.');
@@ -498,7 +498,7 @@ export default class UserController extends BaseController {
       }
 
       await NfcAuthenticator.delete(parseInt(parameters.id, 10));
-      res.status(200).json();
+      res.status(204).json();
     } catch (error) {
       this.logger.error('Could not update NFC:', error);
       res.status(500).json('Internal server error.');
@@ -793,7 +793,7 @@ export default class UserController extends BaseController {
    * @tags users - Operations of user controller
    * @param {integer} id.path.required - The id of the user
    * @security JWT
-   * @return {string} 204 - User successfully deleted
+   * @return 204 - User successfully deleted
    * @return {string} 400 - Cannot delete yourself
    */
   public async deleteUser(req: RequestWithToken, res: Response): Promise<void> {
@@ -831,7 +831,7 @@ export default class UserController extends BaseController {
    * @tags users - Operations of the User controller
    * @param {AcceptTosRequest} request.body.required - "Tosrequest body"
    * @security JWT
-   * @return {string} 204 - ToS accepted
+   * @return 204 - ToS accepted
    * @return {string} 400 - ToS already accepted
    */
   public async acceptToS(req: RequestWithToken, res: Response): Promise<void> {
@@ -1370,7 +1370,7 @@ export default class UserController extends BaseController {
    * @param {integer} id.path.required - The id of the user
    * @operationId waiveUserFines
    * @security JWT
-   * @return {string} 204 - Success
+   * @return 204 - Success
    * @return {string} 400 - User has no fines.
    * @return {string} 404 - User not found error.
    */

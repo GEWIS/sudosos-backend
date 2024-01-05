@@ -143,7 +143,7 @@ export default class DebtorController extends BaseController {
    * @operationId deleteFine
    * @security JWT
    * @param {integer} id.path.required - The id of the fine which should be deleted
-   * @return {string} 204 - Success
+   * @return 204 - Success
    * @return {string} 400 - Validation error
    * @return {string} 500 - Internal server error
    */
@@ -253,7 +253,7 @@ export default class DebtorController extends BaseController {
    * @operationId notifyAboutFutureFines
    * @security JWT
    * @param {HandoutFinesRequest} request.body.required
-   * @return {string} 204 - Success
+   * @return 204 - Success
    * @return {string} 400 - Validation error
    * @return {string} 500 - Internal server error
    */

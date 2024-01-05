@@ -15,12 +15,12 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import {Request, Response} from 'express';
-import log4js, {Logger} from 'log4js';
-import {getConnection} from 'typeorm';
-import BaseController, {BaseControllerOptions} from './base-controller';
+import { Request, Response } from 'express';
+import log4js, { Logger } from 'log4js';
+import { getConnection } from 'typeorm';
+import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
-import {parseRequestPagination} from '../helpers/pagination';
+import { parseRequestPagination } from '../helpers/pagination';
 import BannerService from '../service/banner-service';
 
 export default class RootController extends BaseController {
@@ -85,7 +85,7 @@ export default class RootController extends BaseController {
 
     // handle request
     try {
-      res.json(await BannerService.getBanners({}, {take, skip}));
+      res.json(await BannerService.getBanners({}, { take, skip }));
     } catch (error) {
       this.logger.error('Could not return all banners:', error);
       res.status(500).json('Internal server error.');

@@ -246,7 +246,7 @@ export default class TransactionController extends BaseController {
    * @tags transactions - Operations of the transaction controller
    * @param {integer} id.path.required - The id of the transaction which should be deleted
    * @security JWT
-   * @return {TransactionResponse} 200 - The deleted transaction
+   * @return 204 - No content
    * @return {string} 404 - Nonexistent transaction id
    */
   // eslint-disable-next-line class-methods-use-this
@@ -257,7 +257,8 @@ export default class TransactionController extends BaseController {
     // handle request
     try {
       if (await Transaction.findOne({ where: { id: parseInt(id, 10) } })) {
-        res.status(200).json(await TransactionService.deleteTransaction(parseInt(id, 10)));
+        await TransactionService.deleteTransaction(parseInt(id, 10));
+        res.status(204).json();
       } else {
         res.status(404).json('Transaction not found.');
       }

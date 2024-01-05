@@ -280,19 +280,19 @@ export default class BannerController extends BaseController {
    * @tags banners - Operations of banner controller
    * @param {integer} id.path.required - The id of the banner which should be deleted
    * @security JWT
-   * @return {BannerResponse} 200 - The deleted banner entity
+   * @return 204 - Update success
    * @return {string} 404 - Not found error
    */
   public async removeBanner(req: RequestWithToken, res: Response): Promise<void> {
     const { id } = req.params;
-    this.logger.trace('Remove banner', id, 'by user', req.token.user);
+    this.logger.trace('Remove ban ner', id, 'by user', req.token.user);
 
     // handle request
     try {
       // check if banner in database
       const banner = await BannerService.deleteBanner(Number.parseInt(id, 10), this.fileService);
       if (banner) {
-        res.json(banner);
+        res.status(204).json();
       } else {
         res.status(404).json('Banner not found.');
       }

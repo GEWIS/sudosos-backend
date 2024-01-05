@@ -209,7 +209,7 @@ export default class EventShiftController extends BaseController {
    * @operationId deleteEventShift
    * @security JWT
    * @param {integer} id.path.required - The id of the event which should be deleted
-   * @return {string} 204 - Success
+   * @return 204 - Success
    * @return {string} 400 - Validation error
    * @return {string} 500 - Internal server error
    */

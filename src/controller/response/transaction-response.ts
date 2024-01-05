@@ -17,7 +17,7 @@
  */
 import { DineroObject } from 'dinero.js';
 import BaseResponse from './base-response';
-import {BasePointOfSaleResponse, PointOfSaleResponse} from './point-of-sale-response';
+import { BasePointOfSaleResponse, PointOfSaleResponse } from './point-of-sale-response';
 import { BaseContainerResponse } from './container-response';
 import { BaseProductResponse } from './product-response';
 import { BaseUserResponse } from './user-response';
