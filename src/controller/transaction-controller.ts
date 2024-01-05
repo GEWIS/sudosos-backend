@@ -246,7 +246,7 @@ export default class TransactionController extends BaseController {
    * @tags transactions - Operations of the transaction controller
    * @param {integer} id.path.required - The id of the transaction which should be deleted
    * @security JWT
-   * @return {} 204 - No content
+   * @return 204 - No content
    * @return {string} 404 - Nonexistent transaction id
    */
   // eslint-disable-next-line class-methods-use-this
