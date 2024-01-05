@@ -28,9 +28,9 @@ import {
   StripePaymentIntentResponse,
 } from '../controller/response/stripe-response';
 import TransferService from './transfer-service';
-import {EntityManager, IsNull} from 'typeorm';
+import { EntityManager, IsNull } from 'typeorm';
 import { parseUserToBaseResponse } from '../helpers/revision-to-response';
-import wrapInManager from "../helpers/database";
+import wrapInManager from '../helpers/database';
 
 export const STRIPE_API_VERSION = '2022-08-01';
 
@@ -158,7 +158,7 @@ export default class StripeService {
       throw new Error('Cannot create status FAILED, because SUCCEEDED already exists');
     }
 
-    const depositStatus = Object.assign(new StripeDepositStatus(), { deposit, state });
+    const depositStatus = Object.assign(new StripeDepositStatus(), { deposit: { id: deposit.id }, state });
     await manager.save(depositStatus);
 
     // If payment has succeeded, create the transfer
@@ -173,7 +173,7 @@ export default class StripeService {
         toId: deposit.to.id,
         description: deposit.stripeId,
         fromId: undefined,
-      });
+      }, manager);
 
       await manager.save(deposit);
     }
