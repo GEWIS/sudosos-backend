@@ -25,6 +25,7 @@ import StripeDeposit from '../../../src/entity/deposit/stripe-deposit';
 import StripeService, { STRIPE_API_VERSION } from '../../../src/service/stripe-service';
 import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
 import { StripeDepositState } from '../../../src/entity/deposit/stripe-deposit-status';
+import wrapInManager from '../../../src/helpers/database';
 
 describe('StripeService', async (): Promise<void> => {
   let shouldSkip: boolean;
@@ -115,7 +116,7 @@ describe('StripeService', async (): Promise<void> => {
       // Precondition: state does not yet exist
       expect(beforeStripeDeposit.depositStatus.some((s) => s.state === state)).to.be.false;
 
-      const status = await StripeService.createNewDepositStatus(id, state);
+      const status = await wrapInManager(StripeService.createNewDepositStatus)(id, state);
       expect(status.state).to.equal(state);
 
       const afterStripeDeposit = await StripeService.getStripeDeposit(id);
@@ -123,7 +124,7 @@ describe('StripeService', async (): Promise<void> => {
         .to.equal(beforeStripeDeposit.depositStatus.length + 1);
       expect(afterStripeDeposit.depositStatus.some((s) => s.state === state)).to.be.true;
 
-      await expect(StripeService.createNewDepositStatus(id, state))
+      await expect(wrapInManager(StripeService.createNewDepositStatus)(id, state))
         .to.eventually.be.rejectedWith(`Status ${state} already exists.`);
     };
     it('should correctly create only one created status', async () => {
@@ -154,7 +155,7 @@ describe('StripeService', async (): Promise<void> => {
       const { id } = ctx.stripeDeposits[0];
       const state = StripeDepositState.CREATED;
 
-      await expect(StripeService.createNewDepositStatus(id, state))
+      await expect(wrapInManager(StripeService.createNewDepositStatus)(id, state))
         .to.eventually.be.rejectedWith(`Status ${state} already exists.`);
     });
     it('should not create "SUCCEEDED" state when "FAILED" already exists', async () => {
@@ -162,7 +163,7 @@ describe('StripeService', async (): Promise<void> => {
         .some((s) => s.state === StripeDepositState.FAILED)))[0];
       const state = StripeDepositState.SUCCEEDED;
 
-      await expect(StripeService.createNewDepositStatus(id, state))
+      await expect(wrapInManager(StripeService.createNewDepositStatus)(id, state))
         .to.eventually.be.rejectedWith('Cannot create status SUCCEEDED, because FAILED already exists');
     });
     it('should not create "FAILED" state when "SUCCEEDED" already exists', async () => {
@@ -170,7 +171,7 @@ describe('StripeService', async (): Promise<void> => {
         .some((s) => s.state === StripeDepositState.SUCCEEDED)))[0];
       const state = StripeDepositState.FAILED;
 
-      await expect(StripeService.createNewDepositStatus(id, state))
+      await expect(wrapInManager(StripeService.createNewDepositStatus)(id, state))
         .to.eventually.be.rejectedWith('Cannot create status FAILED, because SUCCEEDED already exists');
     });
   });
