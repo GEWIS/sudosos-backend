@@ -23,6 +23,7 @@ import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import StripeService from '../service/stripe-service';
 import { StripeRequest } from './request/stripe-request';
+import BalanceService from '../service/balance-service';
 
 export default class StripeController extends BaseController {
   private logger: Logger = log4js.getLogger('StripeController');
@@ -72,6 +73,13 @@ export default class StripeController extends BaseController {
 
     try {
       const amount = Dinero({ ...request.amount } as DineroObject);
+      const balance = await BalanceService.getBalance(req.token.user.id);
+      if (!StripeService.validateStripeRequestAmount(balance, request)) {
+        res.status(422).json({ error: 'Top-up amount is to low' });
+        return;
+      }
+
+
       const result = await this.stripeService.createStripePaymentIntent(req.token.user, amount);
       res.status(200).json(result);
     } catch (error) {

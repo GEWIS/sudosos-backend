@@ -26,6 +26,8 @@ import StripeService, { STRIPE_API_VERSION } from '../../../src/service/stripe-s
 import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
 import { StripeDepositState } from '../../../src/entity/deposit/stripe-deposit-status';
 import wrapInManager from '../../../src/helpers/database';
+import BalanceResponse from '../../../src/controller/response/balance-response';
+import { StripeRequest } from '../../../src/controller/request/stripe-request';
 
 describe('StripeService', async (): Promise<void> => {
   let shouldSkip: boolean;
@@ -176,6 +178,74 @@ describe('StripeService', async (): Promise<void> => {
     });
   });
 
+  describe('validateStripeRequestAmount', () => {
+    it('should accept 10 euros if user is in the positive', () => {
+      const balance = { amount: {
+        amount: 1,
+        currency: 'EUR',
+        precision: 2,
+      } } as BalanceResponse;
+      const request: StripeRequest = {
+        amount: {
+          amount: 1000,
+          currency: 'EUR',
+          precision: 2,
+        },
+      };
+      const res = StripeService.validateStripeRequestAmount(balance, request);
+      expect(res).to.be.true;
+    });
+    it('should accept 10 euros if user less than 10 euros in the negative', () => {
+      const balance = {
+        amount: {
+          amount: -800,
+          currency: 'EUR',
+          precision: 2,
+        },
+      } as BalanceResponse;
+      const request: StripeRequest = {
+        amount: {
+          amount: 1000,
+          currency: 'EUR',
+          precision: 2,
+        },
+      };
+      const res = StripeService.validateStripeRequestAmount(balance, request);
+      expect(res).to.be.false;
+    });
+    it('should disallow 11 euros if user less more than 10 euros in the negative', () => {
+      const balance = { amount: {
+        amount: -1800,
+        currency: 'EUR',
+        precision: 2,
+      } } as BalanceResponse;
+      const request: StripeRequest = {
+        amount: {
+          amount: 1100,
+          currency: 'EUR',
+          precision: 2,
+        },
+      };
+      const res = StripeService.validateStripeRequestAmount(balance, request);
+      expect(res).to.be.false;
+    });
+    it('should allow 8,33 euros if user is -8,33', () => {
+      const balance = { amount: {
+        amount: -833,
+        currency: 'EUR',
+        precision: 2,
+      } } as BalanceResponse;
+      const request: StripeRequest = {
+        amount: {
+          amount: 833,
+          currency: 'EUR',
+          precision: 2,
+        },
+      };
+      const res = StripeService.validateStripeRequestAmount(balance, request);
+      expect(res).to.be.true;
+    });
+  });
   describe('handleWebhookEvent', async () => {
     const testHandleWebhookEvent = async (id: number, state: StripeDepositState) => {
       const beforeStripeDeposit = await StripeService.getStripeDeposit(id);
