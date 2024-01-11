@@ -213,7 +213,7 @@ describe('StripeService', async (): Promise<void> => {
       const res = StripeService.validateStripeRequestAmount(balance, request);
       expect(res).to.be.false;
     });
-    it('should disallow 11 euros if user less more than 10 euros in the negative', () => {
+    it('should allow 11 euros if user more than 10 euros in the negative', () => {
       const balance = { amount: {
         amount: -1800,
         currency: 'EUR',
@@ -227,7 +227,7 @@ describe('StripeService', async (): Promise<void> => {
         },
       };
       const res = StripeService.validateStripeRequestAmount(balance, request);
-      expect(res).to.be.false;
+      expect(res).to.be.true;
     });
     it('should allow 8,33 euros if user is -8,33', () => {
       const balance = { amount: {

@@ -49,28 +49,14 @@ export default class StripeService {
   }
 
   /**
-   * Topup should be at least 10 euros or the users negative balance (or greater).
-   * Returns false if request amount is too low.
+   * Topup should be at least 10 euros or the users negative balance.
    * @param balance
    * @param request
    */
   public static validateStripeRequestAmount(balance: BalanceResponse, request: StripeRequest): boolean {
-    // User is in the negative and would remain negative.
-    if (balance.amount.amount < 0) {
-      if (request.amount.amount < balance.amount.amount) {
-        return false;
-      }
-    }
-
     // Check if top up is enough
-    if (request.amount.amount < (process.env.MIN_TOPUP || 1000)) {
-      // edge case if user is topping-up their negative amount
-      if (request.amount.amount !== balance.amount.amount) {
-        return false;
-      }
-    }
-
-    return true;
+    if (request.amount.amount > (process.env.MIN_TOPUP || 1000)) return true;
+    return request.amount.amount === balance.amount.amount;
   }
 
   private static asStripeDepositStatusResponse(status: StripeDepositStatus): StripeDepositStatusResponse {
