@@ -31,6 +31,8 @@ import TransferService from './transfer-service';
 import { EntityManager, IsNull } from 'typeorm';
 import { parseUserToBaseResponse } from '../helpers/revision-to-response';
 import wrapInManager from '../helpers/database';
+import BalanceResponse from '../controller/response/balance-response';
+import { StripeRequest } from '../controller/request/stripe-request';
 
 export const STRIPE_API_VERSION = '2022-08-01';
 
@@ -44,6 +46,19 @@ export default class StripeService {
       apiVersion: STRIPE_API_VERSION,
     });
     this.logger = getLogger('StripeController');
+  }
+
+  /**
+   * Topup should be at least 10 euros or the users negative balance.
+   * @param balance
+   * @param request
+   */
+  public static validateStripeRequestAmount(balance: BalanceResponse, request: StripeRequest): boolean {
+    const MIN_TOPUP = process.env.MIN_TOPUP || 1000;
+
+    // Check if top up is enough
+    if (request.amount.amount >= MIN_TOPUP) return true;
+    return request.amount.amount === -1 * balance.amount.amount;
   }
 
   private static asStripeDepositStatusResponse(status: StripeDepositStatus): StripeDepositStatusResponse {
