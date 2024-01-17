@@ -54,9 +54,11 @@ export default class StripeService {
    * @param request
    */
   public static validateStripeRequestAmount(balance: BalanceResponse, request: StripeRequest): boolean {
+    const MIN_TOPUP = process.env.MIN_TOPUP || 1000;
+
     // Check if top up is enough
-    if (request.amount.amount > (process.env.MIN_TOPUP || 1000)) return true;
-    return request.amount.amount === balance.amount.amount;
+    if (request.amount.amount >= MIN_TOPUP) return true;
+    return request.amount.amount === -1 * balance.amount.amount;
   }
 
   private static asStripeDepositStatusResponse(status: StripeDepositStatus): StripeDepositStatusResponse {
