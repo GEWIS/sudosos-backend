@@ -23,6 +23,8 @@ type NotificationType = 'Transaction';
 
 type NotificationMethod = 'Email';
 
+type NotificationRelation = 'all' | 'own' | 'organ';
+
 @Entity()
 export default class NotificationPreference extends BaseEntity {
   @ManyToOne(() => User, { nullable: false })

@@ -20,9 +20,10 @@ import Transaction from '../entity/transactions/transaction';
 import User from '../entity/user/user';
 import BalanceService from '../service/balance-service';
 import Mailer from '../mailer';
-import UserDebtNotification from '../mailer/templates/user-debt-notification';
+import UserDebtNotification from '../mailer/templates/notifications/user-debt-notification';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
 import { getLogger } from 'log4js';
+import NotificationPreference from '../entity/notifications/notification-preference';
 
 @EventSubscriber()
 export default class TransactionSubscriber implements EntitySubscriberInterface {
@@ -45,6 +46,19 @@ export default class TransactionSubscriber implements EntitySubscriberInterface 
     }
 
     await this.handleDebtor(event, entity);
+  }
+
+  async handleNotification(event: InsertEvent<Transaction>, entity: Transaction) {
+    const user = await event.manager.findOne(User, { where: { id: entity.from.id } });
+    const preference = await NotificationPreference.findOne({ where: { user: user.id, type: 'Transaction' } });
+
+    // No notifications
+    if (!preference) return;
+
+    switch (preference.method) {
+      case "Email":
+
+    }
   }
 
   /**

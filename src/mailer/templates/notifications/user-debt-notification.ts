@@ -16,9 +16,9 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { Dinero } from 'dinero.js';
-import MailContent from './mail-content';
-import { signatureDutch, signatureEnglish } from './signature';
-import MailTemplate, { Language, MailLanguageMap } from './mail-template';
+import MailContent from '../mail-content';
+import { signatureDutch, signatureEnglish } from '../signature';
+import MailTemplate, { Language, MailLanguageMap } from '../mail-template';
 
 interface UserDebtNotificationOptions {
   name: string;
