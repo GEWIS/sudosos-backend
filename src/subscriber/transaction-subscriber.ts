@@ -32,6 +32,8 @@ export default class TransactionSubscriber implements EntitySubscriberInterface 
 
   async afterInsert(event: InsertEvent<Transaction>): Promise<void> {
     if (process.env.NODE_ENV === 'test') return;
+
+    // Collect entity info
     let { entity } = event;
     if (entity.subTransactions == null
       || (entity.subTransactions.length > 0 && entity.subTransactions[0].subTransactionRows == null)
@@ -42,6 +44,13 @@ export default class TransactionSubscriber implements EntitySubscriberInterface 
       });
     }
 
+    await this.handleDebtor(event, entity);
+  }
+
+  /**
+   * Handles fines and e-mailing of (new) debtors.
+   */
+  async handleDebtor(event: InsertEvent<Transaction>, entity: Transaction) {
     const user = await event.manager.findOne(User, { where: { id: entity.from.id } });
     const balance = await BalanceService.getBalance(user.id);
 
