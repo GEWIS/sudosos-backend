@@ -258,21 +258,6 @@ export default async function createApp(): Promise<Application> {
 
   application.tasks = [syncBalances, syncEventShiftAnswers, sendEventPlanningReminders];
 
-  if (process.env.ENABLE_LDAP === 'true') {
-    await ADService.syncUsers();
-    await ADService.syncSharedAccounts().then(
-      () => ADService.syncUserRoles(application.roleManager),
-    );
-    const syncADGroups = cron.schedule('*/10 * * * *', async () => {
-      logger.debug('Syncing AD.');
-      await ADService.syncSharedAccounts().then(
-        () => ADService.syncUserRoles(application.roleManager),
-      );
-      logger.debug('Synced AD');
-    });
-    application.tasks.push(syncADGroups);
-  }
-
   // REMOVE LATER
   const options: BaseControllerOptions = {
     specification: application.specification,
