@@ -73,6 +73,9 @@ async function createCronTasks(): Promise<void> {
 
   application.tasks = [syncBalances];
 
+  // INJECT GEWIS BINDINGS
+  Gewis.overwriteBindings();
+
   if (process.env.ENABLE_LDAP === 'true') {
     await ADService.syncUsers();
     await ADService.syncSharedAccounts().then(
