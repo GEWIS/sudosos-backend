@@ -25,6 +25,8 @@ import User, { TermsOfServiceStatus, UserType } from '../entity/user/user';
 import { BaseUserResponse, UserResponse } from '../controller/response/user-response';
 import VatGroup from '../entity/vat-group';
 import { BaseVatGroupResponse } from '../controller/response/vat-group-response';
+import BaseFile from '../entity/file/base-file';
+import { SimpleFileResponse } from '../controller/response/simple-file-response';
 
 export function parseProductToBaseResponse(
   product: ProductRevision, timestamps: boolean,
@@ -153,5 +155,14 @@ export function parseRawUserToResponse(user: RawUser, timestamps = false): UserR
     extensiveDataProcessing: user.extensiveDataProcessing === 1,
     ofAge: user.ofAge === 1,
     canGoIntoDebt: user.canGoIntoDebt === 1,
+  };
+}
+
+export function parseFileToResponse<T extends BaseFile>(file: T): SimpleFileResponse {
+  return {
+    createdBy: parseUserToResponse(file.createdBy, false),
+    downloadName: file.downloadName,
+    id: file.id,
+    location: file.location,
   };
 }

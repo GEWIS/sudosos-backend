@@ -15,10 +15,14 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+import { Column, Entity } from 'typeorm';
+import BaseFile from './base-file';
 
-export const ROOT_FILE_LOCATION = './data';
-export const SIMPLE_FILE_LOCATION = './data/simple';
-export const PRODUCT_IMAGE_LOCATION = './data/products';
-export const BANNER_IMAGE_LOCATION = './data/banners';
-
-export const INVOICE_PDF_LOCATION = './data/invoices';
+/**
+ * @typedef {BaseFile} InvoicePdf
+ */
+@Entity()
+export default class InvoicePdf extends BaseFile {
+  @Column()
+  public hash: string;
+}

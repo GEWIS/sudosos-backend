@@ -24,6 +24,7 @@
   "author": "",
   "license": "AGPL-3.0-or-later",
   "dependencies": {
+    "@pdf/pdf-generator-client": "github:GEWIS/pdf-generator-client",
     "bcrypt": "^5.1.0",
     "body-parser": "^1.20.2",
     "date-fns": "^2.29.3",
