@@ -43,9 +43,33 @@ import InvoiceEntryRequest from '../controller/request/invoice-entry-request';
 import User from '../entity/user/user';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
 import SubTransactionRow from '../entity/transactions/sub-transaction-row';
-import { parseUserToBaseResponse } from '../helpers/revision-to-response';
-import { collectByToId, collectProductsByRevision, reduceMapToInvoiceEntries } from '../helpers/transaction-mapper';
+import {parseFileToResponse, parseUserToBaseResponse} from '../helpers/revision-to-response';
+import {collectByToId, collectProductsByRevision, reduceMapToInvoiceEntries,} from '../helpers/transaction-mapper';
 import SubTransaction from '../entity/transactions/sub-transaction';
+import FileService from './file-service';
+import {SimpleFileResponse} from '../controller/response/simple-file-response';
+import {
+  Client,
+  FileSettings,
+  IInvoiceRouteParams,
+  InvoiceParameters,
+  InvoiceRouteParams
+} from '@pdf/pdf-generator-client';
+import {
+  Address,
+  Company,
+  Dates,
+  Identity,
+  InvoiceReferences,
+  InvoiceType,
+  Product,
+  TotalPricing
+} from '@pdf/pdf-generator-client/PDF-generator-client';
+
+export interface PdfGenerator {
+  client: Client,
+  fileService: FileService
+}
 
 export interface InvoiceFilterParameters {
   /**
@@ -123,6 +147,7 @@ export default class InvoiceService {
       addressee: invoice.addressee,
       transfer: invoice.transfer ? TransferService.asTransferResponse(invoice.transfer) : undefined,
       description: invoice.description,
+      pdf: parseFileToResponse(invoice.pdf),
       currentState: InvoiceService.asInvoiceStatusResponse(
         invoice.invoiceStatus[invoice.invoiceStatus.length - 1],
       ),
@@ -506,6 +531,60 @@ export default class InvoiceService {
     )).records[0] as InvoiceResponse;
   }
 
+  public static async getOrCreatePDF(invoiceId: number, pdfGenerator: PdfGenerator): Promise<SimpleFileResponse> {
+    const { records } = (await this.getInvoices({ invoiceId, returnInvoiceEntries: true }));
+    if (records.length !== 0) return undefined;
+
+    const invoice = records[0] as InvoiceResponse;
+    if (invoice.pdf) return invoice.pdf;
+
+    return Promise.resolve(this.createInvoicePDF(invoiceId, pdfGenerator));
+  }
+
+  // todo fix
+  static getPdfParams(invoice: InvoiceResponse): InvoiceRouteParams {
+    const params: InvoiceParameters = {
+      reference: new InvoiceReferences({
+        ourReference: "BAC-TEST",
+        yourReference: string,
+      }),
+      products: Product[];
+      pricing: TotalPricing;
+      subject: string;
+      sender: Identity;
+      recipient: Identity;
+      dates: Dates;
+      company: Company;
+      address: Address;
+    };
+
+
+    const settings: FileSettings = new FileSettings({
+      createdAt: undefined,
+      fileType: undefined,
+      language: undefined,
+      name: "",
+      stationery: "BAC"
+    })
+
+    const data: IInvoiceRouteParams = {
+      params,
+      settings
+    };
+
+    return new InvoiceRouteParams(data);
+  }
+
+  public static async createInvoicePDF(invoiceId: number, pdfGenerator: PdfGenerator): Promise<SimpleFileResponse> {
+    const { records } = (await this.getInvoices({ invoiceId, returnInvoiceEntries: true }));
+    if (records.length !== 0) return undefined;
+
+    const invoice = records[0] as InvoiceResponse;
+
+    const res = await pdfGenerator.client.generateInvoice(InvoiceType.Invoice, this.getPdfParams(invoice));
+
+  }
+
   /**
    * Function that returns all the invoices based on the given params.
    * Returns either BaseInvoiceResponse, that is without InvoiceEntries, or InvoiceResponse
@@ -525,7 +604,7 @@ export default class InvoiceService {
       invoiceStatus: 'invoiceStatus.state'
     };
 
-    const relations: FindOptionsRelationByString = ['to', 'invoiceStatus', 'transfer', 'transfer.to', 'transfer.from'];
+    const relations: FindOptionsRelationByString = ['to', 'invoiceStatus', 'transfer', 'transfer.to', 'transfer.from', 'pdf'];
     const options: FindManyOptions<Invoice> = {
       where: QueryFilter.createFilterWhereClause(filterMapping, params),
       order: { createdAt: 'ASC' },

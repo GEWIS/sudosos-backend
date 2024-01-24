@@ -21,7 +21,11 @@ import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import { PaginatedInvoiceResponse } from './response/invoice-response';
-import InvoiceService, { InvoiceFilterParameters, parseInvoiceFilterParameters } from '../service/invoice-service';
+import InvoiceService, {
+  InvoiceFilterParameters,
+  parseInvoiceFilterParameters,
+  PdfGenerator,
+} from '../service/invoice-service';
 import { parseRequestPagination } from '../helpers/pagination';
 import {
   CreateInvoiceParams,
@@ -33,9 +37,14 @@ import verifyCreateInvoiceRequest, { verifyUpdateInvoiceRequest } from './reques
 import { isFail } from '../helpers/specification-validation';
 import { asBoolean, asInvoiceState } from '../helpers/validators';
 import Invoice from '../entity/invoices/invoice';
+import FileService from '../service/file-service';
+import { INVOICE_PDF_LOCATION } from '../files/storage';
+import { Client } from '@pdf/pdf-generator-client';
 
 export default class InvoiceController extends BaseController {
   private logger: Logger = log4js.getLogger('InvoiceController');
+
+  private pdfGenerator: PdfGenerator;
 
   /**
     * Creates a new Invoice controller instance.
@@ -44,6 +53,10 @@ export default class InvoiceController extends BaseController {
   public constructor(options: BaseControllerOptions) {
     super(options);
     this.logger.level = process.env.LOG_LEVEL;
+    this.pdfGenerator = {
+      client: new Client(process.env.PDF_API),
+      fileService: new FileService(INVOICE_PDF_LOCATION),
+    };
   }
 
   /**
@@ -75,6 +88,12 @@ export default class InvoiceController extends BaseController {
         DELETE: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'delete', 'all', 'Invoice', ['*']),
           handler: this.deleteInvoice.bind(this),
+        },
+      },
+      '/:id(\\d+)/pdf': {
+        GET: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', await InvoiceController.getRelation(req), 'Invoice', ['*']),
+          handler: this.getInvoicePDF.bind(this),
         },
       },
     };
@@ -250,7 +269,7 @@ export default class InvoiceController extends BaseController {
    * @security JWT
    * @param {integer} id.path.required - The id of the invoice which should be deleted
    * @return {string} 404 - Invoice not found
-   * @return {BaseInvoiceResponse} 200 - The deleted invoice.
+   * @return 204 - Deletion success
    * @return {string} 500 - Internal server error
    */
   // TODO Deleting of invoices that are not of state CREATED?
@@ -266,6 +285,36 @@ export default class InvoiceController extends BaseController {
         return;
       }
       res.status(204).send();
+    } catch (error) {
+      this.logger.error('Could not delete invoice:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * GET /invoices/{id}/pdf
+   * @summary Get an invoice pdf.
+   * @operationId getInvoicePdf
+   * @tags invoices - Operations of the invoices controller
+   * @security JWT
+   * @param {integer} id.path.required - The id of the invoice to return
+   * @return {string} 404 - Invoice not found
+   * @return {SimpleFileResponse} 200 - The invoice pdf information.
+   * @return {string} 500 - Internal server error
+   */
+  public async getInvoicePDF(req: RequestWithToken, res: Response): Promise<void> {
+    const { id } = req.params;
+    const invoiceId = parseInt(id, 10);
+    this.logger.trace('Get Invoice PDF', id, 'by user', req.token.user);
+
+    try {
+      const invoice = await InvoiceService.getInvoicePDF(invoiceId);
+      if (!invoice) {
+        res.status(404).json('Invoice not found.');
+        return;
+      }
+
+      res.status(200).json(invoice);
     } catch (error) {
       this.logger.error('Could not delete invoice:', error);
       res.status(500).json('Internal server error.');
