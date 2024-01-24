@@ -19,11 +19,9 @@ import { Column, Entity, ManyToOne } from 'typeorm';
 import BaseEntity from '../base-entity';
 import User from '../user/user';
 
-type NotificationType = 'Transaction';
+type NotificationType = 'Transaction.all' | 'Transaction.other';
 
 type NotificationMethod = 'Email';
-
-type NotificationRelation = 'all' | 'own' | 'organ';
 
 @Entity()
 export default class NotificationPreference extends BaseEntity {
