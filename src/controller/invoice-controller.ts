@@ -39,7 +39,57 @@ import { asBoolean, asInvoiceState } from '../helpers/validators';
 import Invoice from '../entity/invoices/invoice';
 import FileService from '../service/file-service';
 import { INVOICE_PDF_LOCATION } from '../files/storage';
-import { Client } from '@pdf/pdf-generator-client';
+// @ts-ignore
+import { Client } from 'pdf-generator-client';
+import fs from 'fs';
+
+// const loggingFetch = async (url: any, options: any) => {
+//   try {
+//     const response = await fetch(url, options);
+//
+//     // Clone the response for logging
+//     const clonedResponse = response.clone();
+//
+//     // Log the response headers for the PDF
+//     console.error(`Received response from ${url}`);
+//     for (let [key, value] of clonedResponse.headers.entries()) {
+//       console.error(`${key}: ${value}`);
+//     }
+//
+//
+//     // console.error(clonedResponse);
+//     // // Check if the response is a PDF
+//     // if (response.headers.get('content-type') === 'application/pdf') {
+//     //   // Extract the filename from the Content-Disposition header
+//     //   const contentDisposition = response.headers.get('content-disposition');
+//     //   let filename;
+//     //
+//     //   if (contentDisposition) {
+//     //     const matches = contentDisposition.match(/filename=".+\/tmp\/([^"]+)"/);
+//     //     filename = matches && matches[1];
+//     //   }
+//     //
+//     //   // If filename is set, construct the new URL and make another call
+//     //   if (filename) {
+//     //     const fileUrl = `http://localhost:3001/${filename}`;
+//     //     console.error(fileUrl);
+//     //     // const fileResponse = await fetch(fileUrl);
+//         const blob = await fileResponse.blob();
+//         const buffer = Buffer.from(await blob.arrayBuffer());
+//     //     //
+//     //     // // Write the file
+//         fs.writeFileSync('./data/invoices/test2.pdf', buffer);
+//         // console.log('PDF saved');
+//     //   }
+//     // }
+//
+//     return response;
+//   } catch (error) {
+//     console.error('Fetch error:', error);
+//     throw error;
+//   }
+// };
+
 
 export default class InvoiceController extends BaseController {
   private logger: Logger = log4js.getLogger('InvoiceController');
@@ -54,7 +104,7 @@ export default class InvoiceController extends BaseController {
     super(options);
     this.logger.level = process.env.LOG_LEVEL;
     this.pdfGenerator = {
-      client: new Client(process.env.PDF_API),
+      client: new Client('http://localhost:3001/pdf', { fetch }),
       fileService: new FileService(INVOICE_PDF_LOCATION),
     };
   }
@@ -308,7 +358,7 @@ export default class InvoiceController extends BaseController {
     this.logger.trace('Get Invoice PDF', id, 'by user', req.token.user);
 
     try {
-      const invoice = await InvoiceService.getInvoicePDF(invoiceId);
+      const invoice = await InvoiceService.getOrCreatePDF(invoiceId, this.pdfGenerator);
       if (!invoice) {
         res.status(404).json('Invoice not found.');
         return;
@@ -316,7 +366,7 @@ export default class InvoiceController extends BaseController {
 
       res.status(200).json(invoice);
     } catch (error) {
-      this.logger.error('Could not delete invoice:', error);
+      this.logger.error('Could get invoice PDF:', error);
       res.status(500).json('Internal server error.');
     }
   }
@@ -330,6 +380,7 @@ export default class InvoiceController extends BaseController {
    */
   static async getRelation(req: RequestWithToken): Promise<string> {
     const invoice: Invoice = await Invoice.findOne({ where: { id: parseInt(req.params.id, 10) }, relations: ['to'] });
+    console.error(invoice);
     if (invoice.to.id === req.token.user.id) return 'own';
     return 'all';
   }

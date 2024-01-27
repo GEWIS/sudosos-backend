@@ -67,6 +67,7 @@ import Event from '../entity/event/event';
 import EventShiftAnswer from '../entity/event/event-shift-answer';
 import EventShift from '../entity/event/event-shift';
 import { TransactionSubscriber, TransferSubscriber } from '../subscriber';
+import InvoicePdf from '../entity/file/invoice-pdf';
 
 export default class Database {
   public static async initialize(): Promise<Connection> {
@@ -125,6 +126,7 @@ export default class Database {
         InvoiceEntry,
         Invoice,
         InvoiceStatus,
+        InvoicePdf,
         BaseFile,
         ProductImage,
         BannerImage,

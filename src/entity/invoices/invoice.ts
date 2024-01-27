@@ -26,7 +26,7 @@ import Transfer from '../transactions/transfer';
 import InvoiceEntry from './invoice-entry';
 // eslint-disable-next-line import/no-cycle
 import InvoiceStatus from './invoice-status';
-import InvoicePdf from "../file/invoice-pdf";
+import InvoicePdf from '../file/invoice-pdf';
 
 /**
  * @typedef {BaseEntity} Invoice
@@ -68,9 +68,27 @@ export default class Invoice extends BaseEntity {
   @Column()
   public description: string;
 
+  // TODO Database changes:
+
   // onDelete: 'CASCADE' is not possible here, because removing the
   // pdf from the database will not remove it form storage
   @OneToOne(() => InvoicePdf, { nullable: true, onDelete: 'RESTRICT' })
   @JoinColumn()
   public pdf?: InvoicePdf;
+
+  @Column()
+  public reference: string;
+
+  @Column()
+  public street: string;
+
+  @Column()
+  public postalCode:string;
+
+  @Column()
+  public city: string;
+
+  @Column()
+  public country: string;
+
 }

@@ -40,4 +40,16 @@ export default class InvoiceUser extends BaseEntityWithoutId {
     default: false,
   })
   public automatic: boolean;
+
+  @Column()
+  public street: string;
+
+  @Column()
+  public postalCode:string;
+
+  @Column()
+  public city: string;
+
+  @Column()
+  public country: string;
 }

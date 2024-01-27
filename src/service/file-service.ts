@@ -26,6 +26,8 @@ import Product from '../entity/product/product';
 import ProductImage from '../entity/file/product-image';
 import Banner from '../entity/banner';
 import BannerImage from '../entity/file/banner-image';
+import Invoice from "../entity/invoices/invoice";
+import InvoicePdf from "../entity/file/invoice-pdf";
 
 /**
  *  Possible storage methods that can be used
@@ -134,6 +136,33 @@ export default class FileService {
 
     await this.removeFile(file);
     await BaseFile.delete(file.id);
+  }
+
+  public async uploadInvoicePdf(entity: Invoice, fileData: Buffer, createdBy: User, hash: string): Promise<InvoicePdf> {
+    let pdf = entity.pdf;
+    // TODO FIX
+    if (pdf == null) {
+      pdf = Object.assign(new InvoicePdf(), {
+        downloadName: 'test',
+        createdBy,
+        location: '',
+        hash,
+      });
+      await InvoicePdf.save(pdf);
+    } else {
+      // If the file does exist, we first have to remove it from storage
+      await this.removeFile(pdf);
+    }
+
+    await this.createFile(pdf, fileData);
+
+    pdf.hash = hash;
+    await InvoicePdf.save(pdf);
+    // eslint-disable-next-line no-param-reassign
+    entity.pdf = pdf;
+
+    await entity.save();
+    return entity.pdf;
   }
 
   /**
