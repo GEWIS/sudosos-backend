@@ -17,7 +17,8 @@
  */
 import BaseResponse from './base-response';
 import { PaginationResult } from '../../helpers/pagination';
-import { TermsOfServiceStatus } from '../../entity/user/user';
+import User, { TermsOfServiceStatus } from '../../entity/user/user';
+import {Column} from "typeorm";
 
 /**
  * @typedef {allOf|BaseResponse} BaseUserResponse
@@ -52,6 +53,25 @@ export interface UserResponse extends BaseUserResponse {
   extensiveDataProcessing?: boolean;
   ofAge?: boolean;
   canGoIntoDebt: boolean;
+}
+
+
+/**
+ * @typedef {object} InvoiceUserResponse
+ * @property {BaseUserResponse} user.required - User linked to the defaults.
+ * @property {string} street.required - Default street to use for invoices.
+ * @property {string} postalCode.required - Default postal code to use for invoices.
+ * @property {string} city.required - Default city to use for invoices.
+ * @property {string} country.required - Default country to use for invoices.
+ * @property {boolean} automatic.required - Whether invoices should be automatically generated
+ */
+export interface InvoiceUserResponse {
+  user: BaseUserResponse,
+  street: string;
+  postalCode:string;
+  city: string;
+  country: string;
+  automatic: boolean,
 }
 
 /**

@@ -27,7 +27,6 @@ import {
 } from '../controller/response/invoice-response';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import Invoice from '../entity/invoices/invoice';
-import crypto from 'crypto';
 import InvoiceEntry from '../entity/invoices/invoice-entry';
 import { CreateInvoiceParams, UpdateInvoiceParams } from '../controller/request/invoice-request';
 import Transaction from '../entity/transactions/transaction';
@@ -41,40 +40,13 @@ import { RequestWithToken } from '../middleware/token-middleware';
 import { asBoolean, asDate, asInvoiceState, asNumber } from '../helpers/validators';
 import { PaginationParameters } from '../helpers/pagination';
 import InvoiceEntryRequest from '../controller/request/invoice-entry-request';
-import User from '../entity/user/user';
+import User, { UserType } from '../entity/user/user';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
 import SubTransactionRow from '../entity/transactions/sub-transaction-row';
 import { parseFileToResponse, parseUserToBaseResponse } from '../helpers/revision-to-response';
 import { collectByToId, collectProductsByRevision, reduceMapToInvoiceEntries } from '../helpers/transaction-mapper';
 import SubTransaction from '../entity/transactions/sub-transaction';
-import FileService from './file-service';
-import { SimpleFileResponse } from '../controller/response/simple-file-response';
-import {
-  Address,
-  Client,
-  Company,
-  Dates,
-  FileResponse,
-  FileSettings,
-  Identity,
-  IInvoiceRouteParams,
-  InvoiceParameters,
-  InvoiceReferences,
-  InvoiceRouteParams,
-  InvoiceType,
-  Language,
-  Product,
-  ProductPricing,
-  ReturnFileType,
-  TotalPricing,
-  VAT,
-} from 'pdf-generator-client';
-import InvoicePdf from '../entity/file/invoice-pdf';
-
-export interface PdfGenerator {
-  client: Client,
-  fileService: FileService
-}
+import InvoiceUser, { InvoiceUserDefaults } from '../entity/user/invoice-user';
 
 export interface InvoiceFilterParameters {
   /**
@@ -103,6 +75,7 @@ export interface InvoiceFilterParameters {
   tillDate?: Date
 }
 
+
 export function parseInvoiceFilterParameters(req: RequestWithToken): InvoiceFilterParameters {
   return {
     toId: asNumber(req.query.toId),
@@ -112,16 +85,6 @@ export function parseInvoiceFilterParameters(req: RequestWithToken): InvoiceFilt
     fromDate: asDate(req.query.fromDate),
     tillDate: asDate(req.query.tillDate),
   };
-}
-
-function hashJSON(jsonObject: object) {
-  // Convert the JSON object to a string
-  const jsonString = JSON.stringify(jsonObject);
-
-  // Create a SHA-256 hash of the string
-  const hash = crypto.createHash('sha256').update(jsonString).digest('hex');
-
-  return hash;
 }
 
 export default class InvoiceService {
@@ -166,7 +129,11 @@ export default class InvoiceService {
       currentState: InvoiceService.asInvoiceStatusResponse(
         invoice.invoiceStatus[invoice.invoiceStatus.length - 1],
       ),
-    } as BaseInvoiceResponse;
+      city: invoice.city,
+      country: invoice.country,
+      postalCode: invoice.postalCode,
+      street: invoice.street,
+    };
   }
 
   /**
@@ -414,8 +381,13 @@ export default class InvoiceService {
       });
     }
 
-    base.description = update.description;
-    base.addressee = update.addressee;
+    if (update.description) base.description = update.description;
+    if (update.addressee) base.addressee = update.addressee;
+    if (update.street) base.addressee = update.street;
+    if (update.postalCode) base.postalCode = update.postalCode;
+    if (update.city) base.postalCode = update.city;
+    if (update.country) base.postalCode = update.country;
+    if (update.reference) base.reference = update.reference;
 
     await base.save();
     // Return the newly updated Invoice.
@@ -469,11 +441,28 @@ export default class InvoiceService {
     return validInvoices[validInvoices.length - 1];
   }
 
+  public static async getDefaultInvoiceParams(userId: number): Promise<InvoiceUserDefaults> {
+    const user = await User.findOne({ where: { id: userId } });
+
+    // Only load defaults for invoice users.
+    if (!user || user.type !== UserType.INVOICE) return undefined;
+
+    const invoiceUser = await InvoiceUser.findOne({ where: { userId }, relations: ['user'] });
+    if (!invoiceUser) return undefined;
+
+    const { city, country, postalCode, street } = invoiceUser;
+    return {
+      city,
+      country,
+      postalCode,
+      street,
+    };
+  }
+
   /**
    * Creates an Invoice from an CreateInvoiceRequest
    * @param invoiceRequest - The Invoice request to create
    */
-  // TODO FIX
   public static async createInvoice(invoiceRequest: CreateInvoiceParams)
     : Promise<InvoiceResponse> {
     const { forId, byId, isCreditInvoice } = invoiceRequest;
@@ -507,6 +496,7 @@ export default class InvoiceService {
     const transactions = (await TransactionService.getTransactions(params, {})).records;
     const transfer = await this.createTransferFromTransactions(forId, transactions, isCreditInvoice);
 
+
     // Create a new Invoice
     const newInvoice: Invoice = Object.assign(new Invoice(), {
       toId: forId,
@@ -515,6 +505,11 @@ export default class InvoiceService {
       invoiceStatus: [],
       invoiceEntries: [],
       description: invoiceRequest.description,
+      street: invoiceRequest.street,
+      postalCode:invoiceRequest.postalCode,
+      city: invoiceRequest.city,
+      country: invoiceRequest.country,
+      reference: invoiceRequest.reference,
     });
 
     // Create a new InvoiceStatus
@@ -547,105 +542,6 @@ export default class InvoiceService {
     )).records[0] as InvoiceResponse;
   }
 
-
-  static validatePdfHash(invoice: Invoice): boolean {
-    if (!invoice.pdf) return false;
-    const hash = hashJSON(this.getInvoiceParameters(invoice));
-    console.error('comparing hash: ', hash, ' to ', invoice.pdf.hash, ' result is ', hash === invoice.pdf.hash);
-    return hash === invoice.pdf.hash;
-  }
-
-  public static async getOrCreatePDF(invoiceId: number, pdfGenerator: PdfGenerator): Promise<SimpleFileResponse> {
-    const invoice = await Invoice.findOne({ where: { id: invoiceId }, relations: ['to', 'invoiceStatus', 'transfer', 'transfer.to', 'transfer.from', 'pdf', 'invoiceEntries'] });
-    if (!invoice) return undefined;
-
-
-    if (invoice.pdf) {
-      // check if invoice is current.
-      // if (this.validatePdfHash(invoice)) return parseFileToResponse(invoice.pdf);
-    }
-
-    const pdf = await this.createInvoicePDF(invoiceId, pdfGenerator);
-    return parseFileToResponse(pdf);
-  }
-
-
-  static getInvoiceParameters(invoice: Invoice): InvoiceParameters {
-    const UNUSED_PARAM = '';
-    return new InvoiceParameters({
-      reference: new InvoiceReferences({
-        ourReference: invoice.reference,
-        yourReference: String(invoice.id),
-        costCenter: true,
-      }),
-      products: [new Product({
-        name: 'productname',
-        summary: 'product summary',
-        pricing: new ProductPricing({
-          basePrice: 100,
-          vatAmount: 13,
-          vatCategory: VAT.LOW,
-          quantity: 1,
-        }),
-      })],
-      pricing: new TotalPricing({
-        exclVat:0,
-        lowVat: 0,
-        highVat:0,
-        inclVat:0,
-      }),
-      subject: UNUSED_PARAM,
-      sender: new Identity({ firstName: UNUSED_PARAM, fullName: UNUSED_PARAM, lastName: UNUSED_PARAM, lastNamePreposition: UNUSED_PARAM }),
-      recipient: new Identity({ firstName: UNUSED_PARAM, lastName: UNUSED_PARAM, lastNamePreposition: UNUSED_PARAM, fullName: UNUSED_PARAM }),
-      dates: new Dates({
-        date: invoice.createdAt,
-      }),
-      company: new Company({
-        name: `${invoice.to.firstName} ${invoice.to.lastName}`,
-      }),
-      address: new Address({
-        street: invoice.street,
-        postalCode: invoice.postalCode,
-        city: invoice.city,
-        country: invoice.country,
-      }),
-    });
-  }
-
-  // todo fix
-  static getPdfParams(invoice: Invoice): InvoiceRouteParams {
-    const params = this.getInvoiceParameters(invoice);
-    const settings: FileSettings = new FileSettings({
-      createdAt: new Date(),
-      fileType: ReturnFileType.PDF,
-      language: Language.ENGLISH,
-      name: '',
-      stationery: 'BAC',
-    });
-
-    const data: IInvoiceRouteParams = {
-      params,
-      settings,
-    };
-    console.error(JSON.stringify(params, null, 4));
-    return new InvoiceRouteParams(data);
-  }
-
-  public static async createInvoicePDF(invoiceId: number, pdfGenerator: PdfGenerator): Promise<InvoicePdf> {
-    const invoice = await Invoice.findOne({ where: { id: invoiceId }, relations: ['to', 'invoiceStatus', 'transfer', 'transfer.to', 'transfer.from', 'pdf', 'invoiceEntries'] });
-    if (!invoice) return undefined;
-
-    const params = this.getPdfParams(invoice);
-    return pdfGenerator.client.generateInvoice(InvoiceType.Invoice, params).then(async (res: FileResponse) => {
-
-      const blob = res.data;
-      const buffer = Buffer.from(await blob.arrayBuffer());
-      return pdfGenerator.fileService.uploadInvoicePdf(invoice, buffer, invoice.to, hashJSON(this.getInvoiceParameters(invoice)));
-    }).catch((res: FileResponse) => {
-      console.error('ERROR IS', res);
-      return undefined;
-    });
-  }
 
   /**
    * Function that returns all the invoices based on the given params.
