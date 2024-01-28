@@ -22,11 +22,12 @@ import ContainerRevision from '../entity/container/container-revision';
 import { BasePointOfSaleResponse } from '../controller/response/point-of-sale-response';
 import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision';
 import User, { TermsOfServiceStatus, UserType } from '../entity/user/user';
-import { BaseUserResponse, UserResponse } from '../controller/response/user-response';
+import { BaseUserResponse, InvoiceUserResponse, UserResponse } from '../controller/response/user-response';
 import VatGroup from '../entity/vat-group';
 import { BaseVatGroupResponse } from '../controller/response/vat-group-response';
 import BaseFile from '../entity/file/base-file';
 import { SimpleFileResponse } from '../controller/response/simple-file-response';
+import InvoiceUser from '../entity/user/invoice-user';
 
 export function parseProductToBaseResponse(
   product: ProductRevision, timestamps: boolean,
@@ -164,5 +165,16 @@ export function parseFileToResponse<T extends BaseFile>(file: T): SimpleFileResp
     downloadName: file.downloadName,
     id: file.id,
     location: file.location,
+  };
+}
+
+export function parseInvoiceUserToResponse(invoiceUser: InvoiceUser): InvoiceUserResponse {
+  return {
+    automatic: invoiceUser.automatic,
+    city: invoiceUser.city,
+    country: invoiceUser.country,
+    postalCode: invoiceUser.postalCode,
+    street: invoiceUser.street,
+    user: parseUserToBaseResponse(invoiceUser.user, false),
   };
 }

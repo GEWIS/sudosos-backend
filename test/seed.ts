@@ -61,6 +61,7 @@ import { calculateBalance } from './helpers/balance';
 import GewisUser from '../src/gewis/entity/gewis-user';
 import AssignedRole from '../src/entity/roles/assigned-role';
 import MemberAuthenticator from '../src/entity/authenticator/member-authenticator';
+import { Column } from 'typeorm';
 
 function getDate(startDate: Date, endDate: Date, i: number): Date {
   const diff = endDate.getTime() - startDate.getTime();
@@ -79,6 +80,10 @@ export function defineInvoiceUsers(users: User[]): InvoiceUser[] {
     invoiceUsers.push(Object.assign(new InvoiceUser(), {
       user: users[nr],
       automatic: nr % 2 > 0,
+      street: `street ${nr}`,
+      postalCode:`postalCode ${nr}`,
+      city: `city ${nr}`,
+      country: `country ${nr}`,
     }));
   }
   return invoiceUsers;
@@ -590,7 +595,8 @@ export async function seedProducts(
     let rev: ProductRevision[] = [];
     for (let o = 0; o < prod.length; o += 1) {
       const category = categories[o % categories.length];
-      const vatGroup = vatGroups[o % vatGroups.length];
+      const fVatGroups = vatGroups.filter((group) => !group.deleted);
+      const vatGroup = fVatGroups[o % fVatGroups.length];
       prod[o].currentRevision = (prod[o].id % 3) + 1;
       rev = rev.concat(defineProductRevisions(
         prod[o].currentRevision,

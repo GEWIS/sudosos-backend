@@ -58,3 +58,20 @@ export interface UpdateUserRequest extends Partial<BaseUserRequest> {
   deleted?: boolean;
   extensiveDataProcessing?: boolean
 }
+
+
+/**
+ * @typedef {object} UpdateInvoiceUserRequest
+ * @property {string} street.required - Default street to use for invoices.
+ * @property {string} postalCode.required - Default postal code to use for invoices.
+ * @property {string} city.required - Default city to use for invoices.
+ * @property {string} country.required - Default country to use for invoices.
+ * @property {boolean} automatic.required - Whether invoices should be automatically generated
+ */
+export interface UpdateInvoiceUserRequest {
+  street: string;
+  postalCode:string;
+  city: string;
+  country: string;
+  automatic: boolean,
+}
