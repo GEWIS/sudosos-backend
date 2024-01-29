@@ -61,7 +61,6 @@ import { calculateBalance } from './helpers/balance';
 import GewisUser from '../src/gewis/entity/gewis-user';
 import AssignedRole from '../src/entity/roles/assigned-role';
 import MemberAuthenticator from '../src/entity/authenticator/member-authenticator';
-import { Column } from 'typeorm';
 
 function getDate(startDate: Date, endDate: Date, i: number): Date {
   const diff = endDate.getTime() - startDate.getTime();
@@ -279,6 +278,11 @@ export async function seedInvoices(users: User[], transactions: Transaction[]): 
       id: i + 1,
       to,
       addressee: `Addressed to ${to.firstName}`,
+      reference: `BAC-${i}`,
+      city: `city-${i}`,
+      country: `country-${i}`,
+      postalCode: `postalCode-${i}`,
+      street: `street-${i}`,
       description: `Invoice #${i}`,
       transfer,
       invoiceEntries,
