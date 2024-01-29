@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { Connection, In } from 'typeorm';
+import { Connection, In, Not } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
@@ -25,9 +25,12 @@ import InvoiceController from '../../../src/controller/invoice-controller';
 import Database from '../../../src/database/database';
 import {
   seedContainers,
-  seedInvoices, seedPointsOfSale,
-  seedProductCategories, seedProducts,
-  seedTransactions, seedVatGroups,
+  seedInvoices,
+  seedPointsOfSale,
+  seedProductCategories,
+  seedProducts,
+  seedTransactions, seedUsers,
+  seedVatGroups,
 } from '../../seed';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Swagger from '../../../src/start/swagger';
@@ -43,8 +46,11 @@ import {
 } from '../../../src/controller/request/invoice-request';
 import Transaction from '../../../src/entity/transactions/transaction';
 import {
-  INVALID_DATE, INVALID_TRANSACTION_OWNER,
-  INVALID_USER_ID, SAME_INVOICE_STATE, SUBTRANSACTION_ALREADY_INVOICED,
+  INVALID_DATE,
+  INVALID_TRANSACTION_OWNER,
+  INVALID_USER_ID,
+  SAME_INVOICE_STATE,
+  SUBTRANSACTION_ALREADY_INVOICED,
   ZERO_LENGTH_STRING,
 } from '../../../src/controller/request/validators/validation-errors';
 import InvoiceEntryRequest from '../../../src/controller/request/invoice-entry-request';
@@ -54,6 +60,7 @@ import { createTransactionRequest, requestToTransaction } from '../service/invoi
 import BalanceService from '../../../src/service/balance-service';
 import { InvoiceState } from '../../../src/entity/invoices/invoice-status';
 import InvoiceService from '../../../src/service/invoice-service';
+import InvoiceUser from '../../../src/entity/user/invoice-user';
 
 describe('InvoiceController', async () => {
   let ctx: {
@@ -67,14 +74,16 @@ describe('InvoiceController', async () => {
     invoiceToken: string,
     validInvoiceRequest: CreateInvoiceRequest,
     token: string,
+    invoiceUser: User,
   };
 
   before(async () => {
     const connection = await Database.initialize();
 
+    await seedUsers();
+
     // create dummy users
     const adminUser = {
-      id: 1,
       firstName: 'Admin',
       type: UserType.LOCAL_ADMIN,
       active: true,
@@ -82,15 +91,13 @@ describe('InvoiceController', async () => {
     } as User;
 
     const localUser = {
-      id: 2,
       firstName: 'User',
       type: UserType.MEMBER,
       active: true,
       acceptedToS: TermsOfServiceStatus.ACCEPTED,
     } as User;
 
-    const invoiceUser = {
-      id: 2,
+    let invoiceUser = {
       firstName: 'User',
       type: UserType.INVOICE,
       active: true,
@@ -108,7 +115,7 @@ describe('InvoiceController', async () => {
     const { pointOfSaleRevisions } = await seedPointsOfSale(
       [adminUser, localUser], containerRevisions,
     );
-    const { transactions } = await seedTransactions([adminUser, localUser], pointOfSaleRevisions);
+    const { transactions } = await seedTransactions([adminUser, localUser, invoiceUser], pointOfSaleRevisions);
     await seedInvoices([invoiceUser], transactions);
 
     // create bearer tokens
@@ -179,6 +186,7 @@ describe('InvoiceController', async () => {
       invoiceToken,
       adminToken,
       token,
+      invoiceUser,
     };
   });
 
@@ -605,5 +613,73 @@ describe('InvoiceController', async () => {
 
       expect(res.status).to.equal(403);
     });
+  });
+
+  describe('/invoices/users/{id}', () => {
+    describe('GET /invoices/users/{id}', () => {
+      it('should return an HTTP 403 if not admin', async () => {
+        const invoiceUser = await InvoiceUser.findOne({ where: { user: { deleted: false, type: UserType.INVOICE } }, relations: ['user'] });
+        expect(invoiceUser).to.not.be.null;
+
+        const res = await request(ctx.app)
+          .get(`/invoices/users/${invoiceUser.userId}`)
+          .set('Authorization', `Bearer ${ctx.token}`);
+
+        expect(res.status).to.equal(403);
+        expect(res.body).to.be.empty;
+      });
+      it('should return an HTTP 200 and the InvoiceUser if admin', async () => {
+        const invoiceUser = await InvoiceUser.findOne({ where: { user: { deleted: false, type: UserType.INVOICE } }, relations: ['user'] });
+        expect(invoiceUser).to.not.be.null;
+
+        const res = await request(ctx.app)
+          .get(`/invoices/users/${invoiceUser.userId}`)
+          .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+        expect(res.status).to.equal(200);
+        const validation = ctx.specification.validateModel(
+          'InvoiceUserResponse',
+          res.body,
+          false,
+          true,
+        );
+        expect(validation.valid).to.be.true;
+      });
+      it('should return an HTTP 404 if user is not found', async () => {
+        const count = await User.count();
+        const user = await User.findOne({ where: { id: count + 1 } });
+        expect(user).to.be.null;
+
+        const res = await request(ctx.app)
+          .get(`/invoices/users/${count + 1}`)
+          .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+        expect(res.status).to.equal(404);
+        expect(res.body).to.equal('User not found.');
+      });
+      it('should return an HTTP 404 if user has no matched InvoiceUser', async () => {
+        const invoiceUser = await InvoiceUser.findOne({ where: { userId: ctx.invoiceUser.id } });
+        expect(invoiceUser).to.be.null;
+
+        const res = await request(ctx.app)
+          .get(`/invoices/users/${ctx.invoiceUser.id}`)
+          .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+        expect(res.status).to.equal(404);
+        expect(res.body).to.equal('Invoice User not found.');
+      });
+      it('should return an HTTP 400 if user is not of type INVOICE', async () => {
+        const user = await User.findOne({ where: { type: Not(UserType.INVOICE) } });
+        expect(user).to.not.be.null;
+
+        const res = await request(ctx.app)
+          .get(`/invoices/users/${user.id}`)
+          .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+        expect(res.status).to.equal(400);
+        expect(res.body).to.equal(`User is of type ${UserType[user.type]} and not of type INVOICE.`);
+      });
+    });
+
   });
 });
