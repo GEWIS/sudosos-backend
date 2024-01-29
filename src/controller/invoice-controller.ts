@@ -233,7 +233,7 @@ export default class InvoiceController extends BaseController {
       }
 
       res.json(await InvoiceService.createInvoice(params));
-      
+
     } catch (error) {
       this.logger.error('Could not create invoice:', error);
       res.status(500).json('Internal server error.');
@@ -470,7 +470,7 @@ export default class InvoiceController extends BaseController {
    */
   static async getRelation(req: RequestWithToken): Promise<string> {
     const invoice: Invoice = await Invoice.findOne({ where: { id: parseInt(req.params.id, 10) }, relations: ['to'] });
-    console.error(invoice);
+    if (!invoice) return 'all';
     if (invoice.to.id === req.token.user.id) return 'own';
     return 'all';
   }
