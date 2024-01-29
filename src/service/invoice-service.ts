@@ -75,7 +75,6 @@ export interface InvoiceFilterParameters {
   tillDate?: Date
 }
 
-
 export function parseInvoiceFilterParameters(req: RequestWithToken): InvoiceFilterParameters {
   return {
     toId: asNumber(req.query.toId),
@@ -450,12 +449,15 @@ export default class InvoiceService {
     const invoiceUser = await InvoiceUser.findOne({ where: { userId }, relations: ['user'] });
     if (!invoiceUser) return undefined;
 
+    const addressee = `${user.firstName} ${user.lastName}`;
+
     const { city, country, postalCode, street } = invoiceUser;
     return {
       city,
       country,
       postalCode,
       street,
+      addressee,
     };
   }
 

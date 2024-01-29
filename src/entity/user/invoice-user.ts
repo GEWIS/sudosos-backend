@@ -24,10 +24,11 @@ import BaseEntityWithoutId from '../base-entity-without-id';
 
 
 export interface InvoiceUserDefaults {
-  street: string;
-  postalCode:string;
-  city: string;
-  country: string;
+  street: string,
+  postalCode: string,
+  city: string,
+  country: string,
+  addressee: string,
 }
 
 @Entity()

@@ -66,6 +66,7 @@ export interface UpdateUserRequest extends Partial<BaseUserRequest> {
  * @property {string} postalCode.required - Default postal code to use for invoices.
  * @property {string} city.required - Default city to use for invoices.
  * @property {string} country.required - Default country to use for invoices.
+ * @property {string} addressee - Default addressee to use for invoices.
  * @property {boolean} automatic.required - Whether invoices should be automatically generated
  */
 export interface UpdateInvoiceUserRequest {
@@ -73,5 +74,6 @@ export interface UpdateInvoiceUserRequest {
   postalCode:string;
   city: string;
   country: string;
+  addressee?: string;
   automatic: boolean,
 }
