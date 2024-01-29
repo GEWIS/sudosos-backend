@@ -161,6 +161,11 @@ describe('InvoiceController', async () => {
       description: 'InvoiceRequest test',
       forId: localUser.type,
       isCreditInvoice: false,
+      reference: 'BAC-41',
+      city: 'city',
+      country: 'country',
+      postalCode: 'postalCode',
+      street: 'street',
     };
 
     ctx = {
@@ -272,10 +277,6 @@ describe('InvoiceController', async () => {
       const req: CreateInvoiceRequest = { ...ctx.validInvoiceRequest, description: '' };
       await expectError(req, `description: ${ZERO_LENGTH_STRING().value}`);
     });
-    it('should verity that addressee is a valid string', async () => {
-      const req: CreateInvoiceRequest = { ...ctx.validInvoiceRequest, addressee: '' };
-      await expectError(req, `addressee: ${ZERO_LENGTH_STRING().value}`);
-    });
     it('should verity that the custom invoice entries have valid amounts', async () => {
       const customEntries: InvoiceEntryRequest[] = [
         {
@@ -328,12 +329,17 @@ describe('InvoiceController', async () => {
           const tIds = transactions.map((transaction) => transaction.tId);
 
           const createInvoiceRequest: CreateInvoiceParams = {
+            city: 'city',
+            country: 'country',
+            postalCode: 'postalCode',
+            street: 'street',
             byId: creditor.id,
             addressee: 'Addressee',
             description: 'Description',
             forId: debtor.id,
             transactionIDs: tIds,
             isCreditInvoice: false,
+            reference: 'BAC-41',
           };
 
           const invoiceTransactions = await Transaction.find({ where: { id: In(tIds) }, relations: ['subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice'] });

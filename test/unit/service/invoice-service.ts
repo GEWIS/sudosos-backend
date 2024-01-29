@@ -132,6 +132,11 @@ createInvoiceWithTransfers(debtorId: number, creditorId: number,
   await new Promise((f) => setTimeout(f, 1000));
 
   const createInvoiceRequest: CreateInvoiceParams = {
+    city: 'city',
+    country: 'country',
+    postalCode: 'postalCode',
+    street: 'street',
+    reference: 'BAC-41',
     byId: creditorId,
     addressee: 'Addressee',
     description: 'Description',
@@ -270,6 +275,11 @@ describe('InvoiceService', () => {
           await new Promise((f) => setTimeout(f, 1000));
 
           const createInvoiceRequest: CreateInvoiceParams = {
+            city: 'city',
+            country: 'country',
+            postalCode: 'postalCode',
+            street: 'street',
+            reference: 'BAC-41',
             byId: creditor.id,
             addressee: 'Addressee',
             description: 'Description',
@@ -312,6 +322,11 @@ describe('InvoiceService', () => {
           const chosenTransactions = transactions.slice(0, 2);
 
           const createInvoiceRequest: CreateInvoiceParams = {
+            city: 'city',
+            country: 'country',
+            postalCode: 'postalCode',
+            street: 'street',
+            reference: 'BAC-41',
             byId: creditor.id,
             addressee: 'Addressee',
             description: 'Description',
@@ -348,6 +363,11 @@ describe('InvoiceService', () => {
             description: 'Description',
             forId: debtor.id,
             isCreditInvoice: false,
+            city: 'city',
+            country: 'country',
+            postalCode: 'postalCode',
+            street: 'street',
+            reference: 'BAC-41',
           };
 
           // Spent more money.
@@ -380,6 +400,11 @@ describe('InvoiceService', () => {
           );
 
           const createInvoiceRequest: CreateInvoiceParams = {
+            city: 'city',
+            country: 'country',
+            postalCode: 'postalCode',
+            street: 'street',
+            reference: 'BAC-41',
             byId: creditor.id,
             addressee: 'Addressee',
             description: 'Description',
@@ -418,6 +443,11 @@ describe('InvoiceService', () => {
       await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
         const { transactions, total } = await createTransactions(debtor.id, creditor.id, 2);
         const createInvoiceRequest: CreateInvoiceParams = {
+          city: 'city',
+          country: 'country',
+          postalCode: 'postalCode',
+          street: 'street',
+          reference: 'BAC-41',
           byId: creditor.id,
           addressee: 'Addressee',
           description: 'Description',
@@ -451,6 +481,11 @@ describe('InvoiceService', () => {
         const { transactions, total } = await requestToTransaction([joinedTransaction]);
         expect(total).to.equal(transactionA.totalPriceInclVat.amount + transactionB.totalPriceInclVat.amount);
         const createInvoiceRequest: CreateInvoiceParams = {
+          city: 'city',
+          country: 'country',
+          postalCode: 'postalCode',
+          street: 'street',
+          reference: 'BAC-41',
           byId: creditor.id,
           addressee: 'Addressee',
           description: 'Description',
@@ -656,6 +691,11 @@ describe('InvoiceService', () => {
           );
 
           const createInvoiceRequest: CreateInvoiceParams = {
+            city: 'city',
+            country: 'country',
+            postalCode: 'postalCode',
+            street: 'street',
+            reference: 'BAC-41',
             byId: creditor.id,
             addressee: 'Addressee',
             description: 'Description',
@@ -731,6 +771,11 @@ describe('InvoiceService', () => {
         transactions.push(...(await createTransactions(debtor.id, secondCreditor.id, 2)).transactions);
 
         const createInvoiceRequest: CreateInvoiceParams = {
+          city: 'city',
+          country: 'country',
+          postalCode: 'postalCode',
+          street: 'street',
+          reference: 'BAC-41',
           byId: creditor.id,
           addressee: 'Addressee',
           description: 'Description',
