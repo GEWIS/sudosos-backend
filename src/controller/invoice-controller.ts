@@ -233,6 +233,7 @@ export default class InvoiceController extends BaseController {
       }
 
       res.json(await InvoiceService.createInvoice(params));
+      
     } catch (error) {
       this.logger.error('Could not create invoice:', error);
       res.status(500).json('Internal server error.');
