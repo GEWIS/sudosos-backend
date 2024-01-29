@@ -54,7 +54,7 @@ import {
   ZERO_LENGTH_STRING,
 } from '../../../src/controller/request/validators/validation-errors';
 import InvoiceEntryRequest from '../../../src/controller/request/invoice-entry-request';
-import { inUserContext, UserFactory } from '../../helpers/user-factory';
+import {inUserContext, INVOICE_USER, UserFactory} from '../../helpers/user-factory';
 import { TransactionRequest } from '../../../src/controller/request/transaction-request';
 import { createTransactionRequest, requestToTransaction } from '../service/invoice-service';
 import BalanceService from '../../../src/service/balance-service';
@@ -680,6 +680,55 @@ describe('InvoiceController', async () => {
         expect(res.body).to.equal(`User is of type ${UserType[user.type]} and not of type INVOICE.`);
       });
     });
+    describe('DELETE /invoices/users/{id}', () => {
+      it('should return an HTTP 403 if not admin', async () => {
+        const invoiceUser = await InvoiceUser.findOne({ where: { user: { deleted: false, type: UserType.INVOICE } }, relations: ['user'] });
+        expect(invoiceUser).to.not.be.null;
 
+        const res = await request(ctx.app)
+          .delete(`/invoices/users/${invoiceUser.userId}`)
+          .set('Authorization', `Bearer ${ctx.token}`);
+
+        expect(res.status).to.equal(403);
+        expect(res.body).to.be.empty;
+      });
+      it('should return an HTTP 204 and delete the InvoiceUser', async () => {
+        await inUserContext(await (await UserFactory(await INVOICE_USER())).clone(1),
+          async (user: User) => {
+            // Create invoice User
+            const invoiceUser = Object.assign(new InvoiceUser(), {
+              automatic: false,
+              city: 'city',
+              country: 'country',
+              postalCode: 'postalCode',
+              street: 'street',
+              userId: user.id,
+            });
+            await InvoiceUser.save(invoiceUser);
+
+            const res = await request(ctx.app)
+              .delete(`/invoices/users/${user.id}`)
+              .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+            expect(res.status).to.equal(204);
+            expect(res.body).to.be.empty;
+
+            const deleted = await InvoiceUser.findOne({ where: { userId: user.id }, relations: ['user'] });
+            expect(deleted).to.be.null;
+          });
+      });
+      it('should return an HTTP 404 if user is not found', async () => {
+        const count = await User.count();
+        const user = await User.findOne({ where: { id: count + 1 } });
+        expect(user).to.be.null;
+
+        const res = await request(ctx.app)
+          .delete(`/invoices/users/${count + 1}`)
+          .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+        expect(res.status).to.equal(404);
+        expect(res.body).to.equal('Invoice User not found.');
+      });
+    });
   });
 });
