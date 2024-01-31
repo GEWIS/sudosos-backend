@@ -17,47 +17,52 @@
  */
 
 import { PaginationParameters } from '../helpers/pagination';
-import BalanceService from './balance-service';
+import { PaginatedUserResponse } from '../controller/response/user-response';
+import { createQueryBuilder, SelectQueryBuilder } from 'typeorm';
 import User from '../entity/user/user';
-import { createQueryBuilder, In, SelectQueryBuilder } from 'typeorm';
 import Transaction from '../entity/transactions/transaction';
-import Transfer from '../entity/transactions/transfer';
-import {
-  PaginatedInactivityAdministrativeCostsResponse,
-} from '../controller/response/inactivity-administrative-costs-response';
-import InactivityAdministrativeCosts from '../entity/transactions/inactivity-administrative-costs';
+import Balance from '../entity/transactions/balance';
+import Bindings from '../helpers/bindings';
 
 /**
  * Parameters for type of administrative cost, notification or fine
  */
 
 export interface AdministrativeFilterParameters {
-  userId?: number,
-  notification?: boolean,
+  notificiation?: boolean,
   fine?: boolean,
 }
 
 export default class AdministrativeCostService {
 
-  private static async buildGetAdministrativeCostUsers(userId: number): SelectQueryBuilder<InactivityAdministrativeCosts> {
-
+  private static async buildGetAdministrativeCostUsers(filters: AdministrativeFilterParameters = {})
+    :Promise<SelectQueryBuilder<User>> {
     const selection = [
-      'administrativeCost.amount AS amount',
-      'administrativeCost.lastTransaction AS last_transaction',
-      'administrativeCost.transfer AS transfer',
+      'user.id AS id',
+      'user.firstName AS firstName',
+      'user.lastName AS lastName',
       'user.email AS email',
-      'user.id AS userId',
-      'user.firstName AS first_name',
-      'user.lastName AS last_name',
     ];
 
+    const date = new Date();
+
     const builder = createQueryBuilder()
-      .from(InactivityAdministrativeCosts, 'administrativeCost')
-      .leftJoin(User, 'user')
+      .from(User, 'user')
+      .innerJoin(
+        Balance,
+        'balance',
+        'balance.userId = user.id',
+      )
+      .innerJoin(
+        Transaction,
+        'transaction',
+        'transaction.fromID = user.id AND balance.lastTransactionId = transaction.id',
+      )
       .select(selection);
 
-    if (userId != null) {
-      builder.where(`user.id = ${userId}`);
+
+    if (filters.notificiation) {
+      builder.where(`((JulianDay(${date})-JulianDay(transaction.createdAt))/365.25) >= 2`);
     }
 
     builder.orderBy({ 'user.id': 'DESC' });
@@ -65,54 +70,26 @@ export default class AdministrativeCostService {
     return builder;
   }
 
-
   /**
-   * Function for getting all users who are in range of the administrative costs
-   * @param filter - Query filter to apply
-   * @param pagination - Pagination to adhere to
-   */
-  public static async getAdministrativeCostUsers(
-    filter: AdministrativeFilterParameters = {}, pagination: PaginationParameters = {},
-  ): Promise<PaginatedInactivityAdministrativeCostsResponse> {
-    const { take, skip } = pagination;
-
-    const results = await Promise.all([
-      (await this.buildGetAdministrativeCostUsers(filter.userId)).limit(take).offset(skip).getRawMany(),
-      (await this.buildGetAdministrativeCostUsers(filter.userId)).getCount(),
-    ]);
-
-
-
-  }
-
-
-
-  /**
-     * Function for checking all users who are in range of the administrative costs
+     * Function for getting all users who are in range of the administrative costs
      * @param filter - Query filter to apply
      * @param pagination - Pagination to adhere to
      */
-  public static async checkAdministrativeCostUsers(
-    filter: AdministrativeFilterParameters = {}, pagination: PaginationParameters = {},
-  ): Promise<PaginatedInactivityAdministrativeCostsResponse> {
+  public static async getAdministrativeCostUsers(
+    filters: AdministrativeFilterParameters = {}, pagination: PaginationParameters = {},
+  ): Promise<PaginatedUserResponse> {
     const { take, skip } = pagination;
-    const balances = await BalanceService.getBalances({});
 
-    const userIds = balances.records.map((u) => u.id);
-    const transactionIds = balances.records.map((t) => t.lastTransactionId);
-    const transferIds = balances.records.map((t) => t.lastTransferId);
-
-    const [users, transactions, transfers] = await Promise.all([
-      User.find({ where: { id: In(userIds) } }),
-      Transaction.find({ where: { id: In(transactionIds) } }),
-      Transfer.find({ where: { id: In(transferIds) } }),
+    const results = await Promise.all([
+      (await this.buildGetAdministrativeCostUsers(filters)).limit(take).offset(skip).getRawMany(),
+      (await this.buildGetAdministrativeCostUsers(filters)).getCount(),
     ]);
 
-
+    const records = results[0].map((u) => Bindings.Users.parseToResponse(u, false));
 
     return {
       _pagination: {
-        take, skip, count: count,
+        take, skip, count: results[1],
       },
       records,
     };
