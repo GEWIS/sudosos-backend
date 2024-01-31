@@ -160,6 +160,9 @@ export default class ProductService {
       id: rawProduct.id,
       revision: rawProduct.revision,
       alcoholPercentage: typeof rawProduct.alcoholpercentage === 'string' ? parseFloat(rawProduct.alcoholpercentage) : rawProduct.alcoholpercentage,
+      featured: !!rawProduct.featured,
+      preferred: !!rawProduct.preferred,
+      showOnPriceList: !!rawProduct.showOnPriceList,
       category: {
         id: rawProduct.category_id,
         name: rawProduct.category_name,
@@ -338,6 +341,9 @@ export default class ProductService {
         'category.name AS category_name',
         'productrevision.alcoholpercentage AS alcoholpercentage',
         'image.downloadName as image',
+        'productrevision.featured as featured',
+        'productrevision.preferred as preferred',
+        'productrevision.showOnPriceList as showOnPriceList',
       ])
       .orderBy({ 'productrevision.name': 'ASC' });
 
@@ -373,6 +379,9 @@ export default class ProductService {
       alcoholPercentage: product.alcoholPercentage,
       name: product.name,
       id: base.id,
+      featured: product.featured,
+      preferred: product.preferred,
+      showOnPriceList: product.showOnPriceList,
     };
 
     let createdProduct: ProductResponse;

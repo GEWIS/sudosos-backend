@@ -140,6 +140,9 @@ describe('Propagation between products, containers, POSs', () => {
         currency: 'EUR',
       },
       alcoholPercentage: 3.9,
+      featured: true,
+      preferred: true,
+      showOnPriceList: true,
     };
 
     const containerRequest: CreateContainerRequest = {
@@ -267,6 +270,9 @@ describe('Propagation between products, containers, POSs', () => {
         category: ctx.productRequest.category,
         priceInclVat: ctx.productRequest.priceInclVat,
         alcoholPercentage: ctx.productRequest.alcoholPercentage,
+        featured: ctx.productRequest.featured,
+        preferred: ctx.productRequest.preferred,
+        showOnPriceList: ctx.productRequest.showOnPriceList,
       };
 
       let res = await request(ctx.app)

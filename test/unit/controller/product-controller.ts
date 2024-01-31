@@ -60,6 +60,9 @@ function productEq(source: CreateProductRequest | UpdateProductRequest, response
   if ('ownerId' in source) {
     expect(source.ownerId).to.eq(response.owner.id);
   }
+  expect(source.featured).to.eq(response.featured);
+  expect(source.preferred).to.eq(response.preferred);
+  expect(source.showOnPriceList).to.eq(response.showOnPriceList);
 }
 
 describe('ProductController', async (): Promise<void> => {
@@ -145,6 +148,9 @@ describe('ProductController', async (): Promise<void> => {
       alcoholPercentage: 0,
       category: 2,
       vat: 2,
+      featured: true,
+      preferred: true,
+      showOnPriceList: true,
     };
 
     const invalidProductReq: UpdateProductRequest = {

@@ -365,6 +365,9 @@ describe('ProductService', async (): Promise<void> => {
         category: 1,
         vat: 1,
         name: 'New Product Name',
+        featured: true,
+        preferred: false,
+        showOnPriceList: true,
         ownerId: (await User.findOne({ where: { deleted: false } })).id,
         priceInclVat: {
           amount: 50,
@@ -389,6 +392,9 @@ describe('ProductService', async (): Promise<void> => {
         vat: 1,
         id: product.id,
         name: 'A product update',
+        featured: true,
+        preferred: false,
+        showOnPriceList: true,
         priceInclVat: {
           amount: 51,
           precision: 2,
@@ -409,6 +415,9 @@ describe('ProductService', async (): Promise<void> => {
         vat: 1,
         name: 'New Product Name',
         ownerId,
+        featured: true,
+        preferred: false,
+        showOnPriceList: true,
         priceInclVat: {
           amount: 50,
           currency: 'EUR',
@@ -433,6 +442,9 @@ describe('ProductService', async (): Promise<void> => {
         category: 2,
         vat: 1,
         name: 'New Product Name 2',
+        featured: true,
+        preferred: false,
+        showOnPriceList: true,
         priceInclVat: {
           amount: 55,
           currency: 'EUR',
@@ -462,6 +474,9 @@ describe('ProductService', async (): Promise<void> => {
         vat: 1,
         name: 'New Product Name',
         ownerId,
+        featured: true,
+        preferred: false,
+        showOnPriceList: true,
         priceInclVat: {
           amount: 50,
           currency: 'EUR',
@@ -495,6 +510,9 @@ describe('ProductService', async (): Promise<void> => {
         vat: 1,
         id: product.id,
         name: 'New Product Name 2',
+        featured: true,
+        preferred: false,
+        showOnPriceList: true,
         priceInclVat: {
           amount: 55,
           currency: 'EUR',
