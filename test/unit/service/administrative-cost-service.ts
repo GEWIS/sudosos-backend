@@ -17,40 +17,108 @@
  */
 
 import { Connection } from 'typeorm';
-import { Application } from 'express';
+import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
-import User from '../../../src/entity/user/user';
-import Transaction from '../../../src/entity/transactions/transaction';
-import Balance from '../../../src/entity/transactions/balance';
 import Database from '../../../src/database/database';
-import { seedTransactions, seedUsers } from '../../seed';
-import { Stripe } from 'stripe';
-import Transfer = module;
-import generate = module;
-import generateBalance from '../../helpers/test-helpers';
+import {
+  seedContainers, seedFines, seedPointsOfSale,
+  seedProductCategories,
+  seedProducts, seedTransactions, seedTransfers,
+  seedUsers,
+  seedVatGroups,
+} from '../../seed';
+import AdministrativeCostService, {
+} from '../../../src/service/administrative-cost-service';
+import User from '../../../src/entity/user/user';
+import ProductRevision from '../../../src/entity/product/product-revision';
+import ContainerRevision from '../../../src/entity/container/container-revision';
+import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
+import Transaction from '../../../src/entity/transactions/transaction';
+import SubTransaction from '../../../src/entity/transactions/sub-transaction';
+import Transfer from '../../../src/entity/transactions/transfer';
+import Fine from '../../../src/entity/fine/fine';
+import Swagger from '../../../src/start/swagger';
+import Balance from '../../../src/entity/transactions/balance';
+import { calculateBalance } from '../../helpers/balance';
 
 describe('AdministrativeCostService', async (): Promise<void> => {
   let ctx: {
     connection: Connection,
     app: Application,
-    specification: SwaggerSpecification,
     users: User[],
+    productRevisions: ProductRevision[],
+    containerRevisions: ContainerRevision[],
+    pointOfSaleRevisions: PointOfSaleRevision[],
     transactions: Transaction[],
-
+    subTransactions: SubTransaction[],
+    transfers: Transfer[],
+    fines: Fine[],
+    balances: Balance[],
+    spec: SwaggerSpecification,
   };
 
-  before(async => {
+  before(async function test(): Promise<void> {
+    this.timeout(50000);
     const connection = await Database.initialize();
-
-    const users = await seedUsers();
-    const transactions = await seedTransactions();
-
-    await generateBalance(1000, 7);
-
-    // start app
     const app = express();
-    const specification = await Swagger.initialize(app);
-    app.use(json());
+    const seededUsers = await seedUsers();
+    const categories = await seedProductCategories();
+    const vatGroups = await seedVatGroups();
+    const { productRevisions } = await seedProducts(seededUsers, categories, vatGroups);
+    const { containerRevisions } = await seedContainers(seededUsers, productRevisions);
+    const { pointOfSaleRevisions } = await seedPointsOfSale(seededUsers, containerRevisions);
+    const { transactions } = await seedTransactions(seededUsers, pointOfSaleRevisions, new Date('2020-02-12'), new Date('2021-11-30'), 10);
+    const transfers = await seedTransfers(seededUsers, new Date('2020-02-12'), new Date('2021-11-30'));
+    const { fines, fineTransfers, users } = await seedFines(seededUsers, transactions, transfers, true);
+    const subTransactions: SubTransaction[] = Array.prototype.concat(...transactions
+      .map((t) => t.subTransactions));
 
+    const balances: Balance[] = [];
+
+    for (let nr = 0; nr < users.length; nr += 1) {
+      balances.push(calculateBalance(users[0], transactions, subTransactions, transfers, new Date()));
+    }
+
+    ctx = {
+      connection,
+      app,
+      users,
+      productRevisions,
+      containerRevisions,
+      pointOfSaleRevisions,
+      transactions,
+      subTransactions,
+      balances,
+      transfers: transfers.concat(fineTransfers),
+      fines,
+      spec: await Swagger.importSpecification(),
+    };
+  });
+
+  after(async () => {
+    await ctx.connection.dropDatabase();
+    await ctx.connection.destroy();
+  });
+
+  describe('getAdministrativeCostUsers function', () => {
+    it('should return only users to send a notification to', async () =>{
+
+      const date = new Date();
+
+      const transaction = Object.assign(new Transaction(), {
+        id: ctx.transactions[-1].id + 1,
+        createdAt: date.setFullYear(date.getFullYear() - 2),
+        from: ctx.users[1],
+        createdBy: ctx.users[18],
+        subTransactions: [],
+        pointOfSale: ctx.pointOfSaleRevisions[1],
+      });
+
+      await Transaction.save(transaction);
+
+      const { records } = await AdministrativeCostService.getAdministrativeCostUsers({ notificiation: true });
+
+
+    });
   });
 });
