@@ -19,7 +19,8 @@ import Invoice from '../entity/invoices/invoice';
 import { SimpleFileResponse } from '../controller/response/simple-file-response';
 import { parseFileToResponse } from '../helpers/revision-to-response';
 import {
-  Address, Client,
+  Address,
+  Client,
   Company,
   Dates,
   FileResponse,
@@ -38,34 +39,42 @@ import {
   VAT,
 } from 'pdf-generator-client';
 import InvoicePdf from '../entity/file/invoice-pdf';
-import crypto from 'crypto';
-
 import FileService from './file-service';
 import InvoiceEntry from '../entity/invoices/invoice-entry';
+import { hashJSON } from '../helpers/hash';
 
 export interface PdfGenerator {
   client: Client,
   fileService: FileService
 }
 
+// Used for grouping in the PDF.
+// These are 'hardcoded' since if these would change the template also would have to change.
 const PDF_VAT_ZERO = 0;
 const PDF_VAT_LOW = 9;
 const PDF_VAT_HIGH = 21;
 
-function hashJSON(jsonObject: object) {
-  const jsonString = JSON.stringify(jsonObject);
-  return crypto.createHash('sha256').update(jsonString).digest('hex');
-}
-
 const UNUSED_PARAM = '';
 
 export default class InvoicePdfService {
+
+  /**
+   * Checks if the invoice pdf parameter signature has changed.
+   * @param invoice
+   * @returns true - If the signature did not change, false if otherwise.
+   */
   static validatePdfHash(invoice: Invoice): boolean {
     if (!invoice.pdf) return false;
     const hash = hashJSON(this.getInvoiceParameters(invoice));
     return hash === invoice.pdf.hash;
   }
 
+  /**
+   *
+   * @param invoiceId
+   * @param pdfGenerator
+   * @param force
+   */
   public static async getOrCreatePDF(invoiceId: number, pdfGenerator: PdfGenerator, force = false): Promise<SimpleFileResponse> {
     const invoice = await Invoice.findOne({ where: { id: invoiceId }, relations: ['to', 'invoiceStatus', 'transfer', 'transfer.to', 'transfer.from', 'pdf', 'invoiceEntries'] });
     if (!invoice) return undefined;

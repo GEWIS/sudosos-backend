@@ -23,7 +23,6 @@ import {
   InvoiceEntryResponse,
   InvoiceResponse,
   InvoiceStatusResponse,
-  PaginatedInvoiceResponse,
 } from '../controller/response/invoice-response';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import Invoice from '../entity/invoices/invoice';
@@ -148,6 +147,22 @@ export default class InvoiceService {
     } as InvoiceResponse;
   }
 
+  public static toResponse(invoices: Invoice | Invoice[], entries: boolean): BaseInvoiceResponse | InvoiceResponse | BaseInvoiceResponse[] | InvoiceResponse[] {
+    if (Array.isArray(invoices)) {
+      if (entries) {
+        return invoices.map(invoice => this.asInvoiceResponse(invoice));
+      } else {
+        return invoices.map(invoice => this.asBaseInvoiceResponse(invoice));
+      }
+    } else {
+      if (entries) {
+        return this.asInvoiceResponse(invoices);
+      } else {
+        return this.asBaseInvoiceResponse(invoices);
+      }
+    }
+  }
+
   /**
    * Creates a Transfer for an Invoice from TransactionResponses
    * @param forId - The user which receives the Invoice/Transfer
@@ -190,7 +205,7 @@ export default class InvoiceService {
    * @param subTransactions - Array of sub transactions to parse.
    */
   public static async createInvoiceEntriesTransactions(invoice: Invoice,
-    subTransactions: SubTransaction[]) {
+    subTransactions: SubTransaction[]): Promise<InvoiceEntry[]> {
     const subTransactionRows = subTransactions.reduce<SubTransactionRow[]>((acc, cur) => acc.concat(cur.subTransactionRows), []);
 
     // Cumulative entries.
@@ -235,7 +250,7 @@ export default class InvoiceService {
    * @param byId
    */
   public static async deleteInvoice(invoiceId: number, byId: number)
-    : Promise<BaseInvoiceResponse | undefined> {
+    : Promise<Invoice | undefined> {
     // Find base invoice.
     const invoice = await Invoice.findOne({ where: { id: invoiceId }, relations: ['to', 'invoiceStatus', 'transfer', 'transfer.to', 'transfer.from'] });
     if (!invoice) return undefined;
@@ -289,7 +304,8 @@ export default class InvoiceService {
       await invoiceStatus.save();
     });
 
-    return ((await this.getInvoices({ invoiceId: invoice.id }))).records[0];
+    const options = this.getOptions({ invoiceId: invoice.id, returnInvoiceEntries: true });
+    return Promise.resolve(await Invoice.findOne(options));
   }
 
   /**
@@ -297,7 +313,7 @@ export default class InvoiceService {
    * @param invoice
    * @param deletion - If the Invoice is being deleted we add the money to the account
    */
-  public static async createTransfersInvoiceSellers(invoice: Invoice, deletion = false): Promise<BaseInvoiceResponse | undefined> {
+  public static async createTransfersInvoiceSellers(invoice: Invoice, deletion = false): Promise<undefined> {
     // By marking an invoice as paid we subtract the money from the seller accounts.
     if (!invoice) return undefined;
 
@@ -390,9 +406,9 @@ export default class InvoiceService {
 
     await base.save();
     // Return the newly updated Invoice.
-    return (await this.getInvoices(
-      { invoiceId: base.id, returnInvoiceEntries: false },
-    )).records[0];
+
+    const options = this.getOptions({ invoiceId: base.id, returnInvoiceEntries: true });
+    return Promise.resolve(await Invoice.findOne(options));
   }
 
   static async getSubTransactionsInvoice(invoice: Invoice, transactions: BaseTransactionResponse[], isCreditInvoice: boolean) {
@@ -410,7 +426,6 @@ export default class InvoiceService {
    * Set a reference to an Invoice for all given sub Transactions.
    * @param invoice
    * @param subTransactions
-   * @param isCreditInvoice
    */
   static async setSubTransactionInvoice(invoice: Invoice,
     subTransactions: SubTransaction[]) {
@@ -431,15 +446,19 @@ export default class InvoiceService {
    * Returns the latest invoice sent to a User that is not deleted.
    * @param toId
    */
-  static async getLatestValidInvoice(toId: number): Promise<BaseInvoiceResponse> {
-    const invoices = (await this.getInvoices({ toId })).records;
+  static async getLatestValidInvoice(toId: number): Promise<Invoice> {
+    const invoices = (await this.getInvoices({ toId }));
     // Filter the deleted invoices
     const validInvoices = invoices.filter(
-      (invoice) => invoice.currentState.state !== InvoiceState[InvoiceState.DELETED],
+      (invoice) =>  InvoiceService.isState(invoice, InvoiceState.DELETED),
     );
     return validInvoices[validInvoices.length - 1];
   }
 
+  /**
+   * TODO
+   * @param userId
+   */
   public static async getDefaultInvoiceParams(userId: number): Promise<InvoiceUserDefaults> {
     const user = await User.findOne({ where: { id: userId } });
 
@@ -466,7 +485,7 @@ export default class InvoiceService {
    * @param invoiceRequest - The Invoice request to create
    */
   public static async createInvoice(invoiceRequest: CreateInvoiceParams)
-    : Promise<InvoiceResponse> {
+    : Promise<Invoice> {
     const { forId, byId, isCreditInvoice } = invoiceRequest;
     let params: TransactionFilterParameters;
 
@@ -538,12 +557,19 @@ export default class InvoiceService {
       }
     });
 
-    // Return the newly created Invoice.
-    return (await this.getInvoices(
-      { invoiceId: newInvoice.id, returnInvoiceEntries: true },
-    )).records[0] as InvoiceResponse;
+    const options = this.getOptions({ invoiceId: newInvoice.id, returnInvoiceEntries: true });
+    return Promise.resolve(await Invoice.findOne(options));
   }
 
+  /**
+   * Returns database entities based on the given filter params.
+   * @param params - The filter params to apply
+   */
+  public static async getInvoices(params: InvoiceFilterParameters = {})
+    : Promise<Invoice[]> {
+    const options = { ...this.getOptions(params) };
+    return Promise.resolve(Invoice.find({ ...options }));
+  }
 
   /**
    * Function that returns all the invoices based on the given params.
@@ -552,33 +578,19 @@ export default class InvoiceService {
    * @param params - The filter params to apply
    * @param pagination - The pagination params to apply
    */
-  public static async getInvoices(params: InvoiceFilterParameters = {},
-    pagination: PaginationParameters = {})
-    : Promise<PaginatedInvoiceResponse> {
+  public static async getPaginatedInvoices(params: InvoiceFilterParameters = {},
+    pagination: PaginationParameters = {}) {
     const { take, skip } = pagination;
+    const options = { ...this.getOptions(params), skip, take };
 
-    const filterMapping: FilterMapping = {
-      currentState: 'currentState',
-      toId: 'toId',
-      invoiceId: 'id',
-      invoiceStatus: 'invoiceStatus.state'
-    };
-
-    const relations: FindOptionsRelationByString = ['to', 'invoiceStatus', 'transfer', 'transfer.to', 'transfer.from', 'pdf'];
-    const options: FindManyOptions<Invoice> = {
-      where: QueryFilter.createFilterWhereClause(filterMapping, params),
-      order: { createdAt: 'ASC' },
-      skip,
-    };
+    const invoices = await Invoice.find({ ...options, take });
 
     let records: (BaseInvoiceResponse | InvoiceResponse)[];
+
     // Case distinction on if we want to return entries or not.
     if (!params.returnInvoiceEntries) {
-      const invoices = await Invoice.find({ ...options, relations, take });
       records = invoices.map(this.asBaseInvoiceResponse);
     } else {
-      relations.push('invoiceEntries');
-      const invoices = await Invoice.find({ ...options, relations, take });
       records = invoices.map(this.asInvoiceResponse.bind(this));
     }
 
@@ -590,4 +602,23 @@ export default class InvoiceService {
       records,
     };
   }
+
+  public static getOptions(params: InvoiceFilterParameters): FindManyOptions<Invoice> {
+    const filterMapping: FilterMapping = {
+      currentState: 'currentState',
+      toId: 'toId',
+      invoiceId: 'id',
+      invoiceStatus: 'invoiceStatus.state',
+    };
+
+    const relations: FindOptionsRelationByString = ['to', 'invoiceStatus', 'transfer', 'transfer.to', 'transfer.from', 'pdf'];
+    const options: FindManyOptions<Invoice> = {
+      where: QueryFilter.createFilterWhereClause(filterMapping, params),
+      order: { createdAt: 'ASC' },
+    };
+
+    if (params.returnInvoiceEntries) relations.push('invoiceEntries');
+    return { ...options, relations };
+  }
+
 }

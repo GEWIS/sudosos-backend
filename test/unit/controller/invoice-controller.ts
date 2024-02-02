@@ -397,13 +397,13 @@ describe('InvoiceController', async () => {
 
         expect(res.status).to.equal(200);
         expect(await Invoice.count()).to.equal(count + 1);
-
-        expect(ctx.specification.validateModel(
+        const validation = ctx.specification.validateModel(
           'InvoiceResponse',
           res.body,
           false,
           true,
-        ).valid).to.be.true;
+        );
+        expect(validation.valid).to.be.true;
       });
     });
     it('should return an HTTP 403 if not admin', async () => {
@@ -883,7 +883,6 @@ describe('InvoiceController', async () => {
         expect(res.status).to.equal(400);
         expect(res.body).to.equal(`User is of type ${UserType[user.type]} and not of type INVOICE.`);
       });
-
     });
   });
 });
