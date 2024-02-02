@@ -151,7 +151,7 @@ export default class InvoiceController extends BaseController {
 
     // Handle request
     try {
-      const invoices: PaginatedInvoiceResponse = await InvoiceService.getInvoices(
+      const invoices: PaginatedInvoiceResponse = await InvoiceService.getPaginatedInvoices(
         filters, { take, skip },
       );
       res.json(invoices);
@@ -183,16 +183,16 @@ export default class InvoiceController extends BaseController {
     try {
       const returnInvoiceEntries = asBoolean(req.query.returnEntries) ?? true;
 
-      const invoices: PaginatedInvoiceResponse = await InvoiceService.getInvoices(
-        { invoiceId, returnInvoiceEntries }, { },
+      const invoices: Invoice[] = await InvoiceService.getInvoices(
+        { invoiceId, returnInvoiceEntries },
       );
 
-      if (!invoices.records[0]) {
+      if (!invoices[0]) {
         res.status(404).json('Unknown invoice ID.');
         return;
       }
 
-      res.json(invoices.records[0]);
+      res.json(InvoiceService.toResponse(invoices[0], returnInvoiceEntries));
     } catch (error) {
       this.logger.error('Could not return invoice:', error);
       res.status(500).json('Internal server error.');
@@ -232,7 +232,8 @@ export default class InvoiceController extends BaseController {
         return;
       }
 
-      res.json(await InvoiceService.createInvoice(params));
+      const invoice: Invoice = await InvoiceService.createInvoice(params);
+      res.json(InvoiceService.toResponse(invoice, true));
 
     } catch (error) {
       this.logger.error('Could not create invoice:', error);
@@ -274,7 +275,9 @@ export default class InvoiceController extends BaseController {
         return;
       }
 
-      res.json(await InvoiceService.updateInvoice(params));
+      const invoice: Invoice = await InvoiceService.updateInvoice(params);
+
+      res.json(InvoiceService.toResponse(invoice, false));
     } catch (error) {
       this.logger.error('Could not update invoice:', error);
       res.status(500).json('Internal server error.');
