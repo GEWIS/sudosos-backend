@@ -351,7 +351,7 @@ describe('InvoiceService', () => {
         async (debtor: User, creditor: User) => {
           // Spent money and create an invoice.
           await createInvoiceWithTransfers(debtor.id, creditor.id, 3);
-          await new Promise((f) => setTimeout(f, 1500));
+          await new Promise((f) => setTimeout(f, 2000));
 
           const createInvoiceRequest: CreateInvoiceParams = {
             byId: creditor.id,
