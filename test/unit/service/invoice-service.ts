@@ -381,6 +381,8 @@ describe('InvoiceService', () => {
           const invoice = await InvoiceService.createInvoice(
             createInvoiceRequest,
           );
+
+          console.error('is equal ', invoice.transfer.amount.getAmount() == total);
           expect(invoice.transfer.amount.getAmount()).is.equal(total);
           expect(
             (await BalanceService.getBalance(debtor.id)).amount.amount,
