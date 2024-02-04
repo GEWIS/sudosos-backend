@@ -365,7 +365,7 @@ describe('InvoiceService', () => {
             street: 'street',
             reference: 'BAC-41',
           };
-
+          console.error(new Date());
           // Spent more money.
           const transactionRequests: TransactionRequest[] =
                         await createTransactionRequest(debtor.id, creditor.id, 2);
@@ -373,7 +373,7 @@ describe('InvoiceService', () => {
           const { total } = await requestToTransaction(
             transactionRequests,
           );
-
+          console.error(new Date());
           await new Promise((f) => setTimeout(f, 2000));
 
           const invoice = await InvoiceService.createInvoice(
