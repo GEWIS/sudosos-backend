@@ -66,6 +66,7 @@ import DebtorController from './controller/debtor-controller';
 import EventController from './controller/event-controller';
 import EventShiftController from './controller/event-shift-controller';
 import EventService from './service/event-service';
+import FlaggedTransactionController from "./controller/flagged-transaction-controller";
 
 export class Application {
   app: express.Express;
@@ -285,6 +286,7 @@ export default async function createApp(): Promise<Application> {
     application.app.use('/v1/files', new SimpleFileController(options).getRouter());
     application.app.use('/v1/test', new TestController(options).getRouter());
   }
+  application.app.use('/v1/flaggedtransactions', new FlaggedTransactionController(options).getRouter());
   // Start express application.
   logger.info(`Server listening on port ${process.env.HTTP_PORT}.`);
   application.server = application.app.listen(process.env.HTTP_PORT);

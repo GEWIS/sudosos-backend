@@ -26,6 +26,8 @@ import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import { FindManyOptions } from 'typeorm';
 import { parseUserToBaseResponse } from '../helpers/revision-to-response';
 import TransactionService from './transaction-service';
+import User from "../entity/user/user";
+import Transaction from "../entity/transactions/transaction";
 
 /**
  * Parameters used to filter on Get Flagged Transactions functions.
@@ -35,6 +37,13 @@ interface FlaggedTransactionsFilterParameters {
   status?: FlagStatus,
   flaggedBy?: UserFilterParameters,
   reason?: string,
+}
+
+export interface CreateFlaggedTransactionParams {
+  status: number;
+  reason: string;
+  flaggedById: number;
+  transactionId: number;
 }
 
 export default class FlaggedTransactionService {
@@ -89,5 +98,35 @@ export default class FlaggedTransactionService {
       },
       records,
     };
+  }
+
+  /**
+   * Creates a flagged transaction from a FlaggedTransactionRequest
+   * @param {CreateFlaggedTransactionParams} params - Flagged transaction request
+   * @returns {FlaggedTransaction.model} - Flagged transaction created
+   */
+  public static async createFlaggedTransaction(params: CreateFlaggedTransactionParams) : Promise<FlaggedTransactionResponse> {
+
+    const flaggedBy = await User.findOne({ where: { id: params.flaggedById } });
+    const transaction = await Transaction.findOne({
+      where: { id: params.transactionId },
+      relations: [
+        'from', 'createdBy', 'subTransactions', 'subTransactions.to', 'subTransactions.subTransactionRows',
+        // We query a lot here, but we will parse this later to a very simple BaseResponse
+        'pointOfSale', 'pointOfSale.pointOfSale',
+        'subTransactions.container', 'subTransactions.container.container',
+        'subTransactions.subTransactionRows.product', 'subTransactions.subTransactionRows.product.product',
+        'subTransactions.subTransactionRows.product.vat',
+      ],
+    });
+    const flaggedTransaction: FlaggedTransaction = Object.assign(new FlaggedTransaction(), {
+      status: params.status,
+      flaggedBy,
+      reason: params.reason,
+      transaction,
+      version: 1, // TODO: Handle logic for updating flagged transactions
+    });
+    await FlaggedTransaction.save(flaggedTransaction);
+    return this.asFlaggedTransactionResponse(flaggedTransaction);
   }
 }

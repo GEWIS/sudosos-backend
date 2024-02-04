@@ -17,16 +17,14 @@
  */
 import { Response } from 'express';
 import log4js, { Logger } from 'log4js';
-import { UploadedFile } from 'express-fileupload';
 import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
-import BannerRequest from './request/banner-request';
 import { RequestWithToken } from '../middleware/token-middleware';
-import BannerService from '../service/banner-service';
-import Banner from '../entity/banner';
 import FileService from '../service/file-service';
-import { BANNER_IMAGE_LOCATION } from '../files/storage';
 import { parseRequestPagination } from '../helpers/pagination';
+import FlaggedTransactionRequest from "./request/flagged-transaction-request";
+import FlaggedTransactionService, {CreateFlaggedTransactionParams} from "../service/flagged-transaction-service";
+import {FlagStatus} from "../entity/transactions/flagged-transaction";
 
 export default class FlaggedTransactionController extends BaseController {
   private logger: Logger = log4js.getLogger('FlaggedTransactionController');
@@ -42,9 +40,6 @@ export default class FlaggedTransactionController extends BaseController {
     this.logger.level = process.env.LOG_LEVEL;
   }
 
-  /**
-   * @inheritdoc
-   */
   public getPolicy(): Policy {
     return {
       '/': {
@@ -55,26 +50,26 @@ export default class FlaggedTransactionController extends BaseController {
         POST: {
           body: { modelName: 'FlaggedTransactionRequest' },
           policy: async (req) => this.roleManager.can(req.token.roles, 'create', 'all', 'FlaggedTransactions', ['*']),
-          handler: this.createBanner.bind(this),
+          handler: this.createFlaggedTransaction.bind(this),
         },
       },
-      '/all': {
-        GET: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'FlaggedTransactions', ['*']),
-          handler: this.returnAllFlaggedTransactions.bind(this),
-        },
-      },
-      '/:id(\\d+)': {
-        GET: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'FlaggedTransactions', ['*']),
-          handler: this.returnSingleBanner.bind(this),
-        },
-        PATCH: {
-          body: { modelName: 'BannerRequest' },
-          policy: async (req) => this.roleManager.can(req.token.roles, 'update', 'all', 'FlaggedTransactions', ['*']),
-          handler: this.updateBanner.bind(this),
-        },
-      },
+      // '/all': {
+      //   GET: {
+      //     policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'FlaggedTransactions', ['*']),
+      //     handler: this.returnAllFlaggedTransactions.bind(this),
+      //   },
+      // },
+      // '/:id(\\d+)': {
+      //   GET: {
+      //     policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'FlaggedTransactions', ['*']),
+      //     handler: this.returnSingleBanner.bind(this),
+      //   },
+      //   PATCH: {
+      //     body: { modelName: 'BannerRequest' },
+      //     policy: async (req) => this.roleManager.can(req.token.roles, 'update', 'all', 'FlaggedTransactions', ['*']),
+      //     handler: this.updateBanner.bind(this),
+      //   },
+      // },
     };
   }
 
@@ -105,13 +100,43 @@ export default class FlaggedTransactionController extends BaseController {
     }
 
     try {
-      res.json(await BannerService.getBanners({}, { take, skip }));
+      res.json(await FlaggedTransactionService.getFlaggedTransactions({}, { take, skip }));
     } catch (error) {
       this.logger.error('Could not return all flagged transactions:', error);
       res.status(500).json('Internal server error.');
     }
   }
 
+  /**
+   * POST /flaggedtransactions
+   * @summary Creates a flagged transaction
+   * @operationId createFlaggedTransaction
+   * @tags flagged - Operations of the flagged transactions controller
+   * @security JWT
+   * @param {FlaggedTransactionRequest} request.body.required - The flagged transaction which should be created
+   * @return {FlaggedTransactionResponse} 200 - The created flagged transaction entity.
+   * @return {string} 400 - Validation error
+   * @return {string} 500 - Internal server error
+   */
+  public async createFlaggedTransaction(request: RequestWithToken, res: Response): Promise<void>{
+    const body = request.body as FlaggedTransactionRequest;
+    this.logger.trace('Create flagged transaction', body, 'by user', request.token.user);
+
+    const params: CreateFlaggedTransactionParams = {
+      status: FlagStatus.TODO,
+      reason: body.reason,
+      flaggedById: request.token.user.id,
+      transactionId: body.transactionId,
+    };
+    try {
+
+      res.json(await FlaggedTransactionService.createFlaggedTransaction(params));
+    } catch (error) {
+      this.logger.error('Could not create flagged transaction:', error);
+      this.logger.error(params);
+      res.status(500).json('Internal server error.');
+    }
+  }
   // /**
   //  * POST /banners
   //  * @summary Saves a banner to the database

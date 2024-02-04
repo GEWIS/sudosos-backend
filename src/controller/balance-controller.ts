@@ -109,7 +109,6 @@ export default class BalanceController extends BaseController {
    */
   private async getAllBalances(req: RequestWithToken, res: Response): Promise<void> {
     this.logger.trace('Get all balances by', req.token.user);
-
     let params: GetBalanceParameters;
     let take;
     let skip;
@@ -121,7 +120,7 @@ export default class BalanceController extends BaseController {
         hasFine: asBoolean(req.query.hasFine),
         minFine: asDinero(req.query.minFine),
         maxFine: asDinero(req.query.maxFine),
-        userTypes: asArrayOfUserTypes(req.query.userTypes),
+        userTypes: asArrayOfUserTypes(req.query.userType),
         orderBy: asBalanceOrderColumn(req.query.orderBy),
         orderDirection: asOrderingDirection(req.query.orderDirection),
       };
