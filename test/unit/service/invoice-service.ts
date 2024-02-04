@@ -374,6 +374,8 @@ describe('InvoiceService', () => {
             transactionRequests,
           );
 
+          await new Promise((f) => setTimeout(f, 2000));
+
           const invoice = await InvoiceService.createInvoice(
             createInvoiceRequest,
           );
