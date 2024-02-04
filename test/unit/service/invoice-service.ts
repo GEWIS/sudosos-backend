@@ -374,6 +374,8 @@ describe('InvoiceService', () => {
             transactionRequests,
           );
 
+          console.error(await Transaction.find({ where: { from: { id: debtor.id } } }));
+
           await new Promise((f) => setTimeout(f, 2000));
 
           const invoice = await InvoiceService.createInvoice(
