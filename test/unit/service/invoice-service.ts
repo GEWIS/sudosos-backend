@@ -374,15 +374,12 @@ describe('InvoiceService', () => {
             transactionRequests,
           );
 
-          console.error(await Transaction.find({ where: { from: { id: debtor.id } } }));
-
           await new Promise((f) => setTimeout(f, 2000));
 
           const invoice = await InvoiceService.createInvoice(
             createInvoiceRequest,
           );
 
-          console.error('is equal ', invoice.transfer.amount.getAmount() == total);
           expect(invoice.transfer.amount.getAmount()).is.equal(total);
           expect(
             (await BalanceService.getBalance(debtor.id)).amount.amount,
