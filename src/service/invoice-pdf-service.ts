@@ -59,29 +59,37 @@ const UNUSED_PARAM = '';
 export default class InvoicePdfService {
 
   /**
-   * Checks if the invoice pdf parameter signature has changed.
-   * @param invoice
-   * @returns true - If the signature did not change, false if otherwise.
+   * Validates whether the PDF hash of an invoice matches the expected hash. This is used to determine if the invoice's PDF representation has been altered or needs regeneration.
+   *
+   * @param {Invoice} invoice - The invoice entity to validate the PDF hash for.
+   * @returns {boolean} Returns `true` if the PDF hash matches the expected hash, indicating no changes; returns `false` otherwise.
    */
   static validatePdfHash(invoice: Invoice): boolean {
     if (!invoice.pdf) return false;
+    console.error(invoice);
     const hash = hashJSON(this.getInvoiceParameters(invoice));
+    console.error(hash, invoice.pdf.hash);
     return hash === invoice.pdf.hash;
   }
 
   /**
+   * Retrieves or creates a PDF representation of an invoice. If a PDF already exists and the `force` parameter is not set, it will return the existing PDF after validating its hash.
+   * If the hash validation fails or `force` is set to `true`, it generates a new PDF.
    *
-   * @param invoiceId
-   * @param pdfGenerator
-   * @param force
+   * @param {number} invoiceId - The ID of the invoice to generate the PDF for.
+   * @param {PdfGenerator} pdfGenerator - The PDF generator service and file service used for creating the PDF.
+   * @param {boolean} [force=false] - Whether to force regeneration of the invoice PDF, ignoring any existing ones.
+   * @returns {Promise<SimpleFileResponse>} A promise that resolves to the file response representing the invoice PDF, or `undefined` if the invoice cannot be found.
    */
-  public static async getOrCreatePDF(invoiceId: number, pdfGenerator: PdfGenerator, force = false): Promise<SimpleFileResponse> {
+
+  public static async getOrCreatePDF(invoiceId: number, pdfGenerator: PdfGenerator, force: boolean = false): Promise<SimpleFileResponse> {
     const invoice = await Invoice.findOne({ where: { id: invoiceId }, relations: ['to', 'invoiceStatus', 'transfer', 'transfer.to', 'transfer.from', 'pdf', 'invoiceEntries'] });
     if (!invoice) return undefined;
 
-
+    console.error(invoice.pdf);
     if (invoice.pdf && !force) {
       // check if invoice is current.
+      console.error('hash ', this.validatePdfHash(invoice));
       if (this.validatePdfHash(invoice)) return parseFileToResponse(invoice.pdf);
     }
 
@@ -89,6 +97,13 @@ export default class InvoicePdfService {
     return parseFileToResponse(pdf);
   }
 
+  /**
+   * Converts invoice entries into products and calculates total pricing information for a PDF invoice.
+   * This includes categorizing VAT rates and calculating total amounts excluding and including VAT.
+   *
+   * @param {Invoice} invoice - The invoice whose entries are to be converted.
+   * @returns {{products: Product[], pricing: TotalPricing}} An object containing an array of products derived from invoice entries and total pricing information, including VAT calculations.
+   */
   static entriesToProductsPricing(invoice: Invoice): { products: Product[], pricing: TotalPricing } {
     let exclVat: number = 0, lowVat: number = 0, highVat: number = 0;
     const products = invoice.invoiceEntries.map((entry: InvoiceEntry) => {
@@ -134,6 +149,13 @@ export default class InvoicePdfService {
     };
   }
 
+  /**
+   * Constructs and returns the parameters required for generating an invoice PDF.
+   * This includes invoice references, products, pricing, subject, sender, recipient, dates, company, and address information.
+   *
+   * @param {Invoice} invoice - The invoice for which to generate the parameters.
+   * @returns {InvoiceParameters} An instance of `InvoiceParameters` containing all necessary information for PDF generation.
+   */
   static getInvoiceParameters(invoice: Invoice): InvoiceParameters {
     const { products, pricing } = this.entriesToProductsPricing(invoice);
 
@@ -163,10 +185,16 @@ export default class InvoicePdfService {
     });
   }
 
-  // todo fix
+  /**
+   * Prepares and returns the parameters required by the PDF generator client to create an invoice PDF.
+   * This includes setting up file settings and consolidating invoice parameters.
+   *
+   * @param {Invoice} invoice - The invoice for which to generate PDF parameters.
+   * @returns {InvoiceRouteParams} An instance of `InvoiceRouteParams` containing the consolidated parameters and settings for PDF generation.
+   */
   static getPdfParams(invoice: Invoice): InvoiceRouteParams {
     const params = this.getInvoiceParameters(invoice);
-    console.error(params);
+
     const settings: FileSettings = new FileSettings({
       createdAt: new Date(),
       fileType: ReturnFileType.PDF,
@@ -183,6 +211,13 @@ export default class InvoicePdfService {
     return new InvoiceRouteParams(data);
   }
 
+  /**
+   * Generates a PDF for an invoice and uploads it to the file service. If the invoice PDF generation or upload fails, it throws an error with the failure reason.
+   *
+   * @param {number} invoiceId - The ID of the invoice to generate and upload the PDF for.
+   * @param {PdfGenerator} pdfGenerator - The services used for generating the PDF and handling file operations.
+   * @returns {Promise<InvoicePdf>} A promise that resolves to the `InvoicePdf` entity representing the generated and uploaded PDF.
+   */
   public static async createInvoicePDF(invoiceId: number, pdfGenerator: PdfGenerator): Promise<InvoicePdf> {
     const invoice = await Invoice.findOne({ where: { id: invoiceId }, relations: ['to', 'invoiceStatus', 'transfer', 'transfer.to', 'transfer.from', 'pdf', 'invoiceEntries'] });
     if (!invoice) return undefined;
