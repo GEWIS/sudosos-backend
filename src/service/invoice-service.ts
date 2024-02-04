@@ -506,6 +506,7 @@ export default class InvoiceService {
         date = user.createdAt;
       }
       params = { fromDate: new Date(date) };
+      if (params.fromDate) params.fromDate.setMilliseconds(params.fromDate.getMilliseconds() + 1);
     }
 
     if (isCreditInvoice) {
@@ -514,9 +515,12 @@ export default class InvoiceService {
       params.fromId = user.id;
     }
 
+    console.error('date to use: ', params.fromDate);
+
     const transactions = (await TransactionService.getTransactions(params, {})).records;
     const transfer = await this.createTransferFromTransactions(forId, transactions, isCreditInvoice);
 
+    console.error(transactions);
 
     // Create a new Invoice
     const newInvoice: Invoice = Object.assign(new Invoice(), {
