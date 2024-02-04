@@ -28,6 +28,8 @@ import { parseUserToBaseResponse } from '../helpers/revision-to-response';
 import TransactionService from './transaction-service';
 import User from "../entity/user/user";
 import Transaction from "../entity/transactions/transaction";
+import UpdateFlaggedTransactionRequest from "../controller/request/UpdateFlaggedTransactionRequest";
+import EventShift from "../entity/event/event-shift";
 
 /**
  * Parameters used to filter on Get Flagged Transactions functions.
@@ -128,5 +130,13 @@ export default class FlaggedTransactionService {
     });
     await FlaggedTransaction.save(flaggedTransaction);
     return this.asFlaggedTransactionResponse(flaggedTransaction);
+  }
+
+  public static async updateFlaggedTransaction(id: number, param: UpdateFlaggedTransactionRequest) : Promise<FlaggedTransactionResponse> {
+    const transaction = await FlaggedTransaction.findOne( {where: {id}} );
+    if (!transaction) return undefined;
+    transaction.status = param.status;
+    await FlaggedTransaction.save(transaction);
+    return this.asFlaggedTransactionResponse(transaction);
   }
 }

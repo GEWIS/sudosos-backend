@@ -24,7 +24,9 @@ import FileService from '../service/file-service';
 import { parseRequestPagination } from '../helpers/pagination';
 import FlaggedTransactionRequest from "./request/flagged-transaction-request";
 import FlaggedTransactionService, {CreateFlaggedTransactionParams} from "../service/flagged-transaction-service";
-import {FlagStatus} from "../entity/transactions/flagged-transaction";
+import FlaggedTransaction, {FlagStatus} from "../entity/transactions/flagged-transaction";
+import {EventShiftRequest} from "./request/event-request";
+import UpdateFlaggedTransactionRequest from "./request/UpdateFlaggedTransactionRequest";
 
 export default class FlaggedTransactionController extends BaseController {
   private logger: Logger = log4js.getLogger('FlaggedTransactionController');
@@ -51,6 +53,12 @@ export default class FlaggedTransactionController extends BaseController {
           body: { modelName: 'FlaggedTransactionRequest' },
           policy: async (req) => this.roleManager.can(req.token.roles, 'create', 'all', 'FlaggedTransactions', ['*']),
           handler: this.createFlaggedTransaction.bind(this),
+        },
+      },
+      '/:id(\\d+)': {
+        PATCH: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'update', 'all', 'Event', ['*']),
+          handler: this.updateFlaggedTransaction.bind(this),
         },
       },
       // '/all': {
@@ -134,6 +142,43 @@ export default class FlaggedTransactionController extends BaseController {
     } catch (error) {
       this.logger.error('Could not create flagged transaction:', error);
       this.logger.error(params);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * PATCH /flaggedtransactions/{id}
+   * @summary Update a flagged transaction
+   * @tags flagged - Operations of the flagged transactions controller
+   * @operationId updateFlaggedTransaction
+   * @security JWT
+   * @param {integer} id.path.required - The id of the flagged transaction to be updated
+   * @param {UpdateFlaggedTransactionRequest} request.body.required
+   * @return {FlaggedTransactionResponse} 200 - Created Flagged Transaction
+   * @return {string} 400 - Validation Error
+   * @return {string} 500 - Internal Server error
+   */
+  public async updateFlaggedTransaction(req: RequestWithToken, res: Response) {
+    const { id: rawId } = req.params;
+    const body = req.body as UpdateFlaggedTransactionRequest;
+    this.logger.trace('Update flaggedTransaction', rawId, 'with body', body, 'by user', req.token.user);
+
+    let id = Number.parseInt(rawId, 10);
+    try {
+      const flaggedTransaction = await FlaggedTransaction.findOne({where: { id }});
+      if (flaggedTransaction == null) {
+        res.status(404).send();
+        return;
+      }
+    } catch (error) {
+      this.logger.error('Could not update flagged transaction:', error);
+      res.status(500).json('Internal server error.');
+    }
+
+    try {
+      res.json(await FlaggedTransactionService.updateFlaggedTransaction(id, body));
+    } catch (error) {
+      this.logger.error('Could not update flagged transaction:', error);
       res.status(500).json('Internal server error.');
     }
   }
