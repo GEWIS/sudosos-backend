@@ -44,6 +44,7 @@ import InvoiceEntry from '../../../src/entity/invoices/invoice-entry';
 import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
 import Transfer from '../../../src/entity/transactions/transfer';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
+import BaseFile from '../../../src/entity/file/base-file';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -340,10 +341,24 @@ describe('InvoicePdfService', async (): Promise<void> => {
   });
 
   describe('createInvoicePDF', () => {
-    it('should generate and upload a new PDF for the given invoice ID', async () => {});
-    it('should return undefined if the invoice does not exist', async () => {});
-    it('should handle and log errors during PDF generation', async () => {});
-    it('should handle and log errors during PDF upload', async () => {});
-    it('should verify that the generated PDF matches the expected format and content', async () => {});
+    it('should generate and upload a new PDF for the given invoice ID', async () => {
+      generateInvoiceStub.resolves({
+        data: new Blob(),
+        status: 200,
+      });
+
+      uploadInvoiceStub.restore();
+
+      const invoice = ctx.invoices[0];
+
+      const invoicePdf = await InvoicePdfService.createInvoicePDF(invoice.id, { client: ctx.client, fileService: ctx.fileService });
+
+      expect(invoicePdf).to.not.be.undefined;
+      expect(invoicePdf.hash).to.eq(hashJSON(InvoicePdfService.getInvoiceParameters(invoice)));
+    });
+    it('should return undefined if the invoice does not exist', async () => {
+      const invoicePdf = await InvoicePdfService.createInvoicePDF(-1, { client: ctx.client, fileService: ctx.fileService });
+      expect(invoicePdf).to.be.undefined;
+    });
   });
 });

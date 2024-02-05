@@ -322,7 +322,7 @@ export default class InvoiceController extends BaseController {
    * @security JWT
    * @param {integer} id.path.required - The id of the invoice to return
    * @return {string} 404 - Invoice not found
-   * @return {SimpleFileResponse} 200 - The invoice pdf information.
+   * @return {string} 200 - The pdf location information.
    * @return {string} 500 - Internal server error
    */
   public async getInvoicePDF(req: RequestWithToken, res: Response): Promise<void> {
@@ -337,7 +337,7 @@ export default class InvoiceController extends BaseController {
         return;
       }
 
-      res.status(200).json(invoice);
+      res.status(200).json({ pdf: invoice.downloadName });
     } catch (error) {
       this.logger.error('Could get invoice PDF:', error);
       res.status(500).json('Internal server error.');

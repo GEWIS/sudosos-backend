@@ -62,6 +62,9 @@ import { InvoiceState } from '../../../src/entity/invoices/invoice-status';
 import InvoiceService from '../../../src/service/invoice-service';
 import InvoiceUser from '../../../src/entity/user/invoice-user';
 import { UpdateInvoiceUserRequest } from '../../../src/controller/request/user-request';
+import InvoicePdf from '../../../src/entity/file/invoice-pdf';
+import InvoicePdfService from '../../../src/service/invoice-pdf-service';
+import sinon from 'sinon';
 
 describe('InvoiceController', async () => {
   let ctx: {
@@ -635,6 +638,33 @@ describe('InvoiceController', async () => {
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
       expect(res.status).to.equal(404);
+    });
+  });
+  describe('GET /invoices/{id}/pdf', () => {
+    it('should return the file name of the pdf', async () => {
+      let invoice = (await Invoice.find())[0];
+
+      const hash = require('../../../src/helpers/hash');
+      const stub = sinon.stub(hash, 'hashJSON').returns('fake_hash');
+
+      const pdf = Object.assign(new InvoicePdf(), {
+        downloadName: 'test-file.pdf',
+        createdBy: ctx.adminUser,
+        location: '/etc/test-file.pdf',
+        hash: 'fake_hash',
+      });
+
+      await InvoicePdf.save(pdf);
+      invoice.pdf = pdf;
+      await Invoice.save(invoice);
+
+      const res = await request(ctx.app)
+        .get(`/invoices/${invoice.id}/pdf`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(200);
+      expect(res.body).to.equal({ pdf: 'test-file.pdf' });
+      stub.restore();
     });
   });
 

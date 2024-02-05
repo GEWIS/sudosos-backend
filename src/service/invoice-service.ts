@@ -42,7 +42,7 @@ import InvoiceEntryRequest from '../controller/request/invoice-entry-request';
 import User, { UserType } from '../entity/user/user';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
 import SubTransactionRow from '../entity/transactions/sub-transaction-row';
-import { parseFileToResponse, parseUserToBaseResponse } from '../helpers/revision-to-response';
+import { parseUserToBaseResponse } from '../helpers/revision-to-response';
 import { collectByToId, collectProductsByRevision, reduceMapToInvoiceEntries } from '../helpers/transaction-mapper';
 import SubTransaction from '../entity/transactions/sub-transaction';
 import InvoiceUser, { InvoiceUserDefaults } from '../entity/user/invoice-user';
@@ -123,7 +123,7 @@ export default class InvoiceService {
       addressee: invoice.addressee,
       transfer: invoice.transfer ? TransferService.asTransferResponse(invoice.transfer) : undefined,
       description: invoice.description,
-      pdf: invoice.pdf ? parseFileToResponse(invoice.pdf) : undefined,
+      pdf: invoice.pdf ? invoice.pdf.downloadName : undefined,
       currentState: InvoiceService.asInvoiceStatusResponse(
         invoice.invoiceStatus[invoice.invoiceStatus.length - 1],
       ),
