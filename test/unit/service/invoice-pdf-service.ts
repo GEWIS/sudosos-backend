@@ -320,16 +320,23 @@ describe('InvoicePdfService', async (): Promise<void> => {
   });
 
   describe('getInvoiceParameters', () => {
-    it('should return all required parameters for generating an invoice PDF', async () => {});
-    it('should handle cases with missing invoice information gracefully', async () => {});
-    it('should correctly format the recipient and sender information', async () => {});
-    it('should include correct dates, company, and address information', async () => {});
-  });
+    it('should return all required parameters for generating an invoice PDF', async () => {
+      const invoice = ctx.invoices[0];
+      const params = InvoicePdfService.getInvoiceParameters(invoice);
 
-  describe('getPdfParams', () => {
-    it('should prepare PDF parameters including file settings', async () => {});
-    it('should log an error if parameters are missing or incorrect', async () => {});
-    it('should correctly set the language, file type, and stationery for the PDF', async () => {});
+      expect(params.reference.ourReference).to.eq(invoice.reference);
+      expect(params.reference.yourReference).to.eq(String(invoice.id));
+      expect(params.reference.costCenter).to.eq(true);
+
+      expect(params.subject).to.eq(invoice.description);
+      expect(params.dates.date).to.eq(invoice.createdAt);
+      expect(params.company.name).to.eq(invoice.addressee);
+
+      expect(params.address.street).to.eq(invoice.street);
+      expect(params.address.postalCode).to.eq(invoice.postalCode);
+      expect(params.address.city).to.eq(invoice.city);
+      expect(params.address.country).to.eq(invoice.country);
+    });
   });
 
   describe('createInvoicePDF', () => {
