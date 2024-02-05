@@ -47,7 +47,7 @@ export type ProductRequest = UpdateProductParams | CreateProductParams;
  * @property {number} category.required  - Category of the product
  * @property {number} alcoholPercentage.required  - Alcohol percentage of the product in 2 decimals
  * @property {boolean} featured - If product is featured
- * @property {boolean} preferred- If product is preferred
+ * @property {boolean} preferred - If product is preferred
  * @property {boolean} priceList - If product is shown on narrowcasting screens
  * @property {number} ownerId.required - ID of the owner
  */
