@@ -663,7 +663,7 @@ describe('InvoiceController', async () => {
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
       expect(res.status).to.equal(200);
-      expect(res.body).to.equal({ pdf: 'test-file.pdf' });
+      expect(res.body.pdf).to.equal('test-file.pdf');
       stub.restore();
     });
   });
