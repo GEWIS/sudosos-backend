@@ -172,13 +172,15 @@ export default class InvoicePdfService {
       products:products,
       pricing: pricing,
       subject: invoice.description,
+      // Are unused but still required.
       sender: new Identity({ firstName: UNUSED_PARAM, fullName: UNUSED_PARAM, lastName: UNUSED_PARAM, lastNamePreposition: UNUSED_PARAM }),
       recipient: new Identity({ firstName: UNUSED_PARAM, lastName: UNUSED_PARAM, lastNamePreposition: UNUSED_PARAM, fullName: UNUSED_PARAM }),
+
       dates: new Dates({
         date: invoice.createdAt,
       }),
       company: new Company({
-        name: `${invoice.to.firstName} ${invoice.to.lastName}`,
+        name: invoice.addressee,
       }),
       address: new Address({
         street: invoice.street,
