@@ -44,7 +44,6 @@ import InvoiceEntry from '../../../src/entity/invoices/invoice-entry';
 import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
 import Transfer from '../../../src/entity/transactions/transfer';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
-import BaseFile from '../../../src/entity/file/base-file';
 
 chai.use(deepEqualInAnyOrder);
 

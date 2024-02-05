@@ -63,7 +63,6 @@ import InvoiceService from '../../../src/service/invoice-service';
 import InvoiceUser from '../../../src/entity/user/invoice-user';
 import { UpdateInvoiceUserRequest } from '../../../src/controller/request/user-request';
 import InvoicePdf from '../../../src/entity/file/invoice-pdf';
-import InvoicePdfService from '../../../src/service/invoice-pdf-service';
 import sinon from 'sinon';
 
 describe('InvoiceController', async () => {
