@@ -66,9 +66,8 @@ export default class InvoicePdfService {
    */
   static validatePdfHash(invoice: Invoice): boolean {
     if (!invoice.pdf) return false;
-    console.error(invoice);
     const hash = hashJSON(this.getInvoiceParameters(invoice));
-    console.error(hash, invoice.pdf.hash);
+
     return hash === invoice.pdf.hash;
   }
 
@@ -86,10 +85,9 @@ export default class InvoicePdfService {
     const invoice = await Invoice.findOne({ where: { id: invoiceId }, relations: ['to', 'invoiceStatus', 'transfer', 'transfer.to', 'transfer.from', 'pdf', 'invoiceEntries'] });
     if (!invoice) return undefined;
 
-    console.error(invoice.pdf);
+
     if (invoice.pdf && !force) {
       // check if invoice is current.
-      console.error('hash ', this.validatePdfHash(invoice));
       if (this.validatePdfHash(invoice)) return parseFileToResponse(invoice.pdf);
     }
 
@@ -106,7 +104,7 @@ export default class InvoicePdfService {
    */
   static entriesToProductsPricing(invoice: Invoice): { products: Product[], pricing: TotalPricing } {
     let exclVat: number = 0, lowVat: number = 0, highVat: number = 0;
-    const products = invoice.invoiceEntries.map((entry: InvoiceEntry) => {
+    let products = invoice.invoiceEntries.map((entry: InvoiceEntry) => {
       // SudoSOS rounds per product.
       const price = entry.priceInclVat.getAmount() * entry.amount;
       const baseExclVat = Math.round(entry.priceInclVat.getAmount()  / (1 + (entry.vatPercentage / 100))) * entry.amount;
@@ -138,6 +136,12 @@ export default class InvoicePdfService {
         }),
       });
     });
+
+    // Sort products by VAT amount from high to low
+    // Design decision: we need some form of sorting since this is not guaranteed by the query. If we do not sort
+    // We would get different hashes just because the order changed.
+    products = products.sort((a, b) => b.pricing.vatAmount - a.pricing.vatAmount);
+
     return {
       products,
       pricing: new TotalPricing({

@@ -15,13 +15,11 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import InvoicePdfService, {PdfGenerator} from '../../../src/service/invoice-pdf-service';
-import {
-  Client,
-} from 'pdf-generator-client';
+import InvoicePdfService, { PdfGenerator } from '../../../src/service/invoice-pdf-service';
+import { Client } from 'pdf-generator-client';
 import sinon from 'sinon';
 import Invoice from '../../../src/entity/invoices/invoice';
-import { expect } from 'chai';
+import chai, { expect } from 'chai';
 import InvoicePdf from '../../../src/entity/file/invoice-pdf';
 import { Connection } from 'typeorm';
 import express, { Application } from 'express';
@@ -29,16 +27,26 @@ import { SwaggerSpecification } from 'swagger-model-validator';
 import User from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import {
-  seedContainers, seedInvoices,
+  seedContainers,
+  seedInvoices,
   seedPointsOfSale,
   seedProductCategories,
-  seedProducts, seedTransactions,
+  seedProducts,
+  seedTransactions,
   seedUsers,
   seedVatGroups,
 } from '../../seed';
 import Swagger from '../../../src/start/swagger';
 import { json } from 'body-parser';
 import { hashJSON } from '../../../src/helpers/hash';
+import FileService from '../../../src/service/file-service';
+import InvoiceEntry from '../../../src/entity/invoices/invoice-entry';
+import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
+import Transfer from '../../../src/entity/transactions/transfer';
+import deepEqualInAnyOrder from 'deep-equal-in-any-order';
+
+chai.use(deepEqualInAnyOrder);
+
 describe('InvoicePdfService', async (): Promise<void> => {
   let ctx: {
     connection: Connection;
@@ -46,6 +54,9 @@ describe('InvoicePdfService', async (): Promise<void> => {
     specification: SwaggerSpecification;
     users: User[];
     invoices: Invoice[];
+    pdfParams: any;
+    fileService: FileService,
+    client: Client,
   };
 
   before(async function test(): Promise<void> {
@@ -79,6 +90,15 @@ describe('InvoicePdfService', async (): Promise<void> => {
     const specification = await Swagger.initialize(app);
     app.use(json());
 
+    const pdfParams = {
+      hash: 'default hash',
+      downloadName: 'test name',
+      location: 'location',
+      createdBy: users[0],
+    };
+
+    const fileService: FileService = new FileService('./data/simple', 'disk');
+
     // initialize context
     ctx = {
       connection,
@@ -86,19 +106,25 @@ describe('InvoicePdfService', async (): Promise<void> => {
       specification,
       users,
       invoices,
+      pdfParams,
+      fileService,
+      client:  new Client('url', { fetch }),
     };
   });
 
   // TODO fix any
   let generateInvoiceStub: any;
+  let uploadInvoiceStub: any;
 
   beforeEach(function () {
-    generateInvoiceStub = sinon.stub(Client.prototype, 'generateInvoice');
+    generateInvoiceStub = sinon.stub(ctx.client, 'generateInvoice');
+    uploadInvoiceStub = sinon.stub(ctx.fileService, 'uploadInvoicePdf');
   });
 
   afterEach(function () {
     // Restore the original function after each test
     generateInvoiceStub.restore();
+    uploadInvoiceStub.restore();
   });
 
   describe('validatePdfHash', () => {
@@ -133,30 +159,159 @@ describe('InvoicePdfService', async (): Promise<void> => {
   describe('getOrCreatePDF', () => {
     it('should return an existing PDF if the hash matches and force is false', async () => {
       const invoice = ctx.invoices[0];
-      const pdf = new InvoicePdf();
+
+      const pdf = Object.assign(new InvoicePdf(), {
+        ...ctx.pdfParams,
+      });
 
       pdf.hash = hashJSON(InvoicePdfService.getInvoiceParameters(invoice));
-      pdf.downloadName = 'test name';
-      pdf.location = 'location';
-      pdf.createdBy = ctx.users[0];
       await InvoicePdf.save(pdf);
 
+      invoice.pdf = pdf;
       await Invoice.save(invoice);
-      console.error(invoice);
+
       const file = await InvoicePdfService.getOrCreatePDF(invoice.id, {} as PdfGenerator);
       expect(file.downloadName).to.eq(pdf.downloadName);
     });
-    it('should regenerate and return a new PDF if the hash does not match', async () => {});
-    it('should always regenerate and return a new PDF if force is true, even if the hash matches', async () => {});
-    it('should return undefined if the invoice does not exist', async () => {});
-    it('should handle and log errors if PDF generation fails', async () => {});
+    it('should regenerate and return a new PDF if the hash does not match', async () => {
+      const invoice = ctx.invoices[0];
+
+      const pdf = Object.assign(new InvoicePdf(), {
+        ...ctx.pdfParams,
+      });
+      await InvoicePdf.save(pdf);
+
+      invoice.pdf = pdf;
+      await Invoice.save(invoice);
+
+      generateInvoiceStub.resolves({
+        data: new Blob(),
+        status: 200,
+      });
+      uploadInvoiceStub.resolves({});
+
+      await InvoicePdfService.getOrCreatePDF(invoice.id, { fileService: ctx.fileService, client: ctx.client } as PdfGenerator);
+      expect(uploadInvoiceStub).to.have.been.calledOnce;
+    });
+    it('should always regenerate and return a new PDF if force is true, even if the hash matches', async () => {
+      const invoice = ctx.invoices[0];
+
+      const pdf = Object.assign(new InvoicePdf(), {
+        ...ctx.pdfParams,
+      });
+
+      pdf.hash = hashJSON(InvoicePdfService.getInvoiceParameters(invoice));
+      await InvoicePdf.save(pdf);
+
+      invoice.pdf = pdf;
+      await Invoice.save(invoice);
+
+      // Hash is valid
+      expect(InvoicePdfService.validatePdfHash(invoice)).to.be.true;
+
+      generateInvoiceStub.resolves({
+        data: new Blob(),
+        status: 200,
+      });
+      uploadInvoiceStub.resolves({});
+
+      await InvoicePdfService.getOrCreatePDF(invoice.id, { fileService: ctx.fileService, client: ctx.client } as PdfGenerator, true);
+
+      // Upload was still called.
+      expect(uploadInvoiceStub).to.have.been.calledOnce;
+    });
+    it('should return undefined if the invoice does not exist', async () => {
+      const file = await InvoicePdfService.getOrCreatePDF(-1, {} as PdfGenerator);
+      expect(file).to.be.undefined;
+    });
   });
 
   describe('entriesToProductsPricing', () => {
-    it('should correctly convert invoice entries to products and total pricing', async () => {});
-    it('should calculate VAT amounts correctly for each VAT category', async () => {});
-    it('should handle invoices with zero entries', async () => {});
-    it('should throw an error for unsupported VAT percentages', async () => {});
+    it('should correctly convert invoice entries to products and total pricing', async () => {
+      const invoice: Invoice = {} as Invoice;
+      const total = 500 + 3 * 1090 + 5 * 1210;
+      const lowVat = 270;
+      const highVat = 1050;
+      invoice.transfer = { amount: DineroTransformer.Instance.from(total) } as Transfer;
+
+      invoice.invoiceEntries = [{
+        description: 'Product no VAT',
+        amount: 1,
+        priceInclVat: DineroTransformer.Instance.from(500),
+        vatPercentage: 0,
+      } as InvoiceEntry,
+      {
+        description: 'Product low VAT',
+        amount: 3,
+        priceInclVat: DineroTransformer.Instance.from(1090),
+        vatPercentage: 9,
+      } as InvoiceEntry,
+      {
+        description: 'Product high VAT',
+        amount: 5,
+        priceInclVat: DineroTransformer.Instance.from(1210),
+        vatPercentage: 21,
+      } as InvoiceEntry,
+      ];
+
+      const result = InvoicePdfService.entriesToProductsPricing(invoice);
+      expect(result.pricing.inclVat).to.eq(total);
+      expect(result.pricing.lowVat).to.eq(lowVat);
+      expect(result.pricing.highVat).to.eq(highVat);
+      expect(result.pricing.exclVat).to.eq(total - lowVat - highVat);
+
+      const results = [{
+        name: 'Product high VAT',
+        details: undefined,
+        summary: '',
+        specification: undefined,
+        pricing: {
+          basePrice: 1210,
+          discount: undefined,
+          vatAmount: 21,
+          vatCategory: 'ZERO',
+          quantity: 5,
+        },
+      } as any,
+      {
+        name: 'Product low VAT',
+        details: undefined,
+        summary: '',
+        specification: undefined,
+        pricing: {
+          basePrice: 1090,
+          discount: undefined,
+          vatAmount: 9,
+          vatCategory: 'ZERO',
+          quantity: 3,
+        },
+      } as any,
+      {
+        name: 'Product no VAT',
+        details: undefined,
+        summary: '',
+        specification: undefined,
+        pricing: {
+          basePrice: 500,
+          discount: undefined,
+          vatAmount: 0,
+          vatCategory: 'ZERO',
+          quantity: 1,
+        },
+      } as any];
+      expect(result.products).to.deep.equalInAnyOrder(results);
+    });
+    it('should throw an error for unsupported VAT percentages', async () => {
+      const invoice: Invoice = {} as Invoice;
+      invoice.invoiceEntries = [{
+        description: 'Product unsupported VAT',
+        amount: 1,
+        priceInclVat: DineroTransformer.Instance.from(500),
+        vatPercentage: 5,
+      } as InvoiceEntry];
+
+      expect(() => InvoicePdfService.entriesToProductsPricing(invoice)).to.Throw('Unsupported vat percentage 5 during pdf generation.');
+    });
   });
 
   describe('getInvoiceParameters', () => {

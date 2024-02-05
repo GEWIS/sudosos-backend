@@ -26,8 +26,8 @@ import Product from '../entity/product/product';
 import ProductImage from '../entity/file/product-image';
 import Banner from '../entity/banner';
 import BannerImage from '../entity/file/banner-image';
-import Invoice from "../entity/invoices/invoice";
-import InvoicePdf from "../entity/file/invoice-pdf";
+import Invoice from '../entity/invoices/invoice';
+import InvoicePdf from '../entity/file/invoice-pdf';
 
 /**
  *  Possible storage methods that can be used
