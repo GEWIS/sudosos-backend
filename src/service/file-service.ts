@@ -138,12 +138,14 @@ export default class FileService {
     await BaseFile.delete(file.id);
   }
 
+  /**
+   * Upload an pdf file
+   */
   public async uploadInvoicePdf(entity: Invoice, fileData: Buffer, createdBy: User, hash: string): Promise<InvoicePdf> {
     let pdf = entity.pdf;
-    // TODO FIX
     if (pdf == null) {
       pdf = Object.assign(new InvoicePdf(), {
-        downloadName: 'test',
+        downloadName: '',
         createdBy,
         location: '',
         hash,
@@ -154,7 +156,10 @@ export default class FileService {
       await this.removeFile(pdf);
     }
 
-    await this.createFile(pdf, fileData);
+    const file = await this.createFile(pdf, fileData);
+
+    // Save the file name as the download name.
+    pdf.downloadName = path.parse(file.location).base;
 
     pdf.hash = hash;
     await InvoicePdf.save(pdf);

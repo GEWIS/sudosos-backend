@@ -16,8 +16,6 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import Invoice from '../entity/invoices/invoice';
-import { SimpleFileResponse } from '../controller/response/simple-file-response';
-import { parseFileToResponse } from '../helpers/revision-to-response';
 import {
   Address,
   Client,
@@ -81,18 +79,16 @@ export default class InvoicePdfService {
    * @returns {Promise<SimpleFileResponse>} A promise that resolves to the file response representing the invoice PDF, or `undefined` if the invoice cannot be found.
    */
 
-  public static async getOrCreatePDF(invoiceId: number, pdfGenerator: PdfGenerator, force: boolean = false): Promise<SimpleFileResponse> {
+  public static async getOrCreatePDF(invoiceId: number, pdfGenerator: PdfGenerator, force: boolean = false): Promise<InvoicePdf> {
     const invoice = await Invoice.findOne({ where: { id: invoiceId }, relations: ['to', 'invoiceStatus', 'transfer', 'transfer.to', 'transfer.from', 'pdf', 'invoiceEntries'] });
     if (!invoice) return undefined;
 
-
     if (invoice.pdf && !force) {
       // check if invoice is current.
-      if (this.validatePdfHash(invoice)) return parseFileToResponse(invoice.pdf);
+      if (this.validatePdfHash(invoice)) return invoice.pdf;
     }
 
-    const pdf = await this.createInvoicePDF(invoiceId, pdfGenerator);
-    return parseFileToResponse(pdf);
+    return Promise.resolve(await this.createInvoicePDF(invoiceId, pdfGenerator));
   }
 
   /**
