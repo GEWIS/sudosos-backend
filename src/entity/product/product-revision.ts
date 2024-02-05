@@ -34,6 +34,9 @@ import BaseEntityWithoutId from '../base-entity-without-id';
  * @property {integer} revision.required - The revision number of this revision.
  * @property {string} name.required - The unique name of the product.
  * @property {Dinero.model} price.required - The price of each product.
+ * @property {boolean} featured - If product should be highlighted in POS.
+ * @property {boolean} preferred - If product should be on top in POS.
+ * @property {boolean} priceList - If shown of narrowcasting screens.
  */
 @Entity()
 export default class ProductRevision extends BaseEntityWithoutId {
@@ -76,6 +79,30 @@ export default class ProductRevision extends BaseEntityWithoutId {
     scale: 2,
   })
   public alcoholPercentage: number;
+
+  /**
+   * Whether this product should be highlighted in the POS
+   */
+  @Column({
+    default: false,
+  })
+  public featured: boolean;
+
+  /**
+   * Whether this product should be on top in the POS
+   */
+  @Column({
+    default: false,
+  })
+  public  preferred: boolean;
+
+  /**
+   * If shown of narrowcasting screens
+   */
+  @Column({
+    default: false,
+  })
+  public  priceList: boolean;
 
   @BeforeUpdate()
   // eslint-disable-next-line class-methods-use-this

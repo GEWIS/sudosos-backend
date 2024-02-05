@@ -142,7 +142,7 @@ describe('Propagation between products, containers, POSs', () => {
       alcoholPercentage: 3.9,
       featured: true,
       preferred: true,
-      showOnPriceList: true,
+      priceList: true,
     };
 
     const containerRequest: CreateContainerRequest = {
@@ -272,7 +272,7 @@ describe('Propagation between products, containers, POSs', () => {
         alcoholPercentage: ctx.productRequest.alcoholPercentage,
         featured: ctx.productRequest.featured,
         preferred: ctx.productRequest.preferred,
-        showOnPriceList: ctx.productRequest.showOnPriceList,
+        priceList: ctx.productRequest.priceList,
       };
 
       let res = await request(ctx.app)

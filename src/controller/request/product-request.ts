@@ -24,9 +24,9 @@ export interface BaseProductParams {
   category: number;
   alcoholPercentage: number;
   name: string;
-  featured: boolean;
-  preferred: boolean;
-  showOnPriceList: boolean;
+  featured?: boolean;
+  preferred?: boolean;
+  priceList?: boolean;
 }
 
 export default interface CreateProductParams extends BaseProductParams {
@@ -46,9 +46,9 @@ export type ProductRequest = UpdateProductParams | CreateProductParams;
  * @property {number} vat.required - VAT group ID of the product
  * @property {number} category.required  - Category of the product
  * @property {number} alcoholPercentage.required  - Alcohol percentage of the product in 2 decimals
- * @property {boolean} featured.required - If product is featured
- * @property {boolean} preferred.required - If product is preferred
- * @property {boolean} showOnPriceList - If product is shown on narrowcasting screens
+ * @property {boolean} featured - If product is featured
+ * @property {boolean} preferred- If product is preferred
+ * @property {boolean} priceList - If product is shown on narrowcasting screens
  * @property {number} ownerId.required - ID of the owner
  */
 export interface CreateProductRequest extends BaseProductParams {
@@ -62,8 +62,8 @@ export interface CreateProductRequest extends BaseProductParams {
  * @property {number} vat.required - VAT group ID of the product
  * @property {number} category.required  - Category of the product
  * @property {number} alcoholPercentage.required  - Alcohol percentage of the product in 2 decimals
- * @property {boolean} featured.required - If product is featured
- * @property {boolean} preferred.required - If product is required
- * @property {boolean} showOnPriceList.required - If product should be shown on narrowcasting screens
+ * @property {boolean} featured - If product is featured
+ * @property {boolean} preferred - If product is required
+ * @property {boolean} priceList - If product should be shown on narrowcasting screens
  */
 export type UpdateProductRequest = BaseProductParams;

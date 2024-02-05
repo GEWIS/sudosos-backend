@@ -356,6 +356,48 @@ describe('ProductService', async (): Promise<void> => {
       // Cleanup
       await MemberAuthenticator.delete({ user: { id: owner.id } });
     });
+    it('should return products which are featured', async () => {
+      const params: ProductFilterParameters = {
+        featured: true,
+      };
+      const { records } = await ProductService.getProducts(params);
+
+      const products = ctx.productRevisions
+        .filter((rev) => {
+          const product = ctx.products.filter((prod) => prod.id === rev.productId)[0];
+          return rev.featured && product.currentRevision === rev.revision && product.id === rev.productId;
+        });
+
+      returnsAllRevisions(records, products);
+    });
+    it('should return products which are preferred', async () => {
+      const params: ProductFilterParameters = {
+        preferred: true,
+      };
+      const { records } = await ProductService.getProducts(params);
+
+      const products = ctx.productRevisions
+        .filter((rev) => {
+          const product = ctx.products.filter((prod) => prod.id === rev.productId)[0];
+          return rev.preferred && product.currentRevision === rev.revision && product.id === rev.productId;
+        });
+
+      returnsAllRevisions(records, products);
+    });
+    it('should return products which are shown on the price list', async () => {
+      const params: ProductFilterParameters = {
+        priceList: true,
+      };
+      const { records } = await ProductService.getProducts(params);
+
+      const products = ctx.productRevisions
+        .filter((rev) => {
+          const product = ctx.products.filter((prod) => prod.id === rev.productId)[0];
+          return rev.priceList && product.currentRevision === rev.revision && product.id === rev.productId;
+        });
+
+      returnsAllRevisions(records, products);
+    });
   });
 
   describe('createProduct function', () => {
@@ -367,7 +409,7 @@ describe('ProductService', async (): Promise<void> => {
         name: 'New Product Name',
         featured: true,
         preferred: false,
-        showOnPriceList: true,
+        priceList: true,
         ownerId: (await User.findOne({ where: { deleted: false } })).id,
         priceInclVat: {
           amount: 50,
@@ -394,7 +436,7 @@ describe('ProductService', async (): Promise<void> => {
         name: 'A product update',
         featured: true,
         preferred: false,
-        showOnPriceList: true,
+        priceList: true,
         priceInclVat: {
           amount: 51,
           precision: 2,
@@ -417,7 +459,7 @@ describe('ProductService', async (): Promise<void> => {
         ownerId,
         featured: true,
         preferred: false,
-        showOnPriceList: true,
+        priceList: true,
         priceInclVat: {
           amount: 50,
           currency: 'EUR',
@@ -444,7 +486,7 @@ describe('ProductService', async (): Promise<void> => {
         name: 'New Product Name 2',
         featured: true,
         preferred: false,
-        showOnPriceList: true,
+        priceList: true,
         priceInclVat: {
           amount: 55,
           currency: 'EUR',
@@ -476,7 +518,7 @@ describe('ProductService', async (): Promise<void> => {
         ownerId,
         featured: true,
         preferred: false,
-        showOnPriceList: true,
+        priceList: true,
         priceInclVat: {
           amount: 50,
           currency: 'EUR',
@@ -512,7 +554,7 @@ describe('ProductService', async (): Promise<void> => {
         name: 'New Product Name 2',
         featured: true,
         preferred: false,
-        showOnPriceList: true,
+        priceList: true,
         priceInclVat: {
           amount: 55,
           currency: 'EUR',

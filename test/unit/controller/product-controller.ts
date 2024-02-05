@@ -62,7 +62,7 @@ function productEq(source: CreateProductRequest | UpdateProductRequest, response
   }
   expect(source.featured).to.eq(response.featured);
   expect(source.preferred).to.eq(response.preferred);
-  expect(source.showOnPriceList).to.eq(response.showOnPriceList);
+  expect(source.priceList).to.eq(response.priceList);
 }
 
 describe('ProductController', async (): Promise<void> => {
@@ -150,7 +150,7 @@ describe('ProductController', async (): Promise<void> => {
       vat: 2,
       featured: true,
       preferred: true,
-      showOnPriceList: true,
+      priceList: true,
     };
 
     const invalidProductReq: UpdateProductRequest = {
