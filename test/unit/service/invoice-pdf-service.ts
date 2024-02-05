@@ -112,6 +112,11 @@ describe('InvoicePdfService', async (): Promise<void> => {
     };
   });
 
+  after(async () => {
+    await ctx.connection.dropDatabase();
+    await ctx.connection.close();
+  });
+
   // TODO fix any
   let generateInvoiceStub: any;
   let uploadInvoiceStub: any;
