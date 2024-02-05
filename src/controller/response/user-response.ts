@@ -17,8 +17,7 @@
  */
 import BaseResponse from './base-response';
 import { PaginationResult } from '../../helpers/pagination';
-import User, { TermsOfServiceStatus } from '../../entity/user/user';
-import {Column} from "typeorm";
+import { TermsOfServiceStatus } from '../../entity/user/user';
 
 /**
  * @typedef {allOf|BaseResponse} BaseUserResponse

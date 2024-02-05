@@ -21,8 +21,6 @@ import { BaseUserResponse } from './user-response';
 import { TransferResponse } from './transfer-response';
 import { PaginationResult } from '../../helpers/pagination';
 import { InvoiceState } from '../../entity/invoices/invoice-status';
-import InvoicePdf from "../../entity/file/invoice-pdf";
-import {SimpleFileResponse} from "./simple-file-response";
 
 /**
  * @typedef {object} InvoiceStatusResponse
