@@ -145,4 +145,16 @@ export default class FlaggedTransactionService {
     if (!transaction) return null;
     return this.asFlaggedTransactionResponse(transaction);
   }
+
+  public static async deleteFlaggedTransaction(id: number) : Promise<FlaggedTransactionResponse> {
+    const transaction: FlaggedTransaction = await FlaggedTransaction.findOne({ where: { id } } );
+
+    if (!transaction) {
+      return undefined;
+    }
+
+    await FlaggedTransaction.delete(id);
+
+    return this.asFlaggedTransactionResponse(transaction);
+  }
 }

@@ -61,8 +61,12 @@ export default class FlaggedTransactionController extends BaseController {
           handler: this.getSingleFlaggedTransaction.bind(this),
         },
         PATCH: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'update', 'all', 'Event', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'update', 'all', 'FlaggedTransactions', ['*']),
           handler: this.updateFlaggedTransaction.bind(this),
+        },
+        DELETE: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'delete', 'all', 'FlaggedTransactions', ['*']),
+          handler: this.deleteFlaggedTransaction.bind(this),
         },
       },
       // '/all': {
@@ -215,6 +219,35 @@ export default class FlaggedTransactionController extends BaseController {
       }
     } catch (error) {
       this.logger.error('Could not return single flagged transaction:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * DELETE /flaggedtransactions/{id}
+   * @summary Deletes a flagged transaction.
+   * @operationId deleteFlaggedTransaction
+   * @tags flagged - Operations of the flagged transactions controller
+   * @security JWT
+   * @param {integer} id.path.required - The id of the flagged transaction which should be deleted
+   * @return {string} 404 - Invoice not found
+   * @return {string} 204 - Update success
+   * @return {string} 500 - Internal server error
+   */
+  public async deleteFlaggedTransaction(req: RequestWithToken, res: Response): Promise<void> {
+    const { id } = req.params;
+    const flaggedTransactionId = parseInt(id, 10);
+    this.logger.trace('Delete Flagged Transaction', id, 'by user', req.token.user);
+
+    try {
+      const flaggedTransaction = await FlaggedTransactionService.deleteFlaggedTransaction(flaggedTransactionId);
+      if (flaggedTransaction) {
+        res.status(204).json();
+      } else {
+        res.status(404).json('Flagged transaction not found');
+      }
+    } catch (error) {
+      this.logger.error('Could not remove flagged transaction:', error);
       res.status(500).json('Internal server error.');
     }
   }
