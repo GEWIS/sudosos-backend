@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { Connection } from 'typeorm';
-import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
+import User, {NotifyDebtUserTypes, TermsOfServiceStatus, UserType} from '../../../src/entity/user/user';
 import Transaction from '../../../src/entity/transactions/transaction';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import Transfer from '../../../src/entity/transactions/transfer';
@@ -87,8 +87,8 @@ describe('TransactionSubscriber', () => {
       connection,
       adminUser,
       users,
-      usersNotInDebt: users.filter((u) => calculateBalance(u, transactions, subTransactions, transfers).amount.getAmount() >= 0),
-      usersInDebt: users.filter((u) => calculateBalance(u, transactions, subTransactions, transfers).amount.getAmount() < 0),
+      usersNotInDebt: users.filter((u) => calculateBalance(u, transactions, subTransactions, transfers).amount.getAmount() >= 0 && u.type in NotifyDebtUserTypes),
+      usersInDebt: users.filter((u) => calculateBalance(u, transactions, subTransactions, transfers).amount.getAmount() < 0 && u.type in NotifyDebtUserTypes),
       products: productRevisions,
       containers: containerRevisions,
       pointOfSales: pointOfSaleRevisions,
