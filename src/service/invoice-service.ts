@@ -44,11 +44,7 @@ import User from '../entity/user/user';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
 import SubTransactionRow from '../entity/transactions/sub-transaction-row';
 import { parseUserToBaseResponse } from '../helpers/revision-to-response';
-import {
-  collectByToId,
-  collectProductsByRevision,
-  reduceMapToInvoiceEntries,
-} from '../helpers/transaction-mapper';
+import { collectByToId, collectProductsByRevision, reduceMapToInvoiceEntries } from '../helpers/transaction-mapper';
 import SubTransaction from '../entity/transactions/sub-transaction';
 
 export interface InvoiceFilterParameters {
@@ -63,7 +59,7 @@ export interface InvoiceFilterParameters {
   /**
    * Filter based on the current invoice state
    */
-  currentState?: InvoiceState
+  invoiceStatus?: InvoiceState
   /**
    * Boolean if the invoice entries should be added to the response.
    */
@@ -82,7 +78,7 @@ export function parseInvoiceFilterParameters(req: RequestWithToken): InvoiceFilt
   return {
     toId: asNumber(req.query.toId),
     invoiceId: asNumber(req.query.invoiceId),
-    currentState: asInvoiceState(req.query.currentState),
+    invoiceStatus: asInvoiceState(req.query.currentState),
     returnInvoiceEntries: asBoolean(req.query.returnInvoiceEntries),
     fromDate: asDate(req.query.fromDate),
     tillDate: asDate(req.query.tillDate),
@@ -526,6 +522,7 @@ export default class InvoiceService {
       currentState: 'currentState',
       toId: 'toId',
       invoiceId: 'id',
+      invoiceStatus: 'invoiceStatus.state'
     };
 
     const relations: FindOptionsRelationByString = ['to', 'invoiceStatus', 'transfer', 'transfer.to', 'transfer.from'];
