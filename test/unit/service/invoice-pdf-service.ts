@@ -21,7 +21,7 @@ import sinon from 'sinon';
 import Invoice from '../../../src/entity/invoices/invoice';
 import chai, { expect } from 'chai';
 import InvoicePdf from '../../../src/entity/file/invoice-pdf';
-import { Connection } from 'typeorm';
+import { Connection, IsNull } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import User from '../../../src/entity/user/user';
@@ -348,8 +348,7 @@ describe('InvoicePdfService', async (): Promise<void> => {
 
       uploadInvoiceStub.restore();
 
-      const invoice = ctx.invoices[0];
-
+      const invoice = await Invoice.findOne({ where: { pdf: IsNull() }, relations: ['to', 'invoiceStatus', 'transfer', 'transfer.to', 'transfer.from', 'pdf', 'invoiceEntries'] });
       const invoicePdf = await InvoicePdfService.createInvoicePDF(invoice.id, { client: ctx.client, fileService: ctx.fileService });
 
       expect(invoicePdf).to.not.be.undefined;
