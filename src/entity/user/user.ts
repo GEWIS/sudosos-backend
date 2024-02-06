@@ -53,6 +53,13 @@ export const TOSRequired = [
 ];
 
 /**
+ * All users that should be notified when in debt.
+ */
+export const NotifyDebtUserTypes: UserType[] = [
+  UserType.LOCAL_ADMIN, UserType.LOCAL_USER, UserType.MEMBER,
+];
+
+/**
  * @typedef {BaseEntity} User
  * @property {string} firstName.required - First name of the user.
  * @property {string} lastName - Last name of the user.

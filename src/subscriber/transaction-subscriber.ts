@@ -17,7 +17,7 @@
  */
 import { EntitySubscriberInterface, EventSubscriber, InsertEvent } from 'typeorm';
 import Transaction from '../entity/transactions/transaction';
-import User from '../entity/user/user';
+import User, {NotifyDebtUserTypes} from '../entity/user/user';
 import BalanceService from '../service/balance-service';
 import Mailer from '../mailer';
 import UserDebtNotification from '../mailer/templates/user-debt-notification';
@@ -47,7 +47,14 @@ export default class TransactionSubscriber implements EntitySubscriberInterface 
 
     let currentBalance = balance.amount.amount;
     if (balance.lastTransactionId < event.entity.id) {
-      currentBalance -= entity.subTransactions[0].subTransactionRows[0].amount * entity.subTransactions[0].subTransactionRows[0].product.priceInclVat.getAmount();
+      // Check if subTransactions exists, is not empty, and subTransactionRows exists and is not empty
+      if (entity.subTransactions?.length > 0 && entity.subTransactions[0].subTransactionRows?.length > 0) {
+        const subTransaction = entity.subTransactions[0].subTransactionRows[0];
+        // Ensure the amount and product.priceInclVat.getAmount() exist before performing the calculation
+        if (subTransaction.amount && typeof subTransaction.product?.priceInclVat?.getAmount === 'function') {
+          currentBalance -= subTransaction.amount * subTransaction.product.priceInclVat.getAmount();
+        }
+      }
     }
 
     if (currentBalance >= 0) return;
@@ -60,6 +67,9 @@ export default class TransactionSubscriber implements EntitySubscriberInterface 
 
     if (balanceBefore.amount.amount < 0) return;
     // User was not in debt before this new transaction
+
+    if (!(user.type in NotifyDebtUserTypes)) return;
+    // User should be notified of debt
 
     Mailer.getInstance().send(user, new UserDebtNotification({
       name: user.firstName,
