@@ -40,6 +40,7 @@ import Fine from '../../../src/entity/fine/fine';
 import Swagger from '../../../src/start/swagger';
 import Balance from '../../../src/entity/transactions/balance';
 import { calculateBalance } from '../../helpers/balance';
+import { expect } from 'chai';
 
 describe('AdministrativeCostService', async (): Promise<void> => {
   let ctx: {
@@ -103,22 +104,19 @@ describe('AdministrativeCostService', async (): Promise<void> => {
   describe('getAdministrativeCostUsers function', () => {
     it('should return only users to send a notification to', async () =>{
 
-      const date = new Date();
+      const transaction = ctx.transactions[0];
 
-      const transaction = Object.assign(new Transaction(), {
-        id: ctx.transactions[-1].id + 1,
-        createdAt: date.setFullYear(date.getFullYear() - 2),
-        from: ctx.users[1],
-        createdBy: ctx.users[18],
-        subTransactions: [],
-        pointOfSale: ctx.pointOfSaleRevisions[1],
-      });
+      const currentDate = new Date();
 
-      await Transaction.save(transaction);
+      transaction.createdAt.setFullYear(currentDate.getFullYear() - 3);
 
-      const { records } = await AdministrativeCostService.getAdministrativeCostUsers({ notificiation: true });
+      await transaction.remove();
+      await transaction.save();
 
+      const { records } = await AdministrativeCostService.getAdministrativeCostUsers({ notification: true });
 
+      expect(records.length).to.be.eq(1);
+      expect(records[0].id).to.be.eq(ctx.transactions[0]);
     });
   });
 });
