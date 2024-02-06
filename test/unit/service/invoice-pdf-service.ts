@@ -120,16 +120,19 @@ describe('InvoicePdfService', async (): Promise<void> => {
   // TODO fix any
   let generateInvoiceStub: any;
   let uploadInvoiceStub: any;
+  let createFileStub: any;
 
   beforeEach(function () {
     generateInvoiceStub = sinon.stub(ctx.client, 'generateInvoice');
     uploadInvoiceStub = sinon.stub(ctx.fileService, 'uploadInvoicePdf');
+    createFileStub = sinon.stub(ctx.fileService, 'createFile');
   });
 
   afterEach(function () {
     // Restore the original function after each test
     generateInvoiceStub.restore();
     uploadInvoiceStub.restore();
+    createFileStub.restore();
   });
 
   describe('validatePdfHash', () => {
@@ -346,9 +349,14 @@ describe('InvoicePdfService', async (): Promise<void> => {
         status: 200,
       });
 
-      uploadInvoiceStub.restore();
-
       const invoice = await Invoice.findOne({ where: { pdf: IsNull() }, relations: ['to', 'invoiceStatus', 'transfer', 'transfer.to', 'transfer.from', 'pdf', 'invoiceEntries'] });
+      uploadInvoiceStub.restore();
+      createFileStub.resolves({
+        downloadName: 'test',
+        location: 'test',
+        createdBy: invoice.to.id,
+        id: 41,
+      });
       const invoicePdf = await InvoicePdfService.createInvoicePDF(invoice.id, { client: ctx.client, fileService: ctx.fileService });
 
       expect(invoicePdf).to.not.be.undefined;
