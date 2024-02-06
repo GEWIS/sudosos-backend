@@ -56,6 +56,10 @@ export default class FlaggedTransactionController extends BaseController {
         },
       },
       '/:id(\\d+)': {
+        GET: {
+          policy: async (req: RequestWithToken) => this.roleManager.can(req.token.roles, 'get', 'all', 'FlaggedTransactions', ['*']),
+          handler: this.getSingleFlaggedTransaction.bind(this),
+        },
         PATCH: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'update', 'all', 'Event', ['*']),
           handler: this.updateFlaggedTransaction.bind(this),
@@ -179,6 +183,38 @@ export default class FlaggedTransactionController extends BaseController {
       res.json(await FlaggedTransactionService.updateFlaggedTransaction(id, body));
     } catch (error) {
       this.logger.error('Could not update flagged transaction:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * GET /flaggedtransactions/{id}
+   * @summary - Returns a single flagged transaction
+   * @operationId getSingleFlaggedTransactions
+   * @tags flagged - Operations of the flagged transactions controller
+   * @param {integer} id.path.required - The id of the flagged transaction which should be returned
+   * @security JWT
+   * @return {FlaggedTransactionResponse} 200 - The requested flagged transaction
+   * @return {string} 404 - Not found error
+   * @return {string} 500 - Internal server error
+   */
+  public async getSingleFlaggedTransaction(req: RequestWithToken, res: Response): Promise<void> {
+    const { id } = req.params;
+    this.logger.trace('Get single flagged transaction', id, 'by user', req.token.user);
+
+    const flaggedTransactionId = parseInt(id, 10);
+
+    // Handle request
+    try {
+      const flaggedTransaction = await FlaggedTransactionService.getSingleFlaggedTransaction(flaggedTransactionId);
+      if (!flaggedTransaction) {
+        res.status(404).json('Flagged transaction not found.');
+        return;
+      } else {
+        res.json(flaggedTransaction);
+      }
+    } catch (error) {
+      this.logger.error('Could not return single flagged transaction:', error);
       res.status(500).json('Internal server error.');
     }
   }
