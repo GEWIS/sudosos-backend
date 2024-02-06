@@ -68,8 +68,6 @@ export default class Invoice extends BaseEntity {
   @Column()
   public description: string;
 
-  // TODO Database changes:
-
   // onDelete: 'CASCADE' is not possible here, because removing the
   // pdf from the database will not remove it form storage
   @OneToOne(() => InvoicePdf, { nullable: true, onDelete: 'RESTRICT' })
