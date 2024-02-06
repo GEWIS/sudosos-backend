@@ -120,7 +120,7 @@ export default class BalanceController extends BaseController {
         hasFine: asBoolean(req.query.hasFine),
         minFine: asDinero(req.query.minFine),
         maxFine: asDinero(req.query.maxFine),
-        userTypes: asArrayOfUserTypes(req.query.userType),
+        userTypes: asArrayOfUserTypes(req.query.userTypes),
         orderBy: asBalanceOrderColumn(req.query.orderBy),
         orderDirection: asOrderingDirection(req.query.orderDirection),
       };

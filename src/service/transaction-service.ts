@@ -71,6 +71,7 @@ import {
   reduceMapToVatEntries,
 } from '../helpers/transaction-mapper';
 import ProductCategoryService from './product-category-service';
+import FlaggedTransaction from "../entity/transactions/flagged-transaction";
 
 export interface TransactionFilterParameters {
   transactionId?: number | number[],
@@ -713,6 +714,7 @@ export default class TransactionService {
   Promise<TransactionResponse | undefined> {
     // get the transaction we should delete
     const transaction = await this.getSingleTransaction(id);
+    await FlaggedTransaction.delete(id);
     await Transaction.delete(id);
 
     // invalidate user balance cache
