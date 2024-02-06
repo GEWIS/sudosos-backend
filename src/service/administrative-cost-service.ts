@@ -29,7 +29,7 @@ import Bindings from '../helpers/bindings';
  */
 
 export interface AdministrativeFilterParameters {
-  notificiation?: boolean,
+  notification?: boolean,
   fine?: boolean,
 }
 
@@ -44,8 +44,6 @@ export default class AdministrativeCostService {
       'user.email AS email',
     ];
 
-    const date = new Date();
-
     const builder = createQueryBuilder()
       .from(User, 'user')
       .innerJoin(
@@ -56,13 +54,13 @@ export default class AdministrativeCostService {
       .innerJoin(
         Transaction,
         'transaction',
-        'transaction.fromID = user.id AND balance.lastTransactionId = transaction.id',
+        'transaction.fromId = user.id AND balance.lastTransactionId = transaction.id',
       )
       .select(selection);
 
 
-    if (filters.notificiation) {
-      builder.where(`((JulianDay(${date})-JulianDay(transaction.createdAt))/365.25) >= 2`);
+    if (filters.notification) {
+      builder.where('((julianday(date())-julianday(transaction.createdAt))/365.25) >= 2');
     }
 
     builder.orderBy({ 'user.id': 'DESC' });
