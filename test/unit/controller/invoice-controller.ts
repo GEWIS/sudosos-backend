@@ -665,6 +665,25 @@ describe('InvoiceController', async () => {
       expect(res.body.pdf).to.equal('test-file.pdf');
       stub.restore();
     });
+    it('should return an HTTP 404 if invoice does not exist', async () => {
+      const res = await request(ctx.app)
+        .get('/invoices/999/pdf')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(404);
+      expect(res.body).to.eq('Invoice not found.');
+    });
+    it('should return an HTTP 403 if not admin', async () => {
+      const invoice = (await Invoice.find())[0];
+      expect(invoice).to.not.be.null;
+
+      const res = await request(ctx.app)
+        .get(`/invoices/${invoice.id}/pdf`)
+        .set('Authorization', `Bearer ${ctx.token}`);
+
+      expect(res.status).to.equal(403);
+      expect(res.body).to.be.empty;
+    });
   });
 
   describe('/invoices/users/{id}', () => {
