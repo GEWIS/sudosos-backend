@@ -57,7 +57,7 @@ export default class FileService {
   /**
    * Create a new file in storage, given the provided parameters
    */
-  private async createFile(file: BaseFile, fileData: Buffer): Promise<BaseFile> {
+  public async createFile(file: BaseFile, fileData: Buffer): Promise<BaseFile> {
     let location: string;
     try {
       location = await this.fileStorage.saveFile(file.downloadName, fileData);
@@ -143,6 +143,7 @@ export default class FileService {
    */
   public async uploadInvoicePdf(entity: Invoice, fileData: Buffer, createdBy: User, hash: string): Promise<InvoicePdf> {
     let pdf = entity.pdf;
+
     if (pdf == null) {
       pdf = Object.assign(new InvoicePdf(), {
         downloadName: '',
