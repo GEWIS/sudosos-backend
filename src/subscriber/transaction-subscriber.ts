@@ -17,7 +17,7 @@
  */
 import { EntitySubscriberInterface, EventSubscriber, InsertEvent } from 'typeorm';
 import Transaction from '../entity/transactions/transaction';
-import User from '../entity/user/user';
+import User, {NotifyDebtUserTypes} from '../entity/user/user';
 import BalanceService from '../service/balance-service';
 import Mailer from '../mailer';
 import UserDebtNotification from '../mailer/templates/user-debt-notification';
@@ -67,6 +67,9 @@ export default class TransactionSubscriber implements EntitySubscriberInterface 
 
     if (balanceBefore.amount.amount < 0) return;
     // User was not in debt before this new transaction
+
+    if (!(user.type in NotifyDebtUserTypes)) return;
+    // User should be notified of debt
 
     Mailer.getInstance().send(user, new UserDebtNotification({
       name: user.firstName,
