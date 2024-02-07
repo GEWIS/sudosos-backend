@@ -154,7 +154,7 @@ export default class EventService {
     };
   }
 
-  private static asEventResponse(entity: Event): EventResponse {
+  public static asEventResponse(entity: Event): EventResponse {
     return {
       ...this.asBaseEventResponse(entity),
       shifts: entity.shifts.map((s) => this.asShiftInEventResponse(entity, s, entity.answers)),

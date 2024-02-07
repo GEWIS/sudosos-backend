@@ -21,7 +21,7 @@ import { TransferResponse } from './transfer-response';
 import { ProductResponse } from './product-response';
 import { ContainerResponse } from './container-response';
 import { PointOfSaleResponse } from './point-of-sale-response';
-import { InvoiceResponse } from './invoice-response';
+import { InvoiceResponseTypes } from './invoice-response';
 import { EventResponse } from './event-response';
 
 /**
@@ -48,7 +48,7 @@ export interface GdprResponse extends UserResponse {
 
   transactions: TransactionResponse[];
   transfers: TransferResponse[];
-  invoices: InvoiceResponse[];
+  invoices: InvoiceResponseTypes[];
 
   bannerImages: string[];
   productImages: string[];
