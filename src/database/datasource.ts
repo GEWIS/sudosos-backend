@@ -15,17 +15,21 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import {
-  Column, Entity,
-} from 'typeorm';
-import AuthenticationMethod from './authentication-method';
-
-/**
- * @typedef {AuthenticationMethod} NfcAuthenticator
- * @property {string} nfcCode.required - The UID of the NFC chip
- */
-@Entity()
-export default class NfcAuthenticator extends AuthenticationMethod {
-  @Column({ unique: true })
-  public nfcCode: string;
-}
+import { DataSource } from 'typeorm';
+export const AppDataSource = new DataSource(
+  {
+    'host': 'localhost',
+    'port': 3306,
+    'database': 'sudosos_test',
+    'type': 'mysql',
+    'username': 'root',
+    'synchronize': false,
+    'logging': true,
+    'migrations': [
+      'out/migrations/*.js',
+    ],
+    'extra': {
+      'authPlugins': {},
+    },
+    'poolSize': 4,
+  });

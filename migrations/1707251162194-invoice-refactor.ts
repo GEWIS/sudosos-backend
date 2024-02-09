@@ -20,7 +20,7 @@ import { MigrationInterface, QueryRunner, Table, TableColumn, TableForeignKey } 
 export class InvoiceRefactor1707251162194 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.createTable(new Table({
-      name: 'invoicePdf',
+      name: 'invoice_pdf',
       columns: [
         {
           name: 'id',
@@ -40,7 +40,7 @@ export class InvoiceRefactor1707251162194 implements MigrationInterface {
           isNullable: false,
         },
         {
-          name: 'createdById',
+          name: 'createdBy',
           type: 'int',
           isNullable: false,
         },
@@ -51,21 +51,6 @@ export class InvoiceRefactor1707251162194 implements MigrationInterface {
         },
       ],
     }), true);
-
-    // Add foreign key for createdBy in InvoicePdf
-    await queryRunner.createForeignKey('invoicePdf', new TableForeignKey({
-      columnNames: ['createdById'],
-      referencedColumnNames: ['id'],
-      referencedTableName: 'user', // Assuming 'user' is the table name for User entity
-      onDelete: 'CASCADE',
-    }));
-
-    // Proceed to add columns to the Invoice table
-    await queryRunner.addColumn('invoice', new TableColumn({
-      name: 'pdfId',
-      type: 'int',
-      isNullable: true,
-    }));
 
 
     // Add new columns with temporary nullable setting
@@ -112,44 +97,46 @@ export class InvoiceRefactor1707251162194 implements MigrationInterface {
       isNullable: false,
     }));
     await queryRunner.changeColumn('invoice', 'postalCode', new TableColumn({
-      name: 'street',
+      name: 'postalCode',
       type: 'varchar',
       isNullable: false,
     }));
     await queryRunner.changeColumn('invoice', 'city', new TableColumn({
-      name: 'street',
+      name: 'city',
       type: 'varchar',
       isNullable: false,
     }));
     await queryRunner.changeColumn('invoice', 'country', new TableColumn({
-      name: 'street',
+      name: 'country',
       type: 'varchar',
       isNullable: false,
     }));
 
+    // Add foreign key for createdBy in invoice_pdf
+    await queryRunner.createForeignKey('invoice_pdf', new TableForeignKey({
+      columnNames: ['createdBy'],
+      referencedColumnNames: ['id'],
+      referencedTableName: 'user',
+      onDelete: 'CASCADE',
+    }));
 
-    // Add foreign key constraint for pdfId to invoicePdf (as before)
+    // Proceed to add columns to the Invoice table
     await queryRunner.addColumn('invoice', new TableColumn({
-      name: 'pdfId',
+      name: 'pdf',
       type: 'int',
       isNullable: true,
     }));
-    await queryRunner.createForeignKey('invoice', new TableForeignKey({
-      columnNames: ['pdfId'],
-      referencedColumnNames: ['id'],
-      referencedTableName: 'invoicePdf',
-      onDelete: 'RESTRICT',
-    }));
+
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     // Remove the foreign key and column for pdfId (as before)
     const invoiceTable = await queryRunner.getTable('invoice');
-    const invoiceForeignKey = invoiceTable.foreignKeys.find(fk => fk.columnNames.indexOf('pdfId') !== -1);
+    const invoiceForeignKey = invoiceTable.foreignKeys.find(fk => fk.columnNames.indexOf('pdf') !== -1);
     if (invoiceForeignKey) {
       await queryRunner.dropForeignKey('invoice', invoiceForeignKey);
     }
-    await queryRunner.dropColumn('invoice', 'pdfId');
+    await queryRunner.dropColumn('invoice', 'pdf');
 
     await queryRunner.dropColumn('invoice', 'reference');
     await queryRunner.dropColumn('invoice', 'street');
@@ -157,12 +144,12 @@ export class InvoiceRefactor1707251162194 implements MigrationInterface {
     await queryRunner.dropColumn('invoice', 'city');
     await queryRunner.dropColumn('invoice', 'country');
 
-    const pdfTable = await queryRunner.getTable('invoicePdf');
-    const pdfForeignKey = pdfTable.foreignKeys.find(fk => fk.columnNames.indexOf('createdById') !== -1);
+    const pdfTable = await queryRunner.getTable('invoice_pdf');
+    const pdfForeignKey = pdfTable.foreignKeys.find(fk => fk.columnNames.indexOf('createdBy') !== -1);
     if (pdfForeignKey) {
-      await queryRunner.dropForeignKey('invoicePdf', pdfForeignKey);
+      await queryRunner.dropForeignKey('invoice_pdf', pdfForeignKey);
     }
-    await queryRunner.dropColumn('invoice', 'pdfId');
-    await queryRunner.dropTable('invoicePdf');
+    await queryRunner.dropColumn('invoice', 'pdf');
+    await queryRunner.dropTable('invoice_pdf');
   }
 }
