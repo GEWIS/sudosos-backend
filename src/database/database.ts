@@ -68,7 +68,7 @@ import EventShiftAnswer from '../entity/event/event-shift-answer';
 import EventShift from '../entity/event/event-shift';
 import { TransactionSubscriber, TransferSubscriber } from '../subscriber';
 import InvoicePdf from '../entity/file/invoice-pdf';
-import {InvoiceRefactor1707251162194} from "../../migrations/1707251162194-invoice-refactor";
+import { InvoiceRefactor1707251162194 } from '../../migrations/1707251162194-invoice-refactor';
 
 export default class Database {
   public static async initialize(): Promise<Connection> {
@@ -82,7 +82,6 @@ export default class Database {
       synchronize: process.env.TYPEORM_SYNCHRONIZE === 'true',
       logging: process.env.TYPEORM_LOGGING === 'true',
       migrations: [InvoiceRefactor1707251162194],
-      migrationsTableName: 'typeorm_migrations',
       extra: {
         authPlugins: {
           mysql_clear_password: () => () => Buffer.from(`${process.env.TYPEORM_PASSWORD}\0`),
@@ -144,6 +143,7 @@ export default class Database {
         TransferSubscriber,
       ],
     };
+
     return createConnection(options);
   }
 }
