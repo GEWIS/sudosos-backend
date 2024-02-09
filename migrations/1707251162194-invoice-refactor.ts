@@ -149,7 +149,6 @@ export class InvoiceRefactor1707251162194 implements MigrationInterface {
     if (pdfForeignKey) {
       await queryRunner.dropForeignKey('invoice_pdf', pdfForeignKey);
     }
-    await queryRunner.dropColumn('invoice', 'pdf');
     await queryRunner.dropTable('invoice_pdf');
   }
 }
