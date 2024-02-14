@@ -44,6 +44,9 @@ export interface BaseProductResponse extends BaseResponse {
  *           excluding VAT
  * @property {string} image - The URL to the picture representing this product.
  * @property {number} alcoholPercentage.required - The percentage of alcohol in this product.
+ * @property {boolean} featured.required - If product is featured
+ * @property {boolean} preferred.required - If product is preferred
+ * @property {boolean} priceList.required - If product is shown on narrow casting screens
  */
 export interface ProductResponse extends BaseProductResponse {
   revision: number,
@@ -52,6 +55,9 @@ export interface ProductResponse extends BaseProductResponse {
   category: ProductCategoryResponse,
   image?: string,
   alcoholPercentage: number,
+  featured: boolean,
+  preferred: boolean,
+  priceList: boolean,
 }
 
 /**

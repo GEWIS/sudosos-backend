@@ -529,6 +529,9 @@ function defineProductRevisions(
       revision: rev,
       name: `Product${product.id}-${rev}`,
       category,
+      featured: rev % 2 > 0,
+      preferred: rev % 3 > 0,
+      priceList: product.id % 5 > 0,
       priceInclVat: dinero({
         amount: (69 + product.id + rev) * priceMultiplier,
       }),

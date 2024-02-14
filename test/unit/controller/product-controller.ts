@@ -60,6 +60,9 @@ function productEq(source: CreateProductRequest | UpdateProductRequest, response
   if ('ownerId' in source) {
     expect(source.ownerId).to.eq(response.owner.id);
   }
+  expect(source.featured).to.eq(response.featured);
+  expect(source.preferred).to.eq(response.preferred);
+  expect(source.priceList).to.eq(response.priceList);
 }
 
 describe('ProductController', async (): Promise<void> => {
@@ -145,6 +148,9 @@ describe('ProductController', async (): Promise<void> => {
       alcoholPercentage: 0,
       category: 2,
       vat: 2,
+      featured: true,
+      preferred: true,
+      priceList: true,
     };
 
     const invalidProductReq: UpdateProductRequest = {
@@ -408,7 +414,7 @@ describe('ProductController', async (): Promise<void> => {
         .post('/products')
         .set('Authorization', `Bearer ${ctx.organMemberToken}`)
         .send(ctx.validCreateProductReq);
-
+      console.error(res.body);
       expect(res.status).to.equal(200);
       const body = res.body as ProductResponse;
       expect(ctx.specification.validateModel(

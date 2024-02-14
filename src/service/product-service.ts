@@ -105,6 +105,18 @@ export interface ProductFilterParameters {
    * Filter based on alcohol percentage.
    */
   alcoholPercentage?: number;
+  /**
+   * Filter on featured products
+   */
+  featured?: boolean;
+  /**
+   * Filter on preferred products
+   */
+  preferred?: boolean;
+  /**
+   * Filter on shown on narrowcasting screens
+   */
+  priceList?: boolean;
 }
 
 export function parseGetProductFilters(req: RequestWithToken): ProductFilterParameters {
@@ -129,6 +141,9 @@ export function parseGetProductFilters(req: RequestWithToken): ProductFilterPara
     // productName: asString(req.query.productName),
     priceInclVat: asNumber(req.query.priceInclVat),
     alcoholPercentage: asNumber(req.query.alcoholPercentage),
+    featured: Boolean(req.query.featured),
+    preferred: Boolean(req.query.preferred),
+    priceList: Boolean(req.query.priceList),
   };
 
   return filters;
@@ -160,6 +175,9 @@ export default class ProductService {
       id: rawProduct.id,
       revision: rawProduct.revision,
       alcoholPercentage: typeof rawProduct.alcoholpercentage === 'string' ? parseFloat(rawProduct.alcoholpercentage) : rawProduct.alcoholpercentage,
+      featured: !!rawProduct.featured,
+      preferred: !!rawProduct.preferred,
+      priceList: !!rawProduct.priceList,
       category: {
         id: rawProduct.category_id,
         name: rawProduct.category_name,
@@ -195,6 +213,9 @@ export default class ProductService {
       productName: 'productrevision.name',
       priceInclVat: 'productrevision.priceInclVat',
       alcoholPercentage: 'productrevision.alcoholpercentage',
+      featured: 'productrevision.featured',
+      preferred: 'productrevision.preferred',
+      priceList: 'productrevision.priceList',
     };
 
     QueryFilter.applyFilter(builder, filterMapping, filters);
@@ -338,6 +359,9 @@ export default class ProductService {
         'category.name AS category_name',
         'productrevision.alcoholpercentage AS alcoholpercentage',
         'image.downloadName as image',
+        'productrevision.featured as featured',
+        'productrevision.preferred as preferred',
+        'productrevision.priceList as priceList',
       ])
       .orderBy({ 'productrevision.name': 'ASC' });
 
@@ -373,6 +397,9 @@ export default class ProductService {
       alcoholPercentage: product.alcoholPercentage,
       name: product.name,
       id: base.id,
+      featured: product.featured,
+      preferred: product.preferred,
+      priceList: product.priceList,
     };
 
     let createdProduct: ProductResponse;
