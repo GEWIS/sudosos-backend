@@ -141,9 +141,9 @@ export function parseGetProductFilters(req: RequestWithToken): ProductFilterPara
     // productName: asString(req.query.productName),
     priceInclVat: asNumber(req.query.priceInclVat),
     alcoholPercentage: asNumber(req.query.alcoholPercentage),
-    featured: asBoolean(req.query.featured),
-    preferred: asBoolean(req.query.preferred),
-    priceList: asBoolean(req.query.priceList),
+    featured: Boolean(req.query.featured),
+    preferred: Boolean(req.query.preferred),
+    priceList: Boolean(req.query.priceList),
   };
 
   return filters;
