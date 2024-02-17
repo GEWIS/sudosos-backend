@@ -62,3 +62,13 @@ export interface SubTransactionRowRequest {
   amount: number,
   totalPriceInclVat: DineroObjectRequest,
 }
+
+/**
+ * @typedef {object} UpdateTransactionRequest
+ * @property {integer} from - From user
+ * @property {integer} createdBy - Created by user
+ */
+export interface UpdateTransactionRequest {
+  from: number,
+  createdBy: number,
+}

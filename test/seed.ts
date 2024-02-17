@@ -61,6 +61,7 @@ import { calculateBalance } from './helpers/balance';
 import GewisUser from '../src/gewis/entity/gewis-user';
 import AssignedRole from '../src/entity/roles/assigned-role';
 import MemberAuthenticator from '../src/entity/authenticator/member-authenticator';
+import FlaggedTransaction, { FlagStatus } from '../src/entity/transactions/flagged-transaction';
 
 function getDate(startDate: Date, endDate: Date, i: number): Date {
   const diff = endDate.getTime() - startDate.getTime();
@@ -1357,6 +1358,26 @@ export async function seedBanners(users: User[]): Promise<{
   return { banners, bannerImages };
 }
 
+export async function seedFlaggedTransactions(transactions: Transaction[]) {
+  const flaggedTransactions: FlaggedTransaction[] = [];
+  for (let i = transactions.length - 1; i >= 0; i--) {
+    if (i % 3 !== 0) continue;
+    const flaggedTransaction = Object.assign(new FlaggedTransaction(), {
+      id: i + 1,
+      status: FlagStatus[i % 3],
+      reason: `Reason number ${i}`,
+      flaggedBy: transactions[i].createdBy,
+      transaction: transactions[i],
+    });
+
+    flaggedTransactions.push(flaggedTransaction);
+  }
+
+  await Promise.all(flaggedTransactions.map((flaggedTransaction) => FlaggedTransaction.save(flaggedTransaction)));
+
+  return { flaggedTransactions };
+}
+
 export interface DatabaseContent {
   users: User[],
   roles: AssignedRole[],
@@ -1382,6 +1403,7 @@ export interface DatabaseContent {
   gewisUsers: GewisUser[],
   pinUsers: PinAuthenticator[],
   localUsers: LocalAuthenticator[],
+  flaggedTransactions: FlaggedTransaction[],
 }
 
 export default async function seedDatabase(): Promise<DatabaseContent> {
@@ -1413,6 +1435,7 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
   const { invoices, invoiceTransfers } = await seedInvoices(users, transactions);
   const { stripeDeposits, stripeDepositTransfers } = await seedStripeDeposits(users);
   const { banners } = await seedBanners(users);
+  const { flaggedTransactions } = await seedFlaggedTransactions(transactions);
 
   return {
     users,
@@ -1439,5 +1462,6 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
     events,
     eventShifts,
     eventShiftAnswers,
+    flaggedTransactions,
   };
 }
