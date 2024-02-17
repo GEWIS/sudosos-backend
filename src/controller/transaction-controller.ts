@@ -25,7 +25,7 @@ import TransactionService, {
 } from '../service/transaction-service';
 import { TransactionResponse } from './response/transaction-response';
 import { parseRequestPagination } from '../helpers/pagination';
-import { TransactionRequest } from './request/transaction-request';
+import { SubTransactionRequest, TransactionRequest, UpdateTransactionRequest } from './request/transaction-request';
 import Transaction from '../entity/transactions/transaction';
 import User from '../entity/user/user';
 import { asNumber } from '../helpers/validators';
@@ -208,7 +208,7 @@ export default class TransactionController extends BaseController {
    * @tags transactions - Operations of transaction controller
    * @param {integer} id.path.required - The id of the transaction which should be updated
    * @param {integer} flaggedId.path - The id of a possible flagged transaction associated with the change.
-   * @param {TransactionRequest} request.body.required -
+   * @param {UpdateTransactionRequest} request.body.required -
    * The updated transaction
    * @security JWT
    * @return {TransactionResponse} 200 - The requested transaction entity
@@ -223,8 +223,21 @@ export default class TransactionController extends BaseController {
 
     // handle request
     try {
-      if (await Transaction.findOne({ where: { id: parseInt(id, 10) } })) {
+      const oldTransaction = await Transaction.findOne({ where: { id: parseInt(id, 10) } });
+      if (oldTransaction) {
         if (await TransactionService.verifyTransaction(body, true)) {
+          // Minimize updates
+          const minimizedBody: UpdateTransactionRequest = { ...body };
+          const oldTransactionRequest: UpdateTransactionRequest = {
+            createdBy: oldTransaction.createdById,
+            from: oldTransaction.fromId,
+          };
+          Object.keys(body).forEach((key: keyof UpdateTransactionRequest) => {
+            if (oldTransactionRequest[key] === body[key]) {
+              delete minimizedBody[key];
+            }
+          });
+
           res.status(200).json(await TransactionService.updateTransaction(
             parseInt(id, 10), body,
           ));

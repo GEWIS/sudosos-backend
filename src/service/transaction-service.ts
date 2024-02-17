@@ -71,7 +71,7 @@ import {
   reduceMapToVatEntries,
 } from '../helpers/transaction-mapper';
 import ProductCategoryService from './product-category-service';
-import FlaggedTransaction from "../entity/transactions/flagged-transaction";
+import FlaggedTransaction from '../entity/transactions/flagged-transaction';
 
 export interface TransactionFilterParameters {
   transactionId?: number | number[],
@@ -690,7 +690,6 @@ export default class TransactionService {
   public static async updateTransaction(id: number, req: TransactionRequest):
   Promise<TransactionResponse | undefined> {
     const transaction = await this.asTransaction(req, await Transaction.findOne({ where: { id } }));
-
     // delete old transaction
     await this.deleteTransaction(id);
 
