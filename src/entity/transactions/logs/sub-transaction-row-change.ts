@@ -17,13 +17,13 @@
  */
 import BaseTransactionChange from './base-transaction-change';
 import { Column, Entity, ManyToOne } from 'typeorm';
-import Transaction from '../transaction';
+import SubTransactionRow from '../sub-transaction-row';
 import TransactionLog from './transaction-log';
 
 @Entity()
-export default class TransactionChange extends BaseTransactionChange {
+export default class SubTransactionRowChange extends BaseTransactionChange {
   @Column({ type: 'varchar' })
-  public attribute: typeof Transaction;
+  public attribute: typeof SubTransactionRow;
 
   @ManyToOne(() => TransactionLog, { onDelete: 'CASCADE' })
   public log: TransactionLog;

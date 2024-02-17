@@ -207,6 +207,7 @@ export default class TransactionController extends BaseController {
    * @operationId updateTransaction
    * @tags transactions - Operations of transaction controller
    * @param {integer} id.path.required - The id of the transaction which should be updated
+   * @param {integer} flaggedId.path - The id of a possible flagged transaction associated with the change.
    * @param {TransactionRequest} request.body.required -
    * The updated transaction
    * @security JWT

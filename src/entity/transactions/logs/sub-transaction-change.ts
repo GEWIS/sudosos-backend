@@ -15,15 +15,15 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import BaseTransactionChange from './base-transaction-change';
 import { Column, Entity, ManyToOne } from 'typeorm';
-import Transaction from '../transaction';
+import BaseTransactionChange from './base-transaction-change';
+import SubTransaction from '../sub-transaction';
 import TransactionLog from './transaction-log';
 
 @Entity()
-export default class TransactionChange extends BaseTransactionChange {
+export default class SubTransactionChange extends BaseTransactionChange {
   @Column({ type: 'varchar' })
-  public attribute: typeof Transaction;
+  public attribute: typeof SubTransaction;
 
   @ManyToOne(() => TransactionLog, { onDelete: 'CASCADE' })
   public log: TransactionLog;

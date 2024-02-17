@@ -69,6 +69,8 @@ import EventShift from '../entity/event/event-shift';
 import { TransactionSubscriber, TransferSubscriber } from '../subscriber';
 import TransactionChange from '../entity/transactions/logs/transaction-change';
 import TransactionLog from '../entity/transactions/logs/transaction-log';
+import SubTransactionChange from '../entity/transactions/logs/sub-transaction-change';
+import SubTransactionRowChange from '../entity/transactions/logs/sub-transaction-row-change';
 
 export default class Database {
   public static async initialize(): Promise<Connection> {
@@ -137,6 +139,8 @@ export default class Database {
         EventShiftAnswer,
         TransactionChange,
         TransactionLog,
+        SubTransactionChange,
+        SubTransactionRowChange,
       ],
       subscribers: [
         TransactionSubscriber,
