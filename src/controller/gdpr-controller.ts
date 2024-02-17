@@ -27,14 +27,21 @@ import GdprService from '../service/gdpr-service';
 export default class GdprController extends BaseController {
   private logger: Logger = log4js.getLogger('GdprLogger');
 
+  /**
+   * Creates a new gdpr controller instance.
+   * @param options - The options passed to the base controller.
+   */
   public constructor(options: BaseControllerOptions) {
     super(options);
     this.logger.level = process.env.LOG_LEVEL;
   }
 
+  /**
+   * @inheritDoc
+   */
   public getPolicy(): Policy {
     return {
-      '/': {
+      '/:id(\\d+)': {
         GET: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'GDPR', ['*']),
           handler: this.getGdprResponse.bind(this),
@@ -43,6 +50,18 @@ export default class GdprController extends BaseController {
     };
   }
 
+  /**
+   * GET /gdpr/{id}
+   * @summary Returns the requested users data
+   * @operationId getGdprResponse
+   * @tags gdpr - Operations of the gdpr controller
+   * @security JWT
+   * @param {string} id.path.required - id of user that needs GDPR response
+   * @return {GdprResponse} 200 - Response with all users data
+   * @return {string} 404 - User not found
+   * @return {string} 400 - Validation error
+   * @return {string} 500 - Internal server error
+   */
   public async getGdprResponse(req: RequestWithToken, res: Response): Promise<GdprResponse> {
     const { id } = req.params;
     try {
