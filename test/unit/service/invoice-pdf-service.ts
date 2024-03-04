@@ -17,7 +17,7 @@
  */
 import InvoicePdfService from '../../../src/service/invoice-pdf-service';
 import { Client } from 'pdf-generator-client';
-import sinon from 'sinon';
+import sinon, { SinonStub } from 'sinon';
 import Invoice from '../../../src/entity/invoices/invoice';
 import chai, { expect } from 'chai';
 import InvoicePdf from '../../../src/entity/file/invoice-pdf';
@@ -117,10 +117,9 @@ describe('InvoicePdfService', async (): Promise<void> => {
     await ctx.connection.destroy();
   });
 
-  // TODO fix any
-  let generateInvoiceStub: any;
-  let uploadInvoiceStub: any;
-  let createFileStub: any;
+  let generateInvoiceStub: SinonStub;
+  let uploadInvoiceStub: SinonStub;
+  let createFileStub: SinonStub;
 
   beforeEach(function () {
     generateInvoiceStub = sinon.stub(InvoicePdfService.pdfGenerator.client, 'generateInvoice');
