@@ -305,7 +305,7 @@ export default class InvoiceService {
     });
 
     const options = this.getOptions({ invoiceId: invoice.id, returnInvoiceEntries: true });
-    return Promise.resolve(await Invoice.findOne(options));
+    return Invoice.findOne(options);
   }
 
   /**
@@ -408,7 +408,7 @@ export default class InvoiceService {
     // Return the newly updated Invoice.
 
     const options = this.getOptions({ invoiceId: base.id, returnInvoiceEntries: true });
-    return Promise.resolve(await Invoice.findOne(options));
+    return Invoice.findOne(options);
   }
 
   static async getSubTransactionsInvoice(invoice: Invoice, transactions: BaseTransactionResponse[], isCreditInvoice: boolean) {
@@ -456,7 +456,7 @@ export default class InvoiceService {
   }
 
   /**
-   * TODO
+   * Returns the default Invoice Params for an invoice user. 
    * @param userId
    */
   public static async getDefaultInvoiceParams(userId: number): Promise<InvoiceUserDefaults> {
@@ -558,7 +558,7 @@ export default class InvoiceService {
     });
 
     const options = this.getOptions({ invoiceId: newInvoice.id, returnInvoiceEntries: true });
-    return Promise.resolve(await Invoice.findOne(options));
+    return Invoice.findOne(options);
   }
 
   /**
@@ -568,7 +568,7 @@ export default class InvoiceService {
   public static async getInvoices(params: InvoiceFilterParameters = {})
     : Promise<Invoice[]> {
     const options = { ...this.getOptions(params) };
-    return Promise.resolve(Invoice.find({ ...options }));
+    return Invoice.find({ ...options });
   }
 
   /**

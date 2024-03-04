@@ -24,5 +24,7 @@ import BaseFile from './base-file';
 @Entity()
 export default class InvoicePdf extends BaseFile {
   @Column()
+  // Stores the PdfInvoiceParams that were used to generate this pdf as an hash. This is used to pretend regeneration if the invoice has not change.
+  // The service still allows the user to force regenerate the pdf.
   public hash: string;
 }

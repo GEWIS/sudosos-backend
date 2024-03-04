@@ -57,7 +57,7 @@ export interface InvoiceEntryResponse {
  * @property {string} country.required -  Country of the invoice.
  * @property {InvoiceStatusResponse} currentState.required - The current state of the invoice.
  * @property {TransferResponse} transfer - Transfer linked to the invoice.
- * @property {string} pdf - Pdf linked to the invoice
+ * @property {string} pdf - Pdf url path linked to the invoice
  */
 export interface BaseInvoiceResponse extends BaseResponse {
   to: BaseUserResponse,
