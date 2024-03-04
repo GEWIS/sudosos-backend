@@ -114,7 +114,7 @@ describe('InvoicePdfService', async (): Promise<void> => {
 
   after(async () => {
     await ctx.connection.dropDatabase();
-    await ctx.connection.close();
+    await ctx.connection.destroy();
   });
 
   // TODO fix any
