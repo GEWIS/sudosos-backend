@@ -22,6 +22,13 @@ describe('Database', (): void => {
     it('should be able to synchronize schema', async () => {
       const connection = await Database.initialize();
       await connection.synchronize();
+      await connection.dropDatabase();
+      await connection.close();
+    });
+
+    it('should be able to drop database', async () => {
+      const connection = await Database.initialize();
+      await connection.dropDatabase();
       await connection.close();
     });
   });

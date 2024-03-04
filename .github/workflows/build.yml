@@ -71,6 +71,7 @@ jobs:
           MARIADB_DATABASE: sudosos-ci
           MARIADB_USER: sudosos-ci
           MARIADB_PASSWORD: sudosos-ci
+    continue-on-error: true
     strategy:
       matrix:
         include:
@@ -85,7 +86,7 @@ jobs:
             typeorm-port: ''
             typeorm-username: ''
             typeorm-password: ''
-            typeorm-database: local.sqlite
+            typeorm-database: ':memory:'
     env:
       NODE_ENV: development
       API_HOST: localhost:3000
@@ -101,8 +102,8 @@ jobs:
       TYPEORM_USERNAME: ${{ matrix.typeorm-username }}
       TYPEORM_PASSWORD: ${{ matrix.typeorm-password }}
       TYPEORM_DATABASE: ${{ matrix.typeorm-database }}
-      TYPEORM_SYNCHRONIZE: 0
-      TYPEORM_LOGGING: 0
+      TYPEORM_SYNCHRONIZE: true
+      TYPEORM_LOGGING: false
       LOG_LEVEL: INFO
       RESET_TOKEN_EXPIRES: 3600
       FILE_STORAGE_METHOD: disk

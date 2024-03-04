@@ -66,6 +66,7 @@ describe('Mailer', () => {
 
   after(async () => {
     sandbox.restore();
+    await ctx.connection.dropDatabase();
     await ctx.connection.close();
   });
 
