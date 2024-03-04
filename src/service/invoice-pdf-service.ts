@@ -40,6 +40,7 @@ import InvoicePdf from '../entity/file/invoice-pdf';
 import FileService from './file-service';
 import InvoiceEntry from '../entity/invoices/invoice-entry';
 import { hashJSON } from '../helpers/hash';
+import { INVOICE_PDF_LOCATION } from '../files/storage';
 
 export interface PdfGenerator {
   client: Client,
@@ -53,8 +54,14 @@ const PDF_VAT_LOW = 9;
 const PDF_VAT_HIGH = 21;
 
 const UNUSED_PARAM = '';
+const PDF_GEN_URL =  process.env.PDF_GEN_URL ? process.env.PDF_GEN_URL : 'http://localhost:3001/pdf';
 
 export default class InvoicePdfService {
+
+  static pdfGenerator = {
+    client: new Client(PDF_GEN_URL, { fetch }),
+    fileService: new FileService(INVOICE_PDF_LOCATION),
+  };
 
   /**
    * Validates whether the PDF hash of an invoice matches the expected hash. This is used to determine if the invoice's PDF representation has been altered or needs regeneration.
@@ -79,7 +86,7 @@ export default class InvoicePdfService {
    * @returns {Promise<SimpleFileResponse>} A promise that resolves to the file response representing the invoice PDF, or `undefined` if the invoice cannot be found.
    */
 
-  public static async getOrCreatePDF(invoiceId: number, pdfGenerator: PdfGenerator, force: boolean = false): Promise<InvoicePdf> {
+  public static async getOrCreatePDF(invoiceId: number, force: boolean = false): Promise<InvoicePdf> {
     const invoice = await Invoice.findOne({ where: { id: invoiceId }, relations: ['to', 'invoiceStatus', 'transfer', 'transfer.to', 'transfer.from', 'pdf', 'invoiceEntries'] });
     if (!invoice) return undefined;
 
@@ -88,7 +95,7 @@ export default class InvoicePdfService {
       if (this.validatePdfHash(invoice)) return invoice.pdf;
     }
 
-    return Promise.resolve(await this.createInvoicePDF(invoiceId, pdfGenerator));
+    return Promise.resolve(await this.createInvoicePDF(invoiceId));
   }
 
   /**
@@ -220,15 +227,15 @@ export default class InvoicePdfService {
    * @param {PdfGenerator} pdfGenerator - The services used for generating the PDF and handling file operations.
    * @returns {Promise<InvoicePdf>} A promise that resolves to the `InvoicePdf` entity representing the generated and uploaded PDF.
    */
-  public static async createInvoicePDF(invoiceId: number, pdfGenerator: PdfGenerator): Promise<InvoicePdf> {
+  public static async createInvoicePDF(invoiceId: number): Promise<InvoicePdf> {
     const invoice = await Invoice.findOne({ where: { id: invoiceId }, relations: ['to', 'invoiceStatus', 'transfer', 'transfer.to', 'transfer.from', 'pdf', 'invoiceEntries'] });
     if (!invoice) return undefined;
 
     const params = this.getPdfParams(invoice);
-    return pdfGenerator.client.generateInvoice(InvoiceType.Invoice, params).then(async (res: FileResponse) => {
+    return this.pdfGenerator.client.generateInvoice(InvoiceType.Invoice, params).then(async (res: FileResponse) => {
       const blob = res.data;
       const buffer = Buffer.from(await blob.arrayBuffer());
-      return pdfGenerator.fileService.uploadInvoicePdf(invoice, buffer, invoice.to, hashJSON(this.getInvoiceParameters(invoice)));
+      return this.pdfGenerator.fileService.uploadInvoicePdf(invoice, buffer, invoice.to, hashJSON(this.getInvoiceParameters(invoice)));
     }).catch((res: any) => {
       throw new Error(`Invoice generation failed: ${res}`);
     });

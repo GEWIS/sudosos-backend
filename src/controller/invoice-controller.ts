@@ -33,10 +33,7 @@ import verifyCreateInvoiceRequest, { verifyUpdateInvoiceRequest } from './reques
 import { isFail } from '../helpers/specification-validation';
 import { asBoolean, asInvoiceState } from '../helpers/validators';
 import Invoice from '../entity/invoices/invoice';
-import FileService from '../service/file-service';
-import { INVOICE_PDF_LOCATION } from '../files/storage';
-import { Client } from 'pdf-generator-client';
-import InvoicePdfService, { PdfGenerator } from '../service/invoice-pdf-service';
+import InvoicePdfService from '../service/invoice-pdf-service';
 import User, { UserType } from '../entity/user/user';
 import { UpdateInvoiceUserRequest } from './request/user-request';
 import InvoiceUser from '../entity/user/invoice-user';
@@ -45,8 +42,6 @@ import { parseInvoiceUserToResponse } from '../helpers/revision-to-response';
 export default class InvoiceController extends BaseController {
   private logger: Logger = log4js.getLogger('InvoiceController');
 
-  private pdfGenerator: PdfGenerator;
-
   /**
     * Creates a new Invoice controller instance.
     * @param options - The options passed to the base controller.
@@ -54,10 +49,6 @@ export default class InvoiceController extends BaseController {
   public constructor(options: BaseControllerOptions) {
     super(options);
     this.logger.level = process.env.LOG_LEVEL;
-    this.pdfGenerator = {
-      client: new Client('http://localhost:3001/pdf', { fetch }),
-      fileService: new FileService(INVOICE_PDF_LOCATION),
-    };
   }
 
   /**
@@ -217,11 +208,11 @@ export default class InvoiceController extends BaseController {
 
     // handle request
     try {
-      const defaults = await InvoiceService.getDefaultInvoiceParams(body.forId);
+      const userDefinedDefaults = await InvoiceService.getDefaultInvoiceParams(body.forId);
 
       // If no byId is provided we use the token user id.
       const params: CreateInvoiceParams = {
-        ...defaults,
+        ...userDefinedDefaults,
         ...body,
         byId: body.byId ?? req.token.user.id,
       };
@@ -331,7 +322,7 @@ export default class InvoiceController extends BaseController {
     this.logger.trace('Get Invoice PDF', id, 'by user', req.token.user);
 
     try {
-      const invoice = await InvoicePdfService.getOrCreatePDF(invoiceId, this.pdfGenerator);
+      const invoice = await InvoicePdfService.getOrCreatePDF(invoiceId);
       if (!invoice) {
         res.status(404).json('Invoice not found.');
         return;

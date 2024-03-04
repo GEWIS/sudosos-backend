@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import InvoicePdfService, { PdfGenerator } from '../../../src/service/invoice-pdf-service';
+import InvoicePdfService from '../../../src/service/invoice-pdf-service';
 import { Client } from 'pdf-generator-client';
 import sinon from 'sinon';
 import Invoice from '../../../src/entity/invoices/invoice';
@@ -123,9 +123,9 @@ describe('InvoicePdfService', async (): Promise<void> => {
   let createFileStub: any;
 
   beforeEach(function () {
-    generateInvoiceStub = sinon.stub(ctx.client, 'generateInvoice');
-    uploadInvoiceStub = sinon.stub(ctx.fileService, 'uploadInvoicePdf');
-    createFileStub = sinon.stub(ctx.fileService, 'createFile');
+    generateInvoiceStub = sinon.stub(InvoicePdfService.pdfGenerator.client, 'generateInvoice');
+    uploadInvoiceStub = sinon.stub(InvoicePdfService.pdfGenerator.fileService, 'uploadInvoicePdf');
+    createFileStub = sinon.stub(InvoicePdfService.pdfGenerator.fileService, 'createFile');
   });
 
   afterEach(function () {
@@ -178,7 +178,7 @@ describe('InvoicePdfService', async (): Promise<void> => {
       invoice.pdf = pdf;
       await Invoice.save(invoice);
 
-      const file = await InvoicePdfService.getOrCreatePDF(invoice.id, {} as PdfGenerator);
+      const file = await InvoicePdfService.getOrCreatePDF(invoice.id);
       expect(file.downloadName).to.eq(pdf.downloadName);
     });
     it('should regenerate and return a new PDF if the hash does not match', async () => {
@@ -198,7 +198,7 @@ describe('InvoicePdfService', async (): Promise<void> => {
       });
       uploadInvoiceStub.resolves({});
 
-      await InvoicePdfService.getOrCreatePDF(invoice.id, { fileService: ctx.fileService, client: ctx.client } as PdfGenerator);
+      await InvoicePdfService.getOrCreatePDF(invoice.id);
       expect(uploadInvoiceStub).to.have.been.calledOnce;
     });
     it('should always regenerate and return a new PDF if force is true, even if the hash matches', async () => {
@@ -223,13 +223,13 @@ describe('InvoicePdfService', async (): Promise<void> => {
       });
       uploadInvoiceStub.resolves({});
 
-      await InvoicePdfService.getOrCreatePDF(invoice.id, { fileService: ctx.fileService, client: ctx.client } as PdfGenerator, true);
+      await InvoicePdfService.getOrCreatePDF(invoice.id, true);
 
       // Upload was still called.
       expect(uploadInvoiceStub).to.have.been.calledOnce;
     });
     it('should return undefined if the invoice does not exist', async () => {
-      const file = await InvoicePdfService.getOrCreatePDF(-1, {} as PdfGenerator);
+      const file = await InvoicePdfService.getOrCreatePDF(-1);
       expect(file).to.be.undefined;
     });
   });
@@ -357,13 +357,13 @@ describe('InvoicePdfService', async (): Promise<void> => {
         createdBy: invoice.to.id,
         id: 41,
       });
-      const invoicePdf = await InvoicePdfService.createInvoicePDF(invoice.id, { client: ctx.client, fileService: ctx.fileService });
+      const invoicePdf = await InvoicePdfService.createInvoicePDF(invoice.id);
 
       expect(invoicePdf).to.not.be.undefined;
       expect(invoicePdf.hash).to.eq(hashJSON(InvoicePdfService.getInvoiceParameters(invoice)));
     });
     it('should return undefined if the invoice does not exist', async () => {
-      const invoicePdf = await InvoicePdfService.createInvoicePDF(-1, { client: ctx.client, fileService: ctx.fileService });
+      const invoicePdf = await InvoicePdfService.createInvoicePDF(-1);
       expect(invoicePdf).to.be.undefined;
     });
   });
