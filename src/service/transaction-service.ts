@@ -826,7 +826,7 @@ export default class TransactionService {
 
     // Don't consider transactions from invoice accounts
     if (dropInvoiced) {
-      const invoiceUsers = new Set((await User.find({ where: { type: In([UserType.INVOICE, UserType.AUTOMATIC_INVOICE]) } })).map((u) => u.id));
+      const invoiceUsers = new Set((await User.find({ where: { type: In([UserType.INVOICE]) } })).map((u) => u.id));
       transactions = transactions.filter((t) => !invoiceUsers.has(t.from.id));
     }
 

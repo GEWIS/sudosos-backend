@@ -35,14 +35,13 @@ export enum UserType {
   LOCAL_USER = 4,
   LOCAL_ADMIN = 5,
   INVOICE = 6,
-  AUTOMATIC_INVOICE = 7,
 }
 
 /**
  * All user types that should be allowed to have a local password.
  */
 export const LocalUserTypes = [
-  UserType.LOCAL_USER, UserType.LOCAL_ADMIN, UserType.INVOICE, UserType.AUTOMATIC_INVOICE,
+  UserType.LOCAL_USER, UserType.LOCAL_ADMIN, UserType.INVOICE,
 ];
 
 /**
