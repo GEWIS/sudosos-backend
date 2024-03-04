@@ -17,7 +17,7 @@
  */
 import { EntitySubscriberInterface, EventSubscriber, InsertEvent } from 'typeorm';
 import Transaction from '../entity/transactions/transaction';
-import User, {NotifyDebtUserTypes} from '../entity/user/user';
+import User, { NotifyDebtUserTypes } from '../entity/user/user';
 import BalanceService from '../service/balance-service';
 import Mailer from '../mailer';
 import UserDebtNotification from '../mailer/templates/user-debt-notification';

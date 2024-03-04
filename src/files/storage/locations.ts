@@ -20,3 +20,5 @@ export const ROOT_FILE_LOCATION = './data';
 export const SIMPLE_FILE_LOCATION = './data/simple';
 export const PRODUCT_IMAGE_LOCATION = './data/products';
 export const BANNER_IMAGE_LOCATION = './data/banners';
+
+export const INVOICE_PDF_LOCATION = './data/invoices';

@@ -51,15 +51,25 @@ export interface InvoiceEntryResponse {
  * @property {BaseUserResponse} to.required - The person who was invoiced.
  * @property {string} addressee.required - Name of the addressed.
  * @property {string} description.required - Description of the invoice.
+ * @property {string} street.required - Street of the invoice.
+ * @property {string} postalCode.required - Postal code of the invoice.
+ * @property {string} city.required -  City of the invoice.
+ * @property {string} country.required -  Country of the invoice.
  * @property {InvoiceStatusResponse} currentState.required - The current state of the invoice.
  * @property {TransferResponse} transfer - Transfer linked to the invoice.
+ * @property {string} pdf - Pdf url path linked to the invoice
  */
 export interface BaseInvoiceResponse extends BaseResponse {
   to: BaseUserResponse,
   addressee: string,
   description: string,
   currentState: InvoiceStatusResponse,
+  street: string;
+  postalCode: string;
+  city: string;
+  country: string;
   transfer?: TransferResponse,
+  pdf?: string,
 }
 
 /**

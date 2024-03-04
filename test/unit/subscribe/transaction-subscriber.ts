@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { Connection } from 'typeorm';
-import User, {NotifyDebtUserTypes, TermsOfServiceStatus, UserType} from '../../../src/entity/user/user';
+import User, { NotifyDebtUserTypes, TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import Transaction from '../../../src/entity/transactions/transaction';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import Transfer from '../../../src/entity/transactions/transfer';

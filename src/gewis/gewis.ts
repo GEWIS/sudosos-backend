@@ -205,7 +205,6 @@ export default class Gewis {
       UserType.MEMBER,
       UserType.VOUCHER,
       UserType.INVOICE,
-      UserType.AUTOMATIC_INVOICE,
     ]);
     this.roleManager.registerRole({
       name: 'Buyer',
@@ -242,7 +241,6 @@ export default class Gewis {
      */
     const invoiceUserTypes = new Set<UserType>([
       UserType.INVOICE,
-      UserType.AUTOMATIC_INVOICE,
     ]);
     this.roleManager.registerRole({
       name: 'Invoice',

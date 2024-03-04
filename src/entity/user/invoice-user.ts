@@ -22,22 +22,45 @@ import {
 import User from './user';
 import BaseEntityWithoutId from '../base-entity-without-id';
 
-/**
- * @typedef {BaseEntity} InvoiceUser
- * @property {User.model} user.required - The user that is an invoice account
- * @property {boolean} automatic - Whether the user gets automatic invoices
- */
+
+export interface InvoiceUserDefaults {
+  street: string,
+  postalCode: string,
+  city: string,
+  country: string,
+  addressee: string,
+}
+
 @Entity()
 export default class InvoiceUser extends BaseEntityWithoutId {
   @PrimaryColumn()
+  // id of the linked user.
   public userId: number;
 
   @OneToOne(() => User, { nullable: false })
   @JoinColumn({ name: 'userId' })
+  // Linked user entity.
   public user: User;
 
   @Column({
     default: false,
   })
+  // Whether invoices should be automagically generated if possible.
   public automatic: boolean;
+
+  @Column()
+  // Default street to use on invoices.
+  public street: string;
+
+  @Column()
+  // Default postal code to use on invoices.
+  public postalCode: string;
+
+  @Column()
+  // Default city to use on invoices.
+  public city: string;
+
+  @Column()
+  // Default country to use on invoices.
+  public country: string;
 }
