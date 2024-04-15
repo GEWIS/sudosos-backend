@@ -21,7 +21,7 @@ import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
 import chai, { expect } from 'chai';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
-import User, {UserType} from '../../../src/entity/user/user';
+import User, { UserType } from '../../../src/entity/user/user';
 import Invoice from '../../../src/entity/invoices/invoice';
 import Database from '../../../src/database/database';
 import {
@@ -54,7 +54,7 @@ import { InvoiceState } from '../../../src/entity/invoices/invoice-status';
 import Transaction from '../../../src/entity/transactions/transaction';
 import Transfer from '../../../src/entity/transactions/transfer';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
-import InvoiceUser from "../../../src/entity/user/invoice-user";
+import InvoiceUser from '../../../src/entity/user/invoice-user';
 
 chai.use(deepEqualInAnyOrder);
 

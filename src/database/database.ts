@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  createConnection, Connection, DataSource,
+  createConnection, DataSource,
 } from 'typeorm';
 import User from '../entity/user/user';
 import Product from '../entity/product/product';
