@@ -21,7 +21,7 @@ import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
 import chai, { expect } from 'chai';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
-import User from '../../../src/entity/user/user';
+import User, {UserType} from '../../../src/entity/user/user';
 import Invoice from '../../../src/entity/invoices/invoice';
 import Database from '../../../src/database/database';
 import {
@@ -54,6 +54,7 @@ import { InvoiceState } from '../../../src/entity/invoices/invoice-status';
 import Transaction from '../../../src/entity/transactions/transaction';
 import Transfer from '../../../src/entity/transactions/transfer';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
+import InvoiceUser from "../../../src/entity/user/invoice-user";
 
 chai.use(deepEqualInAnyOrder);
 
@@ -221,6 +222,35 @@ describe('InvoiceService', () => {
         await InvoiceService.getInvoices({ invoiceId })
       );
       returnsAll(res, [ctx.invoices[0]], baseKeyMapping);
+    });
+  });
+  describe('getDefaultInvoiceParams function', () => {
+    it('should return the default invoice parameters for an invoice user', async () => {
+      const user = User.create({
+        firstName: 'John',
+        lastName: 'Doe',
+        type: UserType.INVOICE,
+      });
+      await user.save();
+
+      const invoiceUser = InvoiceUser.create({
+        userId: user.id,
+        street: 'Groene Loper 5',
+        postalCode: '5612 AE',
+        city: 'Eindhoven',
+        country: 'Netherlands',
+        automatic: true,
+      });
+      await invoiceUser.save();
+
+      const defaults = await InvoiceService.getDefaultInvoiceParams(user.id);
+
+      expect(defaults).to.not.be.undefined;
+      expect(defaults.addressee).to.eq('John Doe');
+      expect(defaults.street).to.eq('Groene Loper 5');
+      expect(defaults.postalCode).to.eq('5612 AE');
+      expect(defaults.city).to.eq('Eindhoven');
+      expect(defaults.country).to.eq('Netherlands');
     });
   });
   describe('createTransferFromTransactions function', () => {
@@ -561,6 +591,83 @@ describe('InvoiceService', () => {
         },
       );
     });
+    it('should update the postalCode if update.postalCode is provided', async () => {
+      await inUserContext(
+        await (await UserFactory()).clone(2),
+        async (debtor: User, creditor: User) => {
+          const invoice = await createInvoiceWithTransfers(debtor.id, creditor.id, 1);
+          const validUpdateInvoiceParams = {
+            postalCode: '12345',
+            byId: creditor.id,
+            invoiceId: invoice.id,
+          };
+
+          const updatedInvoice = await InvoiceService.updateInvoice(validUpdateInvoiceParams);
+          expect(updatedInvoice.postalCode).to.equal(validUpdateInvoiceParams.postalCode);
+
+          const fromDB = await Invoice.findOne({ where: { id: invoice.id } });
+          expect(fromDB.postalCode).to.equal(validUpdateInvoiceParams.postalCode);
+        },
+      );
+    });
+    it('should update the postalCode to the city if update.city is provided', async () => {
+      await inUserContext(
+        await (await UserFactory()).clone(2),
+        async (debtor: User, creditor: User) => {
+          const invoice = await createInvoiceWithTransfers(debtor.id, creditor.id, 1);
+          const validUpdateInvoiceParams = {
+            city: 'Weert',
+            byId: creditor.id,
+            invoiceId: invoice.id,
+          };
+
+          const updatedInvoice = await InvoiceService.updateInvoice(validUpdateInvoiceParams);
+          expect(updatedInvoice.postalCode).to.equal(validUpdateInvoiceParams.city);
+
+          const fromDB = await Invoice.findOne({ where: { id: invoice.id } });
+          expect(fromDB.postalCode).to.equal(validUpdateInvoiceParams.city);
+        },
+      );
+    });
+    it('should update the postalCode to the country if update.country is provided', async () => {
+      await inUserContext(
+        await (await UserFactory()).clone(2),
+        async (debtor: User, creditor: User) => {
+          const invoice = await createInvoiceWithTransfers(debtor.id, creditor.id, 1);
+          const validUpdateInvoiceParams = {
+            country: 'Kazachstan',
+            byId: creditor.id,
+            invoiceId: invoice.id,
+          };
+
+          const updatedInvoice = await InvoiceService.updateInvoice(validUpdateInvoiceParams);
+          expect(updatedInvoice.postalCode).to.equal(validUpdateInvoiceParams.country);
+
+          const fromDB = await Invoice.findOne({ where: { id: invoice.id } });
+          expect(fromDB.postalCode).to.equal(validUpdateInvoiceParams.country);
+        },
+      );
+    });
+    it('should update the reference if update.reference is provided', async () => {
+      await inUserContext(
+        await (await UserFactory()).clone(2),
+        async (debtor: User, creditor: User) => {
+          const invoice = await createInvoiceWithTransfers(debtor.id, creditor.id, 1);
+          const validUpdateInvoiceParams = {
+            reference: 'BAC-123456',
+            byId: creditor.id,
+            invoiceId: invoice.id,
+          };
+
+          const updatedInvoice = await InvoiceService.updateInvoice(validUpdateInvoiceParams);
+          expect(updatedInvoice.reference).to.equal(validUpdateInvoiceParams.reference);
+
+          const fromDB = await Invoice.findOne({ where: { id: invoice.id } });
+          expect(fromDB.reference).to.equal(validUpdateInvoiceParams.reference);
+        },
+      );
+    });
+
     it('should update an Invoice state', async () => {
       await inUserContext(
         await (await UserFactory()).clone(2),

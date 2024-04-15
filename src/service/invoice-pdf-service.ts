@@ -81,7 +81,6 @@ export default class InvoicePdfService {
    * If the hash validation fails or `force` is set to `true`, it generates a new PDF.
    *
    * @param {number} invoiceId - The ID of the invoice to generate the PDF for.
-   * @param {PdfGenerator} pdfGenerator - The PDF generator service and file service used for creating the PDF.
    * @param {boolean} [force=false] - Whether to force regeneration of the invoice PDF, ignoring any existing ones.
    * @returns {Promise<SimpleFileResponse>} A promise that resolves to the file response representing the invoice PDF, or `undefined` if the invoice cannot be found.
    */
@@ -224,7 +223,6 @@ export default class InvoicePdfService {
    * Generates a PDF for an invoice and uploads it to the file service. If the invoice PDF generation or upload fails, it throws an error with the failure reason.
    *
    * @param {number} invoiceId - The ID of the invoice to generate and upload the PDF for.
-   * @param {PdfGenerator} pdfGenerator - The services used for generating the PDF and handling file operations.
    * @returns {Promise<InvoicePdf>} A promise that resolves to the `InvoicePdf` entity representing the generated and uploaded PDF.
    */
   public static async createInvoicePDF(invoiceId: number): Promise<InvoicePdf> {
