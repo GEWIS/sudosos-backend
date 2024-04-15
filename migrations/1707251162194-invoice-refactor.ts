@@ -24,7 +24,7 @@ export class InvoiceRefactor1707251162194 implements MigrationInterface {
       columns: [
         {
           name: 'id',
-          type: 'int',
+          type: 'integer',
           isPrimary: true,
           isGenerated: true,
           generationStrategy: 'increment',
@@ -132,11 +132,11 @@ export class InvoiceRefactor1707251162194 implements MigrationInterface {
   public async down(queryRunner: QueryRunner): Promise<void> {
     // Remove the foreign key and column for pdfId (as before)
     const invoiceTable = await queryRunner.getTable('invoice');
-    const invoiceForeignKey = invoiceTable.foreignKeys.find(fk => fk.columnNames.indexOf('pdf') !== -1);
+    const invoiceForeignKey = invoiceTable.foreignKeys.find(fk => fk.columnNames.indexOf('pdfId') !== -1);
     if (invoiceForeignKey) {
       await queryRunner.dropForeignKey('invoice', invoiceForeignKey);
     }
-    await queryRunner.dropColumn('invoice', 'pdf');
+    await queryRunner.dropColumn('invoice', 'pdfId');
 
     await queryRunner.dropColumn('invoice', 'reference');
     await queryRunner.dropColumn('invoice', 'street');
