@@ -280,6 +280,7 @@ export default class Gewis {
         User: {
           get: { all: star, own: star },
           acceptToS: { own: star },
+          update: { own: new Set(['extensiveDataProcessing']) },
         },
       },
       assignmentCheck: async (user: User) => authorizedBuyerUserTypes.has(user.type),

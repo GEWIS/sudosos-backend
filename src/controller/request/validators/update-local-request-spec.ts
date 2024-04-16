@@ -20,6 +20,7 @@ import {
   Specification, toFail, toPass, validateSpecification, ValidationError,
 } from '../../../helpers/specification-validation';
 import UpdateLocalRequest from '../update-local-request';
+// @ts-ignore
 import isStrongPassword = validator.isStrongPassword;
 import { WEAK_PASSWORD } from './validation-errors';
 
