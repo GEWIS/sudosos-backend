@@ -192,6 +192,9 @@ export default class Gewis {
           update: { own: new Set(['password']) },
           get: { own: star },
         },
+        User: {
+          update: { own: new Set(['email']) },
+        },
       },
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_USER,
     });
