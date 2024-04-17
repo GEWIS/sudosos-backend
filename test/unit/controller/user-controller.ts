@@ -202,7 +202,7 @@ describe('UserController', (): void => {
         User: {
           get: own,
           acceptToS: own,
-          update: { own: new Set<string>(['firstName', 'lastName']) },
+          update: { own: new Set<string>(['firstName', 'lastName', 'extensiveDataProcessing']) },
         },
         Product: {
           get: own,
@@ -904,6 +904,20 @@ describe('UserController', (): void => {
       const user = res.body as UserResponse;
       const spec = await Swagger.importSpecification();
       expect(user.firstName).to.deep.equal(firstName);
+      verifyUserResponse(spec, user);
+    });
+    it('should allow user to update extensiveDataProcessing', async () => {
+      const processing = ctx.users[0].extensiveDataProcessing;
+
+      const res = await request(ctx.app)
+        .patch(`/users/${ctx.users[0].id}`)
+        .set('Authorization', `Bearer ${ctx.userToken}`)
+        .send({ extensiveDataProcessing: !processing });
+      expect(res.status).to.equal(200);
+
+      const user = res.body as UserResponse;
+      const spec = await Swagger.importSpecification();
+      expect(user.extensiveDataProcessing).to.deep.equal(!processing);
       verifyUserResponse(spec, user);
     });
   });
