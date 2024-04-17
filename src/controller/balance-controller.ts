@@ -109,7 +109,6 @@ export default class BalanceController extends BaseController {
    */
   private async getAllBalances(req: RequestWithToken, res: Response): Promise<void> {
     this.logger.trace('Get all balances by', req.token.user);
-
     let params: GetBalanceParameters;
     let take;
     let skip;
