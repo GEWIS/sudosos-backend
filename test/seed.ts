@@ -79,6 +79,10 @@ export function defineInvoiceUsers(users: User[]): InvoiceUser[] {
     invoiceUsers.push(Object.assign(new InvoiceUser(), {
       user: users[nr],
       automatic: nr % 2 > 0,
+      street: `street ${nr}`,
+      postalCode:`postalCode ${nr}`,
+      city: `city ${nr}`,
+      country: `country ${nr}`,
     }));
   }
   return invoiceUsers;
@@ -274,6 +278,11 @@ export async function seedInvoices(users: User[], transactions: Transaction[]): 
       id: i + 1,
       to,
       addressee: `Addressed to ${to.firstName}`,
+      reference: `BAC-${i}`,
+      city: `city-${i}`,
+      country: `country-${i}`,
+      postalCode: `postalCode-${i}`,
+      street: `street-${i}`,
       description: `Invoice #${i}`,
       transfer,
       invoiceEntries,
@@ -590,7 +599,8 @@ export async function seedProducts(
     let rev: ProductRevision[] = [];
     for (let o = 0; o < prod.length; o += 1) {
       const category = categories[o % categories.length];
-      const vatGroup = vatGroups[o % vatGroups.length];
+      const fVatGroups = vatGroups.filter((group) => !group.deleted);
+      const vatGroup = fVatGroups[o % fVatGroups.length];
       prod[o].currentRevision = (prod[o].id % 3) + 1;
       rev = rev.concat(defineProductRevisions(
         prod[o].currentRevision,

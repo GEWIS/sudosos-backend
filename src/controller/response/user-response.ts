@@ -54,6 +54,25 @@ export interface UserResponse extends BaseUserResponse {
   canGoIntoDebt: boolean;
 }
 
+
+/**
+ * @typedef {object} InvoiceUserResponse
+ * @property {BaseUserResponse} user.required - User linked to the defaults.
+ * @property {string} street.required - Default street to use for invoices.
+ * @property {string} postalCode.required - Default postal code to use for invoices.
+ * @property {string} city.required - Default city to use for invoices.
+ * @property {string} country.required - Default country to use for invoices.
+ * @property {boolean} automatic.required - Whether invoices should be automatically generated
+ */
+export interface InvoiceUserResponse {
+  user: BaseUserResponse,
+  street: string;
+  postalCode:string;
+  city: string;
+  country: string;
+  automatic: boolean,
+}
+
 /**
  * @typedef {object} PaginatedUserResponse
  * @property {PaginationResult} _pagination.required - Pagination metadata

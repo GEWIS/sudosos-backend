@@ -15,17 +15,16 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import {
-  Column, Entity,
-} from 'typeorm';
-import AuthenticationMethod from './authentication-method';
+import { Column, Entity } from 'typeorm';
+import BaseFile from './base-file';
 
 /**
- * @typedef {AuthenticationMethod} NfcAuthenticator
- * @property {string} nfcCode.required - The UID of the NFC chip
+ * @typedef {BaseFile} InvoicePdf
  */
 @Entity()
-export default class NfcAuthenticator extends AuthenticationMethod {
-  @Column({ unique: true })
-  public nfcCode: string;
+export default class InvoicePdf extends BaseFile {
+  @Column()
+  // Stores the PdfInvoiceParams that were used to generate this pdf as an hash. This is used to pretend regeneration if the invoice has not change.
+  // The service still allows the user to force regenerate the pdf.
+  public hash: string;
 }

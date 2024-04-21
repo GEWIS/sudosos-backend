@@ -123,7 +123,6 @@ function baseInvoiceRequestSpec<T extends BaseInvoice>(): Specification<T, Valid
     [[userMustExist], 'forId', new ValidationError('forId:')],
     [[validOrUndefinedDate], 'fromDate', new ValidationError('fromDate:')],
     [stringSpec(), 'description', new ValidationError('description:')],
-    [stringSpec(), 'addressee', new ValidationError('addressee:')],
     // We have only defined a single item rule, so we use this to apply it to an array,
     [[createArrayRule(invoiceEntryRequestSpec())], 'customEntries', new ValidationError('Custom entries:')],
   ];
@@ -134,7 +133,6 @@ function baseInvoiceRequestSpec<T extends BaseInvoice>(): Specification<T, Valid
  */
 const updateInvoiceRequestSpec: Specification<UpdateInvoiceParams, ValidationError> = [
   [stringSpec(), 'description', new ValidationError('description:')],
-  [stringSpec(), 'addressee', new ValidationError('addressee:')],
   differentState,
   existsAndNotDeleted,
 ];
@@ -145,6 +143,10 @@ const updateInvoiceRequestSpec: Specification<UpdateInvoiceParams, ValidationErr
 const createInvoiceRequestSpec: () => Specification<CreateInvoiceParams, ValidationError> = () => [
   ...baseInvoiceRequestSpec<CreateInvoiceParams>(),
   [[userMustExist], 'byId', new ValidationError('byId:')],
+  [stringSpec(), 'street', new ValidationError('description:')],
+  [stringSpec(), 'postalCode', new ValidationError('postalCode:')],
+  [stringSpec(), 'city', new ValidationError('city:')],
+  [stringSpec(), 'country', new ValidationError('country:')],
 ];
 
 export default async function verifyCreateInvoiceRequest(

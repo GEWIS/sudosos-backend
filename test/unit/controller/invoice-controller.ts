@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { Connection, In } from 'typeorm';
+import { Connection, In, Not } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
@@ -25,9 +25,12 @@ import InvoiceController from '../../../src/controller/invoice-controller';
 import Database from '../../../src/database/database';
 import {
   seedContainers,
-  seedInvoices, seedPointsOfSale,
-  seedProductCategories, seedProducts,
-  seedTransactions, seedVatGroups,
+  seedInvoices,
+  seedPointsOfSale,
+  seedProductCategories,
+  seedProducts,
+  seedTransactions, seedUsers,
+  seedVatGroups,
 } from '../../seed';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Swagger from '../../../src/start/swagger';
@@ -43,17 +46,24 @@ import {
 } from '../../../src/controller/request/invoice-request';
 import Transaction from '../../../src/entity/transactions/transaction';
 import {
-  INVALID_DATE, INVALID_TRANSACTION_OWNER,
-  INVALID_USER_ID, SAME_INVOICE_STATE, SUBTRANSACTION_ALREADY_INVOICED,
+  INVALID_DATE,
+  INVALID_TRANSACTION_OWNER,
+  INVALID_USER_ID,
+  SAME_INVOICE_STATE,
+  SUBTRANSACTION_ALREADY_INVOICED,
   ZERO_LENGTH_STRING,
 } from '../../../src/controller/request/validators/validation-errors';
 import InvoiceEntryRequest from '../../../src/controller/request/invoice-entry-request';
-import { inUserContext, UserFactory } from '../../helpers/user-factory';
+import { inUserContext, INVOICE_USER, UserFactory } from '../../helpers/user-factory';
 import { TransactionRequest } from '../../../src/controller/request/transaction-request';
 import { createTransactionRequest, requestToTransaction } from '../service/invoice-service';
 import BalanceService from '../../../src/service/balance-service';
 import { InvoiceState } from '../../../src/entity/invoices/invoice-status';
 import InvoiceService from '../../../src/service/invoice-service';
+import InvoiceUser from '../../../src/entity/user/invoice-user';
+import { UpdateInvoiceUserRequest } from '../../../src/controller/request/user-request';
+import InvoicePdf from '../../../src/entity/file/invoice-pdf';
+import sinon from 'sinon';
 
 describe('InvoiceController', async () => {
   let ctx: {
@@ -67,14 +77,16 @@ describe('InvoiceController', async () => {
     invoiceToken: string,
     validInvoiceRequest: CreateInvoiceRequest,
     token: string,
+    invoiceUser: User,
   };
 
   before(async () => {
     const connection = await Database.initialize();
 
+    await seedUsers();
+
     // create dummy users
     const adminUser = {
-      id: 1,
       firstName: 'Admin',
       type: UserType.LOCAL_ADMIN,
       active: true,
@@ -82,15 +94,13 @@ describe('InvoiceController', async () => {
     } as User;
 
     const localUser = {
-      id: 2,
       firstName: 'User',
       type: UserType.MEMBER,
       active: true,
       acceptedToS: TermsOfServiceStatus.ACCEPTED,
     } as User;
 
-    const invoiceUser = {
-      id: 2,
+    let invoiceUser = {
       firstName: 'User',
       type: UserType.INVOICE,
       active: true,
@@ -108,7 +118,7 @@ describe('InvoiceController', async () => {
     const { pointOfSaleRevisions } = await seedPointsOfSale(
       [adminUser, localUser], containerRevisions,
     );
-    const { transactions } = await seedTransactions([adminUser, localUser], pointOfSaleRevisions);
+    const { transactions } = await seedTransactions([adminUser, localUser, invoiceUser], pointOfSaleRevisions);
     await seedInvoices([invoiceUser], transactions);
 
     // create bearer tokens
@@ -161,6 +171,11 @@ describe('InvoiceController', async () => {
       description: 'InvoiceRequest test',
       forId: localUser.type,
       isCreditInvoice: false,
+      reference: 'BAC-41',
+      city: 'city',
+      country: 'country',
+      postalCode: 'postalCode',
+      street: 'street',
     };
 
     ctx = {
@@ -174,6 +189,7 @@ describe('InvoiceController', async () => {
       invoiceToken,
       adminToken,
       token,
+      invoiceUser,
     };
   });
 
@@ -272,10 +288,6 @@ describe('InvoiceController', async () => {
       const req: CreateInvoiceRequest = { ...ctx.validInvoiceRequest, description: '' };
       await expectError(req, `description: ${ZERO_LENGTH_STRING().value}`);
     });
-    it('should verity that addressee is a valid string', async () => {
-      const req: CreateInvoiceRequest = { ...ctx.validInvoiceRequest, addressee: '' };
-      await expectError(req, `addressee: ${ZERO_LENGTH_STRING().value}`);
-    });
     it('should verity that the custom invoice entries have valid amounts', async () => {
       const customEntries: InvoiceEntryRequest[] = [
         {
@@ -328,12 +340,17 @@ describe('InvoiceController', async () => {
           const tIds = transactions.map((transaction) => transaction.tId);
 
           const createInvoiceRequest: CreateInvoiceParams = {
+            city: 'city',
+            country: 'country',
+            postalCode: 'postalCode',
+            street: 'street',
             byId: creditor.id,
             addressee: 'Addressee',
             description: 'Description',
             forId: debtor.id,
             transactionIDs: tIds,
             isCreditInvoice: false,
+            reference: 'BAC-41',
           };
 
           const invoiceTransactions = await Transaction.find({ where: { id: In(tIds) }, relations: ['subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice'] });
@@ -382,13 +399,13 @@ describe('InvoiceController', async () => {
 
         expect(res.status).to.equal(200);
         expect(await Invoice.count()).to.equal(count + 1);
-
-        expect(ctx.specification.validateModel(
+        const validation = ctx.specification.validateModel(
           'InvoiceResponse',
           res.body,
           false,
           true,
-        ).valid).to.be.true;
+        );
+        expect(validation.valid).to.be.true;
       });
     });
     it('should return an HTTP 403 if not admin', async () => {
@@ -517,6 +534,17 @@ describe('InvoiceController', async () => {
 
       expect(res.status).to.equal(403);
     });
+    it('should return an HTTP 404 if invoice does not exist', async () => {
+      const count = await Invoice.count();
+      const invoice = await Invoice.findOne({ where: { id: count + 1 } });
+      expect(invoice).to.be.null;
+
+      const res = await request(ctx.app)
+        .get(`/invoices/${count + 1}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(404);
+    });
   });
   describe('PATCH /invoices/{id}', () => {
     it('should return an HTTP 200 and update an invoice if admin', async () => {
@@ -598,6 +626,311 @@ describe('InvoiceController', async () => {
         .set('Authorization', `Bearer ${ctx.localUser}`);
 
       expect(res.status).to.equal(403);
+    });
+    it('should return an HTTP 404 if invoice does not exist', async () => {
+      const count = await Invoice.count();
+      const invoice = await Invoice.findOne({ where: { id: count + 1 } });
+      expect(invoice).to.be.null;
+
+      const res = await request(ctx.app)
+        .delete(`/invoices/${count + 1}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(404);
+    });
+  });
+  describe('GET /invoices/{id}/pdf', () => {
+    it('should return the file name of the pdf', async () => {
+      let invoice = (await Invoice.find())[0];
+
+      const hash = require('../../../src/helpers/hash');
+      const stub = sinon.stub(hash, 'hashJSON').returns('fake_hash');
+
+      const pdf = Object.assign(new InvoicePdf(), {
+        downloadName: 'test-file.pdf',
+        createdBy: ctx.adminUser,
+        location: '/etc/test-file.pdf',
+        hash: 'fake_hash',
+      });
+
+      await InvoicePdf.save(pdf);
+      invoice.pdf = pdf;
+      await Invoice.save(invoice);
+
+      const res = await request(ctx.app)
+        .get(`/invoices/${invoice.id}/pdf`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(200);
+      expect(res.body.pdf).to.equal('test-file.pdf');
+      stub.restore();
+    });
+    it('should return an HTTP 404 if invoice does not exist', async () => {
+      const res = await request(ctx.app)
+        .get('/invoices/999/pdf')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(404);
+      expect(res.body).to.eq('Invoice not found.');
+    });
+    it('should return an HTTP 403 if not admin', async () => {
+      const invoice = (await Invoice.find())[0];
+      expect(invoice).to.not.be.null;
+
+      const res = await request(ctx.app)
+        .get(`/invoices/${invoice.id}/pdf`)
+        .set('Authorization', `Bearer ${ctx.token}`);
+
+      expect(res.status).to.equal(403);
+      expect(res.body).to.be.empty;
+    });
+  });
+
+  describe('/invoices/users/{id}', () => {
+    describe('GET /invoices/users/{id}', () => {
+      it('should return an HTTP 403 if not admin', async () => {
+        const invoiceUser = await InvoiceUser.findOne({ where: { user: { deleted: false, type: UserType.INVOICE } }, relations: ['user'] });
+        expect(invoiceUser).to.not.be.null;
+
+        const res = await request(ctx.app)
+          .get(`/invoices/users/${invoiceUser.userId}`)
+          .set('Authorization', `Bearer ${ctx.token}`);
+
+        expect(res.status).to.equal(403);
+        expect(res.body).to.be.empty;
+      });
+      it('should return an HTTP 200 and the InvoiceUser if admin', async () => {
+        const invoiceUser = await InvoiceUser.findOne({ where: { user: { deleted: false, type: UserType.INVOICE } }, relations: ['user'] });
+        expect(invoiceUser).to.not.be.null;
+
+        const res = await request(ctx.app)
+          .get(`/invoices/users/${invoiceUser.userId}`)
+          .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+        expect(res.status).to.equal(200);
+        const validation = ctx.specification.validateModel(
+          'InvoiceUserResponse',
+          res.body,
+          false,
+          true,
+        );
+        expect(validation.valid).to.be.true;
+      });
+      it('should return an HTTP 404 if user is not found', async () => {
+        const count = await User.count();
+        const user = await User.findOne({ where: { id: count + 1 } });
+        expect(user).to.be.null;
+
+        const res = await request(ctx.app)
+          .get(`/invoices/users/${count + 1}`)
+          .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+        expect(res.status).to.equal(404);
+        expect(res.body).to.equal('User not found.');
+      });
+      it('should return an HTTP 404 if user has no matched InvoiceUser', async () => {
+        const invoiceUser = await InvoiceUser.findOne({ where: { userId: ctx.invoiceUser.id } });
+        expect(invoiceUser).to.be.null;
+
+        const res = await request(ctx.app)
+          .get(`/invoices/users/${ctx.invoiceUser.id}`)
+          .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+        expect(res.status).to.equal(404);
+        expect(res.body).to.equal('Invoice User not found.');
+      });
+      it('should return an HTTP 400 if user is not of type INVOICE', async () => {
+        const user = await User.findOne({ where: { type: Not(UserType.INVOICE) } });
+        expect(user).to.not.be.null;
+
+        const res = await request(ctx.app)
+          .get(`/invoices/users/${user.id}`)
+          .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+        expect(res.status).to.equal(400);
+        expect(res.body).to.equal(`User is of type ${UserType[user.type]} and not of type INVOICE.`);
+      });
+    });
+    describe('DELETE /invoices/users/{id}', () => {
+      it('should return an HTTP 403 if not admin', async () => {
+        const invoiceUser = await InvoiceUser.findOne({ where: { user: { deleted: false, type: UserType.INVOICE } }, relations: ['user'] });
+        expect(invoiceUser).to.not.be.null;
+
+        const res = await request(ctx.app)
+          .delete(`/invoices/users/${invoiceUser.userId}`)
+          .set('Authorization', `Bearer ${ctx.token}`);
+
+        expect(res.status).to.equal(403);
+        expect(res.body).to.be.empty;
+      });
+      it('should return an HTTP 204 and delete the InvoiceUser', async () => {
+        await inUserContext(await (await UserFactory(await INVOICE_USER())).clone(1),
+          async (user: User) => {
+            // Create invoice User
+            const invoiceUser = Object.assign(new InvoiceUser(), {
+              automatic: false,
+              city: 'city',
+              country: 'country',
+              postalCode: 'postalCode',
+              street: 'street',
+              userId: user.id,
+            });
+            await InvoiceUser.save(invoiceUser);
+
+            const res = await request(ctx.app)
+              .delete(`/invoices/users/${user.id}`)
+              .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+            expect(res.status).to.equal(204);
+            expect(res.body).to.be.empty;
+
+            const deleted = await InvoiceUser.findOne({ where: { userId: user.id }, relations: ['user'] });
+            expect(deleted).to.be.null;
+          });
+      });
+      it('should return an HTTP 404 if user is not found', async () => {
+        const count = await User.count();
+        const user = await User.findOne({ where: { id: count + 1 } });
+        expect(user).to.be.null;
+
+        const res = await request(ctx.app)
+          .delete(`/invoices/users/${count + 1}`)
+          .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+        expect(res.status).to.equal(404);
+        expect(res.body).to.equal('Invoice User not found.');
+      });
+    });
+    describe('PUT /invoices/users/{id}', () => {
+      it('should return an HTTP 200 and the updated InvoiceUser if admin', async () => {
+        const invoiceUser = await InvoiceUser.findOne({ where: { user: { deleted: false, type: UserType.INVOICE } }, relations: ['user'] });
+        expect(invoiceUser).to.not.be.null;
+
+        const update: UpdateInvoiceUserRequest = {
+          automatic: false,
+          city: 'Eindhoven',
+          country: 'Nederland',
+          postalCode: '5612 AE',
+          street: 'Groene Loper 5 ',
+        };
+
+        const res = await request(ctx.app)
+          .put(`/invoices/users/${invoiceUser.userId}`)
+          .set('Authorization', `Bearer ${ctx.adminToken}`)
+          .send(update);
+
+        expect(res.status).to.equal(200);
+        const validation = ctx.specification.validateModel(
+          'InvoiceUserResponse',
+          res.body,
+          false,
+          true,
+        );
+        expect(validation.valid).to.be.true;
+
+        for (let updateKey in update) {
+          // @ts-ignore
+          expect(update[updateKey]).to.equal(res.body[updateKey]);
+        }
+      });
+      it('should create an InvoiceUser if admin and if it does not exist', async () => {
+        await inUserContext(await (await UserFactory(await INVOICE_USER())).clone(1),
+          async (user: User) => {
+
+            let invoiceUser = await InvoiceUser.findOne({ where: { userId: user.id } });
+            expect(invoiceUser).to.be.null;
+
+            const update: UpdateInvoiceUserRequest = {
+              automatic: false,
+              city: 'Eindhoven',
+              country: 'Nederland',
+              postalCode: '5612 AE',
+              street: 'Groene Loper 5 ',
+            };
+
+            const res = await request(ctx.app)
+              .put(`/invoices/users/${user.id}`)
+              .set('Authorization', `Bearer ${ctx.adminToken}`)
+              .send(update);
+
+            expect(res.status).to.equal(200);
+            const validation = ctx.specification.validateModel(
+              'InvoiceUserResponse',
+              res.body,
+              false,
+              true,
+            );
+            expect(validation.valid).to.be.true;
+
+            invoiceUser = await InvoiceUser.findOne({ where: { userId: user.id } });
+            expect(invoiceUser).to.not.be.null;
+
+            for (let updateKey in update) {
+              // @ts-ignore
+              expect(update[updateKey]).to.equal(res.body[updateKey]);
+            }
+          });
+      });
+      it('should return an HTTP 403 if not admin', async () => {
+        const invoiceUser = await InvoiceUser.findOne({ where: { user: { deleted: false, type: UserType.INVOICE } }, relations: ['user'] });
+        expect(invoiceUser).to.not.be.null;
+
+        const update: UpdateInvoiceUserRequest = {
+          automatic: false,
+          city: 'Eindhoven',
+          country: 'Nederland',
+          postalCode: '5612 AE',
+          street: 'Groene Loper 5 ',
+        };
+
+        const res = await request(ctx.app)
+          .put(`/invoices/users/${invoiceUser.userId}`)
+          .set('Authorization', `Bearer ${ctx.token}`)
+          .send(update);
+
+        expect(res.status).to.equal(403);
+      });
+      it('should return an HTTP 404 if user is not  found', async () => {
+        const count = await User.count();
+        const user = await User.findOne({ where: { id: count + 1 } });
+        expect(user).to.be.null;
+
+        const update: UpdateInvoiceUserRequest = {
+          automatic: false,
+          city: 'Eindhoven',
+          country: 'Nederland',
+          postalCode: '5612 AE',
+          street: 'Groene Loper 5 ',
+        };
+
+        const res = await request(ctx.app)
+          .put(`/invoices/users/${count + 1}`)
+          .set('Authorization', `Bearer ${ctx.adminToken}`)
+          .send(update);
+
+        expect(res.status).to.equal(404);
+        expect(res.body).to.equal('User not found.');
+      });
+      it('should return an HTTP 400 if user is not of type INVOICE', async () => {
+        const user = await User.findOne({ where: { type: Not(UserType.INVOICE) } });
+        expect(user).to.not.be.null;
+
+        const update: UpdateInvoiceUserRequest = {
+          automatic: false,
+          city: 'Eindhoven',
+          country: 'Nederland',
+          postalCode: '5612 AE',
+          street: 'Groene Loper 5 ',
+        };
+
+        const res = await request(ctx.app)
+          .put(`/invoices/users/${user.id}`)
+          .set('Authorization', `Bearer ${ctx.adminToken}`)
+          .send(update);
+
+        expect(res.status).to.equal(400);
+        expect(res.body).to.equal(`User is of type ${UserType[user.type]} and not of type INVOICE.`);
+      });
     });
   });
 });

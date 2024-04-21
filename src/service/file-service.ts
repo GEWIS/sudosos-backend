@@ -26,6 +26,8 @@ import Product from '../entity/product/product';
 import ProductImage from '../entity/file/product-image';
 import Banner from '../entity/banner';
 import BannerImage from '../entity/file/banner-image';
+import Invoice from '../entity/invoices/invoice';
+import InvoicePdf from '../entity/file/invoice-pdf';
 
 /**
  *  Possible storage methods that can be used
@@ -55,7 +57,7 @@ export default class FileService {
   /**
    * Create a new file in storage, given the provided parameters
    */
-  private async createFile(file: BaseFile, fileData: Buffer): Promise<BaseFile> {
+  public async createFile(file: BaseFile, fileData: Buffer): Promise<BaseFile> {
     let location: string;
     try {
       location = await this.fileStorage.saveFile(file.downloadName, fileData);
@@ -134,6 +136,39 @@ export default class FileService {
 
     await this.removeFile(file);
     await BaseFile.delete(file.id);
+  }
+
+  /**
+   * Upload an pdf file
+   */
+  public async uploadInvoicePdf(entity: Invoice, fileData: Buffer, createdBy: User, hash: string): Promise<InvoicePdf> {
+    let pdf = entity.pdf;
+
+    if (pdf == null) {
+      pdf = Object.assign(new InvoicePdf(), {
+        downloadName: '',
+        createdBy,
+        location: '',
+        hash,
+      });
+      await InvoicePdf.save(pdf);
+    } else {
+      // If the file does exist, we first have to remove it from storage
+      await this.removeFile(pdf);
+    }
+
+    const file = await this.createFile(pdf, fileData);
+
+    // Save the file name as the download name.
+    pdf.downloadName = path.parse(file.location).base;
+
+    pdf.hash = hash;
+    await InvoicePdf.save(pdf);
+    // eslint-disable-next-line no-param-reassign
+    entity.pdf = pdf;
+
+    await entity.save();
+    return entity.pdf;
   }
 
   /**

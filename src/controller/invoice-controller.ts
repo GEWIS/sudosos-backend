@@ -33,6 +33,11 @@ import verifyCreateInvoiceRequest, { verifyUpdateInvoiceRequest } from './reques
 import { isFail } from '../helpers/specification-validation';
 import { asBoolean, asInvoiceState } from '../helpers/validators';
 import Invoice from '../entity/invoices/invoice';
+import InvoicePdfService from '../service/invoice-pdf-service';
+import User, { UserType } from '../entity/user/user';
+import { UpdateInvoiceUserRequest } from './request/user-request';
+import InvoiceUser from '../entity/user/invoice-user';
+import { parseInvoiceUserToResponse } from '../helpers/revision-to-response';
 
 export default class InvoiceController extends BaseController {
   private logger: Logger = log4js.getLogger('InvoiceController');
@@ -62,6 +67,21 @@ export default class InvoiceController extends BaseController {
           handler: this.createInvoice.bind(this),
         },
       },
+      '/users/:id(\\d+)': {
+        GET: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Invoice', ['*']),
+          handler: this.getSingleInvoiceUser.bind(this),
+        },
+        PUT : {
+          body: { modelName: 'UpdateInvoiceUserRequest' },
+          policy: async (req) => this.roleManager.can(req.token.roles, 'update', 'all', 'Invoice', ['*']),
+          handler: this.updateInvoiceUser.bind(this),
+        },
+        DELETE: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'delete', 'all', 'Invoice', ['*']),
+          handler: this.deleteInvoiceUser.bind(this),
+        },
+      },
       '/:id(\\d+)': {
         GET: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'get', await InvoiceController.getRelation(req), 'Invoice', ['*']),
@@ -75,6 +95,12 @@ export default class InvoiceController extends BaseController {
         DELETE: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'delete', 'all', 'Invoice', ['*']),
           handler: this.deleteInvoice.bind(this),
+        },
+      },
+      '/:id(\\d+)/pdf': {
+        GET: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', await InvoiceController.getRelation(req), 'Invoice', ['*']),
+          handler: this.getInvoicePDF.bind(this),
         },
       },
     };
@@ -116,7 +142,7 @@ export default class InvoiceController extends BaseController {
 
     // Handle request
     try {
-      const invoices: PaginatedInvoiceResponse = await InvoiceService.getInvoices(
+      const invoices: PaginatedInvoiceResponse = await InvoiceService.getPaginatedInvoices(
         filters, { take, skip },
       );
       res.json(invoices);
@@ -148,16 +174,16 @@ export default class InvoiceController extends BaseController {
     try {
       const returnInvoiceEntries = asBoolean(req.query.returnEntries) ?? true;
 
-      const invoices: PaginatedInvoiceResponse = await InvoiceService.getInvoices(
-        { invoiceId, returnInvoiceEntries }, { },
+      const invoices: Invoice[] = await InvoiceService.getInvoices(
+        { invoiceId, returnInvoiceEntries },
       );
 
-      if (!invoices.records[0]) {
+      if (!invoices[0]) {
         res.status(404).json('Unknown invoice ID.');
         return;
       }
 
-      res.json(invoices.records[0]);
+      res.json(InvoiceService.toResponse(invoices[0], returnInvoiceEntries));
     } catch (error) {
       this.logger.error('Could not return invoice:', error);
       res.status(500).json('Internal server error.');
@@ -182,8 +208,11 @@ export default class InvoiceController extends BaseController {
 
     // handle request
     try {
+      const userDefinedDefaults = await InvoiceService.getDefaultInvoiceParams(body.forId);
+
       // If no byId is provided we use the token user id.
       const params: CreateInvoiceParams = {
+        ...userDefinedDefaults,
         ...body,
         byId: body.byId ?? req.token.user.id,
       };
@@ -194,7 +223,9 @@ export default class InvoiceController extends BaseController {
         return;
       }
 
-      res.json(await InvoiceService.createInvoice(params));
+      const invoice: Invoice = await InvoiceService.createInvoice(params);
+      res.json(InvoiceService.toResponse(invoice, true));
+
     } catch (error) {
       this.logger.error('Could not create invoice:', error);
       res.status(500).json('Internal server error.');
@@ -235,7 +266,9 @@ export default class InvoiceController extends BaseController {
         return;
       }
 
-      res.json(await InvoiceService.updateInvoice(params));
+      const invoice: Invoice = await InvoiceService.updateInvoice(params);
+
+      res.json(InvoiceService.toResponse(invoice, false));
     } catch (error) {
       this.logger.error('Could not update invoice:', error);
       res.status(500).json('Internal server error.');
@@ -250,7 +283,7 @@ export default class InvoiceController extends BaseController {
    * @security JWT
    * @param {integer} id.path.required - The id of the invoice which should be deleted
    * @return {string} 404 - Invoice not found
-   * @return {BaseInvoiceResponse} 200 - The deleted invoice.
+   * @return 204 - Deletion success
    * @return {string} 500 - Internal server error
    */
   // TODO Deleting of invoices that are not of state CREATED?
@@ -273,6 +306,156 @@ export default class InvoiceController extends BaseController {
   }
 
   /**
+   * GET /invoices/{id}/pdf
+   * @summary Get an invoice pdf.
+   * @operationId getInvoicePdf
+   * @tags invoices - Operations of the invoices controller
+   * @security JWT
+   * @param {integer} id.path.required - The id of the invoice to return
+   * @return {string} 404 - Invoice not found
+   * @return {string} 200 - The pdf location information.
+   * @return {string} 500 - Internal server error
+   */
+  public async getInvoicePDF(req: RequestWithToken, res: Response): Promise<void> {
+    const { id } = req.params;
+    const invoiceId = parseInt(id, 10);
+    this.logger.trace('Get Invoice PDF', id, 'by user', req.token.user);
+
+    try {
+      const invoice = await InvoicePdfService.getOrCreatePDF(invoiceId);
+      if (!invoice) {
+        res.status(404).json('Invoice not found.');
+        return;
+      }
+
+      res.status(200).json({ pdf: invoice.downloadName });
+    } catch (error) {
+      this.logger.error('Could get invoice PDF:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * DELETE /invoices/users/{id}
+   * @summary Delete invoice user defaults.
+   * @operationId deleteInvoiceUser
+   * @tags invoices - Operations of the invoices controller
+   * @security JWT
+   * @param {integer} id.path.required - The id of the invoice user to delete.
+   * @return {string} 404 - Invoice User not found
+   * @return 204 - Success
+   * @return {string} 500 - Internal server error
+   */
+  public async deleteInvoiceUser(req: RequestWithToken, res: Response): Promise<void> {
+    const { id } = req.params;
+    const userId = parseInt(id, 10);
+    this.logger.trace('Delete Invoice User', id, 'by user', req.token.user);
+
+    try {
+      const invoiceUser = await InvoiceUser.findOne({ where: { userId } });
+      if (!invoiceUser) {
+        res.status(404).json('Invoice User not found.');
+        return;
+      }
+
+      await InvoiceUser.delete(userId);
+      res.status(204).json();
+    } catch (error) {
+      this.logger.error('Could not get invoice user:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * GET /invoices/users/{id}
+   * @summary Get invoice user defaults.
+   * @operationId getSingleInvoiceUser
+   * @tags invoices - Operations of the invoices controller
+   * @security JWT
+   * @param {integer} id.path.required - The id of the invoice user to return.
+   * @return {string} 404 - Invoice User not found
+   * @return {string} 404 - User not found
+   * @return {string} 400 - User is not of type INVOICE
+   * @return {InvoiceUserResponse} 200 - The requested Invoice User
+   * @return {string} 500 - Internal server error
+   */
+  public async getSingleInvoiceUser(req: RequestWithToken, res: Response): Promise<void> {
+    const { id } = req.params;
+    const userId = parseInt(id, 10);
+    this.logger.trace('Get Invoice User', id, 'by user', req.token.user);
+
+    try {
+      const user = await User.findOne({ where: { id: userId, deleted: false } });
+      if (!user) {
+        res.status(404).json('User not found.');
+        return;
+      }
+
+      if (user.type !== UserType.INVOICE) {
+        res.status(400).json(`User is of type ${UserType[user.type]} and not of type INVOICE.`);
+        return;
+      }
+
+      const invoiceUser = await InvoiceUser.findOne({ where: { userId }, relations: ['user'] });
+      if (!invoiceUser) {
+        res.status(404).json('Invoice User not found.');
+        return;
+      }
+
+      res.status(200).json(parseInvoiceUserToResponse(invoiceUser));
+    } catch (error) {
+      this.logger.error('Could not get invoice user:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * PUT /invoices/users/{id}
+   * @summary Update or create invoice user defaults.
+   * @operationId putInvoiceUser
+   * @tags invoices - Operations of the invoices controller
+   * @security JWT
+   * @param {integer} id.path.required - The id of the user to update
+   * @param {UpdateInvoiceUserRequest} request.body.required - The invoice user which should be updated
+   * @return {string} 404 - User not found
+   * @return {string} 400 - User is not of type INVOICE
+   * @return {InvoiceUserResponse} 200 - The updated / created Invoice User
+   * @return {string} 500 - Internal server error
+   */
+  public async updateInvoiceUser(req: RequestWithToken, res: Response): Promise<void> {
+    const { id } = req.params;
+    const body = req.body as UpdateInvoiceUserRequest;
+    const userId = parseInt(id, 10);
+    this.logger.trace('Update Invoice User', id, 'by user', req.token.user);
+
+    try {
+      const user = await User.findOne({ where: { id: userId, deleted: false } });
+      if (!user) {
+        res.status(404).json('User not found.');
+        return;
+      }
+
+      if (user.type !== UserType.INVOICE) {
+        res.status(400).json(`User is of type ${UserType[user.type]} and not of type INVOICE.`);
+        return;
+      }
+
+      let invoiceUser = Object.assign(new InvoiceUser(), {
+        ...body,
+        user,
+      }) as InvoiceUser;
+
+      invoiceUser = await InvoiceUser.save(invoiceUser);
+
+      res.status(200).json(parseInvoiceUserToResponse(invoiceUser));
+    } catch (error) {
+      this.logger.error('Could not update invoice user:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+
+  /**
    * Function to determine which credentials are needed to get invoice
    * all if user is not connected to invoice
    * own if user is connected to invoice
@@ -281,6 +464,7 @@ export default class InvoiceController extends BaseController {
    */
   static async getRelation(req: RequestWithToken): Promise<string> {
     const invoice: Invoice = await Invoice.findOne({ where: { id: parseInt(req.params.id, 10) }, relations: ['to'] });
+    if (!invoice) return 'all';
     if (invoice.to.id === req.token.user.id) return 'own';
     return 'all';
   }

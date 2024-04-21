@@ -93,6 +93,17 @@ export const ADMIN_USER = async () => {
   } as User);
 };
 
+export const INVOICE_USER = async () => {
+  const count = await User.count();
+  return Object.assign(new User(), {
+    firstName: `Invoice #${count + 1}`,
+    lastName: `Doe #${count + 1}`,
+    type: UserType.INVOICE,
+    active: true,
+    acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
+  } as User);
+};
+
 async function setInactive(users: User[]) {
   const promises: Promise<User>[] = [];
   users.forEach((u) => {

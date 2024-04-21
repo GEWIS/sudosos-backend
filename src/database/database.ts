@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  createConnection, Connection,
+  createConnection, DataSource,
 } from 'typeorm';
 import User from '../entity/user/user';
 import Product from '../entity/product/product';
@@ -67,78 +67,91 @@ import Event from '../entity/event/event';
 import EventShiftAnswer from '../entity/event/event-shift-answer';
 import EventShift from '../entity/event/event-shift';
 import { TransactionSubscriber, TransferSubscriber } from '../subscriber';
+import InvoicePdf from '../entity/file/invoice-pdf';
+import { InvoiceRefactor1707251162194 } from '../../migrations/1707251162194-invoice-refactor';
+import dotenv from 'dotenv';
 
-export default class Database {
-  public static async initialize(): Promise<Connection> {
-    const options: DataSourceOptions = {
-      host: process.env.TYPEORM_HOST,
-      port: parseInt(process.env.TYPEORM_PORT || '3001'),
-      database: process.env.TYPEORM_DATABASE,
-      type: process.env.TYPEORM_CONNECTION as 'postgres' | 'mariadb' | 'mysql',
-      username: process.env.TYPEORM_USERNAME,
-      password: process.env.TYPEORM_PASSWORD,
-      synchronize: process.env.TYPEORM_SYNCHRONIZE === 'true',
-      logging: process.env.TYPEORM_LOGGING === 'true',
-      extra: {
-        authPlugins: {
-          mysql_clear_password: () => () => Buffer.from(`${process.env.TYPEORM_PASSWORD}\0`),
-        },
-      },
-      poolSize: 4,
-      entities: [
-        ProductCategory,
-        VatGroup,
-        Product,
-        ProductRevision,
-        Container,
-        ContainerRevision,
-        PointOfSale,
-        PointOfSaleRevision,
-        Transfer,
-        StripeDeposit,
-        StripeDepositStatus,
-        PayoutRequest,
-        PayoutRequestStatus,
-        Fine,
-        FineHandoutEvent,
-        UserFineGroup,
-        Transaction,
-        SubTransaction,
-        SubTransactionRow,
-        FlaggedTransaction,
-        VoucherGroup,
-        User,
-        LocalUser,
-        GewisUser,
-        UserVoucherGroup,
-        EanAuthenticator,
-        MemberAuthenticator,
-        NfcAuthenticator,
-        KeyAuthenticator,
-        PinAuthenticator,
-        LocalAuthenticator,
-        LDAPAuthenticator,
-        Banner,
-        ProductOrdering,
-        Balance,
-        InvoiceUser,
-        InvoiceEntry,
-        Invoice,
-        InvoiceStatus,
-        BaseFile,
-        ProductImage,
-        BannerImage,
-        AssignedRole,
-        ResetToken,
-        Event,
-        EventShift,
-        EventShiftAnswer,
-      ],
-      subscribers: [
-        TransactionSubscriber,
-        TransferSubscriber,
-      ],
-    };
-    return createConnection(options);
-  }
-}
+// We need to load the dotenv to prevent the env from being undefined.
+dotenv.config();
+
+const options: DataSourceOptions = {
+  host: process.env.TYPEORM_HOST,
+  port: parseInt(process.env.TYPEORM_PORT || '3001'),
+  database: process.env.TYPEORM_DATABASE,
+  type: process.env.TYPEORM_CONNECTION as 'postgres' | 'mariadb' | 'mysql',
+  username: process.env.TYPEORM_USERNAME,
+  password: process.env.TYPEORM_PASSWORD,
+  synchronize: process.env.TYPEORM_SYNCHRONIZE === 'true',
+  logging: process.env.TYPEORM_LOGGING === 'true',
+  migrations: [InvoiceRefactor1707251162194],
+  extra: {
+    authPlugins: {
+      mysql_clear_password: () => () => Buffer.from(`${process.env.TYPEORM_PASSWORD}\0`),
+    },
+  },
+  poolSize: 4,
+  entities: [
+    ProductCategory,
+    VatGroup,
+    Product,
+    ProductRevision,
+    Container,
+    ContainerRevision,
+    PointOfSale,
+    PointOfSaleRevision,
+    Transfer,
+    StripeDeposit,
+    StripeDepositStatus,
+    PayoutRequest,
+    PayoutRequestStatus,
+    Fine,
+    FineHandoutEvent,
+    UserFineGroup,
+    Transaction,
+    SubTransaction,
+    SubTransactionRow,
+    FlaggedTransaction,
+    VoucherGroup,
+    User,
+    LocalUser,
+    GewisUser,
+    UserVoucherGroup,
+    EanAuthenticator,
+    MemberAuthenticator,
+    NfcAuthenticator,
+    KeyAuthenticator,
+    PinAuthenticator,
+    LocalAuthenticator,
+    LDAPAuthenticator,
+    Banner,
+    ProductOrdering,
+    Balance,
+    InvoiceUser,
+    InvoiceEntry,
+    Invoice,
+    InvoiceStatus,
+    InvoicePdf,
+    BaseFile,
+    ProductImage,
+    BannerImage,
+    AssignedRole,
+    ResetToken,
+    Event,
+    EventShift,
+    EventShiftAnswer,
+  ],
+  subscribers: [
+    TransactionSubscriber,
+    TransferSubscriber,
+  ],
+};
+
+export const AppDataSource = new DataSource(options);
+
+const Database = {
+  initialize: async () => {
+    return Promise.resolve(createConnection(options));
+  },
+};
+export default Database;
+

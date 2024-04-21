@@ -15,17 +15,13 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import {
-  Column, Entity,
-} from 'typeorm';
-import AuthenticationMethod from './authentication-method';
+import crypto from 'crypto';
 
 /**
- * @typedef {AuthenticationMethod} NfcAuthenticator
- * @property {string} nfcCode.required - The UID of the NFC chip
+ * Returns the sha256 hash of an object.
+ * @param jsonObject
  */
-@Entity()
-export default class NfcAuthenticator extends AuthenticationMethod {
-  @Column({ unique: true })
-  public nfcCode: string;
+export function hashJSON(jsonObject: object) {
+  const jsonString = JSON.stringify(jsonObject);
+  return crypto.createHash('sha256').update(jsonString).digest('hex');
 }

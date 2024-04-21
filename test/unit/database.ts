@@ -16,6 +16,8 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import Database from '../../src/database/database';
+import { expect } from 'chai';
+import {Connection} from "typeorm";
 
 describe('Database', (): void => {
   describe('#initialize', () => {
@@ -23,6 +25,53 @@ describe('Database', (): void => {
       const connection = await Database.initialize();
       await connection.synchronize();
       await connection.close();
+    });
+  });
+  describe('#generate', () => {
+    let dataSource: Connection;
+
+    before(async () => {
+      dataSource = await Database.initialize();
+    });
+
+    after(async () => {
+      await dataSource.destroy();
+    });
+
+    const typeMap: { [key: string]: string } = {
+      'Number': 'integer',
+      'String': 'varchar',
+      'Boolean': 'boolean',
+    };
+
+    it('should match the database schema with entity definition', async () => {
+      const entities = dataSource.entityMetadatas;
+
+      for (const entity of entities) {
+        const tableName = entity.tableName;
+        const queryRunner = dataSource.createQueryRunner();
+        await queryRunner.connect();
+
+        const table = await queryRunner.getTable(tableName);
+        const databaseColumns = table.columns.map(column => column.name);
+        const entityColumns = entity.columns.map(column => column.databaseName);
+
+        expect(databaseColumns.sort()).to.deep.equalInAnyOrder(entityColumns.sort());
+
+        entity.columns.forEach(column => {
+          const matchedColumn = table.columns.find(dbColumn => dbColumn.name === column.databaseName);
+
+          // Edge case for generated columns
+          if ((column.type as Function).name) {
+            const func = column.type as Function;
+            expect(typeMap[func.name]).to.eq(matchedColumn.type);
+          } else {
+            expect(matchedColumn.type).to.eq(column.type);
+          }
+        });
+
+        await queryRunner.release();
+      }
     });
   });
 });

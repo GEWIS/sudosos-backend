@@ -58,7 +58,6 @@ import { extractRawBody } from './helpers/raw-body';
 import InvoiceController from './controller/invoice-controller';
 import PayoutRequestController from './controller/payout-request-controller';
 import RootController from './controller/root-controller';
-import ADService from './service/ad-service';
 import VatGroupController from './controller/vat-group-controller';
 import TestController from './controller/test-controller';
 import AuthenticationSecureController from './controller/authentication-secure-controller';
@@ -217,6 +216,7 @@ export default async function createApp(): Promise<Application> {
   if (process.env.NODE_ENV === 'development') {
     application.app.use('/static/products', express.static('data/products'));
     application.app.use('/static/banners', express.static('data/banners'));
+    application.app.use('/static/invoices', express.static('data/invoices'));
   }
 
   // Setup RBAC.
