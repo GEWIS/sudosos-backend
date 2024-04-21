@@ -20,7 +20,6 @@ ARG TYPEORM_USERNAME
 ARG TYPEORM_PASSWORD
 ARG TYPEORM_DATABASE
 
-COPY --chown=node ./migrations/ /app/migrations/
 COPY --from=build --chown=node /app/init_scripts /app/init_scripts
 COPY --from=build --chown=node /app/pm2.json /app/pm2.json
 RUN chmod +x /app/init_scripts/start.sh
