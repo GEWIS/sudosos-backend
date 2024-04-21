@@ -68,7 +68,7 @@ import EventShiftAnswer from '../entity/event/event-shift-answer';
 import EventShift from '../entity/event/event-shift';
 import { TransactionSubscriber, TransferSubscriber } from '../subscriber';
 import InvoicePdf from '../entity/file/invoice-pdf';
-import { InvoiceRefactor1707251162194 } from '../../migrations/1707251162194-invoice-refactor';
+import { InvoiceRefactor1707251162194 } from '../migrations/1707251162194-invoice-refactor';
 import dotenv from 'dotenv';
 
 // We need to load the dotenv to prevent the env from being undefined.
