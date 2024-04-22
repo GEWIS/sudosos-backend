@@ -414,7 +414,7 @@ describe('ProductController', async (): Promise<void> => {
         .post('/products')
         .set('Authorization', `Bearer ${ctx.organMemberToken}`)
         .send(ctx.validCreateProductReq);
-      console.error(res.body);
+
       expect(res.status).to.equal(200);
       const body = res.body as ProductResponse;
       expect(ctx.specification.validateModel(

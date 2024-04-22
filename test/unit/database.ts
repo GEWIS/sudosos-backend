@@ -17,7 +17,7 @@
  */
 import Database from '../../src/database/database';
 import { expect } from 'chai';
-import {Connection} from "typeorm";
+import { Connection } from 'typeorm';
 
 describe('Database', (): void => {
   describe('#initialize', () => {
@@ -44,8 +44,12 @@ describe('Database', (): void => {
       'Boolean': 'boolean',
     };
 
-    it('should match the database schema with entity definition', async () => {
+    it('should match the database schema with entity definition after migrations', async () => {
       const entities = dataSource.entityMetadatas;
+
+      await dataSource.runMigrations({ transaction: 'all', fake: true });
+      await dataSource.undoLastMigration({ transaction: 'all' });
+      await dataSource.runMigrations({ transaction: 'all' });
 
       for (const entity of entities) {
         const tableName = entity.tableName;
@@ -68,6 +72,10 @@ describe('Database', (): void => {
           } else {
             expect(matchedColumn.type).to.eq(column.type);
           }
+          expect(matchedColumn.isGenerated).to.eq(column.isGenerated);
+          expect(matchedColumn.isArray).to.eq(column.isArray);
+          expect(matchedColumn.isNullable).to.eq(column.isNullable);
+          expect(matchedColumn.isPrimary).to.eq(column.isPrimary);
         });
 
         await queryRunner.release();
