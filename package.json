@@ -8,7 +8,7 @@
     "watch": "ts-node-dev --poll src/index.ts",
     "cron": "ts-node-dev --poll src/cron.ts",
     "serve": "node out/src/index.js",
-    "schema": "ts-node-dev ./src/database/schema.ts",
+    "schema": "ts-node ./src/database/schema.ts",
     "seed": "ts-node-dev --poll src/database/seed.ts",
     "swagger": "ts-node-dev --poll src/start/swagger.ts",
     "swagger:validate": "ts-node-dev --poll src/start/swagger.ts && swagger-cli validate ./out/swagger.json",
