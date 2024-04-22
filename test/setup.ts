@@ -48,6 +48,11 @@ if (!process.env.TYPEORM_CONNECTION || (process.env.TYPEORM_CONNECTION === 'sqli
   process.env.TYPEORM_SYNCHRONIZE = 'true';
 }
 
+// Always sync in sqlite.
+if (process.env.TYPEORM_CONNECTION === 'sqlite') {
+  process.env.TYPEORM_SYNCHRONIZE = 'true';
+}
+
 dinero.defaultCurrency = 'EUR';
 dinero.defaultPrecision = 2;
 
