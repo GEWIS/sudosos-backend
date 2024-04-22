@@ -27,6 +27,7 @@ import ProductCategory from '../../../src/entity/product/product-category';
 import { ProductCategoryResponse } from '../../../src/controller/response/product-category-response';
 import ProductCategoryService from '../../../src/service/product-category-service';
 import ProductCategoryRequest from '../../../src/controller/request/product-category-request';
+import { truncateAllTables } from '../../setup';
 
 /**
  * Test if the set of productCategory responses is equal to the full set of productCategories.
@@ -60,6 +61,7 @@ describe('ProductCategoryService', async (): Promise<void> => {
   describe('getProductCategories function', async (): Promise<void> => {
     before(async () => {
       const connection = await Database.initialize();
+      await truncateAllTables(connection);
 
       const categories = await seedProductCategories();
 
@@ -78,8 +80,7 @@ describe('ProductCategoryService', async (): Promise<void> => {
     });
 
     after(async () => {
-      await ctx.connection.dropDatabase();
-      await ctx.connection.close();
+      await Database.finish(ctx.connection);
     });
 
     it('should return all productCategories', async () => {
@@ -144,6 +145,7 @@ describe('ProductCategoryService', async (): Promise<void> => {
   describe('postProductCategory function', () => {
     beforeEach(async () => {
       const connection = await Database.initialize();
+      await truncateAllTables(connection);
       const categories: ProductCategory[] = [];
 
       // start app
@@ -162,8 +164,7 @@ describe('ProductCategoryService', async (): Promise<void> => {
 
     afterEach(async () => {
       // close database connection
-      await ctx.connection.dropDatabase();
-      await ctx.connection.close();
+      await Database.finish(ctx.connection);
     });
 
     it('should be able to post a new productCategory', async () => {
@@ -191,6 +192,7 @@ describe('ProductCategoryService', async (): Promise<void> => {
   describe('patchProductCategory function', async (): Promise<void> => {
     beforeEach(async () => {
       const connection = await Database.initialize();
+      await truncateAllTables(connection);
 
       const categories = await seedProductCategories();
 
@@ -210,8 +212,7 @@ describe('ProductCategoryService', async (): Promise<void> => {
 
     afterEach(async () => {
       // close database connection
-      await ctx.connection.dropDatabase();
-      await ctx.connection.close();
+      await Database.finish(ctx.connection);
     });
 
     it('should be able to patch a productCategory', async () => {
@@ -237,6 +238,7 @@ describe('ProductCategoryService', async (): Promise<void> => {
   describe('deleteProductCategory function', async (): Promise<void> => {
     beforeEach(async () => {
       const connection = await Database.initialize();
+      await truncateAllTables(connection);
 
       const categories = await seedProductCategories();
 
@@ -256,8 +258,7 @@ describe('ProductCategoryService', async (): Promise<void> => {
 
     afterEach(async () => {
       // close database connection
-      await ctx.connection.dropDatabase();
-      await ctx.connection.close();
+      await Database.finish(ctx.connection);
     });
 
     it('should be able to delete a productCategory', async () => {

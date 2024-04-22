@@ -36,6 +36,7 @@ import { TransactionRequest } from '../../../src/controller/request/transaction-
 import { defaultPagination, PAGINATION_DEFAULT, PaginationResult } from '../../../src/helpers/pagination';
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import MemberAuthenticator from '../../../src/entity/authenticator/member-authenticator';
+import {truncateAllTables} from "../../setup";
 
 describe('TransactionController', (): void => {
   let ctx: {
@@ -62,6 +63,7 @@ describe('TransactionController', (): void => {
     const logger: Logger = log4js.getLogger('TransactionControllerTest');
     logger.level = 'ALL';
     const connection = await Database.initialize();
+    await truncateAllTables(connection);
     const app = express();
     const database = await seedDatabase();
     const validTransReq = {
@@ -233,8 +235,7 @@ describe('TransactionController', (): void => {
   });
 
   after(async () => {
-    await ctx.connection.dropDatabase();
-    await ctx.connection.close();
+    await Database.finish(ctx.connection);
   });
 
   describe('GET /transactions', () => {

@@ -24,6 +24,7 @@ import { UserFactory } from '../../helpers/user-factory';
 import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import TokenHandler from '../../../src/authentication/token-handler';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
+import {truncateAllTables} from "../../setup";
 
 describe('RestrictionMiddleware', (): void => {
   let ctx: {
@@ -40,6 +41,7 @@ describe('RestrictionMiddleware', (): void => {
 
   before(async () => {
     const connection = await Database.initialize();
+    await truncateAllTables(connection);
     const userNotAccepted = await (await UserFactory({
       firstName: 'TestUser1',
       lastName: 'TestUser1',
@@ -96,8 +98,7 @@ describe('RestrictionMiddleware', (): void => {
   });
 
   after(async () => {
-    await ctx.connection.dropDatabase();
-    await ctx.connection.close();
+    await Database.finish(ctx.connection);
   });
 
   describe('Non-lesser endpoints', async () => {

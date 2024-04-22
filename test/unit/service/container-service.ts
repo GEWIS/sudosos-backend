@@ -43,6 +43,7 @@ import PointOfSaleService from '../../../src/service/point-of-sale-service';
 import { CreatePointOfSaleParams } from '../../../src/controller/request/point-of-sale-request';
 import AuthenticationService from '../../../src/service/authentication-service';
 import MemberAuthenticator from '../../../src/entity/authenticator/member-authenticator';
+import { truncateAllTables } from '../../setup';
 
 /**
  * Test if all the container responses are part of the container set array.
@@ -99,6 +100,7 @@ describe('ContainerService', async (): Promise<void> => {
 
   before(async () => {
     const connection = await Database.initialize();
+    await truncateAllTables(connection);
 
     const users = await seedUsers();
     const categories = await seedProductCategories();
@@ -124,8 +126,7 @@ describe('ContainerService', async (): Promise<void> => {
 
   // close database connection
   after(async () => {
-    await ctx.connection.dropDatabase();
-    await ctx.connection.close();
+    await Database.finish(ctx.connection);
   });
 
   describe('getContainers function', () => {

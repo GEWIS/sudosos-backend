@@ -46,6 +46,7 @@ import { CreatePointOfSaleParams } from '../../../src/controller/request/point-o
 import PointOfSaleService from '../../../src/service/point-of-sale-service';
 import MemberAuthenticator from '../../../src/entity/authenticator/member-authenticator';
 import AuthenticationService from '../../../src/service/authentication-service';
+import { truncateAllTables } from '../../setup';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -135,6 +136,7 @@ describe('ProductService', async (): Promise<void> => {
 
   before(async () => {
     const connection = await Database.initialize();
+    await truncateAllTables(connection);
 
     const categories = await seedProductCategories();
     const vatGroups = await seedVatGroups();
@@ -177,8 +179,7 @@ describe('ProductService', async (): Promise<void> => {
 
   // close database connection
   after(async () => {
-    await ctx.connection.dropDatabase();
-    await ctx.connection.close();
+    await Database.finish(ctx.connection);
   });
 
   describe('getProducts function', () => {

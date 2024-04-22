@@ -35,6 +35,7 @@ import FileService, { StorageMethod } from '../../../src/service/file-service';
 import { DiskStorage } from '../../../src/files/storage';
 import Product from '../../../src/entity/product/product';
 import ProductImage from '../../../src/entity/file/product-image';
+import { truncateAllTables } from '../../setup';
 
 describe('FileService', async (): Promise<void> => {
   let ctx: {
@@ -65,6 +66,7 @@ describe('FileService', async (): Promise<void> => {
 
   before(async () => {
     const connection = await Database.initialize();
+    await truncateAllTables(connection);
 
     const users = await seedUsers();
     const categories = await seedProductCategories();
@@ -113,8 +115,7 @@ describe('FileService', async (): Promise<void> => {
   });
 
   after(async () => {
-    await ctx.connection.dropDatabase();
-    await ctx.connection.close();
+    await Database.finish(ctx.connection);
   });
 
   afterEach(() => {

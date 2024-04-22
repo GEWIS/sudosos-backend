@@ -48,6 +48,7 @@ import KeyAuthenticator from '../../../src/entity/authenticator/key-authenticato
 import AuthenticationKeyRequest from '../../../src/controller/request/authentication-key-request';
 import AuthenticationNfcRequest from '../../../src/controller/request/authentication-nfc-request';
 import NfcAuthenticator from '../../../src/entity/authenticator/nfc-authenticator';
+import { truncateAllTables } from '../../setup';
 
 describe('AuthenticationController', async (): Promise<void> => {
   let ctx: {
@@ -64,11 +65,14 @@ describe('AuthenticationController', async (): Promise<void> => {
     request: AuthenticationMockRequest,
   };
 
-  beforeEach(async () => {
+  before(async () => {
+    const connection = await Database.initialize();
+    await truncateAllTables(connection);
+
     // Initialize context
     ctx = {
       env: process.env.NODE_ENV,
-      connection: await Database.initialize(),
+      connection: connection,
       app: express(),
       specification: undefined,
       controller: undefined,
@@ -102,6 +106,7 @@ describe('AuthenticationController', async (): Promise<void> => {
         nonce: 'test',
       },
     };
+
     process.env.NODE_ENV = 'development';
 
     ctx.roleManager.registerRole({
@@ -138,10 +143,9 @@ describe('AuthenticationController', async (): Promise<void> => {
     ctx.app.use(json());
     ctx.app.use('/authentication', ctx.controller.getRouter());
   });
-  afterEach(async () => {
+  after(async () => {
     process.env.NODE_ENV = ctx.env;
-    await ctx.connection.dropDatabase();
-    await ctx.connection.close();
+    await Database.finish(ctx.connection);
   });
 
   describe('POST /authentication/mock', () => {

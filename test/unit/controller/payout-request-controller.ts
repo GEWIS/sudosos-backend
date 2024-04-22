@@ -36,6 +36,7 @@ import {
 } from '../../../src/controller/response/payout-request-response';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import { PayoutRequestState } from '../../../src/entity/transactions/payout-request-status';
+import {truncateAllTables} from "../../setup";
 
 describe('PayoutRequestController', () => {
   let ctx: {
@@ -54,6 +55,7 @@ describe('PayoutRequestController', () => {
 
   before(async () => {
     const connection = await Database.initialize();
+    await truncateAllTables(connection);
 
     const users = await seedUsers();
     const { payoutRequests } = await seedPayoutRequests(users);
@@ -130,8 +132,7 @@ describe('PayoutRequestController', () => {
   });
 
   after(async () => {
-    await ctx.connection.dropDatabase();
-    await ctx.connection.close();
+    await Database.finish(ctx.connection);
   });
 
   describe('GET /payoutrequests', () => {

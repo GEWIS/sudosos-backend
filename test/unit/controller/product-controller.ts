@@ -45,6 +45,7 @@ import ProductController from '../../../src/controller/product-controller';
 import { DineroObjectRequest } from '../../../src/controller/request/dinero-request';
 import { DiskStorage } from '../../../src/files/storage';
 import VatGroup from '../../../src/entity/vat-group';
+import {truncateAllTables} from "../../setup";
 
 /**
  * Tests if a product response is equal to the request.
@@ -91,6 +92,7 @@ describe('ProductController', async (): Promise<void> => {
   before(async () => {
     // initialize test database
     const connection = await Database.initialize();
+    await truncateAllTables(connection);
 
     // create dummy users
     const adminUser = {
@@ -240,8 +242,7 @@ describe('ProductController', async (): Promise<void> => {
 
   // close database connection
   after(async () => {
-    await ctx.connection.dropDatabase();
-    await ctx.connection.close();
+    await Database.finish(ctx.connection);
   });
 
   afterEach(() => {

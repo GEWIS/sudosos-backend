@@ -24,6 +24,7 @@ import User, { UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import HelloWorld from '../../../src/mailer/templates/hello-world';
 import { Language } from '../../../src/mailer/templates/mail-template';
+import {truncateAllTables} from "../../setup";
 
 describe('Mailer', () => {
   let ctx: {
@@ -38,6 +39,7 @@ describe('Mailer', () => {
 
   before(async () => {
     const connection = await Database.initialize();
+    await truncateAllTables(connection);
     const user = await User.save({
       id: 1,
       firstName: 'Admin',
@@ -66,7 +68,7 @@ describe('Mailer', () => {
 
   after(async () => {
     sandbox.restore();
-    await ctx.connection.close();
+    await Database.finish(ctx.connection);
   });
 
   it('should correctly create mailer', () => {

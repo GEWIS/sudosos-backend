@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { Connection } from 'typeorm';
+import {Connection, getConnectionManager} from 'typeorm';
 import express, { Application } from 'express';
 import ProductController from '../../src/controller/product-controller';
 import ContainerController from '../../src/controller/container-controller';
@@ -40,6 +40,7 @@ import ProductCategory from '../../src/entity/product/product-category';
 import { CreateProductRequest, UpdateProductRequest } from '../../src/controller/request/product-request';
 import { CreateContainerRequest, UpdateContainerRequest } from '../../src/controller/request/container-request';
 import { CreatePointOfSaleRequest } from '../../src/controller/request/point-of-sale-request';
+import { truncateAllTables } from '../setup';
 
 describe('Propagation between products, containers, POSs', () => {
   let ctx: {
@@ -63,6 +64,7 @@ describe('Propagation between products, containers, POSs', () => {
 
   before(async () => {
     const connection = await Database.initialize();
+    await truncateAllTables(connection);
 
     const user = await User.save({
       id: 1,
@@ -180,8 +182,7 @@ describe('Propagation between products, containers, POSs', () => {
   });
 
   after(async () => {
-    await ctx.connection.dropDatabase();
-    await ctx.connection.close();
+    await Database.finish(ctx.connection);
   });
 
   describe('Create and fetch entities', () => {

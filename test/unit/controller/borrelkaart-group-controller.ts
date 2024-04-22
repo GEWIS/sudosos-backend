@@ -42,6 +42,7 @@ import {
 import { bkgEq } from '../service/voucher-group-service';
 import Sinon from 'sinon';
 import { DineroObjectRequest } from '../../../src/controller/request/dinero-request';
+import {truncateAllTables} from "../../setup";
 
 async function saveBKG(
   bkgReq: VoucherGroupRequest,
@@ -85,6 +86,7 @@ describe('VoucherGroupController', async (): Promise<void> => {
     const clock = Sinon.useFakeTimers({ now: new Date('2000-01-01T00:00:00Z') });
     // initialize test database
     const connection = await Database.initialize();
+    await truncateAllTables(connection);
 
     // create dummy users
     const adminUser = {
@@ -196,8 +198,7 @@ describe('VoucherGroupController', async (): Promise<void> => {
 
   // close database connection
   afterEach(async () => {
-    await ctx.connection.dropDatabase();
-    await ctx.connection.destroy();
+    await Database.finish(ctx.connection);
     ctx.clock.restore();
   });
 

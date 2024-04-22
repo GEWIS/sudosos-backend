@@ -64,6 +64,7 @@ import InvoiceUser from '../../../src/entity/user/invoice-user';
 import { UpdateInvoiceUserRequest } from '../../../src/controller/request/user-request';
 import InvoicePdf from '../../../src/entity/file/invoice-pdf';
 import sinon from 'sinon';
+import {truncateAllTables} from "../../setup";
 
 describe('InvoiceController', async () => {
   let ctx: {
@@ -82,6 +83,7 @@ describe('InvoiceController', async () => {
 
   before(async () => {
     const connection = await Database.initialize();
+    await truncateAllTables(connection);
 
     await seedUsers();
 
@@ -194,8 +196,7 @@ describe('InvoiceController', async () => {
   });
 
   after(async () => {
-    await ctx.connection.dropDatabase();
-    await ctx.connection.close();
+    await Database.finish(ctx.connection);;
   });
 
   describe('GET /invoices', () => {

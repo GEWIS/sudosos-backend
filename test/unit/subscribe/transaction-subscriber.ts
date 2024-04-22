@@ -39,6 +39,7 @@ import nodemailer, { Transporter } from 'nodemailer';
 import { expect } from 'chai';
 import TransactionService from '../../../src/service/transaction-service';
 import BalanceService from '../../../src/service/balance-service';
+import {truncateAllTables} from "../../setup";
 
 describe('TransactionSubscriber', () => {
   let ctx: {
@@ -62,6 +63,7 @@ describe('TransactionSubscriber', () => {
 
   before(async () => {
     const connection = await Database.initialize();
+    await truncateAllTables(connection);
 
     // create dummy users
     const adminUser = {
@@ -110,8 +112,7 @@ describe('TransactionSubscriber', () => {
   });
 
   after(async () => {
-    await ctx.connection.dropDatabase();
-    await ctx.connection.destroy();
+    await Database.finish(ctx.connection);
     sandbox.restore();
 
     process.env.NODE_ENV = env;

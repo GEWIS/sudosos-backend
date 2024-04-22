@@ -40,6 +40,7 @@ import {
 } from '../../../src/controller/response/event-response';
 import EventService from '../../../src/service/event-service';
 import { EventRequest } from '../../../src/controller/request/event-request';
+import {truncateAllTables} from "../../setup";
 
 describe('EventController', () => {
   let ctx: {
@@ -60,6 +61,7 @@ describe('EventController', () => {
 
   before(async () => {
     const connection = await Database.initialize();
+    await truncateAllTables(connection);
 
     // create dummy users
     const adminUser = {
@@ -152,7 +154,7 @@ describe('EventController', () => {
   });
 
   after(async () => {
-    await ctx.connection.destroy();
+    await Database.finish(ctx.connection);
   });
 
   describe('GET /events', () => {
@@ -192,6 +194,9 @@ describe('EventController', () => {
       expect(res.status).to.equal(200);
 
       const records = res.body.records as BaseEventResponse[];
+      ctx.events.forEach((e) => console.error(e.name));
+      records.forEach((e) => console.error(e.name));
+      console.error((await Event.find()).length);
       expect(records.length).to.equal(ctx.events.length);
     });
     it('should get events created by user', async () => {
@@ -739,8 +744,8 @@ describe('EventController', () => {
     before(async () => {
       req = {
         name: 'Vergadering',
-        startDate: new Date(new Date().getTime() + 1000 * 60 * 60).toISOString(),
-        endDate: new Date(new Date().getTime() + 1000 * 60 * 60 * 4).toISOString(),
+        startDate: new Date((new Date(new Date().setMilliseconds(0))).getTime() + 1000 * 60 * 60).toISOString(),
+        endDate: new Date((new Date(new Date().setMilliseconds(0))).getTime() + 1000 * 60 * 60 * 4).toISOString(),
         shiftIds: ctx.eventShifts.slice(1, 3).map((s) => s.id),
         type: EventType.OTHER,
       };
@@ -769,6 +774,7 @@ describe('EventController', () => {
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(req);
       expect(res.status).to.equal(200);
+      console.error(req.endDate);
 
       const eventResponse = res.body as EventResponse;
 
@@ -793,6 +799,7 @@ describe('EventController', () => {
     });
     it('should correctly update startDate', async () => {
       const startDate = new Date(new Date().getTime() + 60000);
+      startDate.setMilliseconds(0);
       const res = await request(ctx.app)
         .patch(`/events/${originalEvent.id}`)
         .set('Authorization', `Bearer ${ctx.adminToken}`)
@@ -800,6 +807,7 @@ describe('EventController', () => {
       expect(res.status).to.equal(200);
 
       const eventResponse = res.body as EventResponse;
+      startDate.setMilliseconds(0);
       expect(eventResponse.startDate).to.equal(startDate.toISOString());
 
       // Cleanup
@@ -809,6 +817,7 @@ describe('EventController', () => {
     });
     it('should correctly update endDate', async () => {
       const endDate = new Date(new Date().getTime() + 120000);
+      endDate.setMilliseconds(0);
       const res = await request(ctx.app)
         .patch(`/events/${originalEvent.id}`)
         .set('Authorization', `Bearer ${ctx.adminToken}`)
@@ -816,6 +825,7 @@ describe('EventController', () => {
       expect(res.status).to.equal(200);
 
       const eventResponse = res.body as EventResponse;
+      endDate.setMilliseconds(0);
       expect(eventResponse.startDate).to.equal(endDate.toISOString());
 
       // Cleanup

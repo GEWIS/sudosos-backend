@@ -28,6 +28,7 @@ import { StripeDepositState } from '../../../src/entity/deposit/stripe-deposit-s
 import wrapInManager from '../../../src/helpers/database';
 import BalanceResponse from '../../../src/controller/response/balance-response';
 import { StripeRequest } from '../../../src/controller/request/stripe-request';
+import { truncateAllTables } from '../../setup';
 
 describe('StripeService', async (): Promise<void> => {
   let shouldSkip: boolean;
@@ -47,6 +48,7 @@ describe('StripeService', async (): Promise<void> => {
     if (shouldSkip) this.skip();
 
     const connection = await Database.initialize();
+    await truncateAllTables(connection);
 
     const users = await seedUsers();
     const { stripeDeposits } = await seedStripeDeposits(users);
@@ -65,8 +67,7 @@ describe('StripeService', async (): Promise<void> => {
 
   after(async () => {
     if (shouldSkip) return;
-    await ctx.connection.dropDatabase();
-    await ctx.connection.close();
+    await Database.finish(ctx.connection);
   });
 
   describe('getProcessingStripeDepositsFromUser', () => {

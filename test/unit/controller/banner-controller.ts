@@ -38,6 +38,7 @@ import { seedBanners } from '../../seed';
 import BannerImage from '../../../src/entity/file/banner-image';
 import { DiskStorage } from '../../../src/files/storage';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
+import {truncateAllTables} from "../../setup";
 
 export function bannerEq(a: Banner, b: BannerResponse): Boolean {
   const aEmpty = a === {} as Banner || a === undefined;
@@ -83,6 +84,7 @@ describe('BannerController', async (): Promise<void> => {
   before(async () => {
     // initialize test database
     const connection = await Database.initialize();
+    await truncateAllTables(connection);
 
     // create dummy users
     const adminUser = {
@@ -177,8 +179,7 @@ describe('BannerController', async (): Promise<void> => {
 
   // close database connection
   after(async () => {
-    await ctx.connection.dropDatabase();
-    await ctx.connection.close();
+    await Database.finish(ctx.connection);
   });
 
   afterEach(() => {

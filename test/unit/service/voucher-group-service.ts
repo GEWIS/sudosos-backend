@@ -26,6 +26,7 @@ import Transfer from '../../../src/entity/transactions/transfer';
 import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import RoleManager from '../../../src/rbac/role-manager';
 import VoucherGroupService from '../../../src/service/voucher-group-service';
+import { truncateAllTables } from '../../setup';
 
 export function bkgEq(req: VoucherGroupParams, res: VoucherGroupResponse): void {
   // check if non user fields are equal
@@ -66,11 +67,11 @@ describe('VoucherGroupService', async (): Promise<void> => {
     clock: Sinon.SinonFakeTimers
   };
 
-  // initialize context
   beforeEach(async () => {
     const clock = Sinon.useFakeTimers({ now: new Date('2000-01-01T00:00:00Z') });
     // initialize test database
     const connection = await Database.initialize();
+    await truncateAllTables(connection);
 
     const all = { all: new Set<string>(['*']) };
     const roleManager = new RoleManager();
@@ -96,8 +97,7 @@ describe('VoucherGroupService', async (): Promise<void> => {
 
   // close database connection
   afterEach(async () => {
-    await ctx.connection.dropDatabase();
-    await ctx.connection.close();
+    await Database.finish(ctx.connection);
     ctx.clock.restore();
   });
 

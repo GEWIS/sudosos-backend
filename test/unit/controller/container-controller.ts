@@ -44,6 +44,7 @@ import { defaultPagination, PaginationResult } from '../../../src/helpers/pagina
 import { CreateContainerRequest, UpdateContainerRequest } from '../../../src/controller/request/container-request';
 import { INVALID_ORGAN_ID, INVALID_PRODUCT_ID } from '../../../src/controller/request/validators/validation-errors';
 import ContainerRevision from '../../../src/entity/container/container-revision';
+import {truncateAllTables} from "../../setup";
 
 chai.use(deepEqualInAnyOrder);
 
@@ -90,6 +91,7 @@ describe('ContainerController', async (): Promise<void> => {
   before(async () => {
     // initialize test database
     const connection = await Database.initialize();
+    await truncateAllTables(connection);
 
     // create dummy users
     const adminUser = {
@@ -224,8 +226,7 @@ describe('ContainerController', async (): Promise<void> => {
 
   // close database connection
   after(async () => {
-    await ctx.connection.dropDatabase();
-    await ctx.connection.close();
+    await Database.finish(ctx.connection);
   });
 
   describe('GET /containers', () => {

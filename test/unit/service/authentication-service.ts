@@ -35,6 +35,7 @@ import { restoreLDAPEnv, storeLDAPEnv } from '../../helpers/test-helpers';
 import HashBasedAuthenticationMethod from '../../../src/entity/authenticator/hash-based-authentication-method';
 import LocalAuthenticator from '../../../src/entity/authenticator/local-authenticator';
 import AuthenticationResetTokenRequest from '../../../src/controller/request/authentication-reset-token-request';
+import { truncateAllTables } from '../../setup';
 
 export default function userIsAsExpected(user: User | UserResponse, ADResponse: any) {
   expect(user.firstName).to.equal(ADResponse.givenName);
@@ -71,6 +72,7 @@ describe('AuthenticationService', (): void => {
     process.env.ENABLE_LDAP = 'true';
 
     const connection = await Database.initialize();
+    await truncateAllTables(connection);
     const app = express();
     await seedDatabase();
 
@@ -103,8 +105,7 @@ describe('AuthenticationService', (): void => {
 
   after(async () => {
     restoreLDAPEnv(ldapEnvVariables);
-    await ctx.connection.dropDatabase();
-    await ctx.connection.close();
+    await Database.finish(ctx.connection);
   });
 
   afterEach(() => {

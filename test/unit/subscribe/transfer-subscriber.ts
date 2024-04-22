@@ -36,6 +36,7 @@ import { addTransfer } from '../../helpers/transaction-helpers';
 import BalanceService from '../../../src/service/balance-service';
 import dinero from 'dinero.js';
 import Fine from '../../../src/entity/fine/fine';
+import {truncateAllTables} from "../../setup";
 
 describe('TransferSubscriber', (): void => {
   let ctx: {
@@ -49,6 +50,7 @@ describe('TransferSubscriber', (): void => {
 
   before(async () => {
     const connection = await Database.initialize();
+    await truncateAllTables(connection);
 
     const users = await seedUsers();
     const categories = await seedProductCategories();
@@ -72,8 +74,7 @@ describe('TransferSubscriber', (): void => {
   });
 
   after(async () => {
-    await ctx.connection.dropDatabase();
-    await ctx.connection.destroy();
+    await Database.finish(ctx.connection);
   });
 
   describe('afterInsert', () => {

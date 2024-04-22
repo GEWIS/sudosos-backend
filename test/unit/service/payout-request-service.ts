@@ -25,6 +25,7 @@ import Database from '../../../src/database/database';
 import PayoutRequestService from '../../../src/service/payout-request-service';
 import { PayoutRequestState } from '../../../src/entity/transactions/payout-request-status';
 import PayoutRequestRequest from '../../../src/controller/request/payout-request-request';
+import { truncateAllTables } from '../../setup';
 
 describe('PayoutRequestService', () => {
   let ctx: {
@@ -37,6 +38,7 @@ describe('PayoutRequestService', () => {
 
   before(async () => {
     const connection = await Database.initialize();
+    await truncateAllTables(connection);
 
     const users = await seedUsers();
     const { payoutRequests } = await seedPayoutRequests(users);
@@ -63,8 +65,7 @@ describe('PayoutRequestService', () => {
   });
 
   after(async () => {
-    await ctx.connection.dropDatabase();
-    await ctx.connection.close();
+    await Database.finish(ctx.connection);
   });
 
   describe('getPayoutRequests', () => {

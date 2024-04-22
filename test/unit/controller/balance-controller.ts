@@ -44,6 +44,7 @@ import { OrderingDirection } from '../../../src/helpers/ordering';
 import { PaginationResult } from '../../../src/helpers/pagination';
 import Fine from '../../../src/entity/fine/fine';
 import UserFineGroup from '../../../src/entity/fine/userFineGroup';
+import {truncateAllTables} from "../../setup";
 
 describe('BalanceController', (): void => {
   let ctx: {
@@ -64,6 +65,7 @@ describe('BalanceController', (): void => {
   before(async function test(): Promise<void> {
     this.timeout(50000);
     const connection = await Database.initialize();
+    await truncateAllTables(connection);
     const app = express();
     const users = await seedUsers();
     const categories = await seedProductCategories();
@@ -393,7 +395,6 @@ describe('BalanceController', (): void => {
   });
 
   after(async () => {
-    await ctx.connection.dropDatabase();
-    await ctx.connection.close();
+    await Database.finish(ctx.connection);
   });
 });

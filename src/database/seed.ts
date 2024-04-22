@@ -23,6 +23,7 @@ import { Application } from '../index';
 import seedDatabase from '../../test/seed';
 import initializeDiskStorage from '../files/initialize';
 import BalanceService from '../service/balance-service';
+import {truncateAllTables} from "../../test/setup";
 
 export default async function createApp() {
   const application = new Application();
@@ -31,6 +32,7 @@ export default async function createApp() {
   application.logger.info('Starting Seeder');
 
   application.connection = await Database.initialize();
+  await truncateAllTables(application.connection);
 
   // Silent in-dependency logs unless really wanted by the environment.
   const logger = log4js.getLogger('Console');

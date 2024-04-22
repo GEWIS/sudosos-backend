@@ -64,6 +64,7 @@ import { TransactionFilterParameters } from '../../../src/service/transaction-se
 import { createTransactions } from '../service/invoice-service';
 import UpdateNfcRequest from '../../../src/controller/request/update-nfc-request';
 import UserFineGroup from '../../../src/entity/fine/userFineGroup';
+import {truncateAllTables} from "../../setup";
 
 chai.use(deepEqualInAnyOrder);
 
@@ -96,6 +97,7 @@ describe('UserController', (): void => {
 
   before(async () => {
     const connection = await Database.initialize();
+    await truncateAllTables(connection);
     ctx = { connection } as any; // on timeout forces connection to close
     const app = express();
     const database = await seedDatabase();
@@ -257,8 +259,7 @@ describe('UserController', (): void => {
   });
 
   after(async () => {
-    await ctx.connection.dropDatabase();
-    await ctx.connection.close();
+    await Database.finish(ctx.connection);
   });
 
   describe('GET /users', () => {

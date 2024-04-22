@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  createConnection, DataSource,
+  createConnection, DataSource, getConnectionManager,
 } from 'typeorm';
 import User from '../entity/user/user';
 import Product from '../entity/product/product';
@@ -73,7 +73,7 @@ import dotenv from 'dotenv';
 
 // We need to load the dotenv to prevent the env from being undefined.
 dotenv.config();
-
+console.error('HOST: ', process.env.TYPEORM_CONNECTION);
 const options: DataSourceOptions = {
   host: process.env.TYPEORM_HOST,
   port: parseInt(process.env.TYPEORM_PORT || '3001'),
@@ -150,7 +150,33 @@ export const AppDataSource = new DataSource(options);
 
 const Database = {
   initialize: async () => {
-    return Promise.resolve(createConnection(options));
+    const connections = getConnectionManager().connections;
+    if (process.env.TYPEORM_CONNECTION === 'mysql' && process.env.NODE_ENV !== 'test') {
+      return Promise.resolve(createConnection(options));
+    }
+
+    if (process.env.TYPEORM_CONNECTION === 'mysql' && process.env.NODE_ENV === 'test') {
+      if (connections.length > 0) {
+        if (connections[0].name === 'default' && connections[0].isInitialized) {
+          return connections[0];
+        } else {
+          throw new Error('Unresolved connection');
+        }
+      } else {
+        return Promise.resolve(createConnection(options));
+      }
+    } else if (process.env.TYPEORM_CONNECTION === 'sqlite') {
+      return Promise.resolve(createConnection(options));
+    } else {
+      throw new Error(`Unsupported connection type ${process.env.TYPEORM_CONNECTION}`);
+    }
+  },
+  finish: async (connection: DataSource) => {
+    // Only drop in sqlite, otherwise do the call directly.
+    if (process.env.TYPEORM_CONNECTION === 'sqlite') {
+      await connection.dropDatabase();
+      await connection.close();
+    }
   },
 };
 export default Database;

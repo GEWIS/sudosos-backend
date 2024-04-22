@@ -33,6 +33,7 @@ import RoleManager from '../../../src/rbac/role-manager';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import ProductCategory from '../../../src/entity/product/product-category';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
+import {truncateAllTables} from "../../setup";
 
 /**
  * Tests if a productCategory response is equal to the request.
@@ -61,6 +62,7 @@ describe('ProductCategoryController', async (): Promise<void> => {
   before(async () => {
     // initialize test database
     const connection = await Database.initialize();
+    await truncateAllTables(connection);
 
     // create dummy users
     const adminUser = {
@@ -150,8 +152,7 @@ describe('ProductCategoryController', async (): Promise<void> => {
 
   // close database connection
   after(async () => {
-    await ctx.connection.dropDatabase();
-    await ctx.connection.close();
+    await Database.finish(ctx.connection);
   });
 
   // Unit test cases

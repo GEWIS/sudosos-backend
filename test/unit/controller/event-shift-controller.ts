@@ -40,6 +40,7 @@ import { EventShiftRequest } from '../../../src/controller/request/event-request
 import EventShiftController from '../../../src/controller/event-shift-controller';
 import { describe } from 'mocha';
 import Event, { EventType } from '../../../src/entity/event/event';
+import {truncateAllTables} from "../../setup";
 
 describe('EventShiftController', () => {
   let ctx: {
@@ -60,6 +61,7 @@ describe('EventShiftController', () => {
 
   before(async () => {
     const connection = await Database.initialize();
+    await truncateAllTables(connection);
 
     // create dummy users
     const adminUser = {
@@ -151,7 +153,7 @@ describe('EventShiftController', () => {
   });
 
   after(async () => {
-    await ctx.connection.destroy();
+    await Database.finish(ctx.connection);
   });
 
   describe('GET /eventshifts', () => {
@@ -389,7 +391,9 @@ describe('EventShiftController', () => {
 
         expect(counts.length).to.equal(userIds.length);
         counts.forEach((c) => {
+          console.error(c);
           const validation = ctx.specification.validateModel('EventPlanningSelectedCount', c, false, true);
+          console.error(validation.errors);
           expect(validation.valid).to.be.true;
           expect(c.count).to.equal(shiftAnswers.filter((a)  => a.userId === c.id).length);
         });

@@ -30,6 +30,7 @@ import AssignedRole from '../../../src/entity/roles/assigned-role';
 import sinon, { SinonSandbox, SinonSpy } from 'sinon';
 import Mailer from '../../../src/mailer';
 import nodemailer, { Transporter } from 'nodemailer';
+import { truncateAllTables } from '../../setup';
 
 describe('eventService', () => {
   let ctx: {
@@ -44,6 +45,7 @@ describe('eventService', () => {
 
   before(async () => {
     const connection = await Database.initialize();
+    await truncateAllTables(connection);
 
     const users = await seedUsers();
     const roles = await seedRoles(users);
@@ -82,8 +84,7 @@ describe('eventService', () => {
   };
 
   after(async () => {
-    await ctx.connection.dropDatabase();
-    await ctx.connection.destroy();
+    await Database.finish(ctx.connection);
   });
 
   describe('getEvents', () => {
@@ -274,11 +275,11 @@ describe('eventService', () => {
         startDate: event.startDate,
       });
     });
-    it('should send a reminder to events starting in two days from now', async () => {
+    it('should send a reminder to events starting in two days and an hour from now', async () => {
       const event = ctx.events[0];
       const now = new Date();
       const users = Array.from(new Set(event.answers.filter((a) => a.availability == null).map((a) => a.user)));
-      const startDate = new Date(now.getTime() + 1000 * 3600 * 24 * 2);
+      const startDate = new Date(now.getTime() + 1000 * 3600 * 24 * 2 + 1000);
       await EventService.updateEvent(event.id, {
         startDate,
       });
@@ -310,10 +311,10 @@ describe('eventService', () => {
         startDate: event.startDate,
       });
     });
-    it('should not send a reminder to events starting in three days and one millisecond from now', async () => {
+    it('should not send a reminder to events starting in three days and one minute from now', async () => {
       const event = ctx.events[0];
       const now = new Date();
-      const startDate = new Date(now.getTime() + 1000 * 3600 * 24 * 3 + 1);
+      const startDate = new Date(now.getTime() + 1000 * 3600 * 24 * 4 + 1000);
       await EventService.updateEvent(event.id, {
         startDate,
       });
