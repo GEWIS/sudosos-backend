@@ -113,7 +113,9 @@ export default class DebtorService {
   public static async getFineHandoutEvents(pagination: PaginationParameters = {}): Promise<PaginatedFineHandoutEventResponse> {
     const { take, skip } = pagination;
 
-    const events = await FineHandoutEvent.find({ take, skip });
+    const events = await FineHandoutEvent.find({ take, skip, order: {
+      createdAt: 'DESC',
+    } });
     const count = await FineHandoutEvent.count();
 
     const records = events.map((e) => DebtorService.asBaseFineHandoutEventResponse(e));

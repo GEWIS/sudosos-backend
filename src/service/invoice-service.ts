@@ -450,13 +450,13 @@ export default class InvoiceService {
     const invoices = (await this.getInvoices({ toId }));
     // Filter the deleted invoices
     const validInvoices = invoices.filter(
-      (invoice) =>  InvoiceService.isState(invoice, InvoiceState.DELETED),
+      (invoice) =>  !InvoiceService.isState(invoice, InvoiceState.DELETED),
     );
     return validInvoices[validInvoices.length - 1];
   }
 
   /**
-   * Returns the default Invoice Params for an invoice user. 
+   * Returns the default Invoice Params for an invoice user.
    * @param userId
    */
   public static async getDefaultInvoiceParams(userId: number): Promise<InvoiceUserDefaults> {
