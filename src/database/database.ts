@@ -148,14 +148,18 @@ const options: DataSourceOptions = {
 
 export const AppDataSource = new DataSource(options);
 
+const STORED_DB = new Set(['mariadb', 'mysql']);
+
 const Database = {
   initialize: async () => {
     const connections = getConnectionManager().connections;
-    if (process.env.TYPEORM_CONNECTION === 'mysql' && process.env.NODE_ENV !== 'test') {
+    const isPersist = STORED_DB.has(process.env.TYPEORM_CONNECTION);
+
+    if (isPersist && process.env.NODE_ENV !== 'test') {
       return Promise.resolve(createConnection(options));
     }
 
-    if (process.env.TYPEORM_CONNECTION === 'mysql' && process.env.NODE_ENV === 'test') {
+    if (isPersist && process.env.NODE_ENV === 'test') {
       if (connections.length > 0) {
         if (connections[0].name === 'default' && connections[0].isInitialized) {
           return connections[0];
