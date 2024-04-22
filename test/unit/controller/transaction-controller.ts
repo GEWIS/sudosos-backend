@@ -36,7 +36,7 @@ import { TransactionRequest } from '../../../src/controller/request/transaction-
 import { defaultPagination, PAGINATION_DEFAULT, PaginationResult } from '../../../src/helpers/pagination';
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import MemberAuthenticator from '../../../src/entity/authenticator/member-authenticator';
-import {truncateAllTables} from "../../setup";
+import { truncateAllTables } from '../../setup';
 
 describe('TransactionController', (): void => {
   let ctx: {

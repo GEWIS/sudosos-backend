@@ -32,7 +32,7 @@ import TokenMiddleware from '../../../src/middleware/token-middleware';
 import { StripeRequest } from '../../../src/controller/request/stripe-request';
 import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
 import { StripePaymentIntentResponse } from '../../../src/controller/response/stripe-response';
-import {truncateAllTables} from "../../setup";
+import { truncateAllTables } from '../../setup';
 
 describe('StripeController', async (): Promise<void> => {
   let shouldSkip: boolean;

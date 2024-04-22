@@ -36,7 +36,7 @@ import { addTransfer } from '../../helpers/transaction-helpers';
 import BalanceService from '../../../src/service/balance-service';
 import dinero from 'dinero.js';
 import Fine from '../../../src/entity/fine/fine';
-import {truncateAllTables} from "../../setup";
+import { truncateAllTables } from '../../setup';
 
 describe('TransferSubscriber', (): void => {
   let ctx: {

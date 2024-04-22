@@ -64,7 +64,7 @@ import InvoiceUser from '../../../src/entity/user/invoice-user';
 import { UpdateInvoiceUserRequest } from '../../../src/controller/request/user-request';
 import InvoicePdf from '../../../src/entity/file/invoice-pdf';
 import sinon from 'sinon';
-import {truncateAllTables} from "../../setup";
+import { truncateAllTables } from '../../setup';
 
 describe('InvoiceController', async () => {
   let ctx: {
@@ -196,7 +196,7 @@ describe('InvoiceController', async () => {
   });
 
   after(async () => {
-    await Database.finish(ctx.connection);;
+    await Database.finish(ctx.connection);
   });
 
   describe('GET /invoices', () => {

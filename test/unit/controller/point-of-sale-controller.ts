@@ -47,7 +47,7 @@ import { allDefinition, organDefinition, ownDefintion, RoleFactory } from '../..
 import { UpdateContainerRequest } from '../../../src/controller/request/container-request';
 import ContainerController from '../../../src/controller/container-controller';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
-import Database from "../../../src/database/database";
+import Database from '../../../src/database/database';
 
 chai.use(deepEqualInAnyOrder);
 

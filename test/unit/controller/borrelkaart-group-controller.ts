@@ -42,7 +42,7 @@ import {
 import { bkgEq } from '../service/voucher-group-service';
 import Sinon from 'sinon';
 import { DineroObjectRequest } from '../../../src/controller/request/dinero-request';
-import {truncateAllTables} from "../../setup";
+import { truncateAllTables } from '../../setup';
 
 async function saveBKG(
   bkgReq: VoucherGroupRequest,

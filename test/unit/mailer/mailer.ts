@@ -24,7 +24,7 @@ import User, { UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import HelloWorld from '../../../src/mailer/templates/hello-world';
 import { Language } from '../../../src/mailer/templates/mail-template';
-import {truncateAllTables} from "../../setup";
+import { truncateAllTables } from '../../setup';
 
 describe('Mailer', () => {
   let ctx: {

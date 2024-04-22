@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import {Connection, getConnectionManager} from 'typeorm';
+import { Connection } from 'typeorm';
 import express, { Application } from 'express';
 import ProductController from '../../src/controller/product-controller';
 import ContainerController from '../../src/controller/container-controller';

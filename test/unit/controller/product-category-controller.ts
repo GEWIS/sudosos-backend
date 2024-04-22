@@ -33,7 +33,7 @@ import RoleManager from '../../../src/rbac/role-manager';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import ProductCategory from '../../../src/entity/product/product-category';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
-import {truncateAllTables} from "../../setup";
+import { truncateAllTables } from '../../setup';
 
 /**
  * Tests if a productCategory response is equal to the request.

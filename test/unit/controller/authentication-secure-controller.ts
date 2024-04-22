@@ -27,7 +27,7 @@ import Database from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
 import RoleManager from '../../../src/rbac/role-manager';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
-import {truncateAllTables} from "../../setup";
+import { truncateAllTables } from '../../setup';
 
 describe('AuthenticationSecureController', () => {
   let ctx: {

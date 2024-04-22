@@ -64,7 +64,7 @@ import { TransactionFilterParameters } from '../../../src/service/transaction-se
 import { createTransactions } from '../service/invoice-service';
 import UpdateNfcRequest from '../../../src/controller/request/update-nfc-request';
 import UserFineGroup from '../../../src/entity/fine/userFineGroup';
-import {truncateAllTables} from "../../setup";
+import { truncateAllTables } from '../../setup';
 
 chai.use(deepEqualInAnyOrder);
 

@@ -24,7 +24,7 @@ import BaseFile from '../../../../src/entity/file/base-file';
 import User from '../../../../src/entity/user/user';
 import { seedUsers } from '../../../seed';
 import Database from '../../../../src/database/database';
-import {truncateAllTables} from "../../../setup";
+import { truncateAllTables } from '../../../setup';
 
 const workdir = './imaginary/directory';
 

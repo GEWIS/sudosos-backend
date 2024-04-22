@@ -40,7 +40,7 @@ import { EventShiftRequest } from '../../../src/controller/request/event-request
 import EventShiftController from '../../../src/controller/event-shift-controller';
 import { describe } from 'mocha';
 import Event, { EventType } from '../../../src/entity/event/event';
-import {truncateAllTables} from "../../setup";
+import { truncateAllTables } from '../../setup';
 
 describe('EventShiftController', () => {
   let ctx: {

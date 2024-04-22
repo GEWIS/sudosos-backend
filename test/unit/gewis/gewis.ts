@@ -40,7 +40,7 @@ import UserController from '../../../src/controller/user-controller';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import { PaginatedUserResponse } from '../../../src/controller/response/user-response';
 import { GewisUserResponse } from '../../../src/gewis/controller/response/gewis-user-response';
-import {truncateAllTables} from "../../setup";
+import { truncateAllTables } from '../../setup';
 
 describe('GEWIS Helper functions', async (): Promise<void> => {
   let ctx: {

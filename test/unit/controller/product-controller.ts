@@ -45,7 +45,7 @@ import ProductController from '../../../src/controller/product-controller';
 import { DineroObjectRequest } from '../../../src/controller/request/dinero-request';
 import { DiskStorage } from '../../../src/files/storage';
 import VatGroup from '../../../src/entity/vat-group';
-import {truncateAllTables} from "../../setup";
+import { truncateAllTables } from '../../setup';
 
 /**
  * Tests if a product response is equal to the request.

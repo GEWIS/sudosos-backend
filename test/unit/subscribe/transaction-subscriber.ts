@@ -39,7 +39,7 @@ import nodemailer, { Transporter } from 'nodemailer';
 import { expect } from 'chai';
 import TransactionService from '../../../src/service/transaction-service';
 import BalanceService from '../../../src/service/balance-service';
-import {truncateAllTables} from "../../setup";
+import { truncateAllTables } from '../../setup';
 
 describe('TransactionSubscriber', () => {
   let ctx: {

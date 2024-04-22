@@ -39,7 +39,6 @@ import { expect } from 'chai';
 import { addTransfer } from '../../helpers/transaction-helpers';
 import BalanceService from '../../../src/service/balance-service';
 import Fine from '../../../src/entity/fine/fine';
-import FineHandoutEvent from '../../../src/entity/fine/fineHandoutEvent';
 import UserFineGroup from '../../../src/entity/fine/userFineGroup';
 import { calculateBalance, calculateFine } from '../../helpers/balance';
 import { FineHandoutEventResponse } from '../../../src/controller/response/debtor-response';

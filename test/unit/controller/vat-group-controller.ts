@@ -40,7 +40,7 @@ import RoleManager from '../../../src/rbac/role-manager';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import { VatDeclarationResponse } from '../../../src/controller/response/vat-group-response';
-import {truncateAllTables} from "../../setup";
+import { truncateAllTables } from '../../setup';
 
 describe('VatGroupController', () => {
   let ctx: {

@@ -29,7 +29,7 @@ import RoleManager from '../../../src/rbac/role-manager';
 import StripeWebhookController from '../../../src/controller/stripe-webhook-controller';
 import StripeService, { STRIPE_API_VERSION } from '../../../src/service/stripe-service';
 import { extractRawBody } from '../../../src/helpers/raw-body';
-import {truncateAllTables} from "../../setup";
+import { truncateAllTables } from '../../setup';
 
 describe('StripeWebhookController', async (): Promise<void> => {
   let shouldSkip: boolean;

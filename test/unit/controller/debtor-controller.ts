@@ -54,7 +54,7 @@ import { calculateBalance, calculateFine } from '../../helpers/balance';
 import Mailer from '../../../src/mailer';
 import sinon, { SinonSandbox, SinonSpy } from 'sinon';
 import nodemailer, { Transporter } from 'nodemailer';
-import {truncateAllTables} from "../../setup";
+import { truncateAllTables } from '../../setup';
 
 describe('DebtorController', () => {
   let ctx: {

@@ -23,7 +23,7 @@ import { Application } from '../index';
 import seedDatabase from '../../test/seed';
 import initializeDiskStorage from '../files/initialize';
 import BalanceService from '../service/balance-service';
-import {truncateAllTables} from "../../test/setup";
+import { truncateAllTables } from '../../test/setup';
 
 export default async function createApp() {
   const application = new Application();

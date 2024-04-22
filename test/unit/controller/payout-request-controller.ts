@@ -36,7 +36,7 @@ import {
 } from '../../../src/controller/response/payout-request-response';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import { PayoutRequestState } from '../../../src/entity/transactions/payout-request-status';
-import {truncateAllTables} from "../../setup";
+import { truncateAllTables } from '../../setup';
 
 describe('PayoutRequestController', () => {
   let ctx: {

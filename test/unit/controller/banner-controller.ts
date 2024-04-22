@@ -38,7 +38,7 @@ import { seedBanners } from '../../seed';
 import BannerImage from '../../../src/entity/file/banner-image';
 import { DiskStorage } from '../../../src/files/storage';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
-import {truncateAllTables} from "../../setup";
+import { truncateAllTables } from '../../setup';
 
 export function bannerEq(a: Banner, b: BannerResponse): Boolean {
   const aEmpty = a === {} as Banner || a === undefined;

@@ -38,7 +38,7 @@ import userIsAsExpected from '../../service/authentication-service';
 import AuthenticationService from '../../../../src/service/authentication-service';
 import GEWISAuthenticationPinRequest from '../../../../src/gewis/controller/request/gewis-authentication-pin-request';
 import PinAuthenticator from '../../../../src/entity/authenticator/pin-authenticator';
-import {truncateAllTables} from "../../../setup";
+import { truncateAllTables } from '../../../setup';
 
 describe('GewisAuthenticationController', async (): Promise<void> => {
   let ctx: {
