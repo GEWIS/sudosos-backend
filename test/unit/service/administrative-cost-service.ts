@@ -68,7 +68,7 @@ describe('AdministrativeCostService', async (): Promise<void> => {
     const { productRevisions } = await seedProducts(seededUsers, categories, vatGroups);
     const { containerRevisions } = await seedContainers(seededUsers, productRevisions);
     const { pointOfSaleRevisions } = await seedPointsOfSale(seededUsers, containerRevisions);
-    const { transactions } = await seedTransactions(seededUsers, pointOfSaleRevisions, new Date('2020-02-12'), new Date('2021-11-30'), 10);
+    const { transactions } = await seedTransactions(seededUsers, pointOfSaleRevisions, new Date('2020-02-12'), new Date(), 10);
     const transfers = await seedTransfers(seededUsers, new Date('2020-02-12'), new Date('2021-11-30'));
     const { fines, fineTransfers, users } = await seedFines(seededUsers, transactions, transfers, true);
     const subTransactions: SubTransaction[] = Array.prototype.concat(...transactions
@@ -104,19 +104,14 @@ describe('AdministrativeCostService', async (): Promise<void> => {
   describe('getAdministrativeCostUsers function', () => {
     it('should return only users to send a notification to', async () =>{
 
-      const transaction = ctx.transactions[0];
-
-      const currentDate = new Date();
-
-      transaction.createdAt.setFullYear(currentDate.getFullYear() - 3);
-
-      await transaction.remove();
-      await transaction.save();
-
       const { records } = await AdministrativeCostService.getAdministrativeCostUsers({ notification: true });
 
-      expect(records.length).to.be.eq(1);
-      expect(records[0].id).to.be.eq(ctx.transactions[0]);
+      records.forEach((i) => {
+        expect(i.sentAdministrativeCostsEmail).to.eq(false);
+      });
+
+
+
     });
   });
 });

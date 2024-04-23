@@ -67,6 +67,7 @@ import Event from '../entity/event/event';
 import EventShiftAnswer from '../entity/event/event-shift-answer';
 import EventShift from '../entity/event/event-shift';
 import { TransactionSubscriber, TransferSubscriber } from '../subscriber';
+import InactivityAdministrativeCosts from '../entity/transactions/inactivity-administrative-costs';
 import InvoicePdf from '../entity/file/invoice-pdf';
 import { InvoiceRefactor1707251162194 } from '../migrations/1707251162194-invoice-refactor';
 import dotenv from 'dotenv';
@@ -74,6 +75,81 @@ import InactivityAdministrativeCosts from '../entity/transactions/inactivity-adm
 
 // We need to load the dotenv to prevent the env from being undefined.
 dotenv.config();
+export default class Database {
+  public static async initialize(): Promise<Connection> {
+    const options: DataSourceOptions = {
+      host: process.env.TYPEORM_HOST,
+      port: parseInt(process.env.TYPEORM_PORT || '3001'),
+      database: process.env.TYPEORM_DATABASE,
+      type: process.env.TYPEORM_CONNECTION as 'postgres' | 'mariadb' | 'mysql',
+      username: process.env.TYPEORM_USERNAME,
+      password: process.env.TYPEORM_PASSWORD,
+      synchronize: process.env.TYPEORM_SYNCHRONIZE === 'true',
+      logging: process.env.TYPEORM_LOGGING === 'true',
+      extra: {
+        authPlugins: {
+          mysql_clear_password: () => () => Buffer.from(`${process.env.TYPEORM_PASSWORD}\0`),
+        },
+      },
+      poolSize: 4,
+      entities: [
+        ProductCategory,
+        VatGroup,
+        Product,
+        ProductRevision,
+        Container,
+        ContainerRevision,
+        PointOfSale,
+        PointOfSaleRevision,
+        Transfer,
+        StripeDeposit,
+        StripeDepositStatus,
+        PayoutRequest,
+        PayoutRequestStatus,
+        Fine,
+        FineHandoutEvent,
+        UserFineGroup,
+        InactivityAdministrativeCosts,
+        Transaction,
+        SubTransaction,
+        SubTransactionRow,
+        FlaggedTransaction,
+        VoucherGroup,
+        User,
+        LocalUser,
+        GewisUser,
+        UserVoucherGroup,
+        EanAuthenticator,
+        MemberAuthenticator,
+        NfcAuthenticator,
+        KeyAuthenticator,
+        PinAuthenticator,
+        LocalAuthenticator,
+        LDAPAuthenticator,
+        Banner,
+        ProductOrdering,
+        Balance,
+        InvoiceUser,
+        InvoiceEntry,
+        Invoice,
+        InvoiceStatus,
+        BaseFile,
+        ProductImage,
+        BannerImage,
+        AssignedRole,
+        ResetToken,
+        Event,
+        EventShift,
+        EventShiftAnswer,
+      ],
+      subscribers: [
+        TransactionSubscriber,
+        TransferSubscriber,
+      ],
+    };
+    return createConnection(options);
+  }
+}
 
 const options: DataSourceOptions = {
   host: process.env.TYPEORM_HOST,
