@@ -185,7 +185,7 @@ export default class BalanceService {
     ids, date, minBalance, maxBalance, hasFine, minFine, maxFine, userTypes, orderDirection, orderBy,
   }: GetBalanceParameters, pagination: PaginationParameters = {}): Promise<PaginatedBalanceResponse> {
     // Return the empty response if request has no ids.
-    if (ids.length === 0) {
+    if (ids?.length === 0) {
       const { take, skip } = pagination;
       return {
         _pagination: { take, skip, count: 0},
