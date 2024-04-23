@@ -84,9 +84,17 @@ export function sourceFile(file: string) {
   return file.replace('out/test/', 'test/').replace('.js', '.ts');
 }
 
+export const PERSISTENT_TEST_DATABASES = new Set(['mysql', 'mariadb']);
+
+// We should only ever truncate in test.
+// For non-persistent databases (sqlite) we can just drop them.
+function shouldTruncate(): boolean {
+  if (process.env.NODE_ENV !== 'test') return false;
+  return PERSISTENT_TEST_DATABASES.has(process.env.TYPEORM_CONNECTION)
+}
+
 export async function truncateAllTables(dataSource: DataSource): Promise<void> {
-  // TODO fix this could be cleaner?
-  if (process.env.TYPEORM_CONNECTION !== 'mysql' && process.env.TYPEORM_CONNECTION !== 'mariadb') return;
+  if (!shouldTruncate()) return;
 
   console.log('Starting truncation of all tables...');
   const queryRunner = dataSource.createQueryRunner();

@@ -152,35 +152,48 @@ const options: DataSourceOptions = {
 
 export const AppDataSource = new DataSource(options);
 
-const STORED_DB = new Set(['mariadb', 'mysql']);
+export const PERSISTENT_TEST_DATABASES = new Set(['mysql', 'mariadb']);
 
+function getDefaultConnection(connections: DataSource[]): DataSource | undefined {
+  const defaultConnection = connections.find((c) => c.name === 'default');
+  if (defaultConnection) {
+    if (defaultConnection.isInitialized) return defaultConnection;
+    else throw new Error('Default connection was closed or not initialized.');
+  }
+  return undefined;
+}
+
+// TODO: Migrate this to DataSource
 const Database = {
+  // This code was restructured such that we could perform a test suite on a persistent mysql/mariadb database.
+  // In dev and production environment, nothing special happens and we simply return a new default connection.
   initialize: async () => {
     const connections = getConnectionManager().connections;
-    const isPersist = STORED_DB.has(process.env.TYPEORM_CONNECTION);
 
+    const isPersist = PERSISTENT_TEST_DATABASES.has(process.env.TYPEORM_CONNECTION);
+
+    // This means we are in a development or production environment, so we simply initialize the database.
     if (isPersist && process.env.NODE_ENV !== 'test') {
       return Promise.resolve(createConnection(options));
     }
 
+    // If we are in a test environment we have the following cases.
     if (isPersist && process.env.NODE_ENV === 'test') {
-      if (connections.length > 0) {
-        if (connections[0].name === 'default' && connections[0].isInitialized) {
-          return connections[0];
-        } else {
-          throw new Error('Unresolved connection');
-        }
-      } else {
-        return Promise.resolve(createConnection(options));
-      }
+
+      // We return the default connection if it exists
+      const defConnection = getDefaultConnection(connections);
+      if (defConnection) return defConnection;
+      else return Promise.resolve(createConnection(options));
+
     } else if (process.env.TYPEORM_CONNECTION === 'sqlite') {
+      // And for sqlite we always just create a new connection.
       return Promise.resolve(createConnection(options));
     } else {
       throw new Error(`Unsupported connection type ${process.env.TYPEORM_CONNECTION}`);
     }
   },
   finish: async (connection: DataSource) => {
-    // Only drop in sqlite, otherwise do the call directly.
+    // Only drop in sqlite. If really wanted otherwise, do the call directly on the connection.
     if (process.env.TYPEORM_CONNECTION === 'sqlite') {
       await connection.dropDatabase();
       await connection.close();
