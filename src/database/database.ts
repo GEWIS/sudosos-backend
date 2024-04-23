@@ -73,7 +73,7 @@ import dotenv from 'dotenv';
 
 // We need to load the dotenv to prevent the env from being undefined.
 dotenv.config();
-console.error('HOST: ', process.env.TYPEORM_CONNECTION);
+console.error('HOST:', process.env.TYPEORM_CONNECTION);
 const options: DataSourceOptions = {
   host: process.env.TYPEORM_HOST,
   port: parseInt(process.env.TYPEORM_PORT || '3001'),

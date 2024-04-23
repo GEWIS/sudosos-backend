@@ -37,8 +37,10 @@ use(sinonChai);
 use(chaiSorted);
 use(deepEqualInAnyOrder);
 
+config();
 process.env.NODE_ENV = 'test';
 if (!process.env.TYPEORM_CONNECTION) {
+  console.error('Setting sqlite defaults');
   process.env.HTTP_PORT = '3001';
   process.env.TYPEORM_CONNECTION = 'sqlite';
   process.env.TYPEORM_DATABASE = ':memory:';
@@ -57,7 +59,6 @@ dinero.defaultPrecision = 2;
 const logger = log4js.getLogger('Console');
 logger.level = process.env.LOG_LEVEL;
 console.log = (message: any, ...additional: any[]) => logger.debug(message, ...additional);
-config();
 
 /**
  * Generates a basic RSA keypair.
