@@ -61,6 +61,7 @@ import { calculateBalance } from './helpers/balance';
 import GewisUser from '../src/gewis/entity/gewis-user';
 import AssignedRole from '../src/entity/roles/assigned-role';
 import MemberAuthenticator from '../src/entity/authenticator/member-authenticator';
+import InactivityAdministrativeCosts from '../src/entity/transactions/inactivity-administrative-costs';
 
 function getDate(startDate: Date, endDate: Date, i: number): Date {
   const diff = endDate.getTime() - startDate.getTime();
@@ -68,6 +69,13 @@ function getDate(startDate: Date, endDate: Date, i: number): Date {
 
   return new Date(startDate.getTime() + (startDate.getTime() * i ) % diff);
 }
+
+function calculateYearsDifference(date: Date): number {
+  const dateDiff = (Date.now() - date.getTime()) / (1000 * 60 * 60 * 24);
+
+  return dateDiff;
+}
+
 
 /**
  * Defines InvoiceUsers objects for the given Users
@@ -848,6 +856,7 @@ export function defineTransactions(
   from: User,
   createdBy: User,
   createdAt?: Date,
+  updatedAt?: Date,
 ): Transaction[] {
   const transactions: Transaction[] = [];
   let subTransactionId = startSubTransaction;
@@ -857,6 +866,7 @@ export function defineTransactions(
     const transaction = Object.assign(new Transaction(), {
       id: start + nr,
       createdAt,
+      updatedAt,
       from,
       createdBy,
       pointOfSale,
@@ -934,7 +944,9 @@ export async function seedTransactions(
       ? from
       : users[(i * 5 + pos.pointOfSale.id * 7 + pos.revision) % users.length];
     let createdAt: Date;
+    let updatedAt: Date;
     if (beginDate && endDate) createdAt = getDate(beginDate, endDate, i);
+    if (endDate) updatedAt = getDate(createdAt, endDate, i);
     const trans = defineTransactions(
       transactions.length,
       startSubTransaction,
@@ -944,6 +956,7 @@ export async function seedTransactions(
       from,
       createdBy,
       createdAt,
+      updatedAt,
     );
 
     // Update the start id counters.
@@ -1259,16 +1272,18 @@ export async function seedTransfers(users: User[],
   const promises: Promise<any>[] = [];
 
   for (let i = 0; i < users.length; i += 1) {
-    let date = new Date();
-    if (startDate && endDate) {
-      date = getDate(startDate, endDate, i);
-    }
+
+    let createdAt: Date;
+    let updatedAt: Date;
+    if (startDate && endDate) createdAt = getDate(startDate, endDate, i);
+    if (endDate) updatedAt = getDate(createdAt, endDate, i);
     let newTransfer = Object.assign(new Transfer(), {
       description: '',
       amount: dinero({ amount: 100 * (i + 1) }),
       from: undefined,
       to: users[i],
-      createdAt: date,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
     });
     transfers.push(newTransfer);
     promises.push(Transfer.save(newTransfer));
@@ -1278,7 +1293,8 @@ export async function seedTransfers(users: User[],
       amount: dinero({ amount: 50 * (i + 1) }),
       from: users[i],
       to: undefined,
-      createdAt: date,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
     });
     transfers.push(newTransfer);
     promises.push(Transfer.save(newTransfer));
@@ -1288,6 +1304,89 @@ export async function seedTransfers(users: User[],
 
   return transfers;
 }
+
+/**
+ * Create the inactivity administrative costs entity.
+ *
+ * @param users
+ * @param transactions
+ * @param transfers
+ * @param firstReferenceDate
+ */
+export async function seedInactivityAdministrativeCosts(users: User[], transactions: Transaction[], transfers: Transfer[], firstReferenceDate: Date = new Date()):
+Promise<{ inactivityAdministrativeCosts: InactivityAdministrativeCosts[], administrativeCostTransfers: Transfer[], }> {
+  const inactivityAdministrativeCosts: InactivityAdministrativeCosts[] = [];
+  const administrativeCostTransfers: Transfer[] = [];
+
+  const subTransactions: SubTransaction[] = Array.prototype.concat(...transactions
+    .map((t) => t.subTransactions));
+
+  const balance = users.map((u) =>
+    calculateBalance(u, transactions, subTransactions, transfers, firstReferenceDate));
+
+
+  const userEligible: User[] = [];
+  const lastChange : any[] = [];
+
+  balance.forEach((b) => {
+    const transaction = transactions.find(({ id }) => id == b.lastTransaction.id);
+    const transfer = transfers.find(({ id }) => id == b.lastTransfer.id);
+
+
+    if ((transfer !== null) && (transaction !== null)) {
+      if ((calculateYearsDifference(transaction.updatedAt)) > 2 && (calculateYearsDifference(transfer.updatedAt) > 2)) {
+        userEligible.push(b.user);
+        lastChange.push(b.lastTransfer);
+      }
+    } else if (transfer != null) {
+      if (calculateYearsDifference(transfer.updatedAt)) {
+        userEligible.push(b.user);
+        lastChange.push(b.lastTransfer);
+      }
+    } else if (transaction != null) {
+      if (calculateYearsDifference(transaction.updatedAt)) {
+        userEligible.push(b.user);
+        lastChange.push(b.lastTransaction);
+      }
+    }
+  });
+
+  const amount = DineroTransformer.Instance.from(1000);
+
+  for (let i = 0; i < userEligible.length; i += 1) {
+
+    const inactiveAdministrativeCost = Object.assign(new InactivityAdministrativeCosts(), {
+      from: userEligible[i],
+      amount,
+      lastTransaction: lastChange[i].updatedAt,
+      lastTransactionId: lastChange[i].id,
+      lastTransferId: lastChange[i].id,
+    });
+
+    const newTransfer = Object.assign(new Transfer(), {
+      fromId: userEligible[i].id,
+      from: userEligible[i],
+      amount,
+      description: `Administrative Cost request for ${amount}`,
+    });
+
+    await newTransfer.save();
+    newTransfer.administrativeCosts = inactiveAdministrativeCost;
+    administrativeCostTransfers.push(newTransfer);
+    inactiveAdministrativeCost.transfer = newTransfer;
+
+    inactivityAdministrativeCosts.push(await inactiveAdministrativeCost.save());
+  }
+
+  await Promise.all(inactivityAdministrativeCosts);
+
+  return {
+    inactivityAdministrativeCosts,
+    administrativeCostTransfers,
+  };
+
+}
+
 
 /**
  * Create a BannerImage object. When not in a testing environment, a banner image
@@ -1370,6 +1469,7 @@ export interface DatabaseContent {
   pointOfSaleRevisions: PointOfSaleRevision[],
   transactions: Transaction[],
   transfers: Transfer[],
+  inactivityAdministrativeCosts: InactivityAdministrativeCosts[],
   fines: Fine[],
   userFineGroups: UserFineGroup[],
   payoutRequests: PayoutRequest[],
@@ -1403,8 +1503,9 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
   );
   const roles = await seedRoles(users);
   const { events, eventShifts, eventShiftAnswers } = await seedEvents(roles);
-  const { transactions } = await seedTransactions(users, pointOfSaleRevisions);
-  const transfers = await seedTransfers(users);
+  const { transactions } = await seedTransactions(users, pointOfSaleRevisions, new Date((new Date().getFullYear() - 3), 7), new Date((new Date().getFullYear() - 2), 7));
+  const transfers = await seedTransfers(users, new Date((new Date().getFullYear() - 3), 7), new Date((new Date().getFullYear() - 2), 7));
+  const { inactivityAdministrativeCosts, administrativeCostTransfers } = await seedInactivityAdministrativeCosts(users, transactions, transfers);
   const { fines, fineTransfers, userFineGroups } = await seedFines(users, transactions, transfers);
   const { payoutRequests, payoutRequestTransfers } = await seedPayoutRequests(users);
   const { invoices, invoiceTransfers } = await seedInvoices(users, transactions);
@@ -1425,7 +1526,8 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
     transactions,
     stripeDeposits,
     invoices,
-    transfers: transfers.concat(fineTransfers).concat(payoutRequestTransfers).concat(invoiceTransfers).concat(stripeDepositTransfers),
+    transfers: transfers.concat(fineTransfers).concat(payoutRequestTransfers).concat(invoiceTransfers).concat(stripeDepositTransfers).concat(administrativeCostTransfers),
+    inactivityAdministrativeCosts,
     fines,
     userFineGroups,
     payoutRequests,

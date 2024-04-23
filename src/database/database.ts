@@ -67,6 +67,7 @@ import Event from '../entity/event/event';
 import EventShiftAnswer from '../entity/event/event-shift-answer';
 import EventShift from '../entity/event/event-shift';
 import { TransactionSubscriber, TransferSubscriber } from '../subscriber';
+import InactivityAdministrativeCosts from '../entity/transactions/inactivity-administrative-costs';
 
 export default class Database {
   public static async initialize(): Promise<Connection> {
@@ -102,6 +103,7 @@ export default class Database {
         Fine,
         FineHandoutEvent,
         UserFineGroup,
+        InactivityAdministrativeCosts,
         Transaction,
         SubTransaction,
         SubTransactionRow,

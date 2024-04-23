@@ -127,6 +127,11 @@ export default class User extends BaseEntity {
   })
   public extensiveDataProcessing: boolean;
 
+  @Column({
+    default: false,
+  })
+  public sentAdministrativeCostsEmail: boolean;
+
   @OneToOne(() => UserFineGroup, {
     nullable: true,
     onDelete: 'SET NULL',
