@@ -85,7 +85,8 @@ export function sourceFile(file: string) {
 }
 
 export async function truncateAllTables(dataSource: DataSource): Promise<void> {
-  if (process.env.TYPEORM_CONNECTION !== 'mysql') return;
+  // TODO fix this could be cleaner?
+  if (process.env.TYPEORM_CONNECTION !== 'mysql' && process.env.TYPEORM_CONNECTION !== 'mariadb') return;
 
   console.error('Starting truncation of all tables...');
   const queryRunner = dataSource.createQueryRunner();
