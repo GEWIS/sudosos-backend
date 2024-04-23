@@ -112,10 +112,6 @@ jobs:
       STRIPE_PUBLIC_KEY: ${{ secrets.STRIPE_SUDOSOS_TEST_KEY }}
       STRIPE_PRIVATE_KEY: ${{ secrets.STRIPE_SUDOSOS_TEST_KEY }}
     steps:
-      - name: Check Secret Presence
-        run: |
-          echo ${{ secrets.STRIPE_SUDOSOS_TEST_KEY }}
-
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
