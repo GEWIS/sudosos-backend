@@ -131,7 +131,7 @@ jobs:
       - run: npm run swagger:validate
       - run: npm run coverage-ci # Separate command to limit the number of workers to prevent timeouts
       - name: "Post Migration test-suite"
-        if: ${{ matrix.typeorm-connection == 'mariadb' }
+        if: ${{ matrix.typeorm-connection == 'mariadb' }}
         run: npm run test-ci-migrate
       - run: git config --global --add safe.directory $GITHUB_WORKSPACE # To avoid dubious ownership
         if: ${{ matrix.typeorm-connection == 'mariadb' }}
