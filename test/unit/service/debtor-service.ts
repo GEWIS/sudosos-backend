@@ -459,8 +459,6 @@ describe('DebtorService', (): void => {
       expect(ids).to.include(fineHandoutEvent2.fines[0].id);
     });
     it('should create no fines if empty list of userIds is given', async function () {
-      // TODO fix empty ids handout
-      this.skip();
       const fineHandoutEvent = await DebtorService.handOutFines({ userIds: [], referenceDate: new Date() }, ctx.actor);
 
       expect(fineHandoutEvent.fines.length).to.equal(0);

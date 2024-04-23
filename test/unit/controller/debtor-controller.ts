@@ -480,8 +480,6 @@ describe('DebtorController', () => {
       expect(res.status).to.equal(400);
     });
     it('should return empty list of fines if no userIds given', async function () {
-      // TODO error in the huge Balance Query when userIds is []
-      this.skip();
       const res = await request(ctx.app)
         .post('/fines/handout')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
