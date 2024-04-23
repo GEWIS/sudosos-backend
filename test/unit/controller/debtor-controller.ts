@@ -218,7 +218,7 @@ describe('DebtorController', () => {
       expect(res.status).to.equal(200);
 
       const events = res.body.records as BaseFineHandoutEventResponse[];
-      console.error(events);
+
       expect(events).to.be.sortedBy('createdAt', { descending: true });
     });
     it('should return forbidden if not admin', async () => {

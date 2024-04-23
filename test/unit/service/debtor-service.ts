@@ -333,9 +333,10 @@ describe('DebtorService', (): void => {
       const fines = await Fine.find({ relations: ['transfer'] });
       const fineTransfers = fines.map((f) => f.transfer);
 
-      await Fine.clear().catch((e) => console.error(e));
-      await Transfer.remove(fineTransfers).catch((e) => console.error(e));
+      await Fine.clear();
+      await Transfer.remove(fineTransfers);
 
+      // Needed for non sqlite databases.
       const queryRunner = ctx.connection.createQueryRunner();
       await queryRunner.connect();
       try {

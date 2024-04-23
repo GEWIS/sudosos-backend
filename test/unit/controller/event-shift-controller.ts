@@ -391,9 +391,7 @@ describe('EventShiftController', () => {
 
         expect(counts.length).to.equal(userIds.length);
         counts.forEach((c) => {
-          console.error(c);
           const validation = ctx.specification.validateModel('EventPlanningSelectedCount', c, false, true);
-          console.error(validation.errors);
           expect(validation.valid).to.be.true;
           expect(c.count).to.equal(shiftAnswers.filter((a)  => a.userId === c.id).length);
         });

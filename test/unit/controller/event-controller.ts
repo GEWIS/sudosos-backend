@@ -194,9 +194,6 @@ describe('EventController', () => {
       expect(res.status).to.equal(200);
 
       const records = res.body.records as BaseEventResponse[];
-      ctx.events.forEach((e) => console.error(e.name));
-      records.forEach((e) => console.error(e.name));
-      console.error((await Event.find()).length);
       expect(records.length).to.equal(ctx.events.length);
     });
     it('should get events created by user', async () => {
@@ -774,7 +771,6 @@ describe('EventController', () => {
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(req);
       expect(res.status).to.equal(200);
-      console.error(req.endDate);
 
       const eventResponse = res.body as EventResponse;
 

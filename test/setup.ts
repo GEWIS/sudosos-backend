@@ -40,7 +40,7 @@ use(deepEqualInAnyOrder);
 config();
 process.env.NODE_ENV = 'test';
 if (!process.env.TYPEORM_CONNECTION) {
-  console.error('Setting sqlite defaults');
+  console.log('Setting sqlite defaults');
   process.env.HTTP_PORT = '3001';
   process.env.TYPEORM_CONNECTION = 'sqlite';
   process.env.TYPEORM_DATABASE = ':memory:';
@@ -88,7 +88,7 @@ export async function truncateAllTables(dataSource: DataSource): Promise<void> {
   // TODO fix this could be cleaner?
   if (process.env.TYPEORM_CONNECTION !== 'mysql' && process.env.TYPEORM_CONNECTION !== 'mariadb') return;
 
-  console.error('Starting truncation of all tables...');
+  console.log('Starting truncation of all tables...');
   const queryRunner = dataSource.createQueryRunner();
 
   await queryRunner.connect();
@@ -101,12 +101,12 @@ export async function truncateAllTables(dataSource: DataSource): Promise<void> {
 
     for (const table of tables) {
       const tableName = table[Object.keys(table)[0]]; // Gets table name dynamically
-      console.error(`Truncating table: ${tableName}`);
+      console.log(`Truncating table: ${tableName}`);
       await queryRunner.query(`TRUNCATE TABLE \`${tableName}\`;`);
     }
 
     await queryRunner.query('SET FOREIGN_KEY_CHECKS = 1;'); // Re-enable FK checks
-    console.error('All tables truncated successfully.');
+    console.log('All tables truncated successfully.');
   } catch (err) {
     console.error('Failed to truncate tables:', err);
     throw err;
