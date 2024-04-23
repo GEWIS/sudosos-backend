@@ -67,6 +67,7 @@ import Event from '../entity/event/event';
 import EventShiftAnswer from '../entity/event/event-shift-answer';
 import EventShift from '../entity/event/event-shift';
 import { TransactionSubscriber, TransferSubscriber } from '../subscriber';
+import InactivityAdministrativeCosts from '../entity/transactions/inactivity-administrative-costs';
 import InvoicePdf from '../entity/file/invoice-pdf';
 import { InvoiceRefactor1707251162194 } from '../migrations/1707251162194-invoice-refactor';
 import dotenv from 'dotenv';
