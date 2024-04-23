@@ -70,6 +70,7 @@ import { TransactionSubscriber, TransferSubscriber } from '../subscriber';
 import InvoicePdf from '../entity/file/invoice-pdf';
 import { InvoiceRefactor1707251162194 } from '../migrations/1707251162194-invoice-refactor';
 import dotenv from 'dotenv';
+import InactivityAdministrativeCosts from '../entity/transactions/inactivity-administrative-costs';
 
 // We need to load the dotenv to prevent the env from being undefined.
 dotenv.config();

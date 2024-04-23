@@ -27,6 +27,7 @@ import StripeDeposit from '../deposit/stripe-deposit';
 import Invoice from '../invoices/invoice';
 import Fine from '../fine/fine';
 import UserFineGroup from '../fine/userFineGroup';
+import InactivityAdministrativeCosts from './inactivity-administrative-costs';
 
 /**
  * @typedef {BaseEntity} Transfer
@@ -84,4 +85,7 @@ export default class Transfer extends BaseEntity {
 
   @OneToOne(() => UserFineGroup, (g) => g.waivedTransfer, { nullable: true })
   public waivedFines: UserFineGroup | null;
+
+  @OneToOne(() => InactivityAdministrativeCosts, (i) => i.transfer, { nullable: true })
+  public administrativeCosts: InactivityAdministrativeCosts | null;
 }

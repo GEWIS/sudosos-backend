@@ -52,6 +52,7 @@ export interface UserResponse extends BaseUserResponse {
   extensiveDataProcessing?: boolean;
   ofAge?: boolean;
   canGoIntoDebt: boolean;
+  sentAdministrativeCostsEmail?: boolean;
 }
 
 
