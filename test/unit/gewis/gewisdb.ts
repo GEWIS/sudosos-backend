@@ -15,14 +15,13 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import GewisdbService from '../../../src/gewis/service/gewisdb-service';
 import { defaultBefore, DefaultContext } from '../../helpers/test-helpers';
 import User from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import GewisUser from '../../../src/gewis/entity/gewis-user';
 import { seedUsers } from '../../seed';
 import seedGEWISUsers from '../../../src/gewis/database/seed';
-import GewisDBService from "../../../src/gewis/service/gewisdb-service";
+import GewisDBService from '../../../src/gewis/service/gewisdb-service';
 
 describe('GEWISDB Service', async (): Promise<void> => {
 
@@ -37,7 +36,7 @@ describe('GEWISDB Service', async (): Promise<void> => {
       ...(await defaultBefore()),
     } as any;
     ctx.users = await seedUsers();
-    ctx.gewisUsers = await seedGEWISUsers(ctx.users);
+    ctx.gewisUsers = await seedGEWISUsers(ctx.users.slice(0, 2));
     ctx.service = new GewisDBService();
   });
 
@@ -48,6 +47,7 @@ describe('GEWISDB Service', async (): Promise<void> => {
   describe('sync', async () => {
     it('should sync the GEWIS users with the database', async () => {
       await ctx.service.sync();
+      console.error(ctx.users[0], ctx.users[1]);
     });
   });
 });
