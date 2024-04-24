@@ -15,6 +15,8 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+import { expect } from 'chai';
+import sinon from 'sinon';
 import { defaultBefore, DefaultContext } from '../../helpers/test-helpers';
 import User from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
@@ -22,30 +24,206 @@ import GewisUser from '../../../src/gewis/entity/gewis-user';
 import { seedUsers } from '../../seed';
 import seedGEWISUsers from '../../../src/gewis/database/seed';
 import GewisDBService from '../../../src/gewis/service/gewisdb-service';
+import { BasicApi, MemberAllAttributes, MembersApi } from 'gewisdb-ts-client';
 
-describe('GEWISDB Service', async (): Promise<void> => {
+describe('GEWISDB Service', () => {
 
   let ctx: DefaultContext & {
     users: User[],
     gewisUsers: GewisUser[],
   };
 
+  let membersApiStub: sinon.SinonStubbedInstance<MembersApi>;
+  let basicApiStub: sinon.SinonStubbedInstance<BasicApi>;
+
   before(async () => {
     ctx = {
       ...(await defaultBefore()),
     } as any;
     ctx.users = await seedUsers();
-    ctx.gewisUsers = await seedGEWISUsers(ctx.users.slice(0, 2));
+    ctx.gewisUsers = await seedGEWISUsers(ctx.users);
   });
 
   after(async () => {
     await Database.finish(ctx.connection);
+    sinon.restore();
   });
 
-  describe('sync', async () => {
-    it('should sync the GEWIS users with the database', async () => {
-      await GewisDBService.sync();
-      console.error(ctx.users[0], ctx.users[1]);
+  describe('sync', () => {
+
+    function toWebResponse(gewisUser: GewisUser): MemberAllAttributes {
+      // Expiration is one year in the future.
+      const d = new Date(gewisUser.user.updatedAt);
+      const year = d.getFullYear();
+      const month = d.getMonth();
+      const day = d.getDate();
+      const expiration = new Date(year + 1, month, day);
+
+      return {
+        deleted: gewisUser.user.deleted,
+        email:  gewisUser.user.email,
+        expiration: expiration.toISOString(),
+        given_name: gewisUser.user.firstName,
+        family_name: gewisUser.user.lastName,
+        is_18_plus: gewisUser.user.ofAge,
+        lidnr: gewisUser.gewisId,
+      };
+    }
+
+    async function checkUpdateAgainstDB(update: MemberAllAttributes, userId: number) {
+      const dbUser = await GewisUser.findOne({ where: { userId }, relations: ['user'] });
+      expect(dbUser).to.not.be.undefined;
+      expect(dbUser.user.deleted).to.eq(update.deleted);
+      expect(dbUser.user.email).to.eq(update.email);
+      expect(dbUser.user.firstName).to.eq(update.given_name);
+      expect(dbUser.user.lastName).to.eq(update.family_name);
+      expect(dbUser.user.ofAge).to.eq(update.is_18_plus);
+      expect(dbUser.gewisId).to.eq(update.lidnr);
+    }
+
+    beforeEach(() => {
+      membersApiStub = sinon.createStubInstance(MembersApi);
+      basicApiStub = sinon.createStubInstance(BasicApi);
+
+      GewisDBService.api = membersApiStub as any;
+      GewisDBService.pinger = basicApiStub as any;
+
+      basicApiStub.rootGet.returns(Promise.resolve({ healthy: true }) as any);
+    });
+
+    afterEach(() => {
+      sinon.restore();
+    });
+
+    it('should abort synchronization if the GEWISDB API is unhealthy', async () => {
+      basicApiStub.rootGet.returns(Promise.resolve({ healthy: false }) as any);
+
+      const result = await GewisDBService.syncAll();
+
+      expect(result).to.be.null;
+      sinon.assert.calledOnce(basicApiStub.rootGet);
+      sinon.assert.notCalled(membersApiStub.membersLidnrGet);
+    });
+
+    it('should start synchronization if the GEWISDB API is healthy', async () => {
+      basicApiStub.rootGet.returns(Promise.resolve({ healthy: true }) as any);
+      membersApiStub.membersLidnrGet.returns(Promise.resolve({ data: {} }) as any);
+      const result = await GewisDBService.syncAll();
+
+      expect(result).to.be.empty;
+      sinon.assert.calledOnce(basicApiStub.rootGet);
+    });
+
+
+    it('should sync a single non-deleted GEWIS user with the database', async () => {
+      const user = await GewisUser.findOne({ where: { user: { deleted: false } }, relations: ['user'] });
+      const update = toWebResponse(user);
+      update.given_name = `updated ${user.user.firstName}`;
+      // @ts-ignore
+      membersApiStub.membersLidnrGet.returns(Promise.resolve({
+        data: {
+          data: update,
+        },
+      }));
+
+      await GewisDBService.sync([user]);
+      await checkUpdateAgainstDB(update, user.userId);
+    });
+
+    it('should sync multiple non-deleted GEWIS user with the database', async () => {
+      const users = await GewisUser.find({ where: { user: { deleted: false } }, relations: ['user'], take: 5 });
+
+      const updates: { [key: number]: MemberAllAttributes; } = {};
+      membersApiStub.membersLidnrGet.callsFake((async (gewisId: number) => {
+        const user = users.find(u => u.gewisId === gewisId);
+        if (!user) return Promise.resolve({ data: null });
+
+        const update = toWebResponse(user);
+        updates[user.userId] = update;
+
+        update.given_name = `updated ${user.user.firstName}`;
+        update.family_name = `updated ${user.user.lastName}`;
+        update.email = `updated ${user.user.email}`;
+        update.is_18_plus = !user.user.ofAge;
+
+        return Promise.resolve({
+          data: { data: update },
+        });
+      }) as any);
+
+
+      await GewisDBService.sync(users);
+      for (const u of users) { await checkUpdateAgainstDB(updates[u.userId], u.userId); }
+    });
+
+    it('should handle cases where a user cannot be found in the GEWIS database', async () => {
+      const user = await GewisUser.findOne({ where: { user: { deleted: false } }, relations: ['user'] });
+      membersApiStub.membersLidnrGet.returns(Promise.resolve({
+        data: {},
+      } as any));
+
+      await GewisDBService.sync([user]);
+      // Check if user remained the same
+      await checkUpdateAgainstDB(toWebResponse(user), user.userId);
+    });
+
+    it('should return an empty array if there were no updates', async () => {
+      const users = await GewisUser.find({ where: { user: { deleted: false } }, relations: ['user'], take: 5 });
+
+      const updates: { [key: number]: MemberAllAttributes; } = {};
+      membersApiStub.membersLidnrGet.callsFake((async (gewisId: number) => {
+        const user = users.find(u => u.gewisId === gewisId);
+        if (!user) return Promise.resolve({ data: null });
+
+        const update = toWebResponse(user);
+        updates[user.userId] = update;
+
+        return Promise.resolve({
+          data: { data: update },
+        });
+      }) as any);
+
+
+      const res = await GewisDBService.sync(users);
+      expect(res).to.be.empty;
+      for (const u of users) { await checkUpdateAgainstDB(updates[u.userId], u.userId); }
+    });
+
+    it('should return an array with all updated users', async () => {
+      const users = await GewisUser.find({ where: { user: { deleted: false } }, relations: ['user'], take: 5 });
+      const toUpdate = (users.filter((u) => (u.userId % 2) === 0)).map((u) => u.userId);
+      expect(toUpdate).to.not.be.empty;
+
+      const updates: { [key: number]: MemberAllAttributes; } = {};
+      membersApiStub.membersLidnrGet.callsFake((async (gewisId: number) => {
+        const user = users.find(u => u.gewisId === gewisId);
+        if (!user) return Promise.resolve({ data: null });
+
+        const update = toWebResponse(user);
+        updates[user.userId] = update;
+
+        if (toUpdate.indexOf(user.userId) !== -1) {
+          update.given_name = `updated ${user.user.firstName}`;
+          update.family_name = `updated ${user.user.lastName}`;
+          update.email = `updated ${user.user.email}`;
+          update.is_18_plus = !user.user.ofAge;
+        }
+
+        return Promise.resolve({
+          data: { data: update },
+        });
+      }) as any);
+
+
+      const res = await GewisDBService.sync(users);
+      expect(res).to.not.be.empty;
+      expect(res.map((u => u.id))).to.deep.equalInAnyOrder(toUpdate);
+      for (const u of toUpdate) { await checkUpdateAgainstDB(updates[u], u); }
+    });
+
+    it('should properly handle expired users', async function () {
+      this.skip(); // Unimplemented
+      // @ts-ignore
     });
   });
 });
