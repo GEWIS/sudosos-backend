@@ -275,7 +275,7 @@ describe('eventService', () => {
         startDate: event.startDate,
       });
     });
-    it('should send a reminder to events starting in two days and an hour from now', async () => {
+    it('should send a reminder to events starting in two days and an second from now', async () => {
       const event = ctx.events[0];
       const now = new Date();
       const users = Array.from(new Set(event.answers.filter((a) => a.availability == null).map((a) => a.user)));

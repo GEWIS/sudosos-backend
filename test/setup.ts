@@ -29,6 +29,7 @@ import log4js from 'log4js';
 import sinonChai from 'sinon-chai';
 import { config } from 'dotenv';
 import { DataSource } from 'typeorm';
+import { PERSISTENT_TEST_DATABASES } from '../src/database/database';
 
 use(chaiAsPromised);
 use(chaiHttp);
@@ -39,7 +40,7 @@ use(deepEqualInAnyOrder);
 
 config();
 process.env.NODE_ENV = 'test';
-if (!process.env.TYPEORM_CONNECTION) {
+if ((!process.env.TYPEORM_CONNECTION || process.env.TYPEORM_CONNECTION === 'sqlite') && !(process.env.SKIP_SQLITE_DEFAULTS === 'true')) {
   console.log('Setting sqlite defaults');
   process.env.HTTP_PORT = '3001';
   process.env.TYPEORM_CONNECTION = 'sqlite';
@@ -84,13 +85,11 @@ export function sourceFile(file: string) {
   return file.replace('out/test/', 'test/').replace('.js', '.ts');
 }
 
-export const PERSISTENT_TEST_DATABASES = new Set(['mysql', 'mariadb']);
-
 // We should only ever truncate in test.
 // For non-persistent databases (sqlite) we can just drop them.
 function shouldTruncate(): boolean {
   if (process.env.NODE_ENV !== 'test') return false;
-  return PERSISTENT_TEST_DATABASES.has(process.env.TYPEORM_CONNECTION)
+  return PERSISTENT_TEST_DATABASES.has(process.env.TYPEORM_CONNECTION);
 }
 
 export async function truncateAllTables(dataSource: DataSource): Promise<void> {

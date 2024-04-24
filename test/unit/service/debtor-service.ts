@@ -336,7 +336,7 @@ describe('DebtorService', (): void => {
       await Fine.clear();
       await Transfer.remove(fineTransfers);
 
-      // Needed for non sqlite databases.
+      // Truncate instead of clear otherwise; mysql fails.
       const queryRunner = ctx.connection.createQueryRunner();
       await queryRunner.connect();
       try {
@@ -355,8 +355,8 @@ describe('DebtorService', (): void => {
 
     before(async () => {
       await clearFines();
-      // const fineTransfers = (await Transfer.find({ relations: ['fine'] })).filter((t) => t.fine != null);
-      // expect(fineTransfers.length).to.equal(0);
+      const fineTransfers = (await Transfer.find({ relations: ['fine'] })).filter((t) => t.fine != null);
+      expect(fineTransfers.length).to.equal(0);
     });
 
     afterEach(async () => {

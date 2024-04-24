@@ -188,7 +188,7 @@ export default class BalanceService {
     if (ids?.length === 0) {
       const { take, skip } = pagination;
       return {
-        _pagination: { take, skip, count: 0},
+        _pagination: { take, skip, count: 0 },
         records: [],
       };
     }
