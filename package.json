@@ -43,6 +43,7 @@
     "node-cron": "^3.0.2",
     "nodemailer": "^6.9.1",
     "pdf-generator-client": "github:GEWIS/pdf-generator-client",
+    "gewisdb-ts-client": "github:GEWIS/gewisdb-ts-client",
     "reflect-metadata": "^0.1.13",
     "sqlite3": "^5.1.5",
     "stripe": "^10.1.0",
