@@ -16,9 +16,9 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { config } from 'dotenv';
-import { Application } from '../index';
+import { Application } from '../src';
 import log4js from 'log4js';
-import Database from './database';
+import Database from '../src/database/database';
 
 export default async function migrate() {
   const application = new Application();
