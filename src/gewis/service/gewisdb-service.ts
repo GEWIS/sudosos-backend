@@ -41,7 +41,9 @@ export default class GewisDBService {
   public static pinger = pinger;
 
   /**
-   * Synchronizes all non-deleted GEWIS Users against the GEWISDB.
+   * Synchronizes ALL users with GEWIS DB user data.
+   * This method only returns users that were actually updated during the synchronization process.
+   * @returns {Promise<UserResponse[]>} A promise that resolves with an array of UserResponses for users that were updated. Returns null if the API is unhealthy.
    */
   public static async syncAll(): Promise<UserResponse[]> {
     const gewisUsers = await GewisUser.find({ where: { user: { deleted: false } }, relations: ['user'] });
@@ -50,7 +52,9 @@ export default class GewisDBService {
 
   /**
    * Synchronizes users with GEWIS DB user data.
-   * @param gewisUsers - Array of users to sync.
+   * This method only returns users that were actually updated during the synchronization process.
+   * @param {GewisUser[]} gewisUsers - Array of users to sync.
+   * @returns {Promise<UserResponse[]>} A promise that resolves with an array of UserResponses for users that were updated. Returns null if the API is unhealthy.
    */
   public static async sync(gewisUsers: GewisUser[]): Promise<UserResponse[]> {
     const ping: Health = await GewisDBService.pinger.rootGet().then(member => member)
