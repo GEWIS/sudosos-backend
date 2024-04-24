@@ -16,10 +16,11 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import GewisUser from '../entity/gewis-user';
-import { BasicApi, Configuration, MembersApi } from 'gewisdb-ts-client';
+import { BasicApi, Configuration, Health, MembersApi } from 'gewisdb-ts-client';
 import log4js, { Logger } from 'log4js';
 import { webResponseToUpdate } from '../helpers/gewis-helper';
 import UserService from '../../service/user-service';
+import { UserResponse } from '../../controller/response/user-response';
 
 const GEWISDB_API_URL = process.env.GEWISDB_API_URL;
 const GEWISDB_API_KEY = process.env.GEWISDB_API_KEY;
@@ -37,19 +38,38 @@ export default class GewisDBService {
 
   public static api = api;
 
+  public static pinger = pinger;
+
   /**
-   * Synchronizes local user data with GEWIS DB user data.
+   * Synchronizes all non-deleted GEWIS Users against the GEWISDB.
    */
-  public static async sync() {
-    return pinger.rootGet().then(async () => {
-      const gewisUsers = await GewisUser.find({ where: { user: { deleted: false } }, relations: ['user'] });
-      const promises = gewisUsers.map(user => GewisDBService.updateUser(user));
-      await Promise.all(promises);
-      return promises.filter((u) => u);
-    }).catch(() => {
-      logger.warn('Failed to ping GEWIS DB');
+  public static async syncAll(): Promise<UserResponse[]> {
+    const gewisUsers = await GewisUser.find({ where: { user: { deleted: false } }, relations: ['user'] });
+    return this.sync(gewisUsers);
+  }
+
+  /**
+   * Synchronizes users with GEWIS DB user data.
+   * @param gewisUsers - Array of users to sync.
+   */
+  public static async sync(gewisUsers: GewisUser[]): Promise<UserResponse[]> {
+    const ping: Health = await GewisDBService.pinger.rootGet().then(member => member)
+      .catch((error) => {
+        logger.warn('Failed to ping GEWIS DB', error);
+        return null;
+      });
+
+    if (!ping.healthy) {
+      logger.warn('GEWISDB API unhealthy, aborting.');
       return null;
-    });
+    }
+
+    const updates: UserResponse[] = [];
+    const promises = gewisUsers.map(user => GewisDBService.updateUser(user).then((u) => {
+      if (u) updates.push(u);
+    }));
+
+    return Promise.all(promises).then(() => updates).catch(() => null);
   }
 
   /**
