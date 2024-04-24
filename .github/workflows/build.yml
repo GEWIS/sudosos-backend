@@ -112,6 +112,7 @@ jobs:
       STRIPE_PUBLIC_KEY: ${{ secrets.STRIPE_SUDOSOS_TEST_KEY }}
       STRIPE_PRIVATE_KEY: ${{ secrets.STRIPE_SUDOSOS_TEST_KEY }}
       STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_TEST_SECRET }}
+      SKIP_SQLITE_DEFAULTS: true
     steps:
       - uses: actions/checkout@v3
         with:
