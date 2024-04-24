@@ -28,7 +28,6 @@ describe('GEWISDB Service', async (): Promise<void> => {
   let ctx: DefaultContext & {
     users: User[],
     gewisUsers: GewisUser[],
-    service: GewisDBService,
   };
 
   before(async () => {
@@ -37,7 +36,6 @@ describe('GEWISDB Service', async (): Promise<void> => {
     } as any;
     ctx.users = await seedUsers();
     ctx.gewisUsers = await seedGEWISUsers(ctx.users.slice(0, 2));
-    ctx.service = new GewisDBService();
   });
 
   after(async () => {
@@ -46,7 +44,7 @@ describe('GEWISDB Service', async (): Promise<void> => {
 
   describe('sync', async () => {
     it('should sync the GEWIS users with the database', async () => {
-      await ctx.service.sync();
+      await GewisDBService.sync();
       console.error(ctx.users[0], ctx.users[1]);
     });
   });

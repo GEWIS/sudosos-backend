@@ -16,46 +16,56 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import GewisUser from '../entity/gewis-user';
-import { Configuration, MembersApi, MemberSimple } from 'gewisdb-ts-client';
+import { BasicApi, Configuration, MembersApi } from 'gewisdb-ts-client';
 import log4js, { Logger } from 'log4js';
 import { webResponseToUpdate } from '../helpers/gewis-helper';
 import UserService from '../../service/user-service';
 
-const GEWISDB_API_URL =  process.env.GEWISDB_API_URL;
-const GEWISDB_API_KEY =  process.env.GEWISDB_API_KEY;
+const GEWISDB_API_URL = process.env.GEWISDB_API_URL;
+const GEWISDB_API_KEY = process.env.GEWISDB_API_KEY;
+
+// Configuration for the API access
+const configuration = new Configuration({ basePath: GEWISDB_API_URL, accessToken: () => GEWISDB_API_KEY });
+const api = new MembersApi(configuration);
+const pinger = new BasicApi(configuration);
+
+// Logger setup
+const logger: Logger = log4js.getLogger('GewisDBService');
+logger.level = log4js.levels.ALL;
 
 export default class GewisDBService {
 
-  private logger: Logger = log4js.getLogger('GewisDBService');
+  public static api = api;
 
-  gewisDB = {
-    configuration: new Configuration({ basePath: GEWISDB_API_URL, accessToken: () => GEWISDB_API_KEY }),
-    api: new MembersApi(),
-  };
-
-  public constructor() {
-    this.gewisDB.api = new MembersApi(this.gewisDB.configuration);
-    this.logger.level = log4js.levels.ALL;
-  }
-
-  public async sync() {
-    const gewisUsers = await GewisUser.find({ where: { user: { deleted: false } }, relations: ['user'] });
-    // console.error(gewisUsers);
-    gewisUsers[0].gewisId = 1;
-    const promises: Promise<void>[] = gewisUsers.map((u) => this.updateUser(u));
-    await Promise.all(promises);
-  }
-
-  async updateUser(gewisUser: GewisUser) {
-    this.logger.trace(`Syncing GEWIS User ${gewisUser.gewisId}`);
-    const dbMember: MemberSimple | void = await this.gewisDB.api.membersLidnrGet(gewisUser.gewisId).then((m) => {
-      return m.data.data;
-    }).catch((e) => {
-      this.logger.error(`Failed to fetch: ${e}`);
+  /**
+   * Synchronizes local user data with GEWIS DB user data.
+   */
+  public static async sync() {
+    return pinger.rootGet().then(async () => {
+      const gewisUsers = await GewisUser.find({ where: { user: { deleted: false } }, relations: ['user'] });
+      const promises = gewisUsers.map(user => GewisDBService.updateUser(user));
+      await Promise.all(promises);
+      return promises.filter((u) => u);
+    }).catch(() => {
+      logger.warn('Failed to ping GEWIS DB');
+      return null;
     });
+  }
+
+  /**
+   * Updates a user in the local database based on the GEWIS DB data.
+   * @param {GewisUser} gewisUser - The user to be updated.
+   */
+  public static async updateUser(gewisUser: GewisUser) {
+    logger.trace(`Syncing GEWIS User ${gewisUser.gewisId}`);
+    const dbMember = await GewisDBService.api.membersLidnrGet(gewisUser.gewisId).then(member => member.data.data)
+      .catch(error => {
+        logger.error(`Failed to fetch: ${error}`);
+        return null;
+      });
 
     if (!dbMember) {
-      this.logger.trace(`Could not find GEWIS User ${gewisUser.gewisId} in DB.`);
+      logger.trace(`Could not find GEWIS User ${gewisUser.gewisId} in DB.`);
       return;
     }
 
@@ -63,16 +73,26 @@ export default class GewisDBService {
     const expired = new Date() > expirationDate;
 
     if (expired) {
-      this.logger.log(`User ${gewisUser.gewisId} has expired, closing account.`);
-      // handle expired user
+      logger.log(`User ${gewisUser.gewisId} has expired, closing account.`);
     }
 
     const update = webResponseToUpdate(dbMember);
-    if (gewisUser.user.firstName !== update.firstName || gewisUser.user.lastName !== update.lastName || gewisUser.user.ofAge !== update.ofAge || gewisUser.user.email !== update.email) {
-      return UserService.updateUser(gewisUser.user.id, update).then(() => {
-        this.logger.log(`Updated user m${gewisUser.gewisId} (id ${gewisUser.userId}) with `, update);
-      });
+    if (GewisDBService.isUpdateNeeded(gewisUser, update)) {
+      logger.log(`Updated user m${gewisUser.gewisId} (id ${gewisUser.userId}) with `, update);
+      return UserService.updateUser(gewisUser.user.id, update);
     }
   }
 
+  /**
+   * Checks if the user needs an update.
+   * @param {GewisUser} gewisUser - The local user data.
+   * @param {any} update - The new data to potentially update.
+   * @returns {boolean} True if an update is needed, otherwise false.
+   */
+  private static isUpdateNeeded(gewisUser: GewisUser, update: any): boolean {
+    return gewisUser.user.firstName !== update.firstName ||
+      gewisUser.user.lastName !== update.lastName ||
+      gewisUser.user.ofAge !== update.ofAge ||
+      gewisUser.user.email !== update.email;
+  }
 }
