@@ -192,13 +192,6 @@ const Database = {
       throw new Error(`Unsupported connection type ${process.env.TYPEORM_CONNECTION}`);
     }
   },
-  finish: async (connection: DataSource) => {
-    // Only drop in sqlite. If really wanted otherwise, do the call directly on the connection.
-    if (process.env.TYPEORM_CONNECTION === 'sqlite') {
-      await connection.dropDatabase();
-      await connection.close();
-    }
-  },
 };
 export default Database;
 

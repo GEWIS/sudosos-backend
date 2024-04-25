@@ -55,6 +55,7 @@ import Mailer from '../../../src/mailer';
 import sinon, { SinonSandbox, SinonSpy } from 'sinon';
 import nodemailer, { Transporter } from 'nodemailer';
 import { truncateAllTables } from '../../setup';
+import { finishTestDB } from '../../helpers/test-helpers';
 
 describe('DebtorController', () => {
   let ctx: {
@@ -183,7 +184,7 @@ describe('DebtorController', () => {
 
   // close database connection
   after( async () => {
-    await Database.finish(ctx.connection);
+    await finishTestDB(ctx.connection);
     sandbox.restore();
   });
 

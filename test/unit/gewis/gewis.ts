@@ -32,7 +32,7 @@ import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import GewisUser from '../../../src/gewis/entity/gewis-user';
 import Gewis from '../../../src/gewis/gewis';
 import wrapInManager from '../../../src/helpers/database';
-import { restoreLDAPEnv, storeLDAPEnv } from '../../helpers/test-helpers';
+import { finishTestDB, restoreLDAPEnv, storeLDAPEnv } from '../../helpers/test-helpers';
 import Bindings from '../../../src/helpers/bindings';
 import TokenHandler from '../../../src/authentication/token-handler';
 import RoleManager from '../../../src/rbac/role-manager';
@@ -155,7 +155,7 @@ describe('GEWIS Helper functions', async (): Promise<void> => {
   });
 
   after(async () => {
-    await Database.finish(ctx.connection);
+    await finishTestDB(ctx.connection);
     restoreLDAPEnv(ldapEnvVariables);
   });
 

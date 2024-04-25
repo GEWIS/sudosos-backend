@@ -26,6 +26,7 @@ import PayoutRequestService from '../../../src/service/payout-request-service';
 import { PayoutRequestState } from '../../../src/entity/transactions/payout-request-status';
 import PayoutRequestRequest from '../../../src/controller/request/payout-request-request';
 import { truncateAllTables } from '../../setup';
+import { finishTestDB } from '../../helpers/test-helpers';
 
 describe('PayoutRequestService', () => {
   let ctx: {
@@ -65,7 +66,7 @@ describe('PayoutRequestService', () => {
   });
 
   after(async () => {
-    await Database.finish(ctx.connection);
+    await finishTestDB(ctx.connection);
   });
 
   describe('getPayoutRequests', () => {

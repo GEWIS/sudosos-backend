@@ -31,6 +31,7 @@ import sinon, { SinonSandbox, SinonSpy } from 'sinon';
 import Mailer from '../../../src/mailer';
 import nodemailer, { Transporter } from 'nodemailer';
 import { truncateAllTables } from '../../setup';
+import { finishTestDB } from '../../helpers/test-helpers';
 
 describe('eventService', () => {
   let ctx: {
@@ -84,7 +85,7 @@ describe('eventService', () => {
   };
 
   after(async () => {
-    await Database.finish(ctx.connection);
+    await finishTestDB(ctx.connection);
   });
 
   describe('getEvents', () => {
@@ -275,7 +276,7 @@ describe('eventService', () => {
         startDate: event.startDate,
       });
     });
-    it('should send a reminder to events starting in two days and an second from now', async () => {
+    it('should send a reminder to events starting in two days and a second from now', async () => {
       const event = ctx.events[0];
       const now = new Date();
       const users = Array.from(new Set(event.answers.filter((a) => a.availability == null).map((a) => a.user)));
@@ -314,7 +315,7 @@ describe('eventService', () => {
     it('should not send a reminder to events starting in three days and one minute from now', async () => {
       const event = ctx.events[0];
       const now = new Date();
-      const startDate = new Date(now.getTime() + 1000 * 3600 * 24 * 4 + 1000);
+      const startDate = new Date(now.getTime() + 1000 * 3600 * 24 * 3 + 1000);
       await EventService.updateEvent(event.id, {
         startDate,
       });

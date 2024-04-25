@@ -18,6 +18,7 @@
 import Database from '../../src/database/database';
 import { Connection } from 'typeorm';
 import { expect } from 'chai';
+import { finishTestDB } from '../helpers/test-helpers';
 describe('Database', async (): Promise<void> => {
   describe('#initialize', () => {
     it('should be able to synchronize schema', async function () {
@@ -35,7 +36,7 @@ describe('Database', async (): Promise<void> => {
     });
 
     after(async () => {
-      await Database.finish(dataSource);
+      await finishTestDB(dataSource);
     });
 
     function normalizeType(type: any): string[] {

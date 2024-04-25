@@ -31,7 +31,7 @@ import PinAuthenticator from '../../../src/entity/authenticator/pin-authenticato
 import { UserResponse } from '../../../src/controller/response/user-response';
 import { isNumber } from '../../../src/helpers/validators';
 import wrapInManager from '../../../src/helpers/database';
-import { restoreLDAPEnv, storeLDAPEnv } from '../../helpers/test-helpers';
+import { finishTestDB, restoreLDAPEnv, storeLDAPEnv } from '../../helpers/test-helpers';
 import HashBasedAuthenticationMethod from '../../../src/entity/authenticator/hash-based-authentication-method';
 import LocalAuthenticator from '../../../src/entity/authenticator/local-authenticator';
 import AuthenticationResetTokenRequest from '../../../src/controller/request/authentication-reset-token-request';
@@ -105,7 +105,7 @@ describe('AuthenticationService', (): void => {
 
   after(async () => {
     restoreLDAPEnv(ldapEnvVariables);
-    await Database.finish(ctx.connection);
+    await finishTestDB(ctx.connection);
   });
 
   afterEach(() => {

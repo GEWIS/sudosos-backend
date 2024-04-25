@@ -18,13 +18,12 @@
 import { json } from 'body-parser';
 import { expect, request } from 'chai';
 import RootController from '../../../src/controller/root-controller';
-import Database from '../../../src/database/database';
 import { BannerResponse } from '../../../src/controller/response/banner-response';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import Banner from '../../../src/entity/banner';
 import { seedBanners } from '../../seed';
 import { bannerEq } from './banner-controller';
-import { DefaultContext, defaultContext } from '../../helpers/test-helpers';
+import { DefaultContext, defaultContext, finishTestDB } from '../../helpers/test-helpers';
 import User from '../../../src/entity/user/user';
 import { ADMIN_USER, UserFactory } from '../../helpers/user-factory';
 import sinon from 'sinon';
@@ -56,7 +55,7 @@ describe('RootController', async (): Promise<void> => {
 
   // close database connection
   after(async () => {
-    await Database.finish(ctx.connection);
+    await finishTestDB(ctx.connection);
   });
 
   describe('GET /banners', () => {

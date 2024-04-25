@@ -40,6 +40,7 @@ import { expect } from 'chai';
 import TransactionService from '../../../src/service/transaction-service';
 import BalanceService from '../../../src/service/balance-service';
 import { truncateAllTables } from '../../setup';
+import { finishTestDB } from '../../helpers/test-helpers';
 
 describe('TransactionSubscriber', () => {
   let ctx: {
@@ -112,7 +113,7 @@ describe('TransactionSubscriber', () => {
   });
 
   after(async () => {
-    await Database.finish(ctx.connection);
+    await finishTestDB(ctx.connection);
     sandbox.restore();
 
     process.env.NODE_ENV = env;

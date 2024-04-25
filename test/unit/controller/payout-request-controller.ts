@@ -37,6 +37,7 @@ import {
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import { PayoutRequestState } from '../../../src/entity/transactions/payout-request-status';
 import { truncateAllTables } from '../../setup';
+import { finishTestDB } from '../../helpers/test-helpers';
 
 describe('PayoutRequestController', () => {
   let ctx: {
@@ -132,7 +133,7 @@ describe('PayoutRequestController', () => {
   });
 
   after(async () => {
-    await Database.finish(ctx.connection);
+    await finishTestDB(ctx.connection);
   });
 
   describe('GET /payoutrequests', () => {

@@ -25,6 +25,7 @@ import User from '../../../../src/entity/user/user';
 import { seedUsers } from '../../../seed';
 import Database from '../../../../src/database/database';
 import { truncateAllTables } from '../../../setup';
+import { finishTestDB } from '../../../helpers/test-helpers';
 
 const workdir = './imaginary/directory';
 
@@ -80,7 +81,7 @@ describe('Disk Storage', async () => {
   });
 
   after(async () => {
-    await Database.finish(ctx.connection);
+    await finishTestDB(ctx.connection);
   });
 
   describe('saveFile', async () => {

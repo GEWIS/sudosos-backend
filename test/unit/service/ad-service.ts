@@ -35,7 +35,7 @@ import { LDAPGroup, LDAPResponse, LDAPUser } from '../../../src/helpers/ad';
 import userIsAsExpected from './authentication-service';
 import RoleManager from '../../../src/rbac/role-manager';
 import AssignedRole from '../../../src/entity/roles/assigned-role';
-import { restoreLDAPEnv, storeLDAPEnv } from '../../helpers/test-helpers';
+import { finishTestDB, restoreLDAPEnv, storeLDAPEnv } from '../../helpers/test-helpers';
 import { truncateAllTables } from '../../setup';
 
 chai.use(deepEqualInAnyOrder);
@@ -103,7 +103,7 @@ describe('AD Service', (): void => {
 
   after(async () => {
     restoreLDAPEnv(ldapEnvVariables);
-    await Database.finish(ctx.connection);
+    await finishTestDB(ctx.connection);
   });
 
   afterEach(async () => {

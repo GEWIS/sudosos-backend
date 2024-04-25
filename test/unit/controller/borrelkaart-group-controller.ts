@@ -43,6 +43,7 @@ import { bkgEq } from '../service/voucher-group-service';
 import Sinon from 'sinon';
 import { DineroObjectRequest } from '../../../src/controller/request/dinero-request';
 import { truncateAllTables } from '../../setup';
+import { finishTestDB } from '../../helpers/test-helpers';
 
 async function saveBKG(
   bkgReq: VoucherGroupRequest,
@@ -198,7 +199,7 @@ describe('VoucherGroupController', async (): Promise<void> => {
 
   // close database connection
   afterEach(async () => {
-    await Database.finish(ctx.connection);
+    await finishTestDB(ctx.connection);
     ctx.clock.restore();
   });
 

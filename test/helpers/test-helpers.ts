@@ -18,7 +18,7 @@
 import dinero from 'dinero.js';
 import express, { Express } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
-import { Connection } from 'typeorm';
+import { Connection, DataSource } from 'typeorm';
 import TransferRequest from '../../src/controller/request/transfer-request';
 import TransferService from '../../src/service/transfer-service';
 import Swagger from '../../src/start/swagger';
@@ -28,6 +28,7 @@ import TokenHandler from '../../src/authentication/token-handler';
 import User, { UserType } from '../../src/entity/user/user';
 import { ADMIN_USER, UserFactory } from './user-factory';
 import { RoleFactory } from './role-factory';
+import { truncateAllTables } from '../setup';
 
 export interface DefaultContext {
   app: Express,
@@ -52,6 +53,21 @@ export async function defaultContext() {
     connection,
     tokenHandler,
   };
+}
+
+//
+export async function finishTestDB(connection: DataSource) {
+  await truncateAllTables(connection);
+  // Only drop in sqlite. If really wanted otherwise, do the call directly on the connection.
+  if (process.env.TYPEORM_CONNECTION === 'sqlite') {
+    await connection.dropDatabase();
+    await connection.close();
+  }
+}
+
+// Cleans up the database accordingly
+export async function defaultAfter(ctx: DefaultContext): Promise<void> {
+  await finishTestDB(ctx.connection);
 }
 
 export async function defaultTokens(tokenHandler: TokenHandler) {

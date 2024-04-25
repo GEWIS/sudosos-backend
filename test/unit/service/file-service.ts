@@ -36,6 +36,7 @@ import { DiskStorage } from '../../../src/files/storage';
 import Product from '../../../src/entity/product/product';
 import ProductImage from '../../../src/entity/file/product-image';
 import { truncateAllTables } from '../../setup';
+import { finishTestDB } from '../../helpers/test-helpers';
 
 describe('FileService', async (): Promise<void> => {
   let ctx: {
@@ -115,7 +116,7 @@ describe('FileService', async (): Promise<void> => {
   });
 
   after(async () => {
-    await Database.finish(ctx.connection);
+    await finishTestDB(ctx.connection);
   });
 
   afterEach(() => {

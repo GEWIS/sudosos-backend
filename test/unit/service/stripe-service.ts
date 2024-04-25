@@ -29,6 +29,7 @@ import wrapInManager from '../../../src/helpers/database';
 import BalanceResponse from '../../../src/controller/response/balance-response';
 import { StripeRequest } from '../../../src/controller/request/stripe-request';
 import { truncateAllTables } from '../../setup';
+import { finishTestDB } from '../../helpers/test-helpers';
 
 describe('StripeService', async (): Promise<void> => {
   let shouldSkip: boolean;
@@ -67,7 +68,7 @@ describe('StripeService', async (): Promise<void> => {
 
   after(async () => {
     if (shouldSkip) return;
-    await Database.finish(ctx.connection);
+    await finishTestDB(ctx.connection);
   });
 
   describe('getProcessingStripeDepositsFromUser', () => {

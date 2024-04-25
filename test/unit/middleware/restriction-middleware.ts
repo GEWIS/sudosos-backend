@@ -25,6 +25,7 @@ import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/u
 import TokenHandler from '../../../src/authentication/token-handler';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import { truncateAllTables } from '../../setup';
+import { finishTestDB } from '../../helpers/test-helpers';
 
 describe('RestrictionMiddleware', (): void => {
   let ctx: {
@@ -98,7 +99,7 @@ describe('RestrictionMiddleware', (): void => {
   });
 
   after(async () => {
-    await Database.finish(ctx.connection);
+    await finishTestDB(ctx.connection);
   });
 
   describe('Non-lesser endpoints', async () => {

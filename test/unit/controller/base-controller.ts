@@ -30,6 +30,7 @@ import { UserFactory } from '../../helpers/user-factory';
 import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import { truncateAllTables } from '../../setup';
+import { finishTestDB } from '../../helpers/test-helpers';
 
 class TestController extends BaseController {
   // eslint-disable-next-line class-methods-use-this
@@ -142,7 +143,7 @@ describe('BaseController', (): void => {
   });
 
   after(async () => {
-    await Database.finish(ctx.connection);
+    await finishTestDB(ctx.connection);
   });
 
   describe('#handle', () => {

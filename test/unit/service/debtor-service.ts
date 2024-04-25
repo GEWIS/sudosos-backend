@@ -46,6 +46,7 @@ import sinon, { SinonSandbox, SinonSpy } from 'sinon';
 import nodemailer, { Transporter } from 'nodemailer';
 import Mailer from '../../../src/mailer';
 import { truncateAllTables } from '../../setup';
+import { finishTestDB } from '../../helpers/test-helpers';
 
 describe('DebtorService', (): void => {
   let ctx: {
@@ -107,7 +108,7 @@ describe('DebtorService', (): void => {
   });
 
   after(async () => {
-    await Database.finish(ctx.connection);
+    await finishTestDB(ctx.connection);
     sandbox.restore();
   });
 

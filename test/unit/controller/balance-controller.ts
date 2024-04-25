@@ -45,6 +45,7 @@ import { PaginationResult } from '../../../src/helpers/pagination';
 import Fine from '../../../src/entity/fine/fine';
 import UserFineGroup from '../../../src/entity/fine/userFineGroup';
 import { truncateAllTables } from '../../setup';
+import { finishTestDB } from '../../helpers/test-helpers';
 
 describe('BalanceController', (): void => {
   let ctx: {
@@ -395,6 +396,6 @@ describe('BalanceController', (): void => {
   });
 
   after(async () => {
-    await Database.finish(ctx.connection);
+    await finishTestDB(ctx.connection);
   });
 });

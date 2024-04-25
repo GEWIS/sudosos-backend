@@ -41,6 +41,7 @@ import { CreateProductRequest, UpdateProductRequest } from '../../src/controller
 import { CreateContainerRequest, UpdateContainerRequest } from '../../src/controller/request/container-request';
 import { CreatePointOfSaleRequest } from '../../src/controller/request/point-of-sale-request';
 import { truncateAllTables } from '../setup';
+import { finishTestDB } from '../helpers/test-helpers';
 
 describe('Propagation between products, containers, POSs', () => {
   let ctx: {
@@ -182,7 +183,7 @@ describe('Propagation between products, containers, POSs', () => {
   });
 
   after(async () => {
-    await Database.finish(ctx.connection);
+    await finishTestDB(ctx.connection);
   });
 
   describe('Create and fetch entities', () => {

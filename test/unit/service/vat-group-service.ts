@@ -34,6 +34,7 @@ import {
 import VatGroupService from '../../../src/service/vat-group-service';
 import { VatDeclarationResponse } from '../../../src/controller/response/vat-group-response';
 import { truncateAllTables } from '../../setup';
+import { finishTestDB } from '../../helpers/test-helpers';
 
 describe('VatGroupService', () => {
   let ctx: {
@@ -72,7 +73,7 @@ describe('VatGroupService', () => {
   });
 
   after(async () => {
-    await Database.finish(ctx.connection);
+    await finishTestDB(ctx.connection);
   });
 
   describe('Get VAT groups', () => {

@@ -30,6 +30,7 @@ import StripeWebhookController from '../../../src/controller/stripe-webhook-cont
 import StripeService, { STRIPE_API_VERSION } from '../../../src/service/stripe-service';
 import { extractRawBody } from '../../../src/helpers/raw-body';
 import { truncateAllTables } from '../../setup';
+import { finishTestDB } from '../../helpers/test-helpers';
 
 describe('StripeWebhookController', async (): Promise<void> => {
   let shouldSkip: boolean;
@@ -118,7 +119,7 @@ describe('StripeWebhookController', async (): Promise<void> => {
 
   after(async () => {
     if (shouldSkip) return;
-    await Database.finish(ctx.connection);
+    await finishTestDB(ctx.connection);
   });
 
   afterEach(() => {

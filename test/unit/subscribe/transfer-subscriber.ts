@@ -37,6 +37,7 @@ import BalanceService from '../../../src/service/balance-service';
 import dinero from 'dinero.js';
 import Fine from '../../../src/entity/fine/fine';
 import { truncateAllTables } from '../../setup';
+import { finishTestDB } from '../../helpers/test-helpers';
 
 describe('TransferSubscriber', (): void => {
   let ctx: {
@@ -74,7 +75,7 @@ describe('TransferSubscriber', (): void => {
   });
 
   after(async () => {
-    await Database.finish(ctx.connection);
+    await finishTestDB(ctx.connection);
   });
 
   describe('afterInsert', () => {

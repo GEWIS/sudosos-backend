@@ -28,6 +28,7 @@ import Swagger from '../../../src/start/swagger';
 import RoleManager from '../../../src/rbac/role-manager';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import { truncateAllTables } from '../../setup';
+import { finishTestDB } from '../../helpers/test-helpers';
 
 describe('AuthenticationSecureController', () => {
   let ctx: {
@@ -80,7 +81,7 @@ describe('AuthenticationSecureController', () => {
   });
 
   after(async () => {
-    await Database.finish(ctx.connection);
+    await finishTestDB(ctx.connection);
   });
 
   describe('GET /authentication/refreshToken', () => {

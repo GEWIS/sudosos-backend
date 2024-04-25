@@ -41,6 +41,7 @@ import {
 } from '../../seed';
 import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
 import { truncateAllTables } from '../../setup';
+import { finishTestDB } from '../../helpers/test-helpers';
 
 describe('TransferService', async (): Promise<void> => {
   let ctx: {
@@ -88,7 +89,7 @@ describe('TransferService', async (): Promise<void> => {
     };
   });
   after(async () => {
-    await Database.finish(ctx.connection);
+    await finishTestDB(ctx.connection);
   });
   describe('getTransfers function', async (): Promise<void> => {
     it('should return all transfers', async () => {

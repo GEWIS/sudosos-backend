@@ -56,6 +56,7 @@ import Transfer from '../../../src/entity/transactions/transfer';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import InvoiceUser from '../../../src/entity/user/invoice-user';
 import { truncateAllTables } from '../../setup';
+import { finishTestDB } from '../../helpers/test-helpers';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -200,7 +201,7 @@ describe('InvoiceService', () => {
 
   // close database connection
   after(async () => {
-    await Database.finish(ctx.connection);
+    await finishTestDB(ctx.connection);
   });
 
   describe('getInvoices function', () => {

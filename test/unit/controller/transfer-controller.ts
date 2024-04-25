@@ -33,6 +33,7 @@ import RoleManager from '../../../src/rbac/role-manager';
 import Swagger from '../../../src/start/swagger';
 import { seedTransfers, seedUsers } from '../../seed';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
+import { finishTestDB } from '../../helpers/test-helpers';
 
 describe('TransferController', async (): Promise<void> => {
   let connection: Connection;
@@ -168,7 +169,7 @@ describe('TransferController', async (): Promise<void> => {
   });
 
   after(async () => {
-    await Database.finish(connection);
+    await finishTestDB(connection);
   });
 
   describe('GET /transfers', () => {

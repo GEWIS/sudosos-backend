@@ -44,6 +44,7 @@ import { CreatePointOfSaleParams } from '../../../src/controller/request/point-o
 import AuthenticationService from '../../../src/service/authentication-service';
 import MemberAuthenticator from '../../../src/entity/authenticator/member-authenticator';
 import { truncateAllTables } from '../../setup';
+import { finishTestDB } from '../../helpers/test-helpers';
 
 /**
  * Test if all the container responses are part of the container set array.
@@ -126,7 +127,7 @@ describe('ContainerService', async (): Promise<void> => {
 
   // close database connection
   after(async () => {
-    await Database.finish(ctx.connection);
+    await finishTestDB(ctx.connection);
   });
 
   describe('getContainers function', () => {

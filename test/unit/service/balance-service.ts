@@ -51,6 +51,7 @@ import { calculateBalance } from '../../helpers/balance';
 import Fine from '../../../src/entity/fine/fine';
 import BalanceResponse from '../../../src/controller/response/balance-response';
 import { truncateAllTables } from '../../setup';
+import { finishTestDB } from '../../helpers/test-helpers';
 
 describe('BalanceService', (): void => {
   let ctx: {
@@ -100,7 +101,7 @@ describe('BalanceService', (): void => {
   });
 
   after(async () => {
-    await Database.finish(ctx.connection);
+    await finishTestDB(ctx.connection);
   });
 
   async function checkFine(balance: BalanceResponse, user: User) {

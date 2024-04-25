@@ -41,6 +41,7 @@ import EventShiftController from '../../../src/controller/event-shift-controller
 import { describe } from 'mocha';
 import Event, { EventType } from '../../../src/entity/event/event';
 import { truncateAllTables } from '../../setup';
+import { finishTestDB } from '../../helpers/test-helpers';
 
 describe('EventShiftController', () => {
   let ctx: {
@@ -153,7 +154,7 @@ describe('EventShiftController', () => {
   });
 
   after(async () => {
-    await Database.finish(ctx.connection);
+    await finishTestDB(ctx.connection);
   });
 
   describe('GET /eventshifts', () => {

@@ -47,6 +47,7 @@ import PointOfSaleService from '../../../src/service/point-of-sale-service';
 import MemberAuthenticator from '../../../src/entity/authenticator/member-authenticator';
 import AuthenticationService from '../../../src/service/authentication-service';
 import { truncateAllTables } from '../../setup';
+import { finishTestDB } from '../../helpers/test-helpers';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -179,7 +180,7 @@ describe('ProductService', async (): Promise<void> => {
 
   // close database connection
   after(async () => {
-    await Database.finish(ctx.connection);
+    await finishTestDB(ctx.connection);
   });
 
   describe('getProducts function', () => {

@@ -41,13 +41,12 @@ import {
 } from '../../../src/controller/request/point-of-sale-request';
 import { INVALID_CONTAINER_ID } from '../../../src/controller/request/validators/validation-errors';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
-import { defaultContext, DefaultContext, defaultTokens } from '../../helpers/test-helpers';
+import { defaultContext, DefaultContext, defaultTokens, finishTestDB } from '../../helpers/test-helpers';
 import { ORGAN_USER, UserFactory } from '../../helpers/user-factory';
 import { allDefinition, organDefinition, ownDefintion, RoleFactory } from '../../helpers/role-factory';
 import { UpdateContainerRequest } from '../../../src/controller/request/container-request';
 import ContainerController from '../../../src/controller/container-controller';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
-import Database from '../../../src/database/database';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -159,7 +158,7 @@ describe('PointOfSaleController', async () => {
   });
 
   after(async () => {
-    await Database.finish(ctx.connection);
+    await finishTestDB(ctx.connection);
   });
 
   describe('PATCH /pointsofsale/{id}', () => {

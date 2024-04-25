@@ -49,6 +49,7 @@ import AuthenticationKeyRequest from '../../../src/controller/request/authentica
 import AuthenticationNfcRequest from '../../../src/controller/request/authentication-nfc-request';
 import NfcAuthenticator from '../../../src/entity/authenticator/nfc-authenticator';
 import { truncateAllTables } from '../../setup';
+import { finishTestDB } from '../../helpers/test-helpers';
 
 describe('AuthenticationController', async (): Promise<void> => {
   let ctx: {
@@ -145,7 +146,7 @@ describe('AuthenticationController', async (): Promise<void> => {
   });
   after(async () => {
     process.env.NODE_ENV = ctx.env;
-    await Database.finish(ctx.connection);
+    await finishTestDB(ctx.connection);
   });
 
   describe('POST /authentication/mock', () => {

@@ -37,6 +37,7 @@ import { defaultPagination, PAGINATION_DEFAULT, PaginationResult } from '../../.
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import MemberAuthenticator from '../../../src/entity/authenticator/member-authenticator';
 import { truncateAllTables } from '../../setup';
+import { finishTestDB } from '../../helpers/test-helpers';
 
 describe('TransactionController', (): void => {
   let ctx: {
@@ -235,7 +236,7 @@ describe('TransactionController', (): void => {
   });
 
   after(async () => {
-    await Database.finish(ctx.connection);
+    await finishTestDB(ctx.connection);
   });
 
   describe('GET /transactions', () => {

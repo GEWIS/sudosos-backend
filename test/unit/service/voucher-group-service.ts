@@ -27,6 +27,7 @@ import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/u
 import RoleManager from '../../../src/rbac/role-manager';
 import VoucherGroupService from '../../../src/service/voucher-group-service';
 import { truncateAllTables } from '../../setup';
+import { finishTestDB } from '../../helpers/test-helpers';
 
 export function bkgEq(req: VoucherGroupParams, res: VoucherGroupResponse): void {
   // check if non user fields are equal
@@ -97,7 +98,7 @@ describe('VoucherGroupService', async (): Promise<void> => {
 
   // close database connection
   afterEach(async () => {
-    await Database.finish(ctx.connection);
+    await finishTestDB(ctx.connection);
     ctx.clock.restore();
   });
 

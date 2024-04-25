@@ -25,6 +25,7 @@ import Database from '../../../src/database/database';
 import HelloWorld from '../../../src/mailer/templates/hello-world';
 import { Language } from '../../../src/mailer/templates/mail-template';
 import { truncateAllTables } from '../../setup';
+import { finishTestDB } from '../../helpers/test-helpers';
 
 describe('Mailer', () => {
   let ctx: {
@@ -68,7 +69,7 @@ describe('Mailer', () => {
 
   after(async () => {
     sandbox.restore();
-    await Database.finish(ctx.connection);
+    await finishTestDB(ctx.connection);
   });
 
   it('should correctly create mailer', () => {

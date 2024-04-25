@@ -41,6 +41,7 @@ import {
 import EventService from '../../../src/service/event-service';
 import { EventRequest } from '../../../src/controller/request/event-request';
 import { truncateAllTables } from '../../setup';
+import { finishTestDB } from '../../helpers/test-helpers';
 
 describe('EventController', () => {
   let ctx: {
@@ -154,7 +155,7 @@ describe('EventController', () => {
   });
 
   after(async () => {
-    await Database.finish(ctx.connection);
+    await finishTestDB(ctx.connection);
   });
 
   describe('GET /events', () => {

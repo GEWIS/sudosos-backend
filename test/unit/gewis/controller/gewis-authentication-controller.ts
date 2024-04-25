@@ -39,6 +39,7 @@ import AuthenticationService from '../../../../src/service/authentication-servic
 import GEWISAuthenticationPinRequest from '../../../../src/gewis/controller/request/gewis-authentication-pin-request';
 import PinAuthenticator from '../../../../src/entity/authenticator/pin-authenticator';
 import { truncateAllTables } from '../../../setup';
+import { finishTestDB } from '../../../helpers/test-helpers';
 
 describe('GewisAuthenticationController', async (): Promise<void> => {
   let ctx: {
@@ -118,7 +119,7 @@ describe('GewisAuthenticationController', async (): Promise<void> => {
   });
 
   after(async () => {
-    await Database.finish(ctx.connection);
+    await finishTestDB(ctx.connection);
   });
 
   describe('POST /authentication/gewisweb', () => {

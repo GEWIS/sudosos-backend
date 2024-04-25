@@ -48,7 +48,7 @@ import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/u
 import { createValidTransactionRequest } from '../../helpers/transaction-factory';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
 import ContainerRevision from '../../../src/entity/container/container-revision';
-import generateBalance from '../../helpers/test-helpers';
+import generateBalance, { finishTestDB } from '../../helpers/test-helpers';
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import { createInvoiceWithTransfers, createTransactions } from './invoice-service';
 import { truncateAllTables } from '../../setup';
@@ -195,7 +195,7 @@ describe('TransactionService', (): void => {
   });
 
   after(async () => {
-    await Database.finish(ctx.connection);
+    await finishTestDB(ctx.connection);
   });
 
   describe('Get total cost of a transaction', () => {

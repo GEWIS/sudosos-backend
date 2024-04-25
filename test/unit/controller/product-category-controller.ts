@@ -34,6 +34,7 @@ import TokenMiddleware from '../../../src/middleware/token-middleware';
 import ProductCategory from '../../../src/entity/product/product-category';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import { truncateAllTables } from '../../setup';
+import { finishTestDB } from '../../helpers/test-helpers';
 
 /**
  * Tests if a productCategory response is equal to the request.
@@ -152,7 +153,7 @@ describe('ProductCategoryController', async (): Promise<void> => {
 
   // close database connection
   after(async () => {
-    await Database.finish(ctx.connection);
+    await finishTestDB(ctx.connection);
   });
 
   // Unit test cases

@@ -45,6 +45,7 @@ import { CreateContainerRequest, UpdateContainerRequest } from '../../../src/con
 import { INVALID_ORGAN_ID, INVALID_PRODUCT_ID } from '../../../src/controller/request/validators/validation-errors';
 import ContainerRevision from '../../../src/entity/container/container-revision';
 import { truncateAllTables } from '../../setup';
+import { finishTestDB } from '../../helpers/test-helpers';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -226,7 +227,7 @@ describe('ContainerController', async (): Promise<void> => {
 
   // close database connection
   after(async () => {
-    await Database.finish(ctx.connection);
+    await finishTestDB(ctx.connection);
   });
 
   describe('GET /containers', () => {

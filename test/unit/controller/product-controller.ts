@@ -46,6 +46,7 @@ import { DineroObjectRequest } from '../../../src/controller/request/dinero-requ
 import { DiskStorage } from '../../../src/files/storage';
 import VatGroup from '../../../src/entity/vat-group';
 import { truncateAllTables } from '../../setup';
+import { finishTestDB } from '../../helpers/test-helpers';
 
 /**
  * Tests if a product response is equal to the request.
@@ -242,7 +243,7 @@ describe('ProductController', async (): Promise<void> => {
 
   // close database connection
   after(async () => {
-    await Database.finish(ctx.connection);
+    await finishTestDB(ctx.connection);
   });
 
   afterEach(() => {
