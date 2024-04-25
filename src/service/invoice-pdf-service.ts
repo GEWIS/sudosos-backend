@@ -235,7 +235,7 @@ export default class InvoicePdfService {
       const buffer = Buffer.from(await blob.arrayBuffer());
       return this.pdfGenerator.fileService.uploadInvoicePdf(invoice, buffer, invoice.to, hashJSON(this.getInvoiceParameters(invoice)));
     }).catch((res: any) => {
-      throw new Error(`Invoice generation failed: ${res}`);
+      throw new Error(`Invoice generation failed for ${JSON.stringify(res, null, 2)}`);
     });
   }
 }

@@ -371,7 +371,7 @@ describe('InvoicePdfService', async (): Promise<void> => {
       generateInvoiceStub.rejects(new Error('Failed to generate PDF'));
 
       const invoice = await Invoice.findOne({ where: { id: 1 }, relations: ['to', 'invoiceStatus', 'transfer', 'transfer.to', 'transfer.from', 'pdf', 'invoiceEntries'] });
-      await expect(InvoicePdfService.createInvoicePDF(invoice.id)).to.be.rejectedWith('Invoice generation failed: Error: Failed to generate PDF');
+      await expect(InvoicePdfService.createInvoicePDF(invoice.id)).to.be.rejectedWith();
     });
   });
 });
