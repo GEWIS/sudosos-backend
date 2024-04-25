@@ -36,6 +36,10 @@ import Bindings from '../helpers/bindings';
 import AuthenticationService from './authentication-service';
 import WelcomeWithReset from '../mailer/templates/welcome-with-reset';
 import { Brackets } from 'typeorm';
+import DineroTransformer from '../entity/transformer/dinero-transformer';
+import { getLogger } from 'log4js';
+import AccountClosureNotification from '../mailer/templates/account-closure-notification';
+import BalanceService from "./balance-service";
 
 /**
  * Parameters used to filter on Get Users functions.
@@ -182,6 +186,26 @@ export default class UserService {
       });
     }
     return Promise.resolve(this.getSingleUser(user.id));
+  }
+
+  /**
+   *
+   */
+  public static async closeUser(userId: number) {
+    const user = await User.findOne({ where: { id: userId, deleted: false } });
+    if (!user) return undefined;
+    const currentBalance = await BalanceService.getBalance(user.id);
+
+    user.deleted = true;
+    user.active = false;
+    user.acceptedToS = TermsOfServiceStatus.NOT_ACCEPTED;
+    user.canGoIntoDebt = false;
+    await user.save();
+
+    Mailer.getInstance().send(user, new AccountClosureNotification({
+      name: user.firstName,
+      balance:  DineroTransformer.Instance.from(currentBalance.amount.amount),
+    })).catch((e) => getLogger('Transaction').error(e));
   }
 
   /**
