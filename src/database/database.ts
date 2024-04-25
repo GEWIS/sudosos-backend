@@ -70,6 +70,7 @@ import { TransactionSubscriber, TransferSubscriber } from '../subscriber';
 import InvoicePdf from '../entity/file/invoice-pdf';
 import { InvoiceRefactor1707251162194 } from '../migrations/1707251162194-invoice-refactor';
 import dotenv from 'dotenv';
+import { PERSISTENT_TEST_DATABASES } from '../helpers/database';
 
 // We need to load the dotenv to prevent the env from being undefined.
 dotenv.config();
@@ -151,8 +152,6 @@ const options: DataSourceOptions = {
 };
 
 export const AppDataSource = new DataSource(options);
-
-export const PERSISTENT_TEST_DATABASES = new Set(['mysql', 'mariadb']);
 
 function getDefaultConnection(connections: DataSource[]): DataSource | undefined {
   const defaultConnection = connections.find((c) => c.name === 'default');

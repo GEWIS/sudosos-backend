@@ -29,7 +29,7 @@ import log4js from 'log4js';
 import sinonChai from 'sinon-chai';
 import { config } from 'dotenv';
 import { DataSource } from 'typeorm';
-import { PERSISTENT_TEST_DATABASES } from '../src/database/database';
+import { PERSISTENT_TEST_DATABASES } from '../src/helpers/database';
 
 use(chaiAsPromised);
 use(chaiHttp);
