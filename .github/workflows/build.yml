@@ -130,9 +130,6 @@ jobs:
       - run: openssl genrsa -out ./config/jwt.key 2048 && chmod 0777 ./config/jwt.key
       - run: npm run swagger:validate
       - run: npm run coverage-ci # Separate command to limit the number of workers to prevent timeouts
-      - name: "Post Migration test-suite"
-        if: ${{ matrix.typeorm-connection == 'mariadb' }}
-        run: npm run test-ci-migrate
       - run: git config --global --add safe.directory $GITHUB_WORKSPACE # To avoid dubious ownership
         if: ${{ matrix.typeorm-connection == 'mariadb' }}
 
@@ -155,3 +152,33 @@ jobs:
           name: coverage
           path: reports/coverage/
           retention-days: 7
+
+  migration_test:
+    runs-on: ubuntu-latest
+    container:
+      image: node:18
+    services:
+      mariadb:
+        image: mariadb:lts
+        env:
+          MARIADB_RANDOM_ROOT_PASSWORD: true
+          MARIADB_DATABASE: sudosos-ci
+          MARIADB_USER: sudosos-ci
+          MARIADB_PASSWORD: sudosos-ci
+    steps:
+      - uses: actions/checkout@v3
+      - name: Cache and restore node_modules
+        uses: actions/cache@v3
+        with:
+          path: ./node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('./package-lock.json') }}
+      - run: npm install
+      - run: npm run test-ci-migrate
+        env:
+          TYPEORM_CONNECTION: mariadb
+          TYPEORM_HOST: mariadb
+          TYPEORM_PORT: 3306
+          TYPEORM_USERNAME: sudosos-ci
+          TYPEORM_PASSWORD: sudosos-ci
+          TYPEORM_DATABASE: sudosos-ci
+          TYPEORM_SYNCHRONIZE: 'false'
