@@ -167,12 +167,18 @@ jobs:
           MARIADB_PASSWORD: sudosos-ci
     steps:
       - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
       - name: Cache and restore node_modules
+        id: cache-node
         uses: actions/cache@v3
         with:
           path: ./node_modules
           key: ${{ runner.os }}-node-${{ hashFiles('./package-lock.json') }}
       - run: npm install
+        if: steps.cache-node.outputs.cache-hit != 'true'
+      - run: openssl genrsa -out ./config/jwt.key 2048 && chmod 0777 ./config/jwt.key
+      - run: npm run swagger:validate
       - run: npm run test-ci-migrate
         env:
           TYPEORM_CONNECTION: mariadb
