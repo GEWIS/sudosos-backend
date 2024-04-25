@@ -80,12 +80,14 @@ jobs:
             typeorm-username: sudosos-ci
             typeorm-password: sudosos-ci
             typeorm-database: sudosos-ci
+            typeorm-synchronize: 'false'
           - typeorm-connection: sqlite
             typeorm-host: ''
             typeorm-port: ''
             typeorm-username: ''
             typeorm-password: ''
             typeorm-database: local.sqlite
+            typeorm-synchronize: 'true'
     env:
       NODE_ENV: development
       API_HOST: localhost:3000
@@ -101,7 +103,7 @@ jobs:
       TYPEORM_USERNAME: ${{ matrix.typeorm-username }}
       TYPEORM_PASSWORD: ${{ matrix.typeorm-password }}
       TYPEORM_DATABASE: ${{ matrix.typeorm-database }}
-      TYPEORM_SYNCHRONIZE: 0
+      TYPEORM_SYNCHRONIZE: ${{ matrix.typeorm-synchronize }}
       TYPEORM_LOGGING: 0
       LOG_LEVEL: INFO
       RESET_TOKEN_EXPIRES: 3600
