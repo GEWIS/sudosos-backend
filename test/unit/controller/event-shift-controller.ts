@@ -40,6 +40,8 @@ import { EventShiftRequest } from '../../../src/controller/request/event-request
 import EventShiftController from '../../../src/controller/event-shift-controller';
 import { describe } from 'mocha';
 import Event, { EventType } from '../../../src/entity/event/event';
+import { truncateAllTables } from '../../setup';
+import { finishTestDB } from '../../helpers/test-helpers';
 
 describe('EventShiftController', () => {
   let ctx: {
@@ -60,6 +62,7 @@ describe('EventShiftController', () => {
 
   before(async () => {
     const connection = await Database.initialize();
+    await truncateAllTables(connection);
 
     // create dummy users
     const adminUser = {
@@ -151,7 +154,7 @@ describe('EventShiftController', () => {
   });
 
   after(async () => {
-    await ctx.connection.destroy();
+    await finishTestDB(ctx.connection);
   });
 
   describe('GET /eventshifts', () => {

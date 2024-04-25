@@ -40,6 +40,8 @@ import RoleManager from '../../../src/rbac/role-manager';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import { VatDeclarationResponse } from '../../../src/controller/response/vat-group-response';
+import { truncateAllTables } from '../../setup';
+import { finishTestDB } from '../../helpers/test-helpers';
 
 describe('VatGroupController', () => {
   let ctx: {
@@ -58,6 +60,7 @@ describe('VatGroupController', () => {
 
   before(async () => {
     const connection = await Database.initialize();
+    await truncateAllTables(connection);
 
     const user = await User.save({
       id: 1,
@@ -130,8 +133,7 @@ describe('VatGroupController', () => {
   });
 
   after(async () => {
-    await ctx.connection.dropDatabase();
-    await ctx.connection.close();
+    await finishTestDB(ctx.connection);
   });
 
   describe('GET /vatgroups', () => {

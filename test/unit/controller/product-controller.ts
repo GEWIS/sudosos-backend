@@ -45,6 +45,8 @@ import ProductController from '../../../src/controller/product-controller';
 import { DineroObjectRequest } from '../../../src/controller/request/dinero-request';
 import { DiskStorage } from '../../../src/files/storage';
 import VatGroup from '../../../src/entity/vat-group';
+import { truncateAllTables } from '../../setup';
+import { finishTestDB } from '../../helpers/test-helpers';
 
 /**
  * Tests if a product response is equal to the request.
@@ -91,6 +93,7 @@ describe('ProductController', async (): Promise<void> => {
   before(async () => {
     // initialize test database
     const connection = await Database.initialize();
+    await truncateAllTables(connection);
 
     // create dummy users
     const adminUser = {
@@ -240,8 +243,7 @@ describe('ProductController', async (): Promise<void> => {
 
   // close database connection
   after(async () => {
-    await ctx.connection.dropDatabase();
-    await ctx.connection.close();
+    await finishTestDB(ctx.connection);
   });
 
   afterEach(() => {
@@ -414,7 +416,7 @@ describe('ProductController', async (): Promise<void> => {
         .post('/products')
         .set('Authorization', `Bearer ${ctx.organMemberToken}`)
         .send(ctx.validCreateProductReq);
-      console.error(res.body);
+
       expect(res.status).to.equal(200);
       const body = res.body as ProductResponse;
       expect(ctx.specification.validateModel(

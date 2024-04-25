@@ -184,6 +184,15 @@ export default class BalanceService {
   public static async getBalances({
     ids, date, minBalance, maxBalance, hasFine, minFine, maxFine, userTypes, orderDirection, orderBy,
   }: GetBalanceParameters, pagination: PaginationParameters = {}): Promise<PaginatedBalanceResponse> {
+    // Return the empty response if request has no ids.
+    if (ids?.length === 0) {
+      const { take, skip } = pagination;
+      return {
+        _pagination: { take, skip, count: 0 },
+        records: [],
+      };
+    }
+
     const connection = getConnection();
 
     const parameters: any[] = [];

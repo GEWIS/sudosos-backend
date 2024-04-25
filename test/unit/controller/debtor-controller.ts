@@ -54,6 +54,8 @@ import { calculateBalance, calculateFine } from '../../helpers/balance';
 import Mailer from '../../../src/mailer';
 import sinon, { SinonSandbox, SinonSpy } from 'sinon';
 import nodemailer, { Transporter } from 'nodemailer';
+import { truncateAllTables } from '../../setup';
+import { finishTestDB } from '../../helpers/test-helpers';
 
 describe('DebtorController', () => {
   let ctx: {
@@ -83,6 +85,7 @@ describe('DebtorController', () => {
   before(async () => {
     // initialize test database
     const connection = await Database.initialize();
+    await truncateAllTables(connection);
 
     // create dummy users
     const adminUser = {
@@ -180,9 +183,8 @@ describe('DebtorController', () => {
   });
 
   // close database connection
-  after(async () => {
-    await ctx.connection.dropDatabase();
-    await ctx.connection.destroy();
+  after( async () => {
+    await finishTestDB(ctx.connection);
     sandbox.restore();
   });
 
@@ -217,6 +219,7 @@ describe('DebtorController', () => {
       expect(res.status).to.equal(200);
 
       const events = res.body.records as BaseFineHandoutEventResponse[];
+
       expect(events).to.be.sortedBy('createdAt', { descending: true });
     });
     it('should return forbidden if not admin', async () => {
@@ -477,12 +480,12 @@ describe('DebtorController', () => {
         .send({ userIds: ctx.users.map((u) => u.id), referenceDate: ['InvalidDate'] });
       expect(res.status).to.equal(400);
     });
-    it('should return empty list of fines if no userIds given', async () => {
+    it('should return empty list of fines if no userIds given', async function () {
       const res = await request(ctx.app)
         .post('/fines/handout')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send({ userIds: [], referenceDate: new Date()  });
-      expect(res.status).to. equal(200);
+      expect(res.status).to.equal(200);
 
       const fineHandoutEventResponse = res.body as FineHandoutEventResponse;
       expect(fineHandoutEventResponse.fines.length).to.equal(0);

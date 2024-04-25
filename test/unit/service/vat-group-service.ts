@@ -33,6 +33,8 @@ import {
 } from '../../seed';
 import VatGroupService from '../../../src/service/vat-group-service';
 import { VatDeclarationResponse } from '../../../src/controller/response/vat-group-response';
+import { truncateAllTables } from '../../setup';
+import { finishTestDB } from '../../helpers/test-helpers';
 
 describe('VatGroupService', () => {
   let ctx: {
@@ -45,6 +47,7 @@ describe('VatGroupService', () => {
 
   before(async () => {
     const connection = await Database.initialize();
+    await truncateAllTables(connection);
     const users = await seedUsers();
     const vatGroups = await seedVatGroups();
     const categories = await seedProductCategories();
@@ -70,8 +73,7 @@ describe('VatGroupService', () => {
   });
 
   after(async () => {
-    await ctx.connection.dropDatabase();
-    await ctx.connection.close();
+    await finishTestDB(ctx.connection);
   });
 
   describe('Get VAT groups', () => {

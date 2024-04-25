@@ -29,3 +29,5 @@ export default function wrapInManager<T>(transactionFunction:
     async (manager) => Promise.resolve(transactionFunction(manager, ...arg)),
   ));
 }
+
+export const PERSISTENT_TEST_DATABASES = new Set(['mysql', 'mariadb']);

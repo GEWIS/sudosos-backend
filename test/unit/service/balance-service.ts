@@ -50,6 +50,8 @@ import { addTransaction, addTransfer } from '../../helpers/transaction-helpers';
 import { calculateBalance } from '../../helpers/balance';
 import Fine from '../../../src/entity/fine/fine';
 import BalanceResponse from '../../../src/controller/response/balance-response';
+import { truncateAllTables } from '../../setup';
+import { finishTestDB } from '../../helpers/test-helpers';
 
 describe('BalanceService', (): void => {
   let ctx: {
@@ -69,6 +71,7 @@ describe('BalanceService', (): void => {
   before(async function test(): Promise<void> {
     this.timeout(50000);
     const connection = await Database.initialize();
+    await truncateAllTables(connection);
     const app = express();
     const seededUsers = await seedUsers();
     const categories = await seedProductCategories();
@@ -98,8 +101,7 @@ describe('BalanceService', (): void => {
   });
 
   after(async () => {
-    await ctx.connection.dropDatabase();
-    await ctx.connection.destroy();
+    await finishTestDB(ctx.connection);
   });
 
   async function checkFine(balance: BalanceResponse, user: User) {

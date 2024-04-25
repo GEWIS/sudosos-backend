@@ -32,6 +32,8 @@ import TokenMiddleware from '../../../src/middleware/token-middleware';
 import { StripeRequest } from '../../../src/controller/request/stripe-request';
 import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
 import { StripePaymentIntentResponse } from '../../../src/controller/response/stripe-response';
+import { truncateAllTables } from '../../setup';
+import { finishTestDB } from '../../helpers/test-helpers';
 
 describe('StripeController', async (): Promise<void> => {
   let shouldSkip: boolean;
@@ -56,6 +58,7 @@ describe('StripeController', async (): Promise<void> => {
     if (shouldSkip) this.skip();
 
     const connection = await Database.initialize();
+    await truncateAllTables(connection);
 
     // create dummy users
     const adminUser = {
@@ -144,8 +147,7 @@ describe('StripeController', async (): Promise<void> => {
 
   after(async () => {
     if (shouldSkip) return;
-    await ctx.connection.dropDatabase();
-    await ctx.connection.close();
+    await finishTestDB(ctx.connection);
   });
 
   describe('POST /deposit', () => {

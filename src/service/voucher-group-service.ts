@@ -45,7 +45,7 @@ export default class VoucherGroupService {
     const startDate = new Date(req.activeStartDate);
     startDate.setHours(0, 0, 0, 0);
     const endDate = new Date(req.activeEndDate);
-    endDate.setHours(23, 59, 59, 999);
+    endDate.setHours(23, 59, 59, 0);
     return {
       ...req,
       balance: DineroTransformer.Instance.from(req.balance.amount),

@@ -24,6 +24,8 @@ import BaseFile from '../../../../src/entity/file/base-file';
 import User from '../../../../src/entity/user/user';
 import { seedUsers } from '../../../seed';
 import Database from '../../../../src/database/database';
+import { truncateAllTables } from '../../../setup';
+import { finishTestDB } from '../../../helpers/test-helpers';
 
 const workdir = './imaginary/directory';
 
@@ -39,6 +41,7 @@ describe('Disk Storage', async () => {
 
   before(async () => {
     const connection = await Database.initialize();
+    await truncateAllTables(connection);
 
     const users = await seedUsers();
 
@@ -78,8 +81,7 @@ describe('Disk Storage', async () => {
   });
 
   after(async () => {
-    await ctx.connection.dropDatabase();
-    await ctx.connection.close();
+    await finishTestDB(ctx.connection);
   });
 
   describe('saveFile', async () => {

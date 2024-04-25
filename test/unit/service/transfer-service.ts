@@ -40,6 +40,8 @@ import {
   seedVatGroups,
 } from '../../seed';
 import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
+import { truncateAllTables } from '../../setup';
+import { finishTestDB } from '../../helpers/test-helpers';
 
 describe('TransferService', async (): Promise<void> => {
   let ctx: {
@@ -51,6 +53,7 @@ describe('TransferService', async (): Promise<void> => {
   };
   before(async () => {
     const connection = await Database.initialize();
+    await truncateAllTables(connection);
 
     const begin = new Date('1950-02-12T01:57:45.271Z');
     const end = new Date('2001-02-12T01:57:45.271Z');
@@ -86,8 +89,7 @@ describe('TransferService', async (): Promise<void> => {
     };
   });
   after(async () => {
-    await ctx.connection.dropDatabase();
-    await ctx.connection.close();
+    await finishTestDB(ctx.connection);
   });
   describe('getTransfers function', async (): Promise<void> => {
     it('should return all transfers', async () => {

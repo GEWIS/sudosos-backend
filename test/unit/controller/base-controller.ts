@@ -29,6 +29,8 @@ import TokenHandler from '../../../src/authentication/token-handler';
 import { UserFactory } from '../../helpers/user-factory';
 import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
+import { truncateAllTables } from '../../setup';
+import { finishTestDB } from '../../helpers/test-helpers';
 
 class TestController extends BaseController {
   // eslint-disable-next-line class-methods-use-this
@@ -98,6 +100,7 @@ describe('BaseController', (): void => {
   before(async () => {
     // Initialize context
     const connection = await Database.initialize();
+    await truncateAllTables(connection);
 
     ctx = {
       connection,
@@ -140,8 +143,7 @@ describe('BaseController', (): void => {
   });
 
   after(async () => {
-    await ctx.connection.dropDatabase();
-    await ctx.connection.close();
+    await finishTestDB(ctx.connection);
   });
 
   describe('#handle', () => {

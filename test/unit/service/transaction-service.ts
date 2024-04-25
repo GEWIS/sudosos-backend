@@ -48,9 +48,10 @@ import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/u
 import { createValidTransactionRequest } from '../../helpers/transaction-factory';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
 import ContainerRevision from '../../../src/entity/container/container-revision';
-import generateBalance from '../../helpers/test-helpers';
+import generateBalance, { finishTestDB } from '../../helpers/test-helpers';
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import { createInvoiceWithTransfers, createTransactions } from './invoice-service';
+import { truncateAllTables } from '../../setup';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -72,6 +73,7 @@ describe('TransactionService', (): void => {
     const logger: Logger = log4js.getLogger('TransactionServiceTest');
     logger.level = 'ALL';
     const connection = await Database.initialize();
+    await truncateAllTables(connection);
 
     const app = express();
     const users = await seedUsers();
@@ -193,8 +195,7 @@ describe('TransactionService', (): void => {
   });
 
   after(async () => {
-    await ctx.connection.dropDatabase();
-    await ctx.connection.close();
+    await finishTestDB(ctx.connection);
   });
 
   describe('Get total cost of a transaction', () => {

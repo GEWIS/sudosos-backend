@@ -16,48 +16,41 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { config } from 'dotenv';
-import log4js from 'log4js';
-import dinero, { Currency } from 'dinero.js';
-import Database from './database';
 import { Application } from '../index';
-import seedDatabase from '../../test/seed';
-import initializeDiskStorage from '../files/initialize';
-import BalanceService from '../service/balance-service';
-import { truncateAllTables } from '../../test/setup';
+import log4js from 'log4js';
+import Database from './database';
 
-export default async function createApp() {
+export default async function migrate() {
   const application = new Application();
-  application.logger = log4js.getLogger('Seeder');
+  application.logger = log4js.getLogger('Migration');
   application.logger.level = process.env.LOG_LEVEL;
-  application.logger.info('Starting Seeder');
+  application.logger.info('Starting Migrator');
 
   application.connection = await Database.initialize();
-  await truncateAllTables(application.connection);
 
   // Silent in-dependency logs unless really wanted by the environment.
   const logger = log4js.getLogger('Console');
   logger.level = process.env.LOG_LEVEL;
   console.log = (message: any, ...additional: any[]) => logger.debug(message, ...additional);
 
-  // Set up monetary value configuration.
-  dinero.defaultCurrency = process.env.CURRENCY_CODE as Currency;
-  dinero.defaultPrecision = parseInt(process.env.CURRENCY_PRECISION, 10);
-
-  initializeDiskStorage();
-
   try {
+    application.logger.log('Starting synchronize + migrations.');
     await application.connection.synchronize();
-    await seedDatabase();
-    await BalanceService.updateBalances({});
-    application.logger.info('Seeding successful');
+    await application.connection.runMigrations({ transaction: 'all', fake: true });
+    await application.connection.undoLastMigration({ transaction: 'all' });
+    await application.connection.runMigrations({ transaction: 'all' });
+    await application.connection.close();
+    application.logger.log('Finished synchronize + migrations.');
   } catch (e) {
-    application.logger.error('Seeding failed', e);
+    application.logger.error('Error migrating db', e);
   }
 }
 
-if (require.main === module) {
+// Only allow in test environment, for production use CLI.
+if (require.main === module || process.env.NODE_ENV === 'test') {
   // Only execute the application directly if this is the main execution file.
   config();
+  if (process.env.TYPEORM_CONNECTION === 'sqlite') console.warn('Migrations in sqlite most likely have no effect.');
   // eslint-disable-next-line @typescript-eslint/no-floating-promises
-  createApp();
+  migrate();
 }

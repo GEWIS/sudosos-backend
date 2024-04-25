@@ -42,6 +42,8 @@ import {
 import AuthenticationService from '../../../src/service/authentication-service';
 import MemberAuthenticator from '../../../src/entity/authenticator/member-authenticator';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
+import { truncateAllTables } from '../../setup';
+import { finishTestDB } from '../../helpers/test-helpers';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -90,6 +92,7 @@ describe('PointOfSaleService', async (): Promise<void> => {
     this.timeout(5000);
 
     const connection = await Database.initialize();
+    await truncateAllTables(connection);
 
     const users = await seedUsers();
     const categories = await seedProductCategories();
@@ -127,8 +130,7 @@ describe('PointOfSaleService', async (): Promise<void> => {
   });
 
   after(async () => {
-    await ctx.connection.dropDatabase();
-    await ctx.connection.close();
+    await finishTestDB(ctx.connection);
   });
 
   describe('getPointsOfSale function', () => {

@@ -41,7 +41,7 @@ import {
 } from '../../../src/controller/request/point-of-sale-request';
 import { INVALID_CONTAINER_ID } from '../../../src/controller/request/validators/validation-errors';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
-import { defaultContext, DefaultContext, defaultTokens } from '../../helpers/test-helpers';
+import { defaultContext, DefaultContext, defaultTokens, finishTestDB } from '../../helpers/test-helpers';
 import { ORGAN_USER, UserFactory } from '../../helpers/user-factory';
 import { allDefinition, organDefinition, ownDefintion, RoleFactory } from '../../helpers/role-factory';
 import { UpdateContainerRequest } from '../../../src/controller/request/container-request';
@@ -158,8 +158,7 @@ describe('PointOfSaleController', async () => {
   });
 
   after(async () => {
-    await ctx.connection.dropDatabase();
-    await ctx.connection.close();
+    await finishTestDB(ctx.connection);
   });
 
   describe('PATCH /pointsofsale/{id}', () => {

@@ -28,6 +28,8 @@ import dinero from 'dinero.js';
 import log4js from 'log4js';
 import sinonChai from 'sinon-chai';
 import { config } from 'dotenv';
+import { DataSource } from 'typeorm';
+import { PERSISTENT_TEST_DATABASES } from '../src/helpers/database';
 
 use(chaiAsPromised);
 use(chaiHttp);
@@ -36,11 +38,15 @@ use(sinonChai);
 use(chaiSorted);
 use(deepEqualInAnyOrder);
 
+config();
 process.env.NODE_ENV = 'test';
-process.env.HTTP_PORT = '3001';
-process.env.TYPEORM_CONNECTION = 'sqlite';
-process.env.TYPEORM_DATABASE = ':memory:';
-process.env.TYPEORM_SYNCHRONIZE = 'true';
+if (!process.env.TYPEORM_CONNECTION || (process.env.TYPEORM_CONNECTION === 'sqlite' && !(process.env.SKIP_SQLITE_DEFAULTS === 'true'))) {
+  console.log('Setting sqlite defaults');
+  process.env.HTTP_PORT = '3001';
+  process.env.TYPEORM_CONNECTION = 'sqlite';
+  process.env.TYPEORM_DATABASE = ':memory:';
+  process.env.TYPEORM_SYNCHRONIZE = 'true';
+}
 
 dinero.defaultCurrency = 'EUR';
 dinero.defaultPrecision = 2;
@@ -49,7 +55,6 @@ dinero.defaultPrecision = 2;
 const logger = log4js.getLogger('Console');
 logger.level = process.env.LOG_LEVEL;
 console.log = (message: any, ...additional: any[]) => logger.debug(message, ...additional);
-config();
 
 /**
  * Generates a basic RSA keypair.
@@ -73,4 +78,42 @@ export async function generateKeys(): Promise<{ publicKey: string, privateKey: s
  */
 export function sourceFile(file: string) {
   return file.replace('out/test/', 'test/').replace('.js', '.ts');
+}
+
+
+// We should only ever truncate in test.
+// For non-persistent databases (sqlite) we can just drop them.
+function shouldTruncate(): boolean {
+  if (process.env.NODE_ENV !== 'test') return false;
+  return PERSISTENT_TEST_DATABASES.has(process.env.TYPEORM_CONNECTION);
+}
+
+export async function truncateAllTables(dataSource: DataSource): Promise<void> {
+  if (!shouldTruncate()) return;
+
+  console.log('Starting truncation of all tables...');
+  const queryRunner = dataSource.createQueryRunner();
+
+  await queryRunner.connect();
+
+  try {
+    await queryRunner.query('SET FOREIGN_KEY_CHECKS = 0;'); // Disable FK checks to avoid issues
+
+    // Retrieve all table names except for system tables (if any)
+    const tables = await queryRunner.query('SHOW FULL TABLES WHERE Table_type = \'BASE TABLE\';');
+
+    for (const table of tables) {
+      const tableName = table[Object.keys(table)[0]]; // Gets table name dynamically
+      console.log(`Truncating table: ${tableName}`);
+      await queryRunner.query(`TRUNCATE TABLE \`${tableName}\`;`);
+    }
+
+    await queryRunner.query('SET FOREIGN_KEY_CHECKS = 1;'); // Re-enable FK checks
+    console.log('All tables truncated successfully.');
+  } catch (err) {
+    console.error('Failed to truncate tables:', err);
+    throw err;
+  } finally {
+    await queryRunner.release();
+  }
 }

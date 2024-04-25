@@ -44,6 +44,8 @@ import InvoiceEntry from '../../../src/entity/invoices/invoice-entry';
 import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
 import Transfer from '../../../src/entity/transactions/transfer';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
+import { truncateAllTables } from '../../setup';
+import { finishTestDB } from '../../helpers/test-helpers';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -62,6 +64,7 @@ describe('InvoicePdfService', async (): Promise<void> => {
   before(async function test(): Promise<void> {
     this.timeout(50000);
     const connection = await Database.initialize();
+    await truncateAllTables(connection);
 
     const users = await seedUsers();
     const categories = await seedProductCategories();
@@ -113,8 +116,7 @@ describe('InvoicePdfService', async (): Promise<void> => {
   });
 
   after(async () => {
-    await ctx.connection.dropDatabase();
-    await ctx.connection.destroy();
+    await finishTestDB(ctx.connection);
   });
 
   let generateInvoiceStub: SinonStub;

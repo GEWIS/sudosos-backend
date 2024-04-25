@@ -80,12 +80,14 @@ jobs:
             typeorm-username: sudosos-ci
             typeorm-password: sudosos-ci
             typeorm-database: sudosos-ci
+            typeorm-synchronize: 'false'
           - typeorm-connection: sqlite
             typeorm-host: ''
             typeorm-port: ''
             typeorm-username: ''
             typeorm-password: ''
             typeorm-database: local.sqlite
+            typeorm-synchronize: 'true'
     env:
       NODE_ENV: development
       API_HOST: localhost:3000
@@ -101,7 +103,7 @@ jobs:
       TYPEORM_USERNAME: ${{ matrix.typeorm-username }}
       TYPEORM_PASSWORD: ${{ matrix.typeorm-password }}
       TYPEORM_DATABASE: ${{ matrix.typeorm-database }}
-      TYPEORM_SYNCHRONIZE: 0
+      TYPEORM_SYNCHRONIZE: ${{ matrix.typeorm-synchronize }}
       TYPEORM_LOGGING: 0
       LOG_LEVEL: INFO
       RESET_TOKEN_EXPIRES: 3600
@@ -109,6 +111,10 @@ jobs:
       ENABLE_LDAP: true
       PAGINATION_DEFAULT: 20
       PAGINATION_MAX: 500
+      STRIPE_PUBLIC_KEY: ${{ secrets.STRIPE_SUDOSOS_TEST_KEY }}
+      STRIPE_PRIVATE_KEY: ${{ secrets.STRIPE_SUDOSOS_TEST_KEY }}
+      STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_TEST_SECRET }}
+      SKIP_SQLITE_DEFAULTS: true
     steps:
       - uses: actions/checkout@v3
         with:
@@ -124,6 +130,9 @@ jobs:
       - run: openssl genrsa -out ./config/jwt.key 2048 && chmod 0777 ./config/jwt.key
       - run: npm run swagger:validate
       - run: npm run coverage-ci # Separate command to limit the number of workers to prevent timeouts
+      - name: "Post Migration test-suite"
+        if: ${{ matrix.typeorm-connection == 'mariadb' }}
+        run: npm run test-ci-migrate
       - run: git config --global --add safe.directory $GITHUB_WORKSPACE # To avoid dubious ownership
         if: ${{ matrix.typeorm-connection == 'mariadb' }}
 

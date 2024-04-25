@@ -55,6 +55,8 @@ import Transaction from '../../../src/entity/transactions/transaction';
 import Transfer from '../../../src/entity/transactions/transfer';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import InvoiceUser from '../../../src/entity/user/invoice-user';
+import { truncateAllTables } from '../../setup';
+import { finishTestDB } from '../../helpers/test-helpers';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -119,7 +121,6 @@ export async function createTransactions(debtorId: number, creditorId: number, t
   const transactions: TransactionRequest[] = await createTransactionRequest(
     debtorId, creditorId, transactionCount,
   );
-  await new Promise((f) => setTimeout(f, 100));
   return Promise.resolve(requestToTransaction(transactions));
 }
 
@@ -127,7 +128,6 @@ export async function
 createInvoiceWithTransfers(debtorId: number, creditorId: number,
   transactionCount: number) {
   const { transactions } = await createTransactions(debtorId, creditorId, transactionCount);
-  await new Promise((f) => setTimeout(f, 1000));
 
   const createInvoiceRequest: CreateInvoiceParams = {
     city: 'city',
@@ -144,7 +144,6 @@ createInvoiceWithTransfers(debtorId: number, creditorId: number,
   };
 
   const invoice = await InvoiceService.createInvoice(createInvoiceRequest);
-  await new Promise((f) => setTimeout(f, 100));
   expect((await BalanceService.getBalance(debtorId)).amount.amount).is.equal(0);
   return invoice;
 }
@@ -161,6 +160,7 @@ describe('InvoiceService', () => {
   before(async function test(): Promise<void> {
     this.timeout(50000);
     const connection = await Database.initialize();
+    await truncateAllTables(connection);
 
     const users = await seedUsers();
     const categories = await seedProductCategories();
@@ -201,8 +201,7 @@ describe('InvoiceService', () => {
 
   // close database connection
   after(async () => {
-    await ctx.connection.dropDatabase();
-    await ctx.connection.close();
+    await finishTestDB(ctx.connection);
   });
 
   describe('getInvoices function', () => {
@@ -381,7 +380,6 @@ describe('InvoiceService', () => {
         async (debtor: User, creditor: User) => {
           // Spent money and create an invoice.
           await createInvoiceWithTransfers(debtor.id, creditor.id, 3);
-          await new Promise((f) => setTimeout(f, 2000));
 
           const createInvoiceRequest: CreateInvoiceParams = {
             byId: creditor.id,
@@ -400,11 +398,13 @@ describe('InvoiceService', () => {
           const transactionRequests: TransactionRequest[] =
                         await createTransactionRequest(debtor.id, creditor.id, 2);
 
+          await new Promise((f) => setTimeout(f, 1000));
+
           const { total } = await requestToTransaction(
             transactionRequests,
           );
 
-          await new Promise((f) => setTimeout(f, 2000));
+          await new Promise((f) => setTimeout(f, 1000));
 
           const invoice = await InvoiceService.createInvoice(
             createInvoiceRequest,

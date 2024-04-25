@@ -39,13 +39,14 @@ import { expect } from 'chai';
 import { addTransfer } from '../../helpers/transaction-helpers';
 import BalanceService from '../../../src/service/balance-service';
 import Fine from '../../../src/entity/fine/fine';
-import FineHandoutEvent from '../../../src/entity/fine/fineHandoutEvent';
 import UserFineGroup from '../../../src/entity/fine/userFineGroup';
 import { calculateBalance, calculateFine } from '../../helpers/balance';
 import { FineHandoutEventResponse } from '../../../src/controller/response/debtor-response';
 import sinon, { SinonSandbox, SinonSpy } from 'sinon';
 import nodemailer, { Transporter } from 'nodemailer';
 import Mailer from '../../../src/mailer';
+import { truncateAllTables } from '../../setup';
+import { finishTestDB } from '../../helpers/test-helpers';
 
 describe('DebtorService', (): void => {
   let ctx: {
@@ -68,6 +69,7 @@ describe('DebtorService', (): void => {
 
   before(async () => {
     const connection = await Database.initialize();
+    await truncateAllTables(connection);
 
     const users = await seedUsers();
     const categories = await seedProductCategories();
@@ -106,8 +108,7 @@ describe('DebtorService', (): void => {
   });
 
   after(async () => {
-    await ctx.connection.dropDatabase();
-    await ctx.connection.destroy();
+    await finishTestDB(ctx.connection);
     sandbox.restore();
   });
 
@@ -335,8 +336,22 @@ describe('DebtorService', (): void => {
 
       await Fine.clear();
       await Transfer.remove(fineTransfers);
-      await FineHandoutEvent.clear();
-      await UserFineGroup.clear();
+
+      // Truncate instead of clear otherwise; mysql fails.
+      const queryRunner = ctx.connection.createQueryRunner();
+      await queryRunner.connect();
+      try {
+        await queryRunner.startTransaction();
+        await queryRunner.query('SET FOREIGN_KEY_CHECKS = 0');
+        await queryRunner.query('TRUNCATE TABLE `FineHandoutEvent`');
+        await queryRunner.query('TRUNCATE TABLE `UserFineGroup`');
+        await queryRunner.query('SET FOREIGN_KEY_CHECKS = 1');
+        await queryRunner.commitTransaction();
+      } catch (error) {
+        await queryRunner.rollbackTransaction();
+      } finally {
+        await queryRunner.release();
+      }
     }
 
     before(async () => {
@@ -444,7 +459,7 @@ describe('DebtorService', (): void => {
       expect(ids).to.include(fineHandoutEvent1.fines[0].id);
       expect(ids).to.include(fineHandoutEvent2.fines[0].id);
     });
-    it('should create no fines if empty list of userIds is given', async () => {
+    it('should create no fines if empty list of userIds is given', async function () {
       const fineHandoutEvent = await DebtorService.handOutFines({ userIds: [], referenceDate: new Date() }, ctx.actor);
 
       expect(fineHandoutEvent.fines.length).to.equal(0);

@@ -32,7 +32,7 @@ import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import GewisUser from '../../../src/gewis/entity/gewis-user';
 import Gewis from '../../../src/gewis/gewis';
 import wrapInManager from '../../../src/helpers/database';
-import { restoreLDAPEnv, storeLDAPEnv } from '../../helpers/test-helpers';
+import { finishTestDB, restoreLDAPEnv, storeLDAPEnv } from '../../helpers/test-helpers';
 import Bindings from '../../../src/helpers/bindings';
 import TokenHandler from '../../../src/authentication/token-handler';
 import RoleManager from '../../../src/rbac/role-manager';
@@ -40,6 +40,7 @@ import UserController from '../../../src/controller/user-controller';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import { PaginatedUserResponse } from '../../../src/controller/response/user-response';
 import { GewisUserResponse } from '../../../src/gewis/controller/response/gewis-user-response';
+import { truncateAllTables } from '../../setup';
 
 describe('GEWIS Helper functions', async (): Promise<void> => {
   let ctx: {
@@ -67,6 +68,7 @@ describe('GEWIS Helper functions', async (): Promise<void> => {
     process.env.LDAP_BIND_PW = 'BIND PW';
 
     const connection = await Database.initialize();
+    await truncateAllTables(connection);
     const app = express();
     await seedDatabase();
 
@@ -153,8 +155,7 @@ describe('GEWIS Helper functions', async (): Promise<void> => {
   });
 
   after(async () => {
-    await ctx.connection.dropDatabase();
-    await ctx.connection.close();
+    await finishTestDB(ctx.connection);
     restoreLDAPEnv(ldapEnvVariables);
   });
 

@@ -76,6 +76,7 @@ export default class ProductRevision extends BaseEntityWithoutId {
 
   @Column({
     type: 'decimal',
+    precision: 5,
     scale: 2,
   })
   public alcoholPercentage: number;

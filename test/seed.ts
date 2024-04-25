@@ -359,11 +359,13 @@ export async function seedEvents(rolesWithUsers: AssignedRole[]) {
   const events: Event[] = [];
   const eventShifts = await seedEventShifts();
   const eventShiftAnswers: EventShiftAnswer[] = [];
-  for (let i = 0; i < 5; i += 1) {
+  for (let i = 1; i < 6; i += 1) {
     // const startDate = getRandomDate(new Date(), new Date(new Date().getTime() + 1000 * 60 * 60 * 24 * 365));
     const startDate = new Date(new Date().getTime() + ((i * 1000000) % (3600 * 24 * 365)) * 1000 + 60000);
+    startDate.setMilliseconds(0);
     // Add 2,5 hours
     const endDate = new Date(startDate.getTime() + (1000 * 60 * 60 * 2.5));
+    endDate.setMilliseconds(0);
 
     const event = Object.assign(new Event(), {
       name: `${i}-Testborrel-${i}`,
@@ -938,7 +940,6 @@ export async function seedTransactions(
   let startSubTransaction = 0;
   let startRow = 0;
 
-  const promises: Promise<any>[] = [];
   for (let i = 0; i < pointOfSaleRevisions.length; i += 1) {
     const pos = pointOfSaleRevisions[i];
 
@@ -970,30 +971,24 @@ export async function seedTransactions(
     }
 
     // First, save all transactions.
-    const promise = Transaction.save(trans)
+    await Transaction.save(trans)
       .then(async () => {
         // Then, save all subtransactions for the transactions.
-        const subPromises: Promise<any>[] = [];
-        trans.forEach((t) => {
-          subPromises.push(SubTransaction.save(t.subTransactions));
-        });
-        await Promise.all(subPromises);
+        // const subPromises: Promise<any>[] = [];
+        for (let j = trans.length - 1; j >= 0; j--) {
+          await SubTransaction.save(trans[j].subTransactions);
+        }
       }).then(async () => {
         // Then, save all subtransactions rows for the subtransactions.
-        const subPromises: Promise<any>[] = [];
-        trans.forEach((t) => {
-          t.subTransactions.forEach((s) => {
-            subPromises.push(SubTransactionRow.save(s.subTransactionRows));
-          });
-        });
-        await Promise.all(subPromises);
+        for (let j = trans.length - 1; j >= 0; j--) {
+          for (let k = trans[j].subTransactions.length - 1; k >= 0; k--) {
+            await SubTransactionRow.save(trans[j].subTransactions[k].subTransactionRows);
+          }
+        }
       });
-    promises.push(promise);
 
     transactions = transactions.concat(trans);
   }
-  await Promise.all(promises);
-
   return { transactions };
 }
 

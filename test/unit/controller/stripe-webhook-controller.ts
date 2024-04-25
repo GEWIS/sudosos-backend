@@ -29,6 +29,8 @@ import RoleManager from '../../../src/rbac/role-manager';
 import StripeWebhookController from '../../../src/controller/stripe-webhook-controller';
 import StripeService, { STRIPE_API_VERSION } from '../../../src/service/stripe-service';
 import { extractRawBody } from '../../../src/helpers/raw-body';
+import { truncateAllTables } from '../../setup';
+import { finishTestDB } from '../../helpers/test-helpers';
 
 describe('StripeWebhookController', async (): Promise<void> => {
   let shouldSkip: boolean;
@@ -52,6 +54,7 @@ describe('StripeWebhookController', async (): Promise<void> => {
     if (shouldSkip) this.skip();
 
     const connection = await Database.initialize();
+    await truncateAllTables(connection);
 
     // start app
     const app = express();
@@ -116,8 +119,7 @@ describe('StripeWebhookController', async (): Promise<void> => {
 
   after(async () => {
     if (shouldSkip) return;
-    await ctx.connection.dropDatabase();
-    await ctx.connection.close();
+    await finishTestDB(ctx.connection);
   });
 
   afterEach(() => {

@@ -35,7 +35,8 @@ import { LDAPGroup, LDAPResponse, LDAPUser } from '../../../src/helpers/ad';
 import userIsAsExpected from './authentication-service';
 import RoleManager from '../../../src/rbac/role-manager';
 import AssignedRole from '../../../src/entity/roles/assigned-role';
-import { restoreLDAPEnv, storeLDAPEnv } from '../../helpers/test-helpers';
+import { finishTestDB, restoreLDAPEnv, storeLDAPEnv } from '../../helpers/test-helpers';
+import { truncateAllTables } from '../../setup';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -68,6 +69,7 @@ describe('AD Service', (): void => {
     process.env.LDAP_USER_BASE = 'CN=PRIV - SudoSOS Users,OU=SudoSOS Roles,OU=Groups,DC=gewiswg,DC=gewis,DC=nl';
 
     const connection = await Database.initialize();
+    await truncateAllTables(connection);
     const app = express();
     await seedUsers();
 
@@ -101,8 +103,7 @@ describe('AD Service', (): void => {
 
   after(async () => {
     restoreLDAPEnv(ldapEnvVariables);
-    await ctx.connection.dropDatabase();
-    await ctx.connection.close();
+    await finishTestDB(ctx.connection);
   });
 
   afterEach(async () => {

@@ -27,6 +27,8 @@ import Database from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
 import RoleManager from '../../../src/rbac/role-manager';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
+import { truncateAllTables } from '../../setup';
+import { finishTestDB } from '../../helpers/test-helpers';
 
 describe('AuthenticationSecureController', () => {
   let ctx: {
@@ -39,8 +41,9 @@ describe('AuthenticationSecureController', () => {
     token: string;
   };
 
-  beforeEach(async () => {
+  before(async () => {
     const connection = await Database.initialize();
+    await truncateAllTables(connection);
 
     const user = await User.save({
       id: 1,
@@ -78,8 +81,7 @@ describe('AuthenticationSecureController', () => {
   });
 
   after(async () => {
-    await ctx.connection.dropDatabase();
-    await ctx.connection.close();
+    await finishTestDB(ctx.connection);
   });
 
   describe('GET /authentication/refreshToken', () => {

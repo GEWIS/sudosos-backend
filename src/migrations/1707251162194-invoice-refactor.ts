@@ -23,6 +23,24 @@ export class InvoiceRefactor1707251162194 implements MigrationInterface {
       name: 'invoice_pdf',
       columns: [
         {
+          name: 'createdAt',
+          type: 'datetime(6)',
+          default: 'current_timestamp',
+          isNullable: false,
+        },
+        {
+          name: 'updatedAt',
+          type: 'datetime(6)',
+          default: 'current_timestamp',
+          onUpdate: 'current_timestamp',
+          isNullable: false,
+        },
+        {
+          name: 'version',
+          type: 'integer',
+          isNullable: false,
+        },
+        {
           name: 'id',
           type: 'integer',
           isPrimary: true,
@@ -31,90 +49,89 @@ export class InvoiceRefactor1707251162194 implements MigrationInterface {
         },
         {
           name: 'downloadName',
-          type: 'varchar',
+          type: 'varchar(255)',
           isNullable: false,
         },
         {
           name: 'location',
-          type: 'varchar',
-          isNullable: false,
-        },
-        {
-          name: 'createdBy',
-          type: 'int',
+          type: 'varchar(255)',
           isNullable: false,
         },
         {
           name: 'hash',
-          type: 'varchar',
+          type: 'varchar(255)',
+          isNullable: false,
+        },
+        {
+          name: 'createdById',
+          type: 'integer',
           isNullable: false,
         },
       ],
     }), true);
 
 
-    // Add new columns with temporary nullable setting
+
     await queryRunner.addColumns('invoice', [
       new TableColumn({
         name: 'reference',
-        type: 'varchar',
+        type: 'varchar(255)',
         isNullable: true, // Temporarily nullable
       }),
       new TableColumn({
         name: 'street',
-        type: 'varchar',
+        type: 'varchar(255)',
         isNullable: true, // Temporarily nullable
       }),
       new TableColumn({
         name: 'postalCode',
-        type: 'varchar',
+        type: 'varchar(255)',
         isNullable: true, // Temporarily nullable
       }),
       new TableColumn({
         name: 'city',
-        type: 'varchar',
+        type: 'varchar(255)',
         isNullable: true, // Temporarily nullable
       }),
       new TableColumn({
         name: 'country',
-        type: 'varchar',
+        type: 'varchar(255)',
         isNullable: true, // Temporarily nullable
       }),
     ]);
 
-    // Set default values for existing rows
+
     await queryRunner.query('UPDATE invoice SET reference = \'UNSET_MIGRATED_ENTRY\', street = \'UNSET_MIGRATED_ENTRY\', postalCode = \'UNSET_MIGRATED_ENTRY\', city = \'UNSET_MIGRATED_ENTRY\', country = \'UNSET_MIGRATED_ENTRY\'');
 
-    // Alter columns to non-nullable
+
     await queryRunner.changeColumn('invoice', 'reference', new TableColumn({
       name: 'reference',
-      type: 'varchar',
+      type: 'varchar(255)',
       isNullable: false,
     }));
     await queryRunner.changeColumn('invoice', 'street', new TableColumn({
       name: 'street',
-      type: 'varchar',
+      type: 'varchar(255)',
       isNullable: false,
     }));
     await queryRunner.changeColumn('invoice', 'postalCode', new TableColumn({
       name: 'postalCode',
-      type: 'varchar',
+      type: 'varchar(255)',
       isNullable: false,
     }));
     await queryRunner.changeColumn('invoice', 'city', new TableColumn({
       name: 'city',
-      type: 'varchar',
+      type: 'varchar(255)',
       isNullable: false,
     }));
     await queryRunner.changeColumn('invoice', 'country', new TableColumn({
       name: 'country',
-      type: 'varchar',
+      type: 'varchar(255)',
       isNullable: false,
     }));
 
-    // Add foreign key for createdBy in invoice_pdf
     await queryRunner.createForeignKey('invoice_pdf', new TableForeignKey({
-      columnNames: ['createdBy'],
+      columnNames: ['createdById'],
       referencedColumnNames: ['id'],
       referencedTableName: 'user',
       onDelete: 'CASCADE',
@@ -122,15 +139,22 @@ export class InvoiceRefactor1707251162194 implements MigrationInterface {
 
     // Proceed to add columns to the Invoice table
     await queryRunner.addColumn('invoice', new TableColumn({
-      name: 'pdf',
-      type: 'int',
+      name: 'pdfId',
+      type: 'integer',
       isNullable: true,
+      isUnique: true,
     }));
 
+    await queryRunner.createForeignKey('invoice', new TableForeignKey({
+      columnNames: ['pdfId'],
+      referencedColumnNames: ['id'],
+      referencedTableName: 'invoice_pdf',
+      onDelete: 'RESTRICT',
+    }));
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    // Remove the foreign key and column for pdfId (as before)
+
     const invoiceTable = await queryRunner.getTable('invoice');
     const invoiceForeignKey = invoiceTable.foreignKeys.find(fk => fk.columnNames.indexOf('pdfId') !== -1);
     if (invoiceForeignKey) {
@@ -145,7 +169,7 @@ export class InvoiceRefactor1707251162194 implements MigrationInterface {
     await queryRunner.dropColumn('invoice', 'country');
 
     const pdfTable = await queryRunner.getTable('invoice_pdf');
-    const pdfForeignKey = pdfTable.foreignKeys.find(fk => fk.columnNames.indexOf('createdBy') !== -1);
+    const pdfForeignKey = pdfTable.foreignKeys.find(fk => fk.columnNames.indexOf('createdById') !== -1);
     if (pdfForeignKey) {
       await queryRunner.dropForeignKey('invoice_pdf', pdfForeignKey);
     }

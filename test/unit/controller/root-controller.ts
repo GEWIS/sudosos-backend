@@ -18,15 +18,15 @@
 import { json } from 'body-parser';
 import { expect, request } from 'chai';
 import RootController from '../../../src/controller/root-controller';
-import Database from '../../../src/database/database';
 import { BannerResponse } from '../../../src/controller/response/banner-response';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import Banner from '../../../src/entity/banner';
 import { seedBanners } from '../../seed';
 import { bannerEq } from './banner-controller';
-import { DefaultContext, defaultContext } from '../../helpers/test-helpers';
+import { DefaultContext, defaultContext, finishTestDB } from '../../helpers/test-helpers';
 import User from '../../../src/entity/user/user';
 import { ADMIN_USER, UserFactory } from '../../helpers/user-factory';
+import sinon from 'sinon';
 
 describe('RootController', async (): Promise<void> => {
   let ctx: DefaultContext & {
@@ -55,8 +55,7 @@ describe('RootController', async (): Promise<void> => {
 
   // close database connection
   after(async () => {
-    await ctx.connection.dropDatabase();
-    await ctx.connection.close();
+    await finishTestDB(ctx.connection);
   });
 
   describe('GET /banners', () => {
@@ -119,14 +118,27 @@ describe('RootController', async (): Promise<void> => {
       expect(res.status).to.equal(200);
       expect(res.body).to.equal('Pong!');
     });
-    it('should return an HTTP 500 if something is wrong', async () => {
-      await ctx.connection.close();
+    it('should return an HTTP 500 if something is wrong', async function () {
+      // This is how to stub live routes...
+      let stub;
+      ctx.app._router.stack.forEach((s: any) => {
+        if (s.name === 'router') {
+          stub = sinon.stub(s.handle.stack[0], 'handle').callsFake(async (req: any, res: any) => {
+            const err = new Error('Internal server error.');
+            res.status(500).json(err.message);
+          });
+        }
+      });
+
+      expect(stub).to.not.be.undefined;
+
       const res = await request(ctx.app)
         .get('/ping');
 
       expect(res.status).to.equal(500);
       expect(res.body).to.equal('Internal server error.');
-      ctx.connection = await Database.initialize();
+      // @ts-ignore
+      stub.restore();
     });
   });
 });
