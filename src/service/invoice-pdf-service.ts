@@ -105,10 +105,11 @@ export default class InvoicePdfService {
    * @returns {{products: Product[], pricing: TotalPricing}} An object containing an array of products derived from invoice entries and total pricing information, including VAT calculations.
    */
   static entriesToProductsPricing(invoice: Invoice): { products: Product[], pricing: TotalPricing } {
-    let exclVat: number = 0, lowVat: number = 0, highVat: number = 0;
+    let exclVat: number = 0, lowVat: number = 0, highVat: number = 0, inclVat = 0;
     let products = invoice.invoiceEntries.map((entry: InvoiceEntry) => {
       // SudoSOS rounds per product.
       const price = entry.priceInclVat.getAmount() * entry.amount;
+      inclVat += price;
       const baseExclVat = Math.round(entry.priceInclVat.getAmount()  / (1 + (entry.vatPercentage / 100))) * entry.amount;
 
       exclVat += baseExclVat;
@@ -150,7 +151,7 @@ export default class InvoicePdfService {
         exclVat,
         lowVat,
         highVat,
-        inclVat: invoice.transfer.amount.getAmount(),
+        inclVat,
       }),
     };
   }
