@@ -12,3 +12,6 @@ chown node /app/out/data/banners
 
 mkdir -p /app/out/data/products
 chown node /app/out/data/products
+
+mkdir -p /app/out/data/invoices
+chown node /app/out/data/invoices
