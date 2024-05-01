@@ -16,17 +16,16 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { expect } from 'chai';
-import sinon, {SinonSandbox, SinonSpy} from 'sinon';
-import { defaultBefore, DefaultContext } from '../../helpers/test-helpers';
-import User, {TermsOfServiceStatus} from '../../../src/entity/user/user';
-import Database from '../../../src/database/database';
+import sinon, { SinonSandbox, SinonSpy } from 'sinon';
+import { defaultBefore, DefaultContext, finishTestDB } from '../../helpers/test-helpers';
+import User, { TermsOfServiceStatus } from '../../../src/entity/user/user';
 import GewisUser from '../../../src/gewis/entity/gewis-user';
 import { seedUsers } from '../../seed';
 import seedGEWISUsers from '../../../src/gewis/database/seed';
 import GewisDBService from '../../../src/gewis/service/gewisdb-service';
 import { BasicApi, MemberAllAttributes, MembersApi } from 'gewisdb-ts-client';
-import nodemailer, {Transporter} from "nodemailer";
-import Mailer from "../../../src/mailer";
+import nodemailer, { Transporter } from 'nodemailer';
+import Mailer from '../../../src/mailer';
 
 describe('GEWISDB Service', () => {
 
@@ -58,7 +57,7 @@ describe('GEWISDB Service', () => {
   });
 
   after(async () => {
-    await Database.finish(ctx.connection);
+    await finishTestDB(ctx.connection);
     sinon.restore();
   });
 
