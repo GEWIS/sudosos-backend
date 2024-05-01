@@ -32,7 +32,7 @@ const pinger = new BasicApi(configuration);
 
 // Logger setup
 const logger: Logger = log4js.getLogger('GewisDBService');
-logger.level = log4js.levels.ALL;
+logger.level = process.env.LOG_LEVEL;
 
 export default class GewisDBService {
 
