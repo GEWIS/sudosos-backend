@@ -59,6 +59,7 @@ describe('GEWISDB Service', () => {
   after(async () => {
     await finishTestDB(ctx.connection);
     sinon.restore();
+    sandbox.restore();
   });
 
   afterEach(() => {
