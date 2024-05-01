@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { expect } from 'chai';
-import sinon from 'sinon';
+import sinon, {SinonSandbox, SinonSpy} from 'sinon';
 import { defaultBefore, DefaultContext } from '../../helpers/test-helpers';
 import User, {TermsOfServiceStatus} from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
@@ -25,6 +25,8 @@ import { seedUsers } from '../../seed';
 import seedGEWISUsers from '../../../src/gewis/database/seed';
 import GewisDBService from '../../../src/gewis/service/gewisdb-service';
 import { BasicApi, MemberAllAttributes, MembersApi } from 'gewisdb-ts-client';
+import nodemailer, {Transporter} from "nodemailer";
+import Mailer from "../../../src/mailer";
 
 describe('GEWISDB Service', () => {
 
@@ -36,17 +38,32 @@ describe('GEWISDB Service', () => {
   let membersApiStub: sinon.SinonStubbedInstance<MembersApi>;
   let basicApiStub: sinon.SinonStubbedInstance<BasicApi>;
 
+  let sandbox: SinonSandbox;
+  let sendMailFake: SinonSpy;
+
   before(async () => {
     ctx = {
       ...(await defaultBefore()),
     } as any;
     ctx.users = await seedUsers();
     ctx.gewisUsers = await seedGEWISUsers(ctx.users);
+
+    Mailer.reset();
+
+    sandbox = sinon.createSandbox();
+    sendMailFake = sandbox.spy();
+    sandbox.stub(nodemailer, 'createTransport').returns({
+      sendMail: sendMailFake,
+    } as any as Transporter);
   });
 
   after(async () => {
     await Database.finish(ctx.connection);
     sinon.restore();
+  });
+
+  afterEach(() => {
+    sendMailFake.resetHistory();
   });
 
   describe('sync', () => {
@@ -256,6 +273,35 @@ describe('GEWISDB Service', () => {
         expect(u.canGoIntoDebt).to.be.false;
         expect(u.acceptedToS).to.eq(TermsOfServiceStatus.NOT_ACCEPTED);
       });
+    });
+
+    it('should send email to expired users', async function () {
+      const users = await GewisUser.find({ where: { user: { deleted: false } }, relations: ['user'], take: 5 });
+
+      const updates: { [key: number]: MemberAllAttributes; } = {};
+      membersApiStub.membersLidnrGet.callsFake((async (gewisId: number) => {
+        const user = users.find(u => u.gewisId === gewisId);
+        if (!user) return Promise.resolve({ data: null });
+
+        const update = toWebResponse(user);
+        update.expiration = new Date(2020, 1, 1).toISOString();
+        updates[user.userId] = update;
+
+        return Promise.resolve({
+          data: { data: update },
+        });
+      }) as any);
+
+
+      const res = await GewisDBService.sync(users);
+      res.forEach((u) => {
+        expect(u.active).to.be.false;
+        expect(u.deleted).to.be.true;
+        expect(u.canGoIntoDebt).to.be.false;
+        expect(u.acceptedToS).to.eq(TermsOfServiceStatus.NOT_ACCEPTED);
+      });
+
+      expect(sendMailFake).to.be.callCount(res.length);
     });
   });
 });
