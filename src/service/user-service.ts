@@ -40,6 +40,7 @@ import DineroTransformer from '../entity/transformer/dinero-transformer';
 import { getLogger } from 'log4js';
 import AccountClosureNotification from '../mailer/templates/account-closure-notification';
 import BalanceService from './balance-service';
+import { Language } from '../mailer/templates/mail-template';
 
 /**
  * Parameters used to filter on Get Users functions.
@@ -189,9 +190,15 @@ export default class UserService {
   }
 
   /**
+   * Closes a user account by setting the user's status to deleted and inactive.
+   * Also, it sets the user's acceptedToS status to NOT_ACCEPTED and canGoIntoDebt to false.
+   * After saving these changes, it sends an account closure notification email to the user.
    *
+   * @param {number} userId - The ID of the user to close the account for.
+   * @returns {Promise<void>} - A promise that resolves when the user account has been closed and the email has been sent.
+   * @throws {Error} - Throws an error if the email could not be sent.
    */
-  public static async closeUser(userId: number) {
+  public static async closeUser(userId: number): Promise<void> {
     const user = await User.findOne({ where: { id: userId, deleted: false } });
     if (!user) return undefined;
     const currentBalance = await BalanceService.getBalance(user.id);
@@ -205,7 +212,7 @@ export default class UserService {
       Mailer.getInstance().send(user, new AccountClosureNotification({
         name: user.firstName,
         balance:  DineroTransformer.Instance.from(currentBalance.amount.amount),
-      })).catch((e) => getLogger('User').error(e));
+      }), Language.ENGLISH, { bcc: process.env.FINANCIAL_RESPONSIBLE }).catch((e) => getLogger('User').error(e));
     });
   }
 
