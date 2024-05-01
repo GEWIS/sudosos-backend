@@ -198,7 +198,7 @@ export default class UserService {
    * @returns {Promise<void>} - A promise that resolves when the user account has been closed and the email has been sent.
    * @throws {Error} - Throws an error if the email could not be sent.
    */
-  public static async closeUser(userId: number): Promise<void> {
+  public static async closeUser(userId: number): Promise<UserResponse> {
     const user = await User.findOne({ where: { id: userId, deleted: false } });
     if (!user) return undefined;
     const currentBalance = await BalanceService.getBalance(user.id);
@@ -214,6 +214,8 @@ export default class UserService {
         balance:  DineroTransformer.Instance.from(currentBalance.amount.amount),
       }), Language.ENGLISH, { bcc: process.env.FINANCIAL_RESPONSIBLE }).catch((e) => getLogger('User').error(e));
     });
+    // Correctly parsed to expected response
+    return this.getUsers({ id: userId }).then((u) => u.records[0]);
   }
 
   /**

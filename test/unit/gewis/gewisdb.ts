@@ -18,7 +18,7 @@
 import { expect } from 'chai';
 import sinon from 'sinon';
 import { defaultBefore, DefaultContext } from '../../helpers/test-helpers';
-import User from '../../../src/entity/user/user';
+import User, {TermsOfServiceStatus} from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import GewisUser from '../../../src/gewis/entity/gewis-user';
 import { seedUsers } from '../../seed';
@@ -88,7 +88,7 @@ describe('GEWISDB Service', () => {
       GewisDBService.api = membersApiStub as any;
       GewisDBService.pinger = basicApiStub as any;
 
-      basicApiStub.rootGet.returns(Promise.resolve({ healthy: true }) as any);
+      basicApiStub.healthGet.returns(Promise.resolve({ healthy: true, sync_paused: false }) as any);
     });
 
     afterEach(() => {
@@ -96,22 +96,32 @@ describe('GEWISDB Service', () => {
     });
 
     it('should abort synchronization if the GEWISDB API is unhealthy', async () => {
-      basicApiStub.rootGet.returns(Promise.resolve({ healthy: false }) as any);
+      basicApiStub.healthGet.returns(Promise.resolve({ healthy: false, sync_paused: false }) as any);
 
       const result = await GewisDBService.syncAll();
 
       expect(result).to.be.null;
-      sinon.assert.calledOnce(basicApiStub.rootGet);
+      sinon.assert.calledOnce(basicApiStub.healthGet);
+      sinon.assert.notCalled(membersApiStub.membersLidnrGet);
+    });
+
+    it('should abort synchronization if the GEWISDB API is paused', async () => {
+      basicApiStub.healthGet.returns(Promise.resolve({ healthy: true, sync_paused: true }) as any);
+
+      const result = await GewisDBService.syncAll();
+
+      expect(result).to.be.null;
+      sinon.assert.calledOnce(basicApiStub.healthGet);
       sinon.assert.notCalled(membersApiStub.membersLidnrGet);
     });
 
     it('should start synchronization if the GEWISDB API is healthy', async () => {
-      basicApiStub.rootGet.returns(Promise.resolve({ healthy: true }) as any);
+      basicApiStub.healthGet.returns(Promise.resolve({ healthy: true, sync_paused: false }) as any);
       membersApiStub.membersLidnrGet.returns(Promise.resolve({ data: {} }) as any);
       const result = await GewisDBService.syncAll();
 
       expect(result).to.be.empty;
-      sinon.assert.calledOnce(basicApiStub.rootGet);
+      sinon.assert.calledOnce(basicApiStub.healthGet);
     });
 
 
@@ -222,8 +232,30 @@ describe('GEWISDB Service', () => {
     });
 
     it('should properly handle expired users', async function () {
-      this.skip(); // Unimplemented
-      // @ts-ignore
+      const users = await GewisUser.find({ where: { user: { deleted: false } }, relations: ['user'], take: 5 });
+
+      const updates: { [key: number]: MemberAllAttributes; } = {};
+      membersApiStub.membersLidnrGet.callsFake((async (gewisId: number) => {
+        const user = users.find(u => u.gewisId === gewisId);
+        if (!user) return Promise.resolve({ data: null });
+
+        const update = toWebResponse(user);
+        update.expiration = new Date(2020, 1, 1).toISOString();
+        updates[user.userId] = update;
+
+        return Promise.resolve({
+          data: { data: update },
+        });
+      }) as any);
+
+
+      const res = await GewisDBService.sync(users);
+      res.forEach((u) => {
+        expect(u.active).to.be.false;
+        expect(u.deleted).to.be.true;
+        expect(u.canGoIntoDebt).to.be.false;
+        expect(u.acceptedToS).to.eq(TermsOfServiceStatus.NOT_ACCEPTED);
+      });
     });
   });
 });

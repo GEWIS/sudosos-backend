@@ -63,8 +63,9 @@ export default class GewisDBService {
         return null;
       });
 
-    if(!ping.sync_paused) {
+    if (ping.sync_paused) {
       logger.warn('GEWISDB API paused, aborting.');
+      return null;
     }
 
     if (!ping.healthy) {
@@ -102,6 +103,7 @@ export default class GewisDBService {
 
     if (expired) {
       logger.log(`User ${gewisUser.gewisId} has expired, closing account.`);
+      return UserService.closeUser(gewisUser.user.id);
     }
 
     const update = webResponseToUpdate(dbMember);
