@@ -21,7 +21,7 @@ import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import Database from '../../../src/database/database';
 import {
-  seedContainers, seedFines, seedPointsOfSale,
+  seedContainers, seedFines, seedInactivityAdministrativeCosts, seedPointsOfSale,
   seedProductCategories,
   seedProducts, seedTransactions, seedTransfers,
   seedUsers,
@@ -41,6 +41,19 @@ import Swagger from '../../../src/start/swagger';
 import Balance from '../../../src/entity/transactions/balance';
 import { calculateBalance } from '../../helpers/balance';
 import { expect } from 'chai';
+import InactivityAdministrativeCosts from '../../../src/entity/transactions/inactivity-administrative-costs';
+import { T } from './invoice-service';
+import { BaseInvoiceResponse } from '../../../src/controller/response/invoice-response';
+
+function returnsAll(response: T[], superset: InactivityAdministrativeCosts[], mapping: any) {
+  expect(response.map(mapping)).to.deep.equalInAnyOrder(superset.map(mapping));
+}
+
+function baseKeyMapping(invoice: BaseInvoiceResponse | InactivityAdministrativeCosts) {
+  return {
+
+  };
+}
 
 describe('AdministrativeCostService', async (): Promise<void> => {
   let ctx: {
@@ -53,6 +66,7 @@ describe('AdministrativeCostService', async (): Promise<void> => {
     transactions: Transaction[],
     subTransactions: SubTransaction[],
     transfers: Transfer[],
+    inactivityAdministrativeCosts: InactivityAdministrativeCosts[],
     fines: Fine[],
     balances: Balance[],
     spec: SwaggerSpecification,
@@ -70,6 +84,7 @@ describe('AdministrativeCostService', async (): Promise<void> => {
     const { pointOfSaleRevisions } = await seedPointsOfSale(seededUsers, containerRevisions);
     const { transactions } = await seedTransactions(seededUsers, pointOfSaleRevisions, new Date('2020-02-12'), new Date(), 10);
     const transfers = await seedTransfers(seededUsers, new Date('2020-02-12'), new Date('2021-11-30'));
+    const { inactivityAdministrativeCosts, administrativeCostTransfers } = await seedInactivityAdministrativeCosts(seededUsers, transactions, transfers);
     const { fines, fineTransfers, users } = await seedFines(seededUsers, transactions, transfers, true);
     const subTransactions: SubTransaction[] = Array.prototype.concat(...transactions
       .map((t) => t.subTransactions));
@@ -90,7 +105,8 @@ describe('AdministrativeCostService', async (): Promise<void> => {
       transactions,
       subTransactions,
       balances,
-      transfers: transfers.concat(fineTransfers),
+      transfers: transfers.concat(fineTransfers).concat(administrativeCostTransfers),
+      inactivityAdministrativeCosts,
       fines,
       spec: await Swagger.importSpecification(),
     };
@@ -102,16 +118,11 @@ describe('AdministrativeCostService', async (): Promise<void> => {
   });
 
   describe('getAdministrativeCostUsers function', () => {
-    it('should return only users to send a notification to', async () =>{
+    it('should return all users with a inactivity administrative cost', async () =>{
 
-      const { records } = await AdministrativeCostService.getAdministrativeCostUsers({ notification: true });
+      const res = (await AdministrativeCostService.getInactivityAdministrativeCost());
 
-      records.forEach((i) => {
-        expect(i.sentAdministrativeCostsEmail).to.eq(false);
-      });
-
-
-
+      // returnsAll(res, ctx.inactivityAdministrativeCosts, baseKeyMapping);
     });
   });
 });

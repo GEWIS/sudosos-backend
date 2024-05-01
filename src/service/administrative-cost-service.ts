@@ -16,106 +16,47 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { PaginationParameters } from '../helpers/pagination';
-import BalanceService from './balance-service';
-import User from '../entity/user/user';
-import { createQueryBuilder, In, SelectQueryBuilder } from 'typeorm';
-import Transaction from '../entity/transactions/transaction';
-import Transfer from '../entity/transactions/transfer';
-import {
-  PaginatedInactivityAdministrativeCostsResponse,
-} from '../controller/response/inactivity-administrative-costs-response';
+
+import { FindManyOptions, FindOptionsRelations } from 'typeorm';
 import InactivityAdministrativeCosts from '../entity/transactions/inactivity-administrative-costs';
+import QueryFilter, { FilterMapping } from '../helpers/query-filter';
+import User from '../entity/user/user';
 
 /**
  * Parameters for type of administrative cost, notification or fine
  */
 
-export interface AdministrativeFilterParameters {
+export interface InactivityAdministrativeCostFilterParameters {
+  /**
+   * Filter based on userId
+   */
   userId?: number,
-  notification?: boolean,
-  fine?: boolean,
 }
 
 export default class AdministrativeCostService {
 
-  private static async buildGetAdministrativeCostUsers(userId: number): SelectQueryBuilder<InactivityAdministrativeCosts> {
-
-    const selection = [
-      'administrativeCost.amount AS amount',
-      'administrativeCost.lastTransaction AS last_transaction',
-      'administrativeCost.transfer AS transfer',
-      'user.email AS email',
-      'user.id AS userId',
-      'user.firstName AS first_name',
-      'user.lastName AS last_name',
-    ];
-
-    const builder = createQueryBuilder()
-      .from(InactivityAdministrativeCosts, 'administrativeCost')
-      .leftJoin(User, 'user')
-      .select(selection);
-
-    if (userId != null) {
-      builder.where(`user.id = ${userId}`);
-    }
-
-    builder.orderBy({ 'user.id': 'DESC' });
-
-    return builder;
-  }
-
-
   /**
-   * Function for getting all users who are in range of the administrative costs
-   * @param filter - Query filter to apply
-   * @param pagination - Pagination to adhere to
+   *
+   * @param params
    */
-  public static async getAdministrativeCostUsers(
-    filter: AdministrativeFilterParameters = {}, pagination: PaginationParameters = {},
-  ): Promise<PaginatedInactivityAdministrativeCostsResponse> {
-    const { take, skip } = pagination;
+  public static async getInactivityAdministrativeCost(params: InactivityAdministrativeCostFilterParameters = {})
+    : Promise<InactivityAdministrativeCosts[]> {
+    const options = { ...this.getOptions(params) };
 
-    const results = await Promise.all([
-      (await this.buildGetAdministrativeCostUsers(filter.userId)).limit(take).offset(skip).getRawMany(),
-      (await this.buildGetAdministrativeCostUsers(filter.userId)).getCount(),
-    ]);
-
-
-
+    return InactivityAdministrativeCosts.find({ ...options });
   }
 
-
-
-  /**
-     * Function for checking all users who are in range of the administrative costs
-     * @param filter - Query filter to apply
-     * @param pagination - Pagination to adhere to
-     */
-  public static async checkAdministrativeCostUsers(
-    filter: AdministrativeFilterParameters = {}, pagination: PaginationParameters = {},
-  ): Promise<PaginatedInactivityAdministrativeCostsResponse> {
-    const { take, skip } = pagination;
-    const balances = await BalanceService.getBalances({});
-
-    const userIds = balances.records.map((u) => u.id);
-    const transactionIds = balances.records.map((t) => t.lastTransactionId);
-    const transferIds = balances.records.map((t) => t.lastTransferId);
-
-    const [users, transactions, transfers] = await Promise.all([
-      User.find({ where: { id: In(userIds) } }),
-      Transaction.find({ where: { id: In(transactionIds) } }),
-      Transfer.find({ where: { id: In(transferIds) } }),
-    ]);
-
-
-
-    return {
-      _pagination: {
-        take, skip, count: count,
-      },
-      records,
+  public static getOptions(params: InactivityAdministrativeCostFilterParameters): FindManyOptions<InactivityAdministrativeCosts> {
+    const filterMapping: FilterMapping = {
+      userId: 'from.id',
     };
 
+    const relations: FindOptionsRelations<InactivityAdministrativeCosts> = { from: true };
+    const options: FindManyOptions<InactivityAdministrativeCosts> = {
+      where: QueryFilter.createFilterWhereClause(filterMapping, params),
+      order: { createdAt: 'ASC' },
+    };
+
+    return { ...options, relations };
   }
 }
