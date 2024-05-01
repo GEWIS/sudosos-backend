@@ -57,11 +57,15 @@ export default class GewisDBService {
    * @returns {Promise<UserResponse[]>} A promise that resolves with an array of UserResponses for users that were updated. Returns null if the API is unhealthy.
    */
   public static async sync(gewisUsers: GewisUser[]): Promise<UserResponse[]> {
-    const ping: Health = await GewisDBService.pinger.rootGet().then(member => member)
+    const ping: Health = await GewisDBService.pinger.healthGet().then(member => member)
       .catch((error) => {
         logger.warn('Failed to ping GEWIS DB', error);
         return null;
       });
+
+    if(!ping.sync_paused) {
+      logger.warn('GEWISDB API paused, aborting.');
+    }
 
     if (!ping.healthy) {
       logger.warn('GEWISDB API unhealthy, aborting.');
