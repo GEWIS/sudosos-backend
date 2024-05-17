@@ -192,28 +192,20 @@ export default class UserService {
   /**
    * Closes a user account by setting the user's status to deleted and inactive.
    * Also, it sets the user's acceptedToS status to NOT_ACCEPTED and canGoIntoDebt to false.
-   * After saving these changes, it sends an account closure notification email to the user.
    *
    * @param {number} userId - The ID of the user to close the account for.
-   * @returns {Promise<void>} - A promise that resolves when the user account has been closed and the email has been sent.
-   * @throws {Error} - Throws an error if the email could not be sent.
+   * @returns {Promise<void>} - A promise that resolves when the user account has been closed.
    */
   public static async closeUser(userId: number): Promise<UserResponse> {
     const user = await User.findOne({ where: { id: userId, deleted: false } });
     if (!user) return undefined;
-    const currentBalance = await BalanceService.getBalance(user.id);
 
     user.deleted = true;
     user.active = false;
     user.acceptedToS = TermsOfServiceStatus.NOT_ACCEPTED;
     user.canGoIntoDebt = false;
 
-    await user.save().then(() => {
-      Mailer.getInstance().send(user, new MembershipExpiryNotification({
-        name: user.firstName,
-        balance:  DineroTransformer.Instance.from(currentBalance.amount.amount),
-      }), Language.ENGLISH, { bcc: process.env.FINANCIAL_RESPONSIBLE }).catch((e) => getLogger('User').error(e));
-    });
+    await user.save();
     // Correctly parsed to expected response
     return this.getUsers({ id: userId }).then((u) => u.records[0]);
   }

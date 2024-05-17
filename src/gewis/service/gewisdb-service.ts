@@ -17,10 +17,15 @@
  */
 import GewisUser from '../entity/gewis-user';
 import { BasicApi, Configuration, Health, MembersApi } from 'gewisdb-ts-client';
-import log4js, { Logger } from 'log4js';
+import log4js, { getLogger, Logger } from 'log4js';
 import { webResponseToUpdate } from '../helpers/gewis-helper';
 import UserService from '../../service/user-service';
 import { UserResponse } from '../../controller/response/user-response';
+import Mailer from '../../mailer';
+import MembershipExpiryNotification from '../../mailer/templates/membership-expiry-notification';
+import DineroTransformer from '../../entity/transformer/dinero-transformer';
+import { Language } from '../../mailer/templates/mail-template';
+import BalanceService from '../../service/balance-service';
 
 const GEWISDB_API_URL = process.env.GEWISDB_API_URL;
 const GEWISDB_API_KEY = process.env.GEWISDB_API_KEY;
@@ -102,8 +107,19 @@ export default class GewisDBService {
     const expired = new Date() > expirationDate;
 
     if (expired) {
-      logger.log(`User ${gewisUser.gewisId} has expired, closing account.`);
-      return UserService.closeUser(gewisUser.user.id);
+      try {
+        logger.log(`User ${gewisUser.gewisId} has expired, closing account.`);
+        const user = await UserService.closeUser(gewisUser.user.id);
+        const currentBalance = await BalanceService.getBalance(user.id);
+        Mailer.getInstance().send(gewisUser.user, new MembershipExpiryNotification({
+          name: user.firstName,
+          balance: DineroTransformer.Instance.from(currentBalance.amount.amount),
+        }), Language.ENGLISH, { bcc: process.env.FINANCIAL_RESPONSIBLE }).catch((e) => getLogger('User').error(e));
+        return user;
+      } catch (e) {
+        logger.error(e);
+        return null;
+      }
     }
 
     const update = webResponseToUpdate(dbMember);
