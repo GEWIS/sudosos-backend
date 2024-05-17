@@ -38,7 +38,7 @@ import WelcomeWithReset from '../mailer/templates/welcome-with-reset';
 import { Brackets } from 'typeorm';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
 import { getLogger } from 'log4js';
-import AccountClosureNotification from '../mailer/templates/account-closure-notification';
+import MembershipExpiryNotification from '../mailer/templates/membership-expiry-notification';
 import BalanceService from './balance-service';
 import { Language } from '../mailer/templates/mail-template';
 
@@ -209,7 +209,7 @@ export default class UserService {
     user.canGoIntoDebt = false;
 
     await user.save().then(() => {
-      Mailer.getInstance().send(user, new AccountClosureNotification({
+      Mailer.getInstance().send(user, new MembershipExpiryNotification({
         name: user.firstName,
         balance:  DineroTransformer.Instance.from(currentBalance.amount.amount),
       }), Language.ENGLISH, { bcc: process.env.FINANCIAL_RESPONSIBLE }).catch((e) => getLogger('User').error(e));
