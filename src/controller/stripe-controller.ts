@@ -74,11 +74,18 @@ export default class StripeController extends BaseController {
     try {
       const amount = Dinero({ ...request.amount } as DineroObject);
       const balance = await BalanceService.getBalance(req.token.user.id);
-      if (!StripeService.validateStripeRequestAmount(balance, request)) {
-        res.status(422).json({ error: 'Top-up amount is to low' });
+
+      // Check if top-up satisfies minimum in accordance with TOS.
+      if (!StripeService.validateStripeRequestMinimumAmount(balance, request)) {
+        res.status(422).json({ error: 'Top-up amount is too low' });
         return;
       }
 
+      // Check if top-up satisfies maximum in accordance with TOS.
+      if (!StripeService.validateStripeRequestMaximumAmount(balance, request)) {
+        res.status(422).json({ error: 'Top-up amount is too high' });
+        return;
+      }
 
       const result = await this.stripeService.createStripePaymentIntent(req.token.user, amount);
       res.status(200).json(result);
