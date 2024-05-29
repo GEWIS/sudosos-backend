@@ -122,7 +122,7 @@ describe('StripeController', async (): Promise<void> => {
     app.use(new TokenMiddleware({ tokenHandler, refreshFactor: 0.5 }).getMiddleware());
     app.use('/stripe', controller.getRouter());
 
-    const dinero = DineroTransformer.Instance.from(3900);
+    const dinero = DineroTransformer.Instance.from(1050);
     const validStripeRequest: StripeRequest = {
       amount: {
         amount: dinero.getAmount(),
