@@ -105,7 +105,7 @@ describe('GEWISDB Service', () => {
       GewisDBService.api = membersApiStub as any;
       GewisDBService.pinger = basicApiStub as any;
 
-      basicApiStub.healthGet.returns(Promise.resolve({ healthy: true, sync_paused: false }) as any);
+      basicApiStub.healthGet.returns(Promise.resolve({ data: { healthy: true, sync_paused: false } }) as any);
     });
 
     afterEach(() => {
@@ -113,7 +113,7 @@ describe('GEWISDB Service', () => {
     });
 
     it('should abort synchronization if the GEWISDB API is unhealthy', async () => {
-      basicApiStub.healthGet.returns(Promise.resolve({ healthy: false, sync_paused: false }) as any);
+      basicApiStub.healthGet.returns(Promise.resolve({ data: { healthy: false, sync_paused: false } }) as any);
 
       const result = await GewisDBService.syncAll();
 
@@ -123,7 +123,7 @@ describe('GEWISDB Service', () => {
     });
 
     it('should abort synchronization if the GEWISDB API is paused', async () => {
-      basicApiStub.healthGet.returns(Promise.resolve({ healthy: true, sync_paused: true }) as any);
+      basicApiStub.healthGet.returns(Promise.resolve({ data: { healthy: true, sync_paused: true } }) as any);
 
       const result = await GewisDBService.syncAll();
 
@@ -133,7 +133,7 @@ describe('GEWISDB Service', () => {
     });
 
     it('should start synchronization if the GEWISDB API is healthy', async () => {
-      basicApiStub.healthGet.returns(Promise.resolve({ healthy: true, sync_paused: false }) as any);
+      basicApiStub.healthGet.returns(Promise.resolve({ data: { healthy: true, sync_paused: false } }) as any);
       membersApiStub.membersLidnrGet.returns(Promise.resolve({ data: {} }) as any);
       const result = await GewisDBService.syncAll();
 
@@ -271,7 +271,6 @@ describe('GEWISDB Service', () => {
         expect(u.active).to.be.false;
         expect(u.deleted).to.be.true;
         expect(u.canGoIntoDebt).to.be.false;
-        expect(u.acceptedToS).to.eq(TermsOfServiceStatus.NOT_ACCEPTED);
       });
     });
 
@@ -298,7 +297,6 @@ describe('GEWISDB Service', () => {
         expect(u.active).to.be.false;
         expect(u.deleted).to.be.true;
         expect(u.canGoIntoDebt).to.be.false;
-        expect(u.acceptedToS).to.eq(TermsOfServiceStatus.NOT_ACCEPTED);
       });
 
       expect(sendMailFake).to.be.callCount(res.length);

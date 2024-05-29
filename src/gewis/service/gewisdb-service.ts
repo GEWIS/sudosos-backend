@@ -85,20 +85,23 @@ export default class GewisDBService {
       if (u) updates.push(u);
     }));
 
-    return Promise.all(promises).then(() => updates).catch(() => null);
+    await Promise.allSettled(promises);
+    return updates;
   }
 
   /**
    * Updates a user in the local database based on the GEWIS DB data.
    * @param {GewisUser} gewisUser - The user to be updated.
    */
-  public static async updateUser(gewisUser: GewisUser) {
+  private static async updateUser(gewisUser: GewisUser) {
     logger.trace(`Syncing GEWIS User ${gewisUser.gewisId}`);
-    const dbMember = await GewisDBService.api.membersLidnrGet(gewisUser.gewisId).then(member => member.data.data)
-      .catch(error => {
-        logger.error(`Failed to fetch: ${error}`);
-        return null;
-      });
+    let dbMember;
+    try {
+      dbMember = await GewisDBService.api.membersLidnrGet(gewisUser.gewisId).then(member => member.data.data);
+    } catch (error) {
+      logger.error(`Failed to fetch: ${error}`);
+      return;
+    }
 
     if (!dbMember) {
       logger.trace(`Could not find GEWIS User ${gewisUser.gewisId} in DB.`);

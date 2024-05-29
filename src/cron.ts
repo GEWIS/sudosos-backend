@@ -24,7 +24,7 @@ import BalanceService from './service/balance-service';
 import ADService from './service/ad-service';
 import RoleManager from './rbac/role-manager';
 import Gewis from './gewis/gewis';
-import GewisDBService from "./gewis/service/gewisdb-service";
+import GewisDBService from './gewis/service/gewisdb-service';
 
 class CronApplication {
   logger: Logger;

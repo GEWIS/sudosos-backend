@@ -202,7 +202,6 @@ export default class UserService {
 
     user.deleted = true;
     user.active = false;
-    user.acceptedToS = TermsOfServiceStatus.NOT_ACCEPTED;
     user.canGoIntoDebt = false;
 
     await user.save();
