@@ -575,7 +575,6 @@ export default class TransactionService {
     if (user) {
       query.andWhere(new Brackets((qb) => {
         qb.where('transaction.fromId = :userId', { userId: user.id })
-          .orWhere('transaction.createdById = :userId', { userId: user.id })
           .orWhere('subTransaction.toId = :userId', { userId: user.id });
       }));
     }
