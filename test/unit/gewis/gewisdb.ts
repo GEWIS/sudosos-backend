@@ -1,6 +1,6 @@
 /**
  *  SudoSOS back-end API service.
- *  Copyright (C) 2020  Study association GEWIS
+ *  Copyright (C) 2024  Study association GEWIS
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU Affero General Public License as published
@@ -18,7 +18,7 @@
 import { expect } from 'chai';
 import sinon, { SinonSandbox, SinonSpy } from 'sinon';
 import { defaultBefore, DefaultContext, finishTestDB } from '../../helpers/test-helpers';
-import User, { TermsOfServiceStatus } from '../../../src/entity/user/user';
+import User from '../../../src/entity/user/user';
 import GewisUser from '../../../src/gewis/entity/gewis-user';
 import { seedUsers } from '../../seed';
 import seedGEWISUsers from '../../../src/gewis/database/seed';

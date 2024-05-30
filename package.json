@@ -34,7 +34,7 @@
     "express": "^4.18.2",
     "express-fileupload": "^1.4.0",
     "express-jsdoc-swagger": "^1.8.0",
-    "gewisdb-ts-client": "github:GEWIS/gewisdb-ts-client",
+    "gewisdb-ts-client": "github:GEWIS/gewisdb-ts-client#26575e8",
     "jsonwebtoken": "^9.0.0",
     "ldap-escape": "^2.0.6",
     "ldapts": "^4.2.4",

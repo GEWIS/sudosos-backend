@@ -37,11 +37,6 @@ import Bindings from '../helpers/bindings';
 import AuthenticationService from './authentication-service';
 import WelcomeWithReset from '../mailer/templates/welcome-with-reset';
 import { Brackets } from 'typeorm';
-import DineroTransformer from '../entity/transformer/dinero-transformer';
-import { getLogger } from 'log4js';
-import MembershipExpiryNotification from '../mailer/templates/membership-expiry-notification';
-import BalanceService from './balance-service';
-import { Language } from '../mailer/templates/mail-template';
 
 /**
  * Parameters used to filter on Get Users functions.
