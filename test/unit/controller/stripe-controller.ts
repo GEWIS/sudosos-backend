@@ -49,6 +49,8 @@ describe('StripeController', async (): Promise<void> => {
     adminToken: string,
     stripeDeposits: StripeDeposit[],
     validStripeRequest: StripeRequest;
+    minimumStripeRequest: StripeRequest;
+    maximumStripeRequest: StripeRequest;
   };
 
   // eslint-disable-next-line func-names
@@ -122,12 +124,33 @@ describe('StripeController', async (): Promise<void> => {
     app.use(new TokenMiddleware({ tokenHandler, refreshFactor: 0.5 }).getMiddleware());
     app.use('/stripe', controller.getRouter());
 
-    const dinero = DineroTransformer.Instance.from(3900);
+    // Valid Stripe deposit initiation request
+    const validDinero = DineroTransformer.Instance.from(1950);
     const validStripeRequest: StripeRequest = {
       amount: {
-        amount: dinero.getAmount(),
-        precision: dinero.getPrecision(),
-        currency: dinero.getCurrency(),
+        amount: validDinero.getAmount(),
+        precision: validDinero.getPrecision(),
+        currency: validDinero.getCurrency(),
+      },
+    };
+
+    // Too low Stripe deposit initiation request
+    const minimumDinero = DineroTransformer.Instance.from(500);
+    const minimumStripeRequest: StripeRequest = {
+      amount: {
+        amount: minimumDinero.getAmount(),
+        precision: minimumDinero.getPrecision(),
+        currency: minimumDinero.getCurrency(),
+      },
+    };
+
+    // Too high Stripe deposit initiation request
+    const maximumDinero = DineroTransformer.Instance.from(15600);
+    const maximumStripeRequest: StripeRequest = {
+      amount: {
+        amount: maximumDinero.getAmount(),
+        precision: maximumDinero.getPrecision(),
+        currency: maximumDinero.getCurrency(),
       },
     };
 
@@ -142,6 +165,8 @@ describe('StripeController', async (): Promise<void> => {
       userToken,
       stripeDeposits,
       validStripeRequest,
+      minimumStripeRequest,
+      maximumStripeRequest,
     };
   });
 
@@ -172,6 +197,28 @@ describe('StripeController', async (): Promise<void> => {
       ctx.specification.validateModel('StripePaymentIntentResponse', paymentIntent);
       const stripeDeposit = await StripeDeposit.findOne({ where: { id: paymentIntent.id }, relations: ['to'] });
       expect(ctx.localUser.id).to.equal(stripeDeposit.to.id);
+    });
+    it('should return an HTTP 422 if deposit request amount is too low', async () => {
+      const res = await request(ctx.app)
+        .post('/stripe/deposit')
+        .set('Authorization', `Bearer ${ctx.userToken}`)
+        .send(ctx.minimumStripeRequest);
+
+      expect(res.status).to.equal(422);
+      expect(res.body).to.deep.equal({
+        error: 'Top-up amount is too low',
+      });
+    });
+    it('should return an HTTP 422 if deposit request amount is too high', async () => {
+      const res = await request(ctx.app)
+        .post('/stripe/deposit')
+        .set('Authorization', `Bearer ${ctx.userToken}`)
+        .send(ctx.maximumStripeRequest);
+
+      expect(res.status).to.equal(422);
+      expect(res.body).to.deep.equal({
+        error: 'Top-up amount is too high',
+      });
     });
     it('should return an HTTP 401 if no Bearer token provided', async () => {
       const res = await request(ctx.app)
