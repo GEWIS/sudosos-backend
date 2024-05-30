@@ -1,6 +1,6 @@
 /**
  *  SudoSOS back-end API service.
- *  Copyright (C) 2020  Study association GEWIS
+ *  Copyright (C) 2024  Study association GEWIS
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU Affero General Public License as published
@@ -15,6 +15,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
 import Stripe from 'stripe';
 import { Dinero } from 'dinero.js';
 import { getLogger, Logger } from 'log4js';
@@ -49,16 +50,28 @@ export default class StripeService {
   }
 
   /**
-   * Topup should be at least 10 euros or the users negative balance.
+   * Topup should be at least 10 euros or the user's negative balance.
    * @param balance
    * @param request
    */
-  public static validateStripeRequestAmount(balance: BalanceResponse, request: StripeRequest): boolean {
+  public static validateStripeRequestMinimumAmount(balance: BalanceResponse, request: StripeRequest): boolean {
     const MIN_TOPUP = process.env.MIN_TOPUP || 1000;
 
-    // Check if top up is enough
+    // Check if top-up is enough
     if (request.amount.amount >= MIN_TOPUP) return true;
     return request.amount.amount === -1 * balance.amount.amount;
+  }
+
+  /**
+   * Topup should be at most 150 euros minus user's positive balance or user's negative balance.
+   * @param balance
+   * @param request
+   */
+  public static validateStripeRequestMaximumAmount(balance: BalanceResponse, request: StripeRequest): boolean {
+    const MAX_BALANCE = process.env.MAX_BALANCE || 15000;
+
+    // Check if top-up will not exceed max balance
+    return MAX_BALANCE >= (balance.amount.amount + request.amount.amount);
   }
 
   private static asStripeDepositStatusResponse(status: StripeDepositStatus): StripeDepositStatusResponse {

@@ -1,6 +1,6 @@
 /**
  *  SudoSOS back-end API service.
- *  Copyright (C) 2020  Study association GEWIS
+ *  Copyright (C) 2024  Study association GEWIS
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU Affero General Public License as published
@@ -15,6 +15,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
 import log4js, { Logger } from 'log4js';
 import { Response } from 'express';
 import Dinero, { DineroObject } from 'dinero.js';
@@ -74,11 +75,18 @@ export default class StripeController extends BaseController {
     try {
       const amount = Dinero({ ...request.amount } as DineroObject);
       const balance = await BalanceService.getBalance(req.token.user.id);
-      if (!StripeService.validateStripeRequestAmount(balance, request)) {
-        res.status(422).json({ error: 'Top-up amount is to low' });
+
+      // Check if top-up satisfies minimum in accordance with TOS.
+      if (!StripeService.validateStripeRequestMinimumAmount(balance, request)) {
+        res.status(422).json({ error: 'Top-up amount is too low' });
         return;
       }
 
+      // Check if top-up satisfies maximum in accordance with TOS.
+      if (!StripeService.validateStripeRequestMaximumAmount(balance, request)) {
+        res.status(422).json({ error: 'Top-up amount is too high' });
+        return;
+      }
 
       const result = await this.stripeService.createStripePaymentIntent(req.token.user, amount);
       res.status(200).json(result);
