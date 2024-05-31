@@ -1001,7 +1001,7 @@ export default class UserController extends BaseController {
 
   /**
    * GET /users/{id}/transactions
-   * @summary Get an user's transactions (from, to or created)
+   * @summary Get transactions from a user.
    * @operationId getUsersTransactions
    * @tags users - Operations of user controller
    * @param {integer} id.path.required - The id of the user that should be involved
@@ -1062,7 +1062,7 @@ export default class UserController extends BaseController {
 
   /**
    * GET /users/{id}/transfers
-   * @summary Get an user's transfers
+   * @summary Get transfers to or from an user.
    * @operationId getUsersTransfers
    * @tags users - Operations of user controller
    * @param {integer} id.path.required - The id of the user that should be involved
@@ -1241,7 +1241,7 @@ export default class UserController extends BaseController {
 
   /**
    * GET /users/{id}/financialmutations
-   * @summary Get all financial mutations of a user.
+   * @summary Get all financial mutations of a user (from or to).
    * @operationId getUsersFinancialMutations
    * @tags users - Operations of user controller
    * @param {integer} id.path.required - The id of the user to get the mutations from
