@@ -17,9 +17,9 @@
  */
 
 import { config } from 'dotenv';
+import { Application } from '../index';
 import log4js from 'log4js';
-import { Application } from '../../src';
-import Database from '../../src/database/database';
+import Database from './database';
 
 export default async function migrate() {
   const application = new Application();
