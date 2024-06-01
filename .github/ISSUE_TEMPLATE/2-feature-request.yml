@@ -1,0 +1,29 @@
+name: "✨ Feature Request"
+description: Suggest a feature or enhancement to improve SudoSOS backend. Please make sure that this is a feature for the backend and not the frontend.
+labels: ["Type: Idea"]
+body:
+  - type: textarea
+    id: feature
+    attributes:
+      label: What would you like?
+      description: A clear description of the feature or enhancement wanted on the SudoSOS backend.
+      placeholder: I'd like to be able to...
+    validations:
+      required: true
+  - type: textarea
+    id: reason
+    attributes:
+      label: Why is this needed?
+      description: A clear description of why this would be useful to have in the SudoSOS backend.
+      placeholder: I want this because...
+  - type: textarea
+    id: implementation
+    attributes:
+      label: How could it be implemented?
+      description: A clear description of how this feature could be implemented, including any relevant technical details or suggestions.
+      placeholder: This could be implemented by...
+  - type: textarea
+    id: other
+    attributes:
+      label: Other information
+      placeholder: Any other details?

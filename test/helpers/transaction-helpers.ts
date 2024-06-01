@@ -1,6 +1,6 @@
 /**
  *  SudoSOS back-end API service.
- *  Copyright (C) 2020  Study association GEWIS
+ *  Copyright (C) 2024  Study association GEWIS
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU Affero General Public License as published
@@ -15,6 +15,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
 import User from '../../src/entity/user/user';
 import Transaction from '../../src/entity/transactions/transaction';
 import Dinero, { DineroObject } from 'dinero.js';
