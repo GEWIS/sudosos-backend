@@ -1175,7 +1175,7 @@ describe('UserController', (): void => {
         .leftJoinAndSelect('pointOfSaleRev.pointOfSale', 'pointOfSale')
         .leftJoin('transaction.subTransactions', 'subTransaction')
         .leftJoin('subTransaction.subTransactionRows', 'subTransactionRow')
-        .where('transaction.fromId = :userId OR transaction.createdById = :userId OR subTransaction.toId = :userId', { userId: user.id })
+        .where('transaction.fromId = :userId OR subTransaction.toId = :userId', { userId: user.id })
         .distinct(true)
         .getRawMany();
 
