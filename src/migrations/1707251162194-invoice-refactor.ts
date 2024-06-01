@@ -100,9 +100,27 @@ export class InvoiceRefactor1707251162194 implements MigrationInterface {
       }),
     ]);
 
+    await queryRunner.addColumns('invoice_user', [
+      new TableColumn({
+        name: 'street',
+        type: 'varchar(255)',
+      }),
+      new TableColumn({
+        name: 'postalCode',
+        type: 'varchar(255)',
+      }),
+      new TableColumn({
+        name: 'city',
+        type: 'varchar(255)',
+      }),
+      new TableColumn({
+        name: 'country',
+        type: 'varchar(255)',
+      }),
+    ]);
+
 
     await queryRunner.query('UPDATE invoice SET reference = \'UNSET_MIGRATED_ENTRY\', street = \'UNSET_MIGRATED_ENTRY\', postalCode = \'UNSET_MIGRATED_ENTRY\', city = \'UNSET_MIGRATED_ENTRY\', country = \'UNSET_MIGRATED_ENTRY\'');
-
 
     await queryRunner.changeColumn('invoice', 'reference', new TableColumn({
       name: 'reference',
@@ -167,6 +185,11 @@ export class InvoiceRefactor1707251162194 implements MigrationInterface {
     await queryRunner.dropColumn('invoice', 'postalCode');
     await queryRunner.dropColumn('invoice', 'city');
     await queryRunner.dropColumn('invoice', 'country');
+
+    await queryRunner.dropColumn('invoice_user', 'street');
+    await queryRunner.dropColumn('invoice_user', 'postalCode');
+    await queryRunner.dropColumn('invoice_user', 'city');
+    await queryRunner.dropColumn('invoice_user', 'country');
 
     const pdfTable = await queryRunner.getTable('invoice_pdf');
     const pdfForeignKey = pdfTable.foreignKeys.find(fk => fk.columnNames.indexOf('createdById') !== -1);
