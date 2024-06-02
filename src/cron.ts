@@ -25,6 +25,7 @@ import BalanceService from './service/balance-service';
 import ADService from './service/ad-service';
 import RoleManager from './rbac/role-manager';
 import Gewis from './gewis/gewis';
+import GewisDBService from './gewis/service/gewisdb-service';
 
 class CronApplication {
   logger: Logger;
@@ -92,6 +93,15 @@ async function createCronTasks(): Promise<void> {
     application.tasks.push(syncADGroups);
   }
 
+  if (process.env.GEWISDB_API_KEY && process.env.GEWISDB_API_URL) {
+    await GewisDBService.syncAll();
+    const syncGewis = cron.schedule('41 4 * * *', async () => {
+      logger.debug('Syncing users with GEWISDB.');
+      await GewisDBService.syncAll();
+      logger.debug('Synced users with GEWISDB.');
+    });
+    application.tasks.push(syncGewis);
+  }
   application.logger.info('Tasks registered');
 }
 

@@ -186,6 +186,26 @@ export default class UserService {
   }
 
   /**
+   * Closes a user account by setting the user's status to deleted and inactive.
+   * Also, it sets the user's acceptedToS status to NOT_ACCEPTED and canGoIntoDebt to false.
+   *
+   * @param {number} userId - The ID of the user to close the account for.
+   * @returns {Promise<void>} - A promise that resolves when the user account has been closed.
+   */
+  public static async closeUser(userId: number): Promise<UserResponse> {
+    const user = await User.findOne({ where: { id: userId, deleted: false } });
+    if (!user) return undefined;
+
+    user.deleted = true;
+    user.active = false;
+    user.canGoIntoDebt = false;
+
+    await user.save();
+    // Correctly parsed to expected response
+    return this.getUsers({ id: userId }).then((u) => u.records[0]);
+  }
+
+  /**
    * Updates the user object with the new properties.
    * @param userId - ID of the user to update.
    * @param updateUserRequest - The update object.

@@ -34,7 +34,7 @@ import Gewis from '../gewis';
 import User from '../../entity/user/user';
 import wrapInManager from '../../helpers/database';
 import UserService from '../../service/user-service';
-import { UpdateUserRequest } from '../../controller/request/user-request';
+import { webResponseToUpdate } from '../helpers/gewis-helper';
 
 /**
   * The GEWIS authentication controller is responsible for:
@@ -144,12 +144,7 @@ export default class GewisAuthenticationController extends BaseController {
         gewisUser = await wrapInManager<GewisUser>(Gewis.createUserFromWeb)(gewisweb);
       } else {
         //
-        const update: UpdateUserRequest = {
-          firstName: gewisweb.given_name,
-          lastName: (gewisweb.middle_name?.length > 0 ? `${gewisweb.middle_name} ` : '') + gewisweb.family_name,
-          email: gewisweb.email,
-          ofAge: gewisweb.is_18_plus,
-        };
+        const update = webResponseToUpdate(gewisweb);
         await UserService.updateUser(gewisUser.user.id, update);
       }
 

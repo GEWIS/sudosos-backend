@@ -64,10 +64,6 @@ describe('Database', async (): Promise<void> => {
 
       const entities = dataSource.entityMetadatas;
 
-      await dataSource.runMigrations({ transaction: 'all', fake: true });
-      await dataSource.undoLastMigration({ transaction: 'all' });
-      await dataSource.runMigrations({ transaction: 'all' });
-
       for (const entity of entities) {
         const tableName = entity.tableName;
         const queryRunner = dataSource.createQueryRunner();

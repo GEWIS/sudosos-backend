@@ -56,6 +56,12 @@ export async function defaultContext() {
   };
 }
 
+export async function defaultBefore(): Promise<DefaultContext> {
+  const ctx = await defaultContext();
+  await truncateAllTables(ctx.connection);
+  return ctx;
+}
+
 //
 export async function finishTestDB(connection: DataSource) {
   await truncateAllTables(connection);
