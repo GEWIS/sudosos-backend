@@ -241,6 +241,13 @@ export default class InvoiceService {
   private static async AddCustomEntries(invoice: Invoice,
     customEntries: InvoiceEntryRequest[]): Promise<void> {
     const promises: Promise<InvoiceEntry>[] = [];
+    const entries: InvoiceEntry[] = this.GenerateCustomEntries(invoice, customEntries);
+    entries.forEach((e) => promises.push(e.save()));
+    await Promise.all(promises);
+  }
+
+  private static GenerateCustomEntries(invoice: Invoice, customEntries: InvoiceEntryRequest[]): InvoiceEntry[] {
+    const customInvoiceEntries: InvoiceEntry[]  = [];
     customEntries.forEach((request) => {
       const { description, amount, vatPercentage } = request;
       const entry = Object.assign(new InvoiceEntry(), {
@@ -250,9 +257,9 @@ export default class InvoiceService {
         priceInclVat: DineroTransformer.Instance.from(request.priceInclVat.amount),
         vatPercentage,
       });
-      promises.push(entry.save());
+      customInvoiceEntries.push(entry);
     });
-    await Promise.all(promises);
+    return customInvoiceEntries;
   }
 
   static isState(invoice: Invoice, state: InvoiceState): boolean {
@@ -532,8 +539,6 @@ export default class InvoiceService {
     }
 
     const transactions = (await TransactionService.getTransactions(params, {})).records;
-    const transferPreview = await this.createTransferFromTransactions(forId, transactions, isCreditInvoice, false);
-    console.log(transferPreview);
     const transfer = await this.createTransferFromTransactions(forId, transactions, isCreditInvoice, true);
 
     // Create a new Invoice
@@ -559,8 +564,6 @@ export default class InvoiceService {
     });
 
     const subTransactions = await this.getSubTransactionsInvoice(newInvoice, transactions, isCreditInvoice);
-    const invoiceEntries = await this.createInvoiceEntriesTransactions(newInvoice, subTransactions, false);
-    console.log(invoiceEntries);
     // First save the Invoice, then the status.
     await Invoice.save(newInvoice).then(async () => {
       newInvoice.invoiceStatus.push(invoiceStatus);
