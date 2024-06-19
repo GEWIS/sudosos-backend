@@ -33,6 +33,7 @@ import InactivityAdministrativeCostsParams from '../controller/request/inactivit
 import TransferService from './transfer-service';
 import TransferRequest from '../controller/request/transfer-request';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
+import dinero, { Dinero } from 'dinero.js';
 
 
 
@@ -135,14 +136,19 @@ export default class AdministrativeCostService {
 
     if (!from) return undefined;
 
+
+
     const balance = await BalanceService.getBalance(from.id);
-    const amount = (balance.amount.amount > 10) ? 10 : balance.amount.amount;
+    const dineroBalance = DineroTransformer.Instance.from(balance.amount.amount);
+    const fineDinero = DineroTransformer.Instance.from(10);
+
+    const amount = (dineroBalance.greaterThanOrEqual(fineDinero)) ? 10 : balance.amount.amount;
 
     const transfer: TransferRequest = {
       amount: {
-        amount: amount,
-        precision: 2,
-        currency: 'EUR',
+        amount: inactivityAdministrativeCost.amount.amount,
+        precision: inactivityAdministrativeCost.amount.precision,
+        currency: inactivityAdministrativeCost.amount.currency,
       },
       description: '',
       fromId: inactivityAdministrativeCost.fromId,

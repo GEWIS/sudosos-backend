@@ -19,6 +19,7 @@ import { DineroObjectRequest } from './dinero-request';
 
 
 export interface BaseInactivityAdministrativeCostsParams {
+  amount: DineroObjectRequest;
   lastTransaction: Date;
   lastTransactionId: number;
   lastTransferId: number;

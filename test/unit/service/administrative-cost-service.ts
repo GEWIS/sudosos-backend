@@ -49,6 +49,7 @@ import InactivityAdministrativeCostsParams
   from '../../../src/controller/request/inactivity-administrative-costs-request';
 import BalanceService from '../../../src/service/balance-service';
 import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
+import dinero from 'dinero.js';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -82,6 +83,7 @@ describe('AdministrativeCostService', async (): Promise<void> => {
     inactivityAdministrativeCosts: InactivityAdministrativeCosts[],
     balances: Balance[],
     spec: SwaggerSpecification,
+    dineroTransformer: DineroTransformer,
   };
 
   before(async function test(): Promise<void> {
@@ -99,6 +101,7 @@ describe('AdministrativeCostService', async (): Promise<void> => {
     const { inactivityAdministrativeCosts, administrativeCostTransfers } = await seedInactivityAdministrativeCosts(users, transactions, transfers);
     const subTransactions: SubTransaction[] = Array.prototype.concat(...transactions
       .map((t) => t.subTransactions));
+    const dineroTransformer = DineroTransformer.Instance;
 
     const balances = users.map((u) =>
       calculateBalance(u, transactions, subTransactions, transfers, new Date()),
@@ -117,6 +120,7 @@ describe('AdministrativeCostService', async (): Promise<void> => {
       balances,
       transfers: transfers.concat(administrativeCostTransfers),
       inactivityAdministrativeCosts,
+      dineroTransformer,
       spec: await Swagger.importSpecification(),
     };
   });
@@ -153,8 +157,12 @@ describe('AdministrativeCostService', async (): Promise<void> => {
 
       const lastDate = (lastTransaction.updatedAt < lastTransfer.updatedAt) ? lastTransfer.updatedAt : lastTransfer.updatedAt;
 
-
       const creation: InactivityAdministrativeCostsParams = {
+        amount: {
+          amount: 10,
+          precision: dinero.defaultPrecision,
+          currency: dinero.defaultCurrency,
+        },
         fromId: user.id,
         lastTransaction: lastDate,
         lastTransferId: balance.lastTransferId,
@@ -170,10 +178,57 @@ describe('AdministrativeCostService', async (): Promise<void> => {
 
       const newBalance = await BalanceService.getBalance(user.id);
       const difference = balance.amount.amount - newBalance.amount.amount;
+      const transfer = await Transfer.findOne({ where: { id: administrativeCost.transfer.id } } );
 
       expect(response.from.id).to.equal(administrativeCost.from.id);
       expect(response.id).to.equal(administrativeCost.id);
       expect(difference).to.equal(10);
+      expect(ctx.dineroTransformer.to(response.transfer.amount)).to.equal(ctx.dineroTransformer.to(transfer.amount));
+    });
+
+    it('should create a new inactivity administrative cost entity for a member with less than 10 euros', async () => {
+      const user = await User.findOne({ where: { } });
+      const balance = await BalanceService.getBalance(user.id);
+      const lastTransaction = await Transaction.findOne( { where: { id: balance.lastTransactionId } });
+      const lastTransfer = await Transfer.findOne( { where: { id: balance.lastTransferId } });
+      const lastDate = (lastTransaction.updatedAt < lastTransfer.updatedAt) ? lastTransfer.updatedAt : lastTransfer.updatedAt;
+
+      const saveBalance = Object.assign(new Balance(), {
+        userId: user.id,
+        user: user,
+        amount: ctx.dineroTransformer.from(5),
+        lastTransaction: lastTransaction,
+        lastTransfer: lastTransfer,
+      });
+
+      await Balance.save(saveBalance);
+
+      const creation: InactivityAdministrativeCostsParams = {
+        amount: {
+          amount: 10,
+          precision: dinero.defaultPrecision,
+          currency: dinero.defaultCurrency,
+        },
+        fromId: user.id,
+        lastTransaction: lastDate,
+        lastTransferId: balance.lastTransferId,
+        lastTransactionId: balance.lastTransactionId,
+      };
+
+      const response = await AdministrativeCostService.createInactivityAdministrativeCost(creation);
+
+      const administrativeCost = await InactivityAdministrativeCosts.findOne( {
+        where: { fromId: user.id },
+        relations: { from: true, transfer: true },
+      } );
+
+      const newBalance = await BalanceService.getBalance(user.id);
+      const transfer = await Transfer.findOne({ where: { id: administrativeCost.transfer.id } } );
+
+      expect(response.from.id).to.equal(administrativeCost.from.id);
+      expect(response.id).to.equal(administrativeCost.id);
+      expect(newBalance.amount.amount).to.equal(0);
+      expect(ctx.dineroTransformer.to(response.transfer.amount)).to.equal(ctx.dineroTransformer.to(transfer.amount));
     });
   });
 });
