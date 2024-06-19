@@ -180,10 +180,10 @@ export function reduceMapToCategoryEntries(categoryMap: Map<number, SubTransacti
  * Transforms an array of SubTransactionRows of the same product into invoice entries.
  * @param productMap
  * @param invoice
+ * @param saveToDatabase
  */
 export async function reduceMapToInvoiceEntries(productMap: Map<string, SubTransactionRow[]>, invoice: Invoice): Promise<InvoiceEntry[]> {
   const invoiceEntries: InvoiceEntry[] = [];
-  const promises: Promise<any>[] = [];
   productMap.forEach((tSubRow) => {
     const product = tSubRow[0].product;
     const count = tSubRow.reduce((sum, current) => {
@@ -196,8 +196,14 @@ export async function reduceMapToInvoiceEntries(productMap: Map<string, SubTrans
       priceInclVat: product.priceInclVat,
       vatPercentage: product.vat.percentage,
     });
-    promises.push(InvoiceEntry.save(entry).then((i) => invoiceEntries.push(i)));
+    invoiceEntries.push(entry);
   });
-  await Promise.all(promises);
   return invoiceEntries;
+}
+
+export async function saveInvoiceEntries(entries: InvoiceEntry[]): Promise<void> {
+  const promises: Promise<any>[] = [];
+  entries.forEach((entry) => promises.push(InvoiceEntry.save(entry)));
+  await Promise.all(promises);
+  return;
 }

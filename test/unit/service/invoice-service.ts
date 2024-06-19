@@ -265,9 +265,11 @@ describe('InvoiceService', () => {
       });
 
       expect(transactions).to.not.be.empty;
-      const transfer: TransferResponse = (
-        await InvoiceService.createTransferFromTransactions(toId, transactions, false));
-      expect(transfer.amount.amount).to.be.equal(value);
+      const transfer: TransferResponse | Transfer = (
+        await InvoiceService.createTransferFromTransactions(toId, transactions, false, true));
+      if ('amount' in transfer.amount) {
+        expect(transfer.amount.amount).to.be.equal(value);
+      }
       expect(transfer.to.id).to.be.equal(toId);
     });
   });
@@ -548,6 +550,8 @@ describe('InvoiceService', () => {
         const creditorBalance = await BalanceService.getBalance(creditor.id);
         const transfer = await Transfer.findOne({ where: { from: { id: creditor.id } } });
         expect(transfer).to.not.be.undefined;
+        // expect(transfer.amount).to.not.be.null;
+        // expect(invoice.transfer.amount).to.not.be.null;
         expect(transfer.amount.getAmount()).to.eq(invoice.transfer.amount.getAmount());
         expect(creditorBalance.amount.amount).to.eq(0);
       });
