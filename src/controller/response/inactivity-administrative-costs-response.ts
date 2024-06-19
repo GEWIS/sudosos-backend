@@ -15,21 +15,22 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { BaseUserResponse } from './user-response';
 import { PaginationResult } from '../../helpers/pagination';
+import { Dinero } from 'dinero.js';
+import BaseResponse from './base-response';
+import { BaseUserResponse } from './user-response';
 
 /**
- * @typedef {allOf|BaseUserResponse} InactivityAdministrativeCostsResponse
+ * @typedef {allOf|BaseUserResponse} BaseInactivityAdministrativeCostsResponse
  * @property {string} email - If local user, the e-mail of the user
  * @property {boolean} sentAdministrativeCostsEmail.required - Whether the user has already received his cost notification
- * @property {number} amoun.required - The amount of administrative cost
+ * @property {Dinero} amoun.required - The amount of administrative cost
  * @property {number} lastTransactionId - The id of the last transaction the user made
  * @property {number} lastTransferId - The id of the last transfer the user made
  */
-export interface InactivityAdministrativeCostsResponse extends BaseUserResponse {
-  email?: string;
-  sentAdministrativeCostsEmail: boolean;
-  amount: number;
+export interface BaseInactivityAdministrativeCostsResponse extends BaseResponse {
+  from: BaseUserResponse,
+  amount: Dinero;
   lastTransactionId?: number;
   lastTransferId?: number;
 }
@@ -41,5 +42,5 @@ export interface InactivityAdministrativeCostsResponse extends BaseUserResponse 
  */
 export interface PaginatedInactivityAdministrativeCostsResponse {
   _pagination: PaginationResult,
-  records: InactivityAdministrativeCostsResponse[],
+  records: BaseInactivityAdministrativeCostsResponse[],
 }

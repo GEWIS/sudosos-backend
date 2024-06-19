@@ -1369,6 +1369,7 @@ Promise<{ inactivityAdministrativeCosts: InactivityAdministrativeCosts[], admini
   for (let i = 0; i < userEligible.length; i += 1) {
 
     const inactiveAdministrativeCost = Object.assign(new InactivityAdministrativeCosts(), {
+      fromId: userEligible[i].id,
       from: userEligible[i],
       amount,
       lastTransaction: lastChange[i].updatedAt,

@@ -21,7 +21,7 @@ import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import Database from '../../../src/database/database';
 import {
-  seedContainers, seedFines, seedInactivityAdministrativeCosts, seedPointsOfSale,
+  seedContainers, seedInactivityAdministrativeCosts, seedPointsOfSale,
   seedProductCategories,
   seedProducts, seedTransactions, seedTransfers,
   seedUsers,
@@ -36,24 +36,37 @@ import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale
 import Transaction from '../../../src/entity/transactions/transaction';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import Transfer from '../../../src/entity/transactions/transfer';
-import Fine from '../../../src/entity/fine/fine';
 import Swagger from '../../../src/start/swagger';
 import Balance from '../../../src/entity/transactions/balance';
 import { calculateBalance } from '../../helpers/balance';
-import { expect } from 'chai';
 import InactivityAdministrativeCosts from '../../../src/entity/transactions/inactivity-administrative-costs';
-import { T } from './invoice-service';
-import { BaseInvoiceResponse } from '../../../src/controller/response/invoice-response';
+import {
+  BaseInactivityAdministrativeCostsResponse,
+} from '../../../src/controller/response/inactivity-administrative-costs-response';
+import deepEqualInAnyOrder from 'deep-equal-in-any-order';
+import chai, { expect } from 'chai';
+import InactivityAdministrativeCostsParams
+  from '../../../src/controller/request/inactivity-administrative-costs-request';
+import BalanceService from '../../../src/service/balance-service';
+import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
+
+chai.use(deepEqualInAnyOrder);
 
 function returnsAll(response: T[], superset: InactivityAdministrativeCosts[], mapping: any) {
   expect(response.map(mapping)).to.deep.equalInAnyOrder(superset.map(mapping));
 }
 
-function baseKeyMapping(invoice: BaseInvoiceResponse | InactivityAdministrativeCosts) {
+function baseKeyMapping(inactivityAdministrativeCost: BaseInactivityAdministrativeCostsResponse | InactivityAdministrativeCosts) {
   return {
-
+    id: inactivityAdministrativeCost.id,
+    from: inactivityAdministrativeCost.from,
+    amount: inactivityAdministrativeCost.amount.getAmount(),
+    lastTransactionId: inactivityAdministrativeCost.lastTransactionId,
+    lastTransferId: inactivityAdministrativeCost.lastTransferId,
   };
 }
+
+export type T = BaseInactivityAdministrativeCostsResponse | InactivityAdministrativeCosts;
 
 describe('AdministrativeCostService', async (): Promise<void> => {
   let ctx: {
@@ -67,7 +80,6 @@ describe('AdministrativeCostService', async (): Promise<void> => {
     subTransactions: SubTransaction[],
     transfers: Transfer[],
     inactivityAdministrativeCosts: InactivityAdministrativeCosts[],
-    fines: Fine[],
     balances: Balance[],
     spec: SwaggerSpecification,
   };
@@ -76,24 +88,22 @@ describe('AdministrativeCostService', async (): Promise<void> => {
     this.timeout(50000);
     const connection = await Database.initialize();
     const app = express();
-    const seededUsers = await seedUsers();
+    const users = await seedUsers();
     const categories = await seedProductCategories();
     const vatGroups = await seedVatGroups();
-    const { productRevisions } = await seedProducts(seededUsers, categories, vatGroups);
-    const { containerRevisions } = await seedContainers(seededUsers, productRevisions);
-    const { pointOfSaleRevisions } = await seedPointsOfSale(seededUsers, containerRevisions);
-    const { transactions } = await seedTransactions(seededUsers, pointOfSaleRevisions, new Date('2020-02-12'), new Date(), 10);
-    const transfers = await seedTransfers(seededUsers, new Date('2020-02-12'), new Date('2021-11-30'));
-    const { inactivityAdministrativeCosts, administrativeCostTransfers } = await seedInactivityAdministrativeCosts(seededUsers, transactions, transfers);
-    const { fines, fineTransfers, users } = await seedFines(seededUsers, transactions, transfers, true);
+    const { productRevisions } = await seedProducts(users, categories, vatGroups);
+    const { containerRevisions } = await seedContainers(users, productRevisions);
+    const { pointOfSaleRevisions } = await seedPointsOfSale(users, containerRevisions);
+    const { transactions } = await seedTransactions(users, pointOfSaleRevisions, new Date('2020-02-12'), new Date(), 10);
+    const transfers = await seedTransfers(users, new Date('2020-02-12'), new Date());
+    const { inactivityAdministrativeCosts, administrativeCostTransfers } = await seedInactivityAdministrativeCosts(users, transactions, transfers);
     const subTransactions: SubTransaction[] = Array.prototype.concat(...transactions
       .map((t) => t.subTransactions));
 
-    const balances: Balance[] = [];
+    const balances = users.map((u) =>
+      calculateBalance(u, transactions, subTransactions, transfers, new Date()),
+    );
 
-    for (let nr = 0; nr < users.length; nr += 1) {
-      balances.push(calculateBalance(users[0], transactions, subTransactions, transfers, new Date()));
-    }
 
     ctx = {
       connection,
@@ -105,9 +115,8 @@ describe('AdministrativeCostService', async (): Promise<void> => {
       transactions,
       subTransactions,
       balances,
-      transfers: transfers.concat(fineTransfers).concat(administrativeCostTransfers),
+      transfers: transfers.concat(administrativeCostTransfers),
       inactivityAdministrativeCosts,
-      fines,
       spec: await Swagger.importSpecification(),
     };
   });
@@ -118,11 +127,53 @@ describe('AdministrativeCostService', async (): Promise<void> => {
   });
 
   describe('getAdministrativeCostUsers function', () => {
-    it('should return all users with a inactivity administrative cost', async () =>{
+    it('should return all users with a inactivity administrative cost', async () => {
 
       const res = (await AdministrativeCostService.getInactivityAdministrativeCost());
 
-      // returnsAll(res, ctx.inactivityAdministrativeCosts, baseKeyMapping);
+      returnsAll(res, ctx.inactivityAdministrativeCosts, baseKeyMapping);
+    });
+    it('should return specified user by id', async () => {
+      const administrativeCostId = ctx.inactivityAdministrativeCosts[0].id;
+      const res: InactivityAdministrativeCosts[] = (await AdministrativeCostService.getInactivityAdministrativeCost({ userId: administrativeCostId }));
+
+      returnsAll(res, [ctx.inactivityAdministrativeCosts[0]], baseKeyMapping);
+    });
+  });
+
+  describe('createInactivityAdministrativeCosts function', () => {
+    it('should create a new inactivity administrative cost entity for a member with more than 10 euros', async () => {
+      const balances = (await BalanceService.getBalances(
+        { minBalance: DineroTransformer.Instance.from(10) })).records;
+      const user = await User.findOne({ where: { id: balances[0].id } });
+      const balance = await BalanceService.getBalance(user.id);
+
+      const lastTransaction = await Transaction.findOne( { where: { id: balance.lastTransactionId } });
+      const lastTransfer = await Transfer.findOne( { where: { id: balance.lastTransferId } });
+
+      const lastDate = (lastTransaction.updatedAt < lastTransfer.updatedAt) ? lastTransfer.updatedAt : lastTransfer.updatedAt;
+
+
+      const creation: InactivityAdministrativeCostsParams = {
+        fromId: user.id,
+        lastTransaction: lastDate,
+        lastTransferId: balance.lastTransferId,
+        lastTransactionId: balance.lastTransactionId,
+      };
+
+      const response = await AdministrativeCostService.createInactivityAdministrativeCost(creation);
+
+      const administrativeCost = await InactivityAdministrativeCosts.findOne( {
+        where: { fromId: user.id },
+        relations: { from: true, transfer: true },
+      } );
+
+      const newBalance = await BalanceService.getBalance(user.id);
+      const difference = balance.amount.amount - newBalance.amount.amount;
+
+      expect(response.from.id).to.equal(administrativeCost.from.id);
+      expect(response.id).to.equal(administrativeCost.id);
+      expect(difference).to.equal(10);
     });
   });
 });

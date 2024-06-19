@@ -26,6 +26,9 @@ import Transfer from './transfer';
 
 @Entity()
 export default class InactivityAdministrativeCosts extends BaseEntity {
+  @Column({ nullable: false })
+  public fromId: number;
+
   @ManyToOne(() => User, { nullable: false })
   public from: User;
 
