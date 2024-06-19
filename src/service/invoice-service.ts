@@ -205,7 +205,8 @@ export default class InvoiceService {
     };
 
     if (!saveToDatabase) {
-      return TransferService.createTransferFromRequest(transferRequest);
+      const transfer = TransferService.createTransferFromRequest(transferRequest);
+      return transfer;
     } else {
       return TransferService.postTransfer(transferRequest);
     }
