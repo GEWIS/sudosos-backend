@@ -165,7 +165,7 @@ export default class InvoiceService {
   }
 
   /**
-   * Creates a Transfer for an Invoice from TransactionResponses
+   * Is a Transfer for an Invoice from TransactionResponses
    * @param forId - The user which receives the Invoice/Transfer
    * @param transactions - The array of transactions which to create the Transfer for
    * @param isCreditInvoice - If the invoice is a credit Invoice
