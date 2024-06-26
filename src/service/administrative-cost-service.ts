@@ -25,22 +25,16 @@ import {
   BaseInactivityAdministrativeCostsResponse,
 } from '../controller/response/inactivity-administrative-costs-response';
 import { parseUserToResponse } from '../helpers/revision-to-response';
-import BalanceService, { GetBalanceParameters } from './balance-service';
-import Transaction from '../entity/transactions/transaction';
-import Transfer from '../entity/transactions/transfer';
+import BalanceService from './balance-service';
 import User from '../entity/user/user';
 import InactivityAdministrativeCostsParams from '../controller/request/inactivity-administrative-costs-request';
 import TransferService from './transfer-service';
 import TransferRequest from '../controller/request/transfer-request';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
-import dinero, { Dinero } from 'dinero.js';
-
-
 
 /**
  * Parameters for type of administrative cost, notification or fine
  */
-
 export interface InactivityAdministrativeCostFilterParameters {
   /**
    * Filter based on userId
@@ -56,10 +50,7 @@ export interface InactivityAdministrativeCostFilterParameters {
 export default class AdministrativeCostService {
 
   private static yearCheck(date: Date, maxDifference: number) : boolean {
-
     const difference = new Date(Date.now() - date.getTime());
-
-    const diff = difference.getFullYear() - 1970;
 
     if ((difference.getFullYear() - 1970) >= maxDifference) {
       return true;
@@ -79,52 +70,18 @@ export default class AdministrativeCostService {
     };
   }
 
-  // /**
-  //  * Checks all users for their inactivity
-  //  * @param filters - The filter parameters
-  //  */
-  // public static async checkInactivityAdministrativeCost(filters: InactivityAdministrativeCostFilterParameters = {})
-  //   : Promise<User[]> {
-  //
-  //   const getBalanceParameters: GetBalanceParameters = {};
-  //
-  //   const [users, lastTransactions, lastTransfer]: [User[], Transaction[], Transfer[]] = [[], [], []];
-  //
-  //   const balances = (await BalanceService.getBalances(getBalanceParameters)).records;
-  //
-  //   for (let i = 0; i < balances.length; i += 1) {
-  //     const user = await User.findOne({ where: { id: balances[i].id } });
-  //     const transaction = await Transaction.findOne({ where: { id: balances[i].lastTransactionId } });
-  //     const transfer = await Transfer.findOne({ where: { id: balances[i].lastTransferId } });
-  //
-  //     users.push(user);
-  //     lastTransactions.push(transaction);
-  //     lastTransfer.push(transfer);
-  //   }
-  //
-  //   const inactiveUsers: User[] = [];
-  //
-  //   for (let i = 0; i < users.length; i += 1) {
-  //     if (lastTransactions[i] != null && lastTransfer[i] != null) {
-  //       if (this.yearCheck(lastTransactions[i].updatedAt, filters.yearDifference) && this.yearCheck(lastTransfer[i].updatedAt, filters.yearDifference)) {
-  //         inactiveUsers.push(users[i]);
-  //         continue;
-  //       }
-  //     } else if (lastTransactions[i] != null && lastTransfer[i] == null) {
-  //       if (this.yearCheck(lastTransactions[i].updatedAt, filters.yearDifference)) {
-  //         inactiveUsers.push(users[i]);
-  //         continue;
-  //       }
-  //     } else if (lastTransactions[i] == null && lastTransfer[i] != null) {
-  //       if (this.yearCheck(lastTransfer[i].updatedAt, filters.yearDifference)) {
-  //         inactiveUsers.push(users[i]);
-  //         continue;
-  //       }
-  //     }
-  //   }
-  //
-  //   return inactiveUsers;
-  // }
+  /**
+   * Verifies whether a user has a sufficient balance to make administrative costs
+   * @param {number} userId - the transaction request to verify
+   * @returns {boolean} - whether user's balance is ok or not
+   */
+  public static async positiveBalance(userId: number): Promise<boolean> {
+    // get user balance and compare
+    const userBalance = (await BalanceService.getBalance(userId)).amount.amount;
+
+    // return whether user balance is sufficient to complete the transaction
+    return userBalance > 0;
+  }
 
   /**
    * Creates an inactivity administrative cost for users
@@ -136,9 +93,8 @@ export default class AdministrativeCostService {
 
     if (!from) return undefined;
 
-
-
     const balance = await BalanceService.getBalance(from.id);
+
     const dineroBalance = DineroTransformer.Instance.from(balance.amount.amount);
     const fineDinero = DineroTransformer.Instance.from(10);
 
@@ -146,7 +102,7 @@ export default class AdministrativeCostService {
 
     const transfer: TransferRequest = {
       amount: {
-        amount: inactivityAdministrativeCost.amount.amount,
+        amount: amount,
         precision: inactivityAdministrativeCost.amount.precision,
         currency: inactivityAdministrativeCost.amount.currency,
       },

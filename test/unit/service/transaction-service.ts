@@ -82,7 +82,7 @@ describe('TransactionService', (): void => {
     const { pointOfSaleRevisions } = await seedPointsOfSale(users, containerRevisions);
     const { transactions } = await seedTransactions(users, pointOfSaleRevisions);
 
-    await generateBalance(1000, 7);
+    await generateBalance(1000, 7, false);
     const validTransReq = {
       from: 7,
       createdBy: 7,

@@ -28,6 +28,7 @@ import TokenHandler from '../../src/authentication/token-handler';
 import User, { UserType } from '../../src/entity/user/user';
 import { ADMIN_USER, UserFactory } from './user-factory';
 import { RoleFactory } from './role-factory';
+import BalanceService from '../../src/service/balance-service';
 
 export interface DefaultContext {
   app: Express,
@@ -75,7 +76,7 @@ export async function defaultRolesAndTokens(
   return defaultTokens(tokenHandler);
 }
 
-export default async function generateBalance(amount: number, toId: number) {
+export default async function generateBalance(amount: number, userId: number, subtract: boolean) {
   const transferRequest: TransferRequest = {
     amount: {
       amount,
@@ -83,10 +84,18 @@ export default async function generateBalance(amount: number, toId: number) {
       currency: dinero.defaultCurrency,
     },
     description: 'Magic',
-    fromId: 0,
-    toId,
+    fromId: subtract ? userId : 0,
+    toId: subtract ? 0 : userId,
   };
   await TransferService.postTransfer(transferRequest);
+}
+
+export async function changeBalance(userId: number, finalBalance: number, subtract: boolean) {
+  const currentBalance = await BalanceService.getBalance(userId);
+
+  const difference = Math.abs(currentBalance.amount.amount - finalBalance);
+
+  await generateBalance(difference, userId, subtract);
 }
 
 export function storeLDAPEnv(): { [key: string]: any; } {

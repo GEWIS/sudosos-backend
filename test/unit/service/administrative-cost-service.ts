@@ -50,6 +50,8 @@ import InactivityAdministrativeCostsParams
 import BalanceService from '../../../src/service/balance-service';
 import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
 import dinero from 'dinero.js';
+import { changeBalance } from '../../helpers/test-helpers';
+import exp from 'node:constants';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -130,7 +132,7 @@ describe('AdministrativeCostService', async (): Promise<void> => {
     await ctx.connection.destroy();
   });
 
-  describe('getAdministrativeCostUsers function', () => {
+  describe('getAdministrativeCostUsers function', async () => {
     it('should return all users with a inactivity administrative cost', async () => {
 
       const res = (await AdministrativeCostService.getInactivityAdministrativeCost());
@@ -189,19 +191,13 @@ describe('AdministrativeCostService', async (): Promise<void> => {
     it('should create a new inactivity administrative cost entity for a member with less than 10 euros', async () => {
       const user = await User.findOne({ where: { } });
       const balance = await BalanceService.getBalance(user.id);
+
+      const isPositive = balance.amount.amount > 0;
+      await changeBalance(user.id, 5, isPositive);
+
       const lastTransaction = await Transaction.findOne( { where: { id: balance.lastTransactionId } });
       const lastTransfer = await Transfer.findOne( { where: { id: balance.lastTransferId } });
       const lastDate = (lastTransaction.updatedAt < lastTransfer.updatedAt) ? lastTransfer.updatedAt : lastTransfer.updatedAt;
-
-      const saveBalance = Object.assign(new Balance(), {
-        userId: user.id,
-        user: user,
-        amount: ctx.dineroTransformer.from(5),
-        lastTransaction: lastTransaction,
-        lastTransfer: lastTransfer,
-      });
-
-      await Balance.save(saveBalance);
 
       const creation: InactivityAdministrativeCostsParams = {
         amount: {
@@ -230,5 +226,23 @@ describe('AdministrativeCostService', async (): Promise<void> => {
       expect(newBalance.amount.amount).to.equal(0);
       expect(ctx.dineroTransformer.to(response.transfer.amount)).to.equal(ctx.dineroTransformer.to(transfer.amount));
     });
+  });
+
+  describe('positiveBalance function', async () => {
+    it('should return true if use has a positive balance', async () => {
+      const balances = (await BalanceService.getBalances(
+        { minBalance: DineroTransformer.Instance.from(1) })).records;
+      const response = await AdministrativeCostService.positiveBalance(balances[0].id);
+
+      expect(response).to.be.true;
+    });
+    it('should return true if use has a positive balance', async () => {
+      const balances = (await BalanceService.getBalances(
+        { maxBalance: DineroTransformer.Instance.from(0) })).records;
+      const response = await AdministrativeCostService.positiveBalance(balances[0].id);
+
+      expect(response).to.be.false;
+    });
+
   });
 });

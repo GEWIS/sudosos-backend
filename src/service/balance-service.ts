@@ -106,7 +106,7 @@ export default class BalanceService {
 
   /**
    * Update the balance cache with active values
-   * Insafe Query! Safety leveraged by type safety
+   * Unsafe Query! Safety leveraged by type safety
    */
   public static async updateBalances(params: UpdateBalanceParameters) {
     const entityManager = getManager();

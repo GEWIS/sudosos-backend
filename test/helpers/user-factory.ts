@@ -36,7 +36,7 @@ export class Builder {
   }
 
   public async addBalance(amount: number) {
-    await generateBalance(amount, this.user.id);
+    await generateBalance(amount, this.user.id, false);
     return this;
   }
 
