@@ -22,8 +22,7 @@ import DineroTransformer from '../entity/transformer/dinero-transformer';
 import dinero, { Dinero, DineroObject } from 'dinero.js';
 import {
   BaseFineHandoutEventResponse,
-  FineHandoutEventResponse,
-  FineResponse,
+  FineHandoutEventResponse, FineReport, FineResponse,
   PaginatedFineHandoutEventResponse, UserFineGroupResponse,
   UserToFineResponse,
 } from '../controller/response/debtor-response';
@@ -35,7 +34,7 @@ import { DineroObjectRequest } from '../controller/request/dinero-request';
 import UserFineGroup from '../entity/fine/userFineGroup';
 import { PaginationParameters } from '../helpers/pagination';
 import { parseUserToBaseResponse } from '../helpers/revision-to-response';
-import { getConnection } from 'typeorm';
+import { Between, getConnection, IsNull, Not } from 'typeorm';
 import Transfer from '../entity/transactions/transfer';
 import Mailer from '../mailer';
 import UserGotFined from '../mailer/templates/user-got-fined';
@@ -348,4 +347,46 @@ export default class DebtorService {
       }));
     }));
   }
+
+  /**
+   * Get a report of all fines
+   * @param fromDate
+   * @param toDate
+   */
+  public static async getFineReport(fromDate: Date, toDate: Date): Promise<FineReport> {
+    const handedOut = dinero({ amount: 0 });
+    const waivedAmount = dinero({ amount: 0 });
+    const count = {
+      count: 0,
+      waivedCount: 0,
+    };
+
+    // Get all transfers that have a fine or waived fine
+    const transfers = await Transfer.find({
+      relations: ['fine', 'fine.transfer',  'waivedFines', 'waivedFines.waivedTransfer'],
+      // { waivedFines: Not([]) },
+      where: [{ fine: true }, { waivedFines: true }],
+    });
+
+    transfers.forEach((transfer) => {
+      if (transfer.fine != null && transfer.waivedFines != null) Error('Transfer has both fine and waived fine');
+      if (transfer.fine != null) {
+        handedOut.add(transfer.fine.amount);
+        count.count++;
+      }
+      if (transfer.waivedFines != null) {
+        waivedAmount.add(transfer.waivedFines.waivedTransfer.amount);
+        count.waivedCount++;
+      }
+    });
+
+    return {
+      fromDate: fromDate,
+      toDate: toDate,
+      ...count,
+      handedOut,
+      waivedAmount,
+    };
+  }
+
 }

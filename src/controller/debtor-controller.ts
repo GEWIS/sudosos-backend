@@ -77,6 +77,12 @@ export default class DebtorController extends BaseController {
           body: { modelName: 'HandoutFinesRequest' },
         },
       },
+      '/report': {
+        GET: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Fine', ['*']),
+          handler: this.getFineReport.bind(this),
+        },
+      },
     };
   }
 
@@ -282,6 +288,43 @@ export default class DebtorController extends BaseController {
       res.status(204).send();
     } catch (error) {
       this.logger.error('Could not send future fine notification emails:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * GET /fines/report
+   * @summary Get a report of all fines
+   * @tags debtors - Operations of the debtor controller
+   * @operationId getFineReport
+   * @security JWT
+   * @param {Date} fromDate.query - The start date of the report
+   * @param {Date} toDate.query - The end date of the report
+   * @return {FineReportResponse} 200 - The requested report
+   * @return {string} 400 - Validation error
+   * @return {string} 500 - Internal server error
+   */
+  public async getFineReport(req: RequestWithToken, res: Response): Promise<void> {
+    this.logger.trace('Get fine report by ', req.token.user);
+
+    let fromDate: Date;
+    let toDate: Date;
+    try {
+      fromDate = asDate(req.query.fromDate);
+      toDate = asDate(req.query.toDate);
+      if (toDate < fromDate) {
+        res.status(400).json('toDate must be after fromDate');
+        return;
+      }
+    } catch (e) {
+      res.status(400).json(e.message);
+      return;
+    }
+
+    try {
+      res.json(await DebtorService.getFineReport(fromDate, toDate));
+    } catch (error) {
+      this.logger.error('Could not get fine report:', error);
       res.status(500).json('Internal server error.');
     }
   }
