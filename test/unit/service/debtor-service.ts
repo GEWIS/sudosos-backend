@@ -50,6 +50,7 @@ import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import dinero from 'dinero.js';
 import TransferService from '../../../src/service/transfer-service';
+import FineHandoutEvent from "../../../src/entity/fine/fineHandoutEvent";
 
 describe('DebtorService', (): void => {
   let ctx: {
@@ -570,32 +571,49 @@ describe('DebtorService', (): void => {
       await clearFines();
     });
 
-    it('should return report', async () => {
+    async function makeFines(): Promise<FineHandoutEventResponse> {
       const referenceDate = new Date('2021-01-30');
 
       const usersToFine = await DebtorService.calculateFinesOnDate({
         referenceDates: [referenceDate],
       });
 
-      const fineHandoutEvent = await DebtorService.handOutFines({
+      return DebtorService.handOutFines({
         userIds: usersToFine.map((u) => u.id),
         referenceDate,
       }, ctx.actor);
-      console.error(fineHandoutEvent);
-      const fromDate = new Date(fineHandoutEvent.createdAt);
-      fromDate.setDate(fromDate.getDate());
-      const tillDate = new Date(fineHandoutEvent.createdAt);;
-      const report = await DebtorService.getFineReport(new Date(fineHandoutEvent.createdAt), new Date(fineHandoutEvent.createdAt));
+    }
 
-      console.error(report);
-      expect(report.fromDate.toISOString()).to.equal(fromDate.toISOString());
-      expect(report.toDate.toISOString()).to.equal(tillDate.toISOString());
+    it('should return correct report', async () => {
+      const fineHandoutEvent = await makeFines();
+      const date = new Date(fineHandoutEvent.createdAt);
+      const report = await DebtorService.getFineReport(date, date);
 
+      expect(report.fromDate.toISOString()).to.equal(date.toISOString());
+      expect(report.toDate.toISOString()).to.equal(date.toISOString());
       expect(report.count).to.equal(fineHandoutEvent.fines.length);
 
-      const handedOut = usersToFine.reduce((sum, u) => sum + u.fineAmount.amount, 0);
+      const handedOut = fineHandoutEvent.fines.reduce((sum, u) => sum + u.amount.amount, 0);
       expect(report.handedOut.getAmount()).to.equal(handedOut);
       expect(report.waivedAmount.getAmount()).to.equal(0);
+    });
+
+    it('should deal with waived fines', async () => {
+      const fineHandoutEvent = await makeFines();
+      const date = new Date(fineHandoutEvent.createdAt);
+      const tillDate = new Date();
+
+      await DebtorService.waiveFines(fineHandoutEvent.fines[0].user.id);
+      const report = await DebtorService.getFineReport(date, tillDate);
+
+      expect(report.fromDate.toISOString()).to.equal(date.toISOString());
+      expect(report.toDate.toISOString()).to.equal(tillDate.toISOString());
+      expect(report.count).to.equal(fineHandoutEvent.fines.length);
+      expect(report.waivedCount).to.equal(1);
+
+      const handedOut = fineHandoutEvent.fines.reduce((sum, u) => sum + u.amount.amount, 0);
+      expect(report.handedOut.getAmount()).to.equal(handedOut);
+      expect(report.waivedAmount.getAmount()).to.equal(fineHandoutEvent.fines[0].amount.amount);
     });
 
   });

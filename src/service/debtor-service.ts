@@ -354,8 +354,8 @@ export default class DebtorService {
    * @param toDate
    */
   public static async getFineReport(fromDate: Date, toDate: Date): Promise<FineReport> {
-    const handedOut = dinero({ amount: 0 });
-    const waivedAmount = dinero({ amount: 0 });
+    let handedOut = dinero({ amount: 0 });
+    let waivedAmount = dinero({ amount: 0 });
     const count = {
       count: 0,
       waivedCount: 0,
@@ -364,18 +364,17 @@ export default class DebtorService {
     // Get all transfers that have a fine or waived fine
     const transfers = await Transfer.find({
       relations: ['fine', 'fine.transfer',  'waivedFines', 'waivedFines.waivedTransfer'],
-      // { waivedFines: Not([]) },
       where: [{ fine: true }, { waivedFines: true }],
     });
 
     transfers.forEach((transfer) => {
       if (transfer.fine != null && transfer.waivedFines != null) Error('Transfer has both fine and waived fine');
       if (transfer.fine != null) {
-        handedOut.add(transfer.fine.amount);
+        handedOut = handedOut.add(transfer.fine.amount);
         count.count++;
       }
       if (transfer.waivedFines != null) {
-        waivedAmount.add(transfer.waivedFines.waivedTransfer.amount);
+        waivedAmount = waivedAmount.add(transfer.waivedFines.waivedTransfer.amount);
         count.waivedCount++;
       }
     });
