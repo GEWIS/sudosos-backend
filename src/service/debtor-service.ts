@@ -282,7 +282,6 @@ export default class DebtorService {
     await Transfer.remove(transfer);
     if (userFineGroup.fines.length === 1) {
       await UserFineGroup.remove(userFineGroup);
-      return;
     }
     if (userFineGroup.fines.length > 1) {
       // If user does not have a debt anymore, remove the UserFineGroup reference

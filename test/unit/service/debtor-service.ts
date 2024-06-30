@@ -284,6 +284,10 @@ describe('DebtorService', (): void => {
       ctx.fines.filter((f) => f.id !== fine.id);
       ctx.transfers.filter((t) => !t.fine || t.fine.id !== fine.id);
     });
+
+    /**
+     * Covers the use case explained at https://github.com/GEWIS/sudosos-backend/pull/188
+     */
     it('should correctly delete currentFines reference when user tops up after being fined the second time', async () => {
       const userFineGroupIndex = ctx.userFineGroups.findIndex((g) => g.fines.length > 1 && calculateBalance(g.user, ctx.transactions, ctx.subTransactions, ctx.transfersInclFines).amount.getAmount() < 0);
       const userFineGroup = ctx.userFineGroups[userFineGroupIndex];
