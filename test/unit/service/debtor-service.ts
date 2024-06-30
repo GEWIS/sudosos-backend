@@ -532,7 +532,7 @@ describe('DebtorService', (): void => {
       expect(await Fine.count()).to.equal(0);
     });
     it('should not set User.currentFines attribute when user gets 0.00 fine', async () => {
-      const user = ctx.users.find((u) => calculateBalance(u, ctx.transactions, ctx.subTransactions, ctx.transfers).amount.getAmount() > 0);
+      const user = ctx.users.find((u) => calculateBalance(u, ctx.transactions, ctx.subTransactions, ctx.transfersInclFines).amount.getAmount() > 0);
       let dbUser = await User.findOne({ where: { id: user.id }, relations: ['currentFines'] });
       expect(dbUser.currentFines).to.be.null;
 
@@ -543,7 +543,7 @@ describe('DebtorService', (): void => {
       expect(fine.amount.amount).to.equal(0);
 
       dbUser = await User.findOne({ where: { id: user.id }, relations: ['currentFines'] });
-      expect(calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers).amount.getAmount())
+      expect(calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfersInclFines).amount.getAmount())
         .to.be.greaterThanOrEqual(0);
       expect(dbUser.currentFines).to.be.null;
     });
