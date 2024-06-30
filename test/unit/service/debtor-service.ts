@@ -391,35 +391,35 @@ describe('DebtorService', (): void => {
     });
   });
 
+  async function clearFines() {
+    const fines = await Fine.find({ relations: ['transfer'] });
+    const fineTransfers = fines.map((f) => f.transfer);
+
+    await Fine.clear();
+    await Transfer.remove(fineTransfers);
+
+    // Truncate instead of clear otherwise; mysql fails.
+    const queryRunner = ctx.connection.createQueryRunner();
+    await queryRunner.connect();
+    try {
+      await queryRunner.startTransaction();
+      await queryRunner.query('SET FOREIGN_KEY_CHECKS = 0');
+      await queryRunner.query('TRUNCATE TABLE `FineHandoutEvent`');
+      await queryRunner.query('TRUNCATE TABLE `UserFineGroup`');
+      await queryRunner.query('SET FOREIGN_KEY_CHECKS = 1');
+      await queryRunner.commitTransaction();
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
   /**
    * This function should be tested last, because it requires an empty Fines
    * table. It therefore destroys the initial state
    */
   describe('handOutFines', async () => {
-    async function clearFines() {
-      const fines = await Fine.find({ relations: ['transfer'] });
-      const fineTransfers = fines.map((f) => f.transfer);
-
-      await Fine.clear();
-      await Transfer.remove(fineTransfers);
-
-      // Truncate instead of clear otherwise; mysql fails.
-      const queryRunner = ctx.connection.createQueryRunner();
-      await queryRunner.connect();
-      try {
-        await queryRunner.startTransaction();
-        await queryRunner.query('SET FOREIGN_KEY_CHECKS = 0');
-        await queryRunner.query('TRUNCATE TABLE `FineHandoutEvent`');
-        await queryRunner.query('TRUNCATE TABLE `UserFineGroup`');
-        await queryRunner.query('SET FOREIGN_KEY_CHECKS = 1');
-        await queryRunner.commitTransaction();
-      } catch (error) {
-        await queryRunner.rollbackTransaction();
-      } finally {
-        await queryRunner.release();
-      }
-    }
-
     before(async () => {
       await clearFines();
       const fineTransfers = (await Transfer.find({ relations: ['fine'] })).filter((t) => t.fine != null);
@@ -559,4 +559,45 @@ describe('DebtorService', (): void => {
       expect(sendMailFake).to.be.calledOnce;
     });
   });
+
+  describe('getFineReport', () => {
+
+    before(async () => {
+      await clearFines();
+    });
+
+    afterEach(async () => {
+      await clearFines();
+    });
+
+    it('should return report', async () => {
+      const referenceDate = new Date('2021-01-30');
+
+      const usersToFine = await DebtorService.calculateFinesOnDate({
+        referenceDates: [referenceDate],
+      });
+
+      const fineHandoutEvent = await DebtorService.handOutFines({
+        userIds: usersToFine.map((u) => u.id),
+        referenceDate,
+      }, ctx.actor);
+      console.error(fineHandoutEvent);
+      const fromDate = new Date(fineHandoutEvent.createdAt);
+      fromDate.setDate(fromDate.getDate());
+      const tillDate = new Date(fineHandoutEvent.createdAt);;
+      const report = await DebtorService.getFineReport(new Date(fineHandoutEvent.createdAt), new Date(fineHandoutEvent.createdAt));
+
+      console.error(report);
+      expect(report.fromDate.toISOString()).to.equal(fromDate.toISOString());
+      expect(report.toDate.toISOString()).to.equal(tillDate.toISOString());
+
+      expect(report.count).to.equal(fineHandoutEvent.fines.length);
+
+      const handedOut = usersToFine.reduce((sum, u) => sum + u.fineAmount.amount, 0);
+      expect(report.handedOut.getAmount()).to.equal(handedOut);
+      expect(report.waivedAmount.getAmount()).to.equal(0);
+    });
+
+  });
+
 });
