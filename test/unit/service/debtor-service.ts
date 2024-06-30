@@ -48,6 +48,8 @@ import nodemailer, { Transporter } from 'nodemailer';
 import Mailer from '../../../src/mailer';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
+import dinero from 'dinero.js';
+import TransferService from '../../../src/service/transfer-service';
 
 describe('DebtorService', (): void => {
   let ctx: {
@@ -257,6 +259,8 @@ describe('DebtorService', (): void => {
 
       // Fix state
       ctx.userFineGroups.splice(userFineGroupIndex, 1);
+      ctx.fines.filter((f) => f.id !== fine.id);
+      ctx.transfers.filter((t) => !t.fine || t.fine.id !== fine.id);
     });
     it('should correctly delete a single fine in a larger fineUserGroup', async () => {
       const userFineGroupIndex = ctx.userFineGroups.findIndex((g) => g.fines.length > 1);
@@ -277,6 +281,63 @@ describe('DebtorService', (): void => {
 
       // Fix state
       ctx.userFineGroups[userFineGroupIndex].fines.splice(0, 1);
+      ctx.fines.filter((f) => f.id !== fine.id);
+      ctx.transfers.filter((t) => !t.fine || t.fine.id !== fine.id);
+    });
+    it('should correctly delete currentFines reference when user tops up after being fined the second time', async () => {
+      const userFineGroupIndex = ctx.userFineGroups.findIndex((g) => g.fines.length > 1 && calculateBalance(g.user, ctx.transactions, ctx.subTransactions, ctx.transfersInclFines).amount.getAmount() < 0);
+      const userFineGroup = ctx.userFineGroups[userFineGroupIndex];
+      let dbUserFineGroup = await UserFineGroup.findOne({ where: { id: userFineGroup.id }, relations: ['fines', 'fines.transfer'] });
+      expect(dbUserFineGroup).to.not.be.null;
+      expect(dbUserFineGroup.fines.length).to.be.greaterThan(1);
+      const fine = dbUserFineGroup.fines[0];
+      expect(fine.amount.getAmount()).to.be.greaterThan(0);
+
+      const balance = calculateBalance(userFineGroup.user, ctx.transactions, ctx.subTransactions, ctx.transfersInclFines);
+      expect(balance.amount.getAmount()).to.be.lessThan(0);
+      const toTopUp = balance.amount.multiply(-1).subtract(dinero({ amount: 1 }));
+      const transfer = await TransferService.createTransfer({
+        amount: {
+          amount: toTopUp.getAmount(),
+          precision: toTopUp.getPrecision(),
+          currency: toTopUp.getCurrency(),
+        },
+        toId: userFineGroup.userId,
+        description: 'Fake top up to barely negative balance',
+        fromId: -1,
+      });
+      ctx.transfers.push(transfer);
+      ctx.transfersInclFines.push(transfer);
+      const newBalance = calculateBalance(userFineGroup.user, ctx.transactions, ctx.subTransactions, ctx.transfersInclFines);
+      expect(newBalance.amount.getAmount()).to.equal(-1);
+
+      let dbUser = await User.findOne({ where: { id: userFineGroup.userId }, relations: { currentFines: true } });
+      expect(dbUser.currentFines).to.not.be.null;
+      let dbBalance = await BalanceService.getBalance(userFineGroup.userId);
+      expect(dbBalance.amount.amount).to.be.lessThan(0);
+      expect(dbBalance.fine).to.not.be.undefined;
+      expect(dbBalance.fineSince).to.not.be.undefined;
+
+      expect(await DebtorService.deleteFine(fine.id)).to.not.throw;
+
+      const dbFine = await Fine.findOne({ where: { id: fine.id } });
+      expect(dbFine).to.be.null;
+      const dbTransfer = await Transfer.findOne({ where: { id: fine.transfer.id } });
+      expect(dbTransfer).to.be.null;
+      dbUserFineGroup = await UserFineGroup.findOne({ where: { id: userFineGroup.id } });
+      expect(dbUserFineGroup).to.be.not.null;
+      dbUser = await User.findOne({ where: { id: userFineGroup.userId }, relations: { currentFines: true } });
+      expect(dbUser.currentFines).to.be.null;
+
+      dbBalance = await BalanceService.getBalance(userFineGroup.userId);
+      expect(dbBalance.amount.amount).to.be.greaterThan(0);
+      expect(dbBalance.fine).to.be.null;
+      expect(dbBalance.fineSince).to.be.null;
+
+      // Fix state
+      ctx.userFineGroups[userFineGroupIndex].fines.splice(0, 1);
+      ctx.fines.filter((f) => f.id !== fine.id);
+      ctx.transfers.filter((t) => !t.fine || t.fine.id !== fine.id);
     });
     it('should not do anything when fine does not exist', async () => {
       const id = 9999999;
