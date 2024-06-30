@@ -280,7 +280,15 @@ export default class DebtorService {
 
     await Fine.remove(fine);
     await Transfer.remove(transfer);
-    if (userFineGroup.fines.length === 1) await UserFineGroup.remove(userFineGroup);
+    if (userFineGroup.fines.length === 1) {
+      await UserFineGroup.remove(userFineGroup);
+    }
+    if (userFineGroup.fines.length > 1) {
+      // If user does not have a debt anymore, remove the UserFineGroup reference
+      const newBalance = await BalanceService.getBalance(userFineGroup.userId);
+      if (newBalance.amount.amount < 0) return;
+      await User.update(userFineGroup.userId, { currentFines: null });
+    }
   }
 
   /**
