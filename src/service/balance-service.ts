@@ -24,7 +24,8 @@ import { toMySQLString } from '../helpers/timestamps';
 import { Dinero } from 'dinero.js';
 import { OrderingDirection } from '../helpers/ordering';
 import { defaultPagination, PaginationParameters } from '../helpers/pagination';
-import { UserType } from '../entity/user/user';
+import User, { UserType } from '../entity/user/user';
+import UserService from "./user-service";
 
 export enum BalanceOrderColumn {
   ID = 'id',
@@ -47,6 +48,7 @@ export interface GetBalanceParameters extends UpdateBalanceParameters {
   userTypes?: UserType[];
   orderBy?: BalanceOrderColumn;
   orderDirection?: OrderingDirection;
+  allowDeleted?: boolean;
 }
 
 /**
@@ -179,11 +181,12 @@ export default class BalanceService {
    * @param userTypes array of types of users
    * @param orderDirection column to order result at
    * @param orderBy order direction
+   * @param allowDeleted allow balances of deleted users to be returned
    * @param pagination pagination options
    * @returns the current balance of a user
    */
   public static async getBalances({
-    ids, date, minBalance, maxBalance, hasFine, minFine, maxFine, userTypes, orderDirection, orderBy,
+    ids, date, minBalance, maxBalance, hasFine, minFine, maxFine, userTypes, orderDirection, orderBy, allowDeleted
   }: GetBalanceParameters, pagination: PaginationParameters = {}): Promise<PaginatedBalanceResponse> {
     // Return the empty response if request has no ids.
     if (ids?.length === 0) {
@@ -310,7 +313,24 @@ export default class BalanceService {
       throw new Error('No balance returned');
     }
 
-    const count = (await connection.query(query, parameters)).length;
+    let count = (await connection.query(query, parameters)).length;
+
+    // Filter out deleted users
+    if (!allowDeleted) {
+      // TODO see https://github.com/GEWIS/sudosos-backend/issues/153
+      const deleted = await User.find({ where: { deleted: true } });
+      // Keep track of deleted to update the query count
+      let deletedCount = 0;
+      deleted.forEach((u: User) => {
+        const deletedBalance = balances.find((b: BalanceResponse) => b.id === u.id);
+        if (deletedBalance) {
+          deletedCount++;
+          balances.splice(balances.indexOf(deletedBalance), 1);
+        }
+      });
+      count -= deletedCount;
+    }
+
     return {
       _pagination: { take, skip, count },
       records: balances.map((b: object) => this.asBalanceResponse(b, date ?? new Date())),
