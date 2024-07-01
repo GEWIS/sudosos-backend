@@ -202,6 +202,18 @@ describe('BalanceService', (): void => {
       expect(balances.records.length).to.equal(users.length);
       balances.records.forEach((b) => b.fine != null && b.fine.amount >= amount);
     });
+    /**
+     * See https://github.com/GEWIS/sudosos-backend/issues/167
+     */
+    it('should not return deleted users', async () => {
+      const user = ctx.users[0];
+      const balance = await BalanceService.getBalance(user.id);
+      expect(balance).to.not.be.undefined;
+
+      await User.update(user.id, { deleted: true });
+      const balance2 = await BalanceService.getBalance(user.id);
+      expect(balance2).to.be.undefined;
+    });
     it('should only return balances with at most a certain fine amount', async () => {
       const amount = 600;
       const users = ctx.users.filter((u) => u.currentFines != null)
