@@ -25,7 +25,7 @@ import { Dinero } from 'dinero.js';
 import { OrderingDirection } from '../helpers/ordering';
 import { defaultPagination, PaginationParameters } from '../helpers/pagination';
 import User, { UserType } from '../entity/user/user';
-import UserService from "./user-service";
+import UserService from './user-service';
 
 export enum BalanceOrderColumn {
   ID = 'id',
@@ -186,7 +186,7 @@ export default class BalanceService {
    * @returns the current balance of a user
    */
   public static async getBalances({
-    ids, date, minBalance, maxBalance, hasFine, minFine, maxFine, userTypes, orderDirection, orderBy, allowDeleted
+    ids, date, minBalance, maxBalance, hasFine, minFine, maxFine, userTypes, orderDirection, orderBy, allowDeleted,
   }: GetBalanceParameters, pagination: PaginationParameters = {}): Promise<PaginatedBalanceResponse> {
     // Return the empty response if request has no ids.
     if (ids?.length === 0) {
@@ -297,6 +297,7 @@ export default class BalanceService {
     if (minFine !== undefined) query += `and f.fine >= ${minFine.getAmount()} `;
     if (maxFine !== undefined) query += `and f.fine <= ${maxFine.getAmount()} `;
     if (userTypes !== undefined) query += `and u.type in (${userTypes.join(',')}) `;
+    if (!allowDeleted) query += 'and u.deleted = 0 ';
 
     if (orderBy !== undefined) query += `order by ${orderBy} ${orderDirection ?? ''} `;
 
@@ -308,28 +309,11 @@ export default class BalanceService {
     if (skip) recordsQuery += `offset ${skip} `;
 
     const balances = await connection.query(recordsQuery, parameters);
-
     if (balances.length > 0 && balances[0].amount === undefined) {
       throw new Error('No balance returned');
     }
-
     let count = (await connection.query(query, parameters)).length;
 
-    // Filter out deleted users
-    if (!allowDeleted) {
-      // TODO see https://github.com/GEWIS/sudosos-backend/issues/153
-      const deleted = await User.find({ where: { deleted: true } });
-      // Keep track of deleted to update the query count
-      let deletedCount = 0;
-      deleted.forEach((u: User) => {
-        const deletedBalance = balances.find((b: BalanceResponse) => b.id === u.id);
-        if (deletedBalance) {
-          deletedCount++;
-          balances.splice(balances.indexOf(deletedBalance), 1);
-        }
-      });
-      count -= deletedCount;
-    }
 
     return {
       _pagination: { take, skip, count },
