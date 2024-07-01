@@ -48,6 +48,7 @@ export interface FineReportResponse {
   toDate: string;
   count: number;
   handedOut: DineroObjectResponse;
+  waivedCount: number;
   waived: DineroObjectResponse;
 }
 

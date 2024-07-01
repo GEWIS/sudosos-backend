@@ -22,7 +22,7 @@ import DineroTransformer from '../entity/transformer/dinero-transformer';
 import dinero, { Dinero, DineroObject } from 'dinero.js';
 import {
   BaseFineHandoutEventResponse,
-  FineHandoutEventResponse, FineReport, FineResponse,
+  FineHandoutEventResponse, FineReport, FineReportResponse, FineResponse,
   PaginatedFineHandoutEventResponse, UserFineGroupResponse,
   UserToFineResponse,
 } from '../controller/response/debtor-response';
@@ -385,6 +385,17 @@ export default class DebtorService {
       ...count,
       handedOut,
       waivedAmount,
+    };
+  }
+
+  public static fineReportToResponse(report: FineReport): FineReportResponse {
+    return {
+      fromDate: report.fromDate.toISOString(),
+      toDate: report.toDate.toISOString(),
+      count: report.count,
+      handedOut: report.handedOut.toObject(),
+      waivedCount: report.waivedCount,
+      waived: report.waivedAmount.toObject(),
     };
   }
 

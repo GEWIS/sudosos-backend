@@ -298,8 +298,8 @@ export default class DebtorController extends BaseController {
    * @tags debtors - Operations of the debtor controller
    * @operationId getFineReport
    * @security JWT
-   * @param {Date} fromDate.query - The start date of the report
-   * @param {Date} toDate.query - The end date of the report
+   * @param {Date} fromDate.query - The start date of the report, inclusive
+   * @param {Date} toDate.query - The end date of the report, exclusive
    * @return {FineReportResponse} 200 - The requested report
    * @return {string} 400 - Validation error
    * @return {string} 500 - Internal server error
@@ -312,6 +312,8 @@ export default class DebtorController extends BaseController {
     try {
       fromDate = asDate(req.query.fromDate);
       toDate = asDate(req.query.toDate);
+      fromDate.setUTCHours(0, 0, 0, 0);
+      toDate.setUTCHours(0, 0, 0, 0);
       if (toDate < fromDate) {
         res.status(400).json('toDate must be after fromDate');
         return;
@@ -322,7 +324,8 @@ export default class DebtorController extends BaseController {
     }
 
     try {
-      res.json(await DebtorService.getFineReport(fromDate, toDate));
+      const report = await DebtorService.getFineReport(fromDate, toDate);
+      res.json(DebtorService.fineReportToResponse(report));
     } catch (error) {
       this.logger.error('Could not get fine report:', error);
       res.status(500).json('Internal server error.');
