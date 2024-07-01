@@ -43,6 +43,16 @@ export interface FineReport {
   waivedCount: number;
   waivedAmount: Dinero;
 }
+
+/**
+ * @typedef {object} FineReportResponse
+ * @property {string} fromDate.required - From date of the report
+ * @property {string} toDate.required - To date of the report
+ * @property {number} count.required - Number of fines
+ * @property {DineroObjectResponse} handedOut.required - Amount of fines handed out
+ * @property {number} waivedCount.required - Number of fines waived
+ * @property {DineroObjectResponse} waived.required - Amount of fines waived
+ */
 export interface FineReportResponse {
   fromDate: string;
   toDate: string;
