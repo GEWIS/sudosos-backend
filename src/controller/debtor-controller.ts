@@ -298,8 +298,8 @@ export default class DebtorController extends BaseController {
    * @tags debtors - Operations of the debtor controller
    * @operationId getFineReport
    * @security JWT
-   * @param {Date} fromDate.query - The start date of the report, inclusive
-   * @param {Date} toDate.query - The end date of the report, exclusive
+   * @param {string} fromDate.query - The start date of the report, inclusive
+   * @param {string} toDate.query - The end date of the report, exclusive
    * @return {FineReportResponse} 200 - The requested report
    * @return {string} 400 - Validation error
    * @return {string} 500 - Internal server error
