@@ -89,7 +89,7 @@ describe('BalanceService', (): void => {
     ctx = {
       connection,
       app,
-      users,
+      users: [...users.filter((u) => !u.deleted)],
       productRevisions,
       containerRevisions,
       pointOfSaleRevisions,
@@ -207,12 +207,12 @@ describe('BalanceService', (): void => {
      */
     it('should not return deleted users', async () => {
       const user = ctx.users[0];
-      const balance = await BalanceService.getBalance(user.id);
-      expect(balance).to.not.be.undefined;
+      const balance = await BalanceService.getBalances({ ids: [user.id] });
+      expect(balance.records).to.not.be.empty;
 
       await User.update(user.id, { deleted: true });
-      const balance2 = await BalanceService.getBalance(user.id);
-      expect(balance2).to.be.undefined;
+      const balance2 = await BalanceService.getBalances({ ids: [user.id] });
+      expect(balance2.records).to.be.empty;
     });
     it('should only return balances with at most a certain fine amount', async () => {
       const amount = 600;
@@ -228,7 +228,7 @@ describe('BalanceService', (): void => {
     it('should return all users with certain user type', async () => {
       const type = UserType.LOCAL_USER;
       const users = ctx.users.filter((u) => u.type === type);
-      const balances = await BalanceService.getBalances({ userTypes: [type] });
+      const balances = await BalanceService.getBalances({ userTypes: [type], allowDeleted: true });
 
       expect(balances.records.length).to.equal(users.length);
 
@@ -245,7 +245,7 @@ describe('BalanceService', (): void => {
     it('should return all users with certain user type from set of types', async () => {
       const userTypes = [UserType.LOCAL_USER, UserType.LOCAL_ADMIN];
       const users = ctx.users.filter((u) => userTypes.includes(u.type));
-      const balances = await BalanceService.getBalances({ userTypes });
+      const balances = await BalanceService.getBalances({ userTypes, allowDeleted: true });
 
       expect(balances.records.length).to.equal(users.length);
 
@@ -315,7 +315,7 @@ describe('BalanceService', (): void => {
     });
     it('should adhere to pagination take', async () => {
       const take = 10;
-      const balanceResponses = await BalanceService.getBalances({}, { take });
+      const balanceResponses = await BalanceService.getBalances({ allowDeleted: true }, { take });
       expect(balanceResponses.records.length).to.equal(take);
       expect(balanceResponses._pagination.take).to.equal(take);
       expect(balanceResponses._pagination.skip).to.be.undefined;
@@ -324,7 +324,7 @@ describe('BalanceService', (): void => {
     it('should adhere to pagination skip', async () => {
       const take = 4;
       const skip = ctx.users.length - take;
-      const balanceResponses = await BalanceService.getBalances({}, { skip });
+      const balanceResponses = await BalanceService.getBalances({ allowDeleted: true }, { skip });
       expect(balanceResponses.records.length).to.equal(take);
       expect(balanceResponses._pagination.take).to.equal(defaultPagination());
       expect(balanceResponses._pagination.skip).to.equal(skip);
@@ -367,6 +367,7 @@ describe('BalanceService', (): void => {
           expect(actualBalance.lastTransfer).to.be.undefined;
         }
 
+        console.error(balance);
         expect(actualBalance.amount.getAmount()).to.equal(balance.amount.amount);
         expect(cachedBalance.amount.getAmount()).to.equal(balance.amount.amount);
       }

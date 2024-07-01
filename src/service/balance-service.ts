@@ -327,6 +327,6 @@ export default class BalanceService {
    * @param date Date to calculate balance for
    */
   public static async getBalance(id: number, date?: Date): Promise<BalanceResponse> {
-    return (await this.getBalances({ ids: [id], date })).records[0];
+    return (await this.getBalances({ ids: [id], allowDeleted: true, date })).records[0];
   }
 }
