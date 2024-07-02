@@ -24,7 +24,8 @@ import { toMySQLString } from '../helpers/timestamps';
 import { Dinero } from 'dinero.js';
 import { OrderingDirection } from '../helpers/ordering';
 import { defaultPagination, PaginationParameters } from '../helpers/pagination';
-import { UserType } from '../entity/user/user';
+import User, { UserType } from '../entity/user/user';
+import UserService from './user-service';
 
 export enum BalanceOrderColumn {
   ID = 'id',
@@ -47,6 +48,7 @@ export interface GetBalanceParameters extends UpdateBalanceParameters {
   userTypes?: UserType[];
   orderBy?: BalanceOrderColumn;
   orderDirection?: OrderingDirection;
+  allowDeleted?: boolean;
 }
 
 /**
@@ -179,11 +181,12 @@ export default class BalanceService {
    * @param userTypes array of types of users
    * @param orderDirection column to order result at
    * @param orderBy order direction
+   * @param allowDeleted allow balances of deleted users to be returned
    * @param pagination pagination options
    * @returns the current balance of a user
    */
   public static async getBalances({
-    ids, date, minBalance, maxBalance, hasFine, minFine, maxFine, userTypes, orderDirection, orderBy,
+    ids, date, minBalance, maxBalance, hasFine, minFine, maxFine, userTypes, orderDirection, orderBy, allowDeleted,
   }: GetBalanceParameters, pagination: PaginationParameters = {}): Promise<PaginatedBalanceResponse> {
     // Return the empty response if request has no ids.
     if (ids?.length === 0) {
@@ -294,6 +297,7 @@ export default class BalanceService {
     if (minFine !== undefined) query += `and f.fine >= ${minFine.getAmount()} `;
     if (maxFine !== undefined) query += `and f.fine <= ${maxFine.getAmount()} `;
     if (userTypes !== undefined) query += `and u.type in (${userTypes.join(',')}) `;
+    if (!allowDeleted) query += 'and u.deleted = 0 ';
 
     if (orderBy !== undefined) query += `order by ${orderBy} ${orderDirection ?? ''} `;
 
@@ -305,12 +309,12 @@ export default class BalanceService {
     if (skip) recordsQuery += `offset ${skip} `;
 
     const balances = await connection.query(recordsQuery, parameters);
-
     if (balances.length > 0 && balances[0].amount === undefined) {
       throw new Error('No balance returned');
     }
-
     const count = (await connection.query(query, parameters)).length;
+
+
     return {
       _pagination: { take, skip, count },
       records: balances.map((b: object) => this.asBalanceResponse(b, date ?? new Date())),
@@ -323,6 +327,6 @@ export default class BalanceService {
    * @param date Date to calculate balance for
    */
   public static async getBalance(id: number, date?: Date): Promise<BalanceResponse> {
-    return (await this.getBalances({ ids: [id], date })).records[0];
+    return (await this.getBalances({ ids: [id], allowDeleted: true, date })).records[0];
   }
 }

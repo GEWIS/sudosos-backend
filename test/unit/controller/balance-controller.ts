@@ -220,6 +220,23 @@ describe('BalanceController', (): void => {
         expect(balanceResponse.amount.amount).to.equal(actualBalance.amount.getAmount());
       });
     });
+    it('should adhere to allowDeleted parameter', async () => {
+      const res = await request(ctx.app)
+        .get('/balances/all')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query({ allowDeleted: true, take: 10000 });
+      expect(res.status).to.equal(200);
+      const body = res.body as PaginatedBalanceResponse;
+      expect(body.records.length).to.equal(ctx.users.length);
+
+      const res2 = await request(ctx.app)
+        .get('/balances/all')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query({ allowDeleted: false, take: 10000 });
+      expect(res2.status).to.equal(200);
+      const body2 = res2.body as PaginatedBalanceResponse;
+      expect(body2.records.length).to.equal(ctx.users.filter((u) => !u.deleted).length);
+    });
     it('should return only balances satisfying minimum', async () => {
       const minBalance = 100;
       const res = await request(ctx.app)
