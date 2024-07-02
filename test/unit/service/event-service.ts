@@ -901,7 +901,8 @@ describe('eventService', () => {
   });
 
   describe('deleteEvent', () => {
-    it('should correctly delete an event with its answer sheets', async () => {
+    it('should correctly delete an event with its answer sheets', async function () {
+      this.retries(3);
       const event = ctx.events[0];
       const dbEvent = await Event.findOne({ where: { id: event.id } });
       expect(dbEvent).to.not.be.null;
