@@ -1,5 +1,18 @@
-# Welcome to SudoSOS
-Hi welcome to SudoSOS. To get you quickly started follow the install steps below.
+<div align="center">
+
+<!-- Centered Logo Image -->
+<img src="https://github.com/GEWIS/sudosos-frontend/blob/develop/apps/dashboard/src/assets/img/bier.png?raw=true" alt="Logo" style="width:200px;height:auto;">
+
+<!-- Centered Name Beneath Logo -->
+<h1>SudoSOS Backend</h1>
+
+[![Build](https://img.shields.io/github/actions/workflow/status/GEWIS/sudosos-backend/release.yml?branch=main&label=Build)](https://github.com/GEWIS/sudosos-backend/actions/workflows/release.yml)
+[![Latest Release](https://img.shields.io/github/v/tag/GEWIS/sudosos-backend?label=Latest)](https://github.com/GEWIS/sudosos-backend/releases)
+[![Issues](https://img.shields.io/github/issues/GEWIS/sudosos-backend)](https://github.com/GEWIS/sudosos-backend/issues)
+[![Commit Activity](https://img.shields.io/github/commit-activity/m/GEWIS/sudosos-backend)](https://github.com/GEWIS/sudosos-backend/commits/develop)
+[![Code Size](https://img.shields.io/github/languages/code-size/GEWIS/sudosos-backend)](https://github.com/GEWIS/sudosos-backend)
+
+</div>
 
 ## Quick start
 This quick start first states what software needs to be installed to be able to work with the project and then explains how to get the project started.
