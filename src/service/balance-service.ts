@@ -312,7 +312,7 @@ export default class BalanceService {
     if (balances.length > 0 && balances[0].amount === undefined) {
       throw new Error('No balance returned');
     }
-    let count = (await connection.query(query, parameters)).length;
+    const count = (await connection.query(query, parameters)).length;
 
 
     return {
