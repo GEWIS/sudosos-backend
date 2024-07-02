@@ -22,7 +22,8 @@ import ProductRevision from '../../../src/entity/product/product-revision';
 import ContainerRevision from '../../../src/entity/container/container-revision';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
 import {
-  seedContainers, seedFines,
+  seedContainers,
+  seedFines,
   seedPointsOfSale,
   seedProductCategories,
   seedProducts,
@@ -50,7 +51,7 @@ import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import dinero from 'dinero.js';
 import TransferService from '../../../src/service/transfer-service';
-import FineHandoutEvent from "../../../src/entity/fine/fineHandoutEvent";
+import FineHandoutEvent from '../../../src/entity/fine/fineHandoutEvent';
 
 describe('DebtorService', (): void => {
   let ctx: {
@@ -596,6 +597,24 @@ describe('DebtorService', (): void => {
       const handedOut = fineHandoutEvent.fines.reduce((sum, u) => sum + u.amount.amount, 0);
       expect(report.handedOut.getAmount()).to.equal(handedOut);
       expect(report.waivedAmount.getAmount()).to.equal(0);
+    });
+
+    it( 'should return error if transfer has fine and waivedFine', async () => {
+      const fineHandoutEvent = await makeFines();
+      await DebtorService.waiveFines(fineHandoutEvent.fines[0].user.id);
+
+      const transfer = await Transfer.findOne({ where: { waivedFines: { userId: fineHandoutEvent.fines[0].user.id } }, relations: ['fine', 'waivedFines'] });
+      transfer.fine = await Fine.create({
+        userFineGroup: await UserFineGroup.findOne({ where: { userId: fineHandoutEvent.fines[0].user.id } }),
+        fineHandoutEvent: await FineHandoutEvent.findOne({ where: { id: fineHandoutEvent.id } }),
+        amount: dinero({ amount: 100 }),
+        transfer: transfer,
+      }).save();
+      await transfer.save();
+      const date = new Date(fineHandoutEvent.createdAt);
+      const tillDate = new Date();
+      // Expect to error
+      await expect(DebtorService.getFineReport(date, tillDate)).to.eventually.rejectedWith('Transfer has both fine and waived fine');
     });
 
     it('should deal with waived fines', async () => {
