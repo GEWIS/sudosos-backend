@@ -368,20 +368,20 @@ export default class DebtorService {
     });
 
     transfers.forEach((transfer) => {
-      if (transfer.fine != null && transfer.waivedFines != null) Error('Transfer has both fine and waived fine');
+      if (transfer.fine != null && transfer.waivedFines != null) throw new Error('Transfer has both fine and waived fine');
       if (transfer.fine != null) {
         handedOut = handedOut.add(transfer.fine.amount);
         count.count++;
       }
       if (transfer.waivedFines != null) {
-        waivedAmount = waivedAmount.add(transfer.waivedFines.waivedTransfer.amount);
+        waivedAmount = waivedAmount.add(transfer.amount);
         count.waivedCount++;
       }
     });
 
     return {
-      fromDate: fromDate,
-      toDate: toDate,
+      fromDate,
+      toDate,
       ...count,
       handedOut,
       waivedAmount,
