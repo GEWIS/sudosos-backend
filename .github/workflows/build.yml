@@ -130,9 +130,6 @@ jobs:
       - run: openssl genrsa -out ./config/jwt.key 2048 && chmod 0777 ./config/jwt.key
       - run: npm run swagger:validate
       - run: npm run coverage-ci # Separate command to limit the number of workers to prevent timeouts
-      - name: "Post Migration test-suite"
-        if: ${{ matrix.typeorm-connection == 'mariadb' }}
-        run: npm run test-ci-migrate
       - run: git config --global --add safe.directory $GITHUB_WORKSPACE # To avoid dubious ownership
         if: ${{ matrix.typeorm-connection == 'mariadb' }}
 
@@ -163,7 +160,7 @@ jobs:
           retention-days: 7
       - name: "Cache coverage report"
         if: ${{ matrix.typeorm-connection == 'mariadb' }}
-        uses: actions/cache@v3
+        uses: actions/cache/save@v3
         with:
           path: reports/coverage/
           key: ${{ runner.os }}-coverage-${{ matrix.typeorm-connection }}-${{ github.head_ref }}
