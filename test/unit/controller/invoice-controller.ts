@@ -55,7 +55,7 @@ import {
   ZERO_LENGTH_STRING,
 } from '../../../src/controller/request/validators/validation-errors';
 import InvoiceEntryRequest from '../../../src/controller/request/invoice-entry-request';
-import { inUserContext, INVOICE_USER, UserFactory } from '../../helpers/user-factory';
+import {inUserContext, INVOICE_USER, ORGAN_USER, UserFactory} from '../../helpers/user-factory';
 import { TransactionRequest } from '../../../src/controller/request/transaction-request';
 import { createTransactionRequest, requestToTransaction } from '../service/invoice-service';
 import BalanceService from '../../../src/service/balance-service';
@@ -836,6 +836,23 @@ describe('InvoiceController', async () => {
           expect(update[updateKey]).to.equal(res.body[updateKey]);
         }
       });
+      it('should return an HTTP 200 if user is of type ORGAN', async () => {
+        const u = await (await UserFactory(await ORGAN_USER())).get();
+        const update: UpdateInvoiceUserRequest = {
+          automatic: false,
+          city: 'Eindhoven',
+          country: 'Nederland',
+          postalCode: '5612 AE',
+          street: 'Groene Loper 5 ',
+        };
+
+        const res = await request(ctx.app)
+          .put(`/invoices/users/${u.id}`)
+          .set('Authorization', `Bearer ${ctx.adminToken}`)
+          .send(update);
+
+        expect(res.status).to.equal(200);
+      });
       it('should create an InvoiceUser if admin and if it does not exist', async () => {
         await inUserContext(await (await UserFactory(await INVOICE_USER())).clone(1),
           async (user: User) => {
@@ -914,8 +931,8 @@ describe('InvoiceController', async () => {
         expect(res.status).to.equal(404);
         expect(res.body).to.equal('User not found.');
       });
-      it('should return an HTTP 400 if user is not of type INVOICE', async () => {
-        const user = await User.findOne({ where: { type: Not(UserType.INVOICE) } });
+      it('should return an HTTP 400 if user is not of type INVOICE or ORGAN', async () => {
+        const user = await User.findOne({ where: { type: Not(In([UserType.INVOICE, UserType.ORGAN])) } });
         expect(user).to.not.be.null;
 
         const update: UpdateInvoiceUserRequest = {
@@ -932,7 +949,7 @@ describe('InvoiceController', async () => {
           .send(update);
 
         expect(res.status).to.equal(400);
-        expect(res.body).to.equal(`User is of type ${UserType[user.type]} and not of type INVOICE.`);
+        expect(res.body).to.equal(`User is of type ${UserType[user.type]} and not of type INVOICE or ORGAN.`);
       });
     });
   });
