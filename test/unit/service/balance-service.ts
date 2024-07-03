@@ -367,7 +367,6 @@ describe('BalanceService', (): void => {
           expect(actualBalance.lastTransfer).to.be.undefined;
         }
 
-        console.error(balance);
         expect(actualBalance.amount.getAmount()).to.equal(balance.amount.amount);
         expect(cachedBalance.amount.getAmount()).to.equal(balance.amount.amount);
       }

@@ -436,8 +436,8 @@ export default class InvoiceController extends BaseController {
         return;
       }
 
-      if (user.type !== UserType.INVOICE) {
-        res.status(400).json(`User is of type ${UserType[user.type]} and not of type INVOICE.`);
+      if (!([UserType.INVOICE, UserType.ORGAN].includes(user.type))) {
+        res.status(400).json(`User is of type ${UserType[user.type]} and not of type INVOICE or ORGAN.`);
         return;
       }
 
