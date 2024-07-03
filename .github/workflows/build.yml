@@ -4,7 +4,7 @@ on:
   push:
     branches: [ main, develop ]
   pull_request:
-    branches: [ main, develop, ci/temp-test ]
+    branches: [ main, develop, ci/coverage-base-compare ]
 
 concurrency:
     group: ${{ github.workflow }}-${{ github.ref }}
