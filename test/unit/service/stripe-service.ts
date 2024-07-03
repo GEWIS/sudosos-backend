@@ -253,7 +253,7 @@ describe('StripeService', async (): Promise<void> => {
             id: beforeStripeDeposit.stripeId,
           } as any,
         },
-      } as Stripe.Event;
+      } as unknown as Stripe.Event;
 
       await expect(ctx.stripeService.handleWebhookEvent(event)).to.be.eventually.fulfilled;
       const afterStripeDeposit = await StripeService.getStripeDeposit(id);
