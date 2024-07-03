@@ -141,7 +141,7 @@ jobs:
         run: |
             echo "::warning Cannot comment code coverage cross-fork"
       - name: "Fetch target branch coverage from cache"
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork && matrix.typeorm-connection == 'mariadb'
+        if: github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork && matrix.typeorm-connection == 'mariadb'
         uses: actions/cache/restore@v3
         with:
           path: reports/coverage-base/
