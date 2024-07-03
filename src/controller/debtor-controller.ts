@@ -77,6 +77,12 @@ export default class DebtorController extends BaseController {
           body: { modelName: 'HandoutFinesRequest' },
         },
       },
+      '/report': {
+        GET: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Fine', ['*']),
+          handler: this.getFineReport.bind(this),
+        },
+      },
     };
   }
 
@@ -282,6 +288,46 @@ export default class DebtorController extends BaseController {
       res.status(204).send();
     } catch (error) {
       this.logger.error('Could not send future fine notification emails:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * GET /fines/report
+   * @summary Get a report of all fines
+   * @tags debtors - Operations of the debtor controller
+   * @operationId getFineReport
+   * @security JWT
+   * @param {string} fromDate.query - The start date of the report, inclusive
+   * @param {string} toDate.query - The end date of the report, exclusive
+   * @return {FineReportResponse} 200 - The requested report
+   * @return {string} 400 - Validation error
+   * @return {string} 500 - Internal server error
+   */
+  public async getFineReport(req: RequestWithToken, res: Response): Promise<void> {
+    this.logger.trace('Get fine report by ', req.token.user);
+
+    let fromDate: Date;
+    let toDate: Date;
+    try {
+      fromDate = asDate(req.query.fromDate);
+      toDate = asDate(req.query.toDate);
+      fromDate.setUTCHours(0, 0, 0, 0);
+      toDate.setUTCHours(0, 0, 0, 0);
+      if (toDate < fromDate) {
+        res.status(400).json('toDate must be after fromDate');
+        return;
+      }
+    } catch (e) {
+      res.status(400).json(e.message);
+      return;
+    }
+
+    try {
+      const report = await DebtorService.getFineReport(fromDate, toDate);
+      res.json(DebtorService.fineReportToResponse(report));
+    } catch (error) {
+      this.logger.error('Could not get fine report:', error);
       res.status(500).json('Internal server error.');
     }
   }

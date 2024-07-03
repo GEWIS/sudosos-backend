@@ -21,6 +21,7 @@ import BaseResponse from './base-response';
 import { PaginationResult } from '../../helpers/pagination';
 import { BaseUserResponse } from './user-response';
 import BalanceResponse from './balance-response';
+import {Dinero} from "dinero.js";
 
 /**
  * @typedef {object} UserToFineResponse
@@ -32,6 +33,33 @@ export interface UserToFineResponse {
   id: number;
   fineAmount: DineroObjectResponse;
   balances: BalanceResponse[]
+}
+
+export interface FineReport {
+  fromDate: Date;
+  toDate: Date;
+  count: number;
+  handedOut: Dinero;
+  waivedCount: number;
+  waivedAmount: Dinero;
+}
+
+/**
+ * @typedef {object} FineReportResponse
+ * @property {string} fromDate.required - From date of the report
+ * @property {string} toDate.required - To date of the report
+ * @property {number} count.required - Number of fines
+ * @property {DineroObjectResponse} handedOut.required - Amount of fines handed out
+ * @property {number} waivedCount.required - Number of fines waived
+ * @property {DineroObjectResponse} waived.required - Amount of fines waived
+ */
+export interface FineReportResponse {
+  fromDate: string;
+  toDate: string;
+  count: number;
+  handedOut: DineroObjectResponse;
+  waivedCount: number;
+  waived: DineroObjectResponse;
 }
 
 /**
