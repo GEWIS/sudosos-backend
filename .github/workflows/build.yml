@@ -137,12 +137,15 @@ jobs:
         if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork && matrix.typeorm-connection == 'mariadb'
         run: |
             echo "::warning Cannot comment code coverage cross-fork"
-      - name: "Fetch target branch coverage from cache"
-        if: github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork && matrix.typeorm-connection == 'mariadb'
-        uses: actions/cache/restore@v3
+      - name: "Fetch target branch coverage from artifacts"
+        id: fetch-coverage-base
+        uses: dawidd6/action-download-artifact@v6
         with:
-          path: reports/coverage-base/
-          key: ${{ runner.os }}-coverage-${{ matrix.typeorm-connection }}-${{ github.base_ref }}
+          workflow: build.yml
+          workflow_conclusion: success
+          name: coverage
+          branch: ${{ github.base_ref }}
+          path: reports/coverage-base
       - name: "Comment code coverage on PR"
         if: github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork && matrix.typeorm-connection == 'mariadb'
         uses: sidx1024/report-nyc-coverage-github-action@v1.2.7
@@ -158,12 +161,6 @@ jobs:
           name: coverage
           path: reports/coverage/
           retention-days: 7
-      - name: "Cache coverage report"
-        if: ${{ matrix.typeorm-connection == 'mariadb' }}
-        uses: actions/cache/save@v3
-        with:
-          path: reports/coverage/
-          key: ${{ runner.os }}-coverage-${{ matrix.typeorm-connection }}-${{ github.head_ref }}
 
   post-migration-test:
     runs-on: ubuntu-latest
