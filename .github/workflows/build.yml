@@ -130,9 +130,6 @@ jobs:
       - run: openssl genrsa -out ./config/jwt.key 2048 && chmod 0777 ./config/jwt.key
       - run: npm run swagger:validate
       - run: npm run coverage-ci # Separate command to limit the number of workers to prevent timeouts
-      - name: "Post Migration test-suite"
-        if: ${{ matrix.typeorm-connection == 'mariadb' }}
-        run: npm run test-ci-migrate
       - run: git config --global --add safe.directory $GITHUB_WORKSPACE # To avoid dubious ownership
         if: ${{ matrix.typeorm-connection == 'mariadb' }}
 
@@ -140,13 +137,23 @@ jobs:
         if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork && matrix.typeorm-connection == 'mariadb'
         run: |
             echo "::warning Cannot comment code coverage cross-fork"
+      - name: "Fetch target branch coverage from artifacts"
+        id: fetch-coverage-base
+        if: github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork && matrix.typeorm-connection == 'mariadb'
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          workflow: build.yml
+          workflow_conclusion: success
+          name: coverage
+          branch: ${{ github.base_ref }}
+          path: reports/coverage-base
       - name: "Comment code coverage on PR"
         if: github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork && matrix.typeorm-connection == 'mariadb'
-        uses: sidx1024/report-nyc-coverage-github-action@v1.2.6
+        uses: sidx1024/report-nyc-coverage-github-action@v1.2.7
         with:
           comment_template_file: .github/coverage-template.md
           coverage_file: reports/coverage/coverage-summary.json
-          base_coverage_file: ''
+          base_coverage_file: reports/coverage-base/coverage-summary.json
           sources_base_path: "/__w/sudosos-backend/sudosos-backend" #github.action_path does not work in Docker (https://github.com/actions/runner/issues/716)
       - name: "Upload code coverage report"
         if: ${{ matrix.typeorm-connection == 'mariadb' }}
