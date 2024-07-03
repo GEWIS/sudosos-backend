@@ -39,6 +39,7 @@ import {
 } from '../controller/request/point-of-sale-request';
 import { parseUserToBaseResponse } from '../helpers/revision-to-response';
 import AuthenticationService from './authentication-service';
+import { AppDataSource } from '../database/database';
 
 /**
  * Define point of sale filtering parameters used to filter query results.
@@ -110,9 +111,11 @@ export default class PointOfSaleService {
     };
   }
 
-  private static async buildGetPointsOfSaleQuery(filters: PointOfSaleParameters = {}, user?: User)
-    : Promise<SelectQueryBuilder<PointOfSale>> {
-    const builder = createQueryBuilder()
+  // TODO Clean up
+  private static async buildGetPointsOfSaleQuery(
+    filters: PointOfSaleParameters = {}, user?: User,
+  ): Promise<SelectQueryBuilder<PointOfSale>> {
+    const builder = AppDataSource.createQueryBuilder()
       .from(PointOfSale, 'pos')
       .innerJoin(
         PointOfSaleRevision,
@@ -132,6 +135,8 @@ export default class PointOfSaleService {
         'owner.lastName AS owner_lastName',
       ]);
 
+    builder.leftJoin('posrevision.containers', 'containers');
+
     if (filters.pointOfSaleRevision === undefined) builder.where('pos.currentRevision = posrevision.revision');
 
     const filterMapping: FilterMapping = {
@@ -149,6 +154,12 @@ export default class PointOfSaleService {
 
     builder.orderBy({ 'pos.id': 'DESC' });
 
+    if (filters.returnContainers) {
+      const containerSubquery = (await ContainerService.BuildGetContainersQuery({ posId: filters.pointOfSaleId }));
+      builder.leftJoinAndSelect(`(${containerSubquery.getQuery()})`, 'container', 'posrevision_containers.containerRevisionContainerId = container.container_id AND posrevision_containers.containerRevisionRevision = container.container_revision');
+    }
+
+    console.error(builder.getQuery());
     return builder;
   }
 
@@ -168,19 +179,43 @@ export default class PointOfSaleService {
       (await this.buildGetPointsOfSaleQuery(filters, user)).getCount(),
     ]);
 
+    // TODO clean up
     let records;
     if (filters.returnContainers) {
-      const pointOfSales: PointOfSaleWithContainersResponse[] = [];
-      await Promise.all(results[0].map(
-        async (rawPointOfSale) => {
-          pointOfSales.push(
-            await this.asPointOfSaleResponseWithContainers(
-              this.asPointOfSaleResponse(rawPointOfSale),
-            ),
-          );
-        },
-      ));
-      records = pointOfSales;
+      const groupedResults = results[0].reduce((acc, raw) => {
+        const id = raw.id;
+        if (!acc[id]) {
+          acc[id] = {
+            ...this.asPointOfSaleResponse(raw),
+            containers: [],
+          };
+        }
+        if (raw.container_id) {
+          acc[id].containers.push({
+            id: raw.container_id,
+            public: raw.container_public,
+            createdAt: raw.container_createdAt,
+            revision: {
+              id: raw.container_revision,
+              updatedAt: raw.container_updatedAt,
+              name: raw.container_name,
+              products: raw.products ? [{
+                owner: {
+                  id: raw.product_owner_id,
+                  firstName: raw.product_owner_firstName,
+                  lastName: raw.product_owner_lastName,
+                },
+                image: raw.product_image_url,
+                vat: raw.vat_value,
+                category: raw.category_name,
+              }] : [],
+            },
+          });
+        }
+        return acc;
+      }, {});
+
+      records = Object.values(groupedResults) as PointOfSaleWithContainersResponse[];
     } else {
       records = results[0].map((rawPointOfSale) => this.asPointOfSaleResponse(rawPointOfSale));
     }
