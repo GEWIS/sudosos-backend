@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { createQueryBuilder, SelectQueryBuilder } from 'typeorm';
+import { SelectQueryBuilder } from 'typeorm';
 import {
   ContainerResponse,
   ContainerWithProductsResponse,
@@ -44,6 +44,7 @@ import PointOfSaleService from './point-of-sale-service';
 // eslint-disable-next-line import/no-cycle
 import ProductService from './product-service';
 import AuthenticationService from './authentication-service';
+import { AppDataSource } from '../database/database';
 
 interface ContainerVisibility {
   own: boolean;
@@ -51,9 +52,21 @@ interface ContainerVisibility {
 }
 
 /**
- * Define updated container filtering parameters used to filter query results.
+ * Define container filtering parameters used to filter query results.
  */
-export interface UpdatedContainerParameters {
+export interface ContainerFilterParameters {
+  /**
+   * Filter based on pointOfSale id.
+   */
+  posId?: number;
+  /**
+   * Filter based on pointOfSale revision.
+   */
+  posRevision?: number;
+  /**
+   * Whether to select public containers.
+   */
+  public?: boolean;
   /**
    * Filter based on container id.
    */
@@ -68,24 +81,6 @@ export interface UpdatedContainerParameters {
   ownerId?: number;
   returnProducts?: boolean;
   productId?: number;
-}
-
-/**
- * Define container filtering parameters used to filter query results.
- */
-export interface ContainerParameters extends UpdatedContainerParameters {
-  /**
-   * Filter based on pointOfSale id.
-   */
-  posId?: number;
-  /**
-   * Filter based on pointOfSale revision.
-   */
-  posRevision?: number;
-  /**
-   * Whether to select public containers.
-   */
-  public?: boolean;
 }
 
 export default class ContainerService {
@@ -109,8 +104,9 @@ export default class ContainerService {
     };
   }
 
-  private static async buildGetContainersQuery(filters: ContainerParameters = {}, user?: User)
-    : Promise<SelectQueryBuilder<Container>> {
+  public static async BuildGetContainersQuery(
+    filters: ContainerFilterParameters = {}, user?: User,
+  ): Promise<SelectQueryBuilder<Container>> {
     const selection = [
       'container.id AS container_id',
       'container.public as container_public',
@@ -123,8 +119,9 @@ export default class ContainerService {
       'container_owner.lastName AS owner_lastName',
     ];
 
-    const builder = createQueryBuilder()
-      .from(Container, 'container')
+    const builder = AppDataSource
+      .getRepository(Container)
+      .createQueryBuilder('container')
       .innerJoin(
         ContainerRevision,
         'containerrevision',
@@ -164,13 +161,13 @@ export default class ContainerService {
       builder.leftJoinAndSelect(User, 'product_owner', 'product_owner.id = base_product.owner.id');
       builder.leftJoinAndSelect(ProductImage, 'product_image', 'product_image.id = base_product.imageId');
       builder.leftJoinAndSelect('products.vat', 'vat');
-      if (filters.productId) builder.where(`products.productId = ${filters.productId}`);
+      if (filters.productId) builder.where('products.productId = :productId', { productId: filters.productId });
     }
 
     const filterMapping: FilterMapping = {
       containerId: 'container.id',
       containerRevision: 'containerrevision.revision',
-      ownerId: 'ownerId',
+      ownerId: 'container_owner.id',
       public: 'container.public',
     };
 
@@ -263,13 +260,13 @@ export default class ContainerService {
    * @param user
    */
   public static async getContainers(
-    filters: ContainerParameters = {}, pagination: PaginationParameters = {}, user?: User,
+    filters: ContainerFilterParameters = {}, pagination: PaginationParameters = {}, user?: User,
   ): Promise<PaginatedContainerResponse | PaginatedContainerWithProductResponse> {
     const { take, skip } = pagination;
 
     const results = await Promise.all([
-      (await this.buildGetContainersQuery(filters, user)).limit(take).offset(skip).getRawMany(),
-      (await this.buildGetContainersQuery({ ...filters, returnProducts: false }, user)).getCount(),
+      (await this.BuildGetContainersQuery(filters, user)).limit(take).offset(skip).getRawMany(),
+      (await this.BuildGetContainersQuery({ ...filters, returnProducts: false }, user)).getCount(),
     ]);
 
     let records;
@@ -398,7 +395,7 @@ export default class ContainerService {
   /**
    * Test to see if the user can view a specified container
    * @param userId - The User to test
-   * @param containerId - The container to view
+   * @param container - The container to view
    */
   public static async canViewContainer(userId: number, container: Container)
     : Promise<ContainerVisibility> {
