@@ -139,6 +139,7 @@ jobs:
             echo "::warning Cannot comment code coverage cross-fork"
       - name: "Fetch target branch coverage from artifacts"
         id: fetch-coverage-base
+        if: github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork && matrix.typeorm-connection == 'mariadb'
         uses: dawidd6/action-download-artifact@v6
         with:
           workflow: build.yml
