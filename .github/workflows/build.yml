@@ -145,7 +145,7 @@ jobs:
           key: ${{ runner.os }}-coverage-${{ matrix.typeorm-connection }}-${{ github.base_ref }}
       - name: "Comment code coverage on PR"
         if: github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork && matrix.typeorm-connection == 'mariadb'
-        uses: sidx1024/report-nyc-coverage-github-action@v1.2.6
+        uses: sidx1024/report-nyc-coverage-github-action@v1.2.7
         with:
           comment_template_file: .github/coverage-template.md
           coverage_file: reports/coverage/coverage-summary.json
