@@ -27,10 +27,12 @@ import {
 import { parseUserToResponse } from '../helpers/revision-to-response';
 import BalanceService from './balance-service';
 import User from '../entity/user/user';
-import InactivityAdministrativeCostsParams from '../controller/request/inactivity-administrative-costs-request';
+import { BaseInactivityAdministrativeCostsParams } from '../controller/request/inactivity-administrative-costs-request';
 import TransferService from './transfer-service';
 import TransferRequest from '../controller/request/transfer-request';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
+import Transaction from '../entity/transactions/transaction';
+import Transfer from '../entity/transactions/transfer';
 
 /**
  * Parameters for type of administrative cost, notification or fine
@@ -42,19 +44,24 @@ export interface InactivityAdministrativeCostFilterParameters {
   userId?: number,
 
   /**
-   * Filter based on amount of years
+   * Filter based on whether you check for a fine or notification.
    */
-  yearDifference?: number,
+  fine?: boolean,
 }
 
 export default class AdministrativeCostService {
 
-  private static yearCheck(date: Date, maxDifference: number) : boolean {
+  private static yearCheck(date: Date, fine: boolean) : boolean {
     const difference = new Date(Date.now() - date.getTime());
 
-    if ((difference.getFullYear() - 1970) >= maxDifference) {
-      return true;
-    } else return false;
+    if (fine) {
+      if (difference.getFullYear() - 1970 >= 3) return true;
+    }
+    if (!fine) {
+      if (difference.getFullYear() - 1970 == 2) return true;
+    }
+
+    return false;
   }
 
   private static asInactivityAdministrativeCostResponse(records: InactivityAdministrativeCosts)
@@ -68,6 +75,41 @@ export default class AdministrativeCostService {
       lastTransactionId: records.lastTransactionId,
       lastTransferId: records.lastTransferId,
     };
+  }
+
+  public static async checkInactivityAdministrativeCosts(filter: InactivityAdministrativeCostFilterParameters = {})
+    : Promise<User[]> {
+    const allUsers = await User.find();
+    const inactiveUsers: User[] = [];
+
+
+    for (let i = 0; i < allUsers.length; i += 1) {
+      const user = allUsers[i];
+
+      const transaction = await Transaction.find({
+        relations: { from: true },
+        where: { from: { id: user.id } },
+        take: 1,
+        order: { createdAt: 'DESC' },
+      });
+      const transfer = (await Transfer.find({
+        relations: { administrativeCosts: false, from: true },
+        where: { from: { id: user.id } },
+        take: 1,
+        order: { createdAt: 'DESC' },
+      } ));
+      const fine = filter.fine;
+
+      if (transaction != null && transfer != null) {
+        if (this.yearCheck(transaction[0].createdAt, fine) && this.yearCheck(transfer[0].createdAt, fine)) inactiveUsers.push(user);
+      } else if (transaction != null) {
+        if (this.yearCheck(transaction[0].createdAt, fine)) inactiveUsers.push(user);
+      } else if (transfer != null) {
+        if  (this.yearCheck(transfer[0].createdAt, fine)) inactiveUsers.push(user);
+      }
+    }
+
+    return inactiveUsers;
   }
 
   /**
@@ -87,7 +129,7 @@ export default class AdministrativeCostService {
    * Creates an inactivity administrative cost for users
    * @param inactivityAdministrativeCost - The new inactivity administrative costs parameters
    */
-  public static async createInactivityAdministrativeCost(inactivityAdministrativeCost: InactivityAdministrativeCostsParams)
+  public static async createInactivityAdministrativeCost(inactivityAdministrativeCost: BaseInactivityAdministrativeCostsParams)
     : Promise<InactivityAdministrativeCosts> {
     const from = await User.findOne( { where: { id: inactivityAdministrativeCost.fromId } });
 
@@ -103,8 +145,8 @@ export default class AdministrativeCostService {
     const transfer: TransferRequest = {
       amount: {
         amount: amount,
-        precision: inactivityAdministrativeCost.amount.precision,
-        currency: inactivityAdministrativeCost.amount.currency,
+        precision: balance.amount.precision,
+        currency: balance.amount.currency,
       },
       description: '',
       fromId: inactivityAdministrativeCost.fromId,
@@ -114,7 +156,6 @@ export default class AdministrativeCostService {
     const createdInactivityAdministrativeCost = Object.assign(new InactivityAdministrativeCosts(), {
       from: from,
       amount: DineroTransformer.Instance.from(amount),
-      lastTransaction: inactivityAdministrativeCost.lastTransaction,
       lastTransactionId: inactivityAdministrativeCost.lastTransactionId,
       lastTransferId: inactivityAdministrativeCost.lastTransferId,
       transfer: await TransferService.createTransfer(transfer),

@@ -15,10 +15,20 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+import BaseController, { BaseControllerOptions } from './base-controller';
+import log4js, { Logger } from 'log4js';
+
+export default class InactivityAdministrativeCostController extends BaseController {
+  private logger: Logger = log4js.getLogger('InactivityAdministrativeCostController');
+
+  /**
+     * Creates a new Invoice controller instance.
+     * @param options - The options passed to the base controller.
+     */
+  public constructor(options: BaseControllerOptions) {
+    super(options);
+    this.logger.level = process.env.LOG_LEVEL;
+  }
 
 
-export interface BaseInactivityAdministrativeCostsParams {
-  fromId: number;
-  lastTransactionId: number;
-  lastTransferId: number;
 }

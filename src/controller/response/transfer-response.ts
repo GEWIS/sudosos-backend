@@ -24,6 +24,7 @@ import { BaseInvoiceResponse } from './invoice-response';
 import { StripeDepositResponse } from './stripe-response';
 import { BasePayoutRequestResponse } from './payout-request-response';
 import { FineResponse, UserFineGroupResponse } from './debtor-response';
+import InactivityAdministrativeCosts from '../../entity/transactions/inactivity-administrative-costs';
 
 /**
  * @typedef {allOf|BaseResponse} TransferResponse
@@ -47,6 +48,7 @@ export interface TransferResponse extends BaseResponse {
   payoutRequest?: BasePayoutRequestResponse;
   fine?: FineResponse;
   waivedFines?: UserFineGroupResponse;
+  administrativeCosts?: InactivityAdministrativeCosts;
 }
 
 /**

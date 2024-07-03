@@ -226,6 +226,7 @@ describe('InvoiceService', () => {
   });
   describe('getDefaultInvoiceParams function', () => {
     it('should return the default invoice parameters for an invoice user', async () => {
+
       const user = User.create({
         firstName: 'John',
         lastName: 'Doe',

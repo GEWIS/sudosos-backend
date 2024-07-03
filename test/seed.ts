@@ -1372,7 +1372,6 @@ Promise<{ inactivityAdministrativeCosts: InactivityAdministrativeCosts[], admini
       fromId: userEligible[i].id,
       from: userEligible[i],
       amount,
-      lastTransaction: lastChange[i].updatedAt,
       lastTransactionId: lastChange[i].id,
       lastTransferId: lastChange[i].id,
     });

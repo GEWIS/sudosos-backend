@@ -30,7 +30,7 @@ import User from '../../../src/entity/user/user';
 import TransferService from '../../../src/service/transfer-service';
 import Swagger from '../../../src/start/swagger';
 import {
-  seedContainers, seedFines,
+  seedContainers, seedFines, seedInactivityAdministrativeCosts,
   seedInvoices, seedPayoutRequests, seedPointsOfSale,
   seedProductCategories,
   seedProducts, seedStripeDeposits,
@@ -40,6 +40,7 @@ import {
   seedVatGroups,
 } from '../../seed';
 import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
+import InactivityAdministrativeCosts from '../../../src/entity/transactions/inactivity-administrative-costs';
 
 describe('TransferService', async (): Promise<void> => {
   let ctx: {
@@ -48,6 +49,7 @@ describe('TransferService', async (): Promise<void> => {
     specification: SwaggerSpecification,
     users: User[],
     transfers: Transfer[],
+    inactivityAdministrativeCosts: InactivityAdministrativeCosts[],
   };
   before(async () => {
     const connection = await Database.initialize();
@@ -63,6 +65,7 @@ describe('TransferService', async (): Promise<void> => {
     const { pointOfSaleRevisions } = await seedPointsOfSale(users, containerRevisions);
     const transfers = await seedTransfers(users, begin, end);
     const { transactions } = await seedTransactions(users, pointOfSaleRevisions, begin, end);
+    const { inactivityAdministrativeCosts, administrativeCostTransfers } = await seedInactivityAdministrativeCosts(users, transactions, transfers);
     const { invoiceTransfers } = await seedInvoices(users, transactions);
     const { payoutRequestTransfers } = await seedPayoutRequests(users);
     const { stripeDepositTransfers } = await seedStripeDeposits(users);
@@ -82,7 +85,8 @@ describe('TransferService', async (): Promise<void> => {
       app,
       specification,
       users: users2,
-      transfers: transfers2.concat(fineTransfers),
+      transfers: transfers2.concat(fineTransfers).concat(administrativeCostTransfers),
+      inactivityAdministrativeCosts,
     };
   });
   after(async () => {
@@ -178,6 +182,15 @@ describe('TransferService', async (): Promise<void> => {
 
       // Cleanup
       await Transfer.delete(t.id);
+    });
+
+    it('should return corresponding administrative cost if transfer has any', async () => {
+      const transfer = ctx.transfers.filter((t) => t.administrativeCosts != null)[0];
+      expect(transfer).to.not.be.undefined;
+      const res: PaginatedTransferResponse = await TransferService
+        .getTransfers({ id: transfer.id });
+      expect(res.records.length).to.equal(1);
+      expect(res.records[0].administrativeCosts).to.not.be.null;
     });
   });
   describe('postTransfer function', () => {

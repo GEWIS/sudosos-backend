@@ -128,6 +128,7 @@ export default class TransferService {
         'payoutRequest', 'payoutRequest.payoutRequestStatus', 'payoutRequest.requestedBy',
         'fine', 'fine.userFineGroup', 'fine.userFineGroup.user',
         'waivedFines', 'waivedFines.fines', 'waivedFines.fines.userFineGroup',
+        'administrativeCosts', 'administrativeCosts.from',
       ],
       take,
       skip,

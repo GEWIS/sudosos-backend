@@ -39,9 +39,6 @@ export default class InactivityAdministrativeCosts extends BaseEntity {
   public amount: Dinero;
 
   @Column()
-  public lastTransaction: Date;
-
-  @Column()
   public lastTransactionId: number | undefined;
 
   @Column()

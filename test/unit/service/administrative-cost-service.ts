@@ -29,7 +29,7 @@ import {
 } from '../../seed';
 import AdministrativeCostService, {
 } from '../../../src/service/administrative-cost-service';
-import User from '../../../src/entity/user/user';
+import User, { UserType } from '../../../src/entity/user/user';
 import ProductRevision from '../../../src/entity/product/product-revision';
 import ContainerRevision from '../../../src/entity/container/container-revision';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
@@ -45,13 +45,12 @@ import {
 } from '../../../src/controller/response/inactivity-administrative-costs-response';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
 import chai, { expect } from 'chai';
-import InactivityAdministrativeCostsParams
-  from '../../../src/controller/request/inactivity-administrative-costs-request';
+import { BaseInactivityAdministrativeCostsParams } from '../../../src/controller/request/inactivity-administrative-costs-request';
 import BalanceService from '../../../src/service/balance-service';
 import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
-import dinero from 'dinero.js';
 import { changeBalance } from '../../helpers/test-helpers';
-import exp from 'node:constants';
+import { addTransaction, addTransfer } from '../../helpers/transaction-helpers';
+import { UserFactory } from '../../helpers/user-factory';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -70,6 +69,14 @@ function baseKeyMapping(inactivityAdministrativeCost: BaseInactivityAdministrati
 }
 
 export type T = BaseInactivityAdministrativeCostsResponse | InactivityAdministrativeCosts;
+
+function getOlderDate(yearDifference: number): Date {
+  let date = new Date();
+  date.setFullYear(date.getFullYear() - yearDifference);
+  date.setMonth(date.getMonth() - 1);
+
+  return date;
+}
 
 describe('AdministrativeCostService', async (): Promise<void> => {
   let ctx: {
@@ -109,7 +116,6 @@ describe('AdministrativeCostService', async (): Promise<void> => {
       calculateBalance(u, transactions, subTransactions, transfers, new Date()),
     );
 
-
     ctx = {
       connection,
       app,
@@ -132,6 +138,8 @@ describe('AdministrativeCostService', async (): Promise<void> => {
     await ctx.connection.destroy();
   });
 
+
+
   describe('getAdministrativeCostUsers function', async () => {
     it('should return all users with a inactivity administrative cost', async () => {
 
@@ -147,26 +155,18 @@ describe('AdministrativeCostService', async (): Promise<void> => {
     });
   });
 
-  describe('createInactivityAdministrativeCosts function', () => {
+  describe('createInactivityAdministrativeCosts function', async () => {
     it('should create a new inactivity administrative cost entity for a member with more than 10 euros', async () => {
       const balances = (await BalanceService.getBalances(
         { minBalance: DineroTransformer.Instance.from(10) })).records;
       const user = await User.findOne({ where: { id: balances[0].id } });
       const balance = await BalanceService.getBalance(user.id);
 
-      const lastTransaction = await Transaction.findOne( { where: { id: balance.lastTransactionId } });
-      const lastTransfer = await Transfer.findOne( { where: { id: balance.lastTransferId } });
+      await Transaction.findOne( { where: { id: balance.lastTransactionId } });
+      await Transfer.findOne( { where: { id: balance.lastTransferId } });
 
-      const lastDate = (lastTransaction.updatedAt < lastTransfer.updatedAt) ? lastTransfer.updatedAt : lastTransfer.updatedAt;
-
-      const creation: InactivityAdministrativeCostsParams = {
-        amount: {
-          amount: 10,
-          precision: dinero.defaultPrecision,
-          currency: dinero.defaultCurrency,
-        },
+      const creation: BaseInactivityAdministrativeCostsParams = {
         fromId: user.id,
-        lastTransaction: lastDate,
         lastTransferId: balance.lastTransferId,
         lastTransactionId: balance.lastTransactionId,
       };
@@ -195,18 +195,11 @@ describe('AdministrativeCostService', async (): Promise<void> => {
       const isPositive = balance.amount.amount > 0;
       await changeBalance(user.id, 5, isPositive);
 
-      const lastTransaction = await Transaction.findOne( { where: { id: balance.lastTransactionId } });
-      const lastTransfer = await Transfer.findOne( { where: { id: balance.lastTransferId } });
-      const lastDate = (lastTransaction.updatedAt < lastTransfer.updatedAt) ? lastTransfer.updatedAt : lastTransfer.updatedAt;
+      await Transaction.findOne( { where: { id: balance.lastTransactionId } });
+      await Transfer.findOne( { where: { id: balance.lastTransferId } });
 
-      const creation: InactivityAdministrativeCostsParams = {
-        amount: {
-          amount: 10,
-          precision: dinero.defaultPrecision,
-          currency: dinero.defaultCurrency,
-        },
+      const creation: BaseInactivityAdministrativeCostsParams = {
         fromId: user.id,
-        lastTransaction: lastDate,
         lastTransferId: balance.lastTransferId,
         lastTransactionId: balance.lastTransactionId,
       };
@@ -243,6 +236,59 @@ describe('AdministrativeCostService', async (): Promise<void> => {
 
       expect(response).to.be.false;
     });
+  });
+  describe('check inactivityAdministrativeCosts function', async () => {
+    it('should return all users that should get a fine', async () => {
+      const date = getOlderDate(3);
+      const user = Object.assign(new User(), {
+        firstName: 'John',
+        lastName: 'Doe',
+        type: UserType.MEMBER,
+        sentAdministrativeCostsEmail: true,
+      });
+      await user.save();
 
+      const transaction = (await addTransaction(user, ctx.pointOfSaleRevisions, false, date)).transaction;
+      const transfer = (await addTransfer(user, ctx.users, false, date)).transfer;
+
+      const response = await AdministrativeCostService.checkInactivityAdministrativeCosts({ fine: true });
+
+      expect(response[0].id).to.be.equal(user.id);
+      expect(response[0].sentAdministrativeCostsEmail).to.be.true;
+      expect(response[0].id).to.be.equal(transfer.fromId);
+      expect(response[0].id).to.be.equal(transaction.from.id);
+    });
+    it('should return all users that should get a notification', async () => {
+      const date = getOlderDate(2);
+      const user = (await UserFactory()).user;
+
+      const transaction = (await addTransaction(user, ctx.pointOfSaleRevisions, false, date)).transaction;
+      const transfer = (await addTransfer(user, ctx.users, false, date)).transfer;
+
+      const response = await AdministrativeCostService.checkInactivityAdministrativeCosts({ fine: false });
+
+      expect(response[0].id).to.be.equal(user.id);
+      expect(response[0].sentAdministrativeCostsEmail).to.be.false;
+      expect(response[0].id).to.be.equal(transfer.fromId);
+      expect(response[0].id).to.be.equal(transaction.from.id);
+    });
+    it('should not return the administrative cost transfer if its the last transfer', async () => {
+      const date = getOlderDate(3);
+      const user = (await UserFactory()).user;
+
+      const transaction = (await addTransaction(user, ctx.pointOfSaleRevisions, false, date)).transaction;
+      const transfer = (await addTransfer(user, ctx.users, false, date)).transfer;
+
+      const administrativeCostParams: BaseInactivityAdministrativeCostsParams = {
+        fromId: user.id,
+        lastTransactionId: transaction.id,
+        lastTransferId: transfer.id,
+      };
+
+      const administrativeCost = await AdministrativeCostService.createInactivityAdministrativeCost(administrativeCostParams);
+      const response = await AdministrativeCostService.checkInactivityAdministrativeCosts({ fine: true });
+
+      expect(response[0].id).to.not.be.equal(administrativeCost.transfer.id);
+    });
   });
 });
