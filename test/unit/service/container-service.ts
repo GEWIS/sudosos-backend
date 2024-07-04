@@ -170,6 +170,7 @@ describe('ContainerService', async (): Promise<void> => {
         posRevision: pos.revision,
       });
 
+      console.error(JSON.stringify(records, null, 2));
       expect(containerSuperset(records, ctx.containers)).to.be.true;
 
       const belongsToPos = records.every(

@@ -30,7 +30,7 @@ import log4js, { Logger } from 'log4js';
 import { Connection } from 'typeorm';
 import cron from 'node-cron';
 import fileUpload from 'express-fileupload';
-import Database, {AppDataSource} from './database/database';
+import Database from './database/database';
 import Swagger from './start/swagger';
 import TokenHandler from './authentication/token-handler';
 import TokenMiddleware from './middleware/token-middleware';
@@ -184,7 +184,7 @@ export default async function createApp(): Promise<Application> {
   // Create folders for disk storage
   initializeDiskStorage();
 
-  application.connection = await AppDataSource.initialize();
+  application.connection = await Database.initialize();
 
   // Silent in-dependency logs unless really wanted by the environment.
   const logger = log4js.getLogger('Console');
