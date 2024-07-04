@@ -174,7 +174,7 @@ const Database = {
 
     // This means we are in a development or production environment, so we simply initialize the database.
     if (isPersist && process.env.NODE_ENV !== 'test') {
-      return Promise.resolve(AppDataSource.initialize());
+      return Promise.resolve(createConnection(options));
     }
 
     // If we are in a test environment we have the following cases.
@@ -183,11 +183,11 @@ const Database = {
       // We return the default connection if it exists
       const defConnection = getDefaultConnection(connections);
       if (defConnection) return defConnection;
-      else return Promise.resolve(AppDataSource.initialize());
+      else return Promise.resolve(createConnection(options));
 
     } else if (process.env.TYPEORM_CONNECTION === 'sqlite') {
       // And for sqlite we always just create a new connection.
-      return Promise.resolve(AppDataSource.initialize());
+      return Promise.resolve(createConnection(options));
     } else {
       throw new Error(`Unsupported connection type ${process.env.TYPEORM_CONNECTION}`);
     }
