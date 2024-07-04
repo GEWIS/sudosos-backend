@@ -47,7 +47,7 @@ import { expect, request } from 'chai';
 import FineHandoutEvent from '../../../src/entity/fine/fineHandoutEvent';
 import {
   BaseFineHandoutEventResponse,
-  FineHandoutEventResponse,
+  FineHandoutEventResponse, FineReportResponse,
   UserToFineResponse,
 } from '../../../src/controller/response/debtor-response';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
@@ -548,4 +548,81 @@ describe('DebtorController', () => {
       expect(res.status).to.equal(400);
     });
   });
+
+  describe('GET /fines/report', () => {
+    it('should return report', async () => {
+      const fromDate = new Date('2021-01-01');
+      const toDate = new Date();
+
+      const res = await request(ctx.app)
+        .get('/fines/report')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query({ fromDate, toDate });
+      expect(res.status).to.equal(200);
+
+      fromDate.setUTCHours(0, 0, 0, 0);
+      toDate.setUTCHours(0, 0, 0, 0);
+
+      const report = res.body as FineReportResponse;
+      expect(report.fromDate).to.equal(fromDate.toISOString());
+      expect(report.toDate).to.equal(toDate.toISOString());
+    });
+
+    it('should return correct model', async () => {
+      const fromDate = new Date('2021-01-01');
+      const toDate = new Date();
+      const res = await request(ctx.app)
+        .get('/fines/report')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query({ fromDate, toDate });
+      expect(res.status).to.equal(200);
+
+      const report = res.body as FineReportResponse;
+      const validation = ctx.specification.validateModel('FineReportResponse', report, false, true);
+      expect(validation.valid).to.be.true;
+    });
+
+    it('should return 400 if fromDate is not a valid date', async () => {
+      const fromDate = '39Vooooo';
+      const toDate = new Date();
+      const res = await request(ctx.app)
+        .get('/fines/report')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query({ fromDate, toDate });
+      expect(res.status).to.equal(400);
+    });
+
+    it('should return 400 if toDate is not a valid date', async () => {
+      const fromDate = new Date();
+      const toDate = '39Vooooo';
+      const res = await request(ctx.app)
+        .get('/fines/report')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query({ fromDate, toDate });
+      expect(res.status).to.equal(400);
+    });
+
+    it('should return 400 if fromDate is not before toDate', async () => {
+      const fromDate = new Date();
+      const toDate = new Date(fromDate.getTime());
+      toDate.setDate(toDate.getDate() - 1);
+      const res = await request(ctx.app)
+        .get('/fines/report')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query({ fromDate, toDate });
+      expect(res.status).to.equal(400);
+    });
+
+    it('should return 403 if not admin', async () => {
+      const fromDate = new Date();
+      const toDate = new Date();
+      const res = await request(ctx.app)
+        .get('/fines/report')
+        .set('Authorization', `Bearer ${ctx.userToken}`)
+        .query({ fromDate, toDate });
+      expect(res.status).to.equal(403);
+    });
+  });
+
+
 });

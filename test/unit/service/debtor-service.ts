@@ -22,7 +22,8 @@ import ProductRevision from '../../../src/entity/product/product-revision';
 import ContainerRevision from '../../../src/entity/container/container-revision';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
 import {
-  seedContainers, seedFines,
+  seedContainers,
+  seedFines,
   seedPointsOfSale,
   seedProductCategories,
   seedProducts,
@@ -50,6 +51,7 @@ import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import dinero from 'dinero.js';
 import TransferService from '../../../src/service/transfer-service';
+import FineHandoutEvent from '../../../src/entity/fine/fineHandoutEvent';
 
 describe('DebtorService', (): void => {
   let ctx: {
@@ -391,35 +393,35 @@ describe('DebtorService', (): void => {
     });
   });
 
+  async function clearFines() {
+    const fines = await Fine.find({ relations: ['transfer'] });
+    const fineTransfers = fines.map((f) => f.transfer);
+
+    await Fine.clear();
+    await Transfer.remove(fineTransfers);
+
+    // Truncate instead of clear otherwise; mysql fails.
+    const queryRunner = ctx.connection.createQueryRunner();
+    await queryRunner.connect();
+    try {
+      await queryRunner.startTransaction();
+      await queryRunner.query('SET FOREIGN_KEY_CHECKS = 0');
+      await queryRunner.query('TRUNCATE TABLE `FineHandoutEvent`');
+      await queryRunner.query('TRUNCATE TABLE `UserFineGroup`');
+      await queryRunner.query('SET FOREIGN_KEY_CHECKS = 1');
+      await queryRunner.commitTransaction();
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
   /**
    * This function should be tested last, because it requires an empty Fines
    * table. It therefore destroys the initial state
    */
   describe('handOutFines', async () => {
-    async function clearFines() {
-      const fines = await Fine.find({ relations: ['transfer'] });
-      const fineTransfers = fines.map((f) => f.transfer);
-
-      await Fine.clear();
-      await Transfer.remove(fineTransfers);
-
-      // Truncate instead of clear otherwise; mysql fails.
-      const queryRunner = ctx.connection.createQueryRunner();
-      await queryRunner.connect();
-      try {
-        await queryRunner.startTransaction();
-        await queryRunner.query('SET FOREIGN_KEY_CHECKS = 0');
-        await queryRunner.query('TRUNCATE TABLE `FineHandoutEvent`');
-        await queryRunner.query('TRUNCATE TABLE `UserFineGroup`');
-        await queryRunner.query('SET FOREIGN_KEY_CHECKS = 1');
-        await queryRunner.commitTransaction();
-      } catch (error) {
-        await queryRunner.rollbackTransaction();
-      } finally {
-        await queryRunner.release();
-      }
-    }
-
     before(async () => {
       await clearFines();
       const fineTransfers = (await Transfer.find({ relations: ['fine'] })).filter((t) => t.fine != null);
@@ -559,4 +561,80 @@ describe('DebtorService', (): void => {
       expect(sendMailFake).to.be.calledOnce;
     });
   });
+
+  describe('getFineReport', () => {
+
+    before(async () => {
+      await clearFines();
+    });
+
+    afterEach(async () => {
+      await clearFines();
+    });
+
+    async function makeFines(): Promise<FineHandoutEventResponse> {
+      const referenceDate = new Date('2021-01-30');
+
+      const usersToFine = await DebtorService.calculateFinesOnDate({
+        referenceDates: [referenceDate],
+      });
+
+      return DebtorService.handOutFines({
+        userIds: usersToFine.map((u) => u.id),
+        referenceDate,
+      }, ctx.actor);
+    }
+
+    it('should return correct report', async () => {
+      const fineHandoutEvent = await makeFines();
+      const date = new Date(fineHandoutEvent.createdAt);
+      const report = await DebtorService.getFineReport(date, date);
+
+      expect(report.fromDate.toISOString()).to.equal(date.toISOString());
+      expect(report.toDate.toISOString()).to.equal(date.toISOString());
+      expect(report.count).to.equal(fineHandoutEvent.fines.length);
+
+      const handedOut = fineHandoutEvent.fines.reduce((sum, u) => sum + u.amount.amount, 0);
+      expect(report.handedOut.getAmount()).to.equal(handedOut);
+      expect(report.waivedAmount.getAmount()).to.equal(0);
+    });
+
+    it( 'should return error if transfer has fine and waivedFine', async () => {
+      const fineHandoutEvent = await makeFines();
+      await DebtorService.waiveFines(fineHandoutEvent.fines[0].user.id);
+
+      const transfer = await Transfer.findOne({ where: { waivedFines: { userId: fineHandoutEvent.fines[0].user.id } }, relations: ['fine', 'waivedFines'] });
+      transfer.fine = await Fine.create({
+        userFineGroup: await UserFineGroup.findOne({ where: { userId: fineHandoutEvent.fines[0].user.id } }),
+        fineHandoutEvent: await FineHandoutEvent.findOne({ where: { id: fineHandoutEvent.id } }),
+        amount: dinero({ amount: 100 }),
+        transfer: transfer,
+      }).save();
+      await transfer.save();
+      const date = new Date(fineHandoutEvent.createdAt);
+      const tillDate = new Date();
+      // Expect to error
+      await expect(DebtorService.getFineReport(date, tillDate)).to.eventually.rejectedWith('Transfer has both fine and waived fine');
+    });
+
+    it('should deal with waived fines', async () => {
+      const fineHandoutEvent = await makeFines();
+      const date = new Date(fineHandoutEvent.createdAt);
+      const tillDate = new Date();
+
+      await DebtorService.waiveFines(fineHandoutEvent.fines[0].user.id);
+      const report = await DebtorService.getFineReport(date, tillDate);
+
+      expect(report.fromDate.toISOString()).to.equal(date.toISOString());
+      expect(report.toDate.toISOString()).to.equal(tillDate.toISOString());
+      expect(report.count).to.equal(fineHandoutEvent.fines.length);
+      expect(report.waivedCount).to.equal(1);
+
+      const handedOut = fineHandoutEvent.fines.reduce((sum, u) => sum + u.amount.amount, 0);
+      expect(report.handedOut.getAmount()).to.equal(handedOut);
+      expect(report.waivedAmount.getAmount()).to.equal(fineHandoutEvent.fines[0].amount.amount);
+    });
+
+  });
+
 });
