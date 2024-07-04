@@ -198,6 +198,43 @@ export default class ProductService {
     };
   }
 
+  public static revisionToResponse(revision: ProductRevision): ProductResponse {
+    const priceInclVat = revision.priceInclVat.toObject();
+    const priceExclVat: DineroObject = {
+      ...revision.priceInclVat.toObject(),
+      amount: Math.round(priceInclVat.amount / (1 + (revision.vat.percentage / 100))),
+    };
+
+    return {
+      id: revision.product.id,
+      revision: revision.revision,
+      alcoholPercentage: revision.alcoholPercentage,
+      featured: revision.featured,
+      preferred: revision.preferred,
+      priceList: revision.priceList,
+      category: {
+        id: revision.category.id,
+        name: revision.category.name,
+      },
+      createdAt: revision.product.createdAt.toISOString(),
+      updatedAt: revision.product.updatedAt.toISOString(),
+      owner: {
+        id: revision.product.owner.id,
+        firstName: revision.product.owner.firstName,
+        lastName: revision.product.owner.lastName,
+      },
+      image: revision.product?.image?.downloadName,
+      name: revision.name,
+      priceInclVat,
+      priceExclVat,
+      vat: {
+        id: revision.vat.id,
+        percentage: revision.vat.percentage,
+        hidden: revision.vat.hidden,
+      },
+    };
+  }
+
   public static async getProducts(filters: ProductFilterParameters = {},
     pagination: PaginationParameters = {}, user?: User): Promise<PaginatedProductResponse> {
     const { take, skip } = pagination;

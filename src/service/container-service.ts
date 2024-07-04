@@ -16,7 +16,12 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { SelectQueryBuilder } from 'typeorm';
+import {
+  FindManyOptions,
+  FindOptionsRelations,
+  FindOptionsWhere, In,
+  Raw,
+} from 'typeorm';
 import {
   ContainerResponse,
   ContainerWithProductsResponse,
@@ -25,9 +30,7 @@ import {
 } from '../controller/response/container-response';
 import Container from '../entity/container/container';
 import ContainerRevision from '../entity/container/container-revision';
-import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
-import PointOfSale from '../entity/point-of-sale/point-of-sale';
 import Product from '../entity/product/product';
 import ProductRevision from '../entity/product/product-revision';
 import { PaginationParameters } from '../helpers/pagination';
@@ -36,7 +39,6 @@ import {
   UpdateContainerParams,
   UpdateContainerRequest,
 } from '../controller/request/container-request';
-import ProductImage from '../entity/file/product-image';
 import User from '../entity/user/user';
 import { UpdatePointOfSaleParams } from '../controller/request/point-of-sale-request';
 // eslint-disable-next-line import/no-cycle
@@ -44,7 +46,6 @@ import PointOfSaleService from './point-of-sale-service';
 // eslint-disable-next-line import/no-cycle
 import ProductService from './product-service';
 import AuthenticationService from './authentication-service';
-import { AppDataSource } from '../database/database';
 
 interface ContainerVisibility {
   own: boolean;
@@ -79,178 +80,43 @@ export interface ContainerFilterParameters {
    * Filter based on container owner.
    */
   ownerId?: number;
+  /**
+   * Filter on containers related to the given user.
+   */
+  userId?: number;
   returnProducts?: boolean;
   productId?: number;
 }
 
 export default class ContainerService {
-  /**
-   * Helper function for the base mapping the raw getMany response container.
-   * @param rawContainer - the raw response to parse.
-   */
-  private static asContainerResponse(rawContainer: any): ContainerResponse {
-    return {
-      id: rawContainer.container_id,
-      revision: rawContainer.container_revision,
-      name: rawContainer.container_name,
-      createdAt: rawContainer.container_createdAt instanceof Date ? rawContainer.container_createdAt.toISOString() : rawContainer.container_createdAt,
-      updatedAt: rawContainer.container_updatedAt instanceof Date ? rawContainer.container_updatedAt.toISOString() : rawContainer.container_updatedAt,
-      public: !!rawContainer.container_public,
+
+  public static revisionToResponse(revision: ContainerRevision): ContainerResponse | ContainerWithProductsResponse {
+    const response: any =  {
+      id: revision.containerId,
+      revision: revision.revision,
+      name: revision.name,
+      createdAt: revision.createdAt.toISOString(),
+      updatedAt: revision.updatedAt.toISOString(),
+      public: revision.container.public,
       owner: {
-        id: rawContainer.owner_id,
-        firstName: rawContainer.owner_firstName,
-        lastName: rawContainer.owner_lastName,
+        id: revision.container.owner.id,
+        firstName: revision.container.owner.firstName,
+        lastName: revision.container.owner.lastName,
       },
     };
+    if (revision.products) {
+      response.products = revision.products.map((p) => ProductService.revisionToResponse(p));
+    }
+    return response;
   }
 
-  public static async BuildGetContainersQuery(
-    filters: ContainerFilterParameters = {}, user?: User,
-  ): Promise<SelectQueryBuilder<Container>> {
-    const selection = [
-      'container.id AS container_id',
-      'container.public as container_public',
-      'container.createdAt AS container_createdAt',
-      'containerrevision.revision AS container_revision',
-      'containerrevision.updatedAt AS container_updatedAt',
-      'containerrevision.name AS container_name',
-      'container_owner.id AS owner_id',
-      'container_owner.firstName AS owner_firstName',
-      'container_owner.lastName AS owner_lastName',
-    ];
-
-    const builder = AppDataSource
-      .getRepository(Container)
+  private static revisionSubQuery(containerId?: number): string {
+    if (containerId) return `${containerId}`;
+    return Container
+      .getRepository()
       .createQueryBuilder('container')
-      .innerJoin(
-        ContainerRevision,
-        'containerrevision',
-        'container.id = containerrevision.container',
-      )
-      .innerJoin('container.owner', 'container_owner')
-      .select(selection);
-
-    const {
-      posId, posRevision, returnProducts, ...p
-    } = filters;
-
-    if (posId !== undefined) {
-      builder.innerJoin(
-        (qb: SelectQueryBuilder<any>) => qb.from(PointOfSaleRevision, 'pos_revision')
-          .innerJoin(
-            'pos_revision.containers',
-            'cc',
-          )
-          .where(
-            `pos_revision.pointOfSaleId = ${posId} AND pos_revision.revision IN ${posRevision ? `(${posRevision})` : qb.subQuery()
-              .from(PointOfSale, 'pos')
-              .select('pos.currentRevision')
-              .where(`pos.id = ${posId}`)
-              .getSql()}`,
-          )
-          .select(['cc.containerId AS id', 'cc.revision AS revision']),
-        'pos_container',
-        'pos_container.id = container.id AND pos_container.revision = containerrevision.revision',
-      );
-    }
-
-    if (returnProducts || filters.productId) {
-      builder.leftJoinAndSelect('containerrevision.products', 'products');
-      builder.leftJoinAndSelect('products.category', 'category');
-      builder.leftJoin(Product, 'base_product', 'base_product.id = products.productId');
-      builder.leftJoinAndSelect(User, 'product_owner', 'product_owner.id = base_product.owner.id');
-      builder.leftJoinAndSelect(ProductImage, 'product_image', 'product_image.id = base_product.imageId');
-      builder.leftJoinAndSelect('products.vat', 'vat');
-      if (filters.productId) builder.where('products.productId = :productId', { productId: filters.productId });
-    }
-
-    const filterMapping: FilterMapping = {
-      containerId: 'container.id',
-      containerRevision: 'containerrevision.revision',
-      ownerId: 'container_owner.id',
-      public: 'container.public',
-    };
-
-    QueryFilter.applyFilter(builder, filterMapping, p);
-
-    if (!(posId || p.containerRevision)) {
-      builder.andWhere('container.currentRevision = containerrevision.revision');
-    }
-
-    if (user) {
-      const organIds = (await AuthenticationService.getMemberAuthenticators(user)).map((u) => u.id);
-      builder.andWhere('container_owner.id IN (:...organIds)', { organIds });
-    }
-
-    builder.orderBy({ 'container.id': 'DESC' });
-
-    return builder;
-  }
-
-  /**
-   * Combines the database result products and containers into a ContainerWithProductsResponse
-   * @param rawResponse - The SQL result to combine
-   */
-  private static async combineProducts(rawResponse: any[])
-    : Promise<ContainerWithProductsResponse[]> {
-    const collected: ContainerWithProductsResponse[] = [];
-    const mapping = new Map<string, ContainerWithProductsResponse>();
-    rawResponse.forEach((response) => {
-      // Use a string of revision + id as key
-      const key = JSON.stringify({
-        revision: response.container_revision,
-        id: response.container_id,
-      });
-
-      const rawProduct = {
-        id: response.products_productId,
-        revision: response.products_revision,
-        alcoholpercentage: response.products_alcoholPercentage,
-        featured: response.products_featured,
-        preferred: response.products_preferred,
-        priceList: response.products_priceList,
-        vat_id: response.products_vatId,
-        vat_hidden: !!response.vat_hidden,
-        vat_percentage: response.vat_percentage,
-        category_id: response.products_categoryId,
-        category_name: response.category_name,
-        createdAt: response.products_createdAt,
-        updatedAt: response.products_updatedAt,
-        owner_id: response.product_owner_id,
-        owner_firstName: response.product_owner_firstName,
-        owner_lastName: response.product_owner_lastName,
-        image: response.product_image_downloadName,
-        name: response.products_name,
-        priceInclVat: response.products_priceInclVat,
-      };
-
-      // Container is empty
-      if (rawProduct.id === null) {
-        const containerWithProductsResponse: ContainerWithProductsResponse = {
-          ...this.asContainerResponse(response),
-          products: [],
-        };
-
-        mapping.set(key, containerWithProductsResponse);
-      } else {
-        const productResponse = ProductService.asProductResponse(rawProduct);
-
-        if (mapping.has(key)) {
-          mapping.get(key).products.push(productResponse);
-        } else {
-          const containerWithProductsResponse: ContainerWithProductsResponse = {
-            ...this.asContainerResponse(response),
-            products: [productResponse],
-          };
-
-          mapping.set(key, containerWithProductsResponse);
-        }
-      }
-    });
-    mapping.forEach((entry) => {
-      collected.push(entry);
-    });
-    return collected;
+      .select('container.currentRevision')
+      .where('container.id = containerRevision.containerId').getSql();
   }
 
   /**
@@ -264,17 +130,13 @@ export default class ContainerService {
   ): Promise<PaginatedContainerResponse | PaginatedContainerWithProductResponse> {
     const { take, skip } = pagination;
 
+    const options = await this.getOptions(filters, user);
     const results = await Promise.all([
-      (await this.BuildGetContainersQuery(filters, user)).limit(take).offset(skip).getRawMany(),
-      (await this.BuildGetContainersQuery({ ...filters, returnProducts: false }, user)).getCount(),
+      (await ContainerRevision.find({ ...options, take, skip })),
+      (await ContainerRevision.count({ ...options })),
     ]);
 
-    let records;
-    if (filters.returnProducts) {
-      records = await this.combineProducts(results[0]);
-    } else {
-      records = results[0].map((rawContainer) => this.asContainerResponse(rawContainer));
-    }
+    const records = results[0].map((revision) => this.revisionToResponse(revision));
 
     return {
       _pagination: {
@@ -404,5 +266,65 @@ export default class ContainerService {
     if (container.owner.id === userId) result.own = true;
     if (container.public) result.public = true;
     return result;
+  }
+
+  /**
+   * Returns the options for the query
+   * @param params
+   * @param user
+   */
+  public static async getOptions(params: ContainerFilterParameters, user?: User): Promise<FindManyOptions<ContainerRevision>> {
+    const filterMapping: FilterMapping = {
+      containerId: 'containerId',
+    };
+
+    const relations: FindOptionsRelations<ContainerRevision> = {
+      container: {
+        owner: true,
+      },
+      pointsOfSale: {
+        pointOfSale: true,
+      },
+    };
+
+    if (params.returnProducts) relations.products = {
+      product: {
+        image: true,
+        owner: true,
+      },
+      vat: true,
+      category: true,
+    };
+
+    const userFilter: any = {};
+    if (user) {
+      const organIds = (await AuthenticationService.getMemberAuthenticators(user)).map((u) => u.id);
+      userFilter.container = { owner: { id: In(organIds) } };
+    } else if (params.ownerId) {
+      userFilter.container = { owner: { id: params.ownerId } };
+    }
+
+    let revisionFilter: any = {};
+    // Do not filter on revision if we are getting a specific POS
+    if (!params.posId && !params.posRevision) {
+      revisionFilter.revision = Raw(alias => `${alias} = (${this.revisionSubQuery(params.containerRevision)})`);
+    }
+
+    let where: FindOptionsWhere<ContainerRevision> = {
+      ...QueryFilter.createFilterWhereClause(filterMapping, params),
+      ...revisionFilter,
+      ...userFilter,
+      pointsOfSale: {
+        pointOfSaleId: params.posId,
+        revision: params.posRevision,
+      },
+    };
+
+    const options: FindManyOptions<ContainerRevision> = {
+      where,
+      order: { createdAt: 'ASC' },
+    };
+
+    return { ...options, relations };
   }
 }
