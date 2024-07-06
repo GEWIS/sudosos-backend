@@ -39,6 +39,7 @@ import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import MemberAuthenticator from '../../../src/entity/authenticator/member-authenticator';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
+import dinero from 'dinero.js';
 
 describe('TransactionController', (): void => {
   let ctx: {
@@ -68,85 +69,44 @@ describe('TransactionController', (): void => {
     await truncateAllTables(connection);
     const app = express();
     const database = await seedDatabase();
-    const validTransReq = {
-      from: 7,
-      createdBy: 7,
-      subTransactions: [
+    const { users, pointOfSaleRevisions } = database;
+
+    const pos = pointOfSaleRevisions.filter((p) => p.pointOfSale.deletedAt == null)[0];
+    const conts = pos.containers.filter((c) => c.container.deletedAt == null).slice(0, 2);
+    const products = conts.map((c) => c.products.filter((p) => p.product.deletedAt == null).slice(0, 2));
+    const validTransReq: TransactionRequest = {
+      from: users[6].id,
+      createdBy: users[6].id,
+      subTransactions: conts.map((c, i) => (
         {
-          to: 8,
+          to: c.container.owner.id,
           container: {
-            id: 1,
-            revision: 2,
+            id: c.containerId,
+            revision: c.revision,
           },
-          subTransactionRows: [
+          subTransactionRows: products[i].map((p, i2) => (
             {
               product: {
-                id: 1,
-                revision: 2,
+                id: p.productId,
+                revision: p.revision,
               },
-              amount: 1,
-              totalPriceInclVat: {
-                amount: 72,
-                currency: 'EUR',
-                precision: 2,
-              },
-            },
-            {
-              product: {
-                id: 2,
-                revision: 2,
-              },
-              amount: 2,
-              totalPriceInclVat: {
-                amount: 146,
-                currency: 'EUR',
-                precision: 2,
-              },
-            },
-          ],
-          totalPriceInclVat: {
-            amount: 218,
-            currency: 'EUR',
-            precision: 2,
-          },
-        },
-        {
-          to: 9,
-          container: {
-            id: 2,
-            revision: 2,
-          },
-          subTransactionRows: [
-            {
-              product: {
-                id: 5,
-                revision: 2,
-              },
-              amount: 4,
-              totalPriceInclVat: {
-                amount: 304,
-                currency: 'EUR',
-                precision: 2,
-              },
-            },
-          ],
-          totalPriceInclVat: {
-            amount: 304,
-            currency: 'EUR',
-            precision: 2,
-          },
-        },
-      ],
+              amount: i2 + 1,
+              totalPriceInclVat: p.priceInclVat.multiply(i2 + 1).toObject(),
+            }
+          )),
+          totalPriceInclVat: products[i].reduce((total, p, i2) => total
+            .add(p.priceInclVat.multiply(i2 + 1)), dinero({ amount: 0 })).toObject(),
+        }
+      )),
       pointOfSale: {
-        id: 1,
-        revision: 2,
+        id: pos.pointOfSaleId,
+        revision: pos.revision,
       },
-      totalPriceInclVat: {
-        amount: 522,
-        currency: 'EUR',
-        precision: 2,
-      },
-    } as TransactionRequest;
+      totalPriceInclVat: products.reduce((total1, prods) => total1
+        .add(prods.reduce((total2, p, i) => total2
+          .add(p.priceInclVat.multiply(i + 1)), dinero({ amount: 0 })),
+        ), dinero({ amount: 0 })).toObject(),
+    };
     ctx = {
       logger,
       connection,

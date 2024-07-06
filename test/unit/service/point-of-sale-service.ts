@@ -86,6 +86,7 @@ describe('PointOfSaleService', async (): Promise<void> => {
     specification: SwaggerSpecification,
     users: User[],
     pointsOfSale: PointOfSale[],
+    deletedPointsOfSale: PointOfSale[],
     validPOSParams: CreatePointOfSaleParams,
   };
 
@@ -114,7 +115,7 @@ describe('PointOfSaleService', async (): Promise<void> => {
     app.use(json());
 
     const validPOSParams: CreatePointOfSaleParams = {
-      containers: [containers[0].id, containers[1].id, containers[2].id],
+      containers: containers.filter((c) => c.deletedAt == null).map((c) => c.id),
       name: 'Valid POS',
       useAuthentication: true,
       ownerId: 1,
@@ -125,7 +126,8 @@ describe('PointOfSaleService', async (): Promise<void> => {
       app,
       specification,
       users,
-      pointsOfSale,
+      pointsOfSale: pointsOfSale.filter((p) => p.deletedAt == null),
+      deletedPointsOfSale: pointsOfSale.filter((p) => p.deletedAt != null),
       validPOSParams,
     };
   });

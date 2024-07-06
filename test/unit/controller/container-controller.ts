@@ -47,6 +47,7 @@ import { INVALID_ORGAN_ID, INVALID_PRODUCT_ID } from '../../../src/controller/re
 import ContainerRevision from '../../../src/entity/container/container-revision';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
+import Product from '../../../src/entity/product/product';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -84,6 +85,9 @@ describe('ContainerController', async (): Promise<void> => {
     adminToken: String,
     organMemberToken: String,
     token: String,
+    products: Product[],
+    containers: Container[],
+    deletedContainers: Container[],
     validContainerReq: CreateContainerRequest,
     validContainerUpdate: UpdateContainerRequest,
     invalidContainerReq: CreateContainerRequest,
@@ -126,9 +130,9 @@ describe('ContainerController', async (): Promise<void> => {
 
     const categories = await seedProductCategories();
     const vatGroups = await seedVatGroups();
-    const { productRevisions } = (
+    const { products, productRevisions } = (
       await seedProducts([adminUser, localUser], categories, vatGroups));
-    await seedContainers([adminUser, localUser], productRevisions);
+    const { containers } = await seedContainers([adminUser, localUser], productRevisions);
 
     // create bearer tokens
     const tokenHandler = new TokenHandler({
@@ -220,6 +224,9 @@ describe('ContainerController', async (): Promise<void> => {
       adminToken,
       organMemberToken,
       token,
+      products: products.filter((p) => p.deletedAt == null),
+      containers: containers.filter((c) => c.deletedAt == null),
+      deletedContainers: containers.filter((c) => c.deletedAt != null),
       validContainerReq,
       invalidContainerReq,
       validContainerUpdate,
@@ -302,6 +309,7 @@ describe('ContainerController', async (): Promise<void> => {
 
       // success code
       expect(res.status).to.equal(200);
+      expect(res.body).to.not.be.empty;
       asRequested(container, res.body);
       const valid = (ctx.specification.validateModel(
         'ContainerWithProductsResponse',
@@ -312,40 +320,36 @@ describe('ContainerController', async (): Promise<void> => {
       expect(valid.valid).to.be.true;
     }
     it('should return an HTTP 200 and the container with the given id if admin', async () => {
-      const container = await Container.findOne({ where: { id: 1 }, relations: ['owner'] });
+      const container = ctx.containers[0];
+      expect(container).to.not.be.undefined;
       await getAndCheck(container, ctx.adminToken);
     });
     it('should return an HTTP 200 and the container with the given id if own container', async () => {
-      const container = await Container.findOne({ relations: ['owner'], where: { owner: { id: ctx.localUser.id }, public: false } });
+      const container = ctx.containers.find((c) => !c.public && c.owner.id === ctx.localUser.id);
+      expect(container).to.not.be.undefined;
       await getAndCheck(container, ctx.token);
     });
     it('should return an HTTP 200 and container if the container is public and not admin', async () => {
-      const container = await Container.findOne({ relations: ['owner'], where: { owner: { id: ctx.adminUser.id }, public: true } });
-      await getAndCheck(container, ctx.token);
-    });
-    it('should return an HTTP 200 and the container if the container is not public but the user is the owner', async () => {
-      const container = await Container.findOne({ relations: ['owner'], where: { owner: { id: ctx.localUser.id }, public: false } });
+      const container = ctx.containers.find((c) => c.public && c.owner.id !== ctx.localUser.id);
+      expect(container).to.not.be.undefined;
       await getAndCheck(container, ctx.token);
     });
     it('should return an HTTP 200 and the container if the user is connected via organ', async () => {
-      const newContainer = Object.assign(new Container(), {
+      const newContainer = await Container.save({
         owner: ctx.organ,
         public: false,
         currentRevision: 1,
-      }) as Container;
-      await Container.save(newContainer);
-      const revision = Object.assign(new ContainerRevision(), {
+      });
+      await ContainerRevision.save({
         container: newContainer,
         name: 'ORGAN Container',
         revision: 1,
         products: [],
       });
-      await ContainerRevision.save(revision);
-      const container = await Container.findOne({ relations: ['owner'], where: { owner: { id: ctx.organ.id }, public: false } });
-      await getAndCheck(container, ctx.organMemberToken);
+      await getAndCheck(newContainer, ctx.organMemberToken);
     });
     it('should return an HTTP 403 if the container exist but is not visible to the user', async () => {
-      const id = 2;
+      const { id } = ctx.containers.find((c) => !c.public && c.owner.id !== ctx.localUser.id);
       const test = await request(ctx.app)
         .get(`/containers/${id}`)
         .set('Authorization', `Bearer ${ctx.adminToken}`);
@@ -540,12 +544,13 @@ describe('ContainerController', async (): Promise<void> => {
       expect(databaseContainer).to.exist;
     });
     it('should return an HTTP 200 and override a previous update if admin', async () => {
-      const id = 1;
+      const { id } = ctx.containers[0];
 
+      const products = ctx.products.slice(0, 2);
       const newUpdate: CreateContainerRequest = {
         public: true,
         name: 'Valid Container Update',
-        products: [3, 4],
+        products: products.map((p) => p.id),
       };
 
       const res = await request(ctx.app)
@@ -577,16 +582,14 @@ describe('ContainerController', async (): Promise<void> => {
       expect(res.status).to.equal(400);
     });
     it('should return an HTTP 404 if the container with the given id does not exist', async () => {
+      const id = await Container.count({ withDeleted: true }) + 1;
       const res = await request(ctx.app)
-        .patch(`/containers/${(await Container.count()) + 1}`)
+        .patch(`/containers/${id}`)
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(ctx.validContainerUpdate);
 
       // sanity check
-      expect(await Container.findOne({
-        where:
-          { id: (await Container.count()) + 1 },
-      })).to.be.null;
+      expect(await Container.findOne({ where: { id } })).to.be.null;
 
       // check if banner is not returned
       expect(res.body).to.equal('Container not found.');

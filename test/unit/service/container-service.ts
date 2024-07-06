@@ -46,6 +46,7 @@ import AuthenticationService from '../../../src/service/authentication-service';
 import MemberAuthenticator from '../../../src/entity/authenticator/member-authenticator';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
+import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
 
 /**
  * Test if all the container responses are part of the container set array.
@@ -98,6 +99,11 @@ describe('ContainerService', async (): Promise<void> => {
     specification: SwaggerSpecification,
     users: User[],
     containers: Container[],
+    deletedContainers: Container[],
+    containerRevisions: ContainerRevision[],
+    pointsOfSale: PointOfSale[],
+    deletedPointsOfSale: PointOfSale[],
+    pointOfSaleRevisions: PointOfSaleRevision[],
   };
 
   before(async () => {
@@ -109,7 +115,7 @@ describe('ContainerService', async (): Promise<void> => {
     const vatGroups = await seedVatGroups();
     const { productRevisions } = await seedProducts(users, categories, vatGroups);
     const { containers, containerRevisions } = await seedContainers(users, productRevisions);
-    await seedPointsOfSale(users, containerRevisions);
+    const { pointsOfSale, pointOfSaleRevisions } = await seedPointsOfSale(users, containerRevisions);
 
     // start app
     const app = express();
@@ -122,7 +128,12 @@ describe('ContainerService', async (): Promise<void> => {
       app,
       specification,
       users,
-      containers,
+      containers: containers.filter((c) => c.deletedAt == null),
+      deletedContainers: containers.filter((c) => c.deletedAt != null),
+      containerRevisions,
+      pointsOfSale: pointsOfSale.filter((p) => p.deletedAt == null),
+      deletedPointsOfSale: pointsOfSale.filter((p) => p.deletedAt != null),
+      pointOfSaleRevisions,
     };
   });
 
@@ -161,24 +172,22 @@ describe('ContainerService', async (): Promise<void> => {
       expect(belongsToOwner).to.be.true;
     });
     it('should return containers of the point of sale specified', async () => {
-      const pos: PointOfSaleRevision = await PointOfSaleRevision.findOne({
-        relations: ['pointOfSale', 'containers'],
-        where: {},
-      });
+      const pos = ctx.pointsOfSale[0];
+      const posRevision = ctx.pointOfSaleRevisions.find((r) => r.pointOfSaleId === pos.id && r.revision === pos.currentRevision);
       const { records } = await ContainerService.getContainers({
-        posId: pos.pointOfSale.id,
-        posRevision: pos.revision,
+        posId: pos.id,
+        posRevision: posRevision.revision,
       });
 
       expect(containerSuperset(records, ctx.containers)).to.be.true;
 
       const belongsToPos = records.every(
-        (c1: ContainerResponse) => pos.containers.some(
+        (c1: ContainerResponse) => posRevision.containers.some(
           (c2: ContainerRevision) => c2.container.id === c1.id && c2.revision === c1.revision,
         ),
       );
       expect(belongsToPos).to.be.true;
-      expect(pos.containers).to.be.length(records.length);
+      expect(posRevision.containers.filter((c) => c.container.deletedAt == null)).to.be.length(records.length);
     });
     it('should return a single container if containerId is specified', async () => {
       const { records } = await ContainerService.getContainers({

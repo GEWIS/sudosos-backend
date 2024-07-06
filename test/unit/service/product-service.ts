@@ -128,11 +128,14 @@ describe('ProductService', async (): Promise<void> => {
     specification: SwaggerSpecification,
     users: User[],
     products: Product[],
+    deletedProducts: Product[],
     productImages: ProductImage[],
     productRevisions: ProductRevision[],
     containers: Container[],
+    deletedContainers: Container[],
     containerRevisions: ContainerRevision[],
     pointsOfSale: PointOfSale[],
+    deletedPointsOfSale: PointOfSale[],
     pointOfSaleRevisions: PointOfSaleRevision[],
   };
 
@@ -169,12 +172,15 @@ describe('ProductService', async (): Promise<void> => {
       app,
       specification,
       users,
-      products,
+      products: products.filter((p) => p.deletedAt == null),
+      deletedProducts: products.filter((p) => p.deletedAt != null),
       productImages,
       productRevisions,
-      containers,
+      containers: containers.filter((c) => c.deletedAt == null),
+      deletedContainers: containers.filter((c) => c.deletedAt != null),
       containerRevisions,
-      pointsOfSale,
+      pointsOfSale: pointsOfSale.filter((p) => p.deletedAt == null),
+      deletedPointsOfSale: pointsOfSale.filter((p) => p.deletedAt != null),
       pointOfSaleRevisions,
     };
   });
@@ -263,6 +269,22 @@ describe('ProductService', async (): Promise<void> => {
 
       returnsAllRevisions(records, products);
     });
+    it('should return the products belonging to a container', async () => {
+      const params: ProductFilterParameters = {
+        containerId: 3,
+      };
+      const { records } = await ProductService.getProducts(params);
+
+      const products = ctx.containerRevisions
+        .filter((rev) => {
+          const container = ctx.containers.filter((cont) => cont.id === 3)[0];
+          return rev.container.id === container.id && rev.revision === container.currentRevision;
+        })
+        .map((rev) => rev.products.map((prod) => prod.product))[0]
+        .filter((p) => p.deletedAt == null);
+
+      returnsAll(records, products);
+    });
     it('should adhere to pagination', async () => {
       const take = 5;
       const skip = 3;
@@ -275,6 +297,49 @@ describe('ProductService', async (): Promise<void> => {
       expect(_pagination.skip).to.equal(skip);
       expect(_pagination.count).to.equal(ctx.products.length);
       expect(records.length).to.be.at.most(take);
+    });
+    it('should return the products belonging to a container revision that is not current', async () => {
+      const revision = ctx.containerRevisions.find((r) => {
+        const container = ctx.containers.find((c) => c.id === r.containerId);
+        expect(container).to.not.be.undefined;
+        return r.revision < container.currentRevision && r.products.length > 0;
+      });
+      const params: ProductFilterParameters = {
+        containerId: revision.containerId,
+        containerRevision: revision.revision,
+      };
+
+      const { records } = await ProductService.getProducts(params);
+      const products = revision.products
+        .filter((p) => p.product.deletedAt == null)
+        .map((p) => p.product.id);
+
+      expect(records.map((prod) => prod.id)).to.deep.equalInAnyOrder(products);
+    });
+    it('should return the products belonging to a point of sale', async () => {
+      const pointOfSaleId = ctx.pointsOfSale[1].id;
+      const { records } = await ProductService
+        .getProducts({ pointOfSaleId });
+
+      const { containers } = ctx.pointOfSaleRevisions.filter((pos) => (
+        (pos.pointOfSale.id === pointOfSaleId && pos.revision === pos.pointOfSale.currentRevision)))[0];
+
+      const productRevisions = (containers.map((p) => p.products.map((pr) => pr)))
+        .reduce((prev, cur) => prev.concat(cur))
+        .filter((p) => p.product.deletedAt == null);
+
+      const products = productRevisions.map((p) => ((
+        { product: p.product, revision: p.revision } as ProductWithRevision)));
+
+      const filteredProducts = products.reduce((acc: ProductWithRevision[], current) => {
+        if (!acc.some((item) => (
+          (item.product.id === current.product.id && item.revision === current.revision)))) {
+          acc.push(current);
+        }
+        return acc;
+      }, []);
+
+      returnsAllRevisions(records, filteredProducts);
     });
     it('should return all points of sale involving a single user and its memberAuthenticator users', async () => {
       const usersOwningAProd = [...new Set(ctx.products.map((prod) => prod.owner))];
@@ -314,7 +379,7 @@ describe('ProductService', async (): Promise<void> => {
       const products = ctx.productRevisions
         .filter((rev) => {
           const product = ctx.products.filter((prod) => prod.id === rev.productId)[0];
-          return rev.featured && product.currentRevision === rev.revision && product.id === rev.productId;
+          return rev.product.deletedAt == null && rev.featured && product.currentRevision === rev.revision && product.id === rev.productId;
         });
 
       returnsAllRevisions(records, products);
@@ -328,7 +393,7 @@ describe('ProductService', async (): Promise<void> => {
       const products = ctx.productRevisions
         .filter((rev) => {
           const product = ctx.products.filter((prod) => prod.id === rev.productId)[0];
-          return rev.preferred && product.currentRevision === rev.revision && product.id === rev.productId;
+          return rev.product.deletedAt == null && rev.preferred && product.currentRevision === rev.revision && product.id === rev.productId;
         });
 
       returnsAllRevisions(records, products);
@@ -342,7 +407,7 @@ describe('ProductService', async (): Promise<void> => {
       const products = ctx.productRevisions
         .filter((rev) => {
           const product = ctx.products.filter((prod) => prod.id === rev.productId)[0];
-          return rev.priceList && product.currentRevision === rev.revision && product.id === rev.productId;
+          return rev.product.deletedAt == null && rev.priceList && product.currentRevision === rev.revision && product.id === rev.productId;
         });
 
       returnsAllRevisions(records, products);

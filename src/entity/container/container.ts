@@ -17,7 +17,7 @@
  */
 
 import {
-  Column,
+  Column, DeleteDateColumn,
   Entity,
   ManyToOne,
 } from 'typeorm';
@@ -37,6 +37,9 @@ export default class Container extends BaseEntity {
     nullable: true,
   })
   public currentRevision: number;
+
+  @DeleteDateColumn()
+  public readonly deletedAt: Date | null;
 
   @ManyToOne(() => User, { nullable: false })
   public owner: User;

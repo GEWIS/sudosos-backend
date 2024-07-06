@@ -83,6 +83,7 @@ describe('ProductController', async (): Promise<void> => {
     vatGroups: VatGroup[],
     tokenNoRoles: String,
     products: Product[],
+    deletedProducts: Product[],
     validProductReq: UpdateProductRequest,
     invalidProductReq: UpdateProductRequest,
     validCreateProductReq: CreateProductRequest,
@@ -235,7 +236,8 @@ describe('ProductController', async (): Promise<void> => {
       token,
       vatGroups,
       tokenNoRoles,
-      products,
+      products: products.filter((p) => p.deletedAt == null),
+      deletedProducts: products.filter((p) => p.deletedAt != null),
       validProductReq,
       invalidProductReq,
       validCreateProductReq,
@@ -518,11 +520,12 @@ describe('ProductController', async (): Promise<void> => {
       expect(res2.status).to.eq(403);
     });
     it('should return an HTTP 404 if the product with the given id does not exist', async () => {
+      const id = (await Product.count({ withDeleted: true })) + 1;
       const res = await request(ctx.app)
-        .get(`/products/${(await Product.count()) + 1}`)
+        .get(`/products/${id}`)
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
-      expect(await Product.findOne({ where: { id: (await Product.count()) + 1 } })).to.be.null;
+      expect(await Product.findOne({ where: { id } })).to.be.null;
 
       // check if product is not returned
       expect(res.body).to.equal('Product not found.');
@@ -567,13 +570,14 @@ describe('ProductController', async (): Promise<void> => {
       ).valid).to.be.true;
     });
     it('should return an HTTP 404 if the product with the given id does not exist', async () => {
+      const id = await Product.count({ withDeleted: true }) + 1;
       const res = await request(ctx.app)
-        .patch(`/products/${(await Product.count()) + 1}`)
+        .patch(`/products/${id}`)
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(ctx.validProductReq);
 
       // sanity check
-      expect(await Product.findOne({ where: { id: (await Product.count()) + 1 } })).to.be.null;
+      expect(await Product.findOne({ where: { id } })).to.be.null;
 
       // check if banner is not returned
       expect(res.body).to.equal('Product not found.');

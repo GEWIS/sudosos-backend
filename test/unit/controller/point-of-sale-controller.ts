@@ -76,6 +76,7 @@ describe('PointOfSaleController', async () => {
     user: User,
     organ: User,
     pointsOfSale: PointOfSale[],
+    deletedPointsOfSale: PointOfSale[],
     pointOfSaleRevisions: PointOfSaleRevision[],
     validPOSRequest: CreatePointOfSaleRequest,
     adminToken: string,
@@ -125,7 +126,7 @@ describe('PointOfSaleController', async () => {
     const { pointsOfSale, pointOfSaleRevisions } = await seedPointsOfSale([admin, user, organ], containerRevisions);
 
     const validPOSRequest: CreatePointOfSaleRequest = {
-      containers: [containers[0].id, containers[1].id, containers[2].id],
+      containers: containers.filter((c) => c.deletedAt == null).slice(0, 3).map((c) => c.id),
       name: 'Valid POS',
       useAuthentication: true,
       ownerId: 2,
@@ -146,7 +147,8 @@ describe('PointOfSaleController', async () => {
       ...ctx,
       controller,
       organ,
-      pointsOfSale,
+      pointsOfSale: pointsOfSale.filter((p) => p.deletedAt == null),
+      deletedPointsOfSale: pointsOfSale.filter((p) => p.deletedAt != null),
       pointOfSaleRevisions,
       validPOSRequest,
       adminToken,
@@ -164,8 +166,9 @@ describe('PointOfSaleController', async () => {
 
   describe('PATCH /pointsofsale/{id}', () => {
     it('should patch the use authentication', async () => {
+      const { id } = ctx.pointsOfSale[0];
       let res = await request(ctx.app)
-        .get('/pointsofsale/1')
+        .get(`/pointsofsale/${id}`)
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       const pos = res.body as PointOfSaleWithContainersResponse;
       const req: UpdatePointOfSaleRequest = {
@@ -175,15 +178,16 @@ describe('PointOfSaleController', async () => {
         id: 1,
       };
       res = await request(ctx.app)
-        .patch('/pointsofsale/1')
+        .patch(`/pointsofsale/${id}`)
         .set('Authorization', `Bearer ${ctx.superAdminToken}`)
         .send(req);
       expect(res.status).to.eq(200);
       updatePointOfSaleEq(req, res.body as PointOfSaleWithContainersResponse);
     });
     it('should patch the containers', async () => {
+      const { id } = ctx.pointsOfSale[0];
       let res = await request(ctx.app)
-        .get('/pointsofsale/1')
+        .get(`/pointsofsale/${id}`)
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       const pos = res.body as PointOfSaleWithContainersResponse;
       const req: UpdatePointOfSaleRequest = {
@@ -193,15 +197,16 @@ describe('PointOfSaleController', async () => {
         id: 1,
       };
       res = await request(ctx.app)
-        .patch('/pointsofsale/1')
+        .patch(`/pointsofsale/${id}`)
         .set('Authorization', `Bearer ${ctx.superAdminToken}`)
         .send(req);
       expect(res.status).to.eq(200);
       updatePointOfSaleEq(req, res.body as PointOfSaleWithContainersResponse);
     });
     it('should patch the name', async () => {
+      const { id } = ctx.pointsOfSale[0];
       let res = await request(ctx.app)
-        .get('/pointsofsale/1')
+        .get(`/pointsofsale/${id}`)
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       const pos = res.body as PointOfSaleWithContainersResponse;
       const req: UpdatePointOfSaleRequest = {
@@ -211,7 +216,7 @@ describe('PointOfSaleController', async () => {
         id: 1,
       };
       res = await request(ctx.app)
-        .patch('/pointsofsale/1')
+        .patch(`/pointsofsale/${id}`)
         .set('Authorization', `Bearer ${ctx.superAdminToken}`)
         .send(req);
       expect(res.status).to.eq(200);
@@ -539,6 +544,9 @@ describe('PointOfSaleController', async () => {
         .post('/pointsofsale')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(ctx.validPOSRequest);
+
+      expect(res.status).to.equal(200);
+      expect(res.body).to.not.be.empty;
 
       const validation = ctx.specification.validateModel(
         'PointOfSaleWithContainersResponse',
