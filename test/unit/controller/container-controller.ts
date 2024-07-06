@@ -365,6 +365,18 @@ describe('ContainerController', async (): Promise<void> => {
       // success code
       expect(res.status).to.equal(403);
     });
+    it('should return an HTTP 404 if the container is soft deleted', async () => {
+      const id = ctx.deletedContainers[0].id;
+      const res = await request(ctx.app)
+        .get(`/containers/${id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      // check if banner is not returned
+      expect(res.body).to.equal('Container not found.');
+
+      // success code
+      expect(res.status).to.equal(404);
+    });
     it('should return an HTTP 404 if the containerId does not exist', async () => {
       const id = (await Container.count()) + 10;
       const res = await request(ctx.app)

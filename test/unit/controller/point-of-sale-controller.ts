@@ -324,6 +324,14 @@ describe('PointOfSaleController', async () => {
         .set('Authorization', `Bearer ${ctx.organ}`);
       expect(res.status).to.equal(403);
     });
+    it('should return an HTTP 404 if the point of sale is soft deleted', async () => {
+      const res = await request(ctx.app)
+        .get(`/pointsofsale/${ctx.deletedPointsOfSale[0].id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(404);
+      expect(res.body).to.equal('Point of Sale not found.');
+    });
     it('should return an HTTP 404 if the point of sale with given id does not exist', async () => {
       const res = await request(ctx.app)
         .get(`/pointsofsale/${(await PointOfSale.count()) + 1}`)

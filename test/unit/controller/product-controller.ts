@@ -569,6 +569,18 @@ describe('ProductController', async (): Promise<void> => {
         true,
       ).valid).to.be.true;
     });
+    it('should return an HTTP 404 if the product is soft deleted', async () => {
+      const id = ctx.deletedProducts[0].id;
+      const res = await request(ctx.app)
+        .get(`/products/${id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      // check if banner is not returned
+      expect(res.body).to.equal('Product not found.');
+
+      // success code
+      expect(res.status).to.equal(404);
+    });
     it('should return an HTTP 404 if the product with the given id does not exist', async () => {
       const id = await Product.count({ withDeleted: true }) + 1;
       const res = await request(ctx.app)
