@@ -208,7 +208,7 @@ export default class ProductService {
     return {
       id: revision.product.id,
       revision: revision.revision,
-      alcoholPercentage: revision.alcoholPercentage,
+      alcoholPercentage: parseFloat(String(revision.alcoholPercentage)),
       featured: revision.featured,
       preferred: revision.preferred,
       priceList: revision.priceList,
@@ -501,7 +501,7 @@ export default class ProductService {
           name: revision.name,
           id: c.id,
         };
-        await ContainerService.directContainerUpdate(update);
+        await ContainerService.updateContainer(update);
       });
     }
   }

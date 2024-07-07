@@ -91,7 +91,7 @@ export interface ContainerFilterParameters {
 export default class ContainerService {
 
   public static revisionToResponse(revision: ContainerRevision): ContainerResponse | ContainerWithProductsResponse {
-    const response: any =  {
+    const response: any = {
       id: revision.containerId,
       revision: revision.revision,
       name: revision.name,
@@ -110,8 +110,8 @@ export default class ContainerService {
     return response;
   }
 
-  private static revisionSubQuery(containerId?: number): string {
-    if (containerId) return `${containerId}`;
+  private static  revisionSubQuery(revision?: number): string {
+    if (revision) return `${revision}`;
     return Container
       .getRepository()
       .createQueryBuilder('container')
@@ -148,10 +148,6 @@ export default class ContainerService {
 
   /**
    * Creates a new container.
-   *
-   * If approve is false then the newly created container resides in the Container table and has no
-   * current revision. To confirm the revision the update has to be accepted.
-   *
    * @param container - The params that describe the container to be created.
    */
   public static async createContainer(container: CreateContainerParams)
@@ -169,25 +165,33 @@ export default class ContainerService {
       id: base.id,
     };
 
-    return this.directContainerUpdate(update);
+    return this.updateContainer(update);
   }
 
-  public static async applyContainerUpdate(base: Container, updateRequest: UpdateContainerRequest) {
+  /**
+   * Updates a container by directly creating a revision.
+   * @param update - The container update
+   */
+  public static async updateContainer(update: UpdateContainerParams): Promise<ContainerWithProductsResponse> {
+    const base = await Container.findOne({ where: { id: update.id } });
+
+    // TODO change this once the product-service is refactored
     // Get the latest products
-    const products = await Product.findByIds(updateRequest.products);
+    const products = await Product.findBy( { id: In(update.products) });
 
     // Get the product id's for this update.
-    const productIds: { revision: number, product: { id : number } }[] = (
+    const productIds: { revision: number, product: { id: number } }[] = (
       products.map((product) => (
         { revision: product.currentRevision, product: { id: product.id } })));
 
     const productRevisions: ProductRevision[] = await ProductRevision.findByIds(productIds);
+    // ENDTODO
 
     // Set base container and apply new revision.
     const containerRevision: ContainerRevision = Object.assign(new ContainerRevision(), {
       container: base,
       products: productRevisions,
-      name: updateRequest.name,
+      name: update.name,
       // Increment revision.
       revision: base.currentRevision ? base.currentRevision + 1 : 1,
     });
@@ -199,21 +203,12 @@ export default class ContainerService {
     // eslint-disable-next-line no-param-reassign
     base.currentRevision = base.currentRevision ? base.currentRevision + 1 : 1;
     // eslint-disable-next-line no-param-reassign
-    base.public = updateRequest.public;
+    base.public = update.public;
     await base.save();
     await this.propagateContainerUpdate(base.id);
-  }
 
-  /**
-   * Updates a container by directly creating a revision.
-   * @param update - The container update
-   */
-  public static async directContainerUpdate(update: UpdateContainerParams)
-    : Promise<ContainerWithProductsResponse> {
-    const base: Container = await Container.findOne({ where: { id: update.id } });
-    await this.applyContainerUpdate(base, update);
-    return (this.getContainers({ containerId: base.id, returnProducts: true })
-      .then((c) => c.records[0])) as Promise<ContainerWithProductsResponse>;
+    const options = await this.getOptions({ containerId: base.id, returnProducts: true });
+    return (this.revisionToResponse(await ContainerRevision.findOne({ ...options }))) as ContainerWithProductsResponse;
   }
 
   /**
@@ -225,13 +220,16 @@ export default class ContainerService {
    * @param containerId - The container to propagate
    */
   public static async propagateContainerUpdate(containerId: number) {
-    const currentContainer = await Container.findOne({ where: { id: containerId } });
-    const containerRevisions = await ContainerRevision.find({
-      where: { container: { id: containerId }, revision: currentContainer.currentRevision - 1 },
-      relations: ['container', 'pointsOfSale', 'pointsOfSale.pointOfSale', 'pointsOfSale.containers', 'pointsOfSale.containers.container'],
-    });
-    const pos = containerRevisions
-      .map((c) => c.pointsOfSale)
+    let options = await this.getOptions({ containerId: containerId, returnProducts: true });
+    // Get previous revision of container.
+    (options.where as FindOptionsWhere<ContainerRevision>).revision = Raw(alias => `${alias}  = (${this.revisionSubQuery()}) - 1`);
+    const containerRevision = await ContainerRevision.findOne(options);
+
+    // Container is new, no need to propagate.
+    if (!containerRevision) return;
+
+    // Only update POS that contain previous container but are current version themselves.
+    const pos = containerRevision.pointsOfSale
       .reduce((a, b) => a.concat(b), [])
       .filter((p) => p.revision === p.pointOfSale.currentRevision)
       .filter((p, index, self) => (
@@ -244,7 +242,7 @@ export default class ContainerService {
       // eslint-disable-next-line no-await-in-loop
       const { containers } = p;
       const update: UpdatePointOfSaleParams = {
-        containers: containers.map((c) => c.container.id),
+        containers: containers.map((c: ContainerRevision) => c.container.id),
         useAuthentication: p.useAuthentication,
         name: p.name,
         id: p.pointOfSale.id,
@@ -284,6 +282,7 @@ export default class ContainerService {
       },
       pointsOfSale: {
         pointOfSale: true,
+        containers: true,
       },
     };
 

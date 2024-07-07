@@ -290,7 +290,7 @@ describe('ContainerService', async (): Promise<void> => {
     });
   });
 
-  describe('directContainerUpdate function', () => {
+  describe('updateContainer function', () => {
     it('should revise the container without creating a UpdatedContainer', async () => {
       const container = await Container.findOne({ where: {} });
       const update: UpdateContainerParams = {
@@ -299,7 +299,7 @@ describe('ContainerService', async (): Promise<void> => {
         products: [1, 2, 3],
         public: true,
       };
-      const response = await ContainerService.directContainerUpdate(update);
+      const response = await ContainerService.updateContainer(update);
       responseAsUpdate(update, response);
       const entity = await Container.findOne({ where: { id: container.id } });
       const revision = await ContainerRevision.findOne({ where: { container: { id: container.id }, revision: entity.currentRevision }, relations: ['container', 'products', 'products.product'] });
@@ -364,7 +364,7 @@ describe('ContainerService', async (): Promise<void> => {
         id: container.id,
       };
 
-      await ContainerService.directContainerUpdate(update);
+      await ContainerService.updateContainer(update);
 
       const updatedPos = await PointOfSaleRevision
         .findOne({ where: { revision: 2, pointOfSale: { id: pos.id } }, relations: ['containers', 'containers.products'] });
