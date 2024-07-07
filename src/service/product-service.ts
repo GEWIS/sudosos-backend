@@ -17,12 +17,11 @@
  */
 
 import {
-  createQueryBuilder,
   FindManyOptions,
   FindOptionsRelations,
-  FindOptionsWhere, getRepository, In,
+  FindOptionsWhere, In,
   Raw,
-  SelectQueryBuilder,
+
 } from 'typeorm';
 import { DineroObject } from 'dinero.js';
 import {
@@ -34,18 +33,14 @@ import ProductRevision from '../entity/product/product-revision';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import ContainerRevision from '../entity/container/container-revision';
-import Container from '../entity/container/container';
 import User from '../entity/user/user';
-import CreateProductParams, { UpdateProductParams, UpdateProductRequest } from '../controller/request/product-request';
-import PointOfSale from '../entity/point-of-sale/point-of-sale';
-import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision';
+import CreateProductParams, { UpdateProductParams } from '../controller/request/product-request';
 import { PaginationParameters } from '../helpers/pagination';
 import { RequestWithToken } from '../middleware/token-middleware';
 import { asDate, asNumber } from '../helpers/validators';
 // eslint-disable-next-line import/no-cycle
 import ContainerService from './container-service';
 import { UpdateContainerParams } from '../controller/request/container-request';
-import { BaseVatGroupResponse } from '../controller/response/vat-group-response';
 import AuthenticationService from './authentication-service';
 
 /**
@@ -241,12 +236,13 @@ export default class ProductService {
     };
 
     let createdProduct: ProductResponse;
-    createdProduct = await this.directProductUpdate(update);
+    createdProduct = await this.updateProduct(update);
 
     return createdProduct;
   }
 
-  public static async applyProductUpdate(base: Product, update: UpdateProductRequest) {
+  public static async updateProduct(update: UpdateProductParams) {
+    const base = await Product.findOne({ where: { id: update.id } });
     const product = { ...base };
 
     // Set base product, then the oldest settings and then the newest.
@@ -267,16 +263,10 @@ export default class ProductService {
     // eslint-disable-next-line no-param-reassign
     base.currentRevision = base.currentRevision ? base.currentRevision + 1 : 1;
     await base.save();
-
     await this.propagateProductUpdate(base.id);
-    return productRevision;
-  }
 
-  public static async directProductUpdate(updateRequest: UpdateProductParams)
-    : Promise<ProductResponse> {
-    const base: Product = await Product.findOne({ where: { id: updateRequest.id } });
-    await this.applyProductUpdate(base, updateRequest);
-    return (this.getProducts({ productId: base.id }).then((p) => p.records[0]));
+    const options = await this.getOptions({ productId: base.id });
+    return (this.revisionToResponse(await ProductRevision.findOne({ ...options })));
   }
 
   /**
