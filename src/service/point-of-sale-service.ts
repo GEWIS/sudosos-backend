@@ -243,11 +243,6 @@ export default class PointOfSaleService {
       ...QueryFilter.createFilterWhereClause(filterMapping, params),
       ...userFilter,
       ...revisionFilter,
-      pointOfSale: {
-        owner: {
-          id: params.ownerId,
-        },
-      },
     };
 
     const options: FindManyOptions<PointOfSaleRevision> = {

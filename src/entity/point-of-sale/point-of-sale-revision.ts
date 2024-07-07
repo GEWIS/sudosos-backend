@@ -44,10 +44,7 @@ export default class PointOfSaleRevision extends BaseEntityWithoutId {
 
   @ManyToOne(() => PointOfSale, {
     nullable: false,
-    // eager: true | I removed this because of a bug in typeorm. Typeorm prioritises
-    // the eager keyword over the relations that you are trying to load additionally.
-    // So once you specified eager it is not possible to get
-    // PointOfSaleRevision -> PointOfSale -> User(owner). This is unfortunate. Lets wait for le fix
+    eager: true,
   })
   @JoinColumn({ name: 'pointOfSaleId' })
   public readonly pointOfSale: PointOfSale;
