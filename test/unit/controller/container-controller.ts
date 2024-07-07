@@ -40,7 +40,7 @@ import {
   ContainerWithProductsResponse,
   PaginatedContainerResponse,
 } from '../../../src/controller/response/container-response';
-import { ProductResponse } from '../../../src/controller/response/product-response';
+import { PaginatedProductResponse } from '../../../src/controller/response/product-response';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import { CreateContainerRequest, UpdateContainerRequest } from '../../../src/controller/request/container-request';
 import { INVALID_ORGAN_ID, INVALID_PRODUCT_ID } from '../../../src/controller/request/validators/validation-errors';
@@ -86,11 +86,11 @@ describe('ContainerController', async (): Promise<void> => {
     organMemberToken: String,
     token: String,
     products: Product[],
+    deletedProducts: Product[],
     containers: Container[],
     deletedContainers: Container[],
     validContainerReq: CreateContainerRequest,
     validContainerUpdate: UpdateContainerRequest,
-    invalidContainerReq: CreateContainerRequest,
   };
 
   // Initialize context
@@ -145,7 +145,7 @@ describe('ContainerController', async (): Promise<void> => {
     }, '1');
 
     const validContainerUpdate: UpdateContainerRequest = {
-      products: [7, 8],
+      products: products.filter((p) => p.deletedAt == null).slice(0, 2).map((p) => p.id),
       public: true,
       name: 'Valid container',
     };
@@ -153,12 +153,6 @@ describe('ContainerController', async (): Promise<void> => {
     const validContainerReq: CreateContainerRequest = {
       ...validContainerUpdate,
       ownerId: organ.id,
-    };
-
-    const invalidContainerReq: CreateContainerRequest = {
-      ...validContainerReq,
-      name: '',
-      products: [-1],
     };
 
     // start app
@@ -225,10 +219,10 @@ describe('ContainerController', async (): Promise<void> => {
       organMemberToken,
       token,
       products: products.filter((p) => p.deletedAt == null),
+      deletedProducts: products.filter((p) => p.deletedAt != null),
       containers: containers.filter((c) => c.deletedAt == null),
       deletedContainers: containers.filter((c) => c.deletedAt != null),
       validContainerReq,
-      invalidContainerReq,
       validContainerUpdate,
     };
   });
@@ -411,8 +405,14 @@ describe('ContainerController', async (): Promise<void> => {
         .get('/containers/1/products')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
-      expect((res.body as ProductResponse[])).to.not.empty;
+      expect((res.body as PaginatedProductResponse)).to.not.be.empty;
       expect(res.status).to.equal(200);
+
+      const body = res.body as PaginatedProductResponse;
+
+      // Never include deleted containers
+      const deletedProductIds = ctx.deletedProducts.map((p) => p.id);
+      body.records.forEach((product) => expect(deletedProductIds).to.not.include(product.id));
     });
     it('should return an HTTP 403 if container not public or own and if not admin', async () => {
       const { id } = await Container.findOne({ relations: ['owner'], where: { owner: { id: ctx.adminUser.id }, public: true } });
@@ -444,13 +444,23 @@ describe('ContainerController', async (): Promise<void> => {
     }
 
     describe('validate products function', () => {
-      it('should verify product IDs', async () => {
+      it('should verify products exist', async () => {
         const containerRequest = type === 'post' ? ctx.validContainerReq : ctx.validContainerUpdate;
+        const productId = ctx.products.length + ctx.deletedProducts.length + 10;
         const req: CreateContainerRequest = {
           ...containerRequest,
-          products: [-1, 5, 10],
+          products: [productId],
         };
-        await expectError(req, `Products: ${INVALID_PRODUCT_ID(-1).value}`);
+        await expectError(req, `Products: ${INVALID_PRODUCT_ID(productId).value}`);
+      });
+      it('should verify product is not soft deleted', async () => {
+        const containerRequest = type === 'post' ? ctx.validContainerReq : ctx.validContainerUpdate;
+        const productId = ctx.deletedProducts[0].id;
+        const req: CreateContainerRequest = {
+          ...containerRequest,
+          products: [productId],
+        };
+        await expectError(req, `Products: ${INVALID_PRODUCT_ID(productId).value}`);
       });
     });
     it('should verify Name', async () => {
@@ -493,18 +503,6 @@ describe('ContainerController', async (): Promise<void> => {
         where: { id: (res.body as ContainerResponse).id },
       });
       expect(databaseProduct).to.exist;
-    });
-    it('should return an HTTP 400 if the given product is invalid', async () => {
-      const containerCounter = await Container.count();
-      const res = await request(ctx.app)
-        .post('/containers')
-        .set('Authorization', `Bearer ${ctx.adminToken}`)
-        .send(ctx.invalidContainerReq);
-
-      expect(await Container.count()).to.equal(containerCounter);
-      expect(res.body).to.equal('Name: must be a non-zero length string.');
-
-      expect(res.status).to.equal(400);
     });
   });
   describe('PATCH /containers/:id', () => {
