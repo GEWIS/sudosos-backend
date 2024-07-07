@@ -250,7 +250,7 @@ export default class ContainerService {
         id: p.pointOfSale.id,
       };
       // eslint-disable-next-line no-await-in-loop
-      await PointOfSaleService.directPointOfSaleUpdate(update);
+      await PointOfSaleService.updatePointOfSale(update);
     }
   }
 

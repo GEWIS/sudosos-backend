@@ -16,7 +16,13 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { createQueryBuilder, SelectQueryBuilder } from 'typeorm';
+import {
+  FindManyOptions,
+  FindOptionsRelations,
+  FindOptionsWhere, In,
+  Raw,
+
+} from 'typeorm';
 import {
   PaginatedPointOfSaleResponse,
   PointOfSaleResponse,
@@ -30,10 +36,8 @@ import Container from '../entity/container/container';
 import ContainerRevision from '../entity/container/container-revision';
 // eslint-disable-next-line import/no-cycle
 import ContainerService from './container-service';
-import { ContainerWithProductsResponse } from '../controller/response/container-response';
 import { PaginationParameters } from '../helpers/pagination';
 import {
-  BasePointOfSaleParams,
   CreatePointOfSaleParams,
   UpdatePointOfSaleParams,
 } from '../controller/request/point-of-sale-request';
@@ -67,89 +71,34 @@ export interface PointOfSaleParameters {
 }
 
 export default class PointOfSaleService {
-  /**
-   * Helper function for the base mapping the raw getMany response point of sale.
-   * @param rawPointOfSale - the raw response to parse.
-   */
-  private static asPointOfSaleResponse(rawPointOfSale: any): PointOfSaleResponse {
-    return {
-      id: rawPointOfSale.id,
-      revision: rawPointOfSale.revision,
-      name: rawPointOfSale.name,
-      useAuthentication: rawPointOfSale.useAuthentication === 1,
-      createdAt: rawPointOfSale.createdAt instanceof Date ? rawPointOfSale.createdAt.toISOString() : rawPointOfSale.createdAt,
-      updatedAt: rawPointOfSale.updatedAt instanceof Date ? rawPointOfSale.updatedAt.toISOString() : rawPointOfSale.updatedAt,
+
+  private static revisionToResponse(revision: PointOfSaleRevision): PointOfSaleResponse | PointOfSaleWithContainersResponse {
+    const response: any = {
+      id: revision.pointOfSale.id,
+      revision: revision.revision,
+      name: revision.name,
+      useAuthentication: revision.useAuthentication,
+      createdAt: revision.pointOfSale.createdAt.toISOString(),
+      updatedAt: revision.pointOfSale.updatedAt.toISOString(),
       owner: {
-        id: rawPointOfSale.owner_id,
-        firstName: rawPointOfSale.owner_firstName,
-        lastName: rawPointOfSale.owner_lastName,
+        id: revision.pointOfSale.owner.id,
+        firstName: revision.pointOfSale.owner.firstName,
+        lastName: revision.pointOfSale.owner.lastName,
       },
     };
-  }
-
-  /**
-   * Function that adds all the container with products to a point of sale response.
-   * It is slow and should be used sparsely.
-   * @param pointOfSale - The point of sale to decorate
-   */
-  private static async asPointOfSaleResponseWithContainers(
-    pointOfSale: PointOfSaleResponse,
-  ): Promise<PointOfSaleWithContainersResponse> {
-    const filters: any = {
-      posId: pointOfSale.id,
-      posRevision: pointOfSale.revision,
-    };
-
-    const containers = (await ContainerService
-      .getContainers({ ...filters, returnProducts: true }))
-      .records as ContainerWithProductsResponse[];
-
-    return {
-      ...pointOfSale as PointOfSaleResponse,
-      containers,
-    };
-  }
-
-  private static async buildGetPointsOfSaleQuery(filters: PointOfSaleParameters = {}, user?: User)
-    : Promise<SelectQueryBuilder<PointOfSale>> {
-    const builder = createQueryBuilder()
-      .from(PointOfSale, 'pos')
-      .innerJoin(
-        PointOfSaleRevision,
-        'posrevision',
-        'pos.id = posrevision.pointOfSale.id',
-      )
-      .innerJoin('pos.owner', 'owner')
-      .select([
-        'pos.id AS id',
-        'pos.createdAt AS createdAt',
-        'posrevision.revision AS revision',
-        'posrevision.updatedAt AS updatedAt',
-        'posrevision.name AS name',
-        'posrevision.useAuthentication AS useAuthentication',
-        'owner.id AS owner_id',
-        'owner.firstName AS owner_firstName',
-        'owner.lastName AS owner_lastName',
-      ]);
-
-    if (filters.pointOfSaleRevision === undefined) builder.where('pos.currentRevision = posrevision.revision');
-
-    const filterMapping: FilterMapping = {
-      pointOfSaleId: 'pos.id',
-      pointOfSaleRevision: 'posrevision.revision',
-      ownerId: 'owner.id',
-    };
-
-    QueryFilter.applyFilter(builder, filterMapping, filters);
-
-    if (user) {
-      const organIds = (await AuthenticationService.getMemberAuthenticators(user)).map((u) => u.id);
-      builder.andWhere('owner.id IN (:...organIds)', { organIds });
+    if (revision.containers) {
+      response.containers = revision.containers.map((c) => ContainerService.revisionToResponse(c));
     }
+    return response;
+  }
 
-    builder.orderBy({ 'pos.id': 'DESC' });
-
-    return builder;
+  public static revisionSubQuery(revision?: number): string {
+    if (revision) return `${revision}`;
+    return PointOfSale
+      .getRepository()
+      .createQueryBuilder('pos')
+      .select('pos.currentRevision')
+      .where('pos.id = PointOfSaleRevision.pointOfSaleId').getSql();
   }
 
   /**
@@ -163,31 +112,12 @@ export default class PointOfSaleService {
   ): Promise<PaginatedPointOfSaleResponse> {
     const { take, skip } = pagination;
 
-    const results = await Promise.all([
-      (await this.buildGetPointsOfSaleQuery(filters, user)).limit(take).offset(skip).getRawMany(),
-      (await this.buildGetPointsOfSaleQuery(filters, user)).getCount(),
-    ]);
+    const [data, count] = await PointOfSaleRevision.findAndCount({ ...(await this.getOptions(filters, user)), take, skip });
 
-    let records;
-    if (filters.returnContainers) {
-      const pointOfSales: PointOfSaleWithContainersResponse[] = [];
-      await Promise.all(results[0].map(
-        async (rawPointOfSale) => {
-          pointOfSales.push(
-            await this.asPointOfSaleResponseWithContainers(
-              this.asPointOfSaleResponse(rawPointOfSale),
-            ),
-          );
-        },
-      ));
-      records = pointOfSales;
-    } else {
-      records = results[0].map((rawPointOfSale) => this.asPointOfSaleResponse(rawPointOfSale));
-    }
-
+    const records = data.map((revision: PointOfSaleRevision) => this.revisionToResponse(revision));
     return {
       _pagination: {
-        take, skip, count: results[1],
+        take, skip, count,
       },
       records,
     };
@@ -206,7 +136,8 @@ export default class PointOfSaleService {
     } as PointOfSaleResponse;
   }
 
-  public static async applyPointOfSaleUpdate(base: PointOfSale, update: BasePointOfSaleParams) {
+  public static async updatePointOfSale(update: UpdatePointOfSaleParams) {
+    const base = await PointOfSale.findOne({ where: { id: update.id } });
     const containers = await Container.findByIds(update.containers);
 
     const containerIds: { revision: number, container: { id: number } }[] = (
@@ -229,6 +160,9 @@ export default class PointOfSaleService {
     // eslint-disable-next-line no-param-reassign
     base.currentRevision = base.currentRevision ? base.currentRevision + 1 : 1;
     await base.save();
+
+    const options = await this.getOptions({ pointOfSaleId: base.id, returnContainers: true });
+    return (this.revisionToResponse(await PointOfSaleRevision.findOne({ ...options })));
   }
 
   /**
@@ -254,23 +188,8 @@ export default class PointOfSaleService {
       ...posRequest,
       id: base.id,
     };
+    return this.updatePointOfSale(update);
 
-    let createdPointOfSale;
-    createdPointOfSale = await this.directPointOfSaleUpdate(update);
-
-    return createdPointOfSale;
-  }
-
-  /**
-   * Revises a point of sale without creating an update
-   * @param update - the point of sale update to pass
-   */
-  public static async directPointOfSaleUpdate(update: UpdatePointOfSaleParams)
-    : Promise<PointOfSaleWithContainersResponse> {
-    const base: PointOfSale = await PointOfSale.findOne({ where: { id: update.id } });
-    await this.applyPointOfSaleUpdate(base, update);
-    return (this.getPointsOfSale({ pointOfSaleId: base.id, returnContainers: true })
-      .then((p) => p.records[0])) as Promise<PointOfSaleWithContainersResponse>;
   }
 
   /**
@@ -282,5 +201,52 @@ export default class PointOfSaleService {
     : Promise<boolean> {
     if (!pointOfSale) return false;
     return pointOfSale.owner.id === userId;
+  }
+
+  public static async getOptions(params: PointOfSaleParameters, user?: User): Promise<FindManyOptions<PointOfSaleRevision>> {
+    const filterMapping: FilterMapping = {
+      pointOfSaleId: 'pointOfSaleId',
+    };
+
+    const relations: FindOptionsRelations<PointOfSaleRevision> = {
+      pointOfSale: {
+        owner: true,
+      },
+    };
+
+    if (params.returnContainers) relations.containers = {
+      container: {
+        owner: true,
+      },
+    };
+
+    let revisionFilter: any = {};
+    revisionFilter.revision = Raw(alias => `${alias} = (${this.revisionSubQuery(params.pointOfSaleRevision)})`);
+
+    const userFilter: any = {};
+    if (user) {
+      const organIds = (await AuthenticationService.getMemberAuthenticators(user)).map((u) => u.id);
+      userFilter.pointOfSale = { owner: { id: In(organIds) } };
+    } else if (params.ownerId) {
+      userFilter.pointOfSale = { owner: { id: params.ownerId } };
+    }
+
+    let where: FindOptionsWhere<PointOfSaleRevision> = {
+      ...QueryFilter.createFilterWhereClause(filterMapping, params),
+      ...userFilter,
+      ...revisionFilter,
+      pointOfSale: {
+        owner: {
+          id: params.ownerId,
+        },
+      },
+    };
+
+    const options: FindManyOptions<PointOfSaleRevision> = {
+      where,
+      order: { createdAt: 'ASC' },
+    };
+
+    return { ...options, relations };
   }
 }

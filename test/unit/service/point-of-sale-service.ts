@@ -252,7 +252,7 @@ describe('PointOfSaleService', async (): Promise<void> => {
         useAuthentication: true,
       };
 
-      const response = await PointOfSaleService.directPointOfSaleUpdate(update);
+      const response = (await PointOfSaleService.updatePointOfSale(update)) as PointOfSaleWithContainersResponse;
       updateResponseEqual(update, response);
     });
   });

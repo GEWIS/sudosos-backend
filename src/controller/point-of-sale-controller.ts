@@ -247,7 +247,7 @@ export default class PointOfSaleController extends BaseController {
         return;
       }
 
-      res.json(await PointOfSaleService.directPointOfSaleUpdate(params));
+      res.json(await PointOfSaleService.updatePointOfSale(params));
     } catch (error) {
       this.logger.error('Could not update Point of Sale:', error);
       res.status(500).json('Internal server error.');
