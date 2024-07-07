@@ -297,7 +297,7 @@ export default class ContainerController extends BaseController {
         return;
       }
 
-      res.json(await ContainerService.directContainerUpdate(request));
+      res.json(await ContainerService.updateContainer(request));
     } catch (error) {
       this.logger.error('Could not update container:', error);
       res.status(500).json('Internal server error.');
