@@ -110,7 +110,7 @@ export default class ContainerService {
     return response;
   }
 
-  private static  revisionSubQuery(revision?: number): string {
+  public static  revisionSubQuery(revision?: number): string {
     if (revision) return `${revision}`;
     return Container
       .getRepository()
@@ -131,19 +131,22 @@ export default class ContainerService {
     const { take, skip } = pagination;
 
     const options = await this.getOptions(filters, user);
-    const results = await Promise.all([
-      (await ContainerRevision.find({ ...options, take, skip })),
-      (await ContainerRevision.count({ ...options })),
-    ]);
+    const [data, count] = await ContainerRevision.findAndCount({ ...options, take, skip });
 
-    const records = results[0].map((revision) => this.revisionToResponse(revision));
+    const records = data.map((revision) => this.revisionToResponse(revision));
 
     return {
       _pagination: {
-        take, skip, count: results[1],
+        take, skip, count,
       },
       records,
     };
+  }
+
+  public static async getSingleContainer(filters: ContainerFilterParameters = {}): Promise<ContainerWithProductsResponse> {
+    const options = await this.getOptions(filters);
+    const container = await ContainerRevision.findOne({ ...options });
+    return this.revisionToResponse(container) as ContainerWithProductsResponse;
   }
 
   /**
