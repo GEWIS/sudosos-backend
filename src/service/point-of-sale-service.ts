@@ -218,6 +218,14 @@ export default class PointOfSaleService {
       container: {
         owner: true,
       },
+      products: {
+        product: {
+          image: true,
+          owner: true,
+        },
+        category: true,
+        vat: true,
+      },
     };
 
     let revisionFilter: any = {};
