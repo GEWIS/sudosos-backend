@@ -116,7 +116,7 @@ export default class ContainerService {
       .getRepository()
       .createQueryBuilder('container')
       .select('container.currentRevision')
-      .where('container.id = containerRevision.containerId').getSql();
+      .where('`container`.`id` = `ContainerRevision`.`containerId`').getSql();
   }
 
   /**
