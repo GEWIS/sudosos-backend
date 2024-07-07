@@ -34,7 +34,7 @@ import {
 } from '../../../src/controller/response/point-of-sale-response';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import { ContainerResponse, ContainerWithProductsResponse } from '../../../src/controller/response/container-response';
-import { PaginatedProductResponse, ProductResponse } from '../../../src/controller/response/product-response';
+import { ProductResponse } from '../../../src/controller/response/product-response';
 import {
   CreatePointOfSaleParams,
   CreatePointOfSaleRequest,

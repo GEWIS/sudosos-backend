@@ -37,7 +37,6 @@ import { PaginationParameters } from '../helpers/pagination';
 import {
   CreateContainerParams,
   UpdateContainerParams,
-  UpdateContainerRequest,
 } from '../controller/request/container-request';
 import User from '../entity/user/user';
 import { UpdatePointOfSaleParams } from '../controller/request/point-of-sale-request';

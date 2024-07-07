@@ -23,7 +23,6 @@ import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import PointOfSaleService from '../service/point-of-sale-service';
 import ContainerService from '../service/container-service';
-import ProductService from '../service/product-service';
 import PointOfSale from '../entity/point-of-sale/point-of-sale';
 import { asNumber } from '../helpers/validators';
 import { parseRequestPagination } from '../helpers/pagination';
@@ -39,7 +38,7 @@ import {
 } from './request/validators/point-of-sale-request-spec';
 import userTokenInOrgan from '../helpers/token-helper';
 import TransactionService from '../service/transaction-service';
-import {PointOfSaleWithContainersResponse} from "./response/point-of-sale-response";
+import { PointOfSaleWithContainersResponse } from './response/point-of-sale-response';
 
 export default class PointOfSaleController extends BaseController {
   private logger: Logger = log4js.getLogger('PointOfSaleController');

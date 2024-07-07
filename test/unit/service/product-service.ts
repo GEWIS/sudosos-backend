@@ -392,7 +392,7 @@ describe('ProductService', async (): Promise<void> => {
           currency: 'EUR',
         },
       };
-      const response = await ProductService.directProductUpdate(update);
+      const response = await ProductService.updateProduct(update);
       validateProductProperties(response, update);
     });
   });
@@ -443,7 +443,7 @@ describe('ProductService', async (): Promise<void> => {
         },
       };
 
-      const updatedProduct = await ProductService.directProductUpdate(update);
+      const updatedProduct = await ProductService.updateProduct(update);
       validateProductProperties(updatedProduct, update);
 
       const containerEntity = await Container.findOne({ where: { id: container.id } });
@@ -511,7 +511,7 @@ describe('ProductService', async (): Promise<void> => {
         },
       };
 
-      await ProductService.directProductUpdate(productUpdate);
+      await ProductService.updateProduct(productUpdate);
       const productFromPos = (await PointOfSaleRevision.findOne({ where: { revision: 2, pointOfSale: { id: pos.id } }, relations: ['pointOfSale', 'containers', 'containers.products', 'containers.products.category'] })).containers[0].products[0];
 
       expect(productFromPos.name).to.eq(productUpdate.name);
