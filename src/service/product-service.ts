@@ -297,6 +297,18 @@ export default class ProductService {
   }
 
   /**
+   * (Soft) delete a product
+   * @param productId
+   */
+  public static async deleteProduct(productId: number): Promise<void> {
+    const product = await Product.findOne({ where: { id: productId } });
+    if (product == null) {
+      throw new Error('Product not found!');
+    }
+    await Product.softRemove(product);
+  }
+
+  /**
    * Returns a FindManyOptions based on the given parameters
    * @param params - The parameters to filter on
    * @param user - The user to filter on

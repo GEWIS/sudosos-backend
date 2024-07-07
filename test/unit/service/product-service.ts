@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { Connection, getManager } from 'typeorm';
+import { Connection, getManager, IsNull, Not } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import bodyParser from 'body-parser';
@@ -436,6 +436,10 @@ describe('ProductService', async (): Promise<void> => {
       validateProductProperties(response, creation);
       const entity = await Product.findOne({ where: { id: response.id } });
       expect(entity.currentRevision).to.eq(1);
+
+      // Cleanup
+      await ProductRevision.delete({ productId: response.id, revision: response.revision });
+      await Product.delete({ id: response.id });
     });
   });
 
@@ -521,6 +525,12 @@ describe('ProductService', async (): Promise<void> => {
         : productInContainer.alcoholPercentage).to.eq(update.alcoholPercentage);
       expect(productInContainer.priceInclVat.getAmount()).to.eq(update.priceInclVat.amount);
       expect(productInContainer.category.id).to.eq(update.category);
+
+      // Cleanup
+      await ContainerRevision.delete({ containerId: container.id });
+      await Container.delete({ id: container.id });
+      await ProductRevision.delete({ productId: product.id });
+      await Product.delete({ id: product.id });
     });
     it('should propagate the update to all POS', async () => {
       const ownerId = (await User.findOne({ where: { deleted: false } })).id;
@@ -583,6 +593,66 @@ describe('ProductService', async (): Promise<void> => {
       expect(productFromPos.category.id).to.eq(productUpdate.category);
       expect(productFromPos.name).to.eq(productUpdate.name);
       expect(productFromPos.priceInclVat.getAmount()).to.eq(productUpdate.priceInclVat.amount);
+
+      // Cleanup
+      await PointOfSaleRevision.delete({ pointOfSaleId: pos.id });
+      await PointOfSale.delete({ id: pos.id });
+      await ContainerRevision.delete({ containerId: container.id });
+      await Container.delete({ id: container.id });
+      await ProductRevision.delete({ productId: product.id });
+      await Product.delete({ id: product.id });
+    });
+  });
+  describe('deleteProduct function', () => {
+    it('should soft delete product', async () => {
+      const start = Math.floor(new Date().getTime() / 1000) * 1000;
+      const product = ctx.products[0];
+      let dbProduct = await Product.findOne({ where: { id: product.id }, withDeleted: true });
+      // Sanity check
+      expect(dbProduct).to.not.be.null;
+      expect(dbProduct.deletedAt).to.be.null;
+
+      await ProductService.deleteProduct(product.id);
+
+      dbProduct = await Product.findOne({ where: { id: product.id }, withDeleted: true });
+      expect(dbProduct).to.not.be.null;
+      expect(dbProduct.deletedAt).to.not.be.null;
+      expect(dbProduct.deletedAt.getTime()).to.be.greaterThanOrEqual(start);
+
+      const deletedProducts = await Product.find({ where: { deletedAt: Not(IsNull()) }, withDeleted: true });
+      expect(deletedProducts.length).to.equal(ctx.deletedProducts.length + 1);
+
+      // Revert state
+      await dbProduct.recover();
+    });
+    it('should throw error for non existent product', async () => {
+      const productId = ctx.products.length + ctx.deletedProducts.length + 2;
+      let dbProduct = await Product.findOne({ where: { id: productId }, withDeleted: true });
+      // Sanity check
+      expect(dbProduct).to.be.null;
+
+      await expect(ProductService.deleteProduct(productId)).to.eventually.be.rejectedWith('Product not found!');
+
+      const deletedProducts = await Product.find({ where: { deletedAt: Not(IsNull()) }, withDeleted: true });
+      expect(deletedProducts.length).to.equal(ctx.deletedProducts.length);
+    });
+    it('should throw error when soft deleting product twice', async () => {
+      const product = ctx.products[0];
+      let dbProduct = await Product.findOne({ where: { id: product.id }, withDeleted: true });
+      // Sanity check
+      expect(dbProduct).to.not.be.null;
+      expect(dbProduct.deletedAt).to.be.null;
+
+      await ProductService.deleteProduct(product.id);
+
+      dbProduct = await Product.findOne({ where: { id: product.id }, withDeleted: true });
+      expect(dbProduct).to.not.be.null;
+      expect(dbProduct.deletedAt).to.not.be.null;
+
+      await expect(ProductService.deleteProduct(product.id)).to.eventually.be.rejectedWith('Product not found!');
+
+      // Revert state
+      await dbProduct.recover();
     });
   });
 });

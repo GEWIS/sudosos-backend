@@ -580,7 +580,7 @@ export async function seedProducts(
   let productImages: ProductImage[] = [];
   let productRevisions: ProductRevision[] = [];
 
-  const sellers = users.filter((u) => [UserType.LOCAL_ADMIN, UserType.MEMBER].includes(u.type));
+  const sellers = users.filter((u) => [UserType.LOCAL_ADMIN, UserType.MEMBER, UserType.ORGAN].includes(u.type));
 
   const promises: Promise<any>[] = [];
   for (let i = 0; i < sellers.length; i += 1) {
