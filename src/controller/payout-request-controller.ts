@@ -27,6 +27,8 @@ import { PayoutRequestStatusRequest } from './request/payout-request-status-requ
 import PayoutRequest from '../entity/transactions/payout-request';
 import { PayoutRequestState } from '../entity/transactions/payout-request-status';
 import PayoutRequestRequest from './request/payout-request-request';
+import User from '../entity/user/user';
+import BalanceService from '../service/balance-service';
 
 export default class PayoutRequestController extends BaseController {
   private logger: Logger = log4js.getLogger('PayoutRequestController');
@@ -44,7 +46,7 @@ export default class PayoutRequestController extends BaseController {
           handler: this.returnAllPayoutRequests.bind(this),
         },
         POST: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'create', 'own', 'PayoutRequest', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'create', await PayoutRequestController.getRelation(req), 'PayoutRequest', ['*']),
           handler: this.createPayoutRequest.bind(this),
         },
       },
@@ -64,6 +66,14 @@ export default class PayoutRequestController extends BaseController {
   }
 
   static async getRelation(req: RequestWithToken): Promise<string> {
+    if (req.body.forId != null) {
+      if (req.body.forId == req.token.user.id) {
+        return 'own';
+      } else {
+        return 'all';
+      }
+    }
+
     const { id } = req.params;
     const payoutRequest = await PayoutRequest.findOne({ where: { id: parseInt(id, 10) }, relations: ['requestedBy'] });
     return (payoutRequest != null && payoutRequest.requestedBy.id === req.token.user.id) ? 'own' : 'all';
@@ -157,7 +167,19 @@ export default class PayoutRequestController extends BaseController {
     this.logger.trace('Create payout request by user', req.token.user);
 
     try {
-      const payoutRequest = await PayoutRequestService.createPayoutRequest(body, req.token.user);
+      const user = await User.findOne({ where: { id: body.forId } });
+      if (user === undefined) {
+        res.status(404).json('Unknown user ID.');
+        return;
+      }
+
+      const balance = await BalanceService.getBalance(user.id);
+      if (balance.amount.amount < body.amount.amount) {
+        res.status(400).json('Insufficient balance.');
+        return;
+      }
+
+      const payoutRequest = await PayoutRequestService.createPayoutRequest(body, user);
       res.status(200).json(payoutRequest);
     } catch (e) {
       res.status(500).send();

@@ -23,9 +23,11 @@ import { DineroObjectRequest } from './dinero-request';
  * @property {DineroObjectRequest} amount.required - The requested amount to be paid out
  * @property {string} bankAccountNumber.required - The bank account number to transfer the money to
  * @property {string} bankAccountName.required - The name of the owner of the bank account
+ * @property {integer} forId.required - The ID of the user who requested the payout
  */
 export default interface PayoutRequestRequest {
   amount: DineroObjectRequest;
   bankAccountNumber: string;
   bankAccountName: string;
+  forId: number;
 }
