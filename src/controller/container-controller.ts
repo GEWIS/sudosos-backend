@@ -36,7 +36,7 @@ import {
   UpdateContainerRequest,
 } from './request/container-request';
 import userTokenInOrgan from '../helpers/token-helper';
-import { IsNull, Not } from 'typeorm';
+import { IsNull } from 'typeorm';
 
 export default class ContainerController extends BaseController {
   private logger: Logger = log4js.getLogger('ContainerController');
@@ -75,6 +75,10 @@ export default class ContainerController extends BaseController {
           body: { modelName: 'UpdateContainerRequest' },
           policy: async (req) => this.roleManager.can(req.token.roles, 'update', await ContainerController.getRelation(req), 'Container', ['*']),
           handler: this.updateContainer.bind(this),
+        },
+        DELETE: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'delete', await ContainerController.getRelation(req), 'Container', ['*']),
+          handler: this.deleteContainer.bind(this),
         },
       },
       '/:id(\\d+)/products': {
@@ -297,6 +301,40 @@ export default class ContainerController extends BaseController {
       res.json(await ContainerService.updateContainer(request));
     } catch (error) {
       this.logger.error('Could not update container:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * DELETE /containers/{id}
+   * @summary (Soft) delete the given container. Cannot be undone.
+   * @operationId deleteContainer
+   * @tags containers - Operations of container controller
+   * @param {integer} id.path.required - The id of the container which should be deleted
+   * @security JWT
+   * @return {string} 204 - Success
+   * @return {string} 404 - Not found error
+   * @return {string} 500 - Internal server error
+   */
+  public async deleteContainer(req: RequestWithToken, res: Response): Promise<void> {
+    const { id } = req.params;
+    this.logger.trace('Delete container', id, 'by user', req.token.user);
+
+    try {
+      const containerId = parseInt(id, 10);
+
+      const container = await Container.findOne({ where: { id: containerId } });
+
+      if (container == null) {
+        res.status(404).json('Container not found');
+        return;
+      }
+
+      await ContainerService.deleteContainer(containerId);
+      res.status(204).send();
+      return;
+    } catch (error) {
+      this.logger.error('Could not delete container', error);
       res.status(500).json('Internal server error.');
     }
   }

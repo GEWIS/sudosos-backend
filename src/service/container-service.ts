@@ -201,6 +201,18 @@ export default class ContainerService {
   }
 
   /**
+   * (Soft) delete a container
+   * @param containerId
+   */
+  public static async deleteContainer(containerId: number): Promise<void> {
+    const container = await Container.findOne({ where: { id: containerId } });
+    if (container == null) {
+      throw new Error('Container not found');
+    }
+    await Container.softRemove(container);
+  }
+
+  /**
    * Propagates the container update to all point of sales.
    *
    * All POS that contain the previous version of this container

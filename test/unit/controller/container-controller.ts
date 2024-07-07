@@ -499,10 +499,14 @@ describe('ContainerController', async (): Promise<void> => {
       expect(await Container.count()).to.equal(containerCount + 1);
       containerProductsEq(ctx.validContainerReq, containerResponse);
 
-      const databaseProduct = await Container.findOne({
+      const dbContainer = await Container.findOne({
         where: { id: (res.body as ContainerResponse).id },
       });
-      expect(databaseProduct).to.exist;
+      expect(dbContainer).to.exist;
+
+      // Cleanup
+      await ContainerRevision.delete({ containerId: dbContainer.id });
+      await Container.delete({ id: dbContainer.id });
     });
   });
   describe('PATCH /containers/:id', () => {
@@ -641,6 +645,74 @@ describe('ContainerController', async (): Promise<void> => {
         async (container) => (expect(container.public).true),
       );
       expect(res.status).to.equal(200);
+    });
+  });
+  describe('DELETE /containers/:id', () => {
+    it('should return 204 if owner', async () => {
+      const container = ctx.containers.find((p) => p.owner.id === ctx.localUser.id && !p.public && p.deletedAt == null);
+      const res = await request(ctx.app)
+        .delete(`/containers/${container.id}`)
+        .set('Authorization', `Bearer ${ctx.organMemberToken}`)
+        .send();
+
+      expect(res.status).to.equal(204);
+      expect(res.body).to.be.empty;
+
+      const dbContainer = await Container.findOne({ where: { id: container.id }, withDeleted: true });
+      expect(dbContainer).to.not.be.null;
+      expect(dbContainer.deletedAt).to.not.be.null;
+
+      // Cleanup
+      await dbContainer.recover();
+    });
+    it('should return 204 for any container if admin', async () => {
+      const container = ctx.containers.find((p) => p.owner.id !== ctx.adminUser.id && !p.public && p.deletedAt == null);
+      const res = await request(ctx.app)
+        .delete(`/containers/${container.id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send();
+
+      expect(res.status).to.equal(204);
+      expect(res.body).to.be.empty;
+
+      const dbContainer = await Container.findOne({ where: { id: container.id }, withDeleted: true });
+      expect(dbContainer).to.not.be.null;
+      expect(dbContainer.deletedAt).to.not.be.null;
+
+      // Cleanup
+      await dbContainer.recover();
+    });
+    it('should return 403 if not owner', async () => {
+      const container = ctx.containers.find((p) => p.owner.id === ctx.adminUser.id && !p.public && p.deletedAt == null);
+      const res = await request(ctx.app)
+        .delete(`/containers/${container.id}`)
+        .set('Authorization', `Bearer ${ctx.organMemberToken}`)
+        .send();
+
+      expect(res.status).to.equal(403);
+      expect(res.body).to.be.empty;
+    });
+    it('should return 404 if container does not exist', async () => {
+      const containerId = ctx.containers.length + ctx.deletedContainers.length + 2;
+
+      const res = await request(ctx.app)
+        .delete(`/containers/${containerId}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send();
+
+      expect(res.status).to.equal(404);
+      expect(res.body).to.equal('Container not found');
+    });
+    it('should return 404 if container is soft deleted', async () => {
+      const containerId = ctx.deletedContainers[0].id;
+
+      const res = await request(ctx.app)
+        .delete(`/containers/${containerId}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send();
+
+      expect(res.status).to.equal(404);
+      expect(res.body).to.equal('Container not found');
     });
   });
 });
