@@ -24,8 +24,7 @@ import { toMySQLString } from '../helpers/timestamps';
 import { Dinero } from 'dinero.js';
 import { OrderingDirection } from '../helpers/ordering';
 import { defaultPagination, PaginationParameters } from '../helpers/pagination';
-import User, { UserType } from '../entity/user/user';
-import UserService from './user-service';
+import { UserType } from '../entity/user/user';
 
 export enum BalanceOrderColumn {
   ID = 'id',

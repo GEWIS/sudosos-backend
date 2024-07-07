@@ -24,7 +24,6 @@ import { RequestWithToken } from '../middleware/token-middleware';
 import ContainerService from '../service/container-service';
 import { PaginatedContainerResponse } from './response/container-response';
 import ContainerRevision from '../entity/container/container-revision';
-import ProductService from '../service/product-service';
 import Container from '../entity/container/container';
 import { asNumber } from '../helpers/validators';
 import { parseRequestPagination } from '../helpers/pagination';
