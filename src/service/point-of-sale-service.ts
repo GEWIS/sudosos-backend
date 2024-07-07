@@ -197,6 +197,18 @@ export default class PointOfSaleService {
   }
 
   /**
+   * (Soft) delete a point of sale
+   * @param pointOfSaleId
+   */
+  public static async deletePointOfSale(pointOfSaleId: number): Promise<void> {
+    const pointOfSale = await PointOfSale.findOne({ where: { id: pointOfSaleId } });
+    if (pointOfSale == null) {
+      throw new Error('Point of sale not found');
+    }
+    await PointOfSale.softRemove(pointOfSale);
+  }
+
+  /**
    * Test to see if the user can view a specified Point of Sale
    * @param userId - The User to test
    * @param pointOfSale - The Point of Sale to view

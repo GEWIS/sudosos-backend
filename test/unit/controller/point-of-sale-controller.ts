@@ -555,12 +555,16 @@ describe('PointOfSaleController', async () => {
       expect(await PointOfSale.count()).to.equal(count + 1);
       const body = res.body as PointOfSaleWithContainersResponse;
       pointOfSaleEq(createPointOfSaleParams, body);
-      const databaseProduct = await PointOfSale.findOne({
+      const databasePointOfSale = await PointOfSale.findOne({
         where: { id: body.id, currentRevision: body.revision },
       });
-      expect(databaseProduct).to.exist;
+      expect(databasePointOfSale).to.exist;
 
       expect(res.status).to.equal(200);
+
+      // Cleanup
+      await PointOfSaleRevision.delete({ pointOfSaleId: databasePointOfSale.id });
+      await PointOfSale.delete({ id: databasePointOfSale.id });
     });
     it('should return an HTTP 403 if not admin', async () => {
       const count = await PointOfSale.count();
@@ -692,6 +696,74 @@ describe('PointOfSaleController', async () => {
 
       expect(newContainer.name).to.eq(containerUpdate.name);
       expect(newContainer.products.map((p) => p.id)).to.deep.equalInAnyOrder(containerUpdate.products);
+    });
+  });
+  describe('DELETE /pointsofsale/:id', () => {
+    it('should return 204 if owner', async () => {
+      const pointOfSale = ctx.pointsOfSale.find((p) => p.owner.id === ctx.organ.id && p.deletedAt == null);
+      const res = await request(ctx.app)
+        .delete(`/pointsofsale/${pointOfSale.id}`)
+        .set('Authorization', `Bearer ${ctx.organMemberToken}`)
+        .send();
+
+      expect(res.status).to.equal(204);
+      expect(res.body).to.be.empty;
+
+      const dbPointOfSale = await PointOfSale.findOne({ where: { id: pointOfSale.id }, withDeleted: true });
+      expect(dbPointOfSale).to.not.be.null;
+      expect(dbPointOfSale.deletedAt).to.not.be.null;
+
+      // Cleanup
+      await dbPointOfSale.recover();
+    });
+    it('should return 204 for any point of sale if admin', async () => {
+      const pointOfSale = ctx.pointsOfSale.find((p) => p.owner.id !== ctx.admin.id && p.deletedAt == null);
+      const res = await request(ctx.app)
+        .delete(`/pointsofsale/${pointOfSale.id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send();
+
+      expect(res.status).to.equal(204);
+      expect(res.body).to.be.empty;
+
+      const dbPointOfSale = await PointOfSale.findOne({ where: { id: pointOfSale.id }, withDeleted: true });
+      expect(dbPointOfSale).to.not.be.null;
+      expect(dbPointOfSale.deletedAt).to.not.be.null;
+
+      // Cleanup
+      await dbPointOfSale.recover();
+    });
+    it('should return 403 if not owner', async () => {
+      const pointOfSale = ctx.pointsOfSale.find((p) => p.owner.id !== ctx.organ.id && p.deletedAt == null);
+      const res = await request(ctx.app)
+        .delete(`/pointsofsale/${pointOfSale.id}`)
+        .set('Authorization', `Bearer ${ctx.organMemberToken}`)
+        .send();
+
+      expect(res.status).to.equal(403);
+      expect(res.body).to.be.empty;
+    });
+    it('should return 404 if point of sale does not exist', async () => {
+      const pointOfSaleId = ctx.pointsOfSale.length + ctx.deletedPointsOfSale.length + 2;
+
+      const res = await request(ctx.app)
+        .delete(`/pointsofsale/${pointOfSaleId}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send();
+
+      expect(res.status).to.equal(404);
+      expect(res.body).to.equal('Point of sale not found');
+    });
+    it('should return 404 if point of sale is soft deleted', async () => {
+      const pointOfSaleId = ctx.deletedPointsOfSale[0].id;
+
+      const res = await request(ctx.app)
+        .delete(`/pointsofsale/${pointOfSaleId}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send();
+
+      expect(res.status).to.equal(404);
+      expect(res.body).to.equal('Point of sale not found');
     });
   });
 });

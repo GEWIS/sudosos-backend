@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { Connection, getManager } from 'typeorm';
+import { Connection, getManager, IsNull, Not } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
@@ -256,6 +256,58 @@ describe('PointOfSaleService', async (): Promise<void> => {
 
       const response = (await PointOfSaleService.updatePointOfSale(update)) as PointOfSaleWithContainersResponse;
       updateResponseEqual(update, response);
+    });
+  });
+  describe('deletePointOfSale function', () => {
+    it('should soft delete pointOfSale', async () => {
+      const start = Math.floor(new Date().getTime() / 1000) * 1000;
+      const pointOfSale = ctx.pointsOfSale[0];
+      let dbPointOfSale = await PointOfSale.findOne({ where: { id: pointOfSale.id }, withDeleted: true });
+      // Sanity check
+      expect(dbPointOfSale).to.not.be.null;
+      expect(dbPointOfSale.deletedAt).to.be.null;
+
+      await PointOfSaleService.deletePointOfSale(pointOfSale.id);
+
+      dbPointOfSale = await PointOfSale.findOne({ where: { id: pointOfSale.id }, withDeleted: true });
+      expect(dbPointOfSale).to.not.be.null;
+      expect(dbPointOfSale.deletedAt).to.not.be.null;
+      expect(dbPointOfSale.deletedAt.getTime()).to.be.greaterThanOrEqual(start);
+
+      const deletedPointsOfSale = await PointOfSale.find({ where: { deletedAt: Not(IsNull()) }, withDeleted: true });
+      expect(deletedPointsOfSale.length).to.equal(ctx.deletedPointsOfSale.length + 1);
+
+      // Revert state
+      await dbPointOfSale.recover();
+    });
+    it('should throw error for non existent pointOfSale', async () => {
+      const pointOfSaleId = ctx.pointsOfSale.length + ctx.deletedPointsOfSale.length + 2;
+      let dbPointOfSale = await PointOfSale.findOne({ where: { id: pointOfSaleId }, withDeleted: true });
+      // Sanity check
+      expect(dbPointOfSale).to.be.null;
+
+      await expect(PointOfSaleService.deletePointOfSale(pointOfSaleId)).to.eventually.be.rejectedWith('Point of sale not found');
+
+      const deletedPointsOfSale = await PointOfSale.find({ where: { deletedAt: Not(IsNull()) }, withDeleted: true });
+      expect(deletedPointsOfSale.length).to.equal(ctx.deletedPointsOfSale.length);
+    });
+    it('should throw error when soft deleting pointOfSale twice', async () => {
+      const pointOfSale = ctx.pointsOfSale[0];
+      let dbPointOfSale = await PointOfSale.findOne({ where: { id: pointOfSale.id }, withDeleted: true });
+      // Sanity check
+      expect(dbPointOfSale).to.not.be.null;
+      expect(dbPointOfSale.deletedAt).to.be.null;
+
+      await PointOfSaleService.deletePointOfSale(pointOfSale.id);
+
+      dbPointOfSale = await PointOfSale.findOne({ where: { id: pointOfSale.id }, withDeleted: true });
+      expect(dbPointOfSale).to.not.be.null;
+      expect(dbPointOfSale.deletedAt).to.not.be.null;
+
+      await expect(PointOfSaleService.deletePointOfSale(pointOfSale.id)).to.eventually.be.rejectedWith('Point of sale not found');
+
+      // Revert state
+      await dbPointOfSale.recover();
     });
   });
 });
