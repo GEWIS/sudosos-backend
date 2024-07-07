@@ -72,6 +72,11 @@ export interface PointOfSaleParameters {
 
 export default class PointOfSaleService {
 
+  /**
+   * Transforms a point of sale revision into a response.
+   * @param revision
+   * @private
+   */
   private static revisionToResponse(revision: PointOfSaleRevision): PointOfSaleResponse | PointOfSaleWithContainersResponse {
     const response: any = {
       id: revision.pointOfSale.id,
@@ -92,6 +97,10 @@ export default class PointOfSaleService {
     return response;
   }
 
+  /**
+   * Raw sql to deal with current revision.
+   * @param revision
+   */
   public static revisionSubQuery(revision?: number): string {
     if (revision) return `${revision}`;
     return PointOfSale
@@ -136,6 +145,10 @@ export default class PointOfSaleService {
     } as PointOfSaleResponse;
   }
 
+  /**
+   * Updates a PointOfSale
+   * @param update - The update to apply
+   */
   public static async updatePointOfSale(update: UpdatePointOfSaleParams) {
     const base = await PointOfSale.findOne({ where: { id: update.id } });
     const containers = await Container.findByIds(update.containers);
@@ -168,9 +181,6 @@ export default class PointOfSaleService {
   /**
    * Creates a new PointOfSale
    *
-   * If approve is false, then the newly created PointOfSale has no revision.
-   * To confirm the revision the update has to be accepted.
-   *
    * @param posRequest - The POS to be created.
    */
   public static async createPointOfSale(posRequest: CreatePointOfSaleParams) {
@@ -182,7 +192,7 @@ export default class PointOfSaleService {
       owner,
     });
 
-    // Save the base and update..
+    // Save the base and update.
     await base.save();
     const update: UpdatePointOfSaleParams = {
       ...posRequest,
