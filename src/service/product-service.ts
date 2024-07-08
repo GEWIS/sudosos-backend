@@ -175,7 +175,7 @@ export default class ProductService {
     };
   }
 
-  private static  revisionSubQuery(revision?: number): string {
+  private static revisionSubQuery(revision?: number): string {
     if (revision) return `${revision}`;
     return Product
       .getRepository()
