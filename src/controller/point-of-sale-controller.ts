@@ -198,7 +198,7 @@ export default class PointOfSaleController extends BaseController {
       }
 
       const pointOfSale = (await PointOfSaleService
-        .getPointsOfSale({ pointOfSaleId, returnContainers: true })).records[0];
+        .getPointsOfSale({ pointOfSaleId, returnContainers: true, returnProducts: true })).records[0];
       if (pointOfSale) {
         res.json(pointOfSale);
       }
@@ -301,7 +301,8 @@ export default class PointOfSaleController extends BaseController {
     // Handle request
     try {
       const pointOfSaleId = parseInt(id, 10);
-      const products = (await PointOfSaleService.getPointsOfSale({ pointOfSaleId, returnContainers: true })).records.flatMap((p: PointOfSaleWithContainersResponse) => p.containers).flatMap((c) => c.products);
+      const products = (await PointOfSaleService.getPointsOfSale({ pointOfSaleId, returnContainers: true, returnProducts: true }))
+        .records.flatMap((p: PointOfSaleWithContainersResponse) => p.containers).flatMap((c) => c.products);
       res.json(products);
     } catch (error) {
       this.logger.error('Could not return all point of sale products:', error);

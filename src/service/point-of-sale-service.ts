@@ -41,8 +41,8 @@ import {
   CreatePointOfSaleParams,
   UpdatePointOfSaleParams,
 } from '../controller/request/point-of-sale-request';
-import { parseUserToBaseResponse } from '../helpers/revision-to-response';
 import AuthenticationService from './authentication-service';
+import { ContainerWithProductsResponse } from '../controller/response/container-response';
 
 /**
  * Define point of sale filtering parameters used to filter query results.
@@ -65,6 +65,10 @@ export interface PointOfSaleParameters {
    */
   returnContainers?: boolean
   /**
+   * If products should be added to the response
+   */
+  returnProducts?: boolean
+  /**
    * Whether to select public points of sale.
    */
   public?: boolean;
@@ -78,7 +82,7 @@ export default class PointOfSaleService {
    * @private
    */
   private static revisionToResponse(revision: PointOfSaleRevision): PointOfSaleResponse | PointOfSaleWithContainersResponse {
-    const response: any = {
+    const response: PointOfSaleResponse = {
       id: revision.pointOfSale.id,
       revision: revision.revision,
       name: revision.name,
@@ -92,7 +96,10 @@ export default class PointOfSaleService {
       },
     };
     if (revision.containers) {
-      response.containers = revision.containers.map((c) => ContainerService.revisionToResponse(c));
+      return {
+        ...response,
+        containers: revision.containers.map((c) => ContainerService.revisionToResponse(c)) as ContainerWithProductsResponse[],
+      };
     }
     return response;
   }
@@ -133,19 +140,6 @@ export default class PointOfSaleService {
   }
 
   /**
-   * Turns an PointOfSaleRevision into an PointOfSaleResponse
-   */
-  static toPointOfSaleResponse(pointOfSale: PointOfSaleRevision)
-    : PointOfSaleResponse {
-    return {
-      name: pointOfSale.name,
-      owner: parseUserToBaseResponse(pointOfSale.pointOfSale.owner, false),
-      id: pointOfSale.pointOfSale.id,
-      revision: pointOfSale.revision,
-    } as PointOfSaleResponse;
-  }
-
-  /**
    * Updates a PointOfSale
    * @param update - The update to apply
    */
@@ -174,7 +168,7 @@ export default class PointOfSaleService {
     base.currentRevision = base.currentRevision ? base.currentRevision + 1 : 1;
     await base.save();
 
-    const options = await this.getOptions({ pointOfSaleId: base.id, returnContainers: true });
+    const options = await this.getOptions({ pointOfSaleId: base.id, returnContainers: true, returnProducts: true });
     return (this.revisionToResponse(await PointOfSaleRevision.findOne({ ...options })));
   }
 
@@ -224,19 +218,24 @@ export default class PointOfSaleService {
       },
     };
 
-    if (params.returnContainers) relations.containers = {
-      container: {
-        owner: true,
-      },
-      products: {
-        product: {
-          image: true,
+    if (params.returnContainers) {
+      relations.containers = {
+        container: {
           owner: true,
         },
-        category: true,
-        vat: true,
-      },
-    };
+      };
+      if (params.returnProducts) {
+        relations.containers.products = {
+          product: {
+            image: true,
+            owner: true,
+          },
+          category: true,
+          vat: true,
+        };
+      }
+    }
+
 
     let revisionFilter: any = {};
     revisionFilter.revision = Raw(alias => `${alias} = (${this.revisionSubQuery(params.pointOfSaleRevision)})`);
