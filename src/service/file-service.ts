@@ -176,12 +176,13 @@ export default class FileService {
    * @param createdBy - The user that created the file
    * @param hash - The hash of the file params
    */
-  public async uploadPdf<T extends Pdfable<S>, S extends Pdf>(entity: T, PdfType: new () => S, fileData: Buffer, createdBy: User, hash: string): Promise<InvoicePdf> {
+  public async uploadPdf<T extends Pdfable<S>, S extends Pdf>(entity: T, PdfType: new () => S, fileData: Buffer, createdBy: User): Promise<InvoicePdf> {
     let pdf = entity.pdf;
 
     const entityRepo = getRepository(entity.constructor as new () => T);
     const entityPdf = getRepository(PdfType);
 
+    const hash = entity.getPdfParamHash()
     if (pdf == null) {
       pdf = Object.assign(new PdfType(), {
         downloadName: '',

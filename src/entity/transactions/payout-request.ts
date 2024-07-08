@@ -26,11 +26,10 @@ import Transfer from './transfer';
 import DineroTransformer from '../transformer/dinero-transformer';
 // eslint-disable-next-line import/no-cycle
 import PayoutRequestStatus from './payout-request-status';
-import InvoicePdf from "../file/invoice-pdf";
-import PayoutRequestPdf from "../file/payout-request-pdf";
-import {hashJSON} from "../../helpers/hash";
-import InvoicePdfService from "../../service/invoice-pdf-service";
-import PayoutRequestPdfService from "../../service/payout-request-pdf-service";
+import InvoicePdf from '../file/invoice-pdf';
+import PayoutRequestPdf from '../file/payout-request-pdf';
+import { hashJSON } from '../../helpers/hash';
+import PayoutRequestPdfService from '../../service/payout-request-pdf-service';
 
 @Entity()
 export default class PayoutRequest extends BaseEntity {
@@ -66,10 +65,10 @@ export default class PayoutRequest extends BaseEntity {
   public pdf?: PayoutRequestPdf;
 
   getPdfParamHash(): string {
-    return hashJSON(PayoutRequestPdfService.getInvoiceParameters(this));
+    return hashJSON(PayoutRequestPdfService.getParameters(this));
   }
 
   createPDF(): Promise<InvoicePdf> {
-    return PayoutRequestPdfService.createPdf(this.id);
+    return PayoutRequestPdfService.createPayoutRequestPDF(this.id);
   }
 }

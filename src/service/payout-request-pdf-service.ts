@@ -17,10 +17,19 @@
  */
 import { Client, FileResponse } from 'pdf-generator-client';
 import PayoutRequest from '../entity/transactions/payout-request';
-import BaseFile from '../entity/file/base-file';
 import FileService from './file-service';
+import {
+  PayoutParameters,
+  PayoutRouteParams,
+  Payout,
+  FileSettings,
+  ReturnFileType,
+  Language,
+  IPayoutRouteParams,
+} from 'pdf-generator-client';
 import { PAYOUT_REQUEST_PDF_LOCATION } from '../files/storage';
 import {PdfGenerator} from "../entity/file/pdf-file";
+import PayoutRequestPdf from "../entity/file/payout-request-pdf";
 
 const PDF_GEN_URL =  process.env.PDF_GEN_URL ? process.env.PDF_GEN_URL : 'http://localhost:3001/pdf';
 
@@ -31,7 +40,56 @@ export default class PayoutRequestPdfService {
     fileService: new FileService(PAYOUT_REQUEST_PDF_LOCATION),
   };
 
-  public static async createPayoutRequestPDF(payoutRequestId: number): Promise<BaseFile> {
+
+  /**
+   * Constructs and returns the parameters required for generating a payout request PDF.
+   * @param payoutRequest - The payout request for which to generate the parameters.
+   * @returns {PayoutParameters} An instance of `PayoutParameters` containing all necessary information for PDF generation.
+   */
+  static getParameters(payoutRequest: PayoutRequest): PayoutParameters {
+    return new PayoutParameters({
+      payout: new Payout({
+        bankAccountName: payoutRequest.bankAccountName,
+        bankAccountNumber: payoutRequest.bankAccountNumber,
+        amount: payoutRequest.amount.getAmount(),
+        reference: `SDS-PR-${payoutRequest.id}`,
+        date: payoutRequest.createdAt,
+        debtorNumber: String(payoutRequest.requestedBy.id),
+      }),
+    });
+  }
+
+  /**
+   * Prepares and returns the parameters required by the PDF generator client to create a payout request PDF.
+   * @param payoutRequest - The payout request for which to generate the parameters.
+   * @returns {PayoutRouteParams} An instance of `PayoutRouteParams` containing the consolidated parameters and settings for PDF generation.
+   */
+  static getPdfParams(payoutRequest: PayoutRequest): PayoutRouteParams {
+    const params = this.getParameters(payoutRequest);
+
+    const settings: FileSettings = new FileSettings({
+      createdAt: new Date(),
+      fileType: ReturnFileType.PDF,
+      language: Language.ENGLISH,
+      name: '',
+      stationery: 'BAC',
+    });
+
+    const data: IPayoutRouteParams = {
+      params,
+      settings,
+    };
+
+    return new PayoutRouteParams(data);
+  }
+
+  /**
+   * Generates a PDF for a payout request and uploads it to the file service.
+   * If the payout request PDF generation or upload fails, it throws an error with the failure reason.
+   * @param payoutRequestId - The ID of the payout request to generate and upload the PDF for.
+   * @returns {Promise<PayoutRequestPdf>} A promise that resolves to the `PayoutRequestPdf` entity representing the generated and uploaded PDF.
+   */
+  public static async createPayoutRequestPDF(payoutRequestId: number): Promise<PayoutRequestPdf> {
     const payoutRequest = await PayoutRequest.findOne({
       where: { id: payoutRequestId },
       relations: ['requestedBy', 'approvedBy', 'payoutRequestStatus'],
@@ -39,9 +97,10 @@ export default class PayoutRequestPdfService {
     if (!payoutRequest) return undefined;
 
     const params = this.getPdfParams(payoutRequest);
-    return this.pdfGenerator.client.generatePayoutRequest(params).then(async (res: FileResponse) => {
+    return this.pdfGenerator.client.generatePayout(params).then(async (res: FileResponse) => {
       const blob = res.data;
-      return Buffer.from(await blob.arrayBuffer());
+      const buffer = Buffer.from(await blob.arrayBuffer());
+      return this.pdfGenerator.fileService.uploadPdf(payoutRequest, PayoutRequestPdf, buffer, payoutRequest.approvedBy);
     }).catch((res: any) => {
       throw new Error(`PayoutRequest generation failed for ${JSON.stringify(res, null, 2)}`);
     });
