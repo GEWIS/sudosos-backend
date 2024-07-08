@@ -18,28 +18,32 @@
 import { Client, FileResponse } from 'pdf-generator-client';
 import PayoutRequest from '../entity/transactions/payout-request';
 import BaseFile from '../entity/file/base-file';
+import FileService from './file-service';
+import { PAYOUT_REQUEST_PDF_LOCATION } from '../files/storage';
+import {PdfGenerator} from "../entity/file/pdf-file";
 
 const PDF_GEN_URL =  process.env.PDF_GEN_URL ? process.env.PDF_GEN_URL : 'http://localhost:3001/pdf';
 
-// export default class PayoutRequestPdfService {
-//
-//   static pdfGenerator = {
-//     client: new Client(PDF_GEN_URL, { fetch }),
-//   };
-//
-//   public static async createPayoutRequestPDF(payoutRequestId: number): Promise<BaseFile> {
-//     const payoutRequest = await PayoutRequest.findOne({
-//       where: { id: payoutRequestId },
-//       relations: ['requestedBy', 'approvedBy', 'payoutRequestStatus'],
-//     });
-//     if (!payoutRequest) return undefined;
-//
-//     const params = this.getPdfParams(payoutRequest);
-//     return this.pdfGenerator.client.generatePayoutRequest(params).then(async (res: FileResponse) => {
-//       const blob = res.data;
-//       return Buffer.from(await blob.arrayBuffer());
-//     }).catch((res: any) => {
-//       throw new Error(`PayoutRequest generation failed for ${JSON.stringify(res, null, 2)}`);
-//     });
-//   }
-// }
+export default class PayoutRequestPdfService {
+
+  static pdfGenerator: PdfGenerator = {
+    client: new Client(PDF_GEN_URL, { fetch }),
+    fileService: new FileService(PAYOUT_REQUEST_PDF_LOCATION),
+  };
+
+  public static async createPayoutRequestPDF(payoutRequestId: number): Promise<BaseFile> {
+    const payoutRequest = await PayoutRequest.findOne({
+      where: { id: payoutRequestId },
+      relations: ['requestedBy', 'approvedBy', 'payoutRequestStatus'],
+    });
+    if (!payoutRequest) return undefined;
+
+    const params = this.getPdfParams(payoutRequest);
+    return this.pdfGenerator.client.generatePayoutRequest(params).then(async (res: FileResponse) => {
+      const blob = res.data;
+      return Buffer.from(await blob.arrayBuffer());
+    }).catch((res: any) => {
+      throw new Error(`PayoutRequest generation failed for ${JSON.stringify(res, null, 2)}`);
+    });
+  }
+}

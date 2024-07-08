@@ -141,7 +141,7 @@ describe('InvoicePdfService', async (): Promise<void> => {
     it('should return true if the PDF hash matches the expected hash', async () => {
       const invoice = ctx.invoices[0];
       const pdf = new InvoicePdf();
-      pdf.hash = hashJSON(InvoicePdfService.getInvoiceParameters(invoice));
+      pdf.hash = hashJSON(InvoicePdfService.getParameters(invoice));
       invoice.pdf = pdf;
 
       const result = FileService.validatePdfHash(invoice);
@@ -174,7 +174,7 @@ describe('InvoicePdfService', async (): Promise<void> => {
         ...ctx.pdfParams,
       });
 
-      pdf.hash = hashJSON(InvoicePdfService.getInvoiceParameters(invoice));
+      pdf.hash = hashJSON(InvoicePdfService.getParameters(invoice));
       await InvoicePdf.save(pdf);
 
       invoice.pdf = pdf;
@@ -210,7 +210,7 @@ describe('InvoicePdfService', async (): Promise<void> => {
         ...ctx.pdfParams,
       });
 
-      pdf.hash = hashJSON(InvoicePdfService.getInvoiceParameters(invoice));
+      pdf.hash = hashJSON(InvoicePdfService.getParameters(invoice));
       await InvoicePdf.save(pdf);
 
       invoice.pdf = pdf;
@@ -327,7 +327,7 @@ describe('InvoicePdfService', async (): Promise<void> => {
   describe('getInvoiceParameters', () => {
     it('should return all required parameters for generating an invoice PDF', async () => {
       const invoice = ctx.invoices[0];
-      const params = InvoicePdfService.getInvoiceParameters(invoice);
+      const params = InvoicePdfService.getParameters(invoice);
 
       expect(params.reference.ourReference).to.eq(invoice.reference);
       expect(params.reference.yourReference).to.eq(String(invoice.id));
@@ -359,20 +359,20 @@ describe('InvoicePdfService', async (): Promise<void> => {
         createdBy: invoice.to.id,
         id: 41,
       });
-      const invoicePdf = await InvoicePdfService.createInvoicePDF(invoice.id);
+      const invoicePdf = await InvoicePdfService.createPdf(invoice.id);
 
       expect(invoicePdf).to.not.be.undefined;
-      expect(invoicePdf.hash).to.eq(hashJSON(InvoicePdfService.getInvoiceParameters(invoice)));
+      expect(invoicePdf.hash).to.eq(hashJSON(InvoicePdfService.getParameters(invoice)));
     });
     it('should return undefined if the invoice does not exist', async () => {
-      const invoicePdf = await InvoicePdfService.createInvoicePDF(-1);
+      const invoicePdf = await InvoicePdfService.createPdf(-1);
       expect(invoicePdf).to.be.undefined;
     });
     it('should throw an error if PDF generation fails', async () => {
       generateInvoiceStub.rejects(new Error('Failed to generate PDF'));
 
       const invoice = await Invoice.findOne({ where: { id: 1 }, relations: ['to', 'invoiceStatus', 'transfer', 'transfer.to', 'transfer.from', 'pdf', 'invoiceEntries'] });
-      await expect(InvoicePdfService.createInvoicePDF(invoice.id)).to.be.rejectedWith();
+      await expect(InvoicePdfService.createPdf(invoice.id)).to.be.rejectedWith();
     });
   });
 });

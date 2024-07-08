@@ -16,30 +16,11 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { Column, Entity } from 'typeorm';
-import BaseFile from './base-file';
-import BaseEntity from '../base-entity';
-import { Client } from 'pdf-generator-client';
-import FileService from '../../service/file-service';
+import { Entity } from 'typeorm';
+import Pdf from './pdf-file';
 
 /**
- * @typedef {BaseFile} Pdf
+ * @typedef {Pdf} PayoutRequestPdf
  */
 @Entity()
-export default class Pdf extends BaseFile {
-  @Column()
-  // Stores the params that were used to generate this pdf as an hash. This is used to pretend regeneration if the invoice has not change.
-  // The service still allows the user to force regenerate the pdf.
-  public hash: string;
-}
-
-export interface Pdfable<S extends Pdf = Pdf> extends BaseEntity {
-  pdf?: S,
-  getPdfParamHash: () => string,
-  createPDF: () => Promise<S>
-}
-
-export interface PdfGenerator {
-  client: Client,
-  fileService: FileService
-}
+export default class PayoutRequestPdf extends Pdf {}

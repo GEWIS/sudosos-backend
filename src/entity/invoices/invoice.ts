@@ -96,10 +96,10 @@ export default class Invoice extends BaseEntity {
   public country: string;
 
   getPdfParamHash(): string {
-    return hashJSON(InvoicePdfService.getInvoiceParameters(this));
+    return hashJSON(InvoicePdfService.getParameters(this));
   }
 
   createPDF(): Promise<InvoicePdf> {
-    return InvoicePdfService.createInvoicePDF(this.id);
+    return InvoicePdfService.createPdf(this.id);
   }
 }

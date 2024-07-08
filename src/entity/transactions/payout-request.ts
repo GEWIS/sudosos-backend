@@ -26,6 +26,11 @@ import Transfer from './transfer';
 import DineroTransformer from '../transformer/dinero-transformer';
 // eslint-disable-next-line import/no-cycle
 import PayoutRequestStatus from './payout-request-status';
+import InvoicePdf from "../file/invoice-pdf";
+import PayoutRequestPdf from "../file/payout-request-pdf";
+import {hashJSON} from "../../helpers/hash";
+import InvoicePdfService from "../../service/invoice-pdf-service";
+import PayoutRequestPdfService from "../../service/payout-request-pdf-service";
 
 @Entity()
 export default class PayoutRequest extends BaseEntity {
@@ -55,4 +60,16 @@ export default class PayoutRequest extends BaseEntity {
 
   @Column()
   public bankAccountName: string;
+
+  @OneToOne(() => PayoutRequestPdf, { nullable: true, onDelete: 'RESTRICT' })
+  @JoinColumn()
+  public pdf?: PayoutRequestPdf;
+
+  getPdfParamHash(): string {
+    return hashJSON(PayoutRequestPdfService.getInvoiceParameters(this));
+  }
+
+  createPDF(): Promise<InvoicePdf> {
+    return PayoutRequestPdfService.createPdf(this.id);
+  }
 }

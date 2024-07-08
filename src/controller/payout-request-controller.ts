@@ -56,6 +56,12 @@ export default class PayoutRequestController extends BaseController {
           handler: this.returnSinglePayoutRequest.bind(this),
         },
       },
+      '/:id(\\d+)/pdf': {
+        GET: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', await PayoutRequestController.getRelation(req), 'PayoutRequest', ['*']),
+          handler: this.returnSinglePayoutRequestPdf.bind(this),
+        },
+      },
       '/:id(\\d+)/status': {
         POST: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'update', await PayoutRequestController.getRelation(req), 'PayoutRequest', ['*']),
@@ -248,5 +254,11 @@ export default class PayoutRequestController extends BaseController {
       res.status(500).send();
       this.logger.error(e);
     }
+  }
+
+  public async returnSinglePayoutRequestPdf(req: RequestWithToken, res: Response): Promise<void> {
+    const parameters = req.params;
+    this.logger.trace('Get single payout request pdf', parameters, 'by user', req.token.user);
+
   }
 }

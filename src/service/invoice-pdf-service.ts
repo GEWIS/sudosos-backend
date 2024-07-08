@@ -42,11 +42,7 @@ import FileService from './file-service';
 import InvoiceEntry from '../entity/invoices/invoice-entry';
 import { hashJSON } from '../helpers/hash';
 import { INVOICE_PDF_LOCATION } from '../files/storage';
-
-export interface PdfGenerator {
-  client: Client,
-  fileService: FileService
-}
+import { PdfGenerator } from '../entity/file/pdf-file';
 
 // Used for grouping in the PDF.
 // These are 'hardcoded' since if these would change the template also would have to change.
@@ -130,7 +126,7 @@ export default class InvoicePdfService {
    * @param {Invoice} invoice - The invoice for which to generate the parameters.
    * @returns {InvoiceParameters} An instance of `InvoiceParameters` containing all necessary information for PDF generation.
    */
-  static getInvoiceParameters(invoice: Invoice): InvoiceParameters {
+  static getParameters(invoice: Invoice): InvoiceParameters {
     const { products, pricing } = this.entriesToProductsPricing(invoice);
 
     return new InvoiceParameters({
@@ -170,7 +166,7 @@ export default class InvoicePdfService {
    * @returns {InvoiceRouteParams} An instance of `InvoiceRouteParams` containing the consolidated parameters and settings for PDF generation.
    */
   static getPdfParams(invoice: Invoice): InvoiceRouteParams {
-    const params = this.getInvoiceParameters(invoice);
+    const params = this.getParameters(invoice);
 
     const settings: FileSettings = new FileSettings({
       createdAt: new Date(),
@@ -194,7 +190,7 @@ export default class InvoicePdfService {
    * @param {number} invoiceId - The ID of the invoice to generate and upload the PDF for.
    * @returns {Promise<InvoicePdf>} A promise that resolves to the `InvoicePdf` entity representing the generated and uploaded PDF.
    */
-  public static async createInvoicePDF(invoiceId: number): Promise<InvoicePdf> {
+  public static async createPdf(invoiceId: number): Promise<InvoicePdf> {
     const invoice = await Invoice.findOne({ where: { id: invoiceId }, relations: ['to', 'invoiceStatus', 'transfer', 'transfer.to', 'transfer.from', 'pdf', 'invoiceEntries'] });
     if (!invoice) return undefined;
 
@@ -202,7 +198,7 @@ export default class InvoicePdfService {
     return this.pdfGenerator.client.generateInvoice(InvoiceType.Invoice, params).then(async (res: FileResponse) => {
       const blob = res.data;
       const buffer = Buffer.from(await blob.arrayBuffer());
-      return this.pdfGenerator.fileService.uploadPdf(invoice, InvoicePdf, buffer, invoice.to, hashJSON(this.getInvoiceParameters(invoice)));
+      return this.pdfGenerator.fileService.uploadPdf(invoice, InvoicePdf, buffer, invoice.to, hashJSON(this.getParameters(invoice)));
     }).catch((res: any) => {
       throw new Error(`Invoice generation failed for ${JSON.stringify(res, null, 2)}`);
     });
