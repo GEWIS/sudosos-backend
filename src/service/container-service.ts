@@ -76,6 +76,7 @@ export interface ContainerFilterParameters {
   userId?: number;
   returnProducts?: boolean;
   productId?: number;
+  returnPointsOfSale?: boolean;
 }
 
 export default class ContainerService {
@@ -209,7 +210,7 @@ export default class ContainerService {
    * @param containerId - The container to propagate
    */
   public static async propagateContainerUpdate(containerId: number) {
-    let options = await this.getOptions({ containerId: containerId, returnProducts: true });
+    let options = await this.getOptions({ containerId: containerId, returnProducts: true, returnPointsOfSale: true });
     // Get previous revision of container.
     (options.where as FindOptionsWhere<ContainerRevision>).revision = Raw(alias => `${alias}  = (${this.revisionSubQuery()}) - 1`);
     const containerRevision = await ContainerRevision.findOne(options);
@@ -269,10 +270,11 @@ export default class ContainerService {
       container: {
         owner: true,
       },
-      pointsOfSale: {
-        pointOfSale: true,
-        containers: true,
-      },
+    };
+
+    if (params.returnPointsOfSale) relations.pointsOfSale = {
+      pointOfSale: true,
+      containers: true,
     };
 
     if (params.returnProducts) relations.products = {
