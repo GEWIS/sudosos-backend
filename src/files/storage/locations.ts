@@ -24,4 +24,4 @@ export const BANNER_IMAGE_LOCATION = './data/banners';
 
 export const INVOICE_PDF_LOCATION = './data/invoices';
 
-export const PAYOUT_REQUEST_PDF_LOCATION = './data/payout-requests';
+export const PAYOUT_REQUEST_PDF_LOCATION = './data/payout_requests';
