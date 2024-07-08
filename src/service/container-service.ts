@@ -26,7 +26,6 @@ import {
 import Container from '../entity/container/container';
 import ContainerRevision from '../entity/container/container-revision';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
-import Product from '../entity/product/product';
 import ProductRevision from '../entity/product/product-revision';
 import { PaginationParameters } from '../helpers/pagination';
 import { CreateContainerParams, UpdateContainerParams } from '../controller/request/container-request';
@@ -172,17 +171,10 @@ export default class ContainerService {
   public static async updateContainer(update: UpdateContainerParams): Promise<ContainerWithProductsResponse> {
     const base = await Container.findOne({ where: { id: update.id } });
 
-    // TODO change this once the product-service is refactored
     // Get the latest products
-    const products = await Product.findBy( { id: In(update.products) });
-
-    // Get the product id's for this update.
-    const productIds: { revision: number, product: { id: number } }[] = (
-      products.map((product) => (
-        { revision: product.currentRevision, product: { id: product.id } })));
-
-    const productRevisions: ProductRevision[] = await ProductRevision.findByIds(productIds);
-    // ENDTODO
+    const opt = await ProductService.getOptions({});
+    const where = { ...opt.where, product: { id: In(update.products) } };
+    const productRevisions = await ProductRevision.find({ ...opt, where });
 
     // Set base container and apply new revision.
     const containerRevision: ContainerRevision = Object.assign(new ContainerRevision(), {
