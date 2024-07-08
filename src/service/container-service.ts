@@ -16,12 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import {
-  FindManyOptions,
-  FindOptionsRelations,
-  FindOptionsWhere, In,
-  Raw,
-} from 'typeorm';
+import { FindManyOptions, FindOptionsRelations, FindOptionsWhere, In, Raw } from 'typeorm';
 import {
   ContainerResponse,
   ContainerWithProductsResponse,
@@ -34,10 +29,7 @@ import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import Product from '../entity/product/product';
 import ProductRevision from '../entity/product/product-revision';
 import { PaginationParameters } from '../helpers/pagination';
-import {
-  CreateContainerParams,
-  UpdateContainerParams,
-} from '../controller/request/container-request';
+import { CreateContainerParams, UpdateContainerParams } from '../controller/request/container-request';
 import User from '../entity/user/user';
 import { UpdatePointOfSaleParams } from '../controller/request/point-of-sale-request';
 // eslint-disable-next-line import/no-cycle
@@ -90,7 +82,7 @@ export interface ContainerFilterParameters {
 export default class ContainerService {
 
   public static revisionToResponse(revision: ContainerRevision): ContainerResponse | ContainerWithProductsResponse {
-    const response: any = {
+    const response: ContainerResponse = {
       id: revision.containerId,
       revision: revision.revision,
       name: revision.name,
@@ -104,7 +96,10 @@ export default class ContainerService {
       },
     };
     if (revision.products) {
-      response.products = revision.products.map((p) => ProductService.revisionToResponse(p));
+      return {
+        ...response,
+        products: revision.products.map((p) => ProductService.revisionToResponse(p)),
+      };
     }
     return response;
   }
