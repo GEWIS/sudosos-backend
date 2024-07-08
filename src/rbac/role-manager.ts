@@ -18,6 +18,9 @@
 
 import User from '../entity/user/user';
 import AssignedRole from '../entity/rbac/assigned-role';
+import { AppDataSource } from '../database/database';
+import Role from '../entity/rbac/role';
+import log4js, { Logger } from 'log4js';
 
 /**
  * The assignment check is a predicate performed on a user to determine
@@ -98,6 +101,8 @@ export interface RoleDefinitions {
  * and performing access checks based on user roles and user access.
  */
 export default class RoleManager {
+  private logger: Logger;
+
   /**
    * A mapping from role names to the role definitions defined in the system.
    */
@@ -108,14 +113,59 @@ export default class RoleManager {
    *
    * @param role - The role which should be registered in the system.
    * @throws {Error} - Throws an error when a role with the same name is already registered.
+   * @deprecated
    */
   public registerRole(role: RoleDefinition): void {
+    return;
+
     if (this.roles[role.name]) {
       throw new Error('Role with the same name already exists.');
     }
 
     this.roles[role.name] = role;
   }
+
+  protected async loadRolesFromDatabase(): Promise<void> {
+    const roles = await Role.find({ relations: { permissions: true } });
+
+    roles.forEach((role) => {
+      this.roles[role.name] = {
+        name: role.name,
+        permissions: role.permissions.reduce((permDef: PermissionDefinition, permission1, i1, rolePermissions) => {
+          if (permDef[permission1.entity]) return permDef;
+
+          permDef[permission1.entity] = rolePermissions
+            .filter((p) => p.entity === permission1.entity)
+            .reduce((entDef: EntityDefinition, permission2, i2, entityPermissions) => {
+              if (entDef[permission2.entity]) return entDef;
+
+              entDef[permission2.action] = entityPermissions
+                .filter((p) => p.action === permission2.action)
+                .reduce((actDef: ActionDefinition, permission3) => {
+                  if (actDef[permission3.relation]) return;
+
+                  actDef[permission3.relation] = new Set(permission3.attributes);
+                  return actDef;
+
+                }, {});
+              return entDef;
+
+            }, {});
+          return permDef;
+        }, {}),
+        assignmentCheck: async () => false,
+      };
+    });
+  }
+
+  constructor() {
+    this.logger = log4js.getLogger('RoleManager');
+  }
+
+  public async initialize() {
+    this.loadRolesFromDatabase().catch((error) => this.logger.error(error));
+  }
+
 
   /**
    * Filter the allowed attributes from the set of unsatisfied attributes.

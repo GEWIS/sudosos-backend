@@ -15,10 +15,11 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { Column, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';
+import { BaseEntity, Column, Entity, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';
 import Role from './role';
 
-export default class Permission {
+@Entity()
+export default class Permission extends BaseEntity {
   @PrimaryColumn()
   public roleId: number;
 

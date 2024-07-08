@@ -49,6 +49,7 @@ import VatGroup from '../../../src/entity/vat-group';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import ProductRevision from '../../../src/entity/product/product-revision';
+import seedRolesWithPermissions from '../../seed/rbac';
 
 /**
  * Tests if a product response is equal to the request.
@@ -123,24 +124,33 @@ describe('ProductController', async (): Promise<void> => {
       acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
     } as User;
 
+    const integration = {
+      id: 4,
+      firstName: 'Integration',
+      type: UserType.INTEGRATION,
+      active: true,
+      acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
+    } as User;
+
     await User.save(adminUser);
     await User.save(localUser);
     await User.save(organ);
+    await User.save(integration);
+    const users = [organ, adminUser, localUser, integration];
 
     const categories = await seedProductCategories();
     const vatGroups = await seedVatGroups();
-    const { products } = await seedProducts(
-      [organ, adminUser, localUser], categories, vatGroups,
-    );
+    const { products } = await seedProducts(users, categories, vatGroups);
+    await seedRolesWithPermissions(users);
 
     // create bearer tokens
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
-    const adminToken = await tokenHandler.signToken({ user: adminUser, roles: ['Admin'], lesser: false }, 'nonce admin');
-    const token = await tokenHandler.signToken({ user: localUser, roles: ['User'], lesser: false }, 'nonce');
+    const adminToken = await tokenHandler.signToken({ user: adminUser, roles: adminUser.roles.map((r) => r.role.name), lesser: false }, 'nonce admin');
+    const token = await tokenHandler.signToken({ user: localUser, roles: adminUser.roles.map((r) => r.role.name), lesser: false }, 'nonce');
     const organMemberToken = await tokenHandler.signToken({
-      user: localUser, roles: ['User', 'Seller'], organs: [organ], lesser: false,
+      user: localUser, roles: adminUser.roles.map((r) => r.role.name), organs: [organ], lesser: false,
     }, 'nonce');
     const tokenNoRoles = await tokenHandler.signToken({ user: localUser, roles: [], lesser: false }, 'nonce');
 
@@ -173,49 +183,8 @@ describe('ProductController', async (): Promise<void> => {
     const app = express();
     const specification = await Swagger.initialize(app);
 
-    const all = { all: new Set<string>(['*']) };
-    const own = { own: new Set<string>(['*']) };
-    const organRole = { organ: new Set<string>(['*']) };
-
     const roleManager = new RoleManager();
-    roleManager.registerRole({
-      name: 'Admin',
-      permissions: {
-        Product: {
-          create: all,
-          get: all,
-          update: all,
-          delete: all,
-          approve: all,
-        },
-      },
-      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
-    });
-
-    roleManager.registerRole({
-      name: 'Seller',
-      permissions: {
-        Product: {
-          create: organRole,
-          get: all,
-          update: organRole,
-          delete: organRole,
-        },
-      },
-      assignmentCheck: async () => true,
-    });
-
-    roleManager.registerRole({
-      name: 'User',
-      permissions: {
-        Product: {
-          get: own,
-          create: own,
-          update: all,
-        },
-      },
-      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_USER,
-    });
+    await roleManager.initialize();
 
     const controller = new ProductController({ specification, roleManager });
     app.use(json());

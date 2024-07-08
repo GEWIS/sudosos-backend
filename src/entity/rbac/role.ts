@@ -16,10 +16,14 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import BaseEntity from '../base-entity';
-import { Column, Entity } from 'typeorm';
+import { Column, Entity, OneToMany } from 'typeorm';
+import Permission from './permission';
 
 @Entity()
 export default class Role extends BaseEntity {
   @Column({ unique: true })
   public name: string;
+
+  @OneToMany(() => Permission, (permission) => permission.role)
+  public permissions: Permission[];
 }

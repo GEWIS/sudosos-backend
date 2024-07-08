@@ -62,6 +62,7 @@ import { calculateBalance } from './helpers/balance';
 import GewisUser from '../src/gewis/entity/gewis-user';
 import AssignedRole from '../src/entity/rbac/assigned-role';
 import MemberAuthenticator from '../src/entity/authenticator/member-authenticator';
+import seedRolesWithPermissions, { SeededRole } from './seed/rbac';
 
 function getDate(startDate: Date, endDate: Date, i: number): Date {
   const diff = endDate.getTime() - startDate.getTime();
@@ -1368,7 +1369,8 @@ export async function seedBanners(users: User[]): Promise<{
 
 export interface DatabaseContent {
   users: User[],
-  roles: AssignedRole[],
+  roles: SeededRole[],
+  roleAssignments: AssignedRole[],
   categories: ProductCategory[],
   vatGroups: VatGroup[],
   products: Product[],
@@ -1413,8 +1415,8 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
   const { pointsOfSale, pointOfSaleRevisions } = await seedPointsOfSale(
     users, containerRevisions,
   );
-  const roles = await seedRoles(users);
-  const { events, eventShifts, eventShiftAnswers } = await seedEvents(roles);
+  const { roles, assignments: roleAssignments } = await seedRolesWithPermissions(users);
+  const { events, eventShifts, eventShiftAnswers } = await seedEvents(roleAssignments);
   const { transactions } = await seedTransactions(users, pointOfSaleRevisions);
   const transfers = await seedTransfers(users);
   const { fines, fineTransfers, userFineGroups } = await seedFines(users, transactions, transfers);
@@ -1426,6 +1428,7 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
   return {
     users,
     roles,
+    roleAssignments,
     categories,
     vatGroups,
     products,
