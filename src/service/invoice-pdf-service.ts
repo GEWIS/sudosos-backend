@@ -59,44 +59,10 @@ const PDF_GEN_URL =  process.env.PDF_GEN_URL ? process.env.PDF_GEN_URL : 'http:/
 
 export default class InvoicePdfService {
 
-  static pdfGenerator = {
+  static pdfGenerator: PdfGenerator = {
     client: new Client(PDF_GEN_URL, { fetch }),
     fileService: new FileService(INVOICE_PDF_LOCATION),
   };
-
-  /**
-   * Validates whether the PDF hash of an invoice matches the expected hash. This is used to determine if the invoice's PDF representation has been altered or needs regeneration.
-   *
-   * @param {Invoice} invoice - The invoice entity to validate the PDF hash for.
-   * @returns {boolean} Returns `true` if the PDF hash matches the expected hash, indicating no changes; returns `false` otherwise.
-   */
-  static validatePdfHash(invoice: Invoice): boolean {
-    if (!invoice.pdf) return false;
-    const hash = hashJSON(this.getInvoiceParameters(invoice));
-
-    return hash === invoice.pdf.hash;
-  }
-
-  /**
-   * Retrieves or creates a PDF representation of an invoice. If a PDF already exists and the `force` parameter is not set, it will return the existing PDF after validating its hash.
-   * If the hash validation fails or `force` is set to `true`, it generates a new PDF.
-   *
-   * @param {number} invoiceId - The ID of the invoice to generate the PDF for.
-   * @param {boolean} [force=false] - Whether to force regeneration of the invoice PDF, ignoring any existing ones.
-   * @returns {Promise<SimpleFileResponse>} A promise that resolves to the file response representing the invoice PDF, or `undefined` if the invoice cannot be found.
-   */
-
-  public static async getOrCreatePDF(invoiceId: number, force: boolean = false): Promise<InvoicePdf> {
-    const invoice = await Invoice.findOne({ where: { id: invoiceId }, relations: ['to', 'invoiceStatus', 'transfer', 'transfer.to', 'transfer.from', 'pdf', 'invoiceEntries'] });
-    if (!invoice) return undefined;
-
-    if (invoice.pdf && !force) {
-      // check if invoice is current.
-      if (this.validatePdfHash(invoice)) return invoice.pdf;
-    }
-
-    return Promise.resolve(await this.createInvoicePDF(invoiceId));
-  }
 
   /**
    * Converts invoice entries into products and calculates total pricing information for a PDF invoice.
@@ -185,6 +151,7 @@ export default class InvoicePdfService {
       }),
       company: new Company({
         name: invoice.addressee,
+        id: String(invoice.toId),
       }),
       address: new Address({
         street: invoice.street,
@@ -235,7 +202,7 @@ export default class InvoicePdfService {
     return this.pdfGenerator.client.generateInvoice(InvoiceType.Invoice, params).then(async (res: FileResponse) => {
       const blob = res.data;
       const buffer = Buffer.from(await blob.arrayBuffer());
-      return this.pdfGenerator.fileService.uploadInvoicePdf(invoice, buffer, invoice.to, hashJSON(this.getInvoiceParameters(invoice)));
+      return this.pdfGenerator.fileService.uploadPdf(invoice, InvoicePdf, buffer, invoice.to, hashJSON(this.getInvoiceParameters(invoice)));
     }).catch((res: any) => {
       throw new Error(`Invoice generation failed for ${JSON.stringify(res, null, 2)}`);
     });

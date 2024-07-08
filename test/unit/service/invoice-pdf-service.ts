@@ -126,7 +126,7 @@ describe('InvoicePdfService', async (): Promise<void> => {
 
   beforeEach(function () {
     generateInvoiceStub = sinon.stub(InvoicePdfService.pdfGenerator.client, 'generateInvoice');
-    uploadInvoiceStub = sinon.stub(InvoicePdfService.pdfGenerator.fileService, 'uploadInvoicePdf');
+    uploadInvoiceStub = sinon.stub(InvoicePdfService.pdfGenerator.fileService, 'uploadPdf');
     createFileStub = sinon.stub(InvoicePdfService.pdfGenerator.fileService, 'createFile');
   });
 
@@ -137,14 +137,14 @@ describe('InvoicePdfService', async (): Promise<void> => {
     createFileStub.restore();
   });
 
-  describe('validatePdfHash', () => {
+  describe('Invoice: validatePdfHash', () => {
     it('should return true if the PDF hash matches the expected hash', async () => {
       const invoice = ctx.invoices[0];
       const pdf = new InvoicePdf();
       pdf.hash = hashJSON(InvoicePdfService.getInvoiceParameters(invoice));
       invoice.pdf = pdf;
 
-      const result = InvoicePdfService.validatePdfHash(invoice);
+      const result = FileService.validatePdfHash(invoice);
 
       expect(result).to.be.true;
     });
@@ -154,19 +154,19 @@ describe('InvoicePdfService', async (): Promise<void> => {
       pdf.hash = 'false';
       invoice.pdf = pdf;
 
-      const result = InvoicePdfService.validatePdfHash(invoice);
+      const result = FileService.validatePdfHash(invoice);
 
       expect(result).to.be.false;
     });
     it('should return false if the invoice has no associated PDF', async () => {
       const invoice = ctx.invoices[0];
-      const result = InvoicePdfService.validatePdfHash(invoice);
+      const result = FileService.validatePdfHash(invoice);
 
       expect(result).to.be.false;
     });
   });
 
-  describe('getOrCreatePDF', () => {
+  describe('Invoice: getOrCreatePDF', () => {
     it('should return an existing PDF if the hash matches and force is false', async () => {
       const invoice = ctx.invoices[0];
 
@@ -180,7 +180,7 @@ describe('InvoicePdfService', async (): Promise<void> => {
       invoice.pdf = pdf;
       await Invoice.save(invoice);
 
-      const file = await InvoicePdfService.getOrCreatePDF(invoice.id);
+      const file = await FileService.getOrCreatePDF(invoice);
       expect(file.downloadName).to.eq(pdf.downloadName);
     });
     it('should regenerate and return a new PDF if the hash does not match', async () => {
@@ -200,7 +200,7 @@ describe('InvoicePdfService', async (): Promise<void> => {
       });
       uploadInvoiceStub.resolves({});
 
-      await InvoicePdfService.getOrCreatePDF(invoice.id);
+      await FileService.getOrCreatePDF(invoice);
       expect(uploadInvoiceStub).to.have.been.calledOnce;
     });
     it('should always regenerate and return a new PDF if force is true, even if the hash matches', async () => {
@@ -217,7 +217,7 @@ describe('InvoicePdfService', async (): Promise<void> => {
       await Invoice.save(invoice);
 
       // Hash is valid
-      expect(InvoicePdfService.validatePdfHash(invoice)).to.be.true;
+      expect(FileService.validatePdfHash(invoice)).to.be.true;
 
       generateInvoiceStub.resolves({
         data: new Blob(),
@@ -225,13 +225,13 @@ describe('InvoicePdfService', async (): Promise<void> => {
       });
       uploadInvoiceStub.resolves({});
 
-      await InvoicePdfService.getOrCreatePDF(invoice.id, true);
+      await FileService.getOrCreatePDF(invoice, true);
 
       // Upload was still called.
       expect(uploadInvoiceStub).to.have.been.calledOnce;
     });
     it('should return undefined if the invoice does not exist', async () => {
-      const file = await InvoicePdfService.getOrCreatePDF(-1);
+      const file = await FileService.getOrCreatePDF(undefined);
       expect(file).to.be.undefined;
     });
   });

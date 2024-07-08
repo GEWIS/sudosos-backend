@@ -27,8 +27,9 @@ import Product from '../entity/product/product';
 import ProductImage from '../entity/file/product-image';
 import Banner from '../entity/banner';
 import BannerImage from '../entity/file/banner-image';
-import Invoice from '../entity/invoices/invoice';
 import InvoicePdf from '../entity/file/invoice-pdf';
+import Pdf, { Pdfable } from '../entity/file/pdf-file';
+import { getRepository } from 'typeorm';
 
 /**
  *  Possible storage methods that can be used
@@ -140,19 +141,55 @@ export default class FileService {
   }
 
   /**
-   * Upload an pdf file
+   * Retrieves or creates a PDF representation of an entity. If a PDF already exists and the `force` parameter is not set, it will return the existing PDF after validating its hash.
+   * If the hash validation fails or `force` is set to `true`, it generates a new PDF.
+   *
+   * @param Type
+   * @param {T} entity - The entity to generate the PDF for.
+   * @param {boolean} [force=false] - Whether to force regeneration of the entity PDF, ignoring any existing ones.
+   * @returns {Promise<SimpleFileResponse>} A promise that resolves to the file response representing the entity PDF.
    */
-  public async uploadInvoicePdf(entity: Invoice, fileData: Buffer, createdBy: User, hash: string): Promise<InvoicePdf> {
+
+  public static async getOrCreatePDF<T extends Pdfable>(entity: T, force: boolean = false): Promise<InvoicePdf> {
+    if (!entity) return undefined;
+
+    if (entity.pdf && !force) {
+      // check if pdf is current.
+      if (this.validatePdfHash(entity)) return entity.pdf;
+    }
+
+    return Promise.resolve(await entity.createPDF());
+  }
+
+  static validatePdfHash<T extends Pdfable>(entity: T): boolean {
+    if (!entity.pdf) return false;
+    const hash = entity.getPdfParamHash();
+
+    return hash === entity.pdf.hash;
+  }
+
+  /**
+   * Upload a pdf file
+   * @param entity - The entity that has the pdf property
+   * @param PdfType - The pdf type, must be manually specified since the entities pdf can be undefined
+   * @param fileData - The file data
+   * @param createdBy - The user that created the file
+   * @param hash - The hash of the file params
+   */
+  public async uploadPdf<T extends Pdfable<S>, S extends Pdf>(entity: T, PdfType: new () => S, fileData: Buffer, createdBy: User, hash: string): Promise<InvoicePdf> {
     let pdf = entity.pdf;
 
+    const entityRepo = getRepository(entity.constructor as new () => T);
+    const entityPdf = getRepository(PdfType);
+
     if (pdf == null) {
-      pdf = Object.assign(new InvoicePdf(), {
+      pdf = Object.assign(new PdfType(), {
         downloadName: '',
         createdBy,
         location: '',
         hash,
       });
-      await InvoicePdf.save(pdf);
+      await entityPdf.save(pdf);
     } else {
       // If the file does exist, we first have to remove it from storage
       await this.removeFile(pdf);
@@ -164,11 +201,11 @@ export default class FileService {
     pdf.downloadName = path.parse(file.location).base;
 
     pdf.hash = hash;
-    await InvoicePdf.save(pdf);
+    await entityPdf.save(pdf);
     // eslint-disable-next-line no-param-reassign
     entity.pdf = pdf;
 
-    await entity.save();
+    await entityRepo.save(entity);
     return entity.pdf;
   }
 

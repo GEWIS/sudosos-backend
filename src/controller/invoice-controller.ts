@@ -34,11 +34,11 @@ import verifyCreateInvoiceRequest, { verifyUpdateInvoiceRequest } from './reques
 import { isFail } from '../helpers/specification-validation';
 import { asBoolean, asInvoiceState } from '../helpers/validators';
 import Invoice from '../entity/invoices/invoice';
-import InvoicePdfService from '../service/invoice-pdf-service';
 import User, { UserType } from '../entity/user/user';
 import { UpdateInvoiceUserRequest } from './request/user-request';
 import InvoiceUser from '../entity/user/invoice-user';
 import { parseInvoiceUserToResponse } from '../helpers/revision-to-response';
+import FileService from '../service/file-service';
 
 export default class InvoiceController extends BaseController {
   private logger: Logger = log4js.getLogger('InvoiceController');
@@ -323,13 +323,15 @@ export default class InvoiceController extends BaseController {
     this.logger.trace('Get Invoice PDF', id, 'by user', req.token.user);
 
     try {
-      const invoice = await InvoicePdfService.getOrCreatePDF(invoiceId);
+      const invoice = await Invoice.findOne({ ...InvoiceService.getOptions({ invoiceId }) });
       if (!invoice) {
         res.status(404).json('Invoice not found.');
         return;
       }
 
-      res.status(200).json({ pdf: invoice.downloadName });
+      const pdf = await FileService.getOrCreatePDF(invoice);
+
+      res.status(200).json({ pdf: pdf.downloadName });
     } catch (error) {
       this.logger.error('Could get invoice PDF:', error);
       res.status(500).json('Internal server error.');
