@@ -106,7 +106,7 @@ export interface ProductFilterParameters {
   priceList?: boolean;
 }
 
-// TODO figure out why this is unused
+// TODO Add filtering to get products query
 export function parseGetProductFilters(req: RequestWithToken): ProductFilterParameters {
   if (req.query.productRevision && !req.query.productId) {
     throw new Error('Cannot filter on a revision, when there is no id given');
