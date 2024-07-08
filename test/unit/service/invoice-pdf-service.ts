@@ -39,7 +39,6 @@ import {
 } from '../../seed';
 import Swagger from '../../../src/start/swagger';
 import { json } from 'body-parser';
-import { hashJSON } from '../../../src/helpers/hash';
 import FileService from '../../../src/service/file-service';
 import InvoiceEntry from '../../../src/entity/invoices/invoice-entry';
 import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
@@ -141,7 +140,7 @@ describe('InvoicePdfService', async (): Promise<void> => {
     it('should return true if the PDF hash matches the expected hash', async () => {
       const invoice = ctx.invoices[0];
       const pdf = new InvoicePdf();
-      pdf.hash = hashJSON(InvoicePdfService.getParameters(invoice));
+      pdf.hash = invoice.getPdfParamHash();
       invoice.pdf = pdf;
 
       const result = FileService.validatePdfHash(invoice);
@@ -174,7 +173,7 @@ describe('InvoicePdfService', async (): Promise<void> => {
         ...ctx.pdfParams,
       });
 
-      pdf.hash = hashJSON(InvoicePdfService.getParameters(invoice));
+      pdf.hash = invoice.getPdfParamHash();
       await InvoicePdf.save(pdf);
 
       invoice.pdf = pdf;
@@ -210,7 +209,7 @@ describe('InvoicePdfService', async (): Promise<void> => {
         ...ctx.pdfParams,
       });
 
-      pdf.hash = hashJSON(InvoicePdfService.getParameters(invoice));
+      pdf.hash = invoice.getPdfParamHash();
       await InvoicePdf.save(pdf);
 
       invoice.pdf = pdf;
@@ -362,7 +361,7 @@ describe('InvoicePdfService', async (): Promise<void> => {
       const invoicePdf = await InvoicePdfService.createPdf(invoice.id);
 
       expect(invoicePdf).to.not.be.undefined;
-      expect(invoicePdf.hash).to.eq(hashJSON(InvoicePdfService.getParameters(invoice)));
+      expect(invoicePdf.hash).to.eq(invoice.getPdfParamHash());
     });
     it('should return undefined if the invoice does not exist', async () => {
       const invoicePdf = await InvoicePdfService.createPdf(-1);

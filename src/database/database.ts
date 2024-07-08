@@ -72,6 +72,7 @@ import InvoicePdf from '../entity/file/invoice-pdf';
 import { InvoiceRefactor1707251162194 } from '../migrations/1707251162194-invoice-refactor';
 import dotenv from 'dotenv';
 import { PERSISTENT_TEST_DATABASES } from '../helpers/database';
+import PayoutRequestPdf from "../entity/file/payout-request-pdf";
 
 // We need to load the dotenv to prevent the env from being undefined.
 dotenv.config();
@@ -109,6 +110,7 @@ const options: DataSourceOptions = {
     StripeDeposit,
     StripeDepositStatus,
     PayoutRequest,
+    PayoutRequestPdf,
     PayoutRequestStatus,
     Fine,
     FineHandoutEvent,

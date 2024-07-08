@@ -89,7 +89,7 @@ export default class PayoutRequestPdfService {
    * @param payoutRequestId - The ID of the payout request to generate and upload the PDF for.
    * @returns {Promise<PayoutRequestPdf>} A promise that resolves to the `PayoutRequestPdf` entity representing the generated and uploaded PDF.
    */
-  public static async createPayoutRequestPDF(payoutRequestId: number): Promise<PayoutRequestPdf> {
+  public static async createPdf(payoutRequestId: number): Promise<PayoutRequestPdf> {
     const payoutRequest = await PayoutRequest.findOne({
       where: { id: payoutRequestId },
       relations: ['requestedBy', 'approvedBy', 'payoutRequestStatus'],
@@ -100,7 +100,7 @@ export default class PayoutRequestPdfService {
     return this.pdfGenerator.client.generatePayout(params).then(async (res: FileResponse) => {
       const blob = res.data;
       const buffer = Buffer.from(await blob.arrayBuffer());
-      return this.pdfGenerator.fileService.uploadPdf(payoutRequest, PayoutRequestPdf, buffer, payoutRequest.approvedBy);
+      return this.pdfGenerator.fileService.uploadPdf(payoutRequest, PayoutRequestPdf, buffer, payoutRequest.requestedBy);
     }).catch((res: any) => {
       throw new Error(`PayoutRequest generation failed for ${JSON.stringify(res, null, 2)}`);
     });

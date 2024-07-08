@@ -69,6 +69,6 @@ export default class PayoutRequest extends BaseEntity {
   }
 
   createPDF(): Promise<InvoicePdf> {
-    return PayoutRequestPdfService.createPayoutRequestPDF(this.id);
+    return PayoutRequestPdfService.createPdf(this.id);
   }
 }
