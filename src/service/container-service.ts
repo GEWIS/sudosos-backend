@@ -80,7 +80,6 @@ export interface ContainerFilterParameters {
 }
 
 export default class ContainerService {
-
   public static revisionToResponse(revision: ContainerRevision): ContainerResponse | ContainerWithProductsResponse {
     const response: ContainerResponse = {
       id: revision.containerId,
