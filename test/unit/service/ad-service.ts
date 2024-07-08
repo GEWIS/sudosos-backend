@@ -367,7 +367,7 @@ describe('AD Service', (): void => {
         name: 'SudoSOS - Test',
         permissions: {
         },
-        assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: 'SudoSOS - Test', user: { id: user.id } } }) !== undefined,
+        assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: { name: 'SudoSOS - Test' }, user: { id: user.id } } }) !== undefined,
       });
 
       await ADService.syncUserRoles(roleManager);
@@ -379,8 +379,8 @@ describe('AD Service', (): void => {
       userIsAsExpected(user, newUser);
 
       const users = await ADService.getUsers([newUser as LDAPUser, existingUser as LDAPUser]);
-      expect(await AssignedRole.findOne({ where: { role: 'SudoSOS - Test', user: { id: users[0].id } } })).to.exist;
-      expect(await AssignedRole.findOne({ where: { role: 'SudoSOS - Test', user: { id: users[1].id } } })).to.exist;
+      expect(await AssignedRole.findOne({ where: { role: { name: 'SudoSOS - Test' }, user: { id: users[0].id } } })).to.exist;
+      expect(await AssignedRole.findOne({ where: { role: { name: 'SudoSOS - Test' }, user: { id: users[1].id } } })).to.exist;
     });
   });
   describe('syncUsers function', () => {

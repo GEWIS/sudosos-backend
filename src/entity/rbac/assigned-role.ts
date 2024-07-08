@@ -17,10 +17,11 @@
  */
 
 import {
-  Column, Entity, JoinColumn, ManyToOne, PrimaryColumn,
+  Entity, JoinColumn, ManyToOne, PrimaryColumn,
 } from 'typeorm';
 import BaseEntityWithoutId from '../base-entity-without-id';
 import User from '../user/user';
+import Role from './role';
 
 /**
  * @typedef {BaseEntityWithoutId} AssignedRole
@@ -36,6 +37,10 @@ export default class AssignedRole extends BaseEntityWithoutId {
   @JoinColumn({ name: 'userId' })
   public user: User;
 
-  @Column({ primary: true })
-  public role: string;
+  @PrimaryColumn()
+  public roleId: number;
+
+  @ManyToOne(() => Role, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'roleId' })
+  public role: Role;
 }

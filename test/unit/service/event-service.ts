@@ -348,7 +348,7 @@ describe('eventService', () => {
       const answers1 = await EventService.syncEventShiftAnswers(event);
       expect(eventResponse1.shifts.reduce((t, e) => t + e.answers.length, 0)).to.equal(answers1.length);
 
-      await AssignedRole.delete({ userId: roleWithUser.userId, role: roleWithUser.role });
+      await AssignedRole.delete({ userId: roleWithUser.userId, roleId: roleWithUser.roleId });
 
       const answers2 = await EventService.syncEventShiftAnswers(event);
       const removedAnswers = answers1.filter((a1) => answers2.findIndex((a2) => a2.userId === a1.user.id) === -1);
@@ -363,7 +363,7 @@ describe('eventService', () => {
       // Cleanup
       await AssignedRole.insert({
         userId: roleWithUser.userId,
-        role: roleWithUser.role,
+        roleId: roleWithUser.roleId,
         createdAt: roleWithUser.createdAt,
         updatedAt: roleWithUser.updatedAt,
         version: roleWithUser.version,
@@ -391,7 +391,7 @@ describe('eventService', () => {
       await EventService.syncAllEventShiftAnswers();
       expect(await EventShiftAnswer.findOne({ where: { eventId: event.id, shiftId: answer.shiftId, userId: answer.userId } })).to.not.be.null;
 
-      await AssignedRole.delete({ userId: roleWithUser.userId, role: roleWithUser.role });
+      await AssignedRole.delete({ userId: roleWithUser.userId, roleId: roleWithUser.roleId });
 
       await EventService.syncAllEventShiftAnswers();
       expect(await EventShiftAnswer.findOne({ where: { eventId: event.id, userId: roleWithUser.userId } })).to.be.null;
@@ -399,7 +399,7 @@ describe('eventService', () => {
       // Cleanup
       await AssignedRole.insert({
         userId: roleWithUser.userId,
-        role: roleWithUser.role,
+        roleId: roleWithUser.roleId,
         createdAt: roleWithUser.createdAt,
         updatedAt: roleWithUser.updatedAt,
         version: roleWithUser.version,
@@ -429,7 +429,7 @@ describe('eventService', () => {
       expect(event.shifts.length).to.equal(params.shiftIds.length);
 
       const users = ctx.roles
-        .filter((r) => shift.roles.includes(r.role))
+        .filter((r) => shift.roles.includes(r.role.name))
         .map((r) => r.user);
       const userIds = users.map((u) => u.id);
       const actualUserIds = Array.from(new Set(

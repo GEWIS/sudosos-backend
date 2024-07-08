@@ -20,6 +20,6 @@ import { Column, Entity } from 'typeorm';
 
 @Entity()
 export default class Role extends BaseEntity {
-  @Column()
+  @Column({ unique: true })
   public name: string;
 }

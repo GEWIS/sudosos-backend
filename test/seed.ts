@@ -383,7 +383,7 @@ export async function seedEvents(rolesWithUsers: AssignedRole[]) {
     const eventShiftAnswers1: EventShiftAnswer[] = [];
     for (let j = 0; j < ((i + 1) * 243) % 4; j += 1) {
       const shift = eventShifts[((i + j) * 13) % (eventShifts.length)];
-      const users = rolesWithUsers.filter((r) => shift.roles.includes(r.role));
+      const users = rolesWithUsers.filter((r) => shift.roles.includes(r.role.name));
       await Promise.all(users.map(async (r, k) => {
         const answer = await createEventShiftAnswer(r.user, event, shift, k);
         answer.event = event;

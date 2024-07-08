@@ -290,10 +290,10 @@ export default class RoleManager {
     if (!this.roles[role]) return undefined;
 
     // Typeorm doesnt like empty deletes.
-    const drop: AssignedRole[] = await AssignedRole.find({ where: { role } });
+    const drop: AssignedRole[] = await AssignedRole.find({ where: { role: { name: role } } });
     if (drop.length !== 0) {
       // Drop all assigned users.
-      await AssignedRole.delete({ role });
+      await AssignedRole.delete({ role: { name: role } });
     }
 
     // Assign users the role

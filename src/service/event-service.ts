@@ -124,7 +124,7 @@ export async function parseUpdateEventRequestParameters(
     // Check that every shift has at least 1 person to do the shift
     // First, get an array with tuples. The first item is the ID, the second whether the shift has any users.
     const shiftsWithUsers = await Promise.all(shifts.map(async (s) => {
-      const roles = await AssignedRole.find({ where: { role: In(s.roles) }, relations: ['user'] });
+      const roles = await AssignedRole.find({ where: { role: { name: In(s.roles) } }, relations: ['user'] });
       return [s.id, roles.length > 0];
     }));
     // Then, apply a filter to only get the shifts without users
@@ -285,7 +285,7 @@ export default class EventService {
     // Get the answer sheet for every user that can do a shift
     // Create it if it does not exist
     const answers = (await Promise.all(shifts.map(async (shift) => {
-      const users = await User.find({ where: { roles: { role: In(shift.roles) } } });
+      const users = await User.find({ where: { roles: { role: { name: In(shift.roles) } } } });
       return Promise.all(users.map(async (user) => {
         // Find the answer sheet in the database
         const dbAnswer = await EventShiftAnswer.findOne({

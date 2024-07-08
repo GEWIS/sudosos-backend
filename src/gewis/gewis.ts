@@ -360,7 +360,7 @@ export default class Gewis {
           get: { all: star },
         },
       },
-      assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: 'SudoSOS - BAC', user: { id: user.id } } }) != undefined,
+      assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: { name: 'SudoSOS - BAC' }, user: { id: user.id } } }) != undefined,
     });
 
     const admin = {
@@ -388,7 +388,7 @@ export default class Gewis {
           ...admin,
         },
       },
-      assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: 'SudoSOS - Board', user: { id: user.id } } }) != undefined,
+      assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: { name: 'SudoSOS - Board' }, user: { id: user.id } } }) != undefined,
     });
 
     /**
@@ -436,7 +436,7 @@ export default class Gewis {
           notify: { all: star },
         },
       },
-      assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: 'SudoSOS - BAC PM', user: { id: user.id } } }) != undefined,
+      assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: { name: 'SudoSOS - BAC PM' }, user: { id: user.id } } }) != undefined,
     });
 
     /**
@@ -456,7 +456,7 @@ export default class Gewis {
           get: { all: star, own: star },
         },
       },
-      assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: 'SudoSOS - Audit', user: { id: user.id } } }) != undefined,
+      assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: { name: 'SudoSOS - Audit' }, user: { id: user.id } } }) != undefined,
     });
 
     this.roleManager.registerRole({
@@ -478,7 +478,7 @@ export default class Gewis {
           get: { all: star, organ: star },
         },
       },
-      assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: 'SudoSOS - Narrowcasting', user: { id: user.id } } }) != undefined,
+      assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: { name: 'SudoSOS - Narrowcasting' }, user: { id: user.id } } }) != undefined,
     });
   }
 }
