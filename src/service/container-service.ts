@@ -104,7 +104,7 @@ export default class ContainerService {
     return response;
   }
 
-  public static  revisionSubQuery(revision?: number): string {
+  public static revisionSubQuery(revision?: number): string {
     if (revision) return `${revision}`;
     return Container
       .getRepository()
