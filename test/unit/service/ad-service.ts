@@ -35,7 +35,7 @@ import MemberAuthenticator from '../../../src/entity/authenticator/member-authen
 import { LDAPGroup, LDAPResponse, LDAPUser } from '../../../src/helpers/ad';
 import userIsAsExpected from './authentication-service';
 import RoleManager from '../../../src/rbac/role-manager';
-import AssignedRole from '../../../src/entity/roles/assigned-role';
+import AssignedRole from '../../../src/entity/rbac/assigned-role';
 import { finishTestDB, restoreLDAPEnv, storeLDAPEnv } from '../../helpers/test-helpers';
 import { truncateAllTables } from '../../setup';
 

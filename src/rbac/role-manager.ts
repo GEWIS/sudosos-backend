@@ -17,7 +17,7 @@
  */
 
 import User from '../entity/user/user';
-import AssignedRole from '../entity/roles/assigned-role';
+import AssignedRole from '../entity/rbac/assigned-role';
 
 /**
  * The assignment check is a predicate performed on a user to determine

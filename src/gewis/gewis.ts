@@ -22,7 +22,7 @@ import RoleManager from '../rbac/role-manager';
 import GewisUser from './entity/gewis-user';
 import AuthenticationService from '../service/authentication-service';
 import { asNumber } from '../helpers/validators';
-import AssignedRole from '../entity/roles/assigned-role';
+import AssignedRole from '../entity/rbac/assigned-role';
 import { bindUser, LDAPUser } from '../helpers/ad';
 import GewiswebToken from './gewisweb-token';
 import { parseRawUserToResponse, RawUser } from '../helpers/revision-to-response';

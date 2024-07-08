@@ -55,7 +55,7 @@ import StripeDepositStatus from '../entity/deposit/stripe-deposit-status';
 import PayoutRequest from '../entity/transactions/payout-request';
 import PayoutRequestStatus from '../entity/transactions/payout-request-status';
 import LDAPAuthenticator from '../entity/authenticator/ldap-authenticator';
-import AssignedRole from '../entity/roles/assigned-role';
+import AssignedRole from '../entity/rbac/assigned-role';
 import VatGroup from '../entity/vat-group';
 import LocalAuthenticator from '../entity/authenticator/local-authenticator';
 import ResetToken from '../entity/authenticator/reset-token';
@@ -75,6 +75,8 @@ import { PERSISTENT_TEST_DATABASES } from '../helpers/database';
 import PayoutRequestPdf from '../entity/file/payout-request-pdf';
 import { PayoutRequestPdf1720610649657 } from '../migrations/1720610649657-payout-request-pdf';
 import { SoftDeletes1720608140757 } from '../migrations/1720608140757-soft-deletes';
+import Role from '../entity/rbac/role';
+import Permission from '../entity/rbac/permission';
 
 // We need to load the dotenv to prevent the env from being undefined.
 dotenv.config();
@@ -144,6 +146,8 @@ const options: DataSourceOptions = {
     BaseFile,
     ProductImage,
     BannerImage,
+    Role,
+    Permission,
     AssignedRole,
     ResetToken,
     Event,

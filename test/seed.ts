@@ -60,7 +60,7 @@ import FineHandoutEvent from '../src/entity/fine/fineHandoutEvent';
 import Fine from '../src/entity/fine/fine';
 import { calculateBalance } from './helpers/balance';
 import GewisUser from '../src/gewis/entity/gewis-user';
-import AssignedRole from '../src/entity/roles/assigned-role';
+import AssignedRole from '../src/entity/rbac/assigned-role';
 import MemberAuthenticator from '../src/entity/authenticator/member-authenticator';
 
 function getDate(startDate: Date, endDate: Date, i: number): Date {

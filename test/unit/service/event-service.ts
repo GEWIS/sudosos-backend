@@ -27,7 +27,7 @@ import Database from '../../../src/database/database';
 import EventService, { CreateEventParams } from '../../../src/service/event-service';
 import { expect } from 'chai';
 import { BaseEventResponse, BaseEventShiftResponse } from '../../../src/controller/response/event-response';
-import AssignedRole from '../../../src/entity/roles/assigned-role';
+import AssignedRole from '../../../src/entity/rbac/assigned-role';
 import sinon, { SinonSandbox, SinonSpy } from 'sinon';
 import Mailer from '../../../src/mailer';
 import nodemailer, { Transporter } from 'nodemailer';

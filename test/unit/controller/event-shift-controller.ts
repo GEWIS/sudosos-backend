@@ -22,7 +22,7 @@ import { SwaggerSpecification } from 'swagger-model-validator';
 import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import EventShift from '../../../src/entity/event/event-shift';
 import EventShiftAnswer from '../../../src/entity/event/event-shift-answer';
-import AssignedRole from '../../../src/entity/roles/assigned-role';
+import AssignedRole from '../../../src/entity/rbac/assigned-role';
 import Database from '../../../src/database/database';
 import { seedEvents, seedRoles, seedUsers } from '../../seed';
 import TokenHandler from '../../../src/authentication/token-handler';

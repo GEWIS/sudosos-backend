@@ -21,7 +21,7 @@ import {
 } from 'typeorm';
 import BaseEntity from '../base-entity';
 import UserFineGroup from '../fine/userFineGroup';
-import AssignedRole from '../roles/assigned-role';
+import AssignedRole from '../rbac/assigned-role';
 
 export enum TermsOfServiceStatus {
   ACCEPTED = 'ACCEPTED',

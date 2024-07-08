@@ -41,7 +41,7 @@ import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import { RequestWithToken } from '../middleware/token-middleware';
 import { asArrayOfNumbers, asDate, asEventType, asNumber } from '../helpers/validators';
 import { PaginationParameters } from '../helpers/pagination';
-import AssignedRole from '../entity/roles/assigned-role';
+import AssignedRole from '../entity/rbac/assigned-role';
 import Mailer from '../mailer';
 import ForgotEventPlanning from '../mailer/templates/forgot-event-planning';
 import { Language } from '../mailer/templates/mail-template';
