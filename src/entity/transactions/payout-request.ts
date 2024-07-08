@@ -32,6 +32,7 @@ import { hashJSON } from '../../helpers/hash';
 import PayoutRequestPdfService from '../../service/payout-request-pdf-service';
 
 @Entity()
+// TODO Migration
 export default class PayoutRequest extends BaseEntity {
   @ManyToOne(() => User, { nullable: false })
   @JoinColumn()
@@ -68,7 +69,7 @@ export default class PayoutRequest extends BaseEntity {
     return hashJSON(PayoutRequestPdfService.getParameters(this));
   }
 
-  createPDF(): Promise<InvoicePdf> {
+  createPDF(): Promise<PayoutRequestPdf> {
     return PayoutRequestPdfService.createPdf(this.id);
   }
 }
