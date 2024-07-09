@@ -143,7 +143,7 @@ export default class PointOfSaleService {
    * Updates a PointOfSale
    * @param update - The update to apply
    */
-  public static async updatePointOfSale(update: UpdatePointOfSaleParams) {
+  public static async updatePointOfSale(update: UpdatePointOfSaleParams): Promise<PointOfSaleWithContainersResponse> {
     const base = await PointOfSale.findOne({ where: { id: update.id } });
     const containers = await Container.findByIds(update.containers);
 
@@ -169,7 +169,7 @@ export default class PointOfSaleService {
     await base.save();
 
     const options = await this.getOptions({ pointOfSaleId: base.id, returnContainers: true, returnProducts: true });
-    return (this.revisionToResponse(await PointOfSaleRevision.findOne({ ...options })));
+    return (this.revisionToResponse(await PointOfSaleRevision.findOne({ ...options }))) as PointOfSaleWithContainersResponse;
   }
 
   /**
