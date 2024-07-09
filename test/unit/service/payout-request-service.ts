@@ -28,6 +28,7 @@ import { PayoutRequestState } from '../../../src/entity/transactions/payout-requ
 import PayoutRequestRequest from '../../../src/controller/request/payout-request-request';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
+import BalanceService from "../../../src/service/balance-service";
 
 describe('PayoutRequestService', () => {
   let ctx: {
@@ -38,6 +39,20 @@ describe('PayoutRequestService', () => {
     validPayoutRequestRequest: PayoutRequestRequest,
   };
 
+  async function getValidPayoutRequest(id: number): Promise<PayoutRequestRequest> {
+    const balance = await BalanceService.getBalance(id);
+    return {
+      amount: {
+        amount: balance.amount.amount,
+        precision: balance.amount.precision,
+        currency: balance.amount.currency,
+      },
+      bankAccountNumber: 'NL22 ABNA 0528195913',
+      bankAccountName: 'Studievereniging GEWIS',
+      forId: id,
+    };
+  }
+
   before(async () => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
@@ -47,15 +62,7 @@ describe('PayoutRequestService', () => {
 
     const dineroTransformer = DineroTransformer.Instance;
 
-    const validPayoutRequestRequest: PayoutRequestRequest = {
-      amount: {
-        amount: 3900,
-        precision: 2,
-        currency: 'EUR',
-      },
-      bankAccountNumber: 'NL22 ABNA 0528195913',
-      bankAccountName: 'Studievereniging GEWIS',
-    };
+    const validPayoutRequestRequest: PayoutRequestRequest = await getValidPayoutRequest(users[0].id);
 
     ctx = {
       connection,
