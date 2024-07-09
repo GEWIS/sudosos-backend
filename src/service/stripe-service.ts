@@ -35,7 +35,7 @@ import wrapInManager from '../helpers/database';
 import BalanceResponse from '../controller/response/balance-response';
 import { StripeRequest } from '../controller/request/stripe-request';
 
-export const STRIPE_API_VERSION = '2022-08-01';
+export const STRIPE_API_VERSION = '2024-06-20';
 
 export default class StripeService {
   private stripe: Stripe;
