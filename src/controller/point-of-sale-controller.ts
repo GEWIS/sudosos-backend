@@ -23,7 +23,6 @@ import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import PointOfSaleService from '../service/point-of-sale-service';
 import ContainerService from '../service/container-service';
-import ProductService from '../service/product-service';
 import PointOfSale from '../entity/point-of-sale/point-of-sale';
 import { asNumber } from '../helpers/validators';
 import { parseRequestPagination } from '../helpers/pagination';
@@ -39,6 +38,7 @@ import {
 } from './request/validators/point-of-sale-request-spec';
 import userTokenInOrgan from '../helpers/token-helper';
 import TransactionService from '../service/transaction-service';
+import { PointOfSaleWithContainersResponse } from './response/point-of-sale-response';
 
 export default class PointOfSaleController extends BaseController {
   private logger: Logger = log4js.getLogger('PointOfSaleController');
@@ -198,7 +198,7 @@ export default class PointOfSaleController extends BaseController {
       }
 
       const pointOfSale = (await PointOfSaleService
-        .getPointsOfSale({ pointOfSaleId, returnContainers: true })).records[0];
+        .getPointsOfSale({ pointOfSaleId, returnContainers: true, returnProducts: true })).records[0];
       if (pointOfSale) {
         res.json(pointOfSale);
       }
@@ -247,7 +247,7 @@ export default class PointOfSaleController extends BaseController {
         return;
       }
 
-      res.json(await PointOfSaleService.directPointOfSaleUpdate(params));
+      res.json(await PointOfSaleService.updatePointOfSale(params));
     } catch (error) {
       this.logger.error('Could not update Point of Sale:', error);
       res.status(500).json('Internal server error.');
@@ -291,22 +291,18 @@ export default class PointOfSaleController extends BaseController {
    * @tags pointofsale - Operations of the point of sale controller
    * @security JWT
    * @param {integer} id.path.required - The id of the point of sale
-   * @param {integer} take.query - How many products the endpoint should return
-   * @param {integer} skip.query - How many products should be skipped (for pagination)
-   * @return {PaginatedProductResponse} 200 - All products of the requested Point of Sale
+   * @return {Array.<ProductResponse>} 200 - All products of the requested Point of Sale
    * @return {string} 500 - Internal server error
    */
   public async returnAllPointOfSaleProducts(req: RequestWithToken, res: Response): Promise<void> {
     const { id } = req.params;
     this.logger.trace('Get all point of sale products', id, 'by user', req.token.user);
 
-    const { take, skip } = parseRequestPagination(req);
-
     // Handle request
     try {
-      const products = await ProductService.getProducts({
-        pointOfSaleId: parseInt(id, 10),
-      }, { take, skip });
+      const pointOfSaleId = parseInt(id, 10);
+      const products = (await PointOfSaleService.getPointsOfSale({ pointOfSaleId, returnContainers: true, returnProducts: true }))
+        .records.flatMap((p: PointOfSaleWithContainersResponse) => p.containers).flatMap((c) => c.products);
       res.json(products);
     } catch (error) {
       this.logger.error('Could not return all point of sale products:', error);

@@ -24,7 +24,6 @@ import { RequestWithToken } from '../middleware/token-middleware';
 import ContainerService from '../service/container-service';
 import { PaginatedContainerResponse } from './response/container-response';
 import ContainerRevision from '../entity/container/container-revision';
-import ProductService from '../service/product-service';
 import Container from '../entity/container/container';
 import { asNumber } from '../helpers/validators';
 import { parseRequestPagination } from '../helpers/pagination';
@@ -164,9 +163,7 @@ export default class ContainerController extends BaseController {
    * @tags containers - Operations of container controller
    * @param {integer} id.path.required - The id of the container which should be returned
    * @security JWT
-   * @param {integer} take.query - How many products the endpoint should return
-   * @param {integer} skip.query - How many products should be skipped (for pagination)
-   * @return {PaginatedProductResponse} 200 - All products in the container
+   * @return {Array.<ProductResponse>} 200 - All products in the container
    * @return {string} 404 - Not found error
    * @return {string} 500 - Internal server error
    */
@@ -176,8 +173,6 @@ export default class ContainerController extends BaseController {
 
     this.logger.trace('Get all products in container', containerId, 'by user', req.token.user);
 
-    const { take, skip } = parseRequestPagination(req);
-
     try {
       // Check if we should return a 404.
       const exist = await ContainerRevision.findOne({ where: { container: { id: containerId } } });
@@ -186,7 +181,8 @@ export default class ContainerController extends BaseController {
         return;
       }
 
-      res.json(await ProductService.getProducts({ containerId }, { take, skip }));
+      const products = (await ContainerService.getSingleContainer({ containerId, returnProducts: true })).products;
+      res.json(products ? products : []);
     } catch (error) {
       this.logger.error('Could not return all products in container:', error);
       res.status(500).json('Internal server error.');
@@ -297,7 +293,7 @@ export default class ContainerController extends BaseController {
         return;
       }
 
-      res.json(await ContainerService.directContainerUpdate(request));
+      res.json(await ContainerService.updateContainer(request));
     } catch (error) {
       this.logger.error('Could not update container:', error);
       res.status(500).json('Internal server error.');

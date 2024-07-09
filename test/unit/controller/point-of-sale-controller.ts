@@ -34,7 +34,7 @@ import {
 } from '../../../src/controller/response/point-of-sale-response';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import { ContainerResponse, ContainerWithProductsResponse } from '../../../src/controller/response/container-response';
-import { PaginatedProductResponse, ProductResponse } from '../../../src/controller/response/product-response';
+import { ProductResponse } from '../../../src/controller/response/product-response';
 import {
   CreatePointOfSaleParams,
   CreatePointOfSaleRequest,
@@ -460,12 +460,14 @@ describe('PointOfSaleController', async () => {
         .get(`/pointsofsale/${id}/products`)
         .set('Authorization', `Bearer ${ctx.token}`);
       expect(res.status).to.equal(200);
-      expect(ctx.specification.validateModel(
-        'PaginatedProductResponse',
-        res.body,
-        false,
-        true,
-      ).valid).to.be.true;
+      res.body.forEach((p: ProductResponse) => {
+        expect(ctx.specification.validateModel(
+          'ProductResponse',
+          p,
+          false,
+          true,
+        ).valid).to.be.true;
+      });
     });
     it('should return an HTTP 200 and the products in the given point of sale if admin', async () => {
       const take = 5;
@@ -475,15 +477,10 @@ describe('PointOfSaleController', async () => {
         .query({ take, skip })
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
-      const products = res.body.records as ProductResponse[];
-      // eslint-disable-next-line no-underscore-dangle
-      const pagination = res.body._pagination as PaginationResult;
+      const products = res.body as ProductResponse[];
 
       expect(res.status).to.equal(200);
       expect(products.length).to.be.at.least(1);
-      expect(pagination.take).to.equal(take);
-      expect(pagination.skip).to.equal(skip);
-      expect(pagination.count).to.be.at.least(1);
     });
     it('should return an HTTP 200 and the products in the given point of sale if owner', async () => {
       const { id } = await PointOfSale.findOne({ relations: ['owner'], where: { owner: { id: ctx.user.id } } });
@@ -492,13 +489,10 @@ describe('PointOfSaleController', async () => {
         .get(`/pointsofsale/${id}/products`)
         .set('Authorization', `Bearer ${ctx.token}`);
 
-      const products = res.body.records as ProductResponse[];
-      // eslint-disable-next-line no-underscore-dangle
-      const pagination = res.body._pagination as PaginationResult;
+      const products = res.body as ProductResponse[];
 
       expect(res.status).to.equal(200);
       expect(products.length).to.be.at.least(1);
-      expect(pagination).to.not.be.undefined;
     });
     it('should return an HTTP 200 and an empty list if point of sale does not exist', async () => {
       const res = await request(ctx.app)
@@ -506,7 +500,7 @@ describe('PointOfSaleController', async () => {
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
       expect(res.status).to.equal(200);
-      expect((res.body as PaginatedProductResponse).records.length).to.equal(0);
+      expect((res.body as ProductResponse[]).length).to.equal(0);
     });
   });
 

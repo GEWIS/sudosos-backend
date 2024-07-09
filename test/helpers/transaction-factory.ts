@@ -86,6 +86,7 @@ Promise<PointOfSaleWithContainersResponse> {
       pointOfSaleId: pointOfSale.pointOfSale.id,
       pointOfSaleRevision: pointOfSale.revision,
       returnContainers: true,
+      returnProducts: true,
     },
   )).records[0] as PointOfSaleWithContainersResponse;
 }

@@ -197,7 +197,7 @@ export default class ProductController extends BaseController {
         return;
       }
 
-      res.json(await ProductService.directProductUpdate(params));
+      res.json(await ProductService.updateProduct(params));
     } catch (error) {
       this.logger.error('Could not update product:', error);
       res.status(500).json('Internal server error.');

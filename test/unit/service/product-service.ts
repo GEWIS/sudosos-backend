@@ -263,21 +263,6 @@ describe('ProductService', async (): Promise<void> => {
 
       returnsAllRevisions(records, products);
     });
-    it('should return the products belonging to a container', async () => {
-      const params: ProductFilterParameters = {
-        containerId: 3,
-      };
-      const { records } = await ProductService.getProducts(params);
-
-      const products = ctx.containerRevisions
-        .filter((rev) => {
-          const container = ctx.containers.filter((cont) => cont.id === 3)[0];
-          return rev.container.id === container.id && rev.revision === container.currentRevision;
-        })
-        .map((rev) => rev.products.map((prod) => prod.product))[0];
-
-      returnsAll(records, products);
-    });
     it('should adhere to pagination', async () => {
       const take = 5;
       const skip = 3;
@@ -290,45 +275,6 @@ describe('ProductService', async (): Promise<void> => {
       expect(_pagination.skip).to.equal(skip);
       expect(_pagination.count).to.equal(ctx.products.length);
       expect(records.length).to.be.at.most(take);
-    });
-    it('should return the products belonging to a container revision that is not current', async () => {
-      const revision = ctx.containerRevisions.find((r) => {
-        const container = ctx.containers.find((c) => c.id === r.containerId);
-        expect(container).to.not.be.undefined;
-        return r.revision < container.currentRevision && r.products.length > 0;
-      });
-      const params: ProductFilterParameters = {
-        containerId: revision.containerId,
-        containerRevision: revision.revision,
-      };
-
-      const { records } = await ProductService.getProducts(params);
-      const products = revision.products.map((p) => p.product.id);
-
-      expect(records.map((prod) => prod.id)).to.deep.equalInAnyOrder(products);
-    });
-    it('should return the products belonging to a point of sale', async () => {
-      const { records } = await ProductService
-        .getProducts({ pointOfSaleId: 1 });
-
-      const { containers } = ctx.pointOfSaleRevisions.filter((pos) => (
-        (pos.pointOfSale.id === 1 && pos.revision === pos.pointOfSale.currentRevision)))[0];
-
-      const productRevisions = (containers.map((p) => p.products.map((pr) => pr)))
-        .reduce((prev, cur) => prev.concat(cur));
-
-      const products = productRevisions.map((p) => ((
-        { product: p.product, revision: p.revision } as ProductWithRevision)));
-
-      const filteredProducts = products.reduce((acc: ProductWithRevision[], current) => {
-        if (!acc.some((item) => (
-          (item.product.id === current.product.id && item.revision === current.revision)))) {
-          acc.push(current);
-        }
-        return acc;
-      }, []);
-
-      returnsAllRevisions(records, filteredProducts);
     });
     it('should return all points of sale involving a single user and its memberAuthenticator users', async () => {
       const usersOwningAProd = [...new Set(ctx.products.map((prod) => prod.owner))];
@@ -446,7 +392,7 @@ describe('ProductService', async (): Promise<void> => {
           currency: 'EUR',
         },
       };
-      const response = await ProductService.directProductUpdate(update);
+      const response = await ProductService.updateProduct(update);
       validateProductProperties(response, update);
     });
   });
@@ -497,7 +443,7 @@ describe('ProductService', async (): Promise<void> => {
         },
       };
 
-      const updatedProduct = await ProductService.directProductUpdate(update);
+      const updatedProduct = await ProductService.updateProduct(update);
       validateProductProperties(updatedProduct, update);
 
       const containerEntity = await Container.findOne({ where: { id: container.id } });
@@ -565,7 +511,7 @@ describe('ProductService', async (): Promise<void> => {
         },
       };
 
-      await ProductService.directProductUpdate(productUpdate);
+      await ProductService.updateProduct(productUpdate);
       const productFromPos = (await PointOfSaleRevision.findOne({ where: { revision: 2, pointOfSale: { id: pos.id } }, relations: ['pointOfSale', 'containers', 'containers.products', 'containers.products.category'] })).containers[0].products[0];
 
       expect(productFromPos.name).to.eq(productUpdate.name);

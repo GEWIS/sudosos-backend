@@ -34,7 +34,7 @@ import { DineroObjectRequest } from '../controller/request/dinero-request';
 import UserFineGroup from '../entity/fine/userFineGroup';
 import { PaginationParameters } from '../helpers/pagination';
 import { parseUserToBaseResponse } from '../helpers/revision-to-response';
-import { Between, getConnection, IsNull, Not } from 'typeorm';
+import { getConnection } from 'typeorm';
 import Transfer from '../entity/transactions/transfer';
 import Mailer from '../mailer';
 import UserGotFined from '../mailer/templates/user-got-fined';

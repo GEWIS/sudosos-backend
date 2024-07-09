@@ -21,7 +21,7 @@ import BaseResponse from './base-response';
 import { PaginationResult } from '../../helpers/pagination';
 import { BaseUserResponse } from './user-response';
 import BalanceResponse from './balance-response';
-import {Dinero} from "dinero.js";
+import { Dinero } from 'dinero.js';
 
 /**
  * @typedef {object} UserToFineResponse

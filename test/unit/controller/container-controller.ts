@@ -380,13 +380,15 @@ describe('ContainerController', async (): Promise<void> => {
         .get('/containers/1/products')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
-      const valid = ctx.specification.validateModel(
-        'PaginatedProductResponse',
-        res.body,
-        false,
-        true,
-      );
-      expect(valid.valid).to.be.true;
+
+      res.body.forEach((p: ProductResponse) => {
+        expect(ctx.specification.validateModel(
+          'ProductResponse',
+          p,
+          false,
+          true,
+        ).valid).to.be.true;
+      });
     });
     it('should return an HTTP 200 and all the products in the container if admin', async () => {
       const res = await request(ctx.app)
