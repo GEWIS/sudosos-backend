@@ -26,7 +26,6 @@ import Transfer from './transfer';
 import DineroTransformer from '../transformer/dinero-transformer';
 // eslint-disable-next-line import/no-cycle
 import PayoutRequestStatus from './payout-request-status';
-import InvoicePdf from '../file/invoice-pdf';
 import PayoutRequestPdf from '../file/payout-request-pdf';
 import { hashJSON } from '../../helpers/hash';
 import PayoutRequestPdfService from '../../service/payout-request-pdf-service';

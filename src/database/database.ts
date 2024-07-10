@@ -73,6 +73,7 @@ import { InvoiceRefactor1707251162194 } from '../migrations/1707251162194-invoic
 import dotenv from 'dotenv';
 import { PERSISTENT_TEST_DATABASES } from '../helpers/database';
 import PayoutRequestPdf from "../entity/file/payout-request-pdf";
+import {PayoutRequestPdf1720610649657} from "../migrations/1720610649657-payout-request-pdf";
 
 // We need to load the dotenv to prevent the env from being undefined.
 dotenv.config();
@@ -90,7 +91,7 @@ const options: DataSourceOptions = {
   password: process.env.TYPEORM_PASSWORD,
   synchronize: process.env.TYPEORM_SYNCHRONIZE === 'true',
   logging: process.env.TYPEORM_LOGGING === 'true',
-  migrations: [InvoiceRefactor1707251162194],
+  migrations: [InvoiceRefactor1707251162194, PayoutRequestPdf1720610649657],
   extra: {
     authPlugins: {
       mysql_clear_password: () => () => Buffer.from(`${process.env.TYPEORM_PASSWORD}\0`),
