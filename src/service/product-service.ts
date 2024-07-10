@@ -19,7 +19,7 @@
 import {
   FindManyOptions,
   FindOptionsRelations,
-  FindOptionsWhere, In,
+  FindOptionsWhere, In, IsNull,
   Raw,
 
 } from 'typeorm';
@@ -32,7 +32,6 @@ import Product from '../entity/product/product';
 import ProductRevision from '../entity/product/product-revision';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
-import ContainerRevision from '../entity/container/container-revision';
 import User from '../entity/user/user';
 import CreateProductParams, { UpdateProductParams } from '../controller/request/product-request';
 import { PaginationParameters } from '../helpers/pagination';
@@ -42,6 +41,7 @@ import { asDate, asNumber } from '../helpers/validators';
 import ContainerService from './container-service';
 import { UpdateContainerParams } from '../controller/request/container-request';
 import AuthenticationService from './authentication-service';
+import { ContainerWithProductsResponse } from '../controller/response/container-response';
 
 /**
  * Define product filtering parameters used to filter query results.
@@ -278,21 +278,19 @@ export default class ProductService {
    * @param productId - The product to propagate
    */
   public static async propagateProductUpdate(productId: number) {
-    const containers = (await ContainerService.getContainers({ productId })).records;
+    const containers = (await ContainerService.getContainers({ productId, returnProducts: true })).records as ContainerWithProductsResponse[];
     // The async-for loop is intentional to prevent race-conditions.
     // To fix this the good way would be shortlived the structure of POS/Containers will be changed
     for (let i = 0; i < containers.length; i += 1) {
       const c = containers[i];
       // eslint-disable-next-line no-await-in-loop
-      await ContainerRevision.findOne({ where: { container: { id: c.id }, revision: c.revision }, relations: ['products', 'products.product'] }).then(async (revision) => {
-        const update: UpdateContainerParams = {
-          products: revision.products.map((p) => p.product.id),
-          public: c.public,
-          name: revision.name,
-          id: c.id,
-        };
-        await ContainerService.updateContainer(update);
-      });
+      const update: UpdateContainerParams = {
+        products: c.products.map((p) => p.id),
+        public: c.public,
+        name: c.name,
+        id: c.id,
+      };
+      await ContainerService.updateContainer(update);
     }
   }
 
@@ -338,12 +336,12 @@ export default class ProductService {
       category: true,
     };
 
-    const userFilter: any = {};
+    let owner: FindOptionsWhere<User> = {};
     if (user) {
       const organIds = (await AuthenticationService.getMemberAuthenticators(user)).map((u) => u.id);
-      userFilter.product = { owner: { id: In(organIds) } };
+      owner = { id: In(organIds) };
     } else if (params.ownerId) {
-      userFilter.product = { owner: { id: params.ownerId } };
+      owner = { id: params.ownerId };
     }
 
     let revisionFilter: any = {};
@@ -353,12 +351,16 @@ export default class ProductService {
     let where: FindOptionsWhere<ProductRevision> = {
       ...QueryFilter.createFilterWhereClause(filterMapping, params),
       ...revisionFilter,
-      ...userFilter,
+      product: {
+        deletedAt: IsNull(),
+        owner,
+      },
     };
 
     const options: FindManyOptions<ProductRevision> = {
       where,
       order: { name: 'ASC' },
+      withDeleted: true,
     };
 
     return { ...options, relations };

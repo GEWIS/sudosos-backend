@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { FindManyOptions, FindOptionsRelations, FindOptionsWhere, In, Raw } from 'typeorm';
+import { FindManyOptions, FindOptionsRelations, FindOptionsWhere, In, IsNull, Raw } from 'typeorm';
 import {
   ContainerResponse,
   ContainerWithProductsResponse,
@@ -36,6 +36,7 @@ import PointOfSaleService from './point-of-sale-service';
 // eslint-disable-next-line import/no-cycle
 import ProductService from './product-service';
 import AuthenticationService from './authentication-service';
+import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision';
 
 interface ContainerVisibility {
   own: boolean;
@@ -231,7 +232,7 @@ export default class ContainerService {
 
     // Only update POS that contain previous container but are current version themselves.
     const pos = containerRevision.pointsOfSale
-      .reduce((a, b) => a.concat(b), [])
+      .reduce((a: PointOfSaleRevision[], b) => a.concat(b), [])
       .filter((p) => p.revision === p.pointOfSale.currentRevision)
       .filter((p, index, self) => (
         index === self.findIndex((p2) => p.pointOfSale.id === p2.pointOfSale.id)));
@@ -297,12 +298,12 @@ export default class ContainerService {
       category: true,
     };
 
-    const userFilter: any = {};
+    let owner: FindOptionsWhere<User> = {};
     if (user) {
       const organIds = (await AuthenticationService.getMemberAuthenticators(user)).map((u) => u.id);
-      userFilter.container = { owner: { id: In(organIds) } };
+      owner = { id: In(organIds) };
     } else if (params.ownerId) {
-      userFilter.container = { owner: { id: params.ownerId } };
+      owner = { id: params.ownerId };
     }
 
     let revisionFilter: any = {};
@@ -314,16 +315,28 @@ export default class ContainerService {
     let where: FindOptionsWhere<ContainerRevision> = {
       ...QueryFilter.createFilterWhereClause(filterMapping, params),
       ...revisionFilter,
-      ...userFilter,
       pointsOfSale: {
         pointOfSaleId: params.posId,
         revision: params.posRevision,
+        pointOfSale: {
+          deletedAt: IsNull(),
+        },
+      },
+      container: {
+        deletedAt: IsNull(),
+        owner,
+      },
+      products: {
+        product: {
+          deletedAt: IsNull(),
+        },
       },
     };
 
     const options: FindManyOptions<ContainerRevision> = {
       where,
       order: { createdAt: 'ASC' },
+      withDeleted: true,
     };
 
     return { ...options, relations };

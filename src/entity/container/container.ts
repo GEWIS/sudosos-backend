@@ -41,7 +41,7 @@ export default class Container extends BaseEntity {
   @DeleteDateColumn()
   public readonly deletedAt: Date | null;
 
-  @ManyToOne(() => User, { nullable: false })
+  @ManyToOne(() => User, { nullable: false, eager: true })
   public owner: User;
 
   @Column({
