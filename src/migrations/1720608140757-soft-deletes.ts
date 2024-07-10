@@ -37,9 +37,9 @@ export class SoftDeletes1720608140757 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.dropColumn('product', 'deletedAt');
-    await queryRunner.dropColumn('container', 'deletedAt');
-    await queryRunner.dropColumn('point_of_sale', 'deletedAt');
+    await queryRunner.query('ALTER TABLE product DROP COLUMN deletedAt');
+    await queryRunner.query('ALTER TABLE container DROP COLUMN deletedAt');
+    await queryRunner.query('ALTER TABLE point_of_sale DROP COLUMN deletedAt');
   }
 
 }
