@@ -164,6 +164,7 @@ export default class RoleManager {
 
   public async initialize() {
     this.loadRolesFromDatabase().catch((error) => this.logger.error(error));
+    return this;
   }
 
 

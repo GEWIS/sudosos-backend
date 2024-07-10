@@ -20,10 +20,12 @@ import Permission from '../../src/entity/rbac/permission';
 import User, { UserType } from '../../src/entity/user/user';
 import { DeepPartial } from 'typeorm';
 import AssignedRole from '../../src/entity/rbac/assigned-role';
+import { RoleDefinition } from '../../src/rbac/role-manager';
+import JsonWebToken from '../../src/authentication/json-web-token';
 
 export interface SeededRole {
   role: Role,
-  assignmentCheck?: (user: User) => boolean;
+  assignmentCheck?: (user: User) => boolean | Promise<boolean>;
 }
 
 export interface RolesPermissionsSeedResult {
@@ -33,25 +35,72 @@ export interface RolesPermissionsSeedResult {
 
 const star = ['*'];
 
-export default async function seedRolesWithPermissions(users: User[]) {
-  const getAdminPermissions = (role: Role, entity: string, relationOwn = true): DeepPartial<Permission>[] => {
-    const result = [
-      { roleId: role.id, role, entity, action: 'get', relation: 'all', attributes: star },
-      { roleId: role.id, role, entity, action: 'update', relation: 'all', attributes: star },
-      { roleId: role.id, role, entity, action: 'create', relation: 'all', attributes: star },
-      { roleId: role.id, role, entity, action: 'delete', relation: 'all', attributes: star },
-      { roleId: role.id, role, entity, action: 'approve', relation: 'all', attributes: star },
-    ];
-    if (!relationOwn) return result;
-    return [
-      ...result,
-      { roleId: role.id, role, entity, action: 'get', relation: 'own', attributes: star },
-      { roleId: role.id, role, entity, action: 'update', relation: 'own', attributes: star },
-      { roleId: role.id, role, entity, action: 'create', relation: 'own', attributes: star },
-      { roleId: role.id, role, entity, action: 'delete', relation: 'own', attributes: star },
-      { roleId: role.id, role, entity, action: 'approve', relation: 'own', attributes: star },
-    ];
+function getAdminPermissions(role: Role, entity: string, relationOwn = true): DeepPartial<Permission>[] {
+  const result = [
+    { roleId: role.id, role, entity, action: 'get', relation: 'all', attributes: star },
+    { roleId: role.id, role, entity, action: 'update', relation: 'all', attributes: star },
+    { roleId: role.id, role, entity, action: 'create', relation: 'all', attributes: star },
+    { roleId: role.id, role, entity, action: 'delete', relation: 'all', attributes: star },
+    { roleId: role.id, role, entity, action: 'approve', relation: 'all', attributes: star },
+  ];
+  if (!relationOwn) return result;
+  return [
+    ...result,
+    { roleId: role.id, role, entity, action: 'get', relation: 'own', attributes: star },
+    { roleId: role.id, role, entity, action: 'update', relation: 'own', attributes: star },
+    { roleId: role.id, role, entity, action: 'create', relation: 'own', attributes: star },
+    { roleId: role.id, role, entity, action: 'delete', relation: 'own', attributes: star },
+    { roleId: role.id, role, entity, action: 'approve', relation: 'own', attributes: star },
+  ];
+}
+
+export async function seedRole(roles: RoleDefinition[]): Promise<SeededRole[]> {
+  return Promise.all(roles.map((role) => Role.save({ name: role.name }).then(async (r): Promise<SeededRole> => {
+    const permissions: DeepPartial<Permission>[] = [];
+    Object.keys(role.permissions).forEach(entity => {
+      Object.keys(role.permissions[entity]).forEach((action) => {
+        Object.keys(role.permissions[entity][action]).forEach((relation) => {
+          const attributes = Array.from(role.permissions[entity][action][relation]);
+          permissions.push({ roleId: r.id, role: r, entity, action, relation, attributes });
+        });
+      });
+    });
+    r.permissions = await Permission.save(permissions);
+    return {
+      role: r,
+      assignmentCheck: role.assignmentCheck,
+    };
+  })));
+}
+
+async function assignRole(user: User, { role, assignmentCheck }: SeededRole): Promise<AssignedRole | undefined> {
+  if (!assignmentCheck || !await assignmentCheck(user)) {
+    return undefined;
+  }
+  // if (user.roles) {
+  //   user.roles.push(assignment);
+  // } else {
+  //   user.roles = [assignment];
+  // }
+  return await AssignedRole.save({ roleId: role.id, role, userId: user.id }) as AssignedRole;
+}
+
+async function assignRoles(user: User, roles: SeededRole[]): Promise<AssignedRole[]> {
+  const assignments = await Promise.all(roles.map((r) => assignRole(user, r)));
+  return assignments.filter((a) => a !== undefined);
+}
+
+export async function getToken(user: User, roles: SeededRole[], organs?: User[], lesser = false): Promise<JsonWebToken> {
+  const assignments = await assignRoles(user, roles);
+  return {
+    user,
+    roles: assignments.map((a) => a.role.name),
+    organs,
+    lesser,
   };
+}
+
+export async function seedProductionRolesWithPermissions(users: User[]) {
 
   const nonHumanUserTypes = new Set([UserType.INTEGRATION]);
   const userRole = await Role.save({ name: 'User' } as DeepPartial<Role>).then(async (role): Promise<SeededRole> => {
@@ -224,17 +273,8 @@ export default async function seedRolesWithPermissions(users: User[]) {
   // }
 
   const assignments = (await Promise.all(users.map(async (user) => {
-    return Promise.all(roles.map(async ({ role, assignmentCheck }) => {
-      if (!assignmentCheck || !assignmentCheck(user)) {
-        return;
-      }
-      const assignment = await AssignedRole.save({ roleId: role.id, role, userId: user.id }) as AssignedRole;
-      if (user.roles) {
-        user.roles.push(assignment);
-      } else {
-        user.roles = [assignment];
-      }
-      return assignment;
+    return Promise.all(roles.map(async (role) => {
+      return assignRole(user, role);
     }));
   }))).flat().filter((a) => a != null);
 

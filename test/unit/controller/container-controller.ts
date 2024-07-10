@@ -48,6 +48,7 @@ import ContainerRevision from '../../../src/entity/container/container-revision'
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import Product from '../../../src/entity/product/product';
+import { getToken, seedRole } from '../../seed/rbac';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -138,11 +139,6 @@ describe('ContainerController', async (): Promise<void> => {
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
-    const adminToken = await tokenHandler.signToken({ user: adminUser, roles: ['Admin'], lesser: false }, 'nonce admin');
-    const token = await tokenHandler.signToken({ user: localUser, roles: ['User'], lesser: false }, 'nonce');
-    const organMemberToken = await tokenHandler.signToken({
-      user: localUser, roles: ['User', 'Seller'], organs: [organ], lesser: false,
-    }, '1');
 
     const validContainerUpdate: UpdateContainerRequest = {
       products: products.filter((p) => p.deletedAt == null).slice(0, 2).map((p) => p.id),
@@ -163,8 +159,7 @@ describe('ContainerController', async (): Promise<void> => {
     const own = { own: new Set<string>(['*']), public: new Set<string>(['*']) };
     const organRole = { organ: new Set<string>(['*']) };
 
-    const roleManager = new RoleManager();
-    roleManager.registerRole({
+    const roles = await seedRole([{
       name: 'Admin',
       permissions: {
         Container: {
@@ -176,9 +171,7 @@ describe('ContainerController', async (): Promise<void> => {
         },
       },
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
-    });
-
-    roleManager.registerRole({
+    }, {
       name: 'User',
       permissions: {
         Container: {
@@ -189,9 +182,7 @@ describe('ContainerController', async (): Promise<void> => {
         },
       },
       assignmentCheck: async (user: User) => user.type === UserType.MEMBER,
-    });
-
-    roleManager.registerRole({
+    }, {
       name: 'Seller',
       permissions: {
         Container: {
@@ -199,7 +190,12 @@ describe('ContainerController', async (): Promise<void> => {
         },
       },
       assignmentCheck: async () => true,
-    });
+    }]);
+    const roleManager = await new RoleManager().initialize();
+
+    const adminToken = await tokenHandler.signToken(await getToken(adminUser, roles), 'nonce admin');
+    const token = await tokenHandler.signToken(await getToken(localUser, roles), 'nonce');
+    const organMemberToken = await tokenHandler.signToken(await getToken(localUser, roles, [organ]), 'nonce organ');
 
     const controller = new ContainerController({ specification, roleManager });
     app.use(json());

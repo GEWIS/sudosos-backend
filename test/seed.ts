@@ -62,7 +62,7 @@ import { calculateBalance } from './helpers/balance';
 import GewisUser from '../src/gewis/entity/gewis-user';
 import AssignedRole from '../src/entity/rbac/assigned-role';
 import MemberAuthenticator from '../src/entity/authenticator/member-authenticator';
-import seedRolesWithPermissions, { SeededRole } from './seed/rbac';
+import { SeededRole, seedProductionRolesWithPermissions } from './seed/rbac';
 
 function getDate(startDate: Date, endDate: Date, i: number): Date {
   const diff = endDate.getTime() - startDate.getTime();
@@ -1415,7 +1415,7 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
   const { pointsOfSale, pointOfSaleRevisions } = await seedPointsOfSale(
     users, containerRevisions,
   );
-  const { roles, assignments: roleAssignments } = await seedRolesWithPermissions(users);
+  const { roles, assignments: roleAssignments } = await seedProductionRolesWithPermissions(users);
   const { events, eventShifts, eventShiftAnswers } = await seedEvents(roleAssignments);
   const { transactions } = await seedTransactions(users, pointOfSaleRevisions);
   const transfers = await seedTransfers(users);

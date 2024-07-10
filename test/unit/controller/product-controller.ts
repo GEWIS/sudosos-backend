@@ -48,8 +48,8 @@ import { DiskStorage } from '../../../src/files/storage';
 import VatGroup from '../../../src/entity/vat-group';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
+import { seedProductionRolesWithPermissions } from '../../seed/rbac';
 import ProductRevision from '../../../src/entity/product/product-revision';
-import seedRolesWithPermissions from '../../seed/rbac';
 
 /**
  * Tests if a product response is equal to the request.
@@ -141,7 +141,7 @@ describe('ProductController', async (): Promise<void> => {
     const categories = await seedProductCategories();
     const vatGroups = await seedVatGroups();
     const { products } = await seedProducts(users, categories, vatGroups);
-    await seedRolesWithPermissions(users);
+    await seedProductionRolesWithPermissions(users);
 
     // create bearer tokens
     const tokenHandler = new TokenHandler({
