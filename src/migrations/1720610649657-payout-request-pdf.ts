@@ -26,42 +26,48 @@ export class PayoutRequestPdf1720610649657 implements MigrationInterface {
       columns: [
         {
           name: 'id',
-          type: 'int',
+          type: 'integer',
           isPrimary: true,
           isGenerated: true,
           generationStrategy: 'increment',
         },
         {
           name: 'hash',
-          type: 'varchar',
+          type: 'varchar(255)',
+          isNullable: false,
         },
         {
           name: 'downloadName',
-          type: 'varchar',
+          type: 'varchar(255)',
+          isNullable: false,
         },
         {
           name: 'location',
-          type: 'varchar',
+          type: 'varchar(255)',
+          isNullable: false,
         },
         {
           name: 'createdById',
-          type: 'int',
+          type: 'integer',
+          isNullable: false,
         },
         {
           name: 'createdAt',
-          type: 'timestamp',
-          default: 'CURRENT_TIMESTAMP',
+          type: 'datetime(6)',
+          default: 'current_timestamp',
+          isNullable: false,
         },
         {
           name: 'updatedAt',
-          type: 'timestamp',
-          default: 'CURRENT_TIMESTAMP',
-          onUpdate: 'CURRENT_TIMESTAMP',
+          type: 'datetime(6)',
+          default: 'current_timestamp',
+          onUpdate: 'current_timestamp',
+          isNullable: false,
         },
         {
           name: 'version',
-          type: 'int',
-          default: 1,
+          type: 'integer',
+          isNullable: false,
         },
       ],
     }), true);
@@ -75,7 +81,7 @@ export class PayoutRequestPdf1720610649657 implements MigrationInterface {
 
     await queryRunner.addColumn('payout_request', new TableColumn({
       name: 'pdfId',
-      type: 'int',
+      type: 'integer',
       isNullable: true,
     }));
 
