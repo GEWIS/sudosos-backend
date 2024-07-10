@@ -60,6 +60,9 @@ export default class PayoutRequest extends BaseEntity {
   @Column()
   public bankAccountName: string;
 
+  @Column({ nullable: true })
+  public pdfId?: number;
+
   @OneToOne(() => PayoutRequestPdf, { nullable: true, onDelete: 'RESTRICT' })
   @JoinColumn()
   public pdf?: PayoutRequestPdf;
