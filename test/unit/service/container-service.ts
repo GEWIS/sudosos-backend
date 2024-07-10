@@ -41,7 +41,7 @@ import {
   UpdateContainerParams,
 } from '../../../src/controller/request/container-request';
 import PointOfSaleService from '../../../src/service/point-of-sale-service';
-import { CreatePointOfSaleParams, UpdatePointOfSaleParams } from '../../../src/controller/request/point-of-sale-request';
+import { CreatePointOfSaleParams } from '../../../src/controller/request/point-of-sale-request';
 import AuthenticationService from '../../../src/service/authentication-service';
 import MemberAuthenticator from '../../../src/entity/authenticator/member-authenticator';
 import { truncateAllTables } from '../../setup';
@@ -428,6 +428,7 @@ describe('ContainerService', async (): Promise<void> => {
         .some((c) => c.revision === revision.revision && c.containerId === revision.containerId && c.container.deletedAt == null))
         .filter((p) => p.pointOfSale.deletedAt == null)
         .filter((p) => p.revision === p.pointOfSale.currentRevision);
+      expect(stub.callCount).to.be.greaterThan(0);
       expect(stub.callCount).to.equal(pointOfSaleRevisions.length);
       for (let i = 0; i < stub.callCount; i += 1) {
         const call = stub.getCall(i);

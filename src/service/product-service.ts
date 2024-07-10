@@ -41,7 +41,7 @@ import { asDate, asNumber } from '../helpers/validators';
 import ContainerService from './container-service';
 import { UpdateContainerParams } from '../controller/request/container-request';
 import AuthenticationService from './authentication-service';
-import { ContainerWithProductsResponse } from '../controller/response/container-response';
+import ContainerRevision from '../entity/container/container-revision';
 
 /**
  * Define product filtering parameters used to filter query results.
@@ -104,6 +104,8 @@ export interface ProductFilterParameters {
    * Filter on shown on narrowcasting screens
    */
   priceList?: boolean;
+
+  returnContainers?: boolean;
 }
 
 // TODO Add filtering to get products query
@@ -270,6 +272,25 @@ export default class ProductService {
   }
 
   /**
+   * Given a set of containers, update those containers
+   * (for example when one of their products are updated/deleted)
+   * @private
+   */
+  private static async executePropagation(containers: ContainerRevision[]) {
+    // Deleted containers might still be given, so we filter these manually to prevent unnecessary updates
+    const cont = containers.filter((c) => c.container && c.container.deletedAt == null);
+    for (const c of cont) {
+      const update: UpdateContainerParams = {
+        products: c.products.map((p) => p.productId),
+        public: c.container.public,
+        name: c.name,
+        id: c.containerId,
+      };
+      await ContainerService.updateContainer(update);
+    }
+  }
+
+  /**
    * Propagates the product update to all parent containers
    *
    * All containers that contain the previous version of this product
@@ -278,20 +299,19 @@ export default class ProductService {
    * @param productId - The product to propagate
    */
   public static async propagateProductUpdate(productId: number) {
-    const containers = (await ContainerService.getContainers({ productId, returnProducts: true })).records as ContainerWithProductsResponse[];
-    // The async-for loop is intentional to prevent race-conditions.
-    // To fix this the good way would be shortlived the structure of POS/Containers will be changed
-    for (let i = 0; i < containers.length; i += 1) {
-      const c = containers[i];
-      // eslint-disable-next-line no-await-in-loop
-      const update: UpdateContainerParams = {
-        products: c.products.map((p) => p.id),
-        public: c.public,
-        name: c.name,
-        id: c.id,
-      };
-      await ContainerService.updateContainer(update);
-    }
+    let options = await this.getOptions({ productId, returnContainers: true });
+    // Get previous revision of container.
+    (options.where as FindOptionsWhere<ContainerRevision>).revision = Raw(alias => `${alias}  = (${this.revisionSubQuery()}) - 1`);
+    const productRevision = await ProductRevision.findOne(options);
+
+    if (productRevision == null) return;
+
+    const containers = productRevision.containers
+      .filter((c) => c.container.deletedAt == null && c.revision === c.container.currentRevision)
+      .filter((c, index, self) => (
+        index === self.findIndex((c2) => c.container.id === c2.container.id)));
+
+    return this.executePropagation(containers);
   }
 
   /**
@@ -299,11 +319,17 @@ export default class ProductService {
    * @param productId
    */
   public static async deleteProduct(productId: number): Promise<void> {
-    const product = await Product.findOne({ where: { id: productId } });
-    if (product == null) {
+    const options = await this.getOptions({ productId, returnContainers: true });
+    const productRevision = await ProductRevision.findOne(options);
+    if (productRevision == null) {
       throw new Error('Product not found!');
     }
-    await Product.softRemove(product);
+
+    const { containers } = productRevision;
+    containers.forEach((c => c.products = c.products.filter((p) => p.productId !== productId)));
+    await this.executePropagation(containers);
+
+    await Product.softRemove(productRevision.product);
   }
 
   /**
@@ -334,6 +360,11 @@ export default class ProductService {
       },
       vat: true,
       category: true,
+    };
+
+    if (params.returnContainers) relations.containers = {
+      container: true,
+      products: true,
     };
 
     let owner: FindOptionsWhere<User> = {};

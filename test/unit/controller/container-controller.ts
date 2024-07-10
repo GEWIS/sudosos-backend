@@ -40,7 +40,7 @@ import {
   ContainerWithProductsResponse,
   PaginatedContainerResponse,
 } from '../../../src/controller/response/container-response';
-import { PaginatedProductResponse, ProductResponse } from '../../../src/controller/response/product-response';
+import { ProductResponse } from '../../../src/controller/response/product-response';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import { CreateContainerRequest, UpdateContainerRequest } from '../../../src/controller/request/container-request';
 import { INVALID_ORGAN_ID, INVALID_PRODUCT_ID } from '../../../src/controller/request/validators/validation-errors';
@@ -399,7 +399,6 @@ describe('ContainerController', async (): Promise<void> => {
           true,
         ).valid).to.be.true;
       });
-      expect(res.body.length);
     });
     it('should return an HTTP 200 and all the products in the container if admin', async () => {
       const res = await request(ctx.app)

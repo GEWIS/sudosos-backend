@@ -49,6 +49,8 @@ import MemberAuthenticator from '../../../src/entity/authenticator/member-authen
 import AuthenticationService from '../../../src/service/authentication-service';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
+import sinon from 'sinon';
+import { ContainerWithProductsResponse } from '../../../src/controller/response/container-response';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -72,6 +74,7 @@ function correctPriceExclVat(response: ProductResponse) {
  */
 function returnsAll(response: ProductResponse[], superset: Product[]) {
   expect(response).to.not.be.empty;
+  expect(response.length).to.equal(superset.length);
   const temp = superset.map((prod) => ({
     id: prod.id, ownerid: prod.owner.id, image: prod.image != null ? prod.image.downloadName : null,
   }));
@@ -193,7 +196,7 @@ describe('ProductService', async (): Promise<void> => {
   describe('getProducts function', () => {
     it('should return all products with no input specification', async () => {
       // eslint-disable-next-line @typescript-eslint/naming-convention
-      const { records, _pagination } = await ProductService.getProducts();
+      const { records, _pagination } = await ProductService.getProducts({ returnContainers: true });
 
       const products = ctx.products.filter((prod) => prod.currentRevision !== null);
 
@@ -282,7 +285,7 @@ describe('ProductService', async (): Promise<void> => {
       expect(_pagination.count).to.equal(ctx.products.length);
       expect(records.length).to.be.at.most(take);
     });
-    it('should return all points of sale involving a single user and its memberAuthenticator users', async () => {
+    it('should return all products involving a single user and its memberAuthenticator users', async () => {
       const usersOwningAProd = [...new Set(ctx.products.map((prod) => prod.owner))];
       const owner = usersOwningAProd[0];
 
@@ -356,7 +359,7 @@ describe('ProductService', async (): Promise<void> => {
   });
 
   describe('createProduct function', () => {
-    it('should create the product without update if approve is true', async () => {
+    it('should create the product', async () => {
       const creation: CreateProductParams = {
         alcoholPercentage: 0,
         category: 1,
@@ -379,14 +382,19 @@ describe('ProductService', async (): Promise<void> => {
       expect(entity.currentRevision).to.eq(1);
 
       // Cleanup
-      await ProductRevision.delete({ productId: response.id, revision: response.revision });
+      await ProductRevision.delete({ productId: response.id });
       await Product.delete({ id: response.id });
     });
   });
 
-  describe('directProductUpdate', () => {
-    it('should revise the product without creating a UpdatedProduct', async () => {
-      const product = await Product.findOne({ where: {} });
+  describe('updateProduct', () => {
+    it('should update a product', async () => {
+      const owner = ctx.users[0];
+      const product = await Product.save({
+        owner,
+      });
+      expect(product.currentRevision).to.be.null;
+
       const update: UpdateProductParams = {
         alcoholPercentage: 10,
         category: 1,
@@ -402,8 +410,19 @@ describe('ProductService', async (): Promise<void> => {
           currency: 'EUR',
         },
       };
-      const response = await ProductService.updateProduct(update);
+      let response = await ProductService.updateProduct(update);
       validateProductProperties(response, update);
+
+      const update2: UpdateProductParams = {
+        ...update,
+        alcoholPercentage: 20,
+      };
+      response = await ProductService.updateProduct(update2);
+      validateProductProperties(response, update2);
+
+      // Cleanup
+      await ProductRevision.delete({ productId: product.id });
+      await Product.delete({ id: product.id });
     });
   });
 
@@ -544,8 +563,14 @@ describe('ProductService', async (): Promise<void> => {
       await Product.delete({ id: product.id });
     });
   });
+
   describe('deleteProduct function', () => {
-    it('should soft delete product', async () => {
+    it('should soft delete product and propagate to containers', async () => {
+      const stub = sinon.stub(ContainerService, 'updateContainer').callsFake(async (params): Promise<ContainerWithProductsResponse> => {
+        const container = await ContainerService.getContainers({ containerId: params.id, returnProducts: true });
+        return container.records[0] as ContainerWithProductsResponse;
+      });
+
       const start = Math.floor(new Date().getTime() / 1000) * 1000;
       const product = ctx.products[0];
       let dbProduct = await Product.findOne({ where: { id: product.id }, withDeleted: true });
@@ -563,8 +588,29 @@ describe('ProductService', async (): Promise<void> => {
       const deletedProducts = await Product.find({ where: { deletedAt: Not(IsNull()) }, withDeleted: true });
       expect(deletedProducts.length).to.equal(ctx.deletedProducts.length + 1);
 
+      // Propagated update
+      const revision = ctx.productRevisions.find((p) => p.productId === product.id && p.revision === product.currentRevision);
+      const containerRevisions = ctx.containerRevisions.filter((c) => c.products
+        .some((p) => p.revision === revision.revision && p.productId === revision.productId && p.product.deletedAt == null))
+        .filter((c) => c.container.deletedAt == null)
+        .filter((c) => c.revision === c.container.currentRevision);
+      expect(stub.callCount).to.be.greaterThan(0);
+      expect(stub.callCount).to.equal(containerRevisions.length);
+      for (let i = 0; i < stub.callCount; i += 1) {
+        const call = stub.getCall(i);
+        const container = containerRevisions[i];
+        expect(call.args).to.deep.equalInAnyOrder([{
+          id: container.containerId,
+          name: container.name,
+          public: container.container.public,
+          products: container.products
+            .filter((p) => p.productId !== product.id)
+            .map((p) => p.productId),
+        }]);
+      }
       // Revert state
       await dbProduct.recover();
+      stub.restore();
     });
     it('should throw error for non existent product', async () => {
       const productId = ctx.products.length + ctx.deletedProducts.length + 2;

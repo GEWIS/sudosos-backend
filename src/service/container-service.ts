@@ -172,6 +172,8 @@ export default class ContainerService {
   public static async updateContainer(update: UpdateContainerParams): Promise<ContainerWithProductsResponse> {
     const base = await Container.findOne({ where: { id: update.id } });
 
+    if (base == null) throw new Error('Container not found.');
+
     // Get the latest products
     const opt = await ProductService.getOptions({});
     const where = { ...opt.where, product: { id: In(update.products) } };
@@ -227,7 +229,9 @@ export default class ContainerService {
    * @private
    */
   private static async executePropagation(pointsOfSale: PointOfSaleRevision[]) {
-    for (const p of pointsOfSale) {
+    // Deleted points of sale might still be given, so we filter these manually to prevent unnecessary updates
+    const pos = pointsOfSale.filter((p) => p.pointOfSale && p.pointOfSale.deletedAt == null);
+    for (const p of pos) {
       const update: UpdatePointOfSaleParams = {
         containers: p.containers.filter((c) => c.container.deletedAt == null).map((c: ContainerRevision) => c.container.id),
         useAuthentication: p.useAuthentication,
@@ -257,7 +261,7 @@ export default class ContainerService {
 
     // Only update POS that contain previous container but are current version themselves.
     const pos = containerRevision.pointsOfSale
-      .filter((p) => p.revision === p.pointOfSale.currentRevision)
+      .filter((p) => p.pointOfSale.deletedAt == null && p.revision === p.pointOfSale.currentRevision)
       .filter((p, index, self) => (
         index === self.findIndex((p2) => p.pointOfSale.id === p2.pointOfSale.id)));
 
@@ -328,9 +332,6 @@ export default class ContainerService {
       pointsOfSale: {
         pointOfSaleId: params.posId,
         revision: params.posRevision,
-        pointOfSale: {
-          deletedAt: IsNull(),
-        },
       },
       container: {
         deletedAt: IsNull(),

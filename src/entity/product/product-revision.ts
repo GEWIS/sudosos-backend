@@ -19,7 +19,7 @@
 import {
   BeforeUpdate,
   Column,
-  Entity, JoinColumn,
+  Entity, JoinColumn, ManyToMany,
   ManyToOne, PrimaryColumn,
 } from 'typeorm';
 import Product from './product';
@@ -28,6 +28,7 @@ import { Dinero } from 'dinero.js';
 import VatGroup from '../vat-group';
 import ProductCategory from './product-category';
 import BaseEntityWithoutId from '../base-entity-without-id';
+import ContainerRevision from '../container/container-revision';
 
 /**
  * @typedef {BaseEntityWithoutId} ProductRevision
@@ -105,6 +106,9 @@ export default class ProductRevision extends BaseEntityWithoutId {
     default: false,
   })
   public  priceList: boolean;
+
+  @ManyToMany(() => ContainerRevision, (container) => container.products)
+  public containers: ContainerRevision[];
 
   @BeforeUpdate()
   // eslint-disable-next-line class-methods-use-this
