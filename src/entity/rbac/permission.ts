@@ -41,4 +41,11 @@ export default class Permission extends BaseEntity {
     from: (val: string) => JSON.parse(val),
   } })
   public attributes: string[];
+
+  /**
+   * Get a unique string identifier for this permission, that consists of the composite primary key
+   */
+  public get identifier(): string {
+    return `${this.roleId}-${this.entity}-${this.action}-${this.relation}`;
+  }
 }

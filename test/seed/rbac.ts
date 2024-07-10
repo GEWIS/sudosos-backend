@@ -73,7 +73,7 @@ export async function seedRole(roles: RoleDefinition[]): Promise<SeededRole[]> {
   })));
 }
 
-async function assignRole(user: User, { role, assignmentCheck }: SeededRole): Promise<AssignedRole | undefined> {
+export async function assignRole(user: User, { role, assignmentCheck }: SeededRole): Promise<AssignedRole | undefined> {
   if (!assignmentCheck || !await assignmentCheck(user)) {
     return undefined;
   }
@@ -85,7 +85,7 @@ async function assignRole(user: User, { role, assignmentCheck }: SeededRole): Pr
   return await AssignedRole.save({ roleId: role.id, role, userId: user.id }) as AssignedRole;
 }
 
-async function assignRoles(user: User, roles: SeededRole[]): Promise<AssignedRole[]> {
+export async function assignRoles(user: User, roles: SeededRole[]): Promise<AssignedRole[]> {
   const assignments = await Promise.all(roles.map((r) => assignRole(user, r)));
   return assignments.filter((a) => a !== undefined);
 }

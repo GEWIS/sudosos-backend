@@ -18,7 +18,6 @@
 
 import User from '../entity/user/user';
 import AssignedRole from '../entity/rbac/assigned-role';
-import { AppDataSource } from '../database/database';
 import Role from '../entity/rbac/role';
 import log4js, { Logger } from 'log4js';
 
@@ -234,13 +233,13 @@ export default class RoleManager {
    *    used to verify that the user is allowed to access all properties.
    * @returns {boolean} - True if access is allowed, false otherwise.
    */
-  public can(
+  public async can(
     roles: string | string[],
     action: string,
     relations: string | string[],
     entity: string,
     attributes: AllowedAttribute[],
-  ): boolean {
+  ): Promise<boolean> {
     if (process.env.NODE_ENV === 'development') return true;
 
     // Convert roles to array if a single role is given.
@@ -298,11 +297,8 @@ export default class RoleManager {
    * @returns a list of role names.
    */
   public async getRoles(user: User): Promise<string[]> {
-    const roles = Object.keys(this.roles);
-    const results = await Promise.all(
-      roles.map((name): Promise<boolean> => this.roles[name].assignmentCheck(user)),
-    );
-    return roles.filter((_: string, index: number): boolean => results[index]);
+    const roles = await user.getRoles();
+    return roles.map((r) => r.name);
   }
 
   /**

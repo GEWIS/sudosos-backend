@@ -137,18 +137,25 @@ export default class AuthenticationService {
    * @param token - The JWT token that can be used to authenticate.
    * @returns The authentication response.
    */
-  public static asAuthenticationResponse(
+  public static async asAuthenticationResponse(
     user: User,
     roles: string[],
     organs: User[],
     token: string,
-  ): AuthenticationResponse {
+  ): Promise<AuthenticationResponse> {
     return {
       user: parseUserToResponse(user, true),
       organs: organs.map((organ) => parseUserToResponse(organ, false)),
       roles,
       token,
       acceptedToS: user.acceptedToS,
+      permissions: (await user.getPermissions())
+        .map((p) => ({
+          entity: p.entity,
+          action: p.action,
+          relationship: p.relation,
+          attributes: p.attributes,
+        })),
     };
   }
 

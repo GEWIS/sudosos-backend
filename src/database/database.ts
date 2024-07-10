@@ -77,7 +77,7 @@ import { PayoutRequestPdf1720610649657 } from '../migrations/1720610649657-payou
 import { SoftDeletes1720608140757 } from '../migrations/1720608140757-soft-deletes';
 import Role from '../entity/rbac/role';
 import Permission from '../entity/rbac/permission';
-import { DatabaseRbac1720435247260 } from '../migrations/1720435247260-database-rbac';
+import { DatabaseRbac1720624912620 } from '../migrations/1720624912260-database-rbac';
 
 // We need to load the dotenv to prevent the env from being undefined.
 dotenv.config();
@@ -99,7 +99,7 @@ const options: DataSourceOptions = {
     InvoiceRefactor1707251162194,
     SoftDeletes1720608140757,
     PayoutRequestPdf1720610649657,
-    DatabaseRbac1720435247260,
+    DatabaseRbac1720624912620,
   ],
   extra: {
     authPlugins: {

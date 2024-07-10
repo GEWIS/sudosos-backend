@@ -19,7 +19,7 @@ import { MigrationInterface, QueryRunner, Table, TableColumn, TableForeignKey } 
 import AssignedRole from '../entity/rbac/assigned-role';
 import Role from '../entity/rbac/role';
 
-export class DatabaseRbac1720435247260 implements MigrationInterface {
+export class DatabaseRbac1720624912620 implements MigrationInterface {
   private ROLE_TABLE = 'role';
 
   private PERMISSION_TABLE = 'permission';

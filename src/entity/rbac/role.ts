@@ -18,12 +18,20 @@
 import BaseEntity from '../base-entity';
 import { Column, Entity, OneToMany } from 'typeorm';
 import Permission from './permission';
+import { UserType } from '../user/user';
+import AssignedRole from './assigned-role';
 
 @Entity()
 export default class Role extends BaseEntity {
   @Column({ unique: true })
   public name: string;
 
+  @OneToMany(() => AssignedRole, (assignedRole) => assignedRole.role)
+  public assignments: AssignedRole[];
+
   @OneToMany(() => Permission, (permission) => permission.role)
   public permissions: Permission[];
+
+  @Column({ nullable: true })
+  public defaultUserType: UserType | null;
 }

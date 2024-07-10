@@ -562,7 +562,7 @@ export default class AuthenticationController extends BaseController {
         { tokenHandler: this.tokenHandler, roleManager: this.roleManager }, user, false,
       );
       const token = await this.tokenHandler.signToken(contents, body.nonce);
-      const response = AuthenticationService
+      const response = await AuthenticationService
         .asAuthenticationResponse(contents.user, contents.roles, contents.organs, token);
       res.json(response);
     } catch (error) {

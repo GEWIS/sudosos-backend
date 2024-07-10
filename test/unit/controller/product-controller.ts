@@ -147,10 +147,10 @@ describe('ProductController', async (): Promise<void> => {
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
-    const adminToken = await tokenHandler.signToken({ user: adminUser, roles: adminUser.roles.map((r) => r.role.name), lesser: false }, 'nonce admin');
-    const token = await tokenHandler.signToken({ user: localUser, roles: adminUser.roles.map((r) => r.role.name), lesser: false }, 'nonce');
+    const adminToken = await tokenHandler.signToken({ user: adminUser, roles: adminUser.directAssignedRoles.map((r) => r.role.name), lesser: false }, 'nonce admin');
+    const token = await tokenHandler.signToken({ user: localUser, roles: adminUser.directAssignedRoles.map((r) => r.role.name), lesser: false }, 'nonce');
     const organMemberToken = await tokenHandler.signToken({
-      user: localUser, roles: adminUser.roles.map((r) => r.role.name), organs: [organ], lesser: false,
+      user: localUser, roles: adminUser.directAssignedRoles.map((r) => r.role.name), organs: [organ], lesser: false,
     }, 'nonce');
     const tokenNoRoles = await tokenHandler.signToken({ user: localUser, roles: [], lesser: false }, 'nonce');
 
