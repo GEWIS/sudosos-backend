@@ -41,12 +41,14 @@ import {
   UpdateContainerParams,
 } from '../../../src/controller/request/container-request';
 import PointOfSaleService from '../../../src/service/point-of-sale-service';
-import { CreatePointOfSaleParams } from '../../../src/controller/request/point-of-sale-request';
+import { CreatePointOfSaleParams, UpdatePointOfSaleParams } from '../../../src/controller/request/point-of-sale-request';
 import AuthenticationService from '../../../src/service/authentication-service';
 import MemberAuthenticator from '../../../src/entity/authenticator/member-authenticator';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
+import sinon from 'sinon';
+import { PointOfSaleWithContainersResponse } from '../../../src/controller/response/point-of-sale-response';
 
 /**
  * Test if all the container responses are part of the container set array.
@@ -381,7 +383,7 @@ describe('ContainerService', async (): Promise<void> => {
 
       const updatedPos = await PointOfSaleRevision
         .findOne({ where: { revision: 2, pointOfSale: { id: pos.id } }, relations: ['containers', 'containers.products'] });
-      expect(updatedPos).to.not.be.undefined;
+      expect(updatedPos).to.not.be.null;
       expect(updatedPos.containers).length(2);
 
       const newContainer = updatedPos.containers.find((c) => c.container.id === container.id);
@@ -397,7 +399,12 @@ describe('ContainerService', async (): Promise<void> => {
     });
   });
   describe('deleteContainer function', () => {
-    it('should soft delete container', async () => {
+    it('should soft delete container and propagate update after deletion', async () => {
+      const stub = sinon.stub(PointOfSaleService, 'updatePointOfSale').callsFake(async (params): Promise<PointOfSaleWithContainersResponse> => {
+        const pointOfSale = await PointOfSaleService.getPointsOfSale({ pointOfSaleId: params.id, returnContainers: true, returnProducts: true });
+        return pointOfSale.records[0] as PointOfSaleWithContainersResponse;
+      });
+
       const start = Math.floor(new Date().getTime() / 1000) * 1000;
       const container = ctx.containers[0];
       let dbContainer = await Container.findOne({ where: { id: container.id }, withDeleted: true });
@@ -415,8 +422,30 @@ describe('ContainerService', async (): Promise<void> => {
       const deletedContainers = await Container.find({ where: { deletedAt: Not(IsNull()) }, withDeleted: true });
       expect(deletedContainers.length).to.equal(ctx.deletedContainers.length + 1);
 
+      // Propagated update
+      const revision = ctx.containerRevisions.find((c) => c.containerId === container.id && c.revision == container.currentRevision);
+      const pointOfSaleRevisions = ctx.pointOfSaleRevisions.filter((p) => p.containers
+        .some((c) => c.revision === revision.revision && c.containerId === revision.containerId && c.container.deletedAt == null))
+        .filter((p) => p.pointOfSale.deletedAt == null)
+        .filter((p) => p.revision === p.pointOfSale.currentRevision);
+      expect(stub.callCount).to.equal(pointOfSaleRevisions.length);
+      for (let i = 0; i < stub.callCount; i += 1) {
+        const call = stub.getCall(i);
+        const pos = pointOfSaleRevisions[i];
+        expect(call.args).to.deep.equalInAnyOrder([{
+          // Include all previous containers except the just deleted container
+          containers: pos.containers.filter((c) => c.container.deletedAt == null)
+            .map((p) => p.containerId)
+            .filter((c) => c !== container.id),
+          useAuthentication: pos.useAuthentication,
+          name: pos.name,
+          id: pos.pointOfSaleId,
+        }]);
+      }
+
       // Revert state
       await dbContainer.recover();
+      stub.restore();
     });
     it('should throw error for non existent container', async () => {
       const containerId = ctx.containers.length + ctx.deletedContainers.length + 2;

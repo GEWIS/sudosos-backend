@@ -206,11 +206,36 @@ export default class ContainerService {
    * @param containerId
    */
   public static async deleteContainer(containerId: number): Promise<void> {
-    const container = await Container.findOne({ where: { id: containerId } });
-    if (container == null) {
+    let options = await this.getOptions({ containerId: containerId, returnPointsOfSale: true });
+    const containerRevision = await ContainerRevision.findOne(options);
+
+    if (containerRevision == null) {
       throw new Error('Container not found');
     }
-    await Container.softRemove(container);
+
+    // Propagate deletion to points of sale: explicitly remove this (just deleted) container
+    const { pointsOfSale } = containerRevision;
+    pointsOfSale.forEach((p) => p.containers = p.containers.filter((c) => c.containerId !== containerId));
+    await this.executePropagation(pointsOfSale);
+
+    await Container.softRemove(containerRevision.container);
+  }
+
+  /**
+   * Given a set of points of sale, update those point of sale
+   * (for example when one of their containers are updated/deleted)
+   * @private
+   */
+  private static async executePropagation(pointsOfSale: PointOfSaleRevision[]) {
+    for (const p of pointsOfSale) {
+      const update: UpdatePointOfSaleParams = {
+        containers: p.containers.filter((c) => c.container.deletedAt == null).map((c: ContainerRevision) => c.container.id),
+        useAuthentication: p.useAuthentication,
+        name: p.name,
+        id: p.pointOfSale.id,
+      };
+      await PointOfSaleService.updatePointOfSale(update);
+    }
   }
 
   /**
@@ -232,26 +257,11 @@ export default class ContainerService {
 
     // Only update POS that contain previous container but are current version themselves.
     const pos = containerRevision.pointsOfSale
-      .reduce((a: PointOfSaleRevision[], b) => a.concat(b), [])
       .filter((p) => p.revision === p.pointOfSale.currentRevision)
       .filter((p, index, self) => (
         index === self.findIndex((p2) => p.pointOfSale.id === p2.pointOfSale.id)));
 
-    // The async-for loop is intentional to prevent race-conditions.
-    // To fix this the good way would be shortlived, the structure of POS/Containers will be changed
-    for (let i = 0; i < pos.length; i += 1) {
-      const p = pos[i];
-      // eslint-disable-next-line no-await-in-loop
-      const { containers } = p;
-      const update: UpdatePointOfSaleParams = {
-        containers: containers.map((c: ContainerRevision) => c.container.id),
-        useAuthentication: p.useAuthentication,
-        name: p.name,
-        id: p.pointOfSale.id,
-      };
-      // eslint-disable-next-line no-await-in-loop
-      await PointOfSaleService.updatePointOfSale(update);
-    }
+    return this.executePropagation(pos);
   }
 
   /**
