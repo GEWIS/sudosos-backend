@@ -36,7 +36,6 @@ import {
   UpdateContainerRequest,
 } from './request/container-request';
 import userTokenInOrgan from '../helpers/token-helper';
-import { IsNull } from 'typeorm';
 
 export default class ContainerController extends BaseController {
   private logger: Logger = log4js.getLogger('ContainerController');
@@ -145,15 +144,12 @@ export default class ContainerController extends BaseController {
 
     // Handle request
     try {
-      // Check if we should return a 404.
-      const exist = await ContainerRevision.findOne({ where: { container: { id: containerId, deletedAt: IsNull() } } });
-      if (!exist) {
+      const container = (await ContainerService
+        .getContainers({ containerId, returnProducts: true })).records[0];
+      if (!container) {
         res.status(404).json('Container not found.');
         return;
       }
-
-      const container = (await ContainerService
-        .getContainers({ containerId, returnProducts: true })).records[0];
       res.json(container);
     } catch (error) {
       this.logger.error('Could not return single container:', error);
