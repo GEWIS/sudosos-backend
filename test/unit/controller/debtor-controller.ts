@@ -57,6 +57,7 @@ import sinon, { SinonSandbox, SinonSpy } from 'sinon';
 import nodemailer, { Transporter } from 'nodemailer';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
+import { getToken, seedRoles } from '../../seed/rbac';
 
 describe('DebtorController', () => {
   let ctx: {
@@ -120,20 +121,12 @@ describe('DebtorController', () => {
       .map((t) => t.subTransactions));
     const { fines, fineTransfers, fineHandoutEvents } = await seedFines(users, transactions, transfers);
 
-    // create bearer tokens
-    const tokenHandler = new TokenHandler({
-      algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
-    });
-    const adminToken = await tokenHandler.signToken({ user: adminUser, roles: ['Admin'], lesser: false }, 'nonce admin');
-    const userToken = await tokenHandler.signToken({ user: localUser, roles: [], lesser: false }, 'nonce');
-
     // start app
     const app = express();
     const specification = await Swagger.initialize(app);
 
     const all = { all: new Set<string>(['*']) };
-    const roleManager = new RoleManager();
-    roleManager.registerRole({
+    const roles = await seedRoles([{
       name: 'Admin',
       permissions: {
         Fine: {
@@ -145,7 +138,15 @@ describe('DebtorController', () => {
         },
       },
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
+    }]);
+    const roleManager = await new RoleManager().initialize();
+
+    // create bearer tokens
+    const tokenHandler = new TokenHandler({
+      algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
+    const adminToken = await tokenHandler.signToken(await getToken(adminUser, roles), 'nonce admin');
+    const userToken = await tokenHandler.signToken(await getToken(localUser, roles), 'nonce');
 
     const controller = new DebtorController({ specification, roleManager });
     app.use(json());

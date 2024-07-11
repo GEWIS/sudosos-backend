@@ -40,6 +40,7 @@ import { PayoutRequestState } from '../../../src/entity/transactions/payout-requ
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import BalanceService from '../../../src/service/balance-service';
+import { getToken, seedRoles } from '../../seed/rbac';
 
 describe('PayoutRequestController', () => {
   let ctx: {
@@ -80,13 +81,6 @@ describe('PayoutRequestController', () => {
     const adminUser = users.filter((u) => u.type === UserType.LOCAL_ADMIN)[0];
     const localUser = users.filter((u) => u.type === UserType.LOCAL_USER)[0];
 
-    // create bearer tokens
-    const tokenHandler = new TokenHandler({
-      algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
-    });
-    const adminToken = await tokenHandler.signToken({ user: adminUser, roles: ['User', 'Admin'], lesser: false }, 'nonce admin');
-    const userToken = await tokenHandler.signToken({ user: localUser, roles: ['User'], lesser: false }, 'nonce');
-
     // start app
     const app = express();
     const specification = await Swagger.initialize(app);
@@ -94,8 +88,7 @@ describe('PayoutRequestController', () => {
     const own = { own: new Set<string>(['*']) };
     const all = { all: new Set<string>(['*']), ...own };
 
-    const roleManager = new RoleManager();
-    roleManager.registerRole({
+    const roles = await seedRoles([{
       name: 'Admin',
       permissions: {
         PayoutRequest: {
@@ -105,8 +98,7 @@ describe('PayoutRequestController', () => {
         },
       },
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
-    });
-    roleManager.registerRole({
+    }, {
       name: 'User',
       permissions: {
         PayoutRequest: {
@@ -116,7 +108,15 @@ describe('PayoutRequestController', () => {
         },
       },
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_USER,
+    }]);
+    const roleManager = await new RoleManager().initialize();
+
+    // create bearer tokens
+    const tokenHandler = new TokenHandler({
+      algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
+    const adminToken = await tokenHandler.signToken(await getToken(adminUser, roles), 'nonce admin');
+    const userToken = await tokenHandler.signToken(await getToken(localUser, roles), 'nonce');
 
     const controller = new PayoutRequestController({ specification, roleManager });
     app.use(json());

@@ -51,7 +51,7 @@ import AuthenticationNfcRequest from '../../../src/controller/request/authentica
 import NfcAuthenticator from '../../../src/entity/authenticator/nfc-authenticator';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { assignRole, seedRole } from '../../seed/rbac';
+import { assignRole, seedRoles } from '../../seed/rbac';
 import Role from '../../../src/entity/rbac/role';
 
 describe('AuthenticationController', async (): Promise<void> => {
@@ -74,7 +74,7 @@ describe('AuthenticationController', async (): Promise<void> => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
-    const [role] = await seedRole([{
+    const [role] = await seedRoles([{
       name: 'Role',
       permissions: {
         Product: {

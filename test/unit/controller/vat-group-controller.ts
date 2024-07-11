@@ -43,6 +43,7 @@ import { defaultPagination, PaginationResult } from '../../../src/helpers/pagina
 import { VatDeclarationResponse } from '../../../src/controller/response/vat-group-response';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
+import { getToken, seedRoles } from '../../seed/rbac';
 
 describe('VatGroupController', () => {
   let ctx: {
@@ -79,12 +80,6 @@ describe('VatGroupController', () => {
     const { pointOfSaleRevisions } = await seedPointsOfSale(users, containerRevisions);
     const { transactions } = await seedTransactions(users, pointOfSaleRevisions, new Date('2020-02-12'), new Date('2022-11-30'), 3);
 
-    // create bearer tokens
-    const tokenHandler = new TokenHandler({
-      algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
-    });
-    const token = await tokenHandler.signToken({ user, roles: ['Admin'], lesser: false }, 'nonce admin');
-
     const validUpdateVatGroupReq: UpdateVatGroupRequest = {
       name: 'CustomVATGroup',
       deleted: false,
@@ -99,8 +94,7 @@ describe('VatGroupController', () => {
     const specification = await Swagger.initialize(app);
 
     const all = { all: new Set<string>(['*']) };
-    const roleManager = new RoleManager();
-    roleManager.registerRole({
+    const roles = await seedRoles([{
       name: 'Admin',
       permissions: {
         VatGroup: {
@@ -111,7 +105,14 @@ describe('VatGroupController', () => {
         },
       },
       assignmentCheck: async (usr: User) => usr.type === UserType.LOCAL_ADMIN,
+    }]);
+    const roleManager = await new RoleManager().initialize();
+
+    // create bearer tokens
+    const tokenHandler = new TokenHandler({
+      algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
+    const token = await tokenHandler.signToken(await getToken(user, roles), 'nonce admin');
 
     const controller = new VatGroupController({ specification, roleManager });
     app.use(json());

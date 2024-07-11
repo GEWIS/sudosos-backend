@@ -45,6 +45,7 @@ import Sinon from 'sinon';
 import { DineroObjectRequest } from '../../../src/controller/request/dinero-request';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
+import { getToken, seedRoles } from '../../seed/rbac';
 
 async function saveBKG(
   bkgReq: VoucherGroupRequest,
@@ -119,22 +120,6 @@ describe('VoucherGroupController', async (): Promise<void> => {
     await User.save(localUser);
     await User.save(localUser2);
 
-    // create bearer tokens
-    const tokenHandler = new TokenHandler({
-      algorithm: 'HS256',
-      publicKey: 'test',
-      privateKey: 'test',
-      expiry: 3600,
-    });
-    const adminToken = await tokenHandler.signToken(
-      { user: adminUser, roles: ['Admin'], lesser: false },
-      'nonce admin',
-    );
-    const token = await tokenHandler.signToken(
-      { user: localUser, roles: [], lesser: false },
-      'nonce',
-    );
-
     // test voucher groups
     const validVoucherGroupReq: VoucherGroupRequest = {
       name: 'test',
@@ -158,8 +143,7 @@ describe('VoucherGroupController', async (): Promise<void> => {
     const specification = await Swagger.initialize(app);
 
     const all = { all: new Set<string>(['*']) };
-    const roleManager = new RoleManager();
-    roleManager.registerRole({
+    const roles = await seedRoles([{
       name: 'Admin',
       permissions: {
         VoucherGroup: {
@@ -170,7 +154,24 @@ describe('VoucherGroupController', async (): Promise<void> => {
         },
       },
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
+    }]);
+    const roleManager = await new RoleManager().initialize();
+
+    // create bearer tokens
+    const tokenHandler = new TokenHandler({
+      algorithm: 'HS256',
+      publicKey: 'test',
+      privateKey: 'test',
+      expiry: 3600,
     });
+    const adminToken = await tokenHandler.signToken(
+      await getToken(adminUser, roles),
+      'nonce admin',
+    );
+    const token = await tokenHandler.signToken(
+      await getToken(localUser, roles),
+      'nonce',
+    );
 
     const controller = new VoucherGroupController({
       specification,

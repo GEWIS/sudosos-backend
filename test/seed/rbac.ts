@@ -54,7 +54,7 @@ function getAdminPermissions(role: Role, entity: string, relationOwn = true): De
   ];
 }
 
-export async function seedRole(roles: RoleDefinition[]): Promise<SeededRole[]> {
+export async function seedRoles(roles: RoleDefinition[]): Promise<SeededRole[]> {
   return Promise.all(roles.map((role) => Role.save({ name: role.name }).then(async (r): Promise<SeededRole> => {
     const permissions: DeepPartial<Permission>[] = [];
     Object.keys(role.permissions).forEach(entity => {

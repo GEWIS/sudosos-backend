@@ -48,7 +48,7 @@ import { DiskStorage } from '../../../src/files/storage';
 import VatGroup from '../../../src/entity/vat-group';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { seedProductionRolesWithPermissions } from '../../seed/rbac';
+import { getToken, seedRoles } from '../../seed/rbac';
 import ProductRevision from '../../../src/entity/product/product-revision';
 
 /**
@@ -141,18 +141,6 @@ describe('ProductController', async (): Promise<void> => {
     const categories = await seedProductCategories();
     const vatGroups = await seedVatGroups();
     const { products } = await seedProducts(users, categories, vatGroups);
-    await seedProductionRolesWithPermissions(users);
-
-    // create bearer tokens
-    const tokenHandler = new TokenHandler({
-      algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
-    });
-    const adminToken = await tokenHandler.signToken({ user: adminUser, roles: adminUser.directAssignedRoles.map((r) => r.role.name), lesser: false }, 'nonce admin');
-    const token = await tokenHandler.signToken({ user: localUser, roles: adminUser.directAssignedRoles.map((r) => r.role.name), lesser: false }, 'nonce');
-    const organMemberToken = await tokenHandler.signToken({
-      user: localUser, roles: adminUser.directAssignedRoles.map((r) => r.role.name), organs: [organ], lesser: false,
-    }, 'nonce');
-    const tokenNoRoles = await tokenHandler.signToken({ user: localUser, roles: [], lesser: false }, 'nonce');
 
     const validProductReq: UpdateProductRequest = {
       name: 'Valid product',
@@ -183,8 +171,54 @@ describe('ProductController', async (): Promise<void> => {
     const app = express();
     const specification = await Swagger.initialize(app);
 
-    const roleManager = new RoleManager();
-    await roleManager.initialize();
+    const all = { all: new Set<string>(['*']) };
+    const own = { own: new Set<string>(['*']) };
+    const organRole = { organ: new Set<string>(['*']) };
+
+    const roles = await seedRoles([{
+      name: 'Admin',
+      permissions: {
+        Product: {
+          create: all,
+          get: all,
+          update: all,
+          delete: all,
+          approve: all,
+        },
+      },
+      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
+    }, {
+      name: 'Seller',
+      permissions: {
+        Product: {
+          create: organRole,
+          get: all,
+          update: organRole,
+          delete: organRole,
+        },
+      },
+      assignmentCheck: async () => true,
+    }, {
+      name: 'User',
+      permissions: {
+        Product: {
+          get: own,
+          create: own,
+          update: all,
+        },
+      },
+      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_USER,
+    }]);
+
+    // create bearer tokens
+    const tokenHandler = new TokenHandler({
+      algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
+    });
+    const adminToken = await tokenHandler.signToken(await getToken(adminUser, roles), 'nonce admin');
+    const token = await tokenHandler.signToken(await getToken(localUser, roles), 'nonce');
+    const organMemberToken = await tokenHandler.signToken(await getToken(localUser, roles, [organ]), 'nonce');
+    const tokenNoRoles = await tokenHandler.signToken(await getToken(localUser, []), 'nonce');
+    const roleManager = await new RoleManager().initialize();
 
     const controller = new ProductController({ specification, roleManager });
     app.use(json());
@@ -260,13 +294,13 @@ describe('ProductController', async (): Promise<void> => {
     it('should return an HTTP 403 if not admin', async () => {
       const res = await request(ctx.app)
         .get('/products')
-        .set('Authorization', `Bearer ${ctx.token}`);
+        .set('Authorization', `Bearer ${ctx.tokenNoRoles}`);
+      // forbidden code
+      expect(res.status).to.equal(403);
 
       // check no response body
       expect(res.body).to.be.empty;
 
-      // forbidden code
-      expect(res.status).to.equal(403);
     });
     it('should adhere to pagination', async () => {
       const take = 2;
@@ -365,7 +399,7 @@ describe('ProductController', async (): Promise<void> => {
       const productCount = await Product.count();
       const res = await request(ctx.app)
         .post('/products')
-        .set('Authorization', `Bearer ${ctx.token}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(ctx.validCreateProductReq);
 
       expect(await Product.count()).to.equal(productCount + 1);
@@ -518,7 +552,7 @@ describe('ProductController', async (): Promise<void> => {
     it('should return an HTTP 403 if not admin', async () => {
       const res = await request(ctx.app)
         .get('/products/1')
-        .set('Authorization', `Bearer ${ctx.token}`);
+        .set('Authorization', `Bearer ${ctx.tokenNoRoles}`);
 
       expect(res.body).to.be.empty;
 
@@ -533,7 +567,7 @@ describe('ProductController', async (): Promise<void> => {
     it('should return an HTTP 200 and the product update if user', async () => {
       const res = await request(ctx.app)
         .patch('/products/1')
-        .set('Authorization', `Bearer ${ctx.token}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(ctx.validProductReq);
       expect(res.status).to.equal(200);
 

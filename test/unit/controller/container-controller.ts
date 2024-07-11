@@ -48,7 +48,7 @@ import ContainerRevision from '../../../src/entity/container/container-revision'
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import Product from '../../../src/entity/product/product';
-import { getToken, seedRole } from '../../seed/rbac';
+import { getToken, seedRoles } from '../../seed/rbac';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -159,7 +159,7 @@ describe('ContainerController', async (): Promise<void> => {
     const own = { own: new Set<string>(['*']), public: new Set<string>(['*']) };
     const organRole = { organ: new Set<string>(['*']) };
 
-    const roles = await seedRole([{
+    const roles = await seedRoles([{
       name: 'Admin',
       permissions: {
         Container: {
