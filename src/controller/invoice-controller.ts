@@ -323,7 +323,7 @@ export default class InvoiceController extends BaseController {
     this.logger.trace('Get Invoice PDF', id, 'by user', req.token.user);
 
     try {
-      const invoice = await Invoice.findOne({ ...InvoiceService.getOptions({ invoiceId }) });
+      const invoice = await Invoice.findOne(InvoiceService.getOptions({ invoiceId }) );
       if (!invoice) {
         res.status(404).json('Invoice not found.');
         return;
