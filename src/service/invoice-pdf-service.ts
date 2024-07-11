@@ -22,7 +22,6 @@ import {
   Client,
   Company,
   Dates,
-  FileResponse,
   FileSettings,
   Identity,
   IInvoiceRouteParams,
@@ -128,6 +127,7 @@ export default class InvoicePdfService {
    */
   static getParameters(invoice: Invoice): InvoiceParameters {
     const { products, pricing } = this.entriesToProductsPricing(invoice);
+    products.sort((a, b) => a.name.localeCompare(b.name));
 
     return new InvoiceParameters({
       reference: new InvoiceReferences({
@@ -195,12 +195,13 @@ export default class InvoicePdfService {
     if (!invoice) return undefined;
 
     const params = this.getPdfParams(invoice);
-    return this.pdfGenerator.client.generateInvoice(InvoiceType.Invoice, params).then(async (res: FileResponse) => {
+    try {
+      const res = await this.pdfGenerator.client.generateInvoice(InvoiceType.Invoice, params);
       const blob = res.data;
       const buffer = Buffer.from(await blob.arrayBuffer());
-      return this.pdfGenerator.fileService.uploadPdf(invoice, InvoicePdf, buffer, invoice.to);
-    }).catch((res: any) => {
-      throw new Error(`Invoice generation failed for ${JSON.stringify(res, null, 2)}`);
-    });
+      return await this.pdfGenerator.fileService.uploadPdf(invoice, InvoicePdf, buffer, invoice.to);
+    } catch (res: any) {
+      throw new Error(`Invoice generation failed: ${res.message}`);
+    }
   }
 }

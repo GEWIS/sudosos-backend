@@ -47,6 +47,7 @@ import { INVALID_ORGAN_ID, INVALID_PRODUCT_ID } from '../../../src/controller/re
 import ContainerRevision from '../../../src/entity/container/container-revision';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
+import Product from '../../../src/entity/product/product';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -84,9 +85,12 @@ describe('ContainerController', async (): Promise<void> => {
     adminToken: String,
     organMemberToken: String,
     token: String,
+    products: Product[],
+    deletedProducts: Product[],
+    containers: Container[],
+    deletedContainers: Container[],
     validContainerReq: CreateContainerRequest,
     validContainerUpdate: UpdateContainerRequest,
-    invalidContainerReq: CreateContainerRequest,
   };
 
   // Initialize context
@@ -126,9 +130,9 @@ describe('ContainerController', async (): Promise<void> => {
 
     const categories = await seedProductCategories();
     const vatGroups = await seedVatGroups();
-    const { productRevisions } = (
+    const { products, productRevisions } = (
       await seedProducts([adminUser, localUser], categories, vatGroups));
-    await seedContainers([adminUser, localUser], productRevisions);
+    const { containers } = await seedContainers([adminUser, localUser], productRevisions);
 
     // create bearer tokens
     const tokenHandler = new TokenHandler({
@@ -141,7 +145,7 @@ describe('ContainerController', async (): Promise<void> => {
     }, '1');
 
     const validContainerUpdate: UpdateContainerRequest = {
-      products: [7, 8],
+      products: products.filter((p) => p.deletedAt == null).slice(0, 2).map((p) => p.id),
       public: true,
       name: 'Valid container',
     };
@@ -149,12 +153,6 @@ describe('ContainerController', async (): Promise<void> => {
     const validContainerReq: CreateContainerRequest = {
       ...validContainerUpdate,
       ownerId: organ.id,
-    };
-
-    const invalidContainerReq: CreateContainerRequest = {
-      ...validContainerReq,
-      name: '',
-      products: [-1],
     };
 
     // start app
@@ -220,8 +218,11 @@ describe('ContainerController', async (): Promise<void> => {
       adminToken,
       organMemberToken,
       token,
+      products: products.filter((p) => p.deletedAt == null),
+      deletedProducts: products.filter((p) => p.deletedAt != null),
+      containers: containers.filter((c) => c.deletedAt == null),
+      deletedContainers: containers.filter((c) => c.deletedAt != null),
       validContainerReq,
-      invalidContainerReq,
       validContainerUpdate,
     };
   });
@@ -302,6 +303,7 @@ describe('ContainerController', async (): Promise<void> => {
 
       // success code
       expect(res.status).to.equal(200);
+      expect(res.body).to.not.be.empty;
       asRequested(container, res.body);
       const valid = (ctx.specification.validateModel(
         'ContainerWithProductsResponse',
@@ -312,40 +314,36 @@ describe('ContainerController', async (): Promise<void> => {
       expect(valid.valid).to.be.true;
     }
     it('should return an HTTP 200 and the container with the given id if admin', async () => {
-      const container = await Container.findOne({ where: { id: 1 }, relations: ['owner'] });
+      const container = ctx.containers[0];
+      expect(container).to.not.be.undefined;
       await getAndCheck(container, ctx.adminToken);
     });
     it('should return an HTTP 200 and the container with the given id if own container', async () => {
-      const container = await Container.findOne({ relations: ['owner'], where: { owner: { id: ctx.localUser.id }, public: false } });
+      const container = ctx.containers.find((c) => !c.public && c.owner.id === ctx.localUser.id);
+      expect(container).to.not.be.undefined;
       await getAndCheck(container, ctx.token);
     });
     it('should return an HTTP 200 and container if the container is public and not admin', async () => {
-      const container = await Container.findOne({ relations: ['owner'], where: { owner: { id: ctx.adminUser.id }, public: true } });
-      await getAndCheck(container, ctx.token);
-    });
-    it('should return an HTTP 200 and the container if the container is not public but the user is the owner', async () => {
-      const container = await Container.findOne({ relations: ['owner'], where: { owner: { id: ctx.localUser.id }, public: false } });
+      const container = ctx.containers.find((c) => c.public && c.owner.id !== ctx.localUser.id);
+      expect(container).to.not.be.undefined;
       await getAndCheck(container, ctx.token);
     });
     it('should return an HTTP 200 and the container if the user is connected via organ', async () => {
-      const newContainer = Object.assign(new Container(), {
+      const newContainer = await Container.save({
         owner: ctx.organ,
         public: false,
         currentRevision: 1,
-      }) as Container;
-      await Container.save(newContainer);
-      const revision = Object.assign(new ContainerRevision(), {
+      });
+      await ContainerRevision.save({
         container: newContainer,
         name: 'ORGAN Container',
         revision: 1,
         products: [],
       });
-      await ContainerRevision.save(revision);
-      const container = await Container.findOne({ relations: ['owner'], where: { owner: { id: ctx.organ.id }, public: false } });
-      await getAndCheck(container, ctx.organMemberToken);
+      await getAndCheck(newContainer, ctx.organMemberToken);
     });
     it('should return an HTTP 403 if the container exist but is not visible to the user', async () => {
-      const id = 2;
+      const { id } = ctx.containers.find((c) => !c.public && c.owner.id !== ctx.localUser.id);
       const test = await request(ctx.app)
         .get(`/containers/${id}`)
         .set('Authorization', `Bearer ${ctx.adminToken}`);
@@ -360,6 +358,18 @@ describe('ContainerController', async (): Promise<void> => {
 
       // success code
       expect(res.status).to.equal(403);
+    });
+    it('should return an HTTP 404 if the container is soft deleted', async () => {
+      const id = ctx.deletedContainers[0].id;
+      const res = await request(ctx.app)
+        .get(`/containers/${id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      // check if banner is not returned
+      expect(res.body).to.equal('Container not found.');
+
+      // success code
+      expect(res.status).to.equal(404);
     });
     it('should return an HTTP 404 if the containerId does not exist', async () => {
       const id = (await Container.count()) + 10;
@@ -395,8 +405,14 @@ describe('ContainerController', async (): Promise<void> => {
         .get('/containers/1/products')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
-      expect((res.body as ProductResponse[])).to.not.empty;
+      expect((res.body as ProductResponse[])).to.not.be.empty;
       expect(res.status).to.equal(200);
+
+      const body = res.body as ProductResponse[];
+
+      // Never include deleted containers
+      const deletedProductIds = ctx.deletedProducts.map((p) => p.id);
+      body.forEach((product) => expect(deletedProductIds).to.not.include(product.id));
     });
     it('should return an HTTP 403 if container not public or own and if not admin', async () => {
       const { id } = await Container.findOne({ relations: ['owner'], where: { owner: { id: ctx.adminUser.id }, public: true } });
@@ -428,13 +444,23 @@ describe('ContainerController', async (): Promise<void> => {
     }
 
     describe('validate products function', () => {
-      it('should verify product IDs', async () => {
+      it('should verify products exist', async () => {
         const containerRequest = type === 'post' ? ctx.validContainerReq : ctx.validContainerUpdate;
+        const productId = ctx.products.length + ctx.deletedProducts.length + 10;
         const req: CreateContainerRequest = {
           ...containerRequest,
-          products: [-1, 5, 10],
+          products: [productId],
         };
-        await expectError(req, `Products: ${INVALID_PRODUCT_ID(-1).value}`);
+        await expectError(req, `Products: ${INVALID_PRODUCT_ID(productId).value}`);
+      });
+      it('should verify product is not soft deleted', async () => {
+        const containerRequest = type === 'post' ? ctx.validContainerReq : ctx.validContainerUpdate;
+        const productId = ctx.deletedProducts[0].id;
+        const req: CreateContainerRequest = {
+          ...containerRequest,
+          products: [productId],
+        };
+        await expectError(req, `Products: ${INVALID_PRODUCT_ID(productId).value}`);
       });
     });
     it('should verify Name', async () => {
@@ -473,22 +499,14 @@ describe('ContainerController', async (): Promise<void> => {
       expect(await Container.count()).to.equal(containerCount + 1);
       containerProductsEq(ctx.validContainerReq, containerResponse);
 
-      const databaseProduct = await Container.findOne({
+      const dbContainer = await Container.findOne({
         where: { id: (res.body as ContainerResponse).id },
       });
-      expect(databaseProduct).to.exist;
-    });
-    it('should return an HTTP 400 if the given product is invalid', async () => {
-      const containerCounter = await Container.count();
-      const res = await request(ctx.app)
-        .post('/containers')
-        .set('Authorization', `Bearer ${ctx.adminToken}`)
-        .send(ctx.invalidContainerReq);
+      expect(dbContainer).to.exist;
 
-      expect(await Container.count()).to.equal(containerCounter);
-      expect(res.body).to.equal('Name: must be a non-zero length string.');
-
-      expect(res.status).to.equal(400);
+      // Cleanup
+      await ContainerRevision.delete({ containerId: dbContainer.id });
+      await Container.delete({ id: dbContainer.id });
     });
   });
   describe('PATCH /containers/:id', () => {
@@ -540,12 +558,13 @@ describe('ContainerController', async (): Promise<void> => {
       expect(databaseContainer).to.exist;
     });
     it('should return an HTTP 200 and override a previous update if admin', async () => {
-      const id = 1;
+      const { id } = ctx.containers[0];
 
+      const products = ctx.products.slice(0, 2);
       const newUpdate: CreateContainerRequest = {
         public: true,
         name: 'Valid Container Update',
-        products: [3, 4],
+        products: products.map((p) => p.id),
       };
 
       const res = await request(ctx.app)
@@ -577,16 +596,14 @@ describe('ContainerController', async (): Promise<void> => {
       expect(res.status).to.equal(400);
     });
     it('should return an HTTP 404 if the container with the given id does not exist', async () => {
+      const id = await Container.count({ withDeleted: true }) + 1;
       const res = await request(ctx.app)
-        .patch(`/containers/${(await Container.count()) + 1}`)
+        .patch(`/containers/${id}`)
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(ctx.validContainerUpdate);
 
       // sanity check
-      expect(await Container.findOne({
-        where:
-          { id: (await Container.count()) + 1 },
-      })).to.be.null;
+      expect(await Container.findOne({ where: { id } })).to.be.null;
 
       // check if banner is not returned
       expect(res.body).to.equal('Container not found.');
@@ -628,6 +645,74 @@ describe('ContainerController', async (): Promise<void> => {
         async (container) => (expect(container.public).true),
       );
       expect(res.status).to.equal(200);
+    });
+  });
+  describe('DELETE /containers/:id', () => {
+    it('should return 204 if owner', async () => {
+      const container = ctx.containers.find((p) => p.owner.id === ctx.localUser.id && !p.public && p.deletedAt == null);
+      const res = await request(ctx.app)
+        .delete(`/containers/${container.id}`)
+        .set('Authorization', `Bearer ${ctx.organMemberToken}`)
+        .send();
+
+      expect(res.status).to.equal(204);
+      expect(res.body).to.be.empty;
+
+      const dbContainer = await Container.findOne({ where: { id: container.id }, withDeleted: true });
+      expect(dbContainer).to.not.be.null;
+      expect(dbContainer.deletedAt).to.not.be.null;
+
+      // Cleanup
+      await dbContainer.recover();
+    });
+    it('should return 204 for any container if admin', async () => {
+      const container = ctx.containers.find((p) => p.owner.id !== ctx.adminUser.id && !p.public && p.deletedAt == null);
+      const res = await request(ctx.app)
+        .delete(`/containers/${container.id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send();
+
+      expect(res.status).to.equal(204);
+      expect(res.body).to.be.empty;
+
+      const dbContainer = await Container.findOne({ where: { id: container.id }, withDeleted: true });
+      expect(dbContainer).to.not.be.null;
+      expect(dbContainer.deletedAt).to.not.be.null;
+
+      // Cleanup
+      await dbContainer.recover();
+    });
+    it('should return 403 if not owner', async () => {
+      const container = ctx.containers.find((p) => p.owner.id === ctx.adminUser.id && !p.public && p.deletedAt == null);
+      const res = await request(ctx.app)
+        .delete(`/containers/${container.id}`)
+        .set('Authorization', `Bearer ${ctx.organMemberToken}`)
+        .send();
+
+      expect(res.status).to.equal(403);
+      expect(res.body).to.be.empty;
+    });
+    it('should return 404 if container does not exist', async () => {
+      const containerId = ctx.containers.length + ctx.deletedContainers.length + 2;
+
+      const res = await request(ctx.app)
+        .delete(`/containers/${containerId}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send();
+
+      expect(res.status).to.equal(404);
+      expect(res.body).to.equal('Container not found');
+    });
+    it('should return 404 if container is soft deleted', async () => {
+      const containerId = ctx.deletedContainers[0].id;
+
+      const res = await request(ctx.app)
+        .delete(`/containers/${containerId}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send();
+
+      expect(res.status).to.equal(404);
+      expect(res.body).to.equal('Container not found');
     });
   });
 });

@@ -19,7 +19,7 @@
 
 import express, { Application } from 'express';
 import { expect } from 'chai';
-import { Connection } from 'typeorm';
+import { Connection, DeepPartial } from 'typeorm';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import Transaction from '../../../src/entity/transactions/transaction';
 import Transfer from '../../../src/entity/transactions/transfer';
@@ -213,6 +213,108 @@ describe('BalanceService', (): void => {
       await User.update(user.id, { deleted: true });
       const balance2 = await BalanceService.getBalances({ ids: [user.id] });
       expect(balance2.records).to.be.empty;
+    });
+    it('should include transactions from deleted POS', async () => {
+      const builder = await UserFactory();
+      const user = await builder.get();
+
+      const deletedPos = ctx.pointOfSaleRevisions.find((p) => p.pointOfSale.deletedAt != null);
+      const container = deletedPos.containers[0];
+      const product = container.products[0];
+      const totalPriceInclVat = product.priceInclVat.toObject();
+
+      const transaction = await Transaction.save({
+        from: user,
+        createdBy: user,
+        pointOfSale: deletedPos,
+      } as DeepPartial<Transaction>);
+      const subTransaction = await SubTransaction.save({
+        to: container.container.owner,
+        transaction,
+        container,
+      } as DeepPartial<SubTransaction>);
+      const subTransactionRow = await SubTransactionRow.save({
+        product,
+        amount: 1,
+        subTransaction,
+      } as DeepPartial<SubTransactionRow>);
+
+      const balance = await BalanceService.getBalance(user.id);
+      expect(balance.amount.amount).to.equal(totalPriceInclVat.amount * -1);
+
+      // Cleanup
+      await Transaction.delete(transaction.id);
+      await SubTransaction.delete(subTransaction.id);
+      await SubTransactionRow.delete(subTransactionRow.id);
+      await builder.delete();
+    });
+    it('should include transactions with deleted container', async () => {
+      const builder = await UserFactory();
+      const user = await builder.get();
+
+      const deletedPos = ctx.pointOfSaleRevisions.find((p) => p.containers.some((c) => c.container.deletedAt != null));
+      const container = deletedPos.containers.find((c) => c.container.deletedAt != null);
+      const product = container.products[0];
+      const totalPriceInclVat = product.priceInclVat.toObject();
+
+      const transaction = await Transaction.save({
+        from: user,
+        createdBy: user,
+        pointOfSale: deletedPos,
+      } as DeepPartial<Transaction>);
+      const subTransaction = await SubTransaction.save({
+        to: container.container.owner,
+        transaction,
+        container,
+      } as DeepPartial<SubTransaction>);
+      const subTransactionRow = await SubTransactionRow.save({
+        product,
+        amount: 1,
+        subTransaction,
+      } as DeepPartial<SubTransactionRow>);
+
+      const balance = await BalanceService.getBalance(user.id);
+      expect(balance.amount.amount).to.equal(totalPriceInclVat.amount * -1);
+
+      // Cleanup
+      await Transaction.delete(transaction.id);
+      await SubTransaction.delete(subTransaction.id);
+      await SubTransactionRow.delete(subTransactionRow.id);
+      await builder.delete();
+    });
+    it('should include transactions with deleted products', async () => {
+      const builder = await UserFactory();
+      const user = await builder.get();
+
+      const deletedPos = ctx.pointOfSaleRevisions.find((p) => p.containers.some((c) => c.products.some((pr) => pr.product.deletedAt != null)));
+      const container = deletedPos.containers.find((c) => c.products.some((p) => p.product.deletedAt != null));
+      const product = container.products.find((p) => p.product.deletedAt != null);
+      const totalPriceInclVat = product.priceInclVat.toObject();
+
+      const transaction = await Transaction.save({
+        from: user,
+        createdBy: user,
+        pointOfSale: deletedPos,
+      } as DeepPartial<Transaction>);
+      const subTransaction = await SubTransaction.save({
+        to: container.container.owner,
+        transaction,
+        container,
+      } as DeepPartial<SubTransaction>);
+      const subTransactionRow = await SubTransactionRow.save({
+        product,
+        amount: 1,
+        subTransaction,
+      } as DeepPartial<SubTransactionRow>);
+
+      const balance = await BalanceService.getBalance(user.id);
+      expect(balance.amount.amount).to.equal(totalPriceInclVat.amount * -1);
+
+      // Cleanup
+      await Transaction.delete(transaction.id);
+      await SubTransaction.delete(subTransaction.id);
+      await SubTransactionRow.delete(subTransactionRow.id);
+      await builder.delete();
     });
     it('should only return balances with at most a certain fine amount', async () => {
       const amount = 600;

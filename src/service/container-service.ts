@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { FindManyOptions, FindOptionsRelations, FindOptionsWhere, In, Raw } from 'typeorm';
+import { FindManyOptions, FindOptionsRelations, FindOptionsWhere, In, IsNull, Raw } from 'typeorm';
 import {
   ContainerResponse,
   ContainerWithProductsResponse,
@@ -36,6 +36,7 @@ import PointOfSaleService from './point-of-sale-service';
 // eslint-disable-next-line import/no-cycle
 import ProductService from './product-service';
 import AuthenticationService from './authentication-service';
+import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision';
 
 interface ContainerVisibility {
   own: boolean;
@@ -171,6 +172,8 @@ export default class ContainerService {
   public static async updateContainer(update: UpdateContainerParams): Promise<ContainerWithProductsResponse> {
     const base = await Container.findOne({ where: { id: update.id } });
 
+    if (base == null) throw new Error('Container not found.');
+
     // Get the latest products
     const opt = await ProductService.getOptions({});
     const where = { ...opt.where, product: { id: In(update.products) } };
@@ -201,6 +204,45 @@ export default class ContainerService {
   }
 
   /**
+   * (Soft) delete a container
+   * @param containerId
+   */
+  public static async deleteContainer(containerId: number): Promise<void> {
+    let options = await this.getOptions({ containerId: containerId, returnPointsOfSale: true });
+    const containerRevision = await ContainerRevision.findOne(options);
+
+    if (containerRevision == null) {
+      throw new Error('Container not found');
+    }
+
+    // Propagate deletion to points of sale: explicitly remove this (just deleted) container
+    const { pointsOfSale } = containerRevision;
+    pointsOfSale.forEach((p) => p.containers = p.containers.filter((c) => c.containerId !== containerId));
+    await this.executePropagation(pointsOfSale);
+
+    await Container.softRemove(containerRevision.container);
+  }
+
+  /**
+   * Given a set of points of sale, update those point of sale
+   * (for example when one of their containers are updated/deleted)
+   * @private
+   */
+  private static async executePropagation(pointsOfSale: PointOfSaleRevision[]) {
+    // Deleted points of sale might still be given, so we filter these manually to prevent unnecessary updates
+    const pos = pointsOfSale.filter((p) => p.pointOfSale && p.pointOfSale.deletedAt == null);
+    for (const p of pos) {
+      const update: UpdatePointOfSaleParams = {
+        containers: p.containers.filter((c) => c.container.deletedAt == null).map((c: ContainerRevision) => c.container.id),
+        useAuthentication: p.useAuthentication,
+        name: p.name,
+        id: p.pointOfSale.id,
+      };
+      await PointOfSaleService.updatePointOfSale(update);
+    }
+  }
+
+  /**
    * Propagates the container update to all point of sales.
    *
    * All POS that contain the previous version of this container
@@ -219,26 +261,11 @@ export default class ContainerService {
 
     // Only update POS that contain previous container but are current version themselves.
     const pos = containerRevision.pointsOfSale
-      .reduce((a, b) => a.concat(b), [])
-      .filter((p) => p.revision === p.pointOfSale.currentRevision)
+      .filter((p) => p.pointOfSale.deletedAt == null && p.revision === p.pointOfSale.currentRevision)
       .filter((p, index, self) => (
         index === self.findIndex((p2) => p.pointOfSale.id === p2.pointOfSale.id)));
 
-    // The async-for loop is intentional to prevent race-conditions.
-    // To fix this the good way would be shortlived, the structure of POS/Containers will be changed
-    for (let i = 0; i < pos.length; i += 1) {
-      const p = pos[i];
-      // eslint-disable-next-line no-await-in-loop
-      const { containers } = p;
-      const update: UpdatePointOfSaleParams = {
-        containers: containers.map((c: ContainerRevision) => c.container.id),
-        useAuthentication: p.useAuthentication,
-        name: p.name,
-        id: p.pointOfSale.id,
-      };
-      // eslint-disable-next-line no-await-in-loop
-      await PointOfSaleService.updatePointOfSale(update);
-    }
+    return this.executePropagation(pos);
   }
 
   /**
@@ -285,12 +312,12 @@ export default class ContainerService {
       category: true,
     };
 
-    const userFilter: any = {};
+    let owner: FindOptionsWhere<User> = {};
     if (user) {
       const organIds = (await AuthenticationService.getMemberAuthenticators(user)).map((u) => u.id);
-      userFilter.container = { owner: { id: In(organIds) } };
+      owner = { id: In(organIds) };
     } else if (params.ownerId) {
-      userFilter.container = { owner: { id: params.ownerId } };
+      owner = { id: params.ownerId };
     }
 
     let revisionFilter: any = {};
@@ -302,16 +329,25 @@ export default class ContainerService {
     let where: FindOptionsWhere<ContainerRevision> = {
       ...QueryFilter.createFilterWhereClause(filterMapping, params),
       ...revisionFilter,
-      ...userFilter,
       pointsOfSale: {
         pointOfSaleId: params.posId,
         revision: params.posRevision,
+      },
+      container: {
+        deletedAt: IsNull(),
+        owner,
+      },
+      products: {
+        product: {
+          deletedAt: IsNull(),
+        },
       },
     };
 
     const options: FindManyOptions<ContainerRevision> = {
       where,
       order: { createdAt: 'ASC' },
+      withDeleted: true,
     };
 
     return { ...options, relations };

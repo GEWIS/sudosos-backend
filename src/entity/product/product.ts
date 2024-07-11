@@ -17,7 +17,7 @@
  */
 
 import {
-  Column,
+  Column, DeleteDateColumn,
   Entity, JoinColumn,
   ManyToOne, OneToOne,
 } from 'typeorm';
@@ -39,12 +39,15 @@ export default class Product extends BaseEntity {
   })
   public currentRevision: number;
 
-  @ManyToOne(() => User, { nullable: false })
+  @DeleteDateColumn()
+  public readonly deletedAt: Date | null;
+
+  @ManyToOne(() => User, { nullable: false, eager: true })
   public owner: User;
 
   // onDelete: 'CASCADE' is not possible here, because removing the
   // image from the database will not remove it form storage
-  @OneToOne(() => ProductImage, { nullable: true, onDelete: 'RESTRICT' })
+  @OneToOne(() => ProductImage, { nullable: true, eager: true, onDelete: 'RESTRICT' })
   @JoinColumn()
   public image?: ProductImage;
 }

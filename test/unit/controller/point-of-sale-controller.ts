@@ -48,6 +48,7 @@ import { allDefinition, organDefinition, ownDefintion, RoleFactory } from '../..
 import { UpdateContainerRequest } from '../../../src/controller/request/container-request';
 import ContainerController from '../../../src/controller/container-controller';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
+import Container from '../../../src/entity/container/container';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -75,7 +76,10 @@ describe('PointOfSaleController', async () => {
     admin: User,
     user: User,
     organ: User,
+    containers: Container[],
+    deletedContainers: Container[],
     pointsOfSale: PointOfSale[],
+    deletedPointsOfSale: PointOfSale[],
     pointOfSaleRevisions: PointOfSaleRevision[],
     validPOSRequest: CreatePointOfSaleRequest,
     adminToken: string,
@@ -125,7 +129,7 @@ describe('PointOfSaleController', async () => {
     const { pointsOfSale, pointOfSaleRevisions } = await seedPointsOfSale([admin, user, organ], containerRevisions);
 
     const validPOSRequest: CreatePointOfSaleRequest = {
-      containers: [containers[0].id, containers[1].id, containers[2].id],
+      containers: containers.filter((c) => c.deletedAt == null).slice(0, 3).map((c) => c.id),
       name: 'Valid POS',
       useAuthentication: true,
       ownerId: 2,
@@ -146,7 +150,10 @@ describe('PointOfSaleController', async () => {
       ...ctx,
       controller,
       organ,
-      pointsOfSale,
+      containers: containers.filter((c) => c.deletedAt == null),
+      deletedContainers: containers.filter((c) => c.deletedAt != null),
+      pointsOfSale: pointsOfSale.filter((p) => p.deletedAt == null),
+      deletedPointsOfSale: pointsOfSale.filter((p) => p.deletedAt != null),
       pointOfSaleRevisions,
       validPOSRequest,
       adminToken,
@@ -162,62 +169,6 @@ describe('PointOfSaleController', async () => {
     await finishTestDB(ctx.connection);
   });
 
-  describe('PATCH /pointsofsale/{id}', () => {
-    it('should patch the use authentication', async () => {
-      let res = await request(ctx.app)
-        .get('/pointsofsale/1')
-        .set('Authorization', `Bearer ${ctx.adminToken}`);
-      const pos = res.body as PointOfSaleWithContainersResponse;
-      const req: UpdatePointOfSaleRequest = {
-        containers: pos.containers.map((c) => c.id),
-        name: pos.name,
-        useAuthentication: !pos.useAuthentication,
-        id: 1,
-      };
-      res = await request(ctx.app)
-        .patch('/pointsofsale/1')
-        .set('Authorization', `Bearer ${ctx.superAdminToken}`)
-        .send(req);
-      expect(res.status).to.eq(200);
-      updatePointOfSaleEq(req, res.body as PointOfSaleWithContainersResponse);
-    });
-    it('should patch the containers', async () => {
-      let res = await request(ctx.app)
-        .get('/pointsofsale/1')
-        .set('Authorization', `Bearer ${ctx.adminToken}`);
-      const pos = res.body as PointOfSaleWithContainersResponse;
-      const req: UpdatePointOfSaleRequest = {
-        containers: [ctx.validPOSRequest.containers[0]],
-        name: pos.name,
-        useAuthentication: pos.useAuthentication,
-        id: 1,
-      };
-      res = await request(ctx.app)
-        .patch('/pointsofsale/1')
-        .set('Authorization', `Bearer ${ctx.superAdminToken}`)
-        .send(req);
-      expect(res.status).to.eq(200);
-      updatePointOfSaleEq(req, res.body as PointOfSaleWithContainersResponse);
-    });
-    it('should patch the name', async () => {
-      let res = await request(ctx.app)
-        .get('/pointsofsale/1')
-        .set('Authorization', `Bearer ${ctx.adminToken}`);
-      const pos = res.body as PointOfSaleWithContainersResponse;
-      const req: UpdatePointOfSaleRequest = {
-        containers: pos.containers.map((c) => c.id),
-        name: 'New name',
-        useAuthentication: pos.useAuthentication,
-        id: 1,
-      };
-      res = await request(ctx.app)
-        .patch('/pointsofsale/1')
-        .set('Authorization', `Bearer ${ctx.superAdminToken}`)
-        .send(req);
-      expect(res.status).to.eq(200);
-      updatePointOfSaleEq(req, res.body as PointOfSaleWithContainersResponse);
-    });
-  });
   describe('GET /pointsofsale', () => {
     it('should return correct model', async () => {
       const res = await request(ctx.app)
@@ -318,6 +269,14 @@ describe('PointOfSaleController', async () => {
         .get(`/pointsofsale/${pos.id}`)
         .set('Authorization', `Bearer ${ctx.organ}`);
       expect(res.status).to.equal(403);
+    });
+    it('should return an HTTP 404 if the point of sale is soft deleted', async () => {
+      const res = await request(ctx.app)
+        .get(`/pointsofsale/${ctx.deletedPointsOfSale[0].id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(404);
+      expect(res.body).to.equal('Point of Sale not found.');
     });
     it('should return an HTTP 404 if the point of sale with given id does not exist', async () => {
       const res = await request(ctx.app)
@@ -426,6 +385,10 @@ describe('PointOfSaleController', async () => {
       expect(res.status).to.equal(200);
       expect(containers.length).to.be.at.least(1);
 
+      // Never include deleted containers
+      const deletedContainerIds = ctx.deletedContainers.map((c) => c.id);
+      containers.forEach((container) => expect(deletedContainerIds).to.not.include(container.id));
+
       expect(pagination.take).to.equal(defaultPagination());
       expect(pagination.skip).to.equal(0);
       expect(pagination.count).to.be.at.least(1);
@@ -521,12 +484,21 @@ describe('PointOfSaleController', async () => {
       const req: CreatePointOfSaleRequest = { ...ctx.validPOSRequest, ownerId: -1 };
       await expectError(req, 'ownerId: must exist.');
     });
-    it('should verify containers Ids', async () => {
+    it('should verify containers exist', async () => {
+      const containerId = ctx.containers.length + ctx.deletedContainers.length + 10;
       const invalidRequest = {
         ...ctx.validPOSRequest,
-        containers: [-1],
+        containers: [containerId],
       };
-      await expectError(invalidRequest, `Containers: ${INVALID_CONTAINER_ID(-1).value}`);
+      await expectError(invalidRequest, `Containers: ${INVALID_CONTAINER_ID(containerId).value}`);
+    });
+    it('should verify containers are not soft deleted', async () => {
+      const containerId = ctx.deletedContainers[0].id;
+      const invalidRequest = {
+        ...ctx.validPOSRequest,
+        containers: [containerId],
+      };
+      await expectError(invalidRequest, `Containers: ${INVALID_CONTAINER_ID(containerId).value}`);
     });
   }
   describe('POST /pointsofsale', () => {
@@ -539,6 +511,9 @@ describe('PointOfSaleController', async () => {
         .post('/pointsofsale')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(ctx.validPOSRequest);
+
+      expect(res.status).to.equal(200);
+      expect(res.body).to.not.be.empty;
 
       const validation = ctx.specification.validateModel(
         'PointOfSaleWithContainersResponse',
@@ -580,12 +555,16 @@ describe('PointOfSaleController', async () => {
       expect(await PointOfSale.count()).to.equal(count + 1);
       const body = res.body as PointOfSaleWithContainersResponse;
       pointOfSaleEq(createPointOfSaleParams, body);
-      const databaseProduct = await PointOfSale.findOne({
+      const databasePointOfSale = await PointOfSale.findOne({
         where: { id: body.id, currentRevision: body.revision },
       });
-      expect(databaseProduct).to.exist;
+      expect(databasePointOfSale).to.exist;
 
       expect(res.status).to.equal(200);
+
+      // Cleanup
+      await PointOfSaleRevision.delete({ pointOfSaleId: databasePointOfSale.id });
+      await PointOfSale.delete({ id: databasePointOfSale.id });
     });
     it('should return an HTTP 403 if not admin', async () => {
       const count = await PointOfSale.count();
@@ -598,6 +577,68 @@ describe('PointOfSaleController', async () => {
       expect(res.body).to.be.empty;
 
       expect(res.status).to.equal(403);
+    });
+  });
+  describe('PATCH /pointsofsale/{id}', () => {
+    describe('verifyPointOfSaleRequest Specification', async (): Promise<void> => {
+      testValidationOnRoute('post', '/pointsofsale');
+    });
+    it('should patch the use authentication', async () => {
+      const { id } = ctx.pointsOfSale[0];
+      let res = await request(ctx.app)
+        .get(`/pointsofsale/${id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      const pos = res.body as PointOfSaleWithContainersResponse;
+      const req: UpdatePointOfSaleRequest = {
+        containers: pos.containers.map((c) => c.id),
+        name: pos.name,
+        useAuthentication: !pos.useAuthentication,
+        id: 1,
+      };
+      res = await request(ctx.app)
+        .patch(`/pointsofsale/${id}`)
+        .set('Authorization', `Bearer ${ctx.superAdminToken}`)
+        .send(req);
+      expect(res.status).to.eq(200);
+      updatePointOfSaleEq(req, res.body as PointOfSaleWithContainersResponse);
+    });
+    it('should patch the containers', async () => {
+      const { id } = ctx.pointsOfSale[0];
+      let res = await request(ctx.app)
+        .get(`/pointsofsale/${id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      const pos = res.body as PointOfSaleWithContainersResponse;
+      const req: UpdatePointOfSaleRequest = {
+        containers: [ctx.validPOSRequest.containers[0]],
+        name: pos.name,
+        useAuthentication: pos.useAuthentication,
+        id: 1,
+      };
+      res = await request(ctx.app)
+        .patch(`/pointsofsale/${id}`)
+        .set('Authorization', `Bearer ${ctx.superAdminToken}`)
+        .send(req);
+      expect(res.status).to.eq(200);
+      updatePointOfSaleEq(req, res.body as PointOfSaleWithContainersResponse);
+    });
+    it('should patch the name', async () => {
+      const { id } = ctx.pointsOfSale[0];
+      let res = await request(ctx.app)
+        .get(`/pointsofsale/${id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      const pos = res.body as PointOfSaleWithContainersResponse;
+      const req: UpdatePointOfSaleRequest = {
+        containers: pos.containers.map((c) => c.id),
+        name: 'New name',
+        useAuthentication: pos.useAuthentication,
+        id: 1,
+      };
+      res = await request(ctx.app)
+        .patch(`/pointsofsale/${id}`)
+        .set('Authorization', `Bearer ${ctx.superAdminToken}`)
+        .send(req);
+      expect(res.status).to.eq(200);
+      updatePointOfSaleEq(req, res.body as PointOfSaleWithContainersResponse);
     });
   });
   describe('Propagating updates', () => {
@@ -655,6 +696,74 @@ describe('PointOfSaleController', async () => {
 
       expect(newContainer.name).to.eq(containerUpdate.name);
       expect(newContainer.products.map((p) => p.id)).to.deep.equalInAnyOrder(containerUpdate.products);
+    });
+  });
+  describe('DELETE /pointsofsale/:id', () => {
+    it('should return 204 if owner', async () => {
+      const pointOfSale = ctx.pointsOfSale.find((p) => p.owner.id === ctx.organ.id && p.deletedAt == null);
+      const res = await request(ctx.app)
+        .delete(`/pointsofsale/${pointOfSale.id}`)
+        .set('Authorization', `Bearer ${ctx.organMemberToken}`)
+        .send();
+
+      expect(res.status).to.equal(204);
+      expect(res.body).to.be.empty;
+
+      const dbPointOfSale = await PointOfSale.findOne({ where: { id: pointOfSale.id }, withDeleted: true });
+      expect(dbPointOfSale).to.not.be.null;
+      expect(dbPointOfSale.deletedAt).to.not.be.null;
+
+      // Cleanup
+      await dbPointOfSale.recover();
+    });
+    it('should return 204 for any point of sale if admin', async () => {
+      const pointOfSale = ctx.pointsOfSale.find((p) => p.owner.id !== ctx.admin.id && p.deletedAt == null);
+      const res = await request(ctx.app)
+        .delete(`/pointsofsale/${pointOfSale.id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send();
+
+      expect(res.status).to.equal(204);
+      expect(res.body).to.be.empty;
+
+      const dbPointOfSale = await PointOfSale.findOne({ where: { id: pointOfSale.id }, withDeleted: true });
+      expect(dbPointOfSale).to.not.be.null;
+      expect(dbPointOfSale.deletedAt).to.not.be.null;
+
+      // Cleanup
+      await dbPointOfSale.recover();
+    });
+    it('should return 403 if not owner', async () => {
+      const pointOfSale = ctx.pointsOfSale.find((p) => p.owner.id !== ctx.organ.id && p.deletedAt == null);
+      const res = await request(ctx.app)
+        .delete(`/pointsofsale/${pointOfSale.id}`)
+        .set('Authorization', `Bearer ${ctx.organMemberToken}`)
+        .send();
+
+      expect(res.status).to.equal(403);
+      expect(res.body).to.be.empty;
+    });
+    it('should return 404 if point of sale does not exist', async () => {
+      const pointOfSaleId = ctx.pointsOfSale.length + ctx.deletedPointsOfSale.length + 2;
+
+      const res = await request(ctx.app)
+        .delete(`/pointsofsale/${pointOfSaleId}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send();
+
+      expect(res.status).to.equal(404);
+      expect(res.body).to.equal('Point of sale not found');
+    });
+    it('should return 404 if point of sale is soft deleted', async () => {
+      const pointOfSaleId = ctx.deletedPointsOfSale[0].id;
+
+      const res = await request(ctx.app)
+        .delete(`/pointsofsale/${pointOfSaleId}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send();
+
+      expect(res.status).to.equal(404);
+      expect(res.body).to.equal('Point of sale not found');
     });
   });
 });

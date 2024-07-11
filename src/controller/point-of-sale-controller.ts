@@ -78,6 +78,10 @@ export default class PointOfSaleController extends BaseController {
           policy: async (req) => this.roleManager.can(req.token.roles, 'update', await PointOfSaleController.getRelation(req), 'PointOfSale', ['*']),
           handler: this.updatePointOfSale.bind(this),
         },
+        DELETE: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'delete', await PointOfSaleController.getRelation(req), 'PointOfSale', ['*']),
+          handler: this.deletePointOfSale.bind(this),
+        },
       },
       '/:id(\\d+)/transactions': {
         GET: {
@@ -353,6 +357,40 @@ export default class PointOfSaleController extends BaseController {
       res.status(200).json(transactions);
     } catch (error) {
       this.logger.error('Could not return point of sale transactions:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * DELETE /pointsofsale/{id}
+   * @summary (Soft) delete the given point of sale. Cannot be undone.
+   * @operationId deletePointOfSale
+   * @tags pointofsale - Operations of point of sale controller
+   * @param {integer} id.path.required - The id of the point of sale which should be deleted
+   * @security JWT
+   * @return {string} 204 - Success
+   * @return {string} 404 - Not found error
+   * @return {string} 500 - Internal server error
+   */
+  public async deletePointOfSale(req: RequestWithToken, res: Response): Promise<void> {
+    const { id } = req.params;
+    this.logger.trace('Delete point of sale', id, 'by user', req.token.user);
+
+    try {
+      const pointOfSaleId = parseInt(id, 10);
+
+      const pointOfSale = await PointOfSale.findOne({ where: { id: pointOfSaleId } });
+
+      if (pointOfSale == null) {
+        res.status(404).json('Point of sale not found');
+        return;
+      }
+
+      await PointOfSaleService.deletePointOfSale(pointOfSaleId);
+      res.status(204).send();
+      return;
+    } catch (error) {
+      this.logger.error('Could not delete point of sale', error);
       res.status(500).json('Internal server error.');
     }
   }
