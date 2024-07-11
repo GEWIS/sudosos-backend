@@ -15,3 +15,6 @@ chown node /app/out/data/products
 
 mkdir -p /app/out/data/invoices
 chown node /app/out/data/invoices
+
+mkdir -p /app/out/data/payout_requests
+chown node /app/out/data/payout_requests

@@ -16,13 +16,30 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import crypto from 'crypto';
+import { Column, Entity } from 'typeorm';
+import BaseFile from './base-file';
+import BaseEntity from '../base-entity';
+import { Client } from 'pdf-generator-client';
+import FileService from '../../service/file-service';
 
 /**
- * Returns the sha256 hash of an object.
- * @param jsonObject
+ * @typedef {BaseFile} Pdf
  */
-export function hashJSON(jsonObject: object): string {
-  const jsonString = JSON.stringify(jsonObject);
-  return crypto.createHash('sha256').update(jsonString).digest('hex');
+@Entity()
+export default class Pdf extends BaseFile {
+  @Column()
+  // Stores the params that were used to generate this pdf as an hash. This is used to pretend regeneration if the invoice has not change.
+  // The service still allows the user to force regenerate the pdf.
+  public hash: string;
+}
+
+export interface Pdfable<S extends Pdf = Pdf> extends BaseEntity {
+  pdf?: S,
+  getPdfParamHash: () => string,
+  createPDF: () => Promise<S>
+}
+
+export interface PdfGenerator {
+  client: Client,
+  fileService: FileService
 }

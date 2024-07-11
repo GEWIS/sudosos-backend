@@ -29,6 +29,7 @@ import { PayoutRequestState } from '../entity/transactions/payout-request-status
 import PayoutRequestRequest from './request/payout-request-request';
 import User from '../entity/user/user';
 import BalanceService from '../service/balance-service';
+import FileService from "../service/file-service";
 
 export default class PayoutRequestController extends BaseController {
   private logger: Logger = log4js.getLogger('PayoutRequestController');
@@ -54,6 +55,12 @@ export default class PayoutRequestController extends BaseController {
         GET: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'get', await PayoutRequestController.getRelation(req), 'PayoutRequest', ['*']),
           handler: this.returnSinglePayoutRequest.bind(this),
+        },
+      },
+      '/:id(\\d+)/pdf': {
+        GET: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', await PayoutRequestController.getRelation(req), 'PayoutRequest', ['*']),
+          handler: this.getPayoutRequestPdf.bind(this),
         },
       },
       '/:id(\\d+)/status': {
@@ -247,6 +254,39 @@ export default class PayoutRequestController extends BaseController {
     } catch (e) {
       res.status(500).send();
       this.logger.error(e);
+    }
+  }
+
+
+  /**
+   * GET /payoutrequests/{id}/pdf
+   * @summary Get a payout request pdf
+   * @operationId getPayoutRequestPdf
+   * @tags payoutRequests - Operations of the payout request controller
+   * @security JWT
+   * @param {integer} id.path.required - The ID of the payout request object that should be returned
+   * @return {string} 404 - Nonexistent payout request id
+   * @return {string} 200 - The pdf location information.
+   * @return {string} 500 - Internal server error
+   */
+  public async getPayoutRequestPdf(req: RequestWithToken, res: Response): Promise<void> {
+    const { id } = req.params;
+    const payoutRequestId = parseInt(id, 10);
+    this.logger.trace('Get payout request pdf', id, 'by user', req.token.user);
+
+    try {
+      const payoutRequest = await PayoutRequest.findOne({ where: { id: payoutRequestId }, relations: ['requestedBy', 'approvedBy', 'payoutRequestStatus'] });
+      if (!payoutRequest) {
+        res.status(404).json('Unknown payout request ID.');
+        return;
+      }
+
+      const pdf = await FileService.getOrCreatePDF(payoutRequest);
+
+      res.status(200).json({ pdf: pdf.downloadName });
+    } catch (error) {
+      this.logger.error('Could get payout request PDF:', error);
+      res.status(500).json('Internal server error.');
     }
   }
 }

@@ -28,7 +28,7 @@ import { PayoutRequestState } from '../../../src/entity/transactions/payout-requ
 import PayoutRequestRequest from '../../../src/controller/request/payout-request-request';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
-import BalanceService from "../../../src/service/balance-service";
+import BalanceService from '../../../src/service/balance-service';
 
 describe('PayoutRequestService', () => {
   let ctx: {

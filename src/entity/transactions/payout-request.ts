@@ -26,8 +26,12 @@ import Transfer from './transfer';
 import DineroTransformer from '../transformer/dinero-transformer';
 // eslint-disable-next-line import/no-cycle
 import PayoutRequestStatus from './payout-request-status';
+import PayoutRequestPdf from '../file/payout-request-pdf';
+import { hashJSON } from '../../helpers/hash';
+import PayoutRequestPdfService from '../../service/payout-request-pdf-service';
 
 @Entity()
+// TODO Migration
 export default class PayoutRequest extends BaseEntity {
   @ManyToOne(() => User, { nullable: false })
   @JoinColumn()
@@ -55,4 +59,19 @@ export default class PayoutRequest extends BaseEntity {
 
   @Column()
   public bankAccountName: string;
+
+  @Column({ nullable: true })
+  public pdfId?: number;
+
+  @OneToOne(() => PayoutRequestPdf, { nullable: true, onDelete: 'RESTRICT' })
+  @JoinColumn()
+  public pdf?: PayoutRequestPdf;
+
+  getPdfParamHash(): string {
+    return hashJSON(PayoutRequestPdfService.getParameters(this));
+  }
+
+  createPDF(): Promise<PayoutRequestPdf> {
+    return PayoutRequestPdfService.createPdf(this.id);
+  }
 }

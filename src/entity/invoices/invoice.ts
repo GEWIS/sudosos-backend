@@ -28,6 +28,8 @@ import InvoiceEntry from './invoice-entry';
 // eslint-disable-next-line import/no-cycle
 import InvoiceStatus from './invoice-status';
 import InvoicePdf from '../file/invoice-pdf';
+import { hashJSON } from '../../helpers/hash';
+import InvoicePdfService from '../../service/invoice-pdf-service';
 
 /**
  * @typedef {BaseEntity} Invoice
@@ -55,7 +57,7 @@ export default class Invoice extends BaseEntity {
 
   @OneToMany(() => InvoiceEntry,
     (invoiceEntry) => invoiceEntry.invoice,
-    { cascade: true })
+    { cascade: true, eager: true })
   public invoiceEntries: InvoiceEntry[];
 
   @OneToMany(() => InvoiceStatus,
@@ -93,4 +95,11 @@ export default class Invoice extends BaseEntity {
   @Column()
   public country: string;
 
+  getPdfParamHash(): string {
+    return hashJSON(InvoicePdfService.getParameters(this));
+  }
+
+  createPDF(): Promise<InvoicePdf> {
+    return InvoicePdfService.createPdf(this.id);
+  }
 }

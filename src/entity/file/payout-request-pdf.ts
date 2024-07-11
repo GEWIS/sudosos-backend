@@ -16,13 +16,11 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import crypto from 'crypto';
+import { Entity } from 'typeorm';
+import Pdf from './pdf-file';
 
 /**
- * Returns the sha256 hash of an object.
- * @param jsonObject
+ * @typedef {Pdf} PayoutRequestPdf
  */
-export function hashJSON(jsonObject: object): string {
-  const jsonString = JSON.stringify(jsonObject);
-  return crypto.createHash('sha256').update(jsonString).digest('hex');
-}
+@Entity()
+export default class PayoutRequestPdf extends Pdf {}
