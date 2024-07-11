@@ -97,12 +97,13 @@ export default class PayoutRequestPdfService {
     if (!payoutRequest) return undefined;
 
     const params = this.getPdfParams(payoutRequest);
-    return this.pdfGenerator.client.generatePayout(params).then(async (res: FileResponse) => {
+    try {
+      const res: FileResponse = await this.pdfGenerator.client.generatePayout(params);
       const blob = res.data;
       const buffer = Buffer.from(await blob.arrayBuffer());
-      return this.pdfGenerator.fileService.uploadPdf(payoutRequest, PayoutRequestPdf, buffer, payoutRequest.requestedBy);
-    }).catch((res: any) => {
-      throw new Error(`PayoutRequest generation failed for ${JSON.stringify(res, null, 2)}`);
-    });
+      return await this.pdfGenerator.fileService.uploadPdf(payoutRequest, PayoutRequestPdf, buffer, payoutRequest.requestedBy);
+    } catch (error) {
+      throw new Error(`PayoutRequest generation failed for ${JSON.stringify(error, null, 2)}`);
+    }
   }
 }
