@@ -19,7 +19,7 @@
 import {
   FindManyOptions,
   FindOptionsRelations,
-  FindOptionsWhere, In,
+  FindOptionsWhere, In, IsNull,
   Raw,
 
 } from 'typeorm';
@@ -197,6 +197,18 @@ export default class PointOfSaleService {
   }
 
   /**
+   * (Soft) delete a point of sale
+   * @param pointOfSaleId
+   */
+  public static async deletePointOfSale(pointOfSaleId: number): Promise<void> {
+    const pointOfSale = await PointOfSale.findOne({ where: { id: pointOfSaleId } });
+    if (pointOfSale == null) {
+      throw new Error('Point of sale not found');
+    }
+    await PointOfSale.softRemove(pointOfSale);
+  }
+
+  /**
    * Test to see if the user can view a specified Point of Sale
    * @param userId - The User to test
    * @param pointOfSale - The Point of Sale to view
@@ -240,23 +252,37 @@ export default class PointOfSaleService {
     let revisionFilter: any = {};
     revisionFilter.revision = Raw(alias => `${alias} = (${this.revisionSubQuery(params.pointOfSaleRevision)})`);
 
-    const userFilter: any = {};
+    let owner: FindOptionsWhere<User> = {};
     if (user) {
       const organIds = (await AuthenticationService.getMemberAuthenticators(user)).map((u) => u.id);
-      userFilter.pointOfSale = { owner: { id: In(organIds) } };
+      owner = { id: In(organIds) };
     } else if (params.ownerId) {
-      userFilter.pointOfSale = { owner: { id: params.ownerId } };
+      owner = { id: params.ownerId };
     }
 
     let where: FindOptionsWhere<PointOfSaleRevision> = {
       ...QueryFilter.createFilterWhereClause(filterMapping, params),
-      ...userFilter,
       ...revisionFilter,
+      pointOfSale: {
+        deletedAt: IsNull(),
+        owner,
+      },
+      containers: {
+        container: {
+          deletedAt: IsNull(),
+        },
+        products: {
+          product: {
+            deletedAt: IsNull(),
+          },
+        },
+      },
     };
 
     const options: FindManyOptions<PointOfSaleRevision> = {
       where,
       order: { createdAt: 'ASC' },
+      withDeleted: true,
     };
 
     return { ...options, relations };

@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { Brackets, createQueryBuilder, In, SelectQueryBuilder } from 'typeorm';
+import { Brackets, createQueryBuilder, In, IsNull, SelectQueryBuilder } from 'typeorm';
 import Dinero from 'dinero.js';
 import dinero, { DineroObject } from 'dinero.js';
 import { RequestWithToken } from '../middleware/token-middleware';
@@ -187,7 +187,9 @@ export default class TransactionService {
     }
 
     // check if product is in the container
-    if (!container.products.some((product) => product.product.id === req.product.id
+    if (!container.products.some((product) => product.product
+      && product.product.deletedAt == null
+      && product.product.id === req.product.id
       && product.revision === req.product.revision)) {
       return false;
     }
@@ -196,7 +198,7 @@ export default class TransactionService {
     const product = await ProductRevision.findOne({
       where: {
         revision: req.product.revision,
-        product: { id: req.product.id },
+        product: { id: req.product.id, deletedAt: IsNull() },
       },
       relations: ['product'],
     });
@@ -226,7 +228,7 @@ export default class TransactionService {
     }
 
     // check if container is in the point of sale
-    if (!pointOfSale.containers.some((container) => container.container.id === req.container.id
+    if (!pointOfSale.containers.some((container) => container.container && container.container.id === req.container.id
         && container.revision === req.container.revision)) {
       return false;
     }
@@ -249,7 +251,7 @@ export default class TransactionService {
     const container = await ContainerRevision.findOne({
       where: {
         revision: req.container.revision,
-        container: { id: req.container.id },
+        container: { id: req.container.id, deletedAt: IsNull() },
       },
       relations: ['container', 'products'],
     });
@@ -311,7 +313,7 @@ export default class TransactionService {
     const pointOfSale = await PointOfSaleRevision.findOne({
       where: {
         revision: req.pointOfSale.revision,
-        pointOfSale: { id: req.pointOfSale.id },
+        pointOfSale: { id: req.pointOfSale.id, deletedAt: IsNull() },
       },
       relations: ['pointOfSale', 'containers'],
     });
@@ -556,7 +558,9 @@ export default class TransactionService {
       .leftJoinAndSelect('transaction.from', 'from')
       .leftJoinAndSelect('transaction.createdBy', 'createdBy')
       .leftJoinAndSelect('transaction.pointOfSale', 'pointOfSaleRev')
+      .withDeleted()
       .leftJoinAndSelect('pointOfSaleRev.pointOfSale', 'pointOfSale')
+      .withDeleted()
       .leftJoin('transaction.subTransactions', 'subTransaction')
       .leftJoin('subTransaction.subTransactionRows', 'subTransactionRow')
       .distinct(true);
@@ -674,6 +678,7 @@ export default class TransactionService {
         'subTransactions.subTransactionRows.product', 'subTransactions.subTransactionRows.product.product',
         'subTransactions.subTransactionRows.product.vat',
       ],
+      withDeleted: true,
     });
 
     return this.asTransactionResponse(transaction);

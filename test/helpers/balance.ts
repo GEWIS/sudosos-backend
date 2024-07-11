@@ -31,12 +31,11 @@ export function calculateBalance(user: User, transactions: Transaction[], subTra
     transactionsOutgoing = transactionsOutgoing
       .filter((t) => t.createdAt.getTime() <= date.getTime());
   }
-  let transactionsIncoming = subTransactions.filter((s) => s.to.id === user.id)
-    .sort((a, b) => b.transaction.createdAt.getTime() - a.transaction.createdAt.getTime())
-    .map((s) => s.transaction);
+  let subTransactionsIncoming = subTransactions.filter((s) => s.to.id === user.id)
+    .sort((a, b) => b.transaction.createdAt.getTime() - a.transaction.createdAt.getTime());
   if (date) {
-    transactionsIncoming = transactionsIncoming
-      .filter((t) => t.createdAt.getTime() <= date.getTime());
+    subTransactionsIncoming = subTransactionsIncoming
+      .filter((t) => t.transaction.createdAt.getTime() <= date.getTime());
   }
   let transfersOutgoing = transfers.filter((t) => t.from && t.from.id === user.id)
     .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
@@ -59,9 +58,8 @@ export function calculateBalance(user: User, transactions: Transaction[], subTra
       prev - (curr.amount * curr.product.priceInclVat.getAmount())
     ), 0);
   const valueTransactionsIncoming: number = Array.prototype
-    .concat(...Array.prototype.concat(...transactionsIncoming
-      .map((t) => t.subTransactions
-        .map((s) => s.subTransactionRows))))
+    .concat(...Array.prototype.concat(...subTransactionsIncoming
+      .map((s) => s.subTransactionRows)))
     .reduce((prev: number, curr: SubTransactionRow) => (
       prev + (curr.amount * curr.product.priceInclVat.getAmount())
     ), 0);
@@ -72,7 +70,7 @@ export function calculateBalance(user: User, transactions: Transaction[], subTra
 
   // Calculate the user's personal last transaction/transfer
   let lastTransaction: Transaction;
-  const allTransactions = transactionsIncoming.concat(transactionsOutgoing)
+  const allTransactions = transactionsOutgoing.concat(subTransactionsIncoming.map((s) => s.transaction))
     .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   if (allTransactions.length > 0) {
     // eslint-disable-next-line prefer-destructuring

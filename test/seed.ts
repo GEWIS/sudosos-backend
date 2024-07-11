@@ -509,6 +509,7 @@ function defineProducts(
     const product = Object.assign(new Product(), {
       id: start + nr,
       owner: user,
+      deletedAt: (nr % 5 === 4) ? new Date() : undefined,
     }) as Product;
 
     products.push(product);
@@ -579,13 +580,13 @@ export async function seedProducts(
   let productImages: ProductImage[] = [];
   let productRevisions: ProductRevision[] = [];
 
-  const sellers = users.filter((u) => [UserType.LOCAL_ADMIN, UserType.MEMBER].includes(u.type));
+  const sellers = users.filter((u) => [UserType.LOCAL_ADMIN, UserType.MEMBER, UserType.ORGAN].includes(u.type));
 
   const promises: Promise<any>[] = [];
   for (let i = 0; i < sellers.length; i += 1) {
     const prod = defineProducts(
       products.length,
-      6,
+      8,
       sellers[i],
     );
 
@@ -646,6 +647,7 @@ function defineContainers(
     const container = Object.assign(new Container(), {
       id: start + nr,
       owner: user,
+      deletedAt: (nr % 3 === 2) ? new Date() : undefined,
       public: nr % 2 > 0,
     }) as Container;
     containers.push(container);
@@ -706,7 +708,7 @@ export async function seedContainers(
   for (let i = 0; i < sellers.length; i += 1) {
     const con = defineContainers(
       containers.length,
-      3,
+      4,
       sellers[i],
     );
     let rev: ContainerRevision[] = [];
@@ -748,6 +750,7 @@ function definePointsOfSale(
     const pointOfSale = Object.assign(new PointOfSale(), {
       id: start + nr,
       owner: user,
+      deletedAt: (nr % 3 === 2) ? new Date() : undefined,
     });
     pointsOfSale.push(pointOfSale);
   }
@@ -816,7 +819,7 @@ export async function seedPointsOfSale(
   for (let i = 0; i < sellers.length; i += 1) {
     const pos = definePointsOfSale(
       pointsOfSale.length,
-      3,
+      4,
       sellers[i],
     );
     let rev: PointOfSaleRevision[] = [];

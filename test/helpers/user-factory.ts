@@ -18,6 +18,7 @@
 
 import User, { TermsOfServiceStatus, UserType } from '../../src/entity/user/user';
 import generateBalance from './test-helpers';
+import { DeleteResult } from 'typeorm';
 
 export class Builder {
   user: User;
@@ -48,6 +49,10 @@ export class Builder {
 
   public get(): Promise<User> {
     return User.save(this.user as User);
+  }
+
+  public delete(): Promise<DeleteResult> {
+    return User.delete(this.user.id);
   }
 
   public async clone(amount: number): Promise<User[]> {

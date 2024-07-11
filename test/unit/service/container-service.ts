@@ -46,6 +46,9 @@ import AuthenticationService from '../../../src/service/authentication-service';
 import MemberAuthenticator from '../../../src/entity/authenticator/member-authenticator';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
+import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
+import sinon from 'sinon';
+import { PointOfSaleWithContainersResponse } from '../../../src/controller/response/point-of-sale-response';
 
 /**
  * Test if all the container responses are part of the container set array.
@@ -98,6 +101,11 @@ describe('ContainerService', async (): Promise<void> => {
     specification: SwaggerSpecification,
     users: User[],
     containers: Container[],
+    deletedContainers: Container[],
+    containerRevisions: ContainerRevision[],
+    pointsOfSale: PointOfSale[],
+    deletedPointsOfSale: PointOfSale[],
+    pointOfSaleRevisions: PointOfSaleRevision[],
   };
 
   before(async () => {
@@ -109,7 +117,7 @@ describe('ContainerService', async (): Promise<void> => {
     const vatGroups = await seedVatGroups();
     const { productRevisions } = await seedProducts(users, categories, vatGroups);
     const { containers, containerRevisions } = await seedContainers(users, productRevisions);
-    await seedPointsOfSale(users, containerRevisions);
+    const { pointsOfSale, pointOfSaleRevisions } = await seedPointsOfSale(users, containerRevisions);
 
     // start app
     const app = express();
@@ -122,7 +130,12 @@ describe('ContainerService', async (): Promise<void> => {
       app,
       specification,
       users,
-      containers,
+      containers: containers.filter((c) => c.deletedAt == null),
+      deletedContainers: containers.filter((c) => c.deletedAt != null),
+      containerRevisions,
+      pointsOfSale: pointsOfSale.filter((p) => p.deletedAt == null),
+      deletedPointsOfSale: pointsOfSale.filter((p) => p.deletedAt != null),
+      pointOfSaleRevisions,
     };
   });
 
@@ -161,24 +174,22 @@ describe('ContainerService', async (): Promise<void> => {
       expect(belongsToOwner).to.be.true;
     });
     it('should return containers of the point of sale specified', async () => {
-      const pos: PointOfSaleRevision = await PointOfSaleRevision.findOne({
-        relations: ['pointOfSale', 'containers'],
-        where: {},
-      });
+      const pos = ctx.pointsOfSale[0];
+      const posRevision = ctx.pointOfSaleRevisions.find((r) => r.pointOfSaleId === pos.id && r.revision === pos.currentRevision);
       const { records } = await ContainerService.getContainers({
-        posId: pos.pointOfSale.id,
-        posRevision: pos.revision,
+        posId: pos.id,
+        posRevision: posRevision.revision,
       });
 
       expect(containerSuperset(records, ctx.containers)).to.be.true;
 
       const belongsToPos = records.every(
-        (c1: ContainerResponse) => pos.containers.some(
+        (c1: ContainerResponse) => posRevision.containers.some(
           (c2: ContainerRevision) => c2.container.id === c1.id && c2.revision === c1.revision,
         ),
       );
       expect(belongsToPos).to.be.true;
-      expect(pos.containers).to.be.length(records.length);
+      expect(posRevision.containers.filter((c) => c.container.deletedAt == null)).to.be.length(records.length);
     });
     it('should return a single container if containerId is specified', async () => {
       const { records } = await ContainerService.getContainers({
@@ -327,6 +338,10 @@ describe('ContainerService', async (): Promise<void> => {
         relations: ['container', 'products', 'products.product', 'container.owner'],
       });
       await entityAsCreation(creation, revision);
+
+      // Cleanup
+      await ContainerRevision.delete({ containerId: container.id });
+      await Container.delete({ id: container.id });
     });
   });
 
@@ -368,11 +383,99 @@ describe('ContainerService', async (): Promise<void> => {
 
       const updatedPos = await PointOfSaleRevision
         .findOne({ where: { revision: 2, pointOfSale: { id: pos.id } }, relations: ['containers', 'containers.products'] });
-      expect(updatedPos).to.not.be.undefined;
+      expect(updatedPos).to.not.be.null;
       expect(updatedPos.containers).length(2);
 
       const newContainer = updatedPos.containers.find((c) => c.container.id === container.id);
       expect(newContainer.name).to.eq(update.name);
+
+      // Cleanup
+      await PointOfSaleRevision.delete({ pointOfSaleId: pos.id });
+      await PointOfSale.delete({ id: pos.id });
+      await ContainerRevision.delete({ containerId: container2.id });
+      await ContainerRevision.delete({ containerId: container.id });
+      await Container.delete({ id: container2.id });
+      await Container.delete({ id: container.id });
+    });
+  });
+  describe('deleteContainer function', () => {
+    it('should soft delete container and propagate update after deletion', async () => {
+      const stub = sinon.stub(PointOfSaleService, 'updatePointOfSale').callsFake(async (params): Promise<PointOfSaleWithContainersResponse> => {
+        const pointOfSale = await PointOfSaleService.getPointsOfSale({ pointOfSaleId: params.id, returnContainers: true, returnProducts: true });
+        return pointOfSale.records[0] as PointOfSaleWithContainersResponse;
+      });
+
+      const start = Math.floor(new Date().getTime() / 1000) * 1000;
+      const container = ctx.containers[0];
+      let dbContainer = await Container.findOne({ where: { id: container.id }, withDeleted: true });
+      // Sanity check
+      expect(dbContainer).to.not.be.null;
+      expect(dbContainer.deletedAt).to.be.null;
+
+      await ContainerService.deleteContainer(container.id);
+
+      dbContainer = await Container.findOne({ where: { id: container.id }, withDeleted: true });
+      expect(dbContainer).to.not.be.null;
+      expect(dbContainer.deletedAt).to.not.be.null;
+      expect(dbContainer.deletedAt.getTime()).to.be.greaterThanOrEqual(start);
+
+      const deletedContainers = await Container.find({ where: { deletedAt: Not(IsNull()) }, withDeleted: true });
+      expect(deletedContainers.length).to.equal(ctx.deletedContainers.length + 1);
+
+      // Propagated update
+      const revision = ctx.containerRevisions.find((c) => c.containerId === container.id && c.revision == container.currentRevision);
+      const pointOfSaleRevisions = ctx.pointOfSaleRevisions.filter((p) => p.containers
+        .some((c) => c.revision === revision.revision && c.containerId === revision.containerId && c.container.deletedAt == null))
+        .filter((p) => p.pointOfSale.deletedAt == null)
+        .filter((p) => p.revision === p.pointOfSale.currentRevision);
+      expect(stub.callCount).to.be.greaterThan(0);
+      expect(stub.callCount).to.equal(pointOfSaleRevisions.length);
+      for (let i = 0; i < stub.callCount; i += 1) {
+        const call = stub.getCall(i);
+        const pos = pointOfSaleRevisions[i];
+        expect(call.args).to.deep.equalInAnyOrder([{
+          // Include all previous containers except the just deleted container
+          containers: pos.containers.filter((c) => c.container.deletedAt == null)
+            .map((p) => p.containerId)
+            .filter((c) => c !== container.id),
+          useAuthentication: pos.useAuthentication,
+          name: pos.name,
+          id: pos.pointOfSaleId,
+        }]);
+      }
+
+      // Revert state
+      await dbContainer.recover();
+      stub.restore();
+    });
+    it('should throw error for non existent container', async () => {
+      const containerId = ctx.containers.length + ctx.deletedContainers.length + 2;
+      let dbContainer = await Container.findOne({ where: { id: containerId }, withDeleted: true });
+      // Sanity check
+      expect(dbContainer).to.be.null;
+
+      await expect(ContainerService.deleteContainer(containerId)).to.eventually.be.rejectedWith('Container not found');
+
+      const deletedContainers = await Container.find({ where: { deletedAt: Not(IsNull()) }, withDeleted: true });
+      expect(deletedContainers.length).to.equal(ctx.deletedContainers.length);
+    });
+    it('should throw error when soft deleting container twice', async () => {
+      const container = ctx.containers[0];
+      let dbContainer = await Container.findOne({ where: { id: container.id }, withDeleted: true });
+      // Sanity check
+      expect(dbContainer).to.not.be.null;
+      expect(dbContainer.deletedAt).to.be.null;
+
+      await ContainerService.deleteContainer(container.id);
+
+      dbContainer = await Container.findOne({ where: { id: container.id }, withDeleted: true });
+      expect(dbContainer).to.not.be.null;
+      expect(dbContainer.deletedAt).to.not.be.null;
+
+      await expect(ContainerService.deleteContainer(container.id)).to.eventually.be.rejectedWith('Container not found');
+
+      // Revert state
+      await dbContainer.recover();
     });
   });
 });

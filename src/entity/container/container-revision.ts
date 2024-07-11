@@ -60,7 +60,7 @@ export default class ContainerRevision extends BaseEntityWithoutId {
   })
   public name: string;
 
-  @ManyToMany(() => ProductRevision)
+  @ManyToMany(() => ProductRevision, (product) => product.containers)
   @JoinTable()
   public products: ProductRevision[];
 

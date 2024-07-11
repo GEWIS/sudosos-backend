@@ -48,6 +48,7 @@ import { DiskStorage } from '../../../src/files/storage';
 import VatGroup from '../../../src/entity/vat-group';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
+import ProductRevision from '../../../src/entity/product/product-revision';
 
 /**
  * Tests if a product response is equal to the request.
@@ -83,6 +84,7 @@ describe('ProductController', async (): Promise<void> => {
     vatGroups: VatGroup[],
     tokenNoRoles: String,
     products: Product[],
+    deletedProducts: Product[],
     validProductReq: UpdateProductRequest,
     invalidProductReq: UpdateProductRequest,
     validCreateProductReq: CreateProductRequest,
@@ -108,7 +110,7 @@ describe('ProductController', async (): Promise<void> => {
     const localUser = {
       id: 2,
       firstName: 'User',
-      type: UserType.LOCAL_USER,
+      type: UserType.MEMBER,
       active: true,
       acceptedToS: TermsOfServiceStatus.ACCEPTED,
     } as User;
@@ -235,7 +237,8 @@ describe('ProductController', async (): Promise<void> => {
       token,
       vatGroups,
       tokenNoRoles,
-      products,
+      products: products.filter((p) => p.deletedAt == null),
+      deletedProducts: products.filter((p) => p.deletedAt != null),
       validProductReq,
       invalidProductReq,
       validCreateProductReq,
@@ -410,6 +413,12 @@ describe('ProductController', async (): Promise<void> => {
         false,
         true,
       ).valid).to.be.true;
+
+      const product = res.body as ProductResponse;
+
+      // Cleanup
+      await ProductRevision.delete({ productId: product.id, revision: product.revision });
+      await Product.delete({ id: product.id });
     });
     it('should store the given product in the database and return an HTTP 200 and the product if organ', async () => {
       const productCount = await Product.count();
@@ -437,6 +446,12 @@ describe('ProductController', async (): Promise<void> => {
         where: { id: body.id },
       });
       expect(databaseUpdatedProduct).to.exist;
+
+      const product = res.body as ProductResponse;
+
+      // Cleanup
+      await ProductRevision.delete({ productId: product.id, revision: product.revision });
+      await Product.delete({ id: product.id });
     });
     it('should return an HTTP 403 if not admin', async () => {
       const productCount = await Product.count();
@@ -518,11 +533,12 @@ describe('ProductController', async (): Promise<void> => {
       expect(res2.status).to.eq(403);
     });
     it('should return an HTTP 404 if the product with the given id does not exist', async () => {
+      const id = (await Product.count({ withDeleted: true })) + 1;
       const res = await request(ctx.app)
-        .get(`/products/${(await Product.count()) + 1}`)
+        .get(`/products/${id}`)
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
-      expect(await Product.findOne({ where: { id: (await Product.count()) + 1 } })).to.be.null;
+      expect(await Product.findOne({ where: { id } })).to.be.null;
 
       // check if product is not returned
       expect(res.body).to.equal('Product not found.');
@@ -566,14 +582,27 @@ describe('ProductController', async (): Promise<void> => {
         true,
       ).valid).to.be.true;
     });
-    it('should return an HTTP 404 if the product with the given id does not exist', async () => {
+    it('should return an HTTP 404 if the product is soft deleted', async () => {
+      const id = ctx.deletedProducts[0].id;
       const res = await request(ctx.app)
-        .patch(`/products/${(await Product.count()) + 1}`)
+        .get(`/products/${id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      // check if banner is not returned
+      expect(res.body).to.equal('Product not found.');
+
+      // success code
+      expect(res.status).to.equal(404);
+    });
+    it('should return an HTTP 404 if the product with the given id does not exist', async () => {
+      const id = await Product.count({ withDeleted: true }) + 1;
+      const res = await request(ctx.app)
+        .patch(`/products/${id}`)
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(ctx.validProductReq);
 
       // sanity check
-      expect(await Product.findOne({ where: { id: (await Product.count()) + 1 } })).to.be.null;
+      expect(await Product.findOne({ where: { id } })).to.be.null;
 
       // check if banner is not returned
       expect(res.body).to.equal('Product not found.');
@@ -701,6 +730,74 @@ describe('ProductController', async (): Promise<void> => {
         .attach('file', fs.readFileSync(path.join(__dirname, '../../static/product.png')), 'product-image.png');
 
       expect(res.status).to.equal(404);
+    });
+  });
+  describe('DELETE /products/:id', () => {
+    it('should return 204 if owner', async () => {
+      const product = ctx.products.find((p) => p.owner.id === ctx.organ.id && p.deletedAt == null);
+      const res = await request(ctx.app)
+        .delete(`/products/${product.id}`)
+        .set('Authorization', `Bearer ${ctx.organMemberToken}`)
+        .send();
+
+      expect(res.status).to.equal(204);
+      expect(res.body).to.be.empty;
+
+      const dbProduct = await Product.findOne({ where: { id: product.id }, withDeleted: true });
+      expect(dbProduct).to.not.be.null;
+      expect(dbProduct.deletedAt).to.not.be.null;
+
+      // Cleanup
+      await dbProduct.recover();
+    });
+    it('should return 204 for any product if admin', async () => {
+      const product = ctx.products.find((p) => p.owner.id !== ctx.adminUser.id && p.deletedAt == null);
+      const res = await request(ctx.app)
+        .delete(`/products/${product.id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send();
+
+      expect(res.status).to.equal(204);
+      expect(res.body).to.be.empty;
+
+      const dbProduct = await Product.findOne({ where: { id: product.id }, withDeleted: true });
+      expect(dbProduct).to.not.be.null;
+      expect(dbProduct.deletedAt).to.not.be.null;
+
+      // Cleanup
+      await dbProduct.recover();
+    });
+    it('should return 403 if not owner', async () => {
+      const product = ctx.products.find((p) => p.owner.id !== ctx.organ.id && p.deletedAt == null);
+      const res = await request(ctx.app)
+        .delete(`/products/${product.id}`)
+        .set('Authorization', `Bearer ${ctx.organMemberToken}`)
+        .send();
+
+      expect(res.status).to.equal(403);
+      expect(res.body).to.be.empty;
+    });
+    it('should return 404 if product does not exist', async () => {
+      const productId = ctx.products.length + ctx.deletedProducts.length + 2;
+
+      const res = await request(ctx.app)
+        .delete(`/products/${productId}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send();
+
+      expect(res.status).to.equal(404);
+      expect(res.body).to.equal('Product not found');
+    });
+    it('should return 404 if product is soft deleted', async () => {
+      const productId = ctx.deletedProducts[0].id;
+
+      const res = await request(ctx.app)
+        .delete(`/products/${productId}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send();
+
+      expect(res.status).to.equal(404);
+      expect(res.body).to.equal('Product not found');
     });
   });
 });

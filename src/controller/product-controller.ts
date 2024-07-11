@@ -78,6 +78,10 @@ export default class ProductController extends BaseController {
           policy: async (req) => this.roleManager.can(req.token.roles, 'update', await ProductController.getRelation(req), 'Product', ['*']),
           handler: this.updateProduct.bind(this),
         },
+        DELETE: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'delete', await ProductController.getRelation(req), 'Product', ['*']),
+          handler: this.deleteProduct.bind(this),
+        },
       },
       '/:id(\\d+)/image': {
         POST: {
@@ -288,6 +292,40 @@ export default class ProductController extends BaseController {
     } catch (error) {
       this.logger.error('Could not upload image:', error);
       res.status(500).json('Internal server error');
+    }
+  }
+
+  /**
+   * DELETE /products/{id}
+   * @summary (Soft) delete the given product. Cannot be undone.
+   * @operationId deleteProduct
+   * @tags products - Operations of products controller
+   * @param {integer} id.path.required - The id of the product which should be deleted
+   * @security JWT
+   * @return {string} 204 - Success
+   * @return {string} 404 - Not found error
+   * @return {string} 500 - Internal server error
+   */
+  public async deleteProduct(req: RequestWithToken, res: Response): Promise<void> {
+    const { id } = req.params;
+    this.logger.trace('Delete product', id, 'by user', req.token.user);
+
+    try {
+      const productId = parseInt(id, 10);
+
+      const product = await Product.findOne({ where: { id: productId } });
+
+      if (product == null) {
+        res.status(404).json('Product not found');
+        return;
+      }
+
+      await ProductService.deleteProduct(productId);
+      res.status(204).send();
+      return;
+    } catch (error) {
+      this.logger.error('Could not delete product', error);
+      res.status(500).json('Internal server error.');
     }
   }
 
