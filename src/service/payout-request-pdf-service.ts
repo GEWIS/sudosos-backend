@@ -52,7 +52,7 @@ export default class PayoutRequestPdfService {
         bankAccountName: payoutRequest.bankAccountName,
         bankAccountNumber: payoutRequest.bankAccountNumber,
         amount: payoutRequest.amount.getAmount(),
-        reference: `SDS-PR-${payoutRequest.id}`,
+        reference: `SDS-PR-${String(payoutRequest.id).padStart(4, '0')}`,
         date: payoutRequest.createdAt,
         debtorNumber: String(payoutRequest.requestedBy.id),
       }),
