@@ -41,15 +41,7 @@ import FileService from './file-service';
 import InvoiceEntry from '../entity/invoices/invoice-entry';
 import { INVOICE_PDF_LOCATION } from '../files/storage';
 import { PdfGenerator } from '../entity/file/pdf-file';
-
-// Used for grouping in the PDF.
-// These are 'hardcoded' since if these would change the template also would have to change.
-const PDF_VAT_ZERO = 0;
-const PDF_VAT_LOW = 9;
-const PDF_VAT_HIGH = 21;
-
-const UNUSED_PARAM = '';
-const PDF_GEN_URL =  process.env.PDF_GEN_URL ? process.env.PDF_GEN_URL : 'http://localhost:3001/pdf';
+import { PDF_GEN_URL, PDF_VAT_HIGH, PDF_VAT_LOW, PDF_VAT_ZERO, UNUSED_PARAM } from '../helpers/pdf';
 
 export default class InvoicePdfService {
 
