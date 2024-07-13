@@ -347,7 +347,7 @@ export default class DebtorController extends BaseController {
    * @security JWT
    * @param {string} fromDate.query - The start date of the report, inclusive
    * @param {string} toDate.query - The end date of the report, exclusive
-   * @returns {blob} 200 - The requested report - application/pdf
+   * @returns {string} 200 - The requested report - application/pdf
    * @return {string} 400 - Validation error
    * @return {string} 500 - Internal server error
    */
