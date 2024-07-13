@@ -26,7 +26,7 @@ import EventShift from '../../../src/entity/event/event-shift';
 import EventShiftAnswer, { Availability } from '../../../src/entity/event/event-shift-answer';
 import AssignedRole from '../../../src/entity/rbac/assigned-role';
 import Database from '../../../src/database/database';
-import { seedEvents, seedRoles, seedUsers } from '../../seed';
+import { seedEvents, seedUsers } from '../../seed';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Swagger from '../../../src/start/swagger';
 import { json } from 'body-parser';
@@ -43,6 +43,7 @@ import EventService from '../../../src/service/event-service';
 import { EventRequest } from '../../../src/controller/request/event-request';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
+import { getToken, seedRoles } from '../../seed/rbac';
 
 describe('EventController', () => {
   let ctx: {
@@ -86,15 +87,7 @@ describe('EventController', () => {
     await User.save(localUser);
 
     const users = await seedUsers();
-    const roles = await seedRoles(users);
-    const { events, eventShifts, eventShiftAnswers } = await seedEvents(roles);
-
-    // create bearer tokens
-    const tokenHandler = new TokenHandler({
-      algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
-    });
-    const adminToken = await tokenHandler.signToken({ user: adminUser, roles: ['Admin'], lesser: false }, 'nonce admin');
-    const userToken = await tokenHandler.signToken({ user: localUser, roles: [], lesser: false }, 'nonce');
+    const { roleAssignments, events, eventShifts, eventShiftAnswers } = await seedEvents(users);
 
     // start app
     const app = express();
@@ -102,8 +95,7 @@ describe('EventController', () => {
 
     const all = { all: new Set<string>(['*']) };
     const own = { all: new Set<string>(['*']) };
-    const roleManager = new RoleManager();
-    roleManager.registerRole({
+    const accessRoles = await seedRoles([{
       name: 'Admin',
       permissions: {
         Event: {
@@ -118,8 +110,7 @@ describe('EventController', () => {
         },
       },
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
-    });
-    roleManager.registerRole({
+    }, {
       name: 'User',
       permissions: {
         Event: {
@@ -130,7 +121,15 @@ describe('EventController', () => {
         },
       },
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_USER,
+    }]);
+    const roleManager = await new RoleManager().initialize();
+
+    // create bearer tokens
+    const tokenHandler = new TokenHandler({
+      algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
+    const adminToken = await tokenHandler.signToken(await getToken(adminUser, accessRoles), 'nonce admin');
+    const userToken = await tokenHandler.signToken(await getToken(localUser, []), 'nonce');
 
     const controller = new EventController({ specification, roleManager });
     app.use(json());
@@ -151,7 +150,7 @@ describe('EventController', () => {
       events,
       eventShifts,
       eventShiftAnswers,
-      roles,
+      roles: roleAssignments,
     };
   });
 

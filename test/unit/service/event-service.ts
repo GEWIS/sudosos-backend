@@ -19,7 +19,7 @@
 import { describe } from 'mocha';
 import { Connection } from 'typeorm';
 import User from '../../../src/entity/user/user';
-import { seedEvents, seedRoles, seedUsers } from '../../seed';
+import { seedEvents, seedUsers } from '../../seed';
 import Event, { EventType } from '../../../src/entity/event/event';
 import EventShift from '../../../src/entity/event/event-shift';
 import EventShiftAnswer, { Availability } from '../../../src/entity/event/event-shift-answer';
@@ -33,6 +33,7 @@ import Mailer from '../../../src/mailer';
 import nodemailer, { Transporter } from 'nodemailer';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
+import Role from '../../../src/entity/rbac/role';
 
 describe('eventService', () => {
   let ctx: {
@@ -50,8 +51,7 @@ describe('eventService', () => {
     await truncateAllTables(connection);
 
     const users = await seedUsers();
-    const roles = await seedRoles(users);
-    const { events, eventShifts: allEventShifts, eventShiftAnswers } = await seedEvents(roles);
+    const { roleAssignments, events, eventShifts: allEventShifts, eventShiftAnswers } = await seedEvents(users);
 
     const eventShifts = allEventShifts.filter((s) => s.deletedAt == null);
     const deletedEventShifts = allEventShifts.filter((s) => s.deletedAt != null);
@@ -63,7 +63,7 @@ describe('eventService', () => {
       eventShifts,
       deletedEventShifts,
       eventShiftAnswers,
-      roles,
+      roles: roleAssignments,
     };
   });
 
@@ -429,7 +429,7 @@ describe('eventService', () => {
       expect(event.shifts.length).to.equal(params.shiftIds.length);
 
       const users = ctx.roles
-        .filter((r) => shift.roles.includes(r.role.name))
+        .filter((r) => shift.roles.some((r2) => r2.id === r.role.id))
         .map((r) => r.user);
       const userIds = users.map((u) => u.id);
       const actualUserIds = Array.from(new Set(
@@ -594,8 +594,11 @@ describe('eventService', () => {
 
   describe('createShift', () => {
     it('should correctly create a new shift', async () => {
+      const newRole = await Role.save({
+        name: 'BAC Veurzitter',
+      });
       const name = 'Feuten op dweilen zetten';
-      const roles = ['BAC Veurzitter', 'BAC Oud-veurzitter'];
+      const roles = [newRole.name];
       const shift = await EventService.createEventShift({
         name,
         roles,
@@ -610,6 +613,7 @@ describe('eventService', () => {
 
       // Cleanup
       await dbShift.remove();
+      await Role.remove(newRole);
     });
   });
 
@@ -632,7 +636,7 @@ describe('eventService', () => {
     it('should correctly update nothing', async () => {
       const shift = await EventService.updateEventShift(originalShift.id, {});
       expect(shift.name).to.equal(originalShift.name);
-      expect(shift.roles).to.deep.equalInAnyOrder(originalShift.roles);
+      expect(shift.roles).to.deep.equalInAnyOrder(originalShift.roles.map((r) => r.name));
     });
 
     it('should correctly update name', async () => {
@@ -647,7 +651,10 @@ describe('eventService', () => {
     });
 
     it('should correctly update roles', async () => {
-      const roles = ['A', 'B', 'C'];
+      const newRole = await Role.save({
+        name: 'A',
+      });
+      const roles = [newRole.name];
       const shift = await EventService.updateEventShift(originalShift.id, {
         roles,
       });

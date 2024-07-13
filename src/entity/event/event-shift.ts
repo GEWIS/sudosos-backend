@@ -17,9 +17,10 @@
  */
 
 import {
-  Column, DeleteDateColumn, Entity,
+  Column, DeleteDateColumn, Entity, JoinTable, ManyToMany,
 } from 'typeorm';
 import BaseEntity from '../base-entity';
+import Role from '../rbac/role';
 
 /**
  * @typedef {BaseEntity} EventShift
@@ -35,12 +36,7 @@ export default class EventShift extends BaseEntity {
   @Column()
   public name: string;
 
-  @Column({
-    type: 'varchar',
-    transformer: {
-      to: (val: string[]) => JSON.stringify(val),
-      from: (val: string) => JSON.parse(val),
-    },
-  })
-  public roles: string[];
+  @ManyToMany(() => Role, { eager: true })
+  @JoinTable()
+  public roles: Role[];
 }

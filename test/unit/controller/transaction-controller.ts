@@ -40,6 +40,7 @@ import MemberAuthenticator from '../../../src/entity/authenticator/member-authen
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import dinero from 'dinero.js';
+import { getToken, seedRoles } from '../../seed/rbac';
 
 describe('TransactionController', (): void => {
   let ctx: {
@@ -128,18 +129,11 @@ describe('TransactionController', (): void => {
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
 
-    ctx.userToken = await ctx.tokenHandler.signToken({ user: ctx.users[0], roles: ['User'], lesser: false }, '39');
-    ctx.adminToken = await ctx.tokenHandler.signToken({ user: ctx.users[6], roles: ['User', 'Admin'], lesser: false }, '39');
-    ctx.organMemberToken = await ctx.tokenHandler.signToken({
-      user: ctx.users[6], roles: ['User', 'Seller'], organs: [ctx.users[0]], lesser: false,
-    }, '1');
-
     const all = { all: new Set<string>(['*']) };
     const own = { own: new Set<string>(['*']), organ: new Set<string>(['*']) };
     const organRole = { organ: new Set<string>(['*']) };
 
-    const roleManager = new RoleManager();
-    roleManager.registerRole({
+    const roles = await seedRoles([{
       name: 'Admin',
       permissions: {
         Transaction: {
@@ -153,22 +147,19 @@ describe('TransactionController', (): void => {
         },
       },
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
-    });
-
-    roleManager.registerRole({
+    }, {
       name: 'Buyer',
       permissions: {
         Transaction: {
+          get: own,
           create: own,
         },
         Balance: {
           update: own,
         },
       },
-      assignmentCheck: async (user: User) => user.type === UserType.MEMBER,
-    });
-
-    roleManager.registerRole({
+      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_USER,
+    }, {
       name: 'Seller',
       permissions: {
         Transaction: {
@@ -178,8 +169,13 @@ describe('TransactionController', (): void => {
           update: organRole,
         },
       },
-      assignmentCheck: async () => false,
-    });
+      assignmentCheck: async (user) => user.id === ctx.users[7].id,
+    }]);
+    const roleManager = await new RoleManager().initialize();
+
+    ctx.userToken = await ctx.tokenHandler.signToken(await getToken(ctx.users[0], roles), '39');
+    ctx.adminToken = await ctx.tokenHandler.signToken(await getToken(ctx.users[6], roles), '39');
+    ctx.organMemberToken = await ctx.tokenHandler.signToken(await getToken(ctx.users[1], roles, [ctx.users[0]]), '1');
 
     ctx.specification = await Swagger.initialize(ctx.app);
     ctx.swaggerspec = await Swagger.importSpecification();
@@ -550,6 +546,16 @@ describe('TransactionController', (): void => {
         false,
         false);
       expect(valid.valid).to.be.true;
+      expect(res.body.id).to.equal(trans.id);
+    });
+    it('should return HTTP 200 for own transaction', async () => {
+      const trans = await Transaction.findOne({ relations: ['from'], where: { from: { id: ctx.users[0].id } } });
+      expect(trans).to.not.be.undefined;
+      const res = await request(ctx.app)
+        .get(`/transactions/${trans.id}`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(200);
+      expect(res.body.id).to.equal(trans.id);
     });
     it('should return HTTP 403 if not admin and not connected via organ', async () => {
       const trans = await Transaction.findOne({ relations: ['from'], where: { from: { id: ctx.users[3].id } } });
@@ -558,6 +564,7 @@ describe('TransactionController', (): void => {
         .get(`/transactions/${trans.id}`)
         .set('Authorization', `Bearer ${ctx.organMemberToken}`);
       expect(res.status).to.equal(403);
+      expect(res.body).to.be.empty;
     });
   });
 

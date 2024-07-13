@@ -24,7 +24,7 @@ import EventShift from '../../../src/entity/event/event-shift';
 import EventShiftAnswer from '../../../src/entity/event/event-shift-answer';
 import AssignedRole from '../../../src/entity/rbac/assigned-role';
 import Database from '../../../src/database/database';
-import { seedEvents, seedRoles, seedUsers } from '../../seed';
+import { seedEvents, seedUsers } from '../../seed';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Swagger from '../../../src/start/swagger';
 import { json } from 'body-parser';
@@ -43,6 +43,8 @@ import { describe } from 'mocha';
 import Event, { EventType } from '../../../src/entity/event/event';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
+import { getToken, seedRoles } from '../../seed/rbac';
+import Role from '../../../src/entity/rbac/role';
 
 describe('EventShiftController', () => {
   let ctx: {
@@ -86,15 +88,7 @@ describe('EventShiftController', () => {
     await User.save(localUser);
 
     const users = await seedUsers();
-    const roles = await seedRoles(users);
-    const { events, eventShifts, eventShiftAnswers } = await seedEvents(roles);
-
-    // create bearer tokens
-    const tokenHandler = new TokenHandler({
-      algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
-    });
-    const adminToken = await tokenHandler.signToken({ user: adminUser, roles: ['Admin'], lesser: false }, 'nonce admin');
-    const userToken = await tokenHandler.signToken({ user: localUser, roles: [], lesser: false }, 'nonce');
+    const { roleAssignments, events, eventShifts, eventShiftAnswers } = await seedEvents(users);
 
     // start app
     const app = express();
@@ -102,8 +96,7 @@ describe('EventShiftController', () => {
 
     const all = { all: new Set<string>(['*']) };
     const own = { all: new Set<string>(['*']) };
-    const roleManager = new RoleManager();
-    roleManager.registerRole({
+    const accessRoles = await seedRoles([{
       name: 'Admin',
       permissions: {
         Event: {
@@ -117,8 +110,7 @@ describe('EventShiftController', () => {
         },
       },
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
-    });
-    roleManager.registerRole({
+    }, {
       name: 'User',
       permissions: {
         Event: {
@@ -129,7 +121,15 @@ describe('EventShiftController', () => {
         },
       },
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_USER,
+    }]);
+    const roleManager = await new RoleManager().initialize();
+
+    // create bearer tokens
+    const tokenHandler = new TokenHandler({
+      algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
+    const adminToken = await tokenHandler.signToken(await getToken(adminUser, accessRoles), 'nonce admin');
+    const userToken = await tokenHandler.signToken(await getToken(localUser, []), 'nonce');
 
     const controller = new EventShiftController({ specification, roleManager });
     app.use(json());
@@ -150,7 +150,7 @@ describe('EventShiftController', () => {
       events,
       eventShifts,
       eventShiftAnswers,
-      roles,
+      roles: roleAssignments,
     };
   });
 
@@ -277,11 +277,15 @@ describe('EventShiftController', () => {
   describe('PATCH /eventshifts/{id}', () => {
     let req: Partial<EventShiftRequest>;
     let originalShift: EventShift;
+    let newRole: Role;
 
     before(async () => {
+      newRole = await Role.save({
+        name: 'Oud-BAC',
+      });
       req = {
         name: 'Penningmeesteren',
-        roles: ['Oud-BAC', 'Sjaars'],
+        roles: [newRole.name],
       };
 
       originalShift = await EventShift.findOne({ where: { id: ctx.eventShifts[0].id } });
@@ -292,6 +296,7 @@ describe('EventShiftController', () => {
         name: originalShift.name,
         roles: originalShift.roles,
       });
+      await Role.delete(newRole.id);
     });
 
     it('should correctly update shift', async () => {
