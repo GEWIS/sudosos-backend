@@ -24,6 +24,8 @@ export class DatabaseRbac1720624912620 implements MigrationInterface {
 
   private PERMISSION_TABLE = 'permission';
 
+  private ASSIGNED_USER_TYPE_TABLE = 'role_user_type';
+
   private ASSIGNED_ROLE_TABLE = 'assigned_role';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
@@ -60,6 +62,13 @@ export class DatabaseRbac1720624912620 implements MigrationInterface {
           type: 'varchar(255)',
           isNullable: false,
           isUnique: true,
+        },
+        {
+          name: 'systemDefault',
+          type: 'boolean',
+          default: 0,
+          isNullable: false,
+          isUnique: false,
         },
       ],
     }));
@@ -100,6 +109,31 @@ export class DatabaseRbac1720624912620 implements MigrationInterface {
     }));
 
     await queryRunner.createForeignKey(this.PERMISSION_TABLE, new TableForeignKey({
+      columnNames: ['roleId'],
+      referencedColumnNames: ['id'],
+      referencedTableName: this.ROLE_TABLE,
+      onDelete: 'CASCADE',
+    }));
+
+    await queryRunner.createTable(new Table({
+      name: this.ASSIGNED_USER_TYPE_TABLE,
+      columns: [
+        {
+          name: 'roleId',
+          type: 'integer',
+          isPrimary: true,
+          isNullable: false,
+        },
+        {
+          name: 'userType',
+          type: 'integer',
+          isPrimary: true,
+          isNullable: false,
+        },
+      ],
+    }));
+
+    await queryRunner.createForeignKey(this.ASSIGNED_USER_TYPE_TABLE, new TableForeignKey({
       columnNames: ['roleId'],
       referencedColumnNames: ['id'],
       referencedTableName: this.ROLE_TABLE,
@@ -155,6 +189,7 @@ export class DatabaseRbac1720624912620 implements MigrationInterface {
     await queryRunner.dropColumn(this.ASSIGNED_ROLE_TABLE, 'roleId');
 
     await queryRunner.dropTable(this.PERMISSION_TABLE);
+    await queryRunner.dropTable(this.ASSIGNED_USER_TYPE_TABLE);
     await queryRunner.dropTable(this.ROLE_TABLE);
   }
 

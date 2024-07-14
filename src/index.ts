@@ -66,6 +66,7 @@ import DebtorController from './controller/debtor-controller';
 import EventController from './controller/event-controller';
 import EventShiftController from './controller/event-shift-controller';
 import EventService from './service/event-service';
+import DefaultRoles from './rbac/default-roles';
 
 export class Application {
   app: express.Express;
@@ -221,7 +222,8 @@ export default async function createApp(): Promise<Application> {
   }
 
   // Setup RBAC.
-  application.roleManager = new RoleManager();
+  await DefaultRoles.synchronize();
+  application.roleManager = await new RoleManager().initialize();
   await setupRbac(application);
 
   application.app.use('/v1/stripe', new StripeWebhookController(
