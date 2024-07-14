@@ -78,6 +78,7 @@ import { SoftDeletes1720608140757 } from '../migrations/1720608140757-soft-delet
 import Role from '../entity/rbac/role';
 import Permission from '../entity/rbac/permission';
 import { DatabaseRbac1720624912620 } from '../migrations/1720624912260-database-rbac';
+import RoleUserType from '../entity/rbac/role-user-type';
 
 // We need to load the dotenv to prevent the env from being undefined.
 dotenv.config();
@@ -153,6 +154,7 @@ const options: DataSourceOptions = {
     ProductImage,
     BannerImage,
     Role,
+    RoleUserType,
     Permission,
     AssignedRole,
     ResetToken,

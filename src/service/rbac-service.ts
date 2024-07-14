@@ -22,6 +22,8 @@ import ActionResponse from '../controller/response/rbac/action-response';
 import RelationResponse from '../controller/response/rbac/relation-response';
 import Role from '../entity/rbac/role';
 import Permission from '../entity/rbac/permission';
+import { ActionDefinition, EntityDefinition, PermissionDefinition } from '../rbac/role-manager';
+import PermissionRule from '../rbac/permission-rule';
 
 export default class RBACService {
   /**
@@ -66,5 +68,53 @@ export default class RBACService {
         }),
       };
     });
+  }
+
+  /**
+   * Convert a human-readable permission definition to a list of
+   * database permission rules
+   * @param def
+   */
+  public static definitionToRules(def: PermissionDefinition): PermissionRule[] {
+    const permissions: PermissionRule[] = [];
+    Object.keys(def).forEach(entity => {
+      Object.keys(def[entity]).forEach((action) => {
+        Object.keys(def[entity][action]).forEach((relation) => {
+          const attributes = Array.from(def[entity][action][relation]);
+          permissions.push({ entity, action, relation, attributes });
+        });
+      });
+    });
+    return permissions;
+  }
+
+  /**
+   * Convert a list of database permission rules to a human-readable
+   * permissions object
+   * @param rules
+   */
+  public static rulesToDefinition(rules: PermissionRule[]): PermissionDefinition {
+    return rules.reduce((permDef: PermissionDefinition, permission1, i1, rolePermissions) => {
+      if (permDef[permission1.entity]) return permDef;
+
+      permDef[permission1.entity] = rolePermissions
+        .filter((p) => p.entity === permission1.entity)
+        .reduce((entDef: EntityDefinition, permission2, i2, entityPermissions) => {
+          if (entDef[permission2.entity]) return entDef;
+
+          entDef[permission2.action] = entityPermissions
+            .filter((p) => p.action === permission2.action)
+            .reduce((actDef: ActionDefinition, permission3) => {
+              if (actDef[permission3.relation]) return;
+
+              actDef[permission3.relation] = new Set(permission3.attributes);
+              return actDef;
+
+            }, {});
+          return entDef;
+
+        }, {});
+      return permDef;
+    }, {});
   }
 }

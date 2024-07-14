@@ -20,6 +20,7 @@ import User from '../entity/user/user';
 import AssignedRole from '../entity/rbac/assigned-role';
 import Role from '../entity/rbac/role';
 import log4js, { Logger } from 'log4js';
+import RBACService from '../service/rbac-service';
 
 /**
  * The assignment check is a predicate performed on a user to determine
@@ -130,28 +131,7 @@ export default class RoleManager {
     roles.forEach((role) => {
       this.roles[role.name] = {
         name: role.name,
-        permissions: role.permissions.reduce((permDef: PermissionDefinition, permission1, i1, rolePermissions) => {
-          if (permDef[permission1.entity]) return permDef;
-
-          permDef[permission1.entity] = rolePermissions
-            .filter((p) => p.entity === permission1.entity)
-            .reduce((entDef: EntityDefinition, permission2, i2, entityPermissions) => {
-              if (entDef[permission2.entity]) return entDef;
-
-              entDef[permission2.action] = entityPermissions
-                .filter((p) => p.action === permission2.action)
-                .reduce((actDef: ActionDefinition, permission3) => {
-                  if (actDef[permission3.relation]) return;
-
-                  actDef[permission3.relation] = new Set(permission3.attributes);
-                  return actDef;
-
-                }, {});
-              return entDef;
-
-            }, {});
-          return permDef;
-        }, {}),
+        permissions: RBACService.rulesToDefinition(role.permissions),
         assignmentCheck: async () => false,
       };
     });

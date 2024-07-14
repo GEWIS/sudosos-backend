@@ -38,7 +38,6 @@ export enum UserType {
   LOCAL_USER = 4,
   LOCAL_ADMIN = 5,
   INVOICE = 6,
-  INTEGRATION = 7,
 }
 
 /**
@@ -164,7 +163,7 @@ export default class User extends BaseEntity {
    */
   public async getTypeRoles(getPermissions = false): Promise<Role[]> {
     return Role.find({
-      where: { defaultUserType: this.type },
+      where: { roleUserTypes: { userType: this.type } },
       relations: { permissions: getPermissions },
     });
   }

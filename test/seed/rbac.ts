@@ -22,6 +22,7 @@ import { DeepPartial } from 'typeorm';
 import AssignedRole from '../../src/entity/rbac/assigned-role';
 import { RoleDefinition } from '../../src/rbac/role-manager';
 import JsonWebToken from '../../src/authentication/json-web-token';
+import RBACService from '../../src/service/rbac-service';
 
 export interface SeededRole {
   role: Role,
@@ -56,15 +57,12 @@ function getAdminPermissions(role: Role, entity: string, relationOwn = true): De
 
 export async function seedRoles(roles: RoleDefinition[]): Promise<SeededRole[]> {
   return Promise.all(roles.map((role) => Role.save({ name: role.name }).then(async (r): Promise<SeededRole> => {
-    const permissions: DeepPartial<Permission>[] = [];
-    Object.keys(role.permissions).forEach(entity => {
-      Object.keys(role.permissions[entity]).forEach((action) => {
-        Object.keys(role.permissions[entity][action]).forEach((relation) => {
-          const attributes = Array.from(role.permissions[entity][action][relation]);
-          permissions.push({ roleId: r.id, role: r, entity, action, relation, attributes });
-        });
-      });
-    });
+    const permissions = RBACService.definitionToRules(role.permissions)
+      .map((p): DeepPartial<Permission> => ({
+        role: r,
+        roleId: r.id,
+        ...p,
+      }));
     r.permissions = await Permission.save(permissions);
     return {
       role: r,
@@ -102,7 +100,7 @@ export async function getToken(user: User, roles: SeededRole[], organs?: User[],
 
 export async function seedProductionRolesWithPermissions(users: User[]) {
 
-  const nonHumanUserTypes = new Set([UserType.INTEGRATION]);
+  const nonHumanUserTypes = new Set([]);
   const userRole = await Role.save({ name: 'User' } as DeepPartial<Role>).then(async (role): Promise<SeededRole> => {
     role.permissions = await Permission.save([
       { roleId: role.id, role, entity: 'Balance', action: 'get', relation: 'own', attributes: star },

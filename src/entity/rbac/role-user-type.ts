@@ -15,31 +15,22 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import BaseEntity from '../base-entity';
-import { Column, Entity, OneToMany } from 'typeorm';
-import Permission from './permission';
-import AssignedRole from './assigned-role';
-import RoleUserType from './role-user-type';
+import { BaseEntity, Entity, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';
+import Role from './role';
 import { UserType } from '../user/user';
 
+/**
+ * Many-to-many relationship between user types and roles
+ */
 @Entity()
-export default class Role extends BaseEntity {
-  @Column({ unique: true })
-  public name: string;
+export default class RoleUserType extends BaseEntity {
+  @PrimaryColumn()
+  public roleId: number;
 
-  @OneToMany(() => AssignedRole, (assignedRole) => assignedRole.role)
-  public assignments: AssignedRole[];
+  @ManyToOne(() => Role, (r) => r.roleUserTypes, { cascade: true })
+  @JoinColumn({ name: 'roleId' })
+  public role: Role;
 
-  @OneToMany(() => Permission, (permission) => permission.role)
-  public permissions: Permission[];
-
-  @Column({ default: false })
-  public systemDefault: boolean;
-
-  @OneToMany(() => RoleUserType, (r) => r.role, { eager: true })
-  public roleUserTypes: RoleUserType[];
-
-  public get userTypes(): UserType[] {
-    return this.roleUserTypes.map((r) => r.userType);
-  }
+  @PrimaryColumn()
+  public userType: UserType;
 }
