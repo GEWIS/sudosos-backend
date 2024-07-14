@@ -74,7 +74,6 @@ export default class DefaultRoles {
       permissions: {
         Authenticator: {
           update: { own: new Set(['password']) },
-          get: { own: star },
         },
         User: {
           update: { own: new Set(['email']) },
@@ -102,14 +101,9 @@ export default class DefaultRoles {
         },
         Transaction: {
           create: { own: star },
-          get: { own: star },
-        },
-        User: {
-          get: { own: star },
         },
         Authenticator: {
           update: { own: new Set(['pin']) },
-          get: { own: star },
         },
       },
     }, {
@@ -144,7 +138,7 @@ export default class DefaultRoles {
           create: { own: star, all: star },
         },
         User: {
-          get: { all: star, own: star },
+          get: { all: star },
           acceptToS: { own: star },
           update: { own: new Set(['extensiveDataProcessing']) },
         },

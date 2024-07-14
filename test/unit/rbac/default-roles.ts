@@ -56,12 +56,19 @@ describe('DefaultRoles', () => {
       // Check all roles except SuperAdmin, because that one obviously has all permissions
       const definitions = DefaultRoles.definitions.filter((d) => d.name !== 'Super admin');
 
+      // Check for all default roles
       definitions.forEach((definition) => {
         const otherDefs = definitions.filter((d) => d.name !== definition.name);
         const rules = RBACService.definitionToRules(definition.permissions);
+
+        // Match each default role against all other default roles
         otherDefs.forEach((otherDef) => {
+          // If there is no overlap between the user types of the two roles, we don't care that there are duplicates
+          if (!otherDef.userTypes.some((u1) => definition.userTypes.includes(u1))) return;
+
           const otherRules = RBACService.definitionToRules(otherDef.permissions);
           rules.forEach((p1) => {
+            // See whether the rule exists in both roles
             const match = findPermission(otherRules, p1);
             expect(
               match, `Roles "${definition.name}" and "${otherDef.name}" have the same RBAC rule: ${p1.entity} - ${p1.action} - ${p1.relation} - ${JSON.stringify(p1.attributes)}`,
