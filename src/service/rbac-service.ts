@@ -17,7 +17,6 @@
  */
 
 import RoleResponse from '../controller/response/rbac/role-response';
-import { RoleDefinitions } from '../rbac/role-manager';
 import EntityResponse from '../controller/response/rbac/entity-response';
 import ActionResponse from '../controller/response/rbac/action-response';
 import RelationResponse from '../controller/response/rbac/relation-response';

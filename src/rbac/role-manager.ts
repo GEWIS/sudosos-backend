@@ -331,16 +331,17 @@ export default class RoleManager {
   /**
    * Sets (overwrites) all the assigned users of a role.
    * @param users - The users being set the role
-   * @param role - The role to set
+   * @param roleName - The role to set
    */
-  public async setRoleUsers(users: User[], role: string) {
-    if (!this.roles[role]) return undefined;
+  public async setRoleUsers(users: User[], roleName: string) {
+    const role = await Role.findOne({ where: { name: roleName } });
+    if (!role) return undefined;
 
     // Typeorm doesnt like empty deletes.
-    const drop: AssignedRole[] = await AssignedRole.find({ where: { role: { name: role } } });
+    const drop: AssignedRole[] = await AssignedRole.find({ where: { role: { id: role.id } } });
     if (drop.length !== 0) {
       // Drop all assigned users.
-      await AssignedRole.delete({ role: { name: role } });
+      await AssignedRole.delete({ role: { id: role.id } });
     }
 
     // Assign users the role

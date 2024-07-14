@@ -41,6 +41,7 @@ import GEWISAuthenticationPinRequest from '../../../../src/gewis/controller/requ
 import PinAuthenticator from '../../../../src/entity/authenticator/pin-authenticator';
 import { truncateAllTables } from '../../../setup';
 import { finishTestDB } from '../../../helpers/test-helpers';
+import { assignRoles, seedRoles } from '../../../seed/rbac';
 
 describe('GewisAuthenticationController', async (): Promise<void> => {
   let ctx: {
@@ -70,7 +71,7 @@ describe('GewisAuthenticationController', async (): Promise<void> => {
       tokenHandler: new TokenHandler({
         algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
       }),
-      roleManager: new RoleManager(),
+      roleManager: undefined,
       user: await User.save({
         firstName: 'Roy',
         type: UserType.LOCAL_USER,
@@ -98,11 +99,13 @@ describe('GewisAuthenticationController', async (): Promise<void> => {
 
     await AuthenticationService.setUserAuthenticationHash(await User.findOne({ where: { id: 1 } }), '1000', PinAuthenticator);
 
-    ctx.roleManager.registerRole({
+    const roles = await seedRoles([{
       name: 'Role',
       permissions: {},
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
-    });
+    }]);
+    await assignRoles(ctx.user2, roles);
+    ctx.roleManager = await new RoleManager().initialize();
 
     // Silent in-dependency logs unless really wanted by the environment.
     const logger = log4js.getLogger('Console');

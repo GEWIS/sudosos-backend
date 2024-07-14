@@ -29,7 +29,7 @@ import { PayoutRequestState } from '../entity/transactions/payout-request-status
 import PayoutRequestRequest from './request/payout-request-request';
 import User from '../entity/user/user';
 import BalanceService from '../service/balance-service';
-import FileService from "../service/file-service";
+import FileService from '../service/file-service';
 
 export default class PayoutRequestController extends BaseController {
   private logger: Logger = log4js.getLogger('PayoutRequestController');

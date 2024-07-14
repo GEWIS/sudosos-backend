@@ -38,6 +38,7 @@ import RoleManager from '../../../src/rbac/role-manager';
 import AssignedRole from '../../../src/entity/rbac/assigned-role';
 import { finishTestDB, restoreLDAPEnv, storeLDAPEnv } from '../../helpers/test-helpers';
 import { truncateAllTables } from '../../setup';
+import { seedRoles } from '../../seed/rbac';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -361,14 +362,14 @@ describe('AD Service', (): void => {
       stubs.push(clientBindStub);
       stubs.push(clientSearchStub);
 
-      const roleManager = new RoleManager();
-
-      roleManager.registerRole({
+      await seedRoles([{
         name: 'SudoSOS - Test',
         permissions: {
         },
         assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: { name: 'SudoSOS - Test' }, user: { id: user.id } } }) !== undefined,
-      });
+      }]);
+
+      const roleManager = await new RoleManager().initialize();
 
       await ADService.syncUserRoles(roleManager);
       const auth = (await LDAPAuthenticator.findOne(

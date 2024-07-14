@@ -21,6 +21,7 @@ import log4js, { Logger } from 'log4js';
 import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import RBACService from '../service/rbac-service';
+import Role from '../entity/rbac/role';
 
 export default class RbacController extends BaseController {
   private logger: Logger = log4js.getLogger('RbacController');
@@ -63,7 +64,7 @@ export default class RbacController extends BaseController {
 
     // handle request
     try {
-      const roles = this.roleManager.getRegisteredRoles();
+      const roles = await Role.find({ relations: { permissions: true } });
 
       // Map every role to response
       const responses = RBACService.asRoleResponse(roles);

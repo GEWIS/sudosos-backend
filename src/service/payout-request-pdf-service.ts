@@ -28,8 +28,8 @@ import {
   IPayoutRouteParams,
 } from 'pdf-generator-client';
 import { PAYOUT_REQUEST_PDF_LOCATION } from '../files/storage';
-import {PdfGenerator} from "../entity/file/pdf-file";
-import PayoutRequestPdf from "../entity/file/payout-request-pdf";
+import { PdfGenerator } from '../entity/file/pdf-file';
+import PayoutRequestPdf from '../entity/file/payout-request-pdf';
 
 const PDF_GEN_URL =  process.env.PDF_GEN_URL ? process.env.PDF_GEN_URL : 'http://localhost:3001/pdf';
 

@@ -43,6 +43,7 @@ import { CreateContainerRequest, UpdateContainerRequest } from '../../src/contro
 import { CreatePointOfSaleRequest } from '../../src/controller/request/point-of-sale-request';
 import { truncateAllTables } from '../setup';
 import { finishTestDB } from '../helpers/test-helpers';
+import { getToken, seedRoles } from '../seed/rbac';
 
 describe('Propagation between products, containers, POSs', () => {
   let ctx: {
@@ -85,18 +86,11 @@ describe('Propagation between products, containers, POSs', () => {
     const categories = await seedProductCategories();
     const vatGroups = await seedVatGroups();
 
-    // create bearer tokens
-    const tokenHandler = new TokenHandler({
-      algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
-    });
-    const token = await tokenHandler.signToken({ user, roles: ['Admin'], lesser: false }, 'nonce admin');
-
     const app = express();
     const specification = await Swagger.initialize(app);
     const all = { all: new Set<string>(['*']) };
 
-    const roleManager = new RoleManager();
-    roleManager.registerRole({
+    const roles = await seedRoles([{
       name: 'Admin',
       permissions: {
         Product: {
@@ -122,7 +116,14 @@ describe('Propagation between products, containers, POSs', () => {
         },
       },
       assignmentCheck: async (u: User) => u.type === UserType.LOCAL_ADMIN,
+    }]);
+    const roleManager = await new RoleManager().initialize();
+
+    // create bearer tokens
+    const tokenHandler = new TokenHandler({
+      algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
+    const token = await tokenHandler.signToken(await getToken(user, roles), 'nonce admin');
 
     const productController = new ProductController({ specification, roleManager });
     const containerController = new ContainerController({ specification, roleManager });

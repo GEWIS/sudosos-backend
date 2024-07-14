@@ -42,6 +42,7 @@ import TokenMiddleware from '../../../src/middleware/token-middleware';
 import { PaginatedUserResponse } from '../../../src/controller/response/user-response';
 import { GewisUserResponse } from '../../../src/gewis/controller/response/gewis-user-response';
 import { truncateAllTables } from '../../setup';
+import { getToken, seedRoles } from '../../seed/rbac';
 
 describe('GEWIS Helper functions', async (): Promise<void> => {
   let ctx: {
@@ -92,14 +93,8 @@ describe('GEWIS Helper functions', async (): Promise<void> => {
       mail: 'm4141@gewis.nl',
     };
 
-    const tokenHandler = new TokenHandler({
-      algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
-    });
-    const adminToken = await tokenHandler.signToken({ user: users[0], roles: ['User', 'Admin'], lesser: false }, '1');
-
     const all = { all: new Set<string>(['*']) };
-    const roleManager = new RoleManager();
-    roleManager.registerRole({
+    const roles = await seedRoles([{
       name: 'Admin',
       permissions: {
         User: {
@@ -133,7 +128,13 @@ describe('GEWIS Helper functions', async (): Promise<void> => {
         },
       },
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
+    }]);
+    const roleManager = await new RoleManager().initialize();
+
+    const tokenHandler = new TokenHandler({
+      algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
+    const adminToken = await tokenHandler.signToken(await getToken(users[6], roles), '1');
 
     const spec = await Swagger.initialize(app);
     const controller = new UserController({

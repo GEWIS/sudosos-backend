@@ -17,7 +17,7 @@
  */
 
 import {
-  Column, Entity, In, JoinColumn, OneToMany, OneToOne,
+  Column, Entity, JoinColumn, OneToMany, OneToOne,
 } from 'typeorm';
 import BaseEntity from '../base-entity';
 import UserFineGroup from '../fine/userFineGroup';

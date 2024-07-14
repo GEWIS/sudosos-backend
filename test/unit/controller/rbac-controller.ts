@@ -25,9 +25,15 @@ import RoleResponse from '../../../src/controller/response/rbac/role-response';
 import User, { UserType } from '../../../src/entity/user/user';
 import RoleManager, { RoleDefinition } from '../../../src/rbac/role-manager';
 import Swagger from '../../../src/start/swagger';
+import { seedRoles } from '../../seed/rbac';
+import { DataSource } from 'typeorm';
+import database from '../../../src/database/database';
+import { after } from 'mocha';
+import { finishTestDB } from '../../helpers/test-helpers';
 
 describe('RbacController', async (): Promise<void> => {
   let ctx: {
+    connection: DataSource,
     app: Application,
     specification: SwaggerSpecification,
     controller: RbacController,
@@ -35,13 +41,13 @@ describe('RbacController', async (): Promise<void> => {
   };
 
   // initialize context
-  beforeEach(async () => {
+  before(async () => {
     // start app
+    const connection = await database.initialize();
     const app = express();
     const specification = await Swagger.initialize(app);
 
     const all = { all: new Set<string>(['*']) };
-    const roleManager = new RoleManager();
     const role : RoleDefinition = {
       name: 'Admin',
       permissions: {
@@ -57,7 +63,8 @@ describe('RbacController', async (): Promise<void> => {
       },
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
     };
-    roleManager.registerRole(role);
+    await seedRoles([role]);
+    const roleManager = await new RoleManager().initialize();
 
     const controller = new RbacController({ specification, roleManager });
     app.use(json());
@@ -65,11 +72,16 @@ describe('RbacController', async (): Promise<void> => {
 
     // initialize context
     ctx = {
+      connection,
       app,
       specification,
       controller,
       role,
     };
+  });
+
+  after(async () => {
+    await finishTestDB(ctx.connection);
   });
 
   describe('GET /rbac/roles', () => {
