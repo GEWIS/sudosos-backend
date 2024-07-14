@@ -703,7 +703,7 @@ export async function seedContainers(
   let containers: Container[] = [];
   let containerRevisions: ContainerRevision[] = [];
 
-  const sellers = users.filter((u) => [UserType.LOCAL_ADMIN, UserType.MEMBER].includes(u.type));
+  const sellers = users.filter((u) => [UserType.LOCAL_ADMIN, UserType.ORGAN, UserType.MEMBER].includes(u.type));
 
   const promises: Promise<any>[] = [];
   for (let i = 0; i < sellers.length; i += 1) {

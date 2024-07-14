@@ -36,7 +36,7 @@ export default class EventShift extends BaseEntity {
   @Column()
   public name: string;
 
-  @ManyToMany(() => Role, { eager: true })
+  @ManyToMany(() => Role, { eager: true, onUpdate: 'CASCADE' })
   @JoinTable()
   public roles: Role[];
 }

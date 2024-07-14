@@ -292,10 +292,7 @@ describe('EventShiftController', () => {
     });
 
     after(async () => {
-      await EventShift.update(originalShift.id, {
-        name: originalShift.name,
-        roles: originalShift.roles,
-      });
+      await originalShift.save();
       await Role.delete(newRole.id);
     });
 

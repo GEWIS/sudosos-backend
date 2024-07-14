@@ -21,32 +21,45 @@ import { RoleDefinitions } from '../rbac/role-manager';
 import EntityResponse from '../controller/response/rbac/entity-response';
 import ActionResponse from '../controller/response/rbac/action-response';
 import RelationResponse from '../controller/response/rbac/relation-response';
+import Role from '../entity/rbac/role';
+import Permission from '../entity/rbac/permission';
 
 export default class RBACService {
   /**
    * Converts the RoleDefinitions object to an Roleresponse, which can be
    * returned in the API response.
-   * @param definitions - The definitions to parse
+   * @param roles - The role definitions to parse
    */
-  public static asRoleResponse(definitions: RoleDefinitions): RoleResponse[] {
-    return Object.keys(definitions).map((roleName): RoleResponse => {
-      const role = definitions[roleName];
+  public static asRoleResponse(roles: Role[]): RoleResponse[] {
+    return roles.map((role): RoleResponse => {
+      const entities = role.permissions?.reduce((e: string[], permission) => {
+        if (e.includes(permission.entity)) return e;
+        return [...e, permission.entity];
+      }, []);
       return {
-        role: roleName,
+        role: role.name,
         // Map every entity permission to response
-        entities: Object.keys(role.permissions).map((entityName): EntityResponse => {
-          const entity = role.permissions[entityName];
+        entities: entities?.map((entityName): EntityResponse => {
+          const entityPermissions = role.permissions.filter((p) => p.entity === entityName);
+          const actions = entityPermissions.reduce((a: string[], permission) => {
+            if (a.includes(permission.action)) return a;
+            return [...a, permission.action];
+          }, []);
           return {
             entity: entityName,
             // Map every action permission to response
-            actions: Object.keys(entity).map((actionName): ActionResponse => {
-              const action = entity[actionName];
+            actions: actions.map((actionName): ActionResponse => {
+              const actionPermissions = entityPermissions.filter((p) => p.action === actionName);
+              const relationPermissions = actionPermissions.reduce((r: Permission[], permission) => {
+                if (r.some((r2) => r2.relation === permission.relation)) return r;
+                return [...r, permission];
+              }, []);
               return {
                 action: actionName,
                 // Map every relation permission to response
-                relations: Object.keys(action).map((relationName): RelationResponse => ({
-                  relation: relationName,
-                  attributes: [...action[relationName]],
+                relations: relationPermissions.map((relationPerm): RelationResponse => ({
+                  relation: relationPerm.relation,
+                  attributes: relationPerm.attributes,
                 })),
               };
             }),

@@ -627,10 +627,7 @@ describe('eventService', () => {
     });
 
     after(async () => {
-      await EventShift.update(originalShift.id, {
-        name: originalShift.name,
-        roles: originalShift.roles,
-      });
+      await originalShift.save();
     });
 
     it('should correctly update nothing', async () => {
@@ -659,8 +656,8 @@ describe('eventService', () => {
         roles,
       });
 
-      expect(shift.roles).to.equal(roles);
-      expect((await EventShift.findOne({ where: { id: originalShift.id } })).roles)
+      expect(shift.roles).to.deep.equal(roles);
+      expect((await EventShift.findOne({ where: { id: originalShift.id } })).roles.map((r) => r.name))
         .to.deep.equalInAnyOrder(roles);
     });
     it('should return undefined if shift does not exist', async () => {

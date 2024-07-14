@@ -67,6 +67,7 @@ import UpdateNfcRequest from '../../../src/controller/request/update-nfc-request
 import UserFineGroup from '../../../src/entity/fine/userFineGroup';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
+import { getToken, SeededRole, seedRoles } from '../../seed/rbac';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -84,6 +85,7 @@ describe('UserController', (): void => {
     organ: User,
     tokenHandler: TokenHandler,
     users: User[],
+    roles: SeededRole[],
     categories: ProductCategory[],
     products: Product[],
     productRevisions: ProductRevision[],
@@ -123,6 +125,7 @@ describe('UserController', (): void => {
         ofAge: true,
       } as CreateUserRequest,
       ...database,
+      roles: [],
     };
     const deletedUser = Object.assign(new User(), {
       firstName: 'Kevin',
@@ -147,21 +150,10 @@ describe('UserController', (): void => {
     ctx.users.push(ctx.organ);
     ctx.deletedUser = deletedUser;
 
-    const tokenHandler = new TokenHandler({
-      algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
-    });
-    ctx.tokenHandler = tokenHandler;
-    ctx.userToken = await tokenHandler.signToken({ user: ctx.users[0], roles: ['User'], lesser: false }, '1');
-    ctx.adminToken = await tokenHandler.signToken({ user: ctx.users[6], roles: ['User', 'Admin'], lesser: false }, '1');
-    ctx.organMemberToken = await tokenHandler.signToken({
-      user: ctx.users[6], roles: ['User', 'Seller'], organs: [ctx.organ], lesser: false,
-    }, '1');
-
     const all = { all: new Set<string>(['*']) };
     const own = { own: new Set<string>(['*']) };
     const organ = { organ: new Set<string>(['*']) };
-    const roleManager = new RoleManager();
-    roleManager.registerRole({
+    const roles = await seedRoles([{
       name: 'Admin',
       permissions: {
         User: {
@@ -199,8 +191,7 @@ describe('UserController', (): void => {
         },
       },
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
-    });
-    roleManager.registerRole({
+    }, {
       name: 'User',
       permissions: {
         User: {
@@ -233,16 +224,25 @@ describe('UserController', (): void => {
         },
       },
       assignmentCheck: async () => true,
-    });
-    roleManager.registerRole({
+    }, {
       name: 'Seller',
       permissions: {
         User: {
           get: organ,
         },
       },
-      assignmentCheck: async () => false,
+      assignmentCheck: async (user) => user.id === ctx.users[7].id,
+    }]);
+    const roleManager = await new RoleManager().initialize();
+
+    const tokenHandler = new TokenHandler({
+      algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
+    ctx.tokenHandler = tokenHandler;
+    ctx.userToken = await tokenHandler.signToken(await getToken(ctx.users[0], roles), '1');
+    ctx.adminToken = await tokenHandler.signToken(await getToken(ctx.users[6], roles), '1');
+    ctx.organMemberToken = await tokenHandler.signToken(await getToken(ctx.users[7], roles, [ctx.organ]), '1');
+    ctx.roles = roles;
 
     ctx.specification = await Swagger.initialize(ctx.app);
     ctx.controller = new UserController({
@@ -1917,7 +1917,7 @@ describe('UserController', (): void => {
   describe('GET /users/{id}/roles', () => {
     it('should return correct model', async () => {
       await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
-        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
+        const userToken = await ctx.tokenHandler.signToken(await getToken(user, ctx.roles), '1');
 
         const res = await request(ctx.app)
           .get(`/users/${user.id}/roles`)
@@ -1935,7 +1935,7 @@ describe('UserController', (): void => {
     });
     it('should return an HTTP 200 and the users roles', async () => {
       await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
-        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
+        const userToken = await ctx.tokenHandler.signToken(await getToken(user, ctx.roles), '1');
 
         const res = await request(ctx.app)
           .get(`/users/${user.id}/roles`)
