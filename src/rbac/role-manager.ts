@@ -124,7 +124,7 @@ export default class RoleManager {
     this.roles[role.name] = role;
   }
 
-  protected async loadRolesFromDatabase(): Promise<void> {
+  public async loadRolesFromDatabase(): Promise<void> {
     const roles = await Role.find({ relations: { permissions: true } });
 
     roles.forEach((role) => {
@@ -162,7 +162,7 @@ export default class RoleManager {
   }
 
   public async initialize() {
-    this.loadRolesFromDatabase().catch((error) => this.logger.error(error));
+    await this.loadRolesFromDatabase().catch((error) => this.logger.error(error));
     return this;
   }
 

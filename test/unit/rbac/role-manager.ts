@@ -17,11 +17,16 @@
  */
 
 import { expect } from 'chai';
-import User from '../../../src/entity/user/user';
 import RoleManager, { ActionDefinition, AllowedAttribute } from '../../../src/rbac/role-manager';
+import { assignRoles, SeededRole, seedRoles } from '../../seed/rbac';
+import { DataSource } from 'typeorm';
+import database from '../../../src/database/database';
+import { finishTestDB } from '../../helpers/test-helpers';
+import { UserFactory } from '../../helpers/user-factory';
 
 describe('RoleManager', (): void => {
   let ctx: {
+    connection: DataSource,
     wildcard: Set<AllowedAttribute>,
     attrOne: Set<AllowedAttribute>,
     attrTwo: Set<AllowedAttribute>,
@@ -31,11 +36,13 @@ describe('RoleManager', (): void => {
     rels: string[],
     action: ActionDefinition,
     manager: RoleManager,
+    roles: SeededRole[],
   };
 
-  beforeEach(async () => {
+  before(async () => {
     // Initialize context
     ctx = {
+      connection: await database.initialize(),
       wildcard: new Set(['*']),
       attrOne: new Set(['attrOne']),
       attrTwo: new Set(['attrTwo']),
@@ -45,12 +52,12 @@ describe('RoleManager', (): void => {
       rels: ['own', 'created'],
       action: {},
       manager: undefined,
+      roles: [],
     };
     ctx.action.own = ctx.attrOne;
     ctx.action.created = ctx.wildcard;
     ctx.action.all = ctx.attrTwo;
-    ctx.manager = new RoleManager();
-    ctx.manager.registerRole({
+    ctx.roles = await seedRoles([{
       name: 'Role1',
       permissions: {
         Entity1: {
@@ -60,8 +67,7 @@ describe('RoleManager', (): void => {
         },
       },
       assignmentCheck: async () => true,
-    });
-    ctx.manager.registerRole({
+    }, {
       name: 'Role2',
       permissions: {
         Entity2: {
@@ -71,18 +77,12 @@ describe('RoleManager', (): void => {
         },
       },
       assignmentCheck: async () => true,
-    });
+    }]);
+    ctx.manager = await new RoleManager().initialize();
   });
 
-  describe('#registerRole', () => {
-    it('should throw when role is already registered', () => {
-      const func = () => ctx.manager.registerRole({
-        name: 'Role1',
-        permissions: {},
-        assignmentCheck: async () => false,
-      });
-      expect(func).to.throw('Role with the same name already exists.');
-    });
+  after(async () => {
+    await finishTestDB(ctx.connection);
   });
 
   describe('#processAttributes', () => {
@@ -131,52 +131,55 @@ describe('RoleManager', (): void => {
   });
 
   describe('#can', () => {
-    it('should return true when any role has allowed', () => {
+    it('should return true when any role has allowed', async () => {
       const r = ctx.manager.can(['Role1'], 'create', 'own', 'Entity1', [...ctx.attrOne]);
-      expect(r).to.be.true;
+      await expect(r).to.eventually.be.true;
     });
-    it('should return true when all relation is defined', () => {
+    it('should return true when all relation is defined', async () => {
       const r = ctx.manager.can(['Role2'], 'create', 'own', 'Entity2', [...ctx.attrOne]);
-      expect(r).to.be.true;
+      await expect(r).to.eventually.be.true;
     });
-    it('should support multiple relations as argument', () => {
+    it('should support multiple relations as argument', async () => {
       const r = ctx.manager.can(['Role2'], 'create', ['own', 'created'], 'Entity2', [...ctx.attrOne]);
-      expect(r).to.be.true;
+      await expect(r).to.eventually.be.true;
     });
-    it('should support querying all relation', () => {
+    it('should support querying all relation', async () => {
       const r = ctx.manager.can(['Role2'], 'create', 'all', 'Entity2', [...ctx.attrOne]);
-      expect(r).to.be.true;
+      await expect(r).to.eventually.be.true;
     });
-    it('should support single string role as argument', () => {
+    it('should support single string role as argument', async () => {
       const r = ctx.manager.can('Role1', 'create', 'own', 'Entity1', [...ctx.attrOne]);
-      expect(r).to.be.true;
+      await expect(r).to.eventually.be.true;
     });
-    it('should return false when no role has allowed', () => {
+    it('should return false when no role has allowed', async () => {
       const r = ctx.manager.can(['Role1'], 'create', 'own', 'Entity1', [...ctx.attrTwo]);
-      expect(r).to.be.false;
+      await expect(r).to.eventually.be.false;
     });
-    it('should ignore undefined role', () => {
+    it('should ignore undefined role', async () => {
       const r = ctx.manager.can(['undefined'], 'create', 'own', 'Entity1', [...ctx.attrTwo]);
-      expect(r).to.be.false;
+      await expect(r).to.eventually.be.false;
     });
-    it('should ignore undefined entity', () => {
+    it('should ignore undefined entity', async () => {
       const r = ctx.manager.can(['Role1'], 'create', 'own', 'undefined', [...ctx.attrTwo]);
-      expect(r).to.be.false;
+      await expect(r).to.eventually.be.false;
     });
-    it('should ignore undefined action', () => {
+    it('should ignore undefined action', async () => {
       const r = ctx.manager.can(['Role1'], 'undefined', 'own', 'Entity1', [...ctx.attrTwo]);
-      expect(r).to.be.false;
+      await expect(r).to.eventually.be.false;
     });
   });
 
   describe('#getRoles', () => {
     it('should return list of role names', async () => {
-      const user = new User();
-      ctx.manager.registerRole({
+      const { user } = await UserFactory();
+      const [role] = await seedRoles([{
         name: 'Everybody',
         permissions: {},
         assignmentCheck: async () => true,
-      });
+      }]);
+      await assignRoles(user, [...ctx.roles, role]);
+      await ctx.manager.loadRolesFromDatabase();
+
       const roles = await ctx.manager.getRoles(user);
       expect(roles.length).to.equal(3);
       expect(roles).to.contain('Role1');
@@ -184,12 +187,15 @@ describe('RoleManager', (): void => {
       expect(roles).to.contain('Everybody');
     });
     it('should not return role which fails assignment check', async () => {
-      const user = new User();
-      ctx.manager.registerRole({
+      const { user } = await UserFactory();
+      const [role] = await seedRoles([{
         name: 'Nobody',
         permissions: {},
         assignmentCheck: async () => false,
-      });
+      }]);
+      await assignRoles(user, [...ctx.roles, role]);
+      await ctx.manager.loadRolesFromDatabase();
+
       const roles = await ctx.manager.getRoles(user);
       expect(roles.length).to.equal(2);
       expect(roles).to.contain('Role1');
