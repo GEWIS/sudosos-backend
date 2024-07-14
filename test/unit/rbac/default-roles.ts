@@ -27,7 +27,6 @@ import Permission from '../../../src/entity/rbac/permission';
 import PermissionRule from '../../../src/rbac/permission-rule';
 import RoleUserType from '../../../src/entity/rbac/role-user-type';
 import { UserType } from '../../../src/entity/user/user';
-import { de } from 'date-fns/locale';
 
 describe('DefaultRoles', () => {
   let ctx: {
