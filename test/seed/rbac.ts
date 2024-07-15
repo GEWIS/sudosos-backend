@@ -23,6 +23,18 @@ import AssignedRole from '../../src/entity/rbac/assigned-role';
 import { RoleDefinition } from '../../src/rbac/role-manager';
 import JsonWebToken from '../../src/authentication/json-web-token';
 import RBACService from '../../src/service/rbac-service';
+import RoleUserType from '../../src/entity/rbac/role-user-type';
+
+interface SeedRoleDefinition extends RoleDefinition {
+  /**
+   * The user types of this role
+   */
+  userTypes?: UserType[];
+  /**
+   * Whether this role is a system default
+   */
+  systemDefault?: boolean;
+}
 
 export interface SeededRole {
   role: Role,
@@ -55,20 +67,26 @@ function getAdminPermissions(role: Role, entity: string, relationOwn = true): De
   ];
 }
 
-export async function seedRoles(roles: RoleDefinition[]): Promise<SeededRole[]> {
-  return Promise.all(roles.map((role) => Role.save({ name: role.name }).then(async (r): Promise<SeededRole> => {
-    const permissions = RBACService.definitionToRules(role.permissions)
-      .map((p): DeepPartial<Permission> => ({
-        role: r,
-        roleId: r.id,
-        ...p,
-      }));
-    r.permissions = await Permission.save(permissions);
-    return {
-      role: r,
-      assignmentCheck: role.assignmentCheck,
-    };
-  })));
+export async function seedRoles(roles: SeedRoleDefinition[]): Promise<SeededRole[]> {
+  return Promise.all(roles.map((role) => Role.save({ name: role.name, systemDefault: role.systemDefault })
+    .then(async (r): Promise<SeededRole> => {
+      if (role.userTypes && role.userTypes.length > 0) {
+        r.roleUserTypes = await RoleUserType.save(role.userTypes.map((userType): DeepPartial<RoleUserType> => ({ role: r, roleId: r.id, userType })));
+      } else {
+        r.roleUserTypes = [];
+      }
+      const permissions = RBACService.definitionToRules(role.permissions)
+        .map((p): DeepPartial<Permission> => ({
+          role: r,
+          roleId: r.id,
+          ...p,
+        }));
+      r.permissions = await Permission.save(permissions);
+      return {
+        role: await Role.findOne({ where: { id: r.id }, relations: { roleUserTypes: true, permissions: true } }),
+        assignmentCheck: role.assignmentCheck,
+      };
+    })));
 }
 
 export async function assignRole(user: User, { role, assignmentCheck }: SeededRole): Promise<AssignedRole | undefined> {

@@ -162,7 +162,10 @@ export default class DefaultRoles {
         Product: admin,
         Transaction: admin,
         Transfer: admin,
-        User: admin,
+        User: {
+          ...admin,
+          acceptToS: { own: star },
+        },
         VatGroup: admin,
         VoucherGroup: admin,
       },

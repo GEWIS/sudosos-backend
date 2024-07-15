@@ -24,8 +24,27 @@ import Role from '../entity/rbac/role';
 import Permission from '../entity/rbac/permission';
 import { ActionDefinition, EntityDefinition, PermissionDefinition } from '../rbac/role-manager';
 import PermissionRule from '../rbac/permission-rule';
+import { PaginationParameters } from '../helpers/pagination';
+import { DeepPartial, FindManyOptions, FindOptionsRelations } from 'typeorm';
+import QueryFilter, { FilterMapping } from '../helpers/query-filter';
+import { UpdateRoleParams } from '../controller/request/rbac-request';
+
+interface RoleFilterParameters {
+  roleId?: number;
+
+  systemDefault?: boolean;
+
+  returnPermissions?: boolean;
+}
 
 export default class RBACService {
+  private findPermission(permissions: PermissionRule[], toFind: PermissionRule): PermissionRule | undefined {
+    return permissions.find((p2) => toFind.entity === p2.entity
+      && toFind.action === p2.action
+      && toFind.relation === p2.relation
+      && JSON.stringify(toFind.attributes) === JSON.stringify(p2.attributes));
+  }
+
   /**
    * Converts the RoleDefinitions object to an Roleresponse, which can be
    * returned in the API response.
@@ -116,5 +135,116 @@ export default class RBACService {
         }, {});
       return permDef;
     }, {});
+  }
+
+  /**
+   * Get a tuple with a list of all roles and the total number of
+   * roles matching the parameters
+   * @param params
+   * @param take
+   * @param skip
+   */
+  public static async getRoles(params: RoleFilterParameters = {}, { take, skip }: PaginationParameters = {}): Promise<[Role[], number]> {
+    const options = this.getOptions(params);
+    return Role.findAndCount({ ...options, take, skip });
+  }
+
+  /**
+   * Create an new role with the given parameters
+   * @param params
+   */
+  public static async createRole(params: UpdateRoleParams) {
+    return Role.save({ ...params });
+  }
+
+  /**
+   * Update an existing role with the given parameters
+   * @param roleId
+   * @param params
+   */
+  public static async updateRole(roleId: number, params: UpdateRoleParams): Promise<Role> {
+    const role = await Role.findOne({ where: { id: roleId } });
+    if (role == null) throw new Error('Role not found.');
+    if (role.systemDefault) throw new Error('Cannot update system default role.');
+
+    role.name = params.name;
+    await role.save();
+
+    const [[r]] = await this.getRoles({ roleId, returnPermissions: true });
+    return r;
+  }
+
+  /**
+   * Remove an existing role. Cannot delete system default roles
+   * @param roleId
+   */
+  public static async removeRole(roleId: number) {
+    const [[role]] = await this.getRoles({ roleId });
+    if (!role) throw new Error('Role not found.');
+    if (role.systemDefault) throw new Error('Cannot delete system default role.');
+
+    await Role.remove(role);
+  }
+
+  /**
+   * Add zero or more new permissions
+   * @param roleId
+   * @param permissions
+   */
+  public static async addPermissions(roleId: number, permissions: PermissionRule[]) {
+    const [[role]] = await this.getRoles({ roleId, returnPermissions: true });
+    if (!role) throw new Error('Role not found.');
+
+    return Permission.save(permissions.map((p): DeepPartial<Permission> => ({
+      ...p,
+      role,
+      roleId: role.id,
+    })));
+  }
+
+  /**
+   * Remove an existing permission
+   * @param roleId
+   * @param permissionRule
+   */
+  public static async removePermission(roleId: number, permissionRule: Omit<PermissionRule, 'attributes'>) {
+    const matches = (await Permission.find({ where: {
+      roleId,
+      entity: permissionRule.entity,
+      action: permissionRule.action,
+      relation: permissionRule.relation,
+    }, relations: { role: true } }));
+    if (matches.length === 0) {
+      throw new Error('Permission not found.');
+    }
+    if (matches.length > 1) {
+      throw new Error('Multiple permissions found');
+    }
+    if (matches[0].role.systemDefault) {
+      throw new Error('Cannot change permissions of system default role.');
+    }
+    await Permission.remove(matches[0]);
+  }
+
+  /**
+   * Build findOptions object
+   * @param params
+   */
+  public static getOptions(params: RoleFilterParameters): FindManyOptions<Role> {
+    const filterMapping: FilterMapping = {
+      roleId: 'id',
+      systemDefault: 'systemDefault',
+    };
+
+    const relations: FindOptionsRelations<Role> = {
+      permissions: params.returnPermissions,
+    };
+
+    return {
+      where: {
+        ...QueryFilter.createFilterWhereClause(filterMapping, params),
+      },
+      relations,
+    };
   }
 }
