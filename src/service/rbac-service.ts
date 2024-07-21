@@ -57,7 +57,9 @@ export default class RBACService {
         return [...e, permission.entity];
       }, []);
       return {
-        role: role.name,
+        name: role.name,
+        systemDefault: role.systemDefault,
+        userTypes: role.userTypes,
         // Map every entity permission to response
         entities: entities?.map((entityName): EntityResponse => {
           const entityPermissions = role.permissions.filter((p) => p.entity === entityName);

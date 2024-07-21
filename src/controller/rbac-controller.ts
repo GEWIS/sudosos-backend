@@ -53,7 +53,7 @@ export default class RbacController extends BaseController {
         POST: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'create', 'all', 'Role', ['*']),
           handler: this.createRole.bind(this),
-          body: { modelName: 'UpdateRoleRequest' },
+          body: { modelName: 'UpdateRoleParams' },
         },
       },
       '/roles/:id(\\d+)': {
@@ -64,7 +64,7 @@ export default class RbacController extends BaseController {
         PATCH: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'update', 'all', 'Role', ['*']),
           handler: this.updateRole.bind(this),
-          body: { modelName: 'UpdateRoleRequest' },
+          body: { modelName: 'UpdateRoleParams' },
         },
         DELETE: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'delete', 'all', 'Role', ['*']),
@@ -176,7 +176,7 @@ export default class RbacController extends BaseController {
   }
 
   /**
-   * POST /rbac/roles/{id}
+   * PATCH /rbac/roles/{id}
    * @summary Update an existing role
    * @operationId updateRole
    * @tags rbac - Operations of the rbac controller
