@@ -43,4 +43,11 @@ import Permission from '../../entity/rbac/permission';
  */
 export interface UpdateRoleParams extends Pick<Role, 'name'> {}
 
+/**
+ * @typedef CreatePermissionParams
+ * @property {string} entity.required - Entity
+ * @property {string} action.required - Action
+ * @property {string} relation.required - Relation
+ * @property {Array.<string>} attributes.required - Attributes
+ */
 export interface CreatePermissionParams extends Pick<Permission, 'entity' | 'action' | 'relation' | 'attributes'> {}

@@ -20,9 +20,12 @@
 import EntityResponse from './entity-response';
 
 /**
- * @typedef {object} RoleResponse -
- * A role contains a unique name, and a list of permissions per entity.
+ * @typedef {object} RoleResponse
  * @property {string} role.required - The name of the role.
+ */
+
+/**
+ * @typedef {RoleResponse} RoleWithPermissionsResponse
  * @property {Array<EntityResponse>} entities.required - The permissions with regards to the entity.
  */
 export default interface RoleResponse {

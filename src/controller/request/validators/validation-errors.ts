@@ -61,3 +61,5 @@ export const SUBTRANSACTION_ALREADY_INVOICED = (ids: number[]) => new Validation
 export const INVALID_PIN = () => new ValidationError('PIN is not 4 numbers');
 
 export const WEAK_PASSWORD = () => new ValidationError('Password not strong enough.');
+
+export const EMPTY_ARRAY = () => new ValidationError('is empty.');
