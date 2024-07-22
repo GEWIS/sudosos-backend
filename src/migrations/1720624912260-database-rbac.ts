@@ -15,9 +15,32 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { MigrationInterface, QueryRunner, Table, TableColumn, TableForeignKey } from 'typeorm';
+import { DeepPartial, MigrationInterface, QueryRunner, Repository, Table, TableColumn, TableForeignKey } from 'typeorm';
 import AssignedRole from '../entity/rbac/assigned-role';
 import Role from '../entity/rbac/role';
+import Permission from '../entity/rbac/permission';
+import DefaultRoles from '../rbac/default-roles';
+
+const star = ['*'];
+
+function getAdminPermissions(role: Role, entity: string, relationOwn = true): DeepPartial<Permission>[] {
+  const result = [
+    { roleId: role.id, role, entity, action: 'get', relation: 'all', attributes: star },
+    { roleId: role.id, role, entity, action: 'update', relation: 'all', attributes: star },
+    { roleId: role.id, role, entity, action: 'create', relation: 'all', attributes: star },
+    { roleId: role.id, role, entity, action: 'delete', relation: 'all', attributes: star },
+    { roleId: role.id, role, entity, action: 'approve', relation: 'all', attributes: star },
+  ];
+  if (!relationOwn) return result;
+  return [
+    ...result,
+    { roleId: role.id, role, entity, action: 'get', relation: 'own', attributes: star },
+    { roleId: role.id, role, entity, action: 'update', relation: 'own', attributes: star },
+    { roleId: role.id, role, entity, action: 'create', relation: 'own', attributes: star },
+    { roleId: role.id, role, entity, action: 'delete', relation: 'own', attributes: star },
+    { roleId: role.id, role, entity, action: 'approve', relation: 'own', attributes: star },
+  ];
+}
 
 export class DatabaseRbac1720624912620 implements MigrationInterface {
   private ROLE_TABLE = 'role';
@@ -27,6 +50,65 @@ export class DatabaseRbac1720624912620 implements MigrationInterface {
   private ASSIGNED_USER_TYPE_TABLE = 'role_user_type';
 
   private ASSIGNED_ROLE_TABLE = 'assigned_role';
+
+  private async seedGEWISRoles(roleRepo: Repository<Role>, permissionRepo: Repository<Permission>): Promise<void> {
+    await roleRepo.save({ name: 'SudoSOS - BAC' }).then(async (role): Promise<void> => {
+      role.permissions = await permissionRepo.save([
+        ...getAdminPermissions(role, 'Transaction'),
+        ...getAdminPermissions(role, 'VoucherGroup', false),
+        ...getAdminPermissions(role, 'ProductCategory', false),
+        { role, entity: 'Balance', action: 'get', relation: 'all', attributes: star },
+      ]);
+    });
+
+    await roleRepo.save({ name: 'SudoSOS - Board' }).then(async (role): Promise<void> => {
+      role.permissions = await permissionRepo.save([
+        ...getAdminPermissions(role, 'Banner'),
+        ...getAdminPermissions(role, 'VoucherGroup'),
+        ...getAdminPermissions(role, 'User'),
+      ]);
+    });
+
+    await roleRepo.save({ name: 'SudoSOS - BAC PM' }).then(async (role): Promise<void> => {
+      role.permissions = await permissionRepo.save([
+        ...getAdminPermissions(role, 'Authenticator'),
+        ...getAdminPermissions(role, 'Container'),
+        ...getAdminPermissions(role, 'Invoice'),
+        ...getAdminPermissions(role, 'PayoutRequest'),
+        ...getAdminPermissions(role, 'PointOfSale'),
+        ...getAdminPermissions(role, 'ProductCategory'),
+        ...getAdminPermissions(role, 'Product'),
+        ...getAdminPermissions(role, 'Transaction'),
+        ...getAdminPermissions(role, 'Transfer'),
+        ...getAdminPermissions(role, 'VatGroup'),
+        ...getAdminPermissions(role, 'User'),
+        ...getAdminPermissions(role, 'Fine'),
+        { role, entity: 'Fine', action: 'notify', relation: 'all', attributes: star },
+      ]);
+    });
+
+    await roleRepo.save({ name: 'SudoSOS - Audit' }).then(async (role): Promise<void> => {
+      role.permissions = await permissionRepo.save([
+        { roleId: role.id, role, entity: 'Invoice', action: 'get', relation: 'all', attributes: star },
+        { roleId: role.id, role, entity: 'Invoice', action: 'get', relation: 'own', attributes: star },
+        { roleId: role.id, role, entity: 'Transaction', action: 'get', relation: 'all', attributes: star },
+        { roleId: role.id, role, entity: 'Transaction', action: 'get', relation: 'own', attributes: star },
+        { roleId: role.id, role, entity: 'Transfer', action: 'get', relation: 'all', attributes: star },
+        { roleId: role.id, role, entity: 'Transfer', action: 'get', relation: 'own', attributes: star },
+      ]);
+    });
+
+    await roleRepo.save({ name: 'SudoSOS - Narrowcasting' }).then(async (role): Promise<void> => {
+      role.permissions = await permissionRepo.save([
+        { roleId: role.id, role, entity: 'Balance', action: 'get', relation: 'all', attributes: star },
+        { roleId: role.id, role, entity: 'PointOfSale', action: 'get', relation: 'all', attributes: star },
+        { roleId: role.id, role, entity: 'Container', action: 'get', relation: 'all', attributes: star },
+        { roleId: role.id, role, entity: 'Product', action: 'get', relation: 'all', attributes: star },
+        { roleId: role.id, role, entity: 'User', action: 'get', relation: 'all', attributes: star },
+        { roleId: role.id, role, entity: 'User', action: 'get', relation: 'organ', attributes: star },
+      ]);
+    });
+  }
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.createTable(new Table({
@@ -140,6 +222,14 @@ export class DatabaseRbac1720624912620 implements MigrationInterface {
       onDelete: 'CASCADE',
     }));
 
+    /**
+     * Migrate existing roles
+     */
+    await DefaultRoles.synchronize();
+    const roleRepo = queryRunner.manager.getRepository(Role);
+    const permissionRepo = queryRunner.manager.getRepository(Permission);
+    await this.seedGEWISRoles(roleRepo, permissionRepo);
+
     const roleNames: { role: string }[] = await AssignedRole.getRepository().createQueryBuilder()
       .select('role')
       .groupBy('role')
@@ -147,7 +237,12 @@ export class DatabaseRbac1720624912620 implements MigrationInterface {
 
     const roles = new Map<string, Role>();
     for (const { role } of roleNames) {
-      roles.set(role, await Role.save({ name: role }));
+      const existingRole = await roleRepo.findOne({ where: { name: role } });
+      if (existingRole) {
+        roles.set(role, existingRole);
+      } else {
+        roles.set(role, await Role.save({ name: role }));
+      }
     }
 
     await queryRunner.addColumn(this.ASSIGNED_ROLE_TABLE, new TableColumn({

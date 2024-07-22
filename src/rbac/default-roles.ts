@@ -171,6 +171,39 @@ export default class DefaultRoles {
         VatGroup: admin,
         VoucherGroup: admin,
       },
+    }, {
+      name: 'Seller',
+      userTypes: [],
+      permissions: {
+        Product: {
+          get: { own: star, organ: star, all: star },
+        },
+        Container: {
+          get: { own: star, organ: star, all: star },
+        },
+        PointOfSale: {
+          get: { own: star, organ: star, all: star },
+        },
+        ProductCategory: {
+          get: { organ: star },
+        },
+        Balance: {
+          get: { organ: star },
+        },
+        Transaction: {
+          get: { organ: star },
+        },
+        Transfer: {
+          get: { organ: star },
+        },
+        PayoutRequest: {
+          create: { organ: star },
+          get: { organ: star },
+        },
+        User: {
+          get: { all: star, organ: star },
+        },
+      },
     }];
   }
 
