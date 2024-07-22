@@ -1212,7 +1212,7 @@ export default class UserController extends BaseController {
    * @tags users - Operations of user controller
    * @param {integer} id.path.required - The id of the user to get the roles from
    * @security JWT
-   * @return {Array.<RoleResponse>} 200 - The roles of the user
+   * @return {Array.<RoleWithPermissionsResponse>} 200 - The roles of the user
    * @return {string} 404 - User not found error.
    */
   public async getUserRoles(req: RequestWithToken, res: Response): Promise<void> {

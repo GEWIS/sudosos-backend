@@ -29,12 +29,12 @@ import EntityResponse from './entity-response';
 
 /**
  * @typedef {allOf|RoleResponse} RoleWithPermissionsResponse
- * @property {Array.<EntityResponse>} entities.required - The permissions with regards to the entity.
+ * @property {Array.<EntityResponse>} permissions.required - The permissions with regards to the entity.
  */
 export default interface RoleResponse {
   id: number;
   name: string;
   systemDefault: boolean;
   userTypes?: number[];
-  entities: EntityResponse[];
+  permissions?: EntityResponse[];
 }

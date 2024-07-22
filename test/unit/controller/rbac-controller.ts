@@ -143,7 +143,7 @@ describe('RbacController', async (): Promise<void> => {
         expect(role.name).to.equal(actualRole.name);
         expect(role.systemDefault).to.equal(actualRole.systemDefault);
         expect(role.userTypes).to.deep.equal(actualRole.roleUserTypes.map((r) => r.userType));
-        expect(role.entities).to.be.undefined;
+        expect(role.permissions).to.be.undefined;
       }
     });
     it('should return an HTTP 200 if no permissions', async () => {
@@ -176,7 +176,7 @@ describe('RbacController', async (): Promise<void> => {
       expect(role.systemDefault).to.equal(actualRole.systemDefault);
       expect(role.userTypes).to.deep.equal(actualRole.roleUserTypes.map((r) => r.userType));
 
-      const permissions: PermissionRule[] = role.entities.map(({ entity, actions }) => {
+      const permissions: PermissionRule[] = role.permissions.map(({ entity, actions }) => {
         return actions.map(({ action, relations }) => {
           return relations.map(({ relation, attributes }: PermissionRule) => {
             return { entity, action, relation, attributes };
@@ -235,7 +235,7 @@ describe('RbacController', async (): Promise<void> => {
       expect(role.name).to.equal(params.name);
       expect(role.systemDefault).to.be.false;
       expect(role.userTypes).to.deep.equal([]);
-      expect(role.entities).to.deep.equal([]);
+      expect(role.permissions).to.deep.equal([]);
       expect(await Role.count()).to.equal(ctx.roles.length + 1);
 
       // Cleanup

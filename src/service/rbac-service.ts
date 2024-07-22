@@ -96,7 +96,7 @@ export default class RBACService {
         systemDefault: role.systemDefault,
         userTypes: role.userTypes ?? [],
         // Map every entity permission to response
-        entities: role.permissions ? this.asEntityResponse(role.permissions) : undefined,
+        permissions: role.permissions ? this.asEntityResponse(role.permissions) : undefined,
       };
     });
   }

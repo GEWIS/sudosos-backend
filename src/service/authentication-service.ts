@@ -38,6 +38,7 @@ import ResetToken from '../entity/authenticator/reset-token';
 import LocalAuthenticator from '../entity/authenticator/local-authenticator';
 import AuthenticationResetTokenRequest from '../controller/request/authentication-reset-token-request';
 import NfcAuthenticator from '../entity/authenticator/nfc-authenticator';
+import RBACService from './rbac-service';
 
 export interface AuthenticationContext {
   tokenHandler: TokenHandler,
@@ -149,13 +150,7 @@ export default class AuthenticationService {
       roles,
       token,
       acceptedToS: user.acceptedToS,
-      permissions: (await user.getPermissions())
-        .map((p) => ({
-          entity: p.entity,
-          action: p.action,
-          relationship: p.relation,
-          attributes: p.attributes,
-        })),
+      rolesWithPermissions: RBACService.asRoleResponse(await user.getRoles(true)),
     };
   }
 

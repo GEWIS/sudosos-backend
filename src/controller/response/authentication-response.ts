@@ -19,6 +19,7 @@
 
 import { UserResponse } from './user-response';
 import { TermsOfServiceStatus } from '../../entity/user/user';
+import RoleResponse from './rbac/role-response';
 
 /**
  * @typedef {object} PermissionResponse
@@ -43,18 +44,21 @@ export interface PermissionResponse {
 /**
   * @typedef {object} AuthenticationResponse
   * @property {UserResponse} user.required - The user that has authenticated.
-  * @property {Array<string>} roles.required - The RBAC roles that the user has.
+  * @property {Array<string>} roles.required - The RBAC roles that the user has. (DEPRECATED)
   * @property {Array<UserResponse>} organs.required - The organs that the user is a member of.
   * @property {string} token.required - The JWT token that can be used as Bearer token for authentication.
  *  @property {string} acceptedToS.required - Whether the related user has accepted the Terms of Service
  *  or is not required to.
- *  @property {Array<PermissionResponse>} permissions.required - All unique RBAC permissions the user has
+ *  @property {Array<RoleWithPermissionsResponse>} rolesWithPermissions.required - All unique RBAC permissions the user has
   */
 export default interface AuthenticationResponse {
   user: UserResponse,
+  /**
+   * @deprecated Use roles with permissions instead
+   */
   roles: string[],
   organs: UserResponse[],
   token: string,
   acceptedToS: TermsOfServiceStatus;
-  permissions: PermissionResponse[],
+  rolesWithPermissions: RoleResponse[],
 }

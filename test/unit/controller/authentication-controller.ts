@@ -53,6 +53,8 @@ import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { assignRole, seedRoles } from '../../seed/rbac';
 import Role from '../../../src/entity/rbac/role';
+import EntityResponse from '../../../src/controller/response/rbac/entity-response';
+import RoleResponse from '../../../src/controller/response/rbac/role-response';
 
 describe('AuthenticationController', async (): Promise<void> => {
   let ctx: {
@@ -216,13 +218,23 @@ describe('AuthenticationController', async (): Promise<void> => {
       auth = res.body as AuthenticationResponse;
       token = await ctx.tokenHandler.verifyToken(auth.token);
       expect(token.roles).to.deep.equal(['Role']);
-      expect(auth.permissions.length).to.equal(1);
-      expect(auth.permissions[0]).to.deep.equal({
-        entity: 'Product',
-        action: 'create',
-        relationship: 'all',
-        attributes: ['*'],
-      });
+      expect(auth.rolesWithPermissions.length).to.equal(1);
+      expect(auth.rolesWithPermissions[0]).to.deep.equal({
+        id: ctx.role.id,
+        name: ctx.role.name,
+        systemDefault: ctx.role.systemDefault,
+        userTypes: ctx.role.userTypes,
+        permissions: [{
+          entity: 'Product',
+          actions: [{
+            action: 'create',
+            relations: [{
+              relation: 'all',
+              attributes: ['*'],
+            }],
+          }],
+        }],
+      } as RoleResponse);
     });
     it('should give an HTTP 403 when not in development environment', async () => {
       process.env.NODE_ENV = 'production';
