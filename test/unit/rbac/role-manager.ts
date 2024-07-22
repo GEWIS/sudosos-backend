@@ -140,10 +140,11 @@ describe('RoleManager', (): void => {
       await assignRoles(user, [...ctx.roles, role]);
 
       const roles = await ctx.manager.getRoles(user);
+      const roleNames = roles.map((r) => r.name);
       expect(roles.length).to.equal(3);
-      expect(roles).to.contain('Role1');
-      expect(roles).to.contain('Role2');
-      expect(roles).to.contain('Everybody');
+      expect(roleNames).to.contain('Role1');
+      expect(roleNames).to.contain('Role2');
+      expect(roleNames).to.contain('Everybody');
     });
     it('should not return role which fails assignment check', async () => {
       const { user } = await UserFactory();
@@ -155,9 +156,10 @@ describe('RoleManager', (): void => {
       await assignRoles(user, [...ctx.roles, role]);
 
       const roles = await ctx.manager.getRoles(user);
+      const roleNames = roles.map((r) => r.name);
       expect(roles.length).to.equal(2);
-      expect(roles).to.contain('Role1');
-      expect(roles).to.contain('Role2');
+      expect(roleNames).to.contain('Role1');
+      expect(roleNames).to.contain('Role2');
     });
   });
 });
