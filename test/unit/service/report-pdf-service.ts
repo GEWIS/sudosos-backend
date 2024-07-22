@@ -19,9 +19,8 @@
 import { FineReport } from '../../../src/controller/response/debtor-response';
 import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
 import ReportPdfService from '../../../src/service/report-pdf-service';
-import {expect} from "chai";
-import {PDF_VAT_HIGH} from "../../../src/helpers/pdf";
-import {FineReportParameters, Product} from "pdf-generator-client";
+import { expect } from 'chai';
+import { PDF_VAT_HIGH } from '../../../src/helpers/pdf';
 
 describe('ReportPdfService', () => {
   describe('fineReportToParameters', () => {
