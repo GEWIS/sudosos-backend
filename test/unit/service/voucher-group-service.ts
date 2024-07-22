@@ -24,8 +24,7 @@ import { VoucherGroupParams, VoucherGroupRequest } from '../../../src/controller
 import VoucherGroupResponse from '../../../src/controller/response/voucher-group-response';
 import Database from '../../../src/database/database';
 import Transfer from '../../../src/entity/transactions/transfer';
-import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
-import RoleManager from '../../../src/rbac/role-manager';
+import { TermsOfServiceStatus } from '../../../src/entity/user/user';
 import VoucherGroupService from '../../../src/service/voucher-group-service';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
@@ -74,21 +73,6 @@ describe('VoucherGroupService', async (): Promise<void> => {
     // initialize test database
     const connection = await Database.initialize();
     await truncateAllTables(connection);
-
-    const all = { all: new Set<string>(['*']) };
-    const roleManager = new RoleManager();
-    roleManager.registerRole({
-      name: 'Admin',
-      permissions: {
-        VoucherGroup: {
-          create: all,
-          get: all,
-          update: all,
-          delete: all,
-        },
-      },
-      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
-    });
 
     // initialize context
     ctx = {

@@ -53,7 +53,6 @@ import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { assignRole, seedRoles } from '../../seed/rbac';
 import Role from '../../../src/entity/rbac/role';
-import EntityResponse from '../../../src/controller/response/rbac/entity-response';
 import RoleResponse from '../../../src/controller/response/rbac/role-response';
 
 describe('AuthenticationController', async (): Promise<void> => {

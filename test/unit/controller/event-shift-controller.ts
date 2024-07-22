@@ -129,7 +129,7 @@ describe('EventShiftController', () => {
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
     const adminToken = await tokenHandler.signToken(await getToken(adminUser, accessRoles), 'nonce admin');
-    const userToken = await tokenHandler.signToken(await getToken(localUser, []), 'nonce');
+    const userToken = await tokenHandler.signToken(await getToken(localUser), 'nonce');
 
     const controller = new EventShiftController({ specification, roleManager });
     app.use(json());

@@ -98,9 +98,9 @@ export class Application {
  *                      and controller.
  */
 async function setupRbac(application: Application) {
-  // Setup GEWIS-specific module.
-  const gewis = new Gewis(application.roleManager);
-  await gewis.registerRoles();
+  // Synchronize SudoSOS system roles
+  await DefaultRoles.synchronize();
+  application.roleManager = await new RoleManager().initialize();
 
   // Define rbac controller and bind.
   const controller = new RbacController(
@@ -222,8 +222,6 @@ export default async function createApp(): Promise<Application> {
   }
 
   // Setup RBAC.
-  await DefaultRoles.synchronize();
-  application.roleManager = await new RoleManager().initialize();
   await setupRbac(application);
 
   application.app.use('/v1/stripe', new StripeWebhookController(

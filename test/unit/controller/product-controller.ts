@@ -208,7 +208,7 @@ describe('ProductController', async (): Promise<void> => {
     const adminToken = await tokenHandler.signToken(await getToken(adminUser, roles), 'nonce admin');
     const token = await tokenHandler.signToken(await getToken(localUser, roles), 'nonce');
     const organMemberToken = await tokenHandler.signToken(await getToken(localUser, roles, [organ]), 'nonce');
-    const tokenNoRoles = await tokenHandler.signToken(await getToken(localUser, []), 'nonce');
+    const tokenNoRoles = await tokenHandler.signToken(await getToken(localUser), 'nonce');
     const roleManager = await new RoleManager().initialize();
 
     const controller = new ProductController({ specification, roleManager });

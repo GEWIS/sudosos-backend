@@ -108,23 +108,6 @@ export default class RoleManager {
    */
   private roles: RoleDefinitions = {};
 
-  /**
-   * Registers a new role in the systsem.
-   *
-   * @param role - The role which should be registered in the system.
-   * @throws {Error} - Throws an error when a role with the same name is already registered.
-   * @deprecated
-   */
-  public registerRole(role: RoleDefinition): void {
-    return;
-
-    if (this.roles[role.name]) {
-      throw new Error('Role with the same name already exists.');
-    }
-
-    this.roles[role.name] = role;
-  }
-
   public async loadRolesFromDatabase(): Promise<void> {
     const roles = await Role.find({ relations: { permissions: true } });
 
