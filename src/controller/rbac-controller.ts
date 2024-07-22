@@ -79,7 +79,7 @@ export default class RbacController extends BaseController {
         },
       },
       '/roles/:id(\\d+)/permissions/:entity/:action/:relation': {
-        POST: {
+        DELETE: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'delete', 'all', 'Permission', ['*']),
           handler: this.deletePermission.bind(this),
         },
@@ -265,7 +265,7 @@ export default class RbacController extends BaseController {
    * @tags rbac - Operations of the rbac controller
    * @param {integer} id.path.required - The ID of the role which should get the new permissions
    * @param {Array.<CreatePermissionParams>} request.body.required - The permissions that need to be added
-   * @return {RoleResponse} 200 - The created role
+   * @return {Array.<EntityResponse>} 200 - The created permissions
    * @return {string} 400 - Validation error
    * @return {string} 404 - Role not found error
    * @return {string} 500 - Internal server error
@@ -278,9 +278,13 @@ export default class RbacController extends BaseController {
     try {
       const roleId = Number(id);
 
-      let [[role]] = await RBACService.getRoles({ roleId }, { take: 1 });
+      let [[role]] = await RBACService.getRoles({ roleId, returnPermissions: true }, { take: 1 });
       if (!role) {
         res.status(404).json('Role not found.');
+        return;
+      }
+      if (role.systemDefault) {
+        res.status(400).json('Cannot add permission to system default role.');
         return;
       }
 
@@ -298,8 +302,23 @@ export default class RbacController extends BaseController {
         }
       }
 
+      // Check for duplicates in the request body / existing permissions
+      const invalidPermissions = params.filter((p, index) => {
+        const existingMatch = RBACService.findPermission(role.permissions, p);
+        if (existingMatch) return true;
+        const bodyWithoutCurrentPermission = [...params];
+        bodyWithoutCurrentPermission.splice(index, 1);
+        const bodyMatch = RBACService.findPermission(bodyWithoutCurrentPermission, p);
+        return !!bodyMatch;
+      });
+      if (invalidPermissions.length > 0) {
+        res.status(400).json(`Follow permissions are duplicates. They either already exist as permissions, or are duplicate in the request body: ${JSON.stringify(invalidPermissions)}`);
+        return;
+      }
+
       const permissions = await RBACService.addPermissions(roleId, params);
-      res.json(permissions);
+      const response = RBACService.asEntityResponse(permissions);
+      res.json(response);
       return;
     } catch (error) {
       this.logger.error('Could not add permissions:', error);
@@ -331,6 +350,10 @@ export default class RbacController extends BaseController {
       let [[role]] = await RBACService.getRoles({ roleId }, { take: 1 });
       if (!role) {
         res.status(404).json('Role not found.');
+        return;
+      }
+      if (role.systemDefault) {
+        res.status(400).json('Cannot delete permission from system default role.');
         return;
       }
 

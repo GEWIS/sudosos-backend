@@ -26,7 +26,7 @@ import RoleManager from '../../../src/rbac/role-manager';
 import Swagger from '../../../src/start/swagger';
 import { DataSource } from 'typeorm';
 import database from '../../../src/database/database';
-import { after } from 'mocha';
+import { after, beforeEach } from 'mocha';
 import { finishTestDB } from '../../helpers/test-helpers';
 import DefaultRoles from '../../../src/rbac/default-roles';
 import Role from '../../../src/entity/rbac/role';
@@ -35,7 +35,9 @@ import TokenHandler from '../../../src/authentication/token-handler';
 import { getToken } from '../../seed/rbac';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import PermissionRule from '../../../src/rbac/permission-rule';
-import { UpdateRoleParams } from '../../../src/controller/request/rbac-request';
+import { CreatePermissionParams, UpdateRoleParams } from '../../../src/controller/request/rbac-request';
+import EntityResponse from '../../../src/controller/response/rbac/entity-response';
+import Permission from '../../../src/entity/rbac/permission';
 
 describe('RbacController', async (): Promise<void> => {
   let ctx: {
@@ -278,11 +280,25 @@ describe('RbacController', async (): Promise<void> => {
   });
 
   describe('PATCH /rbac/roles/{id}', () => {
+    let newRole: Role;
+    const params: UpdateRoleParams = {
+      name: '41st board',
+    };
+
+    beforeEach(async () => {
+      newRole = await Role.save({ name: '39th board' });
+      expect(newRole.systemDefault).to.be.false;
+    });
+
+    afterEach(async () => {
+      if (!newRole) return;
+
+      // Cleanup
+      await Role.remove(newRole);
+
+    });
+
     it('should return an HTTP 200 when updating role', async () => {
-      const newRole = await Role.save({ name: '39th board' });
-      const params: UpdateRoleParams = {
-        name: '41st board',
-      };
       const res = await request(ctx.app)
         .patch(`/rbac/roles/${newRole.id}`)
         .set('Authorization', `Bearer ${ctx.adminToken}`)
@@ -300,17 +316,11 @@ describe('RbacController', async (): Promise<void> => {
       const role = res.body as RoleResponse;
       expect(role.name).to.equal(params.name);
       expect(role.systemDefault).to.be.false;
-
-      // Cleanup
-      await Role.remove(newRole);
     });
     it('should return an HTTP 400 when updating system default role', async () => {
       const role = ctx.roles.find((r) => r.systemDefault);
       expect(role).to.not.be.undefined;
 
-      const params: UpdateRoleParams = {
-        name: '39th board',
-      };
       const res = await request(ctx.app)
         .patch(`/rbac/roles/${role.id}`)
         .set('Authorization', `Bearer ${ctx.adminToken}`)
@@ -323,44 +333,35 @@ describe('RbacController', async (): Promise<void> => {
       expect(dbRole.name).to.equal(role.name);
     });
     it('should return an HTTP 400 if name is empty', async () => {
-      const newRole = await Role.save({ name: '39th board' });
-      const params: UpdateRoleParams = {
+      const invalidParams: UpdateRoleParams = {
+        ...params,
         name: '',
       };
       const res = await request(ctx.app)
         .patch(`/rbac/roles/${newRole.id}`)
         .set('Authorization', `Bearer ${ctx.adminToken}`)
-        .send(params);
+        .send(invalidParams);
 
       expect(res.status).to.equal(400);
       const dbRole = await Role.findOne({ where: { id: newRole.id } });
       expect(dbRole.name).to.equal(newRole.name);
-
-      // Cleanup
-      await Role.remove(newRole);
     });
     it('should return an HTTP 400 if name already exists', async () => {
-      const newRole = await Role.save({ name: '39th board' });
-      const params: UpdateRoleParams = {
+      const invalidParams: UpdateRoleParams = {
+        ...params,
         name: ctx.roles[0].name,
       };
       const res = await request(ctx.app)
         .patch(`/rbac/roles/${newRole.id}`)
         .set('Authorization', `Bearer ${ctx.adminToken}`)
-        .send(params);
+        .send(invalidParams);
 
       expect(res.status).to.equal(400);
       const dbRole = await Role.findOne({ where: { id: newRole.id } });
       expect(dbRole.name).to.equal(newRole.name);
-
-      // Cleanup
-      await Role.remove(newRole);
     });
     it('should return an HTTP 404 if role does not exist', async () => {
       const id = ctx.roles.length + 1;
-      const params: UpdateRoleParams = {
-        name: '39th board',
-      };
 
       const res = await request(ctx.app)
         .patch(`/rbac/roles/${id}`)
@@ -371,9 +372,6 @@ describe('RbacController', async (): Promise<void> => {
       expect(res.body).to.equal('Role not found.');
     });
     it('should return an HTTP 403 if no permissions', async () => {
-      const params: UpdateRoleParams = {
-        name: '39th board',
-      };
       const res = await request(ctx.app)
         .patch(`/rbac/roles/${ctx.roles[0].id}`)
         .set('Authorization', `Bearer ${ctx.userToken}`)
@@ -385,10 +383,21 @@ describe('RbacController', async (): Promise<void> => {
   });
 
   describe('DELETE /rbac/roles/{id}', () => {
-    it('should return an HTTP 200 and correctly delete role', async () => {
-      const newRole = await Role.save({ name: '39th board' });
-      expect(newRole.systemDefault).to.be.false;
+    let newRole: Role;
 
+    beforeEach(async () => {
+      newRole = await Role.save({ name: '39th board' });
+      expect(newRole.systemDefault).to.be.false;
+    });
+
+    afterEach(async () => {
+      if (!newRole) return;
+
+      // Cleanup
+      await Role.remove(newRole);
+    });
+
+    it('should return an HTTP 200 and correctly delete role', async () => {
       const res = await request(ctx.app)
         .delete(`/rbac/roles/${newRole.id}`)
         .set('Authorization', `Bearer ${ctx.adminToken}`);
@@ -421,9 +430,6 @@ describe('RbacController', async (): Promise<void> => {
       expect(res.body).to.equal('Role not found.');
     });
     it('should return an HTTP 403 if not admin', async () => {
-      const newRole = await Role.save({ name: '39th board' });
-      expect(newRole.systemDefault).to.be.false;
-
       const res = await request(ctx.app)
         .delete(`/rbac/roles/${newRole.id}`)
         .set('Authorization', `Bearer ${ctx.userToken}`);
@@ -432,9 +438,242 @@ describe('RbacController', async (): Promise<void> => {
 
       const dbRole = await Role.findOne({ where: { id: newRole.id } });
       expect(dbRole).to.not.be.null;
+    });
+  });
+
+  describe('POST /rbac/roles/{id}/permissions', () => {
+    let newRole: Role;
+
+    const newPermissions: CreatePermissionParams[] = [{
+      entity: 'Bier',
+      action: 'drink',
+      relation: 'all',
+      attributes: ['*'],
+    }, {
+      entity: 'Bier',
+      action: 'drink',
+      relation: 'own',
+      attributes: ['Vaasje', 'Fluitje'],
+    }, {
+      entity: 'Ketel 1',
+      action: 'drink',
+      relation: 'all',
+      attributes: ['*'],
+    }];
+
+    beforeEach(async () => {
+      newRole = await Role.save({ name: '39th board' });
+      expect(newRole.systemDefault).to.be.false;
+    });
+
+    afterEach(async () => {
+      if (!newRole) return;
 
       // Cleanup
       await Role.remove(newRole);
+    });
+
+    it('should return an HTTP 200 and correctly add multiple permissions', async () => {
+      const res = await request(ctx.app)
+        .post(`/rbac/roles/${newRole.id}/permissions`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(newPermissions);
+
+      expect(res.status).to.equal(200);
+      const validation = ctx.specification.validateModel(
+        'Array.<EntityResponse>',
+        res.body,
+        false,
+        true,
+      );
+      expect(validation.valid).to.be.true;
+
+      const entityResponses = res.body as EntityResponse[];
+      const nrEntities = newPermissions
+        .filter((p1, index, all) => index === all
+          .findIndex((p2) => p1.entity === p2.entity)).length;
+      expect(entityResponses.length).to.equal(nrEntities);
+      for (let { entity, actions } of entityResponses) {
+        const entityPerms = newPermissions.filter((p) => p.entity === entity);
+        expect(actions.length).to.be.at.least(1);
+        for (let { action, relations } of actions) {
+          const actionPerms = entityPerms.filter((p) => p.action === action);
+          expect(relations.length).to.be.at.least(1);
+          for (let { relation, attributes } of relations) {
+            const relationPerms = actionPerms.filter((p) => p.relation === relation);
+            expect(relationPerms.length).to.equal(1);
+            expect(attributes.length).to.be.at.least(1);
+            expect(attributes).to.deep.equal(relationPerms[0].attributes);
+          }
+        }
+      }
+    });
+    it('should return an HTTP 400 when permission already exists', async () => {
+      let res = await request(ctx.app)
+        .post(`/rbac/roles/${newRole.id}/permissions`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(newPermissions);
+      expect(res.status).to.equal(200);
+
+      res = await request(ctx.app)
+        .post(`/rbac/roles/${newRole.id}/permissions`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(newPermissions);
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal(`Follow permissions are duplicates. They either already exist as permissions, or are duplicate in the request body: ${JSON.stringify(newPermissions)}`);
+
+      const dbRole = await Role.findOne({ where: { id: newRole.id }, relations: { permissions: true } });
+      // No new permissions added
+      expect(dbRole.permissions).to.be.length(newPermissions.length);
+    });
+    it('should return an HTTP 400 when sending duplicate permissions', async () => {
+      let res = await request(ctx.app)
+        .post(`/rbac/roles/${newRole.id}/permissions`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send([newPermissions[0], newPermissions[0]]);
+
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal(`Follow permissions are duplicates. They either already exist as permissions, or are duplicate in the request body: ${JSON.stringify([newPermissions[0], newPermissions[0]])}`);
+
+      const dbRole = await Role.findOne({ where: { id: newRole.id }, relations: { permissions: true } });
+      // No new permissions added
+      expect(dbRole.permissions).to.be.length(0);
+    });
+    it('should return an HTTP 400 when body is not an array', async () => {
+      const res = await request(ctx.app)
+        .post(`/rbac/roles/${newRole.id}/permissions`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(newPermissions[0]);
+
+      expect(res.status).to.equal(400);
+
+      const dbRole = await Role.findOne({ where: { id: newRole.id }, relations: { permissions: true } });
+      // No new permissions added
+      expect(dbRole.permissions).to.be.length(0);
+    });
+    it('should return an HTTP 400 when adding permissions to a system default role', async () => {
+      const role = ctx.roles.find((r) => r.systemDefault);
+      const res = await request(ctx.app)
+        .post(`/rbac/roles/${role.id}/permissions`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(newPermissions);
+
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('Cannot add permission to system default role.');
+
+      const dbRole = await Role.findOne({ where: { id: role.id }, relations: { permissions: true } });
+      // No new permissions added
+      expect(dbRole.permissions).to.be.length(role.permissions.length);
+    });
+    it('should return an HTTP 404 when role does not exist', async () => {
+      const id = ctx.roles.length + 2;
+      const res = await request(ctx.app)
+        .post(`/rbac/roles/${id}/permissions`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(newPermissions);
+
+      expect(res.status).to.equal(404);
+      expect(res.body).to.equal('Role not found.');
+    });
+    it('should return an HTTP 403 if no permissions', async () => {
+      const res = await request(ctx.app)
+        .post(`/rbac/roles/${newRole.id}/permissions`)
+        .set('Authorization', `Bearer ${ctx.userToken}`)
+        .send(newPermissions);
+
+      expect(res.status).to.equal(403);
+      expect(res.body).to.be.empty;
+    });
+  });
+
+  describe('DELETE /rbac/roles/{id}/permissions/{entity}/{action}/{relation}', () => {
+    let newRole: Role;
+    let newPermissions: Permission[];
+
+    beforeEach(async () => {
+      newRole = await Role.save({ name: '39th board' });
+      newPermissions = await Permission.save([{
+        role: newRole,
+        roleId: newRole.id,
+        entity: 'Bier',
+        action: 'drink',
+        relation: 'all',
+        attributes: ['*'],
+      }, {
+        role: newRole,
+        roleId: newRole.id,
+        entity: 'Bier',
+        action: 'drink',
+        relation: 'own',
+        attributes: ['Vaasje', 'Fluitje'],
+      }, {
+        role: newRole,
+        roleId: newRole.id,
+        entity: 'Ketel 1',
+        action: 'drink',
+        relation: 'all',
+        attributes: ['*'],
+      }]);
+      expect(newRole.systemDefault).to.be.false;
+    });
+
+    afterEach(async () => {
+      if (!newRole) return;
+
+      // Cleanup
+      await Role.remove(newRole);
+    });
+    it('should return an HTTP 204 and correctly delete single permission', async () => {
+      const perm = newPermissions[0];
+      const res = await request(ctx.app)
+        .delete(`/rbac/roles/${newRole.id}/permissions/${perm.entity}/${perm.action}/${perm.relation}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(204);
+      expect(res.body).to.be.empty;
+
+      const dbPermission = await Permission.findOne({ where: {
+        roleId: perm.roleId,
+        entity: perm.entity,
+        action: perm.action,
+        relation: perm.relation,
+      } });
+      expect(dbPermission).to.be.null;
+    });
+    it('should return an HTTP 400 when deleting permission from system default role', async () => {
+      const role = ctx.roles.find((r) => r.systemDefault);
+      const perm = role.permissions[0];
+      const res = await request(ctx.app)
+        .delete(`/rbac/roles/${role.id}/permissions/${perm.entity}/${perm.action}/${perm.relation}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('Cannot delete permission from system default role.');
+
+      const dbRole = await Role.findOne({ where: { id: role.id }, relations: { permissions: true } });
+      expect(dbRole.permissions).to.be.length(role.permissions.length);
+    });
+    it('should return an HTTP 404 when role does not exist', async () => {
+      const id = ctx.roles.length + 2;
+      const perm = newPermissions[0];
+      const res = await request(ctx.app)
+        .delete(`/rbac/roles/${id}/permissions/${perm.entity}/${perm.action}/${perm.relation}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(404);
+      expect(res.body).to.equal('Role not found.');
+    });
+    it('should return an HTTP 404 when permission does not exist', async () => {
+      const perm = newPermissions[0];
+      const res = await request(ctx.app)
+        .delete(`/rbac/roles/${newRole.id}/permissions/Aquarius/${perm.action}/${perm.relation}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(404);
+      expect(res.body).to.equal('Permission not found.');
+
+      const dbRole = await Role.findOne({ where: { id: newRole.id }, relations: { permissions: true } });
+      expect(dbRole.permissions).to.be.length(newPermissions.length);
     });
   });
 });

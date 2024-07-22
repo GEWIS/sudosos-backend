@@ -38,11 +38,49 @@ interface RoleFilterParameters {
 }
 
 export default class RBACService {
-  private findPermission(permissions: PermissionRule[], toFind: PermissionRule): PermissionRule | undefined {
+  public static findPermission(permissions: PermissionRule[], toFind: PermissionRule): PermissionRule | undefined {
     return permissions.find((p2) => toFind.entity === p2.entity
       && toFind.action === p2.action
       && toFind.relation === p2.relation
       && JSON.stringify(toFind.attributes) === JSON.stringify(p2.attributes));
+  }
+
+  /**
+   * Map list of permissions to an entity response
+   * @param permissions
+   */
+  public static asEntityResponse(permissions: Permission[]): EntityResponse[] {
+    const entities = permissions.reduce((e: string[], permission) => {
+      if (e.includes(permission.entity)) return e;
+      return [...e, permission.entity];
+    }, []);
+
+    return entities.map((entityName): EntityResponse => {
+      const entityPermissions = permissions.filter((p) => p.entity === entityName);
+      const actions = entityPermissions.reduce((a: string[], permission) => {
+        if (a.includes(permission.action)) return a;
+        return [...a, permission.action];
+      }, []);
+      return {
+        entity: entityName,
+        // Map every action permission to response
+        actions: actions.map((actionName): ActionResponse => {
+          const actionPermissions = entityPermissions.filter((p) => p.action === actionName);
+          const relationPermissions = actionPermissions.reduce((r: Permission[], permission) => {
+            if (r.some((r2) => r2.relation === permission.relation)) return r;
+            return [...r, permission];
+          }, []);
+          return {
+            action: actionName,
+            // Map every relation permission to response
+            relations: relationPermissions.map((relationPerm): RelationResponse => ({
+              relation: relationPerm.relation,
+              attributes: relationPerm.attributes,
+            })),
+          };
+        }),
+      };
+    });
   }
 
   /**
@@ -52,42 +90,13 @@ export default class RBACService {
    */
   public static asRoleResponse(roles: Role[]): RoleResponse[] {
     return roles.map((role): RoleResponse => {
-      const entities = role.permissions?.reduce((e: string[], permission) => {
-        if (e.includes(permission.entity)) return e;
-        return [...e, permission.entity];
-      }, []);
       return {
         id: role.id,
         name: role.name,
         systemDefault: role.systemDefault,
         userTypes: role.userTypes ?? [],
         // Map every entity permission to response
-        entities: entities?.map((entityName): EntityResponse => {
-          const entityPermissions = role.permissions.filter((p) => p.entity === entityName);
-          const actions = entityPermissions.reduce((a: string[], permission) => {
-            if (a.includes(permission.action)) return a;
-            return [...a, permission.action];
-          }, []);
-          return {
-            entity: entityName,
-            // Map every action permission to response
-            actions: actions.map((actionName): ActionResponse => {
-              const actionPermissions = entityPermissions.filter((p) => p.action === actionName);
-              const relationPermissions = actionPermissions.reduce((r: Permission[], permission) => {
-                if (r.some((r2) => r2.relation === permission.relation)) return r;
-                return [...r, permission];
-              }, []);
-              return {
-                action: actionName,
-                // Map every relation permission to response
-                relations: relationPermissions.map((relationPerm): RelationResponse => ({
-                  relation: relationPerm.relation,
-                  attributes: relationPerm.attributes,
-                })),
-              };
-            }),
-          };
-        }),
+        entities: role.permissions ? this.asEntityResponse(role.permissions) : undefined,
       };
     });
   }
