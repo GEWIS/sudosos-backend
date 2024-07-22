@@ -85,51 +85,6 @@ describe('RoleManager', (): void => {
     await finishTestDB(ctx.connection);
   });
 
-  describe('#processAttributes', () => {
-    it('should result in empty set when wildcard is allowed', () => {
-      const remaining = new Set(ctx.attrOne);
-      RoleManager.processAttributes(ctx.wildcard, remaining);
-      expect(remaining.size).to.equal(0);
-    });
-    it('should result in empty set when attribute is allowed', () => {
-      const remaining = new Set(ctx.attrOne);
-      RoleManager.processAttributes(ctx.attrOne, remaining);
-      expect(remaining.size).to.equal(0);
-    });
-    it('should result in remaining when partly not allowed', () => {
-      const remaining = new Set(ctx.attrBoth);
-      RoleManager.processAttributes(ctx.attrOne, remaining);
-      expect(remaining.size).to.equal(1);
-      expect(remaining).to.contain('attrTwo');
-    });
-    it('should result in unmodified when attribute is not allowed', () => {
-      const remaining = new Set(ctx.wildcard);
-      RoleManager.processAttributes(ctx.attrOne, remaining);
-      expect(remaining.size).to.equal(1);
-      expect(remaining).to.contain('*');
-    });
-  });
-
-  describe('#processRelations', () => {
-    it('should result in empty set when any role has allowed', () => {
-      const remaining = new Set(ctx.attrOne);
-      RoleManager.processRelations(ctx.action, ctx.rels, remaining);
-      expect(remaining.size).to.equal(0);
-    });
-    it('should result in remaining when partly not allowed', () => {
-      const remaining = new Set(ctx.attrBoth);
-      remaining.add('*');
-      RoleManager.processRelations(ctx.action, [ctx.own, 'all'], remaining);
-      expect(remaining.size).to.equal(1);
-      expect(remaining).to.contain('*');
-    });
-    it('should ignore undefined relation', () => {
-      const remaining = new Set(ctx.attrOne);
-      RoleManager.processRelations(ctx.action, ['undefined'], remaining);
-      expect(remaining.size).to.equal(1);
-    });
-  });
-
   describe('#can', () => {
     it('should return true when any role has allowed', async () => {
       const r = ctx.manager.can(['Role1'], 'create', 'own', 'Entity1', [...ctx.attrOne]);
@@ -167,6 +122,10 @@ describe('RoleManager', (): void => {
       const r = ctx.manager.can(['Role1'], 'undefined', 'own', 'Entity1', [...ctx.attrTwo]);
       await expect(r).to.eventually.be.false;
     });
+    it('should ignore undefined relation', async () => {
+      const r = ctx.manager.can(['Role1'], 'create', 'created', 'Entity1', [...ctx.attrTwo]);
+      await expect(r).to.eventually.be.false;
+    });
   });
 
   describe('#getRoles', () => {
@@ -178,7 +137,6 @@ describe('RoleManager', (): void => {
         assignmentCheck: async () => true,
       }]);
       await assignRoles(user, [...ctx.roles, role]);
-      await ctx.manager.loadRolesFromDatabase();
 
       const roles = await ctx.manager.getRoles(user);
       expect(roles.length).to.equal(3);
@@ -194,7 +152,6 @@ describe('RoleManager', (): void => {
         assignmentCheck: async () => false,
       }]);
       await assignRoles(user, [...ctx.roles, role]);
-      await ctx.manager.loadRolesFromDatabase();
 
       const roles = await ctx.manager.getRoles(user);
       expect(roles.length).to.equal(2);

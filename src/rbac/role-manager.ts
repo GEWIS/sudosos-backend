@@ -20,7 +20,8 @@ import User from '../entity/user/user';
 import AssignedRole from '../entity/rbac/assigned-role';
 import Role from '../entity/rbac/role';
 import log4js, { Logger } from 'log4js';
-import RBACService from '../service/rbac-service';
+import Permission from '../entity/rbac/permission';
+import { In } from 'typeorm';
 
 /**
  * The assignment check is a predicate performed on a user to determine
@@ -103,77 +104,13 @@ export interface RoleDefinitions {
 export default class RoleManager {
   private logger: Logger;
 
-  /**
-   * A mapping from role names to the role definitions defined in the system.
-   */
-  private roles: RoleDefinitions = {};
-
-  public async loadRolesFromDatabase(): Promise<void> {
-    const roles = await Role.find({ relations: { permissions: true } });
-
-    roles.forEach((role) => {
-      this.roles[role.name] = {
-        name: role.name,
-        permissions: RBACService.rulesToDefinition(role.permissions),
-        assignmentCheck: async () => false,
-      };
-    });
-  }
-
   constructor() {
     this.logger = log4js.getLogger('RoleManager');
   }
 
   public async initialize() {
-    await this.loadRolesFromDatabase().catch((error) => this.logger.error(error));
+    // Placeholder for possible (future) asynchronous logic to initialize the role manager
     return this;
-  }
-
-
-  /**
-   * Filter the allowed attributes from the set of unsatisfied attributes.
-   * During this filtering, wildcards are taken into account.
-   *
-   * @param allowedAttributes - The set of allowed attributes to be processed.
-   * @param unsatisfied - The mutable set of so-far unsatisfied attributes.
-   * @returns
-   */
-  public static processAttributes(
-    allowedAttributes: Set<AllowedAttribute>, unsatisfied: Set<AllowedAttribute>,
-  ) {
-    // If this relation has a wildcard, all attributes are allowed.
-    if (allowedAttributes.has('*')) {
-      unsatisfied.clear();
-      return;
-    }
-
-    // Remove all allowed attributes from the unsatisfied attribute list.
-    allowedAttributes.forEach((attr) => {
-      unsatisfied.delete(attr);
-    });
-  }
-
-  /**
-   * Process the allowed attributes for the given relations in a given action definition.
-   *
-   * @param actionDefinition - The action definition from which to process the relations.
-   * @param relations - The relations of the action definition which should be processed.
-   * @param unsatisfied - The mutable set of so-far unsatisfied attributes.
-   */
-  public static processRelations(
-    actionDefinition: ActionDefinition, relations: string[], unsatisfied: Set<AllowedAttribute>,
-  ): void {
-    // Use every, such that we can break early if all attributes are satisfied.
-    relations.every((relation): boolean => {
-      const allowedAttributes = actionDefinition[relation];
-      // If there are no attributes to process, continue with the next iteration
-      if (!allowedAttributes) return true;
-
-      RoleManager.processAttributes(allowedAttributes, unsatisfied);
-      // If unsatisfied is empty, return false and break from the every loop,
-      // otherwise continue with the next iteration.
-      return unsatisfied.size > 0;
-    });
   }
 
   /**
@@ -220,38 +157,31 @@ export default class RoleManager {
     } else {
       relationsArray = relations;
     }
+    // Add the relation "all" to the relations, because if you have permission to access "all",
+    // it does not matter what the given relation is.
     if (relationsArray.indexOf('all') === -1) {
       relationsArray.push('all');
     }
 
-    // Keep track of currently unsatisfied attributes.
-    const unsatisfied = new Set<AllowedAttribute>(attributes);
+    // Given the entity, action and relation, try to find whether such a permission exists for the
+    // given roles.
+    const applicablePermissions = await Permission.find({ where: {
+      entity, action, relation: In(relationsArray), role: { name: In(rolesArray) },
+    } });
 
-    // For every role, remove the attributes that are satisfied by the role.
-    // Use every, such that we can break early if all attributes are satisfied.
-    rolesArray.every((role): boolean => {
-      const roleDefinition: RoleDefinition = this.roles[role];
-      // If there are no roles to process, continue with the next iteration.
-      if (!roleDefinition) return true;
+    // For all found permission records, get a single list of all attributes the user is allowed to access
+    const allAttributes = applicablePermissions.map((perm) => perm.attributes).flat();
 
-      const entityDefinition: EntityDefinition = roleDefinition.permissions[entity];
-      // If there are no entities to process, continue with the next iteration.
-      if (!entityDefinition) return true;
+    // If the user has a wildcard as attribute, they are allowed to access everything, so return true.
+    const hasStar = allAttributes.some((a) => a === '*');
+    if (hasStar) {
+      return true;
+    }
 
-      const actionDefinition: ActionDefinition = entityDefinition[action];
-      // If there are no actions to process, continue with the next iteration.
-      if (!actionDefinition) return true;
-
-      RoleManager.processRelations(
-        actionDefinition, relationsArray, unsatisfied,
-      );
-      // If unsatisfied is empty, return false and break from the every loop,
-      // otherwise continue with the next iteration.
-      return unsatisfied.size > 0;
-    });
-
-    // Action is allowed if all attributes are satisfied.
-    return unsatisfied.size === 0;
+    // Find all attributes that the user should have, but the current set of permissions does not provide
+    const disallowedAttributes = attributes.filter((a) => !allAttributes.includes(a));
+    // Return whether the user is allowed to access all attributes
+    return disallowedAttributes.length === 0;
   }
 
   /**
@@ -262,33 +192,6 @@ export default class RoleManager {
   public async getRoles(user: User): Promise<string[]> {
     const roles = await user.getRoles();
     return roles.map((r) => r.name);
-  }
-
-  /**
-   * Returns a RoleDefinitions object for the provided role names.
-   * @param roles - Names of the roles to return.
-   */
-  public toRoleDefinitions(roles: string[]): RoleDefinitions {
-    const definitions: RoleDefinitions = {};
-    roles.forEach((role) => { definitions[role] = this.roles[role]; });
-    return definitions;
-  }
-
-  /**
-   * Get all registered roles in the system.
-   * Warning: changes to the returned content are reflected in the role manager.
-   * @returns a list of all roles.
-   */
-  public getRegisteredRoles(): RoleDefinitions {
-    return this.roles;
-  }
-
-  /**
-   * Tests if the role manager contains a role with the given name
-   * @param role - role name to test
-   */
-  public containsRole(role: string): Boolean {
-    return this.roles[role] !== undefined;
   }
 
   /**
