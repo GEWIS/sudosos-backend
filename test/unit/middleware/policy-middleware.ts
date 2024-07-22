@@ -19,20 +19,26 @@
 import express, { Application, Response } from 'express';
 import { expect, request } from 'chai';
 import PolicyMiddleware from '../../../src/middleware/policy-middleware';
+import sinon from 'sinon';
 
 describe('PolicyMiddleware', (): void => {
   let ctx: {
     app: Application,
     middleware: PolicyMiddleware,
     value: boolean,
+    error: boolean,
   };
 
   before(async () => {
     // Initialize context
     ctx = {
       app: express(),
-      middleware: new PolicyMiddleware(async () => ctx.value),
+      middleware: new PolicyMiddleware(async () => {
+        if (ctx.error) throw new Error('I\'m dying');
+        return ctx.value;
+      }),
       value: false,
+      error: false,
     };
 
     ctx.app.use(ctx.middleware.getMiddleware());
@@ -58,6 +64,19 @@ describe('PolicyMiddleware', (): void => {
         .get('/');
 
       expect(res.status).to.equal(200);
+    });
+    it('should give an HTTP 500 when policy implementation throws an error', async () => {
+      // Hide the error message from the console
+      const stub = sinon.stub(console, 'error');
+
+      ctx.error = true;
+      const res = await request(ctx.app)
+        .get('/');
+
+      expect(res.status).to.equal(500);
+
+      // Cleanup
+      stub.restore();
     });
   });
 });
