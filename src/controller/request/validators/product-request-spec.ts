@@ -82,7 +82,7 @@ export async function verifyProductRequest(productRequest: BaseProductParams) {
 }
 
 export async function verifyCreateProductRequest(productRequest: CreateProductParams) {
-  return validateSpecification<CreateProductParams, ValidationError>(
+  return Promise.resolve(await validateSpecification<CreateProductParams, ValidationError>(
     productRequest, createProductRequestSpec,
-  );
+  ));
 }

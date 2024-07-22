@@ -253,7 +253,6 @@ export default class EventService {
   public static async getSingleEvent(id: number): Promise<EventResponse | undefined> {
     const event = await Event.findOne({
       where: { id },
-      // relations: ['createdBy', 'shifts', 'answers', 'answers.user'],
       relations: { createdBy: true, shifts: { roles: true }, answers: { user: true } },
       withDeleted: true,
     });

@@ -22,26 +22,6 @@ import { TermsOfServiceStatus } from '../../entity/user/user';
 import RoleResponse from './rbac/role-response';
 
 /**
- * @typedef {object} PermissionResponse
- * @param entity - The entity type name of the object. Most often this is a
- *    database entity, but it could also be a computed entity such as 'balance'.
- * @param action - The action on the entity to check access for.
- *    Commonly used actions are 'create', 'read', 'update', and 'delete'.
- * @param relationship - The ownership relation towards the object.
- *    The ownership relation describes the status of the user related to the object:
- *    the user can be the owner, creator, editor, or not related at all.
- *    Commonly used ownership relations are 'own', 'created' and 'all'.
- * @param attributes - The list of attributes to access. The wildcard '*' can be
- *    used to verify that the user is allowed to access all properties.
- */
-export interface PermissionResponse {
-  entity: string;
-  action: string;
-  relationship: string;
-  attributes: string[];
-}
-
-/**
   * @typedef {object} AuthenticationResponse
   * @property {UserResponse} user.required - The user that has authenticated.
   * @property {Array<string>} roles.required - The RBAC roles that the user has. (DEPRECATED)
