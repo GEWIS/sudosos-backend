@@ -128,7 +128,7 @@ export default class RbacController extends BaseController {
 
     try {
       const roleId = Number(id);
-      const [roles] = await RBACService.getRoles({ roleId });
+      const [roles] = await RBACService.getRoles({ roleId, returnPermissions: true });
       if (roles.length < 1) {
         res.status(404).json('Role not found.');
         return;
@@ -208,6 +208,10 @@ export default class RbacController extends BaseController {
         res.status(404).json('Role not found.');
         return;
       }
+      if (role.systemDefault) {
+        res.status(400).json('Cannot update system default role.');
+        return;
+      }
 
       role = await RBACService.updateRole(roleId, request);
       const response = RBACService.asRoleResponse([role])[0];
@@ -239,6 +243,10 @@ export default class RbacController extends BaseController {
       let [[role]] = await RBACService.getRoles({ roleId }, { take: 1 });
       if (!role) {
         res.status(404).json('Role not found.');
+        return;
+      }
+      if (role.systemDefault) {
+        res.status(400).json('Cannot delete system default role.');
         return;
       }
 

@@ -57,9 +57,10 @@ export default class RBACService {
         return [...e, permission.entity];
       }, []);
       return {
+        id: role.id,
         name: role.name,
         systemDefault: role.systemDefault,
-        userTypes: role.userTypes,
+        userTypes: role.userTypes ?? [],
         // Map every entity permission to response
         entities: entities?.map((entityName): EntityResponse => {
           const entityPermissions = role.permissions.filter((p) => p.entity === entityName);
@@ -156,7 +157,7 @@ export default class RBACService {
    * @param params
    */
   public static async createRole(params: UpdateRoleParams) {
-    return Role.save({ ...params });
+    return Role.save({ ...params, permissions: [] });
   }
 
   /**

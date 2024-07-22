@@ -106,11 +106,14 @@ export async function assignRoles(user: User, roles: SeededRole[]): Promise<Assi
   return assignments.filter((a) => a !== undefined);
 }
 
-export async function getToken(user: User, roles: SeededRole[], organs?: User[], lesser = false): Promise<JsonWebToken> {
+export async function getToken(user: User, roles: SeededRole[] = [], organs?: User[], lesser = false): Promise<JsonWebToken> {
   const assignments = await assignRoles(user, roles);
+  const systemDefaultRoles = await Role.find({ where: { systemDefault: true } });
+  const assignedSystemRoles = systemDefaultRoles.filter((r) => r.roleUserTypes.some((u) => u.userType === user.type));
   return {
     user,
-    roles: assignments.map((a) => a.role.name),
+    roles: assignments.map((a) => a.role.name)
+      .concat(assignedSystemRoles.map((a) => a.name)),
     organs,
     lesser,
   };

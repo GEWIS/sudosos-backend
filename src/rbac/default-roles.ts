@@ -157,9 +157,11 @@ export default class DefaultRoles {
           notify: { all: star },
         },
         PayoutRequest: admin,
+        Permission: admin,
         PointOfSale: admin,
         ProductCategory: admin,
         Product: admin,
+        Role: admin,
         Transaction: admin,
         Transfer: admin,
         User: {

@@ -21,6 +21,7 @@ import EntityResponse from './entity-response';
 
 /**
  * @typedef {object} RoleResponse
+ * @property {integer} id.required - The ID of the role.
  * @property {string} name.required - The name of the role.
  * @property {boolean} systemDefault.required - Whether the role is a system default role
  * @property {Array.<integer>} userTypes - The user types this role is default for
@@ -31,6 +32,7 @@ import EntityResponse from './entity-response';
  * @property {Array.<EntityResponse>} entities.required - The permissions with regards to the entity.
  */
 export default interface RoleResponse {
+  id: number;
   name: string;
   systemDefault: boolean;
   userTypes?: number[];
