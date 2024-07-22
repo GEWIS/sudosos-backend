@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { UserType } from '../entity/user/user';
-import { PermissionDefinition } from './role-manager';
+import { PermissionDefinition } from './role-definitions';
 import Role from '../entity/rbac/role';
 import Permission from '../entity/rbac/permission';
 import RBACService from '../service/rbac-service';

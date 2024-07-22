@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { PermissionDefinition } from '../../../src/rbac/role-manager';
+import { PermissionDefinition } from '../../../src/rbac/role-definitions';
 import RBACService from '../../../src/service/rbac-service';
 import { expect } from 'chai';
 import PermissionRule from '../../../src/rbac/permission-rule';

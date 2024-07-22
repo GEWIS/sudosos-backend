@@ -22,7 +22,7 @@ import ActionResponse from '../controller/response/rbac/action-response';
 import RelationResponse from '../controller/response/rbac/relation-response';
 import Role from '../entity/rbac/role';
 import Permission from '../entity/rbac/permission';
-import { ActionDefinition, EntityDefinition, PermissionDefinition } from '../rbac/role-manager';
+import { ActionDefinition, EntityDefinition, PermissionDefinition } from '../rbac/role-definitions';
 import PermissionRule from '../rbac/permission-rule';
 import { PaginationParameters } from '../helpers/pagination';
 import { DeepPartial, FindManyOptions, FindOptionsRelations } from 'typeorm';

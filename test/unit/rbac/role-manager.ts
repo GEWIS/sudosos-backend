@@ -17,7 +17,8 @@
  */
 
 import { expect } from 'chai';
-import RoleManager, { ActionDefinition, AllowedAttribute } from '../../../src/rbac/role-manager';
+import RoleManager from '../../../src/rbac/role-manager';
+import { ActionDefinition, AllowedAttribute } from '../../../src/rbac/role-definitions';
 import { assignRoles, SeededRole, seedRoles } from '../../seed/rbac';
 import { DataSource } from 'typeorm';
 import database from '../../../src/database/database';

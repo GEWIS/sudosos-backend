@@ -20,7 +20,7 @@ import Permission from '../../src/entity/rbac/permission';
 import User, { UserType } from '../../src/entity/user/user';
 import { DeepPartial } from 'typeorm';
 import AssignedRole from '../../src/entity/rbac/assigned-role';
-import { RoleDefinition } from '../../src/rbac/role-manager';
+import { RoleDefinition } from '../../src/rbac/role-definitions';
 import JsonWebToken from '../../src/authentication/json-web-token';
 import RBACService from '../../src/service/rbac-service';
 import RoleUserType from '../../src/entity/rbac/role-user-type';
