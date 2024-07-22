@@ -124,19 +124,10 @@ describe('ProductController', async (): Promise<void> => {
       acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
     } as User;
 
-    const integration = {
-      id: 4,
-      firstName: 'Integration',
-      type: UserType.INTEGRATION,
-      active: true,
-      acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
-    } as User;
-
     await User.save(adminUser);
     await User.save(localUser);
     await User.save(organ);
-    await User.save(integration);
-    const users = [organ, adminUser, localUser, integration];
+    const users = [organ, adminUser, localUser];
 
     const categories = await seedProductCategories();
     const vatGroups = await seedVatGroups();

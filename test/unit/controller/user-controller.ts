@@ -1923,7 +1923,7 @@ describe('UserController', (): void => {
           .get(`/users/${user.id}/roles`)
           .set('Authorization', `Bearer ${userToken}`);
 
-        expect((res.body as RoleResponse[]).map((r) => r.role)).to.deep.equalInAnyOrder(['User']);
+        expect((res.body as RoleResponse[]).map((r) => r.name)).to.deep.equalInAnyOrder(['User']);
         expect(res.status).to.equal(200);
         expect(ctx.specification.validateModel(
           'Array.<RoleResponse.model>',
@@ -1941,7 +1941,7 @@ describe('UserController', (): void => {
           .get(`/users/${user.id}/roles`)
           .set('Authorization', `Bearer ${userToken}`);
 
-        expect((res.body as RoleResponse[]).map((r) => r.role)).to.deep.equalInAnyOrder(['User']);
+        expect((res.body as RoleResponse[]).map((r) => r.name)).to.deep.equalInAnyOrder(['User']);
         expect(res.status).to.equal(200);
       });
     });
