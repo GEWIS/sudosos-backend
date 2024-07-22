@@ -259,6 +259,12 @@ export class DatabaseRbac1720624912620 implements MigrationInterface {
       name: 'roleId',
       type: 'integer',
       isNullable: false,
+    }));
+
+    await queryRunner.changeColumn(this.ASSIGNED_ROLE_TABLE, 'roleId', new TableColumn({
+      name: 'roleId',
+      type: 'integer',
+      isNullable: false,
       isPrimary: true,
     }));
 
