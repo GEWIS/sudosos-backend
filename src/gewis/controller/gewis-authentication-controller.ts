@@ -148,12 +148,12 @@ export default class GewisAuthenticationController extends BaseController {
         await UserService.updateUser(gewisUser.user.id, update);
       }
 
-      const contents = await AuthenticationService
-        .makeJsonWebToken({ roleManager: this.roleManager, tokenHandler: this.tokenHandler },
-          gewisUser.user, false);
-      const token = await this.tokenHandler.signToken(contents, body.nonce);
-      const response = await AuthenticationService
-        .asAuthenticationResponse(contents.user, contents.roles, contents.organs, token);
+      const response = await AuthenticationService.getSaltedToken(
+        gewisUser.user,
+        { roleManager: this.roleManager, tokenHandler: this.tokenHandler },
+        false,
+        body.nonce,
+      );
       res.json(response);
     } catch (error) {
       this.logger.error('Could not create token:', error);

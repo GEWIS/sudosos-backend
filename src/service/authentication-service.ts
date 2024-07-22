@@ -39,6 +39,7 @@ import LocalAuthenticator from '../entity/authenticator/local-authenticator';
 import AuthenticationResetTokenRequest from '../controller/request/authentication-reset-token-request';
 import NfcAuthenticator from '../entity/authenticator/nfc-authenticator';
 import RBACService from './rbac-service';
+import Role from '../entity/rbac/role';
 
 export interface AuthenticationContext {
   tokenHandler: TokenHandler,
@@ -75,31 +76,19 @@ export default class AuthenticationService {
   }
 
   /**
-   * Returns all the ORGANS the user has rights over
-   * @param user
-   */
-  private static async getUserOrgans(user: User) {
-    const organs = (await MemberAuthenticator.find({ where: { user: { id: user.id } }, relations: ['authenticateAs'] })).map((organ) => organ.authenticateAs);
-    return organs.filter((organ) => organ.type === UserType.ORGAN);
-  }
-
-  /**
    * Creates the corresponding token-content of the given user in the given context.
-   * @param context - The tokenHandler and roleManager to be used.
    * @param user - The user for which to generate the token-content
+   * @param roles - The roles this user has
+   * @param organs - The organs this user belongs to
    * @param lesser - If the token should give full access rights.
    */
   public static async makeJsonWebToken(
-    context: AuthenticationContext, user: User, lesser: boolean,
+    user: User, roles: Role[], organs: User[], lesser: boolean,
   ): Promise<JsonWebToken> {
-    const organs = await this.getUserOrgans(user);
-    const roles = await context.roleManager.getRoles(user);
-    // If a user is part of an organ he gains seller rights.
-    if (organs.length > 0) roles.push('Seller');
 
     return {
       user,
-      roles,
+      roles: roles.map((r) => r.name),
       organs,
       lesser,
     };
@@ -140,17 +129,17 @@ export default class AuthenticationService {
    */
   public static async asAuthenticationResponse(
     user: User,
-    roles: string[],
+    roles: Role[],
     organs: User[],
     token: string,
   ): Promise<AuthenticationResponse> {
     return {
       user: parseUserToResponse(user, true),
       organs: organs.map((organ) => parseUserToResponse(organ, false)),
-      roles,
+      roles: roles.map((r) => r.name),
       token,
       acceptedToS: user.acceptedToS,
-      rolesWithPermissions: RBACService.asRoleResponse(await user.getRoles(true)),
+      rolesWithPermissions: RBACService.asRoleResponse(roles),
     };
   }
 
@@ -394,14 +383,20 @@ export default class AuthenticationService {
    * @param user
    * @param context
    * @param lesser
+   * @param salt
    */
-  public static async getSaltedToken(user: User, context: AuthenticationContext,
-    lesser = true): Promise<AuthenticationResponse> {
-    const contents = await this.makeJsonWebToken(context, user, lesser);
-    const salt = await bcrypt.genSalt(AuthenticationService.BCRYPT_ROUNDS);
+  public static async getSaltedToken(
+    user: User, context: AuthenticationContext, lesser = true, salt?: string,
+  ): Promise<AuthenticationResponse> {
+    const [roles, organs] = await Promise.all([
+      context.roleManager.getRoles(user, true),
+      context.roleManager.getUserOrgans(user),
+    ]);
+    const contents = await this.makeJsonWebToken(user, roles, organs, lesser);
+    if (!salt) salt = await bcrypt.genSalt(AuthenticationService.BCRYPT_ROUNDS);
     const token = await context.tokenHandler.signToken(contents, salt);
 
-    return this.asAuthenticationResponse(contents.user, contents.roles, contents.organs, token);
+    return this.asAuthenticationResponse(contents.user, roles, contents.organs, token);
   }
 
   public static async compareHash(password: string, hash: string): Promise<boolean> {

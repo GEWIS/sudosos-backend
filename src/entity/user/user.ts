@@ -22,8 +22,6 @@ import {
 import BaseEntity from '../base-entity';
 import UserFineGroup from '../fine/userFineGroup';
 import AssignedRole from '../rbac/assigned-role';
-import Permission from '../rbac/permission';
-import Role from '../rbac/role';
 
 export enum TermsOfServiceStatus {
   ACCEPTED = 'ACCEPTED',
@@ -145,50 +143,6 @@ export default class User extends BaseEntity {
 
   @OneToMany(() => AssignedRole, (role) => role.user)
   public directAssignedRoles: AssignedRole[];
-
-  /**
-   * Get all roles that are explicitly assigned to this user
-   * @param getPermissions
-   */
-  public async getAssignedRoles(getPermissions = false): Promise<Role[]> {
-    return Role.find({
-      where: { assignments: { userId: this.id } },
-      relations: { permissions: getPermissions },
-    });
-  }
-
-  /**
-   * Get all roles that are default for this user type
-   * @param getPermissions
-   */
-  public async getTypeRoles(getPermissions = false): Promise<Role[]> {
-    return Role.find({
-      where: { roleUserTypes: { userType: this.type } },
-      relations: { permissions: getPermissions },
-    });
-  }
-
-  /**
-   * Get a list of all roles this user has, optionally with the permissions of each role
-   * @param getPermissions
-   */
-  public async getRoles(getPermissions = false): Promise<Role[]> {
-    return (await Promise.all([
-      await this.getTypeRoles(getPermissions),
-      await this.getAssignedRoles(getPermissions),
-    ])).flat();
-  }
-
-  /**
-   * Get a list of all permissions this user has
-   */
-  public async getPermissions(): Promise<Permission[]> {
-    const roles = await this.getRoles(true);
-    return roles.map((r) => r.permissions)
-      .flat()
-      .filter((p1, index, all) => index === all.findIndex((p2) => p1.identifier === p2.identifier));
-  }
-
 
   public fullName(): string {
     let name = this.firstName;

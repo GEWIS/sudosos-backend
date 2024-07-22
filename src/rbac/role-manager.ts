@@ -16,12 +16,14 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import User from '../entity/user/user';
+import User, { UserType } from '../entity/user/user';
 import AssignedRole from '../entity/rbac/assigned-role';
 import Role from '../entity/rbac/role';
 import log4js, { Logger } from 'log4js';
 import Permission from '../entity/rbac/permission';
 import { In } from 'typeorm';
+import MemberAuthenticator from '../entity/authenticator/member-authenticator';
+import { SELLER_ROLE } from './default-roles';
 
 /**
  * The assignment check is a predicate performed on a user to determine
@@ -185,13 +187,35 @@ export default class RoleManager {
   }
 
   /**
+   * Returns all the ORGANS the user has rights over
+   * @param user
+   */
+  public async getUserOrgans(user: User) {
+    const organs = (await MemberAuthenticator.find({ where: { user: { id: user.id } }, relations: ['authenticateAs'] })).map((organ) => organ.authenticateAs);
+    return organs.filter((organ) => organ.type === UserType.ORGAN);
+  }
+
+  /**
    * Get all role names for which the given user passes the assignment check.
    * @param user - The user for which role checking is performed.
+   * @param getPermissions - Whether the permissions of each role should also be returned
    * @returns a list of role names.
    */
-  public async getRoles(user: User): Promise<string[]> {
-    const roles = await user.getRoles();
-    return roles.map((r) => r.name);
+  public async getRoles(user: User, getPermissions = false): Promise<Role[]> {
+    const roles = await Role.find({ where: [{
+      assignments: { userId: user.id },
+    }, {
+      roleUserTypes: { userType: user.type },
+    }], relations: { permissions: getPermissions } });
+
+    const organs = await this.getUserOrgans(user);
+    // If a user is part of an organ he gains seller rights.
+    if (organs.length > 0) {
+      const sellerRole = await Role.findOne({ where: { name: SELLER_ROLE }, relations: { permissions: getPermissions } });
+      roles.push(sellerRole);
+    }
+
+    return roles;
   }
 
   /**

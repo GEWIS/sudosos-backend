@@ -23,6 +23,8 @@ import RBACService from '../service/rbac-service';
 import { DeepPartial, In, Not } from 'typeorm';
 import RoleUserType from '../entity/rbac/role-user-type';
 
+export const SELLER_ROLE = 'Seller';
+
 interface DefaultRole {
   name: string;
   userTypes: UserType[],
@@ -172,7 +174,7 @@ export default class DefaultRoles {
         VoucherGroup: admin,
       },
     }, {
-      name: 'Seller',
+      name: SELLER_ROLE,
       userTypes: [],
       permissions: {
         Product: {

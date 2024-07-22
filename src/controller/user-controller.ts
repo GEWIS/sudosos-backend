@@ -1229,7 +1229,7 @@ export default class UserController extends BaseController {
         return;
       }
 
-      const rolesWithPermissions = await user.getRoles(true);
+      const rolesWithPermissions = await this.roleManager.getRoles(user, true);
       res.status(200).json(RBACService.asRoleResponse(rolesWithPermissions));
     } catch (error) {
       this.logger.error('Could not get roles of user:', error);
