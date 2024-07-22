@@ -47,7 +47,7 @@ export default class ReportPdfService {
   static client =  new Client(PDF_GEN_URL, { fetch });
 
 
-  private static fineReportToParameters(report: FineReport): FineReportParameters {
+  static fineReportToParameters(report: FineReport): FineReportParameters {
     const handedOut =  new Product({
       name: HANDED_OUT_FINES,
       summary: UNUSED_PARAM,
@@ -93,6 +93,11 @@ export default class ReportPdfService {
     });
   }
 
+  /**
+   * Generate a pdf report of the given fine report.
+   * @returns Buffer - The pdf report
+   * @param report
+   */
   public static async fineReportToPdf(report: FineReport): Promise<Buffer> {
     const fineRouteParams: FineRouteParams = new FineRouteParams({
       params: this.fineReportToParameters(report),
