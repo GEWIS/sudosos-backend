@@ -17,6 +17,7 @@
  */
 
 import {
+  BaseEntity,
   Entity, JoinColumn, ManyToOne, PrimaryColumn,
 } from 'typeorm';
 import BaseEntityWithoutId from '../base-entity-without-id';
@@ -24,23 +25,26 @@ import User from '../user/user';
 import Role from './role';
 
 /**
+ * Basically the many-to-many relationship between users and roles, but still exists
+ * for testing and legacy.
+ *
  * @typedef {BaseEntityWithoutId} AssignedRole
  * @property {User.model} user.required - The user being assigned a role
  * @property {string} role.required - The name of the role
  */
 @Entity()
-export default class AssignedRole extends BaseEntityWithoutId {
+export default class AssignedRole extends BaseEntity {
   @PrimaryColumn()
   public userId: number;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { onDelete: 'CASCADE', nullable: false })
   @JoinColumn({ name: 'userId' })
   public user: User;
 
   @PrimaryColumn()
   public roleId: number;
 
-  @ManyToOne(() => Role, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Role, { onDelete: 'CASCADE', nullable: false })
   @JoinColumn({ name: 'roleId' })
   public role: Role;
 }

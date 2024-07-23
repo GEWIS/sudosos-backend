@@ -20,6 +20,7 @@ import AssignedRole from '../entity/rbac/assigned-role';
 import Role from '../entity/rbac/role';
 import Permission from '../entity/rbac/permission';
 import DefaultRoles from '../rbac/default-roles';
+import EventShift from '../entity/event/event-shift';
 
 const star = ['*'];
 
@@ -50,6 +51,8 @@ export class DatabaseRbac1720624912620 implements MigrationInterface {
   private ASSIGNED_USER_TYPE_TABLE = 'role_user_type';
 
   private ASSIGNED_ROLE_TABLE = 'assigned_role';
+
+  private EVENT_SHIFT_ROLE_TABLE = 'event_shift_roles_role';
 
   private async seedGEWISRoles(roleRepo: Repository<Role>, permissionRepo: Repository<Permission>): Promise<void> {
     await roleRepo.save({ name: 'SudoSOS - BAC' }).then(async (role): Promise<void> => {
@@ -223,20 +226,31 @@ export class DatabaseRbac1720624912620 implements MigrationInterface {
     }));
 
     /**
-     * Migrate existing roles
+     * Create the roles
      */
     await DefaultRoles.synchronize();
     const roleRepo = queryRunner.manager.getRepository(Role);
     const permissionRepo = queryRunner.manager.getRepository(Permission);
     await this.seedGEWISRoles(roleRepo, permissionRepo);
 
-    const roleNames: { role: string }[] = await AssignedRole.getRepository().createQueryBuilder()
+    const assignedRoleNames: string[] = (await AssignedRole.getRepository().createQueryBuilder()
       .select('role')
       .groupBy('role')
+      .getRawMany())
+      .map(({ role }: { role: string }) => role);
+    const eventShifts: { id: number, roles: string }[] = await queryRunner.manager.getRepository(EventShift)
+      .createQueryBuilder()
+      .withDeleted()
+      .select(['id', 'roles'])
       .getRawMany();
+    const eventShiftRoleNames: string[] = eventShifts
+      .map(({ roles }): string[] => JSON.parse(roles))
+      .flat();
+    const roleNames = [...assignedRoleNames, ...eventShiftRoleNames]
+      .filter((r1, index, all) => index === all.findIndex((r2) => r1 === r2));
 
     const roles = new Map<string, Role>();
-    for (const { role } of roleNames) {
+    for (const role of roleNames) {
       const existingRole = await roleRepo.findOne({ where: { name: role } });
       if (existingRole) {
         roles.set(role, existingRole);
@@ -245,6 +259,10 @@ export class DatabaseRbac1720624912620 implements MigrationInterface {
       }
     }
 
+    /**
+     * Migrate existing role assignments
+     */
+    await queryRunner.query('SET FOREIGN_KEY_CHECKS=0');
     await queryRunner.addColumn(this.ASSIGNED_ROLE_TABLE, new TableColumn({
       name: 'roleId',
       type: 'integer',
@@ -260,18 +278,103 @@ export class DatabaseRbac1720624912620 implements MigrationInterface {
       type: 'integer',
       isNullable: false,
     }));
-
-    await queryRunner.changeColumn(this.ASSIGNED_ROLE_TABLE, 'roleId', new TableColumn({
-      name: 'roleId',
-      type: 'integer',
-      isNullable: false,
-      isPrimary: true,
-    }));
-
+    await queryRunner.updatePrimaryKeys(this.ASSIGNED_ROLE_TABLE, [
+      new TableColumn({
+        name: 'roleId',
+        type: 'integer',
+        isNullable: false,
+        isPrimary: true,
+      }),
+      new TableColumn({
+        name: 'userId',
+        type: 'integer',
+        isNullable: false,
+        isPrimary: true,
+      }),
+    ]);
     await queryRunner.dropColumn(this.ASSIGNED_ROLE_TABLE, 'role');
+    await queryRunner.query('SET FOREIGN_KEY_CHECKS=1');
+
+    /**
+     * Migrate event shifts
+     */
+    await queryRunner.createTable(new Table({
+      name: this.EVENT_SHIFT_ROLE_TABLE,
+      columns: [
+        {
+          name: 'eventShiftId',
+          type: 'integer',
+          isPrimary: true,
+          isNullable: false,
+        },
+        {
+          name: 'roleId',
+          type: 'integer',
+          isPrimary: true,
+          isNullable: false,
+        },
+      ],
+    }));
+    await queryRunner.createForeignKey(this.EVENT_SHIFT_ROLE_TABLE, new TableForeignKey({
+      columnNames: ['eventShiftId'],
+      referencedColumnNames: ['id'],
+      referencedTableName: 'event_shift',
+      onDelete: 'CASCADE',
+    }));
+    await queryRunner.createForeignKey(this.EVENT_SHIFT_ROLE_TABLE, new TableForeignKey({
+      columnNames: ['roleId'],
+      referencedColumnNames: ['id'],
+      referencedTableName: this.ROLE_TABLE,
+      onDelete: 'CASCADE',
+    }));
+    await queryRunner.dropColumn('event_shift', 'roles');
+
+
+    const eventShiftRepo = queryRunner.manager.getRepository(EventShift);
+    await Promise.all(eventShifts.map(async ({ id, roles: jsonRoleNames }) => {
+      const eventShift = await eventShiftRepo.findOne({ where: { id }, withDeleted: true });
+      const eRoleNames: string[] = JSON.parse(jsonRoleNames);
+      eventShift.roles = eRoleNames.map((r) => roles.get(r));
+      await eventShiftRepo.save(eventShift);
+    }));
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
+    const rawEventShiftRoles: { eventShiftId: number, roleId: number }[] = await queryRunner.query(`SELECT * FROM ${this.EVENT_SHIFT_ROLE_TABLE}`);
+    await queryRunner.addColumn('event_shift', new TableColumn({
+      name: 'roles',
+      type: 'varchar(255)',
+      isNullable: true,
+    }));
+    // Get a mapping from each shift ID to a list of roles
+    const eventShiftRoles: Map<number, number[]> = rawEventShiftRoles.reduce((shifts, { eventShiftId, roleId }) => {
+      if (shifts.has(eventShiftId)) {
+        shifts.get(eventShiftId).push(roleId);
+      } else {
+        shifts.set(eventShiftId, [roleId]);
+      }
+      return shifts;
+    }, new Map<number, number[]>());
+    // Get all roles
+    const roles = await queryRunner.manager.getRepository(Role).find({ withDeleted: true });
+    const rolesMap = roles.reduce((map, role) => {
+      map.set(role.id, role.name);
+      return map;
+    }, new Map<number, string>());
+    for (let [eventShiftId, roleIds] of eventShiftRoles) {
+      const roleNames = roleIds.map((id) => rolesMap.get(id));
+      await queryRunner.query(`UPDATE event_shift SET roles = "${JSON.stringify(roleNames)}" WHERE id = ?`, [eventShiftId]);
+    }
+    await queryRunner.changeColumn('event_shift', 'roles', new TableColumn({
+      name: 'roles',
+      type: 'varchar(255)',
+      isNullable: false,
+    }));
+    await queryRunner.dropTable(this.EVENT_SHIFT_ROLE_TABLE);
+
+    /**
+     * Migrate assigned roles
+     */
     await queryRunner.addColumn(this.ASSIGNED_ROLE_TABLE, new TableColumn({
       name: 'role',
       type: 'varchar(255)',
@@ -281,13 +384,32 @@ export class DatabaseRbac1720624912620 implements MigrationInterface {
     await queryRunner.query(`UPDATE ${this.ASSIGNED_ROLE_TABLE} AS a SET role = (SELECT name FROM ${this.ROLE_TABLE} WHERE ${this.ROLE_TABLE}.id = a.roleId)`);
     await queryRunner.query(`DELETE FROM ${this.ASSIGNED_ROLE_TABLE} WHERE role IS NULL`);
 
+    await queryRunner.query('SET FOREIGN_KEY_CHECKS=0');
     await queryRunner.changeColumn(this.ASSIGNED_ROLE_TABLE, 'role', new TableColumn({
       name: 'role',
       type: 'varchar(255)',
       isNullable: false,
-      isPrimary: true,
     }));
+    await queryRunner.updatePrimaryKeys(this.ASSIGNED_ROLE_TABLE, [
+      new TableColumn({
+        name: 'userId',
+        type: 'integer',
+        isNullable: false,
+        isPrimary: true,
+      }),
+      new TableColumn({
+        name: 'role',
+        type: 'varchar(255)',
+        isNullable: false,
+        isPrimary: true,
+      }),
+    ]);
+
+    const assignedRoleTable = await queryRunner.getTable(this.ASSIGNED_ROLE_TABLE);
+    const roleForeignKey = assignedRoleTable.foreignKeys.find((fk => fk.columnNames.indexOf('roleId') !== -1));
+    await queryRunner.dropForeignKey(this.ASSIGNED_ROLE_TABLE, roleForeignKey);
     await queryRunner.dropColumn(this.ASSIGNED_ROLE_TABLE, 'roleId');
+    await queryRunner.query('SET FOREIGN_KEY_CHECKS=1');
 
     await queryRunner.dropTable(this.PERMISSION_TABLE);
     await queryRunner.dropTable(this.ASSIGNED_USER_TYPE_TABLE);
