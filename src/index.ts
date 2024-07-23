@@ -100,7 +100,6 @@ export class Application {
 async function setupRbac(application: Application) {
   // Synchronize SudoSOS system roles
   await DefaultRoles.synchronize();
-  application.roleManager = await new RoleManager().initialize();
 
   // Define rbac controller and bind.
   const controller = new RbacController(
@@ -221,8 +220,7 @@ export default async function createApp(): Promise<Application> {
     application.app.use('/static/invoices', express.static('data/invoices'));
   }
 
-  // Setup RBAC.
-  await setupRbac(application);
+  application.roleManager = await new RoleManager().initialize();
 
   application.app.use('/v1/stripe', new StripeWebhookController(
     {
@@ -234,6 +232,9 @@ export default async function createApp(): Promise<Application> {
   const tokenHandler = await createTokenHandler();
   // Setup token handler and authentication controller.
   await setupAuthentication(tokenHandler, application);
+
+  // Setup RBAC.
+  await setupRbac(application);
 
   await BalanceService.updateBalances({});
   const syncBalances = cron.schedule('41 1 * * *', () => {
