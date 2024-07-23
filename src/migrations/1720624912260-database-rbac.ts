@@ -187,7 +187,7 @@ export class DatabaseRbac1720624912620 implements MigrationInterface {
         },
         {
           name: 'attributes',
-          type: 'text',
+          type: 'varchar',
           isNullable: false,
         },
       ],
