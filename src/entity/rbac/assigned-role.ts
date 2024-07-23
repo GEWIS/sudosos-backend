@@ -17,7 +17,6 @@
  */
 
 import {
-  BaseEntity,
   Entity, JoinColumn, ManyToOne, PrimaryColumn,
 } from 'typeorm';
 import BaseEntityWithoutId from '../base-entity-without-id';
@@ -33,7 +32,7 @@ import Role from './role';
  * @property {string} role.required - The name of the role
  */
 @Entity()
-export default class AssignedRole extends BaseEntity {
+export default class AssignedRole extends BaseEntityWithoutId {
   @PrimaryColumn()
   public userId: number;
 
