@@ -114,7 +114,10 @@ export default class GewisDBService {
     if (expired) {
       try {
         logger.log(`User ${gewisUser.gewisId} has expired, closing account.`);
-        const user = await UserService.closeUser(gewisUser.user.id);
+        const balance = await BalanceService.getBalance(gewisUser.user.id);
+        const isZero = balance.amount.amount === 0;
+
+        const user = await UserService.closeUser(gewisUser.user.id, isZero);
         const currentBalance = await BalanceService.getBalance(user.id);
         Mailer.getInstance().send(gewisUser.user, new MembershipExpiryNotification({
           name: user.firstName,
