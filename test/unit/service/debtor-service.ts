@@ -432,6 +432,21 @@ describe('DebtorService', (): void => {
       await clearFines();
     });
 
+    // Delete a fine handout event to clean after each test case
+    async function deleteFineHandoutEvent(id: number) {
+      const dbFineHandoutEvent = await FineHandoutEvent.findOne({
+        where: { id },
+        relations: { fines: { userFineGroup: { fines: true } } },
+      });
+      for (let fine of dbFineHandoutEvent.fines) {
+        await Fine.remove(fine);
+        if (fine.userFineGroup.fines.length === 1) {
+          await UserFineGroup.remove(fine.userFineGroup);
+        }
+      }
+      await FineHandoutEvent.remove(dbFineHandoutEvent);
+    }
+
     async function checkCorrectNewBalance(fines: Fine[]) {
       const balances = await BalanceService.getBalances({});
       balances.records.map((b) => {
@@ -493,14 +508,24 @@ describe('DebtorService', (): void => {
       }));
 
       await checkCorrectNewBalance(fines);
+
+      // Cleanup
+      await deleteFineHandoutEvent(fineHandoutEvent.id);
     });
     it('should correctly put two fines in same userFineGroup', async () => {
       const referenceDate = new Date('2021-01-30');
       const usersToFine = await DebtorService.calculateFinesOnDate({
         referenceDates: [referenceDate],
       });
-      const user = usersToFine[0];
+      const usersWithoutFines = ctx.users.filter((u) => !ctx.userFineGroups.some((g) => g.userId === u.id));
+      const user = usersToFine.find((u) => usersWithoutFines.find((u2) => u2.id === u.id));
+      // Sanity checks
       expect(user).to.not.be.undefined;
+      let userFineGroups = await UserFineGroup.find({
+        where: { userId: user.id },
+        relations: ['fines'],
+      });
+      expect(userFineGroups).to.be.length(0);
 
       const fineHandoutEvent1 = await DebtorService.handOutFines({
         userIds: [user.id],
@@ -516,7 +541,7 @@ describe('DebtorService', (): void => {
       expect(fineHandoutEvent1.fines[0].user.id).to.equal(user.id);
       expect(fineHandoutEvent2.fines[0].user.id).to.equal(user.id);
       expect(fineHandoutEvent1.fines[0].user.id).to.equal(fineHandoutEvent2.fines[0].user.id);
-      const userFineGroups = await UserFineGroup.find({
+      userFineGroups = await UserFineGroup.find({
         where: { userId: user.id },
         relations: ['fines'],
       });
@@ -526,12 +551,19 @@ describe('DebtorService', (): void => {
       expect(collection.fines.length).to.equal(2);
       expect(ids).to.include(fineHandoutEvent1.fines[0].id);
       expect(ids).to.include(fineHandoutEvent2.fines[0].id);
+
+      // Cleanup
+      await deleteFineHandoutEvent(fineHandoutEvent1.id);
+      await deleteFineHandoutEvent(fineHandoutEvent2.id);
     });
     it('should create no fines if empty list of userIds is given', async function () {
       const fineHandoutEvent = await DebtorService.handOutFines({ userIds: [], referenceDate: new Date() }, ctx.actor);
 
       expect(fineHandoutEvent.fines.length).to.equal(0);
       expect(await Fine.count()).to.equal(0);
+
+      // Cleanup
+      await deleteFineHandoutEvent(fineHandoutEvent.id);
     });
     it('should not set User.currentFines attribute when user gets 0.00 fine', async () => {
       const user = ctx.users.find((u) => calculateBalance(u, ctx.transactions, ctx.subTransactions, ctx.transfersInclFines).amount.getAmount() > 0);
@@ -548,17 +580,23 @@ describe('DebtorService', (): void => {
       expect(calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfersInclFines).amount.getAmount())
         .to.be.greaterThanOrEqual(0);
       expect(dbUser.currentFines).to.be.null;
+
+      // Cleanup
+      await deleteFineHandoutEvent(fineHandoutEvent.id);
     });
     it('should correctly send email', async () => {
       const user = ctx.users[0];
       expect(user).to.not.be.undefined;
 
-      await DebtorService.handOutFines({
+      const fineHandoutEvent = await DebtorService.handOutFines({
         userIds: [user.id],
         referenceDate: new Date(),
       }, ctx.actor);
 
       expect(sendMailFake).to.be.calledOnce;
+
+      // Cleanup
+      await deleteFineHandoutEvent(fineHandoutEvent.id);
     });
   });
 
