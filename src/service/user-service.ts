@@ -37,6 +37,7 @@ import Bindings from '../helpers/bindings';
 import AuthenticationService from './authentication-service';
 import WelcomeWithReset from '../mailer/templates/welcome-with-reset';
 import { Brackets } from 'typeorm';
+import BalanceService from "./balance-service";
 
 /**
  * Parameters used to filter on Get Users functions.
@@ -187,16 +188,24 @@ export default class UserService {
 
   /**
    * Closes a user account by setting the user's status to deleted and inactive.
-   * Also, it sets the user's acceptedToS status to NOT_ACCEPTED and canGoIntoDebt to false.
+   * Also, it sets canGoIntoDebt to false.
    *
    * @param {number} userId - The ID of the user to close the account for.
+   * @param deleted - Whether the user is being deleted or not.
+   * @throws Error if the user has a non-zero balance and is being deleted.
    * @returns {Promise<void>} - A promise that resolves when the user account has been closed.
    */
-  public static async closeUser(userId: number): Promise<UserResponse> {
+  public static async closeUser(userId: number, deleted = false): Promise<UserResponse> {
     const user = await User.findOne({ where: { id: userId, deleted: false } });
     if (!user) return undefined;
 
-    user.deleted = true;
+    const balance = await BalanceService.getBalance(userId);
+    const isZero = balance.amount.amount === 0;
+    if (deleted && !isZero) {
+      throw new Error('Cannot delete user with non-zero balance.');
+    }
+
+    user.deleted = deleted;
     user.active = false;
     user.canGoIntoDebt = false;
 
