@@ -53,10 +53,11 @@ import {
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import { calculateBalance, calculateFine } from '../../helpers/balance';
 import Mailer from '../../../src/mailer';
-import sinon, { SinonSandbox, SinonSpy } from 'sinon';
+import sinon, {SinonSandbox, SinonSpy, SinonStub} from 'sinon';
 import nodemailer, { Transporter } from 'nodemailer';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
+import ReportPdfService from "../../../src/service/report-pdf-service";
 import { getToken, seedRoles } from '../../seed/rbac';
 
 describe('DebtorController', () => {
@@ -625,5 +626,80 @@ describe('DebtorController', () => {
     });
   });
 
+  describe('GET /fines/report/pdf', () => {
+    let generateFineReportStub: SinonStub;
 
+    function resolveSuccessful() {
+      generateFineReportStub.resolves({
+        data: new Blob(),
+        status: 200,
+      });
+    }
+
+    beforeEach(function () {
+      generateFineReportStub = sinon.stub(ReportPdfService.client, 'generateFineReport');
+    });
+
+    afterEach(function () {
+      generateFineReportStub.restore();
+    });
+
+    it('should return 200 if admin', async () => {
+      resolveSuccessful();
+      const fromDate = new Date();
+      const toDate = new Date();
+      const res = await request(ctx.app)
+        .get('/fines/report/pdf')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query({ fromDate, toDate });
+      expect(res.status).to.equal(200);
+    });
+    it('should return 500 if pdf generation fails', async () => {
+      generateFineReportStub.rejects(new Error('Failed to generate PDF'));
+      const fromDate = new Date();
+      const toDate = new Date();
+      const res = await request(ctx.app)
+        .get('/fines/report/pdf')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query({ fromDate, toDate });
+      expect(res.status).to.equal(500);
+    });
+    it('should return 403 if not admin', async () => {
+      const fromDate = new Date();
+      const toDate = new Date();
+      const res = await request(ctx.app)
+        .get('/fines/report/pdf')
+        .set('Authorization', `Bearer ${ctx.userToken}`)
+        .query({ fromDate, toDate });
+      expect(res.status).to.equal(403);
+    });
+    it('should return 400 if fromDate is not a valid date', async () => {
+      const fromDate = '41Vooooo';
+      const toDate = new Date();
+      const res = await request(ctx.app)
+        .get('/fines/report/pdf')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query({ fromDate, toDate });
+      expect(res.status).to.equal(400);
+    });
+    it('should return 400 if toDate is not a valid date', async () => {
+      const fromDate = new Date();
+      const toDate = '41Vooooo';
+      const res = await request(ctx.app)
+        .get('/fines/report/pdf')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query({ fromDate, toDate });
+      expect(res.status).to.equal(400);
+    });
+    it('should return 400 if fromDate is not before toDate', async () => {
+      const fromDate = new Date();
+      const toDate = new Date(fromDate.getTime());
+      toDate.setDate(toDate.getDate() - 1);
+      const res = await request(ctx.app)
+        .get('/fines/report/pdf')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query({ fromDate, toDate });
+      expect(res.status).to.equal(400);
+    });
+  });
 });

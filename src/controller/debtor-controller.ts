@@ -28,6 +28,7 @@ import { asArrayOfDates, asArrayOfUserTypes, asDate } from '../helpers/validator
 import { In } from 'typeorm';
 import { HandoutFinesRequest } from './request/debtor-request';
 import Fine from '../entity/fine/fine';
+import ReportPdfService from '../service/report-pdf-service';
 
 export default class DebtorController extends BaseController {
   private logger: Logger = log4js.getLogger(' DebtorController');
@@ -81,6 +82,12 @@ export default class DebtorController extends BaseController {
         GET: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Fine', ['*']),
           handler: this.getFineReport.bind(this),
+        },
+      },
+      '/report/pdf': {
+        GET: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Fine', ['*']),
+          handler: this.getFineReportPdf.bind(this),
         },
       },
     };
@@ -331,4 +338,53 @@ export default class DebtorController extends BaseController {
       res.status(500).json('Internal server error.');
     }
   }
+
+  /**
+   * GET /fines/report/pdf
+   * @summary Get a report of all fines in pdf format
+   * @tags debtors - Operations of the debtor controller
+   * @operationId getFineReportPdf
+   * @security JWT
+   * @param {string} fromDate.query - The start date of the report, inclusive
+   * @param {string} toDate.query - The end date of the report, exclusive
+   * @returns {string} 200 - The requested report - application/pdf
+   * @return {string} 400 - Validation error
+   * @return {string} 500 - Internal server error
+   */
+  public async getFineReportPdf(req: RequestWithToken, res: Response): Promise<void> {
+    this.logger.trace('Get fine report by ', req.token.user);
+
+    let fromDate: Date;
+    let toDate: Date;
+    try {
+      fromDate = asDate(req.query.fromDate);
+      toDate = asDate(req.query.toDate);
+      fromDate.setUTCHours(0, 0, 0, 0);
+      toDate.setUTCHours(0, 0, 0, 0);
+      if (toDate < fromDate) {
+        res.status(400).json('toDate must be after fromDate');
+        return;
+      }
+    } catch (e) {
+      res.status(400).json(e.message);
+      return;
+    }
+
+    try {
+      const report = await DebtorService.getFineReport(fromDate, toDate);
+
+      const pdf = await ReportPdfService.fineReportToPdf(report);
+      const from = `${fromDate.getFullYear()}${fromDate.getMonth() + 1}${fromDate.getDate()}`;
+      const to = `${toDate.getFullYear()}${toDate.getMonth() + 1}${toDate.getDate()}`;
+      const fileName = `report-${from}-${to}.pdf`;
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+      res.send(pdf);
+    } catch (error) {
+      this.logger.error('Could not get fine report pdf:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
 }

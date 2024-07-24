@@ -30,8 +30,7 @@ import {
 import { PAYOUT_REQUEST_PDF_LOCATION } from '../files/storage';
 import { PdfGenerator } from '../entity/file/pdf-file';
 import PayoutRequestPdf from '../entity/file/payout-request-pdf';
-
-const PDF_GEN_URL =  process.env.PDF_GEN_URL ? process.env.PDF_GEN_URL : 'http://localhost:3001/pdf';
+import { PDF_GEN_URL } from '../helpers/pdf';
 
 export default class PayoutRequestPdfService {
 
