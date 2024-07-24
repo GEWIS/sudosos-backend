@@ -219,39 +219,45 @@ export default class DefaultRoles {
       where: { name: roleDefinition.name },
       relations: { permissions: true },
     });
-    let permissions: Permission[];
 
     if (!role) {
       role = await Role.save({
         name: roleDefinition.name,
       });
-      permissions = [];
-    } else {
-      permissions = role.permissions;
     }
 
+    const permissions = role.permissions ?? [];
+
+    // Get a list of all user types that are currently missing from the role
     const userTypesToAdd = roleDefinition.userTypes.filter((t) => !role.userTypes?.includes(t));
+    // Get a list of all user types that should not be linked to this role
     const userTypesToDelete = role.userTypes?.filter((t) => !roleDefinition.userTypes.includes(t));
+    // In parallel, add the new user types and remove any old user types from this role
     await Promise.all([
       RoleUserType.save(userTypesToAdd.map((userType): DeepPartial<RoleUserType> => ({ role, roleId: role.id, userType }))),
       RoleUserType.delete({ roleId: role.id, userType: In(userTypesToDelete ?? []) }),
     ]);
 
+    // Set the role to system default, because this role might be new
     role.systemDefault = true;
     await Role.save(role);
 
+    // Convert the user-readable permissions object to a list of individual permissions
     const rules = RBACService.definitionToRules(roleDefinition.permissions);
+    // Get a list of all permissions that are currently missing from the role
     const rulesToAdd = rules.filter((r1) => !permissions
       .some((r2) => r1.entity === r2.entity
         && r1.action === r2.action
         && r1.relation === r2.relation
         && JSON.stringify(r1.attributes) === JSON.stringify(r2.attributes)));
+    // Get a list of all permissions that should no longer exist for this role
     const rulesToRemove = permissions.filter((r1) => !rules
       .some((r2) => r1.entity === r2.entity
       && r1.action === r2.action
       && r1.relation === r2.relation
       && JSON.stringify(r1.attributes) === JSON.stringify(r2.attributes)));
 
+    // In parallel, add the new permission s and remove any old ones
     await Promise.all([
       Permission.save(rulesToAdd.map((p): DeepPartial<Permission> => ({
         ...p,
@@ -261,6 +267,7 @@ export default class DefaultRoles {
       await Permission.remove(rulesToRemove),
     ]);
 
+    // Return the updated role with its permissions
     return Role.findOne({ where: { id: role.id }, relations: { permissions: true } });
   }
 

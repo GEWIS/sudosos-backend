@@ -17,7 +17,7 @@
  */
 
 import RoleResponse from '../controller/response/rbac/role-response';
-import EntityResponse from '../controller/response/rbac/entity-response';
+import PermissionResponse from '../controller/response/rbac/permission-response';
 import ActionResponse from '../controller/response/rbac/action-response';
 import RelationResponse from '../controller/response/rbac/relation-response';
 import Role from '../entity/rbac/role';
@@ -27,7 +27,7 @@ import PermissionRule from '../rbac/permission-rule';
 import { PaginationParameters } from '../helpers/pagination';
 import { DeepPartial, FindManyOptions, FindOptionsRelations } from 'typeorm';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
-import { UpdateRoleParams } from '../controller/request/rbac-request';
+import { UpdateRoleRequest } from '../controller/request/rbac-request';
 
 interface RoleFilterParameters {
   roleId?: number;
@@ -49,13 +49,13 @@ export default class RBACService {
    * Map list of permissions to an entity response
    * @param permissions
    */
-  public static asEntityResponse(permissions: Permission[]): EntityResponse[] {
+  public static asPermissionResponse(permissions: Permission[]): PermissionResponse[] {
     const entities = permissions.reduce((e: string[], permission) => {
       if (e.includes(permission.entity)) return e;
       return [...e, permission.entity];
     }, []);
 
-    return entities.map((entityName): EntityResponse => {
+    return entities.map((entityName): PermissionResponse => {
       const entityPermissions = permissions.filter((p) => p.entity === entityName);
       const actions = entityPermissions.reduce((a: string[], permission) => {
         if (a.includes(permission.action)) return a;
@@ -84,21 +84,20 @@ export default class RBACService {
   }
 
   /**
-   * Converts the RoleDefinitions object to an Roleresponse, which can be
-   * returned in the API response.
-   * @param roles - The role definitions to parse
+   * Converts a Role object to an RoleResponse, which can be
+   * returned in the API response. If any permissions are
+   * present, those are parsed as well.
+   * @param role - The role definitions to parse
    */
-  public static asRoleResponse(roles: Role[]): RoleResponse[] {
-    return roles.map((role): RoleResponse => {
-      return {
-        id: role.id,
-        name: role.name,
-        systemDefault: role.systemDefault,
-        userTypes: role.userTypes ?? [],
-        // Map every entity permission to response
-        permissions: role.permissions ? this.asEntityResponse(role.permissions) : undefined,
-      };
-    });
+  public static asRoleResponse(role: Role): RoleResponse {
+    return {
+      id: role.id,
+      name: role.name,
+      systemDefault: role.systemDefault,
+      userTypes: role.userTypes ?? [],
+      // Map every entity permission to response
+      permissions: role.permissions ? this.asPermissionResponse(role.permissions) : undefined,
+    };
   }
 
   /**
@@ -165,7 +164,7 @@ export default class RBACService {
    * Create an new role with the given parameters
    * @param params
    */
-  public static async createRole(params: UpdateRoleParams) {
+  public static async createRole(params: UpdateRoleRequest) {
     return Role.save({ ...params, permissions: [] });
   }
 
@@ -174,7 +173,7 @@ export default class RBACService {
    * @param roleId
    * @param params
    */
-  public static async updateRole(roleId: number, params: UpdateRoleParams): Promise<Role> {
+  public static async updateRole(roleId: number, params: UpdateRoleRequest): Promise<Role> {
     const role = await Role.findOne({ where: { id: roleId } });
     if (role == null) throw new Error('Role not found.');
     if (role.systemDefault) throw new Error('Cannot update system default role.');
@@ -220,22 +219,19 @@ export default class RBACService {
    * @param permissionRule
    */
   public static async removePermission(roleId: number, permissionRule: Omit<PermissionRule, 'attributes'>) {
-    const matches = (await Permission.find({ where: {
+    const match = (await Permission.findOne({ where: {
       roleId,
       entity: permissionRule.entity,
       action: permissionRule.action,
       relation: permissionRule.relation,
     }, relations: { role: true } }));
-    if (matches.length === 0) {
+    if (!match) {
       throw new Error('Permission not found.');
     }
-    if (matches.length > 1) {
-      throw new Error('Multiple permissions found');
-    }
-    if (matches[0].role.systemDefault) {
+    if (match.role.systemDefault) {
       throw new Error('Cannot change permissions of system default role.');
     }
-    await Permission.remove(matches[0]);
+    await Permission.remove(match);
   }
 
   /**

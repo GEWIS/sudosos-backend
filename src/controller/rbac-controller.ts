@@ -22,7 +22,7 @@ import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import RBACService from '../service/rbac-service';
 import { RequestWithToken } from '../middleware/token-middleware';
-import { CreatePermissionParams, UpdateRoleParams } from './request/rbac-request';
+import { CreatePermissionParams, UpdateRoleRequest } from './request/rbac-request';
 import { verifyCreatePermissionRequest, verifyUpdateRoleRequest } from './request/validators/rbac-request-spec';
 import { isFail } from '../helpers/specification-validation';
 import Permission from '../entity/rbac/permission';
@@ -52,7 +52,7 @@ export default class RbacController extends BaseController {
         POST: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'create', 'all', 'Role', ['*']),
           handler: this.createRole.bind(this),
-          body: { modelName: 'UpdateRoleParams' },
+          body: { modelName: 'UpdateRoleRequest' },
         },
       },
       '/roles/:id(\\d+)': {
@@ -63,7 +63,7 @@ export default class RbacController extends BaseController {
         PATCH: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'update', 'all', 'Role', ['*']),
           handler: this.updateRole.bind(this),
-          body: { modelName: 'UpdateRoleParams' },
+          body: { modelName: 'UpdateRoleRequest' },
         },
         DELETE: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'delete', 'all', 'Role', ['*']),
@@ -103,7 +103,7 @@ export default class RbacController extends BaseController {
       const [roles] = await RBACService.getRoles();
 
       // Map every role to response
-      const responses = RBACService.asRoleResponse(roles);
+      const responses = roles.map((r) => RBACService.asRoleResponse(r));
       res.json(responses);
     } catch (error) {
       this.logger.error('Could not return all roles:', error);
@@ -127,14 +127,13 @@ export default class RbacController extends BaseController {
 
     try {
       const roleId = Number(id);
-      const [roles] = await RBACService.getRoles({ roleId, returnPermissions: true });
-      if (roles.length < 1) {
+      const [[role]] = await RBACService.getRoles({ roleId, returnPermissions: true });
+      if (!role) {
         res.status(404).json('Role not found.');
         return;
       }
 
-      const role = RBACService.asRoleResponse(roles)[0];
-      res.json(role);
+      res.json(RBACService.asRoleResponse(role));
     } catch (error) {
       this.logger.error('Could not get single role:', error);
       res.status(500).json('Internal server error.');
@@ -146,7 +145,7 @@ export default class RbacController extends BaseController {
    * @summary Create a new role
    * @operationId createRole
    * @tags rbac - Operations of the rbac controller
-   * @param {UpdateRoleParams} request.body.required - The role which should be created
+   * @param {UpdateRoleRequest} request.body.required - The role which should be created
    * @security JWT
    * @return {RoleResponse} 200 - The created role
    * @return {string} 400 - Validation error
@@ -157,7 +156,7 @@ export default class RbacController extends BaseController {
     this.logger.trace('Create new role by', req.token.user);
 
     try {
-      const request = { ...body } as UpdateRoleParams;
+      const request = { ...body } as UpdateRoleRequest;
 
       const validation = await verifyUpdateRoleRequest(request);
       if (isFail(validation)) {
@@ -166,7 +165,7 @@ export default class RbacController extends BaseController {
       }
 
       const role = await RBACService.createRole(request);
-      const response = RBACService.asRoleResponse([role])[0];
+      const response = RBACService.asRoleResponse(role);
       res.json(response);
     } catch (error) {
       this.logger.error('Could not create role:', error);
@@ -180,7 +179,7 @@ export default class RbacController extends BaseController {
    * @operationId updateRole
    * @tags rbac - Operations of the rbac controller
    * @param {integer} id.path.required - The ID of the role which should be updated
-   * @param {UpdateRoleParams} request.body.required - The role which should be updated
+   * @param {UpdateRoleRequest} request.body.required - The role which should be updated
    * @security JWT
    * @return {RoleResponse} 200 - The created role
    * @return {string} 400 - Validation error
@@ -194,7 +193,7 @@ export default class RbacController extends BaseController {
 
     try {
       const roleId = Number(id);
-      const request = { ...body } as UpdateRoleParams;
+      const request = { ...body } as UpdateRoleRequest;
 
       const validation = await verifyUpdateRoleRequest(request);
       if (isFail(validation)) {
@@ -213,7 +212,7 @@ export default class RbacController extends BaseController {
       }
 
       role = await RBACService.updateRole(roleId, request);
-      const response = RBACService.asRoleResponse([role])[0];
+      const response = RBACService.asRoleResponse(role);
       res.json(response);
     } catch (error) {
       this.logger.error('Could not update role:', error);
@@ -264,7 +263,7 @@ export default class RbacController extends BaseController {
    * @tags rbac - Operations of the rbac controller
    * @param {integer} id.path.required - The ID of the role which should get the new permissions
    * @param {Array.<CreatePermissionParams>} request.body.required - The permissions that need to be added
-   * @return {Array.<EntityResponse>} 200 - The created permissions
+   * @return {Array.<PermissionResponse>} 200 - The created permissions
    * @return {string} 400 - Validation error
    * @return {string} 404 - Role not found error
    * @return {string} 500 - Internal server error
@@ -316,7 +315,7 @@ export default class RbacController extends BaseController {
       }
 
       const permissions = await RBACService.addPermissions(roleId, params);
-      const response = RBACService.asEntityResponse(permissions);
+      const response = RBACService.asPermissionResponse(permissions);
       res.json(response);
       return;
     } catch (error) {
@@ -326,7 +325,7 @@ export default class RbacController extends BaseController {
   }
 
   /**
-   * POST /rbac/roles/{id}/permissions/{entity}/{action}/{relation}
+   * DELETE /rbac/roles/{id}/permissions/{entity}/{action}/{relation}
    * @summary Delete a permission from an existing role
    * @operationId deletePermission
    * @tags rbac - Operations of the rbac controller

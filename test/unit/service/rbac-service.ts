@@ -25,7 +25,7 @@ import User, { UserType } from '../../../src/entity/user/user';
 import database from '../../../src/database/database';
 import { seedUsers } from '../../seed';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { UpdateRoleParams } from '../../../src/controller/request/rbac-request';
+import { UpdateRoleRequest } from '../../../src/controller/request/rbac-request';
 import Role from '../../../src/entity/rbac/role';
 
 const all = { all: new Set<string>(['*']) };
@@ -265,7 +265,7 @@ describe('RBACService', () => {
 
   describe('#createRole', () => {
     it('should create a new role', async () => {
-      const newRoleParams: UpdateRoleParams = {
+      const newRoleParams: UpdateRoleRequest = {
         name: 'New role',
       };
       const role = await RBACService.createRole(newRoleParams);
@@ -282,13 +282,13 @@ describe('RBACService', () => {
 
   describe('#updateRole', () => {
     it('should update an existing role', async () => {
-      const updateRoleParams: UpdateRoleParams = {
+      const updateRoleRequest: UpdateRoleRequest = {
         name: 'Updated role',
       };
 
       const existingRole = ctx.roles.find((r) => !r.role.systemDefault).role;
-      const role = await RBACService.updateRole(existingRole.id, updateRoleParams);
-      expect(role.name).to.equal(updateRoleParams.name);
+      const role = await RBACService.updateRole(existingRole.id, updateRoleRequest);
+      expect(role.name).to.equal(updateRoleRequest.name);
 
       const dbRole = await Role.findOne({ where: { id: role.id } });
       expect(dbRole).to.not.be.null;

@@ -35,8 +35,8 @@ import TokenHandler from '../../../src/authentication/token-handler';
 import { getToken } from '../../seed/rbac';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import PermissionRule from '../../../src/rbac/permission-rule';
-import { CreatePermissionParams, UpdateRoleParams } from '../../../src/controller/request/rbac-request';
-import EntityResponse from '../../../src/controller/response/rbac/entity-response';
+import { CreatePermissionParams, UpdateRoleRequest } from '../../../src/controller/request/rbac-request';
+import PermissionResponse from '../../../src/controller/response/rbac/permission-response';
 import Permission from '../../../src/entity/rbac/permission';
 
 describe('RbacController', async (): Promise<void> => {
@@ -214,7 +214,7 @@ describe('RbacController', async (): Promise<void> => {
 
   describe('POST /rbac/roles', () => {
     it('should return an HTTP 200 when creating new role', async () => {
-      const params: UpdateRoleParams = {
+      const params: UpdateRoleRequest = {
         name: '39th board',
       };
       const res = await request(ctx.app)
@@ -242,7 +242,7 @@ describe('RbacController', async (): Promise<void> => {
       await Role.delete({ name: role.name });
     });
     it('should return an HTTP 400 if name is empty', async () => {
-      const params: UpdateRoleParams = {
+      const params: UpdateRoleRequest = {
         name: '',
       };
       const res = await request(ctx.app)
@@ -254,7 +254,7 @@ describe('RbacController', async (): Promise<void> => {
       expect(await Role.count()).to.equal(ctx.roles.length);
     });
     it('should return an HTTP 400 if name already exists', async () => {
-      const params: UpdateRoleParams = {
+      const params: UpdateRoleRequest = {
         name: ctx.roles[0].name,
       };
       const res = await request(ctx.app)
@@ -266,7 +266,7 @@ describe('RbacController', async (): Promise<void> => {
       expect(await Role.count()).to.equal(ctx.roles.length);
     });
     it('should return an HTTP 403 if no permissions', async () => {
-      const params: UpdateRoleParams = {
+      const params: UpdateRoleRequest = {
         name: '39th board',
       };
       const res = await request(ctx.app)
@@ -281,7 +281,7 @@ describe('RbacController', async (): Promise<void> => {
 
   describe('PATCH /rbac/roles/{id}', () => {
     let newRole: Role;
-    const params: UpdateRoleParams = {
+    const params: UpdateRoleRequest = {
       name: '41st board',
     };
 
@@ -333,7 +333,7 @@ describe('RbacController', async (): Promise<void> => {
       expect(dbRole.name).to.equal(role.name);
     });
     it('should return an HTTP 400 if name is empty', async () => {
-      const invalidParams: UpdateRoleParams = {
+      const invalidParams: UpdateRoleRequest = {
         ...params,
         name: '',
       };
@@ -347,7 +347,7 @@ describe('RbacController', async (): Promise<void> => {
       expect(dbRole.name).to.equal(newRole.name);
     });
     it('should return an HTTP 400 if name already exists', async () => {
-      const invalidParams: UpdateRoleParams = {
+      const invalidParams: UpdateRoleRequest = {
         ...params,
         name: ctx.roles[0].name,
       };
@@ -481,19 +481,19 @@ describe('RbacController', async (): Promise<void> => {
 
       expect(res.status).to.equal(200);
       const validation = ctx.specification.validateModel(
-        'Array.<EntityResponse>',
+        'Array.<PermissionResponse>',
         res.body,
         false,
         true,
       );
       expect(validation.valid).to.be.true;
 
-      const entityResponses = res.body as EntityResponse[];
+      const permissionResponses = res.body as PermissionResponse[];
       const nrEntities = newPermissions
         .filter((p1, index, all) => index === all
           .findIndex((p2) => p1.entity === p2.entity)).length;
-      expect(entityResponses.length).to.equal(nrEntities);
-      for (let { entity, actions } of entityResponses) {
+      expect(permissionResponses.length).to.equal(nrEntities);
+      for (let { entity, actions } of permissionResponses) {
         const entityPerms = newPermissions.filter((p) => p.entity === entity);
         expect(actions.length).to.be.at.least(1);
         for (let { action, relations } of actions) {

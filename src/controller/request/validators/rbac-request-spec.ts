@@ -23,7 +23,7 @@ import {
   ValidationError,
 } from '../../../helpers/specification-validation';
 import stringSpec from './string-spec';
-import { CreatePermissionParams, UpdateRoleParams } from '../rbac-request';
+import { CreatePermissionParams, UpdateRoleRequest } from '../rbac-request';
 import Role from '../../../entity/rbac/role';
 import { nonEmptyArray } from './general-validators';
 
@@ -35,12 +35,12 @@ const validRoleName = async (name: string) => {
   return toPass(name);
 };
 
-const updateRoleRequestSpec: () => Specification<UpdateRoleParams, ValidationError> = () => [
+const updateRoleRequestSpec: () => Specification<UpdateRoleRequest, ValidationError> = () => [
   [[...stringSpec(), validRoleName], 'name', new ValidationError('name:')],
 ];
 
-export async function verifyUpdateRoleRequest(roleRequest: UpdateRoleParams) {
-  return validateSpecification<UpdateRoleParams, ValidationError>(roleRequest, updateRoleRequestSpec());
+export async function verifyUpdateRoleRequest(roleRequest: UpdateRoleRequest) {
+  return validateSpecification<UpdateRoleRequest, ValidationError>(roleRequest, updateRoleRequestSpec());
 }
 
 const createPermissionRequestSpec: Specification<CreatePermissionParams, ValidationError> = [

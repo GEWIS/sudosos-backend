@@ -127,19 +127,19 @@ export default class AuthenticationService {
    * @param token - The JWT token that can be used to authenticate.
    * @returns The authentication response.
    */
-  public static async asAuthenticationResponse(
+  public static asAuthenticationResponse(
     user: User,
     roles: Role[],
     organs: User[],
     token: string,
-  ): Promise<AuthenticationResponse> {
+  ): AuthenticationResponse {
     return {
       user: parseUserToResponse(user, true),
       organs: organs.map((organ) => parseUserToResponse(organ, false)),
       roles: roles.map((r) => r.name),
       token,
       acceptedToS: user.acceptedToS,
-      rolesWithPermissions: RBACService.asRoleResponse(roles),
+      rolesWithPermissions: roles.map((r) => RBACService.asRoleResponse(r)),
     };
   }
 
