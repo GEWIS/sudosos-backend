@@ -48,20 +48,22 @@ export default class GewisDBService {
   /**
    * Synchronizes ALL users with GEWIS DB user data.
    * This method only returns users that were actually updated during the synchronization process.
+   * @param {boolean} commit - Whether to commit the changes to the database.
    * @returns {Promise<UserResponse[]>} A promise that resolves with an array of UserResponses for users that were updated. Returns null if the API is unhealthy.
    */
-  public static async syncAll(): Promise<UserResponse[]> {
+  public static async syncAll(commit: boolean = true): Promise<UserResponse[]> {
     const gewisUsers = await GewisUser.find({ where: { user: { deleted: false } }, relations: ['user'] });
-    return this.sync(gewisUsers);
+    return this.sync(gewisUsers, commit);
   }
 
   /**
    * Synchronizes users with GEWIS DB user data.
    * This method only returns users that were actually updated during the synchronization process.
    * @param {GewisUser[]} gewisUsers - Array of users to sync.
+   * @param {boolean} commit - Whether to commit the changes to the database.
    * @returns {Promise<UserResponse[]>} A promise that resolves with an array of UserResponses for users that were updated. Returns null if the API is unhealthy.
    */
-  public static async sync(gewisUsers: GewisUser[]): Promise<UserResponse[]> {
+  public static async sync(gewisUsers: GewisUser[], commit: boolean = true): Promise<UserResponse[]> {
     let ping: Health;
     try {
       ping = await GewisDBService.pinger.healthGet().then(health => health.data);
@@ -80,8 +82,9 @@ export default class GewisDBService {
       return null;
     }
 
+    logger.info(`Syncing ${gewisUsers.length} users with GEWIS DB`);
     const updates: UserResponse[] = [];
-    const promises = gewisUsers.map(user => GewisDBService.updateUser(user).then((u) => {
+    const promises = gewisUsers.map(user => GewisDBService.updateUser(user, commit).then((u: UserResponse) => {
       if (u) updates.push(u);
     }));
 
@@ -91,9 +94,10 @@ export default class GewisDBService {
 
   /**
    * Updates a user in the local database based on the GEWIS DB data.
+   * @param commit - Whether to commit the changes to the database.
    * @param {GewisUser} gewisUser - The user to be updated.
    */
-  private static async updateUser(gewisUser: GewisUser) {
+  private static async updateUser(gewisUser: GewisUser, commit: boolean = true) {
     logger.trace(`Syncing GEWIS User ${gewisUser.gewisId}`);
     let dbMember;
     try {
@@ -114,11 +118,11 @@ export default class GewisDBService {
     if (expired) {
       try {
         logger.log(`User ${gewisUser.gewisId} has expired, closing account.`);
-        const balance = await BalanceService.getBalance(gewisUser.user.id);
-        const isZero = balance.amount.amount === 0;
+        const currentBalance = await BalanceService.getBalance(gewisUser.user.id);
+        const isZero = currentBalance.amount.amount === 0;
+        if (!commit) return null;
 
         const user = await UserService.closeUser(gewisUser.user.id, isZero);
-        const currentBalance = await BalanceService.getBalance(user.id);
         Mailer.getInstance().send(gewisUser.user, new MembershipExpiryNotification({
           name: user.firstName,
           balance: DineroTransformer.Instance.from(currentBalance.amount.amount),
@@ -133,6 +137,8 @@ export default class GewisDBService {
     const update = webResponseToUpdate(dbMember);
     if (GewisDBService.isUpdateNeeded(gewisUser, update)) {
       logger.log(`Updated user m${gewisUser.gewisId} (id ${gewisUser.userId}) with `, update);
+      if (!commit) return null;
+
       return UserService.updateUser(gewisUser.user.id, update);
     }
   }

@@ -91,7 +91,7 @@ async function createCronTasks(): Promise<void> {
     application.tasks.push(syncADGroups);
   }
 
-  if (process.env.GEWISDB_API_KEY && process.env.GEWISDB_API_URL) {
+  if (process.env.GEWISDB_API_KEY && process.env.GEWISDB_API_URL && process.env.ENABLE_GEWISDB_SYNC) {
     await GewisDBService.syncAll();
     const syncGewis = cron.schedule('41 4 * * *', async () => {
       logger.debug('Syncing users with GEWISDB.');

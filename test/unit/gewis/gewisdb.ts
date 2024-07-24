@@ -26,6 +26,7 @@ import GewisDBService from '../../../src/gewis/service/gewisdb-service';
 import { BasicApi, MemberAllAttributes, MembersApi } from 'gewisdb-ts-client';
 import nodemailer, { Transporter } from 'nodemailer';
 import Mailer from '../../../src/mailer';
+import { In } from 'typeorm';
 
 describe('GEWISDB Service', () => {
 
@@ -300,6 +301,35 @@ describe('GEWISDB Service', () => {
       });
 
       expect(sendMailFake).to.be.callCount(res.length);
+    });
+    it('should not commit changes to the database if commit is false', async function () {
+      const users = await GewisUser.find({ where: { user: { deleted: false, active: true } }, relations: ['user'], take: 5 });
+
+      const updates: { [key: number]: MemberAllAttributes; } = {};
+      membersApiStub.membersLidnrGet.callsFake((async (gewisId: number) => {
+        const user = users.find(u => u.gewisId === gewisId);
+        if (!user) return Promise.resolve({ data: null });
+
+        const update = toWebResponse(user);
+        update.expiration = new Date(2020, 1, 1).toISOString();
+        updates[user.userId] = update;
+
+        return Promise.resolve({
+          data: { data: update },
+        });
+      }) as any);
+
+
+      await GewisDBService.sync(users, false);
+      const res = await User.find({ where: { id: In(users.map(u => u.userId)) } });
+      expect(res).to.not.be.empty;
+      expect(res.length).to.eq(users.length);
+      res.forEach((u) => {
+        expect(u.active).to.be.true;
+        expect(u.deleted).to.be.false;
+      });
+
+      expect(sendMailFake).to.be.callCount(0);
     });
   });
 });
