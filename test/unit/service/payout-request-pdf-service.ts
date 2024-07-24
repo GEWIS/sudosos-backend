@@ -213,7 +213,7 @@ describe('PayoutRequestPdfService', async () => {
       });
 
       const payoutRequest = await PayoutRequest.findOne({ where: { id: 1 }, relations: ['requestedBy'] });
-      uploadPayoutStub.restore();
+      uploadPayoutStub.resolves({});
       createFileStub.resolves({
         downloadName: 'test',
         location: 'test',
