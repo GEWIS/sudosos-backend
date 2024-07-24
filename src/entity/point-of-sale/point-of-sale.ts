@@ -18,11 +18,12 @@
 
 import {
   Column, DeleteDateColumn,
-  Entity,
+  Entity, JoinTable, ManyToMany,
   ManyToOne,
 } from 'typeorm';
 import BaseEntity from '../base-entity';
 import User from '../user/user';
+import Role from "../rbac/role";
 
 /**
  * @typedef {BaseEntity} PointOfSale
@@ -42,4 +43,8 @@ export default class PointOfSale extends BaseEntity {
 
   @ManyToOne(() => User, { nullable: false, eager: true })
   public owner: User;
+
+  @ManyToMany(() => Role)
+  @JoinTable()
+  public cashierRoles: Role[];
 }

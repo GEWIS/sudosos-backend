@@ -80,6 +80,7 @@ import Permission from '../entity/rbac/permission';
 import { DatabaseRbac1720624912620 } from '../migrations/1720624912260-database-rbac';
 import RoleUserType from '../entity/rbac/role-user-type';
 import {TransfersVat1721916495084} from "../migrations/1721916495084-transfers-vat";
+import { PosCashiers1721835613950 } from '../migrations/1721835613950-pos-cashiers';
 
 // We need to load the dotenv to prevent the env from being undefined.
 dotenv.config();
@@ -103,6 +104,7 @@ const options: DataSourceOptions = {
     PayoutRequestPdf1720610649657,
     DatabaseRbac1720624912620,
     TransfersVat1721916495084,
+    PosCashiers1721835613950,
   ],
   extra: {
     authPlugins: {
