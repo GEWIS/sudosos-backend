@@ -21,6 +21,8 @@ import DineroTransformer from '../../../src/entity/transformer/dinero-transforme
 import ReportPdfService from '../../../src/service/report-pdf-service';
 import { expect } from 'chai';
 import { PDF_VAT_HIGH } from '../../../src/helpers/pdf';
+import { Product } from 'pdf-generator-client';
+import sinon, { SinonStub } from 'sinon';
 
 describe('ReportPdfService', () => {
   describe('fineReportToParameters', () => {
@@ -39,21 +41,91 @@ describe('ReportPdfService', () => {
       expect(reportParams.endDate).to.eq(report.toDate);
       expect(reportParams.fines.length).to.eq(2);
 
-      const handedOut = reportParams.fines.find( (fine) => fine.name === 'Handed out');
+      const handedOut = reportParams.fines.find((fine: Product) => fine.name === 'Handed out');
       expect(handedOut).to.not.be.undefined;
       expect(handedOut?.pricing.basePrice).to.eq(report.handedOut.getAmount());
       expect(handedOut.pricing.quantity).to.eq(report.count);
       expect(handedOut.pricing.vatAmount).to.eq(PDF_VAT_HIGH);
       expect(reportParams.total.inclVat).to.eq(report.handedOut.getAmount() - report.waivedAmount.getAmount());
 
-      const waived = reportParams.fines.find( (fine) => fine.name === 'Waived');
+      const waived = reportParams.fines.find((fine: Product) => fine.name === 'Waived');
       expect(waived).to.not.be.undefined;
       expect(reportParams.total.exclVat).to.eq(Math.round(reportParams.total.inclVat / (1 + (PDF_VAT_HIGH / 100))));
       expect(waived?.pricing.basePrice).to.eq(report.waivedAmount.getAmount() * -1);
 
       expect(waived.pricing.quantity).to.eq(report.waivedCount);
+    });
+    it('should return params with a total value of 0 if handed out equals waived', () => {
+      const report: FineReport = {
+        fromDate: new Date('2022-01-01'),
+        toDate: new Date('2022-12-31'),
+        count: 10,
+        handedOut: DineroTransformer.Instance.from(100),
+        waivedCount: 10,
+        waivedAmount: DineroTransformer.Instance.from(100),
+      };
 
+      const reportParams = ReportPdfService.fineReportToParameters(report);
+      expect(reportParams.total.inclVat).to.eq(0);
+      expect(reportParams.total.exclVat).to.eq(0);
+    });
+    it('should return parameters without waived fines', () => {
+      const report: FineReport = {
+        fromDate: new Date('2022-01-01'),
+        toDate: new Date('2022-12-31'),
+        count: 10,
+        handedOut: DineroTransformer.Instance.from(100),
+        waivedCount: 0,
+        waivedAmount: DineroTransformer.Instance.from(0),
+      };
 
+      const reportParams = ReportPdfService.fineReportToParameters(report);
+      expect(reportParams.fines.length).to.eq(1);
+    });
+  });
+  describe('fineReportToPdf', () => {
+
+    let generateFineReportStub: SinonStub;
+
+    beforeEach(function () {
+      generateFineReportStub = sinon.stub(ReportPdfService.client, 'generateFineReport');
+    });
+
+    afterEach(function () {
+      generateFineReportStub.restore();
+    });
+
+    it('should return a pdf report', async () => {
+      generateFineReportStub.resolves({
+        data: new Blob(),
+        status: 200,
+      });
+
+      const report: FineReport = {
+        fromDate: new Date('2022-01-01'),
+        toDate: new Date('2022-12-31'),
+        count: 10,
+        handedOut: DineroTransformer.Instance.from(200),
+        waivedCount: 5,
+        waivedAmount: DineroTransformer.Instance.from(100),
+      };
+
+      const pdf = await ReportPdfService.fineReportToPdf(report);
+      expect(pdf).to.not.be.undefined;
+    });
+    it('should throw an error if PDF generation fails', async () => {
+      generateFineReportStub.rejects(new Error('Failed to generate PDF'));
+
+      const report: FineReport = {
+        fromDate: new Date('2022-01-01'),
+        toDate: new Date('2022-12-31'),
+        count: 10,
+        handedOut: DineroTransformer.Instance.from(200),
+        waivedCount: 5,
+        waivedAmount: DineroTransformer.Instance.from(100),
+      };
+
+      await expect(ReportPdfService.fineReportToPdf(report)).to.be.rejectedWith();
     });
   });
 });
