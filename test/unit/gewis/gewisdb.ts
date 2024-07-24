@@ -26,7 +26,7 @@ import GewisDBService from '../../../src/gewis/service/gewisdb-service';
 import { BasicApi, MemberAllAttributes, MembersApi } from 'gewisdb-ts-client';
 import nodemailer, { Transporter } from 'nodemailer';
 import Mailer from '../../../src/mailer';
-import {In} from "typeorm";
+import { In } from 'typeorm';
 
 describe('GEWISDB Service', () => {
 

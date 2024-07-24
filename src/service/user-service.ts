@@ -37,7 +37,7 @@ import Bindings from '../helpers/bindings';
 import AuthenticationService from './authentication-service';
 import WelcomeWithReset from '../mailer/templates/welcome-with-reset';
 import { Brackets } from 'typeorm';
-import BalanceService from "./balance-service";
+import BalanceService from './balance-service';
 
 /**
  * Parameters used to filter on Get Users functions.
