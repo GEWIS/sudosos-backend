@@ -35,6 +35,7 @@ import Swagger from '../../../src/start/swagger';
 import { seedTransfers, seedUsers } from '../../seed';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import { finishTestDB } from '../../helpers/test-helpers';
+import { getToken, seedRoles } from '../../seed/rbac';
 
 describe('TransferController', async (): Promise<void> => {
   let connection: Connection;
@@ -73,8 +74,17 @@ describe('TransferController', async (): Promise<void> => {
       acceptedToS: TermsOfServiceStatus.ACCEPTED,
     } as User;
 
+    const sellerUser = {
+      id: 3,
+      firstName: 'Seller',
+      type: UserType.LOCAL_USER,
+      active: true,
+      acceptedToS: TermsOfServiceStatus.ACCEPTED,
+    } as User;
+
     await User.save(adminUser);
     await User.save(localUser);
+    await User.save(sellerUser);
 
     const users = await seedUsers();
     await seedTransfers(users);
@@ -107,16 +117,6 @@ describe('TransferController', async (): Promise<void> => {
       toId: null,
     };
 
-    // create bearer tokens
-    const tokenHandler = new TokenHandler({
-      algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
-    });
-    adminToken = await tokenHandler.signToken({ user: adminUser, roles: ['User', 'Admin'], lesser: false }, 'nonce admin');
-    token = await tokenHandler.signToken({ user: localUser, roles: ['User'], lesser: false }, 'nonce');
-    organMemberToken = await tokenHandler.signToken({
-      user: localUser, roles: ['User', 'Seller'], organs: [adminUser], lesser: false,
-    }, '1');
-
     // start app
     app = express();
     specification = await Swagger.initialize(app);
@@ -128,8 +128,7 @@ describe('TransferController', async (): Promise<void> => {
     // Create roleManager and set roles of Admin and User
     // In this case Admin can do anything and User nothing.
     // This does not reflect the actual roles of the users in the final product.
-    const roleManager = new RoleManager();
-    roleManager.registerRole({
+    const roles = await seedRoles([{
       name: 'Admin',
       permissions: {
         Transfer: {
@@ -140,8 +139,7 @@ describe('TransferController', async (): Promise<void> => {
         },
       },
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
-    });
-    roleManager.registerRole({
+    }, {
       name: 'User',
       permissions: {
         Transfer: {
@@ -149,8 +147,7 @@ describe('TransferController', async (): Promise<void> => {
         },
       },
       assignmentCheck: async () => true,
-    });
-    roleManager.registerRole({
+    }, {
       name: 'Seller',
       permissions: {
         Transfer: {
@@ -160,8 +157,17 @@ describe('TransferController', async (): Promise<void> => {
           delete: organRole,
         },
       },
-      assignmentCheck: async () => true,
+      assignmentCheck: async (user) => user.id === sellerUser.id,
+    }]);
+    const roleManager = await new RoleManager().initialize();
+
+    // create bearer tokens
+    const tokenHandler = new TokenHandler({
+      algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
+    adminToken = await tokenHandler.signToken(await getToken(adminUser, roles), 'nonce admin');
+    token = await tokenHandler.signToken(await getToken(localUser, roles), 'nonce');
+    organMemberToken = await tokenHandler.signToken(await getToken(sellerUser, roles, [adminUser]), '1');
 
     const controller = new TransferController({ specification, roleManager });
     app.use(json());

@@ -17,7 +17,7 @@
  */
 
 
-import { AllowedAttribute } from '../../../rbac/role-manager';
+import { AllowedAttribute } from '../../../rbac/role-definitions';
 
 /**
  * @typedef {object} RelationResponse -

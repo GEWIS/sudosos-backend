@@ -34,6 +34,7 @@ import DineroTransformer from '../../../src/entity/transformer/dinero-transforme
 import { StripePaymentIntentResponse } from '../../../src/controller/response/stripe-response';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
+import { getToken, seedRoles } from '../../seed/rbac';
 
 describe('StripeController', async (): Promise<void> => {
   let shouldSkip: boolean;
@@ -74,7 +75,7 @@ describe('StripeController', async (): Promise<void> => {
     const localUser = {
       id: 2,
       firstName: 'User',
-      type: UserType.MEMBER,
+      type: UserType.LOCAL_USER,
       active: true,
       acceptedToS: TermsOfServiceStatus.ACCEPTED,
     } as User;
@@ -84,13 +85,6 @@ describe('StripeController', async (): Promise<void> => {
 
     const { stripeDeposits } = await seedStripeDeposits([localUser, adminUser]);
 
-    // create bearer tokens
-    const tokenHandler = new TokenHandler({
-      algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
-    });
-    const adminToken = await tokenHandler.signToken({ user: adminUser, roles: ['Admin'], lesser: false }, 'nonce admin');
-    const userToken = await tokenHandler.signToken({ user: localUser, roles: ['User'], lesser: false }, 'nonce');
-
     // start app
     const app = express();
     const specification = await Swagger.initialize(app);
@@ -99,25 +93,31 @@ describe('StripeController', async (): Promise<void> => {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const own = { own: new Set<string>(['*']), public: new Set<string>(['*']) };
 
-    const roleManager = new RoleManager();
-    roleManager.registerRole({
+    const roles = await seedRoles([{
       name: 'Admin',
       permissions: {
         StripeDeposit: {
           create: all,
         },
       },
-      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_USER,
-    });
-    roleManager.registerRole({
+      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
+    }, {
       name: 'User',
       permissions: {
         StripeDeposit: {
           create: all,
         },
       },
-      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
+      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_USER,
+    }]);
+    const roleManager = await new RoleManager().initialize();
+
+    // create bearer tokens
+    const tokenHandler = new TokenHandler({
+      algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
+    const adminToken = await tokenHandler.signToken(await getToken(adminUser, roles), 'nonce admin');
+    const userToken = await tokenHandler.signToken(await getToken(localUser, roles), 'nonce');
 
     const controller = new StripeController({ specification, roleManager });
     app.use(json());

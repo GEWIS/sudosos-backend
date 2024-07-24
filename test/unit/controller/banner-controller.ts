@@ -41,6 +41,7 @@ import { DiskStorage } from '../../../src/files/storage';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
+import { seedRoles } from '../../seed/rbac';
 
 export function bannerEq(a: Banner, b: BannerResponse): Boolean {
   const aEmpty = a === {} as Banner || a === undefined;
@@ -114,8 +115,6 @@ describe('BannerController', async (): Promise<void> => {
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
-    const adminToken = await tokenHandler.signToken({ user: adminUser, roles: ['Admin'], lesser: false }, 'nonce admin');
-    const token = await tokenHandler.signToken({ user: localUser, roles: [], lesser: false }, 'nonce');
 
     // test banners
     const validBannerReq = {
@@ -142,8 +141,7 @@ describe('BannerController', async (): Promise<void> => {
     const specification = await Swagger.initialize(app);
 
     const all = { all: new Set<string>(['*']) };
-    const roleManager = new RoleManager();
-    roleManager.registerRole({
+    await seedRoles([{
       name: 'Admin',
       permissions: {
         Banner: {
@@ -154,7 +152,10 @@ describe('BannerController', async (): Promise<void> => {
         },
       },
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
-    });
+    }]);
+    const roleManager = await new RoleManager().initialize();
+    const adminToken = await tokenHandler.signToken({ user: adminUser, roles: ['Admin'], lesser: false }, 'nonce admin');
+    const token = await tokenHandler.signToken({ user: localUser, roles: [], lesser: false }, 'nonce');
 
     const controller = new BannerController({ specification, roleManager });
     app.use(json());

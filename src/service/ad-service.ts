@@ -28,6 +28,7 @@ import {
 import AuthenticationService from './authentication-service';
 import Bindings from '../helpers/bindings';
 import RoleManager from '../rbac/role-manager';
+import RBACService from './rbac-service';
 
 export default class ADService {
   /**
@@ -184,16 +185,19 @@ export default class ADService {
    * Function that handles the updating of the AD roles as returned by the AD Query
    * @param roleManager - Reference to the application role manager
    * @param client - LDAP Client connection
-   * @param roles - Roles returned from LDAP
+   * @param ldapRoles - Roles returned from LDAP
    */
   private static async handleADRoles(roleManager: RoleManager,
-    client: Client, roles: LDAPGroup[]) {
-    for (let i = 0; i < roles.length; i += 1) {
-      const role = roles[i];
-      if (roleManager.containsRole(role.cn)) {
-        const result = await ADService.getLDAPGroupMembers(client, role.dn);
+    client: Client, ldapRoles: LDAPGroup[]) {
+    const [dbRoles] = await RBACService.getRoles();
+    for (let i = 0; i < ldapRoles.length; i += 1) {
+      const ldapRole = ldapRoles[i];
+
+      // The LDAP role should also exist in SudoSOS
+      if (dbRoles.some((r) => r.name === ldapRole.cn)) {
+        const result = await ADService.getLDAPGroupMembers(client, ldapRole.dn);
         const members: LDAPUser[] = result.searchEntries.map((u) => userFromLDAP(u));
-        await ADService.addUsersToRole(roleManager, role.cn, members);
+        await ADService.addUsersToRole(roleManager, ldapRole.cn, members);
       }
     }
   }

@@ -47,6 +47,7 @@ import Fine from '../../../src/entity/fine/fine';
 import UserFineGroup from '../../../src/entity/fine/userFineGroup';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
+import { getToken, seedRoles } from '../../seed/rbac';
 
 describe('BalanceController', (): void => {
   let ctx: {
@@ -80,18 +81,9 @@ describe('BalanceController', (): void => {
       .map((t) => t.subTransactions));
     const transfers = await seedTransfers(users);
 
-    const tokenHandler = new TokenHandler({
-      algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
-    });
-    const userToken = await tokenHandler.signToken({ user: users[0], roles: ['User'], lesser: false }, '33');
-    const adminToken = await tokenHandler.signToken({ user: users[6], roles: ['User', 'Admin'], lesser: false }, '33');
-
-    const { fines, fineTransfers, userFineGroups, users: usersWithFines } = await seedFines(users, transactions, transfers, true);
-
     const all = { all: new Set<string>(['*']) };
     const own = { own: new Set<string>(['*']) };
-    const roleManager = new RoleManager();
-    roleManager.registerRole({
+    const roles = await seedRoles([{
       name: 'Admin',
       permissions: {
         Balance: {
@@ -101,9 +93,7 @@ describe('BalanceController', (): void => {
 
       },
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
-    });
-
-    roleManager.registerRole({
+    }, {
       name: 'User',
       permissions: {
         Balance: {
@@ -113,7 +103,15 @@ describe('BalanceController', (): void => {
 
       },
       assignmentCheck: async () => true,
+    }]);
+    const roleManager = await new RoleManager().initialize();
+    const tokenHandler = new TokenHandler({
+      algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
+    const userToken = await tokenHandler.signToken(await getToken(users[0], roles), '33');
+    const adminToken = await tokenHandler.signToken(await getToken(users[6], roles), '33');
+
+    const { fines, fineTransfers, userFineGroups, users: usersWithFines } = await seedFines(users, transactions, transfers, true);
 
     const specification = await Swagger.initialize(app);
     const controller = new BalanceController({

@@ -41,10 +41,11 @@ import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import { RequestWithToken } from '../middleware/token-middleware';
 import { asArrayOfNumbers, asDate, asEventType, asNumber } from '../helpers/validators';
 import { PaginationParameters } from '../helpers/pagination';
-import AssignedRole from '../entity/roles/assigned-role';
+import AssignedRole from '../entity/rbac/assigned-role';
 import Mailer from '../mailer';
 import ForgotEventPlanning from '../mailer/templates/forgot-event-planning';
 import { Language } from '../mailer/templates/mail-template';
+import Role from '../entity/rbac/role';
 
 export interface EventFilterParameters {
   name?: string;
@@ -124,7 +125,7 @@ export async function parseUpdateEventRequestParameters(
     // Check that every shift has at least 1 person to do the shift
     // First, get an array with tuples. The first item is the ID, the second whether the shift has any users.
     const shiftsWithUsers = await Promise.all(shifts.map(async (s) => {
-      const roles = await AssignedRole.find({ where: { role: In(s.roles) }, relations: ['user'] });
+      const roles = await AssignedRole.find({ where: { role: { id: In(s.roles.map((r) => r.id)) } }, relations: ['user'] });
       return [s.id, roles.length > 0];
     }));
     // Then, apply a filter to only get the shifts without users
@@ -177,7 +178,7 @@ export default class EventService {
   EventShiftResponse {
     return {
       ...this.asBaseEventShiftResponse(entity),
-      roles: entity.roles,
+      roles: entity.roles.map((r) => r.name),
     };
   }
 
@@ -252,7 +253,7 @@ export default class EventService {
   public static async getSingleEvent(id: number): Promise<EventResponse | undefined> {
     const event = await Event.findOne({
       where: { id },
-      relations: ['createdBy', 'shifts', 'answers', 'answers.user'],
+      relations: { createdBy: true, shifts: { roles: true }, answers: { user: true } },
       withDeleted: true,
     });
 
@@ -263,7 +264,10 @@ export default class EventService {
    * Synchronize all answer sheets with the corresponding users and shifts
    */
   public static async syncAllEventShiftAnswers() {
-    const events = await Event.find({ where: { startDate: MoreThanOrEqual(new Date()) }, relations: ['answers', 'shifts'] });
+    const events = await Event.find({
+      where: { startDate: MoreThanOrEqual(new Date()) },
+      relations: { answers: true, shifts: { roles: true } },
+    });
     await Promise.all(events.map((e) => this.syncEventShiftAnswers(e)));
   }
 
@@ -285,7 +289,7 @@ export default class EventService {
     // Get the answer sheet for every user that can do a shift
     // Create it if it does not exist
     const answers = (await Promise.all(shifts.map(async (shift) => {
-      const users = await User.find({ where: { roles: { role: In(shift.roles) } } });
+      const users = await User.find({ where: { directAssignedRoles: { role: { id: In(shift.roles.map((s) => s.id)) } } } });
       return Promise.all(users.map(async (user) => {
         // Find the answer sheet in the database
         const dbAnswer = await EventShiftAnswer.findOne({
@@ -411,9 +415,10 @@ export default class EventService {
    */
   public static async createEventShift(eventShiftRequest
   : EventShiftRequest): Promise<EventShiftResponse> {
+    const roles = await Role.find({ where: { name: In(eventShiftRequest.roles) } });
     const newEventShift: EventShift = Object.assign(new EventShift(), {
       name: eventShiftRequest.name,
-      roles: eventShiftRequest.roles,
+      roles,
     });
     await EventShift.save(newEventShift);
     return this.asEventShiftResponse(newEventShift);
@@ -426,7 +431,10 @@ export default class EventService {
     const shift = await EventShift.findOne({ where: { id } });
     if (!shift) return undefined;
     if (update.name) shift.name = update.name;
-    if (update.roles) shift.roles = update.roles;
+    if (update.roles) {
+      const roles = await Role.find({ where: { name: In(update.roles) } });
+      shift.roles = roles;
+    }
     await EventShift.save(shift);
     return this.asEventShiftResponse(shift);
   }

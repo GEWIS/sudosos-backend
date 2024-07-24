@@ -36,6 +36,7 @@ import ProductCategory from '../../../src/entity/product/product-category';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
+import { getToken, seedRoles } from '../../seed/rbac';
 
 /**
  * Tests if a productCategory response is equal to the request.
@@ -88,13 +89,6 @@ describe('ProductCategoryController', async (): Promise<void> => {
 
     const categories = await seedProductCategories();
 
-    // create bearer tokens
-    const tokenHandler = new TokenHandler({
-      algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
-    });
-    const adminToken = await tokenHandler.signToken({ user: adminUser, roles: ['Admin'], lesser: false }, 'nonce admin');
-    const token = await tokenHandler.signToken({ user: localUser, roles: [], lesser: false }, 'nonce');
-
     const validRequest: ProductCategoryRequest = {
       name: 'Valid productcategory',
     };
@@ -116,8 +110,7 @@ describe('ProductCategoryController', async (): Promise<void> => {
     // Create roleManager and set roles of Admin and User
     // In this case Admin can do anything and User nothing.
     // This does not reflect the actual roles of the users in the final product.
-    const roleManager = new RoleManager();
-    roleManager.registerRole({
+    const roles = await seedRoles([{
       name: 'Admin',
       permissions: {
         ProductCategory: {
@@ -128,7 +121,15 @@ describe('ProductCategoryController', async (): Promise<void> => {
         },
       },
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
+    }]);
+    const roleManager = await new RoleManager().initialize();
+
+    // create bearer tokens
+    const tokenHandler = new TokenHandler({
+      algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
+    const adminToken = await tokenHandler.signToken(await getToken(adminUser, roles), 'nonce admin');
+    const token = await tokenHandler.signToken(await getToken(localUser, roles), 'nonce');
 
     const controller = new ProductCategoryController({ specification, roleManager });
     app.use(json());

@@ -15,27 +15,30 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+import { BaseEntity, Column, Entity, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';
+import Role from './role';
 
-import {
-  Column, Entity, JoinColumn, ManyToOne, PrimaryColumn,
-} from 'typeorm';
-import BaseEntityWithoutId from '../base-entity-without-id';
-import User from '../user/user';
-
-/**
- * @typedef {BaseEntityWithoutId} AssignedRole
- * @property {User.model} user.required - The user being assigned a role
- * @property {string} role.required - The name of the role
- */
 @Entity()
-export default class AssignedRole extends BaseEntityWithoutId {
+export default class Permission extends BaseEntity {
   @PrimaryColumn()
-  public userId: number;
+  public roleId: number;
 
-  @ManyToOne(() => User)
-  @JoinColumn({ name: 'userId' })
-  public user: User;
+  @ManyToOne(() => Role, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'roleId' })
+  public role: Role;
 
-  @Column({ primary: true })
-  public role: string;
+  @PrimaryColumn()
+  public action: string;
+
+  @PrimaryColumn()
+  public relation: string;
+
+  @PrimaryColumn()
+  public entity: string;
+
+  @Column({ type: 'varchar', transformer: {
+    to: (val: string[]) => JSON.stringify(val),
+    from: (val: string) => JSON.parse(val),
+  } })
+  public attributes: string[];
 }

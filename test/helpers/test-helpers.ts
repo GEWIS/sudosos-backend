@@ -28,7 +28,6 @@ import Database from '../../src/database/database';
 import TokenHandler from '../../src/authentication/token-handler';
 import User, { UserType } from '../../src/entity/user/user';
 import { ADMIN_USER, UserFactory } from './user-factory';
-import { RoleFactory } from './role-factory';
 import { truncateAllTables } from '../setup';
 
 export interface DefaultContext {
@@ -88,14 +87,6 @@ export async function defaultTokens(tokenHandler: TokenHandler) {
     user,
     token,
   };
-}
-
-export async function defaultRolesAndTokens(
-  roleManager: RoleManager, tokenHandler: TokenHandler, entities: string[],
-) {
-  roleManager.registerRole(RoleFactory(entities, UserType.LOCAL_ADMIN));
-  roleManager.registerRole(RoleFactory(entities, UserType.MEMBER));
-  return defaultTokens(tokenHandler);
 }
 
 export default async function generateBalance(amount: number, toId: number) {

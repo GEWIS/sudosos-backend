@@ -558,12 +558,12 @@ export default class AuthenticationController extends BaseController {
 
     try {
       const user = await User.findOne({ where: { id: body.userId } });
-      const contents = await AuthenticationService.makeJsonWebToken(
-        { tokenHandler: this.tokenHandler, roleManager: this.roleManager }, user, false,
+      const response = await AuthenticationService.getSaltedToken(
+        user,
+        { tokenHandler: this.tokenHandler, roleManager: this.roleManager },
+        false,
+        body.nonce,
       );
-      const token = await this.tokenHandler.signToken(contents, body.nonce);
-      const response = AuthenticationService
-        .asAuthenticationResponse(contents.user, contents.roles, contents.organs, token);
       res.json(response);
     } catch (error) {
       this.logger.error('Could not create token:', error);

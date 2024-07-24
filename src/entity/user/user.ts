@@ -21,7 +21,7 @@ import {
 } from 'typeorm';
 import BaseEntity from '../base-entity';
 import UserFineGroup from '../fine/userFineGroup';
-import AssignedRole from '../roles/assigned-role';
+import AssignedRole from '../rbac/assigned-role';
 
 export enum TermsOfServiceStatus {
   ACCEPTED = 'ACCEPTED',
@@ -142,7 +142,7 @@ export default class User extends BaseEntity {
   public currentFines?: UserFineGroup | null;
 
   @OneToMany(() => AssignedRole, (role) => role.user)
-  public roles: AssignedRole[];
+  public directAssignedRoles: AssignedRole[];
 
   public fullName(): string {
     let name = this.firstName;

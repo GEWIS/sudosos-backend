@@ -60,8 +60,9 @@ import FineHandoutEvent from '../src/entity/fine/fineHandoutEvent';
 import Fine from '../src/entity/fine/fine';
 import { calculateBalance } from './helpers/balance';
 import GewisUser from '../src/gewis/entity/gewis-user';
-import AssignedRole from '../src/entity/roles/assigned-role';
+import AssignedRole from '../src/entity/rbac/assigned-role';
 import MemberAuthenticator from '../src/entity/authenticator/member-authenticator';
+import Role from '../src/entity/rbac/role';
 
 function getDate(startDate: Date, endDate: Date, i: number): Date {
   const diff = endDate.getTime() - startDate.getTime();
@@ -173,23 +174,6 @@ export async function seedUsers(): Promise<User[]> {
   await InvoiceUser.save(invoiceUsers);
 
   return users;
-}
-
-/**
- * Seed some roles, where every user has at most one role.
- * @param users
- */
-export async function seedRoles(users: User[]): Promise<AssignedRole[]> {
-  const roleStrings = ['BAC', 'BAC feut', 'BAC PM', 'Bestuur', 'Kasco'];
-  return (await Promise.all(users.map(async (user, i) => {
-    if (i % 3 === 0) return undefined;
-
-    const role = Object.assign(new AssignedRole(), {
-      user,
-      role: roleStrings[i % 5],
-    });
-    return AssignedRole.save(role);
-  }))).filter((r) => r != null);
 }
 
 /**
@@ -312,38 +296,46 @@ export async function seedInvoices(users: User[], transactions: Transaction[]): 
 /**
  * Seeds a default dataset of borrelSchemaShifts and stores them in the database
  */
-export async function seedEventShifts() {
-  const shifts: EventShift[] = [];
-  shifts.push(Object.assign(new EventShift(), {
+async function seedEventShifts() {
+  const roles = await Role.save([{
+    name: 'BAC',
+  }, {
+    name: 'BAC feut',
+  }, {
+    name: 'BAC PM',
+  }, {
+    name: 'Bestuur',
+  }, {
+    name: 'Kasco',
+  }]);
+
+  const eventShifts = await EventShift.save([{
     name: 'Borrelen',
-    roles: ['BAC', 'BAC feut'],
-  }));
-  shifts.push(Object.assign(new EventShift(), {
+    roles: [roles[0], roles[1]],
+  }, {
     name: 'Portier',
-    roles: ['BAC', 'BAC feut'],
-  }));
-  shifts.push(Object.assign(new EventShift(), {
+    roles: [roles[0], roles[1]],
+  }, {
     name: 'Bier halen voor Job en Sjoerd',
-    roles: ['BAC feut'],
-  }));
-  shifts.push(Object.assign(new EventShift(), {
+    roles: [roles[1]],
+  }, {
     name: 'Roy slaan',
     roles: [],
-  }));
-  shifts.push(Object.assign(new EventShift(), {
+  }, {
     name: '900 euro kwijtraken',
-    roles: ['BAC PM', 'BAC'],
-  }));
-  shifts.push(Object.assign(new EventShift(), {
+    roles: [roles[0], roles[2]],
+  }, {
     name: 'Wassen',
-    roles: ['Bestuur'],
+    roles: [roles[3]],
     deletedAt: new Date(),
-  }));
-  await EventShift.save(shifts);
-  return shifts;
+  }]);
+  return {
+    roles,
+    eventShifts,
+  };
 }
 
-export async function createEventShiftAnswer(user: User, event: Event, shift: EventShift, type: number) {
+function createEventShiftAnswer(user: User, event: Event, shift: EventShift, type: number) {
   const availabilities = [Availability.YES, Availability.MAYBE, Availability.NO, Availability.LATER, Availability.NA, null];
 
   const answer: EventShiftAnswer = Object.assign(new EventShiftAnswer(), {
@@ -356,11 +348,20 @@ export async function createEventShiftAnswer(user: User, event: Event, shift: Ev
   return EventShiftAnswer.save(answer);
 }
 
-export async function seedEvents(rolesWithUsers: AssignedRole[]) {
+export async function seedEvents(users: User[]) {
   const events: Event[] = [];
-  const eventShifts = await seedEventShifts();
+  const { eventShifts, roles } = await seedEventShifts();
+
+  const roleAssignments = (await Promise.all(users.map(async (user, i) => {
+    if (i % 3 === 0) return undefined;
+    return AssignedRole.save({
+      user,
+      role: roles[i % 5],
+    });
+  }))).filter((r) => r != null);
+
   const eventShiftAnswers: EventShiftAnswer[] = [];
-  for (let i = 1; i < 6; i += 1) {
+  for (let i = 1; i < eventShifts.length; i += 1) {
     // const startDate = getRandomDate(new Date(), new Date(new Date().getTime() + 1000 * 60 * 60 * 24 * 365));
     const startDate = new Date(new Date().getTime() + ((i * 1000000) % (3600 * 24 * 365)) * 1000 + 60000);
     startDate.setMilliseconds(0);
@@ -370,7 +371,7 @@ export async function seedEvents(rolesWithUsers: AssignedRole[]) {
 
     const event = Object.assign(new Event(), {
       name: `${i}-Testborrel-${i}`,
-      createdBy: rolesWithUsers[i].user,
+      createdBy: roleAssignments[i].user,
       startDate,
       endDate,
       type: EventType.BORREL,
@@ -383,8 +384,8 @@ export async function seedEvents(rolesWithUsers: AssignedRole[]) {
     const eventShiftAnswers1: EventShiftAnswer[] = [];
     for (let j = 0; j < ((i + 1) * 243) % 4; j += 1) {
       const shift = eventShifts[((i + j) * 13) % (eventShifts.length)];
-      const users = rolesWithUsers.filter((r) => shift.roles.includes(r.role));
-      await Promise.all(users.map(async (r, k) => {
+      const usersWithRole = roleAssignments.filter((r) => shift.roles.some((r2) => r2.id === r.roleId));
+      await Promise.all(usersWithRole.map(async (r, k) => {
         const answer = await createEventShiftAnswer(r.user, event, shift, k);
         answer.event = event;
         answer.shift = shift;
@@ -401,7 +402,7 @@ export async function seedEvents(rolesWithUsers: AssignedRole[]) {
     events.push(event);
   }
 
-  return { events, eventShifts, eventShiftAnswers };
+  return { roles, roleAssignments, events, eventShifts, eventShiftAnswers };
 }
 
 /**
@@ -702,7 +703,7 @@ export async function seedContainers(
   let containers: Container[] = [];
   let containerRevisions: ContainerRevision[] = [];
 
-  const sellers = users.filter((u) => [UserType.LOCAL_ADMIN, UserType.MEMBER].includes(u.type));
+  const sellers = users.filter((u) => [UserType.LOCAL_ADMIN, UserType.ORGAN, UserType.MEMBER].includes(u.type));
 
   const promises: Promise<any>[] = [];
   for (let i = 0; i < sellers.length; i += 1) {
@@ -1368,7 +1369,8 @@ export async function seedBanners(users: User[]): Promise<{
 
 export interface DatabaseContent {
   users: User[],
-  roles: AssignedRole[],
+  roles: Role[],
+  roleAssignments: AssignedRole[],
   categories: ProductCategory[],
   vatGroups: VatGroup[],
   products: Product[],
@@ -1413,8 +1415,7 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
   const { pointsOfSale, pointOfSaleRevisions } = await seedPointsOfSale(
     users, containerRevisions,
   );
-  const roles = await seedRoles(users);
-  const { events, eventShifts, eventShiftAnswers } = await seedEvents(roles);
+  const { roles, roleAssignments, events, eventShifts, eventShiftAnswers } = await seedEvents(users);
   const { transactions } = await seedTransactions(users, pointOfSaleRevisions);
   const transfers = await seedTransfers(users);
   const { fines, fineTransfers, userFineGroups } = await seedFines(users, transactions, transfers);
@@ -1426,6 +1427,7 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
   return {
     users,
     roles,
+    roleAssignments,
     categories,
     vatGroups,
     products,

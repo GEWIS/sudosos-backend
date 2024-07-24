@@ -23,7 +23,6 @@ import { json } from 'body-parser';
 import { expect, request } from 'chai';
 import Stripe from 'stripe';
 import sinon from 'sinon';
-import User, { UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
 import RoleManager from '../../../src/rbac/role-manager';
@@ -60,28 +59,7 @@ describe('StripeWebhookController', async (): Promise<void> => {
     // start app
     const app = express();
     const specification = await Swagger.initialize(app);
-
-    const all = { all: new Set<string>(['*']) };
-
-    const roleManager = new RoleManager();
-    roleManager.registerRole({
-      name: 'Admin',
-      permissions: {
-        StripeDeposit: {
-          create: all,
-        },
-      },
-      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_USER,
-    });
-    roleManager.registerRole({
-      name: 'User',
-      permissions: {
-        StripeDeposit: {
-          create: all,
-        },
-      },
-      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
-    });
+    const roleManager = await new RoleManager().initialize();
 
     const controller = new StripeWebhookController({ specification, roleManager });
     app.use(json({

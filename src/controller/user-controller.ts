@@ -1212,7 +1212,7 @@ export default class UserController extends BaseController {
    * @tags users - Operations of user controller
    * @param {integer} id.path.required - The id of the user to get the roles from
    * @security JWT
-   * @return {Array.<RoleResponse>} 200 - The roles of the user
+   * @return {Array.<RoleWithPermissionsResponse>} 200 - The roles of the user
    * @return {string} 404 - User not found error.
    */
   public async getUserRoles(req: RequestWithToken, res: Response): Promise<void> {
@@ -1229,10 +1229,9 @@ export default class UserController extends BaseController {
         return;
       }
 
-      const roles = await this.roleManager.getRoles(user);
-      if (req.token.organs && req.token.organs.length > 0) roles.push('SELLER');
-      const definitions = this.roleManager.toRoleDefinitions(roles);
-      res.status(200).json(RBACService.asRoleResponse(definitions));
+      const rolesWithPermissions = await this.roleManager.getRoles(user, true);
+      const response = rolesWithPermissions.map((r) => RBACService.asRoleResponse(r));
+      res.status(200).json(response);
     } catch (error) {
       this.logger.error('Could not get roles of user:', error);
       res.status(500).json('Internal server error.');

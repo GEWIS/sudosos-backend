@@ -18,7 +18,7 @@
 
 import { toFail, toPass, ValidationError } from '../../../helpers/specification-validation';
 import User, { TermsOfServiceStatus, UserType } from '../../../entity/user/user';
-import { INVALID_ACTIVE_USER_ID, INVALID_ORGAN_ID, INVALID_USER_ID } from './validation-errors';
+import { EMPTY_ARRAY, INVALID_ACTIVE_USER_ID, INVALID_ORGAN_ID, INVALID_USER_ID } from './validation-errors';
 import { In } from 'typeorm';
 
 export const positiveNumber = async (p: number) => {
@@ -46,4 +46,11 @@ export const ownerIsOrgan = async (id: number) => {
   const owner = await User.findOne({ where: { id, deleted: false, type: UserType.ORGAN } });
   if (!owner) return toFail(INVALID_ORGAN_ID());
   return toPass(id);
+};
+
+export const nonEmptyArray = async <T>(list: T[]) => {
+  if (list.length === 0) {
+    return toFail(EMPTY_ARRAY());
+  }
+  return toPass(list);
 };
