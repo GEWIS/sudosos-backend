@@ -20,10 +20,13 @@ import { Connection, IsNull, Not } from 'typeorm';
 import { json } from 'body-parser';
 import chai, { expect, request } from 'chai';
 import PointOfSaleController from '../../../src/controller/point-of-sale-controller';
-import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
+import User, { UserType } from '../../../src/entity/user/user';
 import {
-  seedContainers, seedPointsOfSale,
-  seedProductCategories, seedProducts,
+  seedContainers,
+  seedPointsOfSale,
+  seedProductCategories,
+  seedProducts,
+  seedUsers,
   seedVatGroups,
 } from '../../seed';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
@@ -40,10 +43,13 @@ import {
   CreatePointOfSaleRequest,
   UpdatePointOfSaleRequest,
 } from '../../../src/controller/request/point-of-sale-request';
-import { INVALID_CONTAINER_ID } from '../../../src/controller/request/validators/validation-errors';
+import {
+  INVALID_CONTAINER_ID,
+  INVALID_CUSTOM_ROLE_ID,
+  INVALID_ROLE_ID,
+} from '../../../src/controller/request/validators/validation-errors';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { ORGAN_USER, UserFactory } from '../../helpers/user-factory';
 import { UpdateContainerRequest } from '../../../src/controller/request/container-request';
 import ContainerController from '../../../src/controller/container-controller';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
@@ -54,7 +60,7 @@ import RoleManager from '../../../src/rbac/role-manager';
 import Database from '../../../src/database/database';
 import TokenHandler from '../../../src/authentication/token-handler';
 import { SwaggerSpecification } from 'swagger-model-validator';
-import { getToken, seedRoles } from '../../seed/rbac';
+import { getToken, SeededRole, seedRoles } from '../../seed/rbac';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -87,6 +93,10 @@ describe('PointOfSaleController', async () => {
     adminUser: User,
     localUser: User,
     organUser: User,
+    feut1: User,
+    feut2: User,
+    bestuur1: User,
+    roles: SeededRole[],
     containers: Container[],
     deletedContainers: Container[],
     pointsOfSale: PointOfSale[],
@@ -106,23 +116,13 @@ describe('PointOfSaleController', async () => {
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
 
-    // create dummy users
-    const adminUser = await User.save({
-      id: 1,
-      firstName: 'Admin',
-      type: UserType.LOCAL_ADMIN,
-      active: true,
-      acceptedToS: TermsOfServiceStatus.ACCEPTED,
-    } as User);
-
-    const localUser = await User.save({
-      id: 2,
-      firstName: 'User',
-      type: UserType.LOCAL_USER,
-      active: true,
-      acceptedToS: TermsOfServiceStatus.ACCEPTED,
-    } as User);
-    const organUser = await (await UserFactory(await ORGAN_USER())).get();
+    const users = await seedUsers();
+    const adminUser = users.filter((u => u.type === UserType.LOCAL_ADMIN))[0];
+    const localUser = users.filter((u => u.type === UserType.LOCAL_USER))[0];
+    const organUser = users.filter((u => u.type === UserType.ORGAN))[0];
+    const feut1 = users.filter((u) => u.type === UserType.MEMBER)[0];
+    const feut2 = users.filter((u) => u.type === UserType.MEMBER)[1];
+    const bestuur1 = users.filter((u) => u.type === UserType.MEMBER)[2];
 
     const categories = await seedProductCategories();
     const vatGroups = await seedVatGroups();
@@ -130,12 +130,6 @@ describe('PointOfSaleController', async () => {
     const { containers, containerRevisions } = await seedContainers([adminUser, organUser], productRevisions);
     const { pointsOfSale, pointOfSaleRevisions } = await seedPointsOfSale([adminUser, organUser], containerRevisions);
 
-    const validPOSRequest: CreatePointOfSaleRequest = {
-      containers: containers.filter((c) => c.deletedAt == null).slice(0, 3).map((c) => c.id),
-      name: 'Valid POS',
-      useAuthentication: true,
-      ownerId: 2,
-    };
     const all = { all: new Set<string>(['*']) };
     const own = { own: new Set<string>(['*']) };
     const organ = { organ: new Set<string>(['*']) };
@@ -180,8 +174,29 @@ describe('PointOfSaleController', async () => {
         },
       },
       assignmentCheck: async () => true,
+    }, {
+      name: 'BAC Feuten',
+      permissions: {},
+      assignmentCheck: async (user) => user.id === feut1.id || user.id === feut2.id,
+    }, {
+      name: 'Bestuur',
+      permissions: {},
+      assignmentCheck: async (user) => user.id === bestuur1.id,
+    }, {
+      name: 'SYSTEM',
+      permissions: {},
+      systemDefault: true,
+      assignmentCheck: async () => false,
     }]);
     const roleManager = await new RoleManager().initialize();
+
+    const validPOSRequest: CreatePointOfSaleRequest = {
+      containers: containers.filter((c) => c.deletedAt == null).slice(0, 3).map((c) => c.id),
+      name: 'Valid POS',
+      useAuthentication: true,
+      ownerId: 2,
+      cashierRoleIds: [roles.find((r) => r.role.name === 'BAC Feuten').role.id],
+    };
 
     const adminToken = await tokenHandler.signToken(await getToken(adminUser, roles), 'nonce');
     const userToken = await tokenHandler.signToken(await getToken(localUser, roles), 'nonce');
@@ -213,6 +228,10 @@ describe('PointOfSaleController', async () => {
       localUser,
       organUser,
       organMemberToken,
+      feut1,
+      feut2,
+      bestuur1,
+      roles,
     };
   });
 
@@ -561,6 +580,22 @@ describe('PointOfSaleController', async () => {
         containers: [containerId],
       };
       await expectError(invalidRequest, `Containers: ${INVALID_CONTAINER_ID(containerId).value}`);
+    });
+    it('should verify cashier roles exist', async () => {
+      const roleId = ctx.roles.length + 10;
+      const invalidRequest = {
+        ...ctx.validPOSRequest,
+        cashierRoleIds: [roleId],
+      };
+      await expectError(invalidRequest, `cashierRoleIds: ${INVALID_ROLE_ID(roleId).value}`);
+    });
+    it('should verify cashier role is not system default', async () => {
+      const roleId = ctx.roles.find((r) => r.role.systemDefault).role.id;
+      const invalidRequest = {
+        ...ctx.validPOSRequest,
+        cashierRoleIds: [roleId],
+      };
+      await expectError(invalidRequest, `cashierRoleIds: ${INVALID_CUSTOM_ROLE_ID(roleId).value}`);
     });
   }
   describe('POST /pointsofsale', () => {

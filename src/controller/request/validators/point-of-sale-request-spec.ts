@@ -29,7 +29,7 @@ import stringSpec from './string-spec';
 import {
   INVALID_CONTAINER_ID,
 } from './validation-errors';
-import { userMustExist } from './general-validators';
+import { rolesCannotBeSystemDefault, rolesMustExist, userMustExist } from './general-validators';
 import { verifyContainerRequest } from './container-request-spec';
 
 /**
@@ -53,6 +53,7 @@ const basePointOfSaleRequestSpec:<T extends BasePointOfSaleParams>() =>
 Specification<T, ValidationError> = () => [
   [stringSpec(), 'name', new ValidationError('Name:')],
   [[createArrayRule([validContainerRequestOrId])], 'containers', new ValidationError('Containers:')],
+  [[rolesMustExist, rolesCannotBeSystemDefault], 'cashierRoleIds', new ValidationError('cashierRoleIds:')],
 ];
 
 /**

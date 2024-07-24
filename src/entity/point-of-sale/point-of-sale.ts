@@ -23,7 +23,7 @@ import {
 } from 'typeorm';
 import BaseEntity from '../base-entity';
 import User from '../user/user';
-import Role from "../rbac/role";
+import Role from '../rbac/role';
 
 /**
  * @typedef {BaseEntity} PointOfSale
@@ -44,6 +44,12 @@ export default class PointOfSale extends BaseEntity {
   @ManyToOne(() => User, { nullable: false, eager: true })
   public owner: User;
 
+  /**
+   * Every user that belongs to at least one of such cashier roles can create
+   * transactions in this POS, if the POS does not require authentication.
+   * In contrary to owners, cashiers should not be able to open this POS or
+   * make changes to it. Note that owners are always able to create transactions.
+   */
   @ManyToMany(() => Role)
   @JoinTable()
   public cashierRoles: Role[];
