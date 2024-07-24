@@ -212,8 +212,10 @@ describe('PayoutRequestPdfService', async () => {
         status: 200,
       });
 
-      const payoutRequest = await PayoutRequest.findOne({ where: { id: 1 }, relations: ['requestedBy', 'payoutRequestStatus', 'transfer', 'transfer.to', 'transfer.from', 'pdf'] });
-      uploadPayoutStub.restore();
+      const payoutRequest = await PayoutRequest.findOne({ where: { id: 1 }, relations: ['requestedBy'] });
+      uploadPayoutStub.resolves({
+        hash: payoutRequest.getPdfParamHash(),
+      });
       createFileStub.resolves({
         downloadName: 'test',
         location: 'test',

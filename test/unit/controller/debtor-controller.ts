@@ -53,11 +53,11 @@ import {
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import { calculateBalance, calculateFine } from '../../helpers/balance';
 import Mailer from '../../../src/mailer';
-import sinon, {SinonSandbox, SinonSpy, SinonStub} from 'sinon';
+import sinon, { SinonSandbox, SinonSpy, SinonStub } from 'sinon';
 import nodemailer, { Transporter } from 'nodemailer';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
-import ReportPdfService from "../../../src/service/report-pdf-service";
+import ReportPdfService from '../../../src/service/report-pdf-service';
 import { getToken, seedRoles } from '../../seed/rbac';
 
 describe('DebtorController', () => {

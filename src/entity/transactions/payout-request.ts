@@ -63,7 +63,7 @@ export default class PayoutRequest extends BaseEntity {
   @Column({ nullable: true })
   public pdfId?: number;
 
-  @OneToOne(() => PayoutRequestPdf, { nullable: true, onDelete: 'RESTRICT' })
+  @OneToOne(() => PayoutRequestPdf, { eager: true, nullable: true, onDelete: 'RESTRICT' })
   @JoinColumn()
   public pdf?: PayoutRequestPdf;
 
