@@ -84,7 +84,7 @@ export default class GewisDBService {
 
     logger.info(`Syncing ${gewisUsers.length} users with GEWIS DB`);
     const updates: UserResponse[] = [];
-    const promises = gewisUsers.map(user => GewisDBService.updateUser(user).then((u) => {
+    const promises = gewisUsers.map(user => GewisDBService.updateUser(user, commit).then((u: UserResponse) => {
       if (u) updates.push(u);
     }));
 
