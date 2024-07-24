@@ -79,7 +79,7 @@ describe('Database', async (): Promise<void> => {
           const normalizedTypes = normalizeType(column.type);
           const matchedColumn = table.columns.find(dbColumn => dbColumn.name === column.databaseName);
           expect(matchedColumn).to.not.be.undefined;
-          expect(normalizedTypes).to.include(matchedColumn.type);
+          expect(normalizedTypes, `expect column ${entity.name}.${column.propertyName} type to match`).to.include(matchedColumn.type);
 
           expect(matchedColumn.isGenerated).to.eq(column.isGenerated);
           expect(matchedColumn.isArray).to.eq(column.isArray);

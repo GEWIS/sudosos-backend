@@ -51,6 +51,9 @@ import AuthenticationNfcRequest from '../../../src/controller/request/authentica
 import NfcAuthenticator from '../../../src/entity/authenticator/nfc-authenticator';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
+import { assignRole, seedRoles } from '../../seed/rbac';
+import Role from '../../../src/entity/rbac/role';
+import RoleResponse from '../../../src/controller/response/rbac/role-response';
 
 describe('AuthenticationController', async (): Promise<void> => {
   let ctx: {
@@ -64,12 +67,23 @@ describe('AuthenticationController', async (): Promise<void> => {
     user: User,
     user2: User,
     user3: User,
+    role: Role,
     request: AuthenticationMockRequest,
   };
 
   before(async () => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
+
+    const [role] = await seedRoles([{
+      name: 'Role',
+      permissions: {
+        Product: {
+          create: { all: new Set(['*']) },
+        },
+      },
+      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
+    }]);
 
     // Initialize context
     ctx = {
@@ -107,15 +121,13 @@ describe('AuthenticationController', async (): Promise<void> => {
         userId: 1,
         nonce: 'test',
       },
+      role: role.role,
     };
 
     process.env.NODE_ENV = 'development';
-
-    ctx.roleManager.registerRole({
-      name: 'Role',
-      permissions: {},
-      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
-    });
+    await Promise.all([ctx.user, ctx.user2, ctx.user3].map((u) => {
+      return assignRole(u, role);
+    }));
 
     await seedHashAuthenticator([ctx.user, ctx.user2], PinAuthenticator);
     await seedHashAuthenticator([ctx.user, ctx.user2], LocalAuthenticator);
@@ -156,12 +168,13 @@ describe('AuthenticationController', async (): Promise<void> => {
         .post('/authentication/mock')
         .send(ctx.request);
       expect(res.status).to.equal(200);
-      expect(ctx.specification.validateModel(
+      const validation = ctx.specification.validateModel(
         'AuthenticationResponse',
         res.body,
         false,
         true,
-      ).valid).to.be.true;
+      );
+      expect(validation.valid).to.be.true;
     });
     it('should be able to create token', async () => {
       const res = await request(ctx.app)
@@ -204,6 +217,23 @@ describe('AuthenticationController', async (): Promise<void> => {
       auth = res.body as AuthenticationResponse;
       token = await ctx.tokenHandler.verifyToken(auth.token);
       expect(token.roles).to.deep.equal(['Role']);
+      expect(auth.rolesWithPermissions.length).to.equal(1);
+      expect(auth.rolesWithPermissions[0]).to.deep.equal({
+        id: ctx.role.id,
+        name: ctx.role.name,
+        systemDefault: ctx.role.systemDefault,
+        userTypes: ctx.role.userTypes,
+        permissions: [{
+          entity: 'Product',
+          actions: [{
+            action: 'create',
+            relations: [{
+              relation: 'all',
+              attributes: ['*'],
+            }],
+          }],
+        }],
+      } as RoleResponse);
     });
     it('should give an HTTP 403 when not in development environment', async () => {
       process.env.NODE_ENV = 'production';

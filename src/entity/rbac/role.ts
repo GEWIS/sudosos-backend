@@ -15,28 +15,31 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-
-import {
-  Column, DeleteDateColumn, Entity, JoinTable, ManyToMany,
-} from 'typeorm';
 import BaseEntity from '../base-entity';
-import Role from '../rbac/role';
-
-/**
- * @typedef {BaseEntity} EventShift
- * @property {string} name - Name of the shift.
- * @property {boolean} default - Indicator whether the shift is a regular shift.
- */
+import { Column, Entity, OneToMany } from 'typeorm';
+import Permission from './permission';
+import AssignedRole from './assigned-role';
+import RoleUserType from './role-user-type';
+import { UserType } from '../user/user';
 
 @Entity()
-export default class EventShift extends BaseEntity {
-  @DeleteDateColumn()
-  public deletedAt?: Date | null;
-
-  @Column()
+export default class Role extends BaseEntity {
+  @Column({ unique: true })
   public name: string;
 
-  @ManyToMany(() => Role, { eager: true, onUpdate: 'CASCADE' })
-  @JoinTable()
-  public roles: Role[];
+  @OneToMany(() => AssignedRole, (assignedRole) => assignedRole.role)
+  public assignments: AssignedRole[];
+
+  @OneToMany(() => Permission, (permission) => permission.role)
+  public permissions: Permission[];
+
+  @Column({ default: false })
+  public systemDefault: boolean;
+
+  @OneToMany(() => RoleUserType, (r) => r.role, { eager: true })
+  public roleUserTypes: RoleUserType[];
+
+  public get userTypes(): UserType[] {
+    return this.roleUserTypes.map((r) => r.userType);
+  }
 }

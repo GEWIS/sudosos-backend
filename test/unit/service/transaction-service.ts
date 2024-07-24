@@ -54,6 +54,7 @@ import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import { createInvoiceWithTransfers, createTransactions } from './invoice-service';
 import { truncateAllTables } from '../../setup';
 import ProductRevision from '../../../src/entity/product/product-revision';
+import { calculateBalance } from '../../helpers/balance';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -156,7 +157,14 @@ describe('TransactionService', (): void => {
 
   describe('Verifiy balance', () => {
     it('should return true if the balance is sufficient', async () => {
-      expect(await TransactionService.verifyBalance(ctx.validTransReq)).to.be.true;
+      const transactionValue = ctx.validTransReq.totalPriceInclVat.amount;
+      const userWithSufficientBalance = ctx.users.find((u) => calculateBalance(
+        u, ctx.transactions, ctx.transactions.map((t) => t.subTransactions).flat(), [],
+      ).amount.getAmount() > transactionValue);
+      expect(await TransactionService.verifyBalance({
+        ...ctx.validTransReq,
+        from: userWithSufficientBalance.id,
+      })).to.be.true;
     });
     it('should return false if the balance is insuficient', async () => {
       expect(await TransactionService.verifyBalance({

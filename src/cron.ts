@@ -59,9 +59,7 @@ async function createCronTasks(): Promise<void> {
   dinero.defaultPrecision = parseInt(process.env.CURRENCY_PRECISION, 10);
 
   // Setup RBAC.
-  application.roleManager = new RoleManager();
-  const gewis = new Gewis(application.roleManager);
-  await gewis.registerRoles();
+  application.roleManager = await new RoleManager().initialize();
 
   await BalanceService.updateBalances({});
   const syncBalances = cron.schedule('41 1 * * *', () => {

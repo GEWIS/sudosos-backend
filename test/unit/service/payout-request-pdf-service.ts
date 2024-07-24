@@ -1,3 +1,20 @@
+/**
+ *  SudoSOS back-end API service.
+ *  Copyright (C) 2024  Study association GEWIS
+ *
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU Affero General Public License as published
+ *  by the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU Affero General Public License for more details.
+ *
+ *  You should have received a copy of the GNU Affero General Public License
+ *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
 import { Client } from 'pdf-generator-client';
 import sinon, { SinonStub } from 'sinon';
 import chai, { expect } from 'chai';
@@ -16,9 +33,9 @@ import FileService from '../../../src/service/file-service';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
-import PayoutRequest from "../../../src/entity/transactions/payout-request";
-import PayoutRequestPdfService from "../../../src/service/payout-request-pdf-service";
-import PayoutRequestPdf from "../../../src/entity/file/payout-request-pdf";
+import PayoutRequest from '../../../src/entity/transactions/payout-request';
+import PayoutRequestPdfService from '../../../src/service/payout-request-pdf-service';
+import PayoutRequestPdf from '../../../src/entity/file/payout-request-pdf';
 
 chai.use(deepEqualInAnyOrder);
 describe('PayoutRequestPdfService', async () => {

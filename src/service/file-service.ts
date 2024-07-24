@@ -182,7 +182,7 @@ export default class FileService {
     const entityRepo = getRepository(entity.constructor as new () => T);
     const entityPdf = getRepository(PdfType);
 
-    const hash = entity.getPdfParamHash()
+    const hash = entity.getPdfParamHash();
     if (pdf == null) {
       pdf = Object.assign(new PdfType(), {
         downloadName: '',

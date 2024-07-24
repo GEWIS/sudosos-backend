@@ -35,9 +35,10 @@ import MemberAuthenticator from '../../../src/entity/authenticator/member-authen
 import { LDAPGroup, LDAPResponse, LDAPUser } from '../../../src/helpers/ad';
 import userIsAsExpected from './authentication-service';
 import RoleManager from '../../../src/rbac/role-manager';
-import AssignedRole from '../../../src/entity/roles/assigned-role';
+import AssignedRole from '../../../src/entity/rbac/assigned-role';
 import { finishTestDB, restoreLDAPEnv, storeLDAPEnv } from '../../helpers/test-helpers';
 import { truncateAllTables } from '../../setup';
+import { seedRoles } from '../../seed/rbac';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -361,14 +362,14 @@ describe('AD Service', (): void => {
       stubs.push(clientBindStub);
       stubs.push(clientSearchStub);
 
-      const roleManager = new RoleManager();
-
-      roleManager.registerRole({
+      await seedRoles([{
         name: 'SudoSOS - Test',
         permissions: {
         },
-        assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: 'SudoSOS - Test', user: { id: user.id } } }) !== undefined,
-      });
+        assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: { name: 'SudoSOS - Test' }, user: { id: user.id } } }) !== undefined,
+      }]);
+
+      const roleManager = await new RoleManager().initialize();
 
       await ADService.syncUserRoles(roleManager);
       const auth = (await LDAPAuthenticator.findOne(
@@ -379,8 +380,8 @@ describe('AD Service', (): void => {
       userIsAsExpected(user, newUser);
 
       const users = await ADService.getUsers([newUser as LDAPUser, existingUser as LDAPUser]);
-      expect(await AssignedRole.findOne({ where: { role: 'SudoSOS - Test', user: { id: users[0].id } } })).to.exist;
-      expect(await AssignedRole.findOne({ where: { role: 'SudoSOS - Test', user: { id: users[1].id } } })).to.exist;
+      expect(await AssignedRole.findOne({ where: { role: { name: 'SudoSOS - Test' }, user: { id: users[0].id } } })).to.exist;
+      expect(await AssignedRole.findOne({ where: { role: { name: 'SudoSOS - Test' }, user: { id: users[1].id } } })).to.exist;
     });
   });
   describe('syncUsers function', () => {

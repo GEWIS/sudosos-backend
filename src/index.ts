@@ -66,6 +66,7 @@ import DebtorController from './controller/debtor-controller';
 import EventController from './controller/event-controller';
 import EventShiftController from './controller/event-shift-controller';
 import EventService from './service/event-service';
+import DefaultRoles from './rbac/default-roles';
 
 export class Application {
   app: express.Express;
@@ -97,9 +98,8 @@ export class Application {
  *                      and controller.
  */
 async function setupRbac(application: Application) {
-  // Setup GEWIS-specific module.
-  const gewis = new Gewis(application.roleManager);
-  await gewis.registerRoles();
+  // Synchronize SudoSOS system roles
+  await DefaultRoles.synchronize();
 
   // Define rbac controller and bind.
   const controller = new RbacController(
@@ -220,9 +220,7 @@ export default async function createApp(): Promise<Application> {
     application.app.use('/static/invoices', express.static('data/invoices'));
   }
 
-  // Setup RBAC.
-  application.roleManager = new RoleManager();
-  await setupRbac(application);
+  application.roleManager = await new RoleManager().initialize();
 
   application.app.use('/v1/stripe', new StripeWebhookController(
     {
@@ -234,6 +232,9 @@ export default async function createApp(): Promise<Application> {
   const tokenHandler = await createTokenHandler();
   // Setup token handler and authentication controller.
   await setupAuthentication(tokenHandler, application);
+
+  // Setup RBAC.
+  await setupRbac(application);
 
   await BalanceService.updateBalances({});
   const syncBalances = cron.schedule('41 1 * * *', () => {

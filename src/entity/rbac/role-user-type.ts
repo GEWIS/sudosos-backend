@@ -15,28 +15,22 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-
-import {
-  Column, DeleteDateColumn, Entity, JoinTable, ManyToMany,
-} from 'typeorm';
-import BaseEntity from '../base-entity';
-import Role from '../rbac/role';
+import { BaseEntity, Entity, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';
+import Role from './role';
+import { UserType } from '../user/user';
 
 /**
- * @typedef {BaseEntity} EventShift
- * @property {string} name - Name of the shift.
- * @property {boolean} default - Indicator whether the shift is a regular shift.
+ * Many-to-many relationship between user types and roles
  */
-
 @Entity()
-export default class EventShift extends BaseEntity {
-  @DeleteDateColumn()
-  public deletedAt?: Date | null;
+export default class RoleUserType extends BaseEntity {
+  @PrimaryColumn()
+  public roleId: number;
 
-  @Column()
-  public name: string;
+  @ManyToOne(() => Role, (r) => r.roleUserTypes, { cascade: true })
+  @JoinColumn({ name: 'roleId' })
+  public role: Role;
 
-  @ManyToMany(() => Role, { eager: true, onUpdate: 'CASCADE' })
-  @JoinTable()
-  public roles: Role[];
+  @PrimaryColumn()
+  public userType: UserType;
 }

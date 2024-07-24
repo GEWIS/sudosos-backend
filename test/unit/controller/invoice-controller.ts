@@ -67,6 +67,7 @@ import InvoicePdf from '../../../src/entity/file/invoice-pdf';
 import sinon from 'sinon';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
+import { getToken, seedRoles } from '../../seed/rbac';
 
 describe('InvoiceController', async () => {
   let ctx: {
@@ -125,22 +126,12 @@ describe('InvoiceController', async () => {
     const { transactions } = await seedTransactions([adminUser, localUser, invoiceUser], pointOfSaleRevisions);
     await seedInvoices([invoiceUser], transactions);
 
-    // create bearer tokens
-    const tokenHandler = new TokenHandler({
-      algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
-    });
-
-    const adminToken = await tokenHandler.signToken({ user: adminUser, roles: ['Admin'], lesser: false }, 'nonce admin');
-    const token = await tokenHandler.signToken({ user: localUser, roles: ['User'], lesser: false }, 'nonce');
-    const invoiceToken = await tokenHandler.signToken({ user: invoiceUser, roles: ['User'], lesser: false }, 'nonce');
-
     const app = express();
     const specification = await Swagger.initialize(app);
 
     const all = { all: new Set<string>(['*']) };
     const own = { own: new Set<string>(['*']) };
-    const roleManager = new RoleManager();
-    roleManager.registerRole({
+    const roles = await seedRoles([{
       name: 'Admin',
       permissions: {
         Invoice: {
@@ -151,9 +142,7 @@ describe('InvoiceController', async () => {
         },
       },
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
-    });
-
-    roleManager.registerRole({
+    }, {
       name: 'User',
       permissions: {
         Invoice: {
@@ -162,7 +151,17 @@ describe('InvoiceController', async () => {
       },
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_USER
           || user.type === UserType.INVOICE,
+    }]);
+    const roleManager = await new RoleManager().initialize();
+
+    // create bearer tokens
+    const tokenHandler = new TokenHandler({
+      algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
+
+    const adminToken = await tokenHandler.signToken(await getToken(adminUser, roles), 'nonce admin');
+    const token = await tokenHandler.signToken(await getToken(localUser, roles), 'nonce');
+    const invoiceToken = await tokenHandler.signToken(await getToken(invoiceUser, roles), 'nonce');
 
     const controller = new InvoiceController({ specification, roleManager });
     app.use(json());

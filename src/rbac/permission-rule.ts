@@ -15,28 +15,6 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+import Permission from '../entity/rbac/permission';
 
-import {
-  Column, DeleteDateColumn, Entity, JoinTable, ManyToMany,
-} from 'typeorm';
-import BaseEntity from '../base-entity';
-import Role from '../rbac/role';
-
-/**
- * @typedef {BaseEntity} EventShift
- * @property {string} name - Name of the shift.
- * @property {boolean} default - Indicator whether the shift is a regular shift.
- */
-
-@Entity()
-export default class EventShift extends BaseEntity {
-  @DeleteDateColumn()
-  public deletedAt?: Date | null;
-
-  @Column()
-  public name: string;
-
-  @ManyToMany(() => Role, { eager: true, onUpdate: 'CASCADE' })
-  @JoinTable()
-  public roles: Role[];
-}
+export default interface PermissionRule extends Pick<Permission, 'entity' | 'action' | 'relation' | 'attributes'> {}

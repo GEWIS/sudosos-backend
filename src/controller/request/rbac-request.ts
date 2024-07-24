@@ -15,28 +15,24 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-
-import {
-  Column, DeleteDateColumn, Entity, JoinTable, ManyToMany,
-} from 'typeorm';
-import BaseEntity from '../base-entity';
-import Role from '../rbac/role';
+import Role from '../../entity/rbac/role';
+import Permission from '../../entity/rbac/permission';
 
 /**
- * @typedef {BaseEntity} EventShift
- * @property {string} name - Name of the shift.
- * @property {boolean} default - Indicator whether the shift is a regular shift.
+ * @typedef {object} UpdateRoleRequest
+ * @property {string} name.required - Name of the role
+ */
+export interface UpdateRoleRequest extends Pick<Role, 'name'> {}
+
+/**
+ * @typedef {object} CreatePermissionParams
+ * @property {string} entity.required - Entity
+ * @property {string} action.required - Action
+ * @property {string} relation.required - Relation
+ * @property {Array.<string>} attributes.required - Attributes
  */
 
-@Entity()
-export default class EventShift extends BaseEntity {
-  @DeleteDateColumn()
-  public deletedAt?: Date | null;
-
-  @Column()
-  public name: string;
-
-  @ManyToMany(() => Role, { eager: true, onUpdate: 'CASCADE' })
-  @JoinTable()
-  public roles: Role[];
-}
+/**
+ * @typedef {Array.<CreatePermissionParams>} CreatePermissionsRequest
+ */
+export interface CreatePermissionParams extends Pick<Permission, 'entity' | 'action' | 'relation' | 'attributes'> {}

@@ -39,7 +39,6 @@ import {
 import InvoicePdf from '../entity/file/invoice-pdf';
 import FileService from './file-service';
 import InvoiceEntry from '../entity/invoices/invoice-entry';
-import { hashJSON } from '../helpers/hash';
 import { INVOICE_PDF_LOCATION } from '../files/storage';
 import { PdfGenerator } from '../entity/file/pdf-file';
 

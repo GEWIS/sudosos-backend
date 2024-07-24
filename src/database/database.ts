@@ -55,7 +55,7 @@ import StripeDepositStatus from '../entity/deposit/stripe-deposit-status';
 import PayoutRequest from '../entity/transactions/payout-request';
 import PayoutRequestStatus from '../entity/transactions/payout-request-status';
 import LDAPAuthenticator from '../entity/authenticator/ldap-authenticator';
-import AssignedRole from '../entity/roles/assigned-role';
+import AssignedRole from '../entity/rbac/assigned-role';
 import VatGroup from '../entity/vat-group';
 import LocalAuthenticator from '../entity/authenticator/local-authenticator';
 import ResetToken from '../entity/authenticator/reset-token';
@@ -75,6 +75,10 @@ import { PERSISTENT_TEST_DATABASES } from '../helpers/database';
 import PayoutRequestPdf from '../entity/file/payout-request-pdf';
 import { PayoutRequestPdf1720610649657 } from '../migrations/1720610649657-payout-request-pdf';
 import { SoftDeletes1720608140757 } from '../migrations/1720608140757-soft-deletes';
+import Role from '../entity/rbac/role';
+import Permission from '../entity/rbac/permission';
+import { DatabaseRbac1720624912620 } from '../migrations/1720624912260-database-rbac';
+import RoleUserType from '../entity/rbac/role-user-type';
 
 // We need to load the dotenv to prevent the env from being undefined.
 dotenv.config();
@@ -92,7 +96,12 @@ const options: DataSourceOptions = {
   password: process.env.TYPEORM_PASSWORD,
   synchronize: process.env.TYPEORM_SYNCHRONIZE === 'true',
   logging: process.env.TYPEORM_LOGGING === 'true',
-  migrations: [InvoiceRefactor1707251162194, SoftDeletes1720608140757, PayoutRequestPdf1720610649657],
+  migrations: [
+    InvoiceRefactor1707251162194,
+    SoftDeletes1720608140757,
+    PayoutRequestPdf1720610649657,
+    DatabaseRbac1720624912620,
+  ],
   extra: {
     authPlugins: {
       mysql_clear_password: () => () => Buffer.from(`${process.env.TYPEORM_PASSWORD}\0`),
@@ -144,6 +153,9 @@ const options: DataSourceOptions = {
     BaseFile,
     ProductImage,
     BannerImage,
+    Role,
+    RoleUserType,
+    Permission,
     AssignedRole,
     ResetToken,
     Event,
