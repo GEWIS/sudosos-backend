@@ -15,8 +15,6 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-
-
 import dinero from 'dinero.js';
 import bodyParser from 'body-parser';
 import { expect } from 'chai';
@@ -43,6 +41,7 @@ import {
 import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
+import VatGroup from '../../../src/entity/vat-group';
 
 describe('TransferService', async (): Promise<void> => {
   let ctx: {
@@ -51,6 +50,7 @@ describe('TransferService', async (): Promise<void> => {
     specification: SwaggerSpecification,
     users: User[],
     transfers: Transfer[],
+    vatGroups: VatGroup[],
   };
   before(async () => {
     const connection = await Database.initialize();
@@ -60,9 +60,9 @@ describe('TransferService', async (): Promise<void> => {
     const end = new Date('2001-02-12T01:57:45.271Z');
 
     const users = await seedUsers();
-    const vatGropus = await seedVatGroups();
+    const vatGroups = await seedVatGroups();
     const categories = await seedProductCategories();
-    const { productRevisions } = await seedProducts(users, categories, vatGropus);
+    const { productRevisions } = await seedProducts(users, categories, vatGroups);
     const { containerRevisions } = await seedContainers(users, productRevisions);
     const { pointOfSaleRevisions } = await seedPointsOfSale(users, containerRevisions);
     const transfers = await seedTransfers(users, begin, end);
@@ -86,6 +86,7 @@ describe('TransferService', async (): Promise<void> => {
       app,
       specification,
       users: users2,
+      vatGroups,
       transfers: transfers2.concat(fineTransfers),
     };
   });
@@ -207,6 +208,34 @@ describe('TransferService', async (): Promise<void> => {
       expect(lastEntry.description).to.equal(req.description);
       expect(lastEntry.from.id).to.equal(req.fromId);
       expect(lastEntry.to).to.be.undefined;
+    });
+  });
+  describe('createTransfer function', () => {
+    it('should be able to create a new transfer', async () => {
+      const req: TransferRequest = {
+        amount: {
+          amount: 10,
+          precision: dinero.defaultPrecision,
+          currency: dinero.defaultCurrency,
+        },
+        description: 'cool',
+        fromId: ctx.users[0].id,
+        toId: undefined,
+        vatId: ctx.vatGroups[0].id,
+      };
+      const resPost = await TransferService.createTransfer(req);
+      expect(resPost).to.not.be.null;
+
+      const res: PaginatedTransferResponse = await TransferService.getTransfers();
+      const transfers = res.records;
+      const lastEntry = transfers.reduce((prev, curr) => (prev.id < curr.id ? curr : prev));
+      expect(lastEntry.amountInclVat.amount).to.equal(req.amount.amount);
+      expect(lastEntry.amountInclVat.currency).to.equal(req.amount.currency);
+      expect(lastEntry.amountInclVat.precision).to.equal(req.amount.precision);
+      expect(lastEntry.description).to.equal(req.description);
+      expect(lastEntry.from.id).to.equal(req.fromId);
+      expect(lastEntry.to).to.be.undefined;
+      expect(lastEntry.vat.id).to.equal(req.vatId);
     });
   });
 });

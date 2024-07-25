@@ -35,7 +35,7 @@ import InvoiceService from './invoice-service';
 import StripeService from './stripe-service';
 import PayoutRequestService from './payout-request-service';
 import DebtorService from './debtor-service';
-import VatGroup from "../entity/vat-group";
+import VatGroup from '../entity/vat-group';
 
 export interface TransferFilterParameters {
   id?: number;
@@ -131,7 +131,7 @@ export default class TransferService {
         'deposit', 'deposit.depositStatus',
         'payoutRequest', 'payoutRequest.payoutRequestStatus', 'payoutRequest.requestedBy',
         'fine', 'fine.userFineGroup', 'fine.userFineGroup.user',
-        'waivedFines', 'waivedFines.fines', 'waivedFines.fines.userFineGroup',
+        'waivedFines', 'waivedFines.fines', 'waivedFines.fines.userFineGroup', 'vat',
       ],
       take,
       skip,
