@@ -30,7 +30,7 @@ import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import { PaginationParameters } from '../helpers/pagination';
 import { RequestWithToken } from '../middleware/token-middleware';
 import { asNumber } from '../helpers/validators';
-import { parseUserToBaseResponse } from '../helpers/revision-to-response';
+import { parseUserToBaseResponse, parseVatGroupToResponse } from '../helpers/revision-to-response';
 import InvoiceService from './invoice-service';
 import StripeService from './stripe-service';
 import PayoutRequestService from './payout-request-service';
@@ -56,7 +56,7 @@ export function parseGetTransferFilters(req: RequestWithToken): TransferFilterPa
 export default class TransferService {
   public static asTransferResponse(transfer: Transfer) : TransferResponse {
     return {
-      amount: transfer.amount.toObject(),
+      amountInclVat: transfer.amountInclVat.toObject(),
       from: parseUserToBaseResponse(transfer.from, false),
       to: parseUserToBaseResponse(transfer.to, false),
       id: transfer.id,
@@ -68,6 +68,7 @@ export default class TransferService {
       payoutRequest: transfer.payoutRequest ? PayoutRequestService.asBasePayoutRequestResponse(transfer.payoutRequest) : null,
       fine: transfer.fine ? DebtorService.asFineResponse(transfer.fine) : null,
       waivedFines: transfer.waivedFines ? DebtorService.asUserFineGroupResponse(transfer.waivedFines) : null,
+      vat: transfer.vat ? parseVatGroupToResponse(transfer.vat) : null,
     };
   }
 

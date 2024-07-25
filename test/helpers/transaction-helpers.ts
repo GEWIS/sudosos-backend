@@ -109,7 +109,7 @@ export async function addTransfer(
   const transfer = Object.assign(new Transfer(), {
     createdAt,
     updatedAt: createdAt,
-    amount: Dinero(amount),
+    amountInclVat: Dinero(amount),
     description: '',
     from,
     to,

@@ -25,21 +25,23 @@ import { BaseInvoiceResponse } from './invoice-response';
 import { StripeDepositResponse } from './stripe-response';
 import { BasePayoutRequestResponse } from './payout-request-response';
 import { FineResponse, UserFineGroupResponse } from './debtor-response';
+import { BaseVatGroupResponse } from './vat-group-response';
 
 /**
  * @typedef {allOf|BaseResponse} TransferResponse
  * @property {string} description.required - Description of the transfer
- * @property {Dinero} amount.required - Amount of money being transferred
+ * @property {Dinero} amountInclVat.required - Amount of money being transferred
  * @property {BaseUserResponse} from - from which user the money is being transferred
  * @property {BaseUserResponse} to - to which user the money is being transferred.
  * @property {BaseInvoiceResponse} invoice - invoice belonging to this transfer
  * @property {StripeDepositResponse} deposit - deposit belonging to this transfer
  * @property {BasePayoutRequestResponse} payoutRequest - payout request belonging to this transfer
  * @property {FineResponse} fine - fine belonging to this transfer
+ * @property {VatGroupResponse} vat - vat group belonging to this transfer
  * @property {UserFineGroupResponse} waivedFines - fines that have been waived by this transfer
  */
 export interface TransferResponse extends BaseResponse {
-  amount: DineroObjectResponse;
+  amountInclVat: DineroObjectResponse;
   description: string;
   from: BaseUserResponse;
   to: BaseUserResponse;
@@ -47,6 +49,7 @@ export interface TransferResponse extends BaseResponse {
   deposit?: StripeDepositResponse;
   payoutRequest?: BasePayoutRequestResponse;
   fine?: FineResponse;
+  vat?: BaseVatGroupResponse;
   waivedFines?: UserFineGroupResponse;
 }
 

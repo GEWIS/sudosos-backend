@@ -28,6 +28,7 @@ import StripeDeposit from '../deposit/stripe-deposit';
 import Invoice from '../invoices/invoice';
 import Fine from '../fine/fine';
 import UserFineGroup from '../fine/userFineGroup';
+import VatGroup from '../vat-group';
 
 /**
  * @typedef {BaseEntity} Transfer
@@ -35,7 +36,8 @@ import UserFineGroup from '../fine/userFineGroup';
  * null if money was deposited.
  * @property {User.model} to - The account to which the transaction is added. Can be null if
  * money was paid out.
- * @property {Dinero.model} amount.required - The amount of money transferred.
+ * @property {VatGroup.model} vat - The vat group of the transfer
+ * @property {Dinero.model} amountInclVat.required - The amount of money transferred.
  * @property {integer} type.required - The type of transfer.
  * @property {string} description - If the transfer is of type 'custom', this contains a
  * description of the transfer.
@@ -64,7 +66,10 @@ export default class Transfer extends BaseEntity {
     type: 'integer',
     transformer: DineroTransformer.Instance,
   })
-  public amount: Dinero;
+  public amountInclVat: Dinero;
+
+  @ManyToOne(() => VatGroup, { nullable: true })
+  public vat?: VatGroup;
 
   @Column({
     nullable: true,

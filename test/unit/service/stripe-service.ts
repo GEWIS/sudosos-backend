@@ -148,7 +148,7 @@ describe('StripeService', async (): Promise<void> => {
       await testStatusCreation(id, StripeDepositState.SUCCEEDED);
 
       deposit = await StripeService.getStripeDeposit(id, ['transfer', 'transfer.to', 'to']);
-      expect(ctx.dineroTransformer.to(deposit.transfer.amount))
+      expect(ctx.dineroTransformer.to(deposit.transfer.amountInclVat))
         .to.equal(ctx.dineroTransformer.to(deposit.amount));
       expect(deposit.transfer.to.id).to.equal(deposit.to.id);
     });

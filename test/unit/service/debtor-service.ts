@@ -367,7 +367,7 @@ describe('DebtorService', (): void => {
 
       const dbUserFineGroupNew = await UserFineGroup.findOne({ where: { id: userFineGroup.id }, relations: ['fines', 'waivedTransfer', 'user', 'user.currentFines'] });
       expect(dbUserFineGroupNew.waivedTransfer).to.not.be.null;
-      expect(dbUserFineGroupNew.waivedTransfer.amount.getAmount()).to.equal(amount);
+      expect(dbUserFineGroupNew.waivedTransfer.amountInclVat.getAmount()).to.equal(amount);
       expect(dbUserFineGroupNew.user.currentFines).to.be.null;
 
       // Cleanup
@@ -478,7 +478,7 @@ describe('DebtorService', (): void => {
       expect(f.transfer).to.not.be.undefined;
       expect(f.transfer.from.id).to.equal(f.userFineGroup.userId);
       expect(f.transfer.to).to.be.undefined;
-      expect(f.transfer.amount.getAmount()).to.equal(f.amount.getAmount());
+      expect(f.transfer.amountInclVat.getAmount()).to.equal(f.amount.getAmount());
       const balString = '-€' + (b.amount.getAmount() / 100).toFixed(2).substring(1);
       expect(f.transfer.description).to.equal(`Fine for balance of ${balString} on ${date.toLocaleDateString()}.`);
     }

@@ -1105,11 +1105,11 @@ export async function seedSingleFines(users: User[], transactions: Transaction[]
     }
 
     // Fine everyone 5 euros
-    const amount = dinero({ amount: 500 });
+    const amountInclVat = dinero({ amount: 500 });
     const transfer = Object.assign(new Transfer(), {
       from: u,
       fromId: u.id,
-      amount,
+      amountInclVat,
       description: 'Seeded fine',
     } as Transfer);
     const fine = await transfer.save().then(async (t) => {
@@ -1117,7 +1117,7 @@ export async function seedSingleFines(users: User[], transactions: Transaction[]
         fineHandoutEvent,
         userFineGroup,
         transfer: t,
-        amount,
+        amount: amountInclVat,
       } as Fine);
       return f.save();
     });

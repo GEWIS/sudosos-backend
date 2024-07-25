@@ -164,13 +164,13 @@ describe('TransferService', async (): Promise<void> => {
     it('should return corresponding waived fines if transfer has any', async () => {
       const user = ctx.users.find((u) => u.currentFines != null);
       const userFineGroup = user.currentFines;
-      const amount = userFineGroup.fines.reduce((sum, f) => sum.add(f.amount), DineroTransformer.Instance.from(0));
+      const amountInclVat = userFineGroup.fines.reduce((sum, f) => sum.add(f.amount), DineroTransformer.Instance.from(0));
 
       const t = await Transfer.save({
         toId: user.id,
         version: 1,
         description: '',
-        amount,
+        amountInclVat,
         waivedFines: userFineGroup,
       } as Transfer);
 
@@ -201,9 +201,9 @@ describe('TransferService', async (): Promise<void> => {
       const res: PaginatedTransferResponse = await TransferService.getTransfers();
       const transfers = res.records;
       const lastEntry = transfers.reduce((prev, curr) => (prev.id < curr.id ? curr : prev));
-      expect(lastEntry.amount.amount).to.equal(req.amount.amount);
-      expect(lastEntry.amount.currency).to.equal(req.amount.currency);
-      expect(lastEntry.amount.precision).to.equal(req.amount.precision);
+      expect(lastEntry.amountInclVat.amount).to.equal(req.amount.amount);
+      expect(lastEntry.amountInclVat.currency).to.equal(req.amount.currency);
+      expect(lastEntry.amountInclVat.precision).to.equal(req.amount.precision);
       expect(lastEntry.description).to.equal(req.description);
       expect(lastEntry.from.id).to.equal(req.fromId);
       expect(lastEntry.to).to.be.undefined;

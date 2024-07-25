@@ -259,9 +259,9 @@ export default class InvoiceService {
 
     // Extract amount from transfer
     const amount: DineroObjectRequest = {
-      amount: invoice.transfer.amount.getAmount(),
-      currency: invoice.transfer.amount.getCurrency(),
-      precision: invoice.transfer.amount.getPrecision(),
+      amount: invoice.transfer.amountInclVat.getAmount(),
+      currency: invoice.transfer.amountInclVat.getCurrency(),
+      precision: invoice.transfer.amountInclVat.getPrecision(),
     };
 
     // We create an undo transfer that sends the money back to the void.
