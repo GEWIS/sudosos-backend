@@ -22,7 +22,7 @@ import chai, { expect, request } from 'chai';
 import PointOfSaleController from '../../../src/controller/point-of-sale-controller';
 import User, { UserType } from '../../../src/entity/user/user';
 import {
-  seedContainers,
+  seedContainers, seedMemberAuthenticators,
   seedPointsOfSale,
   seedProductCategories,
   seedProducts,
@@ -32,6 +32,7 @@ import {
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
 import {
+  PointOfSaleAssociateUsersResponse,
   PointOfSaleResponse,
   PointOfSaleWithContainersResponse,
 } from '../../../src/controller/response/point-of-sale-response';
@@ -60,7 +61,9 @@ import RoleManager from '../../../src/rbac/role-manager';
 import Database from '../../../src/database/database';
 import TokenHandler from '../../../src/authentication/token-handler';
 import { SwaggerSpecification } from 'swagger-model-validator';
-import { getToken, SeededRole, seedRoles } from '../../seed/rbac';
+import { assignRoles, getToken, SeededRole, seedRoles } from '../../seed/rbac';
+import PointOfSaleService from '../../../src/service/point-of-sale-service';
+import MemberAuthenticator from '../../../src/entity/authenticator/member-authenticator';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -117,6 +120,10 @@ describe('PointOfSaleController', async () => {
     });
 
     const users = await seedUsers();
+    await seedMemberAuthenticators(
+      users.filter((u) => u.type !== UserType.ORGAN),
+      users.filter((u) => u.type === UserType.ORGAN),
+    );
     const adminUser = users.filter((u => u.type === UserType.LOCAL_ADMIN))[0];
     const localUser = users.filter((u => u.type === UserType.LOCAL_USER))[0];
     const organUser = users.filter((u => u.type === UserType.ORGAN))[0];
@@ -201,6 +208,9 @@ describe('PointOfSaleController', async () => {
     const adminToken = await tokenHandler.signToken(await getToken(adminUser, roles), 'nonce');
     const userToken = await tokenHandler.signToken(await getToken(localUser, roles), 'nonce');
     const organMemberToken = await tokenHandler.signToken(await getToken(localUser, roles, [organUser]), '1');
+    await assignRoles(feut1, roles);
+    await assignRoles(feut2, roles);
+    await assignRoles(bestuur1, roles);
 
     const controller = new PointOfSaleController({ specification: specification, roleManager });
     const containerController = new ContainerController({ specification: specification, roleManager });
@@ -363,6 +373,75 @@ describe('PointOfSaleController', async () => {
 
       expect(res.status).to.equal(403);
       expect(res.body).to.be.empty;
+    });
+  });
+  describe('GET /pointsofsale/:id/associates', () => {
+    let pointOfSale: PointOfSaleWithContainersResponse;
+
+    before(async () => {
+      pointOfSale = await PointOfSaleService.createPointOfSale({
+        ...ctx.validPOSRequest,
+        ownerId: ctx.organUser.id,
+      });
+    });
+
+    after(async () => {
+      await PointOfSaleRevision.delete({ pointOfSaleId: pointOfSale.id });
+      await PointOfSale.delete({ id: pointOfSale.id });
+    });
+
+    it('should return correct model', async () => {
+      const res = await request(ctx.app)
+        .get(`/pointsofsale/${pointOfSale.id}/associates`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+      const validation = ctx.specification.validateModel(
+        'PaginatedTransactionResponse',
+        res.body,
+        false,
+        true,
+      );
+      expect(validation.valid).to.be.true;
+    });
+    it('should return an HTTP 200 and all associate users if admin', async () => {
+      const res = await request(ctx.app)
+        .get(`/pointsofsale/${pointOfSale.id}/associates`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+
+      const pos = res.body as PointOfSaleAssociateUsersResponse;
+      expect(pos.owner.id).to.equal(pointOfSale.owner.id);
+
+      const members = await MemberAuthenticator.find({ where: { authenticateAsId: pos.owner.id } });
+      expect(pos.ownerMembers.length).to.be.at.least(1);
+      expect(pos.ownerMembers).to.be.lengthOf(members.length);
+      expect(pos.ownerMembers.map((r) => r.id)).to.deep.equalInAnyOrder(members.map((m) => m.userId));
+
+      expect(pos.cashiers).to.be.lengthOf(2);
+      expect(pos.cashiers.map((r) => r.id)).to.deep.equalInAnyOrder([ctx.feut1.id, ctx.feut2.id]);
+    });
+    it('should return an HTTP 403 if not admin and not connected via organ', async () => {
+      const pos = await PointOfSale.findOne({ where: { owner: { id: ctx.organUser.id } } });
+      const res = await request(ctx.app)
+        .get(`/pointsofsale/${pos.id}/associates`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(403);
+    });
+    it('should return an HTTP 404 if the point of sale is soft deleted', async () => {
+      const res = await request(ctx.app)
+        .get(`/pointsofsale/${ctx.deletedPointsOfSale[0].id}/associates`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(404);
+      expect(res.body).to.equal('Point of Sale not found.');
+    });
+    it('should return an HTTP 404 if the point of sale with given id does not exist', async () => {
+      const res = await request(ctx.app)
+        .get(`/pointsofsale/${(await PointOfSale.count({ withDeleted: true })) + 1}/associates`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(404);
+      expect(res.body).to.equal('Point of Sale not found.');
     });
   });
   describe('GET /pointsofsale/:id/transactions', () => {
@@ -841,7 +920,7 @@ describe('PointOfSaleController', async () => {
       expect(res.body).to.be.empty;
     });
     it('should return 404 if point of sale does not exist', async () => {
-      const pointOfSaleId = ctx.pointsOfSale.length + ctx.deletedPointsOfSale.length + 2;
+      const pointOfSaleId = ctx.pointsOfSale.length + ctx.deletedPointsOfSale.length + 3;
 
       const res = await request(ctx.app)
         .delete(`/pointsofsale/${pointOfSaleId}`)

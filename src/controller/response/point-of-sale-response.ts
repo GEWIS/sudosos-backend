@@ -63,3 +63,16 @@ export interface PaginatedPointOfSaleResponse {
 export interface PointOfSaleWithContainersResponse extends PointOfSaleResponse {
   containers: ContainerWithProductsResponse[],
 }
+
+/**
+ * @typedef {object} PointOfSaleAssociateUsersResponse
+ * @property {BaseUserResponse} owner.required - Owner of the POS
+ * @property {Array.<BaseUserResponse>} ownerMembers.required - Members that belong to the owner
+ * @property {Array.<BaseUserResponse>} cashiers.required - Users that belong to at least one
+ * cashier role of this point of sale
+ */
+export interface PointOfSaleAssociateUsersResponse {
+  owner: BaseUserResponse,
+  ownerMembers: BaseUserResponse[],
+  cashiers: BaseUserResponse[],
+}

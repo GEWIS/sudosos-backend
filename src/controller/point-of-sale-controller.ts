@@ -39,6 +39,7 @@ import {
 import userTokenInOrgan from '../helpers/token-helper';
 import TransactionService from '../service/transaction-service';
 import { PointOfSaleWithContainersResponse } from './response/point-of-sale-response';
+import UserService from '../service/user-service';
 
 export default class PointOfSaleController extends BaseController {
   private logger: Logger = log4js.getLogger('PointOfSaleController');
@@ -81,6 +82,12 @@ export default class PointOfSaleController extends BaseController {
         DELETE: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'delete', await PointOfSaleController.getRelation(req), 'PointOfSale', ['*']),
           handler: this.deletePointOfSale.bind(this),
+        },
+      },
+      '/:id(\\d+)/associates': {
+        GET: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', await PointOfSaleController.getRelation(req), 'PointOfSale', ['*']),
+          handler: this.returnPointOfSaleAssociates.bind(this),
         },
       },
       '/:id(\\d+)/transactions': {
@@ -357,6 +364,49 @@ export default class PointOfSaleController extends BaseController {
       res.status(200).json(transactions);
     } catch (error) {
       this.logger.error('Could not return point of sale transactions:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * GET /pointsofsale/{id}/associates
+   * @summary Returns a Point of Sale's associate users
+   * @operationId getPointOfSaleAssociates
+   * @tags pointofsale - Operations of the point of sale controller
+   * @param {integer} id.path.required - The id of the Point of Sale of which to get the associate users.
+   * @security JWT
+   * @return {PointOfSaleAssociateUsersResponse} 200 - The requested Point of Sale transactions
+   * @return {string} 404 - Not found error
+   * @return {string} 500 - Internal server error
+   */
+  public async returnPointOfSaleAssociates(req: RequestWithToken, res: Response): Promise<void> {
+    const { id } = req.params;
+    const pointOfSaleId = parseInt(id, 10);
+    this.logger.trace('Get Point of Sale associate users', id, 'by user', req.token.user);
+
+    try {
+      // Point of sale does not exist.
+      const pos = await PointOfSale.findOne({
+        where: { id: pointOfSaleId },
+        relations: { cashierRoles: true, owner: true },
+      });
+      if (!pos) {
+        res.status(404).json('Point of Sale not found.');
+        return;
+      }
+
+      const { owner } = pos;
+      const ownerMembers = await UserService.getUsers({ organId: pos.owner.id });
+      const cashiers = await UserService.getUsers({ assignedRoleIds: pos.cashierRoles.map((r) => r.id) });
+
+      const response = {
+        owner,
+        ownerMembers: ownerMembers.records,
+        cashiers: cashiers.records,
+      };
+      res.json(response);
+    } catch (error) {
+      this.logger.error('Could not return point of sale associate users:', error);
       res.status(500).json('Internal server error.');
     }
   }
