@@ -29,7 +29,7 @@ import Invoice from '../invoices/invoice';
 import Fine from '../fine/fine';
 import UserFineGroup from '../fine/userFineGroup';
 import VatGroup from '../vat-group';
-import WriteOff from "./write-off";
+import WriteOff from './write-off';
 
 /**
  * @typedef {BaseEntity} Transfer
