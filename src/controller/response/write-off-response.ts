@@ -20,6 +20,7 @@ import { DineroObjectResponse } from './dinero-response';
 import { TransferResponse } from './transfer-response';
 import { BaseVatGroupResponse } from './vat-group-response';
 import BaseResponse from './base-response';
+import { PaginationResult } from '../../helpers/pagination';
 
 /**
  * @typedef {allOf|BaseResponse} WriteOffResponse
@@ -35,4 +36,14 @@ export interface WriteOffResponse extends BaseResponse {
   transfer: TransferResponse
   vat: BaseVatGroupResponse
   pdf?: string
+}
+
+/**
+ * @typedef {object} PaginatedWriteOffResponse
+ * @property {PaginationResult} _pagination.required - Pagination metadata
+ * @property {Array.<WriteOffResponse>} records.required - Returned write offs
+ */
+export interface PaginatedWriteOffResponse {
+  _pagination: PaginationResult,
+  records: WriteOffResponse[],
 }

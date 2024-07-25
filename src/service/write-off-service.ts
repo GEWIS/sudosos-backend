@@ -16,12 +16,53 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import WriteOff from '../entity/transactions/write-off';
-import { parseUserToBaseResponse } from '../helpers/revision-to-response';
+import { parseUserToBaseResponse, parseVatGroupToResponse } from '../helpers/revision-to-response';
 import TransferService from './transfer-service';
-import { WriteOffResponse } from '../controller/response/write-off-response';
+import { PaginatedWriteOffResponse, WriteOffResponse } from '../controller/response/write-off-response';
+import QueryFilter, { FilterMapping } from '../helpers/query-filter';
+import {
+  EntityManager,
+  FindManyOptions,
+  FindOptionsRelations,
+  FindOptionsWhere,
+} from 'typeorm';
+import ContainerRevision from '../entity/container/container-revision';
+import { PaginationParameters } from '../helpers/pagination';
+import User from '../entity/user/user';
+import BalanceService from './balance-service';
+import DineroTransformer from '../entity/transformer/dinero-transformer';
+import UserService from './user-service';
+import { RequestWithToken } from '../middleware/token-middleware';
+import { asNumber } from '../helpers/validators';
 
+export interface WriteOffFilterParameters {
+  /**
+   * Filter based on to user.
+   */
+  toId?: number;
+  /**
+   * Filter based on write-off id.
+   */
+  writeOffId?: number;
+  /**
+   * Filter based on the write-off amount.
+   */
+  amount?: number;
+}
+
+export function parseWriteOffFilterParameters(req: RequestWithToken): WriteOffFilterParameters {
+  return {
+    writeOffId: asNumber(req.query.writeOffId),
+    amount: asNumber(req.query.amount),
+    toId: asNumber(req.query.toId),
+  };
+}
 export default class WriteOffService {
-  public asWriteOffResponse(writeOff: WriteOff): WriteOffResponse {
+  /**
+   * Parses a write off object to a WriteOffResponse
+   * @param writeOff
+   */
+  public static asWriteOffResponse(writeOff: WriteOff): WriteOffResponse {
     return {
       amount: writeOff.amount.toObject(),
       id: writeOff.id,
@@ -29,7 +70,103 @@ export default class WriteOffService {
       updatedAt: writeOff.updatedAt.toISOString(),
       to: parseUserToBaseResponse(writeOff.to, false),
       transfer: writeOff.transfer ? TransferService.asTransferResponse(writeOff.transfer) : undefined,
+      vat: writeOff.transfer.vat ? parseVatGroupToResponse(writeOff.transfer.vat) : undefined,
       // pdf: writeOff.pdf ? writeOff.pdf.downloadName : undefined,
     };
   }
+
+  /**
+   * Returns all write-offs with options.
+   * @param filters - The filtering parameters.
+   * @param pagination - The pagination options.
+   * @returns {Array.<WriteOffResponse>} - all write-offs
+   */
+  public static async getWriteOffs(filters: WriteOffFilterParameters = {}, pagination: PaginationParameters = {}): Promise<PaginatedWriteOffResponse> {
+    const { take, skip } = pagination;
+
+    const options = this.getOptions(filters);
+    const [data, count] = await WriteOff.findAndCount({ ...options, take, skip });
+
+    const records = data.map((writeOff) => this.asWriteOffResponse(writeOff));
+
+    return {
+      _pagination: {
+        take, skip, count,
+      },
+      records,
+    };
+  }
+
+  /**
+   * Creates a write-off for the given user
+   * @param manager - The entity manager to use
+   * @param user - The user to create the write-off for
+   */
+  public static async createWriteOff(manager: EntityManager, user: User): Promise<WriteOffResponse> {
+    const balance = await BalanceService.getBalance(user.id);
+    if (balance.amount.amount > 0) {
+      throw new Error('User has balance, cannot create write off');
+    }
+
+    const amount = DineroTransformer.Instance.from(balance.amount.amount);
+
+    const writeOff = Object.assign(new WriteOff(), {
+      to: user,
+      amount,
+    });
+
+    await manager.save(writeOff);
+    const transfer = await TransferService.createTransfer({
+      amount: {
+        amount: amount.getAmount(),
+        precision: amount.getPrecision(),
+        currency: amount.getCurrency(),
+      },
+      toId: user.id,
+      description: 'Write off',
+      fromId: null,
+    }, manager);
+
+    writeOff.transfer = transfer;
+    transfer.writeOff = writeOff;
+
+    await manager.save(transfer);
+    await manager.save(writeOff);
+
+    // User should now have 0 balance and can be closed
+    await UserService.closeUser(user.id, true);
+
+    return WriteOffService.asWriteOffResponse(writeOff);
+  }
+
+  /**
+   * Function that returns FindManyOptions based on the given parameters
+   * @param params
+   */
+  public static getOptions(params: WriteOffFilterParameters): FindManyOptions<WriteOff> {
+    const filterMapping: FilterMapping = {
+      toId: 'toId',
+      amount: 'amount',
+      vatId: 'vat.id',
+    };
+
+    const relations: FindOptionsRelations<WriteOff> = {
+      transfer: {
+        vat: true,
+      },
+    };
+
+    let where: FindOptionsWhere<ContainerRevision> = {
+      ...QueryFilter.createFilterWhereClause(filterMapping, params),
+    };
+
+    const options: FindManyOptions<WriteOff> = {
+      where,
+      order: { createdAt: 'ASC' },
+      relations,
+    };
+
+    return { ...options, relations };
+  }
+
 }
