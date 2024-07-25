@@ -252,7 +252,7 @@ export async function seedInvoices(users: User[], transactions: Transaction[]): 
     const transfer = Object.assign(new Transfer(), {
       from: null,
       to,
-      amount: dinero({
+      amountInclVat: dinero({
         amount: cost,
       }),
       description: `Invoice Transfer for ${cost}`,
@@ -1032,7 +1032,7 @@ export async function seedStripeDeposits(users: User[]): Promise<{
       const transfer = Object.assign(new Transfer(), {
         from: null,
         to,
-        amount,
+        amountInclVat:amount,
         description: `Deposit transfer for ${amount}`,
       });
       await transfer.save();
@@ -1239,7 +1239,7 @@ export async function seedPayoutRequests(users: User[]): Promise<{
       const transfer = Object.assign(new Transfer(), {
         from: requestedBy,
         to: null,
-        amount,
+        amountInclVat: amount,
         description: `Payout request for ${amount}`,
       });
       await transfer.save();
@@ -1278,7 +1278,7 @@ export async function seedTransfers(users: User[],
     }
     let newTransfer = Object.assign(new Transfer(), {
       description: '',
-      amount: dinero({ amount: 100 * (i + 1) }),
+      amountInclVat: dinero({ amount: 100 * (i + 1) }),
       from: undefined,
       to: users[i],
       createdAt: date,
@@ -1288,7 +1288,7 @@ export async function seedTransfers(users: User[],
 
     newTransfer = Object.assign(new Transfer(), {
       description: '',
-      amount: dinero({ amount: 50 * (i + 1) }),
+      amountInclVat: dinero({ amount: 50 * (i + 1) }),
       from: users[i],
       to: undefined,
       createdAt: date,

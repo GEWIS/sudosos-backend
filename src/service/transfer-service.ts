@@ -75,7 +75,7 @@ export default class TransferService {
   public static async createTransfer(request: TransferRequest, manager?: EntityManager) : Promise<Transfer> {
     const transfer = Object.assign(new Transfer(), {
       description: request.description,
-      amount: dinero(request.amount as Dinero.Options),
+      amountInclVat: dinero(request.amount as Dinero.Options),
       from: request.fromId ? await User.findOne({ where: { id: request.fromId } }) : undefined,
       to: request.toId ? await User.findOne({ where: { id: request.toId } }) : undefined,
     });
