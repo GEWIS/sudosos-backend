@@ -44,9 +44,15 @@ import User, { UserType } from '../entity/user/user';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
 import SubTransactionRow from '../entity/transactions/sub-transaction-row';
 import { parseUserToBaseResponse } from '../helpers/revision-to-response';
-import { collectByToId, collectProductsByRevision, reduceMapToInvoiceEntries } from '../helpers/transaction-mapper';
+import {
+  collectByToId,
+  collectProductsByRevision,
+  reduceMapToInvoiceEntries,
+  saveInvoiceEntries,
+} from '../helpers/transaction-mapper';
 import SubTransaction from '../entity/transactions/sub-transaction';
 import InvoiceUser, { InvoiceUserDefaults } from '../entity/user/invoice-user';
+import Transfer from '../entity/transactions/transfer';
 
 export interface InvoiceFilterParameters {
   /**
@@ -165,13 +171,14 @@ export default class InvoiceService {
   }
 
   /**
-   * Creates a Transfer for an Invoice from TransactionResponses
+   * Is a Transfer for an Invoice from TransactionResponses
    * @param forId - The user which receives the Invoice/Transfer
    * @param transactions - The array of transactions which to create the Transfer for
    * @param isCreditInvoice - If the invoice is a credit Invoice
+   * @param saveToDatabase - If transfer should be saved to the database
    */
   public static async createTransferFromTransactions(forId: number,
-    transactions: BaseTransactionResponse[], isCreditInvoice: boolean): Promise<TransferResponse> {
+    transactions: BaseTransactionResponse[], isCreditInvoice: boolean, saveToDatabase: boolean): Promise<TransferResponse | Transfer> {
     const dineroObjectRequest: DineroObjectRequest = {
       amount: 0,
       currency: dinero.defaultCurrency,
@@ -197,16 +204,22 @@ export default class InvoiceService {
       toId,
     };
 
-    return TransferService.postTransfer(transferRequest);
+    if (!saveToDatabase) {
+      const transfer = TransferService.createTransferFromRequest(transferRequest);
+      return transfer;
+    } else {
+      return TransferService.postTransfer(transferRequest);
+    }
   }
 
   /**
    * Creates InvoiceEntries from an array of Transactions
    * @param invoice - The invoice of which the entries are.
    * @param subTransactions - Array of sub transactions to parse.
+   * @param saveToDatabase - If the invoiceEntries should be saved.
    */
   public static async createInvoiceEntriesTransactions(invoice: Invoice,
-    subTransactions: SubTransaction[]): Promise<InvoiceEntry[]> {
+    subTransactions: SubTransaction[], saveToDatabase: boolean): Promise<InvoiceEntry[]> {
     const subTransactionRows = subTransactions.reduce<SubTransactionRow[]>((acc, cur) => acc.concat(cur.subTransactionRows), []);
 
     // Cumulative entries.
@@ -215,6 +228,9 @@ export default class InvoiceService {
     subTransactionRows.forEach((tSubRow) => collectProductsByRevision(entryMap, tSubRow));
 
     const invoiceEntries: InvoiceEntry[] = await reduceMapToInvoiceEntries(entryMap, invoice);
+    if (saveToDatabase) {
+      await saveInvoiceEntries(invoiceEntries);
+    }
     return invoiceEntries;
   }
 
@@ -226,6 +242,13 @@ export default class InvoiceService {
   private static async AddCustomEntries(invoice: Invoice,
     customEntries: InvoiceEntryRequest[]): Promise<void> {
     const promises: Promise<InvoiceEntry>[] = [];
+    const entries: InvoiceEntry[] = this.GenerateCustomEntries(invoice, customEntries);
+    entries.forEach((e) => promises.push(e.save()));
+    await Promise.all(promises);
+  }
+
+  private static GenerateCustomEntries(invoice: Invoice, customEntries: InvoiceEntryRequest[]): InvoiceEntry[] {
+    const customInvoiceEntries: InvoiceEntry[]  = [];
     customEntries.forEach((request) => {
       const { description, amount, vatPercentage } = request;
       const entry = Object.assign(new InvoiceEntry(), {
@@ -235,9 +258,9 @@ export default class InvoiceService {
         priceInclVat: DineroTransformer.Instance.from(request.priceInclVat.amount),
         vatPercentage,
       });
-      promises.push(entry.save());
+      customInvoiceEntries.push(entry);
     });
-    await Promise.all(promises);
+    return customInvoiceEntries;
   }
 
   static isState(invoice: Invoice, state: InvoiceState): boolean {
@@ -517,7 +540,7 @@ export default class InvoiceService {
     }
 
     const transactions = (await TransactionService.getTransactions(params, {})).records;
-    const transfer = await this.createTransferFromTransactions(forId, transactions, isCreditInvoice);
+    const transfer = await this.createTransferFromTransactions(forId, transactions, isCreditInvoice, true);
 
     // Create a new Invoice
     const newInvoice: Invoice = Object.assign(new Invoice(), {
@@ -541,21 +564,21 @@ export default class InvoiceService {
       state: InvoiceState.CREATED,
     });
 
+    const subTransactions = await this.getSubTransactionsInvoice(newInvoice, transactions, isCreditInvoice);
     // First save the Invoice, then the status.
     await Invoice.save(newInvoice).then(async () => {
       newInvoice.invoiceStatus.push(invoiceStatus);
       await InvoiceStatus.save(invoiceStatus);
 
-      const subTransactions = await this.getSubTransactionsInvoice(newInvoice, transactions, isCreditInvoice);
-      await this.setSubTransactionInvoice(newInvoice, subTransactions);
-
-      await this.createInvoiceEntriesTransactions(newInvoice, subTransactions);
+      await this.createInvoiceEntriesTransactions(newInvoice, subTransactions, true);
       if (invoiceRequest.customEntries) {
         await this.AddCustomEntries(newInvoice, invoiceRequest.customEntries);
       }
       if (!isCreditInvoice) {
         await this.createTransfersInvoiceSellers(newInvoice);
       }
+
+      await this.setSubTransactionInvoice(newInvoice, subTransactions);
     });
 
     const options = this.getOptions({ invoiceId: newInvoice.id, returnInvoiceEntries: true });
