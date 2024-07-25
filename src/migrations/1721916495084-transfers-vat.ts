@@ -15,18 +15,31 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { MigrationInterface, QueryRunner } from 'typeorm';
+import {MigrationInterface, QueryRunner, TableColumn, TableForeignKey} from 'typeorm';
 
 export class TransfersVat1721916495084 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query('ALTER TABLE "transfer" RENAME COLUMN "amount" TO "amountInclVat"');
-    await queryRunner.query('ALTER TABLE "transfer" ADD "vatId" integer');
-    await queryRunner.query('ALTER TABLE "transfer" ADD CONSTRAINT "FK_vatGroup" FOREIGN KEY ("vatId") REFERENCES "vat_group"("id") ON DELETE NO ACTION ON UPDATE NO ACTION');
+    await queryRunner.renameColumn('transfer', 'amount', 'amountInclVat');
+    await queryRunner.addColumn('transfer', new TableColumn({
+      name: 'vatId',
+      type: 'integer',
+      isNullable: true,
+    }));
+    await queryRunner.createForeignKey('transfer', new TableForeignKey({
+      columnNames: ['vatId'],
+      referencedColumnNames: ['id'],
+      referencedTableName: 'vat_group',
+      onDelete: 'SET NULL',
+    }));
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query('ALTER TABLE "transfer" DROP CONSTRAINT "FK_vatGroup"');
-    await queryRunner.query('ALTER TABLE "transfer" DROP COLUMN "vatId"');
-    await queryRunner.query('ALTER TABLE "transfer" RENAME COLUMN "amountInclVat" TO "amount"');
+    const transferTable = await queryRunner.getTable('transfer');
+    const transferForeignKey = transferTable.foreignKeys.find(fk => fk.columnNames.indexOf('vatId') !== -1);
+    if (transferForeignKey) {
+      await queryRunner.dropForeignKey('transfer', transferForeignKey);
+    }
+    await queryRunner.dropColumn('transfer', 'vatId');
+    await queryRunner.renameColumn('transfer', 'amountInclVat', 'amount');
   }
 }
