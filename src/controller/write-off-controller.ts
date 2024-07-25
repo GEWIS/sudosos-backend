@@ -46,7 +46,7 @@ export default class WriteOffController extends BaseController {
         POST: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'create', 'all', 'WriteOff', ['*']),
           handler: this.createWriteOff.bind(this),
-          body: { modelName: 'CreateWriteOffRequest' },
+          body: { modelName: 'WriteOffRequest' },
         },
       },
       '/:id(\\d+)': {
