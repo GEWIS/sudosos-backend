@@ -81,6 +81,7 @@ import { DatabaseRbac1720624912620 } from '../migrations/1720624912260-database-
 import RoleUserType from '../entity/rbac/role-user-type';
 import { TransfersVat1721916495084 } from '../migrations/1721916495084-transfers-vat';
 import { PosCashiers1722022351000 } from '../migrations/1722022351000-pos-cashiers';
+import WriteOff from '../entity/transactions/write-off';
 import ServerSetting from '../entity/server-setting';
 import { ServerSettings1722083254200 } from '../migrations/1722083254200-server-settings';
 import { PosUsers1722084520361 } from '../migrations/1722084520361-pos-users';
@@ -171,6 +172,7 @@ const options: DataSourceOptions = {
     Event,
     EventShift,
     EventShiftAnswer,
+    WriteOff,
   ],
   subscribers: [
     TransactionSubscriber,
