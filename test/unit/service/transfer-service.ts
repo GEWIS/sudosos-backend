@@ -126,6 +126,59 @@ describe('TransferService', async (): Promise<void> => {
       expect(res.records).to.be.empty;
     });
 
+    it('should return all transfer after a given date', async () => {
+      const transfer = ctx.transfers[2];
+      const fromDate = transfer.createdAt;
+
+      const actualTransfers = ctx.transfers.filter((t) => t.createdAt.getTime() > fromDate.getTime());
+      // Sanity check
+      expect(actualTransfers.length).to.be.at.most(ctx.transfers.length - 2);
+      expect(actualTransfers.length).to.be.at.least(1);
+
+      const res = await TransferService.getTransfers({ fromDate });
+      expect(res.records).to.be.lengthOf(actualTransfers.length);
+      res.records.forEach((t) => {
+        expect(new Date(t.createdAt)).to.be.greaterThan(fromDate);
+      });
+    });
+
+    it('should return all transfer before a given date', async () => {
+      const transfer = ctx.transfers[2];
+      const tillDate = transfer.createdAt;
+
+      const actualTransfers = ctx.transfers.filter((t) => t.createdAt.getTime() < tillDate.getTime());
+      // Sanity check
+      expect(actualTransfers.length).to.be.at.most(ctx.transfers.length - 2);
+      expect(actualTransfers.length).to.be.at.least(1);
+
+      const res = await TransferService.getTransfers({ tillDate });
+      expect(res.records).to.be.lengthOf(actualTransfers.length);
+      res.records.forEach((t) => {
+        expect(new Date(t.createdAt)).to.be.lessThan(tillDate);
+      });
+    });
+
+    it('should return all transfer between a two dates', async () => {
+      const firstTransfer = ctx.transfers[2];
+      const fromDate = firstTransfer.createdAt;
+      const lastTransfer = ctx.transfers.filter((t) => t.createdAt.getTime() > fromDate.getTime())[2];
+      const tillDate = lastTransfer.createdAt;
+
+      const actualTransfers = ctx.transfers
+        .filter((t) => t.createdAt.getTime() > fromDate.getTime()
+          && t.createdAt.getTime() < tillDate.getTime());
+      // Sanity check
+      expect(actualTransfers.length).to.be.at.most(ctx.transfers.length - 2);
+      expect(actualTransfers.length).to.be.at.least(1);
+
+      const res = await TransferService.getTransfers({ fromDate, tillDate });
+      expect(res.records).to.be.lengthOf(actualTransfers.length);
+      res.records.forEach((t) => {
+        expect(new Date(t.createdAt)).to.be.greaterThan(fromDate);
+        expect(new Date(t.createdAt)).to.be.lessThan(tillDate);
+      });
+    });
+
     it('should return corresponding invoice if transfer has any', async () => {
       const transfer = ctx.transfers.filter((t) => t.invoice != null)[0];
       expect(transfer).to.not.be.undefined;
