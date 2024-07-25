@@ -21,15 +21,17 @@ import { DineroObjectRequest } from './dinero-request';
 
 /**
  * @typedef {object} TransferRequest
- * @property {string} description - Description of the transfer
- * @property {DineroObjectRequest} amount - Amount of money being transferred
- * @property {integer} type - Type of transfer
- * @property {integer} fromId - from which user the money is being transferred
- * @property {integer} toId - to which user the money is being transferred.
+ * @property {string} description.required - Description of the transfer.
+ * @property {DineroObjectRequest} amount.required - Amount of money being transferred.
+ * @property {integer} type.required - Type of transfer.
+ * @property {integer} fromId.required - from which user the money is being transferred.
+ * @property {integer} toId.required - to which user the money is being transferred.
+ * @property {integer} vatId - The vat group id for the transfer.
  */
 export default interface TransferRequest {
   amount: DineroObjectRequest;
   description: string;
   fromId: number;
   toId: number;
+  vatId?: number;
 }

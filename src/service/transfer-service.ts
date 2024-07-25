@@ -35,6 +35,7 @@ import InvoiceService from './invoice-service';
 import StripeService from './stripe-service';
 import PayoutRequestService from './payout-request-service';
 import DebtorService from './debtor-service';
+import VatGroup from "../entity/vat-group";
 
 export interface TransferFilterParameters {
   id?: number;
@@ -78,6 +79,7 @@ export default class TransferService {
       amountInclVat: dinero(request.amount as Dinero.Options),
       from: request.fromId ? await User.findOne({ where: { id: request.fromId } }) : undefined,
       to: request.toId ? await User.findOne({ where: { id: request.toId } }) : undefined,
+      vat: request.vatId ? await VatGroup.findOne({ where: { id: request.vatId } }) : undefined,
     });
 
     if (manager) {
