@@ -267,7 +267,7 @@ describe('InvoiceService', () => {
       expect(transactions).to.not.be.empty;
       const transfer: TransferResponse = (
         await InvoiceService.createTransferFromTransactions(toId, transactions, false));
-      expect(transfer.amount.amount).to.be.equal(value);
+      expect(transfer.amountInclVat.amount).to.be.equal(value);
       expect(transfer.to.id).to.be.equal(toId);
     });
   });
@@ -326,7 +326,7 @@ describe('InvoiceService', () => {
           const invoice = await InvoiceService.createInvoice(
             createInvoiceRequest,
           );
-          expect(invoice.transfer.amount.getAmount()).is.equal(total);
+          expect(invoice.transfer.amountInclVat.getAmount()).is.equal(total);
           expect(
             (await BalanceService.getBalance(debtor.id)).amount.amount,
           ).is.equal(-1 * transactionsBeforeDate.total);
@@ -366,7 +366,7 @@ describe('InvoiceService', () => {
           const invoice = await InvoiceService.createInvoice(
             createInvoiceRequest,
           );
-          expect(invoice.transfer.amount.getAmount()).is.equal(
+          expect(invoice.transfer.amountInclVat.getAmount()).is.equal(
             chosenTransactions.reduce(
               (sum, current) => sum + current.amount,
               0,
@@ -411,7 +411,7 @@ describe('InvoiceService', () => {
             createInvoiceRequest,
           );
 
-          expect(invoice.transfer.amount.getAmount()).is.equal(total);
+          expect(invoice.transfer.amountInclVat.getAmount()).is.equal(total);
           expect(
             (await BalanceService.getBalance(debtor.id)).amount.amount,
             'balance after final invoice',
@@ -548,7 +548,7 @@ describe('InvoiceService', () => {
         const creditorBalance = await BalanceService.getBalance(creditor.id);
         const transfer = await Transfer.findOne({ where: { from: { id: creditor.id } } });
         expect(transfer).to.not.be.undefined;
-        expect(transfer.amount.getAmount()).to.eq(invoice.transfer.amount.getAmount());
+        expect(transfer.amountInclVat.getAmount()).to.eq(invoice.transfer.amountInclVat.getAmount());
         expect(creditorBalance.amount.amount).to.eq(0);
       });
     });
@@ -761,7 +761,7 @@ describe('InvoiceService', () => {
           // Check if the balance has been decreased
           expect(
             (await BalanceService.getBalance(debtor.id)).amount.amount,
-          ).is.equal(-1 * invoice.transfer.amount.getAmount());
+          ).is.equal(-1 * invoice.transfer.amountInclVat.getAmount());
         },
       );
     });
@@ -776,9 +776,9 @@ describe('InvoiceService', () => {
         await InvoiceService
           .updateInvoice(makeParamsState(invoice.addressee, invoice.description, creditor, invoice.id, InvoiceState.DELETED));
         expect((await BalanceService.getBalance(debtor.id)).amount.amount)
-          .is.equal(-1 * invoice.transfer.amount.getAmount());
+          .is.equal(-1 * invoice.transfer.amountInclVat.getAmount());
         expect((await BalanceService.getBalance(creditorBalance.id)).amount.amount)
-          .is.equal(invoice.transfer.amount.getAmount());
+          .is.equal(invoice.transfer.amountInclVat.getAmount());
       });
     });
     it('should delete invoice reference from subTransactions when Invoice is deleted', async () => {

@@ -374,7 +374,7 @@ export default class DebtorService {
         count.count++;
       }
       if (transfer.waivedFines != null) {
-        waivedAmount = waivedAmount.add(transfer.amount);
+        waivedAmount = waivedAmount.add(transfer.amountInclVat);
         count.waivedCount++;
       }
     });

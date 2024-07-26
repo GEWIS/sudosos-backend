@@ -241,7 +241,7 @@ describe('InvoicePdfService', async (): Promise<void> => {
       const total = 500 + 3 * 1090 + 5 * 1210;
       const lowVat = 270;
       const highVat = 1050;
-      invoice.transfer = { amount: DineroTransformer.Instance.from(total) } as Transfer;
+      invoice.transfer = { amountInclVat: DineroTransformer.Instance.from(total) } as Transfer;
 
       invoice.invoiceEntries = [{
         description: 'Product no VAT',

@@ -231,7 +231,7 @@ describe('VoucherGroupService', async (): Promise<void> => {
         expect(user.active, 'user inactive').to.equal(false);
         expect(user.acceptedToS).to.equal(TermsOfServiceStatus.NOT_REQUIRED);
         const transfers = await Transfer.find({ where: { toId: user.id } });
-        const balanceAmounts = transfers.map((transfer) => transfer.amount.getAmount());
+        const balanceAmounts = transfers.map((transfer) => transfer.amountInclVat.getAmount());
         const balance = balanceAmounts.reduce((a, b) => a + b);
         expect(balance, 'correct transfers').to.equal(params.balance.getAmount());
       }));
@@ -254,7 +254,7 @@ describe('VoucherGroupService', async (): Promise<void> => {
       await Promise.all(bkgRes.users.map(async (user) => {
         expect(user.active, 'user active').to.equal(true);
         const transfers = await Transfer.find({ where: { toId: user.id } });
-        const balanceAmounts = transfers.map((transfer) => transfer.amount.getAmount());
+        const balanceAmounts = transfers.map((transfer) => transfer.amountInclVat.getAmount());
         const balance = balanceAmounts.reduce((a, b) => a + b);
         expect(balance, 'correct transfers').to.equal(params.balance.getAmount());
       }));
@@ -298,7 +298,7 @@ describe('VoucherGroupService', async (): Promise<void> => {
       await Promise.all(bkgRes.users.map(async (user) => {
         expect(user.active, 'user inactive').to.equal(false);
         const transfers = await Transfer.find({ where: { toId: user.id } });
-        const balanceAmounts = transfers.map((transfer) => transfer.amount.getAmount());
+        const balanceAmounts = transfers.map((transfer) => transfer.amountInclVat.getAmount());
         const balance = balanceAmounts.reduce((a, b) => a + b);
         expect(balance, 'correct transfers').to.equal(params.balance.getAmount());
       }));
@@ -322,7 +322,7 @@ describe('VoucherGroupService', async (): Promise<void> => {
       await Promise.all(bkgRes.users.map(async (user) => {
         expect(user.active, 'user inactive').to.equal(false);
         const transfers = await Transfer.find({ where: { toId: user.id } });
-        const balanceAmounts = transfers.map((transfer) => transfer.amount.getAmount());
+        const balanceAmounts = transfers.map((transfer) => transfer.amountInclVat.getAmount());
         const balance = balanceAmounts.reduce((a, b) => a + b);
         expect(balance, 'correct transfers').to.equal(params.balance.getAmount());
       }));
@@ -346,7 +346,7 @@ describe('VoucherGroupService', async (): Promise<void> => {
       await Promise.all(bkgRes.users.map(async (user) => {
         expect(user.active, 'user inactive').to.equal(false);
         const transfers = await Transfer.find({ where: { toId: user.id } });
-        const balanceAmounts = transfers.map((transfer) => transfer.amount.getAmount());
+        const balanceAmounts = transfers.map((transfer) => transfer.amountInclVat.getAmount());
         const balance = balanceAmounts.reduce((a, b) => a + b);
         expect(balance, 'correct transfers').to.equal(params.balance.getAmount());
       }));
@@ -370,7 +370,7 @@ describe('VoucherGroupService', async (): Promise<void> => {
       await Promise.all(bkgRes.users.map(async (user) => {
         expect(user.active, 'user active').to.equal(true);
         const transfers = await Transfer.find({ where: { toId: user.id } });
-        const balanceAmounts = transfers.map((transfer) => transfer.amount.getAmount());
+        const balanceAmounts = transfers.map((transfer) => transfer.amountInclVat.getAmount());
         const balance = balanceAmounts.reduce((a, b) => a + b);
         expect(balance, 'correct transfers').to.equal(params.balance.getAmount());
       }));
@@ -394,7 +394,7 @@ describe('VoucherGroupService', async (): Promise<void> => {
       await Promise.all(bkgRes.users.map(async (user) => {
         expect(user.active, 'user active').to.equal(false);
         const transfers = await Transfer.find({ where: { toId: user.id } });
-        const balanceAmounts = transfers.map((transfer) => transfer.amount.getAmount());
+        const balanceAmounts = transfers.map((transfer) => transfer.amountInclVat.getAmount());
         const balance = balanceAmounts.reduce((a, b) => a + b);
         expect(balance, 'correct transfers').to.equal(params.balance.getAmount());
       }));
@@ -418,7 +418,7 @@ describe('VoucherGroupService', async (): Promise<void> => {
       await Promise.all(bkgRes.users.map(async (user) => {
         expect(user.active, 'user active').to.equal(false);
         const transfers = await Transfer.find({ where: { toId: user.id } });
-        const balanceAmounts = transfers.map((transfer) => transfer.amount.getAmount());
+        const balanceAmounts = transfers.map((transfer) => transfer.amountInclVat.getAmount());
         const balance = balanceAmounts.reduce((a, b) => a + b);
         expect(balance, 'correct transfers').to.equal(params.balance.getAmount());
       }));
@@ -444,8 +444,8 @@ describe('VoucherGroupService', async (): Promise<void> => {
         const transfersPos = await Transfer.find({ where: { toId: user.id } });
         const transfersNeg = await Transfer.find({ where: { fromId: user.id } });
         const balanceAmounts = [
-          ...transfersPos.map((transfer) => transfer.amount.getAmount()),
-          ...transfersNeg.map((transfer) => -transfer.amount.getAmount()),
+          ...transfersPos.map((transfer) => transfer.amountInclVat.getAmount()),
+          ...transfersNeg.map((transfer) => -transfer.amountInclVat.getAmount()),
         ];
         const balance = balanceAmounts.reduce((a, b) => a + b);
         expect(balance, 'correct transfers').to.equal(params.balance.getAmount());
@@ -486,7 +486,7 @@ describe('VoucherGroupService', async (): Promise<void> => {
       await Promise.all(bkgRes.users.map(async (user) => {
         expect(user.active, 'user inactive').to.equal(false);
         const transfers = await Transfer.find({ where: { toId: user.id } });
-        const balanceAmounts = transfers.map((transfer) => transfer.amount.getAmount());
+        const balanceAmounts = transfers.map((transfer) => transfer.amountInclVat.getAmount());
         const balance = balanceAmounts.reduce((a, b) => a + b);
         expect(balance, 'correct transfers').to.equal(paramss[0].balance.getAmount());
       }));
@@ -505,7 +505,7 @@ describe('VoucherGroupService', async (): Promise<void> => {
         await Promise.all(res.users.map(async (user) => {
           expect(user.active, 'user inactive').to.equal(false);
           const transfers = await Transfer.find({ where: { toId: user.id } });
-          const balanceAmounts = transfers.map((transfer) => transfer.amount.getAmount());
+          const balanceAmounts = transfers.map((transfer) => transfer.amountInclVat.getAmount());
           const balance = balanceAmounts.reduce((a, b) => a + b);
           expect(balance, 'correct transfers').to.equal(paramss[i].balance.getAmount());
         }));

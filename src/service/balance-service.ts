@@ -140,10 +140,10 @@ export default class BalanceService {
           + 'where 1 ';
     query = this.addWhereClauseForIds(query, parameters, 'st2.toId', params.ids);
     query += 'UNION ALL '
-        + 'select t2.fromId as `id`, amount*-1 as `amount`, null as `createdAt1`, t2.createdAt as `createdAt2` from `transfer` t2 where t2.fromId is not null ';
+        + 'select t2.fromId as `id`, amountInclVat*-1 as `amount`, null as `createdAt1`, t2.createdAt as `createdAt2` from `transfer` t2 where t2.fromId is not null ';
     query = this.addWhereClauseForIds(query, parameters, 'fromId', params.ids);
     query += 'UNION ALL '
-        + 'select t2.toId as `id`, amount as `amount`, null as `createdAt1`, t2.createdAt as `createdAt2` from `transfer` t2 where t2.toId is not null ';
+        + 'select t2.toId as `id`, amountInclVat as `amount`, null as `createdAt1`, t2.createdAt as `createdAt2` from `transfer` t2 where t2.toId is not null ';
     query = this.addWhereClauseForIds(query, parameters, 'toId', params.ids);
     query += ') as moneys '
         + 'group by moneys.id '
@@ -252,13 +252,13 @@ export default class BalanceService {
     query = this.addWhereClauseForIds(query, parameters, 'st2.toId', ids);
     query = this.addWhereClauseForDate(query, parameters, 't.createdAt', d);
     query += 'UNION ALL '
-      + 'select t2.fromId as `id`, t2.amount*-1 as `totalValue`, null as `transactionId`, t2.id as `transferId` from transfer t2 '
+      + 'select t2.fromId as `id`, t2.amountInclVat*-1 as `totalValue`, null as `transactionId`, t2.id as `transferId` from transfer t2 '
       + `left join ${balanceSubquery()} b on t2.fromId=b.userId `
       + 'where t2.createdAt > COALESCE(b.lastTransferDate, 0) ';
     query = this.addWhereClauseForIds(query, parameters, 't2.fromId', ids);
     query = this.addWhereClauseForDate(query, parameters, 't2.createdAt', d);
     query += 'UNION ALL '
-      + 'select t3.toId as `id`, t3.amount as `totalValue`, null as `transactionId`, t3.id as `transferId` from transfer t3 '
+      + 'select t3.toId as `id`, t3.amountInclVat as `totalValue`, null as `transactionId`, t3.id as `transferId` from transfer t3 '
       + `left join ${balanceSubquery()} b on t3.toId=b.userId `
       + 'where t3.createdAt > COALESCE(b.lastTransferDate, 0) ';
     query = this.addWhereClauseForIds(query, parameters, 't3.toId', ids);

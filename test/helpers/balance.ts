@@ -64,9 +64,9 @@ export function calculateBalance(user: User, transactions: Transaction[], subTra
       prev + (curr.amount * curr.product.priceInclVat.getAmount())
     ), 0);
   const valueTransfersOutgoing = transfersOutgoing
-    .reduce((prev, curr) => prev - curr.amount.getAmount(), 0);
+    .reduce((prev, curr) => prev - curr.amountInclVat.getAmount(), 0);
   const valueTransfersIncoming = transfersIncoming
-    .reduce((prev, curr) => prev + curr.amount.getAmount(), 0);
+    .reduce((prev, curr) => prev + curr.amountInclVat.getAmount(), 0);
 
   // Calculate the user's personal last transaction/transfer
   let lastTransaction: Transaction;

@@ -79,7 +79,7 @@ export default class VoucherGroupService {
   static async updateBalance(users: User[], balance: DineroFactory.Dinero, isPositive = true) {
     const transfers = users.map((user) => Object.assign(new Transfer(), {
       description: '',
-      amount: balance,
+      amountInclVat: balance,
       from: isPositive ? undefined : user,
       to: isPositive ? user : undefined,
     }));

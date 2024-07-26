@@ -38,7 +38,7 @@ export default class TransferSubscriber implements EntitySubscriberInterface {
     // If the new transfer is not included in the balance calculation, add it manually
     let currentBalance = balance.amount.amount;
     if (balance.lastTransferId < event.entity.id) {
-      currentBalance += event.entity.amount.getAmount();
+      currentBalance += event.entity.amountInclVat.getAmount();
     }
 
     // Remove currently unpaid fines when new balance is positive.

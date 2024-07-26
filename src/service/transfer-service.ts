@@ -30,11 +30,12 @@ import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import { PaginationParameters } from '../helpers/pagination';
 import { RequestWithToken } from '../middleware/token-middleware';
 import { asNumber } from '../helpers/validators';
-import { parseUserToBaseResponse } from '../helpers/revision-to-response';
+import { parseUserToBaseResponse, parseVatGroupToResponse } from '../helpers/revision-to-response';
 import InvoiceService from './invoice-service';
 import StripeService from './stripe-service';
 import PayoutRequestService from './payout-request-service';
 import DebtorService from './debtor-service';
+import VatGroup from '../entity/vat-group';
 
 export interface TransferFilterParameters {
   id?: number;
@@ -56,7 +57,8 @@ export function parseGetTransferFilters(req: RequestWithToken): TransferFilterPa
 export default class TransferService {
   public static asTransferResponse(transfer: Transfer) : TransferResponse {
     return {
-      amount: transfer.amount.toObject(),
+      amountInclVat: transfer.amountInclVat.toObject(),
+      amount: transfer.amountInclVat.toObject(),
       from: parseUserToBaseResponse(transfer.from, false),
       to: parseUserToBaseResponse(transfer.to, false),
       id: transfer.id,
@@ -68,15 +70,17 @@ export default class TransferService {
       payoutRequest: transfer.payoutRequest ? PayoutRequestService.asBasePayoutRequestResponse(transfer.payoutRequest) : null,
       fine: transfer.fine ? DebtorService.asFineResponse(transfer.fine) : null,
       waivedFines: transfer.waivedFines ? DebtorService.asUserFineGroupResponse(transfer.waivedFines) : null,
+      vat: transfer.vat ? parseVatGroupToResponse(transfer.vat) : null,
     };
   }
 
   public static async createTransfer(request: TransferRequest, manager?: EntityManager) : Promise<Transfer> {
     const transfer = Object.assign(new Transfer(), {
       description: request.description,
-      amount: dinero(request.amount as Dinero.Options),
+      amountInclVat: dinero(request.amount as Dinero.Options),
       from: request.fromId ? await User.findOne({ where: { id: request.fromId } }) : undefined,
       to: request.toId ? await User.findOne({ where: { id: request.toId } }) : undefined,
+      vat: request.vatId ? await VatGroup.findOne({ where: { id: request.vatId } }) : undefined,
     });
 
     if (manager) {
@@ -128,7 +132,7 @@ export default class TransferService {
         'deposit', 'deposit.depositStatus',
         'payoutRequest', 'payoutRequest.payoutRequestStatus', 'payoutRequest.requestedBy',
         'fine', 'fine.userFineGroup', 'fine.userFineGroup.user',
-        'waivedFines', 'waivedFines.fines', 'waivedFines.fines.userFineGroup',
+        'waivedFines', 'waivedFines.fines', 'waivedFines.fines.userFineGroup', 'vat',
       ],
       take,
       skip,
