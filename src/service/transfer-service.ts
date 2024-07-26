@@ -18,10 +18,7 @@
 
 
 import dinero, { Dinero } from 'dinero.js';
-import {
-  EntityManager,
-  FindManyOptions,
-} from 'typeorm';
+import { EntityManager, FindManyOptions, FindOptionsWhere, Raw } from 'typeorm';
 import Transfer from '../entity/transactions/transfer';
 import { PaginatedTransferResponse, TransferResponse } from '../controller/response/transfer-response';
 import TransferRequest from '../controller/request/transfer-request';
@@ -29,29 +26,31 @@ import User from '../entity/user/user';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import { PaginationParameters } from '../helpers/pagination';
 import { RequestWithToken } from '../middleware/token-middleware';
-import { asNumber } from '../helpers/validators';
+import { asDate, asNumber } from '../helpers/validators';
 import { parseUserToBaseResponse, parseVatGroupToResponse } from '../helpers/revision-to-response';
 import InvoiceService from './invoice-service';
 import StripeService from './stripe-service';
 import PayoutRequestService from './payout-request-service';
 import DebtorService from './debtor-service';
 import VatGroup from '../entity/vat-group';
+import { toMySQLString } from '../helpers/timestamps';
 
 export interface TransferFilterParameters {
   id?: number;
-  createdById?: number,
   fromId?: number,
   toId?: number
+  fromDate?: Date,
+  tillDate?: Date,
 }
 
 export function parseGetTransferFilters(req: RequestWithToken): TransferFilterParameters {
-  const filters: TransferFilterParameters = {
+  return {
     id: asNumber(req.query.id),
-    createdById: asNumber(req.query.id),
     fromId: asNumber(req.query.id),
     toId: asNumber(req.query.id),
+    fromDate: asDate(req.query.fromDate),
+    tillDate: asDate(req.query.tillDate),
   };
-  return filters;
 }
 
 export default class TransferService {
@@ -109,7 +108,34 @@ export default class TransferService {
       type: 'type',
     };
 
-    const whereClause = QueryFilter.createFilterWhereClause(filterMapping, filters);
+    let whereClause: FindOptionsWhere<Transfer> = QueryFilter.createFilterWhereClause(filterMapping, filters);
+
+    // Apply from/till date filters
+    if (filters.fromDate && filters.tillDate) {
+      whereClause = {
+        ...whereClause,
+        createdAt: Raw(
+          (alias) => `${alias} >= :fromDate AND ${alias} < :tillDate`,
+          { fromDate: toMySQLString(filters.fromDate), tillDate: toMySQLString(filters.tillDate) },
+        ),
+      };
+    } else if (filters.fromDate) {
+      whereClause = {
+        ...whereClause,
+        createdAt: Raw(
+          (alias) => `${alias} >= :fromDate`,
+          { fromDate: toMySQLString(filters.fromDate) },
+        ),
+      };
+    } else if (filters.tillDate) {
+      whereClause = {
+        ...whereClause,
+        createdAt: Raw(
+          (alias) => `${alias} < :tillDate`,
+          { tillDate: toMySQLString(filters.tillDate) },
+        ),
+      };
+    }
     let whereOptions: any = [];
 
     // Apparently this is how you make a and-or clause in typeorm without a query builder.

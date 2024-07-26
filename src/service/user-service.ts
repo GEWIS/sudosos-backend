@@ -17,19 +17,19 @@
  */
 
 import { RequestWithToken } from '../middleware/token-middleware';
-import { asBoolean, asNumber, asUserType } from '../helpers/validators';
+import { asBoolean, asDate, asNumber, asUserType } from '../helpers/validators';
 import { PaginationParameters } from '../helpers/pagination';
 import { PaginatedUserResponse, UserResponse } from '../controller/response/user-response';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import User, { LocalUserTypes, TermsOfServiceStatus, TOSRequired, UserType } from '../entity/user/user';
 import MemberAuthenticator from '../entity/authenticator/member-authenticator';
 import { CreateUserRequest, UpdateUserRequest } from '../controller/request/user-request';
-import TransactionService from './transaction-service';
+import TransactionService, { TransactionFilterParameters } from './transaction-service';
 import {
   FinancialMutationResponse,
   PaginatedFinancialMutationResponse,
 } from '../controller/response/financial-mutation-response';
-import TransferService from './transfer-service';
+import TransferService, { TransferFilterParameters } from './transfer-service';
 import Mailer from '../mailer';
 import WelcomeToSudosos from '../mailer/templates/welcome-to-sudosos';
 import { AcceptTosRequest } from '../controller/request/accept-tos-request';
@@ -54,6 +54,8 @@ export interface UserFilterParameters {
   assignedRoleIds?: number | number[],
 }
 
+export type FinancialMutationsFilterParams = TransactionFilterParameters & TransferFilterParameters;
+
 /**
  * Extracts UserFilterParameters from the RequestWithToken
  * @param req - Request to parse
@@ -75,6 +77,13 @@ export function parseGetUsersFilters(req: RequestWithToken): UserFilterParameter
     organId: asNumber(req.query.organ),
     deleted: req.query.active ? asBoolean(req.query.deleted) : false,
     type: asUserType(req.query.type),
+  };
+}
+
+export function parseGetFinancialMutationsFilters(req: RequestWithToken): FinancialMutationsFilterParams {
+  return {
+    fromDate: asDate(req.query.fromDate),
+    tillDate: asDate(req.query.tillDate),
   };
 }
 
@@ -274,10 +283,14 @@ export default class UserService {
   /**
    * Combined query to return a users transfers and transactions from the database
    * @param user - The user of which to get.
+   * @param filters - Filter parameters to adhere to
    * @param paginationParameters - Pagination Parameters to adhere to.
    */
-  public static async getUserFinancialMutations(user: User,
-    paginationParameters: PaginationParameters = {}): Promise<PaginatedFinancialMutationResponse> {
+  public static async getUserFinancialMutations(
+    user: User,
+    filters: FinancialMutationsFilterParams = {},
+    paginationParameters: PaginationParameters = {},
+  ): Promise<PaginatedFinancialMutationResponse> {
     // Since we are combining two different queries the pagination works a bit different.
     const take = (paginationParameters.skip ?? 0) + (paginationParameters.take ?? 0);
     const pagination: PaginationParameters = {
@@ -285,8 +298,8 @@ export default class UserService {
       skip: 0,
     };
 
-    const transactions = await TransactionService.getTransactions({}, pagination, user);
-    const transfers = await TransferService.getTransfers({}, pagination, user);
+    const transactions = await TransactionService.getTransactions(filters, pagination, user);
+    const transfers = await TransferService.getTransfers(filters, pagination, user);
     const financialMutations: FinancialMutationResponse[] = [];
 
     transactions.records.forEach((mutation) => {

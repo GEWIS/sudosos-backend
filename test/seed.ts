@@ -1395,7 +1395,7 @@ export interface DatabaseContent {
   localUsers: LocalAuthenticator[],
 }
 
-export default async function seedDatabase(): Promise<DatabaseContent> {
+export default async function seedDatabase(beginDate?: Date, endDate?: Date): Promise<DatabaseContent> {
   const users = await seedUsers();
   await seedMemberAuthenticators(
     users.filter((u) => u.type !== UserType.ORGAN),
@@ -1416,8 +1416,8 @@ export default async function seedDatabase(): Promise<DatabaseContent> {
     users, containerRevisions,
   );
   const { roles, roleAssignments, events, eventShifts, eventShiftAnswers } = await seedEvents(users);
-  const { transactions } = await seedTransactions(users, pointOfSaleRevisions);
-  const transfers = await seedTransfers(users);
+  const { transactions } = await seedTransactions(users, pointOfSaleRevisions, beginDate, endDate);
+  const transfers = await seedTransfers(users, beginDate, endDate);
   const { fines, fineTransfers, userFineGroups } = await seedFines(users, transactions, transfers);
   const { payoutRequests, payoutRequestTransfers } = await seedPayoutRequests(users);
   const { invoices, invoiceTransfers } = await seedInvoices(users, transactions);
