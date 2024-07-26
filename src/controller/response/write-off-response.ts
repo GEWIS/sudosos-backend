@@ -35,7 +35,7 @@ export interface BaseWriteOffResponse extends BaseResponse {
  * @typedef {allOf|BaseWriteOffResponse} WriteOffResponse
  * @property {TransferResponse} transfer.required - The transfer linked to the write-off
  */
-export interface WriteOffResponse extends BaseResponse {
+export interface WriteOffResponse extends BaseWriteOffResponse {
   transfer: TransferResponse
 }
 

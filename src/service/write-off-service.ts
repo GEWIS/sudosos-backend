@@ -21,7 +21,7 @@ import TransferService from './transfer-service';
 import {
   BaseWriteOffResponse,
   PaginatedWriteOffResponse,
-  WriteOffResponse
+  WriteOffResponse,
 } from '../controller/response/write-off-response';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import {
@@ -49,20 +49,19 @@ export interface WriteOffFilterParameters {
    * Filter based on write-off id.
    */
   writeOffId?: number;
-  /**
-   * Filter based on the write-off amount.
-   */
-  amount?: number;
 }
 
 export function parseWriteOffFilterParameters(req: RequestWithToken): WriteOffFilterParameters {
   return {
     writeOffId: asNumber(req.query.writeOffId),
-    amount: asNumber(req.query.amount),
     toId: asNumber(req.query.toId),
   };
 }
 export default class WriteOffService {
+  /**
+   * Parses a write-off object to a BaseWriteOffResponse
+   * @param writeOff
+   */
   public static asBaseWriteOffResponse(writeOff: WriteOff): BaseWriteOffResponse {
     return {
       id: writeOff.id,
@@ -164,8 +163,7 @@ export default class WriteOffService {
    */
   public static getOptions(params: WriteOffFilterParameters): FindManyOptions<WriteOff> {
     const filterMapping: FilterMapping = {
-      toId: 'toId',
-      amount: 'amount',
+      toId: 'to.id',
       writeOffId: 'id',
     };
 
