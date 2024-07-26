@@ -22,29 +22,31 @@ import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
 import chai, { expect } from 'chai';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
-import User from '../../../src/entity/user/user';
+import User, { UserType } from '../../../src/entity/user/user';
 import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
 import Database from '../../../src/database/database';
 import {
-  seedContainers, seedPointsOfSale,
-  seedProducts,
+  seedContainers,
+  seedPointsOfSale,
   seedProductCategories,
-  seedUsers, seedVatGroups,
+  seedProducts,
+  seedUsers,
+  seedVatGroups,
 } from '../../seed';
 import Swagger from '../../../src/start/swagger';
 import {
   PaginatedPointOfSaleResponse,
-  PointOfSaleResponse, PointOfSaleWithContainersResponse,
+  PointOfSaleResponse,
+  PointOfSaleWithContainersResponse,
 } from '../../../src/controller/response/point-of-sale-response';
 import PointOfSaleService from '../../../src/service/point-of-sale-service';
-import {
-  CreatePointOfSaleParams, UpdatePointOfSaleParams,
-} from '../../../src/controller/request/point-of-sale-request';
+import { CreatePointOfSaleParams, UpdatePointOfSaleParams } from '../../../src/controller/request/point-of-sale-request';
 import AuthenticationService from '../../../src/service/authentication-service';
 import MemberAuthenticator from '../../../src/entity/authenticator/member-authenticator';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
+import { SeededRole, seedRoles } from '../../seed/rbac';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -70,6 +72,7 @@ function requestUpdatedResponseEqual(request: CreatePointOfSaleParams,
   expect(request.name).to.equal(response.name);
   if (response.containers) expect(request.containers).to.deep.equalInAnyOrder(response.containers.map((c) => c.id));
   expect(request.ownerId).to.equal(response.owner.id);
+  expect(request.cashierRoleIds).to.deep.equalInAnyOrder(response.cashierRoles.map((r) => r.id));
 }
 
 function updateResponseEqual(update: UpdatePointOfSaleParams,
@@ -77,6 +80,7 @@ function updateResponseEqual(update: UpdatePointOfSaleParams,
   expect(update.id).to.equal(response.id);
   expect(update.name).to.equal(response.name);
   expect(update.containers).to.deep.equalInAnyOrder(response.containers.map((c) => c.id));
+  expect(update.cashierRoleIds).to.deep.equalInAnyOrder(response.cashierRoles.map((r) => r.id));
 }
 
 describe('PointOfSaleService', async (): Promise<void> => {
@@ -88,6 +92,10 @@ describe('PointOfSaleService', async (): Promise<void> => {
     pointsOfSale: PointOfSale[],
     deletedPointsOfSale: PointOfSale[],
     validPOSParams: CreatePointOfSaleParams,
+    roles: SeededRole[],
+    feut1: User,
+    feut2: User,
+    bestuur1: User,
   };
 
   before(async function before() {
@@ -110,6 +118,19 @@ describe('PointOfSaleService', async (): Promise<void> => {
       pointsOfSale,
     } = await seedPointsOfSale(users, containerRevisions);
 
+    const feut1 = users.filter((u) => u.type === UserType.MEMBER)[0];
+    const feut2 = users.filter((u) => u.type === UserType.MEMBER)[1];
+    const bestuur1 = users.filter((u) => u.type === UserType.MEMBER)[2];
+    const roles = await seedRoles([{
+      name: 'BAC Feuten',
+      permissions: {},
+      assignmentCheck: async (user) => user.id === feut1.id || user.id === feut2.id,
+    }, {
+      name: 'Bestuur',
+      permissions: {},
+      assignmentCheck: async (user) => user.id === bestuur1.id,
+    }]);
+
     const app = express();
     const specification = await Swagger.initialize(app);
     app.use(json());
@@ -119,6 +140,7 @@ describe('PointOfSaleService', async (): Promise<void> => {
       name: 'Valid POS',
       useAuthentication: true,
       ownerId: 1,
+      cashierRoleIds: [roles[0].role.id],
     };
 
     ctx = {
@@ -129,6 +151,10 @@ describe('PointOfSaleService', async (): Promise<void> => {
       pointsOfSale: pointsOfSale.filter((p) => p.deletedAt == null),
       deletedPointsOfSale: pointsOfSale.filter((p) => p.deletedAt != null),
       validPOSParams,
+      roles,
+      feut1,
+      feut2,
+      bestuur1,
     };
   });
 
@@ -252,6 +278,7 @@ describe('PointOfSaleService', async (): Promise<void> => {
         id: pointOfSale.id,
         name: 'Pos Updated Name',
         useAuthentication: true,
+        cashierRoleIds: [ctx.roles[1].role.id],
       };
 
       const response = (await PointOfSaleService.updatePointOfSale(update)) as PointOfSaleWithContainersResponse;

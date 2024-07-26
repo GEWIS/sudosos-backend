@@ -20,6 +20,7 @@ import BaseResponse from './base-response';
 import { ContainerWithProductsResponse } from './container-response';
 import { BaseUserResponse } from './user-response';
 import { PaginationResult } from '../../helpers/pagination';
+import RoleResponse from './rbac/role-response';
 
 /**
  * @typedef {allOf|BaseResponse} BasePointOfSaleResponse
@@ -34,11 +35,14 @@ export interface BasePointOfSaleResponse extends BaseResponse {
  * @property {number} revision.required - Revision of the POS
  * @property {boolean} useAuthentication.required - Whether this POS requires users to
  * authenticate themselves before making a transaction
+ * @property {Array.<RoleResponse>} cashierRoles.required - The roles that are
+ * cashiers of this POS
  */
 export interface PointOfSaleResponse extends BasePointOfSaleResponse {
   owner: BaseUserResponse,
   revision: number,
   useAuthentication: boolean;
+  cashierRoles: RoleResponse[]
 }
 
 /**
@@ -58,4 +62,17 @@ export interface PaginatedPointOfSaleResponse {
  */
 export interface PointOfSaleWithContainersResponse extends PointOfSaleResponse {
   containers: ContainerWithProductsResponse[],
+}
+
+/**
+ * @typedef {object} PointOfSaleAssociateUsersResponse
+ * @property {BaseUserResponse} owner.required - Owner of the POS
+ * @property {Array.<BaseUserResponse>} ownerMembers.required - Members that belong to the owner
+ * @property {Array.<BaseUserResponse>} cashiers.required - Users that belong to at least one
+ * cashier role of this point of sale
+ */
+export interface PointOfSaleAssociateUsersResponse {
+  owner: BaseUserResponse,
+  ownerMembers: BaseUserResponse[],
+  cashiers: BaseUserResponse[],
 }

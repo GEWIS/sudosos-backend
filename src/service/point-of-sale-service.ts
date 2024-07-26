@@ -16,13 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import {
-  FindManyOptions,
-  FindOptionsRelations,
-  FindOptionsWhere, In, IsNull,
-  Raw,
-
-} from 'typeorm';
+import { FindManyOptions, FindOptionsRelations, FindOptionsWhere, In, IsNull, Raw } from 'typeorm';
 import {
   PaginatedPointOfSaleResponse,
   PointOfSaleResponse,
@@ -37,12 +31,11 @@ import ContainerRevision from '../entity/container/container-revision';
 // eslint-disable-next-line import/no-cycle
 import ContainerService from './container-service';
 import { PaginationParameters } from '../helpers/pagination';
-import {
-  CreatePointOfSaleParams,
-  UpdatePointOfSaleParams,
-} from '../controller/request/point-of-sale-request';
+import { CreatePointOfSaleParams, UpdatePointOfSaleParams } from '../controller/request/point-of-sale-request';
 import AuthenticationService from './authentication-service';
 import { ContainerWithProductsResponse } from '../controller/response/container-response';
+import Role from '../entity/rbac/role';
+import RBACService from './rbac-service';
 
 /**
  * Define point of sale filtering parameters used to filter query results.
@@ -94,6 +87,7 @@ export default class PointOfSaleService {
         firstName: revision.pointOfSale.owner.firstName,
         lastName: revision.pointOfSale.owner.lastName,
       },
+      cashierRoles: revision.pointOfSale.cashierRoles.map((r) => RBACService.asRoleResponse(r)),
     };
     if (revision.containers) {
       return {
@@ -163,10 +157,13 @@ export default class PointOfSaleService {
     // First save revision.
     await PointOfSaleRevision.save(pointOfSaleRevision);
 
+    // Set roles
+    base.cashierRoles = await Role.find({ where: { id: In(update.cashierRoleIds ?? []) } });
+
     // Increment current revision.
     // eslint-disable-next-line no-param-reassign
     base.currentRevision = base.currentRevision ? base.currentRevision + 1 : 1;
-    await base.save();
+    await PointOfSale.save(base);
 
     const options = await this.getOptions({ pointOfSaleId: base.id, returnContainers: true, returnProducts: true });
     return (this.revisionToResponse(await PointOfSaleRevision.findOne({ ...options }))) as PointOfSaleWithContainersResponse;
@@ -227,6 +224,7 @@ export default class PointOfSaleService {
     const relations: FindOptionsRelations<PointOfSaleRevision> = {
       pointOfSale: {
         owner: true,
+        cashierRoles: true,
       },
     };
 

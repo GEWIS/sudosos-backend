@@ -36,8 +36,9 @@ import { AcceptTosRequest } from '../controller/request/accept-tos-request';
 import Bindings from '../helpers/bindings';
 import AuthenticationService from './authentication-service';
 import WelcomeWithReset from '../mailer/templates/welcome-with-reset';
-import { Brackets } from 'typeorm';
+import { Brackets, In } from 'typeorm';
 import BalanceService from './balance-service';
+import AssignedRole from '../entity/rbac/assigned-role';
 
 /**
  * Parameters used to filter on Get Users functions.
@@ -50,6 +51,7 @@ export interface UserFilterParameters {
   deleted?: boolean,
   type?: UserType,
   organId?: number,
+  assignedRoleIds?: number | number[],
 }
 
 /**
@@ -57,11 +59,19 @@ export interface UserFilterParameters {
  * @param req - Request to parse
  */
 export function parseGetUsersFilters(req: RequestWithToken): UserFilterParameters {
+  let assignedRoleIds: number[];
+  if (req.query.assignedRoleIds && Array.isArray(req.query.assignedRoleIds)) {
+    assignedRoleIds = req.query.assignedRoleIds.map((r) => Number(r));
+  } else if (req.query.assignedRoleIds) {
+    assignedRoleIds = [Number(req.query.assignedRoleIds)];
+  }
+
   return {
     search: req.query.search as string,
     active: req.query.active ? asBoolean(req.query.active) : undefined,
     ofAge: req.query.active ? asBoolean(req.query.ofAge) : undefined,
     id: asNumber(req.query.id),
+    assignedRoleIds,
     organId: asNumber(req.query.organ),
     deleted: req.query.active ? asBoolean(req.query.deleted) : false,
     type: asUserType(req.query.type),
@@ -93,6 +103,22 @@ export default class UserService {
       const userIds = await MemberAuthenticator
         .find({ where: { authenticateAs: { id: filters.organId } }, relations: ['user'] });
       f.id = userIds.map((auth) => auth.user.id);
+    }
+    if (filters.assignedRoleIds) {
+      // Get all user IDs of the user belonging to any of the given roles
+      const assignedRoles = await AssignedRole
+        .find({ where: { roleId: In(filters.assignedRoleIds as number[]) } });
+      const userIds = assignedRoles.map((r) => r.userId);
+      if (f.id && Array.isArray(f.id)) {
+        // If we already have a list of IDs to filter on, we need to filter on the intersection
+        f.id = f.id.filter((id) => userIds.includes(id));
+      } else if (f.id) {
+        // If we only have a single ID to filter on, only keep it if it exists in one of the roles
+        f.id = userIds.includes(f.id as number) ? f.id : [];
+      } else {
+        // No existing filter on user ID, so we set the filter to the list of users in these groups
+        f.id = userIds;
+      }
     }
 
     const builder = Bindings.Users.getBuilder();

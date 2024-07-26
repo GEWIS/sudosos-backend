@@ -20,7 +20,8 @@
 export interface BasePointOfSaleParams {
   containers: number[],
   name: string,
-  useAuthentication: boolean;
+  useAuthentication: boolean,
+  cashierRoleIds?: number[],
 }
 
 export interface CreatePointOfSaleParams extends BasePointOfSaleParams {
@@ -28,7 +29,7 @@ export interface CreatePointOfSaleParams extends BasePointOfSaleParams {
 }
 
 export interface UpdatePointOfSaleParams extends BasePointOfSaleParams {
-  id: number
+  id: number,
 }
 
 /**
@@ -36,10 +37,12 @@ export interface UpdatePointOfSaleParams extends BasePointOfSaleParams {
  * @property {string} name.required - Name of the POS
  * @property {boolean} useAuthentication.required - Whether this POS requires users to
  * authenticate themselves before making a transaction
- * @property {Array<integer>} containers -
+ * @property {Array<integer>} containers.required -
  * IDs or Requests of the containers to add to the POS
- * @property {integer} ownerId - ID of the user who will own the POS, if undefined it will
+ * @property {integer} ownerId.required - ID of the user who will own the POS, if undefined it will
  *    default to the token ID.
+ * @property {Array<integer>} cashierRoleIds - Users that have at least one of the given roles
+ * can create transactions in this POS (but not open/close/edit it)
  */
 export interface CreatePointOfSaleRequest extends BasePointOfSaleParams {
   ownerId?: number,
@@ -50,8 +53,10 @@ export interface CreatePointOfSaleRequest extends BasePointOfSaleParams {
  * @property {string} name.required - Name of the POS
  * @property {boolean} useAuthentication.required - Whether this POS requires users to
  * authenticate themselves before making a transaction
- * @property {Array<integer>} containers -
+ * @property {Array<integer>} containers.required -
  * IDs or Requests of the containers to add to the POS
  * @property {integer} id.required - ID of the POS to update.
+ * @property {Array<integer>} cashierRoleIds - Users that have at least one of the given roles
+ * can create transactions in this POS (but not open/close/edit it)
  */
 export type UpdatePointOfSaleRequest = BasePointOfSaleParams & { id: number };

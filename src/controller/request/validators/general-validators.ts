@@ -18,8 +18,15 @@
 
 import { toFail, toPass, ValidationError } from '../../../helpers/specification-validation';
 import User, { TermsOfServiceStatus, UserType } from '../../../entity/user/user';
-import { EMPTY_ARRAY, INVALID_ACTIVE_USER_ID, INVALID_ORGAN_ID, INVALID_USER_ID } from './validation-errors';
+import {
+  EMPTY_ARRAY,
+  INVALID_ACTIVE_USER_ID, INVALID_CUSTOM_ROLE_ID,
+  INVALID_ORGAN_ID,
+  INVALID_ROLE_ID,
+  INVALID_USER_ID,
+} from './validation-errors';
 import { In } from 'typeorm';
+import Role from '../../../entity/rbac/role';
 
 export const positiveNumber = async (p: number) => {
   if (p <= 0) return toFail(new ValidationError('Number must be positive'));
@@ -53,4 +60,26 @@ export const nonEmptyArray = async <T>(list: T[]) => {
     return toFail(EMPTY_ARRAY());
   }
   return toPass(list);
+};
+
+export const rolesMustExist = async (ids: number[] | undefined) => {
+  if (ids == undefined) return toPass(ids);
+  const roles = await Role.find({ where: { id: In(ids) } });
+  const foundIds = roles.map((role) => role.id);
+  for (let id of ids) {
+    if (!foundIds.includes(id)) {
+      return toFail(INVALID_ROLE_ID(id));
+    }
+  }
+  return toPass(ids);
+};
+
+export const rolesCannotBeSystemDefault = async (ids: number[]) => {
+  if (ids == undefined) return toPass(ids);
+  const roles = await Role.find({ where: { id: In(ids) } });
+  const systemDefaultRoles = roles.filter((r) => r.systemDefault);
+  if (systemDefaultRoles.length > 0) {
+    return toFail(INVALID_CUSTOM_ROLE_ID(systemDefaultRoles[0].id));
+  }
+  return toPass(ids);
 };
