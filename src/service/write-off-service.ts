@@ -34,6 +34,7 @@ import DineroTransformer from '../entity/transformer/dinero-transformer';
 import UserService from './user-service';
 import { RequestWithToken } from '../middleware/token-middleware';
 import { asNumber } from '../helpers/validators';
+import VatGroup from '../entity/vat-group';
 
 export interface WriteOffFilterParameters {
   /**
@@ -59,7 +60,7 @@ export function parseWriteOffFilterParameters(req: RequestWithToken): WriteOffFi
 }
 export default class WriteOffService {
   /**
-   * Parses a write off object to a WriteOffResponse
+   * Parses a write-off object to a WriteOffResponse
    * @param writeOff
    */
   public static asWriteOffResponse(writeOff: WriteOff): WriteOffResponse {
@@ -97,6 +98,14 @@ export default class WriteOffService {
     };
   }
 
+  // TODO: replace with ServerSettings
+  // @link https://github.com/GEWIS/sudosos-backend/issues/226
+  private static async getHighVATGroup(): Promise<VatGroup> {
+    const vatGroup = await VatGroup.findOne({ where: { percentage: 21, deleted: false, hidden: false } });
+    if (vatGroup) return vatGroup;
+    else throw new Error('High vat group not found');
+  }
+
   /**
    * Creates a write-off for the given user
    * @param manager - The entity manager to use
@@ -108,7 +117,7 @@ export default class WriteOffService {
       throw new Error('User has balance, cannot create write off');
     }
 
-    const amount = DineroTransformer.Instance.from(balance.amount.amount);
+    const amount = DineroTransformer.Instance.from(balance.amount.amount * -1);
 
     const writeOff = Object.assign(new WriteOff(), {
       to: user,
@@ -118,7 +127,7 @@ export default class WriteOffService {
     await manager.save(writeOff);
     const transfer = await TransferService.createTransfer({
       amount: {
-        amount: amount.getAmount() * -1,
+        amount: amount.getAmount(),
         precision: amount.getPrecision(),
         currency: amount.getCurrency(),
       },
@@ -127,8 +136,10 @@ export default class WriteOffService {
       fromId: null,
     }, manager);
 
+    const highVatGroup = await WriteOffService.getHighVATGroup();
     writeOff.transfer = transfer;
     transfer.writeOff = writeOff;
+    transfer.vat = highVatGroup;
 
     await manager.save(transfer);
     await manager.save(writeOff);
