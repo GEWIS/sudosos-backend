@@ -102,7 +102,6 @@ describe('WriteOffController', () => {
       const writeOffs = res.body.records as WriteOffResponse[];
       expect(res.body._pagination.count).to.equal(await WriteOff.count());
       writeOffs.forEach((writeOffResponse) => {
-        console.error(writeOffResponse);
         const writeOff = ctx.writeOffs.find((w) => w.id === writeOffResponse.id);
         expect(writeOff).to.not.be.undefined;
         expect(
