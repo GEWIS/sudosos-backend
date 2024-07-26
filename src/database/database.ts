@@ -82,6 +82,7 @@ import RoleUserType from '../entity/rbac/role-user-type';
 import { TransfersVat1721916495084 } from '../migrations/1721916495084-transfers-vat';
 import { PosCashiers1722022351000 } from '../migrations/1722022351000-pos-cashiers';
 import WriteOff from '../entity/transactions/write-off';
+import { WriteOffs1722004753128 } from '../migrations/1722004753128-write-offs';
 import ServerSetting from '../entity/server-setting';
 import { ServerSettings1722083254200 } from '../migrations/1722083254200-server-settings';
 import { PosUsers1722084520361 } from '../migrations/1722084520361-pos-users';
@@ -108,6 +109,7 @@ const options: DataSourceOptions = {
     PayoutRequestPdf1720610649657,
     DatabaseRbac1720624912620,
     TransfersVat1721916495084,
+    WriteOffs1722004753128,
     PosCashiers1722022351000,
     ServerSettings1722083254200,
     PosUsers1722084520361,

@@ -45,7 +45,8 @@ describe('WriteOffService', () => {
 
   before(async () => {
     ctx = { ...await defaultContext(), writeOffs: await seedWriteOffs() };
-    await (VatGroup.create({ percentage: 21, deleted: false, hidden: false, name: 'High VAT' })).save();
+    const vg = await VatGroup.findOne({ where: { percentage: 21 } });
+    if (!vg) await (VatGroup.create({ percentage: 21, deleted: false, hidden: false, name: 'High VAT' })).save();
     await truncateAllTables(ctx.connection);
   });
 

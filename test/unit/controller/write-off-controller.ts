@@ -154,7 +154,8 @@ describe('WriteOffController', () => {
   });
   describe('POST /writeoffs', () => {
     before(async () => {
-      await VatGroup.create({ percentage: 21, name: 'High VAT', deleted: false, hidden: false }).save();
+      const vg = await VatGroup.findOne({ where: { percentage: 21 } });
+      if (!vg) await VatGroup.create({ percentage: 21, name: 'High VAT', deleted: false, hidden: false }).save();
     });
     it('should create a write-off', async () => {
       const amount = 1000;
