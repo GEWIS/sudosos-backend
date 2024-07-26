@@ -17,7 +17,7 @@
  */
 import { MigrationInterface, QueryRunner, Table, TableColumn, TableForeignKey } from 'typeorm';
 
-export class PosCashiers1721835613950 implements MigrationInterface {
+export class PosCashiers1722022351000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.createTable(new Table({
       name: 'point_of_sale_cashier_roles_role',
