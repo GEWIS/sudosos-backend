@@ -18,7 +18,11 @@
 import WriteOff from '../entity/transactions/write-off';
 import { parseUserToBaseResponse, parseVatGroupToResponse } from '../helpers/revision-to-response';
 import TransferService from './transfer-service';
-import { PaginatedWriteOffResponse, WriteOffResponse } from '../controller/response/write-off-response';
+import {
+  BaseWriteOffResponse,
+  PaginatedWriteOffResponse,
+  WriteOffResponse
+} from '../controller/response/write-off-response';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import {
   EntityManager,
@@ -59,19 +63,24 @@ export function parseWriteOffFilterParameters(req: RequestWithToken): WriteOffFi
   };
 }
 export default class WriteOffService {
+  public static asBaseWriteOffResponse(writeOff: WriteOff): BaseWriteOffResponse {
+    return {
+      id: writeOff.id,
+      createdAt: writeOff.createdAt.toISOString(),
+      updatedAt: writeOff.updatedAt.toISOString(),
+      to: parseUserToBaseResponse(writeOff.to, false),
+      amount: writeOff.amount.toObject(),
+    };
+  }
+
   /**
    * Parses a write-off object to a WriteOffResponse
    * @param writeOff
    */
   public static asWriteOffResponse(writeOff: WriteOff): WriteOffResponse {
     return {
-      amount: writeOff.amount.toObject(),
-      id: writeOff.id,
-      createdAt: writeOff.createdAt.toISOString(),
-      updatedAt: writeOff.updatedAt.toISOString(),
-      to: parseUserToBaseResponse(writeOff.to, false),
+      ...this.asBaseWriteOffResponse(writeOff),
       transfer: writeOff.transfer ? TransferService.asTransferResponse(writeOff.transfer) : undefined,
-      vat: writeOff.transfer?.vat ? parseVatGroupToResponse(writeOff.transfer.vat) : undefined,
     };
   }
 
@@ -157,7 +166,7 @@ export default class WriteOffService {
     const filterMapping: FilterMapping = {
       toId: 'toId',
       amount: 'amount',
-      vatId: 'vat.id',
+      writeOffId: 'id',
     };
 
     const relations: FindOptionsRelations<WriteOff> = {

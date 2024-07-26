@@ -26,7 +26,7 @@ import { StripeDepositResponse } from './stripe-response';
 import { BasePayoutRequestResponse } from './payout-request-response';
 import { FineResponse, UserFineGroupResponse } from './debtor-response';
 import { BaseVatGroupResponse } from './vat-group-response';
-import {WriteOffResponse} from "./write-off-response";
+import { BaseWriteOffResponse } from './write-off-response';
 
 /**
  * @typedef {allOf|BaseResponse} TransferResponse
@@ -40,7 +40,7 @@ import {WriteOffResponse} from "./write-off-response";
  * @property {BasePayoutRequestResponse} payoutRequest - payout request belonging to this transfer
  * @property {FineResponse} fine - fine belonging to this transfer
  * @property {VatGroupResponse} vat - vat group belonging to this transfer
- * @property {WriteOffResponse} writeOff - write-off belonging to this transfer
+ * @property {BaseWriteOffResponse} writeOff - write-off belonging to this transfer
  * @property {UserFineGroupResponse} waivedFines - fines that have been waived by this transfer
  */
 export interface TransferResponse extends BaseResponse {
@@ -57,7 +57,7 @@ export interface TransferResponse extends BaseResponse {
   payoutRequest?: BasePayoutRequestResponse;
   fine?: FineResponse;
   vat?: BaseVatGroupResponse;
-  writeOff?: WriteOffResponse;
+  writeOff?: BaseWriteOffResponse;
   waivedFines?: UserFineGroupResponse;
 }
 

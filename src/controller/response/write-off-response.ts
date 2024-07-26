@@ -18,30 +18,31 @@
 import { BaseUserResponse } from './user-response';
 import { DineroObjectResponse } from './dinero-response';
 import { TransferResponse } from './transfer-response';
-import { BaseVatGroupResponse } from './vat-group-response';
 import BaseResponse from './base-response';
 import { PaginationResult } from '../../helpers/pagination';
 
 /**
- * @typedef {allOf|BaseResponse} WriteOffResponse
- * @property {BaseUserResponse} to.required - The person who has write off
- * @property {DineroObjectResponse} amount.required - The amount of the write off
- * @property {TransferResponse} transfer.required - The transfer linked to the write off
- * @property {BaseVatGroupResponse} vat.required - The vat group linked to the write off
- * @property {string} pdf - Pdf url path linked to the write off
+ * @typedef {allOf|BaseResponse} BaseWriteOffResponse
+ * @property {BaseUserResponse} to.required - The person who has write-off
+ * @property {DineroObjectResponse} amount.required - The amount of the write-off
  */
-export interface WriteOffResponse extends BaseResponse {
+export interface BaseWriteOffResponse extends BaseResponse {
   to: BaseUserResponse
   amount: DineroObjectResponse
+}
+
+/**
+ * @typedef {allOf|BaseWriteOffResponse} WriteOffResponse
+ * @property {TransferResponse} transfer.required - The transfer linked to the write-off
+ */
+export interface WriteOffResponse extends BaseResponse {
   transfer: TransferResponse
-  vat: BaseVatGroupResponse
-  pdf?: string
 }
 
 /**
  * @typedef {object} PaginatedWriteOffResponse
  * @property {PaginationResult} _pagination.required - Pagination metadata
- * @property {Array.<WriteOffResponse>} records.required - Returned write offs
+ * @property {Array.<WriteOffResponse>} records.required - Returned write-offs
  */
 export interface PaginatedWriteOffResponse {
   _pagination: PaginationResult,

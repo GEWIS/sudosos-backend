@@ -70,7 +70,7 @@ export default class TransferService {
       payoutRequest: transfer.payoutRequest ? PayoutRequestService.asBasePayoutRequestResponse(transfer.payoutRequest) : null,
       fine: transfer.fine ? DebtorService.asFineResponse(transfer.fine) : null,
       waivedFines: transfer.waivedFines ? DebtorService.asUserFineGroupResponse(transfer.waivedFines) : null,
-      writeOff: transfer.writeOff ? WriteOffService.asWriteOffResponse(transfer.writeOff) : null,
+      writeOff: transfer.writeOff ? WriteOffService.asBaseWriteOffResponse(transfer.writeOff) : null,
       vat: transfer.vat ? parseVatGroupToResponse(transfer.vat) : null,
     };
   }
