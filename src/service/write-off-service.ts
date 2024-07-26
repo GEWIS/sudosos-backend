@@ -71,8 +71,7 @@ export default class WriteOffService {
       updatedAt: writeOff.updatedAt.toISOString(),
       to: parseUserToBaseResponse(writeOff.to, false),
       transfer: writeOff.transfer ? TransferService.asTransferResponse(writeOff.transfer) : undefined,
-      vat: writeOff.transfer.vat ? parseVatGroupToResponse(writeOff.transfer.vat) : undefined,
-      // pdf: writeOff.pdf ? writeOff.pdf.downloadName : undefined,
+      vat: writeOff.transfer?.vat ? parseVatGroupToResponse(writeOff.transfer.vat) : undefined,
     };
   }
 

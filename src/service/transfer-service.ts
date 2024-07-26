@@ -34,6 +34,7 @@ import PayoutRequestService from './payout-request-service';
 import DebtorService from './debtor-service';
 import VatGroup from '../entity/vat-group';
 import { toMySQLString } from '../helpers/timestamps';
+import WriteOffService from './write-off-service';
 
 export interface TransferFilterParameters {
   id?: number;
@@ -69,6 +70,7 @@ export default class TransferService {
       payoutRequest: transfer.payoutRequest ? PayoutRequestService.asBasePayoutRequestResponse(transfer.payoutRequest) : null,
       fine: transfer.fine ? DebtorService.asFineResponse(transfer.fine) : null,
       waivedFines: transfer.waivedFines ? DebtorService.asUserFineGroupResponse(transfer.waivedFines) : null,
+      writeOff: transfer.writeOff ? WriteOffService.asWriteOffResponse(transfer.writeOff) : null,
       vat: transfer.vat ? parseVatGroupToResponse(transfer.vat) : null,
     };
   }
@@ -158,7 +160,7 @@ export default class TransferService {
         'deposit', 'deposit.depositStatus',
         'payoutRequest', 'payoutRequest.payoutRequestStatus', 'payoutRequest.requestedBy',
         'fine', 'fine.userFineGroup', 'fine.userFineGroup.user',
-        'waivedFines', 'waivedFines.fines', 'waivedFines.fines.userFineGroup', 'vat',
+        'waivedFines', 'waivedFines.fines', 'waivedFines.fines.userFineGroup', 'vat', 'writeOff',
       ],
       take,
       skip,
