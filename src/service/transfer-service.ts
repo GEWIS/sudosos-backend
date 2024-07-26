@@ -58,6 +58,7 @@ export default class TransferService {
   public static asTransferResponse(transfer: Transfer) : TransferResponse {
     return {
       amountInclVat: transfer.amountInclVat.toObject(),
+      amount: transfer.amountInclVat.toObject(),
       from: parseUserToBaseResponse(transfer.from, false),
       to: parseUserToBaseResponse(transfer.to, false),
       id: transfer.id,

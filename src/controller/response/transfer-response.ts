@@ -31,6 +31,7 @@ import { BaseVatGroupResponse } from './vat-group-response';
  * @typedef {allOf|BaseResponse} TransferResponse
  * @property {string} description.required - Description of the transfer
  * @property {Dinero} amountInclVat.required - Amount of money being transferred
+ * @property {Dinero} amount.required - (@deprecated) Amount of money being transferred
  * @property {BaseUserResponse} from - from which user the money is being transferred
  * @property {BaseUserResponse} to - to which user the money is being transferred.
  * @property {BaseInvoiceResponse} invoice - invoice belonging to this transfer
@@ -42,6 +43,10 @@ import { BaseVatGroupResponse } from './vat-group-response';
  */
 export interface TransferResponse extends BaseResponse {
   amountInclVat: DineroObjectResponse;
+  /**
+   * @deprecated
+   */
+  amount: DineroObjectResponse;
   description: string;
   from: BaseUserResponse;
   to: BaseUserResponse;
