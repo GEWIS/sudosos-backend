@@ -93,6 +93,8 @@ export async function validateSpecification<T, F extends Joinable>(target: T,
     if (Array.isArray(spec)) {
       // Recurse on Specification
       const [subSpec, property, trace] = spec as SubSpecification<T, F>;
+      if (target[property] === undefined) continue;
+
       // eslint-disable-next-line no-await-in-loop
       const result = await validateSpecification(target[property], subSpec);
 

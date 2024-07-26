@@ -26,6 +26,7 @@ export default interface BaseUserRequest {
   canGoIntoDebt: boolean;
   ofAge: boolean;
   email: string;
+  type: UserType;
 }
 
 /**
@@ -38,9 +39,7 @@ export default interface BaseUserRequest {
  * @property {string} email.required
  * @property {number} type.required
  */
-export interface CreateUserRequest extends BaseUserRequest {
-  type: UserType;
-}
+export interface CreateUserRequest extends BaseUserRequest {}
 
 /**
  * @typedef {object} UpdateUserRequest
@@ -50,6 +49,7 @@ export interface CreateUserRequest extends BaseUserRequest {
  * @property {boolean} canGoIntoDebt
  * @property {boolean} ofAge
  * @property {string} email
+ * @property {number} type
  * @property {boolean} deleted
  * @property {boolean} active
  * @property {boolean} extensiveDataProcessing

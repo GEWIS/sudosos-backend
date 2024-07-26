@@ -912,6 +912,38 @@ describe('UserController', (): void => {
       expect(user.firstName).to.deep.equal(firstName);
       verifyUserResponse(spec, user);
     });
+    it('should correctly change user type if requester is admin', async () => {
+      const type = UserType.LOCAL_USER;
+      const user = ctx.users.find((u) => u.type === UserType.MEMBER);
+
+      const res = await request(ctx.app)
+        .patch(`/users/${user.id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ type });
+      expect(res.status).to.equal(200);
+
+      const updatedUser = res.body as UserResponse;
+      const spec = await Swagger.importSpecification();
+      expect(updatedUser.type).to.deep.equal('LOCAL_USER');
+      verifyUserResponse(spec, updatedUser);
+
+      // Cleanup
+      await user.save();
+    });
+    it('should give HTTP 400 when non-existing UserType', async () => {
+      const res = await request(ctx.app)
+        .patch(`/users/${ctx.users[0].id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ type: 6969420 });
+      expect(res.status).to.equal(400);
+    });
+    it('should give HTTP 403 if changing own user type', async () => {
+      const res = await request(ctx.app)
+        .patch(`/users/${ctx.users[0].id}`)
+        .set('Authorization', `Bearer ${ctx.userToken}`)
+        .send({ type: UserType.LOCAL_ADMIN });
+      expect(res.status).to.equal(403);
+    });
     it('should allow user to update extensiveDataProcessing', async () => {
       const processing = ctx.users[0].extensiveDataProcessing;
 

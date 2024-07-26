@@ -42,11 +42,11 @@ function validEmail(mail: string) {
 /**
  * Checks if provided type is valid
  */
-function validUserType(u: CreateUserRequest) {
-  if (!Object.values(UserType).includes(u.type)) {
+function validUserType(type: number) {
+  if (!Object.values(UserType).includes(type)) {
     return toFail(INVALID_USER_TYPE());
   }
-  return toPass(u);
+  return toPass(type);
 }
 
 /**
@@ -56,6 +56,8 @@ const updateUserSpec: <T extends BaseUserRequest>() => Specification<T, Validati
   [nameSpec(), 'firstName', new ValidationError('Firstname: ')],
   [[validEmail], 'email', new ValidationError('E-mail: ')],
   [[maxLength(64)], 'lastName', new ValidationError('Lastname: ')],
+  [[maxLength(64)], 'nickname', new ValidationError('Nickname: ')],
+  [[validUserType], 'type', new ValidationError('Type: ')],
 ];
 
 /**
@@ -63,13 +65,12 @@ const updateUserSpec: <T extends BaseUserRequest>() => Specification<T, Validati
  */
 const createUserSpec: () => Specification<CreateUserRequest, ValidationError> = () => [
   ...updateUserSpec<CreateUserRequest>(),
-  validUserType,
 ];
 
 export async function verifyCreateUserRequest(createUserRequest: CreateUserRequest) {
-  return Promise.resolve(await validateSpecification(createUserRequest, createUserSpec()));
+  return validateSpecification(createUserRequest, createUserSpec());
 }
 
 export async function verifyUpdateUserRequest(createUserRequest: CreateUserRequest) {
-  return Promise.resolve(await validateSpecification(createUserRequest, updateUserSpec()));
+  return validateSpecification(createUserRequest, updateUserSpec());
 }
