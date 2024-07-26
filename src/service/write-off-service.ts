@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import WriteOff from '../entity/transactions/write-off';
-import { parseUserToBaseResponse, parseVatGroupToResponse } from '../helpers/revision-to-response';
+import { parseUserToBaseResponse } from '../helpers/revision-to-response';
 import TransferService from './transfer-service';
 import {
   BaseWriteOffResponse,
@@ -181,7 +181,7 @@ export default class WriteOffService {
 
     const options: FindManyOptions<WriteOff> = {
       where,
-      order: { createdAt: 'ASC' },
+      order: { createdAt: 'DESC' },
       relations,
     };
 

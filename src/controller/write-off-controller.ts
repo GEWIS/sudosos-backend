@@ -67,6 +67,8 @@ export default class WriteOffController extends BaseController {
    * @security JWT
    * @param {integer} toId.query - Filter on Id of the debtor
    * @param {integer} amount.query - Filter on the amount of the write-off
+   * @param {integer} take.query - Number of write-offs to return
+   * @param {integer} skip.query - Number of write-offs to skip
    * @return {PaginatedWriteOffResponse} 200 - All existing write-offs
    * @return {string} 400 - Validation error
    * @return {string} 500 - Internal server error
