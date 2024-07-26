@@ -111,7 +111,8 @@ describe('WriteOffService', () => {
     });
     it('should error if HIGH VAT is not set', async () => {
       const vatGroup = await VatGroup.findOne({ where: { percentage: 21 } });
-      await VatGroup.delete(vatGroup.id);
+      vatGroup.deleted = true;
+      await vatGroup.save();
 
       const amount = -100;
       const builder = await (await UserFactory()).addBalance(amount);
@@ -120,7 +121,8 @@ describe('WriteOffService', () => {
         await expect(func()).to.be.rejectedWith('High vat group not found');
       });
 
-      await (VatGroup.create({ percentage: 21, deleted: false, hidden: false, name: 'High VAT' })).save();
+      vatGroup.deleted = true;
+      await vatGroup.save();
     });
   });
 });
