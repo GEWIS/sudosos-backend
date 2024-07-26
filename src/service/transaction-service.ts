@@ -604,8 +604,6 @@ export default class TransactionService {
       builder.getCount(),
     ]);
 
-    const tillDate = params.tillDate ? toMySQLString(params.tillDate) : undefined;
-
     const records = results[0].map((o) => {
       const value = DineroTransformer.Instance.from(o.value || 0);
       const v: BaseTransactionResponse = {
