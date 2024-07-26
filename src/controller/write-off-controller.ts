@@ -27,7 +27,7 @@ import WriteOff from '../entity/transactions/write-off';
 import WriteOffRequest from './request/write-off-request';
 import wrapInManager from '../helpers/database';
 import User from '../entity/user/user';
-import BalanceService from "../service/balance-service";
+import BalanceService from '../service/balance-service';
 
 export default class WriteOffController extends BaseController {
   private logger: Logger = log4js.getLogger(' WriteOffController');
@@ -148,7 +148,7 @@ export default class WriteOffController extends BaseController {
     try {
       const user = await User.findOne({ where: { id: body.toId, deleted: false } });
       if (!user) {
-        res.status(404).json('Unknown user ID.');
+        res.status(404).json('User not found.');
         return;
       }
 

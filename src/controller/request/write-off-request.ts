@@ -18,7 +18,7 @@
 
 /**
  * @typedef {object} WriteOffRequest
- * @property {integer} toId.required - The user who is the receiver of the write off
+ * @property {integer} toId.required - The user who is the receiver of the write-off
  */
 export default interface WriteOffRequest {
   toId: number,

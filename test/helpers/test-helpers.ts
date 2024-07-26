@@ -38,7 +38,7 @@ export interface DefaultContext {
   tokenHandler: TokenHandler,
 }
 
-export async function defaultContext() {
+export async function defaultContext(): Promise<DefaultContext> {
   const app = express();
   const specification = await Swagger.initialize(app);
   const roleManager = new RoleManager();
