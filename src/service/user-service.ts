@@ -59,12 +59,19 @@ export interface UserFilterParameters {
  * @param req - Request to parse
  */
 export function parseGetUsersFilters(req: RequestWithToken): UserFilterParameters {
+  let assignedRoleIds: number[];
+  if (req.query.assignedRoleIds && Array.isArray(req.query.assignedRoleIds)) {
+    assignedRoleIds = req.query.assignedRoleIds.map((r) => Number(r));
+  } else if (req.query.assignedRoleIds) {
+    assignedRoleIds = [Number(req.query.assignedRoleIds)];
+  }
+
   return {
     search: req.query.search as string,
     active: req.query.active ? asBoolean(req.query.active) : undefined,
     ofAge: req.query.active ? asBoolean(req.query.ofAge) : undefined,
     id: asNumber(req.query.id),
-    assignedRoleIds: req.query.roleIds && Array.isArray(req.query.roleIds) ? req.query.roleIds.map((r) => Number(r)) : [Number(req.query.roleIds)],
+    assignedRoleIds,
     organId: asNumber(req.query.organ),
     deleted: req.query.active ? asBoolean(req.query.deleted) : false,
     type: asUserType(req.query.type),
