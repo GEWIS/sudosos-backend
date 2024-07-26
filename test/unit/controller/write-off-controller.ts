@@ -31,7 +31,6 @@ import { json } from 'body-parser';
 import VatGroup from '../../../src/entity/vat-group';
 
 function writeOffEq(a: WriteOff, b: WriteOffResponse): Boolean {
-  console.error(a?.id, b.id);
   return a.to.id === b.to.id
     && a.amount.getAmount() === b.amount.amount
     && a.createdAt.toISOString() === b.createdAt

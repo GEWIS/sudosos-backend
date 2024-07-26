@@ -90,7 +90,7 @@ describe('WriteOffService', () => {
       const amount = 100;
       const builder = await (await UserFactory()).addBalance(-amount);
       await inUserContext([await builder.get()], async (user: User) => {
-        const writeOff = await wrapInManager(WriteOffService.createWriteOff)(user);
+        const writeOff = await WriteOffService.createAndCloseUser(user);
         expect(writeOff.amount.amount).to.equal(100);
         expect(writeOff.to.id).to.equal(user.id);
         expect(writeOff.transfer).to.not.be.undefined;
@@ -105,7 +105,7 @@ describe('WriteOffService', () => {
       const amount = 100;
       const builder = await (await UserFactory()).addBalance(amount);
       await inUserContext([await builder.get()], async (user: User) => {
-        const func = async () => wrapInManager(WriteOffService.createWriteOff)(user);
+        const func = async () => WriteOffService.createAndCloseUser(user);
         await expect(func()).to.be.rejectedWith('User has balance, cannot create write off');
       });
     });
@@ -117,7 +117,7 @@ describe('WriteOffService', () => {
       const amount = -100;
       const builder = await (await UserFactory()).addBalance(amount);
       await inUserContext([await builder.get()], async (user: User) => {
-        const func = async () => wrapInManager(WriteOffService.createWriteOff)(user);
+        const func = async () => WriteOffService.createAndCloseUser(user);
         await expect(func()).to.be.rejectedWith('High vat group not found');
       });
 

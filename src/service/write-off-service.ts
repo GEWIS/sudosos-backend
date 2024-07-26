@@ -39,6 +39,7 @@ import UserService from './user-service';
 import { RequestWithToken } from '../middleware/token-middleware';
 import { asNumber } from '../helpers/validators';
 import VatGroup from '../entity/vat-group';
+import wrapInManager from "../helpers/database";
 
 export interface WriteOffFilterParameters {
   /**
@@ -150,11 +151,13 @@ export default class WriteOffService {
 
     await manager.save(transfer);
     await manager.save(writeOff);
-
-    // User should now have 0 balance and can be closed
-    await UserService.closeUser(user.id, true);
-
     return WriteOffService.asWriteOffResponse(writeOff);
+  }
+
+  public static async createAndCloseUser(user: User): Promise<WriteOffResponse> {
+    const writeOff = await wrapInManager(WriteOffService.createWriteOff)(user);
+    await UserService.closeUser(user.id, true);
+    return writeOff;
   }
 
   /**

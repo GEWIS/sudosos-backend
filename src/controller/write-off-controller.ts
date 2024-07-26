@@ -158,7 +158,7 @@ export default class WriteOffController extends BaseController {
         return;
       }
 
-      const writeOff = await wrapInManager(WriteOffService.createWriteOff)(user);
+      const writeOff = await WriteOffService.createAndCloseUser(user);
       res.status(200).json(writeOff);
     } catch (error) {
       this.logger.error('Could not create write off:', error);
