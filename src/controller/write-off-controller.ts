@@ -134,6 +134,7 @@ export default class WriteOffController extends BaseController {
    * @operationId createWriteOff
    * @tags writeoffs - Operations of the writeoff controller
    * @param {WriteOffRequest} request.body.required - New write off
+   * @security JWT
    * @return {WriteOffResponse} 200 - The created write off.
    * @return {string} 400 - Validation error
    * @return {string} 500 - Internal server error.
@@ -149,7 +150,7 @@ export default class WriteOffController extends BaseController {
         return;
       }
 
-      const writeOff = await wrapInManager(WriteOffService.createWriteOff)(user.id);
+      const writeOff = await wrapInManager(WriteOffService.createWriteOff)(user);
       res.status(200).json(writeOff);
     } catch (error) {
       this.logger.error('Could not create write off:', error);

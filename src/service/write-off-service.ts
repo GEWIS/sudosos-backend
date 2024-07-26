@@ -118,7 +118,7 @@ export default class WriteOffService {
     await manager.save(writeOff);
     const transfer = await TransferService.createTransfer({
       amount: {
-        amount: amount.getAmount(),
+        amount: amount.getAmount() * -1,
         precision: amount.getPrecision(),
         currency: amount.getCurrency(),
       },
