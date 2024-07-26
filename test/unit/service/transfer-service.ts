@@ -130,7 +130,7 @@ describe('TransferService', async (): Promise<void> => {
       const transfer = ctx.transfers[2];
       const fromDate = transfer.createdAt;
 
-      const actualTransfers = ctx.transfers.filter((t) => t.createdAt.getTime() > fromDate.getTime());
+      const actualTransfers = ctx.transfers.filter((t) => t.createdAt.getTime() >= fromDate.getTime());
       // Sanity check
       expect(actualTransfers.length).to.be.at.most(ctx.transfers.length - 2);
       expect(actualTransfers.length).to.be.at.least(1);
@@ -165,7 +165,7 @@ describe('TransferService', async (): Promise<void> => {
       const tillDate = lastTransfer.createdAt;
 
       const actualTransfers = ctx.transfers
-        .filter((t) => t.createdAt.getTime() > fromDate.getTime()
+        .filter((t) => t.createdAt.getTime() >= fromDate.getTime()
           && t.createdAt.getTime() < tillDate.getTime());
       // Sanity check
       expect(actualTransfers.length).to.be.at.most(ctx.transfers.length - 2);
