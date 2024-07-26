@@ -29,6 +29,17 @@ export function dateToUTC(date: Date): Date {
 }
 
 /**
+ * UTC to date
+ */
+export function utcToDate(date: string): Date {
+  let d = date.replace(' ', 'T');
+  if (d.charAt(d.length - 1) !== 'Z') {
+    d += 'Z';
+  }
+  return new Date(d);
+}
+
+/**
  * Pad a string of the given integer
  * @param i
  * @param pad

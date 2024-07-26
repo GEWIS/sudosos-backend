@@ -36,7 +36,11 @@ import RBACService from '../service/rbac-service';
 import { isFail } from '../helpers/specification-validation';
 import verifyUpdatePinRequest from './request/validators/update-pin-request-spec';
 import UpdatePinRequest from './request/update-pin-request';
-import UserService, { parseGetUsersFilters, UserFilterParameters } from '../service/user-service';
+import UserService, {
+  parseGetFinancialMutationsFilters,
+  parseGetUsersFilters,
+  UserFilterParameters,
+} from '../service/user-service';
 import { asNumber } from '../helpers/validators';
 import { verifyCreateUserRequest } from './request/validators/user-request-spec';
 import userTokenInOrgan from '../helpers/token-helper';
@@ -1244,6 +1248,8 @@ export default class UserController extends BaseController {
    * @operationId getUsersFinancialMutations
    * @tags users - Operations of user controller
    * @param {integer} id.path.required - The id of the user to get the mutations from
+   * @param {string} fromDate.query - Start date for selected transactions (inclusive)
+   * @param {string} tillDate.query - End date for selected transactions (exclusive)
    * @param {integer} take.query - How many transactions the endpoint should return
    * @param {integer} skip.query - How many transactions should be skipped (for pagination)
    * @security JWT
@@ -1254,9 +1260,11 @@ export default class UserController extends BaseController {
     const parameters = req.params;
     this.logger.trace('Get financial mutations of user', parameters, 'by user', req.token.user);
 
+    let filters;
     let take;
     let skip;
     try {
+      filters = parseGetFinancialMutationsFilters(req);
       const pagination = parseRequestPagination(req);
       take = pagination.take;
       skip = pagination.skip;
@@ -1275,7 +1283,7 @@ export default class UserController extends BaseController {
         return;
       }
 
-      const mutations = await UserService.getUserFinancialMutations(user, { take, skip });
+      const mutations = await UserService.getUserFinancialMutations(user, filters, { take, skip });
       res.status(200).json(mutations);
     } catch (error) {
       this.logger.error('Could not get financial mutations of user:', error);

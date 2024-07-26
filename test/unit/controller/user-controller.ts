@@ -54,7 +54,10 @@ import {
 } from '../../../src/controller/request/validators/validation-errors';
 import { PaginatedUserResponse, UserResponse } from '../../../src/controller/response/user-response';
 import RoleResponse from '../../../src/controller/response/rbac/role-response';
-import { FinancialMutationResponse } from '../../../src/controller/response/financial-mutation-response';
+import {
+  FinancialMutationResponse,
+  PaginatedFinancialMutationResponse,
+} from '../../../src/controller/response/financial-mutation-response';
 import UpdateLocalRequest from '../../../src/controller/request/update-local-request';
 import { AcceptTosRequest } from '../../../src/controller/request/accept-tos-request';
 import { CreateUserRequest, UpdateUserRequest } from '../../../src/controller/request/user-request';
@@ -104,7 +107,7 @@ describe('UserController', (): void => {
     await truncateAllTables(connection);
     ctx = { connection } as any; // on timeout forces connection to close
     const app = express();
-    const database = await seedDatabase();
+    const database = await seedDatabase(new Date('2020-01-01T00:00:00.000Z'), new Date('2023-12-30T23:59:59.000Z'));
     ctx = {
       tokenHandler: undefined,
       connection,
@@ -1360,6 +1363,58 @@ describe('UserController', (): void => {
         false,
         false,
       ).valid).to.be.true;
+    });
+    it('should return an HTTP 200 with only mutations after a certain date', async () => {
+      const user = ctx.transactions[0].subTransactions[0].to;
+      const transaction = ctx.transactions.filter((t) => t.subTransactions.some((s) => s.to.id === user.id))[2];
+      const fromDate = transaction.createdAt;
+
+      const res = await request(ctx.app)
+        .get(`/users/${user.id}/financialmutations?fromDate=${fromDate.toISOString()}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+
+      const actualTransactions = ctx.transactions
+        .filter((t) => (t.from.id === user.id || t.createdBy.id === user.id || t.subTransactions.some((s) => s.to.id === user.id))
+          && t.createdAt >= fromDate);
+      expect(actualTransactions.length).to.be.at.least(1);
+      const actualTransfers = ctx.transfers
+        .filter((t) => (t.from?.id === user.id || t.to?.id === user.id)
+          && t.createdAt >= fromDate);
+      expect(actualTransfers.length).to.be.at.least(1);
+
+      const body = res.body as PaginatedFinancialMutationResponse;
+      expect(body.records.filter((r) => r.type === 'transfer')).to.be.lengthOf(actualTransfers.length);
+      expect(body.records.filter((r) => r.type === 'transaction')).to.be.lengthOf(actualTransactions.length);
+      body.records.forEach((t) => {
+        expect(new Date(t.mutation.createdAt)).to.be.greaterThanOrEqual(fromDate);
+      });
+    });
+    it('should return an HTTP 200 with only mutations before a certain date', async () => {
+      const user = ctx.transactions[0].from;
+      const transaction = ctx.transactions.filter((t) => t.subTransactions.some((s) => s.to.id === user.id))[0];
+      const tillDate = transaction.createdAt;
+
+      const res = await request(ctx.app)
+        .get(`/users/${user.id}/financialmutations?tillDate=${tillDate.toISOString()}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+
+      const actualTransactions = ctx.transactions
+        .filter((t) => (t.from.id === user.id || t.createdBy.id === user.id || t.subTransactions.some((s) => s.to.id === user.id))
+          && t.createdAt < tillDate);
+      expect(actualTransactions.length).to.be.at.least(1);
+      const actualTransfers = ctx.transfers
+        .filter((t) => (t.from?.id === user.id || t.to?.id === user.id)
+          && t.createdAt < tillDate);
+      expect(actualTransfers.length).to.be.at.least(1);
+
+      const body = res.body as PaginatedFinancialMutationResponse;
+      expect(body.records.filter((r) => r.type === 'transfer')).to.be.lengthOf(actualTransfers.length);
+      expect(body.records.filter((r) => r.type === 'transaction')).to.be.lengthOf(actualTransactions.length);
+      body.records.forEach((t) => {
+        expect(new Date(t.mutation.createdAt)).to.be.lessThanOrEqual(tillDate);
+      });
     });
     it('should adhere to pagination', async () => {
       const take = 5;

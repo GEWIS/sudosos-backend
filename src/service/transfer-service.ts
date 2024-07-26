@@ -115,7 +115,7 @@ export default class TransferService {
       whereClause = {
         ...whereClause,
         createdAt: Raw(
-          (alias) => `${alias} > :fromDate AND ${alias} < :tillDate`,
+          (alias) => `${alias} >= :fromDate AND ${alias} < :tillDate`,
           { fromDate: toMySQLString(filters.fromDate), tillDate: toMySQLString(filters.tillDate) },
         ),
       };
@@ -123,7 +123,7 @@ export default class TransferService {
       whereClause = {
         ...whereClause,
         createdAt: Raw(
-          (alias) => `${alias} > :fromDate`,
+          (alias) => `${alias} >= :fromDate`,
           { fromDate: toMySQLString(filters.fromDate) },
         ),
       };

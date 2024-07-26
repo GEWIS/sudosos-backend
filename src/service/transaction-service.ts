@@ -53,7 +53,7 @@ import { DineroObjectResponse } from '../controller/response/dinero-response';
 import BalanceService from './balance-service';
 import { asBoolean, asDate, asNumber } from '../helpers/validators';
 import { PaginationParameters } from '../helpers/pagination';
-import { toMySQLString } from '../helpers/timestamps';
+import { toMySQLString, utcToDate } from '../helpers/timestamps';
 import {
   TransactionReport,
   TransactionReportCategoryEntryResponse,
@@ -604,30 +604,32 @@ export default class TransactionService {
       builder.getCount(),
     ]);
 
+    const tillDate = params.tillDate ? toMySQLString(params.tillDate) : undefined;
+
     const records = results[0].map((o) => {
       const value = DineroTransformer.Instance.from(o.value || 0);
       const v: BaseTransactionResponse = {
         id: o.transaction_id,
-        createdAt: new Date(o.transaction_createdAt).toISOString(),
-        updatedAt: new Date(o.transaction_updatedAt).toISOString(),
+        createdAt: utcToDate(o.transaction_createdAt).toISOString(),
+        updatedAt: utcToDate(o.transaction_updatedAt).toISOString(),
         from: {
           id: o.from_id,
-          createdAt: new Date(o.from_createdAt).toISOString(),
-          updatedAt: new Date(o.from_updatedAt).toISOString(),
+          createdAt: utcToDate(o.from_createdAt).toISOString(),
+          updatedAt: utcToDate(o.from_updatedAt).toISOString(),
           firstName: o.from_firstName,
           lastName: o.from_lastName,
         },
         createdBy: o.createdBy_id ? {
           id: o.createdBy_id,
-          createdAt: new Date(o.createdBy_createdAt).toISOString(),
-          updatedAt: new Date(o.createdBy_updatedAt).toISOString(),
+          createdAt: utcToDate(o.createdBy_createdAt).toISOString(),
+          updatedAt: utcToDate(o.createdBy_updatedAt).toISOString(),
           firstName: o.createdBy_firstName,
           lastName: o.createdBy_lastName,
         } : undefined,
         pointOfSale: {
           id: o.pointOfSale_id,
-          createdAt: new Date(o.pointOfSale_createdAt).toISOString(),
-          updatedAt: new Date(o.pointOfSaleRev_updatedAt).toISOString(),
+          createdAt: utcToDate(o.pointOfSale_createdAt).toISOString(),
+          updatedAt: utcToDate(o.pointOfSaleRev_updatedAt).toISOString(),
           name: o.pointOfSaleRev_name,
         },
         value: value.toObject(),

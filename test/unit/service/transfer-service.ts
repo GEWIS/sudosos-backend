@@ -138,7 +138,7 @@ describe('TransferService', async (): Promise<void> => {
       const res = await TransferService.getTransfers({ fromDate });
       expect(res.records).to.be.lengthOf(actualTransfers.length);
       res.records.forEach((t) => {
-        expect(new Date(t.createdAt)).to.be.greaterThan(fromDate);
+        expect(new Date(t.createdAt)).to.be.greaterThanOrEqual(fromDate);
       });
     });
 
@@ -174,7 +174,7 @@ describe('TransferService', async (): Promise<void> => {
       const res = await TransferService.getTransfers({ fromDate, tillDate });
       expect(res.records).to.be.lengthOf(actualTransfers.length);
       res.records.forEach((t) => {
-        expect(new Date(t.createdAt)).to.be.greaterThan(fromDate);
+        expect(new Date(t.createdAt)).to.be.greaterThanOrEqual(fromDate);
         expect(new Date(t.createdAt)).to.be.lessThan(tillDate);
       });
     });
