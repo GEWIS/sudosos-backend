@@ -27,6 +27,7 @@ import WriteOff from '../entity/transactions/write-off';
 import WriteOffRequest from './request/write-off-request';
 import wrapInManager from '../helpers/database';
 import User from '../entity/user/user';
+import BalanceService from "../service/balance-service";
 
 export default class WriteOffController extends BaseController {
   private logger: Logger = log4js.getLogger(' WriteOffController');
@@ -148,6 +149,12 @@ export default class WriteOffController extends BaseController {
       const user = await User.findOne({ where: { id: body.toId, deleted: false } });
       if (!user) {
         res.status(404).json('Unknown user ID.');
+        return;
+      }
+
+      const balance = await BalanceService.getBalance(user.id);
+      if (balance.amount.amount > 0) {
+        res.status(400).json('User has balance, cannot create write off');
         return;
       }
 
