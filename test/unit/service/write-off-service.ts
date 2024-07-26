@@ -29,7 +29,6 @@ import chai, { expect } from 'chai';
 import WriteOffService from '../../../src/service/write-off-service';
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import User from '../../../src/entity/user/user';
-import wrapInManager from '../../../src/helpers/database';
 import VatGroup from '../../../src/entity/vat-group';
 
 chai.use(deepEqualInAnyOrder);
@@ -44,10 +43,12 @@ describe('WriteOffService', () => {
   };
 
   before(async () => {
-    ctx = { ...await defaultContext(), writeOffs: await seedWriteOffs() };
+    const c = { ...await defaultContext() };
+    await truncateAllTables(c.connection);
+
     const vg = await VatGroup.findOne({ where: { percentage: 21 } });
     if (!vg) await (VatGroup.create({ percentage: 21, deleted: false, hidden: false, name: 'High VAT' })).save();
-    await truncateAllTables(ctx.connection);
+    ctx = { ...c, writeOffs: await seedWriteOffs() };
   });
 
   after(async () => {
