@@ -42,7 +42,7 @@ export class PosCashiers1721835613950 implements MigrationInterface {
     await queryRunner.createForeignKey('point_of_sale_cashier_roles_role', new TableForeignKey({
       columnNames: ['roleId'],
       referencedColumnNames: ['id'],
-      referencedTableName: 'roles',
+      referencedTableName: 'role',
       onDelete: 'CASCADE',
     }));
   }
