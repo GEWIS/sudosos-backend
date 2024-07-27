@@ -25,6 +25,8 @@ import { RequestWithToken } from '../middleware/token-middleware';
 import AuthenticationService from '../service/authentication-service';
 import TokenHandler from '../authentication/token-handler';
 import User from '../entity/user/user';
+import PointOfSaleController from './point-of-sale-controller';
+import PointOfSale from '../entity/point-of-sale/point-of-sale';
 
 export default class AuthenticationSecureController extends BaseController {
   private logger: Logger = log4js.getLogger('AuthenticationController');
@@ -57,6 +59,12 @@ export default class AuthenticationSecureController extends BaseController {
           restrictions: { lesser: true, acceptedTOS: false },
         },
       },
+      '/pointofsale/:id(\\d+)': {
+        GET: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'authenticate', await PointOfSaleController.getRelation(req), 'User', ['pointOfSale']),
+          handler: this.authenticatePointOfSale.bind(this),
+        },
+      },
     };
   }
 
@@ -77,6 +85,39 @@ export default class AuthenticationSecureController extends BaseController {
         roleManager: this.roleManager,
         tokenHandler: this.tokenHandler,
       }, req.token.lesser);
+      res.json(token);
+    } catch (error) {
+      this.logger.error('Could not create token:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * GET /authentication/pointofsale/{id}
+   * @summary Get a JWT token for the given POS
+   * @operationId authenticatePointOfSale
+   * @tags authenticate - Operations of the authentication controller
+   * @security JWT
+   * @param {integer} id.path.required - The id of the user
+   * @return {AuthenticationResponse} 200 - The created json web token.
+   * @return {string} 404 - Point of sale not found
+   * @return {string} 500 - Internal server error
+   */
+  private async authenticatePointOfSale(req: RequestWithToken, res: Response): Promise<void> {
+    this.logger.trace('Authenticate point of sale', req.params.id, 'by user', req.token.user.id);
+
+    try {
+      const pointOfSaleId = Number(req.params.id);
+      const pointOfSale = await PointOfSale.findOne({ where: { id: pointOfSaleId }, relations: { user: true } });
+      if (!pointOfSale) {
+        res.status(404).json('Point of sale not found.');
+        return;
+      }
+
+      const token = await AuthenticationService.getSaltedToken(pointOfSale.user, {
+        roleManager: this.roleManager,
+        tokenHandler: this.tokenHandler,
+      }, false);
       res.json(token);
     } catch (error) {
       this.logger.error('Could not create token:', error);

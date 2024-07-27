@@ -56,6 +56,10 @@ export default class DefaultRoles {
         },
         User: {
           get: { own: star },
+          authenticate: {
+            own: new Set(['pointOfSale']),
+            organ: new Set(['pointOfSale']),
+          },
         },
         Authenticator: {
           get: { own: star },
@@ -200,6 +204,7 @@ export default class DefaultRoles {
         User: {
           ...admin,
           acceptToS: { own: star },
+          authenticate: { all: star },
         },
         VatGroup: admin,
         VoucherGroup: admin,
