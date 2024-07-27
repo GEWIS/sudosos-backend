@@ -67,6 +67,7 @@ import EventController from './controller/event-controller';
 import EventShiftController from './controller/event-shift-controller';
 import EventService from './service/event-service';
 import DefaultRoles from './rbac/default-roles';
+import ServerSettingsStore from './server-settings/server-settings-store';
 
 export class Application {
   app: express.Express;
@@ -194,6 +195,9 @@ export default async function createApp(): Promise<Application> {
   // Set up monetary value configuration.
   dinero.defaultCurrency = process.env.CURRENCY_CODE as Currency;
   dinero.defaultPrecision = parseInt(process.env.CURRENCY_PRECISION, 10);
+
+  // Initialize database-stored settings
+  await ServerSettingsStore.getInstance().initialize();
 
   // Create express application.
   application.app = express();
