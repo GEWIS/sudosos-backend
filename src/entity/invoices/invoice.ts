@@ -31,69 +31,123 @@ import InvoicePdf from '../file/invoice-pdf';
 import { hashJSON } from '../../helpers/hash';
 import InvoicePdfService from '../../service/invoice-pdf-service';
 
-/**
- * @typedef {BaseEntity} Invoice
- * @property {User.model} to.required - The account for whom the invoice is
- * @property {Transfer.model} transfer.required - The transfer entity representing the invoice.
- * @property {Array.<InvoiceEntry>} invoiceEntries.required
- *                                       The entries describing this invoice.
- * @property {Array.<InvoiceStatus>} invoiceStatus.required - The status history of the invoice
- * @property {string} addressee.required - Name of the addressed
- * @property {string} description.required - The description of the invoice
- */
+
 @Entity()
 export default class Invoice extends BaseEntity {
+
+  /**
+   * The ID of the account for whom the invoice is
+   */
   @Column({ nullable: false })
   public toId: number;
 
+  /**
+   * The account for whom the invoice is
+   */
   @ManyToOne(() => User, { nullable: false })
   public to: User;
 
+  /**
+   * The transfer entity representing the invoice.
+   */
   @OneToOne(() => Transfer, {
     nullable: false,
   })
   @JoinColumn()
   public transfer: Transfer;
 
+  /**
+   * The entries describing this invoice.
+   */
   @OneToMany(() => InvoiceEntry,
     (invoiceEntry) => invoiceEntry.invoice,
     { cascade: true, eager: true })
   public invoiceEntries: InvoiceEntry[];
 
+  /**
+   * The current status of the invoice
+   */
+  @ManyToOne(() => InvoiceStatus, { nullable: false, eager: true })
+  @JoinColumn({ name: 'currentStatusId' })
+  public currentStatus: InvoiceStatus;
+
+  /**
+   * The status history of the invoice
+   */
   @OneToMany(() => InvoiceStatus,
     (invoiceStatus) => invoiceStatus.invoice,
     { cascade: true })
   public invoiceStatus: InvoiceStatus[];
 
+  /**
+   * Name of the addressed
+   */
   @Column()
   public addressee: string;
 
-  @Column()
+  /**
+   * Special attention to the addressee
+   */
+  @Column({ nullable: true, default: '' })
+  public attention: string;
+
+  /**
+   * The description of the invoice
+   */
+  @Column({ nullable: true, default: '' })
   public description: string;
 
+  /**
+   * The ID of the PDF file
+   */
   @Column({ nullable: true })
   public pdfId?: number;
 
-  // onDelete: 'CASCADE' is not possible here, because removing the
-  // pdf from the database will not remove it from storage
+  /**
+   * The PDF file
+   *
+   * onDelete: 'CASCADE' is not possible here, because removing the
+   * pdf from the database will not remove it from storage
+   */
   @OneToOne(() => InvoicePdf, { nullable: true, onDelete: 'RESTRICT' })
   @JoinColumn()
   public pdf?: InvoicePdf;
 
+  /**
+   * The reference of the invoice
+   */
   @Column()
   public reference: string;
 
+  /**
+   * Street to use on the invoice
+   */
   @Column()
   public street: string;
 
+  /**
+   * Postal code to use on the invoice
+   */
   @Column()
   public postalCode:string;
 
+  /**
+   * City to use on the invoice
+   */
   @Column()
   public city: string;
 
+  /**
+   * Country to use on the invoice
+   */
   @Column()
   public country: string;
+
+  /**
+   * Date of the invoice
+   */
+  @Column()
+  public date: Date;
 
   getPdfParamHash(): string {
     return hashJSON(InvoicePdfService.getParameters(this));
