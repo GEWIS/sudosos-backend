@@ -112,9 +112,17 @@ describe('InvoiceController', async () => {
       acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
     } as User;
 
+    let invoiceUser2 = {
+      firstName: 'User2',
+      type: UserType.INVOICE,
+      active: true,
+      acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
+    } as User;
+
     await User.save(adminUser);
     await User.save(localUser);
     await User.save(invoiceUser);
+    await User.save(invoiceUser2);
 
     const categories = await seedProductCategories();
     const vatGroups = await seedVatGroups();
@@ -123,8 +131,8 @@ describe('InvoiceController', async () => {
     const { pointOfSaleRevisions } = await seedPointsOfSale(
       [adminUser, localUser], containerRevisions,
     );
-    const { transactions } = await seedTransactions([adminUser, localUser, invoiceUser], pointOfSaleRevisions);
-    await seedInvoices([invoiceUser], transactions);
+    const { transactions } = await seedTransactions([adminUser, localUser, invoiceUser, invoiceUser2], pointOfSaleRevisions);
+    const { invoices } = await seedInvoices([invoiceUser, invoiceUser2], transactions);
 
     const app = express();
     const specification = await Swagger.initialize(app);
@@ -352,6 +360,7 @@ describe('InvoiceController', async () => {
             forId: debtor.id,
             transactionIDs: tIds,
             isCreditInvoice: false,
+            date: new Date(),
             reference: 'BAC-41',
           };
 
@@ -492,6 +501,20 @@ describe('InvoiceController', async () => {
 
           expect(res.status).to.equal(200);
         });
+    });
+    it('should filter on invoice status', async () => {
+      const sent = await Invoice.find({ where: { latestStatus: { state: 2 } }, relations: ['latestStatus'] });
+      expect(sent.length).to.be.at.least(1);
+      expect(sent.length).to.not.equal(await Invoice.count());
+      const res = await request(ctx.app)
+        .get('/invoices')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query({ currentState: 'SENT' });
+
+      expect(res.status).to.equal(200);
+      res.body.records.forEach((invoice: InvoiceResponse) => {
+        expect(invoice.currentState.state).to.equal('SENT');
+      });
     });
   });
   describe('GET /invoices/{id}', () => {

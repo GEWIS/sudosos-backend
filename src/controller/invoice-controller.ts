@@ -215,6 +215,7 @@ export default class InvoiceController extends BaseController {
       const params: CreateInvoiceParams = {
         ...userDefinedDefaults,
         ...body,
+        date: body.date ? new Date(body.date) : new Date(),
         byId: body.byId ?? req.token.user.id,
       };
 
@@ -226,7 +227,6 @@ export default class InvoiceController extends BaseController {
 
       const invoice: Invoice = await InvoiceService.createInvoice(params);
       res.json(InvoiceService.toResponse(invoice, true));
-
     } catch (error) {
       this.logger.error('Could not create invoice:', error);
       res.status(500).json('Internal server error.');

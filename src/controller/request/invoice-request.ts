@@ -23,25 +23,34 @@ import { InvoiceState } from '../../entity/invoices/invoice-status';
 export interface BaseUpdateInvoice {
   addressee?: string,
   description?: string,
+  street?: string;
+  postalCode?:string;
+  city?: string;
+  country?: string;
+  reference?: string;
+  attention?: string,
+  date?: string,
 }
 
 export interface UpdateInvoiceParams extends BaseUpdateInvoice {
   byId: number,
   invoiceId: number,
   state?: InvoiceState,
-  street?: string;
-  postalCode?:string;
-  city?: string;
-  country?: string;
-  reference?: string;
 }
 
 /**
- * @typedef{object}  UpdateInvoiceRequest
+ * @typedef {object}  UpdateInvoiceRequest
  * @property {integer} byId - The user who updates the Invoice, defaults to the ID of the requester.
  * @property {string} addressee - Name of the addressed.
  * @property {string} description - The description of the invoice.
  * @property {string} state - enum:CREATED,SENT,PAID,DELETED - The state to set of the invoice,
+ * @property {string} street - Street to use on the invoice.
+ * @property {string} postalCode - Postal code to use on the invoice.
+ * @property {string} city - City to use on the invoice.
+ * @property {string} country - Country to use on the invoice.
+ * @property {string} reference - Reference to use on the invoice.
+ * @property {string} attention - Attention to use on the invoice.
+ * @property {string} date - Date to use on the invoice.
  */
 export interface UpdateInvoiceRequest extends BaseUpdateInvoice {
   byId?: number,
@@ -65,6 +74,8 @@ export interface CreateInvoiceParams extends BaseInvoice {
   city: string;
   country: string;
   addressee: string,
+  date: Date,
+  attention?: string,
 }
 
 /**
@@ -83,6 +94,8 @@ export interface CreateInvoiceParams extends BaseInvoice {
  * @property {string} postalCode - Postal code to use on the invoice, overwrites the users default.
  * @property {string} city - City to use on the invoice, overwrites the users default.
  * @property {string} country - Country to use on the invoice, overwrites the users default.
+ * @property {string} date - Date to use on the invoice, overwrites the creation date.
+ * @property {string} attention - Attention to use on the invoice.
  */
 export interface CreateInvoiceRequest extends BaseInvoice {
   byId?: number,
@@ -91,4 +104,6 @@ export interface CreateInvoiceRequest extends BaseInvoice {
   city?: string;
   country?: string;
   addressee?: string,
+  date?: Date,
+  attention?: string,
 }

@@ -333,7 +333,7 @@ describe('InvoicePdfService', async (): Promise<void> => {
       expect(params.reference.costCenter).to.eq(true);
 
       expect(params.subject).to.eq(invoice.description);
-      expect(params.dates.date).to.eq(invoice.createdAt);
+      expect(params.dates.date).to.eq(invoice.date);
       expect(params.company.name).to.eq(invoice.addressee);
 
       expect(params.address.street).to.eq(invoice.street);

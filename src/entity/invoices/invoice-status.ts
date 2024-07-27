@@ -17,12 +17,14 @@
  */
 
 import {
-  Column, Entity, JoinColumn, ManyToOne,
+  AfterInsert, AfterUpdate,
+  Column, Entity, getRepository, JoinColumn, ManyToOne,
 } from 'typeorm';
 // eslint-disable-next-line import/no-cycle
 import Invoice from './invoice';
 import User from '../user/user';
 import BaseEntity from '../base-entity';
+import { AppDataSource } from '../../database/database';
 
 export enum InvoiceState {
   CREATED = 1,
@@ -48,4 +50,20 @@ export default class InvoiceStatus extends BaseEntity {
 
   @Column()
   public state: InvoiceState;
+
+  @AfterInsert()
+  @AfterUpdate()
+  async updateInvoiceCurrentStatus(): Promise<void> {
+    await InvoiceStatus.updateInvoiceStatus(this.invoice.id, this);
+  }
+
+  static async updateInvoiceStatus(invoiceId: number, status: InvoiceStatus): Promise<void> {
+    const invoiceRepository = getRepository(Invoice);
+    const invoice = await invoiceRepository.findOne({ where: { id: invoiceId }, relations: ['latestStatus'] });
+
+    if (invoice) {
+      invoice.latestStatus = status;
+      await invoiceRepository.save(invoice);
+    }
+  }
 }

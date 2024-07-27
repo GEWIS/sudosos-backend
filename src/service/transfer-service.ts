@@ -160,7 +160,7 @@ export default class TransferService {
         'deposit', 'deposit.depositStatus',
         'payoutRequest', 'payoutRequest.payoutRequestStatus', 'payoutRequest.requestedBy',
         'fine', 'fine.userFineGroup', 'fine.userFineGroup.user',
-        'waivedFines', 'waivedFines.fines', 'waivedFines.fines.userFineGroup', 'vat', 'writeOff',
+        'waivedFines', 'waivedFines.fines', 'waivedFines.fines.userFineGroup', 'vat', 'writeOff', 'invoice.latestStatus',
       ],
       take,
       skip,

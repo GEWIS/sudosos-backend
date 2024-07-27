@@ -60,7 +60,7 @@ export interface InvoiceFilterParameters {
   /**
    * Filter based on the current invoice state
    */
-  invoiceStatus?: InvoiceState
+  latestState?: InvoiceState
   /**
    * Boolean if the invoice entries should be added to the response.
    */
@@ -79,7 +79,7 @@ export function parseInvoiceFilterParameters(req: RequestWithToken): InvoiceFilt
   return {
     toId: asNumber(req.query.toId),
     invoiceId: asNumber(req.query.invoiceId),
-    invoiceStatus: asInvoiceState(req.query.currentState),
+    latestState: asInvoiceState(req.query.currentState),
     returnInvoiceEntries: asBoolean(req.query.returnInvoiceEntries),
     fromDate: asDate(req.query.fromDate),
     tillDate: asDate(req.query.tillDate),
@@ -120,15 +120,15 @@ export default class InvoiceService {
       id: invoice.id,
       createdAt: invoice.createdAt.toISOString(),
       updatedAt: invoice.updatedAt.toISOString(),
+      date: invoice.date.toISOString(),
       to: parseUserToBaseResponse(invoice.to, false),
       addressee: invoice.addressee,
       reference: invoice.reference,
+      attention: invoice.attention,
       transfer: invoice.transfer ? TransferService.asTransferResponse(invoice.transfer) : undefined,
       description: invoice.description,
       pdf: invoice.pdf ? invoice.pdf.downloadName : undefined,
-      currentState: InvoiceService.asInvoiceStatusResponse(
-        invoice.invoiceStatus[invoice.invoiceStatus.length - 1],
-      ),
+      currentState: InvoiceService.asInvoiceStatusResponse(invoice.latestStatus),
       city: invoice.city,
       country: invoice.country,
       postalCode: invoice.postalCode,
@@ -242,8 +242,7 @@ export default class InvoiceService {
   }
 
   static isState(invoice: Invoice, state: InvoiceState): boolean {
-    return (invoice.invoiceStatus[invoice.invoiceStatus.length - 1]
-      .state === state);
+    return invoice.latestStatus.state === state;
   }
 
   /**
@@ -374,7 +373,7 @@ export default class InvoiceService {
    * @param update
    */
   public static async updateInvoice(update: UpdateInvoiceParams) {
-    const base: Invoice = await Invoice.findOne({ where: { id: update.invoiceId }, relations: ['invoiceStatus'] });
+    const base: Invoice = await Invoice.findOne({ where: { id: update.invoiceId }, relations: ['invoiceStatus', 'latestStatus'] });
 
     // Return undefined if base does not exist.
     if (!base || this.isState(base, InvoiceState.DELETED) || this.isState(base, InvoiceState.PAID)) {
@@ -405,6 +404,8 @@ export default class InvoiceService {
     if (update.city) base.postalCode = update.city;
     if (update.country) base.postalCode = update.country;
     if (update.reference) base.reference = update.reference;
+    if (update.attention) base.attention = update.attention;
+    if (update.date) base.date = new Date(update.date);
 
     await base.save();
     // Return the newly updated Invoice.
@@ -525,6 +526,7 @@ export default class InvoiceService {
       toId: forId,
       transfer: transfer.id,
       addressee: invoiceRequest.addressee,
+      attention: invoiceRequest.attention,
       invoiceStatus: [],
       invoiceEntries: [],
       description: invoiceRequest.description,
@@ -533,6 +535,7 @@ export default class InvoiceService {
       city: invoiceRequest.city,
       country: invoiceRequest.country,
       reference: invoiceRequest.reference,
+      date: invoiceRequest.date,
     });
 
     // Create a new InvoiceStatus
@@ -610,13 +613,13 @@ export default class InvoiceService {
       currentState: 'currentState',
       toId: 'toId',
       invoiceId: 'id',
-      invoiceStatus: 'invoiceStatus.state',
+      latestState: 'latestStatus.state',
     };
 
-    const relations: FindOptionsRelationByString = ['to', 'invoiceStatus', 'transfer', 'transfer.to', 'transfer.from', 'pdf'];
+    const relations: FindOptionsRelationByString = ['to', 'invoiceStatus', 'transfer', 'transfer.to', 'transfer.from', 'pdf', 'latestStatus'];
     const options: FindManyOptions<Invoice> = {
       where: QueryFilter.createFilterWhereClause(filterMapping, params),
-      order: { createdAt: 'ASC' },
+      order: { createdAt: 'DESC' },
     };
 
     if (params.returnInvoiceEntries) relations.push('invoiceEntries');

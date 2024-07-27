@@ -64,12 +64,16 @@ export default class Invoice extends BaseEntity {
     { cascade: true, eager: true })
   public invoiceEntries: InvoiceEntry[];
 
+
+  @Column({ nullable: true })
+  public latestStatusId?: number;
+
   /**
    * The current status of the invoice
    */
-  @ManyToOne(() => InvoiceStatus, { nullable: false, eager: true })
-  @JoinColumn({ name: 'currentStatusId' })
-  public currentStatus: InvoiceStatus;
+  @OneToOne(() => InvoiceStatus, { nullable: true, eager: false })
+  @JoinColumn({ name: 'latestStatusId' })
+  public latestStatus?: InvoiceStatus;
 
   /**
    * The status history of the invoice
@@ -146,7 +150,10 @@ export default class Invoice extends BaseEntity {
   /**
    * Date of the invoice
    */
-  @Column()
+  @Column({
+    type: 'datetime',
+    default: () => 'CURRENT_TIMESTAMP',
+  })
   public date: Date;
 
   getPdfParamHash(): string {
