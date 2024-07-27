@@ -34,7 +34,7 @@ export default class ServerSetting<T extends keyof ISettings = keyof ISettings> 
    * JSON-stored value
    */
   @Column({
-    type: 'varchar',
+    type: 'text',
     transformer: {
       from(value: string | null): number[] | null {
         if (value == null) return null;

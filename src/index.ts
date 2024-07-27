@@ -197,7 +197,8 @@ export default async function createApp(): Promise<Application> {
   dinero.defaultPrecision = parseInt(process.env.CURRENCY_PRECISION, 10);
 
   // Initialize database-stored settings
-  await ServerSettingsStore.getInstance().initialize();
+  const store = ServerSettingsStore.getInstance();
+  if (!store.initialized) await store.initialize();
 
   // Create express application.
   application.app = express();
