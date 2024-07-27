@@ -122,6 +122,7 @@ export default class InvoiceService {
       updatedAt: invoice.updatedAt.toISOString(),
       to: parseUserToBaseResponse(invoice.to, false),
       addressee: invoice.addressee,
+      reference: invoice.reference,
       transfer: invoice.transfer ? TransferService.asTransferResponse(invoice.transfer) : undefined,
       description: invoice.description,
       pdf: invoice.pdf ? invoice.pdf.downloadName : undefined,

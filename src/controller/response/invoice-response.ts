@@ -51,6 +51,7 @@ export interface InvoiceEntryResponse {
  * @typedef {allOf|BaseResponse} BaseInvoiceResponse
  * @property {BaseUserResponse} to.required - The person who was invoiced.
  * @property {string} addressee.required - Name of the addressed.
+ * @property {string} reference.required - Reference of the invoice.
  * @property {string} description.required - Description of the invoice.
  * @property {string} street.required - Street of the invoice.
  * @property {string} postalCode.required - Postal code of the invoice.
@@ -63,6 +64,7 @@ export interface InvoiceEntryResponse {
 export interface BaseInvoiceResponse extends BaseResponse {
   to: BaseUserResponse,
   addressee: string,
+  reference: string,
   description: string,
   currentState: InvoiceStatusResponse,
   street: string;
