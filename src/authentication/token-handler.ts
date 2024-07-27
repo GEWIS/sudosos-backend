@@ -64,8 +64,9 @@ export default class TokenHandler {
    * Creates a token string by signing the payload.
    * @param payload - the payload of the JWT.
    * @param nonce - the cryptographically secure nonce to be used.
+   * @param expiry - custom expiry to override the token default expiry time (in seconds)
    */
-  public async signToken(payload: JsonWebToken, nonce: string): Promise<string> {
+  public async signToken(payload: JsonWebToken, nonce: string, expiry?: number): Promise<string> {
     assert(payload.user, 'Payload has no user.');
     assert(Number.isInteger(Number((payload.user.id))), 'Payload user has invalid id.');
     assert(nonce, 'Nonce must be set.');
@@ -76,7 +77,7 @@ export default class TokenHandler {
     };
     return util.promisify(jwt.sign).bind(null, noncedPayload, this.options.privateKey, {
       algorithm: this.options.algorithm,
-      expiresIn: this.options.expiry,
+      expiresIn: expiry ?? this.options.expiry,
       notBefore: 0,
     })();
   }
@@ -99,11 +100,12 @@ export default class TokenHandler {
    */
   public async refreshToken(token: string, nonce: string): Promise<string> {
     const payload = await this.verifyToken(token) as any;
+    const expiry = payload.exp - payload.iat;
     delete payload.iat;
     delete payload.exp;
     delete payload.nbf;
     delete payload.jti;
-    return this.signToken(payload, nonce);
+    return this.signToken(payload, nonce, expiry);
   }
 
   /**

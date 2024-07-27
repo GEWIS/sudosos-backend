@@ -44,6 +44,7 @@ import MemberAuthenticator from '../../../src/entity/authenticator/member-authen
 import AuthenticationResponse from '../../../src/controller/response/authentication-response';
 import DefaultRoles from '../../../src/rbac/default-roles';
 import { getToken } from '../../seed/rbac';
+import { POINT_OF_SALE_JWT_EXPIRY } from '../../../src/authentication/jwt-expiry';
 
 describe('AuthenticationSecureController', () => {
   let ctx: {
@@ -157,6 +158,10 @@ describe('AuthenticationSecureController', () => {
       const body = res.body as AuthenticationResponse;
       expect(body.user.id).to.equal(pos.user.id);
       expect(body.rolesWithPermissions.some((r) => r.name === 'Point of Sale')).to.be.true;
+
+      // JWT should have longer expiry compare to standard JWT tokens
+      const payload = await ctx.tokenHandler.verifyToken(body.token);
+      expect(payload.exp - payload.iat).to.equal(POINT_OF_SALE_JWT_EXPIRY);
     });
     it('should return a token for a point of sale if owner', async () => {
       // User owns the POS

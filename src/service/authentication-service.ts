@@ -384,9 +384,11 @@ export default class AuthenticationService {
    * @param context
    * @param lesser
    * @param salt
+   * @param expiry Custom expiry time (in seconds). If not set,
+   * the default tokenHandler expiry will be used
    */
   public static async getSaltedToken(
-    user: User, context: AuthenticationContext, lesser = true, salt?: string,
+    user: User, context: AuthenticationContext, lesser = true, salt?: string, expiry?: number,
   ): Promise<AuthenticationResponse> {
     const [roles, organs] = await Promise.all([
       context.roleManager.getRoles(user, true),
@@ -394,7 +396,7 @@ export default class AuthenticationService {
     ]);
     const contents = await this.makeJsonWebToken(user, roles, organs, lesser);
     if (!salt) salt = await bcrypt.genSalt(AuthenticationService.BCRYPT_ROUNDS);
-    const token = await context.tokenHandler.signToken(contents, salt);
+    const token = await context.tokenHandler.signToken(contents, salt, expiry);
 
     return this.asAuthenticationResponse(contents.user, roles, contents.organs, token);
   }
