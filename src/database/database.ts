@@ -186,45 +186,12 @@ const options: DataSourceOptions = {
   ],
 };
 
-export const AppDataSource = new DataSource(options);
+export let AppDataSource: DataSource;
 
-function getDefaultConnection(connections: DataSource[]): DataSource | undefined {
-  const defaultConnection = connections.find((c) => c.name === 'default');
-  if (defaultConnection) {
-    if (defaultConnection.isInitialized) return defaultConnection;
-    else throw new Error('Default connection was closed or not initialized.');
-  }
-  return undefined;
-}
-
-// TODO: Migrate this to DataSource
 const Database = {
-  // This code was restructured such that we could perform a test suite on a persistent mysql/mariadb database.
-  // In dev and production environment, nothing special happens and we simply return a new default connection.
   initialize: async () => {
-    const connections = getConnectionManager().connections;
-
-    const isPersist = PERSISTENT_TEST_DATABASES.has(process.env.TYPEORM_CONNECTION);
-
-    // This means we are in a development or production environment, so we simply initialize the database.
-    if (isPersist && process.env.NODE_ENV !== 'test') {
-      return Promise.resolve(createConnection(options));
-    }
-
-    // If we are in a test environment we have the following cases.
-    if (isPersist && process.env.NODE_ENV === 'test') {
-
-      // We return the default connection if it exists
-      const defConnection = getDefaultConnection(connections);
-      if (defConnection) return defConnection;
-      else return Promise.resolve(createConnection(options));
-
-    } else if (process.env.TYPEORM_CONNECTION === 'sqlite') {
-      // And for sqlite we always just create a new connection.
-      return Promise.resolve(createConnection(options));
-    } else {
-      throw new Error(`Unsupported connection type ${process.env.TYPEORM_CONNECTION}`);
-    }
+    AppDataSource = await createConnection(options);
+    return AppDataSource;
   },
 };
 export default Database;
