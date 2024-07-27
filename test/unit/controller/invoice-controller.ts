@@ -132,7 +132,7 @@ describe('InvoiceController', async () => {
       [adminUser, localUser], containerRevisions,
     );
     const { transactions } = await seedTransactions([adminUser, localUser, invoiceUser, invoiceUser2], pointOfSaleRevisions);
-    const { invoices } = await seedInvoices([invoiceUser, invoiceUser2], transactions);
+    await seedInvoices([invoiceUser, invoiceUser2], transactions);
 
     const app = express();
     const specification = await Swagger.initialize(app);

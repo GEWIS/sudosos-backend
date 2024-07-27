@@ -86,7 +86,7 @@ import { WriteOffs1722004753128 } from '../migrations/1722004753128-write-offs';
 import ServerSetting from '../entity/server-setting';
 import { ServerSettings1722083254200 } from '../migrations/1722083254200-server-settings';
 import { PosUsers1722084520361 } from '../migrations/1722084520361-pos-users';
-import {InvoiceRework1622118077157} from "../migrations/1722118077157-invoice-rework";
+import { InvoiceRework1622118077157 } from '../migrations/1722118077157-invoice-rework';
 
 // We need to load the dotenv to prevent the env from being undefined.
 dotenv.config();

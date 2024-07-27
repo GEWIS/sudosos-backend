@@ -24,7 +24,6 @@ import {
 import Invoice from './invoice';
 import User from '../user/user';
 import BaseEntity from '../base-entity';
-import { AppDataSource } from '../../database/database';
 
 export enum InvoiceState {
   CREATED = 1,
