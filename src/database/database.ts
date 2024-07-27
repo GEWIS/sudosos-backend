@@ -17,7 +17,7 @@
  */
 
 import {
-  createConnection, DataSource, getConnectionManager,
+  createConnection, DataSource,
 } from 'typeorm';
 import User from '../entity/user/user';
 import Product from '../entity/product/product';
@@ -71,7 +71,6 @@ import { TransactionSubscriber, TransferSubscriber } from '../subscriber';
 import InvoicePdf from '../entity/file/invoice-pdf';
 import { InvoiceRefactor1707251162194 } from '../migrations/1707251162194-invoice-refactor';
 import dotenv from 'dotenv';
-import { PERSISTENT_TEST_DATABASES } from '../helpers/database';
 import PayoutRequestPdf from '../entity/file/payout-request-pdf';
 import { PayoutRequestPdf1720610649657 } from '../migrations/1720610649657-payout-request-pdf';
 import { SoftDeletes1720608140757 } from '../migrations/1720608140757-soft-deletes';
@@ -190,6 +189,7 @@ export let AppDataSource: DataSource;
 
 const Database = {
   initialize: async () => {
+    if (AppDataSource) return AppDataSource;
     AppDataSource = await createConnection(options);
     return AppDataSource;
   },
