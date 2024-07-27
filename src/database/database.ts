@@ -189,7 +189,7 @@ export let AppDataSource: DataSource;
 
 const Database = {
   initialize: async () => {
-    if (AppDataSource) return AppDataSource;
+    if (AppDataSource && AppDataSource.isInitialized) return AppDataSource;
     AppDataSource = await createConnection(options);
     return AppDataSource;
   },
