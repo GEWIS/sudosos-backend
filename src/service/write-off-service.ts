@@ -39,7 +39,7 @@ import UserService from './user-service';
 import { RequestWithToken } from '../middleware/token-middleware';
 import { asNumber } from '../helpers/validators';
 import VatGroup from '../entity/vat-group';
-import wrapInManager from "../helpers/database";
+import wrapInManager from '../helpers/database';
 
 export interface WriteOffFilterParameters {
   /**

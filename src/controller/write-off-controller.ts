@@ -25,7 +25,6 @@ import { PaginatedWriteOffResponse } from './response/write-off-response';
 import WriteOffService, { parseWriteOffFilterParameters } from '../service/write-off-service';
 import WriteOff from '../entity/transactions/write-off';
 import WriteOffRequest from './request/write-off-request';
-import wrapInManager from '../helpers/database';
 import User from '../entity/user/user';
 import BalanceService from '../service/balance-service';
 
