@@ -60,7 +60,8 @@ export default class InvoiceStatus extends BaseEntity {
     const invoiceRepository = getRepository(Invoice);
     const invoice = await invoiceRepository.findOne({ where: { id: invoiceId }, relations: ['latestStatus'] });
 
-    if (invoice) {
+    // Only update if the status is higher than the current status.
+    if (invoice && status.state > invoice.latestStatus.state ) {
       invoice.latestStatus = status;
       await invoiceRepository.save(invoice);
     }
