@@ -27,7 +27,7 @@ import TokenHandler from '../authentication/token-handler';
 import User from '../entity/user/user';
 import PointOfSaleController from './point-of-sale-controller';
 import PointOfSale from '../entity/point-of-sale/point-of-sale';
-import { POINT_OF_SALE_JWT_EXPIRY } from '../authentication/jwt-expiry';
+import ServerSettingsStore from '../server-settings/server-settings-store';
 
 export default class AuthenticationSecureController extends BaseController {
   private logger: Logger = log4js.getLogger('AuthenticationController');
@@ -115,10 +115,11 @@ export default class AuthenticationSecureController extends BaseController {
         return;
       }
 
+      const expiry = ServerSettingsStore.getInstance().getSetting('jwtExpiryPointOfSale');
       const token = await AuthenticationService.getSaltedToken(pointOfSale.user, {
         roleManager: this.roleManager,
         tokenHandler: this.tokenHandler,
-      }, false, undefined, POINT_OF_SALE_JWT_EXPIRY);
+      }, false, undefined, expiry);
       res.json(token);
     } catch (error) {
       this.logger.error('Could not create token:', error);

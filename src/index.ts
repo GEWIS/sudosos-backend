@@ -67,7 +67,6 @@ import EventController from './controller/event-controller';
 import EventShiftController from './controller/event-shift-controller';
 import EventService from './service/event-service';
 import DefaultRoles from './rbac/default-roles';
-import { DEFAULT_JWT_EXPIRY } from './authentication/jwt-expiry';
 import ServerSettingsStore from './server-settings/server-settings-store';
 
 export class Application {
@@ -128,7 +127,7 @@ async function createTokenHandler(): Promise<TokenHandler> {
     algorithm: 'RS512',
     publicKey: jwtPublic.export({ type: 'spki', format: 'pem' }),
     privateKey: jwtPrivate.export({ type: 'pkcs8', format: 'pem' }),
-    expiry: DEFAULT_JWT_EXPIRY,
+    expiry: ServerSettingsStore.getInstance().getSetting('jwtExpiryDefault'),
   });
 }
 
