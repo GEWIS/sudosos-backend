@@ -133,7 +133,7 @@ export default class InvoicePdfService {
       sender: new Identity({ firstName: UNUSED_PARAM, fullName: UNUSED_PARAM, lastName: UNUSED_PARAM, lastNamePreposition: UNUSED_PARAM }),
       // Partly unused, but still required.
       recipient: new Identity({ firstName: UNUSED_PARAM, lastName: UNUSED_PARAM, lastNamePreposition: UNUSED_PARAM, fullName: invoice.attention }),
-
+      description: invoice.description,
       dates: new Dates({
         date: invoice.date,
       }),
