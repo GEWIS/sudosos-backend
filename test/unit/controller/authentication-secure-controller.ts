@@ -45,6 +45,7 @@ import AuthenticationResponse from '../../../src/controller/response/authenticat
 import DefaultRoles from '../../../src/rbac/default-roles';
 import { getToken } from '../../seed/rbac';
 import settingDefaults from '../../../src/server-settings/setting-defaults';
+import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
 
 describe('AuthenticationSecureController', () => {
   let ctx: {
@@ -67,6 +68,8 @@ describe('AuthenticationSecureController', () => {
   before(async () => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
+
+    await ServerSettingsStore.getInstance().initialize();
 
     const users = await seedUsers();
     const memberAuthenticators = await seedMemberAuthenticators(
