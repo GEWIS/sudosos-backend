@@ -573,11 +573,12 @@ describe('InvoiceController', async () => {
   });
   describe('PATCH /invoices/{id}', () => {
     it('should return an HTTP 200 and update an invoice if admin', async () => {
-      const invoice = (await Invoice.find())[0];
+      const invoice = (await Invoice.find({ relations: ['latestStatus'] }))[0];
+      expect(invoice.latestStatus.state).to.not.equal(InvoiceState.PAID);
       const updateRequest: UpdateInvoiceRequest = {
         addressee: 'Updated-addressee',
         description: 'Updated-description',
-        state: 'SENT',
+        state: 'PAID',
       };
 
       const res = await request(ctx.app)
