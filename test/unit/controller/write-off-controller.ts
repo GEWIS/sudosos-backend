@@ -29,6 +29,7 @@ import TokenMiddleware from '../../../src/middleware/token-middleware';
 import BalanceService from '../../../src/service/balance-service';
 import { json } from 'body-parser';
 import VatGroup from '../../../src/entity/vat-group';
+import ServerSettingsStore from "../../../src/server-settings/server-settings-store";
 
 function writeOffEq(a: WriteOff, b: WriteOffResponse): Boolean {
   return a.to.id === b.to.id
@@ -71,6 +72,9 @@ describe('WriteOffController', () => {
     c.app.use(tokenMiddleware);
     const controller = new WriteOffController({ specification: c.specification, roleManager: c.roleManager });
     c.app.use('/writeoffs', controller.getRouter());
+
+    const vg = await (VatGroup.create({ percentage: 21, deleted: false, hidden: false, name: 'High VAT' })).save();
+    await ServerSettingsStore.getInstance().setSetting('highVatGroupId', vg.id);
 
     ctx = { ...c, adminToken, token, writeOffs: await seedWriteOffs() };
   });
