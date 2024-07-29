@@ -16,11 +16,38 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+type MailContentFunction<T> = string | ((context: T) => string);
 
 export interface MailContentFunctions<T> {
-  getHTML: (context: T) => string;
-  getText: (context: T) => string;
-  getSubject: (context: T) => string;
+  getHTML: MailContentFunction<T>;
+  getText: MailContentFunction<T>;
+  getSubject: MailContentFunction<T>;
+
+  /**
+   * Short title used as the header in a templated email
+   */
+  getTitle: MailContentFunction<T>;
+
+  /**
+   * Short, bottom text explaining in the templated email why
+   * the received got this email.
+   */
+  getReasonForEmail?: MailContentFunction<T>;
+}
+
+export interface MailContent {
+  text: string;
+  html: string;
+  subject: string;
+  /**
+   * Short title used as the header in a templated email
+   */
+  title: string;
+  /**
+   * Short, bottom text explaining in the templated email why
+   * the received got this email.
+   */
+  reason?: string;
 }
 
 export default class MailContentBuilder<T> {
@@ -30,10 +57,19 @@ export default class MailContentBuilder<T> {
 
   protected mail: MailContentFunctions<T>;
 
-  public getContent(context: T) {
-    const text = this.mail.getText(context);
-    const html = this.mail.getHTML(context);
-    const subject = this.mail.getSubject(context);
-    return { text, html, subject };
+  public getContent(context: T): MailContent {
+    const text = typeof this.mail.getText === 'string' ? this.mail.getText : this.mail.getText(context);
+    const html = typeof this.mail.getHTML === 'string' ? this.mail.getHTML : this.mail.getHTML(context);
+    const subject = typeof this.mail.getSubject === 'string' ? this.mail.getSubject : this.mail.getSubject(context);
+    const title = typeof this.mail.getTitle === 'string' ? this.mail.getTitle : this.mail.getTitle(context);
+
+    let reason: string | undefined;
+    if (this.mail.getReasonForEmail !== undefined && typeof this.mail.getReasonForEmail === 'string') {
+      reason = this.mail.getReasonForEmail;
+    } else if (this.mail.getReasonForEmail !== undefined && typeof this.mail.getReasonForEmail !== 'string') {
+      reason = this.mail.getReasonForEmail(context);
+    }
+
+    return { text, html, subject, title, reason };
   }
 }

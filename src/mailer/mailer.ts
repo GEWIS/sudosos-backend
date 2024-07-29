@@ -48,7 +48,7 @@ export default class Mailer {
     this.logger.trace('Send email', template.constructor.name, 'to user');
     try {
       await this.transporter.sendMail({
-        ...template.getOptions(language),
+        ...template.getOptions(to, language),
         to: to.email,
         ...extraOptions,
       });

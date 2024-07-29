@@ -18,19 +18,8 @@
 
 import Mail from 'nodemailer/lib/mailer';
 import MailContentBuilder from './messages/mail-content-builder';
-import fs from 'fs';
-import path from 'path';
-
-interface StyledTemplateFields {
-  subject: string;
-  htmlSubject: string;
-  shortTitle: string;
-  body: string;
-  weekDay: string;
-  date: string;
-  serviceEmail: string;
-  reasonForEmail: string;
-}
+import MailBodyGenerator from './template/mail-body-generator';
+import User from '../entity/user/user';
 
 export enum Language {
   DUTCH = 'nl-NL',
@@ -58,29 +47,17 @@ export default class MailMessage<T> {
   /**
    * Get the base options
    */
-  getOptions(language: Language): Mail.Options {
+  getOptions(to: User, language: Language): Mail.Options {
     if (this.mailContents[language] === undefined) throw new Error(`Unknown language: ${language}`);
-    const { text, html, subject } = this.mailContents[language].getContent(this.contentOptions);
 
-    let styledHtml = fs.readFileSync(path.join(__dirname, './template.html')).toString();
-    const styledHtmlTemplateFields: StyledTemplateFields = {
-      subject,
-      htmlSubject: subject.replaceAll(' ', '&nbsp;'),
-      body: html,
-      shortTitle: 'SudoSOS notification',
-      weekDay: new Date().toLocaleString(language, { weekday: 'long' }),
-      date: new Date().toLocaleDateString(language, { day: 'numeric', month: 'long', year: 'numeric' }),
-      serviceEmail: 'sudosos@gewis.nl',
-      reasonForEmail: '',
-    };
-    Object.entries(styledHtmlTemplateFields).forEach(([key, value]) => {
-      styledHtml = styledHtml.replaceAll(`{{ ${key} }}`, value);
-    });
+    const { text, html, subject } = new MailBodyGenerator()
+      .getContents(this.mailContents, this.contentOptions, to, language);
+
 
     return {
       ...this.baseMailOptions,
       text,
-      html: styledHtml,
+      html,
       subject,
     };
   }
