@@ -27,20 +27,19 @@ export default class InvoiceStatusSubscriber implements EntitySubscriberInterfac
   }
 
   async afterInsert(event: InsertEvent<InvoiceStatus>): Promise<void> {
-    await InvoiceStatusSubscriber.updateInvoiceStatus(event.manager, event.entity.invoice.id, event.entity);
+    await InvoiceStatusSubscriber.updateInvoiceStatus(event.manager, event.entity.invoice.id);
   }
 
   async afterUpdate(event: UpdateEvent<InvoiceStatus>): Promise<void> {
-    await InvoiceStatusSubscriber.updateInvoiceStatus(event.manager, event.databaseEntity.invoice.id, event.databaseEntity);
+    await InvoiceStatusSubscriber.updateInvoiceStatus(event.manager, event.databaseEntity.invoice.id);
   }
 
-  static async updateInvoiceStatus(manager: EntityManager, invoiceId: number, status: InvoiceStatus): Promise<void> {
+  static async updateInvoiceStatus(manager: EntityManager, invoiceId: number): Promise<void> {
     const invoiceRepository = manager.getRepository(Invoice);
-    const invoice = await invoiceRepository.findOne({ where: { id: invoiceId }, relations: ['latestStatus'] });
+    const invoice = await invoiceRepository.findOne({ where: { id: invoiceId } });
 
     if (invoice) {
-      invoice.latestStatus = status;
-      await invoiceRepository.save(invoice);
+      await manager.query('UPDATE invoice SET latestStatusId = (SELECT id FROM invoice_status WHERE invoice_status.invoiceId = invoice.id ORDER BY createdAt DESC LIMIT 1) WHERE invoice.id = ?', [invoiceId]);
     }
   }
 }
