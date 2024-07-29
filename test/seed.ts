@@ -739,23 +739,33 @@ export async function seedContainers(
  *
  * @param start - The number of pointsofsale that already exist.
  * @param count - The number of pointsofsale to generate.
- * @param user - The user that is owner of the pointsofsale.
+ * @param owner - The user that is owner of the pointsofsale.
  */
-function definePointsOfSale(
+async function definePointsOfSale(
   start: number,
   count: number,
-  user: User,
-): PointOfSale[] {
+  owner: User,
+): Promise<{ pointsOfSale: PointOfSale[], pointOfSaleUsers: User[] }> {
   const pointsOfSale: PointOfSale[] = [];
+  const pointOfSaleUsers: User[] = [];
   for (let nr = 1; nr <= count; nr += 1) {
+    const id = start + nr;
+    const user = await User.save({
+      firstName: `Point of Sale ${id}`,
+      type: UserType.POINT_OF_SALE,
+      active: true,
+      acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
+    });
     const pointOfSale = Object.assign(new PointOfSale(), {
-      id: start + nr,
-      owner: user,
+      id,
+      owner,
+      user,
       deletedAt: (nr % 3 === 2) ? new Date() : undefined,
     });
     pointsOfSale.push(pointOfSale);
+    pointOfSaleUsers.push(user);
   }
-  return pointsOfSale;
+  return { pointsOfSale, pointOfSaleUsers };
 }
 
 /**
@@ -810,15 +820,17 @@ export async function seedPointsOfSale(
 ): Promise<{
     pointsOfSale: PointOfSale[],
     pointOfSaleRevisions: PointOfSaleRevision[],
+    pointOfSaleUsers: User[],
   }> {
   let pointsOfSale: PointOfSale[] = [];
   let pointOfSaleRevisions: PointOfSaleRevision[] = [];
+  let pointOfSaleUsers: User[] = [];
 
   const sellers = users.filter((u) => [UserType.LOCAL_ADMIN, UserType.MEMBER, UserType.ORGAN].includes(u.type));
 
   const promises: Promise<any>[] = [];
   for (let i = 0; i < sellers.length; i += 1) {
-    const pos = definePointsOfSale(
+    const { pointsOfSale: pos, pointOfSaleUsers: posUsers } = await definePointsOfSale(
       pointsOfSale.length,
       4,
       sellers[i],
@@ -840,10 +852,11 @@ export async function seedPointsOfSale(
 
     pointsOfSale = pointsOfSale.concat(pos);
     pointOfSaleRevisions = pointOfSaleRevisions.concat(rev);
+    pointOfSaleUsers = pointOfSaleUsers.concat(posUsers);
   }
   await Promise.all(promises);
 
-  return { pointsOfSale, pointOfSaleRevisions };
+  return { pointsOfSale, pointOfSaleRevisions, pointOfSaleUsers };
 }
 
 /**

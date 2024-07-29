@@ -25,21 +25,24 @@ import { generateKeys } from '../../setup';
 
 describe('TokenHandler', (): void => {
   let ctx: {
+    expiry: number,
     handler: TokenHandler,
-    user: User
+    user: User,
   };
 
   before(async () => {
     // Generate RSA keypair
     const { publicKey, privateKey } = await generateKeys();
 
+    const expiry = 3600;
     // Initialize context
     ctx = {
+      expiry,
       handler: new TokenHandler({
         algorithm: 'RS512',
         publicKey,
         privateKey,
-        expiry: 3600,
+        expiry,
       }),
       user: {
         id: 1,
@@ -63,6 +66,22 @@ describe('TokenHandler', (): void => {
       const { publicKey } = ctx.handler.getOptions();
       const promise = util.promisify(jwt.verify).bind(null, token, publicKey)();
       await expect(promise).to.eventually.be.fulfilled;
+    });
+
+    it('should set custom expiry', async () => {
+      const expiry = ctx.expiry * 2;
+      const token = await ctx.handler.signToken({
+        user: ctx.user,
+        roles: [],
+        organs: [],
+        lesser: false,
+      }, '1', expiry);
+
+      // Verify that the token has longer expiry
+      const { publicKey } = ctx.handler.getOptions();
+      const payload = await util.promisify(jwt.verify).bind(null, token, publicKey)();
+      const actualExpiry = payload.exp - payload.iat;
+      expect(actualExpiry).to.equal(expiry);
     });
 
     it('should fail to sign if payload does not contain user', async () => {
@@ -157,6 +176,23 @@ describe('TokenHandler', (): void => {
       // New token should be valid
       const promise2 = ctx.handler.verifyToken(token2);
       await expect(promise2).to.eventually.be.fulfilled;
+    });
+
+    it('should use same expiry time as current token', async () => {
+      const expiry = ctx.expiry * 2;
+      const token1 = await ctx.handler.signToken({
+        user: ctx.user,
+        roles: [],
+        lesser: false,
+        organs: [],
+      }, '1', expiry);
+
+      const promise1 = ctx.handler.refreshToken(token1, '2');
+      await expect(promise1).to.eventually.be.fulfilled;
+
+      const token2 = await promise1;
+      const result2 = await ctx.handler.verifyToken(token2);
+      expect(result2.exp - result2.iat).to.equal(expiry);
     });
 
     it('should fail to refresh if signature is from different key', async () => {

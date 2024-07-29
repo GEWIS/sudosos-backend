@@ -127,7 +127,7 @@ async function createTokenHandler(): Promise<TokenHandler> {
     algorithm: 'RS512',
     publicKey: jwtPublic.export({ type: 'spki', format: 'pem' }),
     privateKey: jwtPrivate.export({ type: 'pkcs8', format: 'pem' }),
-    expiry: 3600,
+    expiry: ServerSettingsStore.getInstance().getSetting('jwtExpiryDefault'),
   });
 }
 

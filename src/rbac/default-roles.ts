@@ -56,6 +56,10 @@ export default class DefaultRoles {
         },
         User: {
           get: { own: star },
+          authenticate: {
+            own: new Set(['pointOfSale']),
+            organ: new Set(['pointOfSale']),
+          },
         },
         Authenticator: {
           get: { own: star },
@@ -90,15 +94,19 @@ export default class DefaultRoles {
       userTypes: [UserType.MEMBER, UserType.VOUCHER, UserType.LOCAL_USER, UserType.INVOICE],
       permissions: {
         Container: {
+          // Deprecated in favour of new POS user and POS role
           get: { all: star },
         },
         Product: {
+          // Deprecated in favour of new POS user and POS role
           get: { all: star },
         },
         PointOfSale: {
+          // Deprecated in favour of new POS user and POS role
           get: { all: star },
         },
         ProductCategory: {
+          // Deprecated in favour of new POS user and POS role
           get: { all: star },
         },
         Transaction: {
@@ -140,9 +148,36 @@ export default class DefaultRoles {
           create: { own: star, all: star },
         },
         User: {
+          // Deprecated in favour of new POS user and POS role
           get: { all: star },
           acceptToS: { own: star },
           update: { own: new Set(['extensiveDataProcessing']) },
+        },
+      },
+    }, {
+      /**
+       * The POS user role, which is used by point of sales to fetch relevant data
+       */
+      name: 'Point of Sale',
+      userTypes: [UserType.POINT_OF_SALE],
+      permissions: {
+        User: {
+          get: { all: star },
+        },
+        Balance: {
+          get: { all: star },
+        },
+        Container: {
+          get: { all: star },
+        },
+        Product: {
+          get: { all: star },
+        },
+        PointOfSale: {
+          get: { all: star },
+        },
+        ProductCategory: {
+          get: { all: star },
         },
       },
     }, {
@@ -169,6 +204,7 @@ export default class DefaultRoles {
         User: {
           ...admin,
           acceptToS: { own: star },
+          authenticate: { all: star },
         },
         VatGroup: admin,
         VoucherGroup: admin,

@@ -36,6 +36,7 @@ export enum UserType {
   LOCAL_USER = 4,
   LOCAL_ADMIN = 5,
   INVOICE = 6,
+  POINT_OF_SALE = 7,
 }
 
 /**

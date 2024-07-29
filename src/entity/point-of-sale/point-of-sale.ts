@@ -18,8 +18,8 @@
 
 import {
   Column, DeleteDateColumn,
-  Entity, JoinTable, ManyToMany,
-  ManyToOne,
+  Entity, JoinColumn, JoinTable, ManyToMany,
+  ManyToOne, OneToOne,
 } from 'typeorm';
 import BaseEntity from '../base-entity';
 import User from '../user/user';
@@ -43,6 +43,10 @@ export default class PointOfSale extends BaseEntity {
 
   @ManyToOne(() => User, { nullable: false, eager: true })
   public owner: User;
+
+  @OneToOne(() => User, { nullable: false })
+  @JoinColumn()
+  public user: User;
 
   /**
    * Every user that belongs to at least one of such cashier roles can create

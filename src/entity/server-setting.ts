@@ -20,6 +20,8 @@ import BaseEntity from './base-entity';
 
 export interface ISettings {
   highVatGroupId: number;
+  jwtExpiryDefault: number;
+  jwtExpiryPointOfSale: number;
 }
 
 /**

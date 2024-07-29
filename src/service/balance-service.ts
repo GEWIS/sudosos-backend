@@ -287,7 +287,7 @@ export default class BalanceService {
         + 'where user.currentFinesId = user_fine_group.id '
         + 'group by user.id '
       + ') as f on f.id = moneys2.id '
-      + 'where 1 = 1 ';
+      + `where u.type not in (${UserType.POINT_OF_SALE}) `;
 
     if (minBalance !== undefined) query += `and moneys2.totalvalue + Coalesce(b5.amount, 0) >= ${minBalance.getAmount()} `;
     if (maxBalance !== undefined) query += `and moneys2.totalvalue + Coalesce(b5.amount, 0) <= ${maxBalance.getAmount()} `;

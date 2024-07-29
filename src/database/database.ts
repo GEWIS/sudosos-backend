@@ -83,6 +83,7 @@ import { TransfersVat1721916495084 } from '../migrations/1721916495084-transfers
 import { PosCashiers1722022351000 } from '../migrations/1722022351000-pos-cashiers';
 import ServerSetting from '../entity/server-setting';
 import { ServerSettings1722083254200 } from '../migrations/1722083254200-server-settings';
+import { PosUsers1722084520361 } from '../migrations/1722084520361-pos-users';
 
 // We need to load the dotenv to prevent the env from being undefined.
 dotenv.config();
@@ -108,6 +109,7 @@ const options: DataSourceOptions = {
     TransfersVat1721916495084,
     PosCashiers1722022351000,
     ServerSettings1722083254200,
+    PosUsers1722084520361,
   ],
   extra: {
     authPlugins: {

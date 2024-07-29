@@ -45,6 +45,11 @@ export default class JsonWebToken {
   /**
    * The JWT expiry field. Set automatically by signing the token.
    */
+  public readonly iat?: number;
+
+  /**
+   * The JWT expiry field. Set automatically by signing the token.
+   */
   public readonly exp?: number;
 
   /**

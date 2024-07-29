@@ -25,7 +25,7 @@ import {
 import PointOfSale from '../entity/point-of-sale/point-of-sale';
 import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
-import User from '../entity/user/user';
+import User, { TermsOfServiceStatus, UserType } from '../entity/user/user';
 import Container from '../entity/container/container';
 import ContainerRevision from '../entity/container/container-revision';
 // eslint-disable-next-line import/no-cycle
@@ -179,8 +179,15 @@ export default class PointOfSaleService {
 
     if (!owner) return undefined;
 
+    const posUser = await User.save({
+      firstName: 'Point of Sale',
+      type: UserType.POINT_OF_SALE,
+      active: true,
+      acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
+    });
     const base = Object.assign(new PointOfSale(), {
       owner,
+      user: posUser,
     });
 
     // Save the base and update.
