@@ -18,8 +18,9 @@
 import 'reflect-metadata';
 import { Command } from 'commander';
 import log4js from 'log4js';
-import { AppDataSource } from '../../database/database';
+import database from '../../database/database';
 import GewisDBService from './gewisdb-service';
+import { DataSource } from 'typeorm';
 
 // Load environment variables
 require('dotenv').config();
@@ -33,9 +34,10 @@ logger.level = 'info';
 const program = new Command();
 
 async function dryRunSyncAll() {
+  let dataSource: DataSource;
   try {
     // Initialize the datasource
-    await AppDataSource.initialize();
+    dataSource = await database.initialize();
     logger.info('Datasource initialized successfully.');
 
     // Call syncAll and log the results
@@ -45,7 +47,7 @@ async function dryRunSyncAll() {
     logger.error('Error during dry-run sync:', error);
   } finally {
     // Close the datasource connection
-    await AppDataSource.destroy();
+    await dataSource?.destroy();
     logger.info('Datasource connection closed.');
   }
 }
