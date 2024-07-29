@@ -154,7 +154,7 @@ export default class WriteOffService {
     return WriteOffService.asWriteOffResponse(writeOff);
   }
 
-  public static async createAndCloseUser(user: User): Promise<WriteOffResponse> {
+  public static async createWriteOffAndCloseUser(user: User): Promise<WriteOffResponse> {
     const writeOff = await wrapInManager(WriteOffService.createWriteOff)(user);
     await UserService.closeUser(user.id, true);
     return writeOff;
