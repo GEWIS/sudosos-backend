@@ -16,15 +16,15 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import MailTemplate, { Language, MailLanguageMap } from './mail-template';
-import MailContent from './mail-content';
+import MailMessage, { Language, MailLanguageMap } from '../mail-message';
+import MailContentBuilder from './mail-content-builder';
 
 export interface ForgotEventPlanningOptions {
   name: string;
   eventName: string;
 }
 
-const forgotEventPlanningEnglish = new MailContent<ForgotEventPlanningOptions>({
+const forgotEventPlanningEnglish = new MailContentBuilder<ForgotEventPlanningOptions>({
   getHTML: (context) => `<p>Dear ${context.name},</p>
 <p>What is this? Have you not yet filled in the borrel planning for ${context.eventName}? Shame on you!<br>
 Go quickly to SudoSOS to fix your mistakes!</p>
@@ -41,7 +41,7 @@ The SudoSOS borrel planning robot`,
   getSubject: ({ eventName }) => `Borrel planning ${eventName}`,
 });
 
-const forgotEventPlanningDutch = new MailContent<ForgotEventPlanningOptions>({
+const forgotEventPlanningDutch = new MailContentBuilder<ForgotEventPlanningOptions>({
   getHTML: (context) => `<p>Beste ${context.name},</p>
 <p>Wat is dit nou? Heb je het borrelrooster voor ${context.eventName} nog niet ingevuld? Foei!<br>
 Ga snel naar SudoSOS om je fouten recht te zetten!</p>
@@ -63,7 +63,7 @@ const mailContents: MailLanguageMap<ForgotEventPlanningOptions> = {
   [Language.ENGLISH]: forgotEventPlanningEnglish,
 };
 
-export default class ForgotEventPlanning extends MailTemplate<ForgotEventPlanningOptions> {
+export default class ForgotEventPlanning extends MailMessage<ForgotEventPlanningOptions> {
   public constructor(options: ForgotEventPlanningOptions) {
     super(options, mailContents);
   }

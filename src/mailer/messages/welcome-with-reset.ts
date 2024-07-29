@@ -16,9 +16,9 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import MailTemplate, { Language, MailLanguageMap } from './mail-template';
+import MailMessage, { Language, MailLanguageMap } from '../mail-message';
 import { signatureDutch, signatureEnglish } from './signature';
-import MailContent from './mail-content';
+import MailContentBuilder from './mail-content-builder';
 import { ResetTokenInfo } from '../../service/authentication-service';
 
 interface WelcomeWithResetOptions {
@@ -28,7 +28,7 @@ interface WelcomeWithResetOptions {
   url?: string;
 }
 
-const welcomeWithResetDutch = new MailContent<WelcomeWithResetOptions>({
+const welcomeWithResetDutch = new MailContentBuilder<WelcomeWithResetOptions>({
   getHTML: (context) => `
 <p>Beste ${context.name},</p>
 
@@ -53,7 +53,7 @@ Met vriendelijke groet,
 SudoSOS`,
 });
 
-const welcomeWithResetEnglish = new MailContent<WelcomeWithResetOptions>({
+const welcomeWithResetEnglish = new MailContentBuilder<WelcomeWithResetOptions>({
   getHTML: (context) => `
 <p>Dear ${context.name},</p>
 
@@ -83,7 +83,7 @@ const mailContents: MailLanguageMap<WelcomeWithResetOptions> = {
   [Language.ENGLISH]: welcomeWithResetEnglish,
 };
 
-export default class WelcomeWithReset extends MailTemplate<WelcomeWithResetOptions> {
+export default class WelcomeWithReset extends MailMessage<WelcomeWithResetOptions> {
   public constructor(options: WelcomeWithResetOptions) {
     const opt: WelcomeWithResetOptions = {
       ...options,

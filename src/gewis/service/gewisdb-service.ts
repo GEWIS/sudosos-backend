@@ -22,9 +22,9 @@ import { webResponseToUpdate } from '../helpers/gewis-helper';
 import UserService from '../../service/user-service';
 import { UserResponse } from '../../controller/response/user-response';
 import Mailer from '../../mailer';
-import MembershipExpiryNotification from '../../mailer/templates/membership-expiry-notification';
+import MembershipExpiryNotification from '../../mailer/messages/membership-expiry-notification';
 import DineroTransformer from '../../entity/transformer/dinero-transformer';
-import { Language } from '../../mailer/templates/mail-template';
+import { Language } from '../../mailer/messages/mail-message';
 import BalanceService from '../../service/balance-service';
 
 const GEWISDB_API_URL = process.env.GEWISDB_API_URL;

@@ -17,8 +17,8 @@
  */
 
 import { expect } from 'chai';
-import HelloWorld from '../../../../src/mailer/templates/hello-world';
-import { Language } from '../../../../src/mailer/templates/mail-template';
+import HelloWorld from '../../../../src/mailer/messages/hello-world';
+import { Language } from '../../../../src/mailer/messages/mail-message';
 
 describe('HelloWorldTemplate', () => {
   it('should build correct email in English', () => {

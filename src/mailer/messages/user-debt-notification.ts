@@ -17,9 +17,9 @@
  */
 
 import { Dinero } from 'dinero.js';
-import MailContent from './mail-content';
+import MailContentBuilder from './mail-content-builder';
 import { signatureDutch, signatureEnglish } from './signature';
-import MailTemplate, { Language, MailLanguageMap } from './mail-template';
+import MailMessage, { Language, MailLanguageMap } from '../mail-message';
 
 interface UserDebtNotificationOptions {
   name: string;
@@ -27,7 +27,7 @@ interface UserDebtNotificationOptions {
   balance: Dinero;
 }
 
-const userDebtNotificationDutch = new MailContent<UserDebtNotificationOptions>({
+const userDebtNotificationDutch = new MailContentBuilder<UserDebtNotificationOptions>({
   getHTML: (context) => `
 <p>Beste ${context.name},</p>
 
@@ -54,7 +54,7 @@ Met vriendelijke groet,
 SudoSOS`,
 });
 
-const userDebtNotificationEnglish = new MailContent<UserDebtNotificationOptions>({
+const userDebtNotificationEnglish = new MailContentBuilder<UserDebtNotificationOptions>({
   getHTML: (context) => `
 <p>Dear ${context.name},</p>
 
@@ -82,7 +82,7 @@ const mailContents: MailLanguageMap<UserDebtNotificationOptions> = {
   [Language.ENGLISH]: userDebtNotificationEnglish,
 };
 
-export default class UserDebtNotification extends MailTemplate<UserDebtNotificationOptions> {
+export default class UserDebtNotification extends MailMessage<UserDebtNotificationOptions> {
   public constructor(options: UserDebtNotificationOptions) {
     const opt: UserDebtNotificationOptions = { ...options };
     if (!options.url) {

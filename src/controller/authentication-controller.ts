@@ -37,7 +37,7 @@ import AuthenticationResetTokenRequest from './request/authentication-reset-toke
 import AuthenticationEanRequest from './request/authentication-ean-request';
 import EanAuthenticator from '../entity/authenticator/ean-authenticator';
 import Mailer from '../mailer';
-import PasswordReset from '../mailer/templates/password-reset';
+import PasswordReset from '../mailer/messages/password-reset';
 import AuthenticationNfcRequest from './request/authentication-nfc-request';
 import NfcAuthenticator from '../entity/authenticator/nfc-authenticator';
 import AuthenticationKeyRequest from './request/authentication-key-request';

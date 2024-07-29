@@ -17,7 +17,7 @@
  */
 
 import Mail from 'nodemailer/lib/mailer';
-import MailContent from './mail-content';
+import MailContentBuilder from './messages/mail-content-builder';
 import fs from 'fs';
 import path from 'path';
 
@@ -38,10 +38,10 @@ export enum Language {
 }
 
 export type MailLanguageMap<T> = {
-  [key in Language]: MailContent<T>;
+  [key in Language]: MailContentBuilder<T>;
 };
 
-export default class MailTemplate<T> {
+export default class MailMessage<T> {
   protected baseMailOptions: Mail.Options = {
     from: process.env.SMTP_FROM,
   };

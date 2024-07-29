@@ -17,9 +17,9 @@
  */
 
 import { Dinero } from 'dinero.js';
-import MailContent from './mail-content';
+import MailContentBuilder from './mail-content-builder';
 import { signatureDutch, signatureEnglish } from './signature';
-import MailTemplate, { Language, MailLanguageMap } from './mail-template';
+import MailMessage, { Language, MailLanguageMap } from '../mail-message';
 
 interface UserWillGetFinedOptions {
   name: string;
@@ -54,7 +54,7 @@ const getDateEN = (d: Date) => {
   return `On ${d.toLocaleString('en-US')} you had`;
 };
 
-const userGotFinedDutch = new MailContent<UserWillGetFinedOptions>({
+const userGotFinedDutch = new MailContentBuilder<UserWillGetFinedOptions>({
   getHTML: (context) => `
 <p>Beste ${context.name},</p>
 
@@ -77,7 +77,7 @@ Met vriendelijke groet,
 SudoSOS`,
 });
 
-const userGotFinedEnglish = new MailContent<UserWillGetFinedOptions>({
+const userGotFinedEnglish = new MailContentBuilder<UserWillGetFinedOptions>({
   getHTML: (context) => `
 <p>Dear ${context.name},</p>
 
@@ -105,7 +105,7 @@ const mailContents: MailLanguageMap<UserWillGetFinedOptions> = {
   [Language.ENGLISH]: userGotFinedEnglish,
 };
 
-export default class UserWillGetFined extends MailTemplate<UserWillGetFinedOptions> {
+export default class UserWillGetFined extends MailMessage<UserWillGetFinedOptions> {
   public constructor(options: UserWillGetFinedOptions) {
     super(options, mailContents);
   }

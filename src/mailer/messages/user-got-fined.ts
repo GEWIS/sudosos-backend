@@ -17,9 +17,9 @@
  */
 
 import { Dinero } from 'dinero.js';
-import MailContent from './mail-content';
+import MailContentBuilder from './mail-content-builder';
 import { signatureDutch, signatureEnglish } from './signature';
-import MailTemplate, { Language, MailLanguageMap } from './mail-template';
+import MailMessage, { Language, MailLanguageMap } from '../mail-message';
 
 interface UserGotFinedOptions {
   name: string;
@@ -29,7 +29,7 @@ interface UserGotFinedOptions {
   balance: Dinero;
 }
 
-const userGotFinedDutch = new MailContent<UserGotFinedOptions>({
+const userGotFinedDutch = new MailContentBuilder<UserGotFinedOptions>({
   getHTML: (context) => `
 <p>Beste ${context.name},</p>
 
@@ -57,7 +57,7 @@ Met vriendelijke groet,
 SudoSOS`,
 });
 
-const userGotFinedEnglish = new MailContent<UserGotFinedOptions>({
+const userGotFinedEnglish = new MailContentBuilder<UserGotFinedOptions>({
   getHTML: (context) => `
 <p>Dear ${context.name},</p>
 
@@ -90,7 +90,7 @@ const mailContents: MailLanguageMap<UserGotFinedOptions> = {
   [Language.ENGLISH]: userGotFinedEnglish,
 };
 
-export default class UserGotFined extends MailTemplate<UserGotFinedOptions> {
+export default class UserGotFined extends MailMessage<UserGotFinedOptions> {
   public constructor(options: UserGotFinedOptions) {
     super(options, mailContents);
   }

@@ -20,7 +20,7 @@ import { Transporter } from 'nodemailer';
 import log4js, { Logger } from 'log4js';
 import createSMTPTransporter from './transporter';
 import User from '../entity/user/user';
-import MailTemplate, { Language } from './templates/mail-template';
+import MailMessage, { Language } from './mail-message';
 import Mail from 'nodemailer/lib/mailer';
 
 export default class Mailer {
@@ -43,7 +43,7 @@ export default class Mailer {
   }
 
   async send<T>(
-    to: User, template: MailTemplate<T>, language: Language = Language.ENGLISH, extraOptions?: Mail.Options,
+    to: User, template: MailMessage<T>, language: Language = Language.ENGLISH, extraOptions?: Mail.Options,
   ) {
     this.logger.trace('Send email', template.constructor.name, 'to user');
     try {

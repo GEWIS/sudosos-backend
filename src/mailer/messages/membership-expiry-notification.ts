@@ -16,9 +16,9 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { Dinero } from 'dinero.js';
-import MailContent from './mail-content';
+import MailContentBuilder from './mail-content-builder';
 import { signatureDutch, signatureEnglish } from './signature';
-import MailTemplate, { Language, MailLanguageMap } from './mail-template';
+import MailMessage, { Language, MailLanguageMap } from '../mail-message';
 
 interface MembershipExpiryNotificationOptions {
   name: string;
@@ -30,7 +30,7 @@ const formatBalance = (balance: Dinero) => {
   return `<span style="color: ${isNegative ? 'red' : 'black'}; font-weight: bold; font-size: 20px">${balance.toFormat()}</span>`;
 };
 
-const membershipExpiryNotificationDutch = new MailContent<MembershipExpiryNotificationOptions>({
+const membershipExpiryNotificationDutch = new MailContentBuilder<MembershipExpiryNotificationOptions>({
   getHTML: (context) => `
 <p>Beste ${context.name},</p>
 
@@ -57,7 +57,7 @@ Met vriendelijke groet,
 SudoSOS`,
 });
 
-const membershipExpiryNotificationEnglish = new MailContent<MembershipExpiryNotificationOptions>({
+const membershipExpiryNotificationEnglish = new MailContentBuilder<MembershipExpiryNotificationOptions>({
   getHTML: (context) => `
 <p>Dear ${context.name},</p>
 
@@ -89,7 +89,7 @@ const mailContents: MailLanguageMap<MembershipExpiryNotificationOptions> = {
   [Language.ENGLISH]: membershipExpiryNotificationEnglish,
 };
 
-export default class MembershipExpiryNotification extends MailTemplate<MembershipExpiryNotificationOptions> {
+export default class MembershipExpiryNotification extends MailMessage<MembershipExpiryNotificationOptions> {
   public constructor(options: MembershipExpiryNotificationOptions) {
     const opt: MembershipExpiryNotificationOptions = { ...options };
     super(opt, mailContents);

@@ -21,7 +21,7 @@ import Transaction from '../entity/transactions/transaction';
 import User, { NotifyDebtUserTypes } from '../entity/user/user';
 import BalanceService from '../service/balance-service';
 import Mailer from '../mailer';
-import UserDebtNotification from '../mailer/templates/user-debt-notification';
+import UserDebtNotification from '../mailer/messages/user-debt-notification';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
 import { getLogger } from 'log4js';
 

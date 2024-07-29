@@ -16,15 +16,15 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import MailTemplate, { Language, MailLanguageMap } from './mail-template';
+import MailMessage, { Language, MailLanguageMap } from '../mail-message';
 import { signatureDutch, signatureEnglish } from './signature';
-import MailContent from './mail-content';
+import MailContentBuilder from './mail-content-builder';
 
 interface ChangedPinOptions {
   name: string;
 }
 
-const changedPinDutch = new MailContent<ChangedPinOptions>({
+const changedPinDutch = new MailContentBuilder<ChangedPinOptions>({
   getHTML: (context) => `<p>Beste ${context.name},</p>
 
 <p>De pincode van je account in SudoSOS is zojuist veranderd.</p>
@@ -39,7 +39,7 @@ Met vriendelijke groet,
 SudoSOS`,
 });
 
-const changedPinEnglish = new MailContent<ChangedPinOptions>({
+const changedPinEnglish = new MailContentBuilder<ChangedPinOptions>({
   getSubject: () => 'Your PIN has changed',
   getText: (context) => `Dear ${context.name},
 
@@ -59,7 +59,7 @@ const mailContents: MailLanguageMap<ChangedPinOptions> = {
   [Language.ENGLISH]: changedPinEnglish,
 };
 
-export default class ChangedPin extends MailTemplate<ChangedPinOptions> {
+export default class ChangedPin extends MailMessage<ChangedPinOptions> {
   public constructor(options: ChangedPinOptions) {
     super(options, mailContents);
   }

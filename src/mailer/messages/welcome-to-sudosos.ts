@@ -16,16 +16,16 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import MailTemplate, { Language, MailLanguageMap } from './mail-template';
+import MailMessage, { Language, MailLanguageMap } from '../mail-message';
 import { signatureDutch, signatureEnglish } from './signature';
-import MailContent from './mail-content';
+import MailContentBuilder from './mail-content-builder';
 
 interface WelcomeToSudososOptions {
   name: string;
   url?: string;
 }
 
-const welcomeToSudososDutch = new MailContent<WelcomeToSudososOptions>({
+const welcomeToSudososDutch = new MailContentBuilder<WelcomeToSudososOptions>({
   getHTML: (context) => `
 <p>Beste ${context.name},</p>
 
@@ -50,7 +50,7 @@ Met vriendelijke groet,
 SudoSOS`,
 });
 
-const welcomeToSudososEnglish = new MailContent<WelcomeToSudososOptions>({
+const welcomeToSudososEnglish = new MailContentBuilder<WelcomeToSudososOptions>({
   getHTML: (context) => `
 <p>Dear ${context.name},</p>
 
@@ -80,7 +80,7 @@ const mailContents: MailLanguageMap<WelcomeToSudososOptions> = {
   [Language.ENGLISH]: welcomeToSudososEnglish,
 };
 
-export default class WelcomeToSudosos extends MailTemplate<WelcomeToSudososOptions> {
+export default class WelcomeToSudosos extends MailMessage<WelcomeToSudososOptions> {
   public constructor(options: WelcomeToSudososOptions) {
     const opt: WelcomeToSudososOptions = {
       ...options,

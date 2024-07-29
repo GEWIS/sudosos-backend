@@ -37,9 +37,9 @@ import { parseUserToBaseResponse } from '../helpers/revision-to-response';
 import { getConnection } from 'typeorm';
 import Transfer from '../entity/transactions/transfer';
 import Mailer from '../mailer';
-import UserGotFined from '../mailer/templates/user-got-fined';
-import MailTemplate from '../mailer/templates/mail-template';
-import UserWillGetFined from '../mailer/templates/user-will-get-fined';
+import UserGotFined from '../mailer/messages/user-got-fined';
+import MailMessage from '../mailer/mail-message';
+import UserWillGetFined from '../mailer/messages/user-will-get-fined';
 
 export interface CalculateFinesParams {
   userTypes?: UserType[];
@@ -207,7 +207,7 @@ export default class DebtorService {
       });
       await manager.save(fineHandoutEvent);
 
-      const emails: { user: User, email: MailTemplate<any> }[] = [];
+      const emails: { user: User, email: MailMessage<any> }[] = [];
 
       // Create and save the fine information
       let fines: Fine[] = await Promise.all(balances.records.map(async (b) => {

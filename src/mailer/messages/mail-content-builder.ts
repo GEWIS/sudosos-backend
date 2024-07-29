@@ -23,7 +23,7 @@ export interface MailContentFunctions<T> {
   getSubject: (context: T) => string;
 }
 
-export default class MailContent<T> {
+export default class MailContentBuilder<T> {
   constructor(mail: MailContentFunctions<T>) {
     this.mail = mail;
   }
