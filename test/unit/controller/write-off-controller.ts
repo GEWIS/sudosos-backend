@@ -19,7 +19,7 @@ import { DefaultContext, defaultContext, finishTestDB } from '../../helpers/test
 import { truncateAllTables } from '../../setup';
 import WriteOff from '../../../src/entity/transactions/write-off';
 import { seedWriteOffs } from '../../seed';
-import { seedRoles } from '../../seed/rbac';
+import {getToken, seedRoles} from '../../seed/rbac';
 import User, { UserType } from '../../../src/entity/user/user';
 import { ADMIN_USER, inUserContext, UserFactory } from '../../helpers/user-factory';
 import { expect, request } from 'chai';
@@ -52,7 +52,7 @@ describe('WriteOffController', () => {
     const localUser = await (await UserFactory()).get();
 
     const all = { all: new Set<string>(['*']) };
-    await seedRoles([{
+    const adminRole = await seedRoles([{
       name: 'Admin',
       permissions: {
         WriteOff: {
@@ -63,8 +63,8 @@ describe('WriteOffController', () => {
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
     }]);
 
-    const adminToken = await c.tokenHandler.signToken({ user: admin, roles: ['Admin'], lesser: false }, 'nonce admin');
-    const token = await c.tokenHandler.signToken({ user: localUser, roles: [], lesser: false }, 'nonce');
+    const adminToken = await c.tokenHandler.signToken(await getToken(admin, adminRole), 'nonce admin');
+    const token = await c.tokenHandler.signToken(await getToken(admin, adminRole), 'nonce');
 
     const tokenMiddleware = new TokenMiddleware({ tokenHandler: c.tokenHandler, refreshFactor: 0.5 }).getMiddleware();
     c.app.use(json());
