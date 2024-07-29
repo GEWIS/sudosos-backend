@@ -99,6 +99,17 @@ export default class ServerSettingsStore<T extends keyof ISettings = keyof ISett
   }
 
   /**
+   * Reinitialize the store.
+   * This overwrites the current settings with the defaults.
+   */
+  public async reinitialize(): Promise<ServerSettingsStore> {
+    if (!this._initialized) throw new Error('ServerSettingsStore has not been initialized.');
+    this._initialized = false;
+    await this.initialize()
+    return this;
+  }
+
+  /**
    * Get a server setting
    * @param key
    */
