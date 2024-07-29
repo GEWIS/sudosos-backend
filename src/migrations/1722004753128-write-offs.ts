@@ -89,7 +89,7 @@ export class WriteOffs1722004753128 implements MigrationInterface {
 
     await roleRepo.findOne({ where: { name: 'SudoSOS - BAC PM' } }).then(async (role) => {
       if (!role) return;
-      role.permissions = [...role.permissions, ...await permissionRepo.save({ ...getAdminPermissions(role, 'Transaction') })];
+      role.permissions = [...role.permissions, ...await permissionRepo.save({ ...getAdminPermissions(role, 'WriteOff') })];
       await roleRepo.save(role);
     });
 
@@ -104,17 +104,7 @@ export class WriteOffs1722004753128 implements MigrationInterface {
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.dropTable('write_off');
-    const roleRepo = queryRunner.manager.getRepository(Role);
-    await roleRepo.findOne({ where: { name: 'SudoSOS - BAC PM' } }).then(async (role) => {
-      if (!role) return;
-      role.permissions = role.permissions.filter((p) => p.entity !== 'WriteOff');
-      await roleRepo.save(role);
-    });
-
-    await roleRepo.findOne({ where: { name: 'SudoSOS - Audit' } }).then(async (role) => {
-      if (!role) return;
-      role.permissions = role.permissions.filter((p) => p.entity !== 'WriteOff');
-      await roleRepo.save(role);
-    });
+    const permissions = await queryRunner.manager.getRepository(Permission).find({ where: { entity: 'WriteOff' } });
+    await queryRunner.manager.getRepository(Permission).delete(permissions.map((p) => p.id));
   }
 }
