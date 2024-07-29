@@ -25,37 +25,33 @@ export interface ForgotEventPlanningOptions {
 }
 
 const forgotEventPlanningEnglish = new MailContentBuilder<ForgotEventPlanningOptions>({
-  getHTML: (context) => `<p>Dear ${context.name},</p>
-<p>What is this? Have you not yet filled in the borrel planning for ${context.eventName}? Shame on you!<br>
+  getHTML: (context) => `<p>What is this? Have you not yet filled in the borrel planning for ${context.eventName}? Shame on you!<br>
 Go quickly to SudoSOS to fix your mistakes!</p>
 
 <p>Hugs,<br>
 The SudoSOS borrel planning robot</p>`,
-  getText: (context) => `Dear ${context.name},
-
-What is this? Have you not yet filled in the borrel planning for ${context.eventName}? Shame on you!
+  getText: (context) => `What is this? Have you not yet filled in the borrel planning for ${context.eventName}? Shame on you!
 Go quickly to SudoSOS to fix your mistakes!
 
 Hugs,
 The SudoSOS borrel planning robot`,
   getSubject: ({ eventName }) => `Borrel planning ${eventName}`,
+  getTitle: 'Planningnotificatie',
 });
 
 const forgotEventPlanningDutch = new MailContentBuilder<ForgotEventPlanningOptions>({
-  getHTML: (context) => `<p>Beste ${context.name},</p>
-<p>Wat is dit nou? Heb je het borrelrooster voor ${context.eventName} nog niet ingevuld? Foei!<br>
+  getHTML: (context) => `<p>Wat is dit nou? Heb je het borrelrooster voor ${context.eventName} nog niet ingevuld? Foei!<br>
 Ga snel naar SudoSOS om je fouten recht te zetten!</p>
 
 <p>Kusjes,<br>
 De SudoSOS borrelrooster invulrobot</p>`,
-  getText: (context) => `Beste ${context.name},
-
-Wat is dit nou? Heb je het borrelrooster voor ${context.eventName} nog niet ingevuld? Foei!
+  getText: (context) => `Wat is dit nou? Heb je het borrelrooster voor ${context.eventName} nog niet ingevuld? Foei!
 Ga snel naar SudoSOS om je fouten recht te zetten!
 
 Kusjes,
 De SudoSOS borrelrooster invulrobot`,
   getSubject: ({ eventName }) => `Borrelrooster ${eventName}`,
+  getTitle: 'Planning notification',
 });
 
 const mailContents: MailLanguageMap<ForgotEventPlanningOptions> = {

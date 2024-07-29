@@ -73,7 +73,6 @@ export default class TransactionSubscriber implements EntitySubscriberInterface 
     // User should be notified of debt
 
     Mailer.getInstance().send(user, new UserDebtNotification({
-      name: user.firstName,
       balance: DineroTransformer.Instance.from(currentBalance),
       url: '',
     })).catch((e) => getLogger('Transaction').error(e));

@@ -17,11 +17,9 @@
  */
 import { Dinero } from 'dinero.js';
 import MailContentBuilder from './mail-content-builder';
-import { signatureDutch, signatureEnglish } from './signature';
 import MailMessage, { Language, MailLanguageMap } from '../mail-message';
 
 interface MembershipExpiryNotificationOptions {
-  name: string;
   balance: Dinero;
 }
 
@@ -32,56 +30,40 @@ const formatBalance = (balance: Dinero) => {
 
 const membershipExpiryNotificationDutch = new MailContentBuilder<MembershipExpiryNotificationOptions>({
   getHTML: (context) => `
-<p>Beste ${context.name},</p>
-
 <p>Wij willen u informeren dat uw account bij SudoSOS is gedeactiveerd omdat uw lidmaatschap bij de GEWIS is verlopen. Op het moment van sluiting was het saldo van uw account:<br>
 ${formatBalance(context.balance)}</p>
 
 <p>Om uw lidmaatschap, en toegang tot SudoSOS, te verlengen, klikt u op de link in uw e-mail inbox (deze is 31 dagen geldig na het verlopen van het lidmaatschap).</p>
 
-<p>Als u geen lid meer wilt blijven van GEWIS, maar nog steeds gebruik wilt maken van SudoSOS, kunt u een lokaal account aanvragen. Neem hiervoor contact op met de penningmeester van de Bar Commissie via <a href="mailto:bacpm@gewis.nl">bacpm@gewis.nl</a>.</p>
-
-${signatureDutch}`,
-  getSubject: () => 'Uw SudoSOS-account is gedeactiveerd',
+<p>Als u geen lid meer wilt blijven van GEWIS, maar nog steeds gebruik wilt maken van SudoSOS, kunt u een lokaal account aanvragen. Neem hiervoor contact op met de penningmeester van de Bar Commissie via <a href="mailto:bacpm@gewis.nl">bacpm@gewis.nl</a>.</p>`,
+  getSubject: 'Uw SudoSOS-account is gedeactiveerd',
+  getTitle: 'Accountnotificatie',
   getText: (context) => `
-Beste ${context.name},
-
 Wij willen u informeren dat uw account bij SudoSOS is gedeactiveerd omdat uw lidmaatschap bij GEWIS is verlopen. Op het moment van sluiting was het saldo van uw account:
 ${context.balance.toFormat()}
 
 Om uw lidmaatschap te verlengen, en toegang tot SudoSOS, klikt u op de link in uw e-mail inbox (deze is 31 dagen geldig na het verlopen van het lidmaatschap).
 
-Als u geen lid meer wilt blijven van GEWIS, maar nog steeds gebruik wilt maken van SudoSOS, kunt u een lokaal account aanvragen. Neem hiervoor contact op met de penningmeester van de Bar Committee via bacpm@gewis.nl.
-
-Met vriendelijke groet,
-SudoSOS`,
+Als u geen lid meer wilt blijven van GEWIS, maar nog steeds gebruik wilt maken van SudoSOS, kunt u een lokaal account aanvragen. Neem hiervoor contact op met de penningmeester van de Bar Committee via bacpm@gewis.nl.`,
 });
 
 const membershipExpiryNotificationEnglish = new MailContentBuilder<MembershipExpiryNotificationOptions>({
   getHTML: (context) => `
-<p>Dear ${context.name},</p>
-
 <p>We would like to inform you that your account at SudoSOS has been deactivated because your membership at GEWIS has expired. At the time of deactivation, your account balance was:<br>
 ${formatBalance(context.balance)}</p>
 
 <p>To extend your membership, and your access to SudoSOS, please click the link in your email inbox (valid for 31 days after membership expiration).</p>
 
-<p>If you no longer wish to remain a member of GEWIS but still want to use SudoSOS, you can request a local account. Please contact the Treasurer of the Bar Committee via <a href="mailto:bacpm@gewis.nl">bacpm@gewis.nl</a> for more information.</p>
-
-${signatureEnglish}`,
-  getSubject: () => 'Your SudoSOS Account Has Been Deactivated',
+<p>If you no longer wish to remain a member of GEWIS but still want to use SudoSOS, you can request a local account. Please contact the Treasurer of the Bar Committee via <a href="mailto:bacpm@gewis.nl">bacpm@gewis.nl</a> for more information.</p>`,
+  getSubject: 'Your SudoSOS account has been deactivated',
+  getTitle: 'Account notification',
   getText: (context) => `
-Dear ${context.name},
-
 We would like to inform you that your account at SudoSOS has been deactivated because your membership at GEWIS has expired. At the time of deactivation, your account balance was:
 ${context.balance.toFormat()}
 
 To extend your membership, and your access to SudoSOS,  please click the link in your email inbox (valid for 31 days after membership expiration).
 
-If you no longer wish to remain a member of GEWIS but still want to use SudoSOS, you can request a local account. Please contact the Treasurer of the Bar Committee via bacpm@gewis.nl for more information.
-
-Kind regards,
-SudoSOS`,
+If you no longer wish to remain a member of GEWIS but still want to use SudoSOS, you can request a local account. Please contact the Treasurer of the Bar Committee via bacpm@gewis.nl for more information.`,
 });
 
 const mailContents: MailLanguageMap<MembershipExpiryNotificationOptions> = {

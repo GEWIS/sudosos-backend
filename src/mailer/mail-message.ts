@@ -50,12 +50,12 @@ export default class MailMessage<T> {
   getOptions(to: User, language: Language): Mail.Options {
     if (this.mailContents[language] === undefined) throw new Error(`Unknown language: ${language}`);
 
-    const { text, html, subject } = new MailBodyGenerator()
-      .getContents(this.mailContents, this.contentOptions, to, language);
-
+    const { text, html, subject } = new MailBodyGenerator(language)
+      .getContents(this.mailContents, this.contentOptions, to);
 
     return {
       ...this.baseMailOptions,
+      to: to.email,
       text,
       html,
       subject,

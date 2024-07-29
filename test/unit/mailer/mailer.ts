@@ -24,7 +24,7 @@ import Mailer from '../../../src/mailer';
 import User, { UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import HelloWorld from '../../../src/mailer/messages/hello-world';
-import { Language } from '../../../src/mailer/messages/mail-message';
+import { Language } from '../../../src/mailer/mail-message';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 

@@ -26,13 +26,15 @@ export interface HelloWorldOptions {
 const helloWorldEnglish = new MailContentBuilder<HelloWorldOptions>({
   getHTML: (context) => `<p>Hello world, ${context.name}!</p>`,
   getText: (context) => `Hello world, ${context.name}!`,
-  getSubject: () => 'Hello world!',
+  getSubject: 'Hello world!',
+  getTitle: 'Hello world!',
 });
 
 const helloWorldDutch = new MailContentBuilder<HelloWorldOptions>({
   getHTML: (context) => `<p>Hallo wereld, ${context.name}!</p>`,
   getText: (context) => `Hallo wereld, ${context.name}!`,
-  getSubject: () => 'Hallo wereld!',
+  getSubject: 'Hallo wereld!',
+  getTitle: 'Hallo wereld!',
 });
 
 const mailContents: MailLanguageMap<HelloWorldOptions> = {

@@ -17,41 +17,22 @@
  */
 
 import MailMessage, { Language, MailLanguageMap } from '../mail-message';
-import { signatureDutch, signatureEnglish } from './signature';
 import MailContentBuilder from './mail-content-builder';
 
-interface ChangedPinOptions {
-  name: string;
-}
+interface ChangedPinOptions {}
 
 const changedPinDutch = new MailContentBuilder<ChangedPinOptions>({
-  getHTML: (context) => `<p>Beste ${context.name},</p>
-
-<p>De pincode van je account in SudoSOS is zojuist veranderd.</p>
-
-${signatureDutch}`,
-  getSubject: () => 'Je pincode is veranderd',
-  getText: (context) => `Beste ${context.name},
-
-De pincode van je account in SudoSOS is zojuist veranderd.
-
-Met vriendelijke groet,
-SudoSOS`,
+  getHTML: '<p>De pincode van je account in SudoSOS is zojuist veranderd.</p>',
+  getSubject: 'Je pincode is veranderd',
+  getText: 'De pincode van je account in SudoSOS is zojuist veranderd.',
+  getTitle: 'PIN gewijzigd',
 });
 
 const changedPinEnglish = new MailContentBuilder<ChangedPinOptions>({
-  getSubject: () => 'Your PIN has changed',
-  getText: (context) => `Dear ${context.name},
-
-The PIN number of your account in SudoSOS has just been changed.
-
-Kind regards,
-SudoSOS`,
-  getHTML: (context) => `<p>Dear ${context.name},</p>
-
-<p>The PIN number of your account in SudoSOS has just been changed.</p>
-
-${signatureEnglish}`,
+  getSubject: 'Your PIN has changed',
+  getText: 'The PIN number of your account in SudoSOS has just been changed.',
+  getHTML: '<p>The PIN number of your account in SudoSOS has just been changed.</p>',
+  getTitle: 'PIN changed',
 });
 
 const mailContents: MailLanguageMap<ChangedPinOptions> = {

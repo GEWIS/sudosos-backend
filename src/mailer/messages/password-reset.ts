@@ -17,12 +17,10 @@
  */
 
 import MailMessage, { Language, MailLanguageMap } from '../mail-message';
-import { signatureDutch, signatureEnglish } from './signature';
 import MailContentBuilder from './mail-content-builder';
 import { ResetTokenInfo } from '../../service/authentication-service';
 
 interface WelcomeWithResetOptions {
-  name: string;
   email: string,
   resetTokenInfo: ResetTokenInfo,
   url?: string;
@@ -32,8 +30,6 @@ const passwordResetDutch = new MailContentBuilder<WelcomeWithResetOptions>({
   getHTML: (context) => {
     const link = context.url + '/passwordreset?token=' + context.resetTokenInfo.password + '&email=' + context.email;
     return `
-<p>Beste ${context.name},</p>
-
 <p>Een wachtwoord reset voor dit email adres is aangevraagd. Om het proces te voltooien, gebruik de volgende link elk moment binnen de komende 60 minuten: </p>
 
 <p><a href="${link}">Reset Link</a></p>
@@ -42,32 +38,24 @@ const passwordResetDutch = new MailContentBuilder<WelcomeWithResetOptions>({
 
 <p>Als u geen wachtwoord reset heeft aangevraagd, kunt u deze e-mail veilig negeren en uw huidige inloggegevens gebruiken.</p>
 
-<p>Tot op de borrel!</p>
-
-${signatureDutch}`;
+<p>Tot op de borrel!</p>`;
   },
-  getSubject: () => 'Wachtwoord resetten',
+  getSubject: 'Wachtwoord resetten',
+  getTitle: 'Wachtwoordnotificatie',
   getText: (context) => `
-Beste ${context.name},
-
 Een wachtwoord reset voor dit email adres is aangevraagd. Om het proces te voltooien, gebruik de volgende link elk moment binnen de komende 60 minuten: 
 
 ${context.url + '/passwordreset?token=' + context.resetTokenInfo.password + '&email=' + context.email}
 
 Als u geen wachtwoord reset heeft aangevraagd, kunt u deze e-mail veilig negeren en uw huidige inloggegevens gebruiken.
 
-Tot op de borrel!
-
-Met vriendelijke groet,
-SudoSOS`,
+Tot op de borrel!`,
 });
 
 const passwordResetEnglish = new MailContentBuilder<WelcomeWithResetOptions>({
   getHTML: (context) => {
     const link = context.url + '/passwordreset?token=' + context.resetTokenInfo.password + '&email=' + context.email;
     return `
-<p>Dear ${context.name},</p>
-
 <p>A password reset for this email address has been requested. To complete the process, use the following link any time within the next 60 minutes: </p>
 
 <p><a href="${link}">Reset Link</a></p>
@@ -76,24 +64,18 @@ const passwordResetEnglish = new MailContentBuilder<WelcomeWithResetOptions>({
 
 <p>If you have not requested a password reset, you can safely ignore this email and use your current login information.</p>
 
-<p>See you on the borrel!</p>
-
-${signatureEnglish}`;
+<p>See you on the borrel!</p>`;
   },
   getSubject: () => 'Password reset',
+  getTitle: () => 'Password notification',
   getText: (context) => `
-Dear ${context.name},
-
 A password reset for this email address has been requested. To complete the process, use the following link any time within the next 60 minutes: 
 
 ${context.url + '/passwordreset?token=' + context.resetTokenInfo.password + '&email=' + context.email}
 
 If you have not requested a password reset, you can safely ignore this email and use your current login information.
 
-See you on the borrel!
-
-Kind regards,
-SudoSOS`,
+See you on the borrel!`,
 });
 
 const mailContents: MailLanguageMap<WelcomeWithResetOptions> = {

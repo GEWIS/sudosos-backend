@@ -237,7 +237,6 @@ export default class DebtorService {
         }, manager);
 
         emails.push({ user, email: new UserGotFined({
-          name: user.firstName,
           fine: amount,
           balance: DineroTransformer.Instance.from(b.amount.amount),
           referenceDate,
@@ -340,7 +339,6 @@ export default class DebtorService {
       const balance = f.balances[0];
       if (balance == null) throw new Error('Missing balance');
       return Mailer.getInstance().send(user, new UserWillGetFined({
-        name: user.firstName,
         referenceDate: referenceDate,
         fine: dinero(f.fineAmount as any),
         balance: dinero(balance.amount as any),

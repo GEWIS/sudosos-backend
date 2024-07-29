@@ -33,22 +33,22 @@ interface TemplateFields {
 
 const templateFieldDefault: Record<
 keyof Pick<TemplateFields, 'serviceEmail' | 'reasonForEmail'>
-, Record<Language, string>
+, { [key in Language]: string }
 > = {
   serviceEmail: {
-    [Language.DUTCH]: process.env.STMP_USERNAME || '',
-    [Language.ENGLISH]: process.env.STMP_USERNAME || '',
+    'nl-NL': process.env.STMP_USERNAME || '',
+    'en-US': process.env.STMP_USERNAME || '',
   },
   reasonForEmail: {
-    [Language.ENGLISH]: 'You are receiving this email because you are registered as a SudoSOS user. Learn more about how we treat your personal data on <a href="https://gew.is/privacy">https://gew.is/privacy</a>.',
-    [Language.DUTCH]: 'Je ontvangt deze email omdat je bent geregistreerd als een SudoSOS gebruiker. Lees hoe wij je persoonlijke informatie verwerken op <a href="https://gew.is/privacy">https://gew.is/privacy</a>.',
+    'en-US': 'You are receiving this email because you are registered as a SudoSOS user. Learn more about how we treat your personal data on <a href="https://gew.is/privacy">https://gew.is/privacy</a>.',
+    'nl-NL': 'Je ontvangt deze email omdat je bent geregistreerd als een SudoSOS gebruiker. Lees hoe wij je persoonlijke informatie verwerken op <a href="https://gew.is/privacy">https://gew.is/privacy</a>.',
   },
 };
 
 export default class MailBodyGenerator<T> {
   private readonly template: string;
 
-  constructor() {
+  constructor(private language: Language) {
     this.template = fs.readFileSync(path.join(__dirname, './template.html')).toString();
   }
 
@@ -58,14 +58,27 @@ export default class MailBodyGenerator<T> {
    * @param language
    * @private
    */
-  private getLocalizedSalutation(to: User, language: Language) {
-    switch (language) {
+  private getLocalizedSalutation(to: User) {
+    switch (this.language) {
       case Language.DUTCH:
         return `Beste ${to.firstName},`;
       case Language.ENGLISH:
         return `Dear ${to.firstName},`;
       default:
-        throw new Error(`Unknown language: "${language}"`);
+        throw new Error(`Unknown language: "${this.language}"`);
+    }
+  }
+
+  private getLocalizedClosing() {
+    switch (this.language) {
+      case Language.DUTCH:
+        return `Met vriendelijke groet,
+SudoSOS`;
+      case Language.ENGLISH:
+        return `Kind regards,
+SudoSOS,`;
+      default:
+        throw new Error(`Unknown language: "${this.language}"`);
     }
   }
 
@@ -73,37 +86,45 @@ export default class MailBodyGenerator<T> {
    * Add a salutation to the given html in the given language for the given user
    * @param html
    * @param to
-   * @param language
    * @private
    */
-  private getHtmlWithSalutation(html: string, to: User, language: Language) {
-    return `<p>${this.getLocalizedSalutation(to, language)}</p>
+  public getHtmlWithSalutation(html: string, to: User) {
+    return `<p>${this.getLocalizedSalutation(to)}</p>
 ${html}`;
+  }
+
+  public getTextWithSalutation(text: string, to: User) {
+    return `${this.getLocalizedSalutation(to)},
+    
+${text}
+
+${this.getLocalizedClosing()}`;
   }
 
   public getContents(
     contents: MailLanguageMap<T>,
     options: T,
     to: User,
-    language: Language,
   ) {
-    const { text, html, subject, title, reason } = contents[language].getContent(options);
+    const { text, html, subject, title, reason } = contents[this.language].getContent(options);
 
     let styledHtml = this.template;
     const styledHtmlTemplateFields: TemplateFields = {
       subject,
       htmlSubject: subject.replaceAll(' ', '&nbsp;'),
-      body: this.getHtmlWithSalutation(html, to, language),
+      body: this.getHtmlWithSalutation(html, to),
       shortTitle: title,
-      weekDay: new Date().toLocaleString(language, { weekday: 'long' }),
-      date: new Date().toLocaleDateString(language, { day: 'numeric', month: 'long', year: 'numeric' }),
-      serviceEmail: templateFieldDefault.serviceEmail[language],
-      reasonForEmail: reason ?? templateFieldDefault.reasonForEmail[language],
+      weekDay: new Date().toLocaleString(this.language, { weekday: 'long' }),
+      date: new Date().toLocaleDateString(this.language, { day: 'numeric', month: 'long', year: 'numeric' }),
+      serviceEmail: templateFieldDefault.serviceEmail[this.language],
+      reasonForEmail: reason ?? templateFieldDefault.reasonForEmail[this.language],
     };
     Object.entries(styledHtmlTemplateFields).forEach(([key, value]) => {
       styledHtml = styledHtml.replaceAll(`{{ ${key} }}`, value);
     });
 
-    return { text, html: styledHtml, subject };
+    const styledText = this.getTextWithSalutation(text, to);
+
+    return { text: styledText, html: styledHtml, subject };
   }
 }
