@@ -74,7 +74,8 @@ describe('WriteOffController', () => {
     c.app.use('/writeoffs', controller.getRouter());
 
     const vg = await (VatGroup.create({ percentage: 21, deleted: false, hidden: false, name: 'High VAT' })).save();
-    const serverSettingsStore = await ServerSettingsStore.getInstance().reinitialize();
+    ServerSettingsStore.deleteInstance();
+    const serverSettingsStore = await ServerSettingsStore.getInstance().initialize();
     await serverSettingsStore.setSetting('highVatGroupId', vg.id);
 
     ctx = { ...c, adminToken, token, writeOffs: await seedWriteOffs() };

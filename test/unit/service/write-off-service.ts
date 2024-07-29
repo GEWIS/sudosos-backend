@@ -48,7 +48,8 @@ describe('WriteOffService', () => {
     await truncateAllTables(c.connection);
 
     const vg = await (VatGroup.create({ percentage: 21, deleted: false, hidden: false, name: 'High VAT' })).save();
-    const serverSettingsStore = await ServerSettingsStore.getInstance().reinitialize();
+    ServerSettingsStore.deleteInstance();
+    const serverSettingsStore = await ServerSettingsStore.getInstance().initialize();
     await serverSettingsStore.setSetting('highVatGroupId', vg.id);
 
     ctx = { ...c, writeOffs: await seedWriteOffs() };
