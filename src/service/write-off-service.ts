@@ -40,6 +40,7 @@ import { RequestWithToken } from '../middleware/token-middleware';
 import { asNumber } from '../helpers/validators';
 import VatGroup from '../entity/vat-group';
 import wrapInManager from '../helpers/database';
+import ServerSettingsStore from "../server-settings/server-settings-store";
 
 export interface WriteOffFilterParameters {
   /**
@@ -106,10 +107,9 @@ export default class WriteOffService {
     };
   }
 
-  // TODO: replace with ServerSettings
-  // @link https://github.com/GEWIS/sudosos-backend/issues/226
   private static async getHighVATGroup(): Promise<VatGroup> {
-    const vatGroup = await VatGroup.findOne({ where: { percentage: 21, deleted: false, hidden: false } });
+    const id = ServerSettingsStore.getInstance().getSetting('highVatGroupId');
+    const vatGroup = await VatGroup.findOne({ where: { id } });
     if (vatGroup) return vatGroup;
     else throw new Error('High vat group not found');
   }

@@ -30,6 +30,7 @@ import WriteOffService from '../../../src/service/write-off-service';
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import User from '../../../src/entity/user/user';
 import VatGroup from '../../../src/entity/vat-group';
+import ServerSettingsStore from "../../../src/server-settings/server-settings-store";
 
 chai.use(deepEqualInAnyOrder);
 describe('WriteOffService', () => {
@@ -48,6 +49,8 @@ describe('WriteOffService', () => {
 
     const vg = await VatGroup.findOne({ where: { percentage: 21 } });
     if (!vg) await (VatGroup.create({ percentage: 21, deleted: false, hidden: false, name: 'High VAT' })).save();
+    await ServerSettingsStore.getInstance().setSetting('highVatGroupId', vg.id);
+
     ctx = { ...c, writeOffs: await seedWriteOffs() };
   });
 
@@ -111,9 +114,8 @@ describe('WriteOffService', () => {
       });
     });
     it('should error if HIGH VAT is not set', async () => {
-      const vatGroup = await VatGroup.findOne({ where: { percentage: 21 } });
-      vatGroup.deleted = true;
-      await vatGroup.save();
+      const id = ServerSettingsStore.getInstance().getSetting('highVatGroupId');
+      await ServerSettingsStore.getInstance().setSetting('highVatGroupId', -1);
 
       const amount = -100;
       const builder = await (await UserFactory()).addBalance(amount);
@@ -122,8 +124,7 @@ describe('WriteOffService', () => {
         await expect(func()).to.be.rejectedWith('High vat group not found');
       });
 
-      vatGroup.deleted = true;
-      await vatGroup.save();
+      await ServerSettingsStore.getInstance().setSetting('highVatGroupId', id);
     });
   });
 });
