@@ -29,7 +29,7 @@ import TokenMiddleware from '../../../src/middleware/token-middleware';
 import BalanceService from '../../../src/service/balance-service';
 import { json } from 'body-parser';
 import VatGroup from '../../../src/entity/vat-group';
-import ServerSettingsStore from "../../../src/server-settings/server-settings-store";
+import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
 
 function writeOffEq(a: WriteOff, b: WriteOffResponse): Boolean {
   return a.to.id === b.to.id
