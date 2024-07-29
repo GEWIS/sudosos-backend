@@ -29,7 +29,7 @@ import TokenHandler from '../../src/authentication/token-handler';
 import User, { UserType } from '../../src/entity/user/user';
 import { ADMIN_USER, UserFactory } from './user-factory';
 import { truncateAllTables } from '../setup';
-import ServerSettingsStore from "../../src/server-settings/server-settings-store";
+import ServerSettingsStore from '../../src/server-settings/server-settings-store';
 
 export interface DefaultContext {
   app: Express,
