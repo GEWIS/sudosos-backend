@@ -40,7 +40,7 @@ import { RequestWithToken } from '../middleware/token-middleware';
 import { asNumber } from '../helpers/validators';
 import VatGroup from '../entity/vat-group';
 import wrapInManager from '../helpers/database';
-import ServerSettingsStore from "../server-settings/server-settings-store";
+import ServerSettingsStore from '../server-settings/server-settings-store';
 
 export interface WriteOffFilterParameters {
   /**

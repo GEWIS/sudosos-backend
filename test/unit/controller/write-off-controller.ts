@@ -19,7 +19,7 @@ import { DefaultContext, defaultContext, finishTestDB } from '../../helpers/test
 import { truncateAllTables } from '../../setup';
 import WriteOff from '../../../src/entity/transactions/write-off';
 import { seedWriteOffs } from '../../seed';
-import {getToken, seedRoles} from '../../seed/rbac';
+import { getToken, seedRoles } from '../../seed/rbac';
 import User, { UserType } from '../../../src/entity/user/user';
 import { ADMIN_USER, inUserContext, UserFactory } from '../../helpers/user-factory';
 import { expect, request } from 'chai';
@@ -64,7 +64,7 @@ describe('WriteOffController', () => {
     }]);
 
     const adminToken = await c.tokenHandler.signToken(await getToken(admin, adminRole), 'nonce admin');
-    const token = await c.tokenHandler.signToken(await getToken(admin, adminRole), 'nonce');
+    const token = await c.tokenHandler.signToken(await getToken(localUser, adminRole), 'nonce');
 
     const tokenMiddleware = new TokenMiddleware({ tokenHandler: c.tokenHandler, refreshFactor: 0.5 }).getMiddleware();
     c.app.use(json());

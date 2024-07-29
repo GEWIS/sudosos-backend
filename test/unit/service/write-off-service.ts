@@ -30,7 +30,7 @@ import WriteOffService from '../../../src/service/write-off-service';
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import User from '../../../src/entity/user/user';
 import VatGroup from '../../../src/entity/vat-group';
-import ServerSettingsStore from "../../../src/server-settings/server-settings-store";
+import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
 
 chai.use(deepEqualInAnyOrder);
 describe('WriteOffService', () => {
