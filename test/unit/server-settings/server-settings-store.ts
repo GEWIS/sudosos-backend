@@ -32,6 +32,7 @@ describe('ServerSettingsStore', () => {
     ctx = {
       connection: await database.initialize(),
     };
+    ServerSettingsStore.deleteInstance();
   });
 
   afterEach(async () => {

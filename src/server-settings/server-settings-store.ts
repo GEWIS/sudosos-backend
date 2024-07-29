@@ -125,4 +125,11 @@ export default class ServerSettingsStore<T extends keyof ISettings = keyof ISett
     this.settings[key] = value;
     return this.repo.save(setting!);
   }
+
+  /**
+   * Only for testing, never use in production
+   */
+  public static deleteInstance() {
+    this.instance = undefined;
+  }
 }
