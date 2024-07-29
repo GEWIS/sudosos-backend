@@ -25,7 +25,7 @@ import { DineroObjectRequest } from './dinero-request';
  * @property {DineroObjectRequest} amount.required - Amount of money being transferred.
  * @property {integer} fromId - from which user the money is being transferred.
  * @property {integer} toId - to which user the money is being transferred.
- * @property {integer} vatId - Tuihe vat group id for the transfer.
+ * @property {integer} vatId - The vat group id for the transfer.
  */
 export default interface TransferRequest {
   amount: DineroObjectRequest;
