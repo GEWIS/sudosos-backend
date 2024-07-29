@@ -105,6 +105,6 @@ export class WriteOffs1722004753128 implements MigrationInterface {
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.dropTable('write_off');
     const permissions = await queryRunner.manager.getRepository(Permission).find({ where: { entity: 'WriteOff' } });
-    await queryRunner.manager.getRepository(Permission).delete(permissions.map((p) => p.id));
+    await queryRunner.manager.getRepository(Permission).remove(permissions);
   }
 }
