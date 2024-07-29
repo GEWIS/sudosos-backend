@@ -105,7 +105,7 @@ export default class ServerSettingsStore<T extends keyof ISettings = keyof ISett
   public async reinitialize(): Promise<ServerSettingsStore> {
     if (!this._initialized) throw new Error('ServerSettingsStore has not been initialized.');
     this._initialized = false;
-    await this.initialize()
+    await this.initialize();
     return this;
   }
 

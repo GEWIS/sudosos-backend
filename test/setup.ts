@@ -31,7 +31,6 @@ import sinonChai from 'sinon-chai';
 import { config } from 'dotenv';
 import { DataSource } from 'typeorm';
 import { PERSISTENT_TEST_DATABASES } from '../src/helpers/database';
-import ServerSettingsStore from "../src/server-settings/server-settings-store";
 
 use(chaiAsPromised);
 use(chaiHttp);
