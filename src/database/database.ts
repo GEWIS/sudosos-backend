@@ -109,10 +109,10 @@ const options: DataSourceOptions = {
     PayoutRequestPdf1720610649657,
     DatabaseRbac1720624912620,
     TransfersVat1721916495084,
-    WriteOffs1722004753128,
     PosCashiers1722022351000,
     ServerSettings1722083254200,
     PosUsers1722084520361,
+    WriteOffs1722004753128,
   ],
   extra: {
     authPlugins: {
