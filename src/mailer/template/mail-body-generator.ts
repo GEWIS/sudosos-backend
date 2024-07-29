@@ -31,13 +31,13 @@ interface TemplateFields {
   reasonForEmail: string;
 }
 
-const templateFieldDefault: Record<
+export const templateFieldDefault: Record<
 keyof Pick<TemplateFields, 'serviceEmail' | 'reasonForEmail'>
 , { [key in Language]: string }
 > = {
   serviceEmail: {
-    'nl-NL': process.env.STMP_USERNAME || '',
-    'en-US': process.env.STMP_USERNAME || '',
+    'en-US': process.env.SMTP_FROM?.split('<')[1].split('>')[0] || '',
+    'nl-NL': process.env.SMTP_FROM?.split('<')[1].split('>')[0] || '',
   },
   reasonForEmail: {
     'en-US': 'You are receiving this email because you are registered as a SudoSOS user. Learn more about how we treat your personal data on <a href="https://gew.is/privacy">https://gew.is/privacy</a>.',
@@ -53,17 +53,15 @@ export default class MailBodyGenerator<T> {
   }
 
   /**
-   * Get a localized salutation (including the comma afterwards)
-   * @param to
-   * @param language
+   * Get a localized salutation (including the comma afterward)
    * @private
    */
   private getLocalizedSalutation(to: User) {
     switch (this.language) {
       case Language.DUTCH:
-        return `Beste ${to.firstName},`;
+        return `Beste ${to.firstName}`;
       case Language.ENGLISH:
-        return `Dear ${to.firstName},`;
+        return `Dear ${to.firstName}`;
       default:
         throw new Error(`Unknown language: "${this.language}"`);
     }
@@ -76,7 +74,7 @@ export default class MailBodyGenerator<T> {
 SudoSOS`;
       case Language.ENGLISH:
         return `Kind regards,
-SudoSOS,`;
+SudoSOS`;
       default:
         throw new Error(`Unknown language: "${this.language}"`);
     }
@@ -89,13 +87,13 @@ SudoSOS,`;
    * @private
    */
   public getHtmlWithSalutation(html: string, to: User) {
-    return `<p>${this.getLocalizedSalutation(to)}</p>
+    return `<p>${this.getLocalizedSalutation(to)},</p>
 ${html}`;
   }
 
   public getTextWithSalutation(text: string, to: User) {
     return `${this.getLocalizedSalutation(to)},
-    
+
 ${text}
 
 ${this.getLocalizedClosing()}`;

@@ -27,17 +27,22 @@ import HelloWorld from '../../../src/mailer/messages/hello-world';
 import { Language } from '../../../src/mailer/mail-message';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
+import fs from 'fs';
+import { templateFieldDefault } from '../../../src/mailer/template/mail-body-generator';
 
 describe('Mailer', () => {
   let ctx: {
     connection: Connection,
     mailer?: Mailer,
     user: User,
+    htmlMailTemplate: string,
   };
 
   let sandbox: SinonSandbox;
   let sendMailFake: SinonStub;
   let createTransportStub: SinonStub;
+
+  const fromEmail = process.env.SMTP_FROM?.split('<')[1].split('>')[0] ?? '';
 
   before(async () => {
     const connection = await Database.initialize();
@@ -50,9 +55,12 @@ describe('Mailer', () => {
       email: 'mail@example.com',
     } as User);
 
+    const htmlMailTemplate = fs.readFileSync('./src/mailer/template/template.html').toString();
+
     ctx = {
       connection,
       user,
+      htmlMailTemplate,
     };
 
     Mailer.reset();
@@ -100,10 +108,31 @@ describe('Mailer', () => {
     if (!ctx.mailer) this.skip();
     await ctx.mailer.send(ctx.user, new HelloWorld({ name: ctx.user.firstName }));
 
+    expect(sendMailFake).to.be.calledOnce;
+    const args = sendMailFake.args[0][0];
+
+    const styledHtml = ctx.htmlMailTemplate
+      .replaceAll('{{ subject }}', 'Hello world!')
+      .replaceAll('{{ htmlSubject }}', 'Hello&nbsp;world!')
+      .replaceAll('{{ weekDay }}', new Date().toLocaleString('en-US', { weekday: 'long' }))
+      .replaceAll('{{ date }}', new Date().toLocaleString('en-US', { day: 'numeric', month: 'long', year: 'numeric' }))
+      .replaceAll('{{ shortTitle }}', 'Hello world!')
+      .replaceAll('{{ body }}', `<p>Dear Admin,</p>
+<p>Hello world, Admin!</p>`)
+      .replaceAll('{{ reasonForEmail }}', templateFieldDefault.reasonForEmail['en-US'])
+      .replaceAll('{{ serviceEmail }}', fromEmail);
+
+    // Separate assessment for HTML body (because it is so big)
+    expect(args.html).to.equal(styledHtml);
     expect(sendMailFake).to.be.calledOnceWithExactly({
       from: process.env.SMTP_FROM,
-      text: 'Hello world, Admin!',
-      html: '<p>Hello world, Admin!</p>',
+      text: `Dear Admin,
+
+Hello world, Admin!
+
+Kind regards,
+SudoSOS`,
+      html: styledHtml,
       subject: 'Hello world!',
       to: 'mail@example.com',
     });
@@ -114,10 +143,31 @@ describe('Mailer', () => {
     if (!ctx.mailer) this.skip();
     await ctx.mailer.send(ctx.user, new HelloWorld({ name: ctx.user.firstName }), Language.DUTCH);
 
-    expect(sendMailFake).to.be.calledOnceWithExactly({
+    expect(sendMailFake).to.be.calledOnce;
+    const args = sendMailFake.args[0][0];
+
+    const styledHtml = ctx.htmlMailTemplate
+      .replaceAll('{{ subject }}', 'Hallo wereld!')
+      .replaceAll('{{ htmlSubject }}', 'Hallo&nbsp;wereld!')
+      .replaceAll('{{ weekDay }}', new Date().toLocaleString('nl-NL', { weekday: 'long' }))
+      .replaceAll('{{ date }}', new Date().toLocaleString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' }))
+      .replaceAll('{{ shortTitle }}', 'Hallo wereld!')
+      .replaceAll('{{ body }}', `<p>Beste Admin,</p>
+<p>Hallo wereld, Admin!</p>`)
+      .replaceAll('{{ reasonForEmail }}', templateFieldDefault.reasonForEmail['nl-NL'])
+      .replaceAll('{{ serviceEmail }}', fromEmail);
+    // Separate assessment for HTML body (because it is so big)
+    expect(args.html).to.equal(styledHtml);
+
+    expect(args).to.deep.equal({
       from: process.env.SMTP_FROM,
-      text: 'Hallo wereld, Admin!',
-      html: '<p>Hallo wereld, Admin!</p>',
+      text: `Beste Admin,
+
+Hallo wereld, Admin!
+
+Met vriendelijke groet,
+SudoSOS`,
+      html: styledHtml,
       subject: 'Hallo wereld!',
       to: 'mail@example.com',
     });
