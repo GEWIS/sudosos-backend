@@ -89,15 +89,15 @@ export class WriteOffs1722004753128 implements MigrationInterface {
 
     await roleRepo.findOne({ where: { name: 'SudoSOS - BAC PM' } }).then(async (role) => {
       if (!role) return;
-      role.permissions = [...role.permissions, ...await permissionRepo.save({ ...getAdminPermissions(role, 'WriteOff') })];
+      role.permissions.push(...await permissionRepo.save({ ...getAdminPermissions(role, 'WriteOff') }));
       await roleRepo.save(role);
     });
 
     await roleRepo.findOne({ where: { name: 'SudoSOS - Audit' } }).then(async (role) => {
       if (!role) return;
-      role.permissions = [...role.permissions, ...await permissionRepo.save([
+      role.permissions.push(...await permissionRepo.save([
         { roleId: role.id, role, entity: 'WriteOff', action: 'get', relation: 'all', attributes: ['*'] },
-      ])];
+      ]));
       await roleRepo.save(role);
     });
   }
