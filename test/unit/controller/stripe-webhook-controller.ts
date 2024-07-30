@@ -107,6 +107,16 @@ describe('StripeWebhookController', async (): Promise<void> => {
     stubs.splice(0, stubs.length);
   });
 
+  describe('GET /public', () => {
+    it('should return 200 with public key', async () => {
+      const res = await request(ctx.app)
+        .get('/stripe/public');
+      expect(res.status).to.equal(200);
+
+      expect(res.body).to.equal(process.env.STRIPE_PUBLIC_KEY);
+    });
+  });
+
   describe('POST /webhook', () => {
     it('should return 400 when sending no body', async () => {
       const res = await request(ctx.app)

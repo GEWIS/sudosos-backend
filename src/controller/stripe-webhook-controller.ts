@@ -17,7 +17,7 @@
  */
 
 import log4js, { Logger } from 'log4js';
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import StripeService from '../service/stripe-service';
@@ -43,6 +43,12 @@ export default class StripeWebhookController extends BaseController {
    */
   public getPolicy(): Policy {
     return {
+      '/public': {
+        GET: {
+          policy: async () => true,
+          handler: this.getStripePublicKey.bind(this),
+        },
+      },
       '/webhook': {
         POST: {
           policy: async () => true,
@@ -50,6 +56,19 @@ export default class StripeWebhookController extends BaseController {
         },
       },
     };
+  }
+
+  /**
+   * GET /stripe/public
+   * @operationId getStripePublicKey
+   * @summary Get the Stripe public key
+   * @tags stripe - Operations of the stripe controller
+   * @returns {string} 200 - Public key
+   */
+  public async getStripePublicKey(req: Request, res: Response): Promise<void> {
+    this.logger.trace('Get Stripe public key by IP', req.ip);
+
+    res.json(process.env.STRIPE_PUBLIC_KEY);
   }
 
   /**
