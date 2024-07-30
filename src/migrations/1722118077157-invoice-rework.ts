@@ -31,12 +31,12 @@ export class InvoiceRework1622118077157 implements MigrationInterface {
       isNullable: false,
     }));
     await queryRunner.addColumn('invoice', new TableColumn({
-      name: 'lastStatusId',
+      name: 'latestStatusId',
       type: 'integer',
       isNullable: true,
     }));
     await queryRunner.createForeignKey('invoice', new TableForeignKey({
-      columnNames: ['lastStatusId'],
+      columnNames: ['latestStatusId'],
       referencedColumnNames: ['id'],
       referencedTableName: 'invoice_status',
       onDelete: 'SET NULL',
