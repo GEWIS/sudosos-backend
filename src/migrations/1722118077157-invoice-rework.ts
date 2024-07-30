@@ -48,11 +48,11 @@ export class InvoiceRework1622118077157 implements MigrationInterface {
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     const invoiceTable = await queryRunner.getTable('invoice');
-    const invoiceForeignKey = invoiceTable.foreignKeys.find(fk => fk.columnNames.indexOf('lastStatusId') !== -1);
+    const invoiceForeignKey = invoiceTable.foreignKeys.find(fk => fk.columnNames.indexOf('latestStatusId') !== -1);
     if (invoiceForeignKey) {
       await queryRunner.dropForeignKey('invoice', invoiceForeignKey);
     }
-    await queryRunner.dropColumn('invoice', 'lastStatusId');
+    await queryRunner.dropColumn('invoice', 'latestStatusId');
     await queryRunner.dropColumn('invoice', 'attention');
     await queryRunner.dropColumn('invoice', 'date');
   }
