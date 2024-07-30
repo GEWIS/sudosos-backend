@@ -22,7 +22,6 @@ export class InvoiceRework1622118077157 implements MigrationInterface {
     await queryRunner.addColumn('invoice', new TableColumn({
       name: 'attention',
       type: 'varchar(255)',
-      default: '',
       isNullable: true,
     }));
     await queryRunner.addColumn('invoice', new TableColumn({
