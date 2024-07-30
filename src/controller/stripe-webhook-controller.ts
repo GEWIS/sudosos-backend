@@ -22,6 +22,7 @@ import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import StripeService from '../service/stripe-service';
 import { RequestWithRawBody } from '../helpers/raw-body';
+import { StripePublicKeyResponse } from './response/stripe-response';
 
 export default class StripeWebhookController extends BaseController {
   private logger: Logger = log4js.getLogger('StripeController');
@@ -68,7 +69,12 @@ export default class StripeWebhookController extends BaseController {
   public async getStripePublicKey(req: Request, res: Response): Promise<void> {
     this.logger.trace('Get Stripe public key by IP', req.ip);
 
-    res.json(process.env.STRIPE_PUBLIC_KEY);
+    const response: StripePublicKeyResponse = {
+      publicKey: process.env.STRIPE_PUBLIC_KEY,
+      returnUrl: process.env.STRIPE_RETURN_URL,
+    };
+
+    res.json(response);
   }
 
   /**
