@@ -23,6 +23,16 @@ import { StripeDepositState } from '../../entity/deposit/stripe-deposit-status';
 import { BaseUserResponse } from './user-response';
 
 /**
+ * @typedef {object} StripePublicKeyResponse
+ * @property {string} publicKey.required - Stripe public key
+ * @property {string} returnUrl.required - Redirect url after payment
+ */
+export interface StripePublicKeyResponse {
+  publicKey: string;
+  returnUrl: string;
+}
+
+/**
  * @typedef {allOf|BaseResponse} StripePaymentIntentResponse
  * @property {string} stripeId.required - ID of the intent in Stripe.
  * @property {string} clientSecret.required - The client secret of the created Payment Intent.

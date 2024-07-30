@@ -80,6 +80,10 @@ export default class GewisAuthenticationController extends BaseController {
   public getPolicy(): Policy {
     return {
       '/gewisweb': {
+        GET: {
+          policy: async () => true,
+          handler: this.getGEWISWebPublic.bind(this),
+        },
         POST: {
           body: { modelName: 'GewiswebAuthenticationRequest' },
           policy: async () => true,
@@ -101,6 +105,19 @@ export default class GewisAuthenticationController extends BaseController {
         },
       },
     };
+  }
+
+  /**
+   * GET /authentication/gewisweb
+   * @summary Get the GEWISWeb public token used by SudoSOS
+   * @operationId getGEWISWebPublic
+   * @tags authenticate - Operations of authentication controller
+   * @returns {string} 200 - Public key
+   */
+  public async getGEWISWebPublic(req: Request, res: Response): Promise<void> {
+    this.logger.trace('Get GEWISWeb public token by IP', req.ip);
+
+    res.json(process.env.GEWISWEB_PUBLIC_TOKEN);
   }
 
   /**
