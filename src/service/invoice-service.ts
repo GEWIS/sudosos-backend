@@ -47,6 +47,7 @@ import { parseUserToBaseResponse } from '../helpers/revision-to-response';
 import { collectByToId, collectProductsByRevision, reduceMapToInvoiceEntries } from '../helpers/transaction-mapper';
 import SubTransaction from '../entity/transactions/sub-transaction';
 import InvoiceUser, { InvoiceUserDefaults } from '../entity/user/invoice-user';
+import { create } from 'node:domain';
 
 export interface InvoiceFilterParameters {
   /**
@@ -397,16 +398,21 @@ export default class InvoiceService {
       });
     }
 
-    if (update.description) base.description = update.description;
-    if (update.addressee) base.addressee = update.addressee;
-    if (update.street) base.addressee = update.street;
-    if (update.postalCode) base.postalCode = update.postalCode;
-    if (update.city) base.postalCode = update.city;
-    if (update.country) base.postalCode = update.country;
-    if (update.reference) base.reference = update.reference;
-    if (update.attention) base.attention = update.attention;
-    if (update.date) base.date = new Date(update.date);
+    const { description, addressee, street, postalCode, city,
+      country, reference, attention, date } = update;
+    const updated = Invoice.create({
+      description,
+      addressee,
+      street,
+      postalCode,
+      city,
+      country,
+      reference,
+      attention,
+      date: new Date(date),
+    });
 
+    Invoice.merge(base, updated);
     await base.save();
     // Return the newly updated Invoice.
 
