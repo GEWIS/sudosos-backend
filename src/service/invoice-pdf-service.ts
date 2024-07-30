@@ -131,10 +131,11 @@ export default class InvoicePdfService {
       subject: invoice.description,
       // Are unused but still required.
       sender: new Identity({ firstName: UNUSED_PARAM, fullName: UNUSED_PARAM, lastName: UNUSED_PARAM, lastNamePreposition: UNUSED_PARAM }),
-      recipient: new Identity({ firstName: UNUSED_PARAM, lastName: UNUSED_PARAM, lastNamePreposition: UNUSED_PARAM, fullName: UNUSED_PARAM }),
-
+      // Partly unused, but still required.
+      recipient: new Identity({ firstName: UNUSED_PARAM, lastName: UNUSED_PARAM, lastNamePreposition: UNUSED_PARAM, fullName: invoice.attention }),
+      description: invoice.description,
       dates: new Dates({
-        date: invoice.createdAt,
+        date: invoice.date,
       }),
       company: new Company({
         name: invoice.addressee,

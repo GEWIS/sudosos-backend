@@ -272,12 +272,14 @@ export async function seedInvoices(users: User[], transactions: Transaction[]): 
       street: `street-${i}`,
       description: `Invoice #${i}`,
       transfer,
+      date: new Date(),
       invoiceEntries,
       invoiceStatus: [],
     });
     transfer.invoice = invoice;
 
-    const status = Object.assign(new InvoiceStatus(), {
+    await Invoice.save(invoice);
+    let status = Object.assign(new InvoiceStatus(), {
       id: i + 1,
       invoice,
       changedBy: users[i],
@@ -291,6 +293,21 @@ export async function seedInvoices(users: User[], transactions: Transaction[]): 
 
   await Invoice.save(invoices);
   await InvoiceEntry.save(invoiceEntry);
+
+  for (let i = 0; i < invoices.length; i += 1) {
+    if (i % 2 === 0) {
+      const current = invoices[i].invoiceStatus[0].changedBy.id;
+      const status = Object.assign(new InvoiceStatus(), {
+        invoice: invoices[i],
+        changedBy: current,
+        state: InvoiceState.SENT,
+        dateChanged: addDays(new Date(2020, 0, 1), 2 - (i * 2)),
+      });
+      invoices[i].invoiceStatus.push(status);
+      await Invoice.save(invoices[i]);
+    }
+  }
+
 
   return { invoices, invoiceTransfers };
 }

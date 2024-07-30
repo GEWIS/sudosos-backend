@@ -80,11 +80,10 @@ async function validTransactionIds<T extends BaseInvoice>(p: T) {
  * @param p
  */
 async function existsAndNotDeleted<T extends UpdateInvoiceParams>(p: T) {
-  const base: Invoice = await Invoice.findOne({ where: { id: p.invoiceId }, relations: ['invoiceStatus'] });
+  const base: Invoice = await Invoice.findOne({ where: { id: p.invoiceId }, relations: ['latestStatus'] });
 
   if (!base) return toFail(INVALID_INVOICE_ID());
-  if (base.invoiceStatus[base.invoiceStatus.length - 1]
-    .state === InvoiceState.DELETED) {
+  if (base.latestStatus.state === InvoiceState.DELETED) {
     return toFail(INVOICE_IS_DELETED());
   }
 
@@ -98,9 +97,8 @@ async function existsAndNotDeleted<T extends UpdateInvoiceParams>(p: T) {
 async function differentState<T extends UpdateInvoiceParams>(p: T) {
   if (!p.state) return toPass(p);
 
-  const base: Invoice = await Invoice.findOne({ where: { id: p.invoiceId }, relations: ['invoiceStatus'] });
-  if (base.invoiceStatus[base.invoiceStatus.length - 1]
-    .state === p.state) {
+  const base: Invoice = await Invoice.findOne({ where: { id: p.invoiceId }, relations: ['latestStatus'] });
+  if (base.latestStatus.state === p.state) {
     return toFail(SAME_INVOICE_STATE());
   }
 
@@ -144,10 +142,11 @@ const updateInvoiceRequestSpec: Specification<UpdateInvoiceParams, ValidationErr
 const createInvoiceRequestSpec: () => Specification<CreateInvoiceParams, ValidationError> = () => [
   ...baseInvoiceRequestSpec<CreateInvoiceParams>(),
   [[userMustExist], 'byId', new ValidationError('byId:')],
-  [stringSpec(), 'street', new ValidationError('description:')],
+  [stringSpec(), 'street', new ValidationError('street:')],
   [stringSpec(), 'postalCode', new ValidationError('postalCode:')],
   [stringSpec(), 'city', new ValidationError('city:')],
   [stringSpec(), 'country', new ValidationError('country:')],
+  [stringSpec(), 'reference', new ValidationError('reference:')],
 ];
 
 export default async function verifyCreateInvoiceRequest(

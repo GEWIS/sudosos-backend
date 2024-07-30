@@ -140,6 +140,7 @@ createInvoiceWithTransfers(debtorId: number, creditorId: number,
     addressee: 'Addressee',
     description: 'Description',
     forId: debtorId,
+    date: new Date(),
     transactionIDs: transactions.map((t) => t.tId),
     isCreditInvoice: false,
   };
@@ -310,6 +311,7 @@ describe('InvoiceService', () => {
             addressee: 'Addressee',
             description: 'Description',
             forId: debtor.id,
+            date: new Date(),
             fromDate: new Date().toISOString(),
             isCreditInvoice: false,
           };
@@ -357,6 +359,7 @@ describe('InvoiceService', () => {
             addressee: 'Addressee',
             description: 'Description',
             forId: debtor.id,
+            date: new Date(),
             transactionIDs: chosenTransactions.map(
               (transaction) => transaction.tId,
             ),
@@ -393,6 +396,7 @@ describe('InvoiceService', () => {
             postalCode: 'postalCode',
             street: 'street',
             reference: 'BAC-41',
+            date: new Date(),
           };
 
           // Spent more money.
@@ -439,6 +443,7 @@ describe('InvoiceService', () => {
             addressee: 'Addressee',
             description: 'Description',
             forId: debtor.id,
+            date: new Date(),
             isCreditInvoice: false,
             transactionIDs: transactions.map((t) => t.tId),
           };
@@ -482,6 +487,7 @@ describe('InvoiceService', () => {
           addressee: 'Addressee',
           description: 'Description',
           forId: creditor.id,
+          date: new Date(),
           transactionIDs: transactions.map((t) => t.tId),
           isCreditInvoice: true,
         };
@@ -520,6 +526,7 @@ describe('InvoiceService', () => {
           addressee: 'Addressee',
           description: 'Description',
           forId: creditor.id,
+          date: new Date(),
           transactionIDs: transactions.map((t) => t.tId),
           isCreditInvoice: true,
         };
@@ -802,6 +809,7 @@ describe('InvoiceService', () => {
             description: 'Description',
             forId: debtor.id,
             isCreditInvoice: false,
+            date: new Date(),
             transactionIDs: transactions.map((t) => t.tId),
           };
 
@@ -879,6 +887,7 @@ describe('InvoiceService', () => {
           addressee: 'Addressee',
           description: 'Description',
           forId: debtor.id,
+          date: new Date(),
           transactionIDs: transactions.map((t) => t.tId),
           isCreditInvoice: false,
         };
