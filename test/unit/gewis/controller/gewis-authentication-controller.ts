@@ -126,6 +126,23 @@ describe('GewisAuthenticationController', async (): Promise<void> => {
     await finishTestDB(ctx.connection);
   });
 
+  describe('GET /authentication/gewisweb', () => {
+    it('should return HTTP 200 and public token', async () => {
+      const oldPublic = process.env.GEWISWEB_PUBLIC_TOKEN;
+      if (!oldPublic) {
+        process.env.GEWISWEB_PUBLIC_TOKEN = 'HawkTuahYeeHaw';
+      }
+
+      const res = await request(ctx.app)
+        .get('/authentication/gewisweb');
+      expect(res.status).to.equal(200);
+      expect(res.body).to.equal(process.env.GEWISWEB_PUBLIC_TOKEN);
+
+      // Cleanup
+      process.env.GEWISWEB_PUBLIC_TOKEN = oldPublic;
+    });
+  });
+
   describe('POST /authentication/gewisweb', () => {
     it('should be able to create token', async () => {
       const req = {

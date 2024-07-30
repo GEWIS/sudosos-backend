@@ -107,6 +107,31 @@ describe('StripeWebhookController', async (): Promise<void> => {
     stubs.splice(0, stubs.length);
   });
 
+  describe('GET /public', () => {
+    it('should return 200 with public key', async () => {
+      const oldPublicKey = process.env.STRIPE_PUBLIC_KEY;
+      const oldReturnUrl = process.env.STRIPE_RETURN_URL;
+
+      process.env.STRIPE_PUBLIC_KEY = 'STRIPE_Public_Key_Geef_Geld';
+      process.env.STRIPE_RETURN_URL = 'https://wie.dit.leest.trekteenbak.nl';
+
+      const res = await request(ctx.app)
+        .get('/stripe/public');
+      expect(res.status).to.equal(200);
+
+      const validation = ctx.specification.validateModel('StripePublicKeyResponse', res.body, false, true);
+      expect(validation.valid).to.equal(true);
+      expect(res.body).to.deep.equal({
+        publicKey: process.env.STRIPE_PUBLIC_KEY,
+        returnUrl: process.env.STRIPE_RETURN_URL,
+      });
+
+      // Cleanup
+      process.env.STRIPE_PUBLIC_KEY = oldPublicKey;
+      process.env.STRIPE_RETURN_URL = oldReturnUrl;
+    });
+  });
+
   describe('POST /webhook', () => {
     it('should return 400 when sending no body', async () => {
       const res = await request(ctx.app)
