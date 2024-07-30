@@ -145,6 +145,7 @@ describe('ServerSettingsStore', () => {
   });
   describe('#getInstance', () => {
     it('should return same instance', async () => {
+      ServerSettingsStore.deleteInstance();
       const store = ServerSettingsStore.getInstance();
       expect(store.initialized).to.be.false;
 

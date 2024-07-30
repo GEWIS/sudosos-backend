@@ -29,6 +29,7 @@ import Invoice from '../invoices/invoice';
 import Fine from '../fine/fine';
 import UserFineGroup from '../fine/userFineGroup';
 import VatGroup from '../vat-group';
+import WriteOff from './write-off';
 
 /**
  * @typedef {BaseEntity} Transfer
@@ -87,6 +88,9 @@ export default class Transfer extends BaseEntity {
 
   @OneToOne(() => Fine, (f) => f.transfer, { nullable: true })
   public fine: Fine | null;
+
+  @OneToOne(() => WriteOff, (w) => w.transfer, { nullable: true })
+  public writeOff: WriteOff | null;
 
   @OneToOne(() => UserFineGroup, (g) => g.waivedTransfer, { nullable: true })
   public waivedFines: UserFineGroup | null;

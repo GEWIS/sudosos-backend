@@ -24,7 +24,7 @@ import EventShift from '../entity/event/event-shift';
 
 const star = ['*'];
 
-function getAdminPermissions(role: Role, entity: string, relationOwn = true): DeepPartial<Permission>[] {
+export function getAdminPermissions(role: Role, entity: string, relationOwn = true): DeepPartial<Permission>[] {
   const result = [
     { roleId: role.id, role, entity, action: 'get', relation: 'all', attributes: star },
     { roleId: role.id, role, entity, action: 'update', relation: 'all', attributes: star },

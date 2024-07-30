@@ -63,6 +63,8 @@ import GewisUser from '../src/gewis/entity/gewis-user';
 import AssignedRole from '../src/entity/rbac/assigned-role';
 import MemberAuthenticator from '../src/entity/authenticator/member-authenticator';
 import Role from '../src/entity/rbac/role';
+import generateBalance from './helpers/test-helpers';
+import WriteOff from '../src/entity/transactions/write-off';
 
 function getDate(startDate: Date, endDate: Date, i: number): Date {
   const diff = endDate.getTime() - startDate.getTime();
@@ -1342,6 +1344,39 @@ function defineBannerImage(banner: Banner, createdBy: User): BannerImage {
   });
 }
 
+export async function seedWriteOffs(count = 10): Promise<WriteOff[]> {
+  const userCount = await User.count();
+  const users = defineUsers(userCount, count, UserType.LOCAL_USER, false);
+  await User.save(users);
+
+  for (const u of users) {
+    u.firstName = 'WriteOff';
+    u.deleted = true;
+    await generateBalance(-1000, u.id);
+  }
+  await User.save(users);
+
+  const writeOffs: WriteOff[] = [];
+  for (const u of users) {
+    const writeOff = Object.assign(new WriteOff(), {
+      to: u,
+      amount: dinero({ amount: 1000 }),
+    });
+    await writeOff.save();
+    writeOff.transfer = (await Transfer.save({
+      amountInclVat: dinero({ amount: 1000 }),
+      toId: u.id,
+      description: 'WriteOff',
+      fromId: null,
+      writeOff,
+    }));
+    await writeOff.save();
+
+    writeOffs.push(writeOff);
+  }
+  return writeOffs;
+}
+
 /**
  * Seeds a default dataset of banners based on the given users.
  * When not in a testing environment, actual images will also be saved to disk.
@@ -1406,6 +1441,7 @@ export interface DatabaseContent {
   gewisUsers: GewisUser[],
   pinUsers: PinAuthenticator[],
   localUsers: LocalAuthenticator[],
+  writeOffs: WriteOff[],
 }
 
 export default async function seedDatabase(beginDate?: Date, endDate?: Date): Promise<DatabaseContent> {
@@ -1419,6 +1455,7 @@ export default async function seedDatabase(beginDate?: Date, endDate?: Date): Pr
   const gewisUsers = await seedGEWISUsers(users);
   const categories = await seedProductCategories();
   const vatGroups = await seedVatGroups();
+  const writeOffs = await seedWriteOffs();
   const {
     products, productRevisions,
   } = await seedProducts(users, categories, vatGroups);
@@ -1463,5 +1500,6 @@ export default async function seedDatabase(beginDate?: Date, endDate?: Date): Pr
     events,
     eventShifts,
     eventShiftAnswers,
+    writeOffs,
   };
 }
