@@ -89,7 +89,7 @@ export class WriteOffs1722004753128 implements MigrationInterface {
 
     await roleRepo.findOne({ where: { name: 'SudoSOS - BAC PM' }, relations: ['permissions'] }).then(async (role) => {
       if (!role) return;
-      role.permissions.push(...await permissionRepo.save({ ...getAdminPermissions(role, 'WriteOff') }));
+      role.permissions.push(...await permissionRepo.save(getAdminPermissions(role, 'WriteOff') ));
       await roleRepo.save(role);
     });
 
