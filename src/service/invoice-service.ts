@@ -47,6 +47,7 @@ import { parseUserToBaseResponse } from '../helpers/revision-to-response';
 import { collectByToId, collectProductsByRevision, reduceMapToInvoiceEntries } from '../helpers/transaction-mapper';
 import SubTransaction from '../entity/transactions/sub-transaction';
 import InvoiceUser, { InvoiceUserDefaults } from '../entity/user/invoice-user';
+import { filterRelevantToEntity } from '../helpers/object-filter';
 
 export interface InvoiceFilterParameters {
   /**
@@ -397,27 +398,8 @@ export default class InvoiceService {
       });
     }
 
-    const { description, addressee, street, postalCode, city, country, reference, attention, date } = update;
-
-    const updated = Invoice.create(
-      Object.fromEntries(
-        Object.entries({
-          description,
-          addressee,
-          street,
-          postalCode,
-          city,
-          country,
-          reference,
-          attention,
-          date: date ? new Date(date) : undefined,
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        }).filter(([_, value]) => value !== undefined),
-      ),
-    );
-
-    Invoice.merge(base, updated);
-    await base.save();
+    const updateProps = filterRelevantToEntity(base, update);
+    await Invoice.update(base.id, { ...updateProps, date: updateProps.date ? new Date(updateProps.date) : base.date });
     // Return the newly updated Invoice.
 
     const options = this.getOptions({ invoiceId: base.id, returnInvoiceEntries: true });
