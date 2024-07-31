@@ -397,19 +397,24 @@ export default class InvoiceService {
       });
     }
 
-    const { description, addressee, street, postalCode, city,
-      country, reference, attention, date } = update;
-    const updated = Invoice.create({
-      description,
-      addressee,
-      street,
-      postalCode,
-      city,
-      country,
-      reference,
-      attention,
-      date: new Date(date),
-    });
+    const { description, addressee, street, postalCode, city, country, reference, attention, date } = update;
+
+    const updated = Invoice.create(
+      Object.fromEntries(
+        Object.entries({
+          description,
+          addressee,
+          street,
+          postalCode,
+          city,
+          country,
+          reference,
+          attention,
+          date: date ? new Date(date) : undefined,
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        }).filter(([_, value]) => value !== undefined),
+      ),
+    );
 
     Invoice.merge(base, updated);
     await base.save();
