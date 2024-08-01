@@ -31,11 +31,11 @@ import {
 } from '../controller/response/financial-mutation-response';
 import TransferService, { TransferFilterParameters } from './transfer-service';
 import Mailer from '../mailer';
-import WelcomeToSudosos from '../mailer/templates/welcome-to-sudosos';
+import WelcomeToSudosos from '../mailer/messages/welcome-to-sudosos';
 import { AcceptTosRequest } from '../controller/request/accept-tos-request';
 import Bindings from '../helpers/bindings';
 import AuthenticationService from './authentication-service';
-import WelcomeWithReset from '../mailer/templates/welcome-with-reset';
+import WelcomeWithReset from '../mailer/messages/welcome-with-reset';
 import { Brackets, In } from 'typeorm';
 import BalanceService from './balance-service';
 import AssignedRole from '../entity/rbac/assigned-role';
@@ -211,11 +211,11 @@ export default class UserService {
     // Local users will receive a reset link.
     if (LocalUserTypes.includes(user.type)) {
       const resetTokenInfo = await AuthenticationService.createResetToken(user);
-      Mailer.getInstance().send(user, new WelcomeWithReset({ email: user.email, name: user.firstName, resetTokenInfo })).then().catch((e) => {
+      Mailer.getInstance().send(user, new WelcomeWithReset({ email: user.email, resetTokenInfo })).then().catch((e) => {
         throw e;
       });
     } else {
-      Mailer.getInstance().send(user, new WelcomeToSudosos({ name: user.firstName })).then().catch((e) => {
+      Mailer.getInstance().send(user, new WelcomeToSudosos({ })).then().catch((e) => {
         throw e;
       });
     }

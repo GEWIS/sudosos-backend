@@ -18,4 +18,4 @@
 
 
 export { default } from './mailer';
-export * from './templates';
+export * from './messages';

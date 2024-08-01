@@ -17,18 +17,20 @@
  */
 
 import Mail from 'nodemailer/lib/mailer';
-import MailContent from './mail-content';
+import MailContentBuilder from './messages/mail-content-builder';
+import MailBodyGenerator from './template/mail-body-generator';
+import User from '../entity/user/user';
 
 export enum Language {
-  DUTCH = 'dutch',
-  ENGLISH = 'english',
+  DUTCH = 'nl-NL',
+  ENGLISH = 'en-US',
 }
 
 export type MailLanguageMap<T> = {
-  [key in Language]: MailContent<T>;
+  [key in Language]: MailContentBuilder<T>;
 };
 
-export default class MailTemplate<T> {
+export default class MailMessage<T> {
   protected baseMailOptions: Mail.Options = {
     from: process.env.SMTP_FROM,
   };
@@ -45,12 +47,15 @@ export default class MailTemplate<T> {
   /**
    * Get the base options
    */
-  getOptions(language: Language): Mail.Options {
+  getOptions(to: User, language: Language): Mail.Options {
     if (this.mailContents[language] === undefined) throw new Error(`Unknown language: ${language}`);
-    const { text, html, subject } = this.mailContents[language].getContent(this.contentOptions);
+
+    const { text, html, subject } = new MailBodyGenerator(language)
+      .getContents(this.mailContents, this.contentOptions, to);
 
     return {
       ...this.baseMailOptions,
+      to: to.email,
       text,
       html,
       subject,

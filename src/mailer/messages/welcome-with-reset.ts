@@ -16,66 +16,48 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import MailTemplate, { Language, MailLanguageMap } from './mail-template';
-import { signatureDutch, signatureEnglish } from './signature';
-import MailContent from './mail-content';
+import MailMessage, { Language, MailLanguageMap } from '../mail-message';
+import MailContentBuilder from './mail-content-builder';
 import { ResetTokenInfo } from '../../service/authentication-service';
 
 interface WelcomeWithResetOptions {
-  name: string;
   email: string,
   resetTokenInfo: ResetTokenInfo,
   url?: string;
 }
 
-const welcomeWithResetDutch = new MailContent<WelcomeWithResetOptions>({
+const welcomeWithResetDutch = new MailContentBuilder<WelcomeWithResetOptions>({
   getHTML: (context) => `
-<p>Beste ${context.name},</p>
-
 <p>Er is zojuist een account voor je aangemaakt in SudoSOS. Welkom!</p>
 
 <p>Voordat je SudoSOS écht kunt gebruiken, dien je een wachtwoord te kiezen door te gaan naar ${context.url + '/passwordreset?token=' + context.resetTokenInfo.password + '&email=' + context.email}</p>
 
-<p>Tot op de borrel!</p>
-
-${signatureDutch}`,
-  getSubject: () => 'Welkom bij SudoSOS!',
+<p>Tot op de borrel!</p>`,
+  getSubject: 'Welkom bij SudoSOS!',
+  getTitle: 'Welkom!',
   getText: (context) => `
-Beste ${context.name},
-
 Er is zojuist een account voor je aangemaakt in SudoSOS. Welkom!
 
 Voordat je SudoSOS écht kunt gebruiken, dien je een wachtwoord te kiezen door te gaan naar ${context.url + '/passwordreset?token=' + context.resetTokenInfo.password + '&email=' + context.email}
 
-Tot op de borrel!
-
-Met vriendelijke groet,
-SudoSOS`,
+Tot op de borrel!`,
 });
 
-const welcomeWithResetEnglish = new MailContent<WelcomeWithResetOptions>({
+const welcomeWithResetEnglish = new MailContentBuilder<WelcomeWithResetOptions>({
   getHTML: (context) => `
-<p>Dear ${context.name},</p>
-
 <p>An account for SudoSOS has just been created for you. Welcome!</p>
 
 <p>Before you can actually use SudoSOS, you have to set a password by going to ${context.url + '/passwordreset?token=' + context.resetTokenInfo.password + '&email=' + context.email}</p>
 
-<p>See you on the borrel!</p>
-
-${signatureEnglish}`,
-  getSubject: () => 'Welcome to SudoSOS!',
+<p>See you on the borrel!</p>`,
+  getSubject: 'Welcome to SudoSOS!',
+  getTitle: 'Welcome!',
   getText: (context) => `
-Dear ${context.name},
-
 An account for SudoSOS has just been created for you. Welcome!
 
 Before you can actually use SudoSOS, you have to set a password by going to ${context.url + '/passwordreset?token=' + context.resetTokenInfo.password + '&email=' + context.email}
 
-See you on the borrel!
-
-Kind regards,
-SudoSOS`,
+See you on the borrel!`,
 });
 
 const mailContents: MailLanguageMap<WelcomeWithResetOptions> = {
@@ -83,7 +65,7 @@ const mailContents: MailLanguageMap<WelcomeWithResetOptions> = {
   [Language.ENGLISH]: welcomeWithResetEnglish,
 };
 
-export default class WelcomeWithReset extends MailTemplate<WelcomeWithResetOptions> {
+export default class WelcomeWithReset extends MailMessage<WelcomeWithResetOptions> {
   public constructor(options: WelcomeWithResetOptions) {
     const opt: WelcomeWithResetOptions = {
       ...options,

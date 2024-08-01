@@ -22,7 +22,7 @@ import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import Mailer from '../mailer';
-import HelloWorld from '../mailer/templates/hello-world';
+import HelloWorld from '../mailer/messages/hello-world';
 
 export default class TestController extends BaseController {
   /**
