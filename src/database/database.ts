@@ -185,7 +185,7 @@ const options: DataSourceOptions = {
   ],
 };
 
-export let AppDataSource: DataSource;
+export let AppDataSource = new DataSource(options);
 
 const Database = {
   initialize: async () => {
