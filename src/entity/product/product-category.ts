@@ -17,7 +17,7 @@
  */
 
 import {
-  Entity, Column,
+  Entity, Column, DeleteDateColumn, Tree, TreeChildren, TreeParent,
 } from 'typeorm';
 import BaseEntity from '../base-entity';
 
@@ -26,6 +26,7 @@ import BaseEntity from '../base-entity';
  * @property {string} name.required - The unique name of the productCategory.
  */
 @Entity()
+@Tree('closure-table')
 export default class ProductCategory extends BaseEntity {
   @Column({
     unique: true,
@@ -33,4 +34,10 @@ export default class ProductCategory extends BaseEntity {
     nullable: false,
   })
   public name: string;
+
+  @TreeChildren()
+  public children: ProductCategory[];
+
+  @TreeParent()
+  public parent: ProductCategory;
 }
