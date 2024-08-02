@@ -87,6 +87,7 @@ import { ServerSettings1722083254200 } from '../migrations/1722083254200-server-
 import { PosUsers1722084520361 } from '../migrations/1722084520361-pos-users';
 import { InvoiceRework1622118077157 } from '../migrations/1722118077157-invoice-rework';
 import InvoiceStatusSubscriber from '../subscriber/invoice-status-subscriber';
+import { InvoiceDebitorCreditor1722598638179 } from '../migrations/1722598638179-invoice-debitor-creditor';
 
 // We need to load the dotenv to prevent the env from being undefined.
 dotenv.config();
@@ -115,6 +116,7 @@ const options: DataSourceOptions = {
     PosUsers1722084520361,
     WriteOffs1722004753128,
     InvoiceRework1622118077157,
+    InvoiceDebitorCreditor1722598638179,
   ],
   extra: {
     authPlugins: {

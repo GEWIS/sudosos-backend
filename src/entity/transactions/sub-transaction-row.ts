@@ -43,7 +43,11 @@ export default class SubTransactionRow extends BaseEntity {
 
   @ManyToOne(() => Invoice, { nullable: true })
   @JoinColumn()
-  public invoice?: Invoice;
+  public debitInvoice?: Invoice;
+
+  @ManyToOne(() => Invoice, { nullable: true })
+  @JoinColumn()
+  public creditInvoice?: Invoice;
 
   @ManyToOne(() => SubTransaction,
     (subTransaction) => subTransaction.subTransactionRows,
