@@ -278,10 +278,8 @@ export default class PayoutRequestService {
   public static stateSubQuery(): string {
     return PayoutRequestStatus.getRepository()
       .createQueryBuilder('payoutRequestStatus')
-      .select('payoutRequestStatus.state')
-      .where('payoutRequestStatus.payoutRequestId = payoutRequest.id')
-      .orderBy('payoutRequestStatus.createdAt', 'DESC')
-      .limit(1)
+      .select('MAX(createdAt) as createdAt')
+      .where('payoutRequestStatus.payoutRequestId = `PayoutRequest`.`id`')
       .getSql();
   }
 
@@ -325,9 +323,13 @@ export default class PayoutRequestService {
       };
     }
 
-    let stateFilter: any = {};
+    let stateFilter: FindOptionsWhere<PayoutRequest> = { };
     if (params.status) {
-      stateFilter.payoutRequestStatus = { state: Raw(() => `${this.stateSubQuery()}) in (${params.status.map((s) => `'${s}'`)}`) };
+      stateFilter.payoutRequestStatus = {
+        // Get the latest status
+        createdAt: Raw((raw) => `${raw} = (${this.stateSubQuery()})`),
+        state: Raw((raw) => `${raw} IN (${params.status.map((s) => `'${s}'`)})`),
+      };
     }
 
     let userIdFilter: any = {};
