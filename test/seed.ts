@@ -237,12 +237,26 @@ export async function seedInvoices(users: User[], transactions: Transaction[]): 
   let invoiceTransfers: Transfer[] = [];
   let invoiceEntry: InvoiceEntry[] = [];
 
-  for (let i = 0; i < invoiceUsers.length; i += 1) {
-    const invoiceTransactions = transactions.filter((t) => t.from.id === invoiceUsers[i].id);
-    const to: User = invoiceUsers[i];
+  for (let i = 0; i < invoiceUsers.length * 2; i += 1) {
+    const invoiceUser = invoiceUsers[Math.floor(i / 2)];
+    const invoiceTransactions = transactions.filter((t) => t.from.id === invoiceUser.id);
+    const to: User = invoiceUser;
 
-    const { invoiceEntries, cost } = (
-      defineInvoiceEntries(i + 1, 1 + invoiceEntry.length, invoiceTransactions));
+    let invoiceEntries: InvoiceEntry[] = [];
+    let cost = 0;
+    if (i % 2 === 0) {
+      const result = defineInvoiceEntries(i + 1, 1 + invoiceEntry.length, invoiceTransactions);
+      invoiceEntries = result.invoiceEntries;
+      cost = result.cost;
+    } else {
+      const tRows = transactions
+        .map((t) => t.subTransactions).flat()
+        .map((s) => s.subTransactionRows).flat();
+      cost = tRows.reduce((total, t) => {
+        total += t.product.priceInclVat.getAmount();
+        return total;
+      }, 0);
+    }
     // Edgecase in the seeder
     if (cost === 0) {
       // eslint-disable-next-line no-continue
@@ -282,10 +296,21 @@ export async function seedInvoices(users: User[], transactions: Transaction[]): 
     let status = Object.assign(new InvoiceStatus(), {
       id: i + 1,
       invoice,
-      changedBy: users[i],
+      changedBy: users[i % users.length],
       state: InvoiceState.CREATED,
       dateChanged: addDays(new Date(2020, 0, 1), 2 - (i * 2)),
     });
+
+    if (i % 2 === 1) {
+      await Promise.all(transactions
+        .map(async (t) => t.subTransactions
+          .map(async (s) => s.subTransactionRows
+            .map(async (r) => {
+              r.debitInvoice = invoice;
+              await SubTransactionRow.save(r);
+            }))).flat().flat().flat());
+    }
+
     invoice.invoiceStatus.push(status);
     invoices = invoices.concat(invoice);
     invoiceTransfers = invoiceTransfers.concat(transfer);
