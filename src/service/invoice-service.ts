@@ -282,17 +282,20 @@ export default class InvoiceService {
     });
 
     // Unreference invoices.
-    const { records } = await TransactionService.getTransactions({ invoiceId: invoice.id });
-    const tIds: number[] = records.map((t) => t.id);
+    const { records: debitTransactions } = await TransactionService.getTransactions({ debitInvoiceId: invoice.id });
+    const { records: creditTransactions } = await TransactionService.getTransactions({ creditInvoiceId: invoice.id });
+    const tIds: number[] = [...debitTransactions, ...creditTransactions].map((t) => t.id);
     const promises: Promise<any>[] = [];
-    const transactions = await Transaction.find({ where: { id: In(tIds) }, relations: ['subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice'] });
+    const transactions = await Transaction.find({
+      where: { id: In(tIds) },
+      relations: { subTransactions: { subTransactionRows: { debitInvoice: true, creditInvoice: true } } },
+    });
     transactions.forEach((t) => {
       t.subTransactions.forEach((tSub) => {
         tSub.subTransactionRows.forEach((tSubRow) => {
           const row = tSubRow;
-          if (row.invoice.id === invoice.id) {
-            row.invoice = null;
-          }
+          if (row.debitInvoice?.id === invoice.id) row.debitInvoice = null;
+          if (row.creditInvoice?.id === invoice.id) row.creditInvoice = null;
           promises.push(row.save());
         });
       });
@@ -320,8 +323,9 @@ export default class InvoiceService {
 
     const toIdMap = new Map<number, SubTransaction[]>();
 
-    const baseTransactions = (await TransactionService.getTransactions({ invoiceId: invoice.id })).records;
-    const transactions = await TransactionService.getTransactionsFromBaseTransactions(baseTransactions, false);
+    const debitTransactions = (await TransactionService.getTransactions({ debitInvoiceId: invoice.id })).records;
+    const creditTransactions = (await TransactionService.getTransactions({ creditInvoiceId: invoice.id })).records;
+    const transactions = await TransactionService.getTransactionsFromBaseTransactions([...debitTransactions, ...creditTransactions], false);
 
     // Collect SubTransactions per Seller
     transactions.forEach((t) => {
@@ -413,22 +417,41 @@ export default class InvoiceService {
     };
     // If we have a credit invoice we filter out all unrelated subTransactions.
     if (isCreditInvoice) where.to = { id: invoice.toId };
-    return  SubTransaction.find({ where, relations: ['transaction', 'to', 'subTransactionRows', 'subTransactionRows.invoice', 'subTransactionRows.product', 'subTransactionRows.product.product', 'subTransactionRows.product.vat'] });
+    return  SubTransaction.find({
+      where,
+      relations: {
+        transaction: true,
+        to: true,
+        subTransactionRows: {
+          debitInvoice: true,
+          creditInvoice: true,
+          product: {
+            product: true,
+            vat: true,
+          },
+        },
+      },
+    });
   }
 
   /**
    * Set a reference to an Invoice for all given sub Transactions.
-   * @param invoice
-   * @param subTransactions
    */
-  static async setSubTransactionInvoice(invoice: Invoice,
-    subTransactions: SubTransaction[]) {
+  static async setSubTransactionInvoice(
+    invoice: Invoice,
+    subTransactions: SubTransaction[],
+    isCreditInvoice = false,
+  ): Promise<void> {
     const promises: Promise<any>[] = [];
 
     subTransactions.forEach((tSub) => {
       tSub.subTransactionRows.forEach((tSubRow) => {
         const row = tSubRow;
-        row.invoice = invoice;
+        if (isCreditInvoice) {
+          row.creditInvoice = invoice;
+        } else {
+          row.debitInvoice = invoice;
+        }
         promises.push(SubTransactionRow.save(row));
       });
     });
@@ -542,7 +565,7 @@ export default class InvoiceService {
       await InvoiceStatus.save(invoiceStatus);
 
       const subTransactions = await this.getSubTransactionsInvoice(newInvoice, transactions, isCreditInvoice);
-      await this.setSubTransactionInvoice(newInvoice, subTransactions);
+      await this.setSubTransactionInvoice(newInvoice, subTransactions, isCreditInvoice);
 
       await this.createInvoiceEntriesTransactions(newInvoice, subTransactions);
       if (invoiceRequest.customEntries) {
