@@ -16,13 +16,17 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { createQueryBuilder, SelectQueryBuilder } from 'typeorm';
+import {
+  FindManyOptions,
+  FindOptionsRelations,
+  FindOptionsWhere, In,
+  Raw,
+} from 'typeorm';
 import Dinero, { Currency } from 'dinero.js';
 import { PaginationParameters } from '../helpers/pagination';
 import PayoutRequest from '../entity/transactions/payout-request';
 import PayoutRequestStatus, { PayoutRequestState } from '../entity/transactions/payout-request-status';
-import QueryFilter from '../helpers/query-filter';
-import DineroTransformer from '../entity/transformer/dinero-transformer';
+import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import {
   BasePayoutRequestResponse,
   PaginatedBasePayoutRequestResponse,
@@ -86,6 +90,7 @@ export default class PayoutRequestService {
         currency: req.amount.getCurrency(),
       },
       requestedBy: parseUserToBaseResponse(req.requestedBy, true),
+      approvedBy: req.approvedBy == null ? undefined : parseUserToBaseResponse(req.approvedBy, true),
       status,
     };
   }
@@ -111,46 +116,6 @@ export default class PayoutRequestService {
     };
   }
 
-  /**
-   * Build the query to get all payout requests
-   * @param filters
-   * @private
-   */
-  private static buildGetPayoutRequestsQuery(filters: PayoutRequestFilters = {})
-    : SelectQueryBuilder<PayoutRequest> {
-    const {
-      fromDate, tillDate, ...p
-    } = filters;
-
-    const stateSubquery = (qb?: SelectQueryBuilder<PayoutRequest>) => {
-      const builder = qb !== undefined ? qb.subQuery() : createQueryBuilder();
-      return builder
-        .select('payoutRequestStatus.state', 'status')
-        .from(PayoutRequestStatus, 'payoutRequestStatus')
-        .orderBy('payoutRequestStatus.createdAt', 'DESC')
-        .where('payoutRequestStatus.payoutRequestId = payoutRequest.id')
-        .limit(1);
-    };
-
-    const builder = createQueryBuilder(PayoutRequest, 'payoutRequest')
-      .select('payoutRequest.*')
-      .addSelect((qb) => stateSubquery(qb), 'status')
-      .leftJoinAndSelect('payoutRequest.requestedBy', 'requestedBy')
-      .leftJoinAndSelect('payoutRequest.approvedBy', 'approvedBy')
-      .distinct(true);
-
-    if (fromDate) builder.andWhere('payoutRequest.createdAt >= :fromDate', { fromDate: toMySQLString(fromDate) });
-    if (tillDate) builder.andWhere('payoutRequest.createdAt < :tillDate', { tillDate: toMySQLString(tillDate) });
-    const mapping = {
-      id: 'payoutRequest.id',
-      requestedById: 'payoutRequest.requestedById',
-      approvedById: 'payoutRequest.approvedById',
-      status: `(${stateSubquery().getSql()})`,
-    };
-    QueryFilter.applyFilter(builder, mapping, p);
-
-    return builder;
-  }
 
   /**
    * Get all transactions with the given filters
@@ -162,41 +127,17 @@ export default class PayoutRequestService {
   ): Promise<PaginatedBasePayoutRequestResponse> {
     const { take, skip } = pagination;
 
-    const results = await Promise.all([
-      this.buildGetPayoutRequestsQuery(filters).limit(take).offset(skip).getRawMany(),
-      this.buildGetPayoutRequestsQuery(filters).getCount(),
-    ]);
-
-    const dineroTransformer = DineroTransformer.Instance;
-    const records = results[0].map((o) => {
-      const dinero = dineroTransformer.from(o.amount);
-      const v: BasePayoutRequestResponse = {
-        id: o.id,
-        createdAt: new Date(o.createdAt).toISOString(),
-        updatedAt: new Date(o.updatedAt).toISOString(),
-        requestedBy: o.requestedBy_id ? {
-          id: o.requestedBy_id,
-          createdAt: new Date(o.requestedBy_createdAt).toISOString(),
-          updatedAt: new Date(o.requestedBy_updatedAt).toISOString(),
-          firstName: o.requestedBy_firstName,
-          lastName: o.requestedBy_lastName,
-        } : undefined,
-        approvedBy: o.approvedBy_id ? {
-          id: o.approvedBy_id,
-          createdAt: new Date(o.approvedBy_createdAt).toISOString(),
-          updatedAt: new Date(o.approvedBy_updatedAt).toISOString(),
-          firstName: o.approvedBy_firstName,
-          lastName: o.approvedBy_lastName,
-        } : undefined,
-        amount: dinero.toObject(),
-        status: o.status || '',
-      };
-      return v;
+    const [data, count]  = await PayoutRequest.findAndCount({
+      ...(await this.getOptions(filters)),
+      take,
+      skip,
     });
+
+    const records = data.map((o) => this.asBasePayoutRequestResponse(o));
 
     return {
       _pagination: {
-        take, skip, count: results[1],
+        take, skip, count,
       },
       records,
     };
@@ -208,10 +149,7 @@ export default class PayoutRequestService {
    */
   public static async getSinglePayoutRequest(id: number)
     : Promise<PayoutRequestResponse | undefined> {
-    const payoutRequest = await PayoutRequest.findOne({
-      where: { id },
-      relations: ['requestedBy', 'approvedBy', 'payoutRequestStatus'],
-    });
+    const payoutRequest = await PayoutRequest.findOne(await this.getOptions({ id }));
 
     if (payoutRequest == null) return undefined;
 
@@ -335,5 +273,82 @@ export default class PayoutRequestService {
     }
 
     return PayoutRequestService.getSinglePayoutRequest(payoutRequest.id);
+  }
+
+  public static stateSubQuery(): string {
+    return PayoutRequestStatus.getRepository()
+      .createQueryBuilder('payoutRequestStatus')
+      .select('payoutRequestStatus.state')
+      .where('payoutRequestStatus.payoutRequestId = payoutRequest.id')
+      .orderBy('payoutRequestStatus.createdAt', 'DESC')
+      .limit(1)
+      .getSql();
+  }
+
+  public static async getOptions(params: PayoutRequestFilters): Promise<FindManyOptions<PayoutRequest>> {
+    const filterMapping: FilterMapping = {
+      id: 'id',
+    };
+
+    const relations: FindOptionsRelations<PayoutRequest> = {
+      requestedBy: true,
+      approvedBy: true,
+      payoutRequestStatus: true,
+    };
+
+    let whereClause: FindOptionsWhere<PayoutRequest> = QueryFilter.createFilterWhereClause(filterMapping, params);
+
+    // Apply from/till date filters
+    if (params.fromDate && params.tillDate) {
+      whereClause = {
+        ...whereClause,
+        createdAt: Raw(
+          (alias) => `${alias} >= :fromDate AND ${alias} < :tillDate`,
+          { fromDate: toMySQLString(params.fromDate), tillDate: toMySQLString(params.tillDate) },
+        ),
+      };
+    } else if (params.fromDate) {
+      whereClause = {
+        ...whereClause,
+        createdAt: Raw(
+          (alias) => `${alias} >= :fromDate`,
+          { fromDate: toMySQLString(params.fromDate) },
+        ),
+      };
+    } else if (params.tillDate) {
+      whereClause = {
+        ...whereClause,
+        createdAt: Raw(
+          (alias) => `${alias} < :tillDate`,
+          { tillDate: toMySQLString(params.tillDate) },
+        ),
+      };
+    }
+
+    let stateFilter: any = {};
+    if (params.status) {
+      stateFilter.payoutRequestStatus = { state: Raw(() => `${this.stateSubQuery()}) in (${params.status.map((s) => `'${s}'`)}`) };
+    }
+
+    let userIdFilter: any = {};
+    if (params.requestedById) {
+      userIdFilter.requestedBy = { id: Array.isArray(params.requestedById) ? In(params.requestedById) : params.requestedById };
+    }
+    if (params.approvedById) {
+      userIdFilter.approvedBy = { id: Array.isArray(params.approvedById) ? In(params.approvedById) : params.approvedById };
+    }
+
+    const where: FindOptionsWhere<PayoutRequest> = {
+      ...whereClause,
+      ...stateFilter,
+      ...userIdFilter,
+    };
+
+    const options: FindManyOptions<PayoutRequest> = {
+      where,
+      order: { createdAt: 'DESC' },
+    };
+
+    return { ...options, relations };
   }
 }
