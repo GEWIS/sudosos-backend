@@ -155,7 +155,7 @@ export default class VatGroupService {
   /**
    * Calculate the collected VAT for the periodic declaration at the tax authorization.
    * The values are calculated as follows (based on rules of the Dutch tax
-   * athorization (De Belastingdienst):
+   * authorization (De Belastingdienst):
    * Every product has a VAT-included price. From this price (e.g. including 21% VAT),
    * we derive the absolute VAT amount by multiplying this incl-price by 21 and then
    * dividing by 121. Of course, we also multiply this number by the number of times
@@ -195,7 +195,7 @@ export default class VatGroupService {
       ])
       .innerJoin(ProductRevision, 'product', 'str.productRevision = product.revision AND str.productProductId = product.productId')
       .innerJoin(VatGroup, 'vatgroup', 'product.vatId = vatgroup.id')
-      .where('str.invoiceId IS NULL')
+      .where('str.debitInvoiceId IS NULL')
       .andWhere(`${process.env.TYPEORM_CONNECTION === 'sqlite'
         ? 'Strftime(\'%Y\', str.createdAt)'
         : 'DATE_FORMAT(str.createdAt, \'%Y\')'} = :year`, { year: params.year.toString() })
