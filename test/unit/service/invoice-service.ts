@@ -458,16 +458,15 @@ describe('InvoiceService', () => {
             where: {
               id: In(transactions.map((transaction) => transaction.tId)),
             },
-            relations: [
-              'subTransactions',
-              'subTransactions.subTransactionRows',
-              'subTransactions.subTransactionRows.invoice',
-            ],
+            relations: {
+              subTransactions: { subTransactionRows: { creditInvoice: true, debitInvoice: true } },
+            },
           });
           linkedTransactions.forEach((t) => {
             t.subTransactions.forEach((tSub) => {
               tSub.subTransactionRows.forEach((tSubRow) => {
-                expect(tSubRow.invoice.id).to.equal(invoice.id);
+                expect(tSubRow.debitInvoice.id).to.equal(invoice.id);
+                expect(tSubRow.creditInvoice).to.be.null;
               });
             });
           });
@@ -539,8 +538,11 @@ describe('InvoiceService', () => {
         expect(creditorBalance.amount.amount).to.equal(0);
         expect(otherCreditorBalance.amount.amount).to.equal(transactionB.totalPriceInclVat.amount);
 
-        const subtrans = await SubTransaction.find({ where: { to: { id: otherCreditor.id } }, relations: ['subTransactionRows', 'subTransactionRows.invoice'] });
-        const linkedInvoice = subtrans.map((st) => st.subTransactionRows.map((str) => str.invoice?.id)).flat(1);
+        const subtrans = await SubTransaction.find({
+          where: { to: { id: otherCreditor.id } },
+          relations: { subTransactionRows: { creditInvoice: true } },
+        });
+        const linkedInvoice = subtrans.map((st) => st.subTransactionRows.map((str) => str.creditInvoice?.id)).flat(1);
 
         const entryValue = invoice.invoiceEntries.reduce((acc, curr) => acc + curr.priceInclVat.getAmount() * curr.amount, 0);
         expect(entryValue).to.equal(transactionA.totalPriceInclVat.amount);
@@ -820,16 +822,15 @@ describe('InvoiceService', () => {
             where: {
               id: In(transactions.map((transaction) => transaction.tId)),
             },
-            relations: [
-              'subTransactions',
-              'subTransactions.subTransactionRows',
-              'subTransactions.subTransactionRows.invoice',
-            ],
+            relations: {
+              subTransactions: { subTransactionRows: { debitInvoice: true, creditInvoice: true } },
+            },
           });
           invoiceTransactions.forEach((t) => {
             t.subTransactions.forEach((tSub) => {
               tSub.subTransactionRows.forEach((tSubRow) => {
-                expect(tSubRow.invoice.id).to.equal(invoice.id);
+                expect(tSubRow.debitInvoice.id).to.equal(invoice.id);
+                expect(tSubRow.creditInvoice).to.be.null;
               });
             });
           });
@@ -844,16 +845,15 @@ describe('InvoiceService', () => {
             where: {
               id: In(transactions.map((transaction) => transaction.tId)),
             },
-            relations: [
-              'subTransactions',
-              'subTransactions.subTransactionRows',
-              'subTransactions.subTransactionRows.invoice',
-            ],
+            relations: {
+              subTransactions: { subTransactionRows: { debitInvoice: true, creditInvoice: true } },
+            },
           });
           invoiceTransactions.forEach((t) => {
             t.subTransactions.forEach((tSub) => {
               tSub.subTransactionRows.forEach((tSubRow) => {
-                expect(tSubRow.invoice).to.equal(null);
+                expect(tSubRow.debitInvoice).to.be.null;
+                expect(tSubRow.creditInvoice).to.be.null;
               });
             });
           });

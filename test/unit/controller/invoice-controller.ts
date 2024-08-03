@@ -364,12 +364,15 @@ describe('InvoiceController', async () => {
             reference: 'BAC-41',
           };
 
-          const invoiceTransactions = await Transaction.find({ where: { id: In(tIds) }, relations: ['subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice'] });
+          const invoiceTransactions = await Transaction.find({
+            where: { id: In(tIds) },
+            relations: { subTransactions: { subTransactionRows: { debitInvoice: true } } },
+          });
           const subIDs: number[] = [];
           invoiceTransactions.forEach((t) => {
             t.subTransactions.forEach((tSub) => {
               tSub.subTransactionRows.forEach((tSubRow) => {
-                if (tSubRow.invoice !== undefined) subIDs.push(tSubRow.id);
+                if (tSubRow.debitInvoice !== undefined) subIDs.push(tSubRow.id);
               });
             });
           });

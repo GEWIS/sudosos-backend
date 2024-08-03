@@ -49,7 +49,10 @@ import Invoice from '../../../entity/invoices/invoice';
 async function validTransactionIds<T extends BaseInvoice>(p: T) {
   if (!p.transactionIDs) return toPass(p);
 
-  const transactions = await Transaction.find({ where: { id: In(p.transactionIDs) }, relations: ['from', 'subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice', 'subTransactions.to'] });
+  const transactions = await Transaction.find({
+    where: { id: In(p.transactionIDs) },
+    relations: { from: true, subTransactions: { to: true, subTransactionRows: { debitInvoice: true, creditInvoice: true } } },
+  });
   let notOwnedByUser = [];
   if (p.isCreditInvoice) {
     transactions.forEach((t) => {
@@ -67,7 +70,8 @@ async function validTransactionIds<T extends BaseInvoice>(p: T) {
   transactions.forEach((t) => {
     t.subTransactions.forEach((tSub) => {
       tSub.subTransactionRows.forEach((tSubRow) => {
-        if (tSubRow.invoice !== null) alreadyInvoiced.push(tSubRow.id);
+        if (!p.isCreditInvoice && tSubRow.debitInvoice !== null) alreadyInvoiced.push(tSubRow.id);
+        if (p.isCreditInvoice && tSubRow.creditInvoice !== null) alreadyInvoiced.push(tSubRow.id);
       });
     });
   });

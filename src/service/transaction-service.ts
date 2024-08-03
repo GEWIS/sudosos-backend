@@ -87,7 +87,8 @@ export interface TransactionFilterParameters {
   productRevision?: number,
   fromDate?: Date,
   tillDate?: Date,
-  invoiceId?: number,
+  debitInvoiceId?: number,
+  creditInvoiceId?: number,
 }
 
 export function parseGetTransactionsFilters(req: RequestWithToken): TransactionFilterParameters {
@@ -112,7 +113,8 @@ export function parseGetTransactionsFilters(req: RequestWithToken): TransactionF
     productRevision: asNumber(req.query.productRevision),
     fromDate: asDate(req.query.fromDate),
     tillDate: asDate(req.query.tillDate),
-    invoiceId: asNumber(req.query.invoiceId),
+    debitInvoiceId: asNumber(req.query.debitInvoiceId),
+    creditInvoiceId: asNumber(req.query.creditInvoiceId),
   };
 
   return filters;
@@ -537,7 +539,8 @@ export default class TransactionService {
         containerId: 'subTransaction.containerContainerId',
         containerRevision: 'subTransaction.containerRevision',
         productId: 'subTransactionRow.productProductId',
-        invoiceId: 'subTransactionRow.invoice',
+        debitInvoiceId: 'subTransactionRow.debitInvoice',
+        creditInvoiceId: 'subTransactionRow.creditInvoice',
         productRevision: 'subTransactionRow.productRevision',
       };
 
@@ -816,17 +819,17 @@ export default class TransactionService {
       where: {
         id: In(ids),
       },
-      relations: [
-        'subTransactions',
-        'from',
-        'subTransactions.to',
-        'subTransactions.subTransactionRows',
-        'subTransactions.subTransactionRows.product',
-        'subTransactions.subTransactionRows.product.category',
-        'subTransactions.subTransactionRows.product.product',
-        'subTransactions.subTransactionRows.product.vat',
-        'subTransactions.subTransactionRows.invoice',
-      ],
+      relations: {
+        from: true,
+        subTransactions: {
+          to: true,
+          subTransactionRows: {
+            product: { product: true, category: true, vat: true },
+            debitInvoice: true,
+            creditInvoice: true,
+          },
+        },
+      },
     });
 
     // Don't consider transactions from invoice accounts
@@ -844,7 +847,11 @@ export default class TransactionService {
    * @param exclusiveToId - If not undefined it will drop all Sub transactions with a toId different from the param.
    * @param dropInvoiced - If invoiced SubTransactionRows should be ignored, defaults to true
    */
-  public static async getTransactionReportData(baseTransactions: BaseTransactionResponse[], exclusiveToId: number | undefined, dropInvoiced = true): Promise<TransactionReportData> {
+  public static async getTransactionReportData(
+    baseTransactions: BaseTransactionResponse[],
+    exclusiveToId: number | undefined,
+    dropInvoiced = true,
+  ): Promise<TransactionReportData> {
     const transactions = await this.getTransactionsFromBaseTransactions(baseTransactions, dropInvoiced);
 
     const productEntryMap = new Map<string, SubTransactionRow[]>();
@@ -860,7 +867,7 @@ export default class TransactionService {
     const subTransactionRows = subTransactions.reduce<SubTransactionRow[]>((acc, cur) => acc.concat(cur.subTransactionRows), []);
 
     subTransactionRows.forEach((tSubRow) => {
-      if (dropInvoiced && tSubRow.invoice) return;
+      if (dropInvoiced && tSubRow.debitInvoice) return;
       collectProductsByRevision(productEntryMap, tSubRow);
       collectProductsByCategory(categoryEntryMap, tSubRow);
       collectProductsByVat(vatEntryMap, tSubRow);
