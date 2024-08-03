@@ -47,7 +47,6 @@ import { parseUserToBaseResponse } from '../helpers/revision-to-response';
 import { collectByToId, collectProductsByRevision, reduceMapToInvoiceEntries } from '../helpers/transaction-mapper';
 import SubTransaction from '../entity/transactions/sub-transaction';
 import InvoiceUser, { InvoiceUserDefaults } from '../entity/user/invoice-user';
-import { filterRelevantToEntity } from '../helpers/object-filter';
 
 export interface InvoiceFilterParameters {
   /**
@@ -374,21 +373,22 @@ export default class InvoiceService {
    * @param update
    */
   public static async updateInvoice(update: UpdateInvoiceParams) {
-    const base: Invoice = await Invoice.findOne({ where: { id: update.invoiceId }, relations: ['invoiceStatus', 'latestStatus'] });
+    const { byId, invoiceId, state, ...props } = update;
+    const base: Invoice = await Invoice.findOne({ where: { id:invoiceId }, relations: ['invoiceStatus', 'latestStatus'] });
 
     // Return undefined if base does not exist.
     if (!base || this.isState(base, InvoiceState.DELETED) || this.isState(base, InvoiceState.PAID)) {
       return undefined;
     }
 
-    if (update.state) {
+    if (state) {
       // Deleting is a special case of an update.
-      if (update.state === InvoiceState.DELETED) return this.deleteInvoice(base.id, update.byId);
+      if (state === InvoiceState.DELETED) return this.deleteInvoice(base.id, byId);
 
       const invoiceStatus: InvoiceStatus = Object.assign(new InvoiceStatus(), {
         invoice: base,
-        changedBy: update.byId,
-        state: update.state,
+        changedBy: byId,
+        state,
       });
 
       // Add it to the invoice and save it.
@@ -398,8 +398,7 @@ export default class InvoiceService {
       });
     }
 
-    const updateProps = filterRelevantToEntity(base, update);
-    await Invoice.update(base.id, { ...updateProps, date: updateProps.date ? new Date(updateProps.date) : base.date });
+    await Invoice.update({ id: base.id }, { ...props, date: props.date ? new Date(props.date) : undefined });
     // Return the newly updated Invoice.
 
     const options = this.getOptions({ invoiceId: base.id, returnInvoiceEntries: true });
