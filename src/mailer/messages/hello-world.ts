@@ -16,23 +16,25 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import MailTemplate, { Language, MailLanguageMap } from './mail-template';
-import MailContent from './mail-content';
+import MailMessage, { Language, MailLanguageMap } from '../mail-message';
+import MailContentBuilder from './mail-content-builder';
 
 export interface HelloWorldOptions {
   name: string;
 }
 
-const helloWorldEnglish = new MailContent<HelloWorldOptions>({
+const helloWorldEnglish = new MailContentBuilder<HelloWorldOptions>({
   getHTML: (context) => `<p>Hello world, ${context.name}!</p>`,
   getText: (context) => `Hello world, ${context.name}!`,
-  getSubject: () => 'Hello world!',
+  getSubject: 'Hello world!',
+  getTitle: 'Hello world!',
 });
 
-const helloWorldDutch = new MailContent<HelloWorldOptions>({
+const helloWorldDutch = new MailContentBuilder<HelloWorldOptions>({
   getHTML: (context) => `<p>Hallo wereld, ${context.name}!</p>`,
   getText: (context) => `Hallo wereld, ${context.name}!`,
-  getSubject: () => 'Hallo wereld!',
+  getSubject: 'Hallo wereld!',
+  getTitle: 'Hallo wereld!',
 });
 
 const mailContents: MailLanguageMap<HelloWorldOptions> = {
@@ -40,7 +42,7 @@ const mailContents: MailLanguageMap<HelloWorldOptions> = {
   [Language.ENGLISH]: helloWorldEnglish,
 };
 
-export default class HelloWorld extends MailTemplate<HelloWorldOptions> {
+export default class HelloWorld extends MailMessage<HelloWorldOptions> {
   public constructor(options: HelloWorldOptions) {
     super(options, mailContents);
   }

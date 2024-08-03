@@ -21,7 +21,7 @@ import Transaction from '../entity/transactions/transaction';
 import User, { NotifyDebtUserTypes } from '../entity/user/user';
 import BalanceService from '../service/balance-service';
 import Mailer from '../mailer';
-import UserDebtNotification from '../mailer/templates/user-debt-notification';
+import UserDebtNotification from '../mailer/messages/user-debt-notification';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
 import { getLogger } from 'log4js';
 
@@ -73,7 +73,6 @@ export default class TransactionSubscriber implements EntitySubscriberInterface 
     // User should be notified of debt
 
     Mailer.getInstance().send(user, new UserDebtNotification({
-      name: user.firstName,
       balance: DineroTransformer.Instance.from(currentBalance),
       url: '',
     })).catch((e) => getLogger('Transaction').error(e));

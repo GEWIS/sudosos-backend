@@ -22,9 +22,9 @@ import { webResponseToUpdate } from '../helpers/gewis-helper';
 import UserService from '../../service/user-service';
 import { UserResponse } from '../../controller/response/user-response';
 import Mailer from '../../mailer';
-import MembershipExpiryNotification from '../../mailer/templates/membership-expiry-notification';
+import MembershipExpiryNotification from '../../mailer/messages/membership-expiry-notification';
 import DineroTransformer from '../../entity/transformer/dinero-transformer';
-import { Language } from '../../mailer/templates/mail-template';
+import { Language } from '../../mailer/mail-message';
 import BalanceService from '../../service/balance-service';
 
 const GEWISDB_API_URL = process.env.GEWISDB_API_URL;
@@ -124,7 +124,6 @@ export default class GewisDBService {
         const isZero = currentBalance.amount.amount === 0;
         const user = await UserService.closeUser(gewisUser.user.id, isZero);
         Mailer.getInstance().send(gewisUser.user, new MembershipExpiryNotification({
-          name: user.firstName,
           balance: DineroTransformer.Instance.from(currentBalance.amount.amount),
         }), Language.ENGLISH, { bcc: process.env.FINANCIAL_RESPONSIBLE }).catch((e) => getLogger('User').error(e));
         return user;

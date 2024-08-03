@@ -17,64 +17,46 @@
  */
 
 import { Dinero } from 'dinero.js';
-import MailContent from './mail-content';
-import { signatureDutch, signatureEnglish } from './signature';
-import MailTemplate, { Language, MailLanguageMap } from './mail-template';
+import MailContentBuilder from './mail-content-builder';
+import MailMessage, { Language, MailLanguageMap } from '../mail-message';
 
 interface UserDebtNotificationOptions {
-  name: string;
   url: string;
   balance: Dinero;
 }
 
-const userDebtNotificationDutch = new MailContent<UserDebtNotificationOptions>({
+const userDebtNotificationDutch = new MailContentBuilder<UserDebtNotificationOptions>({
   getHTML: (context) => `
-<p>Beste ${context.name},</p>
-
 <p>Volgens onze administratie heb je momenteel een schuld bij SudoSOS.<br>
 Het gaat hierbij om een bedrag van:<br>
 <span style="color: red; font-weight: bold; font-size: 20px">${context.balance.toFormat()}</span>.</p>
 
-<p>Ga snel naar de SudoSOS website om je saldo op te hogen! Zo voorkom je dat je een boete krijgt.</p>
-
-${signatureDutch}`,
-  getSubject: () => 'Je hebt een SudoSOS schuld!',
+<p>Ga snel naar de SudoSOS website om je saldo op te hogen! Zo voorkom je dat je een boete krijgt.</p>`,
+  getSubject: 'Je hebt een SudoSOS schuld!',
+  getTitle: 'Schuldnotificatie',
   getText: (context) => `
-Beste ${context.name},
-
 Volgens onze administratie heb je momenteel een schuld bij SudoSOS.
 Het gaat hierbij om een bedrag van:
 ${context.balance.toFormat()}
 
 Ga snel naar de SudoSOS website om je saldo op te hogen! Zo voorkom je dat je een boete krijgt.
 
-Tot op de borrel!
-
-Met vriendelijke groet,
-SudoSOS`,
+Tot op de borrel!`,
 });
 
-const userDebtNotificationEnglish = new MailContent<UserDebtNotificationOptions>({
+const userDebtNotificationEnglish = new MailContentBuilder<UserDebtNotificationOptions>({
   getHTML: (context) => `
-<p>Dear ${context.name},</p>
+<p>According to our administration, you currently have a balance of <span style="color: red; font-weight: bold">${context.balance.toFormat()}</span>.</p>
 
-<p>Accoring to our administration, you currently have a balance of <span style="color: red; font-weight: bold">${context.balance.toFormat()}</span>.</p>
-
-<p>Go to the SudoSOS website to deposit money into your account. With this you prevent getting fined into the future.</p>
-
-${signatureEnglish}`,
-  getSubject: () => 'You have a SudoSOS debt',
+<p>Go to the SudoSOS website to deposit money into your account. With this you prevent getting fined in the future.</p>`,
+  getSubject: 'You have a SudoSOS debt',
+  getTitle: 'Debt notification',
   getText: (context) => `
-Dear ${context.name},
+According to our administration, you currently have a balance of ${context.balance.toFormat()}.
 
-Accoring to our administration, you currently have a balance of ${context.balance.toFormat()}.
+Go to the SudoSOS website to deposit money into your account. With this you prevent getting fined in the future.
 
-Go to the SudoSOS website to deposit money into your account. With this you prevent getting fined into the future.
-
-See you at the borel!
-
-Kind regards,
-SudoSOS`,
+See you at the borel!`,
 });
 
 const mailContents: MailLanguageMap<UserDebtNotificationOptions> = {
@@ -82,7 +64,7 @@ const mailContents: MailLanguageMap<UserDebtNotificationOptions> = {
   [Language.ENGLISH]: userDebtNotificationEnglish,
 };
 
-export default class UserDebtNotification extends MailTemplate<UserDebtNotificationOptions> {
+export default class UserDebtNotification extends MailMessage<UserDebtNotificationOptions> {
   public constructor(options: UserDebtNotificationOptions) {
     const opt: UserDebtNotificationOptions = { ...options };
     if (!options.url) {
