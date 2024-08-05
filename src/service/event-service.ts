@@ -43,8 +43,8 @@ import { asArrayOfNumbers, asDate, asEventType, asNumber } from '../helpers/vali
 import { PaginationParameters } from '../helpers/pagination';
 import AssignedRole from '../entity/rbac/assigned-role';
 import Mailer from '../mailer';
-import ForgotEventPlanning from '../mailer/templates/forgot-event-planning';
-import { Language } from '../mailer/templates/mail-template';
+import ForgotEventPlanning from '../mailer/messages/forgot-event-planning';
+import { Language } from '../mailer/mail-message';
 import Role from '../entity/rbac/role';
 
 export interface EventFilterParameters {

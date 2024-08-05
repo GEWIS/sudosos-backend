@@ -16,63 +16,45 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import MailTemplate, { Language, MailLanguageMap } from './mail-template';
-import { signatureDutch, signatureEnglish } from './signature';
-import MailContent from './mail-content';
+import MailMessage, { Language, MailLanguageMap } from '../mail-message';
+import MailContentBuilder from './mail-content-builder';
 
 interface WelcomeToSudososOptions {
-  name: string;
   url?: string;
 }
 
-const welcomeToSudososDutch = new MailContent<WelcomeToSudososOptions>({
+const welcomeToSudososDutch = new MailContentBuilder<WelcomeToSudososOptions>({
   getHTML: (context) => `
-<p>Beste ${context.name},</p>
-
 <p>Er is zojuist een account voor je aangemaakt in SudoSOS. Welkom!</p>
 
 <p>Voordat je SudoSOS écht kunt gebruiken, dien je de voorwaarden van SudoSOS te accepteren. Je kunt deze vinden en accepteren door in te loggen op ${context.url}. Vergeet ook niet gelijk wat saldo op je account te zetten!</p>
 
-<p>Tot op de borrel!</p>
-
-${signatureDutch}`,
-  getSubject: () => 'Welkom bij SudoSOS!',
+<p>Tot op de borrel!</p>`,
+  getSubject: 'Welkom bij SudoSOS!',
+  getTitle: 'Welkom!',
   getText: (context) => `
-Beste ${context.name},
-
 Er is zojuist een account voor je aangemaakt in SudoSOS. Welkom!
 
 Voordat je SudoSOS écht kunt gebruiken, dien je de voorwaarden van SudoSOS te accepteren. Je kunt deze vinden en accepteren door in te loggen op ${context.url}. Vergeet ook niet gelijk wat saldo op je account te zetten!
 
-Tot op de borrel!
-
-Met vriendelijke groet,
-SudoSOS`,
+Tot op de borrel!`,
 });
 
-const welcomeToSudososEnglish = new MailContent<WelcomeToSudososOptions>({
+const welcomeToSudososEnglish = new MailContentBuilder<WelcomeToSudososOptions>({
   getHTML: (context) => `
-<p>Dear ${context.name},</p>
-
 <p>An account for SudoSOS has just been created for you. Welcome!</p>
 
 <p>Before you can actually use SudoSOS, you have to accept the terms of service. You can find and accept these by logging in at ${context.url}. While you're there, don't forget to deposit some money into your account!</p>
 
-<p>See you on the borrel!</p>
-
-${signatureEnglish}`,
-  getSubject: () => 'Welcome to SudoSOS!',
+<p>See you on the borrel!</p>`,
+  getSubject: 'Welcome to SudoSOS!',
+  getTitle: 'Welcome!',
   getText: (context) => `
-Dear ${context.name},
-
 An account for SudoSOS has just been created for you. Welcome!
 
 Before you can actually use SudoSOS, you have to accept the terms of service. You can find and accept these by logging in at ${context.url}. While you're there, don't forget to deposit some money into your account!
 
-See you on the borrel!
-
-Kind regards,
-SudoSOS`,
+See you on the borrel!`,
 });
 
 const mailContents: MailLanguageMap<WelcomeToSudososOptions> = {
@@ -80,7 +62,7 @@ const mailContents: MailLanguageMap<WelcomeToSudososOptions> = {
   [Language.ENGLISH]: welcomeToSudososEnglish,
 };
 
-export default class WelcomeToSudosos extends MailTemplate<WelcomeToSudososOptions> {
+export default class WelcomeToSudosos extends MailMessage<WelcomeToSudososOptions> {
   public constructor(options: WelcomeToSudososOptions) {
     const opt: WelcomeToSudososOptions = {
       ...options,

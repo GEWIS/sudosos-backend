@@ -618,7 +618,7 @@ describe('InvoiceService', () => {
         },
       );
     });
-    it('should update the postalCode to the city if update.city is provided', async () => {
+    it('should update the city to the city if update.city is provided', async () => {
       await inUserContext(
         await (await UserFactory()).clone(2),
         async (debtor: User, creditor: User) => {
@@ -630,14 +630,14 @@ describe('InvoiceService', () => {
           };
 
           const updatedInvoice = await InvoiceService.updateInvoice(validUpdateInvoiceParams);
-          expect(updatedInvoice.postalCode).to.equal(validUpdateInvoiceParams.city);
+          expect(updatedInvoice.city).to.equal(validUpdateInvoiceParams.city);
 
           const fromDB = await Invoice.findOne({ where: { id: invoice.id } });
-          expect(fromDB.postalCode).to.equal(validUpdateInvoiceParams.city);
+          expect(fromDB.city).to.equal(validUpdateInvoiceParams.city);
         },
       );
     });
-    it('should update the postalCode to the country if update.country is provided', async () => {
+    it('should update the country to the country if update.country is provided', async () => {
       await inUserContext(
         await (await UserFactory()).clone(2),
         async (debtor: User, creditor: User) => {
@@ -649,10 +649,10 @@ describe('InvoiceService', () => {
           };
 
           const updatedInvoice = await InvoiceService.updateInvoice(validUpdateInvoiceParams);
-          expect(updatedInvoice.postalCode).to.equal(validUpdateInvoiceParams.country);
+          expect(updatedInvoice.country).to.equal(validUpdateInvoiceParams.country);
 
           const fromDB = await Invoice.findOne({ where: { id: invoice.id } });
-          expect(fromDB.postalCode).to.equal(validUpdateInvoiceParams.country);
+          expect(fromDB.country).to.equal(validUpdateInvoiceParams.country);
         },
       );
     });

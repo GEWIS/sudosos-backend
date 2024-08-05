@@ -373,21 +373,22 @@ export default class InvoiceService {
    * @param update
    */
   public static async updateInvoice(update: UpdateInvoiceParams) {
-    const base: Invoice = await Invoice.findOne({ where: { id: update.invoiceId }, relations: ['invoiceStatus', 'latestStatus'] });
+    const { byId, invoiceId, state, ...props } = update;
+    const base: Invoice = await Invoice.findOne({ where: { id:invoiceId }, relations: ['invoiceStatus', 'latestStatus'] });
 
     // Return undefined if base does not exist.
     if (!base || this.isState(base, InvoiceState.DELETED) || this.isState(base, InvoiceState.PAID)) {
       return undefined;
     }
 
-    if (update.state) {
+    if (state) {
       // Deleting is a special case of an update.
-      if (update.state === InvoiceState.DELETED) return this.deleteInvoice(base.id, update.byId);
+      if (state === InvoiceState.DELETED) return this.deleteInvoice(base.id, byId);
 
       const invoiceStatus: InvoiceStatus = Object.assign(new InvoiceStatus(), {
         invoice: base,
-        changedBy: update.byId,
-        state: update.state,
+        changedBy: byId,
+        state,
       });
 
       // Add it to the invoice and save it.
@@ -397,17 +398,7 @@ export default class InvoiceService {
       });
     }
 
-    if (update.description) base.description = update.description;
-    if (update.addressee) base.addressee = update.addressee;
-    if (update.street) base.addressee = update.street;
-    if (update.postalCode) base.postalCode = update.postalCode;
-    if (update.city) base.postalCode = update.city;
-    if (update.country) base.postalCode = update.country;
-    if (update.reference) base.reference = update.reference;
-    if (update.attention) base.attention = update.attention;
-    if (update.date) base.date = new Date(update.date);
-
-    await base.save();
+    await Invoice.update({ id: base.id }, { ...props, date: props.date ? new Date(props.date) : undefined });
     // Return the newly updated Invoice.
 
     const options = this.getOptions({ invoiceId: base.id, returnInvoiceEntries: true });

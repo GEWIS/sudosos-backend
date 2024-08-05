@@ -17,12 +17,10 @@
  */
 
 import { Dinero } from 'dinero.js';
-import MailContent from './mail-content';
-import { signatureDutch, signatureEnglish } from './signature';
-import MailTemplate, { Language, MailLanguageMap } from './mail-template';
+import MailContentBuilder from './mail-content-builder';
+import MailMessage, { Language, MailLanguageMap } from '../mail-message';
 
 interface UserWillGetFinedOptions {
-  name: string;
   referenceDate: Date;
   fine: Dinero;
   balance: Dinero;
@@ -54,50 +52,34 @@ const getDateEN = (d: Date) => {
   return `On ${d.toLocaleString('en-US')} you had`;
 };
 
-const userGotFinedDutch = new MailContent<UserWillGetFinedOptions>({
+const userGotFinedDutch = new MailContentBuilder<UserWillGetFinedOptions>({
   getHTML: (context) => `
-<p>Beste ${context.name},</p>
-
 <p>${getDateNL(context.referenceDate)} je een saldo van ${formatBalance(context.balance)}.<br>
 Vandaag heeft de BAC boetes uitgedeeld. De volgende keer dat er boetes worden uitgedeeld (waarschijnlijk volgende week), krijg jij een boute van ${context.fine.toFormat()}!<br>
 
-<p>Ga snel naar de SudoSOS website om je saldo op te hogen en deze boete te voorkomen.</p>
-
-${signatureDutch}`,
+<p>Ga snel naar de SudoSOS website om je saldo op te hogen en deze boete te voorkomen.</p>`,
   getSubject: () => 'De volgende keer krijg je een boete voor je negatieve SudoSOS saldo',
+  getTitle: 'Schuldnotificatie',
   getText: (context) => `
-Beste ${context.name},
-
 ${getDateNL(context.referenceDate)} je een saldo van ${context.balance.toFormat()}.
 Vandaag heeft de BAC boetes uitgedeeld. De volgende keer dat er boetes worden uitgedeeld (waarschijnlijk volgende week), krijg jij een boute van ${context.fine.toFormat()}!
 
-Ga snel naar de SudoSOS website om je saldo op te hogen en deze boete te voorkomen.
-
-Met vriendelijke groet,
-SudoSOS`,
+Ga snel naar de SudoSOS website om je saldo op te hogen en deze boete te voorkomen.`,
 });
 
-const userGotFinedEnglish = new MailContent<UserWillGetFinedOptions>({
+const userGotFinedEnglish = new MailContentBuilder<UserWillGetFinedOptions>({
   getHTML: (context) => `
-<p>Dear ${context.name},</p>
-
 <p>${getDateEN(context.referenceDate)} a balance of ${formatBalance(context.balance)}.<br>
 Today, the BAC has handed out fines. Next time fines will be handed out (probably next week), you will get a fine of ${context.fine.toFormat()}!<br>
 
-<p>Go to the SudoSOS website to deposit money into your account to prevent this fine.</p>
-
-${signatureEnglish}`,
+<p>Go to the SudoSOS website to deposit money into your account to prevent this fine.</p>`,
   getSubject: () => 'Next time you will get fined for your negative SudoSOS balance',
+  getTitle: 'Debt notification',
   getText: (context) => `
-Dear ${context.name},
-
 ${getDateEN(context.referenceDate)} a balance of ${context.balance.toFormat()}.
 Today, the BAC has handed out fines. Next time fines will be handed out (probably next week), you will get a fine of ${context.fine.toFormat()}!
 
-Go to the SudoSOS website to deposit money into your account to prevent this fine.
-
-Kind regards,
-SudoSOS`,
+Go to the SudoSOS website to deposit money into your account to prevent this fine.`,
 });
 
 const mailContents: MailLanguageMap<UserWillGetFinedOptions> = {
@@ -105,7 +87,7 @@ const mailContents: MailLanguageMap<UserWillGetFinedOptions> = {
   [Language.ENGLISH]: userGotFinedEnglish,
 };
 
-export default class UserWillGetFined extends MailTemplate<UserWillGetFinedOptions> {
+export default class UserWillGetFined extends MailMessage<UserWillGetFinedOptions> {
   public constructor(options: UserWillGetFinedOptions) {
     super(options, mailContents);
   }

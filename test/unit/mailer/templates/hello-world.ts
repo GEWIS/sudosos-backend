@@ -17,35 +17,66 @@
  */
 
 import { expect } from 'chai';
-import HelloWorld from '../../../../src/mailer/templates/hello-world';
-import { Language } from '../../../../src/mailer/templates/mail-template';
+import HelloWorld from '../../../../src/mailer/messages/hello-world';
+import { Language } from '../../../../src/mailer/mail-message';
+import User, { TermsOfServiceStatus, UserType } from '../../../../src/entity/user/user';
+import { UserFactory } from '../../../helpers/user-factory';
+import { DataSource } from 'typeorm';
+import database from '../../../../src/database/database';
+import { finishTestDB } from '../../../helpers/test-helpers';
 
 describe('HelloWorldTemplate', () => {
+  let ctx: {
+    connection: DataSource,
+    user: User,
+  };
+
+  before(async () => {
+    const connection = await database.initialize();
+    const user = await (await UserFactory({
+      firstName: 'Samuel',
+      active: true,
+      type: UserType.LOCAL_ADMIN,
+      acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      email: 'test@example.com',
+    } as User)).get();
+    ctx = {
+      connection,
+      user,
+    };
+  });
+
+  after(async () => {
+    await finishTestDB(ctx.connection);
+  });
+
   it('should build correct email in English', () => {
-    const name = 'Samuel';
+    const name = ctx.user.firstName;
     const template = new HelloWorld({ name });
 
-    const options = template.getOptions(Language.ENGLISH);
+    const options = template.getOptions(ctx.user, Language.ENGLISH);
     expect(options.text).to.contain(name);
     expect(options.html).to.contain(name);
     expect(options.subject).to.equal('Hello world!');
     expect(options.from).to.equal(process.env.SMTP_FROM);
+    expect(options.to).to.equal(ctx.user.email);
   });
   it('should build correct email in Dutch', () => {
-    const name = 'Samuel';
+    const name = ctx.user.firstName;
     const template = new HelloWorld({ name });
 
-    const options = template.getOptions(Language.DUTCH);
+    const options = template.getOptions(ctx.user, Language.DUTCH);
     expect(options.text).to.contain(name);
     expect(options.html).to.contain(name);
     expect(options.subject).to.equal('Hallo wereld!');
     expect(options.from).to.equal(process.env.SMTP_FROM);
+    expect(options.to).to.equal(ctx.user.email);
   });
   it('throw error if language does not exist', () => {
-    const name = 'Samuel';
+    const name = ctx.user.firstName;
     const template = new HelloWorld({ name });
 
-    const func = () => template.getOptions('binary' as any);
+    const func = () => template.getOptions(ctx.user, 'binary' as any);
     expect(func).to.throw('Unknown language: binary');
   });
 });

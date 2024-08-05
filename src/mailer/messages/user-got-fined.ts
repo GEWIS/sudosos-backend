@@ -17,72 +17,54 @@
  */
 
 import { Dinero } from 'dinero.js';
-import MailContent from './mail-content';
-import { signatureDutch, signatureEnglish } from './signature';
-import MailTemplate, { Language, MailLanguageMap } from './mail-template';
+import MailContentBuilder from './mail-content-builder';
+import MailMessage, { Language, MailLanguageMap } from '../mail-message';
 
 interface UserGotFinedOptions {
-  name: string;
   referenceDate: Date;
   fine: Dinero;
   totalFine: Dinero;
   balance: Dinero;
 }
 
-const userGotFinedDutch = new MailContent<UserGotFinedOptions>({
+const userGotFinedDutch = new MailContentBuilder<UserGotFinedOptions>({
   getHTML: (context) => `
-<p>Beste ${context.name},</p>
-
 <p>Op ${context.referenceDate.toLocaleString('nl-NL')} had je een saldo van <span style="color: red; font-weight: bold;">${context.balance.toFormat()}</span>.<br>
 Hiervoor heb je zojuist een boete gekregen van ${context.fine.toFormat()}.<br>
 Dit brengt je totale boete op:<br>
 <span style="color: red; font-weight: bold; font-size: 20px;">${context.totalFine.toFormat()}</span>.</p>
 
-<p>Ga snel naar de SudoSOS website om je saldo op te hogen en je boete te betalen. Zo voorkom je dat de boete meer wordt of je account geblokkeerd wordt.</p>
-
-${signatureDutch}`,
+<p>Ga snel naar de SudoSOS website om je saldo op te hogen en je boete te betalen. Zo voorkom je dat de boete meer wordt of je account geblokkeerd wordt.</p>`,
   getSubject: (context) => `Je hebt ${context.fine.toFormat()} SudoSOS boete gekregen!`,
+  getTitle: 'Schuldnotificatie',
   getText: (context) => `
-Beste ${context.name},
-
 Op ${context.referenceDate.toLocaleString('nl-NL')} had je een saldo van ${context.balance.toFormat()}.
 Hiervoor heb je zojuist een boete gekregen van ${context.fine.toFormat()}.
 Dit brengt je totale boete op:
 ${context.totalFine.toFormat()}.
 
 Ga snel naar de SudoSOS website om je saldo op te hogen en je boete te betalen.
-Zo voorkom je dat de boete meer wordt of je account geblokkeerd wordt.
-
-Met vriendelijke groet,
-SudoSOS`,
+Zo voorkom je dat de boete meer wordt of je account geblokkeerd wordt.`,
 });
 
-const userGotFinedEnglish = new MailContent<UserGotFinedOptions>({
+const userGotFinedEnglish = new MailContentBuilder<UserGotFinedOptions>({
   getHTML: (context) => `
-<p>Dear ${context.name},</p>
-
 <p>On ${context.referenceDate.toLocaleString('en-US')} you had a balance of <span style="color: red; font-weight: bold;">${context.balance.toFormat()}</span>.<br>
 For your debt, you have been fined for an amount of ${context.fine.toFormat()}.<br>
 This brings your total fine to:<br>
 <span style="color: red; font-weight: bold; font-size: 20px;">${context.totalFine.toFormat()}</span>.</p>
 
-<p>Go to the SudoSOS website to deposit money into your account and pay your fines. With this you prevent getting more fines and getting your account blocked.</p>
-
-${signatureEnglish}`,
+<p>Go to the SudoSOS website to deposit money into your account and pay your fines. With this you prevent getting more fines and getting your account blocked.</p>`,
   getSubject: (context) => `You have been fined ${context.fine.toFormat()} for your negative SudoSOS balance!`,
+  getTitle: 'Debt notification',
   getText: (context) => `
-Dear ${context.name},
-
 On ${context.referenceDate.toLocaleString('nl-NL')} you had a balance of ${context.balance.toFormat()}.
 For your debt, you have been fined for an amount of ${context.fine.toFormat()}.
 This brings your total fine to:
 ${context.totalFine.toFormat()}.
 
 Go to the SudoSOS website to deposit money into your account and pay your fines.
-With this you prevent getting more fines and getting your account blocked.
-
-Kind regards,
-SudoSOS`,
+With this you prevent getting more fines and getting your account blocked.`,
 });
 
 const mailContents: MailLanguageMap<UserGotFinedOptions> = {
@@ -90,7 +72,7 @@ const mailContents: MailLanguageMap<UserGotFinedOptions> = {
   [Language.ENGLISH]: userGotFinedEnglish,
 };
 
-export default class UserGotFined extends MailTemplate<UserGotFinedOptions> {
+export default class UserGotFined extends MailMessage<UserGotFinedOptions> {
   public constructor(options: UserGotFinedOptions) {
     super(options, mailContents);
   }
