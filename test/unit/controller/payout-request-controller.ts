@@ -38,9 +38,10 @@ import {
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import { PayoutRequestState } from '../../../src/entity/transactions/payout-request-status';
 import { truncateAllTables } from '../../setup';
-import { finishTestDB } from '../../helpers/test-helpers';
+import generateBalance, { finishTestDB } from '../../helpers/test-helpers';
 import BalanceService from '../../../src/service/balance-service';
 import { getToken, seedRoles } from '../../seed/rbac';
+import { inUserContext, UserFactory } from '../../helpers/user-factory';
 
 describe('PayoutRequestController', () => {
   let ctx: {
@@ -511,8 +512,9 @@ describe('PayoutRequestController', () => {
         && req.payoutRequestStatus.length === 1)[1];
       const before = await PayoutRequest.findOne({
         where: { id },
-        relations: ['payoutRequestStatus'],
+        relations: ['payoutRequestStatus', 'requestedBy'],
       });
+      await generateBalance(before.amount.getAmount() * 2, before.requestedBy.id);
       const res = await request(ctx.app)
         .post(`/payoutrequests/${id}/status`)
         .set('Authorization', `Bearer ${ctx.adminToken}`)
@@ -530,6 +532,37 @@ describe('PayoutRequestController', () => {
       const validation = ctx.specification.validateModel('PayoutRequestResponse', payoutRequest, false, true);
       expect(validation.valid).to.be.true;
       expect(payoutRequest.statuses.length).to.equal(before.payoutRequestStatus.length + 1);
+    });
+
+    it("should return 400 if admin tries to approve someone else's payout request with insufficient balance", async () => {
+      const amount = 1000;
+      const buider = await (await UserFactory()).addBalance(amount);
+      await inUserContext([await buider.get()], async (user: User) => {
+        const req: PayoutRequestRequest = { amount: {
+          amount: amount,
+          precision: 2,
+          currency: 'EUR',
+        }, bankAccountNumber: 'NL22 ABNA 0528195913', bankAccountName: 'Studievereniging GEWIS', forId: user.id };
+
+        // POST new payout request
+        let res = await request(ctx.app)
+          .post('/payoutrequests')
+          .set('Authorization', `Bearer ${ctx.adminToken}`)
+          .send(req);
+        expect(res.status).to.equal(200);
+
+        await generateBalance(-100, user.id);
+        const balance = await BalanceService.getBalance(user.id);
+        expect(balance.amount.amount).to.be.lessThan(amount);
+
+        // Try to approve payout request
+        res = await request(ctx.app)
+          .post(`/payoutrequests/${res.body.id}/status`)
+          .set('Authorization', `Bearer ${ctx.adminToken}`)
+          .send({ state: 'APPROVED' });
+        expect(res.status).to.equal(400);
+        expect(res.body).to.equal('Insufficient balance.');
+      });
     });
 
     it("should return 403 if admin tries to cancel someone else's payout request", async () => {
