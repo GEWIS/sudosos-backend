@@ -529,7 +529,7 @@ describe('PayoutRequestController', () => {
 
       const validation = ctx.specification.validateModel('PayoutRequestResponse', payoutRequest, false, true);
       expect(validation.valid).to.be.true;
-      expect(payoutRequest.status.length).to.equal(before.payoutRequestStatus.length + 1);
+      expect(payoutRequest.statuses.length).to.equal(before.payoutRequestStatus.length + 1);
     });
 
     it("should return 403 if admin tries to cancel someone else's payout request", async () => {
@@ -567,7 +567,7 @@ describe('PayoutRequestController', () => {
       expect(res.status).to.equal(200);
 
       const payoutRequest = res.body as PayoutRequestResponse;
-      expect(payoutRequest.status.length).to.equal(before.payoutRequestStatus.length + 1);
+      expect(payoutRequest.statuses.length).to.equal(before.payoutRequestStatus.length + 1);
     });
 
     it('should return 404 if payout request does not exist', async () => {

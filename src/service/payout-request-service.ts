@@ -92,6 +92,7 @@ export default class PayoutRequestService {
       requestedBy: parseUserToBaseResponse(req.requestedBy, true),
       approvedBy: req.approvedBy == null ? undefined : parseUserToBaseResponse(req.approvedBy, true),
       status,
+      pdf: req.pdf ? req.pdf.downloadName : undefined,
     };
   }
 
@@ -107,7 +108,7 @@ export default class PayoutRequestService {
         firstName: req.approvedBy.firstName,
         lastName: req.approvedBy.lastName,
       },
-      status: req.payoutRequestStatus.map((status): PayoutRequestStatusResponse => ({
+      statuses: req.payoutRequestStatus.map((status): PayoutRequestStatusResponse => ({
         id: status.id,
         createdAt: status.createdAt.toISOString(),
         updatedAt: status.updatedAt.toISOString(),
@@ -195,7 +196,7 @@ export default class PayoutRequestService {
     id: number, state: PayoutRequestState,
   ) {
     const payoutRequest = await PayoutRequestService.getSinglePayoutRequest(id);
-    const currentStates = payoutRequest.status.map((s) => s.state as PayoutRequestState);
+    const currentStates = payoutRequest.statuses.map((s) => s.state as PayoutRequestState);
     const allStatuses = Object.values(PayoutRequestState);
 
     if (!allStatuses.includes(state)) throw Error(`unknown status: ${state}.`);
