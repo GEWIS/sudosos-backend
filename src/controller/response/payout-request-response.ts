@@ -48,7 +48,7 @@ export interface PayoutRequestStatusResponse extends BaseResponse {
 
 /**
  * @typedef {allOf|BasePayoutRequestResponse} PayoutRequestResponse
- * @property {Array<PayoutRequestStatusResponse>} status.required - Statuses of this
+ * @property {Array<PayoutRequestStatusResponse>} statuses.required - Statuses of this
  * payout response over time
  * @property {string} bankAccountNumber.required - Bank account number
  * @property {string} bankAccountName.required - Name of the account owner
