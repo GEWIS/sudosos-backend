@@ -746,29 +746,19 @@ export default class UserController extends BaseController {
    * @return {string} 400 - Bad request
    */
   public async updateUser(req: RequestWithToken, res: Response): Promise<void> {
-    const body = req.body as UpdateUserRequest;
     const parameters = req.params;
-    this.logger.trace('Update user', parameters.id, 'with', body, 'by user', req.token.user);
-
-    if (body.firstName !== undefined && body.firstName.length === 0) {
-      res.status(400).json('firstName cannot be empty');
-      return;
-    }
-    if (body.firstName !== undefined && body.firstName.length > 64) {
-      res.status(400).json('firstName too long');
-      return;
-    }
-    if (body.lastName !== undefined && body.lastName.length > 64) {
-      res.status(400).json('lastName too long');
-      return;
-    }
-    if (body.nickname !== undefined && body.nickname.length > 64) {
-      res.status(400).json('nickname too long');
-      return;
-    }
-    if (body.nickname === '') body.nickname = null;
+    this.logger.trace('Update user', parameters.id, 'with', req.body, 'by user', req.token.user);
 
     try {
+      const validation = await verifyCreateUserRequest(req.body);
+      if (isFail(validation)) {
+        res.status(400).json(validation.fail.value);
+        return;
+      }
+
+      const body = req.body as UpdateUserRequest;
+      if (body.nickname === '') body.nickname = null;
+
       const id = parseInt(parameters.id, 10);
       // Get the user object if it exists
       let user = await User.findOne({ where: { id, deleted: false } });
@@ -778,13 +768,8 @@ export default class UserController extends BaseController {
         return;
       }
 
-      user = {
-        ...body,
-      } as User;
-      await User.update(parameters.id, user);
-      res.status(200).json(
-        await UserService.getSingleUser(asNumber(parameters.id)),
-      );
+      const response = await UserService.updateUser(id, req.body);
+      res.json(response);
     } catch (error) {
       this.logger.error('Could not update user:', error);
       res.status(500).json('Internal server error.');
