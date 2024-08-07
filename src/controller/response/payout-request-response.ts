@@ -23,23 +23,19 @@ import { PayoutRequestState } from '../../entity/transactions/payout-request-sta
 import { PaginationResult } from '../../helpers/pagination';
 
 /**
- * @typedef {allOf|BaseResponse} BoilerPayoutRequestResponse
+ * @typedef {allOf|BaseResponse} BasePayoutRequestResponse
  * @property {BaseUserResponse} requestedBy.required - The user that requested a payout
  * @property {BaseUserResponse} approvedBy - The user that potentially approved the payout request
  * @property {DineroObjectResponse} amount.required - The amount requested to be paid out
+ * @property {string} status - enum:CREATED,APPROVED,DENIED,CANCELLED - The current status of the payout request
+ * @property {string} pdf - The PDF of the payout request
  */
-interface BoilerPayoutRequestResponse extends BaseResponse {
+export interface BasePayoutRequestResponse extends BaseResponse {
   requestedBy: BaseUserResponse,
   approvedBy?: BaseUserResponse,
   amount: DineroObjectResponse,
-}
-
-/**
- * @typedef {allOf|BoilerPayoutRequestResponse} BasePayoutRequestResponse
- * @property {string} status - The current status of the payout request
- */
-export interface BasePayoutRequestResponse extends BoilerPayoutRequestResponse {
   status?: PayoutRequestState,
+  pdf?: string,
 }
 
 /**
@@ -51,14 +47,14 @@ export interface PayoutRequestStatusResponse extends BaseResponse {
 }
 
 /**
- * @typedef {allOf|BoilerPayoutRequestResponse} PayoutRequestResponse
- * @property {Array<PayoutRequestStatusResponse>} status.required - Statuses of this
+ * @typedef {allOf|BasePayoutRequestResponse} PayoutRequestResponse
+ * @property {Array<PayoutRequestStatusResponse>} statuses.required - Statuses of this
  * payout response over time
  * @property {string} bankAccountNumber.required - Bank account number
  * @property {string} bankAccountName.required - Name of the account owner
  */
-export interface PayoutRequestResponse extends BoilerPayoutRequestResponse {
-  status: PayoutRequestStatusResponse[],
+export interface PayoutRequestResponse extends BasePayoutRequestResponse {
+  statuses: PayoutRequestStatusResponse[],
   bankAccountNumber: string,
   bankAccountName: string,
 }

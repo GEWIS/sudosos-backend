@@ -201,8 +201,9 @@ describe('PayoutRequestService', () => {
         .equal(ctx.validPayoutRequestRequest.bankAccountNumber);
       expect(payoutRequest.bankAccountName).to
         .equal(ctx.validPayoutRequestRequest.bankAccountName);
-      expect(payoutRequest.status.length).to.equal(1);
-      expect(payoutRequest.status[0].state).to.equal(PayoutRequestState.CREATED);
+      expect(payoutRequest.statuses.length).to.equal(1);
+      expect(payoutRequest.statuses[0].state).to.equal(PayoutRequestState.CREATED);
+      expect(payoutRequest.status).to.equal(PayoutRequestState.CREATED);
       expect(payoutRequest.requestedBy.id).to.equal(user.id);
     });
   });
@@ -301,8 +302,9 @@ describe('PayoutRequestService', () => {
 
       const payoutRequest = await PayoutRequestService
         .updateStatus(id, PayoutRequestState.CREATED, user);
-      expect(payoutRequest.status.length).to.equal(1);
-      expect(payoutRequest.status[0].state).to.equal(PayoutRequestState.CREATED);
+      expect(payoutRequest.statuses.length).to.equal(1);
+      expect(payoutRequest.statuses[0].state).to.equal(PayoutRequestState.CREATED);
+      expect(payoutRequest.status).to.equal(PayoutRequestState.CREATED);
       expect(payoutRequest.approvedBy).to.be.undefined;
     });
 
@@ -312,8 +314,9 @@ describe('PayoutRequestService', () => {
 
       const payoutRequest = await PayoutRequestService
         .updateStatus(id, PayoutRequestState.CANCELLED, user);
-      expect(payoutRequest.status.length).to.equal(2);
-      expect(payoutRequest.status[1].state).to.equal(PayoutRequestState.CANCELLED);
+      expect(payoutRequest.statuses.length).to.equal(2);
+      expect(payoutRequest.statuses[1].state).to.equal(PayoutRequestState.CANCELLED);
+      expect(payoutRequest.status).to.equal(PayoutRequestState.CANCELLED);
       expect(payoutRequest.approvedBy).to.be.undefined;
     });
 
@@ -323,8 +326,9 @@ describe('PayoutRequestService', () => {
 
       const payoutRequest = await PayoutRequestService
         .updateStatus(id, PayoutRequestState.DENIED, user);
-      expect(payoutRequest.status.length).to.equal(2);
-      expect(payoutRequest.status[1].state).to.equal(PayoutRequestState.DENIED);
+      expect(payoutRequest.statuses.length).to.equal(2);
+      expect(payoutRequest.statuses[1].state).to.equal(PayoutRequestState.DENIED);
+      expect(payoutRequest.status).to.equal(PayoutRequestState.DENIED);
       expect(payoutRequest.approvedBy).to.be.undefined;
     });
 
@@ -334,8 +338,9 @@ describe('PayoutRequestService', () => {
 
       const payoutRequest = await PayoutRequestService
         .updateStatus(id, PayoutRequestState.APPROVED, user);
-      expect(payoutRequest.status.length).to.equal(2);
-      expect(payoutRequest.status[1].state).to.equal(PayoutRequestState.APPROVED);
+      expect(payoutRequest.statuses.length).to.equal(2);
+      expect(payoutRequest.statuses[1].state).to.equal(PayoutRequestState.APPROVED);
+      expect(payoutRequest.status).to.equal(PayoutRequestState.APPROVED);
       expect(payoutRequest.approvedBy).to.not.be.undefined;
       expect(payoutRequest.approvedBy.id).to.equal(user.id);
 
