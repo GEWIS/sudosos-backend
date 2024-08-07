@@ -30,3 +30,11 @@ export interface SimpleFileResponse extends BaseResponse {
   location: string;
   createdBy: UserResponse;
 }
+
+/**
+ * @typedef {object} PdfUrlResponse
+ * @property {string} pdf - The pdf url
+ */
+export interface PdfUrlResponse {
+  pdf: string;
+}
