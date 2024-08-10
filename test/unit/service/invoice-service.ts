@@ -860,6 +860,40 @@ describe('InvoiceService', () => {
         },
       );
     });
+    it('should delete a credit invoice', async () => {
+      await inUserContext(
+        await (await UserFactory()).clone(2),
+        async (debtor: User, creditor: User) => {
+          const { transactions } = await createTransactions(debtor.id, creditor.id, 5);
+          const debtorBalance = await BalanceService.getBalance(debtor.id);
+          const creditorBalance = await BalanceService.getBalance(creditor.id);
+
+          const createInvoiceRequest: CreateInvoiceParams = {
+            city: 'city',
+            country: 'country',
+            postalCode: 'postalCode',
+            street: 'street',
+            reference: 'BAC-41',
+            byId: creditor.id,
+            addressee: 'Addressee',
+            description: 'Description',
+            forId: creditor.id,
+            date: new Date(),
+            transactionIDs: transactions.map((t) => t.tId),
+            isCreditInvoice: true,
+          };
+
+          const invoice = await InvoiceService.createInvoice(createInvoiceRequest);
+          expect(invoice.transfer.from.id).to.equal(creditor.id);
+          expect(invoice.transfer.amountInclVat.getAmount()).to.eq(creditorBalance.amount.amount);
+          expect((await BalanceService.getBalance(debtor.id)).amount.amount).to.eq(debtorBalance.amount.amount);
+          expect((await BalanceService.getBalance(creditor.id)).amount.amount).to.eq(0);
+
+          await InvoiceService.deleteInvoice(invoice.id, creditor.id);
+          expect((await BalanceService.getBalance(debtor.id)).amount.amount).to.eq(debtorBalance.amount.amount);
+          expect((await BalanceService.getBalance(creditor.id)).amount.amount).to.eq(creditorBalance.amount.amount);
+        });
+    });
   });
   describe('createTransfersPaidInvoice function', () => {
     it('should subtract amount from sellers', async () => {
