@@ -890,6 +890,17 @@ describe('InvoiceService', () => {
           expect((await BalanceService.getBalance(creditor.id)).amount.amount).to.eq(0);
 
           await InvoiceService.deleteInvoice(invoice.id, creditor.id);
+          const tr = await Transaction.find({ where: { id: In(transactions.map((transaction) => transaction.tId)) }, relations: ['subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice'] });
+
+          // should have unlinked the invoice from the transactions
+          tr.forEach((t) => {
+            t.subTransactions.forEach((tSub) => {
+              tSub.subTransactionRows.forEach((tSubRow) => {
+                expect(tSubRow.invoice).to.equal(null);
+              });
+            });
+          });
+
           expect((await BalanceService.getBalance(debtor.id)).amount.amount).to.eq(debtorBalance.amount.amount);
           expect((await BalanceService.getBalance(creditor.id)).amount.amount).to.eq(creditorBalance.amount.amount);
         });

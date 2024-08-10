@@ -245,6 +245,10 @@ export default class InvoiceService {
     return invoice.latestStatus.state === state;
   }
 
+  private static isCreditInvoice(invoice: Invoice): boolean {
+    return invoice.transfer.fromId === invoice.toId;
+  }
+
   /**
    * Deletes the given invoice and makes an undo transfer
    * @param invoiceId
@@ -264,15 +268,19 @@ export default class InvoiceService {
       precision: invoice.transfer.amountInclVat.getPrecision(),
     };
 
-    // We create an undo transfer that sends the money back to the void.
-    const undoTransfer: TransferRequest = {
-      amount,
-      description: `Deletion of Invoice #${invoice.id}`,
-      fromId: invoice.to.id,
-      toId: 0,
-    };
+    // Credit invoices get their money back from the `createTransfersInvoiceSellers` function.
+    if (!this.isCreditInvoice(invoice)) {
+      // We create an undo transfer that sends the money back to the void.
+      const undoTransfer: TransferRequest = {
+        amount,
+        description: `Deletion of Invoice #${invoice.id}`,
+        fromId: invoice.to.id,
+        toId: 0,
+      };
 
-    await TransferService.postTransfer(undoTransfer);
+      await TransferService.postTransfer(undoTransfer);
+    }
+
 
     // Create a new InvoiceStatus
     const invoiceStatus: InvoiceStatus = Object.assign(new InvoiceStatus(), {
@@ -310,12 +318,11 @@ export default class InvoiceService {
   }
 
   /**
-   * When an Invoice is created  we subtract the relevant balance from the sellers
+   * When an Invoice is created we subtract the relevant balance from the sellers
    * @param invoice
    * @param deletion - If the Invoice is being deleted we add the money to the account
    */
   public static async createTransfersInvoiceSellers(invoice: Invoice, deletion = false): Promise<undefined> {
-    // By marking an invoice as paid we subtract the money from the seller accounts.
     if (!invoice) return undefined;
 
     const toIdMap = new Map<number, SubTransaction[]>();
