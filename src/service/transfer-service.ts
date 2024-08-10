@@ -181,8 +181,8 @@ export default class TransferService {
     };
   }
 
-  public static async postTransfer(request: TransferRequest) : Promise<TransferResponse> {
-    const transfer = await this.createTransfer(request);
+  public static async postTransfer(request: TransferRequest, manager?: EntityManager) : Promise<TransferResponse> {
+    const transfer = await this.createTransfer(request, manager);
     return this.asTransferResponse(transfer);
   }
 

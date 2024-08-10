@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { FindManyOptions, FindOptionsRelationByString, FindOptionsWhere, In } from 'typeorm';
+import { EntityManager, FindManyOptions, FindOptionsRelationByString, FindOptionsWhere, In } from 'typeorm';
 import dinero from 'dinero.js';
 import InvoiceStatus, { InvoiceState } from '../entity/invoices/invoice-status';
 import {
@@ -170,9 +170,10 @@ export default class InvoiceService {
    * @param forId - The user which receives the Invoice/Transfer
    * @param transactions - The array of transactions which to create the Transfer for
    * @param isCreditInvoice - If the invoice is a credit Invoice
+   * @param manager - The EntityManager context to use.
    */
   public static async createTransferFromTransactions(forId: number,
-    transactions: BaseTransactionResponse[], isCreditInvoice: boolean): Promise<TransferResponse> {
+    transactions: BaseTransactionResponse[], isCreditInvoice: boolean, manager?: EntityManager): Promise<TransferResponse> {
     const dineroObjectRequest: DineroObjectRequest = {
       amount: 0,
       currency: dinero.defaultCurrency,
@@ -198,7 +199,7 @@ export default class InvoiceService {
       toId,
     };
 
-    return TransferService.postTransfer(transferRequest);
+    return TransferService.postTransfer(transferRequest, manager);
   }
 
   /**
@@ -251,15 +252,16 @@ export default class InvoiceService {
 
   /**
    * Deletes the given invoice and makes an undo transfer
+   * @param manager
    * @param invoiceId
    * @param byId
    */
-  public static async deleteInvoice(invoiceId: number, byId: number)
+  public static async deleteInvoice(manager: EntityManager, invoiceId: number, byId: number)
     : Promise<Invoice | undefined> {
     // Find base invoice.
-    const invoice = await Invoice.findOne({ where: { id: invoiceId }, relations: ['to', 'invoiceStatus', 'transfer', 'transfer.to', 'transfer.from'] });
+    const invoice = await manager.findOne(Invoice, { where: { id: invoiceId }, relations: ['to', 'invoiceStatus', 'transfer', 'transfer.to', 'transfer.from'] });
     if (!invoice) return undefined;
-    await this.createTransfersInvoiceSellers(invoice, true);
+    await InvoiceService.createTransfersInvoiceSellers(invoice, manager, true);
 
     // Extract amount from transfer
     const amount: DineroObjectRequest = {
@@ -269,7 +271,7 @@ export default class InvoiceService {
     };
 
     // Credit invoices get their money back from the `createTransfersInvoiceSellers` function.
-    if (!this.isCreditInvoice(invoice)) {
+    if (!InvoiceService.isCreditInvoice(invoice)) {
       // We create an undo transfer that sends the money back to the void.
       const undoTransfer: TransferRequest = {
         amount,
@@ -278,7 +280,7 @@ export default class InvoiceService {
         toId: 0,
       };
 
-      await TransferService.postTransfer(undoTransfer);
+      await TransferService.postTransfer(undoTransfer, manager);
     }
 
 
@@ -301,28 +303,29 @@ export default class InvoiceService {
           if (row.invoice.id === invoice.id) {
             row.invoice = null;
           }
-          promises.push(row.save());
+          promises.push(manager.save(SubTransactionRow, row));
         });
       });
     });
     await Promise.all(promises);
 
     // Add it to the invoice and save it.
-    await invoice.save().then(async () => {
+    await manager.save(Invoice, invoice).then(async () => {
       invoice.invoiceStatus.push(invoiceStatus);
-      await invoiceStatus.save();
+      await manager.save(InvoiceStatus, invoiceStatus);
     });
 
-    const options = this.getOptions({ invoiceId: invoice.id, returnInvoiceEntries: true });
-    return Invoice.findOne(options);
+    const options = InvoiceService.getOptions({ invoiceId: invoice.id, returnInvoiceEntries: true });
+    return manager.findOne(Invoice, options);
   }
 
   /**
    * When an Invoice is created we subtract the relevant balance from the sellers
    * @param invoice
+   * @param manager
    * @param deletion - If the Invoice is being deleted we add the money to the account
    */
-  public static async createTransfersInvoiceSellers(invoice: Invoice, deletion = false): Promise<undefined> {
+  public static async createTransfersInvoiceSellers(invoice: Invoice, manager: EntityManager, deletion = false): Promise<undefined> {
     if (!invoice) return undefined;
 
     const toIdMap = new Map<number, SubTransaction[]>();
@@ -369,7 +372,7 @@ export default class InvoiceService {
       transferRequests.push(transferRequest);
     });
 
-    await Promise.all(transferRequests.map((t) => TransferService.postTransfer(t)));
+    await Promise.all(transferRequests.map((t) => TransferService.postTransfer(t, manager)));
   }
 
   /**
@@ -377,20 +380,21 @@ export default class InvoiceService {
    *
    * It is not possible to change the amount or details of the transfer itself.
    *
+   * @param manager - The EntityManager context to use.
    * @param update
    */
-  public static async updateInvoice(update: UpdateInvoiceParams) {
+  public static async updateInvoice(manager: EntityManager, update: UpdateInvoiceParams) {
     const { byId, invoiceId, state, ...props } = update;
     const base: Invoice = await Invoice.findOne({ where: { id:invoiceId }, relations: ['invoiceStatus', 'latestStatus'] });
 
     // Return undefined if base does not exist.
-    if (!base || this.isState(base, InvoiceState.DELETED) || this.isState(base, InvoiceState.PAID)) {
+    if (!base || InvoiceService.isState(base, InvoiceState.DELETED) || InvoiceService.isState(base, InvoiceState.PAID)) {
       return undefined;
     }
 
     if (state) {
       // Deleting is a special case of an update.
-      if (state === InvoiceState.DELETED) return this.deleteInvoice(base.id, byId);
+      if (state === InvoiceState.DELETED) return InvoiceService.deleteInvoice(manager, base.id, byId);
 
       const invoiceStatus: InvoiceStatus = Object.assign(new InvoiceStatus(), {
         invoice: base,
@@ -408,7 +412,7 @@ export default class InvoiceService {
     await Invoice.update({ id: base.id }, { ...props, date: props.date ? new Date(props.date) : undefined });
     // Return the newly updated Invoice.
 
-    const options = this.getOptions({ invoiceId: base.id, returnInvoiceEntries: true });
+    const options = InvoiceService.getOptions({ invoiceId: base.id, returnInvoiceEntries: true });
     return Invoice.findOne(options);
   }
 
@@ -427,16 +431,17 @@ export default class InvoiceService {
    * Set a reference to an Invoice for all given sub Transactions.
    * @param invoice
    * @param subTransactions
+   * @param manager - The EntityManager context to use.
    */
   static async setSubTransactionInvoice(invoice: Invoice,
-    subTransactions: SubTransaction[]) {
+    subTransactions: SubTransaction[], manager?: EntityManager) {
     const promises: Promise<any>[] = [];
 
     subTransactions.forEach((tSub) => {
       tSub.subTransactionRows.forEach((tSubRow) => {
         const row = tSubRow;
         row.invoice = invoice;
-        promises.push(SubTransactionRow.save(row));
+        promises.push(manager.save(SubTransactionRow, row));
       });
     });
 
@@ -448,7 +453,7 @@ export default class InvoiceService {
    * @param toId
    */
   static async getLatestValidInvoice(toId: number): Promise<Invoice> {
-    const invoices = (await this.getInvoices({ toId }));
+    const invoices = (await InvoiceService.getInvoices({ toId }));
     // Filter the deleted invoices
     const validInvoices = invoices.filter(
       (invoice) =>  !InvoiceService.isState(invoice, InvoiceState.DELETED),
@@ -483,14 +488,15 @@ export default class InvoiceService {
 
   /**
    * Creates an Invoice from an CreateInvoiceRequest
+   * @param manager - The EntityManager context to use.
    * @param invoiceRequest - The Invoice request to create
    */
-  public static async createInvoice(invoiceRequest: CreateInvoiceParams)
+  public static async createInvoice(manager: EntityManager, invoiceRequest: CreateInvoiceParams)
     : Promise<Invoice> {
     const { forId, byId, isCreditInvoice } = invoiceRequest;
     let params: TransactionFilterParameters;
 
-    const user = await User.findOne({ where: { id: forId } });
+    const user = await manager.findOne(User, { where: { id: forId } });
     // If transactions are specified.
     if (invoiceRequest.transactionIDs) {
       params = { transactionId: invoiceRequest.transactionIDs };
@@ -498,7 +504,7 @@ export default class InvoiceService {
       params = { fromDate: asDate(invoiceRequest.fromDate) };
     } else {
       // By default we create an Invoice from all transactions since last invoice.
-      const latestInvoice = await this.getLatestValidInvoice(forId);
+      const latestInvoice = await InvoiceService.getLatestValidInvoice(forId);
       let date;
       // If no invoice exists we use the time when the account was created.
       if (latestInvoice) {
@@ -517,7 +523,7 @@ export default class InvoiceService {
     }
 
     const transactions = (await TransactionService.getTransactions(params, {})).records;
-    const transfer = await this.createTransferFromTransactions(forId, transactions, isCreditInvoice);
+    const transfer = await InvoiceService.createTransferFromTransactions(forId, transactions, isCreditInvoice, manager);
 
     // Create a new Invoice
     const newInvoice: Invoice = Object.assign(new Invoice(), {
@@ -548,20 +554,20 @@ export default class InvoiceService {
       newInvoice.invoiceStatus.push(invoiceStatus);
       await InvoiceStatus.save(invoiceStatus);
 
-      const subTransactions = await this.getSubTransactionsInvoice(newInvoice, transactions, isCreditInvoice);
-      await this.setSubTransactionInvoice(newInvoice, subTransactions);
+      const subTransactions = await InvoiceService.getSubTransactionsInvoice(newInvoice, transactions, isCreditInvoice);
+      await InvoiceService.setSubTransactionInvoice(newInvoice, subTransactions, manager);
 
-      await this.createInvoiceEntriesTransactions(newInvoice, subTransactions);
+      await InvoiceService.createInvoiceEntriesTransactions(newInvoice, subTransactions);
       if (invoiceRequest.customEntries) {
-        await this.AddCustomEntries(newInvoice, invoiceRequest.customEntries);
+        await InvoiceService.AddCustomEntries(newInvoice, invoiceRequest.customEntries);
       }
       if (!isCreditInvoice) {
-        await this.createTransfersInvoiceSellers(newInvoice);
+        await InvoiceService.createTransfersInvoiceSellers(newInvoice, manager);
       }
     });
 
-    const options = this.getOptions({ invoiceId: newInvoice.id, returnInvoiceEntries: true });
-    return Invoice.findOne(options);
+    const options = InvoiceService.getOptions({ invoiceId: newInvoice.id, returnInvoiceEntries: true });
+    return manager.findOne(Invoice, options);
   }
 
   /**

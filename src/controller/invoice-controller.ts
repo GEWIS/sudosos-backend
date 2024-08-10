@@ -39,6 +39,7 @@ import { UpdateInvoiceUserRequest } from './request/user-request';
 import InvoiceUser from '../entity/user/invoice-user';
 import { parseInvoiceUserToResponse } from '../helpers/revision-to-response';
 import FileService from '../service/file-service';
+import wrapInManager from '../helpers/database';
 
 export default class InvoiceController extends BaseController {
   private logger: Logger = log4js.getLogger('InvoiceController');
@@ -225,7 +226,7 @@ export default class InvoiceController extends BaseController {
         return;
       }
 
-      const invoice: Invoice = await InvoiceService.createInvoice(params);
+      const invoice: Invoice = await wrapInManager(InvoiceService.createInvoice)(params);
       res.json(InvoiceService.toResponse(invoice, true));
     } catch (error) {
       this.logger.error('Could not create invoice:', error);
@@ -267,7 +268,7 @@ export default class InvoiceController extends BaseController {
         return;
       }
 
-      const invoice: Invoice = await InvoiceService.updateInvoice(params);
+      const invoice: Invoice = await wrapInManager(InvoiceService.updateInvoice)(params);
 
       res.json(InvoiceService.toResponse(invoice, false));
     } catch (error) {
@@ -294,7 +295,7 @@ export default class InvoiceController extends BaseController {
     this.logger.trace('Delete Invoice', id, 'by user', req.token.user);
 
     try {
-      const invoice = await InvoiceService.deleteInvoice(invoiceId, req.token.user.id);
+      const invoice = await wrapInManager(InvoiceService.deleteInvoice)(invoiceId, req.token.user.id);
       if (!invoice) {
         res.status(404).json('Invoice not found.');
         return;

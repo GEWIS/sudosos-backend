@@ -58,6 +58,7 @@ import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import InvoiceUser from '../../../src/entity/user/invoice-user';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
+import wrapInManager from '../../../src/helpers/database';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -145,7 +146,7 @@ createInvoiceWithTransfers(debtorId: number, creditorId: number,
     isCreditInvoice: false,
   };
 
-  const invoice = await InvoiceService.createInvoice(createInvoiceRequest);
+  const invoice = await wrapInManager(InvoiceService.createInvoice)(createInvoiceRequest);
   expect((await BalanceService.getBalance(debtorId)).amount.amount).is.equal(0);
   return invoice;
 }
@@ -281,6 +282,7 @@ describe('InvoiceService', () => {
         },
       );
     });
+
     it('should create Invoice from multiple transactions', async () => {
       await inUserContext(
         await (await UserFactory()).clone(2),
@@ -325,7 +327,7 @@ describe('InvoiceService', () => {
           );
           const total = transactionsAfterDate.total;
 
-          const invoice = await InvoiceService.createInvoice(
+          const invoice = await wrapInManager(InvoiceService.createInvoice)(
             createInvoiceRequest,
           );
           expect(invoice.transfer.amountInclVat.getAmount()).is.equal(total);
@@ -366,7 +368,7 @@ describe('InvoiceService', () => {
             isCreditInvoice: false,
           };
 
-          const invoice = await InvoiceService.createInvoice(
+          const invoice = await wrapInManager(InvoiceService.createInvoice)(
             createInvoiceRequest,
           );
           expect(invoice.transfer.amountInclVat.getAmount()).is.equal(
@@ -411,7 +413,7 @@ describe('InvoiceService', () => {
 
           await new Promise((f) => setTimeout(f, 1000));
 
-          const invoice = await InvoiceService.createInvoice(
+          const invoice = await wrapInManager(InvoiceService.createInvoice)(
             createInvoiceRequest,
           );
 
@@ -448,7 +450,7 @@ describe('InvoiceService', () => {
             transactionIDs: transactions.map((t) => t.tId),
           };
 
-          const invoice = await InvoiceService.createInvoice(
+          const invoice = await wrapInManager(InvoiceService.createInvoice)(
             createInvoiceRequest,
           );
           expect(
@@ -491,7 +493,7 @@ describe('InvoiceService', () => {
           transactionIDs: transactions.map((t) => t.tId),
           isCreditInvoice: true,
         };
-        await InvoiceService.createInvoice(createInvoiceRequest);
+        await wrapInManager(InvoiceService.createInvoice)(createInvoiceRequest);
         const debtorBalance = await BalanceService.getBalance(debtor.id);
         const creditorBalance = await BalanceService.getBalance(creditor.id);
         expect(debtorBalance.amount.amount).to.equal(-1 * total);
@@ -530,7 +532,7 @@ describe('InvoiceService', () => {
           transactionIDs: transactions.map((t) => t.tId),
           isCreditInvoice: true,
         };
-        const invoice = await InvoiceService.createInvoice(createInvoiceRequest);
+        const invoice = await wrapInManager(InvoiceService.createInvoice)(createInvoiceRequest);
         const debtorBalance = await BalanceService.getBalance(debtor.id);
         const creditorBalance = await BalanceService.getBalance(creditor.id);
         const otherCreditorBalance = await BalanceService.getBalance(otherCreditor.id);
@@ -580,7 +582,7 @@ describe('InvoiceService', () => {
           };
 
           // Test if attributes were updated
-          const updatedInvoice = await InvoiceService.updateInvoice(
+          const updatedInvoice = await wrapInManager(InvoiceService.updateInvoice)(
             validUpdateInvoiceParams,
           );
           expect(updatedInvoice.description).to.equal(
@@ -610,7 +612,7 @@ describe('InvoiceService', () => {
             invoiceId: invoice.id,
           };
 
-          const updatedInvoice = await InvoiceService.updateInvoice(validUpdateInvoiceParams);
+          const updatedInvoice = await wrapInManager(InvoiceService.updateInvoice)(validUpdateInvoiceParams);
           expect(updatedInvoice.postalCode).to.equal(validUpdateInvoiceParams.postalCode);
 
           const fromDB = await Invoice.findOne({ where: { id: invoice.id } });
@@ -629,7 +631,7 @@ describe('InvoiceService', () => {
             invoiceId: invoice.id,
           };
 
-          const updatedInvoice = await InvoiceService.updateInvoice(validUpdateInvoiceParams);
+          const updatedInvoice = await wrapInManager(InvoiceService.updateInvoice)(validUpdateInvoiceParams);
           expect(updatedInvoice.city).to.equal(validUpdateInvoiceParams.city);
 
           const fromDB = await Invoice.findOne({ where: { id: invoice.id } });
@@ -648,7 +650,7 @@ describe('InvoiceService', () => {
             invoiceId: invoice.id,
           };
 
-          const updatedInvoice = await InvoiceService.updateInvoice(validUpdateInvoiceParams);
+          const updatedInvoice = await wrapInManager(InvoiceService.updateInvoice)(validUpdateInvoiceParams);
           expect(updatedInvoice.country).to.equal(validUpdateInvoiceParams.country);
 
           const fromDB = await Invoice.findOne({ where: { id: invoice.id } });
@@ -667,7 +669,7 @@ describe('InvoiceService', () => {
             invoiceId: invoice.id,
           };
 
-          const updatedInvoice = await InvoiceService.updateInvoice(validUpdateInvoiceParams);
+          const updatedInvoice = await wrapInManager(InvoiceService.updateInvoice)(validUpdateInvoiceParams);
           expect(updatedInvoice.reference).to.equal(validUpdateInvoiceParams.reference);
 
           const fromDB = await Invoice.findOne({ where: { id: invoice.id } });
@@ -697,7 +699,7 @@ describe('InvoiceService', () => {
           };
 
           // Test if attributes were updated
-          const updatedInvoice = await InvoiceService.updateInvoice(
+          const updatedInvoice = await wrapInManager(InvoiceService.updateInvoice)(
             validUpdateInvoiceParams,
           );
           expect(InvoiceService.isState(updatedInvoice, InvoiceState.SENT)).to.be.true;
@@ -725,13 +727,13 @@ describe('InvoiceService', () => {
           });
 
           // Test if attributes were updated
-          let updatedInvoice = await InvoiceService.updateInvoice(
+          let updatedInvoice = await wrapInManager(InvoiceService.updateInvoice)(
             makeParamsState(InvoiceState.SENT),
           );
 
           expect(InvoiceService.isState(updatedInvoice, InvoiceState.SENT)).to.be.true;
 
-          updatedInvoice = await InvoiceService.updateInvoice(
+          updatedInvoice = await wrapInManager(InvoiceService.updateInvoice)(
             makeParamsState(InvoiceState.PAID),
           );
 
@@ -760,7 +762,7 @@ describe('InvoiceService', () => {
           const { addressee, description } = invoice;
 
           // Test if attributes were updated
-          const updatedInvoice = await InvoiceService.updateInvoice(
+          const updatedInvoice = await wrapInManager(InvoiceService.updateInvoice)(
             makeParamsState(addressee, description, creditor, invoice.id, InvoiceState.DELETED),
           );
           expect(InvoiceService.isState(updatedInvoice, InvoiceState.DELETED)).to.be.true;
@@ -780,8 +782,8 @@ describe('InvoiceService', () => {
         expect(creditorBalance.amount.amount).to.eq(0);
         expect(debtorBalance.amount.amount).to.eq(0);
 
-        await InvoiceService
-          .updateInvoice(makeParamsState(invoice.addressee, invoice.description, creditor, invoice.id, InvoiceState.DELETED));
+        await wrapInManager(InvoiceService.updateInvoice)(makeParamsState(invoice.addressee,
+          invoice.description, creditor, invoice.id, InvoiceState.DELETED));
         expect((await BalanceService.getBalance(debtor.id)).amount.amount)
           .is.equal(-1 * invoice.transfer.amountInclVat.getAmount());
         expect((await BalanceService.getBalance(creditorBalance.id)).amount.amount)
@@ -813,7 +815,7 @@ describe('InvoiceService', () => {
             transactionIDs: transactions.map((t) => t.tId),
           };
 
-          const invoice = await InvoiceService.createInvoice(
+          const invoice = await wrapInManager(InvoiceService.createInvoice)(
             createInvoiceRequest,
           );
           let invoiceTransactions = await Transaction.find({
@@ -835,7 +837,7 @@ describe('InvoiceService', () => {
           });
 
           const { addressee, description } = invoice;
-          const updatedInvoice = await InvoiceService.updateInvoice(
+          const updatedInvoice = await wrapInManager(InvoiceService.updateInvoice)(
             makeParamsState(addressee, description, creditor, invoice.id, InvoiceState.DELETED),
           );
           expect(InvoiceService.isState(updatedInvoice, InvoiceState.DELETED)).to.be.true;
@@ -883,13 +885,13 @@ describe('InvoiceService', () => {
             isCreditInvoice: true,
           };
 
-          const invoice = await InvoiceService.createInvoice(createInvoiceRequest);
+          const invoice = await wrapInManager(InvoiceService.createInvoice)(createInvoiceRequest);
           expect(invoice.transfer.from.id).to.equal(creditor.id);
           expect(invoice.transfer.amountInclVat.getAmount()).to.eq(creditorBalance.amount.amount);
           expect((await BalanceService.getBalance(debtor.id)).amount.amount).to.eq(debtorBalance.amount.amount);
           expect((await BalanceService.getBalance(creditor.id)).amount.amount).to.eq(0);
 
-          await InvoiceService.deleteInvoice(invoice.id, creditor.id);
+          await wrapInManager(InvoiceService.deleteInvoice)(invoice.id, creditor.id);
           const tr = await Transaction.find({ where: { id: In(transactions.map((transaction) => transaction.tId)) }, relations: ['subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice'] });
 
           // should have unlinked the invoice from the transactions
@@ -937,7 +939,7 @@ describe('InvoiceService', () => {
           isCreditInvoice: false,
         };
 
-        await InvoiceService.createInvoice(createInvoiceRequest);
+        await wrapInManager(InvoiceService.createInvoice)(createInvoiceRequest);
         let debtorBalance = await BalanceService.getBalance(debtor.id);
         const creditorBalance = await BalanceService.getBalance(creditor.id);
         const secondCreditorBalance = await BalanceService.getBalance(creditor.id);

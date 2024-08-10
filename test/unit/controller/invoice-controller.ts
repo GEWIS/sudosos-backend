@@ -68,6 +68,7 @@ import sinon from 'sinon';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { getToken, seedRoles } from '../../seed/rbac';
+import wrapInManager from '../../../src/helpers/database';
 
 describe('InvoiceController', async () => {
   let ctx: {
@@ -374,7 +375,7 @@ describe('InvoiceController', async () => {
             });
           });
 
-          await InvoiceService.createInvoice(createInvoiceRequest);
+          await wrapInManager(InvoiceService.createInvoice)(createInvoiceRequest);
           await expectError(createInvoiceRequest, (SUBTRANSACTION_ALREADY_INVOICED(subIDs)).value);
         });
     });
