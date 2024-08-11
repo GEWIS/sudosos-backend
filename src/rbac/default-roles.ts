@@ -61,6 +61,9 @@ export default class DefaultRoles {
             organ: new Set(['pointOfSale']),
           },
         },
+        Roles: {
+          get: { own: star },
+        },
         Authenticator: {
           get: { own: star },
         },
