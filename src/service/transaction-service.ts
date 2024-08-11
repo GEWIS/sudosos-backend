@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { Brackets, createQueryBuilder, In, IsNull, SelectQueryBuilder } from 'typeorm';
+import { Brackets, EntityManager, In, IsNull, SelectQueryBuilder } from 'typeorm';
 import Dinero from 'dinero.js';
 import dinero, { DineroObject } from 'dinero.js';
 import { RequestWithToken } from '../middleware/token-middleware';
@@ -72,6 +72,7 @@ import {
   reduceMapToVatEntries,
 } from '../helpers/transaction-mapper';
 import ProductCategoryService from './product-category-service';
+import { AppDataSource } from '../database/database';
 
 export interface TransactionFilterParameters {
   transactionId?: number | number[],
@@ -523,10 +524,17 @@ export default class TransactionService {
   }
 
   private static buildGetTransactionsQuery(
-    params: TransactionFilterParameters = {}, user?: User,
+    params: TransactionFilterParameters = {}, manager?: EntityManager, user?: User,
   ): SelectQueryBuilder<Transaction> {
     // Extract fromDate and tillDate, as they cannot be directly passed to QueryFilter.
     const { fromDate, tillDate, ...p } = params;
+
+    let entityManager;
+    if (!manager) {
+      entityManager = AppDataSource.manager;
+    } else {
+      entityManager = manager;
+    }
 
     function applySubTransactionFilters(query: SelectQueryBuilder<any>): SelectQueryBuilder<any> {
       const mapping: FilterMapping = {
@@ -544,7 +552,7 @@ export default class TransactionService {
       return QueryFilter.applyFilter(query, mapping, p);
     }
 
-    const query = createQueryBuilder(Transaction, 'transaction')
+    const query = entityManager.createQueryBuilder(Transaction, 'transaction')
       .addSelect((qb) => {
         const subquery = qb.subQuery()
           .select('sum(subTransactionRow.amount * product.priceInclVat) as value')
@@ -591,14 +599,22 @@ export default class TransactionService {
    * @param {TransactionFilterParameters.model} params - the filter parameters
    * @param {PaginationParameters} pagination
    * @param {User.model} user - A user that is involved in all transactions
+   * @param manager - The EntityManager context to use.
    * @returns {BaseTransactionResponse[]} - the transactions without sub transactions
    */
   public static async getTransactions(
-    params: TransactionFilterParameters, pagination: PaginationParameters = {}, user?: User,
+    params: TransactionFilterParameters, pagination: PaginationParameters = {}, user?: User, manager?: EntityManager,
   ): Promise<PaginatedBaseTransactionResponse> {
     const { take, skip } = pagination;
 
-    const builder = this.buildGetTransactionsQuery(params, user);
+    let entityManager;
+    if (!manager) {
+      entityManager = AppDataSource.manager;
+    } else {
+      entityManager = manager;
+    }
+
+    const builder = this.buildGetTransactionsQuery(params, entityManager, user);
     const results = await Promise.all([
       builder.limit(take).offset(skip).getRawMany(),
       builder.getCount(),

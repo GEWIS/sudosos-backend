@@ -332,7 +332,8 @@ export default class InvoiceService {
 
     const toIdMap = new Map<number, SubTransaction[]>();
 
-    const baseTransactions = (await TransactionService.getTransactions({ invoiceId: invoice.id })).records;
+    const baseTransactions = (await TransactionService.getTransactions({ invoiceId: invoice.id },
+      {}, undefined, manager)).records;
     const transactions = await TransactionService.getTransactionsFromBaseTransactions(baseTransactions, false);
 
     // Collect SubTransactions per Seller

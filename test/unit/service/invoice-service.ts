@@ -556,7 +556,7 @@ describe('InvoiceService', () => {
         const invoice = await createInvoiceWithTransfers(debtor.id, creditor.id, 1);
         const creditorBalance = await BalanceService.getBalance(creditor.id);
         const transfer = await Transfer.findOne({ where: { from: { id: creditor.id } } });
-        expect(transfer).to.not.be.undefined;
+        expect(transfer).to.not.be.null;
         expect(transfer.amountInclVat.getAmount()).to.eq(invoice.transfer.amountInclVat.getAmount());
         expect(creditorBalance.amount.amount).to.eq(0);
       });
