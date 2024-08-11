@@ -206,9 +206,10 @@ export default class InvoiceService {
    * Creates InvoiceEntries from an array of Transactions
    * @param invoice - The invoice of which the entries are.
    * @param subTransactions - Array of sub transactions to parse.
+   * @param manager - The EntityManager context to use.
    */
   public static async createInvoiceEntriesTransactions(invoice: Invoice,
-    subTransactions: SubTransaction[]): Promise<InvoiceEntry[]> {
+    subTransactions: SubTransaction[], manager: EntityManager): Promise<InvoiceEntry[]> {
     const subTransactionRows = subTransactions.reduce<SubTransactionRow[]>((acc, cur) => acc.concat(cur.subTransactionRows), []);
 
     // Cumulative entries.
@@ -216,7 +217,7 @@ export default class InvoiceService {
 
     subTransactionRows.forEach((tSubRow) => collectProductsByRevision(entryMap, tSubRow));
 
-    const invoiceEntries: InvoiceEntry[] = await reduceMapToInvoiceEntries(entryMap, invoice);
+    const invoiceEntries: InvoiceEntry[] = await reduceMapToInvoiceEntries(entryMap, invoice, manager);
     return invoiceEntries;
   }
 
@@ -224,9 +225,10 @@ export default class InvoiceService {
    * Adds custom entries to the invoice.
    * @param invoice - The Invoice to append to
    * @param customEntries - THe custom entries to append
+   * @param manager
    */
   private static async AddCustomEntries(invoice: Invoice,
-    customEntries: InvoiceEntryRequest[]): Promise<void> {
+    customEntries: InvoiceEntryRequest[], manager: EntityManager): Promise<void> {
     const promises: Promise<InvoiceEntry>[] = [];
     customEntries.forEach((request) => {
       const { description, amount, vatPercentage } = request;
@@ -237,7 +239,7 @@ export default class InvoiceService {
         priceInclVat: DineroTransformer.Instance.from(request.priceInclVat.amount),
         vatPercentage,
       });
-      promises.push(entry.save());
+      promises.push(manager.save(entry));
     });
     await Promise.all(promises);
   }
@@ -550,17 +552,18 @@ export default class InvoiceService {
     });
 
     // First save the Invoice, then the status.
-    await Invoice.save(newInvoice).then(async () => {
+    await manager.save(Invoice, newInvoice).then(async () => {
       newInvoice.invoiceStatus.push(invoiceStatus);
-      await InvoiceStatus.save(invoiceStatus);
+      await manager.save(InvoiceStatus, invoiceStatus);
 
       const subTransactions = await InvoiceService.getSubTransactionsInvoice(newInvoice, transactions, isCreditInvoice);
       await InvoiceService.setSubTransactionInvoice(newInvoice, subTransactions, manager);
 
-      await InvoiceService.createInvoiceEntriesTransactions(newInvoice, subTransactions);
+      await InvoiceService.createInvoiceEntriesTransactions(newInvoice, subTransactions, manager);
       if (invoiceRequest.customEntries) {
-        await InvoiceService.AddCustomEntries(newInvoice, invoiceRequest.customEntries);
+        await InvoiceService.AddCustomEntries(newInvoice, invoiceRequest.customEntries, manager);
       }
+
       if (!isCreditInvoice) {
         await InvoiceService.createTransfersInvoiceSellers(newInvoice, manager);
       }

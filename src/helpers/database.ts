@@ -16,7 +16,8 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { EntityManager, getManager } from 'typeorm';
+import { EntityManager } from 'typeorm';
+import { AppDataSource } from '../database/database';
 
 /**
  * Takes a function with an EntityManager as first param and wraps it in a manager.
@@ -26,7 +27,7 @@ import { EntityManager, getManager } from 'typeorm';
  */
 export default function wrapInManager<T>(transactionFunction:
 (manager: EntityManager, ...arg: any[]) => Promise<T>): (...arg: any[]) => Promise<T> {
-  return async (...arg: any[]) => Promise.resolve(getManager().transaction(
+  return async (...arg: any[]) => Promise.resolve(AppDataSource.manager.transaction(
     async (manager) => Promise.resolve(transactionFunction(manager, ...arg)),
   ));
 }

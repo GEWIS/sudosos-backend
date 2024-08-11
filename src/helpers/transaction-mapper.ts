@@ -26,6 +26,7 @@ import Dinero from 'dinero.js';
 import InvoiceEntry from '../entity/invoices/invoice-entry';
 import Invoice from '../entity/invoices/invoice';
 import SubTransaction from '../entity/transactions/sub-transaction';
+import { EntityManager } from 'typeorm';
 
 /**
  * Applies a function to all SubTransactionRows of the given transactions.
@@ -180,8 +181,9 @@ export function reduceMapToCategoryEntries(categoryMap: Map<number, SubTransacti
  * Transforms an array of SubTransactionRows of the same product into invoice entries.
  * @param productMap
  * @param invoice
+ * @param manager
  */
-export async function reduceMapToInvoiceEntries(productMap: Map<string, SubTransactionRow[]>, invoice: Invoice): Promise<InvoiceEntry[]> {
+export async function reduceMapToInvoiceEntries(productMap: Map<string, SubTransactionRow[]>, invoice: Invoice, manager: EntityManager): Promise<InvoiceEntry[]> {
   const invoiceEntries: InvoiceEntry[] = [];
   const promises: Promise<any>[] = [];
   productMap.forEach((tSubRow) => {
@@ -196,7 +198,7 @@ export async function reduceMapToInvoiceEntries(productMap: Map<string, SubTrans
       priceInclVat: product.priceInclVat,
       vatPercentage: product.vat.percentage,
     });
-    promises.push(InvoiceEntry.save(entry).then((i) => invoiceEntries.push(i)));
+    promises.push(manager.save(InvoiceEntry, entry).then((i: InvoiceEntry) => invoiceEntries.push(i)));
   });
   await Promise.all(promises);
   return invoiceEntries;
