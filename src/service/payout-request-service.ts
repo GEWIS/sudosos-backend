@@ -349,7 +349,7 @@ export default class PayoutRequestService {
 
     const options: FindManyOptions<PayoutRequest> = {
       where,
-      order: { createdAt: 'DESC' },
+      order: { updatedAt: 'DESC' },
     };
 
     return { ...options, relations };
