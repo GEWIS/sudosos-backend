@@ -23,11 +23,11 @@ import Policy from './policy';
 import StripeService from '../service/stripe-service';
 import { RequestWithRawBody } from '../helpers/raw-body';
 import { StripePublicKeyResponse } from './response/stripe-response';
+import { AppDataSource } from '../database/database';
+import Stripe from 'stripe';
 
 export default class StripeWebhookController extends BaseController {
   private logger: Logger = log4js.getLogger('StripeController');
-
-  private stripeService: StripeService;
 
   /**
    * Create a new stripe webhook controller instance
@@ -36,7 +36,6 @@ export default class StripeWebhookController extends BaseController {
   public constructor(options: BaseControllerOptions) {
     super(options);
     this.logger.level = process.env.LOG_LEVEL;
-    this.stripeService = new StripeService();
   }
 
   /**
@@ -90,16 +89,22 @@ export default class StripeWebhookController extends BaseController {
     const { rawBody } = req;
     const signature = req.headers['stripe-signature'];
 
-    let webhookEvent;
+    let webhookEvent: Stripe.Event;
     try {
-      webhookEvent = await this.stripeService.constructWebhookEvent(rawBody, signature);
+      const service = new StripeService();
+      webhookEvent = await service.constructWebhookEvent(rawBody, signature);
     } catch (error) {
       res.status(400).json('Event could not be verified');
       return;
     }
 
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    this.stripeService.handleWebhookEvent(webhookEvent);
+    AppDataSource.manager.transaction(async (manager) => {
+      const stripeService = new StripeService(manager);
+      await stripeService.handleWebhookEvent(webhookEvent);
+    }).catch((error) => {
+      this.logger.error(error);
+    });
 
     res.status(200).send();
   }

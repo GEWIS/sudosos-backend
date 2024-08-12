@@ -26,7 +26,6 @@ import StripeDeposit from '../../../src/entity/stripe/stripe-deposit';
 import StripeService, { STRIPE_API_VERSION } from '../../../src/service/stripe-service';
 import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
 import { StripePaymentIntentState } from '../../../src/entity/stripe/stripe-payment-intent-status';
-import wrapInManager from '../../../src/helpers/database';
 import BalanceResponse from '../../../src/controller/response/balance-response';
 import { StripeRequest } from '../../../src/controller/request/stripe-request';
 import { truncateAllTables } from '../../setup';
@@ -105,7 +104,7 @@ describe('StripeService', async (): Promise<void> => {
       expect(intent).to.not.be.undefined;
 
       const countAfter = await StripeDeposit.count();
-      const stripeDeposit = await StripeService.getStripeDeposit(intent.id);
+      const stripeDeposit = await new StripeService().getStripeDeposit(intent.id);
 
       expect(stripeDeposit).to.not.be.undefined;
       expect(stripeDeposit.id).to.equal(intent.id);
@@ -118,24 +117,24 @@ describe('StripeService', async (): Promise<void> => {
 
   describe('createNewDepositStatus', () => {
     const testStatusCreation = async (id: number, state: StripePaymentIntentState) => {
-      const beforeStripeDeposit = await StripeService.getStripeDeposit(id);
+      const beforeStripeDeposit = await new StripeService().getStripeDeposit(id);
 
       // Precondition: state does not yet exist
       expect(beforeStripeDeposit.stripePaymentIntent.paymentIntentStatuses
         .some((s) => s.state === state))
         .to.be.false;
 
-      const status = await wrapInManager(StripeService.createNewPaymentIntentStatus)(id, state);
+      const status = await new StripeService().createNewPaymentIntentStatus(id, state);
       expect(status.state).to.equal(state);
 
-      const afterStripeDeposit = await StripeService.getStripeDeposit(id);
+      const afterStripeDeposit = await new StripeService().getStripeDeposit(id);
       expect(afterStripeDeposit.stripePaymentIntent.paymentIntentStatuses.length)
         .to.equal(beforeStripeDeposit.stripePaymentIntent.paymentIntentStatuses.length + 1);
       expect(afterStripeDeposit.stripePaymentIntent.paymentIntentStatuses
         .some((s) => s.state === state))
         .to.be.true;
 
-      await expect(wrapInManager(StripeService.createNewPaymentIntentStatus)(id, state))
+      await expect(new StripeService().createNewPaymentIntentStatus(id, state))
         .to.eventually.be.rejectedWith(`Status ${state} already exists.`);
     };
     it('should correctly create only one created status', async () => {
@@ -148,12 +147,12 @@ describe('StripeService', async (): Promise<void> => {
     });
     it('should correctly create only one success status', async () => {
       const { id } = (ctx.stripeDeposits.filter((d) => d.stripePaymentIntent.paymentIntentStatuses.length === 2))[0];
-      let deposit = await StripeService.getStripeDeposit(id);
+      let deposit = await new StripeService().getStripeDeposit(id);
       expect(deposit.transfer).to.be.undefined;
 
       await testStatusCreation(id, StripePaymentIntentState.SUCCEEDED);
 
-      deposit = await StripeService.getStripeDeposit(id, ['transfer', 'transfer.to', 'to']);
+      deposit = await new StripeService().getStripeDeposit(id, ['transfer', 'transfer.to', 'to']);
       expect(ctx.dineroTransformer.to(deposit.transfer.amountInclVat))
         .to.equal(ctx.dineroTransformer.to(deposit.stripePaymentIntent.amount));
       expect(deposit.transfer.to.id).to.equal(deposit.to.id);
@@ -166,7 +165,7 @@ describe('StripeService', async (): Promise<void> => {
       const { id } = ctx.stripeDeposits[0];
       const state = StripePaymentIntentState.CREATED;
 
-      await expect(wrapInManager(StripeService.createNewPaymentIntentStatus)(id, state))
+      await expect(new StripeService().createNewPaymentIntentStatus(id, state))
         .to.eventually.be.rejectedWith(`Status ${state} already exists.`);
     });
     it('should not create "SUCCEEDED" state when "FAILED" already exists', async () => {
@@ -174,7 +173,7 @@ describe('StripeService', async (): Promise<void> => {
         .some((s) => s.state === StripePaymentIntentState.FAILED)))[0];
       const state = StripePaymentIntentState.SUCCEEDED;
 
-      await expect(wrapInManager(StripeService.createNewPaymentIntentStatus)(id, state))
+      await expect(new StripeService().createNewPaymentIntentStatus(id, state))
         .to.eventually.be.rejectedWith('Cannot create status SUCCEEDED, because FAILED already exists');
     });
     it('should not create "FAILED" state when "SUCCEEDED" already exists', async () => {
@@ -182,14 +181,14 @@ describe('StripeService', async (): Promise<void> => {
         .some((s) => s.state === StripePaymentIntentState.SUCCEEDED)))[0];
       const state = StripePaymentIntentState.FAILED;
 
-      await expect(wrapInManager(StripeService.createNewPaymentIntentStatus)(id, state))
+      await expect(new StripeService().createNewPaymentIntentStatus(id, state))
         .to.eventually.be.rejectedWith('Cannot create status FAILED, because SUCCEEDED already exists');
     });
   });
 
   describe('handleWebhookEvent', async () => {
     const testHandleWebhookEvent = async (id: number, state: StripePaymentIntentState) => {
-      const beforeStripeDeposit = await StripeService.getStripeDeposit(id);
+      const beforeStripeDeposit = await new StripeService().getStripeDeposit(id);
 
       // Precondition: state does not yet exist
       expect(beforeStripeDeposit.stripePaymentIntent.paymentIntentStatuses.some((s) => s.state === state)).to.be.false;
@@ -225,7 +224,7 @@ describe('StripeService', async (): Promise<void> => {
 
       await expect(ctx.stripeService.handleWebhookEvent(event)).to.eventually.be.fulfilled;
 
-      const afterStripeDeposit = await StripeService.getStripeDeposit(id);
+      const afterStripeDeposit = await new StripeService().getStripeDeposit(id);
       expect(afterStripeDeposit.stripePaymentIntent.paymentIntentStatuses.length)
         .to.equal(beforeStripeDeposit.stripePaymentIntent.paymentIntentStatuses.length + 1);
       expect(afterStripeDeposit.stripePaymentIntent.paymentIntentStatuses.some((s) => s.state === state)).to.be.true;
@@ -249,7 +248,7 @@ describe('StripeService', async (): Promise<void> => {
     });
     it('should correctly do nothing when type is not listed', async () => {
       const { id } = ctx.stripeDeposits[ctx.stripeDeposits.length - 1];
-      const beforeStripeDeposit = await StripeService.getStripeDeposit(id);
+      const beforeStripeDeposit = await new StripeService().getStripeDeposit(id);
 
       const event = {
         type: 'unknown_stripe_event_to_test_stuff',
@@ -262,7 +261,7 @@ describe('StripeService', async (): Promise<void> => {
       } as unknown as Stripe.Event;
 
       await expect(ctx.stripeService.handleWebhookEvent(event)).to.be.eventually.fulfilled;
-      const afterStripeDeposit = await StripeService.getStripeDeposit(id);
+      const afterStripeDeposit = await new StripeService().getStripeDeposit(id);
 
       expect(afterStripeDeposit.stripePaymentIntent.paymentIntentStatuses.length)
         .to.equal(beforeStripeDeposit.stripePaymentIntent.paymentIntentStatuses.length);

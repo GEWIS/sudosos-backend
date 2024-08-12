@@ -31,10 +31,10 @@ import {
 import TransferService from './transfer-service';
 import { EntityManager, IsNull } from 'typeorm';
 import { parseUserToBaseResponse } from '../helpers/revision-to-response';
-import wrapInManager from '../helpers/database';
 import BalanceResponse from '../controller/response/balance-response';
 import { StripeRequest } from '../controller/request/stripe-request';
 import StripePaymentIntent from '../entity/stripe/stripe-payment-intent';
+import { AppDataSource } from '../database/database';
 
 export const STRIPE_API_VERSION = '2024-06-20';
 
@@ -43,11 +43,15 @@ export default class StripeService {
 
   private logger: Logger;
 
-  constructor() {
+  private manager: EntityManager;
+
+  constructor(manager?: EntityManager) {
     this.stripe = new Stripe(process.env.STRIPE_PRIVATE_KEY, {
       apiVersion: STRIPE_API_VERSION,
     });
     this.logger = getLogger('StripeController');
+
+    this.manager = manager ?? AppDataSource.manager;
   }
 
   /**
@@ -120,8 +124,8 @@ export default class StripeService {
       .map((d) => this.asStripeDepositResponse(d));
   }
 
-  public static async getStripeDeposit(id: number, relations: string[] = []): Promise<StripeDeposit> {
-    return StripeDeposit.findOne({
+  public async getStripeDeposit(id: number, relations: string[] = []): Promise<StripeDeposit> {
+    return this.manager.getRepository(StripeDeposit).findOne({
       where: { id },
       relations: ['stripePaymentIntent', 'stripePaymentIntent.paymentIntentStatuses'].concat(relations),
     });
@@ -141,12 +145,12 @@ export default class StripeService {
       automatic_payment_methods: { enabled: true },
     });
 
-    const stripePaymentIntent = await StripePaymentIntent.save({
+    const stripePaymentIntent = await this.manager.getRepository(StripePaymentIntent).save({
       stripeId: paymentIntent.id,
       amount,
       paymentIntentStatuses: [],
     });
-    const stripeDeposit = await StripeDeposit.save({
+    const stripeDeposit = await this.manager.getRepository(StripeDeposit).save({
       stripePaymentIntent,
       to: user,
     });
@@ -173,14 +177,13 @@ export default class StripeService {
 
   /**
    * Create a new deposit status
-   * @param manager
    * @param paymentIntentId
    * @param state
    */
-  public static async createNewPaymentIntentStatus(
-    manager: EntityManager, paymentIntentId: number, state: StripePaymentIntentState,
+  public async createNewPaymentIntentStatus(
+    paymentIntentId: number, state: StripePaymentIntentState,
   ): Promise<StripePaymentIntentStatus> {
-    const paymentIntent = await manager.getRepository(StripePaymentIntent)
+    const paymentIntent = await this.manager.getRepository(StripePaymentIntent)
       .findOne({ where: { id: paymentIntentId } });
 
     const states = paymentIntent.paymentIntentStatuses?.map((status) => status.state) ?? [];
@@ -192,7 +195,8 @@ export default class StripeService {
       throw new Error('Cannot create status FAILED, because SUCCEEDED already exists');
     }
 
-    const depositStatus = await manager.getRepository(StripePaymentIntentStatus).save({ stripePaymentIntent: paymentIntent, state });
+    const depositStatus = await this.manager.getRepository(StripePaymentIntentStatus)
+      .save({ stripePaymentIntent: paymentIntent, state });
 
     // If payment has succeeded, create the transfer
     if (state === StripePaymentIntentState.SUCCEEDED && paymentIntent.deposit) {
@@ -205,9 +209,9 @@ export default class StripeService {
         toId: paymentIntent.deposit.to.id,
         description: paymentIntent.stripeId,
         fromId: undefined,
-      }, manager);
+      }, this.manager);
 
-      await manager.save(paymentIntent.deposit);
+      await this.manager.save(paymentIntent.deposit);
     }
 
     return depositStatus;
@@ -227,16 +231,16 @@ export default class StripeService {
 
       switch (event.type) {
         case 'payment_intent.created':
-          await wrapInManager(StripeService.createNewPaymentIntentStatus)(paymentIntent.id, StripePaymentIntentState.CREATED);
+          await this.createNewPaymentIntentStatus(paymentIntent.id, StripePaymentIntentState.CREATED);
           break;
         case 'payment_intent.processing':
-          await wrapInManager(StripeService.createNewPaymentIntentStatus)(paymentIntent.id, StripePaymentIntentState.PROCESSING);
+          await this.createNewPaymentIntentStatus(paymentIntent.id, StripePaymentIntentState.PROCESSING);
           break;
         case 'payment_intent.succeeded':
-          await wrapInManager(StripeService.createNewPaymentIntentStatus)(paymentIntent.id, StripePaymentIntentState.SUCCEEDED);
+          await this.createNewPaymentIntentStatus(paymentIntent.id, StripePaymentIntentState.SUCCEEDED);
           break;
         case 'payment_intent.payment_failed':
-          await wrapInManager(StripeService.createNewPaymentIntentStatus)(paymentIntent.id, StripePaymentIntentState.FAILED);
+          await this.createNewPaymentIntentStatus(paymentIntent.id, StripePaymentIntentState.FAILED);
           break;
         default:
           this.logger.warn('Tried to process event', event.type, 'but processing method is not defined');
