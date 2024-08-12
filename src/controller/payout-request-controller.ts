@@ -30,6 +30,7 @@ import PayoutRequestRequest from './request/payout-request-request';
 import User from '../entity/user/user';
 import BalanceService from '../service/balance-service';
 import FileService from '../service/file-service';
+import { PdfUrlResponse } from './response/simple-file-response';
 
 export default class PayoutRequestController extends BaseController {
   private logger: Logger = log4js.getLogger('PayoutRequestController');
@@ -273,8 +274,8 @@ export default class PayoutRequestController extends BaseController {
    * @tags payoutRequests - Operations of the payout request controller
    * @security JWT
    * @param {integer} id.path.required - The ID of the payout request object that should be returned
+   * @return {PdfUrlResponse} 200 - The pdf location information.
    * @return {string} 404 - Nonexistent payout request id
-   * @return {string} 200 - The pdf location information.
    * @return {string} 500 - Internal server error
    */
   public async getPayoutRequestPdf(req: RequestWithToken, res: Response): Promise<void> {
@@ -291,7 +292,7 @@ export default class PayoutRequestController extends BaseController {
 
       const pdf = await FileService.getOrCreatePDF(payoutRequest);
 
-      res.status(200).json({ pdf: pdf.downloadName });
+      res.status(200).json({ pdf: pdf.downloadName } as PdfUrlResponse);
     } catch (error) {
       this.logger.error('Could get payout request PDF:', error);
       res.status(500).json('Internal server error.');
