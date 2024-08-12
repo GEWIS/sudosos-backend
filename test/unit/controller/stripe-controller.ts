@@ -22,7 +22,7 @@ import { json } from 'body-parser';
 import { expect, request } from 'chai';
 import StripeController from '../../../src/controller/stripe-controller';
 import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
-import StripeDeposit from '../../../src/entity/deposit/stripe-deposit';
+import StripeDeposit from '../../../src/entity/stripe/stripe-deposit';
 import Database from '../../../src/database/database';
 import { seedStripeDeposits } from '../../seed';
 import TokenHandler from '../../../src/authentication/token-handler';

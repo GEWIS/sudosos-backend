@@ -15,33 +15,20 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-
-import {
-  Column, Entity, JoinColumn, ManyToOne, OneToMany, OneToOne,
-} from 'typeorm';
-import { Dinero } from 'dinero.js';
 import BaseEntity from '../base-entity';
-import User from '../user/user';
+import { Column, Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
+import StripePaymentIntentStatus from './stripe-payment-intent-status';
 import DineroTransformer from '../transformer/dinero-transformer';
-// eslint-disable-next-line import/no-cycle
-import StripeDepositStatus from './stripe-deposit-status';
-import Transfer from '../transactions/transfer';
+import { Dinero } from 'dinero.js';
+import StripeDeposit from './stripe-deposit';
 
 @Entity()
-export default class StripeDeposit extends BaseEntity {
-  @ManyToOne(() => User, { nullable: false, eager: true })
-  @JoinColumn()
-  public to: User;
-
-  @OneToOne(() => Transfer, { nullable: true })
-  @JoinColumn()
-  public transfer?: Transfer;
-
-  @OneToMany(() => StripeDepositStatus,
-    (depositStatus) => depositStatus.deposit,
+export default class StripePaymentIntent extends BaseEntity {
+  @OneToMany(() => StripePaymentIntentStatus,
+    (paymentStatus) => paymentStatus.stripePaymentIntent,
     { cascade: true, eager: true })
   @JoinColumn()
-  public depositStatus: StripeDepositStatus[];
+  public paymentIntentStatuses: StripePaymentIntentStatus[];
 
   @Column({ unique: true })
   public stripeId: string;
@@ -51,4 +38,7 @@ export default class StripeDeposit extends BaseEntity {
     transformer: DineroTransformer.Instance,
   })
   public amount: Dinero;
+
+  @OneToOne(() => StripeDeposit, (s) => s.stripePaymentIntent, { nullable: true })
+  public deposit: StripeDeposit | null;
 }

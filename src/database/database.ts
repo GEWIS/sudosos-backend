@@ -50,8 +50,8 @@ import InvoiceStatus from '../entity/invoices/invoice-status';
 import BaseFile from '../entity/file/base-file';
 import ProductImage from '../entity/file/product-image';
 import BannerImage from '../entity/file/banner-image';
-import StripeDeposit from '../entity/deposit/stripe-deposit';
-import StripeDepositStatus from '../entity/deposit/stripe-deposit-status';
+import StripeDeposit from '../entity/stripe/stripe-deposit';
+import StripePaymentIntentStatus from '../entity/stripe/stripe-payment-intent-status';
 import PayoutRequest from '../entity/transactions/payout-request';
 import PayoutRequestStatus from '../entity/transactions/payout-request-status';
 import LDAPAuthenticator from '../entity/authenticator/ldap-authenticator';
@@ -88,6 +88,8 @@ import { PosUsers1722084520361 } from '../migrations/1722084520361-pos-users';
 import { InvoiceRework1622118077157 } from '../migrations/1722118077157-invoice-rework';
 import InvoiceStatusSubscriber from '../subscriber/invoice-status-subscriber';
 import { InvoiceDebitorCreditor1722598638179 } from '../migrations/1722598638179-invoice-debitor-creditor';
+import StripePaymentIntent from '../entity/stripe/stripe-payment-intent';
+import { StripePaymentIntents1722869409448 } from '../migrations/1722869409448-stripe-payment-intents';
 
 // We need to load the dotenv to prevent the env from being undefined.
 dotenv.config();
@@ -117,6 +119,7 @@ const options: DataSourceOptions = {
     WriteOffs1722004753128,
     InvoiceRework1622118077157,
     InvoiceDebitorCreditor1722598638179,
+    StripePaymentIntents1722869409448,
   ],
   extra: {
     authPlugins: {
@@ -136,7 +139,8 @@ const options: DataSourceOptions = {
     PointOfSaleRevision,
     Transfer,
     StripeDeposit,
-    StripeDepositStatus,
+    StripePaymentIntent,
+    StripePaymentIntentStatus,
     PayoutRequest,
     PayoutRequestPdf,
     PayoutRequestStatus,

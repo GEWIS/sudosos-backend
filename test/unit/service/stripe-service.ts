@@ -22,10 +22,10 @@ import Stripe from 'stripe';
 import User from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import { seedStripeDeposits, seedUsers } from '../../seed';
-import StripeDeposit from '../../../src/entity/deposit/stripe-deposit';
+import StripeDeposit from '../../../src/entity/stripe/stripe-deposit';
 import StripeService, { STRIPE_API_VERSION } from '../../../src/service/stripe-service';
 import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
-import { StripeDepositState } from '../../../src/entity/deposit/stripe-deposit-status';
+import { StripePaymentIntentState } from '../../../src/entity/stripe/stripe-payment-intent-status';
 import wrapInManager from '../../../src/helpers/database';
 import BalanceResponse from '../../../src/controller/response/balance-response';
 import { StripeRequest } from '../../../src/controller/request/stripe-request';
@@ -75,7 +75,9 @@ describe('StripeService', async (): Promise<void> => {
   describe('getProcessingStripeDepositsFromUser', () => {
     it('should return the correct deposits', async () => {
       const processingDeposits = ctx.stripeDeposits.filter((d) => {
-        return d.depositStatus.length === 2 && d.depositStatus.some((s) => s.state === StripeDepositState.PROCESSING);
+        return d.stripePaymentIntent.paymentIntentStatuses.length === 2
+          && d.stripePaymentIntent.paymentIntentStatuses
+            .some((s) => s.state === StripePaymentIntentState.PROCESSING);
       });
 
       const user = processingDeposits[0].to;
@@ -87,7 +89,7 @@ describe('StripeService', async (): Promise<void> => {
         expect(d.to.id).to.equal(user.id);
         const states = d.depositStatus
           .map((s) => s.state);
-        expect(states[states.length - 1]).to.equal(StripeDepositState.PROCESSING);
+        expect(states[states.length - 1]).to.equal(StripePaymentIntentState.PROCESSING);
       });
     });
   });
@@ -109,97 +111,101 @@ describe('StripeService', async (): Promise<void> => {
       expect(stripeDeposit.id).to.equal(intent.id);
       expect(countAfter).to.equal(countBefore + 1);
 
-      expect(intent.stripeId).to.equal(stripeDeposit.stripeId);
-      expect(stripeDeposit.depositStatus.length).to.equal(0);
+      expect(intent.stripeId).to.equal(stripeDeposit.stripePaymentIntent.stripeId);
+      expect(stripeDeposit.stripePaymentIntent.paymentIntentStatuses.length).to.equal(0);
     });
   });
 
   describe('createNewDepositStatus', () => {
-    const testStatusCreation = async (id: number, state: StripeDepositState) => {
+    const testStatusCreation = async (id: number, state: StripePaymentIntentState) => {
       const beforeStripeDeposit = await StripeService.getStripeDeposit(id);
 
       // Precondition: state does not yet exist
-      expect(beforeStripeDeposit.depositStatus.some((s) => s.state === state)).to.be.false;
+      expect(beforeStripeDeposit.stripePaymentIntent.paymentIntentStatuses
+        .some((s) => s.state === state))
+        .to.be.false;
 
-      const status = await wrapInManager(StripeService.createNewDepositStatus)(id, state);
+      const status = await wrapInManager(StripeService.createNewPaymentIntentStatus)(id, state);
       expect(status.state).to.equal(state);
 
       const afterStripeDeposit = await StripeService.getStripeDeposit(id);
-      expect(afterStripeDeposit.depositStatus.length)
-        .to.equal(beforeStripeDeposit.depositStatus.length + 1);
-      expect(afterStripeDeposit.depositStatus.some((s) => s.state === state)).to.be.true;
+      expect(afterStripeDeposit.stripePaymentIntent.paymentIntentStatuses.length)
+        .to.equal(beforeStripeDeposit.stripePaymentIntent.paymentIntentStatuses.length + 1);
+      expect(afterStripeDeposit.stripePaymentIntent.paymentIntentStatuses
+        .some((s) => s.state === state))
+        .to.be.true;
 
-      await expect(wrapInManager(StripeService.createNewDepositStatus)(id, state))
+      await expect(wrapInManager(StripeService.createNewPaymentIntentStatus)(id, state))
         .to.eventually.be.rejectedWith(`Status ${state} already exists.`);
     };
     it('should correctly create only one created status', async () => {
-      const { id } = (ctx.stripeDeposits.filter((d) => d.depositStatus.length === 0))[0];
-      await testStatusCreation(id, StripeDepositState.CREATED);
+      const { id } = (ctx.stripeDeposits.filter((d) => d.stripePaymentIntent.paymentIntentStatuses.length === 0))[0];
+      await testStatusCreation(id, StripePaymentIntentState.CREATED);
     });
     it('should correctly create only one processing status', async () => {
-      const { id } = (ctx.stripeDeposits.filter((d) => d.depositStatus.length === 1))[0];
-      await testStatusCreation(id, StripeDepositState.PROCESSING);
+      const { id } = (ctx.stripeDeposits.filter((d) => d.stripePaymentIntent.paymentIntentStatuses.length === 1))[0];
+      await testStatusCreation(id, StripePaymentIntentState.PROCESSING);
     });
     it('should correctly create only one success status', async () => {
-      const { id } = (ctx.stripeDeposits.filter((d) => d.depositStatus.length === 2))[0];
+      const { id } = (ctx.stripeDeposits.filter((d) => d.stripePaymentIntent.paymentIntentStatuses.length === 2))[0];
       let deposit = await StripeService.getStripeDeposit(id);
       expect(deposit.transfer).to.be.undefined;
 
-      await testStatusCreation(id, StripeDepositState.SUCCEEDED);
+      await testStatusCreation(id, StripePaymentIntentState.SUCCEEDED);
 
       deposit = await StripeService.getStripeDeposit(id, ['transfer', 'transfer.to', 'to']);
       expect(ctx.dineroTransformer.to(deposit.transfer.amountInclVat))
-        .to.equal(ctx.dineroTransformer.to(deposit.amount));
+        .to.equal(ctx.dineroTransformer.to(deposit.stripePaymentIntent.amount));
       expect(deposit.transfer.to.id).to.equal(deposit.to.id);
     });
     it('should correctly create only one failed status', async () => {
-      const { id } = (ctx.stripeDeposits.filter((d) => d.depositStatus.length === 2))[1];
-      await testStatusCreation(id, StripeDepositState.FAILED);
+      const { id } = (ctx.stripeDeposits.filter((d) => d.stripePaymentIntent.paymentIntentStatuses.length === 2))[1];
+      await testStatusCreation(id, StripePaymentIntentState.FAILED);
     });
     it('should not create duplicate created status', async () => {
       const { id } = ctx.stripeDeposits[0];
-      const state = StripeDepositState.CREATED;
+      const state = StripePaymentIntentState.CREATED;
 
-      await expect(wrapInManager(StripeService.createNewDepositStatus)(id, state))
+      await expect(wrapInManager(StripeService.createNewPaymentIntentStatus)(id, state))
         .to.eventually.be.rejectedWith(`Status ${state} already exists.`);
     });
     it('should not create "SUCCEEDED" state when "FAILED" already exists', async () => {
-      const { id } = (ctx.stripeDeposits.filter((d) => d.depositStatus
-        .some((s) => s.state === StripeDepositState.FAILED)))[0];
-      const state = StripeDepositState.SUCCEEDED;
+      const { id } = (ctx.stripeDeposits.filter((d) => d.stripePaymentIntent.paymentIntentStatuses
+        .some((s) => s.state === StripePaymentIntentState.FAILED)))[0];
+      const state = StripePaymentIntentState.SUCCEEDED;
 
-      await expect(wrapInManager(StripeService.createNewDepositStatus)(id, state))
+      await expect(wrapInManager(StripeService.createNewPaymentIntentStatus)(id, state))
         .to.eventually.be.rejectedWith('Cannot create status SUCCEEDED, because FAILED already exists');
     });
     it('should not create "FAILED" state when "SUCCEEDED" already exists', async () => {
-      const { id } = (ctx.stripeDeposits.filter((d) => d.depositStatus
-        .some((s) => s.state === StripeDepositState.SUCCEEDED)))[0];
-      const state = StripeDepositState.FAILED;
+      const { id } = (ctx.stripeDeposits.filter((d) => d.stripePaymentIntent.paymentIntentStatuses
+        .some((s) => s.state === StripePaymentIntentState.SUCCEEDED)))[0];
+      const state = StripePaymentIntentState.FAILED;
 
-      await expect(wrapInManager(StripeService.createNewDepositStatus)(id, state))
+      await expect(wrapInManager(StripeService.createNewPaymentIntentStatus)(id, state))
         .to.eventually.be.rejectedWith('Cannot create status FAILED, because SUCCEEDED already exists');
     });
   });
 
   describe('handleWebhookEvent', async () => {
-    const testHandleWebhookEvent = async (id: number, state: StripeDepositState) => {
+    const testHandleWebhookEvent = async (id: number, state: StripePaymentIntentState) => {
       const beforeStripeDeposit = await StripeService.getStripeDeposit(id);
 
       // Precondition: state does not yet exist
-      expect(beforeStripeDeposit.depositStatus.some((s) => s.state === state)).to.be.false;
+      expect(beforeStripeDeposit.stripePaymentIntent.paymentIntentStatuses.some((s) => s.state === state)).to.be.false;
 
       let type;
       switch (state) {
-        case StripeDepositState.CREATED:
+        case StripePaymentIntentState.CREATED:
           type = 'payment_intent.created';
           break;
-        case StripeDepositState.PROCESSING:
+        case StripePaymentIntentState.PROCESSING:
           type = 'payment_intent.processing';
           break;
-        case StripeDepositState.SUCCEEDED:
+        case StripePaymentIntentState.SUCCEEDED:
           type = 'payment_intent.succeeded';
           break;
-        case StripeDepositState.FAILED:
+        case StripePaymentIntentState.FAILED:
           type = 'payment_intent.payment_failed';
           break;
         default:
@@ -212,7 +218,7 @@ describe('StripeService', async (): Promise<void> => {
         api_version: STRIPE_API_VERSION,
         data: {
           object: {
-            id: beforeStripeDeposit.stripeId,
+            id: beforeStripeDeposit.stripePaymentIntent.stripeId,
           } as any,
         },
       } as Stripe.Event;
@@ -220,26 +226,26 @@ describe('StripeService', async (): Promise<void> => {
       await expect(ctx.stripeService.handleWebhookEvent(event)).to.eventually.be.fulfilled;
 
       const afterStripeDeposit = await StripeService.getStripeDeposit(id);
-      expect(afterStripeDeposit.depositStatus.length)
-        .to.equal(beforeStripeDeposit.depositStatus.length + 1);
-      expect(afterStripeDeposit.depositStatus.some((s) => s.state === state)).to.be.true;
+      expect(afterStripeDeposit.stripePaymentIntent.paymentIntentStatuses.length)
+        .to.equal(beforeStripeDeposit.stripePaymentIntent.paymentIntentStatuses.length + 1);
+      expect(afterStripeDeposit.stripePaymentIntent.paymentIntentStatuses.some((s) => s.state === state)).to.be.true;
     };
 
     it('should correctly handle payment_intent.created', async () => {
-      const { id } = (ctx.stripeDeposits.filter((d) => d.depositStatus.length === 0))[1];
-      await testHandleWebhookEvent(id, StripeDepositState.CREATED);
+      const { id } = (ctx.stripeDeposits.filter((d) => d.stripePaymentIntent.paymentIntentStatuses.length === 0))[1];
+      await testHandleWebhookEvent(id, StripePaymentIntentState.CREATED);
     });
     it('should correctly handle payment_intent.processing', async () => {
-      const { id } = (ctx.stripeDeposits.filter((d) => d.depositStatus.length === 1))[1];
-      await testHandleWebhookEvent(id, StripeDepositState.PROCESSING);
+      const { id } = (ctx.stripeDeposits.filter((d) => d.stripePaymentIntent.paymentIntentStatuses.length === 1))[1];
+      await testHandleWebhookEvent(id, StripePaymentIntentState.PROCESSING);
     });
     it('should correctly handle payment_intent.succeeded', async () => {
-      const { id } = (ctx.stripeDeposits.filter((d) => d.depositStatus.length === 2))[2];
-      await testHandleWebhookEvent(id, StripeDepositState.SUCCEEDED);
+      const { id } = (ctx.stripeDeposits.filter((d) => d.stripePaymentIntent.paymentIntentStatuses.length === 2))[2];
+      await testHandleWebhookEvent(id, StripePaymentIntentState.SUCCEEDED);
     });
     it('should correctly handle payment_intent.payment_failed', async () => {
-      const { id } = (ctx.stripeDeposits.filter((d) => d.depositStatus.length === 2))[3];
-      await testHandleWebhookEvent(id, StripeDepositState.FAILED);
+      const { id } = (ctx.stripeDeposits.filter((d) => d.stripePaymentIntent.paymentIntentStatuses.length === 2))[3];
+      await testHandleWebhookEvent(id, StripePaymentIntentState.FAILED);
     });
     it('should correctly do nothing when type is not listed', async () => {
       const { id } = ctx.stripeDeposits[ctx.stripeDeposits.length - 1];
@@ -250,7 +256,7 @@ describe('StripeService', async (): Promise<void> => {
         api_version: STRIPE_API_VERSION,
         data: {
           object: {
-            id: beforeStripeDeposit.stripeId,
+            id: beforeStripeDeposit.stripePaymentIntent.stripeId,
           } as any,
         },
       } as unknown as Stripe.Event;
@@ -258,8 +264,8 @@ describe('StripeService', async (): Promise<void> => {
       await expect(ctx.stripeService.handleWebhookEvent(event)).to.be.eventually.fulfilled;
       const afterStripeDeposit = await StripeService.getStripeDeposit(id);
 
-      expect(afterStripeDeposit.depositStatus.length)
-        .to.equal(beforeStripeDeposit.depositStatus.length);
+      expect(afterStripeDeposit.stripePaymentIntent.paymentIntentStatuses.length)
+        .to.equal(beforeStripeDeposit.stripePaymentIntent.paymentIntentStatuses.length);
       expect(afterStripeDeposit.updatedAt.getTime())
         .to.equal(beforeStripeDeposit.updatedAt.getTime());
     });
