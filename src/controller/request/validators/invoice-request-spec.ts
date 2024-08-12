@@ -76,7 +76,7 @@ async function validTransactionIds<T extends BaseInvoice>(p: T) {
     });
   });
   if (alreadyInvoiced.length !== 0) return toFail(SUBTRANSACTION_ALREADY_INVOICED(alreadyInvoiced));
-  if (p.isCreditInvoice && fromInvoiceAccount.length !== 1) return toFail(CREDIT_CONTAINS_INVOICE_ACCOUNT(fromInvoiceAccount));
+  if (p.isCreditInvoice && fromInvoiceAccount.length !== 0) return toFail(CREDIT_CONTAINS_INVOICE_ACCOUNT(fromInvoiceAccount));
   return toPass(p);
 }
 
