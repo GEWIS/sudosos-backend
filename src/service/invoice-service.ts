@@ -48,6 +48,7 @@ import { collectByToId, collectProductsByRevision, reduceMapToInvoiceEntries } f
 import SubTransaction from '../entity/transactions/sub-transaction';
 import InvoiceUser, { InvoiceUserDefaults } from '../entity/user/invoice-user';
 import { AppDataSource } from '../database/database';
+import { NotImplementedError } from '../helpers/errors';
 
 export interface InvoiceFilterParameters {
   /**
@@ -499,6 +500,25 @@ export default class InvoiceService {
   }
 
   /**
+   * Checks if all transaction are for the same seller
+   * @param ids
+   */
+  public static async checkSingleSellerTransactions(ids: number[]) {
+    const transactions = await Transaction.find({ where: { id: In(ids) }, relations: ['subTransactions', 'subTransactions.to'] });
+    // Get all sellers from sub transactions
+    const sellers = new Set<number>();
+    transactions.forEach((t) => {
+      t.subTransactions.forEach((tSub) => {
+        sellers.add(tSub.to.id);
+      });
+    });
+
+    if (sellers.size > 1) {
+      throw new NotImplementedError('Transactions are not for the same seller');
+    }
+  }
+
+  /**
    * Creates an Invoice from an CreateInvoiceRequest
    * @param manager - The EntityManager context to use.
    * @param invoiceRequest - The Invoice request to create
@@ -535,6 +555,7 @@ export default class InvoiceService {
     }
 
     const transactions = (await (new TransactionService(this.manager)).getTransactions(params, {})).records;
+    if (!isCreditInvoice) await InvoiceService.checkSingleSellerTransactions(transactions.map((t) => t.id));
     const transfer = await this.createTransferFromTransactions(forId, transactions, isCreditInvoice);
 
     // Create a new Invoice

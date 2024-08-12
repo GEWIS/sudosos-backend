@@ -40,6 +40,7 @@ import InvoiceUser from '../entity/user/invoice-user';
 import { parseInvoiceUserToResponse } from '../helpers/revision-to-response';
 import FileService from '../service/file-service';
 import { AppDataSource } from '../database/database';
+import { NotImplementedError } from '../helpers/errors';
 
 export default class InvoiceController extends BaseController {
   private logger: Logger = log4js.getLogger('InvoiceController');
@@ -230,6 +231,10 @@ export default class InvoiceController extends BaseController {
         Promise.resolve(new InvoiceService(manager).createInvoice(params)));
       res.json(InvoiceService.toResponse(invoice, true));
     } catch (error) {
+      if (error instanceof NotImplementedError) {
+        res.status(501).json(error.message);
+        return;
+      }
       this.logger.error('Could not create invoice:', error);
       res.status(500).json('Internal server error.');
     }
