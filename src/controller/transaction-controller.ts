@@ -124,7 +124,7 @@ export default class TransactionController extends BaseController {
     }
 
     try {
-      const transactions = await TransactionService.getTransactions(filters, { take, skip });
+      const transactions = await new TransactionService().getTransactions(filters, { take, skip });
       res.status(200).json(transactions);
     } catch (e) {
       res.status(500).send();
@@ -151,18 +151,18 @@ export default class TransactionController extends BaseController {
 
     // handle request
     try {
-      if (!await TransactionService.verifyTransaction(body)) {
+      if (!await new TransactionService().verifyTransaction(body)) {
         res.status(400).json('Invalid transaction.');
         return;
       }
 
       // verify balance if user cannot have negative balance.
       const user = await User.findOne({ where: { id: body.from } });
-      if (!user.canGoIntoDebt && !await TransactionService.verifyBalance(body)) {
+      if (!user.canGoIntoDebt && !await new TransactionService().verifyBalance(body)) {
         res.status(403).json('Insufficient balance.');
       } else {
         // create the transaction
-        res.json(await TransactionService.createTransaction(body));
+        res.json(await new TransactionService().createTransaction(body));
       }
     } catch (error) {
       this.logger.error('Could not create transaction:', error);
@@ -186,7 +186,7 @@ export default class TransactionController extends BaseController {
 
     let transaction;
     try {
-      transaction = await TransactionService.getSingleTransaction(parseInt(parameters.id, 10));
+      transaction = await new TransactionService().getSingleTransaction(parseInt(parameters.id, 10));
     } catch (e) {
       res.status(500).send();
       this.logger.error(e);
@@ -224,8 +224,8 @@ export default class TransactionController extends BaseController {
     // handle request
     try {
       if (await Transaction.findOne({ where: { id: parseInt(id, 10) } })) {
-        if (await TransactionService.verifyTransaction(body, true)) {
-          res.status(200).json(await TransactionService.updateTransaction(
+        if (await new TransactionService().verifyTransaction(body, true)) {
+          res.status(200).json(await new TransactionService().updateTransaction(
             parseInt(id, 10), body,
           ));
         } else {
@@ -258,7 +258,7 @@ export default class TransactionController extends BaseController {
     // handle request
     try {
       if (await Transaction.findOne({ where: { id: parseInt(id, 10) } })) {
-        await TransactionService.deleteTransaction(parseInt(id, 10));
+        await new TransactionService().deleteTransaction(parseInt(id, 10));
         res.status(204).json();
       } else {
         res.status(404).json('Transaction not found.');
@@ -286,7 +286,7 @@ export default class TransactionController extends BaseController {
     this.logger.trace('Validate transaction', body, 'by user', req.token.user);
 
     try {
-      if (await TransactionService.verifyTransaction(body)) {
+      if (await new TransactionService().verifyTransaction(body)) {
         res.status(200).json(true);
       } else  {
         res.status(400).json('Transaction is invalid');

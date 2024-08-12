@@ -35,6 +35,7 @@ import DebtorService from './debtor-service';
 import VatGroup from '../entity/vat-group';
 import { toMySQLString } from '../helpers/timestamps';
 import WriteOffService from './write-off-service';
+import { AppDataSource } from '../database/database';
 
 export interface TransferFilterParameters {
   id?: number;
@@ -55,6 +56,13 @@ export function parseGetTransferFilters(req: RequestWithToken): TransferFilterPa
 }
 
 export default class TransferService {
+
+  private manager: EntityManager;
+
+  constructor(manager?: EntityManager) {
+    this.manager = manager ? manager : AppDataSource.manager;
+  }
+
   public static asTransferResponse(transfer: Transfer) : TransferResponse {
     return {
       amountInclVat: transfer.amountInclVat.toObject(),
@@ -75,20 +83,16 @@ export default class TransferService {
     };
   }
 
-  public static async createTransfer(request: TransferRequest, manager?: EntityManager) : Promise<Transfer> {
+  public async createTransfer(request: TransferRequest) : Promise<Transfer> {
     const transfer = Object.assign(new Transfer(), {
       description: request.description,
       amountInclVat: dinero(request.amount as Dinero.Options),
-      from: request.fromId ? await User.findOne({ where: { id: request.fromId } }) : undefined,
-      to: request.toId ? await User.findOne({ where: { id: request.toId } }) : undefined,
-      vat: request.vatId ? await VatGroup.findOne({ where: { id: request.vatId } }) : undefined,
+      from: request.fromId ? await this.manager.findOne(User, { where: { id: request.fromId } }) : undefined,
+      to: request.toId ? await this.manager.findOne(User, { where: { id: request.toId } }) : undefined,
+      vat: request.vatId ? await this.manager.findOne(VatGroup, { where: { id: request.vatId } }) : undefined,
     });
 
-    if (manager) {
-      await manager.save(transfer);
-    } else {
-      await transfer.save();
-    }
+    await this.manager.save(transfer);
     return transfer;
   }
 
@@ -98,7 +102,7 @@ export default class TransferService {
    * @param pagination
    * @param user
    */
-  public static async getTransfers(filters: TransferFilterParameters = {},
+  public async getTransfers(filters: TransferFilterParameters = {},
     pagination: PaginationParameters = {}, user?: User)
     : Promise<PaginatedTransferResponse> {
     const { take, skip } = pagination;
@@ -168,11 +172,11 @@ export default class TransferService {
     };
 
     const results = await Promise.all([
-      Transfer.find(options),
-      Transfer.count(options),
+      this.manager.find(Transfer, options),
+      this.manager.count(Transfer, options),
     ]);
 
-    const records = results[0].map((rawTransfer) => this.asTransferResponse(rawTransfer));
+    const records = results[0].map((rawTransfer) => TransferService.asTransferResponse(rawTransfer));
     return {
       _pagination: {
         take, skip, count: results[1],
@@ -181,19 +185,19 @@ export default class TransferService {
     };
   }
 
-  public static async postTransfer(request: TransferRequest, manager?: EntityManager) : Promise<TransferResponse> {
-    const transfer = await this.createTransfer(request, manager);
-    return this.asTransferResponse(transfer);
+  public async postTransfer(request: TransferRequest) : Promise<TransferResponse> {
+    const transfer = await this.createTransfer(request);
+    return TransferService.asTransferResponse(transfer);
   }
 
-  public static async verifyTransferRequest(request: TransferRequest) : Promise<boolean> {
+  public async verifyTransferRequest(request: TransferRequest) : Promise<boolean> {
     // the type of the request should be in TransferType enums
     // if the type is custom a description is necessary
     // a transfer is always at least from a valid user OR to a valid user
     // a transfer may be from null to an user, or from an user to null
     return (request.fromId || request.toId)
-        && (await User.findOne({ where: { id: request.fromId } })
-        || await User.findOne({ where: { id: request.toId } }))
+        && (await this.manager.findOne(User, { where: { id: request.fromId } })
+        || await this.manager.findOne(User, { where: { id: request.toId } }))
         && request.amount.precision === dinero.defaultPrecision
         && request.amount.currency === dinero.defaultCurrency;
   }

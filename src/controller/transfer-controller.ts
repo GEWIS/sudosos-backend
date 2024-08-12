@@ -110,7 +110,7 @@ export default class TransferController extends BaseController {
     }
 
     try {
-      const transfers = await TransferService.getTransfers({}, { take, skip });
+      const transfers = await new TransferService().getTransfers({}, { take, skip });
       res.json(transfers);
     } catch (error) {
       this.logger.error('Could not return all transfers:', error);
@@ -135,7 +135,7 @@ export default class TransferController extends BaseController {
     try {
       const parsedId = parseInt(id, 10);
       const transfer = (
-        (await TransferService.getTransfers({ id: parsedId }, {})).records[0]);
+        (await new TransferService().getTransfers({ id: parsedId }, {})).records[0]);
       if (transfer) {
         res.json(transfer);
       } else {
@@ -163,13 +163,15 @@ export default class TransferController extends BaseController {
     const request = req.body as TransferRequest;
     this.logger.trace('Post transfer', request, 'by user', req.token.user);
 
+    const transferService = new TransferService();
+
     try {
-      if (!(await TransferService.verifyTransferRequest(request))) {
+      if (!(await transferService.verifyTransferRequest(request))) {
         res.status(400).json('Invalid transfer.');
         return;
       }
 
-      res.json(await TransferService.postTransfer(request));
+      res.json(await transferService.postTransfer(request));
     } catch (error) {
       this.logger.error('Could not create transfer:', error);
       res.status(500).json('Internal server error.');

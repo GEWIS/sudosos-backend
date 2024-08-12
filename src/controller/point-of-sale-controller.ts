@@ -358,7 +358,7 @@ export default class PointOfSaleController extends BaseController {
         return;
       }
 
-      const transactions = await TransactionService.getTransactions(
+      const transactions = await new TransactionService().getTransactions(
         { pointOfSaleId }, { take, skip },
       );
       res.status(200).json(transactions);

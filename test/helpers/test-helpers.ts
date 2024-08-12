@@ -102,7 +102,7 @@ export default async function generateBalance(amount: number, toId: number) {
     fromId: 0,
     toId,
   };
-  await TransferService.postTransfer(transferRequest);
+  await (new TransferService()).postTransfer(transferRequest);
 }
 
 export function storeLDAPEnv(): { [key: string]: any; } {

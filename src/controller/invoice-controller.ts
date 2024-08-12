@@ -39,7 +39,7 @@ import { UpdateInvoiceUserRequest } from './request/user-request';
 import InvoiceUser from '../entity/user/invoice-user';
 import { parseInvoiceUserToResponse } from '../helpers/revision-to-response';
 import FileService from '../service/file-service';
-import wrapInManager from '../helpers/database';
+import { AppDataSource } from '../database/database';
 
 export default class InvoiceController extends BaseController {
   private logger: Logger = log4js.getLogger('InvoiceController');
@@ -144,7 +144,7 @@ export default class InvoiceController extends BaseController {
 
     // Handle request
     try {
-      const invoices: PaginatedInvoiceResponse = await InvoiceService.getPaginatedInvoices(
+      const invoices: PaginatedInvoiceResponse = await new InvoiceService().getPaginatedInvoices(
         filters, { take, skip },
       );
       res.json(invoices);
@@ -176,7 +176,7 @@ export default class InvoiceController extends BaseController {
     try {
       const returnInvoiceEntries = asBoolean(req.query.returnEntries) ?? true;
 
-      const invoices: Invoice[] = await InvoiceService.getInvoices(
+      const invoices: Invoice[] = await new InvoiceService().getInvoices(
         { invoiceId, returnInvoiceEntries },
       );
 
@@ -210,7 +210,7 @@ export default class InvoiceController extends BaseController {
 
     // handle request
     try {
-      const userDefinedDefaults = await InvoiceService.getDefaultInvoiceParams(body.forId);
+      const userDefinedDefaults = await new InvoiceService().getDefaultInvoiceParams(body.forId);
 
       // If no byId is provided we use the token user id.
       const params: CreateInvoiceParams = {
@@ -226,7 +226,8 @@ export default class InvoiceController extends BaseController {
         return;
       }
 
-      const invoice: Invoice = await wrapInManager(InvoiceService.createInvoice)(params);
+      const invoice: Invoice = await AppDataSource.manager.transaction(async (manager) =>
+        Promise.resolve(new InvoiceService(manager).createInvoice(params)));
       res.json(InvoiceService.toResponse(invoice, true));
     } catch (error) {
       this.logger.error('Could not create invoice:', error);
@@ -268,7 +269,8 @@ export default class InvoiceController extends BaseController {
         return;
       }
 
-      const invoice: Invoice = await wrapInManager(InvoiceService.updateInvoice)(params);
+      const invoice: Invoice = await AppDataSource.manager.transaction(async (manager) =>
+        Promise.resolve(new InvoiceService(manager).updateInvoice(params)));
 
       res.json(InvoiceService.toResponse(invoice, false));
     } catch (error) {
@@ -295,7 +297,8 @@ export default class InvoiceController extends BaseController {
     this.logger.trace('Delete Invoice', id, 'by user', req.token.user);
 
     try {
-      const invoice = await wrapInManager(InvoiceService.deleteInvoice)(invoiceId, req.token.user.id);
+      const invoice = await AppDataSource.manager.transaction(async (manager) =>
+        Promise.resolve(new InvoiceService(manager).deleteInvoice(invoiceId, req.token.user.id)));
       if (!invoice) {
         res.status(404).json('Invoice not found.');
         return;

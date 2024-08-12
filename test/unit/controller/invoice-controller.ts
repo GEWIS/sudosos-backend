@@ -23,7 +23,7 @@ import { json } from 'body-parser';
 import { expect, request } from 'chai';
 import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import InvoiceController from '../../../src/controller/invoice-controller';
-import Database from '../../../src/database/database';
+import Database, { AppDataSource } from '../../../src/database/database';
 import {
   seedContainers,
   seedInvoices,
@@ -68,7 +68,6 @@ import sinon from 'sinon';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { getToken, seedRoles } from '../../seed/rbac';
-import wrapInManager from '../../../src/helpers/database';
 
 describe('InvoiceController', async () => {
   let ctx: {
@@ -375,7 +374,9 @@ describe('InvoiceController', async () => {
             });
           });
 
-          await wrapInManager(InvoiceService.createInvoice)(createInvoiceRequest);
+          await AppDataSource.manager.transaction(async (manager) => {
+            return (new InvoiceService(manager)).createInvoice(createInvoiceRequest);
+          });
           await expectError(createInvoiceRequest, (SUBTRANSACTION_ALREADY_INVOICED(subIDs)).value);
         });
     });

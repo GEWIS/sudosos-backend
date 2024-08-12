@@ -120,15 +120,22 @@ export function parseGetTransactionsFilters(req: RequestWithToken): TransactionF
 }
 
 export default class TransactionService {
+
+  private manager: EntityManager;
+
+  constructor(manager?: EntityManager) {
+    this.manager = manager ? manager : AppDataSource.manager;
+  }
+
   /**
    * Gets total cost of a transaction with values stored in the database
    * @returns {DineroObject.model} - the total cost of a transaction
    * @param rows
    */
-  public static async getTotalCost(rows: SubTransactionRowRequest[]): Promise<Dinero.Dinero> {
+  public async getTotalCost(rows: SubTransactionRowRequest[]): Promise<Dinero.Dinero> {
     // get costs of individual rows
     const rowCosts = await Promise.all(rows.map(async (row) => {
-      const rowCost = await ProductRevision.findOne({
+      const rowCost = await this.manager.findOne(ProductRevision, {
         where: {
           revision: row.product.revision,
           product: { id: row.product.id },
@@ -147,7 +154,7 @@ export default class TransactionService {
    * @param {TransactionRequest.model} req - the transaction request to verify
    * @returns {boolean} - whether user's balance is ok or not
    */
-  public static async verifyBalance(req: TransactionRequest): Promise<boolean> {
+  public async verifyBalance(req: TransactionRequest): Promise<boolean> {
     const rows: SubTransactionRowRequest[] = [];
     req.subTransactions.forEach((sub) => sub.subTransactionRows.forEach((row) => rows.push(row)));
 
@@ -178,7 +185,7 @@ export default class TransactionService {
    * @param container
    * @returns {boolean} - whether sub transaction row is ok or not
    */
-  public static async verifySubTransactionRow(
+  public async verifySubTransactionRow(
     req: SubTransactionRowRequest, container: ContainerRevision,
   ): Promise<boolean> {
     // check if fields provided in subtransactionrow
@@ -196,7 +203,7 @@ export default class TransactionService {
     }
 
     // check if product exists
-    const product = await ProductRevision.findOne({
+    const product = await this.manager.findOne(ProductRevision, {
       where: {
         revision: req.product.revision,
         product: { id: req.product.id, deletedAt: IsNull() },
@@ -209,7 +216,7 @@ export default class TransactionService {
 
     // check whether the request price corresponds to the database price
     const cost = await this.getTotalCost([req]);
-    return this.dineroEq(req.totalPriceInclVat, cost);
+    return TransactionService.dineroEq(req.totalPriceInclVat, cost);
   }
 
   /**
@@ -219,7 +226,7 @@ export default class TransactionService {
    * @param isUpdate
    * @returns {boolean} - whether sub transaction is ok or not
    */
-  public static async verifySubTransaction(
+  public async verifySubTransaction(
     req: SubTransactionRequest, pointOfSale: PointOfSaleRevision, isUpdate?: boolean,
   ): Promise<boolean> {
     // check if fields provided in the transaction
@@ -235,7 +242,7 @@ export default class TransactionService {
     }
 
     // check if to user exists, check if they are active in database if the call is not an update
-    const user = await User.findOne({ where: { id: req.to } });
+    const user = await this.manager.findOne(User, { where: { id: req.to } });
     if (!user || (!isUpdate && !user.active)) {
       return false;
     }
@@ -244,12 +251,12 @@ export default class TransactionService {
     const rows: SubTransactionRowRequest[] = [];
     req.subTransactionRows.forEach((row) => rows.push(row));
     const cost = await this.getTotalCost(rows);
-    if (!this.dineroEq(req.totalPriceInclVat, cost)) {
+    if (!TransactionService.dineroEq(req.totalPriceInclVat, cost)) {
       return false;
     }
 
     // check if container exists in database and get products for subtransactionrow check
-    const container = await ContainerRevision.findOne({
+    const container = await this.manager.findOne(ContainerRevision, {
       where: {
         revision: req.container.revision,
         container: { id: req.container.id, deletedAt: IsNull() },
@@ -275,7 +282,7 @@ export default class TransactionService {
    * @param isUpdate
    * @returns {boolean} - whether transaction is ok or not
    */
-  public static async verifyTransaction(req: TransactionRequest, isUpdate?: boolean):
+  public async verifyTransaction(req: TransactionRequest, isUpdate?: boolean):
   Promise<boolean> {
     // check fields provided in the transaction
     if (!req.from || !req.createdBy
@@ -291,13 +298,13 @@ export default class TransactionService {
     }
 
     // don't check active users if verification is done on an update
-    const users = await User.findByIds(ids);
+    const users = await this.manager.find(User, { where: { id: In(ids) } });
     if (users.length !== ids.length
       || (!isUpdate && !users.every((user) => user.active && user.acceptedToS !== TermsOfServiceStatus.NOT_ACCEPTED))) {
       return false;
     }
 
-    const fromUser = await User.findOne({ where: { id: req.from } });
+    const fromUser = await this.manager.findOne(User, { where: { id: req.from } });
     if (fromUser.type === UserType.ORGAN) {
       return false;
     }
@@ -306,12 +313,12 @@ export default class TransactionService {
     const rows: SubTransactionRowRequest[] = [];
     req.subTransactions.forEach((sub) => sub.subTransactionRows.forEach((row) => rows.push(row)));
     const cost = await this.getTotalCost(rows);
-    if (!this.dineroEq(req.totalPriceInclVat, cost)) {
+    if (!TransactionService.dineroEq(req.totalPriceInclVat, cost)) {
       return false;
     }
 
     // check if point of sale exists in database and get containers for subtransaction check
-    const pointOfSale = await PointOfSaleRevision.findOne({
+    const pointOfSale = await this.manager.findOne(PointOfSaleRevision, {
       where: {
         revision: req.pointOfSale.revision,
         pointOfSale: { id: req.pointOfSale.id, deletedAt: IsNull() },
@@ -336,7 +343,7 @@ export default class TransactionService {
    * @param update
    * @returns {Transaction.model} - the transaction
    */
-  public static async asTransaction(req: TransactionRequest, update?: Transaction):
+  public async asTransaction(req: TransactionRequest, update?: Transaction):
   Promise<Transaction | undefined> {
     if (!req) {
       return undefined;
@@ -350,8 +357,8 @@ export default class TransactionService {
     }) : Object.assign(new Transaction(), {})) as Transaction;
 
     // get users
-    transaction.from = await User.findOne({ where: { id: req.from } });
-    transaction.createdBy = await User.findOne({ where: { id: req.createdBy } });
+    transaction.from = await this.manager.findOne(User, { where: { id: req.from } });
+    transaction.createdBy = await this.manager.findOne(User, { where: { id: req.createdBy } });
 
     // set subtransactions
     transaction.subTransactions = await Promise.all(req.subTransactions.map(
@@ -359,7 +366,7 @@ export default class TransactionService {
     ));
 
     // get point of sale revision
-    transaction.pointOfSale = await PointOfSaleRevision.findOne({
+    transaction.pointOfSale = await this.manager.findOne(PointOfSaleRevision, {
       where: {
         revision: req.pointOfSale.revision,
         pointOfSale: { id: req.pointOfSale.id },
@@ -375,7 +382,7 @@ export default class TransactionService {
    * @returns {TransactionResponse.model} - the transaction response
    * @param transaction
    */
-  public static async asTransactionResponse(transaction: Transaction):
+  public async asTransactionResponse(transaction: Transaction):
   Promise<TransactionResponse | undefined> {
     if (!transaction) {
       return undefined;
@@ -416,7 +423,7 @@ export default class TransactionService {
    * @param {SubTransactionRequest.model} req - the sub transaction request to cast
    * @returns {SubTransaction.model} - the sub transaction
    */
-  public static async asSubTransaction(req: SubTransactionRequest):
+  public async asSubTransaction(req: SubTransactionRequest):
   Promise<SubTransaction | undefined> {
     if (!req) {
       return undefined;
@@ -426,10 +433,10 @@ export default class TransactionService {
     const subTransaction = {} as SubTransaction;
 
     // get user
-    subTransaction.to = await User.findOne({ where: { id: req.to } });
+    subTransaction.to = await this.manager.findOne(User, { where: { id: req.to } });
 
     // get container revision
-    subTransaction.container = await ContainerRevision.findOne({
+    subTransaction.container = await this.manager.findOne(ContainerRevision, {
       where: {
         revision: req.container.revision,
         container: { id: req.container.id },
@@ -449,7 +456,7 @@ export default class TransactionService {
    * @returns {SubTransactionResponse.model} - the sub transaction response
    * @param subTransaction
    */
-  public static async asSubTransactionResponse(subTransaction: SubTransaction):
+  public async asSubTransactionResponse(subTransaction: SubTransaction):
   Promise<SubTransactionResponse | undefined> {
     if (!subTransaction) {
       return undefined;
@@ -493,13 +500,13 @@ export default class TransactionService {
    * @param {SubTransaction.model} subTransaction - the sub transaction to connect
    * @returns {SubTransactionRow.model} - the sub transaction row
    */
-  public static async asSubTransactionRow(
+  public async asSubTransactionRow(
     req: SubTransactionRowRequest, subTransaction: SubTransaction,
   ): Promise<SubTransactionRow | undefined> {
     if (!req) {
       return undefined;
     }
-    const product = await ProductRevision.findOne({
+    const product = await this.manager.findOne(ProductRevision, {
       where: {
         revision: req.product.revision,
         product: { id: req.product.id },
@@ -523,18 +530,11 @@ export default class TransactionService {
     await BalanceService.clearBalanceCache(userIds);
   }
 
-  private static buildGetTransactionsQuery(
-    params: TransactionFilterParameters = {}, manager?: EntityManager, user?: User,
+  private buildGetTransactionsQuery(
+    params: TransactionFilterParameters = {}, user?: User,
   ): SelectQueryBuilder<Transaction> {
     // Extract fromDate and tillDate, as they cannot be directly passed to QueryFilter.
     const { fromDate, tillDate, ...p } = params;
-
-    let entityManager;
-    if (!manager) {
-      entityManager = AppDataSource.manager;
-    } else {
-      entityManager = manager;
-    }
 
     function applySubTransactionFilters(query: SelectQueryBuilder<any>): SelectQueryBuilder<any> {
       const mapping: FilterMapping = {
@@ -552,7 +552,7 @@ export default class TransactionService {
       return QueryFilter.applyFilter(query, mapping, p);
     }
 
-    const query = entityManager.createQueryBuilder(Transaction, 'transaction')
+    const query = this.manager.createQueryBuilder(Transaction, 'transaction')
       .addSelect((qb) => {
         const subquery = qb.subQuery()
           .select('sum(subTransactionRow.amount * product.priceInclVat) as value')
@@ -599,22 +599,14 @@ export default class TransactionService {
    * @param {TransactionFilterParameters.model} params - the filter parameters
    * @param {PaginationParameters} pagination
    * @param {User.model} user - A user that is involved in all transactions
-   * @param manager - The EntityManager context to use.
    * @returns {BaseTransactionResponse[]} - the transactions without sub transactions
    */
-  public static async getTransactions(
-    params: TransactionFilterParameters, pagination: PaginationParameters = {}, user?: User, manager?: EntityManager,
+  public async getTransactions(
+    params: TransactionFilterParameters, pagination: PaginationParameters = {}, user?: User,
   ): Promise<PaginatedBaseTransactionResponse> {
     const { take, skip } = pagination;
 
-    let entityManager;
-    if (!manager) {
-      entityManager = AppDataSource.manager;
-    } else {
-      entityManager = manager;
-    }
-
-    const builder = this.buildGetTransactionsQuery(params, entityManager, user);
+    const builder = this.buildGetTransactionsQuery(params, user);
     const results = await Promise.all([
       builder.limit(take).offset(skip).getRawMany(),
       builder.getCount(),
@@ -664,7 +656,7 @@ export default class TransactionService {
    * @param {TransactionRequest.model} req - the transaction request to save
    * @returns {Transaction.model} - the saved transaction
    */
-  public static async createTransaction(req: TransactionRequest):
+  public async createTransaction(req: TransactionRequest):
   Promise<TransactionResponse | undefined> {
     const transaction = await this.asTransaction(req);
 
@@ -672,7 +664,7 @@ export default class TransactionService {
 
     // save the transaction and invalidate user balance cache
     const savedTransaction = await this.asTransactionResponse(transaction);
-    await this.invalidateBalanceCache(savedTransaction);
+    await TransactionService.invalidateBalanceCache(savedTransaction);
 
     // save transaction and return response
     return savedTransaction;
@@ -683,8 +675,8 @@ export default class TransactionService {
    * @param {integer} id - the id of the requested transaction
    * @returns {Transaction.model} - the requested transaction transaction
    */
-  public static async getSingleTransaction(id: number): Promise<TransactionResponse | undefined> {
-    const transaction = await Transaction.findOne({
+  public async getSingleTransaction(id: number): Promise<TransactionResponse | undefined> {
+    const transaction = await this.manager.findOne(Transaction, {
       where: { id },
       relations: [
         'from', 'createdBy', 'subTransactions', 'subTransactions.to', 'subTransactions.subTransactionRows',
@@ -707,19 +699,19 @@ export default class TransactionService {
    * @returns {TransactionResponse.model} updated transaction
    * @returns {undefined} undefined when transaction not found
    */
-  public static async updateTransaction(id: number, req: TransactionRequest):
+  public async updateTransaction(id: number, req: TransactionRequest):
   Promise<TransactionResponse | undefined> {
-    const transaction = await this.asTransaction(req, await Transaction.findOne({ where: { id } }));
+    const transaction = await this.asTransaction(req, await this.manager.findOne(Transaction, { where: { id } }));
 
     // delete old transaction
     await this.deleteTransaction(id);
 
     // save updated transaction with same id
-    await Transaction.save(transaction);
+    await this.manager.save(Transaction, transaction);
 
     // invalidate updated transaction user balance cache
     const updatedTransaction = await this.getSingleTransaction(id);
-    await this.invalidateBalanceCache(updatedTransaction);
+    await TransactionService.invalidateBalanceCache(updatedTransaction);
 
     // return updatedTransaction;
     return updatedTransaction;
@@ -730,14 +722,14 @@ export default class TransactionService {
    * @param {number} id - the id of the requested transaction
    * @returns {TransactionResponse.model} - the deleted transaction
    */
-  public static async deleteTransaction(id: number):
+  public async deleteTransaction(id: number):
   Promise<TransactionResponse | undefined> {
     // get the transaction we should delete
     const transaction = await this.getSingleTransaction(id);
-    await Transaction.delete(id);
+    await this.manager.delete(Transaction, id);
 
     // invalidate user balance cache
-    await this.invalidateBalanceCache(transaction);
+    await TransactionService.invalidateBalanceCache(transaction);
 
     // return deleted transaction
     return transaction;
@@ -806,8 +798,8 @@ export default class TransactionService {
    * Generates a transaction report object from the given transaction filter parameters
    * @param parameters - Parameters describing what should be included in the report
    */
-  public static async getTransactionReport(parameters: TransactionFilterParameters): Promise<TransactionReport> {
-    let baseTransactions = (await TransactionService.getTransactions(parameters)).records;
+  public async getTransactionReport(parameters: TransactionFilterParameters): Promise<TransactionReport> {
+    let baseTransactions = (await this.getTransactions(parameters)).records;
 
     const transactionReportData = await this.getTransactionReportData(baseTransactions, parameters.exclusiveToId ? parameters.toId : undefined);
     return {
@@ -820,15 +812,15 @@ export default class TransactionService {
    * Creates a transaction report response from the given parameters
    * @param parameters
    */
-  public static async getTransactionReportResponse(parameters: TransactionFilterParameters): Promise<TransactionReportResponse> {
+  public async getTransactionReportResponse(parameters: TransactionFilterParameters): Promise<TransactionReportResponse> {
     const transactionReport = await this.getTransactionReport(parameters);
-    return this.transactionReportToResponse(transactionReport);
+    return TransactionService.transactionReportToResponse(transactionReport);
   }
 
-  public static async getTransactionsFromBaseTransactions(baseTransactions: BaseTransactionResponse[], dropInvoiced = true): Promise<Transaction[]> {
+  public async getTransactionsFromBaseTransactions(baseTransactions: BaseTransactionResponse[], dropInvoiced = true): Promise<Transaction[]> {
     const ids = baseTransactions.map((t) => t.id);
 
-    let transactions = await Transaction.find({
+    let transactions = await this.manager.find(Transaction, {
       where: {
         id: In(ids),
       },
@@ -847,7 +839,7 @@ export default class TransactionService {
 
     // Don't consider transactions from invoice accounts
     if (dropInvoiced) {
-      const invoiceUsers = new Set((await User.find({ where: { type: In([UserType.INVOICE]) } })).map((u) => u.id));
+      const invoiceUsers = new Set((await this.manager.find(User, { where: { type: In([UserType.INVOICE]) } })).map((u) => u.id));
       transactions = transactions.filter((t) => !invoiceUsers.has(t.from.id));
     }
 
@@ -860,7 +852,7 @@ export default class TransactionService {
    * @param exclusiveToId - If not undefined it will drop all Sub transactions with a toId different from the param.
    * @param dropInvoiced - If invoiced SubTransactionRows should be ignored, defaults to true
    */
-  public static async getTransactionReportData(baseTransactions: BaseTransactionResponse[], exclusiveToId: number | undefined, dropInvoiced = true): Promise<TransactionReportData> {
+  public async getTransactionReportData(baseTransactions: BaseTransactionResponse[], exclusiveToId: number | undefined, dropInvoiced = true): Promise<TransactionReportData> {
     const transactions = await this.getTransactionsFromBaseTransactions(baseTransactions, dropInvoiced);
 
     const productEntryMap = new Map<string, SubTransactionRow[]>();

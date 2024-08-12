@@ -299,8 +299,8 @@ export default class UserService {
       skip: 0,
     };
 
-    const transactions = await TransactionService.getTransactions(filters, pagination, user);
-    const transfers = await TransferService.getTransfers(filters, pagination, user);
+    const transactions = await (new TransactionService()).getTransactions(filters, pagination, user);
+    const transfers = await (new TransferService()).getTransfers(filters, pagination, user);
     const financialMutations: FinancialMutationResponse[] = [];
 
     transactions.records.forEach((mutation) => {
