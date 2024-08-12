@@ -500,11 +500,29 @@ export default class InvoiceService {
   }
 
   /**
+   * TEMPORARY: Checks if any of the transactions are already invoiced
+   * This will later be replaced when the InvoiceService is refactored
+   * @param ids
+   */
+  public async checkIfSAlreadyInvoiced(ids: number[]) {
+    const transactions = await this.manager.find(Transaction, { where: { id: In(ids) }, relations: ['subTransactions', 'subTransactions.subTransactionRows'] });
+    transactions.forEach((t) => {
+      t.subTransactions.forEach((tSub) => {
+        tSub.subTransactionRows.forEach((tSubRow) => {
+          console.error(tSubRow);
+          if (tSubRow.invoice) throw new NotImplementedError('Transaction already invoiced');
+        });
+      });
+    });
+  }
+
+
+  /**
    * Checks if all transaction are for the same seller
    * @param ids
    */
-  public static async checkSingleSellerTransactions(ids: number[]) {
-    const transactions = await Transaction.find({ where: { id: In(ids) }, relations: ['subTransactions', 'subTransactions.to'] });
+  public async checkSingleSellerTransactions(ids: number[]) {
+    const transactions = await this.manager.find(Transaction, { where: { id: In(ids) }, relations: ['subTransactions', 'subTransactions.to'] });
     // Get all sellers from sub transactions
     const sellers = new Set<number>();
     transactions.forEach((t) => {
@@ -555,7 +573,8 @@ export default class InvoiceService {
     }
 
     const transactions = (await (new TransactionService(this.manager)).getTransactions(params, {})).records;
-    if (!isCreditInvoice) await InvoiceService.checkSingleSellerTransactions(transactions.map((t) => t.id));
+    if (!isCreditInvoice) await this.checkSingleSellerTransactions(transactions.map((t) => t.id));
+    await this.checkIfSAlreadyInvoiced(transactions.map((t) => t.id));
 
     const transfer = await this.createTransferFromTransactions(forId, transactions, isCreditInvoice);
 
