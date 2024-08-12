@@ -556,6 +556,7 @@ export default class InvoiceService {
 
     const transactions = (await (new TransactionService(this.manager)).getTransactions(params, {})).records;
     if (!isCreditInvoice) await InvoiceService.checkSingleSellerTransactions(transactions.map((t) => t.id));
+
     const transfer = await this.createTransferFromTransactions(forId, transactions, isCreditInvoice);
 
     // Create a new Invoice
