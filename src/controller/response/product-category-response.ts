@@ -22,9 +22,11 @@ import { PaginationResult } from '../../helpers/pagination';
 /**
  * @typedef {allOf|BaseResponse} ProductCategoryResponse
  * @property {string} name.required - The name of the productCategory.
+ * @property {ProductCategoryResponse} parent - The name of the productCategory.
  */
 export interface ProductCategoryResponse extends BaseResponse {
   name: string,
+  parent?: ProductCategoryResponse,
 }
 
 /**

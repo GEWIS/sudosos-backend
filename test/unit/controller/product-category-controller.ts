@@ -314,7 +314,7 @@ describe('ProductCategoryController', async (): Promise<void> => {
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send({
           ...ctx.invalidRequest,
-          name: null,
+          name: '',
         });
 
       expect(await ProductCategory.count()).to.equal(productCategoryCount);

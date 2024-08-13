@@ -16,10 +16,9 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { Connection } from 'typeorm';
-import express, { Application } from 'express';
+import { DataSource } from 'typeorm';
+import express from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
-import bodyParser from 'body-parser';
 import { expect } from 'chai';
 import Database from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
@@ -55,36 +54,34 @@ function productCategoryEqualset(
 
 describe('ProductCategoryService', async (): Promise<void> => {
   let ctx: {
-    connection: Connection,
-    app: Application,
+    connection: DataSource,
     specification: SwaggerSpecification,
     categories: ProductCategory[],
   };
+
+  before(async () => {
+    const connection = await Database.initialize();
+    await truncateAllTables(connection);
+
+    const categories = await seedProductCategories();
+
+    // start app
+    const app = express();
+    const specification = await Swagger.initialize(app);
+
+    // initialize context
+    ctx = {
+      connection,
+      specification,
+      categories,
+    };
+  });
+
+  after(async () => {
+    await finishTestDB(ctx.connection);
+  });
+
   describe('getProductCategories function', async (): Promise<void> => {
-    before(async () => {
-      const connection = await Database.initialize();
-      await truncateAllTables(connection);
-
-      const categories = await seedProductCategories();
-
-      // start app
-      const app = express();
-      const specification = await Swagger.initialize(app);
-      app.use(bodyParser.json());
-
-      // initialize context
-      ctx = {
-        connection,
-        app,
-        specification,
-        categories,
-      };
-    });
-
-    after(async () => {
-      await finishTestDB(ctx.connection);
-    });
-
     it('should return all productCategories', async () => {
       // eslint-disable-next-line @typescript-eslint/naming-convention
       const { records, _pagination } = await ProductCategoryService.getProductCategories();
@@ -145,90 +142,69 @@ describe('ProductCategoryService', async (): Promise<void> => {
     });
   });
   describe('postProductCategory function', () => {
-    beforeEach(async () => {
-      const connection = await Database.initialize();
-      await truncateAllTables(connection);
-      const categories: ProductCategory[] = [];
-
-      // start app
-      const app = express();
-      const specification = await Swagger.initialize(app);
-      app.use(bodyParser.json());
-
-      // initialize context
-      ctx = {
-        connection,
-        app,
-        specification,
-        categories,
-      };
-    });
-
-    afterEach(async () => {
-      // close database connection
-      await finishTestDB(ctx.connection);
-    });
-
-    it('should be able to post a new productCategory', async () => {
+    it('should be able to create a new productCategory', async () => {
       const c1: ProductCategoryRequest = { name: 'test' };
       const c2 = await ProductCategoryService.postProductCategory(c1);
       expect(c2).to.not.be.null;
       expect(c2.name).to.equal(c1.name);
 
       const { records } = await ProductCategoryService
-        .getProductCategories({ id: 1 });
+        .getProductCategories({ id: c2.id });
 
       expect(records.length).to.equal(1);
       expect(records[0].name).to.equal(c1.name);
+
+      // Cleanup
+      await ctx.connection.manager.getRepository(ProductCategory).delete(c2.id);
     });
-    it('should not be able to post an invalid productCategory', async () => {
+    it('should be able to create a new productCategory with parent', async () => {
+      const parent = ctx.categories[0];
+      const c1: ProductCategoryRequest = { name: 'test', parentCategoryId: parent.id };
+      const c2 = await ProductCategoryService.postProductCategory(c1);
+      expect(c2).to.not.be.null;
+      expect(c2.name).to.equal(c1.name);
+      expect(c2.parent).to.not.be.undefined;
+      expect(c2.parent.id).to.equal(parent.id);
+      expect(c2.parent.name).to.equal(parent.name);
+
+      const { records } = await ProductCategoryService
+        .getProductCategories({ id: c2.id });
+
+      expect(records.length).to.equal(1);
+      expect(records[0].name).to.equal(c1.name);
+      expect(records[0].parent).to.not.be.undefined;
+      expect(records[0].parent.id).to.equal(parent.id);
+
+      // Cleanup
+      await ctx.connection.manager.getRepository(ProductCategory).delete(c2.id);
+    });
+    it('should not be able to create an invalid productCategory', async () => {
       const c1: ProductCategoryRequest = { name: null };
       const promise = ProductCategoryService.postProductCategory(c1);
       await expect(promise).to.eventually.be.rejected;
 
       const { records } = await ProductCategoryService
-        .getProductCategories({ id: 1 });
-      expect(records).to.be.empty;
+        .getProductCategories();
+      expect(records).to.be.lengthOf(ctx.categories.length);
     });
   });
   describe('patchProductCategory function', async (): Promise<void> => {
-    beforeEach(async () => {
-      const connection = await Database.initialize();
-      await truncateAllTables(connection);
-
-      const categories = await seedProductCategories();
-
-      // start app
-      const app = express();
-      const specification = await Swagger.initialize(app);
-      app.use(bodyParser.json());
-
-      // initialize context
-      ctx = {
-        connection,
-        app,
-        specification,
-        categories,
-      };
-    });
-
-    afterEach(async () => {
-      // close database connection
-      await finishTestDB(ctx.connection);
-    });
-
     it('should be able to patch a productCategory', async () => {
+      const category = ctx.categories[0];
       const c1: ProductCategoryRequest = { name: 'test' };
       const c2: ProductCategoryResponse = await ProductCategoryService
-        .patchProductCategory(ctx.categories[0].id, c1);
+        .patchProductCategory(category.id, c1);
       expect(c2).to.not.be.null;
       expect(c2.name).to.equal(c1.name);
 
       const { records } = await ProductCategoryService
-        .getProductCategories({ id: ctx.categories[0].id });
+        .getProductCategories({ id: category.id });
 
       expect(records).to.not.be.null;
       expect(records[0].name).to.equal(c1.name);
+
+      // Cleanup
+      await ctx.connection.manager.save(ProductCategory, category);
     });
     it('should not be able to patch an invalid productCategory id', async () => {
       const c1: ProductCategoryRequest = { name: 'test' };
@@ -238,38 +214,24 @@ describe('ProductCategoryService', async (): Promise<void> => {
     });
   });
   describe('deleteProductCategory function', async (): Promise<void> => {
-    beforeEach(async () => {
-      const connection = await Database.initialize();
-      await truncateAllTables(connection);
-
-      const categories = await seedProductCategories();
-
-      // start app
-      const app = express();
-      const specification = await Swagger.initialize(app);
-      app.use(bodyParser.json());
-
-      // initialize context
-      ctx = {
-        connection,
-        app,
-        specification,
-        categories,
-      };
-    });
-
-    afterEach(async () => {
-      // close database connection
-      await finishTestDB(ctx.connection);
-    });
-
     it('should be able to delete a productCategory', async () => {
+      const category = ctx.categories.find((c) => c.parent != null);
       const res: ProductCategoryResponse = await ProductCategoryService
-        .deleteProductCategory(ctx.categories[0].id);
+        .deleteProductCategory(category.id);
 
       expect(res).to.not.be.null;
-      expect(res.id).to.equal(ctx.categories[0].id);
-      expect(res.name).to.equal(ctx.categories[0].name);
+      expect(res.id).to.equal(category.id);
+      expect(res.name).to.equal(category.name);
+
+      // Cleanup
+      await ctx.connection.manager.save(ProductCategory, category);
+    });
+    it('should not be able to delete a productCategory with children', async () => {
+      const category = ctx.categories.find((c) => c.parent == null);
+      const res: ProductCategoryResponse = await ProductCategoryService
+        .deleteProductCategory(category.id);
+
+      expect(res).to.be.null;
     });
     it('should not be able to delete an invalid productCategory id', async () => {
       const res: ProductCategoryResponse = await ProductCategoryService
