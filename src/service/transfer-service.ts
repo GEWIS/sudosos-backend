@@ -157,15 +157,16 @@ export default class TransferService {
       whereOptions = whereClause;
     }
 
-    const options: FindManyOptions = {
+    const options: FindManyOptions<Transfer> = {
       where: whereOptions,
-      relations: ['from', 'to',
-        'invoice', 'invoice.invoiceStatus',
-        'deposit', 'deposit.depositStatus',
-        'payoutRequest', 'payoutRequest.payoutRequestStatus', 'payoutRequest.requestedBy',
-        'fine', 'fine.userFineGroup', 'fine.userFineGroup.user',
-        'waivedFines', 'waivedFines.fines', 'waivedFines.fines.userFineGroup', 'vat', 'writeOff', 'invoice.latestStatus',
-      ],
+      relations: {
+        from: true, to: true, vat: true, writeOff: true,
+        invoice: { invoiceStatus: true, latestStatus: true },
+        deposit: { stripePaymentIntent: { paymentIntentStatuses: true } },
+        payoutRequest: { payoutRequestStatus: true, requestedBy: true },
+        fine: { userFineGroup: { user: true } },
+        waivedFines: { fines: { userFineGroup: true } },
+      },
       take,
       skip,
       order: { createdAt: 'DESC' },

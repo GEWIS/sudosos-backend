@@ -19,7 +19,7 @@
 
 import BaseResponse from './base-response';
 import { DineroObjectResponse } from './dinero-response';
-import { StripeDepositState } from '../../entity/deposit/stripe-deposit-status';
+import { StripePaymentIntentState } from '../../entity/stripe/stripe-payment-intent-status';
 import { BaseUserResponse } from './user-response';
 
 /**
@@ -50,7 +50,7 @@ export interface StripePaymentIntentResponse extends BaseResponse {
  * @property {integer} state.required - State of the Stripe deposit. It can be 1 ('CREATED'), 2 ('PROCESSING'), 3 ('SUCCEEDED'), or 4 ('FAILED')
  */
 export interface StripeDepositStatusResponse extends BaseResponse {
-  state: StripeDepositState;
+  state: StripePaymentIntentState;
 }
 
 /**

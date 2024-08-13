@@ -61,7 +61,7 @@ import {
 import UpdateLocalRequest from '../../../src/controller/request/update-local-request';
 import { AcceptTosRequest } from '../../../src/controller/request/accept-tos-request';
 import { CreateUserRequest, UpdateUserRequest } from '../../../src/controller/request/user-request';
-import StripeDeposit from '../../../src/entity/deposit/stripe-deposit';
+import StripeDeposit from '../../../src/entity/stripe/stripe-deposit';
 import { StripeDepositResponse } from '../../../src/controller/response/stripe-response';
 import { TransactionReportResponse } from '../../../src/controller/response/transaction-report-response';
 import { TransactionFilterParameters } from '../../../src/service/transaction-service';
