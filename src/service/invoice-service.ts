@@ -189,7 +189,7 @@ export default class InvoiceService {
     const transactionEntries = subTransactionRows.map(InvoiceService.subTransactionRowsAsInvoiceEntryResponse);
 
     return {
-      ...await InvoiceService.asBaseInvoiceResponse(invoice),
+      ...InvoiceService.asBaseInvoiceResponse(invoice),
       invoiceEntries: [...customEntries, ...transactionEntries],
     } as InvoiceResponse;
   }

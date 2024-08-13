@@ -47,7 +47,6 @@ import {
 } from '../../../src/controller/request/invoice-request';
 import Transaction from '../../../src/entity/transactions/transaction';
 import {
-  CREDIT_CONTAINS_INVOICE_ACCOUNT,
   INVALID_TRANSACTION_OWNER,
   INVALID_USER_ID,
   SAME_INVOICE_STATE,
