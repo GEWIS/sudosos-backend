@@ -509,7 +509,6 @@ export default class InvoiceService {
     transactions.forEach((t) => {
       t.subTransactions.forEach((tSub) => {
         tSub.subTransactionRows.forEach((tSubRow) => {
-          console.error(tSubRow);
           if (tSubRow.invoice) throw new NotImplementedError('Transaction already invoiced');
         });
       });
