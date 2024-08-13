@@ -48,7 +48,7 @@ import { collectByToId, collectProductsByRevision, reduceMapToInvoiceEntries } f
 import SubTransaction from '../entity/transactions/sub-transaction';
 import InvoiceUser, { InvoiceUserDefaults } from '../entity/user/invoice-user';
 import { AppDataSource } from '../database/database';
-import { NotImplementedError } from '../helpers/errors';
+import { NotImplementedError } from '../errors';
 
 export interface InvoiceFilterParameters {
   /**
@@ -207,7 +207,7 @@ export default class InvoiceService {
       toId,
     };
 
-    return (new TransferService(this.manager)).postTransfer(transferRequest);
+    return new TransferService(this.manager).postTransfer(transferRequest);
   }
 
   /**
@@ -385,7 +385,7 @@ export default class InvoiceService {
       transferRequests.push(transferRequest);
     });
 
-    await Promise.all(transferRequests.map((t) => (new TransferService(this.manager)).postTransfer(t)));
+    await Promise.all(transferRequests.map((t) => new TransferService(this.manager).postTransfer(t)));
   }
 
   /**

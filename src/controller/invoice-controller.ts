@@ -40,7 +40,7 @@ import InvoiceUser from '../entity/user/invoice-user';
 import { parseInvoiceUserToResponse } from '../helpers/revision-to-response';
 import FileService from '../service/file-service';
 import { AppDataSource } from '../database/database';
-import { NotImplementedError } from '../helpers/errors';
+import { NotImplementedError } from '../errors';
 
 export default class InvoiceController extends BaseController {
   private logger: Logger = log4js.getLogger('InvoiceController');
@@ -228,7 +228,7 @@ export default class InvoiceController extends BaseController {
       }
 
       const invoice: Invoice = await AppDataSource.manager.transaction(async (manager) =>
-        Promise.resolve(new InvoiceService(manager).createInvoice(params)));
+        new InvoiceService(manager).createInvoice(params));
       res.json(InvoiceService.toResponse(invoice, true));
     } catch (error) {
       if (error instanceof NotImplementedError) {
@@ -275,7 +275,7 @@ export default class InvoiceController extends BaseController {
       }
 
       const invoice: Invoice = await AppDataSource.manager.transaction(async (manager) =>
-        Promise.resolve(new InvoiceService(manager).updateInvoice(params)));
+        new InvoiceService(manager).updateInvoice(params));
 
       res.json(InvoiceService.toResponse(invoice, false));
     } catch (error) {
@@ -303,7 +303,7 @@ export default class InvoiceController extends BaseController {
 
     try {
       const invoice = await AppDataSource.manager.transaction(async (manager) =>
-        Promise.resolve(new InvoiceService(manager).deleteInvoice(invoiceId, req.token.user.id)));
+        new InvoiceService(manager).deleteInvoice(invoiceId, req.token.user.id));
       if (!invoice) {
         res.status(404).json('Invoice not found.');
         return;

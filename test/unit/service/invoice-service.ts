@@ -80,7 +80,7 @@ export async function requestToTransaction(
   let total = 0;
   await Promise.all(
     transactionRequests.map(async (t) => {
-      const transactionResponse = await (new TransactionService()).createTransaction(t);
+      const transactionResponse = await new TransactionService().createTransaction(t);
       transactions.push({
         tId: transactionResponse.id,
         amount: transactionResponse.totalPriceInclVat.amount,
@@ -146,7 +146,7 @@ createInvoiceWithTransfers(debtorId: number, creditorId: number,
   };
 
   const invoice = await AppDataSource.manager.transaction(async (manager) => {
-    return (new InvoiceService(manager)).createInvoice(createInvoiceRequest);
+    return new InvoiceService(manager).createInvoice(createInvoiceRequest);
   });
   expect((await BalanceService.getBalance(debtorId)).amount.amount).is.equal(0);
   return invoice;
@@ -210,19 +210,19 @@ describe('InvoiceService', () => {
 
   describe('getInvoices function', () => {
     it('should return all invoices with no input specification', async () => {
-      const res = (await (new InvoiceService()).getInvoices());
+      const res = (await new InvoiceService().getInvoices());
       returnsAll(res, ctx.invoices, baseKeyMapping);
     });
     it('should return all invoices and their entries if specified', async () => {
       const res: Invoice[] = (
-        await (new InvoiceService()).getInvoices({ returnInvoiceEntries: true })
+        await new InvoiceService().getInvoices({ returnInvoiceEntries: true })
       );
       returnsAll(res, ctx.invoices, keyMapping);
     });
     it('should return a specific invoice if the ID is specified', async () => {
       const invoiceId = ctx.invoices[0].id;
       const res: Invoice[] = (
-        await (new InvoiceService()).getInvoices({ invoiceId })
+        await new InvoiceService().getInvoices({ invoiceId })
       );
       returnsAll(res, [ctx.invoices[0]], baseKeyMapping);
     });
@@ -247,7 +247,7 @@ describe('InvoiceService', () => {
       await invoiceUser.save();
 
       const defaults = await AppDataSource.manager.transaction(async (manager) => {
-        return (new InvoiceService(manager)).getDefaultInvoiceParams(user.id);
+        return new InvoiceService(manager).getDefaultInvoiceParams(user.id);
       });
 
       expect(defaults).to.not.be.undefined;
@@ -262,7 +262,7 @@ describe('InvoiceService', () => {
     it('should return a correct Transfer', async () => {
       const toId = (await User.findOne({ where: {} })).id;
       const transactions: BaseTransactionResponse[] = (
-        await (new TransactionService()).getTransactions({ fromId: toId })
+        await new TransactionService().getTransactions({ fromId: toId })
       ).records;
       let value = 0;
       transactions.forEach((t) => {
@@ -271,7 +271,7 @@ describe('InvoiceService', () => {
 
       expect(transactions).to.not.be.empty;
       const transfer: TransferResponse = (
-        await (new InvoiceService()).createTransferFromTransactions(toId, transactions, false));
+        await new InvoiceService().createTransferFromTransactions(toId, transactions, false));
       expect(transfer.amountInclVat.amount).to.be.equal(value);
       expect(transfer.to.id).to.be.equal(toId);
     });
@@ -331,7 +331,7 @@ describe('InvoiceService', () => {
           const total = transactionsAfterDate.total;
 
           const invoice = await AppDataSource.manager.transaction(async (manager) => {
-            return (new InvoiceService(manager)).createInvoice(createInvoiceRequest);
+            return new InvoiceService(manager).createInvoice(createInvoiceRequest);
           });
           expect(invoice.transfer.amountInclVat.getAmount()).is.equal(total);
           expect(
@@ -372,7 +372,7 @@ describe('InvoiceService', () => {
           };
 
           const invoice = await AppDataSource.manager.transaction(async (manager) => {
-            return (new InvoiceService(manager)).createInvoice(createInvoiceRequest);
+            return new InvoiceService(manager).createInvoice(createInvoiceRequest);
           });
           expect(invoice.transfer.amountInclVat.getAmount()).is.equal(
             chosenTransactions.reduce(
@@ -417,7 +417,7 @@ describe('InvoiceService', () => {
           await new Promise((f) => setTimeout(f, 1000));
 
           const invoice = await AppDataSource.manager.transaction(async (manager) => {
-            return (new InvoiceService(manager)).createInvoice(createInvoiceRequest);
+            return new InvoiceService(manager).createInvoice(createInvoiceRequest);
           });
 
           expect(invoice.transfer.amountInclVat.getAmount()).is.equal(total);
@@ -454,7 +454,7 @@ describe('InvoiceService', () => {
           };
 
           const invoice = await AppDataSource.manager.transaction(async (manager) => {
-            return (new InvoiceService(manager)).createInvoice(createInvoiceRequest);
+            return new InvoiceService(manager).createInvoice(createInvoiceRequest);
           });
           expect(
             (await BalanceService.getBalance(debtor.id)).amount.amount,
@@ -497,7 +497,7 @@ describe('InvoiceService', () => {
           isCreditInvoice: true,
         };
         await AppDataSource.manager.transaction(async (manager) => {
-          await (new InvoiceService(manager)).createInvoice(createInvoiceRequest);
+          await new InvoiceService(manager).createInvoice(createInvoiceRequest);
         });
         const debtorBalance = await BalanceService.getBalance(debtor.id);
         const creditorBalance = await BalanceService.getBalance(creditor.id);
@@ -538,7 +538,7 @@ describe('InvoiceService', () => {
           isCreditInvoice: true,
         };
         const invoice = await AppDataSource.manager.transaction(async (manager) => {
-          return (new InvoiceService(manager)).createInvoice(createInvoiceRequest);
+          return new InvoiceService(manager).createInvoice(createInvoiceRequest);
         } );
         const debtorBalance = await BalanceService.getBalance(debtor.id);
         const creditorBalance = await BalanceService.getBalance(creditor.id);
@@ -590,7 +590,7 @@ describe('InvoiceService', () => {
 
           // Test if attributes were updated
           const updatedInvoice = await AppDataSource.manager.transaction(async (manager) => {
-            return (new InvoiceService(manager)).updateInvoice(
+            return new InvoiceService(manager).updateInvoice(
               validUpdateInvoiceParams,
             );
           });
@@ -622,7 +622,7 @@ describe('InvoiceService', () => {
           };
 
           const updatedInvoice = await AppDataSource.manager.transaction(async (manager) => {
-            return (new InvoiceService(manager)).updateInvoice(
+            return new InvoiceService(manager).updateInvoice(
               validUpdateInvoiceParams,
             );
           });
@@ -645,7 +645,7 @@ describe('InvoiceService', () => {
           };
 
           const updatedInvoice = await AppDataSource.manager.transaction(async (manager) => {
-            return (new InvoiceService(manager)).updateInvoice(
+            return new InvoiceService(manager).updateInvoice(
               validUpdateInvoiceParams,
             );
           });
@@ -668,7 +668,7 @@ describe('InvoiceService', () => {
           };
 
           const updatedInvoice = await AppDataSource.manager.transaction(async (manager) => {
-            return (new InvoiceService(manager)).updateInvoice(
+            return new InvoiceService(manager).updateInvoice(
               validUpdateInvoiceParams,
             );
           });
@@ -691,7 +691,7 @@ describe('InvoiceService', () => {
           };
 
           const updatedInvoice = await AppDataSource.manager.transaction(async (manager) => {
-            return (new InvoiceService(manager)).updateInvoice(
+            return new InvoiceService(manager).updateInvoice(
               validUpdateInvoiceParams,
             );
           });
@@ -725,7 +725,7 @@ describe('InvoiceService', () => {
 
           // Test if attributes were updated
           const updatedInvoice = await AppDataSource.manager.transaction(async (manager) => {
-            return (new InvoiceService(manager)).updateInvoice(
+            return new InvoiceService(manager).updateInvoice(
               validUpdateInvoiceParams,
             );
           });
@@ -755,7 +755,7 @@ describe('InvoiceService', () => {
 
           // Test if attributes were updated
           let updatedInvoice = await AppDataSource.manager.transaction(async (manager) => {
-            return (new InvoiceService(manager)).updateInvoice(
+            return new InvoiceService(manager).updateInvoice(
               makeParamsState(InvoiceState.SENT),
             );
           });
@@ -763,7 +763,7 @@ describe('InvoiceService', () => {
           expect(InvoiceService.isState(updatedInvoice, InvoiceState.SENT)).to.be.true;
 
           updatedInvoice = await AppDataSource.manager.transaction(async (manager) => {
-            return (new InvoiceService(manager)).updateInvoice(
+            return new InvoiceService(manager).updateInvoice(
               makeParamsState(InvoiceState.PAID),
             );
           });
@@ -794,7 +794,7 @@ describe('InvoiceService', () => {
 
           // Test if attributes were updated
           const updatedInvoice = await AppDataSource.manager.transaction(async (manager) => {
-            return (new InvoiceService(manager)).updateInvoice(
+            return new InvoiceService(manager).updateInvoice(
               makeParamsState(addressee, description, creditor, invoice.id, InvoiceState.DELETED),
             );
           });
@@ -816,7 +816,7 @@ describe('InvoiceService', () => {
         expect(debtorBalance.amount.amount).to.eq(0);
 
         await AppDataSource.manager.transaction(async (manager) => {
-          await (new InvoiceService(manager)).updateInvoice(makeParamsState(invoice.addressee,
+          await new InvoiceService(manager).updateInvoice(makeParamsState(invoice.addressee,
             invoice.description, creditor, invoice.id, InvoiceState.DELETED));
         });
         expect((await BalanceService.getBalance(debtor.id)).amount.amount)
@@ -851,7 +851,7 @@ describe('InvoiceService', () => {
           };
 
           const invoice = await AppDataSource.manager.transaction(async (manager) => {
-            return (new InvoiceService(manager)).createInvoice(createInvoiceRequest);
+            return new InvoiceService(manager).createInvoice(createInvoiceRequest);
           });
           let invoiceTransactions = await Transaction.find({
             where: {
@@ -873,7 +873,7 @@ describe('InvoiceService', () => {
 
           const { addressee, description } = invoice;
           const updatedInvoice = await AppDataSource.manager.transaction(async (manager) => {
-            return (new InvoiceService(manager)).updateInvoice(
+            return new InvoiceService(manager).updateInvoice(
               makeParamsState(addressee, description, creditor, invoice.id, InvoiceState.DELETED),
             );
           });
@@ -923,7 +923,7 @@ describe('InvoiceService', () => {
           };
 
           const invoice = await AppDataSource.manager.transaction(async (manager) => {
-            return (new InvoiceService(manager)).createInvoice(createInvoiceRequest);
+            return new InvoiceService(manager).createInvoice(createInvoiceRequest);
           });
 
           expect(invoice.transfer.from.id).to.equal(creditor.id);
@@ -932,7 +932,7 @@ describe('InvoiceService', () => {
           expect((await BalanceService.getBalance(creditor.id)).amount.amount).to.eq(0);
 
           await AppDataSource.manager.transaction(async (manager) => {
-            await (new InvoiceService(manager)).deleteInvoice(invoice.id, creditor.id);
+            await new InvoiceService(manager).deleteInvoice(invoice.id, creditor.id);
           });
           const tr = await Transaction.find({ where: { id: In(transactions.map((transaction) => transaction.tId)) }, relations: ['subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice'] });
 
@@ -983,7 +983,7 @@ describe('InvoiceService', () => {
         };
 
         await AppDataSource.manager.transaction(async (manager) => {
-          await (new InvoiceService(manager)).createInvoice(createInvoiceRequest);
+          await new InvoiceService(manager).createInvoice(createInvoiceRequest);
         });
         let debtorBalance = await BalanceService.getBalance(debtor.id);
         const creditorBalance = await BalanceService.getBalance(creditor.id);

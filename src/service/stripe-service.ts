@@ -195,7 +195,7 @@ export default class StripeService {
 
     // If payment has succeeded, create the transfer
     if (state === StripeDepositState.SUCCEEDED) {
-      deposit.transfer = await (new TransferService(this.manager)).createTransfer({
+      deposit.transfer = await new TransferService(this.manager).createTransfer({
         amount: {
           amount: deposit.amount.getAmount(),
           precision: deposit.amount.getPrecision(),
@@ -225,16 +225,16 @@ export default class StripeService {
 
       switch (event.type) {
         case 'payment_intent.created':
-          await this.manager.transaction(async (manager) => Promise.resolve(new StripeService(manager).createNewDepositStatus(deposit.id, StripeDepositState.CREATED)));
+          await this.manager.transaction(async (manager) => new StripeService(manager).createNewDepositStatus(deposit.id, StripeDepositState.CREATED));
           break;
         case 'payment_intent.processing':
-          await this.manager.transaction(async (manager) => Promise.resolve(new StripeService(manager).createNewDepositStatus(deposit.id, StripeDepositState.PROCESSING)));
+          await this.manager.transaction(async (manager) => new StripeService(manager).createNewDepositStatus(deposit.id, StripeDepositState.PROCESSING));
           break;
         case 'payment_intent.succeeded':
-          await this.manager.transaction(async (manager) => Promise.resolve(new StripeService(manager).createNewDepositStatus(deposit.id, StripeDepositState.SUCCEEDED)));
+          await this.manager.transaction(async (manager) => new StripeService(manager).createNewDepositStatus(deposit.id, StripeDepositState.SUCCEEDED));
           break;
         case 'payment_intent.payment_failed':
-          await this.manager.transaction(async (manager) => Promise.resolve(new StripeService(manager).createNewDepositStatus(deposit.id, StripeDepositState.FAILED)));
+          await this.manager.transaction(async (manager) => new StripeService(manager).createNewDepositStatus(deposit.id, StripeDepositState.FAILED));
           break;
         default:
           this.logger.warn('Tried to process event', event.type, 'but processing method is not defined');

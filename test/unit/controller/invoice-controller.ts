@@ -382,7 +382,7 @@ describe('InvoiceController', async () => {
           });
 
           await AppDataSource.manager.transaction(async (manager) => {
-            return (new InvoiceService(manager)).createInvoice(createInvoiceRequest);
+            return new InvoiceService(manager).createInvoice(createInvoiceRequest);
           });
           await expectError(createInvoiceRequest, (SUBTRANSACTION_ALREADY_INVOICED(subIDs)).value);
         });

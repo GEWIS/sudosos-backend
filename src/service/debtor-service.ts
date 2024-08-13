@@ -305,7 +305,7 @@ export default class DebtorService {
     const amount = userFineGroup.fines.reduce((sum, f) => sum.add(f.amount), dinero({ amount: 0 }));
 
     // Create the waived transfer
-    userFineGroup.waivedTransfer = await (new TransferService()).createTransfer({
+    userFineGroup.waivedTransfer = await new TransferService().createTransfer({
       amount: amount.toObject(),
       toId: user.id,
       description: 'Waived fines',
