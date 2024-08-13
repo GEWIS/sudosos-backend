@@ -576,7 +576,6 @@ export default class InvoiceService {
       currentState: 'currentState',
       toId: 'toId',
       invoiceId: 'id',
-      latestState: 'latestStatus.state',
     };
 
     let stateFilter: FindOptionsWhere<Invoice> = { };
@@ -593,7 +592,6 @@ export default class InvoiceService {
       invoiceStatus: true,
       transfer: { to: true, from: true },
       pdf: true,
-      latestStatus: true,
     };
     if (params.returnInvoiceEntries) {
       relations.invoiceEntries = true;
