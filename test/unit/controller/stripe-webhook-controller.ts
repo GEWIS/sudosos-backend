@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { Connection } from 'typeorm';
+import { DataSource } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
@@ -36,7 +36,7 @@ describe('StripeWebhookController', async (): Promise<void> => {
   let shouldSkip: boolean;
 
   let ctx: {
-    connection: Connection,
+    connection: DataSource,
     app: Application,
     specification: SwaggerSpecification,
     controller: StripeWebhookController,
@@ -155,9 +155,12 @@ describe('StripeWebhookController', async (): Promise<void> => {
         .post('/stripe/webhook')
         .set('stripe-signature', ctx.signatureHeader)
         .send(ctx.payload);
+      expect(res.status).to.equal(200);
+
+      // Race condition (by design), because the webhook event is and should be handled asynchronously
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       expect(handleWebhookEventStub).to.have.been.calledOnce;
-      expect(res.status).to.equal(200);
     });
   });
 });
