@@ -64,13 +64,13 @@ export default class Invoice extends BaseEntity {
     { cascade: true, eager: true })
   public invoiceEntries: InvoiceEntry[];
 
-
-  /**
-   * The current status of the invoice
-   */
-  @OneToOne(() => InvoiceStatus, { nullable: true, eager: false })
-  @JoinColumn({ name: 'latestStatusId' })
-  public latestStatus?: InvoiceStatus;
+  // TODO drop during migration
+  // /**
+  //  * The current status of the invoice
+  //  */
+  // @OneToOne(() => InvoiceStatus, { nullable: true, eager: false })
+  // @JoinColumn({ name: 'latestStatusId' })
+  // public latestStatus?: InvoiceStatus;
 
   /**
    * The status history of the invoice
