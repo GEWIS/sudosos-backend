@@ -15,9 +15,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-
-
-import dinero, { Dinero } from 'dinero.js';
+import dinero from 'dinero.js';
 import { EntityManager, FindManyOptions, FindOptionsWhere, Raw } from 'typeorm';
 import Transfer from '../entity/transactions/transfer';
 import { PaginatedTransferResponse, TransferResponse } from '../controller/response/transfer-response';
@@ -73,7 +71,7 @@ export default class TransferService {
       description: transfer.description,
       createdAt: transfer.createdAt.toISOString(),
       updatedAt: transfer.updatedAt.toISOString(),
-      invoice: transfer.invoice ? InvoiceService.asInvoiceResponse(transfer.invoice) : null,
+      invoice: transfer.invoice ? InvoiceService.asBaseInvoiceResponse(transfer.invoice) : null,
       deposit: transfer.deposit ? StripeService.asStripeDepositResponse(transfer.deposit) : null,
       payoutRequest: transfer.payoutRequest ? PayoutRequestService.asBasePayoutRequestResponse(transfer.payoutRequest) : null,
       fine: transfer.fine ? DebtorService.asFineResponse(transfer.fine) : null,
@@ -161,7 +159,7 @@ export default class TransferService {
       where: whereOptions,
       relations: {
         from: true, to: true, vat: true, writeOff: true,
-        invoice: { invoiceStatus: true, latestStatus: true },
+        invoice: { invoiceStatus: true, transfer: true },
         deposit: { stripePaymentIntent: { paymentIntentStatuses: true } },
         payoutRequest: { payoutRequestStatus: true, requestedBy: true },
         fine: { userFineGroup: { user: true } },

@@ -46,15 +46,13 @@ import InvoiceEntry from '../../../src/entity/invoices/invoice-entry';
 import { CreateInvoiceParams, UpdateInvoiceParams } from '../../../src/controller/request/invoice-request';
 import { TransferResponse } from '../../../src/controller/response/transfer-response';
 import TransactionService from '../../../src/service/transaction-service';
-import { BaseTransactionResponse } from '../../../src/controller/response/transaction-response';
+import { BaseTransactionResponse, TransactionResponse } from '../../../src/controller/response/transaction-response';
 import BalanceService from '../../../src/service/balance-service';
 import { createValidTransactionRequest } from '../../helpers/transaction-factory';
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import { TransactionRequest } from '../../../src/controller/request/transaction-request';
 import { InvoiceState } from '../../../src/entity/invoices/invoice-status';
 import Transaction from '../../../src/entity/transactions/transaction';
-import Transfer from '../../../src/entity/transactions/transfer';
-import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import InvoiceUser from '../../../src/entity/user/invoice-user';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
@@ -142,13 +140,15 @@ createInvoiceWithTransfers(debtorId: number, creditorId: number,
     forId: debtorId,
     date: new Date(),
     transactionIDs: transactions.map((t) => t.tId),
-    isCreditInvoice: false,
   };
+
+  const creditorBalance = await BalanceService.getBalance(creditorId);
 
   const invoice = await AppDataSource.manager.transaction(async (manager) => {
     return new InvoiceService(manager).createInvoice(createInvoiceRequest);
   });
   expect((await BalanceService.getBalance(debtorId)).amount.amount).is.equal(0);
+  expect((await BalanceService.getBalance(creditorId)).amount.amount).is.equal(creditorBalance.amount.amount);
   return invoice;
 }
 
@@ -270,8 +270,10 @@ describe('InvoiceService', () => {
       });
 
       expect(transactions).to.not.be.empty;
+      console.error('toId', toId);
       const transfer: TransferResponse = (
-        await new InvoiceService().createTransferFromTransactions(toId, transactions, false));
+        await new InvoiceService().createTransferFromTransactions(toId,
+          await AppDataSource.manager.find(Transaction, { where: { id: In(transactions.map((t) => t.id)) } })));
       expect(transfer.amountInclVat.amount).to.be.equal(value);
       expect(transfer.to.id).to.be.equal(toId);
     });
@@ -306,6 +308,26 @@ describe('InvoiceService', () => {
           );
           await new Promise((f) => setTimeout(f, 1000));
 
+          const fromDate = new Date();
+
+          await new Promise((f) => setTimeout(f, 1000));
+
+          // Spent more money.
+          const transactionRequestsAfterDate: TransactionRequest[] =
+            await createTransactionRequest(debtor.id, creditor.id, 2);
+          const transactionsAfterDate = await requestToTransaction(
+            transactionRequestsAfterDate,
+          );
+          const total = transactionsAfterDate.total;
+
+          const transactions = await new InvoiceService().getTransactionsForInvoice({
+            forId: debtor.id,
+            fromDate,
+          });
+
+          expect(transactions).to.not.eq(false);
+          expect(transactions).length.to.be.greaterThan(0);
+
           const createInvoiceRequest: CreateInvoiceParams = {
             city: 'city',
             country: 'country',
@@ -317,18 +339,8 @@ describe('InvoiceService', () => {
             description: 'Description',
             forId: debtor.id,
             date: new Date(),
-            fromDate: new Date().toISOString(),
-            isCreditInvoice: false,
+            transactionIDs: (transactions as TransactionResponse[]).map((t) => t.id),
           };
-
-          await new Promise((f) => setTimeout(f, 1000));
-          // Spent more money.
-          const transactionRequestsAfterDate: TransactionRequest[] =
-                        await createTransactionRequest(debtor.id, creditor.id, 2);
-          const transactionsAfterDate = await requestToTransaction(
-            transactionRequestsAfterDate,
-          );
-          const total = transactionsAfterDate.total;
 
           const invoice = await AppDataSource.manager.transaction(async (manager) => {
             return new InvoiceService(manager).createInvoice(createInvoiceRequest);
@@ -368,7 +380,6 @@ describe('InvoiceService', () => {
             transactionIDs: chosenTransactions.map(
               (transaction) => transaction.tId,
             ),
-            isCreditInvoice: false,
           };
 
           const invoice = await AppDataSource.manager.transaction(async (manager) => {
@@ -380,51 +391,6 @@ describe('InvoiceService', () => {
               0,
             ),
           );
-        },
-      );
-    });
-    it('should create Invoice since latest invoice if nothing specified', async () => {
-      await inUserContext(
-        await (await UserFactory()).clone(2),
-        async (debtor: User, creditor: User) => {
-          // Spent money and create an invoice.
-          await createInvoiceWithTransfers(debtor.id, creditor.id, 3);
-
-          const createInvoiceRequest: CreateInvoiceParams = {
-            byId: creditor.id,
-            addressee: 'Addressee',
-            description: 'Description',
-            forId: debtor.id,
-            isCreditInvoice: false,
-            city: 'city',
-            country: 'country',
-            postalCode: 'postalCode',
-            street: 'street',
-            reference: 'BAC-41',
-            date: new Date(),
-          };
-
-          // Spent more money.
-          const transactionRequests: TransactionRequest[] =
-                        await createTransactionRequest(debtor.id, creditor.id, 2);
-
-          await new Promise((f) => setTimeout(f, 1000));
-
-          const { total } = await requestToTransaction(
-            transactionRequests,
-          );
-
-          await new Promise((f) => setTimeout(f, 1000));
-
-          const invoice = await AppDataSource.manager.transaction(async (manager) => {
-            return new InvoiceService(manager).createInvoice(createInvoiceRequest);
-          });
-
-          expect(invoice.transfer.amountInclVat.getAmount()).is.equal(total);
-          expect(
-            (await BalanceService.getBalance(debtor.id)).amount.amount,
-            'balance after final invoice',
-          ).is.equal(0);
         },
       );
     });
@@ -449,7 +415,6 @@ describe('InvoiceService', () => {
             description: 'Description',
             forId: debtor.id,
             date: new Date(),
-            isCreditInvoice: false,
             transactionIDs: transactions.map((t) => t.tId),
           };
 
@@ -478,95 +443,6 @@ describe('InvoiceService', () => {
           });
         },
       );
-    });
-    it('should create Credit Invoice from transactions', async () => {
-      await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
-        const { transactions, total } = await createTransactions(debtor.id, creditor.id, 2);
-        const createInvoiceRequest: CreateInvoiceParams = {
-          city: 'city',
-          country: 'country',
-          postalCode: 'postalCode',
-          street: 'street',
-          reference: 'BAC-41',
-          byId: creditor.id,
-          addressee: 'Addressee',
-          description: 'Description',
-          forId: creditor.id,
-          date: new Date(),
-          transactionIDs: transactions.map((t) => t.tId),
-          isCreditInvoice: true,
-        };
-        await AppDataSource.manager.transaction(async (manager) => {
-          await new InvoiceService(manager).createInvoice(createInvoiceRequest);
-        });
-        const debtorBalance = await BalanceService.getBalance(debtor.id);
-        const creditorBalance = await BalanceService.getBalance(creditor.id);
-        expect(debtorBalance.amount.amount).to.equal(-1 * total);
-        expect(creditorBalance.amount.amount).to.equal(0);
-      });
-    });
-    it('should create Credit Invoice only for transactions with relevant toId', async () => {
-      await inUserContext((await UserFactory()).clone(3), async (debtor: User, creditor: User, otherCreditor: User) => {
-        const transactionA: TransactionRequest = (await createTransactionRequest(
-          debtor.id, creditor.id, 1,
-        ))[0];
-        const transactionB: TransactionRequest = (await createTransactionRequest(
-          debtor.id, otherCreditor.id, 1,
-        ))[0];
-        const joinedTransaction: TransactionRequest = { ...transactionA,
-          totalPriceInclVat: {
-            ...transactionA.totalPriceInclVat,
-            amount: transactionA.totalPriceInclVat.amount + transactionB.totalPriceInclVat.amount,
-          },
-          subTransactions: transactionA.subTransactions.concat(transactionB.subTransactions),
-        };
-
-        const { transactions, total } = await requestToTransaction([joinedTransaction]);
-        expect(total).to.equal(transactionA.totalPriceInclVat.amount + transactionB.totalPriceInclVat.amount);
-        const createInvoiceRequest: CreateInvoiceParams = {
-          city: 'city',
-          country: 'country',
-          postalCode: 'postalCode',
-          street: 'street',
-          reference: 'BAC-41',
-          byId: creditor.id,
-          addressee: 'Addressee',
-          description: 'Description',
-          forId: creditor.id,
-          date: new Date(),
-          transactionIDs: transactions.map((t) => t.tId),
-          isCreditInvoice: true,
-        };
-        const invoice = await AppDataSource.manager.transaction(async (manager) => {
-          return new InvoiceService(manager).createInvoice(createInvoiceRequest);
-        } );
-        const debtorBalance = await BalanceService.getBalance(debtor.id);
-        const creditorBalance = await BalanceService.getBalance(creditor.id);
-        const otherCreditorBalance = await BalanceService.getBalance(otherCreditor.id);
-
-        expect(debtorBalance.amount.amount).to.equal(-1 * total);
-        expect(creditorBalance.amount.amount).to.equal(0);
-        expect(otherCreditorBalance.amount.amount).to.equal(transactionB.totalPriceInclVat.amount);
-
-        const subtrans = await SubTransaction.find({ where: { to: { id: otherCreditor.id } }, relations: ['subTransactionRows', 'subTransactionRows.invoice'] });
-        const linkedInvoice = subtrans.map((st) => st.subTransactionRows.map((str) => str.invoice?.id)).flat(1);
-
-        const entryValue = invoice.invoiceEntries.reduce((acc, curr) => acc + curr.priceInclVat.getAmount() * curr.amount, 0);
-        expect(entryValue).to.equal(transactionA.totalPriceInclVat.amount);
-
-        // Only relevant transactions should be linked.
-        expect(linkedInvoice).to.not.include(invoice.id);
-      });
-    });
-    it('should create a seller transfer when Invoice is created', async () => {
-      await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
-        const invoice = await createInvoiceWithTransfers(debtor.id, creditor.id, 1);
-        const creditorBalance = await BalanceService.getBalance(creditor.id);
-        const transfer = await Transfer.findOne({ where: { from: { id: creditor.id } } });
-        expect(transfer).to.not.be.null;
-        expect(transfer.amountInclVat.getAmount()).to.eq(invoice.transfer.amountInclVat.getAmount());
-        expect(creditorBalance.amount.amount).to.eq(0);
-      });
     });
   });
   describe('updateInvoice function', () => {
@@ -807,24 +683,6 @@ describe('InvoiceService', () => {
         },
       );
     });
-    it('should return money to sellers if invoice is deleted', async () => {
-      await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
-        const invoice = await createInvoiceWithTransfers(debtor.id, creditor.id, 1);
-        let creditorBalance = await BalanceService.getBalance(creditor.id);
-        let debtorBalance = await BalanceService.getBalance(debtor.id);
-        expect(creditorBalance.amount.amount).to.eq(0);
-        expect(debtorBalance.amount.amount).to.eq(0);
-
-        await AppDataSource.manager.transaction(async (manager) => {
-          await new InvoiceService(manager).updateInvoice(makeParamsState(invoice.addressee,
-            invoice.description, creditor, invoice.id, InvoiceState.DELETED));
-        });
-        expect((await BalanceService.getBalance(debtor.id)).amount.amount)
-          .is.equal(-1 * invoice.transfer.amountInclVat.getAmount());
-        expect((await BalanceService.getBalance(creditorBalance.id)).amount.amount)
-          .is.equal(invoice.transfer.amountInclVat.getAmount());
-      });
-    });
     it('should delete invoice reference from subTransactions when Invoice is deleted', async () => {
       await inUserContext(
         await (await UserFactory()).clone(2),
@@ -845,7 +703,6 @@ describe('InvoiceService', () => {
             addressee: 'Addressee',
             description: 'Description',
             forId: debtor.id,
-            isCreditInvoice: false,
             date: new Date(),
             transactionIDs: transactions.map((t) => t.tId),
           };
@@ -898,100 +755,6 @@ describe('InvoiceService', () => {
           });
         },
       );
-    });
-    it('should delete a credit invoice', async () => {
-      await inUserContext(
-        await (await UserFactory()).clone(2),
-        async (debtor: User, creditor: User) => {
-          const { transactions } = await createTransactions(debtor.id, creditor.id, 5);
-          const debtorBalance = await BalanceService.getBalance(debtor.id);
-          const creditorBalance = await BalanceService.getBalance(creditor.id);
-
-          const createInvoiceRequest: CreateInvoiceParams = {
-            city: 'city',
-            country: 'country',
-            postalCode: 'postalCode',
-            street: 'street',
-            reference: 'BAC-41',
-            byId: creditor.id,
-            addressee: 'Addressee',
-            description: 'Description',
-            forId: creditor.id,
-            date: new Date(),
-            transactionIDs: transactions.map((t) => t.tId),
-            isCreditInvoice: true,
-          };
-
-          const invoice = await AppDataSource.manager.transaction(async (manager) => {
-            return new InvoiceService(manager).createInvoice(createInvoiceRequest);
-          });
-
-          expect(invoice.transfer.from.id).to.equal(creditor.id);
-          expect(invoice.transfer.amountInclVat.getAmount()).to.eq(creditorBalance.amount.amount);
-          expect((await BalanceService.getBalance(debtor.id)).amount.amount).to.eq(debtorBalance.amount.amount);
-          expect((await BalanceService.getBalance(creditor.id)).amount.amount).to.eq(0);
-
-          await AppDataSource.manager.transaction(async (manager) => {
-            await new InvoiceService(manager).deleteInvoice(invoice.id, creditor.id);
-          });
-          const tr = await Transaction.find({ where: { id: In(transactions.map((transaction) => transaction.tId)) }, relations: ['subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice'] });
-
-          // should have unlinked the invoice from the transactions
-          tr.forEach((t) => {
-            t.subTransactions.forEach((tSub) => {
-              tSub.subTransactionRows.forEach((tSubRow) => {
-                expect(tSubRow.invoice).to.equal(null);
-              });
-            });
-          });
-
-          expect((await BalanceService.getBalance(debtor.id)).amount.amount).to.eq(debtorBalance.amount.amount);
-          expect((await BalanceService.getBalance(creditor.id)).amount.amount).to.eq(creditorBalance.amount.amount);
-        });
-    });
-  });
-  describe('createTransfersPaidInvoice function', () => {
-    it('should subtract amount from sellers', async () => {
-      await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
-        await createInvoiceWithTransfers(debtor.id, creditor.id, 1);
-        let creditorBalance = await BalanceService.getBalance(creditor.id);
-        const debtorBalance = await BalanceService.getBalance(debtor.id);
-        expect(creditorBalance.amount.amount).to.equal(0);
-        expect(debtorBalance.amount.amount).to.equal(0);
-      });
-    });
-    // TODO Refactor how multiple sellers are handled
-    it.skip('should subtract amount from multiple sellers', async () => {
-      await inUserContext((await UserFactory()).clone(3), async (debtor: User, creditor: User, secondCreditor) => {
-        const transactions = [];
-        transactions.push(...(await createTransactions(debtor.id, creditor.id, 3)).transactions);
-        transactions.push(...(await createTransactions(debtor.id, secondCreditor.id, 2)).transactions);
-
-        const createInvoiceRequest: CreateInvoiceParams = {
-          city: 'city',
-          country: 'country',
-          postalCode: 'postalCode',
-          street: 'street',
-          reference: 'BAC-41',
-          byId: creditor.id,
-          addressee: 'Addressee',
-          description: 'Description',
-          forId: debtor.id,
-          date: new Date(),
-          transactionIDs: transactions.map((t) => t.tId),
-          isCreditInvoice: false,
-        };
-
-        await AppDataSource.manager.transaction(async (manager) => {
-          await new InvoiceService(manager).createInvoice(createInvoiceRequest);
-        });
-        let debtorBalance = await BalanceService.getBalance(debtor.id);
-        const creditorBalance = await BalanceService.getBalance(creditor.id);
-        const secondCreditorBalance = await BalanceService.getBalance(creditor.id);
-        expect(creditorBalance.amount.amount).to.equal(0);
-        expect(secondCreditorBalance.amount.amount).to.equal(0);
-        expect(debtorBalance.amount.amount).to.equal(0);
-      });
     });
   });
 });

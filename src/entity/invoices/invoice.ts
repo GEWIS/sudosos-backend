@@ -65,9 +65,6 @@ export default class Invoice extends BaseEntity {
   public invoiceEntries: InvoiceEntry[];
 
 
-  @Column({ nullable: true })
-  public latestStatusId?: number;
-
   /**
    * The current status of the invoice
    */
