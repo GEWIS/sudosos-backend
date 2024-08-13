@@ -259,7 +259,7 @@ export default class PayoutRequestService {
     await payoutRequestStatus.save();
 
     if (state === PayoutRequestState.APPROVED) {
-      payoutRequest.transfer = await TransferService.createTransfer({
+      payoutRequest.transfer = await new TransferService().createTransfer({
         amount: {
           amount: payoutRequest.amount.getAmount(),
           precision: payoutRequest.amount.getPrecision(),

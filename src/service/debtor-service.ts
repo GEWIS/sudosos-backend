@@ -229,12 +229,12 @@ export default class DebtorService {
           }
         }
 
-        const transfer = await TransferService.createTransfer({
+        const transfer = await (new TransferService(manager)).createTransfer({
           amount: amount.toObject(),
           fromId: user.id,
           description: `Fine for balance of ${dinero({ amount: b.amount.amount }).toFormat()} on ${referenceDate.toLocaleDateString()}.`,
           toId: undefined,
-        }, manager);
+        });
 
         emails.push({ user, email: new UserGotFined({
           fine: amount,
@@ -305,7 +305,7 @@ export default class DebtorService {
     const amount = userFineGroup.fines.reduce((sum, f) => sum.add(f.amount), dinero({ amount: 0 }));
 
     // Create the waived transfer
-    userFineGroup.waivedTransfer = await TransferService.createTransfer({
+    userFineGroup.waivedTransfer = await new TransferService().createTransfer({
       amount: amount.toObject(),
       toId: user.id,
       description: 'Waived fines',

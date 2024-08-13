@@ -23,7 +23,7 @@ import { json } from 'body-parser';
 import { expect, request } from 'chai';
 import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import InvoiceController from '../../../src/controller/invoice-controller';
-import Database from '../../../src/database/database';
+import Database, { AppDataSource } from '../../../src/database/database';
 import {
   seedContainers,
   seedInvoices,
@@ -47,6 +47,7 @@ import {
 } from '../../../src/controller/request/invoice-request';
 import Transaction from '../../../src/entity/transactions/transaction';
 import {
+  CREDIT_CONTAINS_INVOICE_ACCOUNT,
   INVALID_DATE,
   INVALID_TRANSACTION_OWNER,
   INVALID_USER_ID,
@@ -286,6 +287,12 @@ describe('InvoiceController', async () => {
       const req: CreateInvoiceRequest = { ...ctx.validInvoiceRequest, forId: ctx.localUser.id, isCreditInvoice: true, transactionIDs };
       await expectError(req, INVALID_TRANSACTION_OWNER().value);
     });
+    it('should verify that all transactions are not invoice accounts if credit Invoice', async () => {
+      const transaction = (await Transaction.findOne({ where: { from : { type: UserType.INVOICE } }, relations: [ 'from', 'subTransactions', 'subTransactions.to' ] }));
+      const transactionIDs = [transaction.id];
+      const req: CreateInvoiceRequest = { ...ctx.validInvoiceRequest, forId: transaction.subTransactions[0].to.id, isCreditInvoice: true, transactionIDs };
+      await expectError(req, CREDIT_CONTAINS_INVOICE_ACCOUNT(transactionIDs).value);
+    });
     it('should verity that forId is a valid user', async () => {
       const req: CreateInvoiceRequest = { ...ctx.validInvoiceRequest, forId: -1 };
       await expectError(req, `forId: ${INVALID_USER_ID().value}`);
@@ -374,7 +381,9 @@ describe('InvoiceController', async () => {
             });
           });
 
-          await InvoiceService.createInvoice(createInvoiceRequest);
+          await AppDataSource.manager.transaction(async (manager) => {
+            return new InvoiceService(manager).createInvoice(createInvoiceRequest);
+          });
           await expectError(createInvoiceRequest, (SUBTRANSACTION_ALREADY_INVOICED(subIDs)).value);
         });
     });

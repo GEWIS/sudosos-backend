@@ -302,7 +302,7 @@ describe('DebtorService', (): void => {
       const balance = calculateBalance(userFineGroup.user, ctx.transactions, ctx.subTransactions, ctx.transfersInclFines);
       expect(balance.amount.getAmount()).to.be.lessThan(0);
       const toTopUp = balance.amount.multiply(-1).subtract(dinero({ amount: 1 }));
-      const transfer = await TransferService.createTransfer({
+      const transfer = await new TransferService().createTransfer({
         amount: {
           amount: toTopUp.getAmount(),
           precision: toTopUp.getPrecision(),

@@ -141,7 +141,7 @@ describe('TransactionSubscriber', () => {
 
       const amount = Math.ceil(currentBalance.getAmount() / product.priceInclVat.getAmount()) + 1 ;
       const totalPriceInclVat = product.priceInclVat.multiply(amount).toObject();
-      await TransactionService.createTransaction({
+      await (new TransactionService()).createTransaction({
         from: user.id,
         pointOfSale: {
           id: pos.pointOfSaleId,
@@ -182,7 +182,7 @@ describe('TransactionSubscriber', () => {
       const amount = Math.floor(currentBalance.getAmount() / product.priceInclVat.getAmount());
       expect(amount).to.be.at.least(1);
       const totalPriceInclVat = product.priceInclVat.multiply(amount).toObject();
-      await TransactionService.createTransaction({
+      await (new TransactionService()).createTransaction({
         from: user.id,
         pointOfSale: {
           id: pos.pointOfSaleId,
@@ -222,7 +222,7 @@ describe('TransactionSubscriber', () => {
 
       const amount = 1;
       const totalPriceInclVat = product.priceInclVat.toObject();
-      await TransactionService.createTransaction({
+      await (new TransactionService()).createTransaction({
         from: user.id,
         pointOfSale: {
           id: pos.pointOfSaleId,

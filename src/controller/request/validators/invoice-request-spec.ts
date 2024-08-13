@@ -34,6 +34,7 @@ import { validOrUndefinedDate } from './duration-spec';
 import stringSpec from './string-spec';
 import { positiveNumber, userMustExist } from './general-validators';
 import {
+  CREDIT_CONTAINS_INVOICE_ACCOUNT,
   INVALID_INVOICE_ID,
   INVALID_TRANSACTION_IDS,
   INVALID_TRANSACTION_OWNER,
@@ -42,6 +43,7 @@ import {
 } from './validation-errors';
 import { InvoiceState } from '../../../entity/invoices/invoice-status';
 import Invoice from '../../../entity/invoices/invoice';
+import { UserType } from '../../../entity/user/user';
 
 /**
  * Checks whether all the transactions exists and are credited to the debtor or sold in case of credit Invoice.
@@ -51,6 +53,7 @@ async function validTransactionIds<T extends BaseInvoice>(p: T) {
 
   const transactions = await Transaction.find({ where: { id: In(p.transactionIDs) }, relations: ['from', 'subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice', 'subTransactions.to'] });
   let notOwnedByUser = [];
+  let fromInvoiceAccount: number[] = [];
   if (p.isCreditInvoice) {
     transactions.forEach((t) => {
       t.subTransactions.forEach((tSub) => {
@@ -65,6 +68,7 @@ async function validTransactionIds<T extends BaseInvoice>(p: T) {
 
   const alreadyInvoiced: number[] = [];
   transactions.forEach((t) => {
+    if (t.from.type === UserType.INVOICE) fromInvoiceAccount.push(t.id);
     t.subTransactions.forEach((tSub) => {
       tSub.subTransactionRows.forEach((tSubRow) => {
         if (tSubRow.invoice !== null) alreadyInvoiced.push(tSubRow.id);
@@ -72,6 +76,7 @@ async function validTransactionIds<T extends BaseInvoice>(p: T) {
     });
   });
   if (alreadyInvoiced.length !== 0) return toFail(SUBTRANSACTION_ALREADY_INVOICED(alreadyInvoiced));
+  if (p.isCreditInvoice && fromInvoiceAccount.length !== 0) return toFail(CREDIT_CONTAINS_INVOICE_ACCOUNT(fromInvoiceAccount));
   return toPass(p);
 }
 

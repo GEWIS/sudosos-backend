@@ -39,8 +39,8 @@ import UserService from './user-service';
 import { RequestWithToken } from '../middleware/token-middleware';
 import { asNumber } from '../helpers/validators';
 import VatGroup from '../entity/vat-group';
-import wrapInManager from '../helpers/database';
 import ServerSettingsStore from '../server-settings/server-settings-store';
+import { AppDataSource } from '../database/database';
 
 export interface WriteOffFilterParameters {
   /**
@@ -60,6 +60,13 @@ export function parseWriteOffFilterParameters(req: RequestWithToken): WriteOffFi
   };
 }
 export default class WriteOffService {
+
+  private manager: EntityManager;
+
+  constructor(manager?: EntityManager) {
+    this.manager = manager ? manager : AppDataSource.manager;
+  }
+
   /**
    * Parses a write-off object to a BaseWriteOffResponse
    * @param writeOff
@@ -119,7 +126,7 @@ export default class WriteOffService {
    * @param manager - The entity manager to use
    * @param user - The user to create the write-off for
    */
-  public static async createWriteOff(manager: EntityManager, user: User): Promise<WriteOffResponse> {
+  public async createWriteOff(user: User): Promise<WriteOffResponse> {
     const balance = await BalanceService.getBalance(user.id);
     if (balance.amount.amount > 0) {
       throw new Error('User has balance, cannot create write off');
@@ -132,8 +139,8 @@ export default class WriteOffService {
       amount,
     });
 
-    await manager.save(writeOff);
-    const transfer = await TransferService.createTransfer({
+    await this.manager.save(writeOff);
+    const transfer = await (new TransferService()).createTransfer({
       amount: {
         amount: amount.getAmount(),
         precision: amount.getPrecision(),
@@ -142,20 +149,22 @@ export default class WriteOffService {
       toId: user.id,
       description: 'Write off',
       fromId: null,
-    }, manager);
+    });
 
     const highVatGroup = await WriteOffService.getHighVATGroup();
     writeOff.transfer = transfer;
     transfer.writeOff = writeOff;
     transfer.vat = highVatGroup;
 
-    await manager.save(transfer);
-    await manager.save(writeOff);
+    await this.manager.save(transfer);
+    await this.manager.save(writeOff);
     return WriteOffService.asWriteOffResponse(writeOff);
   }
 
-  public static async createWriteOffAndCloseUser(user: User): Promise<WriteOffResponse> {
-    const writeOff = await wrapInManager(WriteOffService.createWriteOff)(user);
+  // TODO: This should be a transaction
+  //   wait for BalanceService to be refactored
+  public async createWriteOffAndCloseUser(user: User): Promise<WriteOffResponse> {
+    const writeOff = await this.createWriteOff(user);
     await UserService.closeUser(user.id, true);
     return writeOff;
   }

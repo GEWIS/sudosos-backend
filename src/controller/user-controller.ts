@@ -1055,7 +1055,7 @@ export default class UserController extends BaseController {
         res.status(404).json({});
         return;
       }
-      const transactions = await TransactionService.getTransactions(filters, { take, skip }, user);
+      const transactions = await new TransactionService().getTransactions(filters, { take, skip }, user);
 
       res.status(200).json(transactions);
     } catch (error) {
@@ -1114,7 +1114,7 @@ export default class UserController extends BaseController {
         return;
       }
 
-      const transfers = (await TransferService.getTransfers(
+      const transfers = (await new TransferService().getTransfers(
         { ...filters }, { take, skip }, user,
       ));
       res.json(transfers);
@@ -1363,7 +1363,7 @@ export default class UserController extends BaseController {
         return;
       }
 
-      const report = await TransactionService.getTransactionReportResponse(filters);
+      const report = await (new TransactionService()).getTransactionReportResponse(filters);
       res.status(200).json(report);
     } catch (e) {
       res.status(500).send();
