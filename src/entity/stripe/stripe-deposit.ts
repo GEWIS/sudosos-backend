@@ -17,12 +17,10 @@
  */
 
 import {
-  Column, Entity, JoinColumn, ManyToOne, OneToOne,
+  Entity, JoinColumn, ManyToOne, OneToOne,
 } from 'typeorm';
-import { Dinero } from 'dinero.js';
 import BaseEntity from '../base-entity';
 import User from '../user/user';
-import DineroTransformer from '../transformer/dinero-transformer';
 import Transfer from '../transactions/transfer';
 import StripePaymentIntent from './stripe-payment-intent';
 

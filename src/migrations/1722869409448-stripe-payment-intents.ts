@@ -119,7 +119,7 @@ SELECT id, createdAt, updatedAt, version, toId, transferId, id FROM ${this.PAYME
     await queryRunner.renameTable('stripe_payment_intent_status', 'stripe_deposit_status');
 
     const depositTable = await queryRunner.getTable(this.DEPOSIT_TABLE_NAME);
-    const foreignKeys = await depositTable.foreignKeys.filter((fk) => fk.referencedTableName === this.PAYMENT_INTENT_TABLE_NAME);
+    const foreignKeys = depositTable.foreignKeys.filter((fk) => fk.referencedTableName === this.PAYMENT_INTENT_TABLE_NAME);
     await queryRunner.dropForeignKeys(depositTable, foreignKeys);
 
     const paymentIntentTable = await queryRunner.getTable(this.PAYMENT_INTENT_TABLE_NAME);
