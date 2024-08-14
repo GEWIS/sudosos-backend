@@ -187,12 +187,19 @@ export default class InvoiceController extends BaseController {
         { invoiceId, returnInvoiceEntries },
       );
 
-      if (!invoices[0]) {
+      const invoice = invoices[0];
+      if (!invoice) {
         res.status(404).json('Unknown invoice ID.');
         return;
       }
 
-      res.json(await new InvoiceService().toResponse(invoices[0], returnInvoiceEntries));
+      let response;
+      if (returnInvoiceEntries) {
+        response = await new InvoiceService().asInvoiceResponse(invoice);
+      } else {
+        response = InvoiceService.asBaseInvoiceResponse(invoice);
+      }
+      res.json(response);
     } catch (error) {
       this.logger.error('Could not return invoice:', error);
       res.status(500).json('Internal server error.');
@@ -236,7 +243,7 @@ export default class InvoiceController extends BaseController {
 
       const invoice: Invoice = await AppDataSource.manager.transaction(async (manager) =>
         new InvoiceService(manager).createInvoice(params));
-      res.json(await new InvoiceService().toResponse(invoice, true));
+      res.json(await new InvoiceService().asInvoiceResponse(invoice));
     } catch (error) {
       if (error instanceof NotImplementedError) {
         res.status(501).json(error.message);
@@ -284,7 +291,7 @@ export default class InvoiceController extends BaseController {
       const invoice: Invoice = await AppDataSource.manager.transaction(async (manager) =>
         new InvoiceService(manager).updateInvoice(params));
 
-      res.json(await new InvoiceService().toResponse(invoice, false));
+      res.json(await new InvoiceService().asInvoiceResponse(invoice));
     } catch (error) {
       this.logger.error('Could not update invoice:', error);
       res.status(500).json('Internal server error.');
@@ -486,8 +493,7 @@ export default class InvoiceController extends BaseController {
    * @return {string} 500 - Internal server error
    */
   public async getEligibleTransactions(req: RequestWithToken, res: Response): Promise<void> {
-    const { body } = req;
-    this.logger.trace('Get eligible transactions for invoice creation', body, 'by user', req.token.user);
+    this.logger.trace('Get eligible transactions for invoice creation', req.query, 'by user', req.token.user);
 
     let fromDate, tillDate;
     let forId;

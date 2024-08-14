@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { In } from 'typeorm';
+import { FindOptionsRelations, In } from 'typeorm';
 import {
   BaseInvoice, CreateInvoiceParams, CreateInvoiceRequest, UpdateInvoiceParams,
 } from '../invoice-request';
@@ -48,8 +48,17 @@ import Invoice from '../../../entity/invoices/invoice';
 async function validTransactionIds<T extends BaseInvoice>(p: T) {
   if (!p.transactionIDs) return toPass(p);
 
+  const relations: FindOptionsRelations<Transaction> = {
+    from: true,
+    subTransactions: {
+      subTransactionRows: {
+        invoice: true,
+      },
+      to: true,
+    },
+  };
   const transactions = await Transaction.find({ where: { id: In(p.transactionIDs) },
-    relations: ['from', 'subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice', 'subTransactions.to'] });
+    relations });
   let notOwnedByUser = [];
   notOwnedByUser.push(...transactions.filter((t) => t.from.id !== p.forId));
   if (notOwnedByUser.length !== 0) return toFail(INVALID_TRANSACTION_OWNER());

@@ -36,7 +36,7 @@ import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import Invoice from '../entity/invoices/invoice';
 import InvoiceEntry from '../entity/invoices/invoice-entry';
 import {
-  CreateInvoiceParams, InvoiceTransactionRequest,
+  CreateInvoiceParams, InvoiceTransactionsRequest,
   UpdateInvoiceParams,
 } from '../controller/request/invoice-request';
 import Transaction from '../entity/transactions/transaction';
@@ -180,13 +180,7 @@ export default class InvoiceService {
   public async asInvoiceResponse(invoice: Invoice)
     : Promise<InvoiceResponse> {
     const customEntries = invoice.invoiceEntries.map(InvoiceService.asInvoiceEntryResponse);
-    const relations: FindOptionsRelations<SubTransactionRow> = {
-      product: {
-        vat: true,
-      },
-    };
-    const subTransactionRows = await this.manager.find(SubTransactionRow, { where: { invoice: { id: invoice.id } }, relations });
-    const transactionEntries = subTransactionRows.map(InvoiceService.subTransactionRowsAsInvoiceEntryResponse);
+    const transactionEntries = invoice.subTransactionRows.map(InvoiceService.subTransactionRowsAsInvoiceEntryResponse);
 
     return {
       ...InvoiceService.asBaseInvoiceResponse(invoice),
@@ -194,21 +188,14 @@ export default class InvoiceService {
     } as InvoiceResponse;
   }
 
-  public async toResponse(invoices: Invoice | Invoice[], entries: boolean): Promise<BaseInvoiceResponse | InvoiceResponse | BaseInvoiceResponse[] | InvoiceResponse[]> {
-    if (Array.isArray(invoices)) {
-      if (entries) {
-        return Promise.all(invoices.map(invoice => this.asInvoiceResponse(invoice)));
-      } else {
-        return invoices.map(invoice => InvoiceService.asBaseInvoiceResponse(invoice));
-      }
-    } else {
-      if (entries) {
-        return await this.asInvoiceResponse(invoices) as InvoiceResponse;
-      } else {
-        return InvoiceService.asBaseInvoiceResponse(invoices) as BaseInvoiceResponse;
-      }
-    }
+  public async toArrayResponse(invoices: Invoice[]): Promise<InvoiceResponse[]> {
+    return Promise.all(invoices.map(invoice => this.asInvoiceResponse(invoice)));
   }
+
+  public toArrayWithoutEntriesResponse(invoices: Invoice[]): BaseInvoiceResponse[] {
+    return invoices.map(invoice => InvoiceService.asBaseInvoiceResponse(invoice));
+  }
+
 
   /**
    * Creates a Transfer for an Invoice from TransactionResponses
@@ -435,7 +422,7 @@ export default class InvoiceService {
    * returns false if the transactions contain invoiced transactions
    * @param params
    */
-  public async getTransactionsForInvoice(params: InvoiceTransactionRequest): Promise<TransactionResponse[] | false> {
+  public async getTransactionsForInvoice(params: InvoiceTransactionsRequest): Promise<TransactionResponse[] | false> {
     const { forId, fromDate, tillDate } = params;
     const transactionService = new TransactionService(this.manager);
 
@@ -443,6 +430,7 @@ export default class InvoiceService {
       .records.map((t) => t.id);
 
 
+    // TODO: Remove after TransactionService migration to `getOptions
     const relations: FindOptionsRelations<Transaction> = {
       subTransactions: {
         subTransactionRows: {
@@ -552,7 +540,12 @@ export default class InvoiceService {
 
     const invoices = await this.manager.find(Invoice, { ...options, take });
 
-    let records = await this.toResponse(invoices, params.returnInvoiceEntries) as (BaseInvoiceResponse | InvoiceResponse)[];
+    let records = [];
+    if (params.returnInvoiceEntries) {
+      records = await this.toArrayResponse(invoices);
+    } else {
+      records = this.toArrayWithoutEntriesResponse(invoices);
+    }
 
     const count = await this.manager.count(Invoice, options);
     return {
@@ -592,6 +585,11 @@ export default class InvoiceService {
       invoiceStatus: true,
       transfer: { to: true, from: true },
       pdf: true,
+      subTransactionRows: {
+        product: {
+          vat: true,
+        },
+      },
     };
     if (params.returnInvoiceEntries) {
       relations.invoiceEntries = true;
