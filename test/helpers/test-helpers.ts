@@ -24,7 +24,7 @@ import TransferRequest from '../../src/controller/request/transfer-request';
 import TransferService from '../../src/service/transfer-service';
 import Swagger from '../../src/start/swagger';
 import RoleManager from '../../src/rbac/role-manager';
-import Database from '../../src/database/database';
+import Database, { AppDataSource } from '../../src/database/database';
 import TokenHandler from '../../src/authentication/token-handler';
 import User, { UserType } from '../../src/entity/user/user';
 import { ADMIN_USER, UserFactory } from './user-factory';
@@ -71,6 +71,7 @@ export async function finishTestDB(connection: DataSource) {
     await connection.dropDatabase();
     await connection.close();
   }
+  await connection.destroy();
 }
 
 // Cleans up the database accordingly
