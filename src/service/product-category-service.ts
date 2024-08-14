@@ -155,8 +155,12 @@ export default class ProductCategoryService {
    */
   public static async verifyProductCategory(request: ProductCategoryRequest):
   Promise<boolean> {
+    const parent = await ProductCategory.findOne({ where: { id: request.parentCategoryId } });
     return request.name != null && request.name !== ''
         && request.name.length <= 64
-        && !(await ProductCategory.findOne({ where: { name: request.name } }));
+        && !(await ProductCategory.findOne({ where: { name: request.name } }))
+        && !!(request.parentCategoryId !== undefined
+          ? await ProductCategory.findOne({ where: { id: request.parentCategoryId } })
+          : true);
   }
 }
