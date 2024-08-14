@@ -30,6 +30,7 @@ import InvoiceStatus from './invoice-status';
 import InvoicePdf from '../file/invoice-pdf';
 import { hashJSON } from '../../helpers/hash';
 import InvoicePdfService from '../../service/invoice-pdf-service';
+import SubTransactionRow from '../transactions/sub-transaction-row';
 
 
 @Entity()
@@ -152,6 +153,9 @@ export default class Invoice extends BaseEntity {
     default: () => 'CURRENT_TIMESTAMP',
   })
   public date: Date;
+
+  @OneToMany(() => SubTransactionRow, (row) => row.invoice, { cascade: true })
+  public subTransactionRows: SubTransactionRow[];
 
   getPdfParamHash(): string {
     return hashJSON(InvoicePdfService.getParameters(this));

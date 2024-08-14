@@ -270,7 +270,6 @@ describe('InvoiceService', () => {
       });
 
       expect(transactions).to.not.be.empty;
-      console.error('toId', toId);
       const transfer: TransferResponse = (
         await new InvoiceService().createTransferFromTransactions(toId,
           await AppDataSource.manager.find(Transaction, { where: { id: In(transactions.map((t) => t.id)) } })));

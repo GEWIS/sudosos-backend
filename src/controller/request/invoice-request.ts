@@ -57,7 +57,7 @@ export interface UpdateInvoiceRequest extends BaseUpdateInvoice {
   state?: keyof typeof InvoiceState,
 }
 
-export interface InvoiceTransactionRequest {
+export interface InvoiceTransactionsRequest {
   forId: number,
   fromDate?: Date,
   tillDate?: Date,
