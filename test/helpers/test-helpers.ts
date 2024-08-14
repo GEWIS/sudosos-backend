@@ -24,7 +24,7 @@ import TransferRequest from '../../src/controller/request/transfer-request';
 import TransferService from '../../src/service/transfer-service';
 import Swagger from '../../src/start/swagger';
 import RoleManager from '../../src/rbac/role-manager';
-import Database, { AppDataSource } from '../../src/database/database';
+import Database from '../../src/database/database';
 import TokenHandler from '../../src/authentication/token-handler';
 import User, { UserType } from '../../src/entity/user/user';
 import { ADMIN_USER, UserFactory } from './user-factory';
