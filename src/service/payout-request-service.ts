@@ -24,8 +24,8 @@ import {
 } from 'typeorm';
 import Dinero, { Currency } from 'dinero.js';
 import { PaginationParameters } from '../helpers/pagination';
-import PayoutRequest from '../entity/transactions/payout-request';
-import PayoutRequestStatus, { PayoutRequestState } from '../entity/transactions/payout-request-status';
+import PayoutRequest from '../entity/transactions/payout/payout-request';
+import PayoutRequestStatus, { PayoutRequestState } from '../entity/transactions/payout/payout-request-status';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import {
   BasePayoutRequestResponse,

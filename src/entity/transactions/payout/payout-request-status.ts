@@ -16,12 +16,23 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { PayoutRequestState } from '../../entity/transactions/payout/payout-request-status';
+import { Column, Entity, ManyToOne } from 'typeorm';
+import BaseEntity from '../../base-entity';
+// eslint-disable-next-line import/no-cycle
+import PayoutRequest from './payout-request';
 
-/**
- * @typedef {object} PayoutRequestStatusRequest
- * @property {string} state - enum:CREATED,APPROVED,DENIED,CANCELLED - PayoutRequestState to change to.
- */
-export interface PayoutRequestStatusRequest {
-  state: PayoutRequestState;
+export enum PayoutRequestState {
+  CREATED = 'CREATED',
+  APPROVED = 'APPROVED',
+  DENIED = 'DENIED',
+  CANCELLED = 'CANCELLED',
+}
+
+@Entity()
+export default class PayoutRequestStatus extends BaseEntity {
+  @ManyToOne(() => PayoutRequest, (pr) => pr.payoutRequestStatus, { nullable: false })
+  public payoutRequest: PayoutRequest;
+
+  @Column()
+  public state: PayoutRequestState;
 }

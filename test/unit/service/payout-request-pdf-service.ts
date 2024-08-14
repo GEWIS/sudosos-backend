@@ -33,7 +33,7 @@ import FileService from '../../../src/service/file-service';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
-import PayoutRequest from '../../../src/entity/transactions/payout-request';
+import PayoutRequest from '../../../src/entity/transactions/payout/payout-request';
 import PayoutRequestPdfService from '../../../src/service/payout-request-pdf-service';
 import PayoutRequestPdf from '../../../src/entity/file/payout-request-pdf';
 

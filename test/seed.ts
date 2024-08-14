@@ -40,8 +40,8 @@ import { BANNER_IMAGE_LOCATION, PRODUCT_IMAGE_LOCATION } from '../src/files/stor
 import StripeDeposit from '../src/entity/stripe/stripe-deposit';
 import StripePaymentIntentStatus, { StripePaymentIntentState } from '../src/entity/stripe/stripe-payment-intent-status';
 import DineroTransformer from '../src/entity/transformer/dinero-transformer';
-import PayoutRequest from '../src/entity/transactions/payout-request';
-import PayoutRequestStatus, { PayoutRequestState } from '../src/entity/transactions/payout-request-status';
+import PayoutRequest from '../src/entity/transactions/payout/payout-request';
+import PayoutRequestStatus, { PayoutRequestState } from '../src/entity/transactions/payout/payout-request-status';
 import InvoiceUser from '../src/entity/user/invoice-user';
 import Invoice from '../src/entity/invoices/invoice';
 import InvoiceEntry from '../src/entity/invoices/invoice-entry';
