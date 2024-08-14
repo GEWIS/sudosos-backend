@@ -291,7 +291,7 @@ export default class InvoiceController extends BaseController {
       const invoice: Invoice = await AppDataSource.manager.transaction(async (manager) =>
         new InvoiceService(manager).updateInvoice(params));
 
-      res.json(await new InvoiceService().asInvoiceResponse(invoice));
+      res.json(InvoiceService.asBaseInvoiceResponse(invoice));
     } catch (error) {
       this.logger.error('Could not update invoice:', error);
       res.status(500).json('Internal server error.');
