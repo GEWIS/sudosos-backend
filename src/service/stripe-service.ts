@@ -25,7 +25,7 @@ import DineroTransformer from '../entity/transformer/dinero-transformer';
 import StripePaymentIntentStatus, { StripePaymentIntentState } from '../entity/stripe/stripe-payment-intent-status';
 import {
   StripeDepositResponse,
-  StripeDepositStatusResponse,
+  StripePaymentIntentStatusResponse,
   StripePaymentIntentResponse,
 } from '../controller/response/stripe-response';
 import TransferService from './transfer-service';
@@ -78,7 +78,7 @@ export default class StripeService {
     return MAX_BALANCE >= (balance.amount.amount + request.amount.amount);
   }
 
-  private static asStripeDepositStatusResponse(status: StripePaymentIntentStatus): StripeDepositStatusResponse {
+  private static asStripePaymentIntentStatusResponse(status: StripePaymentIntentStatus): StripePaymentIntentStatusResponse {
     return {
       id: status.id,
       createdAt: status.createdAt.toISOString(),
@@ -95,7 +95,7 @@ export default class StripeService {
       updatedAt: deposit.updatedAt.toISOString(),
       version: deposit.version,
       stripeId: deposit.stripePaymentIntent.stripeId,
-      depositStatus: deposit.stripePaymentIntent.paymentIntentStatuses.map((s) => this.asStripeDepositStatusResponse(s)),
+      depositStatus: deposit.stripePaymentIntent.paymentIntentStatuses.map((s) => this.asStripePaymentIntentStatusResponse(s)),
       amount: deposit.stripePaymentIntent.amount.toObject(),
       to: parseUserToBaseResponse(deposit.to, true),
     };
