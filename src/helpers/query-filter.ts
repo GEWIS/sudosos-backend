@@ -55,8 +55,14 @@ export default class QueryFilter {
       const value = params[param];
       if (value !== undefined) {
         if (Array.isArray(value)) {
-          const parsed = value.length > 0 && typeof value[0] === 'string'
-            ? value.map((s) => `"${s}"`) : value;
+          let parsed: string[];
+          if (value.length === 0) {
+            parsed = ['NULL'];
+          } else if (value.length > 0 && typeof value[0] === 'string') {
+            parsed = value.map((s) => `"${s}"`);
+          } else {
+            parsed = value;
+          }
           query.andWhere(`${mapping[param]} in (${parsed.toString()})`);
         } else {
           query.andWhere(`${mapping[param]} = :${param}`);
