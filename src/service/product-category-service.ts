@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { EntityManager, FindManyOptions, IsNull } from 'typeorm';
+import { EntityManager, FindManyOptions, IsNull, Raw } from 'typeorm';
 import ProductCategory from '../entity/product/product-category';
 import {
   PaginatedProductCategoryResponse,
@@ -43,6 +43,10 @@ export interface ProductCategoryFilterParameters {
    * Whether to only return root categories (so categories without parents)
    */
   onlyRoot?: boolean;
+  /**
+   * Whether to only return leaf categories (so categories without children)
+   */
+  onlyLeaf?: boolean;
 }
 
 /**
@@ -84,10 +88,13 @@ export default class ProductCategoryService {
       id: 'id',
       name: 'name',
     };
+
     const options: FindManyOptions<ProductCategory> = {
       where: {
-        ...QueryFilter.createFilterWhereClause(filterMapping, filters),
+        // Only IDs that are not found in the "parentId" column (so those IDs are not parents, i.e. are leafs)
+        id: filters.onlyLeaf ? Raw((columnAlias) => `${columnAlias} NOT IN (SELECT DISTINCT parentId FROM product_category WHERE parentId IS NOT NULL)`) : undefined,
         parent: filters.onlyRoot ? IsNull() : undefined,
+        ...QueryFilter.createFilterWhereClause(filterMapping, filters),
       },
       order: { id: 'ASC' },
     };

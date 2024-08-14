@@ -139,6 +139,20 @@ describe('ProductCategoryService', async (): Promise<void> => {
         expect(c.parent).to.be.undefined;
       });
     });
+    it('should return only leaf categories', async () => {
+      // Find all categories that are not a parent, i.e. have no children
+      const leafCategories = ctx.categories.filter((c) => !ctx.categories
+        .some((c2) => c2.parent?.id === c.id));
+      const { records } = await ProductCategoryService
+        .getProductCategories({ onlyLeaf: true });
+
+      expect(records.length).to.equal(leafCategories.length);
+      expect(records.map((r) => r.id)).to.deep.equalInAnyOrder(leafCategories.map((c) => c.id));
+      records.forEach((c) => {
+        const children = ctx.categories.filter((c2) => c2.parent?.id === c.id);
+        expect(children).to.be.lengthOf(0);
+      });
+    });
     it('should adhere to pagination', async () => {
       const take = 5;
       const skip = 3;

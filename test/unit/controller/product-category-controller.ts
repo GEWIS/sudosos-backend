@@ -210,6 +210,30 @@ describe('ProductCategoryController', async (): Promise<void> => {
         expect(c.parent).to.be.undefined;
       });
     });
+    it('should return an HTTP 200 and only leaf categories', async () => {
+      const res = await request(ctx.app)
+        .get('/productcategories?onlyLeaf=true')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+
+      // Find all categories that are not a parent, i.e. have no children
+      const actualCategories = ctx.categories.filter((c) => !ctx.categories
+        .some((c2) => c2.parent?.id === c.id));
+      const categories = res.body.records as ProductCategoryResponse[];
+      // eslint-disable-next-line no-underscore-dangle
+      const pagination = res.body._pagination as PaginationResult;
+
+      // Every productcategory should be returned.
+      expect(categories.length).to.equal(Math.min(actualCategories.length, defaultPagination()));
+      expect(pagination.take).to.equal(defaultPagination());
+      expect(pagination.skip).to.equal(0);
+      expect(pagination.count).to.equal(actualCategories.length);
+
+      categories.forEach((c) => {
+        const children = ctx.categories.filter((c2) => c2.parent?.id === c.id);
+        expect(children).to.be.lengthOf(0);
+      });
+    });
     it('should return an HTTP 403 if not admin', async () => {
       const res = await request(ctx.app)
         .get('/productcategories')
