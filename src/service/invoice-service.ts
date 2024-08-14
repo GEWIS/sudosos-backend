@@ -217,8 +217,8 @@ export default class InvoiceService {
    */
   public async createTransferFromTransactions(forId: number,
     transactions: Transaction[]): Promise<TransferResponse> {
-    // We retrieve base transactions to easily get the transaction total price.
-    const baseTransactions = (await new TransactionService(this.manager).getTransactions({ transactionId: transactions.map((t) => t.id) })).records;
+    const transactionId = transactions.length > 0 ? transactions.map((t) => t.id) : null;
+    const baseTransactions = (await new TransactionService(this.manager).getTransactions({ transactionId })).records;
 
     const dineroObjectRequest: DineroObjectRequest = {
       amount: 0,
@@ -228,7 +228,7 @@ export default class InvoiceService {
 
     if (baseTransactions.length !== 0) {
       baseTransactions.forEach((t) => {
-        if (t.from.id !== forId) throw new Error(`Transaction ${t} not from user ${forId}`);
+        if (t.from.id !== forId) throw new Error(`Transaction from ${t.from.id} not from user ${forId}`);
         dineroObjectRequest.amount += t.value.amount;
       });
     }
