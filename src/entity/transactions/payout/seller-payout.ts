@@ -20,9 +20,12 @@ import { Column, Entity } from 'typeorm';
 
 @Entity()
 export default class SellerPayout extends BasePayout {
-  @Column({ type: 'varchar', nullable: false })
+  @Column({ type: 'datetime', length: 6, nullable: false })
   public startDate: Date;
 
-  @Column({ type: 'varchar', nullable: false })
+  @Column({ type: 'datetime', length: 6, nullable: false })
   public endDate: Date;
+
+  @Column({ nullable: false })
+  public reference: string;
 }
