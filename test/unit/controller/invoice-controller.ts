@@ -481,6 +481,7 @@ describe('InvoiceController', async () => {
             .post('/invoices')
             .set('Authorization', `Bearer ${ctx.adminToken}`)
             .send(newRequest);
+          expect(res.status).to.equal(200);
 
           expect(await Invoice.count()).to.equal(count + 1);
           expect(((res.body) as InvoiceResponse).invoiceEntries[0].description)
