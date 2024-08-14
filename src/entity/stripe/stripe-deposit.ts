@@ -34,7 +34,7 @@ export default class StripeDeposit extends BaseEntity {
   @JoinColumn()
   public transfer?: Transfer;
 
-  @OneToOne(() => StripePaymentIntent, { eager: true, onDelete: 'RESTRICT' })
+  @OneToOne(() => StripePaymentIntent, { nullable: false, eager: true, onDelete: 'RESTRICT' })
   @JoinColumn()
   public stripePaymentIntent: StripePaymentIntent;
 }
