@@ -103,19 +103,11 @@ SELECT id, createdAt, updatedAt, version, toId, transferId, id FROM ${this.PAYME
     await queryRunner.dropColumns(this.PAYMENT_INTENT_TABLE_NAME, ['toId', 'transferId']);
 
     await queryRunner.renameTable('stripe_deposit_status', 'stripe_payment_intent_status');
-    await queryRunner.changeColumn('stripe_payment_intent_status', 'depositId', new TableColumn({
-      name: 'stripePaymentIntentId',
-      type: 'integer',
-      isNullable: false,
-    }));
+    await queryRunner.renameColumn('stripe_payment_intent_status', 'depositId', 'stripePaymentIntentId');
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.changeColumn('stripe_payment_intent_status', 'stripePaymentIntentId', new TableColumn({
-      name: 'depositId',
-      type: 'integer',
-      isNullable: false,
-    }));
+    await queryRunner.renameColumn('stripe_payment_intent_status', 'stripePaymentIntentId', 'depositId');
     await queryRunner.renameTable('stripe_payment_intent_status', 'stripe_deposit_status');
 
     const depositTable = await queryRunner.getTable(this.DEPOSIT_TABLE_NAME);
