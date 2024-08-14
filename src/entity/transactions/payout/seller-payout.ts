@@ -15,13 +15,14 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+import BasePayout from './base-payout';
+import { Column, Entity } from 'typeorm';
 
-import { PayoutRequestState } from '../../entity/transactions/payout/payout-request-status';
+@Entity()
+export default class SellerPayout extends BasePayout {
+  @Column({ type: 'varchar', nullable: false })
+  public startDate: Date;
 
-/**
- * @typedef {object} PayoutRequestStatusRequest
- * @property {string} state - enum:CREATED,APPROVED,DENIED,CANCELLED - PayoutRequestState to change to.
- */
-export interface PayoutRequestStatusRequest {
-  state: PayoutRequestState;
+  @Column({ type: 'varchar', nullable: false })
+  public endDate: Date;
 }

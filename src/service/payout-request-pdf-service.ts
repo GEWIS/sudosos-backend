@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { Client, FileResponse } from 'pdf-generator-client';
-import PayoutRequest from '../entity/transactions/payout-request';
+import PayoutRequest from '../entity/transactions/payout/payout-request';
 import FileService from './file-service';
 import {
   PayoutParameters,

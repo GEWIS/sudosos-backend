@@ -23,7 +23,7 @@ import { Dinero } from 'dinero.js';
 import BaseEntity from '../base-entity';
 import User from '../user/user';
 import DineroTransformer from '../transformer/dinero-transformer';
-import PayoutRequest from './payout-request';
+import PayoutRequest from './payout/payout-request';
 import StripeDeposit from '../stripe/stripe-deposit';
 import Invoice from '../invoices/invoice';
 import Fine from '../fine/fine';

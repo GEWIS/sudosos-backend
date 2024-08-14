@@ -15,24 +15,25 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+import BaseEntity from '../../base-entity';
+import { Column, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
+import User from '../../user/user';
+import Transfer from '../transfer';
+import DineroTransformer from '../../transformer/dinero-transformer';
+import { Dinero } from 'dinero.js';
 
-import { Column, Entity, ManyToOne } from 'typeorm';
-import BaseEntity from '../base-entity';
-// eslint-disable-next-line import/no-cycle
-import PayoutRequest from './payout-request';
+export default class BasePayout extends BaseEntity {
+  @ManyToOne(() => User, { nullable: false })
+  @JoinColumn()
+  public requestedBy: User;
 
-export enum PayoutRequestState {
-  CREATED = 'CREATED',
-  APPROVED = 'APPROVED',
-  DENIED = 'DENIED',
-  CANCELLED = 'CANCELLED',
-}
+  @OneToOne(() => Transfer, { nullable: true })
+  @JoinColumn()
+  public transfer?: Transfer;
 
-@Entity()
-export default class PayoutRequestStatus extends BaseEntity {
-  @ManyToOne(() => PayoutRequest, (pr) => pr.payoutRequestStatus, { nullable: false })
-  public payoutRequest: PayoutRequest;
-
-  @Column()
-  public state: PayoutRequestState;
+  @Column({
+    type: 'integer',
+    transformer: DineroTransformer.Instance,
+  })
+  public amount: Dinero;
 }

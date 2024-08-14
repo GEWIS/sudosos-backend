@@ -23,7 +23,7 @@ import { json } from 'body-parser';
 import { expect, request } from 'chai';
 import PayoutRequestController from '../../../src/controller/payout-request-controller';
 import User, { UserType } from '../../../src/entity/user/user';
-import PayoutRequest from '../../../src/entity/transactions/payout-request';
+import PayoutRequest from '../../../src/entity/transactions/payout/payout-request';
 import Database from '../../../src/database/database';
 import { seedPayoutRequests, seedUsers } from '../../seed';
 import PayoutRequestRequest from '../../../src/controller/request/payout-request-request';
@@ -36,7 +36,7 @@ import {
   PayoutRequestResponse,
 } from '../../../src/controller/response/payout-request-response';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
-import { PayoutRequestState } from '../../../src/entity/transactions/payout-request-status';
+import { PayoutRequestState } from '../../../src/entity/transactions/payout/payout-request-status';
 import { truncateAllTables } from '../../setup';
 import generateBalance, { finishTestDB } from '../../helpers/test-helpers';
 import BalanceService from '../../../src/service/balance-service';

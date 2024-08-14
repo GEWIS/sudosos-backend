@@ -19,36 +19,20 @@
 import {
   Column, Entity, JoinColumn, ManyToOne, OneToMany, OneToOne,
 } from 'typeorm';
-import { Dinero } from 'dinero.js';
-import BaseEntity from '../base-entity';
-import User from '../user/user';
-import Transfer from './transfer';
-import DineroTransformer from '../transformer/dinero-transformer';
+import User from '../../user/user';
 // eslint-disable-next-line import/no-cycle
 import PayoutRequestStatus from './payout-request-status';
-import PayoutRequestPdf from '../file/payout-request-pdf';
-import { hashJSON } from '../../helpers/hash';
-import PayoutRequestPdfService from '../../service/payout-request-pdf-service';
+import PayoutRequestPdf from '../../file/payout-request-pdf';
+import { hashJSON } from '../../../helpers/hash';
+import PayoutRequestPdfService from '../../../service/payout-request-pdf-service';
+import BasePayout from './base-payout';
 
 @Entity()
 // TODO Migration
-export default class PayoutRequest extends BaseEntity {
-  @ManyToOne(() => User, { nullable: false })
-  @JoinColumn()
-  public requestedBy: User;
-
-  @OneToOne(() => Transfer, { nullable: true })
-  @JoinColumn()
-  public transfer?: Transfer;
+export default class PayoutRequest extends BasePayout {
 
   @OneToMany(() => PayoutRequestStatus, (status) => status.payoutRequest, { cascade: true })
   public payoutRequestStatus: PayoutRequestStatus[];
-
-  @Column({
-    type: 'integer',
-    transformer: DineroTransformer.Instance,
-  })
-  public amount: Dinero;
 
   @ManyToOne(() => User, { nullable: true })
   @JoinColumn()
