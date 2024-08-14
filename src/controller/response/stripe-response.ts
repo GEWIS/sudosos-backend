@@ -19,7 +19,7 @@
 
 import BaseResponse from './base-response';
 import { DineroObjectResponse } from './dinero-response';
-import { StripeDepositState } from '../../entity/deposit/stripe-deposit-status';
+import { StripePaymentIntentState } from '../../entity/stripe/stripe-payment-intent-status';
 import { BaseUserResponse } from './user-response';
 
 /**
@@ -46,23 +46,23 @@ export interface StripePaymentIntentResponse extends BaseResponse {
 //  * @property {integer} state.required - enum:1,2,3,4 - State of the Stripe deposit. It can be 1 ('CREATED'), 2 ('PROCESSING'), 3 ('SUCCEEDED'), or 4 ('FAILED')
 //  @see https://github.com/BRIKEV/express-jsdoc-swagger/issues/257
 /**
- * @typedef {allOf|BaseResponse} StripeDepositStatusResponse
+ * @typedef {allOf|BaseResponse} StripePaymentIntentStatusResponse
  * @property {integer} state.required - State of the Stripe deposit. It can be 1 ('CREATED'), 2 ('PROCESSING'), 3 ('SUCCEEDED'), or 4 ('FAILED')
  */
-export interface StripeDepositStatusResponse extends BaseResponse {
-  state: StripeDepositState;
+export interface StripePaymentIntentStatusResponse extends BaseResponse {
+  state: StripePaymentIntentState;
 }
 
 /**
  * @typedef {allOf|BaseResponse} StripeDepositResponse
  * @property {string} stripeId.required - The ID of the payment intent in Stripe
- * @property {Array<StripeDepositStatusResponse>} depositStatus.required - Current status of the deposit
+ * @property {Array<StripePaymentIntentStatusResponse>} depositStatus.required - Current status of the deposit
  * @property {DineroObjectResponse} amount.required - The amount deposited
  * @property {BaseUserResponse} to.required - User that deposited money
  */
 export interface StripeDepositResponse extends BaseResponse {
   stripeId: string;
-  depositStatus: StripeDepositStatusResponse[];
+  depositStatus: StripePaymentIntentStatusResponse[];
   amount: DineroObjectResponse;
   to: BaseUserResponse;
 }

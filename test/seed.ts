@@ -37,8 +37,8 @@ import ProductImage from '../src/entity/file/product-image';
 import Banner from '../src/entity/banner';
 import BannerImage from '../src/entity/file/banner-image';
 import { BANNER_IMAGE_LOCATION, PRODUCT_IMAGE_LOCATION } from '../src/files/storage';
-import StripeDeposit from '../src/entity/deposit/stripe-deposit';
-import StripeDepositStatus, { StripeDepositState } from '../src/entity/deposit/stripe-deposit-status';
+import StripeDeposit from '../src/entity/stripe/stripe-deposit';
+import StripePaymentIntentStatus, { StripePaymentIntentState } from '../src/entity/stripe/stripe-payment-intent-status';
 import DineroTransformer from '../src/entity/transformer/dinero-transformer';
 import PayoutRequest from '../src/entity/transactions/payout-request';
 import PayoutRequestStatus, { PayoutRequestState } from '../src/entity/transactions/payout-request-status';
@@ -65,6 +65,7 @@ import MemberAuthenticator from '../src/entity/authenticator/member-authenticato
 import Role from '../src/entity/rbac/role';
 import generateBalance from './helpers/test-helpers';
 import WriteOff from '../src/entity/transactions/write-off';
+import StripePaymentIntent from '../src/entity/stripe/stripe-payment-intent';
 
 function getDate(startDate: Date, endDate: Date, i: number): Date {
   const diff = endDate.getTime() - startDate.getTime();
@@ -1047,18 +1048,21 @@ export async function seedStripeDeposits(users: User[]): Promise<{
   for (let i = 0; i < users.length * totalNrOfStatuses + 1; i += 1) {
     const to = users[Math.floor(i / 4)];
     const amount = DineroTransformer.Instance.from(3900);
-    const newDeposit = Object.assign(new StripeDeposit(), {
+    // eslint-disable-next-line no-await-in-loop
+    const stripePaymentIntent = await StripePaymentIntent.save({
       stripeId: `FakeStripeIDDoNotUsePleaseThankYou_${i + 1}`,
-      to,
       amount,
-      depositStatus: [],
+      paymentIntentStatuses: [],
     });
     // eslint-disable-next-line no-await-in-loop
-    await newDeposit.save();
+    const newDeposit = await StripeDeposit.save({
+      stripePaymentIntent,
+      to,
+    });
 
     const succeeded = Math.floor(((i % 8) + 1) / 4) !== 1;
-    const states = [StripeDepositState.CREATED, StripeDepositState.PROCESSING,
-      succeeded ? StripeDepositState.SUCCEEDED : StripeDepositState.FAILED].slice(0, i % 4);
+    const states = [StripePaymentIntentState.CREATED, StripePaymentIntentState.PROCESSING,
+      succeeded ? StripePaymentIntentState.SUCCEEDED : StripePaymentIntentState.FAILED].slice(0, i % 4);
 
     if (succeeded) {
       const transfer = Object.assign(new Transfer(), {
@@ -1069,19 +1073,19 @@ export async function seedStripeDeposits(users: User[]): Promise<{
       });
       await transfer.save();
       newDeposit.transfer = transfer;
-      await newDeposit.save();
+      await StripeDeposit.save(newDeposit);
       transfer.deposit = newDeposit;
       transfers.push(transfer);
     }
 
     const statePromises: Promise<any>[] = [];
     states.forEach((state) => {
-      const newState = Object.assign(new StripeDepositStatus(), {
+      const newState = Object.assign(new StripePaymentIntentStatus(), {
+        stripePaymentIntent,
         state,
-        deposit: newDeposit,
       });
       statePromises.push(newState.save());
-      newDeposit.depositStatus.push(newState);
+      stripePaymentIntent.paymentIntentStatuses.push(newState);
     });
 
     // eslint-disable-next-line no-await-in-loop

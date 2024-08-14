@@ -20,10 +20,10 @@ import {
   Column, Entity, ManyToOne,
 } from 'typeorm';
 // eslint-disable-next-line import/no-cycle
-import StripeDeposit from './stripe-deposit';
 import BaseEntity from '../base-entity';
+import StripePaymentIntent from './stripe-payment-intent';
 
-export enum StripeDepositState {
+export enum StripePaymentIntentState {
   CREATED = 1,
   PROCESSING = 2,
   SUCCEEDED = 3,
@@ -31,10 +31,10 @@ export enum StripeDepositState {
 }
 
 @Entity()
-export default class StripeDepositStatus extends BaseEntity {
-  @ManyToOne(() => StripeDeposit, (deposit) => deposit.depositStatus, { nullable: false })
-  public deposit: StripeDeposit;
+export default class StripePaymentIntentStatus extends BaseEntity {
+  @ManyToOne(() => StripePaymentIntent, (intent) => intent.paymentIntentStatuses, { nullable: false })
+  public stripePaymentIntent: StripePaymentIntent;
 
   @Column()
-  public state: StripeDepositState;
+  public state: StripePaymentIntentState;
 }

@@ -17,38 +17,24 @@
  */
 
 import {
-  Column, Entity, JoinColumn, ManyToOne, OneToMany, OneToOne,
+  Entity, JoinColumn, ManyToOne, OneToOne,
 } from 'typeorm';
-import { Dinero } from 'dinero.js';
 import BaseEntity from '../base-entity';
 import User from '../user/user';
-import DineroTransformer from '../transformer/dinero-transformer';
-// eslint-disable-next-line import/no-cycle
-import StripeDepositStatus from './stripe-deposit-status';
 import Transfer from '../transactions/transfer';
+import StripePaymentIntent from './stripe-payment-intent';
 
 @Entity()
 export default class StripeDeposit extends BaseEntity {
-  @ManyToOne(() => User, { nullable: false, eager: true })
+  @ManyToOne(() => User, { nullable: false, eager: true, onDelete: 'CASCADE' })
   @JoinColumn()
   public to: User;
 
-  @OneToOne(() => Transfer, { nullable: true })
+  @OneToOne(() => Transfer, { nullable: true, onDelete: 'CASCADE' })
   @JoinColumn()
   public transfer?: Transfer;
 
-  @OneToMany(() => StripeDepositStatus,
-    (depositStatus) => depositStatus.deposit,
-    { cascade: true, eager: true })
+  @OneToOne(() => StripePaymentIntent, { nullable: false, eager: true, onDelete: 'RESTRICT' })
   @JoinColumn()
-  public depositStatus: StripeDepositStatus[];
-
-  @Column({ unique: true })
-  public stripeId: string;
-
-  @Column({
-    type: 'integer',
-    transformer: DineroTransformer.Instance,
-  })
-  public amount: Dinero;
+  public stripePaymentIntent: StripePaymentIntent;
 }

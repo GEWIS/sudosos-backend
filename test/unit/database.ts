@@ -78,13 +78,13 @@ describe('Database', async (): Promise<void> => {
         entity.columns.forEach(column => {
           const normalizedTypes = normalizeType(column.type);
           const matchedColumn = table.columns.find(dbColumn => dbColumn.name === column.databaseName);
-          expect(matchedColumn).to.not.be.undefined;
+          expect(matchedColumn, `expect column ${entity.name}.${column.propertyName} to not be undefined`).to.not.be.undefined;
           expect(normalizedTypes, `expect column ${entity.name}.${column.propertyName} type to match`).to.include(matchedColumn.type);
 
-          expect(matchedColumn.isGenerated).to.eq(column.isGenerated);
-          expect(matchedColumn.isArray).to.eq(column.isArray);
-          expect(matchedColumn.isNullable).to.eq(column.isNullable);
-          expect(matchedColumn.isPrimary).to.eq(column.isPrimary);
+          expect(matchedColumn.isGenerated, `expect column ${entity.name}.${column.propertyName} to ${column.isGenerated ? '' : 'not '}be generated`).to.eq(column.isGenerated);
+          expect(matchedColumn.isArray, `expect column ${entity.name}.${column.propertyName} to ${column.isArray ? '' : 'not '}be an array`).to.eq(column.isArray);
+          expect(matchedColumn.isNullable, `expect column ${entity.name}.${column.propertyName} to ${column.isNullable ? '' : 'not '}be nullable`).to.eq(column.isNullable);
+          expect(matchedColumn.isPrimary, `expect column ${entity.name}.${column.propertyName} to ${column.isPrimary ? '' : 'not '}be primary`).to.eq(column.isPrimary);
         });
 
         await queryRunner.release();
