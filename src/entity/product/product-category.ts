@@ -17,7 +17,7 @@
  */
 
 import {
-  Entity, Column, DeleteDateColumn, Tree, TreeChildren, TreeParent,
+  Entity, Column, Tree, TreeChildren, TreeParent,
 } from 'typeorm';
 import BaseEntity from '../base-entity';
 

@@ -128,6 +128,17 @@ describe('ProductCategoryService', async (): Promise<void> => {
 
       expect(records).to.be.empty;
     });
+    it('should return only root categories', async () => {
+      const rootCategories = ctx.categories.filter((c) => c.parent == null);
+      const { records } = await ProductCategoryService
+        .getProductCategories({ onlyRoot: true });
+
+      expect(records.length).to.equal(rootCategories.length);
+      expect(records.map((r) => r.id)).to.deep.equalInAnyOrder(rootCategories.map((c) => c.id));
+      records.forEach((c) => {
+        expect(c.parent).to.be.undefined;
+      });
+    });
     it('should adhere to pagination', async () => {
       const take = 5;
       const skip = 3;

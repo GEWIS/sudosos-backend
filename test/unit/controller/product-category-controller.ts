@@ -189,6 +189,27 @@ describe('ProductCategoryController', async (): Promise<void> => {
       expect(pagination.skip).to.equal(0);
       expect(pagination.count).to.equal(ctx.categories.length);
     });
+    it('should return an HTTP 200 and only root categories', async () => {
+      const res = await request(ctx.app)
+        .get('/productcategories?onlyRoot=true')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+
+      const actualCategories = ctx.categories.filter((c) => c.parent == null);
+      const categories = res.body.records as ProductCategoryResponse[];
+      // eslint-disable-next-line no-underscore-dangle
+      const pagination = res.body._pagination as PaginationResult;
+
+      // Every productcategory should be returned.
+      expect(categories.length).to.equal(Math.min(actualCategories.length, defaultPagination()));
+      expect(pagination.take).to.equal(defaultPagination());
+      expect(pagination.skip).to.equal(0);
+      expect(pagination.count).to.equal(actualCategories.length);
+
+      categories.forEach((c) => {
+        expect(c.parent).to.be.undefined;
+      });
+    });
     it('should return an HTTP 403 if not admin', async () => {
       const res = await request(ctx.app)
         .get('/productcategories')

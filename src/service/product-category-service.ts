@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { EntityManager, FindManyOptions } from 'typeorm';
+import { EntityManager, FindManyOptions, IsNull } from 'typeorm';
 import ProductCategory from '../entity/product/product-category';
 import {
   PaginatedProductCategoryResponse,
@@ -39,6 +39,10 @@ export interface ProductCategoryFilterParameters {
    * Filter based on product owner.
    */
   name?: string;
+  /**
+   * Whether to only return root categories (so categories without parents)
+   */
+  onlyRoot?: boolean;
 }
 
 /**
@@ -80,8 +84,11 @@ export default class ProductCategoryService {
       id: 'id',
       name: 'name',
     };
-    const options: FindManyOptions = {
-      where: QueryFilter.createFilterWhereClause(filterMapping, filters),
+    const options: FindManyOptions<ProductCategory> = {
+      where: {
+        ...QueryFilter.createFilterWhereClause(filterMapping, filters),
+        parent: filters.onlyRoot ? IsNull() : undefined,
+      },
       order: { id: 'ASC' },
     };
 
@@ -155,7 +162,6 @@ export default class ProductCategoryService {
    */
   public static async verifyProductCategory(request: ProductCategoryRequest):
   Promise<boolean> {
-    const parent = await ProductCategory.findOne({ where: { id: request.parentCategoryId } });
     return request.name != null && request.name !== ''
         && request.name.length <= 64
         && !(await ProductCategory.findOne({ where: { name: request.name } }))

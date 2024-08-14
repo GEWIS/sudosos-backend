@@ -74,6 +74,7 @@ export default class ProductCategoryController extends BaseController {
    * @operationId getAllProductCategories
    * @tags productCategories - Operations of productcategory controller
    * @security JWT
+   * @param {boolean} onlyRoot.query - Whether to return only root categories
    * @param {integer} take.query - How many product categories the endpoint should return
    * @param {integer} skip.query - How many product categories should be skipped (for pagination)
    * @return {PaginatedProductCategoryResponse} 200 - All existing productcategories
@@ -97,7 +98,9 @@ export default class ProductCategoryController extends BaseController {
     // Handle requestd
     try {
       const productCategories = await ProductCategoryService
-        .getProductCategories({}, { take, skip });
+        .getProductCategories({
+          onlyRoot: req.query.onlyRoot === 'true',
+        }, { take, skip });
       res.json(productCategories);
     } catch (error) {
       this.logger.error('Could not return all product-categories:', error);

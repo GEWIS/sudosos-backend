@@ -429,8 +429,6 @@ export async function seedEvents(users: User[]) {
  * Seeds a default dataset of product categories, and stores them in the database.
  */
 export async function seedProductCategories(): Promise<ProductCategory[]> {
-  const category = (data: object) => Object.assign(new ProductCategory(), data) as ProductCategory;
-
   const rootCategories = await ProductCategory.save([
     {
       id: 1,
