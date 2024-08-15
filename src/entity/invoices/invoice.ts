@@ -145,6 +145,15 @@ export default class Invoice extends BaseEntity {
   @Column()
   public country: string;
 
+  // TODO: create during migration
+  //   ADD TEST CASES
+  /**
+   * If this invoice is deleted, this will be credit transfer.
+   */
+  @OneToOne(() => Transfer, { nullable: true })
+  @JoinColumn()
+  public creditTransfer?: Transfer;
+
   /**
    * Date of the invoice
    */
