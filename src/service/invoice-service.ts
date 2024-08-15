@@ -57,7 +57,7 @@ import { parseUserToBaseResponse } from '../helpers/revision-to-response';
 import SubTransaction from '../entity/transactions/sub-transaction';
 import InvoiceUser, { InvoiceUserDefaults } from '../entity/user/invoice-user';
 import { AppDataSource } from '../database/database';
-import Transfer from "../entity/transactions/transfer";
+import Transfer from '../entity/transactions/transfer';
 
 export interface InvoiceFilterParameters {
   /**
@@ -545,7 +545,7 @@ export default class InvoiceService {
 
     const invoices = await this.manager.find(Invoice, { ...options, take });
 
-    let records = [];
+    let records: any[];
     if (params.returnInvoiceEntries) {
       records = await this.toArrayResponse(invoices);
     } else {
