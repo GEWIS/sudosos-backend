@@ -25,50 +25,64 @@ import { toMySQLString } from '../helpers/timestamps';
 import SubTransactionRow from '../entity/transactions/sub-transaction-row';
 import SubTransaction from '../entity/transactions/sub-transaction';
 import { asDinero, asNumber } from '../helpers/validators';
+import PointOfSaleRevision from "../entity/point-of-sale/point-of-sale-revision";
+import Transaction from "../entity/transactions/transaction";
 
-
-export interface SalesReportProductEntry {
+export interface ReportProductEntry {
   count: number,
   product: ProductRevision,
   totalExclVat: Dinero.Dinero,
   totalInclVat: Dinero.Dinero
 }
 
-export interface SalesReportVatEntry {
+export interface ReportVatEntry {
   vat: VatGroup,
   totalExclVat: Dinero.Dinero,
   totalInclVat: Dinero.Dinero
 }
 
-export interface SalesReportCategoryEntry {
+export interface ReportCategoryEntry {
   category: ProductCategory,
   totalExclVat: Dinero.Dinero,
   totalInclVat: Dinero.Dinero
 }
 
-export interface SalesReportData {
-  entries?: SalesReportProductEntry[],
-  categories?: SalesReportCategoryEntry[],
-  vat?: SalesReportVatEntry[],
+export interface ReportPosEntry {
+  pos: PointOfSaleRevision,
+  totalExclVat: Dinero.Dinero,
+  totalInclVat: Dinero.Dinero
 }
 
-export interface SalesReport {
+export interface ReportData {
+  entries?: ReportProductEntry[],
+  categories?: ReportCategoryEntry[],
+  vat?: ReportVatEntry[],
+  pos?: ReportPosEntry[],
+}
+
+export interface Report {
   forId: number,
   fromDate: Date,
   tillDate: Date,
-  data: SalesReportData,
+  data: ReportData,
   totalExclVat: Dinero.Dinero,
   totalInclVat: Dinero.Dinero,
 }
 
-export default class SalesReportService {
+export interface SalesReport extends Report {}
+
+export interface BuyerReport extends Report {}
+
+
+export default abstract class ReportService {
 
   private manager: EntityManager;
 
-  constructor(manager?: EntityManager) {
+  protected constructor(manager?: EntityManager) {
     this.manager = manager ? manager : AppDataSource.manager;
   }
 
+  protected abstract addSubTransactionRowFilter<T>(query: SelectQueryBuilder<T>, forId: number, fromDate: Date, tillDate: Date): SelectQueryBuilder<T>;
 
   /**
      * Adds the totals to the given query
@@ -83,32 +97,18 @@ export default class SalesReportService {
   }
 
   /**
-     * Adds a filter on the sub transaction row to the given query
-     * @param query - The query to add the filter to
-     * @param toId - The user ID to filter on
-     * @param fromDate - The from date to filter on (inclusive)
-     * @param tillDate - The till date to filter on (exclusive)
-     * @private
-     */
-  private addSubTransactionRowFilter<T>(query: SelectQueryBuilder<T>, toId: number, fromDate: Date, tillDate: Date): SelectQueryBuilder<T> {
-    return query
-      .where('subTransaction.toId = :userId', { userId: toId })
-      .andWhere('subTransaction.createdAt >= :fromDate', { fromDate: toMySQLString(fromDate) })
-      .andWhere('subTransaction.createdAt < :tillDate', { tillDate: toMySQLString(tillDate) });
-  }
-
-  /**
-     * Gets the product sales for the given user
+     * Gets the product report for the given user
      * @param forId - The user ID to get the entries for
      * @param fromDate - The from date to get the entries for (inclusive)
      * @param tillDate - The till date to get the entries for (exclusive)
-     * @returns {Promise<SalesReportProductEntry[]>} - The product sales
+     * @returns {Promise<ReportProductEntry[]>} - The product report
      */
-  public async getProductEntries(forId: number, fromDate: Date, tillDate: Date): Promise<SalesReportProductEntry[]> {
+  public async getProductEntries(forId: number, fromDate: Date, tillDate: Date): Promise<ReportProductEntry[]> {
     const query = this.manager.createQueryBuilder(ProductRevision, 'productRevision')
       .innerJoinAndSelect('productRevision.vat', 'vatGroup')
       .innerJoin(SubTransactionRow, 'subTransactionRow', 'subTransactionRow.productProductId = productRevision.productId AND subTransactionRow.productRevision = productRevision.revision')
       .innerJoin(SubTransaction, 'subTransaction', 'subTransaction.id = subTransactionRow.subTransactionId')
+      .innerJoin(Transaction, 'transaction', 'transaction.id = subTransaction.transactionId')
       .addSelect('sum(subTransactionRow.amount)', 'sum_amount');
     this.addSelectTotals(query);
 
@@ -130,17 +130,18 @@ export default class SalesReportService {
   }
 
   /**
-     * Gets the VAT sales for the given user
+     * Gets the VAT report for the given user
      * @param forId - The user ID to get the entries for
      * @param fromDate - The from date to get the entries for (inclusive)
      * @param tillDate - The till date to get the entries for (exclusive)
-     * @returns {Promise<SalesReportVatEntry[]>} - The VAT sales
+     * @returns {Promise<ReportVatEntry[]>} - The VAT report
      */
-  public async getVatEntries(forId: number, fromDate: Date, tillDate: Date): Promise<SalesReportVatEntry[]> {
+  public async getVatEntries(forId: number, fromDate: Date, tillDate: Date): Promise<ReportVatEntry[]> {
     const query = this.manager.createQueryBuilder(VatGroup, 'vatGroup')
       .innerJoin(ProductRevision, 'productRevision', 'productRevision.vat = vatGroup.id')
       .innerJoin(SubTransactionRow, 'subTransactionRow', 'subTransactionRow.productProductId = productRevision.productId AND subTransactionRow.productRevision = productRevision.revision')
-      .innerJoin(SubTransaction, 'subTransaction', 'subTransaction.id = subTransactionRow.subTransactionId');
+      .innerJoin(SubTransaction, 'subTransaction', 'subTransaction.id = subTransactionRow.subTransactionId')
+      .innerJoin(Transaction, 'transaction', 'transaction.id = subTransaction.transactionId');
     this.addSelectTotals(query);
 
     const data = await this.addSubTransactionRowFilter(query, forId, fromDate, tillDate)
@@ -159,18 +160,19 @@ export default class SalesReportService {
   }
 
   /**
-     * Gets the category sales for the given user
+     * Gets the category report for the given user
      * @param forId - The user ID to get the entries for
      * @param fromDate - The from date to get the entries for (inclusive)
      * @param tillDate - The till date to get the entries for (exclusive)
-     * @returns {Promise<SalesReportCategoryEntry[]>} - The category sales
+     * @returns {Promise<ReportCategoryEntry[]>} - The category report
      */
-  public async getCategoryEntries(forId: number, fromDate: Date, tillDate: Date): Promise<SalesReportCategoryEntry[]> {
+  public async getCategoryEntries(forId: number, fromDate: Date, tillDate: Date): Promise<ReportCategoryEntry[]> {
     const query = this.manager.createQueryBuilder(ProductCategory, 'productCategory')
       .innerJoin(ProductRevision, 'productRevision', 'productRevision.category = productCategory.id')
       .innerJoin(VatGroup, 'vatGroup', 'vatGroup.id = productRevision.vat')
       .innerJoin(SubTransactionRow, 'subTransactionRow', 'subTransactionRow.productProductId = productRevision.productId AND subTransactionRow.productRevision = productRevision.revision')
-      .innerJoin(SubTransaction, 'subTransaction', 'subTransaction.id = subTransactionRow.subTransactionId');
+      .innerJoin(SubTransaction, 'subTransaction', 'subTransaction.id = subTransactionRow.subTransactionId')
+      .innerJoin(Transaction, 'transaction', 'transaction.id = subTransaction.transactionId');
     this.addSelectTotals(query);
 
     const data = await this.addSubTransactionRowFilter(query, forId, fromDate, tillDate)
@@ -189,6 +191,37 @@ export default class SalesReportService {
   }
 
   /**
+   * Gets the POS report for the given user
+   * @param forId - The user ID to get the entries for
+   * @param fromDate - The from date to get the entries for (inclusive)
+   * @param tillDate - The till date to get the entries for (exclusive)
+   * @returns {Promise<ReportPosEntry[]>} - The POS report
+   */
+  public async getPosEntries(forId: number, fromDate: Date, tillDate: Date): Promise<ReportPosEntry[]> {
+    const query = this.manager.createQueryBuilder(PointOfSaleRevision, 'pointOfSaleRevision')
+        .innerJoin(Transaction, 'transaction', 'transaction.pointOfSalePointOfSaleId = pointOfSaleRevision.pointOfSaleId AND transaction.pointOfSaleRevision = pointOfSaleRevision.revision')
+        .innerJoin(SubTransaction, 'subTransaction', 'subTransaction.transactionId = transaction.id')
+        .innerJoin(SubTransactionRow, 'subTransactionRow', 'subTransactionRow.subTransactionId = subTransaction.id')
+        .innerJoin(ProductRevision, 'productRevision', 'productRevision.productId = subTransactionRow.productProductId AND productRevision.revision = subTransactionRow.productRevision')
+        .innerJoin(VatGroup, 'vatGroup', 'vatGroup.id = productRevision.vat');
+    this.addSelectTotals(query);
+
+    const data = await this.addSubTransactionRowFilter(query, forId, fromDate, tillDate)
+        .groupBy('pointOfSaleRevision.pointOfSaleId')
+        .getRawAndEntities();
+
+    return data.entities.map((pos, index) => {
+      const totalInclVat = asDinero(data.raw[index].total_incl_vat);
+      const totalExclVat = asDinero(data.raw[index].total_excl_vat);
+      return {
+        pos,
+        totalExclVat,
+        totalInclVat,
+      };
+    });
+  }
+
+  /**
      * Gets the totals for the given user
      * @param forId - The user ID to get the totals for
      * @param fromDate - The from date to get the totals for (inclusive)
@@ -199,7 +232,8 @@ export default class SalesReportService {
     const query = this.manager.createQueryBuilder(ProductRevision, 'productRevision')
       .innerJoin('productRevision.vat', 'vatGroup')
       .innerJoin(SubTransactionRow, 'subTransactionRow', 'subTransactionRow.productProductId = productRevision.productId AND subTransactionRow.productRevision = productRevision.revision')
-      .innerJoin(SubTransaction, 'subTransaction', 'subTransaction.id = subTransactionRow.subTransactionId');
+      .innerJoin(SubTransaction, 'subTransaction', 'subTransaction.id = subTransactionRow.subTransactionId')
+      .innerJoin(Transaction, 'transaction', 'transaction.id = subTransaction.transactionId');
     this.addSelectTotals(query);
 
     const data = await this.addSubTransactionRowFilter(query, forId, fromDate, tillDate)
@@ -214,19 +248,21 @@ export default class SalesReportService {
   }
 
   /**
-     * Gets the sales report for the given user
+     * Gets the report for the given user
      * @param forId - The user ID to get the report for
      * @param fromDate - The from date to get the report for (inclusive)
      * @param tillDate - The till date to get the report for (exclusive)
-     * @returns {Promise<SalesReport>} - The sales report
+     * @returns {Promise<Report>} - The report
      */
-  public async getSalesReport(forId: number, fromDate: Date, tillDate: Date): Promise<SalesReport> {
-    console.error(forId, fromDate, tillDate);
-
+  public async getReport(forId: number, fromDate: Date, tillDate: Date): Promise<Report> {
     const productEntries = await this.getProductEntries(forId, fromDate, tillDate);
     const vatEntries = await this.getVatEntries(forId, fromDate, tillDate);
     const categoryEntries = await this.getCategoryEntries(forId, fromDate, tillDate);
+    const getPosEntries = await this.getPosEntries(forId, fromDate, tillDate);
     const totals = await this.getTotals(forId, fromDate, tillDate);
+
+    // console.error(JSON.stringify(getPosEntries, null, 2));
+    console.error(JSON.stringify(getPosEntries, null, 2));
 
     return {
       forId,
@@ -236,9 +272,46 @@ export default class SalesReportService {
         entries: productEntries,
         categories: categoryEntries,
         vat: vatEntries,
+        pos: getPosEntries,
       },
       totalExclVat: totals.totalExclVat,
       totalInclVat: totals.totalInclVat,
     };
+  }
+}
+
+export class SalesReportService extends ReportService {
+
+  constructor(manager?: EntityManager) {
+    super(manager);
+  }
+
+  protected addSubTransactionRowFilter<T>(query: SelectQueryBuilder<T>, forId: number, fromDate: Date, tillDate: Date): SelectQueryBuilder<T> {
+    return query
+        .where('subTransaction.toId = :userId', {userId: forId})
+        .andWhere('subTransaction.createdAt >= :fromDate', {fromDate: toMySQLString(fromDate)})
+        .andWhere('subTransaction.createdAt < :tillDate', {tillDate: toMySQLString(tillDate)});
+  }
+
+  getReport(forId: number, fromDate: Date, tillDate: Date): Promise<SalesReport> {
+    return super.getReport(forId, fromDate, tillDate);
+  }
+}
+
+export class BuyerReportService extends ReportService {
+
+  constructor(manager?: EntityManager) {
+    super(manager);
+  }
+
+  protected addSubTransactionRowFilter<T>(query: SelectQueryBuilder<T>, forId: number, fromDate: Date, tillDate: Date): SelectQueryBuilder<T> {
+    return query
+        .where('transaction.fromId = :userId', {userId: forId})
+        .andWhere('subTransaction.createdAt >= :fromDate', {fromDate: toMySQLString(fromDate)})
+        .andWhere('subTransaction.createdAt < :tillDate', {tillDate: toMySQLString(tillDate)});
+  }
+
+  getReport(forId: number, fromDate: Date, tillDate: Date): Promise<BuyerReport> {
+    return super.getReport(forId, fromDate, tillDate);
   }
 }
