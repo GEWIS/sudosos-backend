@@ -57,6 +57,7 @@ import { parseUserToBaseResponse } from '../helpers/revision-to-response';
 import SubTransaction from '../entity/transactions/sub-transaction';
 import InvoiceUser, { InvoiceUserDefaults } from '../entity/user/invoice-user';
 import { AppDataSource } from '../database/database';
+import Transfer from "../entity/transactions/transfer";
 
 export interface InvoiceFilterParameters {
   /**
@@ -277,12 +278,16 @@ export default class InvoiceService {
     // We create an undo transfer that sends the money back to the void.
     const undoTransfer: TransferRequest = {
       amount,
-      description: `Deletion of Invoice #${invoice.id}`,
+      description: 'Deletion of Invoice',
       fromId: invoice.to.id,
       toId: 0,
     };
 
-    await new TransferService(this.manager).postTransfer(undoTransfer);
+    await new TransferService(this.manager).postTransfer(undoTransfer).then(async (response) => {
+      const transfer = await this.manager.findOne(Transfer, { where: { id: response.id } });
+      if (!transfer) throw new Error('Transfer not found during deletion of invoice, aborting');
+      invoice.creditTransfer = transfer;
+    });
 
     // Create a new InvoiceStatus
     const invoiceStatus: InvoiceStatus = Object.assign(new InvoiceStatus(), {
