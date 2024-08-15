@@ -55,6 +55,7 @@ import { createInvoiceWithTransfers, createTransactions } from './invoice-servic
 import { truncateAllTables } from '../../setup';
 import ProductRevision from '../../../src/entity/product/product-revision';
 import { calculateBalance } from '../../helpers/balance';
+import SalesReportService from "../../../src/service/sales-report-service";
 
 chai.use(deepEqualInAnyOrder);
 
@@ -887,11 +888,15 @@ describe('TransactionService', (): void => {
     it('should create a transaction report response', async () => {
       await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
         const transactions = await createTransactions(debtor.id, creditor.id, 3);
+        // TODO: Remove, this is TEMP.
+        await createTransactions(debtor.id, creditor.id, 3);
+        await createTransactions(debtor.id, creditor.id, 3);
         const parameters: TransactionFilterParameters = {
           fromDate: new Date(2000, 0, 0),
           tillDate: new Date(2050, 0, 0),
           toId: creditor.id,
         };
+        console.error(await new SalesReportService().getSalesReport(creditor.id, new Date(2000, 0, 0), new Date(2050, 0, 0)));
         const report = await new TransactionService().getTransactionReportResponse(parameters);
         expect(report.totalInclVat.amount).to.eq(transactions.total);
       });
