@@ -55,7 +55,7 @@ import { createInvoiceWithTransfers } from './invoice-service';
 import { truncateAllTables } from '../../setup';
 import ProductRevision from '../../../src/entity/product/product-revision';
 import { calculateBalance } from '../../helpers/balance';
-import SalesReportService from '../../../src/service/sales-report-service';
+import ReportService, {BuyerReportService, SalesReportService} from '../../../src/service/report-service';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -896,7 +896,8 @@ describe('TransactionService', (): void => {
           tillDate: new Date(2050, 0, 0),
           toId: creditor.id,
         };
-        console.error(await new SalesReportService().getSalesReport(creditor.id, new Date(2000, 0, 0), new Date(2050, 0, 0)));
+        await new SalesReportService().getReport(creditor.id, new Date(2000, 0, 0), new Date(2050, 0, 0));
+        await new BuyerReportService().getReport(debtor.id, new Date(2000, 0, 0), new Date(2050, 0, 0));
         const report = await new TransactionService().getTransactionReportResponse(parameters);
         expect(report.totalInclVat.amount).to.eq(transactions.total);
       });
