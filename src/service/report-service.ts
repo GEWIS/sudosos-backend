@@ -27,30 +27,32 @@ import SubTransaction from '../entity/transactions/sub-transaction';
 import { asDinero, asNumber } from '../helpers/validators';
 import PointOfSaleRevision from "../entity/point-of-sale/point-of-sale-revision";
 import Transaction from "../entity/transactions/transaction";
+import ContainerRevision from "../entity/container/container-revision";
 
-export interface ReportProductEntry {
+interface ReportEntry {
+  totalExclVat: Dinero.Dinero,
+  totalInclVat: Dinero.Dinero
+}
+
+export interface ReportProductEntry extends ReportEntry {
   count: number,
   product: ProductRevision,
-  totalExclVat: Dinero.Dinero,
-  totalInclVat: Dinero.Dinero
 }
 
-export interface ReportVatEntry {
+export interface ReportVatEntry extends ReportEntry {
   vat: VatGroup,
-  totalExclVat: Dinero.Dinero,
-  totalInclVat: Dinero.Dinero
 }
 
-export interface ReportCategoryEntry {
+export interface ReportCategoryEntry extends ReportEntry {
   category: ProductCategory,
-  totalExclVat: Dinero.Dinero,
-  totalInclVat: Dinero.Dinero
 }
 
-export interface ReportPosEntry {
+export interface ReportPosEntry extends ReportEntry {
   pos: PointOfSaleRevision,
-  totalExclVat: Dinero.Dinero,
-  totalInclVat: Dinero.Dinero
+}
+
+export interface ReportContainerEntry extends ReportEntry {
+  container: ContainerRevision,
 }
 
 export interface ReportData {
@@ -58,6 +60,7 @@ export interface ReportData {
   categories?: ReportCategoryEntry[],
   vat?: ReportVatEntry[],
   pos?: ReportPosEntry[],
+  containers?: ReportContainerEntry[],
 }
 
 export interface Report {
@@ -222,6 +225,37 @@ export default abstract class ReportService {
   }
 
   /**
+   * Gets the container report for the given user
+   * @param forId - The user ID to get the entries for
+   * @param fromDate - The from date to get the entries for (inclusive)
+   * @param tillDate - The till date to get the entries for (exclusive)
+   * @returns {Promise<ReportContainerEntry[]>} - The container report
+   */
+  public async getContainerEntries(forId: number, fromDate: Date, tillDate: Date): Promise<ReportContainerEntry[]> {
+    const query = this.manager.createQueryBuilder(ContainerRevision, 'container')
+        .innerJoin(SubTransaction, 'subTransaction', 'subTransaction.containerContainerId = container.containerId and subTransaction.containerRevision = container.revision')
+        .innerJoin(SubTransactionRow, 'subTransactionRow', 'subTransactionRow.subTransactionId = subTransaction.id')
+        .innerJoin(Transaction, 'transaction', 'transaction.id = subTransaction.transactionId')
+        .innerJoin(ProductRevision, 'productRevision', 'productRevision.productId = subTransactionRow.productProductId AND productRevision.revision = subTransactionRow.productRevision')
+        .innerJoin(VatGroup, 'vatGroup', 'vatGroup.id = productRevision.vat');
+    this.addSelectTotals(query);
+
+    const data = await this.addSubTransactionRowFilter(query, forId, fromDate, tillDate)
+        .groupBy('container.containerId')
+        .getRawAndEntities();
+
+    return data.entities.map((container, index) => {
+      const totalInclVat = asDinero(data.raw[index].total_incl_vat);
+      const totalExclVat = asDinero(data.raw[index].total_excl_vat);
+      return {
+        container,
+        totalExclVat,
+        totalInclVat,
+      };
+    });
+  }
+
+  /**
      * Gets the totals for the given user
      * @param forId - The user ID to get the totals for
      * @param fromDate - The from date to get the totals for (inclusive)
@@ -259,10 +293,11 @@ export default abstract class ReportService {
     const vatEntries = await this.getVatEntries(forId, fromDate, tillDate);
     const categoryEntries = await this.getCategoryEntries(forId, fromDate, tillDate);
     const getPosEntries = await this.getPosEntries(forId, fromDate, tillDate);
+    const getContainerEntries = await this.getContainerEntries(forId, fromDate, tillDate);
     const totals = await this.getTotals(forId, fromDate, tillDate);
 
     // console.error(JSON.stringify(getPosEntries, null, 2));
-    console.error(JSON.stringify(getPosEntries, null, 2));
+    console.error(JSON.stringify(getContainerEntries, null, 2));
 
     return {
       forId,
@@ -273,6 +308,7 @@ export default abstract class ReportService {
         categories: categoryEntries,
         vat: vatEntries,
         pos: getPosEntries,
+        containers: getContainerEntries,
       },
       totalExclVat: totals.totalExclVat,
       totalInclVat: totals.totalInclVat,
