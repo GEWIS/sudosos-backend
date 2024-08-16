@@ -65,12 +65,12 @@ import StripeDeposit from '../../../src/entity/stripe/stripe-deposit';
 import { StripeDepositResponse } from '../../../src/controller/response/stripe-response';
 import { TransactionReportResponse } from '../../../src/controller/response/transaction-report-response';
 import { TransactionFilterParameters } from '../../../src/service/transaction-service';
-import { createTransactions } from '../service/invoice-service';
 import UpdateNfcRequest from '../../../src/controller/request/update-nfc-request';
 import UserFineGroup from '../../../src/entity/fine/userFineGroup';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { getToken, SeededRole, seedRoles } from '../../seed/rbac';
+import {createTransactions} from "../../helpers/transaction-factory";
 
 chai.use(deepEqualInAnyOrder);
 

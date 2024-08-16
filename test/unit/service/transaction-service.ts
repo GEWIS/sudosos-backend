@@ -46,12 +46,12 @@ import {
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import SubTransactionRow from '../../../src/entity/transactions/sub-transaction-row';
 import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
-import { createValidTransactionRequest } from '../../helpers/transaction-factory';
+import {createTransactions, createValidTransactionRequest} from '../../helpers/transaction-factory';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
 import ContainerRevision from '../../../src/entity/container/container-revision';
 import generateBalance, { finishTestDB } from '../../helpers/test-helpers';
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
-import { createInvoiceWithTransfers, createTransactions } from './invoice-service';
+import { createInvoiceWithTransfers } from './invoice-service';
 import { truncateAllTables } from '../../setup';
 import ProductRevision from '../../../src/entity/product/product-revision';
 import { calculateBalance } from '../../helpers/balance';
@@ -888,16 +888,13 @@ describe('TransactionService', (): void => {
     it('should create a transaction report response', async () => {
       await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
         const transactions = await createTransactions(debtor.id, creditor.id, 3);
-        // TODO: Remove, this is TEMP.
-        await createTransactions(debtor.id, creditor.id, 3);
-        await createTransactions(debtor.id, creditor.id, 3);
+
         const parameters: TransactionFilterParameters = {
           fromDate: new Date(2000, 0, 0),
           tillDate: new Date(2050, 0, 0),
           toId: creditor.id,
         };
-        await new SalesReportService().getReport(creditor.id, new Date(2000, 0, 0), new Date(2050, 0, 0));
-        await new BuyerReportService().getReport(debtor.id, new Date(2000, 0, 0), new Date(2050, 0, 0));
+
         const report = await new TransactionService().getTransactionReportResponse(parameters);
         expect(report.totalInclVat.amount).to.eq(transactions.total);
       });
