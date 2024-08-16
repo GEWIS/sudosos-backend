@@ -63,7 +63,7 @@ export function isDate(date: any, canBeUndefined?: boolean): boolean {
  */
 export function asNumber(input: any): number | undefined {
   if (!isNumber(input, true)) throw new TypeError(`Input '${input}' is not a number.`);
-  return (input ? Number(input) : undefined);
+  return (input !== undefined ? Number(input) : undefined);
 }
 
 /**
