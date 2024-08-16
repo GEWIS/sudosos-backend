@@ -17,17 +17,17 @@
  */
 
 import dinero from 'dinero.js';
-import { expect } from 'chai';
-import { ProductResponse } from '../../src/controller/response/product-response';
-import { DineroObjectRequest } from '../../src/controller/request/dinero-request';
+import {expect} from 'chai';
+import {ProductResponse} from '../../src/controller/response/product-response';
+import {DineroObjectRequest} from '../../src/controller/request/dinero-request';
 import RevisionRequest from '../../src/controller/request/revision-request';
-import { ContainerWithProductsResponse } from '../../src/controller/response/container-response';
+import {ContainerWithProductsResponse} from '../../src/controller/response/container-response';
 import {
   SubTransactionRequest,
   SubTransactionRowRequest,
   TransactionRequest,
 } from '../../src/controller/request/transaction-request';
-import { PointOfSaleWithContainersResponse } from '../../src/controller/response/point-of-sale-response';
+import {PointOfSaleWithContainersResponse} from '../../src/controller/response/point-of-sale-response';
 import PointOfSaleRevision from '../../src/entity/point-of-sale/point-of-sale-revision';
 import PointOfSaleService from '../../src/service/point-of-sale-service';
 import TransactionService from '../../src/service/transaction-service';
