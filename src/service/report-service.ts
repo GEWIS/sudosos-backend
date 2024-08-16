@@ -21,7 +21,7 @@ import ProductRevision from '../entity/product/product-revision';
 import Dinero from 'dinero.js';
 import VatGroup from '../entity/vat-group';
 import ProductCategory from '../entity/product/product-category';
-import { toMySQLString } from '../helpers/timestamps';
+import {toLocalMySQLString, toMySQLString} from '../helpers/timestamps';
 import SubTransactionRow from '../entity/transactions/sub-transaction-row';
 import SubTransaction from '../entity/transactions/sub-transaction';
 import { asDinero, asNumber } from '../helpers/validators';
@@ -56,7 +56,7 @@ export interface ReportContainerEntry extends ReportEntry {
 }
 
 export interface ReportData {
-  entries?: ReportProductEntry[],
+  products?: ReportProductEntry[],
   categories?: ReportCategoryEntry[],
   vat?: ReportVatEntry[],
   pos?: ReportPosEntry[],
@@ -75,6 +75,12 @@ export interface Report {
 export interface SalesReport extends Report {}
 
 export interface BuyerReport extends Report {}
+
+interface ReportParameters {
+  fromDate: Date,
+  tillDate: Date,
+  forId: number,
+}
 
 
 export default abstract class ReportService {
@@ -95,7 +101,7 @@ export default abstract class ReportService {
      */
   private addSelectTotals<T>(query: SelectQueryBuilder<T>): SelectQueryBuilder<T> {
     return query
-      .addSelect('sum(subTransactionRow.amount * ROUND(productRevision.priceInclVat * (1 - (vatGroup.percentage / 100))))', 'total_excl_vat')
+      .addSelect('sum(subTransactionRow.amount * ROUND(productRevision.priceInclVat / (1 + (vatGroup.percentage / 100))))', 'total_excl_vat')
       .addSelect('sum(subTransactionRow.amount * productRevision.priceInclVat)', 'total_incl_vat');
   }
 
@@ -273,8 +279,10 @@ export default abstract class ReportService {
     const data = await this.addSubTransactionRowFilter(query, forId, fromDate, tillDate)
       .getRawAndEntities();
 
-    const totalExclVat = asDinero(data.raw[0].total_excl_vat);
-    const totalInclVat = asDinero(data.raw[0].total_incl_vat);
+    if (data.raw.length > 1) throw new Error('Multiple results when getting totals');
+
+    const totalExclVat = asDinero(data.raw[0].total_excl_vat || 0);
+    const totalInclVat = asDinero(data.raw[0].total_incl_vat || 0);
     return {
       totalExclVat,
       totalInclVat,
@@ -282,13 +290,12 @@ export default abstract class ReportService {
   }
 
   /**
-     * Gets the report for the given user
-     * @param forId - The user ID to get the report for
-     * @param fromDate - The from date to get the report for (inclusive)
-     * @param tillDate - The till date to get the report for (exclusive)
-     * @returns {Promise<Report>} - The report
-     */
-  public async getReport(forId: number, fromDate: Date, tillDate: Date): Promise<Report> {
+   * Gets the report for the given user
+   * @param parameters - The parameters to get the report for
+   * @returns {Promise<Report>} - The report
+   */
+  public async getReport(parameters: ReportParameters): Promise<Report> {
+    const { fromDate, tillDate, forId } = parameters;
     const productEntries = await this.getProductEntries(forId, fromDate, tillDate);
     const vatEntries = await this.getVatEntries(forId, fromDate, tillDate);
     const categoryEntries = await this.getCategoryEntries(forId, fromDate, tillDate);
@@ -296,17 +303,14 @@ export default abstract class ReportService {
     const getContainerEntries = await this.getContainerEntries(forId, fromDate, tillDate);
     const totals = await this.getTotals(forId, fromDate, tillDate);
 
-    // console.error(JSON.stringify(getPosEntries, null, 2));
-    console.error(JSON.stringify(getContainerEntries, null, 2));
-
     return {
       forId,
       fromDate,
       tillDate,
       data: {
-        entries: productEntries,
-        categories: categoryEntries,
+        products: productEntries,
         vat: vatEntries,
+        categories: categoryEntries,
         pos: getPosEntries,
         containers: getContainerEntries,
       },
@@ -325,8 +329,8 @@ export class SalesReportService extends ReportService {
       .andWhere('subTransaction.createdAt < :tillDate', { tillDate: toMySQLString(tillDate) });
   }
 
-  getReport(forId: number, fromDate: Date, tillDate: Date): Promise<SalesReport> {
-    return super.getReport(forId, fromDate, tillDate);
+  getReport(parameters: ReportParameters): Promise<SalesReport> {
+    return super.getReport(parameters);
   }
 }
 
@@ -339,7 +343,7 @@ export class BuyerReportService extends ReportService {
       .andWhere('subTransaction.createdAt < :tillDate', { tillDate: toMySQLString(tillDate) });
   }
 
-  getReport(forId: number, fromDate: Date, tillDate: Date): Promise<BuyerReport> {
-    return super.getReport(forId, fromDate, tillDate);
+  getReport(parameters: ReportParameters): Promise<BuyerReport> {
+    return super.getReport(parameters);
   }
 }

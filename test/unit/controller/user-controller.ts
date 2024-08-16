@@ -70,10 +70,7 @@ import UserFineGroup from '../../../src/entity/fine/userFineGroup';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { getToken, SeededRole, seedRoles } from '../../seed/rbac';
-import { createTransactions } from '../../helpers/transaction-factory';
-import { ReportResponse } from '../../../src/controller/response/report-response';
-import sinon, { SinonStub } from 'sinon';
-import ReportPdfService from '../../../src/service/report-pdf-service';
+import {createTransactions} from "../../helpers/transaction-factory";
 
 chai.use(deepEqualInAnyOrder);
 
