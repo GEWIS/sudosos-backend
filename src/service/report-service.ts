@@ -25,9 +25,9 @@ import { toMySQLString } from '../helpers/timestamps';
 import SubTransactionRow from '../entity/transactions/sub-transaction-row';
 import SubTransaction from '../entity/transactions/sub-transaction';
 import { asDinero, asNumber } from '../helpers/validators';
-import PointOfSaleRevision from "../entity/point-of-sale/point-of-sale-revision";
-import Transaction from "../entity/transactions/transaction";
-import ContainerRevision from "../entity/container/container-revision";
+import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision';
+import Transaction from '../entity/transactions/transaction';
+import ContainerRevision from '../entity/container/container-revision';
 
 interface ReportEntry {
   totalExclVat: Dinero.Dinero,
@@ -81,7 +81,7 @@ export default abstract class ReportService {
 
   private manager: EntityManager;
 
-  protected constructor(manager?: EntityManager) {
+  constructor(manager?: EntityManager) {
     this.manager = manager ? manager : AppDataSource.manager;
   }
 
@@ -202,16 +202,16 @@ export default abstract class ReportService {
    */
   public async getPosEntries(forId: number, fromDate: Date, tillDate: Date): Promise<ReportPosEntry[]> {
     const query = this.manager.createQueryBuilder(PointOfSaleRevision, 'pointOfSaleRevision')
-        .innerJoin(Transaction, 'transaction', 'transaction.pointOfSalePointOfSaleId = pointOfSaleRevision.pointOfSaleId AND transaction.pointOfSaleRevision = pointOfSaleRevision.revision')
-        .innerJoin(SubTransaction, 'subTransaction', 'subTransaction.transactionId = transaction.id')
-        .innerJoin(SubTransactionRow, 'subTransactionRow', 'subTransactionRow.subTransactionId = subTransaction.id')
-        .innerJoin(ProductRevision, 'productRevision', 'productRevision.productId = subTransactionRow.productProductId AND productRevision.revision = subTransactionRow.productRevision')
-        .innerJoin(VatGroup, 'vatGroup', 'vatGroup.id = productRevision.vat');
+      .innerJoin(Transaction, 'transaction', 'transaction.pointOfSalePointOfSaleId = pointOfSaleRevision.pointOfSaleId AND transaction.pointOfSaleRevision = pointOfSaleRevision.revision')
+      .innerJoin(SubTransaction, 'subTransaction', 'subTransaction.transactionId = transaction.id')
+      .innerJoin(SubTransactionRow, 'subTransactionRow', 'subTransactionRow.subTransactionId = subTransaction.id')
+      .innerJoin(ProductRevision, 'productRevision', 'productRevision.productId = subTransactionRow.productProductId AND productRevision.revision = subTransactionRow.productRevision')
+      .innerJoin(VatGroup, 'vatGroup', 'vatGroup.id = productRevision.vat');
     this.addSelectTotals(query);
 
     const data = await this.addSubTransactionRowFilter(query, forId, fromDate, tillDate)
-        .groupBy('pointOfSaleRevision.pointOfSaleId')
-        .getRawAndEntities();
+      .groupBy('pointOfSaleRevision.pointOfSaleId')
+      .getRawAndEntities();
 
     return data.entities.map((pos, index) => {
       const totalInclVat = asDinero(data.raw[index].total_incl_vat);
@@ -233,16 +233,16 @@ export default abstract class ReportService {
    */
   public async getContainerEntries(forId: number, fromDate: Date, tillDate: Date): Promise<ReportContainerEntry[]> {
     const query = this.manager.createQueryBuilder(ContainerRevision, 'container')
-        .innerJoin(SubTransaction, 'subTransaction', 'subTransaction.containerContainerId = container.containerId and subTransaction.containerRevision = container.revision')
-        .innerJoin(SubTransactionRow, 'subTransactionRow', 'subTransactionRow.subTransactionId = subTransaction.id')
-        .innerJoin(Transaction, 'transaction', 'transaction.id = subTransaction.transactionId')
-        .innerJoin(ProductRevision, 'productRevision', 'productRevision.productId = subTransactionRow.productProductId AND productRevision.revision = subTransactionRow.productRevision')
-        .innerJoin(VatGroup, 'vatGroup', 'vatGroup.id = productRevision.vat');
+      .innerJoin(SubTransaction, 'subTransaction', 'subTransaction.containerContainerId = container.containerId and subTransaction.containerRevision = container.revision')
+      .innerJoin(SubTransactionRow, 'subTransactionRow', 'subTransactionRow.subTransactionId = subTransaction.id')
+      .innerJoin(Transaction, 'transaction', 'transaction.id = subTransaction.transactionId')
+      .innerJoin(ProductRevision, 'productRevision', 'productRevision.productId = subTransactionRow.productProductId AND productRevision.revision = subTransactionRow.productRevision')
+      .innerJoin(VatGroup, 'vatGroup', 'vatGroup.id = productRevision.vat');
     this.addSelectTotals(query);
 
     const data = await this.addSubTransactionRowFilter(query, forId, fromDate, tillDate)
-        .groupBy('container.containerId')
-        .getRawAndEntities();
+      .groupBy('container.containerId')
+      .getRawAndEntities();
 
     return data.entities.map((container, index) => {
       const totalInclVat = asDinero(data.raw[index].total_incl_vat);
@@ -318,15 +318,11 @@ export default abstract class ReportService {
 
 export class SalesReportService extends ReportService {
 
-  constructor(manager?: EntityManager) {
-    super(manager);
-  }
-
   protected addSubTransactionRowFilter<T>(query: SelectQueryBuilder<T>, forId: number, fromDate: Date, tillDate: Date): SelectQueryBuilder<T> {
     return query
-        .where('subTransaction.toId = :userId', {userId: forId})
-        .andWhere('subTransaction.createdAt >= :fromDate', {fromDate: toMySQLString(fromDate)})
-        .andWhere('subTransaction.createdAt < :tillDate', {tillDate: toMySQLString(tillDate)});
+      .where('subTransaction.toId = :userId', { userId: forId })
+      .andWhere('subTransaction.createdAt >= :fromDate', { fromDate: toMySQLString(fromDate) })
+      .andWhere('subTransaction.createdAt < :tillDate', { tillDate: toMySQLString(tillDate) });
   }
 
   getReport(forId: number, fromDate: Date, tillDate: Date): Promise<SalesReport> {
@@ -336,15 +332,11 @@ export class SalesReportService extends ReportService {
 
 export class BuyerReportService extends ReportService {
 
-  constructor(manager?: EntityManager) {
-    super(manager);
-  }
-
   protected addSubTransactionRowFilter<T>(query: SelectQueryBuilder<T>, forId: number, fromDate: Date, tillDate: Date): SelectQueryBuilder<T> {
     return query
-        .where('transaction.fromId = :userId', {userId: forId})
-        .andWhere('subTransaction.createdAt >= :fromDate', {fromDate: toMySQLString(fromDate)})
-        .andWhere('subTransaction.createdAt < :tillDate', {tillDate: toMySQLString(tillDate)});
+      .where('transaction.fromId = :userId', { userId: forId })
+      .andWhere('subTransaction.createdAt >= :fromDate', { fromDate: toMySQLString(fromDate) })
+      .andWhere('subTransaction.createdAt < :tillDate', { tillDate: toMySQLString(tillDate) });
   }
 
   getReport(forId: number, fromDate: Date, tillDate: Date): Promise<BuyerReport> {
