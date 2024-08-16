@@ -66,7 +66,7 @@ import sinon from 'sinon';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { getToken, seedRoles } from '../../seed/rbac';
-import { createTransactionRequest, requestToTransaction } from '../../helpers/transaction-factory';
+import {createTransactionRequest, requestToTransaction} from "../../helpers/transaction-factory";
 
 describe('InvoiceController', async () => {
   let ctx: {

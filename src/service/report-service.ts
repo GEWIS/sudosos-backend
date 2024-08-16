@@ -386,3 +386,4 @@ export class BuyerReportService extends ReportService {
     return super.getReport(parameters);
   }
 }
+
