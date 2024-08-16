@@ -55,7 +55,7 @@ import { createInvoiceWithTransfers } from './invoice-service';
 import { truncateAllTables } from '../../setup';
 import ProductRevision from '../../../src/entity/product/product-revision';
 import { calculateBalance } from '../../helpers/balance';
-import ReportService, {BuyerReportService, SalesReportService} from '../../../src/service/report-service';
+import { BuyerReportService, SalesReportService } from '../../../src/service/report-service';
 
 chai.use(deepEqualInAnyOrder);
 
