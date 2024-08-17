@@ -17,10 +17,11 @@
  */
 
 import {
-  FindOptionsWhere, Like,
+  FindOptionsWhere, FindOptionsWhereProperty, Like, Raw,
   SelectQueryBuilder,
 } from 'typeorm';
 import { asNumber } from './validators';
+import { toMySQLString } from './timestamps';
 
 /**
  * Defines the mapping from properties on the parameter object, to
@@ -117,5 +118,25 @@ export default class QueryFilter {
     if (query === undefined) return undefined;
     if (Array.isArray(query)) return query.map((d: any) => asNumber(d));
     return asNumber(query);
+  }
+
+  /**
+   * Given a time range, return a find options filter that filters based on this range
+   * @param fromDate
+   * @param tillDate
+   */
+  public static createFilterWhereDate(fromDate?: Date, tillDate?: Date): FindOptionsWhereProperty<Date> | undefined {
+    if (fromDate && tillDate) return Raw(
+      (alias) => `${alias} >= :fromDate AND ${alias} < :tillDate`,
+      { fromDate: toMySQLString(fromDate), tillDate: toMySQLString(tillDate) },
+    );
+    if (fromDate) return Raw(
+      (alias) => `${alias} >= :fromDate`,
+      { fromDate: toMySQLString(fromDate) },
+    );
+    if (tillDate) return Raw(
+      (alias) => `${alias} < :tillDate`,
+      { tillDate: toMySQLString(tillDate) },
+    );
   }
 }
