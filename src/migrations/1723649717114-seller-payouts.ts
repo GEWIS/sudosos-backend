@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { IsNull, MigrationInterface, Not, QueryRunner, Table } from 'typeorm';
+import { IsNull, MigrationInterface, Not, QueryRunner, Table, TableForeignKey } from 'typeorm';
 import Invoice from '../entity/invoices/invoice';
 import SellerPayout from '../entity/transactions/payout/seller-payout';
 import InvoiceEntry from '../entity/invoices/invoice-entry';
@@ -50,6 +50,10 @@ export class SellerPayouts1723649717114 implements MigrationInterface {
         isGenerated: true,
         generationStrategy: 'increment',
       }, {
+        name: 'requestedById',
+        type: 'integer',
+        isNullable: false,
+      }, {
         name: 'transferId',
         type: 'integer',
         isNullable: true,
@@ -68,8 +72,23 @@ export class SellerPayouts1723649717114 implements MigrationInterface {
       }],
     }));
 
+    await queryRunner.createForeignKeys(this.SELLER_PAYOUT_TABLE, [
+      new TableForeignKey({
+        columnNames: ['requestedById'],
+        referencedColumnNames: ['id'],
+        referencedTableName: 'user',
+        onDelete: 'RESTRICT',
+      }),
+      new TableForeignKey({
+        columnNames: ['transferId'],
+        referencedColumnNames: ['id'],
+        referencedTableName: 'transfer',
+        onDelete: 'RESTRICT',
+      }),
+    ]);
+
     const creditInvoices = await queryRunner.manager.getRepository(Invoice).find({
-      where: { transfer: { toId: Not(IsNull()) } },
+      where: { transfer: { fromId: IsNull() } },
       relations: { invoiceEntries: true, invoiceStatus: true, pdf: true, transfer: true, to: true },
       order: { date: 'ASC' },
     });
@@ -83,8 +102,11 @@ export class SellerPayouts1723649717114 implements MigrationInterface {
     });
 
     const repo = queryRunner.manager.getRepository(SellerPayout);
-    // Create a seller payout for each invoice
+    // Create a seller payout for each invoice with the same value as the transfer
     for (const invoice of creditInvoices) {
+      // Do not create a seller payout with value zero
+      if (invoice.transfer.amountInclVat.isZero()) continue;
+
       await repo.save({
         transfer: invoice.transfer,
         requestedBy: invoice.to,
