@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { FindManyOptions } from 'typeorm';
+import { EntityManager, FindManyOptions, IsNull, Raw } from 'typeorm';
 import ProductCategory from '../entity/product/product-category';
 import {
   PaginatedProductCategoryResponse,
@@ -25,6 +25,7 @@ import {
 import ProductCategoryRequest from '../controller/request/product-category-request';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import { PaginationParameters } from '../helpers/pagination';
+import { AppDataSource } from '../database/database';
 
 /**
  * Define productCategory filtering parameters used to filter query results.
@@ -38,12 +39,26 @@ export interface ProductCategoryFilterParameters {
    * Filter based on product owner.
    */
   name?: string;
+  /**
+   * Whether to only return root categories (so categories without parents)
+   */
+  onlyRoot?: boolean;
+  /**
+   * Whether to only return leaf categories (so categories without children)
+   */
+  onlyLeaf?: boolean;
 }
 
 /**
  * Wrapper for all Product related logic.
  */
 export default class ProductCategoryService {
+  private manager: EntityManager;
+
+  constructor(manager?: EntityManager) {
+    this.manager = manager ?? AppDataSource.manager;
+  }
+
   /**
    * Creates a productCategoryResponse from a productCategory
    * @param {ProductCategory.model} productCategory - productCategory
@@ -57,6 +72,7 @@ export default class ProductCategoryService {
       name: productCategory.name,
       createdAt: productCategory.createdAt.toISOString(),
       updatedAt: productCategory.updatedAt.toISOString(),
+      parent: productCategory.parent ? this.asProductCategoryResponse(productCategory.parent) : undefined,
     };
   }
 
@@ -72,13 +88,19 @@ export default class ProductCategoryService {
       id: 'id',
       name: 'name',
     };
-    const options: FindManyOptions = {
-      where: QueryFilter.createFilterWhereClause(filterMapping, filters),
+
+    const options: FindManyOptions<ProductCategory> = {
+      where: {
+        // Only IDs that are not found in the "parentId" column (so those IDs are not parents, i.e. are leafs)
+        id: filters.onlyLeaf ? Raw((columnAlias) => `${columnAlias} NOT IN (SELECT DISTINCT parentId FROM product_category WHERE parentId IS NOT NULL)`) : undefined,
+        parent: filters.onlyRoot ? IsNull() : undefined,
+        ...QueryFilter.createFilterWhereClause(filterMapping, filters),
+      },
       order: { id: 'ASC' },
     };
 
     const results = await Promise.all([
-      ProductCategory.find({ ...options, take, skip }),
+      ProductCategory.find({ ...options, take, skip, relations: { parent: true } }),
       ProductCategory.count(options),
     ]);
 
@@ -98,11 +120,18 @@ export default class ProductCategoryService {
    * Saves a ProductCategory to the database.
    * @param request - The ProductCategoryRequest with values.
    */
-  public static async postProductCategory(request: ProductCategoryRequest)
-    : Promise<ProductCategoryResponse> {
-    const productCategory = Object.assign(new ProductCategory(), request);
-    return ProductCategory.save(productCategory)
-      .then(() => this.asProductCategoryResponse(productCategory));
+  public static async postProductCategory(
+    request: ProductCategoryRequest,
+  ): Promise<ProductCategoryResponse> {
+    const parentCategory = request.parentCategoryId
+      ? await ProductCategory.findOne({ where: { id: request.parentCategoryId } })
+      : undefined;
+
+    const category = new ProductCategory();
+    category.name = request.name;
+    category.parent = parentCategory;
+    return ProductCategory.save(category)
+      .then(() => this.asProductCategoryResponse(category));
   }
 
   /**
@@ -110,11 +139,12 @@ export default class ProductCategoryService {
    * @param id - The id of the productCategory that needs to be updated.
    * @param request - The ProductCategoryRequest with updated values.
    */
-  public static async patchProductCategory(id: number, request: ProductCategoryRequest)
-    : Promise<ProductCategoryResponse> {
-    const productCategoryToUpdate = await ProductCategory.findOne({ where: { id } });
-    if (!productCategoryToUpdate) return null;
-    const productCategory = Object.assign(productCategoryToUpdate, request);
+  public static async patchProductCategory(
+    id: number, request: ProductCategoryRequest,
+  ): Promise<ProductCategoryResponse> {
+    const category = await ProductCategory.findOne({ where: { id } });
+    if (!category) return null;
+    const productCategory = Object.assign(category, request);
     await ProductCategory.save(productCategory);
     return this.asProductCategoryResponse(productCategory);
   }
@@ -124,8 +154,8 @@ export default class ProductCategoryService {
    * @param id - The id of the productCategory that needs to be deleted.
    */
   public static async deleteProductCategory(id: number): Promise<ProductCategoryResponse> {
-    const productCategory = await ProductCategory.findOne({ where: { id } });
-    if (!productCategory) {
+    const productCategory = await ProductCategory.findOne({ where: { id }, relations: { children: true } });
+    if (!productCategory || productCategory.children.length > 0) {
       return null;
     }
     return ProductCategory.delete(id).then(() => this.asProductCategoryResponse(productCategory));
@@ -141,6 +171,9 @@ export default class ProductCategoryService {
   Promise<boolean> {
     return request.name != null && request.name !== ''
         && request.name.length <= 64
-        && !(await ProductCategory.findOne({ where: { name: request.name } }));
+        && !(await ProductCategory.findOne({ where: { name: request.name } }))
+        && !!(request.parentCategoryId !== undefined
+          ? await ProductCategory.findOne({ where: { id: request.parentCategoryId } })
+          : true);
   }
 }

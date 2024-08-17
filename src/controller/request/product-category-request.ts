@@ -16,11 +16,13 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import ProductCategory from '../../entity/product/product-category';
 
 /**
  * @typedef {object} ProductCategoryRequest
- * @property {string} name - Name/label of the productCategory
+ * @property {string} name.required - Name/label of the productCategory
+ * @property {integer} parentCategoryId - ID of the parent product category
  */
-export default interface ProductCategoryRequest {
-  name: string,
+export default interface ProductCategoryRequest extends Pick<ProductCategory, 'name'> {
+  parentCategoryId?: number,
 }

@@ -189,6 +189,51 @@ describe('ProductCategoryController', async (): Promise<void> => {
       expect(pagination.skip).to.equal(0);
       expect(pagination.count).to.equal(ctx.categories.length);
     });
+    it('should return an HTTP 200 and only root categories', async () => {
+      const res = await request(ctx.app)
+        .get('/productcategories?onlyRoot=true')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+
+      const actualCategories = ctx.categories.filter((c) => c.parent == null);
+      const categories = res.body.records as ProductCategoryResponse[];
+      // eslint-disable-next-line no-underscore-dangle
+      const pagination = res.body._pagination as PaginationResult;
+
+      // Every productcategory should be returned.
+      expect(categories.length).to.equal(Math.min(actualCategories.length, defaultPagination()));
+      expect(pagination.take).to.equal(defaultPagination());
+      expect(pagination.skip).to.equal(0);
+      expect(pagination.count).to.equal(actualCategories.length);
+
+      categories.forEach((c) => {
+        expect(c.parent).to.be.undefined;
+      });
+    });
+    it('should return an HTTP 200 and only leaf categories', async () => {
+      const res = await request(ctx.app)
+        .get('/productcategories?onlyLeaf=true')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+
+      // Find all categories that are not a parent, i.e. have no children
+      const actualCategories = ctx.categories.filter((c) => !ctx.categories
+        .some((c2) => c2.parent?.id === c.id));
+      const categories = res.body.records as ProductCategoryResponse[];
+      // eslint-disable-next-line no-underscore-dangle
+      const pagination = res.body._pagination as PaginationResult;
+
+      // Every productcategory should be returned.
+      expect(categories.length).to.equal(Math.min(actualCategories.length, defaultPagination()));
+      expect(pagination.take).to.equal(defaultPagination());
+      expect(pagination.skip).to.equal(0);
+      expect(pagination.count).to.equal(actualCategories.length);
+
+      categories.forEach((c) => {
+        const children = ctx.categories.filter((c2) => c2.parent?.id === c.id);
+        expect(children).to.be.lengthOf(0);
+      });
+    });
     it('should return an HTTP 403 if not admin', async () => {
       const res = await request(ctx.app)
         .get('/productcategories')
@@ -288,12 +333,58 @@ describe('ProductCategoryController', async (): Promise<void> => {
         true,
       ).valid).to.be.true;
 
+      const response = res.body as ProductCategoryResponse;
+
       expect(await ProductCategory.count()).to.equal(productCategoryCount + 1);
-      expect(ctx.validRequest.name).to.equal(res.body.name);
+      expect(response.name).to.equal(ctx.validRequest.name);
+      expect(response.parent).to.be.undefined;
       const databaseEntry = await ProductCategory.findOne({
         where: { id: (res.body as ProductCategoryResponse).id },
       });
       expect(databaseEntry).to.exist;
+
+      // Cleanup
+      await ProductCategory.remove(databaseEntry);
+    });
+    it('should return an HTTP 200 if product category has a parent', async () => {
+      const productCategoryCount = await ProductCategory.count();
+      const parent = ctx.categories[0];
+
+      // Sanity check
+      const dbParent = await ProductCategory.findOne({ where: { id: parent.id } });
+      expect(dbParent).to.not.be.null;
+
+      const res = await request(ctx.app)
+        .post('/productcategories')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({
+          ...ctx.validRequest,
+          parentCategoryId: parent.id,
+        } as ProductCategoryRequest);
+
+      expect(res.status).to.equal(200);
+      const validation =
+      ctx.specification.validateModel(
+        'ProductCategoryResponse',
+        res.body,
+        false,
+        true,
+      );
+      expect(validation.valid).to.be.true;
+
+      const response = res.body as ProductCategoryResponse;
+
+      expect(await ProductCategory.count()).to.equal(productCategoryCount + 1);
+      expect(response.name).to.equal(ctx.validRequest.name);
+      expect(response.parent).to.not.be.undefined;
+      expect(response.parent.id).to.equal(parent.id);
+      const databaseEntry = await ProductCategory.findOne({
+        where: { id: (res.body as ProductCategoryResponse).id },
+      });
+      expect(databaseEntry).to.exist;
+
+      // Cleanup
+      await ProductCategory.remove(databaseEntry);
     });
     it('should return an HTTP 400 if the given productcategory name is empty', async () => {
       const productCategoryCount = await ProductCategory.count();
@@ -307,20 +398,34 @@ describe('ProductCategoryController', async (): Promise<void> => {
 
       expect(res.status).to.equal(400);
     });
-    it('should return an HTTP 400 if the given productcategory name is null', async () => {
+    it('should return an HTTP 400 if the given productcategory name is empty', async () => {
       const productCategoryCount = await ProductCategory.count();
       const res = await request(ctx.app)
         .post('/productcategories')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send({
           ...ctx.invalidRequest,
-          name: null,
+          name: '',
         });
+
+      expect(res.status).to.equal(400);
 
       expect(await ProductCategory.count()).to.equal(productCategoryCount);
       expect(res.body).to.equal('Invalid productcategory.');
-
+    });
+    it('should return an HTTP 400 if the given parentCategory does not exist', async () => {
+      const productCategoryCount = await ProductCategory.count();
+      const res = await request(ctx.app)
+        .post('/productcategories')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({
+          ...ctx.invalidRequest,
+          parentCategoryId: productCategoryCount + 1,
+        } as ProductCategoryRequest);
       expect(res.status).to.equal(400);
+
+      expect(await ProductCategory.count()).to.equal(productCategoryCount);
+      expect(res.body).to.equal('Invalid productcategory.');
     });
     it('should return an HTTP 403 if not admin', async () => {
       const productCategoryCount = await ProductCategory.count();
