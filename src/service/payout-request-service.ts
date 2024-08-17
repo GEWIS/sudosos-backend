@@ -38,7 +38,6 @@ import User from '../entity/user/user';
 import TransferService from './transfer-service';
 import { RequestWithToken } from '../middleware/token-middleware';
 import { asDate } from '../helpers/validators';
-import { toMySQLString } from '../helpers/timestamps';
 import { parseUserToBaseResponse } from '../helpers/revision-to-response';
 
 export interface PayoutRequestFilters {
@@ -295,34 +294,10 @@ export default class PayoutRequestService {
       payoutRequestStatus: true,
     };
 
-    let whereClause: FindOptionsWhere<PayoutRequest> = QueryFilter.createFilterWhereClause(filterMapping, params);
-
-    // Apply from/till date filters
-    if (params.fromDate && params.tillDate) {
-      whereClause = {
-        ...whereClause,
-        createdAt: Raw(
-          (alias) => `${alias} >= :fromDate AND ${alias} < :tillDate`,
-          { fromDate: toMySQLString(params.fromDate), tillDate: toMySQLString(params.tillDate) },
-        ),
-      };
-    } else if (params.fromDate) {
-      whereClause = {
-        ...whereClause,
-        createdAt: Raw(
-          (alias) => `${alias} >= :fromDate`,
-          { fromDate: toMySQLString(params.fromDate) },
-        ),
-      };
-    } else if (params.tillDate) {
-      whereClause = {
-        ...whereClause,
-        createdAt: Raw(
-          (alias) => `${alias} < :tillDate`,
-          { tillDate: toMySQLString(params.tillDate) },
-        ),
-      };
-    }
+    let whereClause: FindOptionsWhere<PayoutRequest> = {
+      ...QueryFilter.createFilterWhereClause(filterMapping, params),
+      createdAt: QueryFilter.createFilterWhereDate(params.fromDate, params.tillDate),
+    };
 
     let stateFilter: FindOptionsWhere<PayoutRequest> = { };
     if (params.status) {
