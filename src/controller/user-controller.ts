@@ -41,7 +41,7 @@ import UserService, {
   parseGetUsersFilters,
   UserFilterParameters,
 } from '../service/user-service';
-import { asFromAndTillDate, asNumber, asReturnFileType } from '../helpers/validators';
+import { asDate, asNumber } from '../helpers/validators';
 import { verifyCreateUserRequest } from './request/validators/user-request-spec';
 import userTokenInOrgan from '../helpers/token-helper';
 import { parseUserToResponse } from '../helpers/revision-to-response';
@@ -59,8 +59,6 @@ import UpdateKeyResponse from './response/update-key-response';
 import { randomBytes } from 'crypto';
 import DebtorService from '../service/debtor-service';
 import ReportService, { BuyerReportService, SalesReportService } from '../service/report-service';
-import { ReturnFileType, UserReportParametersType } from 'pdf-generator-client';
-import { reportPDFhelper } from '../helpers/express-pdf';
 
 export default class UserController extends BaseController {
   private logger: Logger = log4js.getLogger('UserController');
@@ -251,7 +249,7 @@ export default class UserController extends BaseController {
           handler: this.getUsersTransactions.bind(this),
         },
       },
-      '/:id(\\d+)/transactions/sales/report': {
+      'id(\\d+)/transactions/sales/report': {
         GET: {
           policy: async (req) => this.roleManager.can(
             req.token.roles, 'get', UserController.getRelation(req), 'Transaction', ['*'],
@@ -259,28 +257,12 @@ export default class UserController extends BaseController {
           handler: this.getUsersSalesReport.bind(this),
         },
       },
-      '/:id(\\d+)/transactions/sales/report/pdf': {
-        GET: {
-          policy: async (req) => this.roleManager.can(
-            req.token.roles, 'get', UserController.getRelation(req), 'Transaction', ['*'],
-          ),
-          handler: this.getUsersSalesReportPdf.bind(this),
-        },
-      },
-      '/:id(\\d+)/transactions/purchases/report': {
+      'id(\\d+)/transactions/purchases/report': {
         GET: {
           policy: async (req) => this.roleManager.can(
             req.token.roles, 'get', UserController.getRelation(req), 'Transaction', ['*'],
           ),
           handler: this.getUsersPurchasesReport.bind(this),
-        },
-      },
-      '/:id(\\d+)/transactions/purchases/report/pdf': {
-        GET: {
-          policy: async (req) => this.roleManager.can(
-            req.token.roles, 'get', UserController.getRelation(req), 'Transaction', ['*'],
-          ),
-          handler: this.getUsersPurchaseReportPdf.bind(this),
         },
       },
       '/:id(\\d+)/transactions/report': {
@@ -1118,7 +1100,10 @@ export default class UserController extends BaseController {
 
     let filters: { fromDate: Date, tillDate: Date };
     try {
-      filters = asFromAndTillDate(req.query.fromDate, req.query.tillDate);
+      filters = {
+        fromDate: asDate(req.query.fromDate),
+        tillDate: asDate(req.query.tillDate),
+      };
     } catch (e) {
       res.status(400).json(e.message);
       return;
@@ -1140,98 +1125,7 @@ export default class UserController extends BaseController {
   }
 
   /**
-   * GET /users/{id}/transactions/sales/report/pdf
-   * @summary Get sales report for the given user
-   * @operationId getUsersSalesReportPdf
-   * @tags users - Operations of user controller
-   * @param {integer} id.path.required - The id of the user to get the sales report for
-   * @security JWT
-   * @param {string} fromDate.query.required - Start date for selected sales (inclusive)
-   * @param {string} tillDate.query.required - End date for selected sales (exclusive)
-   * @param {string} description.query - Description of the report
-   * @param {string} fileType.query - enum:PDF,TEX - The file type of the report
-   * @return {string} 404 - User not found error.
-   * @returns {string} 200 - The requested report - application/pdf
-   * @return {string} 400 - Validation error
-   * @return {string} 500 - Internal server error
-   */
-  public async getUsersSalesReportPdf(req: RequestWithToken, res: Response): Promise<void> {
-    const { id } = req.params;
-    this.logger.trace('Get sales report pdf for user ', id, ' by user', req.token.user);
-
-    let filters: { fromDate: Date, tillDate: Date };
-    let description: string;
-    let fileType: ReturnFileType;
-    try {
-      filters = asFromAndTillDate(req.query.fromDate, req.query.tillDate);
-      description = String(req.query.description);
-      fileType = asReturnFileType(req.query.fileType);
-    } catch (e) {
-      res.status(400).json(e.message);
-      return;
-    }
-
-    try {
-      const user = await User.findOne({ where: { id: parseInt(id, 10) } });
-      if (user == null) {
-        res.status(404).json('Unknown user ID.');
-        return;
-      }
-      const service = new SalesReportService();
-      await reportPDFhelper(res)(service, filters, description, user.id, UserReportParametersType.Sales, fileType);
-    } catch (error) {
-      this.logger.error('Could not get sales report:', error);
-      res.status(500).json('Internal server error.');
-    }
-  }
-
-  /**
-   * GET /users/{id}/transactions/purchases/report/pdf
-   * @summary Get purchase report pdf for the given user
-   * @operationId getUsersPurchaseReportPdf
-   * @tags users - Operations of user controller
-   * @param {integer} id.path.required - The id of the user to get the purchase report for
-   * @security JWT
-   * @param {string} fromDate.query.required - Start date for selected purchases (inclusive)
-   * @param {string} tillDate.query.required - End date for selected purchases (exclusive)
-   * @param {string} fileType.query - enum:PDF,TEX - The file type of the report
-   * @return {string} 404 - User not found error.
-   * @returns {string} 200 - The requested report - application/pdf
-   * @return {string} 400 - Validation error
-   * @return {string} 500 - Internal server error
-   */
-  public async getUsersPurchaseReportPdf(req: RequestWithToken, res: Response): Promise<void> {
-    const { id } = req.params;
-    this.logger.trace('Get purchase report pdf for user ', id, ' by user', req.token.user);
-
-    let filters: { fromDate: Date, tillDate: Date };
-    let description: string;
-    let fileType: ReturnFileType;
-    try {
-      filters = asFromAndTillDate(req.query.fromDate, req.query.tillDate);
-      description = String(req.query.description);
-      fileType = asReturnFileType(req.query.fileType);
-    } catch (e) {
-      res.status(400).json(e.message);
-      return;
-    }
-
-    try {
-      const user = await User.findOne({ where: { id: parseInt(id, 10) } });
-      if (user == null) {
-        res.status(404).json('Unknown user ID.');
-        return;
-      }
-      const service = new BuyerReportService();
-      await (reportPDFhelper(res))(service, filters, description, user.id, UserReportParametersType.Purchases, fileType);
-    } catch (error) {
-      this.logger.error('Could not get sales report:', error);
-      res.status(500).json('Internal server error.');
-    }
-  }
-
-  /**
-   * GET /users/{id}/transactions/purchases/report
+   * GET /users/{id}/transactions/purhcases/report
    * @summary Get purchases report for the given user
    * @operationId getUsersPurchasesReport
    * @tags users - Operations of user controller
@@ -1249,7 +1143,10 @@ export default class UserController extends BaseController {
 
     let filters: { fromDate: Date, tillDate: Date };
     try {
-      filters = asFromAndTillDate(req.query.fromDate, req.query.tillDate);
+      filters = {
+        fromDate: asDate(req.query.fromDate),
+        tillDate: asDate(req.query.tillDate),
+      };
     } catch (e) {
       res.status(400).json(e.message);
       return;
