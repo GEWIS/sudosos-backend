@@ -28,6 +28,7 @@ import DineroTransformer from '../entity/transformer/dinero-transformer';
 import { UpdateSellerPayoutRequest } from '../controller/request/seller-payout-request';
 import Dinero, { Currency } from 'dinero.js';
 import TransferService from './transfer-service';
+import User from '../entity/user/user';
 
 export interface SellerPayoutFilterParameters {
   sellerPayoutId?: number;
@@ -78,6 +79,12 @@ export default class SellerPayoutService {
     // TODO: calculate amount based on transaction reporting
     const amount = DineroTransformer.Instance.from(0);
 
+    const requestedBy = await this.manager.getRepository(User)
+      .findOne({ where: { id: params.requestedById } });
+    if (!requestedBy) {
+      throw new Error(`User with ID "${params.requestedById}" not found.`);
+    }
+
     const transfer = await new TransferService().createTransfer({
       amount: amount.toObject(),
       description: `Seller payout: ${params.reference}`,
@@ -85,14 +92,15 @@ export default class SellerPayoutService {
       toId: null,
     });
 
-    const payout = this.manager.getRepository(SellerPayout).create({
+    const payout = await this.manager.getRepository(SellerPayout).save({
       ...params,
+      requestedBy,
       amount,
       transfer,
     });
 
 
-    const [[dbPayout]] = await this.getSellerPayouts({ sellerPayoutId: payout.id });
+    const [[dbPayout]] = await this.getSellerPayouts({ sellerPayoutId: payout.id, returnTransfer: true });
     return dbPayout;
   }
 
@@ -122,7 +130,7 @@ export default class SellerPayoutService {
     transfer.amountInclVat = amount;
     await this.manager.save(transfer);
 
-    [[payout]] = await this.getSellerPayouts({ sellerPayoutId: id });
+    [[payout]] = await this.getSellerPayouts({ sellerPayoutId: id, returnTransfer: true });
     return payout;
   }
 
@@ -136,8 +144,8 @@ export default class SellerPayoutService {
       throw new Error(`Payout with ID "${id}" not found.`);
     }
 
-    await this.manager.remove(payout.transfer);
     await this.manager.remove(payout);
+    await this.manager.remove(payout.transfer);
   }
 
   /**
