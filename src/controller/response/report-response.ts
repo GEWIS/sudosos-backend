@@ -16,11 +16,6 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { DineroObjectResponse } from './dinero-response';
-import ProductRevision from '../../entity/product/product-revision';
-import VatGroup from '../../entity/vat-group';
-import ProductCategory from '../../entity/product/product-category';
-import PointOfSaleRevision from '../../entity/point-of-sale/point-of-sale-revision';
-import ContainerRevision from '../../entity/container/container-revision';
 import { BaseVatGroupResponse } from './vat-group-response';
 import { BaseProductResponse } from './product-response';
 import { ProductCategoryResponse } from './product-category-response';
