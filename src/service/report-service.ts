@@ -40,6 +40,7 @@ import {
 } from '../controller/response/report-response';
 import ProductService from './product-service';
 import VatGroupService from './vat-group-service';
+import { BaseVatGroupResponse } from '../controller/response/vat-group-response';
 import ProductCategoryService from './product-category-service';
 import PointOfSaleService from './point-of-sale-service';
 import ContainerService from './container-service';
