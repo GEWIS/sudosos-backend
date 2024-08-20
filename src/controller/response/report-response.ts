@@ -16,10 +16,15 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { DineroObjectResponse } from './dinero-response';
-import { VatGroupResponse } from './vat-group-response';
-import { BaseProductResponse } from './product-response';
+import ProductRevision from '../../entity/product/product-revision';
+import VatGroup from '../../entity/vat-group';
+import ProductCategory from '../../entity/product/product-category';
+import PointOfSaleRevision from '../../entity/point-of-sale/point-of-sale-revision';
+import ContainerRevision from '../../entity/container/container-revision';
+import { BaseVatGroupResponse } from './vat-group-response';
+import { ProductResponse } from './product-response';
 import { ProductCategoryResponse } from './product-category-response';
-import { BasePointOfSaleResponse } from './point-of-sale-response';
+import { BasePointOfSaleResponse, PointOfSaleResponse } from './point-of-sale-response';
 import { BaseContainerResponse } from './container-response';
 
 /**
@@ -35,19 +40,19 @@ export interface ReportEntryResponse {
 /**
  * @typedef {allOf|ReportEntryResponse} ReportProductEntryResponse
  * @property {integer} count.required - count
- * @property {BaseProductResponse} product.required - product
+ * @property {ProductResponse} product.required - product
  */
 export interface ReportProductEntryResponse extends ReportEntryResponse {
   count: number,
-  product: BaseProductResponse,
+  product: ProductResponse,
 }
 
 /**
  * @typedef {allOf|ReportEntryResponse} ReportVatEntryResponse
- * @property {VatGroupResponse} vat.required - vat
+ * @property {BaseVatGroupResponse} vat.required - vat
  */
 export interface ReportVatEntryResponse extends ReportEntryResponse {
-  vat: VatGroupResponse,
+  vat: BaseVatGroupResponse,
 }
 
 /**

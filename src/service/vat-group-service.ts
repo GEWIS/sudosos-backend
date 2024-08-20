@@ -82,22 +82,11 @@ export function parseGetVatCalculationValuesParams(req: RequestWithToken): VatDe
 }
 
 export default class VatGroupService {
-  public static toBaseResponse(vatGroup: VatGroup): BaseVatGroupResponse {
+  public static revisionToResponse(vatGroup: VatGroup): VatGroupResponse {
     return {
-      id: vatGroup.id,
+      ...vatGroup,
       createdAt: vatGroup.createdAt.toISOString(),
-      updatedAt: vatGroup.updatedAt.toISOString(),
-      version: vatGroup.version,
-      percentage: vatGroup.percentage,
-      hidden: vatGroup.hidden,
-    };
-  }
-
-  public static toResponse(vatGroup: VatGroup): VatGroupResponse {
-    return {
-      ...this.toBaseResponse(vatGroup),
-      name: vatGroup.name,
-      deleted: vatGroup.deleted,
+      updatedAt:vatGroup.updatedAt.toISOString(),
     };
   }
 
