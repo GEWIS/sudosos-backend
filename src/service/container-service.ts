@@ -18,6 +18,7 @@
 
 import { FindManyOptions, FindOptionsRelations, FindOptionsWhere, In, IsNull, Raw } from 'typeorm';
 import {
+  BaseContainerResponse,
   ContainerResponse,
   ContainerWithProductsResponse,
   PaginatedContainerResponse,
@@ -81,6 +82,14 @@ export interface ContainerFilterParameters {
 }
 
 export default class ContainerService {
+
+  public static revisionToBaseResponse(revision: ContainerRevision): BaseContainerResponse {
+    return {
+      id: revision.containerId,
+      name: revision.name,
+    };
+  }
+
   public static revisionToResponse(revision: ContainerRevision): ContainerResponse | ContainerWithProductsResponse {
     const response: ContainerResponse = {
       id: revision.containerId,

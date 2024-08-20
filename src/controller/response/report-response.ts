@@ -17,7 +17,7 @@
  */
 import { DineroObjectResponse } from './dinero-response';
 import { BaseVatGroupResponse } from './vat-group-response';
-import { ProductResponse } from './product-response';
+import { BaseProductResponse, ProductResponse } from './product-response';
 import { ProductCategoryResponse } from './product-category-response';
 import { BasePointOfSaleResponse } from './point-of-sale-response';
 import { BaseContainerResponse } from './container-response';
@@ -35,11 +35,11 @@ export interface ReportEntryResponse {
 /**
  * @typedef {allOf|ReportEntryResponse} ReportProductEntryResponse
  * @property {integer} count.required - count
- * @property {ProductResponse} product.required - product
+ * @property {BaseProductResponse} product.required - product
  */
 export interface ReportProductEntryResponse extends ReportEntryResponse {
   count: number,
-  product: ProductResponse,
+  product: BaseProductResponse,
 }
 
 /**

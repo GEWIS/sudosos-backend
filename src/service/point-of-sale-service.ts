@@ -18,6 +18,7 @@
 
 import { FindManyOptions, FindOptionsRelations, FindOptionsWhere, In, IsNull, Raw } from 'typeorm';
 import {
+  BasePointOfSaleResponse,
   PaginatedPointOfSaleResponse,
   PointOfSaleResponse,
   PointOfSaleWithContainersResponse,
@@ -69,6 +70,13 @@ export interface PointOfSaleParameters {
 
 export default class PointOfSaleService {
 
+  public static revisionToBaseResponse(revision: PointOfSaleRevision): BasePointOfSaleResponse {
+    return {
+      id: revision.pointOfSaleId,
+      name: revision.name,
+    };
+  }
+
   /**
    * Transforms a point of sale revision into a response.
    * @param revision
@@ -76,12 +84,11 @@ export default class PointOfSaleService {
    */
   public static revisionToResponse(revision: PointOfSaleRevision): PointOfSaleResponse | PointOfSaleWithContainersResponse {
     const response: PointOfSaleResponse = {
-      id: revision.pointOfSale.id,
-      revision: revision.revision,
-      name: revision.name,
-      useAuthentication: revision.useAuthentication,
+      ...PointOfSaleService.revisionToBaseResponse(revision),
       createdAt: revision.pointOfSale.createdAt.toISOString(),
       updatedAt: revision.pointOfSale.updatedAt.toISOString(),
+      revision: revision.revision,
+      useAuthentication: revision.useAuthentication,
       owner: {
         id: revision.pointOfSale.owner.id,
         firstName: revision.pointOfSale.owner.firstName,

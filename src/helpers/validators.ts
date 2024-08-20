@@ -222,3 +222,25 @@ export function asArrayOfDates(input: any): Date[] | undefined {
   if (dates.some((d: (Date | undefined)[]) => d === undefined)) throw new TypeError('Array contains invalid date');
   return dates;
 }
+
+/**
+ * Converts the inputs to a from and till date
+ * @param fromDate
+ * @param tillDate
+ * @throws Error - If tillDate is before fromDate
+ * @throws TypeError - If any of the inputs is not a valid date
+ */
+export function asFromAndTillDate(fromDate: any, tillDate: any): { fromDate: Date, tillDate: Date } {
+  const filters = {
+    fromDate: asDate(fromDate),
+    tillDate: asDate(tillDate),
+  };
+  filters.fromDate.setUTCHours(0, 0, 0, 0);
+  filters.tillDate.setUTCHours(0, 0, 0, 0);
+
+  if (filters.fromDate >= filters.tillDate) {
+    throw new Error('tillDate must be after fromDate');
+  }
+
+  return filters;
+}
