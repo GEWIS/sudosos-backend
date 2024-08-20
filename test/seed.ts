@@ -993,6 +993,7 @@ export async function seedTransactions(
   nrMultiplier: number = 1,
 ): Promise<{
     transactions: Transaction[],
+    subTransactions: SubTransaction[],
   }> {
   let transactions: Transaction[] = [];
   let startSubTransaction = 0;
@@ -1046,8 +1047,12 @@ export async function seedTransactions(
       });
 
     transactions = transactions.concat(trans);
+
   }
-  return { transactions };
+  return {
+    transactions,
+    subTransactions: transactions.map((t) => t.subTransactions).flat(),
+  };
 }
 
 /**
