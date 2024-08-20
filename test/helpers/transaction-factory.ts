@@ -32,7 +32,7 @@ import PointOfSaleRevision from '../../src/entity/point-of-sale/point-of-sale-re
 import PointOfSaleService from '../../src/service/point-of-sale-service';
 import TransactionService from '../../src/service/transaction-service';
 import Transaction from '../../src/entity/transactions/transaction';
-import { In, UpdateResult } from 'typeorm';
+import { In } from 'typeorm';
 import { AppDataSource } from '../../src/database/database';
 import { toMySQLString } from '../../src/helpers/timestamps';
 

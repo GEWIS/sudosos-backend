@@ -139,7 +139,7 @@ describe('ReportService', () => {
     });
   }
 
-  describe('BuyerReportService', () => {
+  describe('SalesReportService', () => {
     it('should return the total income of a user', async () => {
       await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
         const transaction = (await createTransactions(debtor.id, creditor.id, 1)).transactions[0];
@@ -330,7 +330,7 @@ describe('ReportService', () => {
 
     it('should correctly aggregate transactions from multiple buyers to the same seller', async () => {
       await createMultipleBuyersSingleSeller(3, async (users, transactions) => {
-        const [seller, buyer] = users;
+        const [seller] = users;
         await checkTransactionReport(transactions, {
           fromDate: new Date(2000, 0, 0),
           tillDate: new Date(2050, 0, 0),

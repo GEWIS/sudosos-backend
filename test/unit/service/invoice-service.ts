@@ -16,15 +16,15 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import {Connection, In} from 'typeorm';
-import express, {Application} from 'express';
-import {SwaggerSpecification} from 'swagger-model-validator';
-import {json} from 'body-parser';
-import chai, {expect} from 'chai';
+import { Connection, In } from 'typeorm';
+import express, { Application } from 'express';
+import { SwaggerSpecification } from 'swagger-model-validator';
+import { json } from 'body-parser';
+import chai, { expect } from 'chai';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
-import User, {UserType} from '../../../src/entity/user/user';
+import User, { UserType } from '../../../src/entity/user/user';
 import Invoice from '../../../src/entity/invoices/invoice';
-import Database, {AppDataSource} from '../../../src/database/database';
+import Database, { AppDataSource } from '../../../src/database/database';
 import {
   seedContainers,
   seedInvoices,
@@ -43,19 +43,19 @@ import {
 } from '../../../src/controller/response/invoice-response';
 import InvoiceService from '../../../src/service/invoice-service';
 import InvoiceEntry from '../../../src/entity/invoices/invoice-entry';
-import {CreateInvoiceParams, UpdateInvoiceParams} from '../../../src/controller/request/invoice-request';
-import {TransferResponse} from '../../../src/controller/response/transfer-response';
+import { CreateInvoiceParams, UpdateInvoiceParams } from '../../../src/controller/request/invoice-request';
+import { TransferResponse } from '../../../src/controller/response/transfer-response';
 import TransactionService from '../../../src/service/transaction-service';
 import { BaseTransactionResponse, TransactionResponse } from '../../../src/controller/response/transaction-response';
 import BalanceService from '../../../src/service/balance-service';
-import {createTransactionRequest, createTransactions, requestToTransaction} from '../../helpers/transaction-factory';
-import {inUserContext, UserFactory} from '../../helpers/user-factory';
-import {TransactionRequest} from '../../../src/controller/request/transaction-request';
-import {InvoiceState} from '../../../src/entity/invoices/invoice-status';
+import { createTransactionRequest, createTransactions, requestToTransaction } from '../../helpers/transaction-factory';
+import { inUserContext, UserFactory } from '../../helpers/user-factory';
+import { TransactionRequest } from '../../../src/controller/request/transaction-request';
+import { InvoiceState } from '../../../src/entity/invoices/invoice-status';
 import Transaction from '../../../src/entity/transactions/transaction';
 import InvoiceUser from '../../../src/entity/user/invoice-user';
-import {truncateAllTables} from '../../setup';
-import {finishTestDB} from '../../helpers/test-helpers';
+import { truncateAllTables } from '../../setup';
+import { finishTestDB } from '../../helpers/test-helpers';
 
 chai.use(deepEqualInAnyOrder);
 
