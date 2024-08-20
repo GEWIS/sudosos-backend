@@ -28,6 +28,19 @@ import { asDinero, asNumber } from '../helpers/validators';
 import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision';
 import Transaction from '../entity/transactions/transaction';
 import ContainerRevision from '../entity/container/container-revision';
+import {
+  ReportCategoryEntryResponse, ReportContainerEntryResponse,
+  ReportDataResponse,
+  ReportEntryResponse, ReportPosEntryResponse,
+  ReportProductEntryResponse,
+  ReportResponse, ReportVatEntryResponse,
+} from '../controller/response/report-response';
+import ProductService from './product-service';
+import VatGroupService from './vat-group-service';
+import { BaseVatGroupResponse } from '../controller/response/vat-group-response';
+import ProductCategoryService from './product-category-service';
+import PointOfSaleService from './point-of-sale-service';
+import ContainerService from './container-service';
 
 interface ReportEntry {
   totalExclVat: Dinero.Dinero,
@@ -89,6 +102,67 @@ export default abstract class ReportService {
 
   constructor(manager?: EntityManager) {
     this.manager = manager ? manager : AppDataSource.manager;
+  }
+
+  private static reportEntryToResponse(entry: ReportEntry): ReportEntryResponse {
+    return {
+      totalInclVat: entry.totalInclVat.toObject(),
+      totalExclVat: entry.totalExclVat.toObject(),
+    };
+  }
+
+  private static productEntryToResponse(entry: ReportProductEntry): ReportProductEntryResponse {
+    return {
+      ...entry,
+      ...ReportService.reportEntryToResponse(entry),
+      product: ProductService.revisionToResponse(entry.product),
+    };
+  }
+
+  private static vatEntryToResponse(entry: ReportVatEntry): ReportVatEntryResponse {
+    return {
+      ...ReportService.reportEntryToResponse(entry),
+      vat: VatGroupService.revisionToResponse(entry.vat),
+    };
+  }
+
+  private static categoryEntryToResponse(entry: ReportCategoryEntry): ReportCategoryEntryResponse {
+    return {
+      ...ReportService.reportEntryToResponse(entry),
+      category: ProductCategoryService.asProductCategoryResponse(entry.category),
+    };
+  }
+
+  private static posEntryToResponse(entry: ReportPosEntry): ReportPosEntryResponse {
+    return {
+      ...ReportService.reportEntryToResponse(entry),
+      pos: PointOfSaleService.revisionToResponse(entry.pos),
+    };
+  }
+
+  private static containerEntryToResponse(entry: ReportContainerEntry): ReportContainerEntryResponse {
+    return {
+      ...ReportService.reportEntryToResponse(entry),
+      container: ContainerService.revisionToResponse(entry.container),
+    };
+  }
+
+  public static reportToResponse(report: Report): ReportResponse {
+    const data: ReportDataResponse = {};
+    if (report.data.categories) data.categories = report.data.categories.map((c) => ReportService.categoryEntryToResponse(c));
+    if (report.data.pos) data.pos = report.data.pos.map((p) => ReportService.posEntryToResponse(p));
+    if (report.data.containers) data.containers = report.data.containers.map((c) => ReportService.containerEntryToResponse(c));
+    if (report.data.products) data.products = report.data.products.map((p) => ReportService.productEntryToResponse(p));
+    if (report.data.vat) data.vat = report.data.vat.map((v) => ReportService.vatEntryToResponse(v));
+
+    return {
+      forId: report.forId,
+      fromDate: report.fromDate.toISOString(),
+      tillDate: report.tillDate.toISOString(),
+      data,
+      totalExclVat: report.totalExclVat.toObject(),
+      totalInclVat: report.totalInclVat.toObject(),
+    };
   }
 
   protected abstract addSubTransactionRowFilter<T>(query: SelectQueryBuilder<T>, forId: number, fromDate: Date, tillDate: Date): SelectQueryBuilder<T>;

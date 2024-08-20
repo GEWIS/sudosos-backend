@@ -74,7 +74,7 @@ export default class PointOfSaleService {
    * @param revision
    * @private
    */
-  private static revisionToResponse(revision: PointOfSaleRevision): PointOfSaleResponse | PointOfSaleWithContainersResponse {
+  public static revisionToResponse(revision: PointOfSaleRevision): PointOfSaleResponse | PointOfSaleWithContainersResponse {
     const response: PointOfSaleResponse = {
       id: revision.pointOfSale.id,
       revision: revision.revision,
