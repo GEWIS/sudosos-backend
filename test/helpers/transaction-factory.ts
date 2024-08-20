@@ -175,15 +175,15 @@ export async function createTransactions(debtorId: number, creditorId: number, t
     await Transaction.find({ where: { id: In(ids) }, relations: ['subTransactions', 'subTransactions.subTransactionRows'] }).then((tr) => {
       tr.forEach((t) => {
         let createdAt = new Date(t.createdAt.getTime() + delta);
-        let query = `UPDATE 'transaction' SET createdAt = '${toMySQLString(createdAt)}' WHERE id = ${t.id}`;
+        let query = `UPDATE \`transaction\` SET createdAt = '${toMySQLString(createdAt)}' WHERE id = ${t.id}`;
         promises.push(AppDataSource.query(query));
         t.subTransactions.forEach((st) => {
           createdAt = new Date(st.createdAt.getTime() + delta);
-          query = `UPDATE 'sub_transaction' SET createdAt = '${toMySQLString(createdAt)}' WHERE id = ${st.id}`;
+          query = `UPDATE \`sub_transaction\` SET createdAt = '${toMySQLString(createdAt)}' WHERE id = ${st.id}`;
           promises.push(AppDataSource.query(query));
           st.subTransactionRows.forEach((sr) => {
             createdAt = new Date(sr.createdAt.getTime() + delta);
-            query = `UPDATE 'sub_transaction_row' SET createdAt = '${toMySQLString(createdAt)}' WHERE id = ${sr.id}`;
+            query = `UPDATE \`sub_transaction_row\` SET createdAt = '${toMySQLString(createdAt)}' WHERE id = ${sr.id}`;
             promises.push(AppDataSource.query(query));
           });
         });
