@@ -20,10 +20,10 @@ import { Column, Entity } from 'typeorm';
 
 @Entity()
 export default class SellerPayout extends BasePayout {
-  @Column({ type: 'datetime', length: 6, nullable: false })
+  @Column({ type: 'datetime', nullable: false })
   public startDate: Date;
 
-  @Column({ type: 'datetime', length: 6, nullable: false })
+  @Column({ type: 'datetime', nullable: false })
   public endDate: Date;
 
   @Column({ nullable: false })
