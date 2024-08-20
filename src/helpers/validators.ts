@@ -236,22 +236,12 @@ export function asFromAndTillDate(fromDate: any, tillDate: any): { fromDate: Dat
     fromDate: asDate(fromDate),
     tillDate: asDate(tillDate),
   };
+  filters.fromDate.setUTCHours(0, 0, 0, 0);
+  filters.tillDate.setUTCHours(0, 0, 0, 0);
+
   if (filters.fromDate >= filters.tillDate) {
     throw new Error('tillDate must be after fromDate');
   }
 
   return filters;
-}
-
-/**
- * Converts the input to a ReturnFileType
- * @param input
- */
-export function asReturnFileType(input: any): ReturnFileType {
-  if (!input) return undefined;
-  input = input.toUpperCase();
-  if (typeof input === 'string' && Object.values(ReturnFileType).includes(input as ReturnFileType)) {
-    return input as ReturnFileType;
-  }
-  throw new TypeError(`Input '${input}' is not a valid ReturnFileType.`);
 }

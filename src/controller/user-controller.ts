@@ -41,7 +41,7 @@ import UserService, {
   parseGetUsersFilters,
   UserFilterParameters,
 } from '../service/user-service';
-import { asDate, asNumber } from '../helpers/validators';
+import { asDate, asFromAndTillDate, asNumber } from '../helpers/validators';
 import { verifyCreateUserRequest } from './request/validators/user-request-spec';
 import userTokenInOrgan from '../helpers/token-helper';
 import { parseUserToResponse } from '../helpers/revision-to-response';
@@ -249,7 +249,7 @@ export default class UserController extends BaseController {
           handler: this.getUsersTransactions.bind(this),
         },
       },
-      'id(\\d+)/transactions/sales/report': {
+      '/:id(\\d+)/transactions/sales/report': {
         GET: {
           policy: async (req) => this.roleManager.can(
             req.token.roles, 'get', UserController.getRelation(req), 'Transaction', ['*'],
@@ -257,7 +257,7 @@ export default class UserController extends BaseController {
           handler: this.getUsersSalesReport.bind(this),
         },
       },
-      'id(\\d+)/transactions/purchases/report': {
+      '/:id(\\d+)/transactions/purchases/report': {
         GET: {
           policy: async (req) => this.roleManager.can(
             req.token.roles, 'get', UserController.getRelation(req), 'Transaction', ['*'],
@@ -1100,10 +1100,7 @@ export default class UserController extends BaseController {
 
     let filters: { fromDate: Date, tillDate: Date };
     try {
-      filters = {
-        fromDate: asDate(req.query.fromDate),
-        tillDate: asDate(req.query.tillDate),
-      };
+      filters = asFromAndTillDate(req.query.fromDate, req.query.tillDate);
     } catch (e) {
       res.status(400).json(e.message);
       return;
@@ -1143,10 +1140,7 @@ export default class UserController extends BaseController {
 
     let filters: { fromDate: Date, tillDate: Date };
     try {
-      filters = {
-        fromDate: asDate(req.query.fromDate),
-        tillDate: asDate(req.query.tillDate),
-      };
+      filters = asFromAndTillDate(req.query.fromDate, req.query.tillDate);
     } catch (e) {
       res.status(400).json(e.message);
       return;
