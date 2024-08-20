@@ -21,7 +21,7 @@ import ProductRevision from '../entity/product/product-revision';
 import Dinero from 'dinero.js';
 import VatGroup from '../entity/vat-group';
 import ProductCategory from '../entity/product/product-category';
-import { toLocalMySQLString, toMySQLString } from '../helpers/timestamps';
+import { toMySQLString } from '../helpers/timestamps';
 import SubTransactionRow from '../entity/transactions/sub-transaction-row';
 import SubTransaction from '../entity/transactions/sub-transaction';
 import { asDinero, asNumber } from '../helpers/validators';
