@@ -33,6 +33,8 @@ import TransactionService from '../../../src/service/transaction-service';
 describe('ReportService', () => {
   let ctx: any & DefaultContext;
 
+  let EMPTY_TRANSACTIONS: { tId: number, amount: number }[] = [];
+
   before(async () => {
     ctx = {
       ...(await defaultBefore()),
@@ -121,8 +123,15 @@ describe('ReportService', () => {
     }
   }
 
-  async function checkTransactionReport(transactions: { tId: number, amount: number }[], parameters: ReportParameters) {
+  async function checkTransactionsSalesReport(transactions: { tId: number, amount: number }[], parameters: ReportParameters) {
     const report = await new SalesReportService().getReport(parameters);
+    const totalInclVat = transactions.reduce((sum, t) => sum + t.amount, 0);
+    expect(report.totalInclVat.getAmount()).to.eq(totalInclVat);
+    checkReport(report);
+  }
+
+  async function checkTransactionsBuyerReport(transactions: { tId: number, amount: number }[], parameters: ReportParameters) {
+    const report = await new BuyerReportService().getReport(parameters);
     const totalInclVat = transactions.reduce((sum, t) => sum + t.amount, 0);
     expect(report.totalInclVat.getAmount()).to.eq(totalInclVat);
     checkReport(report);
@@ -159,7 +168,7 @@ describe('ReportService', () => {
     it('should return the total income of a user with multiple transactions', async () => {
       await inUserContext((await UserFactory()).clone(3), async (debtor: User, creditor: User) => {
         const transactions = await createTransactions(debtor.id, creditor.id, 3);
-        await checkTransactionReport(transactions.transactions, {
+        await checkTransactionsSalesReport(transactions.transactions, {
           fromDate: new Date(2000, 0, 0),
           tillDate: new Date(2050, 0, 0),
           forId: creditor.id,
@@ -169,7 +178,7 @@ describe('ReportService', () => {
 
     it('should return an empty report when there are no transactions', async () => {
       await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
-        await checkTransactionReport([{ tId: 0, amount: 0 }], {
+        await checkTransactionsSalesReport(EMPTY_TRANSACTIONS, {
           fromDate: new Date(2000, 0, 0),
           tillDate: new Date(2050, 0, 0),
           forId: creditor.id,
@@ -180,7 +189,7 @@ describe('ReportService', () => {
     it('should return the correct total income for multiple buyers buying from the same seller', async () => {
       await createMultipleBuyersSingleSeller(3, async (users, transactions) => {
         const [seller] = users;
-        await checkTransactionReport(transactions, {
+        await checkTransactionsSalesReport(transactions, {
           fromDate: new Date(2000, 0, 0),
           tillDate: new Date(2050, 0, 0),
           forId: seller.id,
@@ -192,7 +201,7 @@ describe('ReportService', () => {
       it('should return the total income of a user with a transactions in the past', async () => {
         await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
           const transactions = await createTransactions(debtor.id, creditor.id, 3, -5000);
-          await checkTransactionReport(transactions.transactions, {
+          await checkTransactionsSalesReport(transactions.transactions, {
             fromDate: new Date(2000, 0, 0),
             tillDate: new Date(2050, 0, 0),
             forId: creditor.id,
@@ -204,7 +213,7 @@ describe('ReportService', () => {
         await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
           const fromDate = new Date(new Date().getTime() - 1000);
           await createTransactions(debtor.id, creditor.id, 3, -3000);
-          await checkTransactionReport([{ tId: 0, amount: 0 }], {
+          await checkTransactionsSalesReport(EMPTY_TRANSACTIONS, {
             fromDate,
             tillDate: new Date(2050, 0, 0),
             forId: creditor.id,
@@ -216,7 +225,7 @@ describe('ReportService', () => {
         await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
           const fromDate = new Date(new Date().getTime() - 2000);
           const transactions = await createTransactions(debtor.id, creditor.id, 3, -1000);
-          await checkTransactionReport(transactions.transactions, {
+          await checkTransactionsSalesReport(transactions.transactions, {
             fromDate,
             tillDate: new Date(2050, 0, 0),
             forId: creditor.id,
@@ -229,7 +238,7 @@ describe('ReportService', () => {
           const fromDate = new Date(new Date().getTime() - 1500);
           await createTransactions(debtor.id, creditor.id, 2, -2000);  // Before fromDate
           const transactions = await createTransactions(debtor.id, creditor.id, 3, -1000); // After fromDate
-          await checkTransactionReport(transactions.transactions, {
+          await checkTransactionsSalesReport(transactions.transactions, {
             fromDate,
             tillDate: new Date(2050, 0, 0),
             forId: creditor.id,
@@ -240,7 +249,7 @@ describe('ReportService', () => {
         await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
           const fromDate = new Date(new Date().getTime() - 1000);
           const transactions = await createTransactions(debtor.id, creditor.id, 3);
-          await checkTransactionReport(transactions.transactions, {
+          await checkTransactionsSalesReport(transactions.transactions, {
             fromDate,
             tillDate: new Date(2050, 0, 0),
             forId: creditor.id,
@@ -254,7 +263,7 @@ describe('ReportService', () => {
         await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
           const tillDate = new Date(new Date().getTime() + 1000);
           const transactions = await createTransactions(debtor.id, creditor.id, 3);
-          await checkTransactionReport(transactions.transactions, {
+          await checkTransactionsSalesReport(transactions.transactions, {
             fromDate: new Date(2000, 0, 0),
             tillDate,
             forId: creditor.id,
@@ -266,7 +275,7 @@ describe('ReportService', () => {
         await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
           const tillDate = new Date(new Date().getTime() + 1000);
           await createTransactions(debtor.id, creditor.id, 3, 2000);
-          await checkTransactionReport([{ tId: 0, amount: 0 }], {
+          await checkTransactionsSalesReport(EMPTY_TRANSACTIONS, {
             fromDate: new Date(2000, 0, 0),
             tillDate,
             forId: creditor.id,
@@ -278,7 +287,7 @@ describe('ReportService', () => {
         await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
           const tillDate = new Date(new Date().getTime() + 2000);
           const transactions = await createTransactions(debtor.id, creditor.id, 3, 1000);
-          await checkTransactionReport(transactions.transactions, {
+          await checkTransactionsSalesReport(transactions.transactions, {
             fromDate: new Date(2000, 0, 0),
             tillDate,
             forId: creditor.id,
@@ -288,10 +297,10 @@ describe('ReportService', () => {
 
       it('should return the total income of a user with mixed transactions before and after the tillDate', async () => {
         await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
-          const tillDate = new Date(new Date().getTime() + 1500);
-          await createTransactions(debtor.id, creditor.id, 2, 2000);  // After tillDate
-          const transactions = await createTransactions(debtor.id, creditor.id, 3, 1000); // Before tillDate
-          await checkTransactionReport(transactions.transactions, {
+          const transactions = await createTransactions(debtor.id, creditor.id, 3); // Before tillDate
+          const tillDate = new Date(new Date().getTime() + 2000);
+          await createTransactions(debtor.id, creditor.id, 2, 3000);  // After tillDate
+          await checkTransactionsSalesReport(transactions.transactions, {
             fromDate: new Date(2000, 0, 0),
             tillDate,
             forId: creditor.id,
@@ -303,7 +312,7 @@ describe('ReportService', () => {
         await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
           const tillDate = new Date(new Date().getTime() + 1000);
           const transactions = await createTransactions(debtor.id, creditor.id, 3);
-          await checkTransactionReport(transactions.transactions, {
+          await checkTransactionsSalesReport(transactions.transactions, {
             fromDate: new Date(2000, 0, 0),
             tillDate,
             forId: creditor.id,
@@ -320,7 +329,7 @@ describe('ReportService', () => {
         const tillDate = new Date(new Date().getTime() - 1000);
         await createTransactions(debtor.id, creditor.id, 2); // After tillDate
 
-        await checkTransactionReport(transactionsWithin.transactions, {
+        await checkTransactionsSalesReport(transactionsWithin.transactions, {
           fromDate,
           tillDate,
           forId: creditor.id,
@@ -331,10 +340,209 @@ describe('ReportService', () => {
     it('should correctly aggregate transactions from multiple buyers to the same seller', async () => {
       await createMultipleBuyersSingleSeller(3, async (users, transactions) => {
         const [seller] = users;
-        await checkTransactionReport(transactions, {
+        await checkTransactionsSalesReport(transactions, {
           fromDate: new Date(2000, 0, 0),
           tillDate: new Date(2050, 0, 0),
           forId: seller.id,
+        });
+      });
+    });
+  });
+
+  describe('BuyerReportService', () => {
+    it('should return the total expenditure of a user', async () => {
+      await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
+        const transaction = (await createTransactions(debtor.id, creditor.id, 1)).transactions[0];
+        const parameters = {
+          fromDate: new Date(2000, 0, 0),
+          tillDate: new Date(2050, 0, 0),
+          forId: debtor.id,
+        };
+        const t = await new TransactionService().getSingleTransaction(transaction.tId);
+
+        const report = await new BuyerReportService().getReport(parameters);
+        expect(report.totalInclVat.getAmount()).to.eq(t.totalPriceInclVat.amount);
+        checkReport(report);
+      });
+    });
+
+    it('should return the total expenditure of a user with multiple transactions', async () => {
+      await inUserContext((await UserFactory()).clone(3), async (debtor: User, creditor: User) => {
+        const transactions = await createTransactions(debtor.id, creditor.id, 3);
+        await checkTransactionsBuyerReport(transactions.transactions, {
+          fromDate: new Date(2000, 0, 0),
+          tillDate: new Date(2050, 0, 0),
+          forId: debtor.id,
+        });
+      });
+    });
+
+    it('should return an empty report when there are no transactions', async () => {
+      await inUserContext((await UserFactory()).clone(1), async (debtor: User) => {
+        await checkTransactionsBuyerReport(EMPTY_TRANSACTIONS, {
+          fromDate: new Date(2000, 0, 0),
+          tillDate: new Date(2050, 0, 0),
+          forId: debtor.id,
+        });
+      });
+    });
+
+    describe('fromDate filter', () => {
+      it('should return the total expenditure of a user with a transactions in the past', async () => {
+        await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
+          const transactions = await createTransactions(debtor.id, creditor.id, 3, -5000); // Transactions in the past
+          await checkTransactionsBuyerReport(transactions.transactions, {
+            fromDate: new Date(2000, 0, 0),
+            tillDate: new Date(2050, 0, 0),
+            forId: debtor.id,
+          });
+        });
+      });
+
+      it('should return the total expenditure of a user with transactions right before the fromDate', async () => {
+        await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
+          const fromDate = new Date(new Date().getTime() - 1000); // Set fromDate to 1 second before current time
+          await createTransactions(debtor.id, creditor.id, 3, -3000); // Transactions 3 seconds in the past
+          await checkTransactionsBuyerReport([{ tId: 0, amount: 0 }], {
+            fromDate,
+            tillDate: new Date(2050, 0, 0),
+            forId: debtor.id,
+          });
+        });
+      });
+
+      it('should return the total expenditure of a user with transactions right after the fromDate', async () => {
+        await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
+          const fromDate = new Date(new Date().getTime() - 2000); // Set fromDate to 2 seconds before current time
+          const transactions = await createTransactions(debtor.id, creditor.id, 3, -1000); // Transactions 1 second in the past
+          await checkTransactionsBuyerReport(transactions.transactions, {
+            fromDate,
+            tillDate: new Date(2050, 0, 0),
+            forId: debtor.id,
+          });
+        });
+      });
+
+      it('should return the total expenditure of a user with mixed transactions before and after the fromDate', async () => {
+        await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
+          const fromDate = new Date(new Date().getTime() - 1500); // Set fromDate to 1.5 seconds before current time
+          await createTransactions(debtor.id, creditor.id, 2, -2000);  // Transactions 2 seconds in the past (before fromDate)
+          const transactions = await createTransactions(debtor.id, creditor.id, 3, -1000); // Transactions 1 second in the past (after fromDate)
+          await checkTransactionsBuyerReport(transactions.transactions, {
+            fromDate,
+            tillDate: new Date(2050, 0, 0),
+            forId: debtor.id,
+          });
+        });
+      });
+
+      it('should return the total expenditure of a user from the exact fromDate', async () => {
+        await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
+          const fromDate = new Date(new Date().getTime() - 1000); // Set fromDate to 1 second before current time
+          const transactions = await createTransactions(debtor.id, creditor.id, 3);
+          await checkTransactionsBuyerReport(transactions.transactions, {
+            fromDate,
+            tillDate: new Date(2050, 0, 0),
+            forId: debtor.id,
+          });
+        });
+      });
+    });
+
+    describe('tillDate filter', () => {
+      it('should return the total expenditure of a user with transactions before the tillDate', async () => {
+        await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
+          const tillDate = new Date(new Date().getTime() + 1000); // Set tillDate to 1 second after current time
+          const transactions = await createTransactions(debtor.id, creditor.id, 3);
+          await checkTransactionsBuyerReport(transactions.transactions, {
+            fromDate: new Date(2000, 0, 0),
+            tillDate,
+            forId: debtor.id,
+          });
+        });
+      });
+
+      it('should return the total expenditure of a user with transactions right after the tillDate', async () => {
+        await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
+          const tillDate = new Date(new Date().getTime() + 1000); // Set tillDate to 1 second after current time
+          await createTransactions(debtor.id, creditor.id, 3, 2000); // Transactions 2 seconds in the future
+          await checkTransactionsBuyerReport([{ tId: 0, amount: 0 }], {
+            fromDate: new Date(2000, 0, 0),
+            tillDate,
+            forId: debtor.id,
+          });
+        });
+      });
+
+      it('should return the total expenditure of a user with transactions right before the tillDate', async () => {
+        await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
+          const tillDate = new Date(new Date().getTime() + 2000); // Set tillDate to 2 seconds after current time
+          const transactions = await createTransactions(debtor.id, creditor.id, 3, 1000); // Transactions 1 second in the future
+          await checkTransactionsBuyerReport(transactions.transactions, {
+            fromDate: new Date(2000, 0, 0),
+            tillDate,
+            forId: debtor.id,
+          });
+        });
+      });
+
+      it('should return the total expenditure of a user with mixed transactions before and after the tillDate', async () => {
+        await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
+          const tillDate = new Date(new Date().getTime() + 1500); // Set tillDate to 1.5 seconds after current time
+          await createTransactions(debtor.id, creditor.id, 2, 2000);  // Transactions 2 seconds in the future (after tillDate)
+          const transactions = await createTransactions(debtor.id, creditor.id, 3, 1000); // Transactions 1 second in the future (before tillDate)
+          await checkTransactionsBuyerReport(transactions.transactions, {
+            fromDate: new Date(2000, 0, 0),
+            tillDate,
+            forId: debtor.id,
+          });
+        });
+      });
+
+      it('should return the total expenditure of a user till the exact tillDate', async () => {
+        await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
+          const tillDate = new Date(new Date().getTime() + 1000); // Set tillDate to 1 second after current time
+          const transactions = await createTransactions(debtor.id, creditor.id, 3);
+          await checkTransactionsBuyerReport(transactions.transactions, {
+            fromDate: new Date(2000, 0, 0),
+            tillDate,
+            forId: debtor.id,
+          });
+        });
+      });
+    });
+
+    it('should adhere to both fromDate and tillDate filters', async () => {
+      await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
+        await createTransactions(debtor.id, creditor.id, 2, -5000);
+        const fromDate = new Date(new Date().getTime() - 4000);
+        const transactionsWithin = await createTransactions(debtor.id, creditor.id, 3, -3000);
+        const tillDate = new Date(new Date().getTime() - 1000);
+        await createTransactions(debtor.id, creditor.id, 2);
+
+        await checkTransactionsBuyerReport(transactionsWithin.transactions, {
+          fromDate,
+          tillDate,
+          forId: debtor.id,
+        });
+      });
+    });
+
+    it('should correctly aggregate transactions from multiple sellers by the same buyer', async () => {
+      await inUserContext((await UserFactory()).clone(4), async (debtor: User, ...creditors: User[]) => {
+        const transactions: { tId: number, amount: number }[] = [];
+        const promises = creditors.map(async (creditor) => {
+          return createTransactions(debtor.id, creditor.id, 2).then((t) => {
+            transactions.push(...t.transactions);
+          });
+        });
+
+        await Promise.all(promises);
+
+        await checkTransactionsBuyerReport(transactions, {
+          fromDate: new Date(2000, 0, 0),
+          tillDate: new Date(2050, 0, 0),
+          forId: debtor.id,
         });
       });
     });
