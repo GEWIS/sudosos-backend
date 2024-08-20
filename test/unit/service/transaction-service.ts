@@ -46,7 +46,7 @@ import {
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import SubTransactionRow from '../../../src/entity/transactions/sub-transaction-row';
 import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
-import {createTransactions, createValidTransactionRequest} from '../../helpers/transaction-factory';
+import { createTransactions, createValidTransactionRequest } from '../../helpers/transaction-factory';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
 import ContainerRevision from '../../../src/entity/container/container-revision';
 import generateBalance, { finishTestDB } from '../../helpers/test-helpers';
@@ -55,7 +55,6 @@ import { createInvoiceWithTransfers } from './invoice-service';
 import { truncateAllTables } from '../../setup';
 import ProductRevision from '../../../src/entity/product/product-revision';
 import { calculateBalance } from '../../helpers/balance';
-import { BuyerReportService, SalesReportService } from '../../../src/service/report-service';
 
 chai.use(deepEqualInAnyOrder);
 
