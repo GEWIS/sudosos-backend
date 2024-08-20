@@ -25,6 +25,7 @@ import {
 } from 'typeorm';
 import { DineroObject } from 'dinero.js';
 import {
+  BaseProductResponse,
   PaginatedProductResponse,
   ProductResponse,
 } from '../controller/response/product-response';
@@ -137,6 +138,19 @@ export function parseGetProductFilters(req: RequestWithToken): ProductFilterPara
  * Wrapper for all Product related logic.
  */
 export default class ProductService {
+
+  public static revisionToBaseResponse(revision: ProductRevision): BaseProductResponse {
+    return {
+      id: revision.productId,
+      name: revision.name,
+      priceInclVat: revision.priceInclVat.toObject(),
+      vat: {
+        id: revision.vat.id,
+        percentage: revision.vat.percentage,
+        hidden: revision.vat.hidden,
+      },
+    };
+  }
 
   public static revisionToResponse(revision: ProductRevision): ProductResponse {
     const priceInclVat = revision.priceInclVat.toObject();

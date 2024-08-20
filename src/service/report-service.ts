@@ -29,71 +29,37 @@ import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision'
 import Transaction from '../entity/transactions/transaction';
 import ContainerRevision from '../entity/container/container-revision';
 import {
-  ReportCategoryEntryResponse, ReportContainerEntryResponse,
+  ReportCategoryEntryResponse,
+  ReportContainerEntryResponse,
   ReportDataResponse,
-  ReportEntryResponse, ReportPosEntryResponse,
+  ReportEntryResponse,
+  ReportPosEntryResponse,
   ReportProductEntryResponse,
-  ReportResponse, ReportVatEntryResponse,
+  ReportResponse,
+  ReportVatEntryResponse,
 } from '../controller/response/report-response';
 import ProductService from './product-service';
 import VatGroupService from './vat-group-service';
 import ProductCategoryService from './product-category-service';
 import PointOfSaleService from './point-of-sale-service';
 import ContainerService from './container-service';
-
-interface ReportEntry {
-  totalExclVat: Dinero.Dinero,
-  totalInclVat: Dinero.Dinero
-}
-
-export interface ReportProductEntry extends ReportEntry {
-  count: number,
-  product: ProductRevision,
-}
-
-export interface ReportVatEntry extends ReportEntry {
-  vat: VatGroup,
-}
-
-export interface ReportCategoryEntry extends ReportEntry {
-  category: ProductCategory,
-}
-
-export interface ReportPosEntry extends ReportEntry {
-  pos: PointOfSaleRevision,
-}
-
-export interface ReportContainerEntry extends ReportEntry {
-  container: ContainerRevision,
-}
-
-export interface ReportData {
-  products?: ReportProductEntry[],
-  categories?: ReportCategoryEntry[],
-  vat?: ReportVatEntry[],
-  pos?: ReportPosEntry[],
-  containers?: ReportContainerEntry[],
-}
-
-export interface Report {
-  forId: number,
-  fromDate: Date,
-  tillDate: Date,
-  data: ReportData,
-  totalExclVat: Dinero.Dinero,
-  totalInclVat: Dinero.Dinero,
-}
-
-export interface SalesReport extends Report {}
-
-export interface BuyerReport extends Report {}
+import {
+  BuyerReport,
+  Report,
+  ReportCategoryEntry,
+  ReportContainerEntry,
+  ReportEntry,
+  ReportPosEntry,
+  ReportProductEntry,
+  ReportVatEntry,
+  SalesReport,
+} from '../entity/report/report';
 
 export interface ReportParameters {
   fromDate: Date,
   tillDate: Date,
   forId: number,
 }
-
 
 export default abstract class ReportService {
 
@@ -114,7 +80,7 @@ export default abstract class ReportService {
     return {
       ...entry,
       ...ReportService.reportEntryToResponse(entry),
-      product: ProductService.revisionToResponse(entry.product),
+      product: ProductService.revisionToBaseResponse(entry.product),
     };
   }
 
@@ -135,14 +101,14 @@ export default abstract class ReportService {
   private static posEntryToResponse(entry: ReportPosEntry): ReportPosEntryResponse {
     return {
       ...ReportService.reportEntryToResponse(entry),
-      pos: PointOfSaleService.revisionToResponse(entry.pos),
+      pos: PointOfSaleService.revisionToBaseResponse(entry.pos),
     };
   }
 
   private static containerEntryToResponse(entry: ReportContainerEntry): ReportContainerEntryResponse {
     return {
       ...ReportService.reportEntryToResponse(entry),
-      container: ContainerService.revisionToResponse(entry.container),
+      container: ContainerService.revisionToBaseResponse(entry.container),
     };
   }
 
@@ -311,8 +277,8 @@ export default abstract class ReportService {
    * @returns {Promise<ReportContainerEntry[]>} - The container report
    */
   public async getContainerEntries(forId: number, fromDate: Date, tillDate: Date): Promise<ReportContainerEntry[]> {
-    const query = this.manager.createQueryBuilder(ContainerRevision, 'container')
-      .innerJoin(SubTransaction, 'subTransaction', 'subTransaction.containerContainerId = container.containerId and subTransaction.containerRevision = container.revision')
+    const query = this.manager.createQueryBuilder(ContainerRevision, 'containerRevision')
+      .innerJoin(SubTransaction, 'subTransaction', 'subTransaction.containerContainerId = containerRevision.containerId and subTransaction.containerRevision = containerRevision.revision')
       .innerJoin(SubTransactionRow, 'subTransactionRow', 'subTransactionRow.subTransactionId = subTransaction.id')
       .innerJoin(Transaction, 'transaction', 'transaction.id = subTransaction.transactionId')
       .innerJoin(ProductRevision, 'productRevision', 'productRevision.productId = subTransactionRow.productProductId AND productRevision.revision = subTransactionRow.productRevision')
@@ -320,7 +286,7 @@ export default abstract class ReportService {
     this.addSelectTotals(query);
 
     const data = await this.addSubTransactionRowFilter(query, forId, fromDate, tillDate)
-      .groupBy('container.containerId')
+      .groupBy('containerRevision.containerId')
       .getRawAndEntities();
 
     return data.entities.map((container, index) => {
