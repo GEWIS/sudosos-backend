@@ -18,13 +18,15 @@
 import { DataSource } from 'typeorm';
 import Transaction from '../../../src/entity/transactions/transaction';
 import Transfer from '../../../src/entity/transactions/transfer';
-import User from '../../../src/entity/user/user';
-import database, { AppDataSource } from '../../../src/database/database';
+import User, { UserType } from '../../../src/entity/user/user';
+import database from '../../../src/database/database';
 import {
-  seedContainers, seedPointsOfSale,
+  seedContainers,
+  seedPointsOfSale,
   seedProductCategories,
   seedProducts,
-  seedTransactions, seedTransfers,
+  seedTransactions,
+  seedTransfers,
   seedUsers,
   seedVatGroups,
 } from '../../seed';
@@ -33,7 +35,9 @@ import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import SellerPayout from '../../../src/entity/transactions/payout/seller-payout';
 import { seedSellerPayouts } from '../../seed/seller-payout';
 import { expect } from 'chai';
-import SellerPayoutService from '../../../src/service/seller-payout-service';
+import SellerPayoutService, { CreateSellerPayoutParams } from '../../../src/service/seller-payout-service';
+import { calculateBalance } from '../../helpers/balance';
+import { DineroObjectRequest } from '../../../src/controller/request/dinero-request';
 
 describe('SellerPayoutService', () => {
   let ctx: {
@@ -159,6 +163,106 @@ describe('SellerPayoutService', () => {
       sellerPayouts.forEach((sellerPayout) => {
         expect(sellerPayout.transfer).to.not.be.undefined;
       });
+    });
+  });
+
+  describe('#createSellerPayout', async () => {
+    it('should create a seller payout', async () => {
+      const organ = ctx.users.find((u) => u.type === UserType.ORGAN
+        && calculateBalance(u, ctx.transactions, ctx.subTransactions, ctx.transfers).amount.getAmount() > 0);
+      // Sanity check
+      expect(organ).to.not.be.undefined;
+
+      const service = new SellerPayoutService();
+      const params: CreateSellerPayoutParams = {
+        startDate: new Date(0),
+        endDate: new Date(),
+        requestedById: organ.id,
+        reference: 'TEST',
+      };
+      const sellerPayout = await service.createSellerPayout(params);
+
+      // Somehow a ~200ms difference between two dates, so just round to seconds
+      const expectedStartDate = Math.round(params.startDate.getTime() / 1000);
+      const expectedEndDate = Math.round(params.endDate.getTime() / 1000);
+      const actualStartDate = Math.round(sellerPayout.startDate.getTime() / 1000);
+      const actualEndDate = Math.round(sellerPayout.endDate.getTime() / 1000);
+
+      expect(actualStartDate).to.equal(expectedStartDate);
+      expect(actualEndDate).to.equal(expectedEndDate);
+      expect(sellerPayout.reference).to.equal(params.reference);
+      expect(sellerPayout.requestedBy.id).to.equal(params.requestedById);
+      expect(sellerPayout.transfer).to.not.be.undefined;
+      expect(sellerPayout.transfer.fromId).to.equal(params.requestedById);
+      expect(sellerPayout.transfer.toId).to.be.null;
+
+      // TODO: calculate amount based on transaction reporting
+      expect(sellerPayout.amount.getAmount()).to.equal(0);
+      expect(sellerPayout.amount.getAmount()).to.equal(sellerPayout.transfer.amountInclVat.getAmount());
+
+      // Cleanup
+      await SellerPayout.remove(sellerPayout);
+      await Transfer.remove(sellerPayout.transfer);
+    });
+    it('should throw an error when user does not exist', async () => {
+      const service = new SellerPayoutService();
+      const params: CreateSellerPayoutParams = {
+        startDate: new Date(0),
+        endDate: new Date(),
+        requestedById: ctx.users.length + 1000,
+        reference: 'TEST',
+      };
+      await expect(service.createSellerPayout(params)).to.eventually.be
+        .rejectedWith(`User with ID "${params.requestedById}" not found.`);
+    });
+  });
+
+  describe('#updateSellerPayout', () => {
+    it('should update seller payout', async () => {
+      const oldSellerPayout = ctx.sellerPayouts[0];
+
+      const amount: DineroObjectRequest = {
+        amount: oldSellerPayout.amount.getAmount() + 100,
+        precision: oldSellerPayout.amount.getPrecision(),
+        currency: oldSellerPayout.amount.getCurrency(),
+      };
+
+      const service = new SellerPayoutService();
+      const sellerPayout = await service.updateSellerPayout(oldSellerPayout.id, {
+        amount,
+      });
+
+      expect(sellerPayout.amount.getAmount()).to.equal(amount.amount);
+      expect(sellerPayout.transfer.amountInclVat.getAmount()).to.equal(amount.amount);
+
+      // Cleanup
+      await SellerPayout.save(oldSellerPayout);
+    });
+    it('should throw if seller payout does not exist', async () => {
+      const id = ctx.sellerPayouts.length + 1;
+      const service = new SellerPayoutService();
+      await expect(service.updateSellerPayout(id, { amount: ctx.sellerPayouts[0].amount.toObject() }))
+        .to.eventually.be.rejectedWith(`Payout with ID "${id}" not found.`);
+    });
+  });
+
+  describe('#deleteSellerPayout', () => {
+    it('should delete a seller payout with its transfer', async () => {
+      const payout = ctx.sellerPayouts[0];
+
+      const service = new SellerPayoutService();
+      await service.deleteSellerPayout(payout.id);
+
+      const dbPayout = await SellerPayout.findOne({ where: { id: payout.id } });
+      const dbTransfer = await Transfer.findOne({ where: { id: payout.transfer.id } });
+      expect(dbPayout).to.be.null;
+      expect(dbTransfer).to.be.null;
+    });
+    it('should throw if seller payout does not exist', async () => {
+      const id = ctx.sellerPayouts.length + 1;
+      const service = new SellerPayoutService();
+      await expect(service.deleteSellerPayout(id)).to.eventually.be
+        .rejectedWith(`Payout with ID "${id}" not found.`);
     });
   });
 });
