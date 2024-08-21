@@ -365,7 +365,7 @@ export default class DebtorController extends BaseController {
     try {
       const report = await DebtorService.getFineReport(fromDate, toDate);
 
-      const pdf = await ReportPdfService.getFineReportPdf(report, fileType);
+      const pdf = await ReportPdfService.getFineReportPdf(report);
       const from = `${fromDate.getFullYear()}${fromDate.getMonth() + 1}${fromDate.getDate()}`;
       const to = `${toDate.getFullYear()}${toDate.getMonth() + 1}${toDate.getDate()}`;
       const fileName = `fine-report-${from}-${to}.${fileType}`;

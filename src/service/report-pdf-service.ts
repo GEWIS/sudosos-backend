@@ -19,7 +19,8 @@ import {
   Client, FileResponse,
   FileSettings,
   FineReportParameters,
-  FineRouteParams, IFileSettings,
+  FineRouteParams, Identity,
+  IFileSettings,
   Language,
   Product,
   ProductPricing,
@@ -28,16 +29,10 @@ import {
   VAT,
 } from 'pdf-generator-client';
 import { FineReport } from '../controller/response/debtor-response';
-import {
-  entryToProduct,
-  getPDFTotalsFromReport,
-  PDF_GEN_URL,
-  PDF_VAT_HIGH,
-  UNUSED_NUMBER,
-  UNUSED_PARAM, userToIdentity,
-} from '../helpers/pdf';
+import { PDF_GEN_URL, PDF_VAT_HIGH, PDF_VAT_LOW, PDF_VAT_ZERO, UNUSED_NUMBER, UNUSED_PARAM } from '../helpers/pdf';
+import { Report, ReportProductEntry, ReportVatEntry } from './report-service';
 import User from '../entity/user/user';
-import { Report, ReportProductEntry } from '../entity/report/report';
+import { asNumber } from '../helpers/validators';
 
 const HANDED_OUT_FINES = 'Handed out';
 const WAIVED_FINES = 'Waived';
@@ -122,28 +117,65 @@ export default class ReportPdfService {
     }
   }
 
-  /**
-   * Convert Report to UserReportParameters
-   * @param report
-   * @param type
-   * @param description
-   */
+  static vatPercentageToPDFVat(percentage: number): VAT {
+    switch (percentage) {
+      case PDF_VAT_LOW:
+        return VAT.LOW;
+      case PDF_VAT_HIGH:
+        return VAT.HIGH;
+      case PDF_VAT_ZERO:
+        return VAT.ZERO;
+      default:
+        throw new Error(`Unknown VAT percentage: ${percentage}`);
+    }
+  }
+
   private static async userReportToParameters(report: Report, type: UserReportParametersType, description: string): Promise<UserReportParameters> {
     const sales: Product[] = [];
 
-    if (!report.data.products) throw new Error('No products found in report');
-    report.data.products.forEach((s: ReportProductEntry) => entryToProduct(s));
+    if (report.data.products.length === 0) throw new Error('No products found in report');
+    report.data.products.forEach((s: ReportProductEntry) => {
+      sales.push(new Product({
+        name: s.product.name,
+        summary: s.product.name,
+        pricing: new ProductPricing({
+          basePrice: s.product.priceInclVat.getAmount(),
+          vatAmount: s.product.vat.percentage,
+          vatCategory: this.vatPercentageToPDFVat(s.product.vat.percentage),
+          quantity: s.count,
+        }),
+      }));
+    });
+
+    const lowVatGroup = report.data.vat.find((v: ReportVatEntry) => v.vat.percentage === PDF_VAT_LOW);
+    if (!lowVatGroup) throw new Error('No low VAT group found in report');
+    const highVatGroup = report.data.vat.find((v: ReportVatEntry) => v.vat.percentage === PDF_VAT_HIGH);
+    if (!highVatGroup) throw new Error('No high VAT group found in report');
+
+    const total = new TotalPricing({
+      exclVat: report.totalExclVat.getAmount(),
+      lowVat: lowVatGroup.totalInclVat.getAmount() - lowVatGroup.totalExclVat.getAmount(),
+      highVat: highVatGroup.totalInclVat.getAmount() - highVatGroup.totalExclVat.getAmount(),
+      inclVat: report.totalInclVat.getAmount(),
+    });
 
     const user = await User.findOne({ where: { id: report.forId } });
 
+    const startDate = report.fromDate;
+    const endDate = report.tillDate;
     return new UserReportParameters({
-      account: userToIdentity(user),
-      startDate: report.fromDate,
-      endDate: report.tillDate,
+      account: new Identity({
+        lastNamePreposition: UNUSED_PARAM,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        fullName: `${user.firstName} ${user.lastName}`,
+      }),
+      startDate,
+      endDate,
       description,
       entries: sales,
       type,
-      total: getPDFTotalsFromReport(report),
+      total,
     });
   }
 
