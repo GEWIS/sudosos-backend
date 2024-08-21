@@ -110,7 +110,7 @@ describe('ReportPdfService', () => {
         waivedAmount: DineroTransformer.Instance.from(100),
       };
 
-      const pdf = await ReportPdfService.fineReportToPdf(report);
+      const pdf = await ReportPdfService.getFineReportPdf(report);
       expect(pdf).to.not.be.undefined;
     });
     it('should throw an error if PDF generation fails', async () => {
@@ -125,7 +125,7 @@ describe('ReportPdfService', () => {
         waivedAmount: DineroTransformer.Instance.from(100),
       };
 
-      await expect(ReportPdfService.fineReportToPdf(report)).to.be.rejectedWith();
+      await expect(ReportPdfService.getFineReportPdf(report)).to.be.rejectedWith();
     });
   });
 });
