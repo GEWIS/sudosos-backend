@@ -29,6 +29,10 @@ import { UpdateSellerPayoutRequest } from '../controller/request/seller-payout-r
 import Dinero, { Currency } from 'dinero.js';
 import TransferService from './transfer-service';
 import User from '../entity/user/user';
+import { SellerPayoutResponse } from '../controller/response/seller-payout-response';
+import { parseUserToBaseResponse } from '../helpers/revision-to-response';
+import { RequestWithToken } from '../middleware/token-middleware';
+import { asDate, asNumber } from '../helpers/validators';
 
 export interface SellerPayoutFilterParameters {
   sellerPayoutId?: number;
@@ -45,11 +49,33 @@ export interface CreateSellerPayoutParams {
   endDate: Date;
 }
 
+export function parseSellerPayoutFilters(req: RequestWithToken): SellerPayoutFilterParameters {
+  return {
+    requestedById: asNumber(req.query.requestedById),
+    fromDate: asDate(req.query.fromDate),
+    tillDate: asDate(req.query.tillDate),
+  };
+}
+
 export default class SellerPayoutService {
   private manager: EntityManager;
 
   constructor(manager?: EntityManager) {
     this.manager = manager ?? AppDataSource.manager;
+  }
+
+  public static asSellerPayoutResponse(payout: SellerPayout): SellerPayoutResponse {
+    return {
+      id: payout.id,
+      createdAt: payout.createdAt.toISOString(),
+      updatedAt: payout.updatedAt.toISOString(),
+      version: payout.version,
+      requestedBy: parseUserToBaseResponse(payout.requestedBy, false),
+      amount: payout.amount.toObject(),
+      startDate: payout.startDate.toISOString(),
+      endDate: payout.endDate.toISOString(),
+      reference: payout.reference,
+    };
   }
 
   /**
