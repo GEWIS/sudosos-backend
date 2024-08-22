@@ -28,7 +28,7 @@ export async function seedSellerPayouts(
   transactions: Transaction[],
   subTransactions: SubTransaction[],
   transfers: Transfer[],
-): Promise<{ sellerPayouts: SellerPayout[] }> {
+): Promise<{ sellerPayouts: SellerPayout[], transfers: Transfer[] }> {
   const organs = users.filter((u) => u.type === UserType.ORGAN);
 
   const sellerPayouts: SellerPayout[] = [];
@@ -62,5 +62,5 @@ export async function seedSellerPayouts(
     sellerPayouts.push(sellerPayout);
   }
 
-  return { sellerPayouts };
+  return { sellerPayouts, transfers: sellerPayouts.map((s) => s.transfer) };
 }

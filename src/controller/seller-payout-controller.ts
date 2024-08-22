@@ -23,6 +23,8 @@ import { RequestWithToken } from '../middleware/token-middleware';
 import { parseRequestPagination } from '../helpers/pagination';
 import SellerPayoutService, { parseSellerPayoutFilters } from '../service/seller-payout-service';
 import { PaginatedSellerPayoutResponse } from './response/seller-payout-response';
+import { CreateSellerPayoutRequest, UpdateSellerPayoutRequest } from './request/seller-payout-request';
+import User from '../entity/user/user';
 
 export default class SellerPayoutController extends BaseController {
   private logger: Logger = log4js.getLogger(' SellerPayoutController');
@@ -39,6 +41,26 @@ export default class SellerPayoutController extends BaseController {
           policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'SellerPayout', ['*']),
           handler: this.returnAllSellerPayouts.bind(this),
         },
+        POST: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'create', 'all', 'SellerPayout', ['*']),
+          handler: this.createSellerPayout.bind(this),
+          body: { modelName: 'CreateSellerPayoutRequest' },
+        },
+      },
+      '/:id(\\d+)': {
+        GET: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'SellerPayout', ['*']),
+          handler: this.returnSingleSellerPayout.bind(this),
+        },
+        PATCH: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'update', 'all', 'SellerPayout', ['*']),
+          handler: this.updateSellerPayout.bind(this),
+          body: { modelName: 'UpdateSellerPayoutRequest' },
+        },
+        DELETE: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'delete', 'all', 'SellerPayout', ['*']),
+          handler: this.deleteSellerPayout.bind(this),
+        },
       },
     };
   }
@@ -47,7 +69,7 @@ export default class SellerPayoutController extends BaseController {
    * GET /seller-payouts
    * @summary Return all seller payouts
    * @operationId getAllSellerPayouts
-   * @tags SellerPayouts - Operations of the seller payout controller
+   * @tags sellerPayouts - Operations of the seller payout controller
    * @security JWT
    * @param {integer} requestedById.query - Requested by user ID
    * @param {string} fromDate.query - Lower bound on seller payout creation date (inclusive)
@@ -83,6 +105,153 @@ export default class SellerPayoutController extends BaseController {
       res.json(response);
     } catch (error) {
       this.logger.error('Could not return all seller payouts:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * GET /seller-payouts/{id}
+   * @summary Get a single seller payout
+   * @operationId getSingleSellerPayout
+   * @tags sellerPayouts - Operations of the seller payout controller
+   * @security JWT
+   * @param {integer} id.path.required - ID of the seller payout that should be returned
+   * @return {SellerPayoutResponse} 200 - Single seller payout with given ID
+   * @return {string} 404 - Seller payout not found
+   */
+  public async returnSingleSellerPayout(req: RequestWithToken, res: Response): Promise<void> {
+    this.logger.trace('Get single seller payout with ID', req.params.id, 'by user', req.token.user);
+
+    try {
+      const id = Number(req.params.id);
+      const service = new SellerPayoutService();
+      const [[sellerPayout]] = await service.getSellerPayouts({ sellerPayoutId: id });
+      if (!sellerPayout) {
+        res.status(404).json('Seller Payout not found.');
+        return;
+      }
+
+      res.json(SellerPayoutService.asSellerPayoutResponse(sellerPayout));
+    } catch (error) {
+      this.logger.error('Could not return single seller payout:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * POST /seller-payouts
+   * @summary Create a new seller payout
+   * @operationId createSellerPayout
+   * @tags sellerPayouts - Operations of the seller payout controller
+   * @security JWT
+   * @param {CreateSellerPayoutRequest} request.body.required - New seller payout
+   * @return {SellerPayoutResponse} 200 - The created seller payout
+   * @return {string} 400 - Validation error.
+   * @return {string} 500 - Internal server error.
+   */
+  public async createSellerPayout(req: RequestWithToken, res: Response): Promise<void> {
+    const body = req.body as CreateSellerPayoutRequest;
+    this.logger.trace('Create new seller payout by', req.token.user);
+
+    try {
+      const requestedBy = await User.findOne({ where: { id: body.requestedById, deleted: false } });
+      if (!requestedBy) {
+        res.status(400).json('RequestedBy user not found.');
+        return;
+      }
+
+      const startDate = new Date(body.startDate);
+      if (isNaN(startDate.getTime())) {
+        res.status(400).json('StartDate is not a valid date.');
+        return;
+      }
+      const endDate = new Date(body.endDate);
+      if (isNaN(endDate.getTime())) {
+        res.status(400).json('EndDate is not a valid date.');
+        return;
+      }
+      if (startDate.getTime() > endDate.getTime()) {
+        res.status(400).json('EndDate cannot be before startDate.');
+      }
+
+      const service = new SellerPayoutService();
+      const payout = await service.createSellerPayout({
+        requestedById: requestedBy.id,
+        startDate,
+        endDate,
+        reference: body.reference,
+      });
+
+      res.json(SellerPayoutService.asSellerPayoutResponse(payout));
+    } catch (error) {
+      this.logger.error('Could not create seller payout:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * PATCH /seller-payouts/{id}
+   * @summary Update an existing seller payout
+   * @operationId updateSellerPayout
+   * @tags sellerPayouts - Operations of the seller payout controller
+   * @security JWT
+   * @param {integer} id.path.required - ID of the seller payout that should be updated
+   * @param {UpdateSellerPayoutRequest} request.body.required - Updated seller payout
+   * @return {SellerPayoutResponse} 200 - The updated seller payout
+   * @return {string} 400 - Validation error.
+   * @return {string} 404 - Seller payout not found.
+   * @return {string} 500 - Internal server error.
+   */
+  public async updateSellerPayout(req: RequestWithToken, res: Response): Promise<void> {
+    const body = req.body as UpdateSellerPayoutRequest;
+    const { id } = req.params;
+    this.logger.trace('Update seller payout', id, 'by user', req.token.user);
+
+    try {
+      const sellerPayoutId = Number(req.params.id);
+      const service = new SellerPayoutService();
+      let [[sellerPayout]] = await service.getSellerPayouts({ sellerPayoutId: sellerPayoutId });
+      if (!sellerPayout) {
+        res.status(404).json('Seller Payout not found.');
+        return;
+      }
+
+      sellerPayout = await service.updateSellerPayout(sellerPayoutId, body);
+      res.json(SellerPayoutService.asSellerPayoutResponse(sellerPayout));
+    } catch (error) {
+      this.logger.error('Could not update seller payout:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * DELETE /seller-payouts/{id}
+   * @summary Delete an existing seller payout
+   * @operationId deleteSellerPayout
+   * @tags sellerPayouts - Operations of the seller payout controller
+   * @security JWT
+   * @param {integer} id.path.required - ID of the seller payout that should be updated
+   * @return {string} 204 - Success
+   * @return {string} 404 - Seller payout not found.
+   * @return {string} 500 - Internal server error.
+   */
+  public async deleteSellerPayout(req: RequestWithToken, res: Response): Promise<void> {
+    const { id } = req.params;
+    this.logger.trace('Delete seller payout', id, 'by user', req.token.user);
+
+    try {
+      const sellerPayoutId = Number(req.params.id);
+      const service = new SellerPayoutService();
+      let [[sellerPayout]] = await service.getSellerPayouts({ sellerPayoutId: sellerPayoutId });
+      if (!sellerPayout) {
+        res.status(404).json('Seller Payout not found.');
+        return;
+      }
+
+      await service.deleteSellerPayout(sellerPayoutId);
+      res.status(204).json(null);
+    } catch (error) {
+      this.logger.error('Could not delete seller payout:', error);
       res.status(500).json('Internal server error.');
     }
   }
