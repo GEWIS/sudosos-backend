@@ -59,16 +59,16 @@ describe('SellerPayoutService', () => {
     const { containerRevisions } = await seedContainers(users, productRevisions);
     const { pointOfSaleRevisions } = await seedPointsOfSale(users, containerRevisions);
 
-    const { transactions, subTransactions } = await seedTransactions(users, pointOfSaleRevisions);
-    const transfers = await seedTransfers(users);
-    const { sellerPayouts } = await seedSellerPayouts(users, transactions, subTransactions, transfers);
+    const { transactions, subTransactions } = await seedTransactions(users, pointOfSaleRevisions, new Date('2020-01-01'), new Date());
+    const transfers = await seedTransfers(users, new Date('2020-01-01'), new Date());
+    const { sellerPayouts, transfers: sellerPayoutTransfers } = await seedSellerPayouts(users, transactions, subTransactions, transfers);
 
     ctx = {
       connection,
       users,
       transactions,
       subTransactions,
-      transfers,
+      transfers: transfers.concat(sellerPayoutTransfers),
       sellerPayouts,
     };
 
@@ -113,10 +113,9 @@ describe('SellerPayoutService', () => {
       expect(sellerPayouts[0].requestedBy.id).to.equal(ctx.sellerPayouts[0].requestedBy.id);
     });
     it('should return seller payouts created after a date', async () => {
-      let fromDate = ctx.sellerPayouts[0].createdAt < ctx.sellerPayouts[1].createdAt
+      const fromDate = ctx.sellerPayouts[0].createdAt > ctx.sellerPayouts[1].createdAt
         ? ctx.sellerPayouts[0].createdAt
         : ctx.sellerPayouts[1].createdAt;
-      fromDate = new Date(fromDate.getTime() + 60000);
 
       const actualPayouts = ctx.sellerPayouts.filter((s) => s.createdAt >= fromDate);
       const service = new SellerPayoutService();
@@ -125,6 +124,7 @@ describe('SellerPayoutService', () => {
       });
 
       // Sanity check
+      expect(actualPayouts.length).to.be.at.least(1);
       expect(actualPayouts.length).to.not.equal(ctx.sellerPayouts.length);
 
       expect(sellerPayouts.length).to.equal(actualPayouts.length);
@@ -137,7 +137,7 @@ describe('SellerPayoutService', () => {
       let tillDate = ctx.sellerPayouts[0].createdAt > ctx.sellerPayouts[1].createdAt
         ? ctx.sellerPayouts[0].createdAt
         : ctx.sellerPayouts[1].createdAt;
-      tillDate = new Date(tillDate.getTime() - 60000);
+      tillDate = new Date(tillDate.getTime());
 
       const actualPayouts = ctx.sellerPayouts.filter((s) => s.createdAt < tillDate);
       const service = new SellerPayoutService();
@@ -146,6 +146,7 @@ describe('SellerPayoutService', () => {
       });
 
       // Sanity check
+      expect(actualPayouts.length).to.be.at.least(1);
       expect(actualPayouts.length).to.not.equal(ctx.sellerPayouts.length);
 
       expect(sellerPayouts.length).to.equal(actualPayouts.length);

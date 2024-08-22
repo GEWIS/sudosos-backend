@@ -268,6 +268,9 @@ describe('SellerPayoutController', () => {
     before(() => {
       organ = ctx.users.find((u) => u.type === UserType.ORGAN
         && calculateBalance(u, ctx.transactions, ctx.subTransactions, ctx.transfers).amount.getAmount() > 0);
+      // Sanity check
+      expect(organ).to.not.be.undefined;
+
       req = {
         requestedById: organ.id,
         startDate: new Date(0).toISOString(),
