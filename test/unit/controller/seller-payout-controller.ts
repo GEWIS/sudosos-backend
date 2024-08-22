@@ -37,7 +37,15 @@ import { getToken, seedRoles } from '../../seed/rbac';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import { json } from 'body-parser';
 import SellerPayoutController from '../../../src/controller/seller-payout-controller';
-import { PaginatedSellerPayoutResponse } from '../../../src/controller/response/seller-payout-response';
+import {
+  PaginatedSellerPayoutResponse,
+  SellerPayoutResponse,
+} from '../../../src/controller/response/seller-payout-response';
+import { calculateBalance } from '../../helpers/balance';
+import {
+  CreateSellerPayoutRequest,
+  UpdateSellerPayoutRequest,
+} from '../../../src/controller/request/seller-payout-request';
 
 describe('SellerPayoutController', () => {
   let ctx: DefaultContext & {
@@ -65,7 +73,7 @@ describe('SellerPayoutController', () => {
 
     const { transactions, subTransactions } = await seedTransactions(users, pointOfSaleRevisions, new Date('2020-01-01'), new Date());
     const transfers = await seedTransfers(users, new Date('2020-01-01'), new Date());
-    const { sellerPayouts } = await seedSellerPayouts(users, transactions, subTransactions, transfers);
+    const { sellerPayouts, transfers: sellerPayoutTransfers } = await seedSellerPayouts(users, transactions, subTransactions, transfers);
 
     const all = { all: new Set<string>(['*']) };
     const adminRole = await seedRoles([{
@@ -97,7 +105,7 @@ describe('SellerPayoutController', () => {
       users,
       transactions,
       subTransactions,
-      transfers,
+      transfers: transfers.concat(sellerPayoutTransfers),
       sellerPayouts,
       admin,
       adminToken,
@@ -210,6 +218,223 @@ describe('SellerPayoutController', () => {
     it('should return HTTP 403 if not admin', async () => {
       const res = await request(ctx.app)
         .get('/seller-payouts')
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(403);
+    });
+  });
+
+  describe('GET /seller-payouts/{id}', () => {
+    it('should return HTTP 200 and correct seller payout', async () => {
+      const sellerPayout = ctx.sellerPayouts[0];
+      const res = await request(ctx.app)
+        .get(`/seller-payouts/${sellerPayout.id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+
+      const validation = ctx.specification.validateModel('SellerPayoutResponse', res.body, false, true);
+      expect(validation.valid).to.be.true;
+
+      const body = res.body as SellerPayoutResponse;
+      expect(body.id).to.equal(sellerPayout.id);
+      expect(body.createdAt).to.equal(sellerPayout.createdAt.toISOString());
+      expect(body.updatedAt).to.equal(sellerPayout.updatedAt.toISOString());
+      expect(body.requestedBy.id).to.equal(sellerPayout.requestedBy.id);
+      expect(body.amount).to.deep.equal(sellerPayout.amount.toObject());
+      expect(body.startDate).to.equal(sellerPayout.startDate.toISOString());
+      expect(body.endDate).to.equal(sellerPayout.endDate.toISOString());
+      expect(body.reference).to.equal(sellerPayout.reference);
+    });
+    it('should return HTTP 404 if seller payout does not exist', async () => {
+      const id = ctx.sellerPayouts.length + 1;
+      const res = await request(ctx.app)
+        .get(`/seller-payouts/${id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(404);
+      expect(res.body).to.equal('Seller Payout not found.');
+    });
+    it('should return HTTP 403 if not admin', async () => {
+      const sellerPayout = ctx.sellerPayouts[0];
+      const res = await request(ctx.app)
+        .get(`/seller-payouts/${sellerPayout.id}`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(403);
+    });
+  });
+
+  describe('POST /seller-payouts', () => {
+    let organ: User;
+    let req: CreateSellerPayoutRequest;
+
+    before(() => {
+      organ = ctx.users.find((u) => u.type === UserType.ORGAN
+        && calculateBalance(u, ctx.transactions, ctx.subTransactions, ctx.transfers).amount.getAmount() > 0);
+      req = {
+        requestedById: organ.id,
+        startDate: new Date(0).toISOString(),
+        endDate: new Date().toISOString(),
+        reference: 'TEST CASE',
+      };
+    });
+
+    it('should return HTTP 200 and new seller payout', async () => {
+      const res = await request(ctx.app)
+        .post('/seller-payouts')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(req);
+      expect(res.status).to.equal(200);
+
+      const validation = ctx.specification.validateModel('SellerPayoutResponse', res.body, false, true);
+      expect(validation.valid).to.be.true;
+
+      expect(await SellerPayout.count()).to.equal(ctx.sellerPayouts.length + 1);
+
+      const body = res.body as SellerPayoutResponse;
+      expect(body.requestedBy.id).to.equal(organ.id);
+      expect(body.startDate).to.equal(req.startDate);
+      expect(body.endDate).to.equal(req.endDate);
+      expect(body.reference).to.equal(req.reference);
+
+      // TODO: calculate amount based on transaction reporting
+      expect(body.amount.amount).to.equal(0);
+
+      // Cleanup
+      const dbSellerPayout = await SellerPayout.findOne({ where: { id: body.id }, relations: { transfer: true } });
+      await SellerPayout.remove(dbSellerPayout);
+      await Transfer.remove(dbSellerPayout.transfer);
+    });
+    it('should return HTTP 400 if user does not exist', async () => {
+      const invalidReq: CreateSellerPayoutRequest = {
+        ...req,
+        requestedById: 9999,
+      };
+      const res = await request(ctx.app)
+        .post('/seller-payouts')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(invalidReq);
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('RequestedBy user not found.');
+    });
+    it('should return HTTP 400 if startDate is an invalid date', async () => {
+      const invalidReq: CreateSellerPayoutRequest = {
+        ...req,
+        startDate: 'WieDitLeestMaaktSudoSOSAf',
+      };
+      const res = await request(ctx.app)
+        .post('/seller-payouts')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(invalidReq);
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('StartDate is not a valid date.');
+    });
+    it('should return HTTP 400 if endDate is an invalid date', async () => {
+      const invalidReq: CreateSellerPayoutRequest = {
+        ...req,
+        endDate: 'WieDitLeestMaaktSudoSOSAf',
+      };
+      const res = await request(ctx.app)
+        .post('/seller-payouts')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(invalidReq);
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('EndDate is not a valid date.');
+    });
+    it('should return an HTTP 400 if startDate is after endDate', async () => {
+      const invalidReq: CreateSellerPayoutRequest = {
+        ...req,
+        startDate: req.endDate,
+        endDate: req.startDate,
+      };
+      const res = await request(ctx.app)
+        .post('/seller-payouts')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(invalidReq);
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('EndDate cannot be before startDate.');
+    });
+    it('should return an HTTP 403 if not admin', async () => {
+      const res = await request(ctx.app)
+        .post('/seller-payouts')
+        .set('Authorization', `Bearer ${ctx.userToken}`)
+        .send(req);
+      expect(res.status).to.equal(403);
+    });
+  });
+
+  describe('PATCH /seller-payouts/{id}', () => {
+    const req: UpdateSellerPayoutRequest = {
+      amount: {
+        amount: 3900,
+        precision: 2,
+        currency: 'EUR',
+      },
+    };
+
+    it('should return HTTP 200 and update the seller payout', async () => {
+      const sellerPayout = ctx.sellerPayouts[0];
+      const res = await request(ctx.app)
+        .patch(`/seller-payouts/${sellerPayout.id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(req);
+      expect(res.status).to.equal(200);
+
+      const validation = ctx.specification.validateModel('SellerPayoutResponse', res.body, false, true);
+      expect(validation.valid).to.equal(true);
+
+      const body = res.body as SellerPayoutResponse;
+      expect(body.requestedBy.id).to.equal(sellerPayout.requestedBy.id);
+      expect(body.startDate).to.equal(sellerPayout.startDate.toISOString());
+      expect(body.endDate).to.equal(sellerPayout.endDate.toISOString());
+      expect(body.reference).to.equal(sellerPayout.reference);
+      expect(body.amount).to.deep.equal(req.amount);
+
+      // Cleanup
+      await SellerPayout.save(sellerPayout);
+    });
+    it('should return HTTP 404 if seller payout does not exist', async () => {
+      const id = ctx.sellerPayouts.length + 1;
+      const res = await request(ctx.app)
+        .patch(`/seller-payouts/${id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(req);
+      expect(res.status).to.equal(404);
+      expect(res.body).to.equal('Seller Payout not found.');
+    });
+    it('should return HTTP 403 if not admin', async () => {
+      const sellerPayout = ctx.sellerPayouts[0];
+      const res = await request(ctx.app)
+        .patch(`/seller-payouts/${sellerPayout.id}`)
+        .set('Authorization', `Bearer ${ctx.userToken}`)
+        .send(req);
+      expect(res.status).to.equal(403);
+    });
+  });
+
+  describe('DELETE /seller-payouts/{id}', () => {
+    it('should return HTTP 204 and delete the seller payout', async () => {
+      const sellerPayout = ctx.sellerPayouts[0];
+      const res = await request(ctx.app)
+        .delete(`/seller-payouts/${sellerPayout.id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(204);
+      expect(res.body).to.be.empty;
+
+      const dbSellerPayout = await SellerPayout.findOne({ where: { id: sellerPayout.id } });
+      expect(dbSellerPayout).to.be.null;
+      const dbTransfer = await Transfer.findOne({ where: { id: sellerPayout.transfer.id } });
+      expect(dbTransfer).to.be.null;
+    });
+    it('should return HTTP 404 if seller payout does not exist', async () => {
+      const id = ctx.sellerPayouts.length + 1;
+      const res = await request(ctx.app)
+        .delete(`/seller-payouts/${id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(404);
+      expect(res.body).to.equal('Seller Payout not found.');
+    });
+    it('should return HTTP 403 if not admin', async () => {
+      const sellerPayout = ctx.sellerPayouts[1];
+      const res = await request(ctx.app)
+        .delete(`/seller-payouts/${sellerPayout.id}`)
         .set('Authorization', `Bearer ${ctx.userToken}`);
       expect(res.status).to.equal(403);
     });

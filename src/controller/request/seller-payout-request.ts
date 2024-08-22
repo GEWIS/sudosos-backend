@@ -21,6 +21,7 @@ import { DineroObjectRequest } from './dinero-request';
 /**
  * @typedef {object} CreateSellerPayoutRequest
  * @property {integer} requestedById.required - The user to create the Seller Payout for
+ * @property {string} reference.required - Reference of the seller payout
  * @property {string} startDate.required - The lower bound of the range of transactions
  * to be paid out
  * @property {string} endDate.required - the upper bound of the range of transactions
