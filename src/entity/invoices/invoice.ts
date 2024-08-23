@@ -156,9 +156,6 @@ export default class Invoice extends BaseEntity {
   })
   public date: Date;
 
-  @OneToMany(() => SubTransactionRow, (row) => row.invoice, { cascade: false })
-  public subTransactionRows: SubTransactionRow[];
-
   async getPdfParamHash(): Promise<string> {
     return hashJSON(InvoicePdfService.getParameters(this));
   }
