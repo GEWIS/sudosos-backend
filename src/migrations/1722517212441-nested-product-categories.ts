@@ -15,10 +15,20 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { MigrationInterface, QueryRunner, Table, TableForeignKey } from 'typeorm';
+import { MigrationInterface, QueryRunner, Table, TableColumn, TableForeignKey } from 'typeorm';
 
 export class NestedProductCategories1722517212441 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.addColumn('product_category', new TableColumn({
+      name: 'parentId',
+      type: 'integer',
+      isNullable: true,
+    }));
+    await queryRunner.createForeignKey('product_category', new TableForeignKey({
+      columnNames: ['parentId'],
+      referencedColumnNames: ['id'],
+      referencedTableName: 'product_category',
+    }));
     await queryRunner.createTable(new Table({
       name: 'product_category_closure',
       columns: [{
@@ -47,9 +57,18 @@ export class NestedProductCategories1722517212441 implements MigrationInterface 
         onDelete: 'CASCADE',
       }),
     ]);
+    await queryRunner.query(`
+      INSERT INTO product_category_closure (id_ancestor, id_descendant)
+      SELECT id, id FROM product_category
+    `);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
+    const categoryTable = await queryRunner.getTable('product_category');
+    const parentForeignKeys = categoryTable.foreignKeys.filter((fk) => fk.columnNames.includes('parentId'));
+    await queryRunner.dropForeignKeys(categoryTable, parentForeignKeys);
+    await queryRunner.dropColumn(categoryTable, 'parentId');
+
     await queryRunner.dropTable('product_category_closure');
   }
 }
