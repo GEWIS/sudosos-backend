@@ -17,7 +17,7 @@
  */
 import { DineroObjectResponse } from './dinero-response';
 import { BaseVatGroupResponse } from './vat-group-response';
-import { BaseProductResponse, ProductResponse } from './product-response';
+import { BaseProductResponse } from './product-response';
 import { ProductCategoryResponse } from './product-category-response';
 import { BasePointOfSaleResponse } from './point-of-sale-response';
 import { BaseContainerResponse } from './container-response';
