@@ -1432,6 +1432,7 @@ export default class UserController extends BaseController {
    * @param {integer} fromId.query - From-user for selected transactions
    * @param {integer} toId.query - To-user for selected transactions
    * @param {boolean} exclusiveToId.query - If all sub-transactions should be to the toId user, default true
+   * @deprecated - Use /users/{id}/transactions/sales/report or /users/{id}/transactions/purchases/report instead
    * @return {string} 404 - User not found error.
    */
   public async getUsersTransactionsReport(req: RequestWithToken, res: Response): Promise<void> {
