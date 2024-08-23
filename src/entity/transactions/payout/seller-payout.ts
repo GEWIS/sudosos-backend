@@ -16,7 +16,11 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import BasePayout from './base-payout';
-import { Column, Entity } from 'typeorm';
+import { Column, Entity, JoinColumn, OneToOne } from 'typeorm';
+import PayoutRequestPdf from '../../file/payout-request-pdf';
+import { hashJSON } from '../../../helpers/hash';
+import SellerPayoutPdf from '../../file/seller-payout-pdf';
+import SellerPayoutPdfService from '../../../service/seller-payout-pdf-service';
 
 @Entity()
 export default class SellerPayout extends BasePayout {
@@ -28,4 +32,19 @@ export default class SellerPayout extends BasePayout {
 
   @Column({ nullable: false })
   public reference: string;
+
+  @Column({ nullable: true })
+  public pdfId?: number;
+
+  @OneToOne(() => SellerPayoutPdf, { eager: true, nullable: true, onDelete: 'RESTRICT' })
+  @JoinColumn()
+  public pdf?: SellerPayoutPdf;
+
+  async getPdfParamHash(): Promise<string> {
+    return hashJSON(await SellerPayoutPdfService.getParameters(this));
+  }
+
+  async createPDF(): Promise<PayoutRequestPdf> {
+    return SellerPayoutPdfService.createPdf(this.id);
+  }
 }

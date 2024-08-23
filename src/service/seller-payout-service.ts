@@ -24,7 +24,6 @@ import { AppDataSource } from '../database/database';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import SellerPayout from '../entity/transactions/payout/seller-payout';
 import { PaginationParameters } from '../helpers/pagination';
-import DineroTransformer from '../entity/transformer/dinero-transformer';
 import { UpdateSellerPayoutRequest } from '../controller/request/seller-payout-request';
 import Dinero, { Currency } from 'dinero.js';
 import TransferService from './transfer-service';
@@ -33,6 +32,7 @@ import { SellerPayoutResponse } from '../controller/response/seller-payout-respo
 import { parseUserToBaseResponse } from '../helpers/revision-to-response';
 import { RequestWithToken } from '../middleware/token-middleware';
 import { asDate, asNumber } from '../helpers/validators';
+import { SalesReportService } from './report-service';
 
 export interface SellerPayoutFilterParameters {
   sellerPayoutId?: number;
@@ -102,14 +102,18 @@ export default class SellerPayoutService {
    * @param params
    */
   public async createSellerPayout(params: CreateSellerPayoutParams): Promise<SellerPayout> {
-    // TODO: calculate amount based on transaction reporting
-    const amount = DineroTransformer.Instance.from(0);
-
     const requestedBy = await this.manager.getRepository(User)
       .findOne({ where: { id: params.requestedById } });
     if (!requestedBy) {
       throw new Error(`User with ID "${params.requestedById}" not found.`);
     }
+
+    const report = await new SalesReportService().getReport({
+      fromDate: params.startDate,
+      tillDate: params.endDate,
+      forId: params.requestedById,
+    });
+    const amount = report.totalInclVat;
 
     const transfer = await new TransferService().createTransfer({
       amount: amount.toObject(),
