@@ -18,21 +18,24 @@
 import { PdfGenerator } from '../entity/file/pdf-file';
 import {
   Client,
-  FileSettings, Identity,
-  ISellerPayoutRouteParams,
-  Language, Product, ProductPricing,
-  ReturnFileType, SellerPayoutParameters,
-  SellerPayoutRouteParams, TotalPricing, VAT,
+  FileSettings, ISellerPayoutRouteParams,
+  Language, ReturnFileType, SellerPayoutParameters,
+  SellerPayoutRouteParams,
 } from 'pdf-generator-client';
-import { PDF_GEN_URL, PDF_VAT_HIGH, PDF_VAT_LOW, PDF_VAT_ZERO, UNUSED_PARAM } from '../helpers/pdf';
+import {
+  entryToProduct,
+  getPDFTotalsFromReport,
+  PDF_GEN_URL,
+  userToIdentity,
+} from '../helpers/pdf';
 import FileService from './file-service';
 import { SELLER_PAYOUT_PDF_LOCATION } from '../files/storage';
 import SellerPayout from '../entity/transactions/payout/seller-payout';
-import { FindOptionsRelations } from 'typeorm';
 import SellerPayoutPdf from '../entity/file/seller-payout-pdf';
 import { SalesReportService } from './report-service';
-import { ReportProductEntry, ReportVatEntry } from '../entity/report/report';
+import { ReportProductEntry } from '../entity/report/report';
 import assert from 'assert';
+import SellerPayoutService from './seller-payout-service';
 
 export default class SellerPayoutPdfService {
 
@@ -41,19 +44,10 @@ export default class SellerPayoutPdfService {
     fileService: new FileService(SELLER_PAYOUT_PDF_LOCATION),
   };
 
-  static vatPercentageToPDFVat(percentage: number): VAT {
-    switch (percentage) {
-      case PDF_VAT_LOW:
-        return VAT.LOW;
-      case PDF_VAT_HIGH:
-        return VAT.HIGH;
-      case PDF_VAT_ZERO:
-        return VAT.ZERO;
-      default:
-        throw new Error(`Unknown VAT percentage: ${percentage}`);
-    }
-  }
-
+  /**
+   * get the parameters required for generating an seller payout PDF.
+   * @param sellerPayout
+   */
   static async getParameters(sellerPayout: SellerPayout): Promise<SellerPayoutParameters> {
     const { amount, startDate, endDate, reference } = sellerPayout;
     const report = await new SalesReportService().getReport({
@@ -66,53 +60,25 @@ export default class SellerPayoutPdfService {
     console.error(amount.getAmount(), report.totalInclVat.getAmount());
     assert(amount.getAmount() === report.totalInclVat.getAmount(), 'Amounts do not match');
 
-    // TODO: make function when sales-report is merged
-    const sales: Product[] = [];
-
-    if (report.data.products.length === 0) throw new Error('No products found in report');
-    report.data.products.forEach((s: ReportProductEntry) => {
-      sales.push(new Product({
-        name: s.product.name,
-        summary: s.product.name,
-        pricing: new ProductPricing({
-          basePrice: s.product.priceInclVat.getAmount(),
-          vatAmount: s.product.vat.percentage,
-          vatCategory: this.vatPercentageToPDFVat(s.product.vat.percentage),
-          quantity: s.count,
-        }),
-      }));
-    });
-
-    const lowVatGroup = report.data.vat.find((v: ReportVatEntry) => v.vat.percentage === PDF_VAT_LOW);
-    if (!lowVatGroup) throw new Error('No low VAT group found in report');
-    const highVatGroup = report.data.vat.find((v: ReportVatEntry) => v.vat.percentage === PDF_VAT_HIGH);
-    if (!highVatGroup) throw new Error('No high VAT group found in report');
-
-    const total = new TotalPricing({
-      exclVat: report.totalExclVat.getAmount(),
-      lowVat: lowVatGroup.totalInclVat.getAmount() - lowVatGroup.totalExclVat.getAmount(),
-      highVat: highVatGroup.totalInclVat.getAmount() - highVatGroup.totalExclVat.getAmount(),
-      inclVat: report.totalInclVat.getAmount(),
-    });
+    const entries = report.data.products.map((s: ReportProductEntry) => entryToProduct(s));
+    entries.sort((a, b) => a.name.localeCompare(b.name));
 
     return new SellerPayoutParameters({
       reference: `SDS-SP-${String(sellerPayout.id).padStart(4, '0')}`,
       startDate,
       endDate,
-      entries: sales,
-      total,
+      entries,
+      total: getPDFTotalsFromReport(report),
       description: reference,
       debtorId: sellerPayout.requestedBy.id,
-      account: new Identity({
-        firstName: sellerPayout.requestedBy.firstName,
-        lastName: UNUSED_PARAM,
-        lastNamePreposition: UNUSED_PARAM,
-        fullName: `${sellerPayout.requestedBy.firstName} ${sellerPayout.requestedBy.lastName}`,
-        function: UNUSED_PARAM,
-      }),
+      account: userToIdentity(sellerPayout.requestedBy),
     });
   }
 
+  /**
+   * Prepares and returns the parameters required by the PDF generator client to create an seller payout PDF.
+   * @param sellerPayout
+   */
   static async getPdfParams(sellerPayout: SellerPayout): Promise<SellerPayoutRouteParams> {
     const params = await this.getParameters(sellerPayout);
 
@@ -132,12 +98,12 @@ export default class SellerPayoutPdfService {
     return new SellerPayoutRouteParams(data);
   }
 
+  /**
+   * Generate a pdf report of the given report.
+   * @param sellerPayoutId
+   */
   public static async createPdf(sellerPayoutId: number): Promise<SellerPayoutPdf> {
-    const relations: FindOptionsRelations<SellerPayout> = {
-      requestedBy: true,
-      transfer: true,
-    };
-    const sellerPayout = await SellerPayout.findOne({ where: { id: sellerPayoutId }, relations });
+    const sellerPayout = await SellerPayout.findOne(SellerPayoutService.getOptions({ sellerPayoutId, returnTransfer: true }));
     if (!sellerPayout) return undefined;
 
     const params = await this.getPdfParams(sellerPayout);
