@@ -74,36 +74,6 @@ export default class BannerService {
   }
 
   /**
-   * Creates a banner response from a banner
-   * @param {Banner.model} banner - banner
-   * @returns {BannerResponse.model} - a banner response created with the banner
-   */
-  public static asBannerResponse(banner: Banner): BannerResponse {
-    if (!banner) {
-      return undefined;
-    }
-
-    let image;
-    if (!banner.image) {
-      image = null;
-    } else {
-      image = banner.image.downloadName;
-    }
-
-    return {
-      id: banner.id,
-      name: banner.name,
-      image,
-      duration: banner.duration,
-      active: banner.active,
-      createdAt: banner.createdAt.toISOString(),
-      updatedAt: banner.updatedAt.toISOString(),
-      startDate: banner.startDate.toISOString(),
-      endDate: banner.endDate.toISOString(),
-    };
-  }
-
-  /**
    * Returns all banners with options.
    * @param filters - The filtering parameters.
    * @param pagination - The pagination options.
@@ -130,7 +100,7 @@ export default class BannerService {
       take,
       skip,
     });
-    const records = banners.map((banner) => this.asBannerResponse(banner));
+    const records = banners.map((banner) => banner.toResponse());
 
     return {
       _pagination: {
@@ -151,7 +121,7 @@ export default class BannerService {
     // save and return banner
     const banner = this.asBanner(bannerReq);
     await Banner.save(banner);
-    return this.asBannerResponse(banner);
+    return banner.toResponse();
   }
 
   /**
@@ -172,7 +142,7 @@ export default class BannerService {
     // patch banner if found
     const banner = this.asBanner(bannerReq);
     await Banner.update(id, banner);
-    return this.asBannerResponse(await Banner.findOne({ where: { id }, relations: ['image'] }));
+    return (await Banner.findOne({ where: { id }, relations: ['image'] })).toResponse();
   }
 
   /**
@@ -202,6 +172,6 @@ export default class BannerService {
 
     // Restore the banner image so the response will be correct
     banner.image = bannerImage;
-    return this.asBannerResponse(banner);
+    return banner.toResponse();
   }
 }
