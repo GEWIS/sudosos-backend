@@ -36,4 +36,12 @@ export default class BaseEntityWithoutId extends OrmBaseEntity {
 
   @VersionColumn()
   public readonly version: number;
+
+  public toResponse(): { createdAt?: string, updatedAt?: string, version?: number } {
+    return {
+      createdAt: this.createdAt.toISOString(),
+      updatedAt: this.updatedAt.toISOString(),
+      version: this.version,
+    };
+  }
 }

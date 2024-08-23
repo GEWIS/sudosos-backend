@@ -21,6 +21,7 @@ import {
 } from 'typeorm';
 import BaseEntity from './base-entity';
 import BannerImage from './file/banner-image';
+import {BannerResponse} from "../controller/response/banner-response";
 
 /**
  * @typedef {BaseEntity} Banner
@@ -61,4 +62,16 @@ export default class Banner extends BaseEntity {
   @OneToOne(() => BannerImage, { nullable: true, onDelete: 'RESTRICT' })
   @JoinColumn()
   public image?: BannerImage;
+
+  public toResponse(base?: boolean): BannerResponse {
+    return {
+      ...super.toResponse(base),
+      name: this.name,
+      image: this.image?.downloadName,
+      duration: this.duration,
+      active: this.active,
+      startDate: this.startDate.toISOString(),
+      endDate: this.endDate.toISOString(),
+    };
+  }
 }

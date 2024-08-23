@@ -20,6 +20,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import BaseEntityWithoutId from './base-entity-without-id';
+import BaseResponse from "../controller/response/base-response";
 
 /**
  * @typedef  {BaseEntityWithoutId} BaseEntity
@@ -28,4 +29,12 @@ import BaseEntityWithoutId from './base-entity-without-id';
 export default class BaseEntity extends BaseEntityWithoutId {
   @PrimaryGeneratedColumn()
   public readonly id: number;
+
+  public toResponse(base?: boolean): BaseResponse {
+    if (base) return { id: this.id };
+    return {
+      ...super.toResponse(),
+      id: this.id
+    };
+  }
 }
