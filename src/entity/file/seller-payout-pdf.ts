@@ -16,14 +16,11 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import { Entity } from 'typeorm';
+import Pdf from './pdf-file';
 
-export const ROOT_FILE_LOCATION = './data';
-export const SIMPLE_FILE_LOCATION = './data/simple';
-export const PRODUCT_IMAGE_LOCATION = './data/products';
-export const BANNER_IMAGE_LOCATION = './data/banners';
-
-export const INVOICE_PDF_LOCATION = './data/invoices';
-
-export const SELLER_PAYOUT_PDF_LOCATION = './data/seller_payouts';
-
-export const PAYOUT_REQUEST_PDF_LOCATION = './data/payout_requests';
+/**
+ * @typedef {Pdf} SellerPayoutPdf
+ */
+@Entity()
+export default class SellerPayoutPdf extends Pdf {}
