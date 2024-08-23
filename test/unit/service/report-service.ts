@@ -301,7 +301,7 @@ describe('ReportService', () => {
         await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
           const transactions = await createTransactions(debtor.id, creditor.id, 3); // Before tillDate
           const tillDate = new Date(new Date().getTime() + 2000);
-          await createTransactions(debtor.id, creditor.id, 2, 3000);  // After tillDate
+          await createTransactions(debtor.id, creditor.id, 2, 4000);  // After tillDate
           await checkTransactionsSalesReport(transactions.transactions, {
             fromDate: new Date(2000, 0, 0),
             tillDate,
@@ -490,9 +490,9 @@ describe('ReportService', () => {
 
       it('should return the total expenditure of a user with mixed transactions before and after the tillDate', async () => {
         await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
-          const tillDate = new Date(new Date().getTime() + 1500); // Set tillDate to 1.5 seconds after current time
-          await createTransactions(debtor.id, creditor.id, 2, 2000);  // Transactions 2 seconds in the future (after tillDate)
-          const transactions = await createTransactions(debtor.id, creditor.id, 3, 1000); // Transactions 1 second in the future (before tillDate)
+          const transactions = await createTransactions(debtor.id, creditor.id, 3);
+          const tillDate = new Date();
+          await createTransactions(debtor.id, creditor.id, 2, 2000);
           await checkTransactionsBuyerReport(transactions.transactions, {
             fromDate: new Date(2000, 0, 0),
             tillDate,
