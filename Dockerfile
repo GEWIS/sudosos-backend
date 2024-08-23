@@ -27,5 +27,6 @@ RUN chmod +x /app/init_scripts/start.sh
 
 COPY --from=build --chown=node /app/out/src /app/out/src
 COPY --from=build --chown=node /app/out/swagger.json /app/out/swagger.json
+COPY --from=build --chown=node /app/static /app/static
 
 CMD ["sh", "/app/init_scripts/start.sh"]

@@ -28,7 +28,7 @@ import { Language } from '../../../src/mailer/mail-message';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import fs from 'fs';
-import { templateFieldDefault } from '../../../src/mailer/template/mail-body-generator';
+import { templateFieldDefault } from '../../../src/mailer/mail-body-generator';
 
 describe('Mailer', () => {
   let ctx: {
@@ -55,7 +55,7 @@ describe('Mailer', () => {
       email: 'mail@example.com',
     } as User);
 
-    const htmlMailTemplate = fs.readFileSync('./src/mailer/template/template.html').toString();
+    const htmlMailTemplate = fs.readFileSync('./static/mailer/template.html').toString();
 
     ctx = {
       connection,
