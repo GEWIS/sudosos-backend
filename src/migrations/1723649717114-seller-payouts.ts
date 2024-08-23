@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { IsNull, MigrationInterface, Not, QueryRunner, Table, TableForeignKey } from 'typeorm';
+import { IsNull, MigrationInterface, QueryRunner, Table, TableForeignKey } from 'typeorm';
 import Invoice from '../entity/invoices/invoice';
 import SellerPayout from '../entity/transactions/payout/seller-payout';
 import InvoiceEntry from '../entity/invoices/invoice-entry';
