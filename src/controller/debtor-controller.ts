@@ -317,7 +317,7 @@ export default class DebtorController extends BaseController {
 
     let fromDate, toDate;
     try {
-      const filters = asFromAndTillDate(req.query.fromDate, req.query.tillDate);
+      const filters = asFromAndTillDate(req.query.fromDate, req.query.toDate);
       fromDate = filters.fromDate;
       toDate = filters.tillDate;
     } catch (e) {
@@ -340,9 +340,9 @@ export default class DebtorController extends BaseController {
    * @tags debtors - Operations of the debtor controller
    * @operationId getFineReportPdf
    * @security JWT
-   * @param {string} fromDate.query - The start date of the report, inclusive
-   * @param {string} toDate.query - The end date of the report, exclusive
-   * @param {string} fileType.query - enum:PDF,TEX - The file type of the report
+   * @param {string} fromDate.query.required - The start date of the report, inclusive
+   * @param {string} toDate.query.required - The end date of the report, exclusive
+   * @param {string} fileType.query.required - enum:PDF,TEX - The file type of the report
    * @returns {string} 200 - The requested report - application/pdf
    * @return {string} 400 - Validation error
    * @return {string} 500 - Internal server error
@@ -353,7 +353,7 @@ export default class DebtorController extends BaseController {
     let fromDate, toDate;
     let fileType: ReturnFileType;
     try {
-      const filters = asFromAndTillDate(req.query.fromDate, req.query.tillDate);
+      const filters = asFromAndTillDate(req.query.fromDate, req.query.toDate);
       fromDate = filters.fromDate;
       toDate = filters.tillDate;
       fileType = asReturnFileType(req.query.fileType);
