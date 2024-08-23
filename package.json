@@ -45,7 +45,7 @@
     "mysql2": "^3.2.0",
     "node-cron": "^3.0.2",
     "nodemailer": "^6.9.1",
-    "pdf-generator-client": "github:GEWIS/pdf-generator#b94b94e",
+    "pdf-generator-client": "github:GEWIS/pdf-generator#4b7c455",
     "reflect-metadata": "^0.1.13",
     "sqlite3": "^5.1.5",
     "stripe": "^16.1.0",

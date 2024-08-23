@@ -110,7 +110,7 @@ describe('PayoutRequestPdfService', async () => {
     it('should return true if the PDF hash matches the expected hash', async () => {
       const payoutRequest = ctx.payoutRequests[0];
       const pdf = new PayoutRequestPdf();
-      pdf.hash = payoutRequest.getPdfParamHash();
+      pdf.hash = await payoutRequest.getPdfParamHash();
       payoutRequest.pdf = pdf;
 
       const result = FileService.validatePdfHash(payoutRequest);
