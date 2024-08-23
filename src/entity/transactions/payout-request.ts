@@ -67,7 +67,7 @@ export default class PayoutRequest extends BaseEntity {
   @JoinColumn()
   public pdf?: PayoutRequestPdf;
 
-  getPdfParamHash(): string {
+  async getPdfParamHash(): Promise<string> {
     return hashJSON(PayoutRequestPdfService.getParameters(this));
   }
 

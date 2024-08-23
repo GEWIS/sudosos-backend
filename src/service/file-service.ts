@@ -149,21 +149,20 @@ export default class FileService {
    * @param {boolean} [force=false] - Whether to force regeneration of the entity PDF, ignoring any existing ones.
    * @returns {Promise<SimpleFileResponse>} A promise that resolves to the file response representing the entity PDF.
    */
-
   public static async getOrCreatePDF<T extends Pdfable>(entity: T, force: boolean = false): Promise<InvoicePdf> {
     if (!entity) return undefined;
 
     if (entity.pdf && !force) {
       // check if pdf is current.
-      if (this.validatePdfHash(entity)) return entity.pdf;
+      if (await this.validatePdfHash(entity)) return entity.pdf;
     }
 
     return Promise.resolve(await entity.createPDF());
   }
 
-  static validatePdfHash<T extends Pdfable>(entity: T): boolean {
+  static async validatePdfHash<T extends Pdfable>(entity: T): Promise<boolean> {
     if (!entity.pdf) return false;
-    const hash = entity.getPdfParamHash();
+    const hash = await entity.getPdfParamHash();
 
     return hash === entity.pdf.hash;
   }
@@ -182,7 +181,7 @@ export default class FileService {
     const entityRepo = getRepository(entity.constructor as new () => T);
     const entityPdf = getRepository(PdfType);
 
-    const hash = entity.getPdfParamHash();
+    const hash = await entity.getPdfParamHash();
     if (pdf == null) {
       pdf = Object.assign(new PdfType(), {
         downloadName: '',

@@ -140,7 +140,7 @@ describe('InvoicePdfService', async (): Promise<void> => {
     it('should return true if the PDF hash matches the expected hash', async () => {
       const invoice = ctx.invoices[0];
       const pdf = new InvoicePdf();
-      pdf.hash = invoice.getPdfParamHash();
+      pdf.hash = await invoice.getPdfParamHash();
       invoice.pdf = pdf;
 
       const result = FileService.validatePdfHash(invoice);

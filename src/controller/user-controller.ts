@@ -41,7 +41,7 @@ import UserService, {
   parseGetUsersFilters,
   UserFilterParameters,
 } from '../service/user-service';
-import { asFromAndTillDate, asNumber } from '../helpers/validators';
+import { asFromAndTillDate, asNumber, asReturnFileType } from '../helpers/validators';
 import { verifyCreateUserRequest } from './request/validators/user-request-spec';
 import userTokenInOrgan from '../helpers/token-helper';
 import { parseUserToResponse } from '../helpers/revision-to-response';
