@@ -15,8 +15,8 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { Language, MailLanguageMap } from '../mail-message';
-import User from '../../entity/user/user';
+import { Language, MailLanguageMap } from './mail-message';
+import User from '../entity/user/user';
 import fs from 'fs';
 import path from 'path';
 
@@ -49,7 +49,7 @@ export default class MailBodyGenerator<T> {
   private readonly template: string;
 
   constructor(private language: Language) {
-    this.template = fs.readFileSync(path.join(__dirname, './template.html')).toString();
+    this.template = fs.readFileSync(path.join(__dirname, '../../static/mailer/template.html')).toString();
   }
 
   /**

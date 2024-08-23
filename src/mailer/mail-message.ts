@@ -18,7 +18,7 @@
 
 import Mail from 'nodemailer/lib/mailer';
 import MailContentBuilder from './messages/mail-content-builder';
-import MailBodyGenerator from './template/mail-body-generator';
+import MailBodyGenerator from './mail-body-generator';
 import User from '../entity/user/user';
 
 export enum Language {
