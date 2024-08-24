@@ -376,7 +376,7 @@ describe('InvoiceController', async () => {
     });
     it('should not create an Invoice with only custom entries and return an HTTP 400 if admin', async () => {
       await inUserContext(await (await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
-        const count = await Invoice.count();
+        await Invoice.count();
         const newRequest: CreateInvoiceRequest = {
           ...ctx.validInvoiceRequest,
           forId: debtor.id,
@@ -451,7 +451,7 @@ describe('InvoiceController', async () => {
     it('should NOT create an Invoice with custom entries and return an HTTP 400 if admin', async () => {
       await inUserContext(await (await UserFactory()).clone(2),
         async (debtor: User, creditor: User) => {
-          const count = await Invoice.count();
+          await Invoice.count();
           const newRequest: CreateInvoiceRequest = {
             ...ctx.validInvoiceRequest,
             forId: debtor.id,
