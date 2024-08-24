@@ -374,7 +374,7 @@ describe('InvoiceController', async () => {
     describe('verifyInvoiceRequest Specification', async () => {
       await testValidationOnRoute('post', '/invoices');
     });
-    it('should create an Invoice with only custom entries and return an HTTP 200 if admin', async () => {
+    it('should not create an Invoice with only custom entries and return an HTTP 400 if admin', async () => {
       await inUserContext(await (await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
         const count = await Invoice.count();
         const newRequest: CreateInvoiceRequest = {
@@ -399,15 +399,7 @@ describe('InvoiceController', async () => {
           .set('Authorization', `Bearer ${ctx.adminToken}`)
           .send(newRequest);
 
-        expect(res.status).to.equal(200);
-        expect(await Invoice.count()).to.equal(count + 1);
-        const validation = ctx.specification.validateModel(
-          'InvoiceResponse',
-          res.body,
-          false,
-          true,
-        );
-        expect(validation.valid).to.be.true;
+        expect(res.status).to.equal(400);
       });
     });
     it('should return an HTTP 403 if not admin', async () => {
@@ -456,7 +448,7 @@ describe('InvoiceController', async () => {
           expect(res.status).to.equal(200);
         });
     });
-    it('should create an Invoice with custom entries and return an HTTP 200 if admin', async () => {
+    it('should NOT create an Invoice with custom entries and return an HTTP 400 if admin', async () => {
       await inUserContext(await (await UserFactory()).clone(2),
         async (debtor: User, creditor: User) => {
           const count = await Invoice.count();
@@ -481,17 +473,7 @@ describe('InvoiceController', async () => {
             .post('/invoices')
             .set('Authorization', `Bearer ${ctx.adminToken}`)
             .send(newRequest);
-          expect(res.status).to.equal(200);
-
-          expect(await Invoice.count()).to.equal(count + 1);
-          expect(((res.body) as InvoiceResponse).invoiceEntries[0].description)
-            .to.equal(newRequest.customEntries[0].description);
-          expect(((res.body) as InvoiceResponse).invoiceEntries[0].amount)
-            .to.equal(newRequest.customEntries[0].amount);
-          expect(((res.body) as InvoiceResponse).invoiceEntries[0].priceInclVat.amount)
-            .to.equal(newRequest.customEntries[0].priceInclVat.amount);
-
-          expect(res.status).to.equal(200);
+          expect(res.status).to.equal(400);
         });
     });
     it('should filter on invoice status', async () => {
