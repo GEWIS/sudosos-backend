@@ -65,14 +65,6 @@ export default class Invoice extends BaseEntity {
     { cascade: true, eager: true })
   public invoiceEntries: InvoiceEntry[];
 
-  // TODO drop during migration
-  // /**
-  //  * The current status of the invoice
-  //  */
-  // @OneToOne(() => InvoiceStatus, { nullable: true, eager: false })
-  // @JoinColumn({ name: 'latestStatusId' })
-  // public latestStatus?: InvoiceStatus;
-
   /**
    * The status history of the invoice
    */
@@ -148,8 +140,6 @@ export default class Invoice extends BaseEntity {
   @Column({ nullable: true })
   public creditTransferId?: number;
 
-  // TODO: create during migration
-  //   ADD TEST CASES
   /**
    * If this invoice is deleted, this will be credit transfer.
    */
