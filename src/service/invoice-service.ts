@@ -97,7 +97,6 @@ export function parseInvoiceFilterParameters(req: RequestWithToken): InvoiceFilt
   };
 }
 
-// TODO: delete the 'balanced' invariant from invoices.
 
 export default class InvoiceService {
 
@@ -146,6 +145,10 @@ export default class InvoiceService {
     } as InvoiceStatusResponse;
   }
 
+  static getLatestInvoiceStatus(invoiceStatus: InvoiceStatus[]): InvoiceStatus {
+    return invoiceStatus.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0];
+  }
+
   /**
    * Parses an Invoice Object to a BaseInvoiceResponse
    * @param invoice - The Invoice to parse
@@ -165,7 +168,7 @@ export default class InvoiceService {
       transfer: invoice.transfer ? TransferService.asTransferResponse(invoice.transfer) : undefined,
       description: invoice.description,
       pdf: invoice.pdf ? invoice.pdf.downloadName : undefined,
-      currentState: InvoiceService.asInvoiceStatusResponse(invoice.invoiceStatus[invoice.invoiceStatus.length - 1]),
+      currentState: InvoiceService.asInvoiceStatusResponse(InvoiceService.getLatestInvoiceStatus(invoice.invoiceStatus)),
       city: invoice.city,
       country: invoice.country,
       postalCode: invoice.postalCode,
@@ -512,9 +515,11 @@ export default class InvoiceService {
       const subTransactions = transactions.flatMap((t) => t.subTransactions);
       await this.setSubTransactionInvoice(newInvoice, subTransactions);
 
-      if (invoiceRequest.customEntries) {
-        await this.AddCustomEntries(newInvoice, invoiceRequest.customEntries);
-      }
+      // IGNORED UNTIL REMOVED
+      // TODO: Refactor at a later state.
+      // if (invoiceRequest.customEntries) {
+      //   await this.AddCustomEntries(newInvoice, invoiceRequest.customEntries);
+      // }
     });
 
     const options = InvoiceService.getOptions({ invoiceId: newInvoice.id, returnInvoiceEntries: true });
