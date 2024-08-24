@@ -389,7 +389,7 @@ describe('SellerPayoutService', () => {
       const id = (await SellerPayout.count()) + 41;
       expect(await SellerPayout.findOne({ where: { id } })).to.be.null;
       const service = new SellerPayoutService();
-      await expect(service.updateSellerPayout(id, { amount: ctx.sellerPayouts[0].amount.toObject() }))
+      await expect(await service.updateSellerPayout(id, { amount: ctx.sellerPayouts[0].amount.toObject() }))
         .to.eventually.be.rejectedWith(`Payout with ID "${id}" not found.`);
     });
   });

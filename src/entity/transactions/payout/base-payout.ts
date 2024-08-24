@@ -36,4 +36,8 @@ export default class BasePayout extends BaseEntity {
     transformer: DineroTransformer.Instance,
   })
   public amount: Dinero;
+
+  async getOwner(): Promise<User> {
+    return this.requestedBy;
+  }
 }

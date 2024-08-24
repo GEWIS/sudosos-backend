@@ -80,6 +80,15 @@ export function userToIdentity(user: User): Identity {
   });
 }
 
+export function emptyIdentity(): Identity {
+  return new Identity({
+    lastNamePreposition: UNUSED_PARAM,
+    firstName: UNUSED_PARAM,
+    lastName: UNUSED_PARAM,
+    fullName: UNUSED_PARAM,
+  });
+}
+
 /**
  * Convert report product entry to product for PDF
  * @param entry

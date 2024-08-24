@@ -73,7 +73,9 @@ import { getToken, SeededRole, seedRoles } from '../../seed/rbac';
 import { createTransactions } from '../../helpers/transaction-factory';
 import { ReportResponse } from '../../../src/controller/response/report-response';
 import sinon, { SinonStub } from 'sinon';
-import ReportPdfService from '../../../src/service/report-pdf-service';
+import UserReportPdfService from '../../../src/service/pdf/user-report-pdf-service';
+import { Client } from 'pdf-generator-client';
+import { BasePdfService } from '../../../src/service/pdf/pdf-service';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -2267,21 +2269,22 @@ describe('UserController', (): void => {
     });
   });
   describe('GET pdf', () => {
-    let generateReportStub: SinonStub;
+    let clientStub: sinon.SinonStubbedInstance<Client>;
 
     function resolveSuccessful() {
-      generateReportStub.resolves({
+      clientStub.generateUserReport.resolves({
         data: new Blob(),
         status: 200,
       });
     }
 
-    beforeEach(function () {
-      generateReportStub = sinon.stub(ReportPdfService.client, 'generateUserReport');
+    beforeEach(() => {
+      clientStub = sinon.createStubInstance(Client);
+      sinon.stub(BasePdfService, 'getClient').returns(clientStub);
     });
 
-    afterEach(function () {
-      generateReportStub.restore();
+    afterEach(() => {
+      sinon.restore();
     });
 
     describe('GET /users/{id}/transactions/sales/report/pdf', () => {
@@ -2298,7 +2301,7 @@ describe('UserController', (): void => {
         expect(res.status).to.equal(200);
       });
       it('should return 500 if pdf generation fails', async () => {
-        generateReportStub.rejects(new Error('Failed to generate PDF'));
+        clientStub.generateUserReport.rejects(new Error('Failed to generate PDF'));
         const id = 1;
         const parameters = { fromDate: '2021-01-01', tillDate: '2021-12-31' };
         const user = await User.findOne({ where: { id } });
@@ -2391,7 +2394,7 @@ describe('UserController', (): void => {
         expect(res.status).to.equal(200);
       });
       it('should return 500 if pdf generation fails', async () => {
-        generateReportStub.rejects(new Error('Failed to generate PDF'));
+        clientStub.generateUserReport.rejects(new Error('Failed to generate PDF'));
         const id = 1;
         const parameters = { fromDate: '2021-01-01', tillDate: '2021-12-31' };
         const user = await User.findOne({ where: { id } });

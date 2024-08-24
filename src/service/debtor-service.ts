@@ -22,7 +22,7 @@ import DineroTransformer from '../entity/transformer/dinero-transformer';
 import dinero, { Dinero, DineroObject } from 'dinero.js';
 import {
   BaseFineHandoutEventResponse,
-  FineHandoutEventResponse, FineReport, FineReportResponse, FineResponse,
+  FineHandoutEventResponse, FineResponse,
   PaginatedFineHandoutEventResponse, UserFineGroupResponse,
   UserToFineResponse,
 } from '../controller/response/debtor-response';
@@ -40,6 +40,7 @@ import Mailer from '../mailer';
 import UserGotFined from '../mailer/messages/user-got-fined';
 import MailMessage from '../mailer/mail-message';
 import UserWillGetFined from '../mailer/messages/user-will-get-fined';
+import { FineReport } from '../entity/report/fine-report';
 
 export interface CalculateFinesParams {
   userTypes?: UserType[];
@@ -377,24 +378,12 @@ export default class DebtorService {
       }
     });
 
-    return {
+    return new FineReport({
       fromDate,
       toDate,
       ...count,
       handedOut,
       waivedAmount,
-    };
+    });
   }
-
-  public static fineReportToResponse(report: FineReport): FineReportResponse {
-    return {
-      fromDate: report.fromDate.toISOString(),
-      toDate: report.toDate.toISOString(),
-      count: report.count,
-      handedOut: report.handedOut.toObject(),
-      waivedCount: report.waivedCount,
-      waived: report.waivedAmount.toObject(),
-    };
-  }
-
 }
