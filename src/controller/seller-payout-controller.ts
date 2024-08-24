@@ -62,6 +62,12 @@ export default class SellerPayoutController extends BaseController {
           handler: this.deleteSellerPayout.bind(this),
         },
       },
+      '/:id(\\d+)/pdf': {
+        GET: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'SellerPayout', ['*']),
+          handler: this.getSellerPayoutPdf.bind(this),
+        },
+      },
     };
   }
 
@@ -252,6 +258,39 @@ export default class SellerPayoutController extends BaseController {
       res.status(204).json(null);
     } catch (error) {
       this.logger.error('Could not delete seller payout:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * GET /seller-payouts/{id}/pdf
+   * @summary Get a single seller payout as PDF
+   * @operationId getSingleSellerPayoutPdf
+   * @tags sellerPayouts - Operations of the seller payout controller
+   * @security JWT
+   * @param {integer} id.path.required - ID of the seller payout that should be returned
+   * @param {boolean} force.query - Force the creation of the PDF even if it already exists, defaults to false
+   * @return {string} 200 - The requested seller payout as PDF
+   * @return {string} 404 - Seller payout not found
+   * @return {string} 500 - Internal server error
+   */
+  public async getSellerPayoutPdf(req: RequestWithToken, res: Response): Promise<void> {
+    this.logger.trace('Get single seller payout pdf with ID', req.params.id, 'by user', req.token.user);
+
+    try {
+      const id = Number(req.params.id);
+      const force = req.query.force === 'true';
+      const service = new SellerPayoutService();
+      const [[sellerPayout]] = await service.getSellerPayouts({ sellerPayoutId: id });
+      if (!sellerPayout) {
+        res.status(404).json('Seller Payout not found.');
+        return;
+      }
+
+      const pdf = await sellerPayout.getOrCreatePdf(force);
+      res.status(200).json({ pdf: pdf.downloadName });
+    } catch (error) {
+      this.logger.error('Could not get seller payout pdf:', error);
       res.status(500).json('Internal server error.');
     }
   }

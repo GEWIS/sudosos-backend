@@ -69,6 +69,7 @@ import EventService from './service/event-service';
 import DefaultRoles from './rbac/default-roles';
 import WriteOffController from './controller/write-off-controller';
 import ServerSettingsStore from './server-settings/server-settings-store';
+import SellerPayoutController from './controller/seller-payout-controller';
 
 export class Application {
   app: express.Express;
@@ -290,6 +291,7 @@ export default async function createApp(): Promise<Application> {
   application.app.use('/v1/invoices', new InvoiceController(options).getRouter());
   application.app.use('/v1/containers', new ContainerController(options).getRouter());
   application.app.use('/v1/writeoffs', new WriteOffController(options).getRouter());
+  application.app.use('/v1/seller-payouts', new SellerPayoutController(options).getRouter());
   if (process.env.NODE_ENV === 'development') {
     application.app.use('/v1/files', new SimpleFileController(options).getRouter());
     application.app.use('/v1/test', new TestController(options).getRouter());
