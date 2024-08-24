@@ -44,7 +44,7 @@ export default class TransactionSubscriber implements EntitySubscriberInterface 
     }
 
     const user = await event.manager.findOne(User, { where: { id: entity.from.id } });
-    const balance = await BalanceService.getBalance(user.id);
+    const balance = await new BalanceService().getBalance(user.id);
 
     let currentBalance = balance.amount.amount;
     if (balance.lastTransactionId < event.entity.id) {
@@ -61,7 +61,7 @@ export default class TransactionSubscriber implements EntitySubscriberInterface 
     if (currentBalance >= 0) return;
     // User is now in debt
 
-    const balanceBefore = await BalanceService.getBalance(
+    const balanceBefore = await new BalanceService().getBalance(
       user.id,
       new Date(entity.createdAt.getTime() - 1),
     );

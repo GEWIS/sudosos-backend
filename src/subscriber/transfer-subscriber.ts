@@ -33,7 +33,7 @@ export default class TransferSubscriber implements EntitySubscriberInterface {
     const user = await event.manager.findOne(User, { where: { id: event.entity.toId }, relations: ['currentFines'] });
     if (user.currentFines == null) return;
 
-    const balance = await BalanceService.getBalance(user.id);
+    const balance = await new BalanceService().getBalance(user.id);
 
     // If the new transfer is not included in the balance calculation, add it manually
     let currentBalance = balance.amount.amount;

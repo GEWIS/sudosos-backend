@@ -142,13 +142,13 @@ createInvoiceWithTransfers(debtorId: number, creditorId: number,
     transactionIDs: transactions.map((t) => t.tId),
   };
 
-  const creditorBalance = await BalanceService.getBalance(creditorId);
+  const creditorBalance = await new BalanceService().getBalance(creditorId);
 
   const invoice = await AppDataSource.manager.transaction(async (manager) => {
     return new InvoiceService(manager).createInvoice(createInvoiceRequest);
   });
-  expect((await BalanceService.getBalance(debtorId)).amount.amount).is.equal(0);
-  expect((await BalanceService.getBalance(creditorId)).amount.amount).is.equal(creditorBalance.amount.amount);
+  expect((await new BalanceService().getBalance(debtorId)).amount.amount).is.equal(0);
+  expect((await new BalanceService().getBalance(creditorId)).amount.amount).is.equal(creditorBalance.amount.amount);
   return invoice;
 }
 
@@ -346,7 +346,7 @@ describe('InvoiceService', () => {
           });
           expect(invoice.transfer.amountInclVat.getAmount()).is.equal(total);
           expect(
-            (await BalanceService.getBalance(debtor.id)).amount.amount,
+            (await new BalanceService().getBalance(debtor.id)).amount.amount,
           ).is.equal(-1 * transactionsBeforeDate.total);
         },
       );
@@ -421,7 +421,7 @@ describe('InvoiceService', () => {
             return new InvoiceService(manager).createInvoice(createInvoiceRequest);
           });
           expect(
-            (await BalanceService.getBalance(debtor.id)).amount.amount,
+            (await new BalanceService().getBalance(debtor.id)).amount.amount,
           ).is.equal(0);
           const linkedTransactions = await Transaction.find({
             where: {
@@ -677,7 +677,7 @@ describe('InvoiceService', () => {
 
           // Check if the balance has been decreased
           expect(
-            (await BalanceService.getBalance(debtor.id)).amount.amount,
+            (await new BalanceService().getBalance(debtor.id)).amount.amount,
           ).is.equal(-1 * invoice.transfer.amountInclVat.getAmount());
         },
       );

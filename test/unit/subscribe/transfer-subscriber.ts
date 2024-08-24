@@ -86,7 +86,7 @@ describe('TransferSubscriber', (): void => {
 
       const debt = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers).amount;
       expect(debt.getAmount()).to.be.lessThan(0);
-      expect((await BalanceService.getBalance(user.id)).amount.amount).to.equal(debt.getAmount());
+      expect((await new BalanceService().getBalance(user.id)).amount.amount).to.equal(debt.getAmount());
 
       const { fines } = await DebtorService.handOutFines({ userIds: [user.id], referenceDate: new Date() }, ctx.users[0]);
       const fine = await Fine.findOne({
@@ -102,11 +102,11 @@ describe('TransferSubscriber', (): void => {
       // Positive number to be added
       const transferAmount = debt.subtract(fine.amount).multiply(-1);
       // Sanity check
-      expect((await BalanceService.getBalance(user.id)).amount.amount).to.equal(transferAmount.getAmount() * -1);
+      expect((await new BalanceService().getBalance(user.id)).amount.amount).to.equal(transferAmount.getAmount() * -1);
 
       await addTransfer(user, [], true, undefined, transferAmount.getAmount());
 
-      const newBalance = await BalanceService.getBalance(user.id);
+      const newBalance = await new BalanceService().getBalance(user.id);
       expect(newBalance.amount.amount).to.equal(0);
       dbUser = await User.findOne({ where: { id: user.id }, relations: ['currentFines'] });
       expect(dbUser.currentFines).to.be.null;
@@ -116,7 +116,7 @@ describe('TransferSubscriber', (): void => {
       expect(user).to.not.be.undefined;
 
       const debt = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers).amount;
-      expect((await BalanceService.getBalance(user.id)).amount.amount).to.equal(debt.getAmount());
+      expect((await new BalanceService().getBalance(user.id)).amount.amount).to.equal(debt.getAmount());
 
       const { fines } = await DebtorService.handOutFines({ userIds: [user.id], referenceDate: new Date() }, ctx.users[0]);
       const fine = await Fine.findOne({
@@ -134,11 +134,11 @@ describe('TransferSubscriber', (): void => {
         .multiply(-1)
         .subtract(dinero({ amount: 1 }));
       // Sanity check
-      expect((await BalanceService.getBalance(user.id)).amount.amount).to.be.lessThan(transferAmount.getAmount() * -1);
+      expect((await new BalanceService().getBalance(user.id)).amount.amount).to.be.lessThan(transferAmount.getAmount() * -1);
 
       await addTransfer(user, [], true, undefined, transferAmount.getAmount());
 
-      const newBalance = await BalanceService.getBalance(user.id);
+      const newBalance = await new BalanceService().getBalance(user.id);
       expect(newBalance.amount.amount).to.be.lessThan(0);
       dbUser = await User.findOne({ where: { id: user.id }, relations: ['currentFines'] });
       expect(dbUser.currentFines).to.not.be.null;
@@ -148,7 +148,7 @@ describe('TransferSubscriber', (): void => {
       expect(user).to.not.be.undefined;
 
       const debt = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers).amount;
-      expect((await BalanceService.getBalance(user.id)).amount.amount).to.equal(debt.getAmount());
+      expect((await new BalanceService().getBalance(user.id)).amount.amount).to.equal(debt.getAmount());
 
       const { fines } = await DebtorService.handOutFines({ userIds: [user.id], referenceDate: new Date() }, ctx.users[0]);
       const fine = await Fine.findOne({
@@ -164,11 +164,11 @@ describe('TransferSubscriber', (): void => {
       // Positive number to be added, but not enough to pay the full debt
       const transferAmount = debt.subtract(fine.amount);
       // Sanity check
-      expect((await BalanceService.getBalance(user.id)).amount.amount).to.equal(transferAmount.getAmount());
+      expect((await new BalanceService().getBalance(user.id)).amount.amount).to.equal(transferAmount.getAmount());
 
       await addTransfer(user, [], false, undefined, transferAmount.getAmount());
 
-      const newBalance = await BalanceService.getBalance(user.id);
+      const newBalance = await new BalanceService().getBalance(user.id);
       expect(newBalance.amount.amount).to.be.greaterThanOrEqual(0);
       dbUser = await User.findOne({ where: { id: user.id }, relations: ['currentFines'] });
       expect(dbUser.currentFines).to.not.be.null;
