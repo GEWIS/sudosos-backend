@@ -15,12 +15,35 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import PointOfSaleRevision from '../point-of-sale/point-of-sale-revision';
+import Dinero from 'dinero.js';
 import ProductRevision from '../product/product-revision';
 import VatGroup from '../vat-group';
 import ProductCategory from '../product/product-category';
+import PointOfSaleRevision from '../point-of-sale/point-of-sale-revision';
 import ContainerRevision from '../container/container-revision';
-import Dinero from 'dinero.js';
+import { UnstoredPdfAble } from '../file/pdf-able';
+import UserReportPdfService from '../../service/pdf/user-report-pdf-service';
+import { UserReportParametersType } from 'pdf-generator-client';
+
+export interface IReport {
+  forId: number;
+
+  fromDate: Date;
+
+  tillDate: Date;
+
+  totalExclVat: Dinero.Dinero;
+
+  totalInclVat: Dinero.Dinero;
+
+  data: ReportData;
+}
+
+export class Report implements IReport {
+  constructor(init?: Partial<IReport>) {
+    Object.assign(this, init);
+  }
+}
 
 export interface ReportEntry {
   totalExclVat: Dinero.Dinero,
@@ -65,8 +88,13 @@ export interface Report {
   totalInclVat: Dinero.Dinero,
 }
 
-export interface SalesReport extends Report {
+
+export class SalesReport extends UnstoredPdfAble(Report) {
+  pdfService = new UserReportPdfService(UserReportParametersType.Sales);
+
+  description: string;
 }
 
-export interface BuyerReport extends Report {
+export class BuyerReport extends UnstoredPdfAble(Report) {
+  pdfService = new UserReportPdfService(UserReportParametersType.Purchases);
 }

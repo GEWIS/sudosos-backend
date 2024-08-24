@@ -38,7 +38,6 @@ import User, { UserType } from '../entity/user/user';
 import { UpdateInvoiceUserRequest } from './request/user-request';
 import InvoiceUser from '../entity/user/invoice-user';
 import { parseInvoiceUserToResponse } from '../helpers/revision-to-response';
-import FileService from '../service/file-service';
 import { AppDataSource } from '../database/database';
 import { NotImplementedError } from '../errors';
 
@@ -358,7 +357,7 @@ export default class InvoiceController extends BaseController {
         return;
       }
 
-      const pdf = await FileService.getOrCreatePDF(invoice);
+      const pdf = await invoice.getOrCreatePdf();
 
       res.status(200).json({ pdf: pdf.downloadName });
     } catch (error) {

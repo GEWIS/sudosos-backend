@@ -113,6 +113,7 @@ export default class SellerPayoutService {
       tillDate: params.endDate,
       forId: params.requestedById,
     });
+
     const amount = report.totalInclVat;
 
     const transfer = await new TransferService().createTransfer({

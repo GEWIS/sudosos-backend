@@ -18,9 +18,6 @@
 
 import { Column, Entity } from 'typeorm';
 import BaseFile from './base-file';
-import BaseEntity from '../base-entity';
-import { Client } from 'pdf-generator-client';
-import FileService from '../../service/file-service';
 
 /**
  * @typedef {BaseFile} Pdf
@@ -33,13 +30,3 @@ export default class Pdf extends BaseFile {
   public hash: string;
 }
 
-export interface Pdfable<S extends Pdf = Pdf> extends BaseEntity {
-  pdf?: S,
-  getPdfParamHash: () => Promise<string>,
-  createPDF: () => Promise<S>
-}
-
-export interface PdfGenerator {
-  client: Client,
-  fileService: FileService
-}

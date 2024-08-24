@@ -27,9 +27,9 @@ import Product from '../entity/product/product';
 import ProductImage from '../entity/file/product-image';
 import Banner from '../entity/banner';
 import BannerImage from '../entity/file/banner-image';
-import InvoicePdf from '../entity/file/invoice-pdf';
-import Pdf, { Pdfable } from '../entity/file/pdf-file';
+import Pdf from '../entity/file/pdf-file';
 import { getRepository } from 'typeorm';
+import { IPdfAble } from '../entity/file/pdf-able';
 
 /**
  *  Possible storage methods that can be used
@@ -140,32 +140,6 @@ export default class FileService {
     await BaseFile.delete(file.id);
   }
 
-  /**
-   * Retrieves or creates a PDF representation of an entity. If a PDF already exists and the `force` parameter is not set, it will return the existing PDF after validating its hash.
-   * If the hash validation fails or `force` is set to `true`, it generates a new PDF.
-   *
-   * @param Type
-   * @param {T} entity - The entity to generate the PDF for.
-   * @param {boolean} [force=false] - Whether to force regeneration of the entity PDF, ignoring any existing ones.
-   * @returns {Promise<SimpleFileResponse>} A promise that resolves to the file response representing the entity PDF.
-   */
-  public static async getOrCreatePDF<T extends Pdfable>(entity: T, force: boolean = false): Promise<InvoicePdf> {
-    if (!entity) return undefined;
-
-    if (entity.pdf && !force) {
-      // check if pdf is current.
-      if (await this.validatePdfHash(entity)) return entity.pdf;
-    }
-
-    return Promise.resolve(await entity.createPDF());
-  }
-
-  static async validatePdfHash<T extends Pdfable>(entity: T): Promise<boolean> {
-    if (!entity.pdf) return false;
-    const hash = await entity.getPdfParamHash();
-
-    return hash === entity.pdf.hash;
-  }
 
   /**
    * Upload a pdf file
@@ -175,7 +149,7 @@ export default class FileService {
    * @param createdBy - The user that created the file
    * @param hash - The hash of the file params
    */
-  public async uploadPdf<T extends Pdfable<S>, S extends Pdf>(entity: T, PdfType: new () => S, fileData: Buffer, createdBy: User): Promise<InvoicePdf> {
+  public async uploadPdf<T extends IPdfAble<S>, S extends Pdf>(entity: T, PdfType: new () => S, fileData: Buffer, createdBy: User): Promise<S> {
     let pdf = entity.pdf;
 
     const entityRepo = getRepository(entity.constructor as new () => T);

@@ -16,27 +16,27 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { FineReport } from '../../../src/controller/response/debtor-response';
 import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
-import ReportPdfService from '../../../src/service/report-pdf-service';
 import { expect } from 'chai';
 import { PDF_VAT_HIGH } from '../../../src/helpers/pdf';
 import { Product } from 'pdf-generator-client';
 import sinon, { SinonStub } from 'sinon';
+import { FineReport } from '../../../src/entity/report/fine-report';
+import FineReportPdfService from '../../../src/service/pdf/report-pdf-service';
 
 describe('ReportPdfService', () => {
   describe('fineReportToParameters', () => {
-    it('should convert fine report to parameters', () => {
-      const report: FineReport = {
+    it('should convert fine report to parameters', async () => {
+      const report: FineReport = new FineReport({
         fromDate: new Date('2022-01-01'),
         toDate: new Date('2022-12-31'),
         count: 10,
         handedOut: DineroTransformer.Instance.from(200),
         waivedCount: 5,
         waivedAmount: DineroTransformer.Instance.from(100),
-      };
+      });
 
-      const reportParams = ReportPdfService.fineReportToParameters(report);
+      const reportParams = await report.pdfService.getParameters(report);
       expect(reportParams.startDate).to.eq(report.fromDate);
       expect(reportParams.endDate).to.eq(report.toDate);
       expect(reportParams.fines.length).to.eq(2);
@@ -55,31 +55,31 @@ describe('ReportPdfService', () => {
 
       expect(waived.pricing.quantity).to.eq(report.waivedCount);
     });
-    it('should return params with a total value of 0 if handed out equals waived', () => {
-      const report: FineReport = {
+    it('should return params with a total value of 0 if handed out equals waived', async () => {
+      const report: FineReport = new FineReport({
         fromDate: new Date('2022-01-01'),
         toDate: new Date('2022-12-31'),
         count: 10,
         handedOut: DineroTransformer.Instance.from(100),
         waivedCount: 10,
         waivedAmount: DineroTransformer.Instance.from(100),
-      };
+      });
 
-      const reportParams = ReportPdfService.fineReportToParameters(report);
+      const reportParams = await report.pdfService.getParameters(report);
       expect(reportParams.total.inclVat).to.eq(0);
       expect(reportParams.total.exclVat).to.eq(0);
     });
-    it('should return parameters without waived fines', () => {
-      const report: FineReport = {
+    it('should return parameters without waived fines', async () => {
+      const report: FineReport = new FineReport({
         fromDate: new Date('2022-01-01'),
         toDate: new Date('2022-12-31'),
         count: 10,
         handedOut: DineroTransformer.Instance.from(100),
         waivedCount: 0,
         waivedAmount: DineroTransformer.Instance.from(0),
-      };
+      });
 
-      const reportParams = ReportPdfService.fineReportToParameters(report);
+      const reportParams = await report.pdfService.getParameters(report);
       expect(reportParams.fines.length).to.eq(1);
     });
   });
@@ -87,8 +87,10 @@ describe('ReportPdfService', () => {
 
     let generateFineReportStub: SinonStub;
 
+    let pdfService = new FineReportPdfService();
+
     beforeEach(function () {
-      generateFineReportStub = sinon.stub(ReportPdfService.client, 'generateFineReport');
+      generateFineReportStub = sinon.stub(pdfService.client, 'generateFineReport');
     });
 
     afterEach(function () {
@@ -101,31 +103,33 @@ describe('ReportPdfService', () => {
         status: 200,
       });
 
-      const report: FineReport = {
+      const report: FineReport = new FineReport({
         fromDate: new Date('2022-01-01'),
         toDate: new Date('2022-12-31'),
         count: 10,
         handedOut: DineroTransformer.Instance.from(200),
         waivedCount: 5,
         waivedAmount: DineroTransformer.Instance.from(100),
-      };
+      });
+      report.pdfService = pdfService;
 
-      const pdf = await ReportPdfService.getFineReportPdf(report);
+      const pdf = await report.createPdf();
       expect(pdf).to.not.be.undefined;
     });
     it('should throw an error if PDF generation fails', async () => {
       generateFineReportStub.rejects(new Error('Failed to generate PDF'));
 
-      const report: FineReport = {
+      const report: FineReport = new FineReport({
         fromDate: new Date('2022-01-01'),
         toDate: new Date('2022-12-31'),
         count: 10,
         handedOut: DineroTransformer.Instance.from(200),
         waivedCount: 5,
         waivedAmount: DineroTransformer.Instance.from(100),
-      };
+      });
+      report.pdfService = pdfService;
 
-      await expect(ReportPdfService.getFineReportPdf(report)).to.be.rejectedWith();
+      await expect(report.createPdf()).to.be.rejectedWith();
     });
   });
 });

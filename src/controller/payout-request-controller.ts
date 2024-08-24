@@ -29,7 +29,6 @@ import { PayoutRequestState } from '../entity/transactions/payout/payout-request
 import PayoutRequestRequest from './request/payout-request-request';
 import User from '../entity/user/user';
 import BalanceService from '../service/balance-service';
-import FileService from '../service/file-service';
 import { PdfUrlResponse } from './response/simple-file-response';
 
 export default class PayoutRequestController extends BaseController {
@@ -290,7 +289,7 @@ export default class PayoutRequestController extends BaseController {
         return;
       }
 
-      const pdf = await FileService.getOrCreatePDF(payoutRequest);
+      const pdf = await payoutRequest.getOrCreatePdf();
 
       res.status(200).json({ pdf: pdf.downloadName } as PdfUrlResponse);
     } catch (error) {

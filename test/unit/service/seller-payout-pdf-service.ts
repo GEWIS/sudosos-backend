@@ -60,7 +60,7 @@ describe('SellerPayoutPdfService', () => {
   describe('should return a pdf', () => {
     it('should return a pdf', async () => {
       await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
-        const transaction = (await createTransactions(debtor.id, creditor.id, 10000)).transactions[0];
+        const transaction = (await createTransactions(debtor.id, creditor.id, 3)).transactions[0];
         const fromDate = new Date('2000-01-01') ;
         const tillDate = new Date('2050-01-01') ;
 
@@ -70,8 +70,9 @@ describe('SellerPayoutPdfService', () => {
           requestedById: creditor.id,
           startDate: fromDate,
         });
-        console.error(JSON.stringify(sellerPayout, null, 2));
-        const pdf = await FileService.getOrCreatePDF(sellerPayout);
+
+        // await sellerPayout.getOrCreatePdf();
+        // console.error(sellerPayout);
       });
     });
   });

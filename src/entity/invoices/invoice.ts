@@ -28,13 +28,15 @@ import InvoiceEntry from './invoice-entry';
 // eslint-disable-next-line import/no-cycle
 import InvoiceStatus from './invoice-status';
 import InvoicePdf from '../file/invoice-pdf';
+import InvoicePdfService from '../../service/pdf/invoice-pdf-service';
+import { PdfAble } from '../file/pdf-able';
+import { INVOICE_PDF_LOCATION } from '../../files/storage';
 import { hashJSON } from '../../helpers/hash';
-import InvoicePdfService from '../../service/invoice-pdf-service';
 import SubTransactionRow from '../transactions/sub-transaction-row';
 
 
 @Entity()
-export default class Invoice extends BaseEntity {
+export default class Invoice extends PdfAble(BaseEntity) {
 
   /**
    * The ID of the account for whom the invoice is
@@ -159,11 +161,9 @@ export default class Invoice extends BaseEntity {
   @OneToMany(() => SubTransactionRow, (row) => row.invoice, { cascade: false })
   public subTransactionRows: SubTransactionRow[];
 
-  async getPdfParamHash(): Promise<string> {
-    return hashJSON(InvoicePdfService.getParameters(this));
-  }
+  pdfService = new InvoicePdfService(INVOICE_PDF_LOCATION);
 
-  createPDF(): Promise<InvoicePdf> {
-    return InvoicePdfService.createPdf(this.id);
+  async getOwner(): Promise<User> {
+    return this.to;
   }
 }

@@ -17,13 +17,13 @@
  */
 import BasePayout from './base-payout';
 import { Column, Entity, JoinColumn, OneToOne } from 'typeorm';
-import PayoutRequestPdf from '../../file/payout-request-pdf';
-import { hashJSON } from '../../../helpers/hash';
 import SellerPayoutPdf from '../../file/seller-payout-pdf';
-import SellerPayoutPdfService from '../../../service/seller-payout-pdf-service';
+import SellerPayoutPdfService from '../../../service/pdf/seller-payout-pdf-service';
+import { PdfAble } from '../../file/pdf-able';
+import { SELLER_PAYOUT_PDF_LOCATION } from '../../../files/storage';
 
 @Entity()
-export default class SellerPayout extends BasePayout {
+export default class SellerPayout extends PdfAble(BasePayout) {
   @Column({ type: 'datetime', nullable: false })
   public startDate: Date;
 
@@ -40,11 +40,5 @@ export default class SellerPayout extends BasePayout {
   @JoinColumn()
   public pdf?: SellerPayoutPdf;
 
-  async getPdfParamHash(): Promise<string> {
-    return hashJSON(await SellerPayoutPdfService.getParameters(this));
-  }
-
-  async createPDF(): Promise<PayoutRequestPdf> {
-    return SellerPayoutPdfService.createPdf(this.id);
-  }
+  pdfService = new SellerPayoutPdfService(SELLER_PAYOUT_PDF_LOCATION);
 }
