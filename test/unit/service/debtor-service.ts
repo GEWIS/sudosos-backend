@@ -201,7 +201,7 @@ describe('DebtorService', (): void => {
       newUser = await newUser.save();
       const { transfer } = await addTransfer(newUser, ctx.users, false, undefined, 500);
 
-      const balance = await BalanceService.getBalance(newUser.id);
+      const balance = await new BalanceService().getBalance(newUser.id);
       expect(balance.amount.amount).to.equal(-500);
 
       const fines = await DebtorService.calculateFinesOnDate({
@@ -319,7 +319,7 @@ describe('DebtorService', (): void => {
 
       let dbUser = await User.findOne({ where: { id: userFineGroup.userId }, relations: { currentFines: true } });
       expect(dbUser.currentFines).to.not.be.null;
-      let dbBalance = await BalanceService.getBalance(userFineGroup.userId);
+      let dbBalance = await new BalanceService().getBalance(userFineGroup.userId);
       expect(dbBalance.amount.amount).to.be.lessThan(0);
       expect(dbBalance.fine).to.not.be.undefined;
       expect(dbBalance.fineSince).to.not.be.undefined;
@@ -335,7 +335,7 @@ describe('DebtorService', (): void => {
       dbUser = await User.findOne({ where: { id: userFineGroup.userId }, relations: { currentFines: true } });
       expect(dbUser.currentFines).to.be.null;
 
-      dbBalance = await BalanceService.getBalance(userFineGroup.userId);
+      dbBalance = await new BalanceService().getBalance(userFineGroup.userId);
       expect(dbBalance.amount.amount).to.be.greaterThan(0);
       expect(dbBalance.fine).to.be.null;
       expect(dbBalance.fineSince).to.be.null;
@@ -448,7 +448,7 @@ describe('DebtorService', (): void => {
     }
 
     async function checkCorrectNewBalance(fines: Fine[]) {
-      const balances = await BalanceService.getBalances({});
+      const balances = await new BalanceService().getBalances({});
       balances.records.map((b) => {
         const user = ctx.users.find((u) => u.id === b.id);
         expect(user).to.not.be.undefined;

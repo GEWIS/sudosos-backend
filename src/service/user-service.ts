@@ -235,7 +235,7 @@ export default class UserService {
     const user = await User.findOne({ where: { id: userId, deleted: false } });
     if (!user) return undefined;
 
-    const balance = await BalanceService.getBalance(userId);
+    const balance = await new BalanceService().getBalance(userId);
     const isZero = balance.amount.amount === 0;
     if (deleted && !isZero) {
       throw new Error('Cannot delete user with non-zero balance.');

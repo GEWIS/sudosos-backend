@@ -127,7 +127,7 @@ export default class WriteOffService {
    * @param user - The user to create the write-off for
    */
   public async createWriteOff(user: User): Promise<WriteOffResponse> {
-    const balance = await BalanceService.getBalance(user.id);
+    const balance = await new BalanceService().getBalance(user.id);
     if (balance.amount.amount > 0) {
       throw new Error('User has balance, cannot create write off');
     }

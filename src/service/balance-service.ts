@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { getConnection, getManager } from 'typeorm';
+import { EntityManager } from 'typeorm';
 import Balance from '../entity/transactions/balance';
 import BalanceResponse, { PaginatedBalanceResponse } from '../controller/response/balance-response';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
@@ -25,6 +25,7 @@ import { Dinero } from 'dinero.js';
 import { OrderingDirection } from '../helpers/ordering';
 import { defaultPagination, PaginationParameters } from '../helpers/pagination';
 import { UserType } from '../entity/user/user';
+import { AppDataSource } from '../database/database';
 
 export enum BalanceOrderColumn {
   ID = 'id',
@@ -65,6 +66,13 @@ export function asBalanceOrderColumn(input: any): BalanceOrderColumn | undefined
 }
 
 export default class BalanceService {
+
+  private readonly manager: EntityManager;
+
+  constructor(manager?: EntityManager) {
+    this.manager = manager ? manager : AppDataSource.manager;
+  }
+
   protected static asBalanceResponse(rawBalance: any, date: Date): BalanceResponse {
     let fineSince = null;
     // SQLite returns timestamps in UTC, while MariaDB/MySQL returns timestamps in the local timezone
@@ -110,8 +118,8 @@ export default class BalanceService {
    * Update the balance cache with active values
    * Insafe Query! Safety leveraged by type safety
    */
-  public static async updateBalances(params: UpdateBalanceParameters) {
-    const entityManager = getManager();
+  public async updateBalances(params: UpdateBalanceParameters) {
+    const entityManager = this.manager;
 
     const parameters: any[] = [];
 
@@ -131,20 +139,20 @@ export default class BalanceService {
           + 'left join `sub_transaction_row` str on st.id=str.subTransactionId '
           + 'left join `product_revision` pr on str.productRevision=pr.revision and str.productProductId=pr.productId '
           + 'where 1 ';
-    query = this.addWhereClauseForIds(query, parameters, 't1.fromId', params.ids);
+    query = BalanceService.addWhereClauseForIds(query, parameters, 't1.fromId', params.ids);
     query += 'UNION ALL '
         + 'select st2.toId as `id`, str2.amount * pr2.priceInclVat as `amount`, t1.createdAt as `createdAt1`, null as `createdAt2` from sub_transaction st2 '
           + 'inner join `transaction` t1 on t1.id=st2.transactionId '
           + 'left join `sub_transaction_row` str2 on st2.id=str2.subTransactionId '
           + 'left join `product_revision` pr2 on str2.productRevision=pr2.revision and str2.productProductId=pr2.productId '
           + 'where 1 ';
-    query = this.addWhereClauseForIds(query, parameters, 'st2.toId', params.ids);
+    query =  BalanceService.addWhereClauseForIds(query, parameters, 'st2.toId', params.ids);
     query += 'UNION ALL '
         + 'select t2.fromId as `id`, amountInclVat*-1 as `amount`, null as `createdAt1`, t2.createdAt as `createdAt2` from `transfer` t2 where t2.fromId is not null ';
-    query = this.addWhereClauseForIds(query, parameters, 'fromId', params.ids);
+    query =  BalanceService.addWhereClauseForIds(query, parameters, 'fromId', params.ids);
     query += 'UNION ALL '
         + 'select t2.toId as `id`, amountInclVat as `amount`, null as `createdAt1`, t2.createdAt as `createdAt2` from `transfer` t2 where t2.toId is not null ';
-    query = this.addWhereClauseForIds(query, parameters, 'toId', params.ids);
+    query =  BalanceService.addWhereClauseForIds(query, parameters, 'toId', params.ids);
     query += ') as moneys '
         + 'group by moneys.id '
       + ') as moneys2 '
@@ -159,11 +167,11 @@ export default class BalanceService {
   /**
    * Clear balance cache
    */
-  public static async clearBalanceCache(ids?: number | number[]) {
+  public async clearBalanceCache(ids?: number | number[]) {
     if (ids) {
       await Balance.delete(ids);
     } else {
-      const entityManager = getManager();
+      const entityManager = this.manager;
       await entityManager.query('DELETE from balance where 1=1;');
     }
   }
@@ -184,7 +192,7 @@ export default class BalanceService {
    * @param pagination pagination options
    * @returns the current balance of a user
    */
-  public static async getBalances({
+  public async getBalances({
     ids, date, minBalance, maxBalance, hasFine, minFine, maxFine, userTypes, orderDirection, orderBy, allowDeleted,
   }: GetBalanceParameters, pagination: PaginationParameters = {}): Promise<PaginatedBalanceResponse> {
     // Return the empty response if request has no ids.
@@ -196,7 +204,7 @@ export default class BalanceService {
       };
     }
 
-    const connection = getConnection();
+    const connection = this.manager.connection;
 
     const parameters: any[] = [];
     const d = date ? toMySQLString(date) : undefined;
@@ -240,8 +248,8 @@ export default class BalanceService {
       + 'inner join sub_transaction_row str on st.id=str.subTransactionId '
       + 'inner join product_revision pr on str.productRevision=pr.revision and str.productProductId=pr.productId '
       + 'where t.createdAt > COALESCE(b.lastTransactionDate, 0) ';
-    query = this.addWhereClauseForIds(query, parameters, 't.fromId', ids);
-    query = this.addWhereClauseForDate(query, parameters, 't.createdAt', d);
+    query = BalanceService.addWhereClauseForIds(query, parameters, 't.fromId', ids);
+    query = BalanceService.addWhereClauseForDate(query, parameters, 't.createdAt', d);
     query += 'UNION ALL '
       + 'select st2.toId as `id`, str2.amount * pr2.priceInclVat as `totalValue`, t.id as `transactionId`, null as `transferId` from sub_transaction st2 '
       + `left join ${balanceSubquery()} b on st2.toId=b.userId `
@@ -249,23 +257,23 @@ export default class BalanceService {
       + 'inner join sub_transaction_row str2 on st2.id=str2.subTransactionId '
       + 'inner join product_revision pr2 on str2.productRevision=pr2.revision and str2.productProductId=pr2.productId '
       + 'where t.createdAt > COALESCE(b.lastTransactionDate, 0) ';
-    query = this.addWhereClauseForIds(query, parameters, 'st2.toId', ids);
-    query = this.addWhereClauseForDate(query, parameters, 't.createdAt', d);
+    query = BalanceService.addWhereClauseForIds(query, parameters, 'st2.toId', ids);
+    query = BalanceService.addWhereClauseForDate(query, parameters, 't.createdAt', d);
     query += 'UNION ALL '
       + 'select t2.fromId as `id`, t2.amountInclVat*-1 as `totalValue`, null as `transactionId`, t2.id as `transferId` from transfer t2 '
       + `left join ${balanceSubquery()} b on t2.fromId=b.userId `
       + 'where t2.createdAt > COALESCE(b.lastTransferDate, 0) ';
-    query = this.addWhereClauseForIds(query, parameters, 't2.fromId', ids);
-    query = this.addWhereClauseForDate(query, parameters, 't2.createdAt', d);
+    query = BalanceService.addWhereClauseForIds(query, parameters, 't2.fromId', ids);
+    query = BalanceService.addWhereClauseForDate(query, parameters, 't2.createdAt', d);
     query += 'UNION ALL '
       + 'select t3.toId as `id`, t3.amountInclVat as `totalValue`, null as `transactionId`, t3.id as `transferId` from transfer t3 '
       + `left join ${balanceSubquery()} b on t3.toId=b.userId `
       + 'where t3.createdAt > COALESCE(b.lastTransferDate, 0) ';
-    query = this.addWhereClauseForIds(query, parameters, 't3.toId', ids);
-    query = this.addWhereClauseForDate(query, parameters, 't3.createdAt', d);
+    query = BalanceService.addWhereClauseForIds(query, parameters, 't3.toId', ids);
+    query = BalanceService.addWhereClauseForDate(query, parameters, 't3.createdAt', d);
     query += ') as moneys on moneys.id=user.id '
       + 'where 1 ';
-    query = this.addWhereClauseForIds(query, parameters, 'user.id', ids);
+    query = BalanceService.addWhereClauseForIds(query, parameters, 'user.id', ids);
     query += 'group by user.id '
       + ') as moneys2 '
       + 'left join ( '
@@ -300,7 +308,7 @@ export default class BalanceService {
 
     if (orderBy !== undefined) query += `order by ${orderBy} ${orderDirection ?? ''} `;
 
-    const take = pagination.skip ? pagination.take || defaultPagination() : pagination.take;
+    const take = pagination.take ? pagination.take || defaultPagination() : pagination.take;
     const skip = pagination.skip;
 
     let recordsQuery = `${query}`;
@@ -316,7 +324,7 @@ export default class BalanceService {
 
     return {
       _pagination: { take, skip, count },
-      records: balances.map((b: object) => this.asBalanceResponse(b, date ?? new Date())),
+      records: balances.map((b: object) => BalanceService.asBalanceResponse(b, date ?? new Date())),
     };
   }
 
@@ -325,7 +333,7 @@ export default class BalanceService {
    * @param id ID of user
    * @param date Date to calculate balance for
    */
-  public static async getBalance(id: number, date?: Date): Promise<BalanceResponse> {
+  public async getBalance(id: number, date?: Date): Promise<BalanceResponse> {
     return (await this.getBalances({ ids: [id], allowDeleted: true, date })).records[0];
   }
 }

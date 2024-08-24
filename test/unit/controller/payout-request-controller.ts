@@ -59,7 +59,7 @@ describe('PayoutRequestController', () => {
   };
 
   async function getValidPayoutRequest(id: number): Promise<PayoutRequestRequest> {
-    const balance = await BalanceService.getBalance(id);
+    const balance = await new BalanceService().getBalance(id);
     return {
       amount: {
         amount: balance.amount.amount,
@@ -552,7 +552,7 @@ describe('PayoutRequestController', () => {
         expect(res.status).to.equal(200);
 
         await generateBalance(-100, user.id);
-        const balance = await BalanceService.getBalance(user.id);
+        const balance = await new BalanceService().getBalance(user.id);
         expect(balance.amount.amount).to.be.lessThan(amount);
 
         // Try to approve payout request

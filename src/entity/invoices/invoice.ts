@@ -145,6 +145,9 @@ export default class Invoice extends BaseEntity {
   @Column()
   public country: string;
 
+  @Column({ nullable: true })
+  public creditTransferId?: number;
+
   // TODO: create during migration
   //   ADD TEST CASES
   /**
