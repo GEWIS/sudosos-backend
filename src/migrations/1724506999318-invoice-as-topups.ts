@@ -15,13 +15,14 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { MigrationInterface, Not, QueryRunner, TableColumn, TableForeignKey } from 'typeorm';
+import { In, MigrationInterface, Not, QueryRunner, TableColumn, TableForeignKey } from 'typeorm';
 import Invoice from '../entity/invoices/invoice';
 import Transfer from '../entity/transactions/transfer';
 import InvoiceStatus from '../entity/invoices/invoice-status';
 import assert from 'assert';
 import BalanceService from '../service/balance-service';
 import User from '../entity/user/user';
+import fs from 'fs';
 
 export class InvoiceAsTopups1724506999318 implements MigrationInterface {
 
@@ -48,10 +49,15 @@ export class InvoiceAsTopups1724506999318 implements MigrationInterface {
     }));
 
     await new BalanceService().clearBalanceCache();
-    const ids = (await queryRunner.manager.find(User, { where: { type: Not(7) } })).map((u) => u.id);
+    const ids = (await queryRunner.manager.find(User, { where: { type: Not(In([2, 7])) } })).map((u) => u.id);
     const balanceBefore = await new BalanceService().getBalances({ ids, allowDeleted: true }, { take: ids.length });
     console.error(balanceBefore._pagination.count, ids.length);
     assert(balanceBefore._pagination.count === ids.length);
+
+    const organs = await queryRunner.manager.find(User, { where: { type: 2 } });
+    let organBalances = await new BalanceService().getBalances({ ids: organs.map((o) => o.id), allowDeleted: true }, { take: organs.length });
+    fs.writeFileSync('./organBalances-before.json', JSON.stringify(organBalances, null, 2));
+
 
     // Query to get all normal invoices that are deleted.
     const subQuery = queryRunner.manager.createQueryBuilder(Invoice, 'invoice')
@@ -113,6 +119,10 @@ export class InvoiceAsTopups1724506999318 implements MigrationInterface {
     const balancesAfter = await postBalanceService.getBalances({ ids, allowDeleted: true }, { take: ids.length });
     assert(balancesAfter._pagination.count === ids.length);
 
+    organBalances = await postBalanceService.getBalances({ ids: organs.map((o) => o.id), allowDeleted: true }, { take: organs.length });
+    fs.writeFileSync('./organBalances-after.json', JSON.stringify(organBalances, null, 2));
+
+
     for (const id of ids) {
       const before = balanceBefore.records.find((b) => b.id === id);
       const after = balancesAfter.records.find((b) => b.id === id);
@@ -125,9 +135,6 @@ export class InvoiceAsTopups1724506999318 implements MigrationInterface {
       }
       assert(before.amount.amount === after.amount.amount);
     }
-
-    console.error('Not implemented.');
-    throw new Error('Not implemented.');
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
