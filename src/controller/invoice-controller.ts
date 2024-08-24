@@ -241,6 +241,12 @@ export default class InvoiceController extends BaseController {
         return;
       }
 
+      if (params.customEntries) {
+        res.status(400).json('Custom entries are not supported anymore.');
+        return;
+      }
+
+
       const invoice: Invoice = await AppDataSource.manager.transaction(async (manager) =>
         new InvoiceService(manager).createInvoice(params));
       res.json(await new InvoiceService().asInvoiceResponse(invoice));
