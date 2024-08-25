@@ -308,7 +308,7 @@ export default class BalanceService {
 
     if (orderBy !== undefined) query += `order by ${orderBy} ${orderDirection ?? ''} `;
 
-    const take = pagination.take ? pagination.take || defaultPagination() : pagination.take;
+    const take = pagination.skip || pagination.take ? pagination.take || defaultPagination() : pagination.take;
     const skip = pagination.skip;
 
     let recordsQuery = `${query}`;
