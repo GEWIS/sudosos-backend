@@ -137,8 +137,36 @@ export class InvoiceAsTopups1724506999318 implements MigrationInterface {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public async down(queryRunner: QueryRunner): Promise<void> {
-    throw new Error('Unable to reverse migration.');
+    await queryRunner.addColumn('invoice', new TableColumn({
+      name: 'attention',
+      type: 'varchar(255)',
+      default: '\'\'',
+      isNullable: false,
+    }));
+    await queryRunner.addColumn('invoice', new TableColumn({
+      name: 'date',
+      type: 'datetime(6)',
+      default: 'current_timestamp',
+      isNullable: false,
+    }));
+    await queryRunner.addColumn('invoice', new TableColumn({
+      name: 'latestStatusId',
+      type: 'integer',
+      isNullable: true,
+    }));
+    await queryRunner.createForeignKey('invoice', new TableForeignKey({
+      columnNames: ['latestStatusId'],
+      referencedColumnNames: ['id'],
+      referencedTableName: 'invoice_status',
+      onDelete: 'SET NULL',
+    }));
+
+    const invoiceTable = await queryRunner.getTable('invoice');
+    const invoiceForeignKey = invoiceTable.foreignKeys.find(fk => fk.columnNames.indexOf('creditTransferId') !== -1);
+    if (invoiceForeignKey) {
+      await queryRunner.dropForeignKey('invoice', invoiceForeignKey);
+    }
+    await queryRunner.dropColumn('invoice', 'creditTransferId');
   }
 }
