@@ -24,7 +24,7 @@ import BalanceService from '../service/balance-service';
 import User from '../entity/user/user';
 import fs from 'fs';
 
-export class InvoiceAsTopups1724506999318 implements MigrationInterface {
+export class InvoiceAsTopups1723649717114 implements MigrationInterface {
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Drop the latestStatusId column
