@@ -53,7 +53,7 @@ import {
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import { calculateBalance, calculateFine } from '../../helpers/balance';
 import Mailer from '../../../src/mailer';
-import sinon, { SinonSandbox, SinonSpy, SinonStub } from 'sinon';
+import sinon, { SinonSandbox, SinonSpy } from 'sinon';
 import nodemailer, { Transporter } from 'nodemailer';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';

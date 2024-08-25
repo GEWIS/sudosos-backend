@@ -93,6 +93,10 @@ export class SellerPayouts1723649717114 implements MigrationInterface {
       order: { date: 'ASC' },
     });
 
+    console.error(creditInvoices);
+
+    throw new Error('Migration failed');
+
     // Mapping to keep track of the start date for each seller payout
     const userDateMap = new Map<number, Date>();
     creditInvoices.forEach((i) => {

@@ -18,9 +18,9 @@
 import BasePayout from './base-payout';
 import { Column, Entity, JoinColumn, OneToOne } from 'typeorm';
 import SellerPayoutPdf from '../../file/seller-payout-pdf';
-import SellerPayoutPdfService from '../../../service/pdf/seller-payout-pdf-service';
-import { PdfAble } from '../../file/pdf-able';
 import { SELLER_PAYOUT_PDF_LOCATION } from '../../../files/storage';
+import { PdfAble } from '../../file/pdf-able';
+import SellerPayoutPdfService from '../../../service/pdf/seller-payout-pdf-service';
 
 @Entity()
 export default class SellerPayout extends PdfAble(BasePayout) {

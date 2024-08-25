@@ -31,7 +31,6 @@ import InvoicePdf from '../file/invoice-pdf';
 import InvoicePdfService from '../../service/pdf/invoice-pdf-service';
 import { PdfAble } from '../file/pdf-able';
 import { INVOICE_PDF_LOCATION } from '../../files/storage';
-import { hashJSON } from '../../helpers/hash';
 import SubTransactionRow from '../transactions/sub-transaction-row';
 
 
