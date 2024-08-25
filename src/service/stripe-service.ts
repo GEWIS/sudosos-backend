@@ -191,7 +191,7 @@ export default class StripeService {
     paymentIntentId: number, state: StripePaymentIntentState,
   ): Promise<StripePaymentIntentStatus> {
     const paymentIntent = await this.manager.getRepository(StripePaymentIntent)
-      .findOne({ where: { id: paymentIntentId } });
+      .findOne({ where: { id: paymentIntentId }, relations: { deposit: true } });
 
     const states = paymentIntent.paymentIntentStatuses?.map((status) => status.state) ?? [];
     if (states.includes(state)) throw new Error(`Status ${state} already exists.`);
