@@ -31,6 +31,8 @@ import StripeService, { STRIPE_API_VERSION } from '../../../src/service/stripe-s
 import { extractRawBody } from '../../../src/helpers/raw-body';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
+import StripeDeposit from '../../../src/entity/stripe/stripe-deposit';
+import { seedStripeDeposits, seedUsers } from '../../seed';
 
 describe('StripeWebhookController', async (): Promise<void> => {
   let shouldSkip: boolean;
@@ -40,12 +42,19 @@ describe('StripeWebhookController', async (): Promise<void> => {
     app: Application,
     specification: SwaggerSpecification,
     controller: StripeWebhookController,
+    stripeDeposits: StripeDeposit[],
     stripe: Stripe;
-    payload: object;
-    signatureHeader: string;
+    payload: any;
   };
 
   const stubs: sinon.SinonStub[] = [];
+
+  function getSignatureHeader(payload: any) {
+    return ctx.stripe.webhooks.generateTestHeaderString({
+      payload: JSON.stringify(payload),
+      secret: process.env.STRIPE_WEBHOOK_SECRET,
+    });
+  }
 
   // eslint-disable-next-line func-names
   before(async function () {
@@ -61,6 +70,9 @@ describe('StripeWebhookController', async (): Promise<void> => {
     const specification = await Swagger.initialize(app);
     const roleManager = await new RoleManager().initialize();
 
+    const users = await seedUsers();
+    const { stripeDeposits } = await seedStripeDeposits(users);
+
     const controller = new StripeWebhookController({ specification, roleManager });
     app.use(json({
       verify: extractRawBody,
@@ -74,25 +86,20 @@ describe('StripeWebhookController', async (): Promise<void> => {
     const payload = {
       data: {
         object: {
-          id: 'abcde12345',
+          id: stripeDeposits[0].stripePaymentIntent.stripeId,
         } as Stripe.PaymentIntent,
       },
-      type: 'UNKNOWN',
+      type: 'payment_intent.succeeded',
     };
-
-    const signatureHeader = stripe.webhooks.generateTestHeaderString({
-      payload: JSON.stringify(payload),
-      secret: process.env.STRIPE_WEBHOOK_SECRET,
-    });
 
     ctx = {
       connection,
       app,
       specification,
       controller,
+      stripeDeposits,
       stripe,
       payload,
-      signatureHeader,
     };
   });
 
@@ -153,7 +160,7 @@ describe('StripeWebhookController', async (): Promise<void> => {
 
       const res = await request(ctx.app)
         .post('/stripe/webhook')
-        .set('stripe-signature', ctx.signatureHeader)
+        .set('stripe-signature', getSignatureHeader(ctx.payload))
         .send(ctx.payload);
       expect(res.status).to.equal(200);
 
@@ -161,6 +168,42 @@ describe('StripeWebhookController', async (): Promise<void> => {
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       expect(handleWebhookEventStub).to.have.been.calledOnce;
+    });
+    it('should return 404 when using unknown payment intent', async () => {
+      const payload = {
+        ...ctx.payload,
+        data: {
+          object: {
+            ...ctx.payload.data.object,
+            id: 'Yeeeee',
+          },
+        },
+      };
+      const res = await request(ctx.app)
+        .post('/stripe/webhook')
+        .set('stripe-signature', getSignatureHeader(payload))
+        .send(payload);
+      expect(res.status).to.equal(404);
+      expect(res.body).to.equal('PaymentIntent with ID "Yeeeee" not found.');
+    });
+    it('should return 200 if not listening for event', async () => {
+      const handleWebhookEventStub = sinon.stub(StripeService.prototype, 'handleWebhookEvent').resolves();
+      stubs.push(handleWebhookEventStub);
+
+      const payload = {
+        ...ctx.payload,
+        type: 'nothing.just.testing',
+      };
+      const res = await request(ctx.app)
+        .post('/stripe/webhook')
+        .set('stripe-signature', getSignatureHeader(payload))
+        .send(payload);
+      expect(res.status).to.equal(200);
+
+      // Race condition (by design), because the webhook event is and should be handled asynchronously
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      expect(handleWebhookEventStub).to.not.have.been.called;
     });
   });
 });
