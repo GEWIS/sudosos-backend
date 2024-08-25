@@ -160,7 +160,7 @@ describe('StripeService', async (): Promise<void> => {
       expect(deposit.transfer.to.id).to.equal(deposit.to.id);
     });
     it('should correctly create only one failed status', async () => {
-      const { id } = (ctx.stripeDeposits.filter((d) => d.stripePaymentIntent.paymentIntentStatuses.length === 2))[1];
+      const { id } = (ctx.stripeDeposits.filter((d) => d.stripePaymentIntent.paymentIntentStatuses.length === 1))[1];
       await testStatusCreation(id, StripePaymentIntentState.FAILED);
     });
     it('should not create duplicate created status', async () => {
