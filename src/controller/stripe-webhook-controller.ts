@@ -86,6 +86,7 @@ export default class StripeWebhookController extends BaseController {
    * @return 400 - Not
    */
   public async handleWebhookEvent(req: RequestWithRawBody, res: Response): Promise<void> {
+    this.logger.trace('Receive Stripe webhook event with body', req.body);
     const { rawBody } = req;
     const signature = req.headers['stripe-signature'];
 
@@ -97,13 +98,26 @@ export default class StripeWebhookController extends BaseController {
       return;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    AppDataSource.manager.transaction(async (manager) => {
-      const stripeService = new StripeService(manager);
-      await stripeService.handleWebhookEvent(webhookEvent);
-    }).catch((error) => {
-      this.logger.error(error);
-    });
+    if (webhookEvent.type.includes('payment_intent')) {
+      const service = new StripeService();
+      const { id } = (webhookEvent.data.object as Stripe.PaymentIntent);
+      const paymentIntent = await service.getPaymentIntent(id);
+      if (!paymentIntent) {
+        this.logger.warn(`PaymentIntent with ID "${id}" not found.`);
+        res.status(404).json(`PaymentIntent with ID "${id}" not found.`);
+        return;
+      }
+
+      // NO await here, because we should execute the action asynchronously
+      AppDataSource.manager.transaction(async (manager) => {
+        const stripeService = new StripeService(manager);
+        await stripeService.handleWebhookEvent(webhookEvent);
+      }).catch((error) => {
+        this.logger.error(error);
+      });
+    } else {
+      this.logger.trace(`Event ignored, because it is type "${webhookEvent.type}"`);
+    }
 
     res.status(200).send();
   }

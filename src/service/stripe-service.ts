@@ -131,6 +131,14 @@ export default class StripeService {
   }
 
   /**
+   * Get a payment intent with the given ID, if it exists
+   * @param stripeId
+   */
+  public async getPaymentIntent(stripeId: string): Promise<StripePaymentIntent | null> {
+    return this.manager.getRepository(StripePaymentIntent).findOne({ where: { stripeId } });
+  }
+
+  /**
    * Create a payment intent and save it to the database
    * @param user User that wants to deposit some money into their account
    * @param amount The amount to be deposited
@@ -144,12 +152,12 @@ export default class StripeService {
       automatic_payment_methods: { enabled: true },
     });
 
-    const stripePaymentIntent = await StripePaymentIntent.save({
+    const stripePaymentIntent = await this.manager.getRepository(StripePaymentIntent).save({
       stripeId: paymentIntent.id,
       amount,
       paymentIntentStatuses: [],
     });
-    const stripeDeposit = await StripeDeposit.save({
+    const stripeDeposit = await this.manager.getRepository(StripeDeposit).save({
       stripePaymentIntent,
       to: user,
     });
@@ -229,20 +237,23 @@ export default class StripeService {
 
       switch (event.type) {
         case 'payment_intent.created':
-          await this.manager.transaction(async (manager) => new StripeService(manager).createNewPaymentIntentStatus(paymentIntent.id, StripePaymentIntentState.CREATED));
+          await this.createNewPaymentIntentStatus(paymentIntent.id, StripePaymentIntentState.CREATED);
           break;
         case 'payment_intent.processing':
-          await this.manager.transaction(async (manager) => new StripeService(manager).createNewPaymentIntentStatus(paymentIntent.id, StripePaymentIntentState.PROCESSING));
+          await this.createNewPaymentIntentStatus(paymentIntent.id, StripePaymentIntentState.PROCESSING);
           break;
         case 'payment_intent.succeeded':
-          await this.manager.transaction(async (manager) => new StripeService(manager).createNewPaymentIntentStatus(paymentIntent.id, StripePaymentIntentState.SUCCEEDED));
+          await this.createNewPaymentIntentStatus(paymentIntent.id, StripePaymentIntentState.SUCCEEDED);
           break;
         case 'payment_intent.payment_failed':
-          await this.manager.transaction(async (manager) => new StripeService(manager).createNewPaymentIntentStatus(paymentIntent.id, StripePaymentIntentState.FAILED));
+        case 'payment_intent.canceled':
+          await this.createNewPaymentIntentStatus(paymentIntent.id, StripePaymentIntentState.FAILED);
           break;
         default:
           this.logger.warn('Tried to process event', event.type, 'but processing method is not defined');
       }
+
+      this.logger.trace(`Successfully processed event "${event.type}" for payment intent "${eventPaymentIntent.id}" (ID: ${paymentIntent.id})`);
     } catch (error) {
       this.logger.error('Could not process Stripe webhook event with ID', event.id, error);
     }
