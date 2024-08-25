@@ -39,6 +39,8 @@ export default class SellerPayoutPdfService extends PdfService<SellerPayoutPdf, 
 
   async getParameters(entity: SellerPayout): Promise<SellerPayoutParameters> {
     const { amount, startDate, endDate, reference } = entity;
+    startDate.setHours(0, 0, 0, 0);
+    endDate.setHours(23, 59, 59, 999);
     const report = await new SalesReportService().getReport({
       fromDate: startDate,
       tillDate: endDate,
