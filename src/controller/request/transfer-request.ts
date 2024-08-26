@@ -21,6 +21,7 @@ import { DineroObjectRequest } from './dinero-request';
 
 /**
  * @typedef {object} TransferRequest
+ * @property {string} createdAt - Date on which the transfer should be created
  * @property {string} description.required - Description of the transfer.
  * @property {DineroObjectRequest} amount.required - Amount of money being transferred.
  * @property {integer} fromId - from which user the money is being transferred.
@@ -28,6 +29,7 @@ import { DineroObjectRequest } from './dinero-request';
  * @property {integer} vatId - The vat group id for the transfer.
  */
 export default interface TransferRequest {
+  createdAt?: string;
   amount: DineroObjectRequest;
   description: string;
   fromId: number;

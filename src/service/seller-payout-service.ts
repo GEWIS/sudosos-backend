@@ -112,6 +112,7 @@ export default class SellerPayoutService {
     }
 
     const transfer = await new TransferService().createTransfer({
+      createdAt: params.endDate.toISOString(),
       amount: amount.toObject(),
       description: `Seller payout: ${params.reference}`,
       fromId: params.requestedById,

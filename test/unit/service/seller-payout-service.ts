@@ -335,6 +335,7 @@ describe('SellerPayoutService', () => {
       expect(sellerPayout.transfer).to.not.be.undefined;
       expect(sellerPayout.transfer.fromId).to.equal(params.requestedById);
       expect(sellerPayout.transfer.toId).to.be.null;
+      expect(sellerPayout.transfer.createdAt.getTime()).to.equal(params.endDate.getTime());
 
       // TODO: calculate amount based on transaction reporting
       expect(sellerPayout.amount.getAmount()).to.equal(0);
