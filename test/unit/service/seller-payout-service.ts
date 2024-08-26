@@ -38,6 +38,7 @@ import { expect } from 'chai';
 import SellerPayoutService, { CreateSellerPayoutParams } from '../../../src/service/seller-payout-service';
 import { calculateBalance } from '../../helpers/balance';
 import { DineroObjectRequest } from '../../../src/controller/request/dinero-request';
+import dinero from 'dinero.js';
 
 describe('SellerPayoutService', () => {
   let ctx: {
@@ -337,8 +338,12 @@ describe('SellerPayoutService', () => {
       expect(sellerPayout.transfer.toId).to.be.null;
       expect(sellerPayout.transfer.createdAt.getTime()).to.equal(params.endDate.getTime());
 
-      // TODO: calculate amount based on transaction reporting
-      expect(sellerPayout.amount.getAmount()).to.equal(0);
+      const incomingTransactions = ctx.subTransactions.filter((s) => s.to.id === params.requestedById);
+      const rows = incomingTransactions.map((s) => s.subTransactionRows).flat();
+      // Calculate the total value of all incoming transactions
+      const totalValue = rows.reduce((total, r) => total.add(r.product.priceInclVat.multiply(r.amount)), dinero({ amount: 0 }));
+
+      expect(sellerPayout.amount.getAmount()).to.equal(totalValue.getAmount());
       expect(sellerPayout.amount.getAmount()).to.equal(sellerPayout.transfer.amountInclVat.getAmount());
 
       // Cleanup
