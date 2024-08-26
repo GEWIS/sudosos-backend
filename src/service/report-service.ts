@@ -87,7 +87,7 @@ export default abstract class ReportService {
   private static vatEntryToResponse(entry: ReportVatEntry): ReportVatEntryResponse {
     return {
       ...ReportService.reportEntryToResponse(entry),
-      vat: VatGroupService.revisionToResponse(entry.vat),
+      vat: VatGroupService.toResponse(entry.vat),
     };
   }
 

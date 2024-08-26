@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { DineroObjectResponse } from './dinero-response';
-import { BaseVatGroupResponse } from './vat-group-response';
+import { VatGroupResponse } from './vat-group-response';
 import { BaseProductResponse } from './product-response';
 import { ProductCategoryResponse } from './product-category-response';
 import { BasePointOfSaleResponse } from './point-of-sale-response';
@@ -44,10 +44,10 @@ export interface ReportProductEntryResponse extends ReportEntryResponse {
 
 /**
  * @typedef {allOf|ReportEntryResponse} ReportVatEntryResponse
- * @property {BaseVatGroupResponse} vat.required - vat
+ * @property {VatGroupResponse} vat.required - vat
  */
 export interface ReportVatEntryResponse extends ReportEntryResponse {
-  vat: BaseVatGroupResponse,
+  vat: VatGroupResponse,
 }
 
 /**

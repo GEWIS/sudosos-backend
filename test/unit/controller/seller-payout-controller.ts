@@ -46,6 +46,8 @@ import {
   CreateSellerPayoutRequest,
   UpdateSellerPayoutRequest,
 } from '../../../src/controller/request/seller-payout-request';
+import { ReportResponse } from '../../../src/controller/response/report-response';
+import dinero from 'dinero.js';
 
 describe('SellerPayoutController', () => {
   let ctx: DefaultContext & {
@@ -257,6 +259,64 @@ describe('SellerPayoutController', () => {
     });
   });
 
+  describe('GET /seller-payouts/{id}/report', () => {
+    it('should return HTTP 200 with the sales report belonging to the seller payout', async () => {
+      const sellerPayout = ctx.sellerPayouts[0];
+      const res = await request(ctx.app)
+        .get(`/seller-payouts/${sellerPayout.id}/report`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+
+      const validation = ctx.specification.validateModel('ReportResponse', res.body, false, true);
+      expect(validation.valid).to.be.true;
+
+      const body = res.body as ReportResponse;
+      expect(body.totalInclVat.amount).equals(sellerPayout.amount.getAmount());
+    });
+    it('should return HTTP 404 if seller payout does not exist', async () => {
+      const id = ctx.sellerPayouts.length + 1;
+      const res = await request(ctx.app)
+        .get(`/seller-payouts/${id}/report`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(404);
+      expect(res.body).to.equal('Seller Payout not found.');
+    });
+    it('should return HTTP 403 if not admin', async () => {
+      const sellerPayout = ctx.sellerPayouts[0];
+      const res = await request(ctx.app)
+        .get(`/seller-payouts/${sellerPayout.id}/report`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(403);
+    });
+  });
+
+  describe('GET /seller-payouts/{id}/report/pdf', () => {
+    it('should return HTTP 200 with the sales report PDF belonging to the seller payout', async () => {
+      const sellerPayout = ctx.sellerPayouts[0];
+      const res = await request(ctx.app)
+        .get(`/seller-payouts/${sellerPayout.id}/report/pdf`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      // TODO: actually implement the PDF functionality
+      expect(res.status).to.equal(501);
+    });
+    it('should return HTTP 404 if seller payout does not exist', async () => {
+      const id = ctx.sellerPayouts.length + 1;
+      const res = await request(ctx.app)
+        .get(`/seller-payouts/${id}/report/pdf`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(404);
+      expect(res.body).to.equal('Seller Payout not found.');
+    });
+    it('should return HTTP 403 if not admin', async () => {
+      const sellerPayout = ctx.sellerPayouts[0];
+      const res = await request(ctx.app)
+        .get(`/seller-payouts/${sellerPayout.id}/report/pdf`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(403);
+    });
+  });
+
   describe('POST /seller-payouts', () => {
     let organ: User;
     let req: CreateSellerPayoutRequest;
@@ -293,8 +353,11 @@ describe('SellerPayoutController', () => {
       expect(body.endDate).to.equal(req.endDate);
       expect(body.reference).to.equal(req.reference);
 
-      // TODO: calculate amount based on transaction reporting
-      expect(body.amount.amount).to.equal(0);
+      const incomingTransactions = ctx.subTransactions.filter((s) => s.to.id === organ.id);
+      const rows = incomingTransactions.map((s) => s.subTransactionRows).flat();
+      // Calculate the total value of all incoming transactions
+      const sellerPayoutValue = rows.reduce((total, r) => total.add(r.product.priceInclVat.multiply(r.amount)), dinero({ amount: 0 }));
+      expect(body.amount.amount).to.equal(sellerPayoutValue.getAmount());
 
       // Cleanup
       const dbSellerPayout = await SellerPayout.findOne({ where: { id: body.id }, relations: { transfer: true } });

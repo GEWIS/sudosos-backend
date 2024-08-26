@@ -25,6 +25,7 @@ import SellerPayoutService, { parseSellerPayoutFilters } from '../service/seller
 import { PaginatedSellerPayoutResponse } from './response/seller-payout-response';
 import { CreateSellerPayoutRequest, UpdateSellerPayoutRequest } from './request/seller-payout-request';
 import User from '../entity/user/user';
+import ReportService, { SalesReportService } from '../service/report-service';
 
 export default class SellerPayoutController extends BaseController {
   private logger: Logger = log4js.getLogger(' SellerPayoutController');
@@ -60,6 +61,18 @@ export default class SellerPayoutController extends BaseController {
         DELETE: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'delete', 'all', 'SellerPayout', ['*']),
           handler: this.deleteSellerPayout.bind(this),
+        },
+      },
+      '/:id(\\d+)/report': {
+        GET: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'SellerPayout', ['*']),
+          handler: this.getSellerPayoutReport.bind(this),
+        },
+      },
+      '/:id(\\d+)/report/pdf': {
+        GET: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'SellerPayout', ['*']),
+          handler: this.getSellerPayoutReportPdf.bind(this),
         },
       },
     };
@@ -118,6 +131,7 @@ export default class SellerPayoutController extends BaseController {
    * @param {integer} id.path.required - ID of the seller payout that should be returned
    * @return {SellerPayoutResponse} 200 - Single seller payout with given ID
    * @return {string} 404 - Seller payout not found
+   * @return {string} 500 - Internal server error
    */
   public async returnSingleSellerPayout(req: RequestWithToken, res: Response): Promise<void> {
     this.logger.trace('Get single seller payout with ID', req.params.id, 'by user', req.token.user);
@@ -134,6 +148,72 @@ export default class SellerPayoutController extends BaseController {
       res.json(SellerPayoutService.asSellerPayoutResponse(sellerPayout));
     } catch (error) {
       this.logger.error('Could not return single seller payout:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * GET /seller-payouts/{id}/report
+   * @summary Get a single seller payout's sales report
+   * @operationId getSellerPayoutReport
+   * @tags sellerPayouts - Operations of the seller payout controller
+   * @param {integer} id.path.required - ID of the seller payout that should be returned
+   * @return {ReportResponse} 200 - The sales report that belongs to the given seller payout
+   * @return {string} 404 - SellerPayout not found.
+   * @return {string} 500 - Internal server error.
+   */
+  public async getSellerPayoutReport(req: RequestWithToken, res: Response): Promise<void> {
+    const { id } = req.params;
+    this.logger.trace('Get sales report for Seller Payout', id, 'by user', req.token.user);
+
+    try {
+      const sellerPayoutId = Number(req.params.id);
+      const service = new SellerPayoutService();
+      const [[sellerPayout]] = await service.getSellerPayouts({ sellerPayoutId });
+      if (!sellerPayout) {
+        res.status(404).json('Seller Payout not found.');
+        return;
+      }
+
+      const report = await new SalesReportService().getReport({
+        forId: sellerPayout.requestedBy.id,
+        fromDate: sellerPayout.startDate,
+        tillDate: sellerPayout.endDate,
+      });
+      res.json(ReportService.reportToResponse(report));
+    } catch (error) {
+      this.logger.error('Could not get sales report for seller payout:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * GET /seller-payouts/{id}/report/pdf
+   * @summary Get a single seller payout's sales report as PDF
+   * @operationId getSellerPayoutReportPdf
+   * @tags sellerPayouts - Operations of the seller payout controller
+   * @param {integer} id.path.required - ID of the seller payout that should be returned
+   * @return {string} 200 - The requested report - application/pdf
+   * @return {string} 404 - SellerPayout not found.
+   * @return {string} 500 - Internal server error.
+   */
+  public async getSellerPayoutReportPdf(req: RequestWithToken, res: Response): Promise<void> {
+    const { id } = req.params;
+    this.logger.trace('Get sales report PDF for Seller Payout', id, 'by user', req.token.user);
+
+    try {
+      const sellerPayoutId = Number(req.params.id);
+      const service = new SellerPayoutService();
+      const [[sellerPayout]] = await service.getSellerPayouts({ sellerPayoutId });
+      if (!sellerPayout) {
+        res.status(404).json('Seller Payout not found.');
+        return;
+      }
+
+      // TODO: create the pdf and actually send it
+      res.status(501).json(null);
+    } catch (error) {
+      this.logger.error('Could not get sales report for seller payout:', error);
       res.status(500).json('Internal server error.');
     }
   }
