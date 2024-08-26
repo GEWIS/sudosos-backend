@@ -139,18 +139,6 @@ export class InvoiceAsTopups1724506999318 implements MigrationInterface {
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.addColumn('invoice', new TableColumn({
-      name: 'attention',
-      type: 'varchar(255)',
-      default: '\'\'',
-      isNullable: false,
-    }));
-    await queryRunner.addColumn('invoice', new TableColumn({
-      name: 'date',
-      type: 'datetime(6)',
-      default: 'current_timestamp',
-      isNullable: false,
-    }));
-    await queryRunner.addColumn('invoice', new TableColumn({
       name: 'latestStatusId',
       type: 'integer',
       isNullable: true,
