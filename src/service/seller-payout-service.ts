@@ -207,6 +207,10 @@ export default class SellerPayoutService {
       where = [whereOptions];
     }
 
-    return { where, relations };
+    return {
+      where,
+      relations,
+      order: { endDate: 'DESC' },
+    };
   }
 }
