@@ -39,6 +39,8 @@ export async function seedSellerPayouts(
     const balance = calculateBalance(organ, transactions, subTransactions, transfers);
     if (balance.amount.getAmount() <= 0) continue;
 
+    // Random startdate between epoch and 2020
+    const startDate = new Date(Math.round(Math.random() * new Date('2020-01-01').getTime()));
     // Get the greatest end date
     const endDate = balance.lastTransaction?.createdAt && balance.lastTransfer?.createdAt
       ? (balance.lastTransaction.createdAt > balance.lastTransfer.createdAt
@@ -55,7 +57,7 @@ export async function seedSellerPayouts(
       requestedBy: organ,
       transfer,
       amount: balance.amount,
-      startDate: new Date(0),
+      startDate,
       endDate,
       reference: '',
     });

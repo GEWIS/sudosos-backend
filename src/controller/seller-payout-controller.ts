@@ -172,9 +172,25 @@ export default class SellerPayoutController extends BaseController {
       }
       if (startDate.getTime() > endDate.getTime()) {
         res.status(400).json('EndDate cannot be before startDate.');
+        return;
+      }
+      if (startDate > new Date()) {
+        res.status(400).json('StartDate cannot be in the future.');
+        return;
+      }
+      if (endDate > new Date()) {
+        res.status(400).json('EndDate cannot be in the future.');
+        return;
       }
 
       const service = new SellerPayoutService();
+      const [requestedByPayouts] = await service.getSellerPayouts({
+        requestedById: requestedBy.id, fromDate: startDate, tillDate: endDate,
+      });
+      if (requestedByPayouts.length > 0) {
+        res.status(400).json(`New seller payout time window overlaps with the time windows of SellerPayouts ${requestedByPayouts.map((r) => `"${r.id}"`).join(', ')}.`);
+      }
+
       const payout = await service.createSellerPayout({
         requestedById: requestedBy.id,
         startDate,

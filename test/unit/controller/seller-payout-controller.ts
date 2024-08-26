@@ -151,11 +151,12 @@ describe('SellerPayoutController', () => {
       });
     });
     it('should return HTTP 200 when filtering on fromDate', async () => {
-      const fromDate = ctx.sellerPayouts[0].createdAt > ctx.sellerPayouts[1].createdAt
-        ? ctx.sellerPayouts[0].createdAt
-        : ctx.sellerPayouts[1].createdAt;
+      let fromDate = ctx.sellerPayouts[0].endDate > ctx.sellerPayouts[1].endDate
+        ? ctx.sellerPayouts[0].endDate
+        : ctx.sellerPayouts[1].endDate;
+      fromDate = new Date(fromDate.getTime() - 10000);
 
-      const actualPayouts = ctx.sellerPayouts.filter((s) => s.createdAt >= fromDate);
+      const actualPayouts = ctx.sellerPayouts.filter((s) => s.endDate > fromDate);
       // Sanity check
       expect(actualPayouts.length).to.be.at.least(1);
       expect(actualPayouts.length).to.not.equal(ctx.sellerPayouts.length);
@@ -168,16 +169,14 @@ describe('SellerPayoutController', () => {
       const response = res.body as PaginatedSellerPayoutResponse;
       expect(response.records.map((s) => s.id)).to.deep
         .equalInAnyOrder(actualPayouts.map((s) => s.id));
-      response.records.forEach((s) => {
-        expect(new Date(s.createdAt)).to.be.greaterThanOrEqual(fromDate);
-      });
     });
     it('should return HTTP 200 when filtering on tillDate', async () => {
-      const tillDate = ctx.sellerPayouts[0].createdAt > ctx.sellerPayouts[1].createdAt
-        ? ctx.sellerPayouts[0].createdAt
-        : ctx.sellerPayouts[1].createdAt;
+      let tillDate = ctx.sellerPayouts[0].startDate > ctx.sellerPayouts[1].startDate
+        ? ctx.sellerPayouts[0].startDate
+        : ctx.sellerPayouts[1].startDate;
+      tillDate = new Date(tillDate.getTime() - 10000);
 
-      const actualPayouts = ctx.sellerPayouts.filter((s) => s.createdAt < tillDate);
+      const actualPayouts = ctx.sellerPayouts.filter((s) => s.startDate < tillDate);
       // Sanity check
       expect(actualPayouts.length).to.be.at.least(1);
       expect(actualPayouts.length).to.not.equal(ctx.sellerPayouts.length);
@@ -190,9 +189,6 @@ describe('SellerPayoutController', () => {
       const response = res.body as PaginatedSellerPayoutResponse;
       expect(response.records.map((s) => s.id)).to.deep
         .equalInAnyOrder(actualPayouts.map((s) => s.id));
-      response.records.forEach((s) => {
-        expect(new Date(s.createdAt)).to.be.lessThan(tillDate);
-      });
     });
     it('should return HTTP 200 and adhere to pagination', async () => {
       const skip = 1;
@@ -353,6 +349,35 @@ describe('SellerPayoutController', () => {
         .send(invalidReq);
       expect(res.status).to.equal(400);
       expect(res.body).to.equal('EndDate cannot be before startDate.');
+    });
+    it('should return an HTTP 400 if endDate is in the future', async () => {
+      const invalidReq: CreateSellerPayoutRequest = {
+        ...req,
+        endDate: new Date(new Date().getTime() + 60000).toISOString(),
+      };
+      const res = await request(ctx.app)
+        .post('/seller-payouts')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(invalidReq);
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('EndDate cannot be in the future.');
+    });
+    it('should return an HTTP 400 if time window overlaps with other seller payout', async () => {
+      const previousSellerPayout = ctx.sellerPayouts[0];
+      const invalidReq: CreateSellerPayoutRequest = {
+        ...req,
+        requestedById: previousSellerPayout.requestedBy.id,
+        startDate: new Date(previousSellerPayout.endDate.getTime() - 1000 * 60 * 60 * 24).toISOString(),
+      };
+      // Sanity check
+      expect(new Date(invalidReq.startDate)).to.be.lessThan(previousSellerPayout.endDate);
+
+      const res = await request(ctx.app)
+        .post('/seller-payouts')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(invalidReq);
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal(`New seller payout time window overlaps with the time windows of SellerPayouts "${previousSellerPayout.id}".`);
     });
     it('should return an HTTP 403 if not admin', async () => {
       const res = await request(ctx.app)

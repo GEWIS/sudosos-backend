@@ -189,10 +189,18 @@ export default class SellerPayoutService {
       transfer: params.returnTransfer,
     };
 
-    const where: FindOptionsWhere<SellerPayout> = {
-      ...QueryFilter.createFilterWhereClause(filterMapping, params),
-      createdAt: QueryFilter.createFilterWhereDate(params.fromDate, params.tillDate),
-    };
+    const whereOptions: FindOptionsWhere<SellerPayout> = QueryFilter.createFilterWhereClause(filterMapping, params);
+    const whereOptionsDates = QueryFilter.createFilterWhereDateRange<SellerPayout>('startDate', 'endDate', params.fromDate, params.tillDate);
+
+    let where: FindOptionsWhere<SellerPayout>[];
+    if (whereOptionsDates.length > 0) {
+      where = whereOptionsDates.map((w) => ({
+        ...w,
+        ...whereOptions,
+      }));
+    } else {
+      where = [whereOptions];
+    }
 
     return { where, relations };
   }

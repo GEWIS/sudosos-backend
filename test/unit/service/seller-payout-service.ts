@@ -112,47 +112,186 @@ describe('SellerPayoutService', () => {
       expect(sellerPayouts).to.be.lengthOf(1);
       expect(sellerPayouts[0].requestedBy.id).to.equal(ctx.sellerPayouts[0].requestedBy.id);
     });
-    it('should return seller payouts created after a date', async () => {
-      const fromDate = ctx.sellerPayouts[0].createdAt > ctx.sellerPayouts[1].createdAt
-        ? ctx.sellerPayouts[0].createdAt
-        : ctx.sellerPayouts[1].createdAt;
+    describe('fromDate filter', () => {
+      it('should not return "completely before"', async () => {
+        const sellerPayout = ctx.sellerPayouts[0];
+        const fromDate = new Date(sellerPayout.endDate.getTime() + 1000);
 
-      const actualPayouts = ctx.sellerPayouts.filter((s) => s.createdAt >= fromDate);
-      const service = new SellerPayoutService();
-      const [sellerPayouts, count] = await service.getSellerPayouts({
-        fromDate,
+        const service = new SellerPayoutService();
+        const [sellerPayouts] = await service.getSellerPayouts({
+          fromDate,
+        });
+        const ids = sellerPayouts.map((s) => s.id);
+        expect(ids).to.not.include(sellerPayout.id);
       });
+      it('should return "startDate before, endDate after"', async () => {
+        const sellerPayout = ctx.sellerPayouts[0];
+        // Strictly after
+        let fromDate = new Date(sellerPayout.endDate.getTime() - 1000);
+        // Sanity check
+        expect(fromDate).to.be.greaterThan(sellerPayout.startDate);
 
-      // Sanity check
-      expect(actualPayouts.length).to.be.at.least(1);
-      expect(actualPayouts.length).to.not.equal(ctx.sellerPayouts.length);
+        const service = new SellerPayoutService();
+        let [sellerPayouts] = await service.getSellerPayouts({
+          fromDate,
+        });
+        let ids = sellerPayouts.map((s) => s.id);
+        expect(ids).to.include(sellerPayout.id);
 
-      expect(sellerPayouts.length).to.equal(actualPayouts.length);
-      expect(sellerPayouts.length).to.equal(count);
-      sellerPayouts.forEach((s) => {
-        expect(s.createdAt).to.be.greaterThanOrEqual(fromDate);
+        // FromDate same as endDate
+        fromDate = new Date(sellerPayout.endDate.getTime());
+        [sellerPayouts] = await service.getSellerPayouts({
+          fromDate,
+        });
+        ids = sellerPayouts.map((s) => s.id);
+        expect(ids).to.not.include(sellerPayout.id);
+      });
+      it('should return "completely after"', async () => {
+        const sellerPayout = ctx.sellerPayouts[0];
+        const fromDate = new Date(sellerPayout.startDate.getTime() - 1000);
+
+        const service = new SellerPayoutService();
+        const [sellerPayouts] = await service.getSellerPayouts({
+          fromDate,
+        });
+        const ids = sellerPayouts.map((s) => s.id);
+        expect(ids).to.include(sellerPayout.id);
       });
     });
-    it('should return seller payouts created before a date', async () => {
-      let tillDate = ctx.sellerPayouts[0].createdAt > ctx.sellerPayouts[1].createdAt
-        ? ctx.sellerPayouts[0].createdAt
-        : ctx.sellerPayouts[1].createdAt;
-      tillDate = new Date(tillDate.getTime());
+    describe('tillDate filter', () => {
+      it('should not return "completely before"', async () => {
+        const sellerPayout = ctx.sellerPayouts[0];
+        const tillDate = new Date(sellerPayout.endDate.getTime() + 1000);
 
-      const actualPayouts = ctx.sellerPayouts.filter((s) => s.createdAt < tillDate);
-      const service = new SellerPayoutService();
-      const [sellerPayouts, count] = await service.getSellerPayouts({
-        tillDate,
+        const service = new SellerPayoutService();
+        const [sellerPayouts] = await service.getSellerPayouts({
+          tillDate,
+        });
+        const ids = sellerPayouts.map((s) => s.id);
+        expect(ids).to.include(sellerPayout.id);
       });
+      it('should return "startDate before, endDate after"', async () => {
+        const sellerPayout = ctx.sellerPayouts[0];
+        // Strictly after
+        let tillDate = new Date(sellerPayout.endDate.getTime() - 1000);
+        // Sanity check
+        expect(tillDate).to.be.greaterThan(sellerPayout.startDate);
 
-      // Sanity check
-      expect(actualPayouts.length).to.be.at.least(1);
-      expect(actualPayouts.length).to.not.equal(ctx.sellerPayouts.length);
+        const service = new SellerPayoutService();
+        let [sellerPayouts] = await service.getSellerPayouts({
+          tillDate,
+        });
+        let ids = sellerPayouts.map((s) => s.id);
+        expect(ids).to.include(sellerPayout.id);
 
-      expect(sellerPayouts.length).to.equal(actualPayouts.length);
-      expect(sellerPayouts.length).to.equal(count);
-      sellerPayouts.forEach((s) => {
-        expect(s.createdAt).to.be.lessThan(tillDate);
+        // tillDate same as startDate
+        tillDate = new Date(sellerPayout.startDate.getTime());
+        [sellerPayouts] = await service.getSellerPayouts({
+          tillDate,
+        });
+        ids = sellerPayouts.map((s) => s.id);
+        expect(ids).to.not.include(sellerPayout.id);
+      });
+      it('should not return "completely after"', async () => {
+        const sellerPayout = ctx.sellerPayouts[0];
+        const tillDate = new Date(sellerPayout.startDate.getTime() - 1000);
+
+        const service = new SellerPayoutService();
+        const [sellerPayouts] = await service.getSellerPayouts({
+          tillDate,
+        });
+        const ids = sellerPayouts.map((s) => s.id);
+        expect(ids).to.not.include(sellerPayout.id);
+      });
+    });
+    describe('fromDate & tillDate filter', () => {
+      it('should not return "completely before"', async () => {
+        const sellerPayout = ctx.sellerPayouts[0];
+        const fromDate = new Date(sellerPayout.endDate.getTime() + 1000);
+        const tillDate = new Date(fromDate.getTime() + 60000);
+        // Sanity check
+        expect(sellerPayout.endDate).to.be.lessThan(fromDate);
+
+        const service = new SellerPayoutService();
+        const [sellerPayouts] = await service.getSellerPayouts({
+          fromDate, tillDate,
+        });
+        const ids = sellerPayouts.map((s) => s.id);
+        expect(ids).to.not.include(sellerPayout.id);
+      });
+      it('should not return "completely after"', async () => {
+        const sellerPayout = ctx.sellerPayouts[0];
+        const tillDate = new Date(sellerPayout.startDate.getTime() - 1000);
+        const fromDate = new Date(tillDate.getTime() - 60000);
+        // Sanity check
+        expect(sellerPayout.startDate).to.be.greaterThan(tillDate);
+
+        const service = new SellerPayoutService();
+        const [sellerPayouts] = await service.getSellerPayouts({
+          fromDate, tillDate,
+        });
+        const ids = sellerPayouts.map((s) => s.id);
+        expect(ids).to.not.include(sellerPayout.id);
+      });
+      it('should return "endDate contained"', async () => {
+        const sellerPayout = ctx.sellerPayouts[0];
+        const fromDate = new Date(sellerPayout.endDate.getTime() - 2000);
+        const tillDate = new Date(sellerPayout.endDate.getTime() + 2000);
+        // Sanity check
+        expect(sellerPayout.startDate).to.be.lessThan(fromDate);
+
+        const service = new SellerPayoutService();
+        const [sellerPayouts] = await service.getSellerPayouts({
+          fromDate, tillDate,
+        });
+        const ids = sellerPayouts.map((s) => s.id);
+        expect(ids).to.include(sellerPayout.id);
+      });
+      it('should return "startDate contained"', async () => {
+        const sellerPayout = ctx.sellerPayouts[0];
+        const fromDate = new Date(sellerPayout.startDate.getTime() - 2000);
+        const tillDate = new Date(sellerPayout.startDate.getTime() + 2000);
+        // Sanity check
+        expect(sellerPayout.endDate).to.be.greaterThan(tillDate);
+
+        const service = new SellerPayoutService();
+        const [sellerPayouts] = await service.getSellerPayouts({
+          fromDate, tillDate,
+        });
+        const ids = sellerPayouts.map((s) => s.id);
+        expect(ids).to.include(sellerPayout.id);
+      });
+      it('should return "SellerPayout within range"', async () => {
+        const sellerPayout = ctx.sellerPayouts[0];
+        const fromDate = new Date(sellerPayout.startDate.getTime() - 20000);
+        const tillDate = new Date(sellerPayout.endDate.getTime() + 20000);
+        // Sanity check
+        expect(fromDate).to.be.lessThan(tillDate);
+        expect(fromDate).to.be.lessThan(sellerPayout.startDate);
+        expect(sellerPayout.endDate).to.be.lessThan(tillDate);
+
+        const service = new SellerPayoutService();
+        const [sellerPayouts] = await service.getSellerPayouts({
+          fromDate, tillDate,
+        });
+        const ids = sellerPayouts.map((s) => s.id);
+        expect(ids).to.include(sellerPayout.id);
+      });
+      it('should return "Range within SellerPayout"', async () => {
+        const sellerPayout = ctx.sellerPayouts[0];
+        const fromDate = new Date(sellerPayout.startDate.getTime() + 20000);
+        const tillDate = new Date(sellerPayout.endDate.getTime() - 20000);
+        // Sanity check
+        expect(fromDate).to.be.lessThan(tillDate);
+        expect(sellerPayout.startDate).to.be.lessThan(fromDate);
+        expect(tillDate).to.be.lessThan(sellerPayout.endDate);
+
+        const service = new SellerPayoutService();
+        const [sellerPayouts] = await service.getSellerPayouts({
+          fromDate, tillDate,
+        });
+        const ids = sellerPayouts.map((s) => s.id);
+        expect(ids).to.include(sellerPayout.id);
       });
     });
     it('should return seller payouts with transfers', async () => {
