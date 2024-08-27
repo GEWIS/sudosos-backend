@@ -61,10 +61,10 @@ async function createCronTasks(): Promise<void> {
   // Setup RBAC.
   application.roleManager = await new RoleManager().initialize();
 
-  await BalanceService.updateBalances({});
+  await new BalanceService().updateBalances({});
   const syncBalances = cron.schedule('41 1 * * *', () => {
     logger.debug('Syncing balances.');
-    BalanceService.updateBalances({}).then(() => {
+    new BalanceService().updateBalances({}).then(() => {
       logger.debug('Synced balances.');
     }).catch((error => {
       logger.error('Could not sync balances.', error);

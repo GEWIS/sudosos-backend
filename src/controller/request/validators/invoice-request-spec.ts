@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { In } from 'typeorm';
+import { FindOptionsRelations, In } from 'typeorm';
 import {
   BaseInvoice, CreateInvoiceParams, CreateInvoiceRequest, UpdateInvoiceParams,
 } from '../invoice-request';
@@ -30,11 +30,9 @@ import {
 } from '../../../helpers/specification-validation';
 import Transaction from '../../../entity/transactions/transaction';
 import InvoiceEntryRequest from '../invoice-entry-request';
-import { validOrUndefinedDate } from './duration-spec';
 import stringSpec from './string-spec';
 import { positiveNumber, userMustExist } from './general-validators';
 import {
-  CREDIT_CONTAINS_INVOICE_ACCOUNT,
   INVALID_INVOICE_ID,
   INVALID_TRANSACTION_IDS,
   INVALID_TRANSACTION_OWNER,
@@ -43,7 +41,6 @@ import {
 } from './validation-errors';
 import { InvoiceState } from '../../../entity/invoices/invoice-status';
 import Invoice from '../../../entity/invoices/invoice';
-import { UserType } from '../../../entity/user/user';
 
 /**
  * Checks whether all the transactions exists and are credited to the debtor or sold in case of credit Invoice.
@@ -51,24 +48,24 @@ import { UserType } from '../../../entity/user/user';
 async function validTransactionIds<T extends BaseInvoice>(p: T) {
   if (!p.transactionIDs) return toPass(p);
 
-  const transactions = await Transaction.find({ where: { id: In(p.transactionIDs) }, relations: ['from', 'subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice', 'subTransactions.to'] });
+  const relations: FindOptionsRelations<Transaction> = {
+    from: true,
+    subTransactions: {
+      subTransactionRows: {
+        invoice: true,
+      },
+      to: true,
+    },
+  };
+  const transactions = await Transaction.find({ where: { id: In(p.transactionIDs) },
+    relations });
   let notOwnedByUser = [];
-  let fromInvoiceAccount: number[] = [];
-  if (p.isCreditInvoice) {
-    transactions.forEach((t) => {
-      t.subTransactions.forEach((tSub) => {
-        if (tSub.to.id !== p.forId) notOwnedByUser.push(t);
-      });
-    });
-  } else {
-    notOwnedByUser.push(...transactions.filter((t) => t.from.id !== p.forId));
-  }
+  notOwnedByUser.push(...transactions.filter((t) => t.from.id !== p.forId));
   if (notOwnedByUser.length !== 0) return toFail(INVALID_TRANSACTION_OWNER());
   if (transactions.length !== p.transactionIDs.length) return toFail(INVALID_TRANSACTION_IDS());
 
   const alreadyInvoiced: number[] = [];
   transactions.forEach((t) => {
-    if (t.from.type === UserType.INVOICE) fromInvoiceAccount.push(t.id);
     t.subTransactions.forEach((tSub) => {
       tSub.subTransactionRows.forEach((tSubRow) => {
         if (tSubRow.invoice !== null) alreadyInvoiced.push(tSubRow.id);
@@ -76,7 +73,6 @@ async function validTransactionIds<T extends BaseInvoice>(p: T) {
     });
   });
   if (alreadyInvoiced.length !== 0) return toFail(SUBTRANSACTION_ALREADY_INVOICED(alreadyInvoiced));
-  if (p.isCreditInvoice && fromInvoiceAccount.length !== 0) return toFail(CREDIT_CONTAINS_INVOICE_ACCOUNT(fromInvoiceAccount));
   return toPass(p);
 }
 
@@ -85,10 +81,10 @@ async function validTransactionIds<T extends BaseInvoice>(p: T) {
  * @param p
  */
 async function existsAndNotDeleted<T extends UpdateInvoiceParams>(p: T) {
-  const base: Invoice = await Invoice.findOne({ where: { id: p.invoiceId }, relations: ['latestStatus'] });
+  const base: Invoice = await Invoice.findOne({ where: { id: p.invoiceId }, relations: ['invoiceStatus'] });
 
   if (!base) return toFail(INVALID_INVOICE_ID());
-  if (base.latestStatus.state === InvoiceState.DELETED) {
+  if (base.invoiceStatus[base.invoiceStatus.length - 1].state === InvoiceState.DELETED) {
     return toFail(INVOICE_IS_DELETED());
   }
 
@@ -102,8 +98,8 @@ async function existsAndNotDeleted<T extends UpdateInvoiceParams>(p: T) {
 async function differentState<T extends UpdateInvoiceParams>(p: T) {
   if (!p.state) return toPass(p);
 
-  const base: Invoice = await Invoice.findOne({ where: { id: p.invoiceId }, relations: ['latestStatus'] });
-  if (base.latestStatus.state === p.state) {
+  const base: Invoice = await Invoice.findOne({ where: { id: p.invoiceId }, relations: ['invoiceStatus'] });
+  if (base.invoiceStatus[base.invoiceStatus.length - 1].state === p.state) {
     return toFail(SAME_INVOICE_STATE());
   }
 
@@ -125,8 +121,6 @@ function baseInvoiceRequestSpec<T extends BaseInvoice>(): Specification<T, Valid
   return [
     validTransactionIds,
     [[userMustExist], 'forId', new ValidationError('forId:')],
-    [[validOrUndefinedDate], 'fromDate', new ValidationError('fromDate:')],
-    [stringSpec(), 'description', new ValidationError('description:')],
     // We have only defined a single item rule, so we use this to apply it to an array,
     [[createArrayRule(invoiceEntryRequestSpec())], 'customEntries', new ValidationError('Custom entries:')],
   ];
@@ -152,6 +146,7 @@ const createInvoiceRequestSpec: () => Specification<CreateInvoiceParams, Validat
   [stringSpec(), 'city', new ValidationError('city:')],
   [stringSpec(), 'country', new ValidationError('country:')],
   [stringSpec(), 'reference', new ValidationError('reference:')],
+  [stringSpec(), 'description', new ValidationError('description:')],
 ];
 
 export default async function verifyCreateInvoiceRequest(

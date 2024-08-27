@@ -181,7 +181,7 @@ export default class PayoutRequestController extends BaseController {
         return;
       }
 
-      const balance = await BalanceService.getBalance(user.id);
+      const balance = await new BalanceService().getBalance(user.id);
       if (balance.amount.amount < body.amount.amount) {
         res.status(400).json('Insufficient balance.');
         return;
@@ -241,7 +241,7 @@ export default class PayoutRequestController extends BaseController {
     }
 
     if (body.state === PayoutRequestState.APPROVED) {
-      const balance = await BalanceService.getBalance(payoutRequest.requestedBy.id);
+      const balance = await new BalanceService().getBalance(payoutRequest.requestedBy.id);
       if (balance.amount.amount < payoutRequest.amount.amount) {
         res.status(400).json('Insufficient balance.');
         return;

@@ -30,6 +30,7 @@ import InvoiceStatus from './invoice-status';
 import InvoicePdf from '../file/invoice-pdf';
 import { hashJSON } from '../../helpers/hash';
 import InvoicePdfService from '../../service/invoice-pdf-service';
+import SubTransactionRow from '../transactions/sub-transaction-row';
 
 
 @Entity()
@@ -63,17 +64,6 @@ export default class Invoice extends BaseEntity {
     (invoiceEntry) => invoiceEntry.invoice,
     { cascade: true, eager: true })
   public invoiceEntries: InvoiceEntry[];
-
-
-  @Column({ nullable: true })
-  public latestStatusId?: number;
-
-  /**
-   * The current status of the invoice
-   */
-  @OneToOne(() => InvoiceStatus, { nullable: true, eager: false })
-  @JoinColumn({ name: 'latestStatusId' })
-  public latestStatus?: InvoiceStatus;
 
   /**
    * The status history of the invoice
@@ -147,6 +137,16 @@ export default class Invoice extends BaseEntity {
   @Column()
   public country: string;
 
+  @Column({ nullable: true })
+  public creditTransferId?: number;
+
+  /**
+   * If this invoice is deleted, this will be credit transfer.
+   */
+  @OneToOne(() => Transfer, { nullable: true })
+  @JoinColumn()
+  public creditTransfer?: Transfer;
+
   /**
    * Date of the invoice
    */
@@ -155,6 +155,9 @@ export default class Invoice extends BaseEntity {
     default: () => 'CURRENT_TIMESTAMP',
   })
   public date: Date;
+
+  @OneToMany(() => SubTransactionRow, (row) => row.invoice, { cascade: false })
+  public subTransactionRows: SubTransactionRow[];
 
   getPdfParamHash(): string {
     return hashJSON(InvoicePdfService.getParameters(this));

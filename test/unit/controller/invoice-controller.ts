@@ -47,8 +47,6 @@ import {
 } from '../../../src/controller/request/invoice-request';
 import Transaction from '../../../src/entity/transactions/transaction';
 import {
-  CREDIT_CONTAINS_INVOICE_ACCOUNT,
-  INVALID_DATE,
   INVALID_TRANSACTION_OWNER,
   INVALID_USER_ID,
   SAME_INVOICE_STATE,
@@ -182,12 +180,12 @@ describe('InvoiceController', async () => {
       byId: adminUser.id,
       description: 'InvoiceRequest test',
       forId: localUser.type,
-      isCreditInvoice: false,
       reference: 'BAC-41',
       city: 'city',
       country: 'country',
       postalCode: 'postalCode',
       street: 'street',
+      transactionIDs: [],
     };
 
     ctx = {
@@ -282,24 +280,9 @@ describe('InvoiceController', async () => {
       const req: CreateInvoiceRequest = { ...ctx.validInvoiceRequest, transactionIDs };
       await expectError(req, INVALID_TRANSACTION_OWNER().value);
     });
-    it('should verify that all transactions are owned by creditor if credit Invoice', async () => {
-      const transactionIDs = (await Transaction.find({ relations: ['from'] })).filter((i) => i.from.id === ctx.adminUser.id).map((t) => t.id);
-      const req: CreateInvoiceRequest = { ...ctx.validInvoiceRequest, forId: ctx.localUser.id, isCreditInvoice: true, transactionIDs };
-      await expectError(req, INVALID_TRANSACTION_OWNER().value);
-    });
-    it('should verify that all transactions are not invoice accounts if credit Invoice', async () => {
-      const transaction = (await Transaction.findOne({ where: { from : { type: UserType.INVOICE } }, relations: [ 'from', 'subTransactions', 'subTransactions.to' ] }));
-      const transactionIDs = [transaction.id];
-      const req: CreateInvoiceRequest = { ...ctx.validInvoiceRequest, forId: transaction.subTransactions[0].to.id, isCreditInvoice: true, transactionIDs };
-      await expectError(req, CREDIT_CONTAINS_INVOICE_ACCOUNT(transactionIDs).value);
-    });
     it('should verity that forId is a valid user', async () => {
       const req: CreateInvoiceRequest = { ...ctx.validInvoiceRequest, forId: -1 };
       await expectError(req, `forId: ${INVALID_USER_ID().value}`);
-    });
-    it('should verity that fromDate is a valid date', async () => {
-      const req: CreateInvoiceRequest = { ...ctx.validInvoiceRequest, fromDate: 'invalid' };
-      await expectError(req, `fromDate: ${INVALID_DATE().value}`);
     });
     it('should verity that description is a valid string', async () => {
       const req: CreateInvoiceRequest = { ...ctx.validInvoiceRequest, description: '' };
@@ -366,7 +349,6 @@ describe('InvoiceController', async () => {
             description: 'Description',
             forId: debtor.id,
             transactionIDs: tIds,
-            isCreditInvoice: false,
             date: new Date(),
             reference: 'BAC-41',
           };
@@ -392,9 +374,9 @@ describe('InvoiceController', async () => {
     describe('verifyInvoiceRequest Specification', async () => {
       await testValidationOnRoute('post', '/invoices');
     });
-    it('should create an Invoice with only custom entries and return an HTTP 200 if admin', async () => {
+    it('should not create an Invoice with only custom entries and return an HTTP 400 if admin', async () => {
       await inUserContext(await (await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
-        const count = await Invoice.count();
+        await Invoice.count();
         const newRequest: CreateInvoiceRequest = {
           ...ctx.validInvoiceRequest,
           forId: debtor.id,
@@ -417,15 +399,7 @@ describe('InvoiceController', async () => {
           .set('Authorization', `Bearer ${ctx.adminToken}`)
           .send(newRequest);
 
-        expect(res.status).to.equal(200);
-        expect(await Invoice.count()).to.equal(count + 1);
-        const validation = ctx.specification.validateModel(
-          'InvoiceResponse',
-          res.body,
-          false,
-          true,
-        );
-        expect(validation.valid).to.be.true;
+        expect(res.status).to.equal(400);
       });
     });
     it('should return an HTTP 403 if not admin', async () => {
@@ -460,7 +434,7 @@ describe('InvoiceController', async () => {
           };
 
           await new Promise((f) => setTimeout(f, 500));
-          expect((await BalanceService.getBalance(debtor.id)).amount.amount).is.equal(-1 * total);
+          expect((await new BalanceService().getBalance(debtor.id)).amount.amount).is.equal(-1 * total);
 
           const count = await Invoice.count();
           const res = await request(ctx.app)
@@ -468,16 +442,16 @@ describe('InvoiceController', async () => {
             .set('Authorization', `Bearer ${ctx.adminToken}`)
             .send(newRequest);
 
-          expect((await BalanceService.getBalance(debtor.id)).amount.amount).is.equal(0);
+          expect((await new BalanceService().getBalance(debtor.id)).amount.amount).is.equal(0);
           expect(await Invoice.count()).to.equal(count + 1);
 
           expect(res.status).to.equal(200);
         });
     });
-    it('should create an Invoice with custom entries and return an HTTP 200 if admin', async () => {
+    it('should NOT create an Invoice with custom entries and return an HTTP 400 if admin', async () => {
       await inUserContext(await (await UserFactory()).clone(2),
         async (debtor: User, creditor: User) => {
-          const count = await Invoice.count();
+          await Invoice.count();
           const newRequest: CreateInvoiceRequest = {
             ...ctx.validInvoiceRequest,
             forId: debtor.id,
@@ -499,20 +473,12 @@ describe('InvoiceController', async () => {
             .post('/invoices')
             .set('Authorization', `Bearer ${ctx.adminToken}`)
             .send(newRequest);
-
-          expect(await Invoice.count()).to.equal(count + 1);
-          expect(((res.body) as InvoiceResponse).invoiceEntries[0].description)
-            .to.equal(newRequest.customEntries[0].description);
-          expect(((res.body) as InvoiceResponse).invoiceEntries[0].amount)
-            .to.equal(newRequest.customEntries[0].amount);
-          expect(((res.body) as InvoiceResponse).invoiceEntries[0].priceInclVat.amount)
-            .to.equal(newRequest.customEntries[0].priceInclVat.amount);
-
-          expect(res.status).to.equal(200);
+          expect(res.status).to.equal(400);
         });
     });
     it('should filter on invoice status', async () => {
-      const sent = await Invoice.find({ where: { latestStatus: { state: 2 } }, relations: ['latestStatus'] });
+      const sent = (await Invoice.find({ where: { invoiceStatus: true }, relations: ['invoiceStatus'] }))
+        .filter((i) => i.invoiceStatus[i.invoiceStatus.length - 1].state === InvoiceState.SENT);
       expect(sent.length).to.be.at.least(1);
       expect(sent.length).to.not.equal(await Invoice.count());
       const res = await request(ctx.app)
@@ -582,8 +548,8 @@ describe('InvoiceController', async () => {
   });
   describe('PATCH /invoices/{id}', () => {
     it('should return an HTTP 200 and update an invoice if admin', async () => {
-      const invoice = (await Invoice.find({ relations: ['latestStatus'] }))[0];
-      expect(invoice.latestStatus.state).to.not.equal(InvoiceState.PAID);
+      const invoice = (await Invoice.find({ relations: ['invoiceStatus'] }))
+        .filter((i) => i.invoiceStatus[i.invoiceStatus.length - 1].state === InvoiceState.SENT)[0];
       const updateRequest: UpdateInvoiceRequest = {
         addressee: 'Updated-addressee',
         description: 'Updated-description',

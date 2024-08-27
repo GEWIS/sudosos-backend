@@ -86,10 +86,10 @@ import ServerSetting from '../entity/server-setting';
 import { ServerSettings1722083254200 } from '../migrations/1722083254200-server-settings';
 import { PosUsers1722084520361 } from '../migrations/1722084520361-pos-users';
 import { InvoiceRework1622118077157 } from '../migrations/1722118077157-invoice-rework';
-import InvoiceStatusSubscriber from '../subscriber/invoice-status-subscriber';
 import StripePaymentIntent from '../entity/stripe/stripe-payment-intent';
 import { StripePaymentIntents1722869409448 } from '../migrations/1722869409448-stripe-payment-intents';
 import { NestedProductCategories1722517212441 } from '../migrations/1722517212441-nested-product-categories';
+import { InvoiceAsTopups1724506999318 } from '../migrations/1724506999318-invoice-as-topups';
 
 // We need to load the dotenv to prevent the env from being undefined.
 dotenv.config();
@@ -120,6 +120,7 @@ const options: DataSourceOptions = {
     InvoiceRework1622118077157,
     StripePaymentIntents1722869409448,
     NestedProductCategories1722517212441,
+    InvoiceAsTopups1724506999318,
   ],
   extra: {
     authPlugins: {
@@ -187,7 +188,6 @@ const options: DataSourceOptions = {
   subscribers: [
     TransactionSubscriber,
     TransferSubscriber,
-    InvoiceStatusSubscriber,
   ],
 };
 

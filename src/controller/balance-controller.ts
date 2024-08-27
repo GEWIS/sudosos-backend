@@ -80,7 +80,7 @@ export default class BalanceController extends BaseController {
   // eslint-disable-next-line class-methods-use-this
   private async getOwnBalance(req: RequestWithToken, res: Response): Promise<void> {
     try {
-      res.json(await BalanceService.getBalance(req.token.user.id));
+      res.json(await new BalanceService().getBalance(req.token.user.id));
     } catch (error) {
       this.logger.error(`Could not get balance of user with id ${req.token.user.id}`, error);
       res.status(500).json('Internal server error.');
@@ -137,7 +137,7 @@ export default class BalanceController extends BaseController {
     }
 
     try {
-      const result = await BalanceService.getBalances(params, { take, skip });
+      const result = await new BalanceService().getBalances(params, { take, skip });
       res.json(result);
     } catch (error) {
       this.logger.error('Could not get balances', error);
@@ -161,7 +161,7 @@ export default class BalanceController extends BaseController {
     try {
       const userId = Number.parseInt(req.params.id, 10);
       if (await User.findOne({ where: { id: userId, deleted: false } })) {
-        res.json(await BalanceService.getBalance(userId));
+        res.json(await new BalanceService().getBalance(userId));
       } else {
         res.status(404).json('User does not exist');
       }

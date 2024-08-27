@@ -175,7 +175,7 @@ describe('WriteOffController', () => {
         expect(writeOff.to.id).to.equal(user.id);
         expect(writeOff.amount.amount).to.equal(amount);
 
-        const newBalance = await BalanceService.getBalance(user.id);
+        const newBalance = await new BalanceService().getBalance(user.id);
         expect(newBalance.amount.amount).to.equal(0);
 
         const newUser = await User.findOne({ where: { id: user.id } });

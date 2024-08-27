@@ -151,7 +151,7 @@ export default class WriteOffController extends BaseController {
         return;
       }
 
-      const balance = await BalanceService.getBalance(user.id);
+      const balance = await new BalanceService().getBalance(user.id);
       if (balance.amount.amount > 0) {
         res.status(400).json('User has balance, cannot create write off');
         return;

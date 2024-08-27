@@ -50,7 +50,7 @@ export default async function createApp() {
     await application.connection.synchronize();
     await application.connection.runMigrations({ fake: true });
     await seedDatabase();
-    await BalanceService.updateBalances({});
+    await new BalanceService().updateBalances({});
     application.logger.info('Seeding successful');
   } catch (e) {
     application.logger.error('Seeding failed', e);

@@ -70,6 +70,8 @@ export async function finishTestDB(connection: DataSource) {
   if (process.env.TYPEORM_CONNECTION === 'sqlite') {
     await connection.dropDatabase();
     await connection.close();
+  } else {
+    await connection.destroy();
   }
 }
 

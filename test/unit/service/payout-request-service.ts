@@ -40,7 +40,7 @@ describe('PayoutRequestService', () => {
   };
 
   async function getValidPayoutRequest(id: number): Promise<PayoutRequestRequest> {
-    const balance = await BalanceService.getBalance(id);
+    const balance = await new BalanceService().getBalance(id);
     return {
       amount: {
         amount: balance.amount.amount,

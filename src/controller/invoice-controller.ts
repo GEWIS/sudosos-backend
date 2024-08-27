@@ -32,7 +32,7 @@ import {
 } from './request/invoice-request';
 import verifyCreateInvoiceRequest, { verifyUpdateInvoiceRequest } from './request/validators/invoice-request-spec';
 import { isFail } from '../helpers/specification-validation';
-import { asBoolean, asInvoiceState } from '../helpers/validators';
+import { asBoolean, asDate, asInvoiceState, asNumber } from '../helpers/validators';
 import Invoice from '../entity/invoices/invoice';
 import User, { UserType } from '../entity/user/user';
 import { UpdateInvoiceUserRequest } from './request/user-request';
@@ -104,6 +104,12 @@ export default class InvoiceController extends BaseController {
         GET: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'get', await InvoiceController.getRelation(req), 'Invoice', ['*']),
           handler: this.getInvoicePDF.bind(this),
+        },
+      },
+      '/eligible-transactions': {
+        GET: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Invoice', ['*']),
+          handler: this.getEligibleTransactions.bind(this),
         },
       },
     };
@@ -181,12 +187,19 @@ export default class InvoiceController extends BaseController {
         { invoiceId, returnInvoiceEntries },
       );
 
-      if (!invoices[0]) {
+      const invoice = invoices[0];
+      if (!invoice) {
         res.status(404).json('Unknown invoice ID.');
         return;
       }
 
-      res.json(InvoiceService.toResponse(invoices[0], returnInvoiceEntries));
+      let response;
+      if (returnInvoiceEntries) {
+        response = await new InvoiceService().asInvoiceResponse(invoice);
+      } else {
+        response = InvoiceService.asBaseInvoiceResponse(invoice);
+      }
+      res.json(response);
     } catch (error) {
       this.logger.error('Could not return invoice:', error);
       res.status(500).json('Internal server error.');
@@ -219,6 +232,7 @@ export default class InvoiceController extends BaseController {
         ...body,
         date: body.date ? new Date(body.date) : new Date(),
         byId: body.byId ?? req.token.user.id,
+        description: body.description ?? '',
       };
 
       const validation = await verifyCreateInvoiceRequest(params);
@@ -227,9 +241,15 @@ export default class InvoiceController extends BaseController {
         return;
       }
 
+      if (params.customEntries) {
+        res.status(400).json('Custom entries are not supported anymore.');
+        return;
+      }
+
+
       const invoice: Invoice = await AppDataSource.manager.transaction(async (manager) =>
         new InvoiceService(manager).createInvoice(params));
-      res.json(InvoiceService.toResponse(invoice, true));
+      res.json(await new InvoiceService().asInvoiceResponse(invoice));
     } catch (error) {
       if (error instanceof NotImplementedError) {
         res.status(501).json(error.message);
@@ -277,7 +297,7 @@ export default class InvoiceController extends BaseController {
       const invoice: Invoice = await AppDataSource.manager.transaction(async (manager) =>
         new InvoiceService(manager).updateInvoice(params));
 
-      res.json(InvoiceService.toResponse(invoice, false));
+      res.json(InvoiceService.asBaseInvoiceResponse(invoice));
     } catch (error) {
       this.logger.error('Could not update invoice:', error);
       res.status(500).json('Internal server error.');
@@ -462,6 +482,45 @@ export default class InvoiceController extends BaseController {
       res.status(200).json(parseInvoiceUserToResponse(invoiceUser));
     } catch (error) {
       this.logger.error('Could not update invoice user:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * GET /invoices/eligible-transactions
+   * @summary Get eligible transactions for invoice creation.
+   * @operationId getEligibleTransactions
+   * @tags invoices - Operations of the invoices controller
+   * @security JWT
+   * @param {integer} forId.query.required - Filter on Id of the debtor
+   * @param {string} fromDate.query.required - Start date for selected transactions (inclusive)
+   * @param {string} tillDate.query - End date for selected transactions (exclusive)
+   * @return {TransactionResponse} 200 - The eligible transactions
+   * @return {string} 500 - Internal server error
+   */
+  public async getEligibleTransactions(req: RequestWithToken, res: Response): Promise<void> {
+    this.logger.trace('Get eligible transactions for invoice creation', req.query, 'by user', req.token.user);
+
+    let fromDate, tillDate;
+    let forId;
+    try {
+      forId = asNumber(req.query.forId);
+      fromDate = asDate(req.query.fromDate);
+      tillDate = req.query.tillDate ? asDate(req.query.tillDate) : undefined;
+    } catch (e) {
+      res.status(400).send(e.message);
+      return;
+    }
+
+    try {
+      const transactions = await new InvoiceService().getTransactionsForInvoice({
+        forId,
+        fromDate,
+        tillDate,
+      });
+      res.json(transactions);
+    } catch (error) {
+      this.logger.error('Could not get eligible transactions:', error);
       res.status(500).json('Internal server error.');
     }
   }
