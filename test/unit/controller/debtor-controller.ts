@@ -562,9 +562,6 @@ describe('DebtorController', () => {
         .query({ fromDate, toDate });
       expect(res.status).to.equal(200);
 
-      fromDate.setUTCHours(0, 0, 0, 0);
-      toDate.setUTCHours(0, 0, 0, 0);
-
       const report = res.body as FineReportResponse;
       expect(report.fromDate).to.equal(fromDate.toISOString());
       expect(report.toDate).to.equal(toDate.toISOString());

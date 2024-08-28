@@ -386,6 +386,7 @@ describe('SellerPayoutService', () => {
     });
     it('should throw if seller payout does not exist', async () => {
       const id = ctx.sellerPayouts.length + 1;
+      expect(await SellerPayout.findOne({ where: { id } })).to.be.null;
       const service = new SellerPayoutService();
       await expect(service.updateSellerPayout(id, { amount: ctx.sellerPayouts[0].amount.toObject() }))
         .to.eventually.be.rejectedWith(`Payout with ID "${id}" not found.`);
@@ -406,7 +407,9 @@ describe('SellerPayoutService', () => {
     });
     it('should throw if seller payout does not exist', async () => {
       const id = ctx.sellerPayouts.length + 1;
+      expect(await SellerPayout.findOne({ where: { id } })).to.be.null;
       const service = new SellerPayoutService();
+      expect(await SellerPayout.findOne({ where: { id } })).to.be.null;
       await expect(service.deleteSellerPayout(id)).to.eventually.be
         .rejectedWith(`Payout with ID "${id}" not found.`);
     });

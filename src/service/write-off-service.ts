@@ -41,6 +41,7 @@ import { asNumber } from '../helpers/validators';
 import VatGroup from '../entity/vat-group';
 import ServerSettingsStore from '../server-settings/server-settings-store';
 import { AppDataSource } from '../database/database';
+import Transfer from '../entity/transactions/transfer';
 
 export interface WriteOffFilterParameters {
   /**
@@ -156,8 +157,8 @@ export default class WriteOffService {
     transfer.writeOff = writeOff;
     transfer.vat = highVatGroup;
 
-    await this.manager.save(transfer);
-    await this.manager.save(writeOff);
+    await this.manager.getRepository(Transfer).save(transfer);
+    await this.manager.getRepository(WriteOff).save(writeOff);
     return WriteOffService.asWriteOffResponse(writeOff);
   }
 

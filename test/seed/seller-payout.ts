@@ -48,6 +48,10 @@ export async function seedSellerPayouts(
         ? balance.lastTransaction.createdAt
         : balance.lastTransfer.createdAt)
       : (balance.lastTransaction?.createdAt || balance.lastTransfer?.createdAt);
+    endDate.setSeconds(endDate.getSeconds() + 1);
+
+    startDate.setMilliseconds(0);
+    endDate.setMilliseconds(0);
 
     const incomingTransactions = subTransactions.filter((s) => s.to.id === organ.id);
     const rows = incomingTransactions.map((s) => s.subTransactionRows).flat();

@@ -326,11 +326,15 @@ describe('SellerPayoutController', () => {
         && calculateBalance(u, ctx.transactions, ctx.subTransactions, ctx.transfers).amount.getAmount() > 0);
       // Sanity check
       expect(organ).to.not.be.undefined;
+      const startDate = new Date(0);
+      const endDate = new Date();
+      startDate.setMilliseconds(0);
+      endDate.setMilliseconds(0);
 
       req = {
         requestedById: organ.id,
-        startDate: new Date(0).toISOString(),
-        endDate: new Date().toISOString(),
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
         reference: 'TEST CASE',
       };
     });
