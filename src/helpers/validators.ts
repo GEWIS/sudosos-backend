@@ -235,9 +235,6 @@ export function asFromAndTillDate(fromDate: any, tillDate: any): { fromDate: Dat
     fromDate: asDate(fromDate),
     tillDate: asDate(tillDate),
   };
-  filters.fromDate.setUTCHours(0, 0, 0, 0);
-  filters.tillDate.setUTCHours(0, 0, 0, 0);
-
   if (filters.fromDate >= filters.tillDate) {
     throw new Error('tillDate must be after fromDate');
   }
