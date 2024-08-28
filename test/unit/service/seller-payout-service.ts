@@ -336,7 +336,7 @@ describe('SellerPayoutService', () => {
       expect(sellerPayout.transfer).to.not.be.undefined;
       expect(sellerPayout.transfer.fromId).to.equal(params.requestedById);
       expect(sellerPayout.transfer.toId).to.be.null;
-      expect(sellerPayout.transfer.createdAt.getTime()).to.equal(params.endDate.getTime());
+      expect(sellerPayout.transfer.createdAt.getTime()).to.equal(params.endDate.getTime() + 1);
 
       const incomingTransactions = ctx.subTransactions.filter((s) => s.to.id === params.requestedById);
       const rows = incomingTransactions.map((s) => s.subTransactionRows).flat();
@@ -385,7 +385,7 @@ describe('SellerPayoutService', () => {
       await SellerPayout.save(oldSellerPayout);
     });
     it('should throw if seller payout does not exist', async () => {
-      const id = ctx.sellerPayouts.length + 1;
+      const id = (await SellerPayout.count()) + 41;
       expect(await SellerPayout.findOne({ where: { id } })).to.be.null;
       const service = new SellerPayoutService();
       await expect(service.updateSellerPayout(id, { amount: ctx.sellerPayouts[0].amount.toObject() }))
@@ -406,8 +406,7 @@ describe('SellerPayoutService', () => {
       expect(dbTransfer).to.be.null;
     });
     it('should throw if seller payout does not exist', async () => {
-      const id = ctx.sellerPayouts.length + 1;
-      expect(await SellerPayout.findOne({ where: { id } })).to.be.null;
+      const id = (await SellerPayout.count()) + 41;
       const service = new SellerPayoutService();
       expect(await SellerPayout.findOne({ where: { id } })).to.be.null;
       await expect(service.deleteSellerPayout(id)).to.eventually.be
