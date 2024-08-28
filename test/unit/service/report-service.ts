@@ -237,9 +237,9 @@ describe('ReportService', () => {
 
       it('should return the total income of a user with mixed transactions before and after the fromDate', async () => {
         await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
-          const fromDate = new Date(new Date().getTime() - 1500);
-          await createTransactions(debtor.id, creditor.id, 2, -2000);  // Before fromDate
-          const transactions = await createTransactions(debtor.id, creditor.id, 3, -1000); // After fromDate
+          await createTransactions(debtor.id, creditor.id, 2, -4000);  // Before fromDate
+          const fromDate = new Date(new Date().getTime() - 1000);
+          const transactions = await createTransactions(debtor.id, creditor.id, 3); // After fromDate
           await checkTransactionsSalesReport(transactions.transactions, {
             fromDate,
             tillDate: new Date(2050, 0, 0),
