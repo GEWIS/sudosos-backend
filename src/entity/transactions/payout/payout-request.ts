@@ -29,7 +29,6 @@ import PayoutRequestPdfService from '../../../service/pdf/payout-request-pdf-ser
 import { PAYOUT_REQUEST_PDF_LOCATION } from '../../../files/storage';
 
 @Entity()
-// TODO Migration
 export default class PayoutRequest extends PdfAble(BasePayout) {
 
   @OneToMany(() => PayoutRequestStatus, (status) => status.payoutRequest, { cascade: true })

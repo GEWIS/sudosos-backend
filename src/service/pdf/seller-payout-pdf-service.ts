@@ -29,7 +29,6 @@ import SellerPayout from '../../entity/transactions/payout/seller-payout';
 import SellerPayoutPdf from '../../entity/file/seller-payout-pdf';
 import { SalesReportService } from '../report-service';
 import { ReportProductEntry } from '../../entity/report/report';
-import assert from 'assert';
 import { PdfService } from './pdf-service';
 
 export default class SellerPayoutPdfService extends PdfService<SellerPayoutPdf, SellerPayout, SellerPayoutRouteParams> {
@@ -38,16 +37,12 @@ export default class SellerPayoutPdfService extends PdfService<SellerPayoutPdf, 
   }
 
   async getParameters(entity: SellerPayout): Promise<SellerPayoutParameters> {
-    const { amount, startDate, endDate, reference } = entity;
+    const { startDate, endDate, reference } = entity;
     const report = await new SalesReportService().getReport({
       fromDate: startDate,
       tillDate: endDate,
       forId: entity.requestedBy.id,
     });
-
-    // TODO? throw error if amount and report amount are different?
-    console.error(amount.getAmount(), report.totalInclVat.getAmount());
-    assert(amount.getAmount() === report.totalInclVat.getAmount(), 'Amounts do not match');
 
     const entries = report.data.products.map((s: ReportProductEntry) => entryToProduct(s));
     entries.sort((a, b) => a.name.localeCompare(b.name));

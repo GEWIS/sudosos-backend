@@ -322,12 +322,12 @@ describe('SellerPayoutService', () => {
         reference: 'TEST',
       };
       const sellerPayout = await service.createSellerPayout(params);
-
       // Somehow a ~200ms difference between two dates, so just round to seconds
-      const expectedStartDate = Math.round(params.startDate.getTime() / 1000);
-      const expectedEndDate = Math.round(params.endDate.getTime() / 1000);
-      const actualStartDate = Math.round(sellerPayout.startDate.getTime() / 1000);
-      const actualEndDate = Math.round(sellerPayout.endDate.getTime() / 1000);
+
+      const expectedStartDate = Math.floor(params.startDate.getTime() / 1000);
+      const expectedEndDate = Math.floor(params.endDate.getTime() / 1000);
+      const actualStartDate = Math.floor(sellerPayout.startDate.getTime() / 1000);
+      const actualEndDate = Math.floor(sellerPayout.endDate.getTime() / 1000);
 
       expect(actualStartDate).to.equal(expectedStartDate);
       expect(actualEndDate).to.equal(expectedEndDate);
@@ -336,8 +336,7 @@ describe('SellerPayoutService', () => {
       expect(sellerPayout.transfer).to.not.be.undefined;
       expect(sellerPayout.transfer.fromId).to.equal(params.requestedById);
       expect(sellerPayout.transfer.toId).to.be.null;
-      const transferCreationDate = Math.round(sellerPayout.transfer.createdAt.getTime() / 1000);
-      console.error(actualEndDate, transferCreationDate, sellerPayout.endDate, sellerPayout.transfer.createdAt);
+      const transferCreationDate = Math.floor(sellerPayout.transfer.createdAt.getTime() / 1000);
       expect(transferCreationDate).to.equal(actualEndDate);
 
       const incomingTransactions = ctx.subTransactions.filter((s) => s.to.id === params.requestedById);
