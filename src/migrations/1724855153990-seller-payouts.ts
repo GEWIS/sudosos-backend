@@ -256,13 +256,13 @@ export class SellerPayouts1724855153990 implements MigrationInterface {
 
       const minCreatedAtDate = new Date(minCreatedAt.minCreatedAt);
       const maxCreatedAtDate = new Date(maxCreatedAt.maxCreatedAt);
-      minCreatedAtDate.setHours(0, 0, 0, 0);
-      maxCreatedAtDate.setHours(23, 59, 59, 999);
+      const tillDate = new Date(maxCreatedAt.maxCreatedAt);
+      tillDate.setSeconds(tillDate.getSeconds() + 1);
       console.warn(`Migrating credit invoice ${invoice.id} from ${minCreatedAtDate.toISOString()} to ${maxCreatedAtDate.toISOString()}`);
       const report = await salesReportService.getReport({
         forId: invoice.to.id,
         fromDate: minCreatedAtDate,
-        tillDate: maxCreatedAtDate,
+        tillDate,
       });
       console.error('report value of invoice', invoice.id, report.totalInclVat.toObject());
       assert(invoice.transfer.amountInclVat.equalsTo(report.totalInclVat), 'Migration of invoice would not match total');
