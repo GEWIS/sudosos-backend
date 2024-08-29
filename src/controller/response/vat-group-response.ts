@@ -33,9 +33,13 @@ export interface BaseVatGroupResponse extends BaseResponse {
 
 /**
  * @typedef {allOf|BaseVatGroupResponse} VatGroupResponse
- * @property {string} name.rquired - Name of the VAT group
+ * @property {string} name.required - Name of the VAT group
  * @property {boolean} deleted.required - Whether this group is soft-deleted
  */
+export interface VatGroupResponse extends BaseVatGroupResponse {
+  name: string,
+  deleted: boolean,
+}
 
 /**
  * @typedef {object} PaginatedVatGroupResponse

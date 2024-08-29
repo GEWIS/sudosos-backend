@@ -63,7 +63,7 @@ export function isDate(date: any, canBeUndefined?: boolean): boolean {
  */
 export function asNumber(input: any): number | undefined {
   if (!isNumber(input, true)) throw new TypeError(`Input '${input}' is not a number.`);
-  return (input ? Number(input) : undefined);
+  return (input !== undefined ? Number(input) : undefined);
 }
 
 /**
@@ -221,4 +221,23 @@ export function asArrayOfDates(input: any): Date[] | undefined {
   const dates = input.map((i: any[]) => asDate(i));
   if (dates.some((d: (Date | undefined)[]) => d === undefined)) throw new TypeError('Array contains invalid date');
   return dates;
+}
+
+/**
+ * Converts the inputs to a from and till date
+ * @param fromDate
+ * @param tillDate
+ * @throws Error - If tillDate is before fromDate
+ * @throws TypeError - If any of the inputs is not a valid date
+ */
+export function asFromAndTillDate(fromDate: any, tillDate: any): { fromDate: Date, tillDate: Date } {
+  const filters = {
+    fromDate: asDate(fromDate),
+    tillDate: asDate(tillDate),
+  };
+  if (filters.fromDate >= filters.tillDate) {
+    throw new Error('tillDate must be after fromDate');
+  }
+
+  return filters;
 }

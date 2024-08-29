@@ -56,7 +56,6 @@ import {
 import InvoiceEntryRequest from '../../../src/controller/request/invoice-entry-request';
 import { inUserContext, INVOICE_USER, ORGAN_USER, UserFactory } from '../../helpers/user-factory';
 import { TransactionRequest } from '../../../src/controller/request/transaction-request';
-import { createTransactionRequest, requestToTransaction } from '../service/invoice-service';
 import BalanceService from '../../../src/service/balance-service';
 import { InvoiceState } from '../../../src/entity/invoices/invoice-status';
 import InvoiceService from '../../../src/service/invoice-service';
@@ -67,6 +66,7 @@ import sinon from 'sinon';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { getToken, seedRoles } from '../../seed/rbac';
+import { createTransactionRequest, requestToTransaction } from '../../helpers/transaction-factory';
 
 describe('InvoiceController', async () => {
   let ctx: {

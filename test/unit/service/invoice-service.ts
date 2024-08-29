@@ -48,7 +48,7 @@ import { TransferResponse } from '../../../src/controller/response/transfer-resp
 import TransactionService from '../../../src/service/transaction-service';
 import { BaseTransactionResponse, TransactionResponse } from '../../../src/controller/response/transaction-response';
 import BalanceService from '../../../src/service/balance-service';
-import { createValidTransactionRequest } from '../../helpers/transaction-factory';
+import { createTransactionRequest, createTransactions, requestToTransaction } from '../../helpers/transaction-factory';
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import { TransactionRequest } from '../../../src/controller/request/transaction-request';
 import { InvoiceState } from '../../../src/entity/invoices/invoice-status';
@@ -58,36 +58,6 @@ import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 
 chai.use(deepEqualInAnyOrder);
-
-export async function createTransactionRequest(debtorId: number,
-  creditorId: number, transactionCount: number) {
-  const transactions: TransactionRequest[] = [];
-  await Promise.all(Array(transactionCount).fill(0, 0).map(async () => {
-    const t = await createValidTransactionRequest(
-      debtorId, creditorId,
-    );
-    return transactions.push(t as TransactionRequest);
-  }));
-  return transactions;
-}
-
-export async function requestToTransaction(
-  transactionRequests: TransactionRequest[],
-) {
-  const transactions: Array<{ tId: number; amount: number }> = [];
-  let total = 0;
-  await Promise.all(
-    transactionRequests.map(async (t) => {
-      const transactionResponse = await new TransactionService().createTransaction(t);
-      transactions.push({
-        tId: transactionResponse.id,
-        amount: transactionResponse.totalPriceInclVat.amount,
-      });
-      total += transactionResponse.totalPriceInclVat.amount;
-    }),
-  );
-  return { transactions, total };
-}
 
 function baseKeyMapping(invoice: BaseInvoiceResponse | Invoice) {
   return {
@@ -114,13 +84,6 @@ export type T = InvoiceResponse | BaseInvoiceResponse | Invoice;
 
 function returnsAll(response: T[], superset: Invoice[], mapping: any) {
   expect(response.map(mapping)).to.deep.equalInAnyOrder(superset.map(mapping));
-}
-
-export async function createTransactions(debtorId: number, creditorId: number, transactionCount: number) {
-  const transactions: TransactionRequest[] = await createTransactionRequest(
-    debtorId, creditorId, transactionCount,
-  );
-  return Promise.resolve(requestToTransaction(transactions));
 }
 
 export async function
