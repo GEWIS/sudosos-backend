@@ -336,7 +336,7 @@ describe('SellerPayoutService', () => {
       expect(sellerPayout.transfer).to.not.be.undefined;
       expect(sellerPayout.transfer.fromId).to.equal(params.requestedById);
       expect(sellerPayout.transfer.toId).to.be.null;
-      const transferCreationDate = Math.round(sellerPayout.transfer.createdAt.getTime() / 1000);
+      const transferCreationDate = Math.floor(sellerPayout.transfer.createdAt.getTime() / 1000);
       expect(transferCreationDate).to.equal(actualEndDate);
 
       const incomingTransactions = ctx.subTransactions.filter((s) => s.to.id === params.requestedById);
@@ -389,7 +389,7 @@ describe('SellerPayoutService', () => {
       const id = (await SellerPayout.count()) + 41;
       expect(await SellerPayout.findOne({ where: { id } })).to.be.null;
       const service = new SellerPayoutService();
-      await expect(await service.updateSellerPayout(id, { amount: ctx.sellerPayouts[0].amount.toObject() }))
+      await expect(service.updateSellerPayout(id, { amount: ctx.sellerPayouts[0].amount.toObject() }))
         .to.eventually.be.rejectedWith(`Payout with ID "${id}" not found.`);
     });
   });

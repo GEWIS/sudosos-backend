@@ -16,10 +16,14 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import BasePayout from './base-payout';
-import { Column, Entity } from 'typeorm';
+import { Column, Entity, JoinColumn, OneToOne } from 'typeorm';
+import SellerPayoutPdf from '../../file/seller-payout-pdf';
+import SellerPayoutPdfService from '../../../service/pdf/seller-payout-pdf-service';
+import { PdfAble } from '../../file/pdf-able';
+import { SELLER_PAYOUT_PDF_LOCATION } from '../../../files/storage';
 
 @Entity()
-export default class SellerPayout extends BasePayout {
+export default class SellerPayout extends PdfAble(BasePayout) {
   @Column({ type: 'datetime', nullable: false })
   public startDate: Date;
 
@@ -31,4 +35,10 @@ export default class SellerPayout extends BasePayout {
 
   @Column({ nullable: true })
   public pdfId?: number;
+
+  @OneToOne(() => SellerPayoutPdf, { eager: true, nullable: true, onDelete: 'RESTRICT' })
+  @JoinColumn()
+  public pdf?: SellerPayoutPdf;
+
+  pdfService = new SellerPayoutPdfService(SELLER_PAYOUT_PDF_LOCATION);
 }

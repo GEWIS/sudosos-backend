@@ -69,6 +69,33 @@ export class SellerPayouts1724855153990 implements MigrationInterface {
     fs.writeFileSync('./organBalances-before-payouts.json', JSON.stringify(organBalances, null, 2));
 
 
+    await queryRunner.createTable(new Table({ name: this.SELLER_PAYOUT_PDF_TABLE,
+      columns: [
+        {
+          name: 'id',
+          type: 'integer',
+          isPrimary: true,
+          isGenerated: true,
+          generationStrategy: 'increment',
+        },
+        {
+          name: 'hash',
+          type: 'varchar(255)',
+          isNullable: false,
+        },
+        {
+          name: 'downloadName',
+          type: 'varchar(255)',
+          isNullable: false,
+        },
+        {
+          name: 'location',
+          type: 'varchar(255)',
+          isNullable: false,
+        },
+      ],
+    }), true);
+
     await queryRunner.createTable(new Table({
       name: this.SELLER_PAYOUT_TABLE,
       columns: [{
@@ -121,64 +148,6 @@ export class SellerPayouts1724855153990 implements MigrationInterface {
         type: 'integer',
         isNullable: true,
       }],
-    }));
-
-    await queryRunner.createTable(new Table({
-      name: this.SELLER_PAYOUT_PDF_TABLE,
-      columns: [
-        {
-          name: 'id',
-          type: 'integer',
-          isPrimary: true,
-          isGenerated: true,
-          generationStrategy: 'increment',
-        },
-        {
-          name: 'hash',
-          type: 'varchar(255)',
-          isNullable: false,
-        },
-        {
-          name: 'downloadName',
-          type: 'varchar(255)',
-          isNullable: false,
-        },
-        {
-          name: 'location',
-          type: 'varchar(255)',
-          isNullable: false,
-        },
-        {
-          name: 'createdById',
-          type: 'integer',
-          isNullable: false,
-        },
-        {
-          name: 'createdAt',
-          type: 'datetime(6)',
-          default: 'current_timestamp',
-          isNullable: false,
-        },
-        {
-          name: 'updatedAt',
-          type: 'datetime(6)',
-          default: 'current_timestamp',
-          onUpdate: 'current_timestamp',
-          isNullable: false,
-        },
-        {
-          name: 'version',
-          type: 'integer',
-          isNullable: false,
-        },
-      ],
-    }), true);
-
-    await queryRunner.createForeignKey(this.SELLER_PAYOUT_PDF_TABLE, new TableForeignKey({
-      columnNames: ['createdById'],
-      referencedColumnNames: ['id'],
-      referencedTableName: 'user',
-      onDelete: 'CASCADE',
     }));
 
     await queryRunner.createForeignKeys(this.SELLER_PAYOUT_TABLE, [
