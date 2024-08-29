@@ -224,6 +224,7 @@ export class SellerPayouts1724855153990 implements MigrationInterface {
         .getRawOne();
 
       const minCreatedAtDate = new Date(minCreatedAt.minCreatedAt);
+      minCreatedAtDate.setMilliseconds(0);
       const maxCreatedAtDate = new Date(maxCreatedAt.maxCreatedAt);
       const tillDate = new Date(maxCreatedAt.maxCreatedAt);
       tillDate.setSeconds(tillDate.getSeconds() + 1);
@@ -233,7 +234,7 @@ export class SellerPayouts1724855153990 implements MigrationInterface {
         fromDate: minCreatedAtDate,
         tillDate,
       });
-      console.error('report value of invoice', invoice.id, report.totalInclVat.toObject());
+      console.error('report value of invoice', invoice.id, report.totalInclVat.toObject(), invoice.transfer.amountInclVat.getAmount(), maxCreatedAtDate, tillDate);
       assert(invoice.transfer.amountInclVat.equalsTo(report.totalInclVat), 'Migration of invoice would not match total');
 
       const maxDate = new Date(maxCreatedAt.maxCreatedAt);
