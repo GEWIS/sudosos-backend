@@ -336,7 +336,8 @@ describe('SellerPayoutService', () => {
       expect(sellerPayout.transfer).to.not.be.undefined;
       expect(sellerPayout.transfer.fromId).to.equal(params.requestedById);
       expect(sellerPayout.transfer.toId).to.be.null;
-      expect(sellerPayout.transfer.createdAt.getTime()).to.equal(params.endDate.getTime()+1);
+      const transferCreationDate = Math.round(sellerPayout.transfer.createdAt.getTime() / 1000);
+      expect(transferCreationDate).to.equal(actualEndDate);
 
       const incomingTransactions = ctx.subTransactions.filter((s) => s.to.id === params.requestedById);
       const rows = incomingTransactions.map((s) => s.subTransactionRows).flat();
