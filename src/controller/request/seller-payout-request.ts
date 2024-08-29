@@ -16,23 +16,28 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-
 import { DineroObjectRequest } from './dinero-request';
 
 /**
- * @typedef {object} TransferRequest
- * @property {string} createdAt - Date on which the transfer should be created
- * @property {string} description.required - Description of the transfer.
- * @property {DineroObjectRequest} amount.required - Amount of money being transferred.
- * @property {integer} fromId - from which user the money is being transferred.
- * @property {integer} toId - to which user the money is being transferred.
- * @property {integer} vatId - The vat group id for the transfer.
+ * @typedef {object} CreateSellerPayoutRequest
+ * @property {integer} requestedById.required - The user to create the Seller Payout for
+ * @property {string} reference.required - Reference of the seller payout
+ * @property {string} startDate.required - The lower bound of the range of transactions
+ * to be paid out
+ * @property {string} endDate.required - the upper bound of the range of transactions
+ * to be paid out.
  */
-export default interface TransferRequest {
-  createdAt?: string;
-  amount: DineroObjectRequest;
-  description: string;
-  fromId: number;
-  toId: number;
-  vatId?: number;
+export interface CreateSellerPayoutRequest {
+  requestedById: number;
+  reference: string;
+  startDate: string;
+  endDate: string;
+}
+
+/**
+ * @typedef {object} UpdateSellerPayoutRequest
+ * @property {DineroObjectRequest} amount.required - The new total value of the Seller Payout
+ */
+export interface UpdateSellerPayoutRequest {
+  amount: DineroObjectRequest
 }

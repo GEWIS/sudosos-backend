@@ -16,23 +16,23 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import { Column, Entity, ManyToOne } from 'typeorm';
+import BaseEntity from '../../base-entity';
+// eslint-disable-next-line import/no-cycle
+import PayoutRequest from './payout-request';
 
-import { DineroObjectRequest } from './dinero-request';
+export enum PayoutRequestState {
+  CREATED = 'CREATED',
+  APPROVED = 'APPROVED',
+  DENIED = 'DENIED',
+  CANCELLED = 'CANCELLED',
+}
 
-/**
- * @typedef {object} TransferRequest
- * @property {string} createdAt - Date on which the transfer should be created
- * @property {string} description.required - Description of the transfer.
- * @property {DineroObjectRequest} amount.required - Amount of money being transferred.
- * @property {integer} fromId - from which user the money is being transferred.
- * @property {integer} toId - to which user the money is being transferred.
- * @property {integer} vatId - The vat group id for the transfer.
- */
-export default interface TransferRequest {
-  createdAt?: string;
-  amount: DineroObjectRequest;
-  description: string;
-  fromId: number;
-  toId: number;
-  vatId?: number;
+@Entity()
+export default class PayoutRequestStatus extends BaseEntity {
+  @ManyToOne(() => PayoutRequest, (pr) => pr.payoutRequestStatus, { nullable: false })
+  public payoutRequest: PayoutRequest;
+
+  @Column()
+  public state: PayoutRequestState;
 }

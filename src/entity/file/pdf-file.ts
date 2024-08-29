@@ -35,7 +35,7 @@ export default class Pdf extends BaseFile {
 
 export interface Pdfable<S extends Pdf = Pdf> extends BaseEntity {
   pdf?: S,
-  getPdfParamHash: () => string,
+  getPdfParamHash: () => Promise<string>,
   createPDF: () => Promise<S>
 }
 

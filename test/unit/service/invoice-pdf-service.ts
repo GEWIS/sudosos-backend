@@ -140,10 +140,10 @@ describe('InvoicePdfService', async (): Promise<void> => {
     it('should return true if the PDF hash matches the expected hash', async () => {
       const invoice = ctx.invoices[0];
       const pdf = new InvoicePdf();
-      pdf.hash = invoice.getPdfParamHash();
+      pdf.hash = await invoice.getPdfParamHash();
       invoice.pdf = pdf;
 
-      const result = FileService.validatePdfHash(invoice);
+      const result = await FileService.validatePdfHash(invoice);
 
       expect(result).to.be.true;
     });
@@ -153,13 +153,13 @@ describe('InvoicePdfService', async (): Promise<void> => {
       pdf.hash = 'false';
       invoice.pdf = pdf;
 
-      const result = FileService.validatePdfHash(invoice);
+      const result = await FileService.validatePdfHash(invoice);
 
       expect(result).to.be.false;
     });
     it('should return false if the invoice has no associated PDF', async () => {
       const invoice = ctx.invoices[0];
-      const result = FileService.validatePdfHash(invoice);
+      const result = await FileService.validatePdfHash(invoice);
 
       expect(result).to.be.false;
     });
@@ -173,7 +173,7 @@ describe('InvoicePdfService', async (): Promise<void> => {
         ...ctx.pdfParams,
       });
 
-      pdf.hash = invoice.getPdfParamHash();
+      pdf.hash = await invoice.getPdfParamHash();
       await InvoicePdf.save(pdf);
 
       invoice.pdf = pdf;
@@ -209,14 +209,14 @@ describe('InvoicePdfService', async (): Promise<void> => {
         ...ctx.pdfParams,
       });
 
-      pdf.hash = invoice.getPdfParamHash();
+      pdf.hash = await invoice.getPdfParamHash();
       await InvoicePdf.save(pdf);
 
       invoice.pdf = pdf;
       await Invoice.save(invoice);
 
       // Hash is valid
-      expect(FileService.validatePdfHash(invoice)).to.be.true;
+      expect(await FileService.validatePdfHash(invoice)).to.be.true;
 
       generateInvoiceStub.resolves({
         data: new Blob(),
@@ -361,7 +361,7 @@ describe('InvoicePdfService', async (): Promise<void> => {
       const invoicePdf = await InvoicePdfService.createPdf(invoice.id);
 
       expect(invoicePdf).to.not.be.undefined;
-      expect(invoicePdf.hash).to.eq(invoice.getPdfParamHash());
+      expect(invoicePdf.hash).to.eq(await invoice.getPdfParamHash());
     });
     it('should return undefined if the invoice does not exist', async () => {
       const invoicePdf = await InvoicePdfService.createPdf(-1);

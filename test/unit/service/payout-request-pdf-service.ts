@@ -33,7 +33,7 @@ import FileService from '../../../src/service/file-service';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
-import PayoutRequest from '../../../src/entity/transactions/payout-request';
+import PayoutRequest from '../../../src/entity/transactions/payout/payout-request';
 import PayoutRequestPdfService from '../../../src/service/payout-request-pdf-service';
 import PayoutRequestPdf from '../../../src/entity/file/payout-request-pdf';
 
@@ -110,10 +110,10 @@ describe('PayoutRequestPdfService', async () => {
     it('should return true if the PDF hash matches the expected hash', async () => {
       const payoutRequest = ctx.payoutRequests[0];
       const pdf = new PayoutRequestPdf();
-      pdf.hash = payoutRequest.getPdfParamHash();
+      pdf.hash = await payoutRequest.getPdfParamHash();
       payoutRequest.pdf = pdf;
 
-      const result = FileService.validatePdfHash(payoutRequest);
+      const result = await FileService.validatePdfHash(payoutRequest);
 
       expect(result).to.be.true;
     });
@@ -123,13 +123,13 @@ describe('PayoutRequestPdfService', async () => {
       pdf.hash = 'false';
       payoutRequest.pdf = pdf;
 
-      const result = FileService.validatePdfHash(payoutRequest);
+      const result = await FileService.validatePdfHash(payoutRequest);
 
       expect(result).to.be.false;
     });
     it('should return false if the payoutRequest has no associated PDF', async () => {
       const payoutRequest = ctx.payoutRequests[0];
-      const result = FileService.validatePdfHash(payoutRequest);
+      const result = await FileService.validatePdfHash(payoutRequest);
 
       expect(result).to.be.false;
     });
@@ -143,7 +143,7 @@ describe('PayoutRequestPdfService', async () => {
         ...ctx.pdfParams,
       });
 
-      pdf.hash = payoutRequest.getPdfParamHash();
+      pdf.hash = await payoutRequest.getPdfParamHash();
       await PayoutRequestPdf.save(pdf);
 
       payoutRequest.pdf = pdf;
@@ -179,14 +179,14 @@ describe('PayoutRequestPdfService', async () => {
         ...ctx.pdfParams,
       });
 
-      pdf.hash = payoutRequest.getPdfParamHash();
+      pdf.hash = await payoutRequest.getPdfParamHash();
       await PayoutRequestPdf.save(pdf);
 
       payoutRequest.pdf = pdf;
       await PayoutRequest.save(payoutRequest);
 
       // Hash is valid
-      expect(FileService.validatePdfHash(payoutRequest)).to.be.true;
+      expect(await FileService.validatePdfHash(payoutRequest)).to.be.true;
 
       generatePayoutRequestStub.resolves({
         data: new Blob(),
@@ -214,7 +214,7 @@ describe('PayoutRequestPdfService', async () => {
 
       const payoutRequest = await PayoutRequest.findOne({ where: { id: 1 }, relations: ['requestedBy'] });
       uploadPayoutStub.resolves({
-        hash: payoutRequest.getPdfParamHash(),
+        hash: await payoutRequest.getPdfParamHash(),
       });
       createFileStub.resolves({
         downloadName: 'test',
@@ -225,7 +225,7 @@ describe('PayoutRequestPdfService', async () => {
       const payoutRequestPdf = await PayoutRequestPdfService.createPdf(payoutRequest.id);
 
       expect(payoutRequestPdf).to.not.be.undefined;
-      expect(payoutRequestPdf.hash).to.eq(payoutRequest.getPdfParamHash());
+      expect(payoutRequestPdf.hash).to.eq(await payoutRequest.getPdfParamHash());
     });
     it('should return undefined if the payoutRequest does not exist', async () => {
       const payoutRequestPdf = await PayoutRequestPdfService.createPdf(-1);

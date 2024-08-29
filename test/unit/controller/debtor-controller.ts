@@ -562,9 +562,6 @@ describe('DebtorController', () => {
         .query({ fromDate, toDate });
       expect(res.status).to.equal(200);
 
-      fromDate.setUTCHours(0, 0, 0, 0);
-      toDate.setUTCHours(0, 0, 0, 0);
-
       const report = res.body as FineReportResponse;
       expect(report.fromDate).to.equal(fromDate.toISOString());
       expect(report.toDate).to.equal(toDate.toISOString());
@@ -647,21 +644,21 @@ describe('DebtorController', () => {
     it('should return 200 if admin', async () => {
       resolveSuccessful();
       const fromDate = new Date();
-      const toDate = new Date();
+      const toDate = new Date(fromDate.getTime() + 1000 * 60 * 60 * 24);
       const res = await request(ctx.app)
         .get('/fines/report/pdf')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
-        .query({ fromDate, toDate });
+        .query({ fromDate, toDate, fileType: 'PDF' });
       expect(res.status).to.equal(200);
     });
     it('should return 500 if pdf generation fails', async () => {
       generateFineReportStub.rejects(new Error('Failed to generate PDF'));
       const fromDate = new Date();
-      const toDate = new Date();
+      const toDate = new Date(fromDate.getTime() + 1000 * 60 * 60 * 24);
       const res = await request(ctx.app)
         .get('/fines/report/pdf')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
-        .query({ fromDate, toDate });
+        .query({ fromDate, toDate, fileType: 'PDF' });
       expect(res.status).to.equal(500);
     });
     it('should return 403 if not admin', async () => {
@@ -670,7 +667,7 @@ describe('DebtorController', () => {
       const res = await request(ctx.app)
         .get('/fines/report/pdf')
         .set('Authorization', `Bearer ${ctx.userToken}`)
-        .query({ fromDate, toDate });
+        .query({ fromDate, toDate, fileType: 'PDF' });
       expect(res.status).to.equal(403);
     });
     it('should return 400 if fromDate is not a valid date', async () => {
@@ -679,7 +676,7 @@ describe('DebtorController', () => {
       const res = await request(ctx.app)
         .get('/fines/report/pdf')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
-        .query({ fromDate, toDate });
+        .query({ fromDate, toDate, fileType: 'PDF' });
       expect(res.status).to.equal(400);
     });
     it('should return 400 if toDate is not a valid date', async () => {
@@ -688,7 +685,7 @@ describe('DebtorController', () => {
       const res = await request(ctx.app)
         .get('/fines/report/pdf')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
-        .query({ fromDate, toDate });
+        .query({ fromDate, toDate, fileType: 'PDF' });
       expect(res.status).to.equal(400);
     });
     it('should return 400 if fromDate is not before toDate', async () => {
@@ -698,7 +695,7 @@ describe('DebtorController', () => {
       const res = await request(ctx.app)
         .get('/fines/report/pdf')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
-        .query({ fromDate, toDate });
+        .query({ fromDate, toDate, fileType: 'PDF' });
       expect(res.status).to.equal(400);
     });
   });

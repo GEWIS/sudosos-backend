@@ -22,6 +22,7 @@ import { PaginationParameters } from '../helpers/pagination';
 import VatGroup, { VatDeclarationPeriod } from '../entity/vat-group';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import {
+  BaseVatGroupResponse,
   PaginatedVatGroupResponse,
   VatDeclarationResponse,
   VatDeclarationRow, VatGroupResponse,
@@ -81,11 +82,22 @@ export function parseGetVatCalculationValuesParams(req: RequestWithToken): VatDe
 }
 
 export default class VatGroupService {
-  public static revisionToResponse(vatGroup: VatGroup): VatGroupResponse {
+  public static toBaseResponse(vatGroup: VatGroup): BaseVatGroupResponse {
     return {
-      ...vatGroup,
+      id: vatGroup.id,
       createdAt: vatGroup.createdAt.toISOString(),
-      updatedAt:vatGroup.updatedAt.toISOString(),
+      updatedAt: vatGroup.updatedAt.toISOString(),
+      version: vatGroup.version,
+      percentage: vatGroup.percentage,
+      hidden: vatGroup.hidden,
+    };
+  }
+
+  public static toResponse(vatGroup: VatGroup): VatGroupResponse {
+    return {
+      ...this.toBaseResponse(vatGroup),
+      name: vatGroup.name,
+      deleted: vatGroup.deleted,
     };
   }
 

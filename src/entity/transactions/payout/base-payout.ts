@@ -15,24 +15,25 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+import BaseEntity from '../../base-entity';
+import { Column, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
+import User from '../../user/user';
+import Transfer from '../transfer';
+import DineroTransformer from '../../transformer/dinero-transformer';
+import { Dinero } from 'dinero.js';
 
+export default class BasePayout extends BaseEntity {
+  @ManyToOne(() => User, { nullable: false })
+  @JoinColumn()
+  public requestedBy: User;
 
-import { DineroObjectRequest } from './dinero-request';
+  @OneToOne(() => Transfer, { nullable: true })
+  @JoinColumn()
+  public transfer?: Transfer;
 
-/**
- * @typedef {object} TransferRequest
- * @property {string} createdAt - Date on which the transfer should be created
- * @property {string} description.required - Description of the transfer.
- * @property {DineroObjectRequest} amount.required - Amount of money being transferred.
- * @property {integer} fromId - from which user the money is being transferred.
- * @property {integer} toId - to which user the money is being transferred.
- * @property {integer} vatId - The vat group id for the transfer.
- */
-export default interface TransferRequest {
-  createdAt?: string;
-  amount: DineroObjectRequest;
-  description: string;
-  fromId: number;
-  toId: number;
-  vatId?: number;
+  @Column({
+    type: 'integer',
+    transformer: DineroTransformer.Instance,
+  })
+  public amount: Dinero;
 }

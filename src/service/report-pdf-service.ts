@@ -19,17 +19,25 @@ import {
   Client, FileResponse,
   FileSettings,
   FineReportParameters,
-  FineRouteParams,
-  IFileSettings,
+  FineRouteParams, IFileSettings,
   Language,
   Product,
   ProductPricing,
   ReturnFileType,
-  TotalPricing,
+  TotalPricing, UserReportParameters, UserReportParametersType, UserRouteParams,
   VAT,
 } from 'pdf-generator-client';
 import { FineReport } from '../controller/response/debtor-response';
-import { PDF_GEN_URL, PDF_VAT_HIGH, UNUSED_NUMBER, UNUSED_PARAM } from '../helpers/pdf';
+import {
+  entryToProduct,
+  getPDFTotalsFromReport,
+  PDF_GEN_URL,
+  PDF_VAT_HIGH,
+  UNUSED_NUMBER,
+  UNUSED_PARAM, userToIdentity,
+} from '../helpers/pdf';
+import User from '../entity/user/user';
+import { Report, ReportProductEntry } from '../entity/report/report';
 
 const HANDED_OUT_FINES = 'Handed out';
 const WAIVED_FINES = 'Waived';
@@ -97,19 +105,68 @@ export default class ReportPdfService {
    * Generate a pdf report of the given fine report.
    * @returns Buffer - The pdf report
    * @param report
+   * @param fileType
    */
-  public static async fineReportToPdf(report: FineReport): Promise<Buffer> {
+  public static async getFineReportPdf(report: FineReport, fileType = ReturnFileType.PDF): Promise<Buffer> {
     const fineRouteParams: FineRouteParams = new FineRouteParams({
-      params: this.fineReportToParameters(report),
-      settings: new FileSettings({ ...this.fileSettings, createdAt: new Date() }),
+      params: ReportPdfService.fineReportToParameters(report),
+      settings: new FileSettings({ ...ReportPdfService.fileSettings, createdAt: new Date(), fileType }),
     });
 
     try {
-      const res: FileResponse = await this.client.generateFineReport(fineRouteParams);
+      const res: FileResponse = await ReportPdfService.client.generateFineReport(fineRouteParams);
       const blob = res.data;
       return Buffer.from(await blob.arrayBuffer());
     } catch (res: any) {
       throw new Error(`Fine report generation failed: ${res.message}`);
+    }
+  }
+
+  /**
+   * Convert Report to UserReportParameters
+   * @param report
+   * @param type
+   * @param description
+   */
+  private static async userReportToParameters(report: Report, type: UserReportParametersType, description: string): Promise<UserReportParameters> {
+    const sales: Product[] = [];
+
+    if (!report.data.products) throw new Error('No products found in report');
+    report.data.products.forEach((s: ReportProductEntry) => entryToProduct(s));
+
+    const user = await User.findOne({ where: { id: report.forId } });
+
+    return new UserReportParameters({
+      account: userToIdentity(user),
+      startDate: report.fromDate,
+      endDate: report.tillDate,
+      description,
+      entries: sales,
+      type,
+      total: getPDFTotalsFromReport(report),
+    });
+  }
+
+  /**
+   * Generate a pdf report of the given report.
+   * @param report
+   * @param description
+   * @param type
+   * @param fileType
+   */
+  public static async getReportPdf(report: Report, description: string, type: UserReportParametersType, fileType = ReturnFileType.PDF): Promise<Buffer> {
+    const salesRouteParams: UserRouteParams = new UserRouteParams({
+      params: await ReportPdfService.userReportToParameters(report, type, description),
+      settings: new FileSettings({ ...ReportPdfService.fileSettings, createdAt: new Date(), fileType }),
+    });
+
+    try {
+      const res: FileResponse = await ReportPdfService.client.generateUserReport(salesRouteParams);
+      const blob = res.data;
+      return Buffer.from(await blob.arrayBuffer());
+    } catch (res: any) {
+      console.error(res);
+      throw new Error(`User report generation failed: ${res.message}`);
     }
   }
 }

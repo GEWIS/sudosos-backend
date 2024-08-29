@@ -24,11 +24,12 @@ import { RequestWithToken } from '../middleware/token-middleware';
 import { parseRequestPagination } from '../helpers/pagination';
 import DebtorService from '../service/debtor-service';
 import User from '../entity/user/user';
-import { asArrayOfDates, asArrayOfUserTypes, asDate } from '../helpers/validators';
+import { asArrayOfDates, asArrayOfUserTypes, asDate, asFromAndTillDate, asReturnFileType } from '../helpers/validators';
 import { In } from 'typeorm';
 import { HandoutFinesRequest } from './request/debtor-request';
 import Fine from '../entity/fine/fine';
 import ReportPdfService from '../service/report-pdf-service';
+import { ReturnFileType } from 'pdf-generator-client';
 
 export default class DebtorController extends BaseController {
   private logger: Logger = log4js.getLogger(' DebtorController');
@@ -314,17 +315,11 @@ export default class DebtorController extends BaseController {
   public async getFineReport(req: RequestWithToken, res: Response): Promise<void> {
     this.logger.trace('Get fine report by ', req.token.user);
 
-    let fromDate: Date;
-    let toDate: Date;
+    let fromDate, toDate;
     try {
-      fromDate = asDate(req.query.fromDate);
-      toDate = asDate(req.query.toDate);
-      fromDate.setUTCHours(0, 0, 0, 0);
-      toDate.setUTCHours(0, 0, 0, 0);
-      if (toDate < fromDate) {
-        res.status(400).json('toDate must be after fromDate');
-        return;
-      }
+      const filters = asFromAndTillDate(req.query.fromDate, req.query.toDate);
+      fromDate = filters.fromDate;
+      toDate = filters.tillDate;
     } catch (e) {
       res.status(400).json(e.message);
       return;
@@ -345,8 +340,9 @@ export default class DebtorController extends BaseController {
    * @tags debtors - Operations of the debtor controller
    * @operationId getFineReportPdf
    * @security JWT
-   * @param {string} fromDate.query - The start date of the report, inclusive
-   * @param {string} toDate.query - The end date of the report, exclusive
+   * @param {string} fromDate.query.required - The start date of the report, inclusive
+   * @param {string} toDate.query.required - The end date of the report, exclusive
+   * @param {string} fileType.query.required - enum:PDF,TEX - The file type of the report
    * @returns {string} 200 - The requested report - application/pdf
    * @return {string} 400 - Validation error
    * @return {string} 500 - Internal server error
@@ -354,17 +350,13 @@ export default class DebtorController extends BaseController {
   public async getFineReportPdf(req: RequestWithToken, res: Response): Promise<void> {
     this.logger.trace('Get fine report by ', req.token.user);
 
-    let fromDate: Date;
-    let toDate: Date;
+    let fromDate, toDate;
+    let fileType: ReturnFileType;
     try {
-      fromDate = asDate(req.query.fromDate);
-      toDate = asDate(req.query.toDate);
-      fromDate.setUTCHours(0, 0, 0, 0);
-      toDate.setUTCHours(0, 0, 0, 0);
-      if (toDate < fromDate) {
-        res.status(400).json('toDate must be after fromDate');
-        return;
-      }
+      const filters = asFromAndTillDate(req.query.fromDate, req.query.toDate);
+      fromDate = filters.fromDate;
+      toDate = filters.tillDate;
+      fileType = asReturnFileType(req.query.fileType);
     } catch (e) {
       res.status(400).json(e.message);
       return;
@@ -373,10 +365,10 @@ export default class DebtorController extends BaseController {
     try {
       const report = await DebtorService.getFineReport(fromDate, toDate);
 
-      const pdf = await ReportPdfService.fineReportToPdf(report);
+      const pdf = await ReportPdfService.getFineReportPdf(report, fileType);
       const from = `${fromDate.getFullYear()}${fromDate.getMonth() + 1}${fromDate.getDate()}`;
       const to = `${toDate.getFullYear()}${toDate.getMonth() + 1}${toDate.getDate()}`;
-      const fileName = `report-${from}-${to}.pdf`;
+      const fileName = `fine-report-${from}-${to}.${fileType}`;
 
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);

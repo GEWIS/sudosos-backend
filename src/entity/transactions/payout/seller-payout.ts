@@ -15,24 +15,20 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-
-import { Column, Entity, ManyToOne } from 'typeorm';
-import BaseEntity from '../base-entity';
-// eslint-disable-next-line import/no-cycle
-import PayoutRequest from './payout-request';
-
-export enum PayoutRequestState {
-  CREATED = 'CREATED',
-  APPROVED = 'APPROVED',
-  DENIED = 'DENIED',
-  CANCELLED = 'CANCELLED',
-}
+import BasePayout from './base-payout';
+import { Column, Entity } from 'typeorm';
 
 @Entity()
-export default class PayoutRequestStatus extends BaseEntity {
-  @ManyToOne(() => PayoutRequest, (pr) => pr.payoutRequestStatus, { nullable: false })
-  public payoutRequest: PayoutRequest;
+export default class SellerPayout extends BasePayout {
+  @Column({ type: 'datetime', nullable: false })
+  public startDate: Date;
 
-  @Column()
-  public state: PayoutRequestState;
+  @Column({ type: 'datetime', nullable: false })
+  public endDate: Date;
+
+  @Column({ nullable: false })
+  public reference: string;
+
+  @Column({ nullable: true })
+  public pdfId?: number;
 }

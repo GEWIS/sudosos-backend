@@ -24,6 +24,7 @@ import { Dinero } from 'dinero.js';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
 import { Availability } from '../entity/event/event-shift-answer';
 import { EventType } from '../entity/event/event';
+import { ReturnFileType } from 'pdf-generator-client';
 
 /**
  * Returns whether the given object is a number
@@ -240,4 +241,17 @@ export function asFromAndTillDate(fromDate: any, tillDate: any): { fromDate: Dat
   }
 
   return filters;
+}
+
+/**
+ * Converts the input to a ReturnFileType
+ * @param input
+ */
+export function asReturnFileType(input: any): ReturnFileType {
+  if (!input) return undefined;
+  input = input.toUpperCase();
+  if (typeof input === 'string' && Object.values(ReturnFileType).includes(input as ReturnFileType)) {
+    return input as ReturnFileType;
+  }
+  throw new TypeError(`Input '${input}' is not a valid ReturnFileType.`);
 }
