@@ -30,7 +30,7 @@ import SubTransactionRow from '../entity/transactions/sub-transaction-row';
 import User from '../entity/user/user';
 import fs from 'fs';
 
-export class SellerPayouts1724506999318 implements MigrationInterface {
+export class SellerPayouts1724855153990 implements MigrationInterface {
   private SELLER_PAYOUT_TABLE = 'seller_payout';
 
   private SELLER_PAYOUT_PDF_TABLE = 'seller_payout_pdf';

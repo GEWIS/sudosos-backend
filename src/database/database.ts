@@ -91,7 +91,7 @@ import { StripePaymentIntents1722869409448 } from '../migrations/1722869409448-s
 import { NestedProductCategories1722517212441 } from '../migrations/1722517212441-nested-product-categories';
 import SellerPayout from '../entity/transactions/payout/seller-payout';
 import { InvoiceAsTopups1724506999318 } from '../migrations/1724506999318-invoice-as-topups';
-import { SellerPayouts1724506999318 } from '../migrations/1724855153990-seller-payouts';
+import { SellerPayouts1724855153990 } from '../migrations/1724855153990-seller-payouts';
 
 // We need to load the dotenv to prevent the env from being undefined.
 dotenv.config();
@@ -123,7 +123,7 @@ const options: DataSourceOptions = {
     StripePaymentIntents1722869409448,
     NestedProductCategories1722517212441,
     InvoiceAsTopups1724506999318,
-    SellerPayouts1724506999318,
+    SellerPayouts1724855153990,
   ],
   extra: {
     authPlugins: {
