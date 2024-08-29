@@ -139,13 +139,6 @@ describe('ReportService', () => {
     checkReport(report);
   }
 
-  async function checkTransactionsBuyerReport(transactions: { tId: number, amount: number }[], parameters: ReportParameters) {
-    const report = await new BuyerReportService().getReport(parameters);
-    const totalInclVat = transactions.reduce((sum, t) => sum + t.amount, 0);
-    expect(report.totalInclVat.getAmount()).to.eq(totalInclVat);
-    checkReport(report);
-  }
-
   async function createMultipleBuyersSingleSeller(buyerCount: number, tester: (users: User[], transactions: { tId: number, amount: number }[]) => Promise<void>) {
     return inUserContext((await UserFactory()).clone(buyerCount + 1), async (...users: User[]) => {
       const [seller, ...buyers] = users;
