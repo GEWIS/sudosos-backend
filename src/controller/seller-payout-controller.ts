@@ -213,7 +213,7 @@ export default class SellerPayoutController extends BaseController {
       }
 
       const pdf = await sellerPayout.getOrCreatePdf(force);
-      res.status(501).json({ pdf: pdf.downloadName });
+      res.status(200).json({ pdf: pdf.downloadName });
     } catch (error) {
       this.logger.error('Could not get sales report for seller payout:', error);
       res.status(500).json('Internal server error.');
