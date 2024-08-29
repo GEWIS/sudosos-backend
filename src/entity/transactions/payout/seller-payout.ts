@@ -28,4 +28,7 @@ export default class SellerPayout extends BasePayout {
 
   @Column({ nullable: false })
   public reference: string;
+
+  @Column({ nullable: true })
+  public pdfId?: number;
 }
