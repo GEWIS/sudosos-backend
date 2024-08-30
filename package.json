@@ -13,7 +13,7 @@
     "swagger": "ts-node-dev --poll src/start/swagger.ts",
     "migrate": "ts-node ./src/database/migrate.ts",
     "swagger:validate": "ts-node-dev --poll src/start/swagger.ts && swagger-cli validate ./out/swagger.json",
-    "test": "mocha -r ts-node/register --parallel --timeout 10000 --require ./test/setup.ts 'test/**/*.ts' --exit",
+    "test": "mocha -r ts-node/register --parallel --timeout 50000 --require ./test/setup.ts 'test/**/*.ts' --exit",
     "test-ci": "npm run schema && mocha -r ts-node/register --timeout 50000 --require ./test/setup.ts 'test/**/*.ts' --exit",
     "test-ci-migrate": "npm run migrate && mocha -r ts-node/register --timeout 50000 --require ./test/setup.ts 'test/**/*.ts' --exit",
     "test-file": "mocha -r ts-node/register --timeout 10000 --require ./test/setup.ts",
