@@ -18,6 +18,8 @@
 import { Identity, Product, ProductPricing, TotalPricing, VAT } from 'pdf-generator-client';
 import User from '../entity/user/user';
 import { Report, ReportProductEntry, ReportVatEntry } from '../entity/report/report';
+import ProductRevision from '../entity/product/product-revision';
+import SubTransactionRow from '../entity/transactions/sub-transaction-row';
 
 export const PDF_VAT_ZERO = 0;
 export const PDF_VAT_LOW = 9;
@@ -89,19 +91,28 @@ export function emptyIdentity(): Identity {
   });
 }
 
+export function productToPdfProduct(product: ProductRevision, quantity: number): Product {
+  return new Product({
+    name: product.name,
+    summary: UNUSED_PARAM,
+    pricing: new ProductPricing({
+      basePrice: product.priceInclVat.getAmount(),
+      vatAmount: product.vat.percentage,
+      vatCategory: vatPercentageToPDFVat(product.vat.percentage),
+      quantity,
+    }),
+  });
+}
+
+
 /**
  * Convert report product entry to product for PDF
  * @param entry
  */
 export function entryToProduct(entry: ReportProductEntry): Product {
-  return new Product({
-    name: entry.product.name,
-    summary: UNUSED_PARAM,
-    pricing: new ProductPricing({
-      basePrice: entry.product.priceInclVat.getAmount(),
-      vatAmount: entry.product.vat.percentage,
-      vatCategory: vatPercentageToPDFVat(entry.product.vat.percentage),
-      quantity: entry.count,
-    }),
-  });
+  return productToPdfProduct(entry.product, entry.count);
+}
+
+export function subTransactionRowToProduct(str: SubTransactionRow): Product {
+  return productToPdfProduct(str.product, str.amount);
 }

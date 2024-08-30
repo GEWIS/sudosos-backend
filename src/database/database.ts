@@ -44,7 +44,6 @@ import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision'
 import ProductOrdering from '../entity/point-of-sale/product-ordering';
 import Balance from '../entity/transactions/balance';
 import InvoiceUser from '../entity/user/invoice-user';
-import InvoiceEntry from '../entity/invoices/invoice-entry';
 import Invoice from '../entity/invoices/invoice';
 import InvoiceStatus from '../entity/invoices/invoice-status';
 import BaseFile from '../entity/file/base-file';
@@ -176,7 +175,6 @@ const options: DataSourceOptions = {
     ProductOrdering,
     Balance,
     InvoiceUser,
-    InvoiceEntry,
     Invoice,
     InvoiceStatus,
     InvoicePdf,

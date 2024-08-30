@@ -23,7 +23,6 @@ import {
   In,
   Raw,
 } from 'typeorm';
-import dinero from 'dinero.js';
 import InvoiceStatus, { InvoiceState } from '../entity/invoices/invoice-status';
 import {
   BaseInvoiceResponse,
@@ -33,7 +32,6 @@ import {
 } from '../controller/response/invoice-response';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import Invoice from '../entity/invoices/invoice';
-import InvoiceEntry from '../entity/invoices/invoice-entry';
 import {
   CreateInvoiceParams, InvoiceTransactionsRequest,
   UpdateInvoiceParams,
@@ -48,9 +46,7 @@ import { TransactionResponse } from '../controller/response/transaction-response
 import { RequestWithToken } from '../middleware/token-middleware';
 import { asBoolean, asDate, asInvoiceState, asNumber } from '../helpers/validators';
 import { PaginationParameters } from '../helpers/pagination';
-import InvoiceEntryRequest from '../controller/request/invoice-entry-request';
 import User, { UserType } from '../entity/user/user';
-import DineroTransformer from '../entity/transformer/dinero-transformer';
 import SubTransactionRow from '../entity/transactions/sub-transaction-row';
 import { parseUserToBaseResponse } from '../helpers/revision-to-response';
 import SubTransaction from '../entity/transactions/sub-transaction';
@@ -99,20 +95,6 @@ export function parseInvoiceFilterParameters(req: RequestWithToken): InvoiceFilt
 
 export default class InvoiceService extends WithManager {
   /**
-   * Parses an InvoiceEntry Object to a InvoiceEntryResponse
-   * @param invoiceEntries - The invoiceEntries to parse
-   */
-  private static asInvoiceEntryResponse(invoiceEntries: InvoiceEntry): InvoiceEntryResponse {
-    return {
-      description: invoiceEntries.description,
-      amount: invoiceEntries.amount,
-      priceInclVat: invoiceEntries.priceInclVat.toObject(),
-      vatPercentage: invoiceEntries.vatPercentage,
-      custom: true,
-    } as InvoiceEntryResponse;
-  }
-
-  /**
    * Parses an subTransactionRow Object to a InvoiceEntryResponse
    * @param row
    */
@@ -146,8 +128,6 @@ export default class InvoiceService extends WithManager {
    * @param invoice - The Invoice to parse
    */
   public static asBaseInvoiceResponse(invoice: Invoice): BaseInvoiceResponse {
-    const totalInclVat = invoice.invoiceEntries.reduce((sum, entry) => sum + entry.amount, 0) + invoice.transfer.amountInclVat.getAmount();
-
     return {
       id: invoice.id,
       createdAt: invoice.createdAt.toISOString(),
@@ -165,7 +145,7 @@ export default class InvoiceService extends WithManager {
       country: invoice.country,
       postalCode: invoice.postalCode,
       street: invoice.street,
-      totalInclVat: DineroTransformer.Instance.from(totalInclVat).toObject(),
+      totalInclVat: invoice.transfer.amountInclVat.toObject(),
     };
   }
 
@@ -173,22 +153,23 @@ export default class InvoiceService extends WithManager {
    * Parses an Invoice Object to a InvoiceResponse
    * @param invoice - The Invoice to parse
    */
-  public async asInvoiceResponse(invoice: Invoice)
-    : Promise<InvoiceResponse> {
-    const customEntries = invoice.invoiceEntries.map(InvoiceService.asInvoiceEntryResponse);
-    const transactionEntries = invoice.subTransactionRows.map(InvoiceService.subTransactionRowsAsInvoiceEntryResponse);
+  public static asInvoiceResponse(invoice: Invoice)
+    : InvoiceResponse {
+    const invoiceEntries = InvoiceService.isState(invoice, InvoiceState.DELETED)
+      ? invoice.subTransactionRowsDeletedInvoice.map(InvoiceService.subTransactionRowsAsInvoiceEntryResponse)
+      : invoice.subTransactionRows.map(InvoiceService.subTransactionRowsAsInvoiceEntryResponse);
 
     return {
       ...InvoiceService.asBaseInvoiceResponse(invoice),
-      invoiceEntries: [...customEntries, ...transactionEntries],
+      invoiceEntries,
     } as InvoiceResponse;
   }
 
-  public async toArrayResponse(invoices: Invoice[]): Promise<InvoiceResponse[]> {
-    return Promise.all(invoices.map(invoice => this.asInvoiceResponse(invoice)));
+  public static toArrayResponse(invoices: Invoice[]): InvoiceResponse[] {
+    return invoices.map(invoice => InvoiceService.asInvoiceResponse(invoice));
   }
 
-  public toArrayWithoutEntriesResponse(invoices: Invoice[]): BaseInvoiceResponse[] {
+  public static toArrayWithoutEntriesResponse(invoices: Invoice[]): BaseInvoiceResponse[] {
     return invoices.map(invoice => InvoiceService.asBaseInvoiceResponse(invoice));
   }
 
@@ -197,27 +178,23 @@ export default class InvoiceService extends WithManager {
    * Creates a Transfer for an Invoice from TransactionResponses
    * @param forId - The user which receives the Invoice/Transfer
    * @param transactions - The array of transactions which to create the Transfer for
+   * @param amount - The amount to transfer
    */
-  public async createTransferFromTransactions(forId: number,
-    transactions: Transaction[]): Promise<TransferResponse> {
+  public async createTransfer(forId: number,
+    transactions: Transaction[], amount: DineroObjectRequest): Promise<TransferResponse> {
     const transactionId = transactions.length > 0 ? transactions.map((t) => t.id) : null;
     const baseTransactions = (await new TransactionService(this.manager).getTransactions({ transactionId })).records;
 
-    const dineroObjectRequest: DineroObjectRequest = {
-      amount: 0,
-      currency: dinero.defaultCurrency,
-      precision: dinero.defaultPrecision,
-    };
+    const sum = baseTransactions.reduce((acc, t) => {
+      if (t.from.id !== forId) throw new Error(`Transaction from ${t.from.id} not from user ${forId}`);
+      return acc + t.value.amount;
+    }, 0);
 
-    if (baseTransactions.length !== 0) {
-      baseTransactions.forEach((t) => {
-        if (t.from.id !== forId) throw new Error(`Transaction from ${t.from.id} not from user ${forId}`);
-        dineroObjectRequest.amount += t.value.amount;
-      });
-    }
+    // TODO: Should we error if the sum is not equal to the amount?
+    if (sum !== amount.amount) throw new Error(`Sum of transactions is ${sum}, but amount is ${amount.amount}`);
 
     const transferRequest: TransferRequest = {
-      amount: dineroObjectRequest,
+      amount,
       description: 'Invoice Transfer',
       fromId: 0,
       toId: forId,
@@ -226,30 +203,9 @@ export default class InvoiceService extends WithManager {
     return new TransferService(this.manager).postTransfer(transferRequest);
   }
 
-  /**
-   * Adds custom entries to the invoice.
-   * @param invoice - The Invoice to append to
-   * @param customEntries - THe custom entries to append
-   */
-  private async AddCustomEntries(invoice: Invoice,
-    customEntries: InvoiceEntryRequest[]): Promise<void> {
-    const promises: Promise<InvoiceEntry>[] = [];
-    customEntries.forEach((request) => {
-      const { description, amount, vatPercentage } = request;
-      const entry = Object.assign(new InvoiceEntry(), {
-        invoice,
-        description,
-        amount,
-        priceInclVat: DineroTransformer.Instance.from(request.priceInclVat.amount),
-        vatPercentage,
-      });
-      promises.push(this.manager.save(entry));
-    });
-    await Promise.all(promises);
-  }
-
   static isState(invoice: Invoice, state: InvoiceState): boolean {
-    return invoice.invoiceStatus[invoice.invoiceStatus.length - 1].state === state;
+    // Sort to make sure we have the latest status.
+    return invoice.invoiceStatus.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0].state === state;
   }
 
   /**
@@ -291,6 +247,7 @@ export default class InvoiceService extends WithManager {
       state: InvoiceState.DELETED,
     });
 
+    invoice.subTransactionRowsDeletedInvoice = invoice.subTransactionRows;
     await this.removeSubTransactionInvoice(invoice);
 
     // Add it to the invoice and save it.
@@ -430,7 +387,7 @@ export default class InvoiceService extends WithManager {
       .records.map((t) => t.id);
 
 
-    // TODO: Remove after TransactionService migration to `getOptions
+    // TODO: Remove after TransactionService migration to `getOptions`
     const relations: FindOptionsRelations<Transaction> = {
       subTransactions: {
         subTransactionRows: {
@@ -468,12 +425,25 @@ export default class InvoiceService extends WithManager {
     : Promise<Invoice> {
     const { forId, byId, transactionIDs } = invoiceRequest;
 
-    const transactions = await this.manager.find(Transaction, { where: { id: In(transactionIDs) }, relations: ['subTransactions', 'subTransactions.subTransactionRows', 'from'] });
+    const relations: FindOptionsRelations<Transaction> = {
+      subTransactions: {
+        subTransactionRows: {
+          invoice: true,
+          product: {
+            vat: true,
+          },
+        },
+        container: true,
+      },
+      pointOfSale: true,
+    };
+
+    const transactions = await this.manager.find(Transaction, { where: { id: In(transactionIDs) }, relations });
     if (transactions.length !== transactionIDs.length) throw new Error('Transaction not found');
 
     await this.checkIfInvoiced(transactions);
 
-    const transfer = await this.createTransferFromTransactions(forId, transactions);
+    const transfer = await this.createTransfer(forId, transactions, invoiceRequest.amount);
 
     // Create a new Invoice
     const newInvoice: Invoice = Object.assign(new Invoice(), {
@@ -482,7 +452,6 @@ export default class InvoiceService extends WithManager {
       addressee: invoiceRequest.addressee,
       attention: invoiceRequest.attention,
       invoiceStatus: [],
-      invoiceEntries: [],
       description: invoiceRequest.description,
       street: invoiceRequest.street,
       postalCode:invoiceRequest.postalCode,
@@ -506,12 +475,6 @@ export default class InvoiceService extends WithManager {
 
       const subTransactions = transactions.flatMap((t) => t.subTransactions);
       await this.setSubTransactionInvoice(newInvoice, subTransactions);
-
-      // IGNORED UNTIL REMOVED
-      // TODO: Refactor at a later state.
-      // if (invoiceRequest.customEntries) {
-      //   await this.AddCustomEntries(newInvoice, invoiceRequest.customEntries);
-      // }
     });
 
     const options = InvoiceService.getOptions({ invoiceId: newInvoice.id, returnInvoiceEntries: true });
@@ -542,12 +505,9 @@ export default class InvoiceService extends WithManager {
 
     const invoices = await this.manager.find(Invoice, { ...options, take });
 
-    let records: any[];
-    if (params.returnInvoiceEntries) {
-      records = await this.toArrayResponse(invoices);
-    } else {
-      records = this.toArrayWithoutEntriesResponse(invoices);
-    }
+    const records = params.returnInvoiceEntries
+      ? InvoiceService.toArrayResponse(invoices)
+      : InvoiceService.toArrayWithoutEntriesResponse(invoices);
 
     const count = await this.manager.count(Invoice, options);
     return {
@@ -587,15 +547,16 @@ export default class InvoiceService extends WithManager {
       invoiceStatus: true,
       transfer: { to: true, from: true },
       pdf: true,
-      subTransactionRows: {
+    };
+
+    if (params.returnInvoiceEntries) {
+      relations.subTransactionRows = {
         product: {
           vat: true,
         },
-      },
-    };
-    if (params.returnInvoiceEntries) {
-      relations.invoiceEntries = true;
+      };
     }
+
     const options: FindManyOptions<Invoice> = {
       where: {
         ...QueryFilter.createFilterWhereClause(filterMapping, params),

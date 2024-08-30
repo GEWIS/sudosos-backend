@@ -18,13 +18,11 @@
 
 import {
   Column,
-  Entity, JoinColumn, ManyToOne, OneToMany, OneToOne,
+  Entity, JoinColumn, ManyToOne, OneToMany, OneToOne, ManyToMany,
 } from 'typeorm';
 import BaseEntity from '../base-entity';
 import User from '../user/user';
 import Transfer from '../transactions/transfer';
-// eslint-disable-next-line import/no-cycle
-import InvoiceEntry from './invoice-entry';
 // eslint-disable-next-line import/no-cycle
 import InvoiceStatus from './invoice-status';
 import InvoicePdf from '../file/invoice-pdf';
@@ -57,14 +55,6 @@ export default class Invoice extends PdfAble(BaseEntity) {
   })
   @JoinColumn()
   public transfer: Transfer;
-
-  /**
-   * The entries describing this invoice.
-   */
-  @OneToMany(() => InvoiceEntry,
-    (invoiceEntry) => invoiceEntry.invoice,
-    { cascade: true, eager: true })
-  public invoiceEntries: InvoiceEntry[];
 
   /**
    * The status history of the invoice
@@ -159,6 +149,9 @@ export default class Invoice extends PdfAble(BaseEntity) {
 
   @OneToMany(() => SubTransactionRow, (row) => row.invoice, { cascade: false })
   public subTransactionRows: SubTransactionRow[];
+
+  @ManyToMany(() => SubTransactionRow, { cascade: false })
+  public subTransactionRowsDeletedInvoice: SubTransactionRow[];
 
   pdfService = new InvoicePdfService(INVOICE_PDF_LOCATION);
 

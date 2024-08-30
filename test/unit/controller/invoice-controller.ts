@@ -44,7 +44,6 @@ import {
   SUBTRANSACTION_ALREADY_INVOICED,
   ZERO_LENGTH_STRING,
 } from '../../../src/controller/request/validators/validation-errors';
-import InvoiceEntryRequest from '../../../src/controller/request/invoice-entry-request';
 import { inUserContext, INVOICE_USER, ORGAN_USER, UserFactory } from '../../helpers/user-factory';
 import { TransactionRequest } from '../../../src/controller/request/transaction-request';
 import BalanceService from '../../../src/service/balance-service';
@@ -170,6 +169,11 @@ describe('InvoiceController', async () => {
       postalCode: 'postalCode',
       street: 'street',
       transactionIDs: [],
+      amount: {
+        amount: 100,
+        currency: 'EUR',
+        precision: 2,
+      },
     };
 
     ctx = {
@@ -272,55 +276,13 @@ describe('InvoiceController', async () => {
       const req: CreateInvoiceRequest = { ...ctx.validInvoiceRequest, description: '' };
       await expectError(req, `description: ${ZERO_LENGTH_STRING().value}`);
     });
-    it('should verity that the custom invoice entries have valid amounts', async () => {
-      const customEntries: InvoiceEntryRequest[] = [
-        {
-          description: 'invalid',
-          amount: -2,
-          priceInclVat: {
-            amount: 72,
-            currency: 'EUR',
-            precision: 2,
-          },
-          vatPercentage: 39,
-        },
-      ];
-      const req: CreateInvoiceRequest = { ...ctx.validInvoiceRequest, customEntries };
-      await expectError(req, 'Custom entries: amount: Number must be positive');
-    });
-    it('should verity that the custom invoice entries have valid descriptions', async () => {
-      const customEntries: InvoiceEntryRequest[] = [
-        {
-          description: 'valid',
-          amount: 1,
-          priceInclVat: {
-            amount: 72,
-            currency: 'EUR',
-            precision: 2,
-          },
-          vatPercentage: 39,
-        },
-        {
-          description: '',
-          amount: 2,
-          priceInclVat: {
-            amount: 72,
-            currency: 'EUR',
-            precision: 2,
-          },
-          vatPercentage: 39,
-        },
-      ];
-      const req: CreateInvoiceRequest = { ...ctx.validInvoiceRequest, customEntries };
-      await expectError(req, 'Custom entries: description: must be a non-zero length string.');
-    });
     it('should disallow double invoicing of a transaction', async () => {
       await inUserContext(await (await UserFactory()).clone(2),
         async (debtor: User, creditor: User) => {
           const transactionRequests: TransactionRequest[] = await createTransactionRequest(
             debtor.id, creditor.id, 2,
           );
-          const { transactions } = await requestToTransaction(transactionRequests);
+          const { transactions, total } = await requestToTransaction(transactionRequests);
           const tIds = transactions.map((transaction) => transaction.tId);
 
           const createInvoiceRequest: CreateInvoiceParams = {
@@ -335,6 +297,11 @@ describe('InvoiceController', async () => {
             transactionIDs: tIds,
             date: new Date(),
             reference: 'BAC-41',
+            amount: {
+              amount: total,
+              currency: 'EUR',
+              precision: 2,
+            },
           };
 
           const invoiceTransactions = await Transaction.find({ where: { id: In(tIds) }, relations: ['subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice'] });
@@ -357,34 +324,6 @@ describe('InvoiceController', async () => {
   describe('POST /invoices', () => {
     describe('verifyInvoiceRequest Specification', async () => {
       await testValidationOnRoute('post', '/invoices');
-    });
-    it('should not create an Invoice with only custom entries and return an HTTP 400 if admin', async () => {
-      await inUserContext(await (await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
-        await Invoice.count();
-        const newRequest: CreateInvoiceRequest = {
-          ...ctx.validInvoiceRequest,
-          forId: debtor.id,
-          byId: creditor.id,
-          customEntries: [
-            {
-              description: 'Tappers vergoeding',
-              amount: 1,
-              priceInclVat: {
-                amount: 2000,
-                currency: 'EUR',
-                precision: 2,
-              },
-              vatPercentage: 39,
-            },
-          ],
-        };
-        const res = await request(ctx.app)
-          .post('/invoices')
-          .set('Authorization', `Bearer ${ctx.adminToken}`)
-          .send(newRequest);
-
-        expect(res.status).to.equal(400);
-      });
     });
     it('should return an HTTP 403 if not admin', async () => {
       await inUserContext(await (await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
@@ -430,34 +369,6 @@ describe('InvoiceController', async () => {
           expect(await Invoice.count()).to.equal(count + 1);
 
           expect(res.status).to.equal(200);
-        });
-    });
-    it('should NOT create an Invoice with custom entries and return an HTTP 400 if admin', async () => {
-      await inUserContext(await (await UserFactory()).clone(2),
-        async (debtor: User, creditor: User) => {
-          await Invoice.count();
-          const newRequest: CreateInvoiceRequest = {
-            ...ctx.validInvoiceRequest,
-            forId: debtor.id,
-            byId: creditor.id,
-            customEntries: [
-              {
-                description: 'Tappers vergoeding',
-                amount: 1,
-                priceInclVat: {
-                  amount: 2000,
-                  currency: 'EUR',
-                  precision: 2,
-                },
-                vatPercentage: 39,
-              },
-            ],
-          };
-          const res = await request(ctx.app)
-            .post('/invoices')
-            .set('Authorization', `Bearer ${ctx.adminToken}`)
-            .send(newRequest);
-          expect(res.status).to.equal(400);
         });
     });
     it('should filter on invoice status', async () => {

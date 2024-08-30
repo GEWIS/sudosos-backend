@@ -18,7 +18,6 @@
 import { In, IsNull, MigrationInterface, Not, QueryRunner, Table, TableForeignKey } from 'typeorm';
 import Invoice from '../entity/invoices/invoice';
 import SellerPayout from '../entity/transactions/payout/seller-payout';
-import InvoiceEntry from '../entity/invoices/invoice-entry';
 import InvoiceStatus, { InvoiceState } from '../entity/invoices/invoice-status';
 import InvoicePdf from '../entity/file/invoice-pdf';
 import FileService from '../service/file-service';
@@ -46,7 +45,7 @@ export class SellerPayouts1724855153990 implements MigrationInterface {
       await queryRunner.manager.getRepository(Transfer).delete({ id: deletionTransfer.id });
     }
     await queryRunner.manager.getRepository(InvoiceStatus).delete({ invoice: { id: invoice.id } });
-    await queryRunner.manager.getRepository(InvoiceEntry).delete({ invoice: { id: invoice.id } });
+    await queryRunner.manager.query(`DELETE from invoice_entry WHERE invoiceId = ${invoice.id}`);
     await queryRunner.manager.getRepository(Invoice).delete({ id: invoice.id });
     if (invoice.pdf) {
       // We don't really care if the file is not found, just try to delete it.
@@ -173,7 +172,7 @@ export class SellerPayouts1724855153990 implements MigrationInterface {
 
     const creditInvoices = await queryRunner.manager.getRepository(Invoice).find({
       where: { transfer: { fromId: Not(IsNull()) } },
-      relations: { invoiceEntries: true, invoiceStatus: true, pdf: true, transfer: true, to: true, subTransactionRows: true },
+      relations: { invoiceStatus: true, pdf: true, transfer: true, to: true, subTransactionRows: true },
       order: { date: 'ASC' },
     });
 
@@ -257,7 +256,12 @@ UPDATE sub_transaction_row
 SET invoiceId = NULL
 WHERE invoiceId = ${invoice.id}`);
 
-      await queryRunner.manager.getRepository(InvoiceEntry).remove(invoice.invoiceEntries);
+      // Invoice entries have been removed from the entity.
+      // await queryRunner.manager.getRepository(InvoiceEntry).remove(invoice.invoiceEntries);
+      await queryRunner.query(`
+DELETE from invoice_entry
+WHERE invoiceId = ${invoice.id}`);
+
       await queryRunner.manager.getRepository(InvoiceStatus).remove(invoice.invoiceStatus);
       await queryRunner.manager.getRepository(Invoice).remove(invoice);
       if (invoice.pdf) {

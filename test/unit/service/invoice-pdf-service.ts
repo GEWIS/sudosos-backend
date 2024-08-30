@@ -30,9 +30,6 @@ import Database from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
 import { json } from 'body-parser';
 import FileService from '../../../src/service/file-service';
-import InvoiceEntry from '../../../src/entity/invoices/invoice-entry';
-import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
-import Transfer from '../../../src/entity/transactions/transfer';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
@@ -85,7 +82,7 @@ describe('InvoicePdfService', async (): Promise<void> => {
       invoices,
       pdfParams,
       fileService,
-      client:  new Client('url', { fetch }),
+      client: new Client('url', { fetch }),
     };
   });
 
@@ -208,93 +205,7 @@ describe('InvoicePdfService', async (): Promise<void> => {
     });
   });
 
-  describe('entriesToProductsPricing', () => {
-    it('should correctly convert invoice entries to products and total pricing', async () => {
-      const invoice: Invoice = new Invoice();
-      const total = 500 + 3 * 1090 + 5 * 1210;
-      const lowVat = 270;
-      const highVat = 1050;
-      invoice.transfer = { amountInclVat: DineroTransformer.Instance.from(total) } as Transfer;
-
-      invoice.invoiceEntries = [{
-        description: 'Product no VAT',
-        amount: 1,
-        priceInclVat: DineroTransformer.Instance.from(500),
-        vatPercentage: 0,
-      } as InvoiceEntry,
-      {
-        description: 'Product low VAT',
-        amount: 3,
-        priceInclVat: DineroTransformer.Instance.from(1090),
-        vatPercentage: 9,
-      } as InvoiceEntry,
-      {
-        description: 'Product high VAT',
-        amount: 5,
-        priceInclVat: DineroTransformer.Instance.from(1210),
-        vatPercentage: 21,
-      } as InvoiceEntry,
-      ];
-
-      const result = invoice.pdfService.entriesToProductsPricing(invoice);
-      expect(result.pricing.inclVat).to.eq(total);
-      expect(result.pricing.lowVat).to.eq(lowVat);
-      expect(result.pricing.highVat).to.eq(highVat);
-      expect(result.pricing.exclVat).to.eq(total - lowVat - highVat);
-
-      const results = [{
-        name: 'Product high VAT',
-        details: undefined,
-        summary: '',
-        specification: undefined,
-        pricing: {
-          basePrice: 1210,
-          discount: undefined,
-          vatAmount: 21,
-          vatCategory: 'ZERO',
-          quantity: 5,
-        },
-      } as any,
-      {
-        name: 'Product low VAT',
-        details: undefined,
-        summary: '',
-        specification: undefined,
-        pricing: {
-          basePrice: 1090,
-          discount: undefined,
-          vatAmount: 9,
-          vatCategory: 'ZERO',
-          quantity: 3,
-        },
-      } as any,
-      {
-        name: 'Product no VAT',
-        details: undefined,
-        summary: '',
-        specification: undefined,
-        pricing: {
-          basePrice: 500,
-          discount: undefined,
-          vatAmount: 0,
-          vatCategory: 'ZERO',
-          quantity: 1,
-        },
-      } as any];
-      expect(result.products).to.deep.equalInAnyOrder(results);
-    });
-    it('should throw an error for unsupported VAT percentages', async () => {
-      const invoice: Invoice = new Invoice();
-      invoice.invoiceEntries = [{
-        description: 'Product unsupported VAT',
-        amount: 1,
-        priceInclVat: DineroTransformer.Instance.from(500),
-        vatPercentage: 5,
-      } as InvoiceEntry];
-
-      expect(() => invoice.pdfService.entriesToProductsPricing(invoice)).to.Throw('Unsupported vat percentage 5 during pdf generation.');
-    });
-  });
+  // TODO: test invoiceToPricing and subTransactionRowToProduct
 
   describe('getInvoiceParameters', () => {
     it('should return all required parameters for generating an invoice PDF', async () => {
