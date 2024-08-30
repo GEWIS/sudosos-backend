@@ -271,6 +271,7 @@ export default class SellerPayoutController extends BaseController {
       });
       if (requestedByPayouts.length > 0) {
         res.status(400).json(`New seller payout time window overlaps with the time windows of SellerPayouts ${requestedByPayouts.map((r) => `"${r.id}"`).join(', ')}.`);
+        return;
       }
 
       const payout = await service.createSellerPayout({
