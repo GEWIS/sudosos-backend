@@ -316,7 +316,7 @@ describe('SellerPayoutController', () => {
     //  Turns out we have never tested the full pdf download flow.
     //  The fileservice errors if the dir does not exist, and these are created with the init_scripts.
     //  I propose we skip this test for now, and decide how to handle this later.
-    it.skip('should return HTTP 200 with the sales report PDF belonging to the seller payout', async () => {
+    xit('should return HTTP 200 with the sales report PDF belonging to the seller payout', async () => {
       resolveSuccessful();
       const sellerPayout = ctx.sellerPayouts[0];
       const res = await request(ctx.app)
