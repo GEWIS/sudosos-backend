@@ -146,9 +146,19 @@ export default class User extends BaseEntity {
   public directAssignedRoles: AssignedRole[];
 
   public fullName(): string {
-    let name = this.firstName;
-    if (this.nickname) name += ` "${this.nickname}"`;
-    if (this.lastName) name += ` ${this.lastName}`;
+    return User.fullName(this);
+  }
+
+  /**
+   * Get the full name of the given user.
+   * Separate static method, as user objects taken from tokens
+   * do not have any class methods.
+   * @param user
+   */
+  public static fullName(user: User): string {
+    let name = user.firstName;
+    if (user.nickname) name += ` "${user.nickname}"`;
+    if (user.lastName) name += ` ${user.lastName}`;
     return name;
   }
 

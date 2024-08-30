@@ -35,15 +35,20 @@ import { StripePaymentIntentResponse } from '../../../src/controller/response/st
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { getToken, seedRoles } from '../../seed/rbac';
+import Stripe from 'stripe';
+import { STRIPE_API_VERSION } from '../../../src/service/stripe-service';
 
 describe('StripeController', async (): Promise<void> => {
   let shouldSkip: boolean;
+  let originalName: string;
 
   let ctx: {
     connection: Connection,
     app: Application,
     specification: SwaggerSpecification,
     controller: StripeController,
+    stripe: Stripe,
+    serviceName: string,
     localUser: User,
     adminUser: User,
     userToken: string,
@@ -60,28 +65,31 @@ describe('StripeController', async (): Promise<void> => {
       || process.env.STRIPE_PRIVATE_KEY === '' || process.env.STRIPE_PRIVATE_KEY === undefined);
     if (shouldSkip) this.skip();
 
+    originalName = process.env.NAME;
+    const serviceName = 'sudosos-stripe-test-suite';
+    process.env.NAME = serviceName;
+
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
-    // create dummy users
-    const adminUser = {
+    const stripe = new Stripe(process.env.STRIPE_PRIVATE_KEY, {
+      apiVersion: STRIPE_API_VERSION,
+    });
+
+    const adminUser = await User.save({
       id: 1,
       firstName: 'Admin',
       type: UserType.LOCAL_ADMIN,
       active: true,
       acceptedToS: TermsOfServiceStatus.ACCEPTED,
-    } as User;
-
-    const localUser = {
+    });
+    const localUser = await User.save({
       id: 2,
       firstName: 'User',
       type: UserType.LOCAL_USER,
       active: true,
       acceptedToS: TermsOfServiceStatus.ACCEPTED,
-    } as User;
-
-    await User.save(adminUser);
-    await User.save(localUser);
+    });
 
     const { stripeDeposits } = await seedStripeDeposits([localUser, adminUser]);
 
@@ -159,6 +167,8 @@ describe('StripeController', async (): Promise<void> => {
       app,
       specification,
       controller,
+      stripe,
+      serviceName,
       adminUser,
       localUser,
       adminToken,
@@ -172,6 +182,8 @@ describe('StripeController', async (): Promise<void> => {
 
   after(async () => {
     if (shouldSkip) return;
+
+    process.env.NAME = originalName;
     await finishTestDB(ctx.connection);
   });
 
@@ -197,6 +209,17 @@ describe('StripeController', async (): Promise<void> => {
       ctx.specification.validateModel('StripePaymentIntentResponse', paymentIntent);
       const stripeDeposit = await StripeDeposit.findOne({ where: { id: paymentIntent.id }, relations: ['to'] });
       expect(ctx.localUser.id).to.equal(stripeDeposit.to.id);
+
+      const stripePaymentIntent = await ctx.stripe.paymentIntents.retrieve(paymentIntent.stripeId);
+      expect(stripePaymentIntent).to.not.be.null;
+      expect(stripePaymentIntent.amount).to.equal(ctx.validStripeRequest.amount.amount);
+      // Correct description
+      expect(stripePaymentIntent.description).to.equal(`SudoSOS deposit of ${ctx.validStripeRequest.amount.currency} ${(ctx.validStripeRequest.amount.amount / 100).toFixed(2)} for ${User.fullName(ctx.localUser)}.`);
+      // Correct metadata
+      expect(stripePaymentIntent.metadata).to.deep.equal({
+        service: ctx.serviceName,
+        userId: ctx.localUser.id.toString(),
+      });
     });
     it('should return an HTTP 422 if deposit request amount is too low', async () => {
       const res = await request(ctx.app)

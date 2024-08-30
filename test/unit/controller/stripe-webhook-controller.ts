@@ -36,6 +36,7 @@ import { seedStripeDeposits, seedUsers } from '../../seed';
 
 describe('StripeWebhookController', async (): Promise<void> => {
   let shouldSkip: boolean;
+  let originalName: string;
 
   let ctx: {
     connection: DataSource,
@@ -62,6 +63,10 @@ describe('StripeWebhookController', async (): Promise<void> => {
       || process.env.STRIPE_PRIVATE_KEY === '' || process.env.STRIPE_PRIVATE_KEY === undefined);
     if (shouldSkip) this.skip();
 
+    originalName = process.env.NAME;
+    const serviceName = 'sudosos-stripe-webhook-test-suite';
+    process.env.NAME = serviceName;
+
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
@@ -87,6 +92,10 @@ describe('StripeWebhookController', async (): Promise<void> => {
       data: {
         object: {
           id: stripeDeposits[0].stripePaymentIntent.stripeId,
+          metadata: {
+            service: serviceName,
+            user_id: stripeDeposits[0].to.id,
+          } as any,
         } as Stripe.PaymentIntent,
       },
       type: 'payment_intent.succeeded',
@@ -105,6 +114,8 @@ describe('StripeWebhookController', async (): Promise<void> => {
 
   after(async () => {
     if (shouldSkip) return;
+
+    process.env.NAME = originalName;
     await finishTestDB(ctx.connection);
   });
 
@@ -154,7 +165,7 @@ describe('StripeWebhookController', async (): Promise<void> => {
 
       expect(res.status).to.equal(400);
     });
-    it('should return 200 when sending correct request', async () => {
+    it('should return 204 when sending correct request', async () => {
       const handleWebhookEventStub = sinon.stub(StripeService.prototype, 'handleWebhookEvent').resolves();
       stubs.push(handleWebhookEventStub);
 
@@ -162,14 +173,14 @@ describe('StripeWebhookController', async (): Promise<void> => {
         .post('/stripe/webhook')
         .set('stripe-signature', getSignatureHeader(ctx.payload))
         .send(ctx.payload);
-      expect(res.status).to.equal(200);
+      expect(res.status).to.equal(204);
 
       // Race condition (by design), because the webhook event is and should be handled asynchronously
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       expect(handleWebhookEventStub).to.have.been.calledOnce;
     });
-    it('should return 404 when using unknown payment intent', async () => {
+    it('should return 400 when using unknown payment intent', async () => {
       const payload = {
         ...ctx.payload,
         data: {
@@ -183,10 +194,60 @@ describe('StripeWebhookController', async (): Promise<void> => {
         .post('/stripe/webhook')
         .set('stripe-signature', getSignatureHeader(payload))
         .send(payload);
-      expect(res.status).to.equal(404);
+      expect(res.status).to.equal(400);
       expect(res.body).to.equal('PaymentIntent with ID "Yeeeee" not found.');
     });
-    it('should return 200 if not listening for event', async () => {
+    it('should return 204 if not for SudoSOS service', async () => {
+      const handleWebhookEventStub = sinon.stub(StripeService.prototype, 'handleWebhookEvent').resolves();
+      stubs.push(handleWebhookEventStub);
+
+      const payload = {
+        ...ctx.payload,
+        data: {
+          object: {
+            ...ctx.payload.data.object,
+            metadata: {
+              service: 'definitely-not-sudosos',
+            },
+          },
+        },
+      };
+      const res = await request(ctx.app)
+        .post('/stripe/webhook')
+        .set('stripe-signature', getSignatureHeader(payload))
+        .send(payload);
+      expect(res.status).to.equal(204);
+
+      // Race condition (by design), because the webhook event is and should be handled asynchronously
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      expect(handleWebhookEventStub).to.not.have.been.called;
+    });
+    it('should return 204 if no service given', async () => {
+      const handleWebhookEventStub = sinon.stub(StripeService.prototype, 'handleWebhookEvent').resolves();
+      stubs.push(handleWebhookEventStub);
+
+      const payload = {
+        ...ctx.payload,
+        data: {
+          object: {
+            ...ctx.payload.data.object,
+            metadata: {},
+          },
+        },
+      };
+      const res = await request(ctx.app)
+        .post('/stripe/webhook')
+        .set('stripe-signature', getSignatureHeader(payload))
+        .send(payload);
+      expect(res.status).to.equal(204);
+
+      // Race condition (by design), because the webhook event is and should be handled asynchronously
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      expect(handleWebhookEventStub).to.not.have.been.called;
+    });
+    it('should return 204 if not listening for event', async () => {
       const handleWebhookEventStub = sinon.stub(StripeService.prototype, 'handleWebhookEvent').resolves();
       stubs.push(handleWebhookEventStub);
 
@@ -198,7 +259,7 @@ describe('StripeWebhookController', async (): Promise<void> => {
         .post('/stripe/webhook')
         .set('stripe-signature', getSignatureHeader(payload))
         .send(payload);
-      expect(res.status).to.equal(200);
+      expect(res.status).to.equal(204);
 
       // Race condition (by design), because the webhook event is and should be handled asynchronously
       await new Promise((resolve) => setTimeout(resolve, 100));
