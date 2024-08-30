@@ -32,6 +32,11 @@ export interface TokenRestrictions {
    * Whether the TOS should be accepted to access this endpoint. True by default.
    */
   acceptedTOS: boolean;
+
+  /**
+   * Whether this endpoint should remain accessible when maintenance mode is enabled.
+   */
+  availableDuringMaintenance: boolean;
 }
 
 export default class RestrictionMiddleware {
@@ -51,10 +56,10 @@ export default class RestrictionMiddleware {
    * @param next - the express next function to continue processing of the request.
    */
   public async handle(req: RequestWithToken, res: Response, next: Function): Promise<void> {
-    const { lesser, acceptedTOS } = this.restrictionsImpl();
+    const { lesser, acceptedTOS, availableDuringMaintenance } = this.restrictionsImpl();
 
     const maintenance = await ServerSettingsStore.getInstance().getSettingFromDatabase('maintenanceMode') as ISettings['maintenanceMode'];
-    if (maintenance) {
+    if (maintenance && !availableDuringMaintenance) {
       res.status(503).end('Service is in maintenance mode. Please try again later.');
       return;
     }

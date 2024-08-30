@@ -48,6 +48,7 @@ export default class RootController extends BaseController {
         GET: {
           policy: async () => Promise.resolve(true),
           handler: this.ping.bind(this),
+          restrictions: { availableDuringMaintenance: true },
         },
       },
       '/open/banners': {

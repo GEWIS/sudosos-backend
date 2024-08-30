@@ -40,6 +40,7 @@ describe('RestrictionMiddleware', (): void => {
     userAccepted: User,
     lesser?: boolean,
     acceptTOS?: boolean,
+    availableDuringMaintenance?: boolean,
   };
 
   before(async () => {
@@ -84,11 +85,13 @@ describe('RestrictionMiddleware', (): void => {
       userAccepted,
       lesser: undefined,
       acceptTOS: undefined,
+      availableDuringMaintenance: undefined,
     };
 
     ctx.middleware = new RestrictionMiddleware(() => ({
       lesser: ctx.lesser,
       acceptedTOS: ctx.acceptTOS,
+      availableDuringMaintenance: ctx.availableDuringMaintenance,
     }));
 
     ctx.app.use(new TokenMiddleware({ tokenHandler, refreshFactor: 0.5 }).getMiddleware());
@@ -111,6 +114,7 @@ describe('RestrictionMiddleware', (): void => {
   describe('Maintenance mode', () => {
     afterEach(async () => {
       await ServerSettingsStore.getInstance().setSetting('maintenanceMode', false);
+      ctx.availableDuringMaintenance = undefined;
     });
 
     it('should not be in maintenance mode by default', async () => {
@@ -133,6 +137,17 @@ describe('RestrictionMiddleware', (): void => {
         .set('Authorization', `Bearer ${token}`);
       expect(res.status).to.equal(503);
       expect(res.text).to.equal('Service is in maintenance mode. Please try again later.');
+    });
+    it('should return 200 if SudoSOS is in maintenance mode, but endpoint is excepted', async () => {
+      ctx.availableDuringMaintenance = true;
+      const store = ServerSettingsStore.getInstance();
+      await store.setSetting('maintenanceMode', true);
+
+      const token = await ctx.tokenHandler.signToken({ user: ctx.userAccepted, roles: [], lesser: false }, '39');
+      const res = await request(ctx.app)
+        .get('/')
+        .set('Authorization', `Bearer ${token}`);
+      expect(res.status).to.equal(200);
     });
   });
 
