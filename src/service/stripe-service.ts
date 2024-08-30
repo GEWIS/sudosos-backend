@@ -151,6 +151,11 @@ export default class StripeService {
       amount: DineroTransformer.Instance.to(amount),
       currency: amount.getCurrency(),
       automatic_payment_methods: { enabled: true },
+      description: `SudoSOS deposit of ${amount.getCurrency()} ${(amount.getAmount() / 100).toFixed(2)} for ${User.fullName(user)}.`,
+      metadata: {
+        'service': process.env.NAME ?? 'sudosos-unknown',
+        'userId': user.id,
+      },
     });
 
     const stripePaymentIntent = await this.manager.getRepository(StripePaymentIntent).save({
