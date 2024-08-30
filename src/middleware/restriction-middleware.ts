@@ -19,6 +19,8 @@
 import { RequestHandler, Response } from 'express';
 import { RequestWithToken } from './token-middleware';
 import { TermsOfServiceStatus } from '../entity/user/user';
+import ServerSettingsStore from '../server-settings/server-settings-store';
+import { ISettings } from '../entity/server-setting';
 
 export interface TokenRestrictions {
   /**
@@ -50,6 +52,12 @@ export default class RestrictionMiddleware {
    */
   public async handle(req: RequestWithToken, res: Response, next: Function): Promise<void> {
     const { lesser, acceptedTOS } = this.restrictionsImpl();
+
+    const maintenance = await ServerSettingsStore.getInstance().getSettingFromDatabase('maintenanceMode') as ISettings['maintenanceMode'];
+    if (maintenance) {
+      res.status(503).end('Service is in maintenance mode. Please try again later.');
+      return;
+    }
 
     // No token middleware has been processed before, so skip the restrictions below this snippet
     if (!req.token) {

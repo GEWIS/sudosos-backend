@@ -27,6 +27,7 @@ import TokenHandler from '../../../src/authentication/token-handler';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
+import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
 
 describe('RestrictionMiddleware', (): void => {
   let ctx: {
@@ -70,6 +71,9 @@ describe('RestrictionMiddleware', (): void => {
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
 
+    ServerSettingsStore.deleteInstance();
+    await ServerSettingsStore.getInstance().initialize();
+
     ctx = {
       connection,
       app: express(),
@@ -100,7 +104,36 @@ describe('RestrictionMiddleware', (): void => {
   });
 
   after(async () => {
+    ServerSettingsStore.deleteInstance();
     await finishTestDB(ctx.connection);
+  });
+
+  describe('Maintenance mode', () => {
+    afterEach(async () => {
+      await ServerSettingsStore.getInstance().setSetting('maintenanceMode', false);
+    });
+
+    it('should not be in maintenance mode by default', async () => {
+      // Check precondition
+      await expect(ServerSettingsStore.getInstance().getSettingFromDatabase('maintenanceMode')).to.eventually.equal(false);
+
+      const token = await ctx.tokenHandler.signToken({ user: ctx.userAccepted, roles: [], lesser: false }, '39');
+      const res = await request(ctx.app)
+        .get('/')
+        .set('Authorization', `Bearer ${token}`);
+      expect(res.status).to.equal(200);
+    });
+    it('should return 503 if SudoSOS is in maintenance mode', async () => {
+      const store = ServerSettingsStore.getInstance();
+      await store.setSetting('maintenanceMode', true);
+
+      const token = await ctx.tokenHandler.signToken({ user: ctx.userAccepted, roles: [], lesser: false }, '39');
+      const res = await request(ctx.app)
+        .get('/')
+        .set('Authorization', `Bearer ${token}`);
+      expect(res.status).to.equal(503);
+      expect(res.text).to.equal('Service is in maintenance mode. Please try again later.');
+    });
   });
 
   describe('Non-lesser endpoints', async () => {
@@ -119,6 +152,7 @@ describe('RestrictionMiddleware', (): void => {
         .get('/')
         .set('Authorization', `Bearer ${token}`);
       expect(res.status).to.equal(403);
+      expect(res.text).to.equal('You have a lesser token, but this endpoint only accepts full-rights tokens.');
     });
   });
   describe('Lesser endpoints', async () => {
@@ -179,6 +213,7 @@ describe('RestrictionMiddleware', (): void => {
         .get('/')
         .set('Authorization', `Bearer ${token}`);
       expect(res.status).to.equal(403);
+      expect(res.text).to.equal('You have not yet accepted the Terms of Service. Please do this first.');
     });
     it('should reject not accepted users by default', async () => {
       // sanity check
@@ -194,6 +229,7 @@ describe('RestrictionMiddleware', (): void => {
         .get('/')
         .set('Authorization', `Bearer ${token}`);
       expect(res.status).to.equal(403);
+      expect(res.text).to.equal('You have not yet accepted the Terms of Service. Please do this first.');
     });
   });
   describe('Not accepted TOS endpoints', async () => {
