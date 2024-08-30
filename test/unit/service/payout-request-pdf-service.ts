@@ -234,7 +234,7 @@ describe('PayoutRequestPdfService', async () => {
 
       const payoutRequest = await PayoutRequest.findOne({ where: { id: 1 }, relations: ['requestedBy', 'payoutRequestStatus', 'transfer', 'transfer.to', 'transfer.from', 'pdf'] });
       payoutRequest.pdfService = pdfService;
-      await expect(payoutRequest.createPdf()).to.eventually.be.rejectedWith();
+      await expect(await payoutRequest.createPdf()).to.eventually.be.rejectedWith();
     });
   });
 });
