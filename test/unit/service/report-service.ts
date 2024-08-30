@@ -65,7 +65,7 @@ describe('ReportService', () => {
    * Checks if the report agrees with itself.
    * i.e. all the totals are the same across all categories.
    */
-  function checkReport(report: Report) {
+  function checkReport<T extends Report>(report: T) {
     // Check products
     if (report.data.products) {
       let sumExclVat = 0;
@@ -427,9 +427,9 @@ describe('ReportService', () => {
 
       it('should return the total expenditure of a user with mixed transactions before and after the fromDate', async () => {
         await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
-          const fromDate = new Date(new Date().getTime() - 1500); // Set fromDate to 1.5 seconds before current time
-          await createTransactions(debtor.id, creditor.id, 2, -2000);  // Transactions 2 seconds in the past (before fromDate)
-          const transactions = await createTransactions(debtor.id, creditor.id, 3, -1000); // Transactions 1 second in the past (after fromDate)
+          await createTransactions(debtor.id, creditor.id, 2, -2000);  // (before fromDate)
+          const fromDate = new Date(new Date().getTime());
+          const transactions = await createTransactions(debtor.id, creditor.id, 3, 2000); // (after fromDate)
           await checkTransactionsBuyerReport(transactions.transactions, {
             fromDate,
             tillDate: new Date(2050, 0, 0),

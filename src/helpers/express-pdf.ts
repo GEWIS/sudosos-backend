@@ -16,21 +16,22 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { Response } from 'express';
-import ReportService from '../service/report-service';
 import { ReturnFileType, UserReportParametersType } from 'pdf-generator-client';
-import ReportPdfService from '../service/report-pdf-service';
+import { BuyerReportService, SalesReportService } from '../service/report-service';
+
+type PdfAbleService = SalesReportService | BuyerReportService;
 
 export function reportPDFhelper(res: Response) {
-  return async (service: ReportService, filters: { fromDate: Date, tillDate: Date }, description: string, forId: number, reportType: UserReportParametersType, fileType: ReturnFileType) => {
+  return async (service: PdfAbleService, filters: { fromDate: Date, tillDate: Date }, description: string, forId: number, reportType: UserReportParametersType, fileType: ReturnFileType) => {
     const report = await service.getReport({ ...filters, forId });
 
-    const pdf = await ReportPdfService.getReportPdf(report, description, reportType, fileType);
+    const buffer = fileType === 'PDF' ? await report.createPdf() : await report.createTex();
     const from = `${filters.fromDate.getFullYear()}${filters.fromDate.getMonth() + 1}${filters.fromDate.getDate()}`;
     const to = `${filters.tillDate.getFullYear()}${filters.tillDate.getMonth() + 1}${filters.tillDate.getDate()}`;
     const fileName = `${reportType}-${from}-${to}.${fileType}`;
 
     res.setHeader('Content-Type', `application/${fileType}`);
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-    res.send(pdf);
+    res.send(buffer);
   };
 }

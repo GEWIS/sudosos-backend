@@ -23,13 +23,13 @@ import User from '../../user/user';
 // eslint-disable-next-line import/no-cycle
 import PayoutRequestStatus from './payout-request-status';
 import PayoutRequestPdf from '../../file/payout-request-pdf';
-import { hashJSON } from '../../../helpers/hash';
-import PayoutRequestPdfService from '../../../service/payout-request-pdf-service';
 import BasePayout from './base-payout';
+import { PdfAble } from '../../file/pdf-able';
+import PayoutRequestPdfService from '../../../service/pdf/payout-request-pdf-service';
+import { PAYOUT_REQUEST_PDF_LOCATION } from '../../../files/storage';
 
 @Entity()
-// TODO Migration
-export default class PayoutRequest extends BasePayout {
+export default class PayoutRequest extends PdfAble(BasePayout) {
 
   @OneToMany(() => PayoutRequestStatus, (status) => status.payoutRequest, { cascade: true })
   public payoutRequestStatus: PayoutRequestStatus[];
@@ -51,11 +51,5 @@ export default class PayoutRequest extends BasePayout {
   @JoinColumn()
   public pdf?: PayoutRequestPdf;
 
-  async getPdfParamHash(): Promise<string> {
-    return hashJSON(PayoutRequestPdfService.getParameters(this));
-  }
-
-  createPDF(): Promise<PayoutRequestPdf> {
-    return PayoutRequestPdfService.createPdf(this.id);
-  }
+  pdfService = new PayoutRequestPdfService(PAYOUT_REQUEST_PDF_LOCATION);
 }

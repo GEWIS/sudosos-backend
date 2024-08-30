@@ -15,5 +15,14 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-export { NotImplementedError } from './not-implemented-error';
-export { PdfError } from './pdf-error';
+export class PdfError extends Error {
+  constructor(message?: string) {
+    super(message);
+    this.name = 'PdfError';
+
+    // Ensure the error stack trace includes this constructor call
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(this, PdfError);
+    }
+  }
+}

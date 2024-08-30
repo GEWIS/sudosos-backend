@@ -44,7 +44,7 @@ import ProductCategoryService from './product-category-service';
 import PointOfSaleService from './point-of-sale-service';
 import ContainerService from './container-service';
 import {
-  BuyerReport,
+  BuyerReport, IReport,
   Report,
   ReportCategoryEntry,
   ReportContainerEntry,
@@ -328,12 +328,7 @@ export default abstract class ReportService {
     };
   }
 
-  /**
-   * Gets the report for the given user
-   * @param parameters - The parameters to get the report for
-   * @returns {Promise<Report>} - The report
-   */
-  public async getReport(parameters: ReportParameters): Promise<Report> {
+  async fetchReportData(parameters: ReportParameters): Promise<IReport> {
     const { fromDate, tillDate, forId } = parameters;
     const productEntries = await this.getProductEntries(forId, fromDate, tillDate);
     const vatEntries = await this.getVatEntries(forId, fromDate, tillDate);
@@ -346,6 +341,8 @@ export default abstract class ReportService {
       forId,
       fromDate,
       tillDate,
+      totalExclVat: totals.totalExclVat,
+      totalInclVat: totals.totalInclVat,
       data: {
         products: productEntries,
         vat: vatEntries,
@@ -353,10 +350,15 @@ export default abstract class ReportService {
         pos: getPosEntries,
         containers: getContainerEntries,
       },
-      totalExclVat: totals.totalExclVat,
-      totalInclVat: totals.totalInclVat,
     };
   }
+
+  /**
+   * Gets the report for the given user
+   * @param parameters - The parameters to get the report for
+   * @returns {Promise<Report>} - The report
+   */
+  abstract getReport(parameters: ReportParameters): Promise<Report>;
 }
 
 export class SalesReportService extends ReportService {
@@ -368,8 +370,9 @@ export class SalesReportService extends ReportService {
       .andWhere('subTransaction.createdAt < :tillDate', { tillDate: toMySQLString(tillDate) });
   }
 
-  getReport(parameters: ReportParameters): Promise<SalesReport> {
-    return super.getReport(parameters);
+  async getReport(parameters: ReportParameters): Promise<SalesReport> {
+    const report = await super.fetchReportData(parameters);
+    return new SalesReport(report);
   }
 }
 
@@ -382,8 +385,9 @@ export class BuyerReportService extends ReportService {
       .andWhere('subTransaction.createdAt < :tillDate', { tillDate: toMySQLString(tillDate) });
   }
 
-  getReport(parameters: ReportParameters): Promise<BuyerReport> {
-    return super.getReport(parameters);
+  async getReport(parameters: ReportParameters): Promise<BuyerReport> {
+    const report = await super.fetchReportData(parameters);
+    return new BuyerReport(report);
   }
 }
 

@@ -193,7 +193,8 @@ export default class SellerPayoutController extends BaseController {
    * @operationId getSellerPayoutReportPdf
    * @tags sellerPayouts - Operations of the seller payout controller
    * @param {integer} id.path.required - ID of the seller payout that should be returned
-   * @return {string} 200 - The requested report - application/pdf
+   * @param {boolean} force.query - Force the generation of the PDF
+   * @return {PdfUrlResponse} 200 - The requested report
    * @return {string} 404 - SellerPayout not found.
    * @return {string} 500 - Internal server error.
    */
@@ -203,6 +204,7 @@ export default class SellerPayoutController extends BaseController {
 
     try {
       const sellerPayoutId = Number(req.params.id);
+      const force = req.query.force === 'true';
       const service = new SellerPayoutService();
       const [[sellerPayout]] = await service.getSellerPayouts({ sellerPayoutId });
       if (!sellerPayout) {
@@ -210,8 +212,8 @@ export default class SellerPayoutController extends BaseController {
         return;
       }
 
-      // TODO: create the pdf and actually send it
-      res.status(501).json(null);
+      const pdf = await sellerPayout.getOrCreatePdf(force);
+      res.status(200).json({ pdf: pdf.downloadName });
     } catch (error) {
       this.logger.error('Could not get sales report for seller payout:', error);
       res.status(500).json('Internal server error.');

@@ -15,5 +15,12 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-export { NotImplementedError } from './not-implemented-error';
-export { PdfError } from './pdf-error';
+
+import { Entity } from 'typeorm';
+import Pdf from './pdf-file';
+
+/**
+ * @typedef {Pdf} SellerPayoutPdf
+ */
+@Entity()
+export default class SellerPayoutPdf extends Pdf {}

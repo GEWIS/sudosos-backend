@@ -28,7 +28,6 @@ import { asArrayOfDates, asArrayOfUserTypes, asDate, asFromAndTillDate, asReturn
 import { In } from 'typeorm';
 import { HandoutFinesRequest } from './request/debtor-request';
 import Fine from '../entity/fine/fine';
-import ReportPdfService from '../service/report-pdf-service';
 import { ReturnFileType } from 'pdf-generator-client';
 
 export default class DebtorController extends BaseController {
@@ -327,7 +326,7 @@ export default class DebtorController extends BaseController {
 
     try {
       const report = await DebtorService.getFineReport(fromDate, toDate);
-      res.json(DebtorService.fineReportToResponse(report));
+      res.json(report.toResponse());
     } catch (error) {
       this.logger.error('Could not get fine report:', error);
       res.status(500).json('Internal server error.');
@@ -365,14 +364,14 @@ export default class DebtorController extends BaseController {
     try {
       const report = await DebtorService.getFineReport(fromDate, toDate);
 
-      const pdf = await ReportPdfService.getFineReportPdf(report, fileType);
+      const buffer = fileType === 'PDF' ? await report.createPdf() : await report.createTex();
       const from = `${fromDate.getFullYear()}${fromDate.getMonth() + 1}${fromDate.getDate()}`;
       const to = `${toDate.getFullYear()}${toDate.getMonth() + 1}${toDate.getDate()}`;
       const fileName = `fine-report-${from}-${to}.${fileType}`;
 
-      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Type', 'application/pdf+tex');
       res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-      res.send(pdf);
+      res.send(buffer);
     } catch (error) {
       this.logger.error('Could not get fine report pdf:', error);
       res.status(500).json('Internal server error.');
