@@ -20,7 +20,6 @@ import assert from 'assert';
 import * as util from 'util';
 import * as jwt from 'jsonwebtoken';
 import JsonWebToken from './json-web-token';
-import User from '../entity/user/user';
 
 /**
  * The configuration options for the token handler.
