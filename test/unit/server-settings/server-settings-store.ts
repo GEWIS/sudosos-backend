@@ -111,6 +111,41 @@ describe('ServerSettingsStore', () => {
       expect(() => store.getSetting(key)).to.throw('ServerSettingsStore has not been initialized.');
     });
   });
+  describe('#getSettingFromDatabase', () => {
+    it('should fetch a setting directly from the database', async () => {
+      const store = await new ServerSettingsStore().initialize();
+      const key: keyof ISettings = 'highVatGroupId';
+      const oldValue = store.getSetting(key);
+      const newValue: ISettings['highVatGroupId'] = 1000;
+      // Check precondition
+      expect(oldValue).to.equal(settingDefaults[key]);
+      expect(oldValue).to.not.equal(newValue);
+
+      // Change value of key in database, but not in store
+      await ServerSetting.update({ key }, { value: newValue });
+
+      // #getSetting should return "old" value
+      expect(store.getSetting(key)).to.equal(oldValue);
+      // #getSettingFromDatabase should return new value, AND update the existing value in the store
+      await expect(store.getSettingFromDatabase(key)).to.eventually.equal(newValue);
+      // #getSetting should return "new" value
+      expect(store.getSetting(key)).to.equal(newValue);
+    });
+    it('should throw if key does not exist', async () => {
+      const store = await new ServerSettingsStore().initialize();
+      const randomKey = '39Vooooo' as any as keyof ISettings;
+      // Sanity check
+      expect(settingDefaults[randomKey]).to.be.undefined;
+
+      await expect(store.getSettingFromDatabase(randomKey)).to.eventually.be.rejectedWith(`Setting with key "${randomKey}" does not exist.`);
+    });
+    it('should throw if not initialized', async () => {
+      const store = new ServerSettingsStore();
+
+      const key: keyof ISettings = 'highVatGroupId';
+      await expect(store.getSettingFromDatabase(key)).to.eventually.be.rejectedWith('ServerSettingsStore has not been initialized.');
+    });
+  });
   describe('#setSetting', () => {
     it('should correctly set a setting to the store', async () => {
       const store = await new ServerSettingsStore().initialize();

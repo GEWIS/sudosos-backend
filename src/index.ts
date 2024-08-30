@@ -67,6 +67,7 @@ import EventShiftController from './controller/event-shift-controller';
 import WriteOffController from './controller/write-off-controller';
 import ServerSettingsStore from './server-settings/server-settings-store';
 import SellerPayoutController from './controller/seller-payout-controller';
+import { ISettings } from './entity/server-setting';
 
 export class Application {
   app: express.Express;
@@ -107,7 +108,7 @@ async function createTokenHandler(): Promise<TokenHandler> {
     algorithm: 'RS512',
     publicKey: jwtPublic.export({ type: 'spki', format: 'pem' }),
     privateKey: jwtPrivate.export({ type: 'pkcs8', format: 'pem' }),
-    expiry: ServerSettingsStore.getInstance().getSetting('jwtExpiryDefault'),
+    expiry: ServerSettingsStore.getInstance().getSetting('jwtExpiryDefault') as ISettings['jwtExpiryDefault'],
   });
 }
 

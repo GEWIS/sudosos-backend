@@ -99,7 +99,8 @@ export default class ServerSettingsStore<T extends keyof ISettings = keyof ISett
   }
 
   /**
-   * Get a server setting
+   * Get a server setting. If the setting is subject to change during runtime,
+   * use the "getSettingFromDatabase" method instead.
    * @param key
    */
   public getSetting(key: T): ISettings[T] {
@@ -108,6 +109,22 @@ export default class ServerSettingsStore<T extends keyof ISettings = keyof ISett
       throw new Error(`Setting with key "${key}" does not exist.`);
     }
     return this.settings[key];
+  }
+
+  /**
+   * Get a server setting from the database. This ensures it is always up to date,
+   * but adds some latency due to a database query.
+   * @param key
+   */
+  public async getSettingFromDatabase(key: T): Promise<ISettings[T]> {
+    this.isInitialized();
+    const record = await this.repo.findOne({ where: { key } });
+    if (!record) {
+      throw new Error(`Setting with key "${key}" does not exist.`);
+    }
+    const value = record.value as ISettings[T];
+    this.settings[key] = value;
+    return value;
   }
 
   /**
