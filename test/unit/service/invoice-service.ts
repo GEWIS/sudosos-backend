@@ -38,11 +38,9 @@ import {
 import Swagger from '../../../src/start/swagger';
 import {
   BaseInvoiceResponse,
-  InvoiceEntryResponse,
   InvoiceResponse,
 } from '../../../src/controller/response/invoice-response';
 import InvoiceService from '../../../src/service/invoice-service';
-import InvoiceEntry from '../../../src/entity/invoices/invoice-entry';
 import { CreateInvoiceParams, UpdateInvoiceParams } from '../../../src/controller/request/invoice-request';
 import { TransferResponse } from '../../../src/controller/response/transfer-response';
 import TransactionService from '../../../src/service/transaction-service';
@@ -59,24 +57,10 @@ import { finishTestDB } from '../../helpers/test-helpers';
 
 chai.use(deepEqualInAnyOrder);
 
-function baseKeyMapping(invoice: BaseInvoiceResponse | Invoice) {
+function keyMapping(invoice: BaseInvoiceResponse | Invoice) {
   return {
     id: invoice.id,
     toId: invoice.to.id,
-  };
-}
-
-function keyMapping(invoice: InvoiceResponse | Invoice) {
-  return {
-    ...baseKeyMapping(invoice),
-    entries: invoice.invoiceEntries.map((entry) => ({
-      amount: entry.amount,
-      description: entry.description,
-      priceInclVat:
-        invoice instanceof Invoice
-          ? (entry as InvoiceEntry).priceInclVat.getAmount()
-          : (entry as InvoiceEntryResponse).priceInclVat.amount,
-    })),
   };
 }
 
@@ -174,7 +158,7 @@ describe('InvoiceService', () => {
   describe('getInvoices function', () => {
     it('should return all invoices with no input specification', async () => {
       const res = (await new InvoiceService().getInvoices());
-      returnsAll(res, ctx.invoices, baseKeyMapping);
+      returnsAll(res, ctx.invoices, keyMapping);
     });
     it('should return all invoices and their entries if specified', async () => {
       const res: Invoice[] = (
@@ -187,7 +171,7 @@ describe('InvoiceService', () => {
       const res: Invoice[] = (
         await new InvoiceService().getInvoices({ invoiceId })
       );
-      returnsAll(res, [ctx.invoices[0]], baseKeyMapping);
+      returnsAll(res, [ctx.invoices[0]], keyMapping);
     });
   });
   describe('getDefaultInvoiceParams function', () => {

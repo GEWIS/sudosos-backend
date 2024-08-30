@@ -34,7 +34,6 @@ import {
 } from '../controller/response/invoice-response';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import Invoice from '../entity/invoices/invoice';
-import InvoiceEntry from '../entity/invoices/invoice-entry';
 import {
   CreateInvoiceParams, InvoiceTransactionsRequest,
   UpdateInvoiceParams,
@@ -107,20 +106,6 @@ export default class InvoiceService {
   }
 
   /**
-   * Parses an InvoiceEntry Object to a InvoiceEntryResponse
-   * @param invoiceEntries - The invoiceEntries to parse
-   */
-  private static asInvoiceEntryResponse(invoiceEntries: InvoiceEntry): InvoiceEntryResponse {
-    return {
-      description: invoiceEntries.description,
-      amount: invoiceEntries.amount,
-      priceInclVat: invoiceEntries.priceInclVat.toObject(),
-      vatPercentage: invoiceEntries.vatPercentage,
-      custom: true,
-    } as InvoiceEntryResponse;
-  }
-
-  /**
    * Parses an subTransactionRow Object to a InvoiceEntryResponse
    * @param row
    */
@@ -154,8 +139,6 @@ export default class InvoiceService {
    * @param invoice - The Invoice to parse
    */
   public static asBaseInvoiceResponse(invoice: Invoice): BaseInvoiceResponse {
-    const totalInclVat = invoice.invoiceEntries.reduce((sum, entry) => sum + entry.amount, 0) + invoice.transfer.amountInclVat.getAmount();
-
     return {
       id: invoice.id,
       createdAt: invoice.createdAt.toISOString(),
@@ -173,7 +156,7 @@ export default class InvoiceService {
       country: invoice.country,
       postalCode: invoice.postalCode,
       street: invoice.street,
-      totalInclVat: DineroTransformer.Instance.from(totalInclVat).toObject(),
+      totalInclVat: invoice.transfer.amountInclVat.toObject(),
     };
   }
 
@@ -181,19 +164,16 @@ export default class InvoiceService {
    * Parses an Invoice Object to a InvoiceResponse
    * @param invoice - The Invoice to parse
    */
-  public async asInvoiceResponse(invoice: Invoice)
-    : Promise<InvoiceResponse> {
-    const customEntries = invoice.invoiceEntries.map(InvoiceService.asInvoiceEntryResponse);
-    const transactionEntries = invoice.subTransactionRows.map(InvoiceService.subTransactionRowsAsInvoiceEntryResponse);
-
+  public asInvoiceResponse(invoice: Invoice)
+    : InvoiceResponse {
     return {
       ...InvoiceService.asBaseInvoiceResponse(invoice),
-      invoiceEntries: [...customEntries, ...transactionEntries],
+      invoiceEntries: invoice.subTransactionRows.map(InvoiceService.subTransactionRowsAsInvoiceEntryResponse),
     } as InvoiceResponse;
   }
 
-  public async toArrayResponse(invoices: Invoice[]): Promise<InvoiceResponse[]> {
-    return Promise.all(invoices.map(invoice => this.asInvoiceResponse(invoice)));
+  public toArrayResponse(invoices: Invoice[]): InvoiceResponse[] {
+    return invoices.map(invoice => this.asInvoiceResponse(invoice));
   }
 
   public toArrayWithoutEntriesResponse(invoices: Invoice[]): BaseInvoiceResponse[] {
@@ -232,28 +212,6 @@ export default class InvoiceService {
     };
 
     return new TransferService(this.manager).postTransfer(transferRequest);
-  }
-
-  /**
-   * Adds custom entries to the invoice.
-   * @param invoice - The Invoice to append to
-   * @param customEntries - THe custom entries to append
-   */
-  private async AddCustomEntries(invoice: Invoice,
-    customEntries: InvoiceEntryRequest[]): Promise<void> {
-    const promises: Promise<InvoiceEntry>[] = [];
-    customEntries.forEach((request) => {
-      const { description, amount, vatPercentage } = request;
-      const entry = Object.assign(new InvoiceEntry(), {
-        invoice,
-        description,
-        amount,
-        priceInclVat: DineroTransformer.Instance.from(request.priceInclVat.amount),
-        vatPercentage,
-      });
-      promises.push(this.manager.save(entry));
-    });
-    await Promise.all(promises);
   }
 
   static isState(invoice: Invoice, state: InvoiceState): boolean {
@@ -438,7 +396,7 @@ export default class InvoiceService {
       .records.map((t) => t.id);
 
 
-    // TODO: Remove after TransactionService migration to `getOptions
+    // TODO: Remove after TransactionService migration to `getOptions`
     const relations: FindOptionsRelations<Transaction> = {
       subTransactions: {
         subTransactionRows: {
@@ -476,7 +434,20 @@ export default class InvoiceService {
     : Promise<Invoice> {
     const { forId, byId, transactionIDs } = invoiceRequest;
 
-    const transactions = await this.manager.find(Transaction, { where: { id: In(transactionIDs) }, relations: ['subTransactions', 'subTransactions.subTransactionRows', 'from'] });
+    const relations: FindOptionsRelations<Transaction> = {
+      subTransactions: {
+        subTransactionRows: {
+          invoice: true,
+          product: {
+            vat: true,
+          },
+        },
+        container: true,
+      },
+      pointOfSale: true,
+    };
+
+    const transactions = await this.manager.find(Transaction, { where: { id: In(transactionIDs) }, relations });
     if (transactions.length !== transactionIDs.length) throw new Error('Transaction not found');
 
     await this.checkIfInvoiced(transactions);
@@ -490,7 +461,6 @@ export default class InvoiceService {
       addressee: invoiceRequest.addressee,
       attention: invoiceRequest.attention,
       invoiceStatus: [],
-      invoiceEntries: [],
       description: invoiceRequest.description,
       street: invoiceRequest.street,
       postalCode:invoiceRequest.postalCode,
@@ -514,12 +484,6 @@ export default class InvoiceService {
 
       const subTransactions = transactions.flatMap((t) => t.subTransactions);
       await this.setSubTransactionInvoice(newInvoice, subTransactions);
-
-      // IGNORED UNTIL REMOVED
-      // TODO: Refactor at a later state.
-      // if (invoiceRequest.customEntries) {
-      //   await this.AddCustomEntries(newInvoice, invoiceRequest.customEntries);
-      // }
     });
 
     const options = InvoiceService.getOptions({ invoiceId: newInvoice.id, returnInvoiceEntries: true });
@@ -552,7 +516,7 @@ export default class InvoiceService {
 
     let records: any[];
     if (params.returnInvoiceEntries) {
-      records = await this.toArrayResponse(invoices);
+      records = this.toArrayResponse(invoices);
     } else {
       records = this.toArrayWithoutEntriesResponse(invoices);
     }
@@ -595,15 +559,16 @@ export default class InvoiceService {
       invoiceStatus: true,
       transfer: { to: true, from: true },
       pdf: true,
-      subTransactionRows: {
+    };
+
+    if (params.returnInvoiceEntries) {
+      relations.subTransactionRows = {
         product: {
           vat: true,
         },
-      },
-    };
-    if (params.returnInvoiceEntries) {
-      relations.invoiceEntries = true;
+      };
     }
+
     const options: FindManyOptions<Invoice> = {
       where: {
         ...QueryFilter.createFilterWhereClause(filterMapping, params),

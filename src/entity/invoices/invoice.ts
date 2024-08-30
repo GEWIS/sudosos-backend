@@ -59,14 +59,6 @@ export default class Invoice extends PdfAble(BaseEntity) {
   public transfer: Transfer;
 
   /**
-   * The entries describing this invoice.
-   */
-  @OneToMany(() => InvoiceEntry,
-    (invoiceEntry) => invoiceEntry.invoice,
-    { cascade: true, eager: true })
-  public invoiceEntries: InvoiceEntry[];
-
-  /**
    * The status history of the invoice
    */
   @OneToMany(() => InvoiceStatus,

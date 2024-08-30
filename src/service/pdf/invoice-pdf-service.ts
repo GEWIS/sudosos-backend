@@ -26,15 +26,19 @@ import {
   InvoiceReferences,
   InvoiceRouteParams,
   InvoiceType,
-  Product,
-  ProductPricing,
   TotalPricing,
-  VAT,
 } from 'pdf-generator-client';
 import InvoicePdf from '../../entity/file/invoice-pdf';
-import InvoiceEntry from '../../entity/invoices/invoice-entry';
-import { emptyIdentity, PDF_VAT_HIGH, PDF_VAT_LOW, PDF_VAT_ZERO, UNUSED_PARAM } from '../../helpers/pdf';
+import {
+  emptyIdentity,
+  PDF_VAT_HIGH,
+  PDF_VAT_LOW,
+  PDF_VAT_ZERO,
+  subTransactionRowToProduct,
+  UNUSED_PARAM,
+} from '../../helpers/pdf';
 import { PdfService } from './pdf-service';
+import SubTransactionRow from '../../entity/transactions/sub-transaction-row';
 
 
 export default class InvoicePdfService extends PdfService<InvoicePdf, Invoice, InvoiceRouteParams> {
@@ -46,61 +50,38 @@ export default class InvoicePdfService extends PdfService<InvoicePdf, Invoice, I
     return this.client.generateInvoice(InvoiceType.Invoice, routeParams);
   }
 
-  entriesToProductsPricing(invoice: Invoice): { products: Product[], pricing: TotalPricing } {
+  invoiceToPricing(invoice: Invoice): TotalPricing {
     let exclVat: number = 0, lowVat: number = 0, highVat: number = 0, inclVat = 0;
-    let products = invoice.invoiceEntries.map((entry: InvoiceEntry) => {
-      // SudoSOS rounds per product.
-      const price = entry.priceInclVat.getAmount() * entry.amount;
-      inclVat += price;
-      const baseExclVat = Math.round(entry.priceInclVat.getAmount()  / (1 + (entry.vatPercentage / 100))) * entry.amount;
-
-      exclVat += baseExclVat;
-
-      switch (entry.vatPercentage) {
+    invoice.subTransactionRows.map((str: SubTransactionRow) => {
+      exclVat += str.product.priceInclVat.getAmount() * str.amount;
+      const baseExclVat = Math.round(str.product.priceInclVat.getAmount()  / (1 + (str.product.vat.percentage / 100))) * str.amount;
+      switch (str.product.vat.percentage) {
         case PDF_VAT_LOW:
-          lowVat += (price - baseExclVat);
+          lowVat += str.product.priceInclVat.getAmount() - baseExclVat;
           break;
         case PDF_VAT_HIGH:
-          highVat += (price - baseExclVat);
+          highVat += str.product.priceInclVat.getAmount() - baseExclVat;
           break;
         case PDF_VAT_ZERO:
           break;
         default:
-          throw new Error(`Unsupported vat percentage ${entry.vatPercentage} during pdf generation.`);
+          throw new Error(`Unsupported vat percentage ${str.product.vat.percentage} during pdf generation.`);
       }
-
-      return new Product({
-        name: entry.description,
-        summary: UNUSED_PARAM,
-        pricing: new ProductPricing({
-          basePrice: entry.priceInclVat.getAmount(),
-          vatAmount: entry.vatPercentage,
-          // is actually unused
-          vatCategory: VAT.ZERO,
-          quantity: entry.amount,
-        }),
-      });
+      inclVat += str.product.priceInclVat.getAmount() * str.amount;
     });
-
-    // Sort products by VAT amount from high to low
-    // Design decision: we need some form of sorting since this is not guaranteed by the query. If we do not sort
-    // We would get different hashes just because the order changed.
-    products = products.sort((a, b) => b.pricing.vatAmount - a.pricing.vatAmount);
-
-    return {
-      products,
-      pricing: new TotalPricing({
-        exclVat,
-        lowVat,
-        highVat,
-        inclVat,
-      }),
-    };
+    return new TotalPricing({
+      exclVat,
+      lowVat,
+      highVat,
+      inclVat,
+    });
   }
 
   async getParameters(entity: Invoice): Promise<InvoiceParameters> {
-    const { products, pricing } = this.entriesToProductsPricing(entity);
+    const products = entity.subTransactionRows.map((str: SubTransactionRow) => subTransactionRowToProduct(str));
     products.sort((a, b) => a.name.localeCompare(b.name));
+
+    const pricing = this.invoiceToPricing(entity);
 
     return new InvoiceParameters({
       reference: new InvoiceReferences({
@@ -108,8 +89,8 @@ export default class InvoicePdfService extends PdfService<InvoicePdf, Invoice, I
         yourReference: String(entity.id),
         costCenter: true,
       }),
-      products:products,
-      pricing: pricing,
+      products,
+      pricing,
       subject: entity.description,
       sender: emptyIdentity(),
       // Partly unused, but still required.
