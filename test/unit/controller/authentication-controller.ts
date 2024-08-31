@@ -19,7 +19,7 @@
 import express, { Application } from 'express';
 import { expect, request } from 'chai';
 import { SwaggerSpecification } from 'swagger-model-validator';
-import { Connection } from 'typeorm';
+import { DataSource } from 'typeorm';
 import { json } from 'body-parser';
 import log4js from 'log4js';
 import sinon from 'sinon';
@@ -57,8 +57,7 @@ import RoleResponse from '../../../src/controller/response/rbac/role-response';
 
 describe('AuthenticationController', async (): Promise<void> => {
   let ctx: {
-    env: string,
-    connection: Connection,
+    connection: DataSource,
     app: Application,
     tokenHandler: TokenHandler,
     roleManager: RoleManager,
@@ -96,7 +95,6 @@ describe('AuthenticationController', async (): Promise<void> => {
 
     // Initialize context
     ctx = {
-      env: process.env.NODE_ENV,
       connection: connection,
       app: express(),
       specification: undefined,
@@ -134,7 +132,6 @@ describe('AuthenticationController', async (): Promise<void> => {
       maintenanceOverrideRole: maintenanceOverrideRole.role,
     };
 
-    process.env.NODE_ENV = 'development';
     await Promise.all([ctx.user, ctx.user2, ctx.user3].map((u) => {
       return assignRoles(u, [role, maintenanceOverrideRole]);
     }));
@@ -168,7 +165,6 @@ describe('AuthenticationController', async (): Promise<void> => {
     ctx.app.use('/authentication', ctx.controller.getRouter());
   });
   after(async () => {
-    process.env.NODE_ENV = ctx.env;
     await finishTestDB(ctx.connection);
   });
 
@@ -205,7 +201,7 @@ describe('AuthenticationController', async (): Promise<void> => {
       const token = await promise;
       expect(token.roles).to.be.empty;
       // By default no overriding maintenance mode
-      expect(token.overrideMaintenance).to.be.undefined;
+      expect(token.overrideMaintenance).to.be.false;
       expect(auth.rolesWithPermissions).to.be.length(0);
     });
     it('should contain the correct roles', async () => {
@@ -263,13 +259,16 @@ describe('AuthenticationController', async (): Promise<void> => {
         }],
       }] as RoleResponse[]);
     });
-    it('should give an HTTP 403 when not in development environment', async () => {
+    it('should give an HTTP 403 when not in development/test environment', async () => {
+      const env = process.env.NODE_ENV;
       process.env.NODE_ENV = 'production';
 
       const res = await request(ctx.app)
         .post('/authentication/mock')
         .send(ctx.request);
       expect(res.status).to.equal(403);
+
+      process.env.NODE_ENV = env;
     });
     it('should give an HTTP 403 when user does not exist', async () => {
       const req = { ...ctx.request, userId: 10 };
