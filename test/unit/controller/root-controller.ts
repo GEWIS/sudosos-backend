@@ -28,6 +28,7 @@ import { DefaultContext, defaultContext, finishTestDB } from '../../helpers/test
 import User from '../../../src/entity/user/user';
 import { ADMIN_USER, UserFactory } from '../../helpers/user-factory';
 import sinon from 'sinon';
+import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
 
 describe('RootController', async (): Promise<void> => {
   let ctx: DefaultContext & {
@@ -47,6 +48,9 @@ describe('RootController', async (): Promise<void> => {
     ctx.app.use(json());
     ctx.app.use('', controller.getRouter());
 
+    ServerSettingsStore.deleteInstance();
+    await ServerSettingsStore.getInstance().initialize();
+
     ctx = {
       ...ctx,
       controller,
@@ -57,6 +61,7 @@ describe('RootController', async (): Promise<void> => {
   // close database connection
   after(async () => {
     await finishTestDB(ctx.connection);
+    ServerSettingsStore.deleteInstance();
   });
 
   describe('GET /banners', () => {
@@ -113,11 +118,31 @@ describe('RootController', async (): Promise<void> => {
 
   describe('GET /ping', () => {
     it('should return an HTTP 200 if nothing is wrong', async () => {
+      let res = await request(ctx.app)
+        .get('/ping');
+      expect(res.status).to.equal(200);
+      expect(res.body).to.deep.equal({ maintenanceMode: false });
+
+      await ServerSettingsStore.getInstance().setSetting('maintenanceMode', true);
+
+      res = await request(ctx.app)
+        .get('/ping');
+      expect(res.status).to.equal(200);
+      expect(res.body).to.deep.equal({ maintenanceMode: true });
+
+      // Cleanup
+      await ServerSettingsStore.getInstance().setSetting('maintenanceMode', false);
+    });
+    it('should return an HTTP 500 if database error', async () => {
+      const stub = sinon.stub(ServerSettingsStore.prototype, 'getSettingFromDatabase')
+        .throws(new Error('Mock database error'));
+
       const res = await request(ctx.app)
         .get('/ping');
 
-      expect(res.status).to.equal(200);
-      expect(res.body).to.equal('Pong!');
+      expect(res.status).to.equal(500);
+      expect(res.body).to.equal('Internal server error.');
+      stub.restore();
     });
     it('should return an HTTP 500 if something is wrong', async function () {
       // This is how to stub live routes...

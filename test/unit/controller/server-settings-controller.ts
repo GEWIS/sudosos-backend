@@ -96,6 +96,13 @@ describe('ServerSettingsController', () => {
       // Cleanup
       await store.setSetting('maintenanceMode', enabled);
     });
+    it('should return 400 if invalid request', async () => {
+      const res = await request(ctx.app)
+        .put('/server-settings/maintenance-mode')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ enabled: 'Ploperdeplop' });
+      expect(res.status).to.equal(400);
+    });
     it('should return 403 if not admin', async () => {
       const res = await request(ctx.app)
         .put('/server-settings/maintenance-mode')
