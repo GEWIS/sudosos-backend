@@ -18,6 +18,7 @@
 import { Repository } from 'typeorm';
 import ServerSetting, { ISettings } from '../entity/server-setting';
 import SettingsDefaults from './setting-defaults';
+import { AppDataSource } from '../database/database';
 
 /**
  * Store of global server settings, which are key-value pairs stored in the database.
@@ -118,13 +119,23 @@ export default class ServerSettingsStore<T extends keyof ISettings = keyof ISett
    */
   public async getSettingFromDatabase(key: T): Promise<ISettings[T]> {
     this.isInitialized();
-    const record = await this.repo.findOne({ where: { key } });
-    if (!record) {
+    const value = await ServerSettingsStore.getSettingFromDatabase(key);
+    if (value == null) {
       throw new Error(`Setting with key "${key}" does not exist.`);
     }
-    const value = record.value as ISettings[T];
     this.settings[key] = value;
     return value;
+  }
+
+  /**
+   * Get a server setting from the database. Returns null if it does not exist.
+   * Compared to the class method, this method does not update the internal cache.
+   * @param key
+   */
+  public static async getSettingFromDatabase<T extends keyof ISettings>(key: T): Promise<ISettings[T] | null> {
+    const record = await AppDataSource.manager.findOne(ServerSetting, { where: { key } });
+    if (!record) return null;
+    return record.value as ISettings[T];
   }
 
   /**

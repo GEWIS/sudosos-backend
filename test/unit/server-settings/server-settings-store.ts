@@ -86,6 +86,25 @@ describe('ServerSettingsStore', () => {
       await expect(store.initialize()).to.eventually.be.rejectedWith('ServerSettingsStore already initialized!');
     });
   });
+  describe('.getSettingFromDatabase (static)', () => {
+    it('should correctly return value if key exists in the database', async () => {
+      await ServerSettingsStore.getInstance().initialize();
+
+      const key: keyof ISettings = 'highVatGroupId';
+      const value = await ServerSettingsStore.getSettingFromDatabase(key);
+      expect(value).to.equal(settingDefaults[key]);
+    });
+    it('should return null if key does not exist', async () => {
+      const key: keyof ISettings = 'highVatGroupId';
+
+      // Sanity check
+      const record = await ServerSetting.findOne({ where: { key } });
+      expect(record).to.be.null;
+
+      const value = await ServerSettingsStore.getSettingFromDatabase(key);
+      expect(value).to.be.null;
+    });
+  });
   describe('#getSetting', () => {
     it('should correctly get a setting from store', async () => {
       const store = await new ServerSettingsStore().initialize();

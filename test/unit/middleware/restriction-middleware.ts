@@ -28,6 +28,7 @@ import TokenMiddleware from '../../../src/middleware/token-middleware';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
+import sinon from 'sinon';
 
 describe('RestrictionMiddleware', (): void => {
   let ctx: {
@@ -138,7 +139,7 @@ describe('RestrictionMiddleware', (): void => {
       expect(res.status).to.equal(503);
       expect(res.text).to.equal('Service is in maintenance mode. Please try again later.');
     });
-    it('should return 200 if SudoSOS is in maintenance mode, but endpoint is excepted', async () => {
+    it('should return 200 if SudoSOS is in maintenance mode, but endpoint is excluded', async () => {
       ctx.availableDuringMaintenance = true;
       const store = ServerSettingsStore.getInstance();
       await store.setSetting('maintenanceMode', true);
@@ -148,6 +149,30 @@ describe('RestrictionMiddleware', (): void => {
         .get('/')
         .set('Authorization', `Bearer ${token}`);
       expect(res.status).to.equal(200);
+    });
+    it('should return 200 if SudoSOS is in maintenance mode, but token overrides maintenance', async () => {
+      const store = ServerSettingsStore.getInstance();
+      await store.setSetting('maintenanceMode', true);
+
+      const token = await ctx.tokenHandler.signToken({ user: ctx.userAccepted, roles: [], lesser: false, overrideMaintenance: true }, '39');
+      const res = await request(ctx.app)
+        .get('/')
+        .set('Authorization', `Bearer ${token}`);
+      expect(res.status).to.equal(200);
+    });
+    it('should return 500 if database error', async () => {
+      const stub = sinon.stub(ServerSettingsStore, 'getSettingFromDatabase')
+        .throws(new Error('Mock database error.'));
+
+      const token = await ctx.tokenHandler.signToken({ user: ctx.userAccepted, roles: [], lesser: false, overrideMaintenance: true }, '39');
+      const res = await request(ctx.app)
+        .get('/')
+        .set('Authorization', `Bearer ${token}`);
+      expect(res.status).to.equal(500);
+      expect(res.text).to.equal('Internal server error.');
+
+      // Cleanup
+      stub.restore();
     });
   });
 

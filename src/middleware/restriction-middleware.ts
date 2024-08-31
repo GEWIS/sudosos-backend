@@ -21,6 +21,7 @@ import { RequestWithToken } from './token-middleware';
 import { TermsOfServiceStatus } from '../entity/user/user';
 import ServerSettingsStore from '../server-settings/server-settings-store';
 import { ISettings } from '../entity/server-setting';
+import { getLogger } from 'log4js';
 
 export interface TokenRestrictions {
   /**
@@ -58,9 +59,15 @@ export default class RestrictionMiddleware {
   public async handle(req: RequestWithToken, res: Response, next: Function): Promise<void> {
     const { lesser, acceptedTOS, availableDuringMaintenance } = this.restrictionsImpl();
 
-    const maintenance = await ServerSettingsStore.getInstance().getSettingFromDatabase('maintenanceMode') as ISettings['maintenanceMode'];
-    if (maintenance && !availableDuringMaintenance) {
-      res.status(503).end('Service is in maintenance mode. Please try again later.');
+    try {
+      const maintenance = await ServerSettingsStore.getSettingFromDatabase('maintenanceMode') as ISettings['maintenanceMode'];
+      if (maintenance && !availableDuringMaintenance && !req.token?.overrideMaintenance) {
+        res.status(503).end('Service is in maintenance mode. Please try again later.');
+        return;
+      }
+    } catch (e) {
+      getLogger('RestrictionMiddleware').error(e);
+      res.status(500).end('Internal server error.');
       return;
     }
 
