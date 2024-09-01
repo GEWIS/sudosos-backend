@@ -18,7 +18,6 @@
 
 
 import PermissionResponse from './permission-response';
-import { UserType } from '../../../entity/user/user';
 
 /**
  * @typedef {object} RoleResponse
