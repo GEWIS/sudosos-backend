@@ -179,7 +179,7 @@ describe('InvoiceController', async () => {
       addressee: 'InvoiceRequest',
       byId: adminUser.id,
       description: 'InvoiceRequest test',
-      forId: localUser.type,
+      forId: localUser.id,
       reference: 'BAC-41',
       city: 'city',
       country: 'country',

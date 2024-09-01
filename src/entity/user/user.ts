@@ -30,13 +30,13 @@ export enum TermsOfServiceStatus {
 }
 
 export enum UserType {
-  MEMBER = 1,
-  ORGAN = 2,
-  VOUCHER = 3,
-  LOCAL_USER = 4,
-  LOCAL_ADMIN = 5,
-  INVOICE = 6,
-  POINT_OF_SALE = 7,
+  MEMBER = 'MEMBER',
+  ORGAN = 'ORGAN',
+  VOUCHER = 'VOUCHER',
+  LOCAL_USER = 'LOCAL_USER',
+  LOCAL_ADMIN = 'LOCAL_ADMIN',
+  INVOICE = 'INVOICE',
+  POINT_OF_SALE = 'POINT_OF_SALE',
 }
 
 /**

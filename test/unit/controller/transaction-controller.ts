@@ -648,13 +648,13 @@ describe('TransactionController', (): void => {
         lastName: 'voucher',
         active: true,
         deleted: false,
-        type: 3,
+        type: UserType.VOUCHER,
         acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
         canGoIntoDebt: false,
       } as User);
 
       const voucherUser = await User.findOne({
-        where: { active: true, deleted: false, type: 3 },
+        where: { active: true, deleted: false, type: UserType.VOUCHER },
       });
       const badReq = {
         ...ctx.validTransReq,

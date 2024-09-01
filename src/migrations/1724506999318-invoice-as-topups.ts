@@ -21,7 +21,7 @@ import Transfer from '../entity/transactions/transfer';
 import InvoiceStatus from '../entity/invoices/invoice-status';
 import assert from 'assert';
 import BalanceService from '../service/balance-service';
-import User from '../entity/user/user';
+import User, { UserType } from '../entity/user/user';
 import fs from 'fs';
 
 export class InvoiceAsTopups1724506999318 implements MigrationInterface {
@@ -54,7 +54,7 @@ export class InvoiceAsTopups1724506999318 implements MigrationInterface {
     console.error(balanceBefore._pagination.count, ids.length);
     assert(balanceBefore._pagination.count === ids.length);
 
-    const organs = await queryRunner.manager.find(User, { where: { type: 2 } });
+    const organs = await queryRunner.manager.find(User, { where: { type: UserType.ORGAN } });
     let organBalances = await new BalanceService().getBalances({ ids: organs.map((o) => o.id), allowDeleted: true }, { take: organs.length });
     fs.writeFileSync('./organBalances-before.json', JSON.stringify(organBalances, null, 2));
 
