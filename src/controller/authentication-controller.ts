@@ -118,6 +118,7 @@ export default class AuthenticationController extends BaseController {
           body: { modelName: 'AuthenticationLocalRequest' },
           policy: async () => true,
           handler: this.LocalLogin.bind(this),
+          restrictions: { availableDuringMaintenance: true },
         },
         PUT: {
           body: { modelName: 'AuthenticationResetTokenRequest' },

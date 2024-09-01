@@ -102,6 +102,7 @@ export default class GewisAuthenticationController extends BaseController {
           body: { modelName: 'AuthenticationLDAPRequest' },
           policy: async () => true,
           handler: this.ldapLogin.bind(this),
+          restrictions: { availableDuringMaintenance: true },
         },
       },
     };
