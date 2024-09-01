@@ -56,22 +56,15 @@ export class UserTypeEnums1725196803203 implements MigrationInterface {
     const promises: Promise<void>[] = [];
     Object.entries(UserTypeMapping).forEach(([key, value]) => {
       promises.push(queryRunner.query('UPDATE user SET type = ? WHERE type = ?', [value, key]));
-      promises.push(queryRunner.query('UPDATE role_user_type SET userType = ? WHERE userType = ?', [key, value]));
+      promises.push(queryRunner.query('UPDATE role_user_type SET userType = ? WHERE userType = ?', [value, key]));
     });
 
     await Promise.all(promises);
 
-    await queryRunner.changeColumn('user', 'type', new TableColumn({
-      name: 'type',
-      type: 'integer',
-      isNullable: false,
-    }));
-    await queryRunner.changeColumn('role_user_type', 'userType', new TableColumn({
-      name: 'userType',
-      type: 'integer',
-      isNullable: false,
-      isPrimary: true,
-    }));
+    // TypeORM completely deletes the column and adds it anew, which makes all values 0...
+    // So a manual query it is! The migration:revert will now no longer work on SQLite though.
+    await queryRunner.query('ALTER TABLE user MODIFY type integer NOT NULL');
+    await queryRunner.query('ALTER TABLE role_user_type MODIFY userType integer NOT NULL');
   }
 
 }
