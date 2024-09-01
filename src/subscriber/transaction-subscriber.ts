@@ -31,7 +31,7 @@ import BalanceService from '../service/balance-service';
 import Mailer from '../mailer';
 import UserDebtNotification from '../mailer/messages/user-debt-notification';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
-import log4js from "log4js";
+import log4js from 'log4js';
 
 @EventSubscriber()
 export default class TransactionSubscriber implements EntitySubscriberInterface {

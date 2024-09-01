@@ -29,7 +29,7 @@ import { RequestWithToken } from './token-middleware';
 import { TermsOfServiceStatus } from '../entity/user/user';
 import ServerSettingsStore from '../server-settings/server-settings-store';
 import { ISettings } from '../entity/server-setting';
-import log4js from "log4js";
+import log4js from 'log4js';
 
 export interface TokenRestrictions {
   /**
