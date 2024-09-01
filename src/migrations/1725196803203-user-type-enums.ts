@@ -35,10 +35,18 @@ export class UserTypeEnums1725196803203 implements MigrationInterface {
       length: '64',
       isNullable: false,
     }));
+    await queryRunner.changeColumn('role_user_type', 'userType', new TableColumn({
+      name: 'userType',
+      type: 'varchar',
+      length: '64',
+      isNullable: false,
+      isPrimary: true,
+    }));
 
     const promises: Promise<void>[] = [];
     Object.entries(UserTypeMapping).forEach(([key, value]) => {
       promises.push(queryRunner.query('UPDATE user SET type = ? WHERE type = ?', [key, value]));
+      promises.push(queryRunner.query('UPDATE role_user_type SET userType = ? WHERE userType = ?', [key, value]));
     });
 
     await Promise.all(promises);
@@ -48,6 +56,7 @@ export class UserTypeEnums1725196803203 implements MigrationInterface {
     const promises: Promise<void>[] = [];
     Object.entries(UserTypeMapping).forEach(([key, value]) => {
       promises.push(queryRunner.query('UPDATE user SET type = ? WHERE type = ?', [value, key]));
+      promises.push(queryRunner.query('UPDATE role_user_type SET userType = ? WHERE userType = ?', [key, value]));
     });
 
     await Promise.all(promises);
@@ -56,6 +65,12 @@ export class UserTypeEnums1725196803203 implements MigrationInterface {
       name: 'type',
       type: 'integer',
       isNullable: false,
+    }));
+    await queryRunner.changeColumn('role_user_type', 'userType', new TableColumn({
+      name: 'userType',
+      type: 'integer',
+      isNullable: false,
+      isPrimary: true,
     }));
   }
 

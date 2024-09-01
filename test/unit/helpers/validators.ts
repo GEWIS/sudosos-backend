@@ -18,17 +18,17 @@
 
 import { asArrayOfUserTypes, asUserType } from '../../../src/helpers/validators';
 import { expect } from 'chai';
+import { UserType } from '../../../src/entity/user/user';
 
 describe('Validators', (): void => {
   describe('asUserType', (): void => {
-    it('should accept number inputs', () => {
-      const valid = asUserType(1);
-      expect(valid).to.not.be.undefined;
-    });
     it('should accept string inputs', async () => {
       const valid = asUserType('MEMBER');
       expect(valid).to.not.be.undefined;
-      expect(valid).to.be.a('number');
+      expect(valid).to.equal(UserType.MEMBER);
+    });
+    it('should throw erorr if number', () => {
+      expect(() => asUserType(1)).to.throw();
     });
     it('should throw error for bad input', async () => {
       expect(() => asUserType('TEST')).to.throw();
@@ -36,43 +36,30 @@ describe('Validators', (): void => {
     });
   });
   describe('asArrayOfUserTypes', (): void => {
-    it('should accept number input', () => {
-      const valid = asArrayOfUserTypes(1);
-      expect(valid).to.not.be.undefined;
-    });
-    it('should accept number inputs', () => {
-      const valid = asArrayOfUserTypes([1, 2]);
-      expect(valid).to.not.be.undefined;
-    });
     it('should accept string input', () => {
       const valid = asArrayOfUserTypes('MEMBER');
       expect(valid).to.not.be.undefined;
+      expect(valid).to.deep.equalInAnyOrder([UserType.MEMBER]);
     });
     it('should accept string inputs', () => {
       const valid = asArrayOfUserTypes(['MEMBER', 'LOCAL_ADMIN']);
       expect(valid).to.not.be.undefined;
+      expect(valid).to.deep.equalInAnyOrder([UserType.MEMBER, UserType.LOCAL_ADMIN]);
     });
-    it('should convert string to int', async () => {
-      const valid = asArrayOfUserTypes(['MEMBER', 'LOCAL_ADMIN']);
-      expect(valid).to.not.be.undefined;
-      valid.forEach(item => {
-        expect(item).to.be.a('number');
-      });
+    it('should throw if number input', () => {
+      expect(() => asArrayOfUserTypes(1)).to.throw();
     });
-    it('should accept string number input', () => {
-      const valid = asArrayOfUserTypes('1');
-      expect(valid).to.not.be.undefined;
+    it('should throw if multiple number inputs', () => {
+      expect(() => asArrayOfUserTypes([1, 2])).to.throw();
     });
-    it('should accept string number inputs', () => {
-      const valid = asArrayOfUserTypes(['1', '2']);
-      expect(valid).to.not.be.undefined;
+    it('should throw if combination of string and number inputs', () => {
+      expect(() => asArrayOfUserTypes([1, UserType.MEMBER])).to.throw();
     });
-    it('should convert string number to int', async () => {
-      const valid = asArrayOfUserTypes(['1', '2']);
-      expect(valid).to.not.be.undefined;
-      valid.forEach(item => {
-        expect(item).to.be.a('number');
-      });
+    it('should throw if invalid userType', () => {
+      expect(() => asArrayOfUserTypes('TEST')).to.throw();
+    });
+    it('should throw if one invalid userType', () => {
+      expect(() => asArrayOfUserTypes([UserType.MEMBER, 'TEST'])).to.throw();
     });
   });
 });

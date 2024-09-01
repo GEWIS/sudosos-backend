@@ -295,7 +295,7 @@ export default class BalanceService {
         + 'where user.currentFinesId = user_fine_group.id '
         + 'group by user.id '
       + ') as f on f.id = moneys2.id '
-      + `where u.type not in (${UserType.POINT_OF_SALE}) `;
+      + `where u.type not in ("${UserType.POINT_OF_SALE}") `;
 
     if (minBalance !== undefined) query += `and moneys2.totalvalue + Coalesce(b5.amount, 0) >= ${minBalance.getAmount()} `;
     if (maxBalance !== undefined) query += `and moneys2.totalvalue + Coalesce(b5.amount, 0) <= ${maxBalance.getAmount()} `;
@@ -303,7 +303,7 @@ export default class BalanceService {
     if (hasFine === true) query += 'and f.fine is not null ';
     if (minFine !== undefined) query += `and f.fine >= ${minFine.getAmount()} `;
     if (maxFine !== undefined) query += `and f.fine <= ${maxFine.getAmount()} `;
-    if (userTypes !== undefined) query += `and u.type in (${userTypes.join(',')}) `;
+    if (userTypes !== undefined) query += `and u.type in (${userTypes.map((t) => `"${t}"`).join(',')}) `;
     if (!allowDeleted) query += 'and u.deleted = 0 ';
 
     if (orderBy !== undefined) query += `order by ${orderBy} ${orderDirection ?? ''} `;
