@@ -118,7 +118,7 @@ export default class RootController extends BaseController {
       const maintenanceMode = await store.getSettingFromDatabase('maintenanceMode');
       res.status(200).json({
         maintenanceMode,
-      });
+      } as ServerStatusResponse);
     } catch (e) {
       res.status(500).json('Internal server error.');
     }
