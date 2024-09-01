@@ -29,19 +29,26 @@ const UserTypeMapping: Record<string, number> = {
 
 export class UserTypeEnums1725196803203 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.changeColumn('user', 'type', new TableColumn({
-      name: 'type',
-      type: 'varchar',
-      length: '64',
-      isNullable: false,
-    }));
-    await queryRunner.changeColumn('role_user_type', 'userType', new TableColumn({
-      name: 'userType',
-      type: 'varchar',
-      length: '64',
-      isNullable: false,
-      isPrimary: true,
-    }));
+    if (process.env.TYPEORM_CONNECTION === 'sqlite') {
+      await queryRunner.changeColumn('user', 'type', new TableColumn({
+        name: 'type',
+        type: 'varchar',
+        length: '64',
+        isNullable: false,
+      }));
+      await queryRunner.changeColumn('role_user_type', 'userType', new TableColumn({
+        name: 'userType',
+        type: 'varchar',
+        length: '64',
+        isNullable: false,
+        isPrimary: true,
+      }));
+    } else {
+      // TypeORM completely deletes the column and adds it anew, which deletes all values
+      // So a manual query it is! SQLite somehow does work with TypeORM
+      await queryRunner.query('ALTER TABLE user MODIFY type varchar(64) NOT NULL');
+      await queryRunner.query('ALTER TABLE role_user_type MODIFY userType varchar(64) NOT NULL');
+    }
 
     const promises: Promise<void>[] = [];
     Object.entries(UserTypeMapping).forEach(([key, value]) => {
