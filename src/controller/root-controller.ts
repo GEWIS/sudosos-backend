@@ -23,14 +23,7 @@ import Policy from './policy';
 import { parseRequestPagination } from '../helpers/pagination';
 import BannerService from '../service/banner-service';
 import ServerSettingsStore from '../server-settings/server-settings-store';
-
-/**
- * @typedef {object} ServerStatusReponse
- * @property {boolean} maintenanceMode.required - Whether the server is in maintenance mode
- */
-interface ServerStatusResponse {
-  maintenanceMode: boolean;
-}
+import { ServerStatusResponse } from './response/server-status-response';
 
 export default class RootController extends BaseController {
   /**
