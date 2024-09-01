@@ -19,7 +19,7 @@
 import express, { Application } from 'express';
 import { expect, request } from 'chai';
 import { SwaggerSpecification } from 'swagger-model-validator';
-import { Connection } from 'typeorm';
+import { DataSource } from 'typeorm';
 import { json } from 'body-parser';
 import log4js from 'log4js';
 import sinon from 'sinon';
@@ -51,14 +51,13 @@ import AuthenticationNfcRequest from '../../../src/controller/request/authentica
 import NfcAuthenticator from '../../../src/entity/authenticator/nfc-authenticator';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { assignRole, seedRoles } from '../../seed/rbac';
+import { assignRoles, seedRoles } from '../../seed/rbac';
 import Role from '../../../src/entity/rbac/role';
 import RoleResponse from '../../../src/controller/response/rbac/role-response';
 
 describe('AuthenticationController', async (): Promise<void> => {
   let ctx: {
-    env: string,
-    connection: Connection,
+    connection: DataSource,
     app: Application,
     tokenHandler: TokenHandler,
     roleManager: RoleManager,
@@ -68,6 +67,7 @@ describe('AuthenticationController', async (): Promise<void> => {
     user2: User,
     user3: User,
     role: Role,
+    maintenanceOverrideRole: Role,
     request: AuthenticationMockRequest,
   };
 
@@ -75,7 +75,7 @@ describe('AuthenticationController', async (): Promise<void> => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
-    const [role] = await seedRoles([{
+    const [role, maintenanceOverrideRole] = await seedRoles([{
       name: 'Role',
       permissions: {
         Product: {
@@ -83,11 +83,18 @@ describe('AuthenticationController', async (): Promise<void> => {
         },
       },
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
+    }, {
+      name: 'MaintenanceOverride',
+      permissions: {
+        Maintenance: {
+          override: { all: new Set(['*']) },
+        },
+      },
+      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
     }]);
 
     // Initialize context
     ctx = {
-      env: process.env.NODE_ENV,
       connection: connection,
       app: express(),
       specification: undefined,
@@ -122,11 +129,11 @@ describe('AuthenticationController', async (): Promise<void> => {
         nonce: 'test',
       },
       role: role.role,
+      maintenanceOverrideRole: maintenanceOverrideRole.role,
     };
 
-    process.env.NODE_ENV = 'development';
     await Promise.all([ctx.user, ctx.user2, ctx.user3].map((u) => {
-      return assignRole(u, role);
+      return assignRoles(u, [role, maintenanceOverrideRole]);
     }));
 
     await seedHashAuthenticator([ctx.user, ctx.user2], PinAuthenticator);
@@ -158,7 +165,6 @@ describe('AuthenticationController', async (): Promise<void> => {
     ctx.app.use('/authentication', ctx.controller.getRouter());
   });
   after(async () => {
-    process.env.NODE_ENV = ctx.env;
     await finishTestDB(ctx.connection);
   });
 
@@ -194,6 +200,9 @@ describe('AuthenticationController', async (): Promise<void> => {
 
       const token = await promise;
       expect(token.roles).to.be.empty;
+      // By default no overriding maintenance mode
+      expect(token.overrideMaintenance).to.be.false;
+      expect(auth.rolesWithPermissions).to.be.length(0);
     });
     it('should contain the correct roles', async () => {
       let res = await request(ctx.app)
@@ -216,9 +225,9 @@ describe('AuthenticationController', async (): Promise<void> => {
 
       auth = res.body as AuthenticationResponse;
       token = await ctx.tokenHandler.verifyToken(auth.token);
-      expect(token.roles).to.deep.equal(['Role']);
-      expect(auth.rolesWithPermissions.length).to.equal(1);
-      expect(auth.rolesWithPermissions[0]).to.deep.equal({
+      expect(token.roles).to.deep.equalInAnyOrder(['Role', 'MaintenanceOverride']);
+      expect(token.overrideMaintenance).to.be.true;
+      expect(auth.rolesWithPermissions).to.deep.equalInAnyOrder([{
         id: ctx.role.id,
         name: ctx.role.name,
         systemDefault: ctx.role.systemDefault,
@@ -233,15 +242,33 @@ describe('AuthenticationController', async (): Promise<void> => {
             }],
           }],
         }],
-      } as RoleResponse);
+      }, {
+        id: ctx.maintenanceOverrideRole.id,
+        name: ctx.maintenanceOverrideRole.name,
+        systemDefault: ctx.maintenanceOverrideRole.systemDefault,
+        userTypes: ctx.maintenanceOverrideRole.userTypes,
+        permissions: [{
+          entity: 'Maintenance',
+          actions: [{
+            action: 'override',
+            relations: [{
+              relation: 'all',
+              attributes: ['*'],
+            }],
+          }],
+        }],
+      }] as RoleResponse[]);
     });
-    it('should give an HTTP 403 when not in development environment', async () => {
+    it('should give an HTTP 403 when not in development/test environment', async () => {
+      const env = process.env.NODE_ENV;
       process.env.NODE_ENV = 'production';
 
       const res = await request(ctx.app)
         .post('/authentication/mock')
         .send(ctx.request);
       expect(res.status).to.equal(403);
+
+      process.env.NODE_ENV = env;
     });
     it('should give an HTTP 403 when user does not exist', async () => {
       const req = { ...ctx.request, userId: 10 };

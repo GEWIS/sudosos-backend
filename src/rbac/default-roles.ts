@@ -187,6 +187,9 @@ export default class DefaultRoles {
       name: 'Super admin',
       userTypes: [UserType.LOCAL_ADMIN],
       permissions: {
+        Maintenance: {
+          override: { all: star },
+        },
         Authenticator: admin,
         Balance: admin,
         Banner: admin,

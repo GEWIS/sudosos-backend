@@ -42,6 +42,7 @@ import VatGroup from '../entity/vat-group';
 import ServerSettingsStore from '../server-settings/server-settings-store';
 import { AppDataSource } from '../database/database';
 import Transfer from '../entity/transactions/transfer';
+import { ISettings } from '../entity/server-setting';
 
 export interface WriteOffFilterParameters {
   /**
@@ -116,7 +117,7 @@ export default class WriteOffService {
   }
 
   private static async getHighVATGroup(): Promise<VatGroup> {
-    const id = ServerSettingsStore.getInstance().getSetting('highVatGroupId');
+    const id = ServerSettingsStore.getInstance().getSetting('highVatGroupId') as ISettings['highVatGroupId'];
     const vatGroup = await VatGroup.findOne({ where: { id } });
     if (vatGroup) return vatGroup;
     else throw new Error('High vat group not found');

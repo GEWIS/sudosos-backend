@@ -38,6 +38,12 @@ export default class JsonWebToken {
   public lesser: boolean;
 
   /**
+   * Whether this token should still be able to access
+   * all endpoints in maintenance mode
+   */
+  public overrideMaintenance?: boolean;
+
+  /**
    * All the organs that the user is a part of.
    */
   public organs?: User[];

@@ -15,13 +15,11 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { ISettings } from '../entity/server-setting';
 
-const SettingsDefaults: ISettings = {
-  highVatGroupId: -1,
-  jwtExpiryDefault: 3600,
-  jwtExpiryPointOfSale: 60 * 60 * 24 * 14,
-  maintenanceMode: false,
-};
-
-export default SettingsDefaults;
+/**
+ * @typedef {object} ServerStatusResponse
+ * @property {boolean} maintenanceMode.required - Whether the server is in maintenance mode
+ */
+export interface ServerStatusResponse {
+  maintenanceMode: boolean;
+}
