@@ -18,7 +18,7 @@
 
 import {
   Column,
-  Entity, JoinColumn, ManyToOne, OneToMany, OneToOne, ManyToMany,
+  Entity, JoinColumn, ManyToOne, OneToMany, OneToOne, ManyToMany, JoinTable,
 } from 'typeorm';
 import BaseEntity from '../base-entity';
 import User from '../user/user';
@@ -151,6 +151,7 @@ export default class Invoice extends PdfAble(BaseEntity) {
   public subTransactionRows: SubTransactionRow[];
 
   @ManyToMany(() => SubTransactionRow, { cascade: false })
+  @JoinTable()
   public subTransactionRowsDeletedInvoice: SubTransactionRow[];
 
   pdfService = new InvoicePdfService(INVOICE_PDF_LOCATION);

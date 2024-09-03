@@ -705,5 +705,25 @@ describe('InvoiceService', () => {
         },
       );
     });
+    it('should move invoice entries to deleted sub transaction rows after deleting invoice', async () => {
+      await inUserContext(
+        await (await UserFactory()).clone(2),
+        async (debtor: User, creditor: User) => {
+          const invoice = await createInvoiceWithTransfers(debtor.id, creditor.id, 1);
+          const subTransactionRows = invoice.subTransactionRows;
+
+          const { addressee, description } = invoice;
+
+          const updatedInvoice = await AppDataSource.manager.transaction(async (manager) => {
+            return new InvoiceService(manager).updateInvoice(
+              makeParamsState(addressee, description, creditor, invoice.id, InvoiceState.DELETED),
+            );
+          });
+
+          expect(subTransactionRows.map((str) => str.id))
+            .to.deep.equalInAnyOrder(updatedInvoice.subTransactionRowsDeletedInvoice.map((str) => str.id));
+          expect(InvoiceService.isState(updatedInvoice, InvoiceState.DELETED)).to.be.true;
+        });
+    });
   });
 });

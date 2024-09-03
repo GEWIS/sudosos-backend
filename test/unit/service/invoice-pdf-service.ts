@@ -26,7 +26,7 @@ import { Connection, IsNull } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import User from '../../../src/entity/user/user';
-import Database from '../../../src/database/database';
+import Database, { AppDataSource } from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
 import { json } from 'body-parser';
 import FileService from '../../../src/service/file-service';
@@ -36,6 +36,9 @@ import { finishTestDB } from '../../helpers/test-helpers';
 import { INVOICE_PDF_LOCATION } from '../../../src/files/storage';
 import { InvoiceSeeder, TransactionSeeder, UserSeeder } from '../../seed';
 import InvoiceService from '../../../src/service/invoice-service';
+import { createInvoiceWithTransfers } from './invoice-service';
+import { inUserContext, UserFactory } from '../../helpers/user-factory';
+import { InvoiceState } from '../../../src/entity/invoices/invoice-status';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -257,6 +260,28 @@ describe('InvoicePdfService', async (): Promise<void> => {
       const invoice = await Invoice.findOne({ ...options, where: { pdf: IsNull() } });
       invoice.pdfService = pdfService;
       await expect(invoice.createPdf()).to.be.rejectedWith();
+    });
+  });
+  describe('PDF of deleted invoice', () => {
+    it('should return the correct PDF', async () => {
+      await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
+        const invoice = await createInvoiceWithTransfers(debtor.id, creditor.id, 1);
+        const hash = await invoice.getPdfParamHash();
+        const params = await invoice.pdfService.getParameters(invoice);
+
+        const updatedInvoice = await AppDataSource.manager.transaction(async (manager) => {
+          return new InvoiceService(manager).updateInvoice({
+            byId: invoice.to.id,
+            invoiceId: invoice.id,
+            state: InvoiceState.DELETED,
+          });
+        });
+
+        const newHash = await updatedInvoice.getPdfParamHash();
+        const newParams = await updatedInvoice.pdfService.getParameters(updatedInvoice);
+        expect(newHash).to.deep.equal(hash);
+        expect(newParams).to.deep.equal(params);
+      });
     });
   });
 });

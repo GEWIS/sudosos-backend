@@ -217,7 +217,7 @@ export default class InvoiceService extends WithManager {
   public async deleteInvoice(invoiceId: number, byId: number)
     : Promise<Invoice | undefined> {
     // Find base invoice.
-    const invoice = await this.manager.findOne(Invoice, { where: { id: invoiceId }, relations: ['to', 'invoiceStatus', 'transfer', 'transfer.to', 'transfer.from'] });
+    const invoice = await this.manager.findOne(Invoice, { ...InvoiceService.getOptions({ invoiceId, returnInvoiceEntries: true }) });
     if (!invoice) return undefined;
 
     // Extract amount from transfer
@@ -552,6 +552,11 @@ export default class InvoiceService extends WithManager {
 
     if (params.returnInvoiceEntries) {
       relations.subTransactionRows = {
+        product: {
+          vat: true,
+        },
+      };
+      relations.subTransactionRowsDeletedInvoice = {
         product: {
           vat: true,
         },
