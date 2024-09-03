@@ -22,7 +22,7 @@ import sinon, { SinonStub } from 'sinon';
 import Invoice from '../../../src/entity/invoices/invoice';
 import chai, { expect } from 'chai';
 import InvoicePdf from '../../../src/entity/file/invoice-pdf';
-import { Connection, IsNull } from 'typeorm';
+import { Connection, FindOptionsRelations, IsNull } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import User from '../../../src/entity/user/user';
@@ -35,6 +35,7 @@ import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { INVOICE_PDF_LOCATION } from '../../../src/files/storage';
 import { InvoiceSeeder, TransactionSeeder, UserSeeder } from '../../seed';
+import InvoiceService from '../../../src/service/invoice-service';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -234,7 +235,9 @@ describe('InvoicePdfService', async (): Promise<void> => {
         status: 200,
       });
 
-      const invoice = await Invoice.findOne({ where: { pdf: IsNull() }, relations: ['to', 'invoiceStatus', 'transfer', 'transfer.to', 'transfer.from', 'pdf', 'invoiceEntries'] });
+      const options = InvoiceService.getOptions({ returnInvoiceEntries: true });
+      const invoice = await Invoice.findOne({ ...options, where: { pdf: IsNull() } });
+
       uploadInvoiceStub.restore();
       createFileStub.resolves({
         downloadName: 'test',
@@ -250,8 +253,8 @@ describe('InvoicePdfService', async (): Promise<void> => {
     });
     it('should throw an error if PDF generation fails', async () => {
       generateInvoiceStub.rejects(new Error('Failed to generate PDF'));
-
-      const invoice = await Invoice.findOne({ where: { id: 1 }, relations: ['to', 'invoiceStatus', 'transfer', 'transfer.to', 'transfer.from', 'pdf', 'invoiceEntries'] });
+      const options = InvoiceService.getOptions({ returnInvoiceEntries: true });
+      const invoice = await Invoice.findOne({ ...options, where: { pdf: IsNull() } });
       invoice.pdfService = pdfService;
       await expect(invoice.createPdf()).to.be.rejectedWith();
     });

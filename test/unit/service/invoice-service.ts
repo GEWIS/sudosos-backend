@@ -311,7 +311,10 @@ describe('InvoiceService', () => {
               (transaction) => transaction.tId,
             ),
             amount: {
-              amount: total,
+              amount: chosenTransactions.reduce(
+                (acc, curr) => acc + curr.amount,
+                0,
+              ),
               currency: 'EUR',
               precision: 2,
             },
@@ -545,6 +548,7 @@ describe('InvoiceService', () => {
               validUpdateInvoiceParams,
             );
           });
+          console.error(updatedInvoice);
           expect(InvoiceService.isState(updatedInvoice, InvoiceState.SENT)).to.be.true;
         },
       );

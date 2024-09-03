@@ -354,6 +354,11 @@ describe('InvoiceController', async () => {
             transactionIDs: tIds,
             forId: debtor.id,
             byId: creditor.id,
+            amount: {
+              amount: total,
+              currency: 'EUR',
+              precision: 2,
+            },
           };
 
           await new Promise((f) => setTimeout(f, 500));

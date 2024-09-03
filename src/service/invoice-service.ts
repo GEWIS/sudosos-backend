@@ -205,7 +205,8 @@ export default class InvoiceService extends WithManager {
 
   static isState(invoice: Invoice, state: InvoiceState): boolean {
     // Sort to make sure we have the latest status.
-    return invoice.invoiceStatus.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0].state === state;
+    // Sort createdAt ascending, take the last element. We do this in case timestamps are equal.
+    return invoice.invoiceStatus.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())[invoice.invoiceStatus.length - 1].state === state;
   }
 
   /**
