@@ -659,6 +659,7 @@ describe('InvoiceService', () => {
           const invoice = await AppDataSource.manager.transaction(async (manager) => {
             return new InvoiceService(manager).createInvoice(createInvoiceRequest);
           });
+          const oldSubtransactionRows = invoice.subTransactionRows;
           let invoiceTransactions = await Transaction.find({
             where: {
               id: In(transactions.map((transaction) => transaction.tId)),
@@ -678,13 +679,14 @@ describe('InvoiceService', () => {
           });
 
           const { addressee, description } = invoice;
-          const updatedInvoice = await AppDataSource.manager.transaction(async (manager) => {
+          const updatedInvoice = await AppDataSource.manager.transaction( (manager) => {
             return new InvoiceService(manager).updateInvoice(
               makeParamsState(addressee, description, creditor, invoice.id, InvoiceState.DELETED),
             );
           });
           expect(InvoiceService.isState(updatedInvoice, InvoiceState.DELETED)).to.be.true;
-
+          expect(updatedInvoice.subTransactionRowsDeletedInvoice.map((str) => str.id))
+            .to.deep.equalInAnyOrder(oldSubtransactionRows.map((str) => str.id));
           invoiceTransactions = await Transaction.find({
             where: {
               id: In(transactions.map((transaction) => transaction.tId)),

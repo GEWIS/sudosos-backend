@@ -39,6 +39,8 @@ import {
 } from '../../helpers/pdf';
 import { PdfService } from './pdf-service';
 import SubTransactionRow from '../../entity/transactions/sub-transaction-row';
+import InvoiceService from '../invoice-service';
+import { InvoiceState } from '../../entity/invoices/invoice-status';
 
 
 export default class InvoicePdfService extends PdfService<InvoicePdf, Invoice, InvoiceRouteParams> {
@@ -52,7 +54,11 @@ export default class InvoicePdfService extends PdfService<InvoicePdf, Invoice, I
 
   invoiceToPricing(invoice: Invoice): TotalPricing {
     let exclVat: number = 0, lowVat: number = 0, highVat: number = 0, inclVat = 0;
-    invoice.subTransactionRows.map((str: SubTransactionRow) => {
+    const rows = InvoiceService.isState(invoice, InvoiceState.DELETED)
+      ? invoice.subTransactionRowsDeletedInvoice
+      : invoice.subTransactionRows;
+
+    rows.map((str: SubTransactionRow) => {
       exclVat += str.product.priceInclVat.getAmount() * str.amount;
       const baseExclVat = Math.round(str.product.priceInclVat.getAmount()  / (1 + (str.product.vat.percentage / 100))) * str.amount;
       switch (str.product.vat.percentage) {
@@ -78,7 +84,10 @@ export default class InvoicePdfService extends PdfService<InvoicePdf, Invoice, I
   }
 
   async getParameters(entity: Invoice): Promise<InvoiceParameters> {
-    const products = entity.subTransactionRows.map((str: SubTransactionRow) => subTransactionRowToProduct(str));
+    const products = InvoiceService.isState(entity, InvoiceState.DELETED)
+      ? entity.subTransactionRowsDeletedInvoice.map((str: SubTransactionRow) => subTransactionRowToProduct(str))
+      : entity.subTransactionRows.map((str: SubTransactionRow) => subTransactionRowToProduct(str));
+
     products.sort((a, b) => a.name.localeCompare(b.name));
 
     const pricing = this.invoiceToPricing(entity);

@@ -249,6 +249,8 @@ export default class InvoiceService extends WithManager {
     });
 
     invoice.subTransactionRowsDeletedInvoice = invoice.subTransactionRows;
+    // Save inbetween to make sure the stRows are saved before deletion.
+    await this.manager.save(Invoice, invoice);
     await this.removeSubTransactionInvoice(invoice);
 
     // Add it to the invoice and save it.
@@ -306,8 +308,9 @@ export default class InvoiceService extends WithManager {
    * @param invoice
    */
   async removeSubTransactionInvoice(invoice: Invoice) {
+    invoice.subTransactionRows = [];
     const subTransactionRows = await this.manager.find(SubTransactionRow, { where: { invoice: { id: invoice.id } } });
-    const promises: Promise<any>[] = [];
+    const promises: Promise<any>[] = [this.manager.save(Invoice, invoice)];
     subTransactionRows.forEach((tSubRow) => {
       const row = tSubRow;
       row.invoice = null;
