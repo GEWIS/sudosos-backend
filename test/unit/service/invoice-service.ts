@@ -548,7 +548,6 @@ describe('InvoiceService', () => {
               validUpdateInvoiceParams,
             );
           });
-          console.error(updatedInvoice);
           expect(InvoiceService.isState(updatedInvoice, InvoiceState.SENT)).to.be.true;
         },
       );
