@@ -22,7 +22,7 @@ import sinon, { SinonStub } from 'sinon';
 import Invoice from '../../../src/entity/invoices/invoice';
 import chai, { expect } from 'chai';
 import InvoicePdf from '../../../src/entity/file/invoice-pdf';
-import { Connection, FindOptionsRelations, IsNull } from 'typeorm';
+import { Connection, IsNull } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import User from '../../../src/entity/user/user';

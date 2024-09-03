@@ -290,7 +290,7 @@ describe('InvoiceService', () => {
           const transactionRequests: TransactionRequest[] =
                         await createTransactionRequest(debtor.id, creditor.id, 5);
 
-          const { transactions, total } = await requestToTransaction(
+          const { transactions } = await requestToTransaction(
             transactionRequests,
           );
 
