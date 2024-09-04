@@ -19,7 +19,7 @@
 import dinero from 'dinero.js';
 import express, { Express } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
-import { Connection, DataSource } from 'typeorm';
+import { Connection, DataSource, getConnectionManager } from 'typeorm';
 import TransferRequest from '../../src/controller/request/transfer-request';
 import TransferService from '../../src/service/transfer-service';
 import Swagger from '../../src/start/swagger';
