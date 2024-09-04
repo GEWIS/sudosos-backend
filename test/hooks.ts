@@ -15,18 +15,10 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-
-
 import { AppDataSource } from '../src/database/database';
 import { getConnectionManager } from 'typeorm';
 
 after(async () => {
-  await new Promise((f) => setTimeout(f, 5000)).then(() => {
-    console.error('Wasted 5s, closing connections');
-  });
-
-  await import('wtfnode').then((wtfnode) => wtfnode.dump());
-
   console.error('Global after, finishing test suite.');
   if (AppDataSource.isConnected) {
     console.error('closing AppDataSource');
@@ -39,5 +31,6 @@ after(async () => {
       await connection.destroy();
     }
   }
+  process.exit();
 });
 
