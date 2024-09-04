@@ -24,12 +24,11 @@ import { RequestWithToken } from '../middleware/token-middleware';
 import { parseRequestPagination } from '../helpers/pagination';
 import PayoutRequestService, { parseGetPayoutRequestsFilters } from '../service/payout-request-service';
 import { PayoutRequestStatusRequest } from './request/payout-request-status-request';
-import PayoutRequest from '../entity/transactions/payout-request';
-import { PayoutRequestState } from '../entity/transactions/payout-request-status';
+import PayoutRequest from '../entity/transactions/payout/payout-request';
+import { PayoutRequestState } from '../entity/transactions/payout/payout-request-status';
 import PayoutRequestRequest from './request/payout-request-request';
 import User from '../entity/user/user';
 import BalanceService from '../service/balance-service';
-import FileService from '../service/file-service';
 import { PdfUrlResponse } from './response/simple-file-response';
 
 export default class PayoutRequestController extends BaseController {
@@ -181,7 +180,7 @@ export default class PayoutRequestController extends BaseController {
         return;
       }
 
-      const balance = await BalanceService.getBalance(user.id);
+      const balance = await new BalanceService().getBalance(user.id);
       if (balance.amount.amount < body.amount.amount) {
         res.status(400).json('Insufficient balance.');
         return;
@@ -241,7 +240,7 @@ export default class PayoutRequestController extends BaseController {
     }
 
     if (body.state === PayoutRequestState.APPROVED) {
-      const balance = await BalanceService.getBalance(payoutRequest.requestedBy.id);
+      const balance = await new BalanceService().getBalance(payoutRequest.requestedBy.id);
       if (balance.amount.amount < payoutRequest.amount.amount) {
         res.status(400).json('Insufficient balance.');
         return;
@@ -290,7 +289,7 @@ export default class PayoutRequestController extends BaseController {
         return;
       }
 
-      const pdf = await FileService.getOrCreatePDF(payoutRequest);
+      const pdf = await payoutRequest.getOrCreatePdf();
 
       res.status(200).json({ pdf: pdf.downloadName } as PdfUrlResponse);
     } catch (error) {

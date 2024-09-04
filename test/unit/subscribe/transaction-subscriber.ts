@@ -91,8 +91,8 @@ describe('TransactionSubscriber', () => {
       connection,
       adminUser,
       users,
-      usersNotInDebt: users.filter((u) => calculateBalance(u, transactions, subTransactions, transfers).amount.getAmount() >= 0 && u.type in NotifyDebtUserTypes),
-      usersInDebt: users.filter((u) => calculateBalance(u, transactions, subTransactions, transfers).amount.getAmount() < 0 && u.type in NotifyDebtUserTypes),
+      usersNotInDebt: users.filter((u) => calculateBalance(u, transactions, subTransactions, transfers).amount.getAmount() >= 0 && NotifyDebtUserTypes.includes(u.type)),
+      usersInDebt: users.filter((u) => calculateBalance(u, transactions, subTransactions, transfers).amount.getAmount() < 0 && NotifyDebtUserTypes.includes(u.type)),
       products: productRevisions,
       containers: containerRevisions,
       pointOfSales: pointOfSaleRevisions,
@@ -111,6 +111,9 @@ describe('TransactionSubscriber', () => {
 
     env = process.env.NODE_ENV;
     process.env.NODE_ENV = 'test-transactions';
+
+    // Sanity check
+    expect(ctx.usersInDebt.length).to.be.at.least(3);
   });
 
   after(async () => {
@@ -129,7 +132,7 @@ describe('TransactionSubscriber', () => {
       const user = ctx.usersNotInDebt[1];
       const currentBalance = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers).amount;
       expect(currentBalance.getAmount()).to.be.at.least(0);
-      expect((await BalanceService.getBalance(user.id)).amount.amount).to.equal(currentBalance.getAmount());
+      expect((await new BalanceService().getBalance(user.id)).amount.amount).to.equal(currentBalance.getAmount());
 
       const pos = ctx.pointOfSales.find((p) => p.pointOfSale.owner.id !== user.id);
       const container = ctx.containers.find((c) => c.container.owner.id !== user.id);
@@ -173,7 +176,7 @@ describe('TransactionSubscriber', () => {
       const user = ctx.usersNotInDebt[2];
       const currentBalance = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers).amount;
       expect(currentBalance.getAmount()).to.be.at.least(0);
-      expect((await BalanceService.getBalance(user.id)).amount.amount).to.equal(currentBalance.getAmount());
+      expect((await new BalanceService().getBalance(user.id)).amount.amount).to.equal(currentBalance.getAmount());
 
       const pos = ctx.pointOfSales[0];
       const container = ctx.containers[0];
@@ -214,7 +217,7 @@ describe('TransactionSubscriber', () => {
       const user = ctx.usersInDebt[0];
       const currentBalance = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers).amount;
       expect(currentBalance.getAmount()).to.be.at.most(-1);
-      expect((await BalanceService.getBalance(user.id)).amount.amount).to.equal(currentBalance.getAmount());
+      expect((await new BalanceService().getBalance(user.id)).amount.amount).to.equal(currentBalance.getAmount());
 
       const pos = ctx.pointOfSales[0];
       const container = ctx.containers[0];

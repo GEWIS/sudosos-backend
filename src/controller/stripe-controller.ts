@@ -74,7 +74,7 @@ export default class StripeController extends BaseController {
 
     try {
       const amount = Dinero({ ...request.amount } as DineroObject);
-      const balance = await BalanceService.getBalance(req.token.user.id);
+      const balance = await new BalanceService().getBalance(req.token.user.id);
 
       // Check if top-up satisfies minimum in accordance with TOS.
       if (!StripeService.validateStripeRequestMinimumAmount(balance, request)) {

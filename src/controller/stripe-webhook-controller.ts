@@ -82,8 +82,8 @@ export default class StripeWebhookController extends BaseController {
    * @route POST /stripe/webhook
    * @operationId webhook
    * @tags stripe - Operations of the stripe controller
-   * @return 200 - Success
-   * @return 400 - Not
+   * @return 204 - Success
+   * @return 400 - Event invalid error
    */
   public async handleWebhookEvent(req: RequestWithRawBody, res: Response): Promise<void> {
     this.logger.trace('Receive Stripe webhook event with body', req.body);
@@ -98,27 +98,35 @@ export default class StripeWebhookController extends BaseController {
       return;
     }
 
-    if (webhookEvent.type.includes('payment_intent')) {
-      const service = new StripeService();
-      const { id } = (webhookEvent.data.object as Stripe.PaymentIntent);
-      const paymentIntent = await service.getPaymentIntent(id);
-      if (!paymentIntent) {
-        this.logger.warn(`PaymentIntent with ID "${id}" not found.`);
-        res.status(404).json(`PaymentIntent with ID "${id}" not found.`);
-        return;
-      }
-
-      // NO await here, because we should execute the action asynchronously
-      AppDataSource.manager.transaction(async (manager) => {
-        const stripeService = new StripeService(manager);
-        await stripeService.handleWebhookEvent(webhookEvent);
-      }).catch((error) => {
-        this.logger.error(error);
-      });
-    } else {
+    if (!webhookEvent.type.includes('payment_intent')) {
       this.logger.trace(`Event ignored, because it is type "${webhookEvent.type}"`);
+      res.status(204).send();
+      return;
     }
 
-    res.status(200).send();
+    if ((webhookEvent.data.object as any)?.metadata?.service !== process.env.NAME) {
+      this.logger.trace(`Event ignored, because it is not for service "${process.env.NAME}"`);
+      res.status(204).send();
+      return;
+    }
+
+    const service = new StripeService();
+    const { id } = (webhookEvent.data.object as Stripe.PaymentIntent);
+    const paymentIntent = await service.getPaymentIntent(id);
+    if (!paymentIntent) {
+      this.logger.warn(`PaymentIntent with ID "${id}" not found.`);
+      res.status(400).json(`PaymentIntent with ID "${id}" not found.`);
+      return;
+    }
+
+    // NO await here, because we should execute the action asynchronously
+    AppDataSource.manager.transaction(async (manager) => {
+      const stripeService = new StripeService(manager);
+      await stripeService.handleWebhookEvent(webhookEvent);
+    }).catch((error) => {
+      this.logger.error(error);
+    });
+
+    res.status(204).send();
   }
 }

@@ -19,6 +19,9 @@
 import { RequestHandler, Response } from 'express';
 import { RequestWithToken } from './token-middleware';
 import { TermsOfServiceStatus } from '../entity/user/user';
+import ServerSettingsStore from '../server-settings/server-settings-store';
+import { ISettings } from '../entity/server-setting';
+import { getLogger } from 'log4js';
 
 export interface TokenRestrictions {
   /**
@@ -30,6 +33,11 @@ export interface TokenRestrictions {
    * Whether the TOS should be accepted to access this endpoint. True by default.
    */
   acceptedTOS: boolean;
+
+  /**
+   * Whether this endpoint should remain accessible when maintenance mode is enabled.
+   */
+  availableDuringMaintenance: boolean;
 }
 
 export default class RestrictionMiddleware {
@@ -49,7 +57,19 @@ export default class RestrictionMiddleware {
    * @param next - the express next function to continue processing of the request.
    */
   public async handle(req: RequestWithToken, res: Response, next: Function): Promise<void> {
-    const { lesser, acceptedTOS } = this.restrictionsImpl();
+    const { lesser, acceptedTOS, availableDuringMaintenance } = this.restrictionsImpl();
+
+    try {
+      const maintenance = await ServerSettingsStore.getSettingFromDatabase('maintenanceMode') as ISettings['maintenanceMode'];
+      if (maintenance && !availableDuringMaintenance && !req.token?.overrideMaintenance) {
+        res.status(503).end('Service is in maintenance mode. Please try again later.');
+        return;
+      }
+    } catch (e) {
+      getLogger('RestrictionMiddleware').error(e);
+      res.status(500).end('Internal server error.');
+      return;
+    }
 
     // No token middleware has been processed before, so skip the restrictions below this snippet
     if (!req.token) {

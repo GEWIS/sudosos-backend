@@ -22,7 +22,7 @@ import DineroTransformer from '../entity/transformer/dinero-transformer';
 import dinero, { Dinero, DineroObject } from 'dinero.js';
 import {
   BaseFineHandoutEventResponse,
-  FineHandoutEventResponse, FineReport, FineReportResponse, FineResponse,
+  FineHandoutEventResponse, FineResponse,
   PaginatedFineHandoutEventResponse, UserFineGroupResponse,
   UserToFineResponse,
 } from '../controller/response/debtor-response';
@@ -40,6 +40,7 @@ import Mailer from '../mailer';
 import UserGotFined from '../mailer/messages/user-got-fined';
 import MailMessage from '../mailer/mail-message';
 import UserWillGetFined from '../mailer/messages/user-will-get-fined';
+import { FineReport } from '../entity/report/fine-report';
 
 export interface CalculateFinesParams {
   userTypes?: UserType[];
@@ -152,7 +153,7 @@ export default class DebtorService {
   public static async calculateFinesOnDate({ userTypes, userIds, referenceDates }: CalculateFinesParams): Promise<UserToFineResponse[]> {
     if (referenceDates.length === 0) throw new Error('No reference dates given.');
 
-    const balances = await Promise.all(referenceDates.map((date) => BalanceService.getBalances({
+    const balances = await Promise.all(referenceDates.map((date) => new BalanceService().getBalances({
       maxBalance: DineroTransformer.Instance.from(-500),
       date,
       userTypes,
@@ -193,7 +194,7 @@ export default class DebtorService {
       take: 1,
     }))[0];
 
-    const balances = await BalanceService.getBalances({
+    const balances = await new BalanceService().getBalances({
       date: referenceDate,
       ids: userIds,
     });
@@ -283,7 +284,7 @@ export default class DebtorService {
     }
     if (userFineGroup.fines.length > 1) {
       // If user does not have a debt anymore, remove the UserFineGroup reference
-      const newBalance = await BalanceService.getBalance(userFineGroup.userId);
+      const newBalance = await new BalanceService().getBalance(userFineGroup.userId);
       if (newBalance.amount.amount < 0) return;
       await User.update(userFineGroup.userId, { currentFines: null });
     }
@@ -377,24 +378,12 @@ export default class DebtorService {
       }
     });
 
-    return {
+    return new FineReport({
       fromDate,
       toDate,
       ...count,
       handedOut,
       waivedAmount,
-    };
+    });
   }
-
-  public static fineReportToResponse(report: FineReport): FineReportResponse {
-    return {
-      fromDate: report.fromDate.toISOString(),
-      toDate: report.toDate.toISOString(),
-      count: report.count,
-      handedOut: report.handedOut.toObject(),
-      waivedCount: report.waivedCount,
-      waived: report.waivedAmount.toObject(),
-    };
-  }
-
 }

@@ -24,7 +24,7 @@ import PermissionResponse from './permission-response';
  * @property {integer} id.required - The ID of the role.
  * @property {string} name.required - The name of the role.
  * @property {boolean} systemDefault.required - Whether the role is a system default role
- * @property {Array.<integer>} userTypes - The user types this role is default for
+ * @property {Array.<string>} userTypes - The user types this role is default for
  */
 
 /**
@@ -35,6 +35,6 @@ export default interface RoleResponse {
   id: number;
   name: string;
   systemDefault: boolean;
-  userTypes?: number[];
+  userTypes?: string[];
   permissions?: PermissionResponse[];
 }

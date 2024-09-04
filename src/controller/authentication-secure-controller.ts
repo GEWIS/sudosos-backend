@@ -28,6 +28,7 @@ import User from '../entity/user/user';
 import PointOfSaleController from './point-of-sale-controller';
 import PointOfSale from '../entity/point-of-sale/point-of-sale';
 import ServerSettingsStore from '../server-settings/server-settings-store';
+import { ISettings } from '../entity/server-setting';
 
 export default class AuthenticationSecureController extends BaseController {
   private logger: Logger = log4js.getLogger('AuthenticationController');
@@ -115,7 +116,7 @@ export default class AuthenticationSecureController extends BaseController {
         return;
       }
 
-      const expiry = ServerSettingsStore.getInstance().getSetting('jwtExpiryPointOfSale');
+      const expiry = ServerSettingsStore.getInstance().getSetting('jwtExpiryPointOfSale') as ISettings['jwtExpiryPointOfSale'];
       const token = await AuthenticationService.getSaltedToken(pointOfSale.user, {
         roleManager: this.roleManager,
         tokenHandler: this.tokenHandler,

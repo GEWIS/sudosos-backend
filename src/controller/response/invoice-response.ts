@@ -22,6 +22,7 @@ import { BaseUserResponse } from './user-response';
 import { TransferResponse } from './transfer-response';
 import { PaginationResult } from '../../helpers/pagination';
 import { InvoiceState } from '../../entity/invoices/invoice-status';
+import { DineroObjectResponse } from './dinero-response';
 
 /**
  * @typedef {object} InvoiceStatusResponse
@@ -29,8 +30,8 @@ import { InvoiceState } from '../../entity/invoices/invoice-status';
  * @property {string} state.required - enum:CREATED,SENT,PAID,DELETED - The state of the invoice
  */
 export interface InvoiceStatusResponse {
-  state: keyof typeof InvoiceState,
   changedBy: BaseUserResponse,
+  state: keyof typeof InvoiceState,
 }
 
 /**
@@ -39,12 +40,14 @@ export interface InvoiceStatusResponse {
  * @property {integer} amount.required - Amount of products sold.
  * @property {DineroObject} priceInclVat.required - The price per product.
  * @property {number} vatPercentage.required - The percentage of VAT applied to this entry
+ * @property {boolean} custom.required - If the entry is a custom entry or not.
  */
 export interface InvoiceEntryResponse {
   description: string,
   amount: number,
   priceInclVat: DineroObject
   vatPercentage: number;
+  custom: boolean;
 }
 
 /**
@@ -54,14 +57,15 @@ export interface InvoiceEntryResponse {
  * @property {string} reference.required - Reference of the invoice.
  * @property {string} attention.required - Special attention to the addressee
  * @property {string} description.required - Description of the invoice.
+ * @property {InvoiceStatusResponse} currentState.required - The current state of the invoice.
  * @property {string} street.required - Street of the invoice.
  * @property {string} postalCode.required - Postal code of the invoice.
  * @property {string} city.required -  City of the invoice.
  * @property {string} country.required -  Country of the invoice.
  * @property {string} date.required - Date of the invoice
- * @property {InvoiceStatusResponse} currentState.required - The current state of the invoice.
  * @property {TransferResponse} transfer - Transfer linked to the invoice.
  * @property {string} pdf - Pdf url path linked to the invoice
+ * @property {DineroObjectResponse} totalInclVat.required - Total amount of the invoice, including custom entries.
  */
 export interface BaseInvoiceResponse extends BaseResponse {
   to: BaseUserResponse,
@@ -77,6 +81,7 @@ export interface BaseInvoiceResponse extends BaseResponse {
   date: string;
   transfer?: TransferResponse,
   pdf?: string,
+  totalInclVat: DineroObjectResponse,
 }
 
 /**

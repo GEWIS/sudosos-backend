@@ -57,20 +57,24 @@ export interface UpdateInvoiceRequest extends BaseUpdateInvoice {
   state?: keyof typeof InvoiceState,
 }
 
+export interface InvoiceTransactionsRequest {
+  forId: number,
+  fromDate?: Date,
+  tillDate?: Date,
+}
+
 export interface BaseInvoice {
   forId: number,
-  reference: string,
-  description?: string,
   customEntries?: InvoiceEntryRequest[],
-  transactionIDs?: number[],
-  fromDate?: string,
-  isCreditInvoice: boolean,
+  transactionIDs: number[],
 }
 
 export interface CreateInvoiceParams extends BaseInvoice {
   byId: number,
   street: string;
   postalCode:string;
+  reference: string,
+  description: string,
   city: string;
   country: string;
   addressee: string,
@@ -83,13 +87,10 @@ export interface CreateInvoiceParams extends BaseInvoice {
  * @property {integer} forId.required - The recipient of the Invoice.
  * @property {integer} byId - The creator of the Invoice, defaults to the ID of the requester.
  * @property {string} addressee - Name of the addressed, defaults to the fullname of the person being invoiced.
- * @property {string} description - The description of the invoice.
+ * @property {string} description.required - The description of the invoice.
  * @property {string} reference.required - The reference of the invoice.
  * @property {Array<InvoiceEntryRequest>} customEntries - Custom entries to be added to the invoice
- * @property {Array<integer>} transactionIDs - IDs of the transactions to add to the Invoice.
- * @property {string} fromDate - For creating an Invoice for all transactions from a specific date.
- * @property {boolean} isCreditInvoice.required - If the invoice is an credit Invoice
- *  If an invoice is a credit invoice the relevant subtransactions are defined as all the sub transactions which have `subTransaction.toId == forId`.
+ * @property {Array<integer>} transactionIDs.required - IDs of the transactions to add to the Invoice.
  * @property {string} street - Street to use on the invoice, overwrites the users default.
  * @property {string} postalCode - Postal code to use on the invoice, overwrites the users default.
  * @property {string} city - City to use on the invoice, overwrites the users default.
@@ -106,4 +107,6 @@ export interface CreateInvoiceRequest extends BaseInvoice {
   addressee?: string,
   date?: Date,
   attention?: string,
+  reference: string,
+  description: string,
 }

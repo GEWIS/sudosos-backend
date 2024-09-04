@@ -17,10 +17,16 @@
  */
 
 import {
-  FindOptionsWhere, Like,
+  BaseEntity,
+  FindOptionsWhere, FindOptionsWhereProperty, Like, Raw,
   SelectQueryBuilder,
 } from 'typeorm';
 import { asNumber } from './validators';
+import { toMySQLString } from './timestamps';
+
+type KeyOfType<T, V> = keyof {
+  [P in keyof T as T[P] extends V ? P : never]: any
+};
 
 /**
  * Defines the mapping from properties on the parameter object, to
@@ -117,5 +123,123 @@ export default class QueryFilter {
     if (query === undefined) return undefined;
     if (Array.isArray(query)) return query.map((d: any) => asNumber(d));
     return asNumber(query);
+  }
+
+  /**
+   * Given a time range, return a find options filter that filters based on this range
+   * @param fromDate
+   * @param tillDate
+   */
+  public static createFilterWhereDate(fromDate?: Date, tillDate?: Date): FindOptionsWhereProperty<Date> | undefined {
+    if (fromDate && tillDate) return Raw(
+      (alias) => `${alias} >= :fromDate AND ${alias} < :tillDate`,
+      { fromDate: toMySQLString(fromDate), tillDate: toMySQLString(tillDate) },
+    );
+    if (fromDate) return Raw(
+      (alias) => `${alias} >= :fromDate`,
+      { fromDate: toMySQLString(fromDate) },
+    );
+    if (tillDate) return Raw(
+      (alias) => `${alias} < :tillDate`,
+      { tillDate: toMySQLString(tillDate) },
+    );
+  }
+
+  /**
+   * Return a filter options that only returns the attributes
+   * whose timeframe partially overlaps with the given timeframe
+   * @param rangeStartAttributeName Name of the entity's attribute that defines
+   * the start of the timeframe
+   * @param rangeEndAttributeName Name of the entity's attribute that defines
+   * the end of the timeframe
+   * @param rangeFromDate Optional start of the selecting timeframe
+   * @param rangeTillDate Optional end of the selecting timeframe
+   */
+  public static createFilterWhereDateRange<Entity extends BaseEntity>(
+    rangeStartAttributeName: KeyOfType<Entity, Date>,
+    rangeEndAttributeName: KeyOfType<Entity, Date>,
+    rangeFromDate?: Date,
+    rangeTillDate?: Date,
+  ): FindOptionsWhere<Entity>[] {
+    const fromDate = rangeFromDate ? toMySQLString(rangeFromDate) : undefined;
+    const tillDate = rangeTillDate ? toMySQLString(rangeTillDate) : undefined;
+
+    /*
+     *                          +------------------+
+     *    <---------------------+      Range       +-------------------->
+     *                          +------------------+
+     * ---------------------------------------------------------------------
+     *  +-------------------+                          +------------------+
+     *  |X Completely before|                          |X Completely after|
+     *  +-------------------+                          +------------------+
+     *             +-------------------+    +---------------------+
+     *             |✓ EndDate contained|    |✓ StartDate contained|
+     *             +-------------------+    +---------------------+
+     *                           +----------------+
+     *                           |✓ SellerPayout  |
+     *                           |  within range  |
+     *                           +----------------+
+     *                     +----------------------------+
+     *                     |✓  Range within SellerPayout|
+     *                     +----------------------------+
+     */
+
+    if (fromDate && tillDate) return [
+      { // EndDate contained && SellerPayout within range
+        [rangeEndAttributeName]: Raw((alias) => `${alias} > :fromDate AND ${alias} <= :tillDate`, { fromDate, tillDate }),
+      },
+      { // StartDate contained && SellerPayout within range
+        [rangeStartAttributeName]: Raw((alias) => `${alias} >= :fromDate AND ${alias} < :tillDate`, { fromDate, tillDate }),
+      },
+      { // Range within SellerPayout
+        [rangeStartAttributeName]: Raw((alias) => `${alias} <= :fromDate`, { fromDate }),
+        [rangeEndAttributeName]: Raw((alias) => `${alias} >= :tillDate`, { tillDate }),
+      },
+    ] as FindOptionsWhere<Entity>[];
+
+    /*
+     *                            |FromDate
+     *                            +--------------------->
+     *
+     * ------------------------------------------------------
+     *   +-------------------+         +------------------+
+     *   |X Completely before|         |✓ Completely after|
+     *   +-------------------+         +------------------+
+     *                 +--------------------+
+     *                 |✓  startDate before |
+     *                 |    endDate after   |
+     *                 +--------------------+
+     *
+     * If the endDate equals the fromDate, the entry is not returned
+     */
+    if (fromDate) return [
+      { // StartDate after (endDate before) && Completely after
+        [rangeEndAttributeName]: Raw((alias) => `${alias} > :fromDate`, { fromDate }),
+      },
+    ] as FindOptionsWhere<Entity>[];
+
+    /*
+     *                    tillDate|
+     *     <----------------------+
+     *
+     * ------------------------------------------------------
+     *
+     *   +-------------------+         +------------------+
+     *   |✓ Completely before|         |X Completely after|
+     *   +-------------------+         +------------------+
+     *                 +--------------------+
+     *                 |✓  startDate before |
+     *                 |    endDate after   |
+     *                 +--------------------+
+     *
+     * If the startDate equals the tillDate, the entry is not returned
+     */
+    if (tillDate) return [
+      { // StartDate after (endDate before) && Completely before
+        [rangeStartAttributeName]: Raw((alias) => `${alias} < :tillDate`, { tillDate }),
+      },
+    ] as FindOptionsWhere<Entity>[];
+
+    return [];
   }
 }

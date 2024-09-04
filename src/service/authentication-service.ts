@@ -81,9 +81,11 @@ export default class AuthenticationService {
    * @param roles - The roles this user has
    * @param organs - The organs this user belongs to
    * @param lesser - If the token should give full access rights.
+   * @param overrideMaintenance - If the token should be able to access all endpoints
+   * in maintenance mode
    */
   public static async makeJsonWebToken(
-    user: User, roles: Role[], organs: User[], lesser: boolean,
+    user: User, roles: Role[], organs: User[], lesser: boolean, overrideMaintenance: boolean,
   ): Promise<JsonWebToken> {
 
     return {
@@ -91,6 +93,7 @@ export default class AuthenticationService {
       roles: roles.map((r) => r.name),
       organs,
       lesser,
+      overrideMaintenance,
     };
   }
 
@@ -394,7 +397,9 @@ export default class AuthenticationService {
       context.roleManager.getRoles(user, true),
       context.roleManager.getUserOrgans(user),
     ]);
-    const contents = await this.makeJsonWebToken(user, roles, organs, lesser);
+    const roleNames = roles.map((r)  => r.name);
+    const overrideMaintenance = await context.roleManager.can(roleNames, 'override', 'all', 'Maintenance', ['*']);
+    const contents = await this.makeJsonWebToken(user, roles, organs, lesser, overrideMaintenance);
     if (!salt) salt = await bcrypt.genSalt(AuthenticationService.BCRYPT_ROUNDS);
     const token = await context.tokenHandler.signToken(contents, salt, expiry);
 

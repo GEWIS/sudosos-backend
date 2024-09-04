@@ -30,13 +30,13 @@ export enum TermsOfServiceStatus {
 }
 
 export enum UserType {
-  MEMBER = 1,
-  ORGAN = 2,
-  VOUCHER = 3,
-  LOCAL_USER = 4,
-  LOCAL_ADMIN = 5,
-  INVOICE = 6,
-  POINT_OF_SALE = 7,
+  MEMBER = 'MEMBER',
+  ORGAN = 'ORGAN',
+  VOUCHER = 'VOUCHER',
+  LOCAL_USER = 'LOCAL_USER',
+  LOCAL_ADMIN = 'LOCAL_ADMIN',
+  INVOICE = 'INVOICE',
+  POINT_OF_SALE = 'POINT_OF_SALE',
 }
 
 /**
@@ -146,9 +146,19 @@ export default class User extends BaseEntity {
   public directAssignedRoles: AssignedRole[];
 
   public fullName(): string {
-    let name = this.firstName;
-    if (this.nickname) name += ` "${this.nickname}"`;
-    if (this.lastName) name += ` ${this.lastName}`;
+    return User.fullName(this);
+  }
+
+  /**
+   * Get the full name of the given user.
+   * Separate static method, as user objects taken from tokens
+   * do not have any class methods.
+   * @param user
+   */
+  public static fullName(user: User): string {
+    let name = user.firstName;
+    if (user.nickname) name += ` "${user.nickname}"`;
+    if (user.lastName) name += ` ${user.lastName}`;
     return name;
   }
 

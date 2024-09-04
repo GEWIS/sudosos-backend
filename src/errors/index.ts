@@ -16,3 +16,4 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 export { NotImplementedError } from './not-implemented-error';
+export { PdfError } from './pdf-error';

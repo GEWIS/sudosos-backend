@@ -35,6 +35,7 @@ import BalanceResponse from '../controller/response/balance-response';
 import { StripeRequest } from '../controller/request/stripe-request';
 import { AppDataSource } from '../database/database';
 import StripePaymentIntent from '../entity/stripe/stripe-payment-intent';
+import { asNumber } from '../helpers/validators';
 
 export const STRIPE_API_VERSION = '2024-06-20';
 
@@ -59,7 +60,7 @@ export default class StripeService {
    * @param request
    */
   public static validateStripeRequestMinimumAmount(balance: BalanceResponse, request: StripeRequest): boolean {
-    const MIN_TOPUP = process.env.MIN_TOPUP || 1000;
+    const MIN_TOPUP = asNumber(process.env.MIN_TOPUP) || 1000;
 
     // Check if top-up is enough
     if (request.amount.amount >= MIN_TOPUP) return true;
@@ -72,7 +73,7 @@ export default class StripeService {
    * @param request
    */
   public static validateStripeRequestMaximumAmount(balance: BalanceResponse, request: StripeRequest): boolean {
-    const MAX_BALANCE = process.env.MAX_BALANCE || 15000;
+    const MAX_BALANCE = asNumber(process.env.MAX_BALANCE) || 15000;
 
     // Check if top-up will not exceed max balance
     return MAX_BALANCE >= (balance.amount.amount + request.amount.amount);
@@ -150,6 +151,11 @@ export default class StripeService {
       amount: DineroTransformer.Instance.to(amount),
       currency: amount.getCurrency(),
       automatic_payment_methods: { enabled: true },
+      description: `SudoSOS deposit of ${amount.getCurrency()} ${(amount.getAmount() / 100).toFixed(2)} for ${User.fullName(user)}.`,
+      metadata: {
+        'service': process.env.NAME ?? 'sudosos-unknown',
+        'userId': user.id,
+      },
     });
 
     const stripePaymentIntent = await this.manager.getRepository(StripePaymentIntent).save({

@@ -26,6 +26,8 @@ import ADService from './service/ad-service';
 import RoleManager from './rbac/role-manager';
 import Gewis from './gewis/gewis';
 import GewisDBService from './gewis/service/gewisdb-service';
+import EventService from './service/event-service';
+import DefaultRoles from './rbac/default-roles';
 
 class CronApplication {
   logger: Logger;
@@ -38,7 +40,7 @@ class CronApplication {
 
   public async stop(): Promise<void> {
     this.tasks.forEach((task) => task.stop());
-    await this.connection.close();
+    await this.connection.destroy();
     this.logger.info('Application stopped.');
   }
 }
@@ -61,17 +63,32 @@ async function createCronTasks(): Promise<void> {
   // Setup RBAC.
   application.roleManager = await new RoleManager().initialize();
 
-  await BalanceService.updateBalances({});
+  // Synchronize SudoSOS system roles
+  await DefaultRoles.synchronize();
+
+  await new BalanceService().updateBalances({});
   const syncBalances = cron.schedule('41 1 * * *', () => {
     logger.debug('Syncing balances.');
-    BalanceService.updateBalances({}).then(() => {
+    new BalanceService().updateBalances({}).then(() => {
       logger.debug('Synced balances.');
     }).catch((error => {
       logger.error('Could not sync balances.', error);
     }));
   });
+  const syncEventShiftAnswers = cron.schedule('39 2 * * *', () => {
+    logger.debug('Syncing event shift answers.');
+    EventService.syncAllEventShiftAnswers()
+      .then(() => logger.debug('Synced event shift answers.'))
+      .catch((error) => logger.error('Could not sync event shift answers.', error));
+  });
+  const sendEventPlanningReminders = cron.schedule('39 13 * * *', () => {
+    logger.debug('Send event planning reminder emails.');
+    EventService.sendEventPlanningReminders()
+      .then(() => logger.debug('Sent event planning reminder emails.'))
+      .catch((error) => logger.error('Could not send event planning reminder emails.', error));
+  });
 
-  application.tasks = [syncBalances];
+  application.tasks = [syncBalances, syncEventShiftAnswers, sendEventPlanningReminders];
 
   // INJECT GEWIS BINDINGS
   Gewis.overwriteBindings();

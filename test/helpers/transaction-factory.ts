@@ -30,6 +30,11 @@ import {
 import { PointOfSaleWithContainersResponse } from '../../src/controller/response/point-of-sale-response';
 import PointOfSaleRevision from '../../src/entity/point-of-sale/point-of-sale-revision';
 import PointOfSaleService from '../../src/service/point-of-sale-service';
+import TransactionService from '../../src/service/transaction-service';
+import Transaction from '../../src/entity/transactions/transaction';
+import { In } from 'typeorm';
+import { AppDataSource } from '../../src/database/database';
+import { toMySQLString } from '../../src/helpers/timestamps';
 
 function wrapGet<T>(array: T[], index: number): T {
   return array[index % array.length];
@@ -126,4 +131,67 @@ export async function createValidTransactionRequest(byId: number, toId: number) 
     byId, toId, 3, pos,
   ));
   return request;
+}
+
+export async function createTransactionRequest(debtorId: number,
+  creditorId: number, transactionCount: number) {
+  const transactions: TransactionRequest[] = [];
+  await Promise.all(Array(transactionCount).fill(0, 0).map(async () => {
+    const t = await createValidTransactionRequest(
+      debtorId, creditorId,
+    );
+    return transactions.push(t as TransactionRequest);
+  }));
+  return transactions;
+}
+
+export async function requestToTransaction(
+  transactionRequests: TransactionRequest[],
+) {
+  const transactions: Array<{ tId: number; amount: number }> = [];
+  let total = 0;
+  await Promise.all(
+    transactionRequests.map(async (t) => {
+      const transactionResponse = await new TransactionService().createTransaction(t);
+      transactions.push({
+        tId: transactionResponse.id,
+        amount: transactionResponse.totalPriceInclVat.amount,
+      });
+      total += transactionResponse.totalPriceInclVat.amount;
+    }),
+  );
+  return { transactions, total };
+}
+
+export async function createTransactions(debtorId: number, creditorId: number, transactionCount: number, delta?: number) {
+  const requests: TransactionRequest[] = await createTransactionRequest(
+    debtorId, creditorId, transactionCount,
+  );
+
+  const transactions = await requestToTransaction(requests);
+  if (delta) {
+    const promises: Promise<any>[] = [];
+    const ids = transactions.transactions.map((t) => t.tId);
+    await Transaction.find({ where: { id: In(ids) }, relations: ['subTransactions', 'subTransactions.subTransactionRows'] }).then((tr) => {
+      tr.forEach((t) => {
+        let createdAt = new Date(t.createdAt.getTime() + delta);
+        let query = `UPDATE \`transaction\` SET createdAt = '${toMySQLString(createdAt)}' WHERE id = ${t.id}`;
+        promises.push(AppDataSource.query(query));
+        t.subTransactions.forEach((st) => {
+          createdAt = new Date(st.createdAt.getTime() + delta);
+          query = `UPDATE \`sub_transaction\` SET createdAt = '${toMySQLString(createdAt)}' WHERE id = ${st.id}`;
+          promises.push(AppDataSource.query(query));
+          st.subTransactionRows.forEach((sr) => {
+            createdAt = new Date(sr.createdAt.getTime() + delta);
+            query = `UPDATE \`sub_transaction_row\` SET createdAt = '${toMySQLString(createdAt)}' WHERE id = ${sr.id}`;
+            promises.push(AppDataSource.query(query));
+          });
+        });
+      });
+    });
+    await Promise.all(promises);
+  }
+
+
+  return transactions;
 }

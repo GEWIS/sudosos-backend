@@ -15,9 +15,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-
-
-import dinero, { Dinero } from 'dinero.js';
+import dinero from 'dinero.js';
 import { EntityManager, FindManyOptions, FindOptionsWhere, Raw } from 'typeorm';
 import Transfer from '../entity/transactions/transfer';
 import { PaginatedTransferResponse, TransferResponse } from '../controller/response/transfer-response';
@@ -73,7 +71,7 @@ export default class TransferService {
       description: transfer.description,
       createdAt: transfer.createdAt.toISOString(),
       updatedAt: transfer.updatedAt.toISOString(),
-      invoice: transfer.invoice ? InvoiceService.asInvoiceResponse(transfer.invoice) : null,
+      invoice: transfer.invoice ? InvoiceService.asBaseInvoiceResponse(transfer.invoice) : null,
       deposit: transfer.deposit ? StripeService.asStripeDepositResponse(transfer.deposit) : null,
       payoutRequest: transfer.payoutRequest ? PayoutRequestService.asBasePayoutRequestResponse(transfer.payoutRequest) : null,
       fine: transfer.fine ? DebtorService.asFineResponse(transfer.fine) : null,
@@ -84,16 +82,14 @@ export default class TransferService {
   }
 
   public async createTransfer(request: TransferRequest) : Promise<Transfer> {
-    const transfer = Object.assign(new Transfer(), {
+    return this.manager.getRepository(Transfer).save({
+      createdAt: request.createdAt ? new Date(request.createdAt) : undefined,
       description: request.description,
       amountInclVat: dinero(request.amount as Dinero.Options),
       from: request.fromId ? await this.manager.findOne(User, { where: { id: request.fromId } }) : undefined,
       to: request.toId ? await this.manager.findOne(User, { where: { id: request.toId } }) : undefined,
       vat: request.vatId ? await this.manager.findOne(VatGroup, { where: { id: request.vatId } }) : undefined,
     });
-
-    await this.manager.save(transfer);
-    return transfer;
   }
 
   /**
@@ -161,7 +157,7 @@ export default class TransferService {
       where: whereOptions,
       relations: {
         from: true, to: true, vat: true, writeOff: true,
-        invoice: { invoiceStatus: true, latestStatus: true },
+        invoice: { invoiceStatus: true, transfer: true },
         deposit: { stripePaymentIntent: { paymentIntentStatuses: true } },
         payoutRequest: { payoutRequestStatus: true, requestedBy: true },
         fine: { userFineGroup: { user: true } },

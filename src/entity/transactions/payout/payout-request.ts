@@ -19,36 +19,20 @@
 import {
   Column, Entity, JoinColumn, ManyToOne, OneToMany, OneToOne,
 } from 'typeorm';
-import { Dinero } from 'dinero.js';
-import BaseEntity from '../base-entity';
-import User from '../user/user';
-import Transfer from './transfer';
-import DineroTransformer from '../transformer/dinero-transformer';
+import User from '../../user/user';
 // eslint-disable-next-line import/no-cycle
 import PayoutRequestStatus from './payout-request-status';
-import PayoutRequestPdf from '../file/payout-request-pdf';
-import { hashJSON } from '../../helpers/hash';
-import PayoutRequestPdfService from '../../service/payout-request-pdf-service';
+import PayoutRequestPdf from '../../file/payout-request-pdf';
+import BasePayout from './base-payout';
+import { PdfAble } from '../../file/pdf-able';
+import PayoutRequestPdfService from '../../../service/pdf/payout-request-pdf-service';
+import { PAYOUT_REQUEST_PDF_LOCATION } from '../../../files/storage';
 
 @Entity()
-// TODO Migration
-export default class PayoutRequest extends BaseEntity {
-  @ManyToOne(() => User, { nullable: false })
-  @JoinColumn()
-  public requestedBy: User;
-
-  @OneToOne(() => Transfer, { nullable: true })
-  @JoinColumn()
-  public transfer?: Transfer;
+export default class PayoutRequest extends PdfAble(BasePayout) {
 
   @OneToMany(() => PayoutRequestStatus, (status) => status.payoutRequest, { cascade: true })
   public payoutRequestStatus: PayoutRequestStatus[];
-
-  @Column({
-    type: 'integer',
-    transformer: DineroTransformer.Instance,
-  })
-  public amount: Dinero;
 
   @ManyToOne(() => User, { nullable: true })
   @JoinColumn()
@@ -67,11 +51,5 @@ export default class PayoutRequest extends BaseEntity {
   @JoinColumn()
   public pdf?: PayoutRequestPdf;
 
-  getPdfParamHash(): string {
-    return hashJSON(PayoutRequestPdfService.getParameters(this));
-  }
-
-  createPDF(): Promise<PayoutRequestPdf> {
-    return PayoutRequestPdfService.createPdf(this.id);
-  }
+  pdfService = new PayoutRequestPdfService(PAYOUT_REQUEST_PDF_LOCATION);
 }

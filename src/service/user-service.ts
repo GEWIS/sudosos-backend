@@ -131,7 +131,7 @@ export default class UserService {
     }
 
     const builder = Bindings.Users.getBuilder();
-    builder.where(`user.type NOT IN (${UserType.POINT_OF_SALE})`);
+    builder.where(`user.type NOT IN ("${UserType.POINT_OF_SALE}")`);
 
     QueryFilter.applyFilter(builder, filterMapping, f);
     // Note this is only for MySQL
@@ -235,7 +235,7 @@ export default class UserService {
     const user = await User.findOne({ where: { id: userId, deleted: false } });
     if (!user) return undefined;
 
-    const balance = await BalanceService.getBalance(userId);
+    const balance = await new BalanceService().getBalance(userId);
     const isZero = balance.amount.amount === 0;
     if (deleted && !isZero) {
       throw new Error('Cannot delete user with non-zero balance.');

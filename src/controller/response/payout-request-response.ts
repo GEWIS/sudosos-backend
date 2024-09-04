@@ -19,7 +19,7 @@
 import BaseResponse from './base-response';
 import { BaseUserResponse } from './user-response';
 import { DineroObjectResponse } from './dinero-response';
-import { PayoutRequestState } from '../../entity/transactions/payout-request-status';
+import { PayoutRequestState } from '../../entity/transactions/payout/payout-request-status';
 import { PaginationResult } from '../../helpers/pagination';
 
 /**

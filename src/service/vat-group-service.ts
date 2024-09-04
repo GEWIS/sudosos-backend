@@ -22,9 +22,10 @@ import { PaginationParameters } from '../helpers/pagination';
 import VatGroup, { VatDeclarationPeriod } from '../entity/vat-group';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import {
+  BaseVatGroupResponse,
   PaginatedVatGroupResponse,
   VatDeclarationResponse,
-  VatDeclarationRow,
+  VatDeclarationRow, VatGroupResponse,
 } from '../controller/response/vat-group-response';
 import { UpdateVatGroupRequest, VatGroupRequest } from '../controller/request/vat-group-request';
 import { RequestWithToken } from '../middleware/token-middleware';
@@ -81,6 +82,25 @@ export function parseGetVatCalculationValuesParams(req: RequestWithToken): VatDe
 }
 
 export default class VatGroupService {
+  public static toBaseResponse(vatGroup: VatGroup): BaseVatGroupResponse {
+    return {
+      id: vatGroup.id,
+      createdAt: vatGroup.createdAt.toISOString(),
+      updatedAt: vatGroup.updatedAt.toISOString(),
+      version: vatGroup.version,
+      percentage: vatGroup.percentage,
+      hidden: vatGroup.hidden,
+    };
+  }
+
+  public static toResponse(vatGroup: VatGroup): VatGroupResponse {
+    return {
+      ...this.toBaseResponse(vatGroup),
+      name: vatGroup.name,
+      deleted: vatGroup.deleted,
+    };
+  }
+
   /**
    * Returns all VAT groups with options.
    * @param filters - The filtering parameters.

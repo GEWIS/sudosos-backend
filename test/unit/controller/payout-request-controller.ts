@@ -23,7 +23,7 @@ import { json } from 'body-parser';
 import { expect, request } from 'chai';
 import PayoutRequestController from '../../../src/controller/payout-request-controller';
 import User, { UserType } from '../../../src/entity/user/user';
-import PayoutRequest from '../../../src/entity/transactions/payout-request';
+import PayoutRequest from '../../../src/entity/transactions/payout/payout-request';
 import Database from '../../../src/database/database';
 import { seedPayoutRequests, seedUsers } from '../../seed';
 import PayoutRequestRequest from '../../../src/controller/request/payout-request-request';
@@ -36,7 +36,7 @@ import {
   PayoutRequestResponse,
 } from '../../../src/controller/response/payout-request-response';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
-import { PayoutRequestState } from '../../../src/entity/transactions/payout-request-status';
+import { PayoutRequestState } from '../../../src/entity/transactions/payout/payout-request-status';
 import { truncateAllTables } from '../../setup';
 import generateBalance, { finishTestDB } from '../../helpers/test-helpers';
 import BalanceService from '../../../src/service/balance-service';
@@ -59,7 +59,7 @@ describe('PayoutRequestController', () => {
   };
 
   async function getValidPayoutRequest(id: number): Promise<PayoutRequestRequest> {
-    const balance = await BalanceService.getBalance(id);
+    const balance = await new BalanceService().getBalance(id);
     return {
       amount: {
         amount: balance.amount.amount,
@@ -552,7 +552,7 @@ describe('PayoutRequestController', () => {
         expect(res.status).to.equal(200);
 
         await generateBalance(-100, user.id);
-        const balance = await BalanceService.getBalance(user.id);
+        const balance = await new BalanceService().getBalance(user.id);
         expect(balance.amount.amount).to.be.lessThan(amount);
 
         // Try to approve payout request

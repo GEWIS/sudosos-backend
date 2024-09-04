@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import InvoicePdfService from '../../../src/service/invoice-pdf-service';
+import InvoicePdfService from '../../../src/service/pdf/invoice-pdf-service';
 import { Client } from 'pdf-generator-client';
 import sinon, { SinonStub } from 'sinon';
 import Invoice from '../../../src/entity/invoices/invoice';
@@ -46,6 +46,7 @@ import Transfer from '../../../src/entity/transactions/transfer';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
+import { INVOICE_PDF_LOCATION } from '../../../src/files/storage';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -123,10 +124,12 @@ describe('InvoicePdfService', async (): Promise<void> => {
   let uploadInvoiceStub: SinonStub;
   let createFileStub: SinonStub;
 
+  let pdfService = new InvoicePdfService(INVOICE_PDF_LOCATION);
+
   beforeEach(function () {
-    generateInvoiceStub = sinon.stub(InvoicePdfService.pdfGenerator.client, 'generateInvoice');
-    uploadInvoiceStub = sinon.stub(InvoicePdfService.pdfGenerator.fileService, 'uploadPdf');
-    createFileStub = sinon.stub(InvoicePdfService.pdfGenerator.fileService, 'createFile');
+    generateInvoiceStub = sinon.stub(pdfService.client, 'generateInvoice');
+    uploadInvoiceStub = sinon.stub(pdfService.fileService, 'uploadPdf');
+    createFileStub = sinon.stub(pdfService.fileService, 'createFile');
   });
 
   afterEach(function () {
@@ -140,10 +143,10 @@ describe('InvoicePdfService', async (): Promise<void> => {
     it('should return true if the PDF hash matches the expected hash', async () => {
       const invoice = ctx.invoices[0];
       const pdf = new InvoicePdf();
-      pdf.hash = invoice.getPdfParamHash();
+      pdf.hash = await invoice.getPdfParamHash();
       invoice.pdf = pdf;
 
-      const result = FileService.validatePdfHash(invoice);
+      const result = await invoice.validatePdfHash();
 
       expect(result).to.be.true;
     });
@@ -153,13 +156,13 @@ describe('InvoicePdfService', async (): Promise<void> => {
       pdf.hash = 'false';
       invoice.pdf = pdf;
 
-      const result = FileService.validatePdfHash(invoice);
+      const result = await invoice.validatePdfHash();
 
       expect(result).to.be.false;
     });
     it('should return false if the invoice has no associated PDF', async () => {
       const invoice = ctx.invoices[0];
-      const result = FileService.validatePdfHash(invoice);
+      const result = await invoice.validatePdfHash();
 
       expect(result).to.be.false;
     });
@@ -173,13 +176,13 @@ describe('InvoicePdfService', async (): Promise<void> => {
         ...ctx.pdfParams,
       });
 
-      pdf.hash = invoice.getPdfParamHash();
+      pdf.hash = await invoice.getPdfParamHash();
       await InvoicePdf.save(pdf);
 
       invoice.pdf = pdf;
       await Invoice.save(invoice);
 
-      const file = await FileService.getOrCreatePDF(invoice);
+      const file = await invoice.getOrCreatePdf();
       expect(file.downloadName).to.eq(pdf.downloadName);
     });
     it('should regenerate and return a new PDF if the hash does not match', async () => {
@@ -198,8 +201,9 @@ describe('InvoicePdfService', async (): Promise<void> => {
         status: 200,
       });
       uploadInvoiceStub.resolves({});
+      invoice.pdfService = pdfService;
 
-      await FileService.getOrCreatePDF(invoice);
+      await invoice.getOrCreatePdf();
       expect(uploadInvoiceStub).to.have.been.calledOnce;
     });
     it('should always regenerate and return a new PDF if force is true, even if the hash matches', async () => {
@@ -209,14 +213,14 @@ describe('InvoicePdfService', async (): Promise<void> => {
         ...ctx.pdfParams,
       });
 
-      pdf.hash = invoice.getPdfParamHash();
+      pdf.hash = await invoice.getPdfParamHash();
       await InvoicePdf.save(pdf);
 
       invoice.pdf = pdf;
       await Invoice.save(invoice);
 
       // Hash is valid
-      expect(FileService.validatePdfHash(invoice)).to.be.true;
+      expect(await invoice.validatePdfHash()).to.be.true;
 
       generateInvoiceStub.resolves({
         data: new Blob(),
@@ -224,20 +228,16 @@ describe('InvoicePdfService', async (): Promise<void> => {
       });
       uploadInvoiceStub.resolves({});
 
-      await FileService.getOrCreatePDF(invoice, true);
+      await invoice.getOrCreatePdf(true);
 
       // Upload was still called.
       expect(uploadInvoiceStub).to.have.been.calledOnce;
-    });
-    it('should return undefined if the invoice does not exist', async () => {
-      const file = await FileService.getOrCreatePDF(undefined);
-      expect(file).to.be.undefined;
     });
   });
 
   describe('entriesToProductsPricing', () => {
     it('should correctly convert invoice entries to products and total pricing', async () => {
-      const invoice: Invoice = {} as Invoice;
+      const invoice: Invoice = new Invoice();
       const total = 500 + 3 * 1090 + 5 * 1210;
       const lowVat = 270;
       const highVat = 1050;
@@ -263,7 +263,7 @@ describe('InvoicePdfService', async (): Promise<void> => {
       } as InvoiceEntry,
       ];
 
-      const result = InvoicePdfService.entriesToProductsPricing(invoice);
+      const result = invoice.pdfService.entriesToProductsPricing(invoice);
       expect(result.pricing.inclVat).to.eq(total);
       expect(result.pricing.lowVat).to.eq(lowVat);
       expect(result.pricing.highVat).to.eq(highVat);
@@ -311,7 +311,7 @@ describe('InvoicePdfService', async (): Promise<void> => {
       expect(result.products).to.deep.equalInAnyOrder(results);
     });
     it('should throw an error for unsupported VAT percentages', async () => {
-      const invoice: Invoice = {} as Invoice;
+      const invoice: Invoice = new Invoice();
       invoice.invoiceEntries = [{
         description: 'Product unsupported VAT',
         amount: 1,
@@ -319,14 +319,14 @@ describe('InvoicePdfService', async (): Promise<void> => {
         vatPercentage: 5,
       } as InvoiceEntry];
 
-      expect(() => InvoicePdfService.entriesToProductsPricing(invoice)).to.Throw('Unsupported vat percentage 5 during pdf generation.');
+      expect(() => invoice.pdfService.entriesToProductsPricing(invoice)).to.Throw('Unsupported vat percentage 5 during pdf generation.');
     });
   });
 
   describe('getInvoiceParameters', () => {
     it('should return all required parameters for generating an invoice PDF', async () => {
       const invoice = ctx.invoices[0];
-      const params = InvoicePdfService.getParameters(invoice);
+      const params = await invoice.pdfService.getParameters(invoice);
 
       expect(params.reference.ourReference).to.eq(invoice.reference);
       expect(params.reference.yourReference).to.eq(String(invoice.id));
@@ -358,20 +358,18 @@ describe('InvoicePdfService', async (): Promise<void> => {
         createdBy: invoice.to.id,
         id: 41,
       });
-      const invoicePdf = await InvoicePdfService.createPdf(invoice.id);
+      invoice.pdfService = pdfService;
+      const invoicePdf = await invoice.createPdf();
 
       expect(invoicePdf).to.not.be.undefined;
-      expect(invoicePdf.hash).to.eq(invoice.getPdfParamHash());
-    });
-    it('should return undefined if the invoice does not exist', async () => {
-      const invoicePdf = await InvoicePdfService.createPdf(-1);
-      expect(invoicePdf).to.be.undefined;
+      expect(invoicePdf.hash).to.eq(await invoice.getPdfParamHash());
     });
     it('should throw an error if PDF generation fails', async () => {
       generateInvoiceStub.rejects(new Error('Failed to generate PDF'));
 
       const invoice = await Invoice.findOne({ where: { id: 1 }, relations: ['to', 'invoiceStatus', 'transfer', 'transfer.to', 'transfer.from', 'pdf', 'invoiceEntries'] });
-      await expect(InvoicePdfService.createPdf(invoice.id)).to.be.rejectedWith();
+      invoice.pdfService = pdfService;
+      await expect(invoice.createPdf()).to.be.rejectedWith();
     });
   });
 });

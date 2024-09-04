@@ -41,7 +41,7 @@ import UserService, {
   parseGetUsersFilters,
   UserFilterParameters,
 } from '../service/user-service';
-import { asNumber } from '../helpers/validators';
+import { asFromAndTillDate, asNumber, asReturnFileType } from '../helpers/validators';
 import { verifyCreateUserRequest } from './request/validators/user-request-spec';
 import userTokenInOrgan from '../helpers/token-helper';
 import { parseUserToResponse } from '../helpers/revision-to-response';
@@ -58,6 +58,9 @@ import KeyAuthenticator from '../entity/authenticator/key-authenticator';
 import UpdateKeyResponse from './response/update-key-response';
 import { randomBytes } from 'crypto';
 import DebtorService from '../service/debtor-service';
+import ReportService, { BuyerReportService, SalesReportService } from '../service/report-service';
+import { ReturnFileType, UserReportParametersType } from 'pdf-generator-client';
+import { reportPDFhelper } from '../helpers/express-pdf';
 
 export default class UserController extends BaseController {
   private logger: Logger = log4js.getLogger('UserController');
@@ -246,6 +249,38 @@ export default class UserController extends BaseController {
             req.token.roles, 'get', UserController.getRelation(req), 'Transaction', ['*'],
           ),
           handler: this.getUsersTransactions.bind(this),
+        },
+      },
+      '/:id(\\d+)/transactions/sales/report': {
+        GET: {
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'get', UserController.getRelation(req), 'Transaction', ['*'],
+          ),
+          handler: this.getUsersSalesReport.bind(this),
+        },
+      },
+      '/:id(\\d+)/transactions/sales/report/pdf': {
+        GET: {
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'get', UserController.getRelation(req), 'Transaction', ['*'],
+          ),
+          handler: this.getUsersSalesReportPdf.bind(this),
+        },
+      },
+      '/:id(\\d+)/transactions/purchases/report': {
+        GET: {
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'get', UserController.getRelation(req), 'Transaction', ['*'],
+          ),
+          handler: this.getUsersPurchasesReport.bind(this),
+        },
+      },
+      '/:id(\\d+)/transactions/purchases/report/pdf': {
+        GET: {
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'get', UserController.getRelation(req), 'Transaction', ['*'],
+          ),
+          handler: this.getUsersPurchaseReportPdf.bind(this),
         },
       },
       '/:id(\\d+)/transactions/report': {
@@ -1065,6 +1100,177 @@ export default class UserController extends BaseController {
   }
 
   /**
+   * GET /users/{id}/transactions/sales/report
+   * @summary Get sales report for the given user
+   * @operationId getUsersSalesReport
+   * @tags users - Operations of user controller
+   * @param {integer} id.path.required - The id of the user to get the sales report for
+   * @security JWT
+   * @param {string} fromDate.query.required - Start date for selected sales (inclusive)
+   * @param {string} tillDate.query.required - End date for selected sales (exclusive)
+   * @return {Array.<ReportResponse>} 200 - The sales report of the user
+   * @return {string} 400 - Validation error
+   * @return {string} 404 - User not found error.
+   */
+  public async getUsersSalesReport(req: RequestWithToken, res: Response): Promise<void> {
+    const { id } = req.params;
+    this.logger.trace('Get sales report for user ', id, ' by user', req.token.user);
+
+    let filters: { fromDate: Date, tillDate: Date };
+    try {
+      filters = asFromAndTillDate(req.query.fromDate, req.query.tillDate);
+    } catch (e) {
+      res.status(400).json(e.message);
+      return;
+    }
+
+    try {
+      const user = await User.findOne({ where: { id: parseInt(id, 10) } });
+      if (user == null) {
+        res.status(404).json('Unknown user ID.');
+        return;
+      }
+
+      const report = await (new SalesReportService()).getReport({ ...filters, forId: user.id });
+      res.status(200).json(ReportService.reportToResponse(report));
+    } catch (error) {
+      this.logger.error('Could not get sales report:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * GET /users/{id}/transactions/sales/report/pdf
+   * @summary Get sales report for the given user
+   * @operationId getUsersSalesReportPdf
+   * @tags users - Operations of user controller
+   * @param {integer} id.path.required - The id of the user to get the sales report for
+   * @security JWT
+   * @param {string} fromDate.query.required - Start date for selected sales (inclusive)
+   * @param {string} tillDate.query.required - End date for selected sales (exclusive)
+   * @param {string} description.query - Description of the report
+   * @param {string} fileType.query - enum:PDF,TEX - The file type of the report
+   * @return {string} 404 - User not found error.
+   * @returns {string} 200 - The requested report - application/pdf
+   * @return {string} 400 - Validation error
+   * @return {string} 500 - Internal server error
+   */
+  public async getUsersSalesReportPdf(req: RequestWithToken, res: Response): Promise<void> {
+    const { id } = req.params;
+    this.logger.trace('Get sales report pdf for user ', id, ' by user', req.token.user);
+
+    let filters: { fromDate: Date, tillDate: Date };
+    let description: string;
+    let fileType: ReturnFileType;
+    try {
+      filters = asFromAndTillDate(req.query.fromDate, req.query.tillDate);
+      description = String(req.query.description);
+      fileType = asReturnFileType(req.query.fileType);
+    } catch (e) {
+      res.status(400).json(e.message);
+      return;
+    }
+
+    try {
+      const user = await User.findOne({ where: { id: parseInt(id, 10) } });
+      if (user == null) {
+        res.status(404).json('Unknown user ID.');
+        return;
+      }
+      const service = new SalesReportService();
+      await reportPDFhelper(res)(service, filters, description, user.id, UserReportParametersType.Sales, fileType);
+    } catch (error) {
+      this.logger.error('Could not get sales report:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * GET /users/{id}/transactions/purchases/report/pdf
+   * @summary Get purchase report pdf for the given user
+   * @operationId getUsersPurchaseReportPdf
+   * @tags users - Operations of user controller
+   * @param {integer} id.path.required - The id of the user to get the purchase report for
+   * @security JWT
+   * @param {string} fromDate.query.required - Start date for selected purchases (inclusive)
+   * @param {string} tillDate.query.required - End date for selected purchases (exclusive)
+   * @param {string} fileType.query - enum:PDF,TEX - The file type of the report
+   * @return {string} 404 - User not found error.
+   * @returns {string} 200 - The requested report - application/pdf
+   * @return {string} 400 - Validation error
+   * @return {string} 500 - Internal server error
+   */
+  public async getUsersPurchaseReportPdf(req: RequestWithToken, res: Response): Promise<void> {
+    const { id } = req.params;
+    this.logger.trace('Get purchase report pdf for user ', id, ' by user', req.token.user);
+
+    let filters: { fromDate: Date, tillDate: Date };
+    let description: string;
+    let fileType: ReturnFileType;
+    try {
+      filters = asFromAndTillDate(req.query.fromDate, req.query.tillDate);
+      description = String(req.query.description);
+      fileType = asReturnFileType(req.query.fileType);
+    } catch (e) {
+      res.status(400).json(e.message);
+      return;
+    }
+
+    try {
+      const user = await User.findOne({ where: { id: parseInt(id, 10) } });
+      if (user == null) {
+        res.status(404).json('Unknown user ID.');
+        return;
+      }
+      const service = new BuyerReportService();
+      await (reportPDFhelper(res))(service, filters, description, user.id, UserReportParametersType.Purchases, fileType);
+    } catch (error) {
+      this.logger.error('Could not get sales report:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * GET /users/{id}/transactions/purchases/report
+   * @summary Get purchases report for the given user
+   * @operationId getUsersPurchasesReport
+   * @tags users - Operations of user controller
+   * @param {integer} id.path.required - The id of the user to get the purchases report for
+   * @security JWT
+   * @param {string} fromDate.query.required - Start date for selected purchases (inclusive)
+   * @param {string} tillDate.query.required - End date for selected purchases (exclusive)
+   * @return {Array.<ReportResponse>} 200 - The purchases report of the user
+   * @return {string} 400 - Validation error
+   * @return {string} 404 - User not found error.
+   */
+  public async getUsersPurchasesReport(req: RequestWithToken, res: Response): Promise<void> {
+    const { id } = req.params;
+    this.logger.trace('Get purchases report for user ', id, ' by user', req.token.user);
+
+    let filters: { fromDate: Date, tillDate: Date };
+    try {
+      filters = asFromAndTillDate(req.query.fromDate, req.query.tillDate);
+    } catch (e) {
+      res.status(400).json(e.message);
+      return;
+    }
+
+    try {
+      const user = await User.findOne({ where: { id: parseInt(id, 10) } });
+      if (user == null) {
+        res.status(404).json('Unknown user ID.');
+        return;
+      }
+
+      const report = await (new BuyerReportService()).getReport({ ...filters, forId: user.id });
+      res.status(200).json(ReportService.reportToResponse(report));
+    } catch (error) {
+      this.logger.error('Could not get sales report:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
    * GET /users/{id}/transfers
    * @summary Get transfers to or from an user.
    * @operationId getUsersTransfers
@@ -1335,6 +1541,7 @@ export default class UserController extends BaseController {
    * @param {integer} fromId.query - From-user for selected transactions
    * @param {integer} toId.query - To-user for selected transactions
    * @param {boolean} exclusiveToId.query - If all sub-transactions should be to the toId user, default true
+   * @deprecated - Use /users/{id}/transactions/sales/report or /users/{id}/transactions/purchases/report instead
    * @return {string} 404 - User not found error.
    */
   public async getUsersTransactionsReport(req: RequestWithToken, res: Response): Promise<void> {

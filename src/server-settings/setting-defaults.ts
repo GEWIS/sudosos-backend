@@ -21,6 +21,7 @@ const SettingsDefaults: ISettings = {
   highVatGroupId: -1,
   jwtExpiryDefault: 3600,
   jwtExpiryPointOfSale: 60 * 60 * 24 * 14,
+  maintenanceMode: false,
 };
 
 export default SettingsDefaults;

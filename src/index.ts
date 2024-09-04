@@ -44,7 +44,6 @@ import ProductController from './controller/product-controller';
 import ProductCategoryController from './controller/product-category-controller';
 import TransactionController from './controller/transaction-controller';
 import VoucherGroupController from './controller/voucher-group-controller';
-import BalanceService from './service/balance-service';
 import BalanceController from './controller/balance-controller';
 import RbacController from './controller/rbac-controller';
 import GewisAuthenticationController from './gewis/controller/gewis-authentication-controller';
@@ -65,10 +64,11 @@ import AuthenticationSecureController from './controller/authentication-secure-c
 import DebtorController from './controller/debtor-controller';
 import EventController from './controller/event-controller';
 import EventShiftController from './controller/event-shift-controller';
-import EventService from './service/event-service';
-import DefaultRoles from './rbac/default-roles';
 import WriteOffController from './controller/write-off-controller';
 import ServerSettingsStore from './server-settings/server-settings-store';
+import SellerPayoutController from './controller/seller-payout-controller';
+import { ISettings } from './entity/server-setting';
+import ServerSettingsController from './controller/server-settings-controller';
 
 export class Application {
   app: express.Express;
@@ -89,28 +89,9 @@ export class Application {
     this.logger.info('Stopping application instance...');
     await util.promisify(this.server.close).bind(this.server)();
     this.tasks.forEach((task) => task.stop());
-    await this.connection.close();
+    await this.connection.destroy();
     this.logger.info('Application stopped.');
   }
-}
-
-/**
- * Sets up the rbac and initializes the rbac controllers of the application.
- * @param application - The application on which to bind the middleware
- *                      and controller.
- */
-async function setupRbac(application: Application) {
-  // Synchronize SudoSOS system roles
-  await DefaultRoles.synchronize();
-
-  // Define rbac controller and bind.
-  const controller = new RbacController(
-    {
-      specification: application.specification,
-      roleManager: application.roleManager,
-    },
-  );
-  application.app.use('/v1/rbac', controller.getRouter());
 }
 
 /**
@@ -128,7 +109,7 @@ async function createTokenHandler(): Promise<TokenHandler> {
     algorithm: 'RS512',
     publicKey: jwtPublic.export({ type: 'spki', format: 'pem' }),
     privateKey: jwtPrivate.export({ type: 'pkcs8', format: 'pem' }),
-    expiry: ServerSettingsStore.getInstance().getSetting('jwtExpiryDefault'),
+    expiry: ServerSettingsStore.getInstance().getSetting('jwtExpiryDefault') as ISettings['jwtExpiryDefault'],
   });
 }
 
@@ -177,6 +158,7 @@ export default async function createApp(): Promise<Application> {
     appenders: {
       out: { type: 'stdout' },
     },
+    disableClustering: true,
     categories: { default: { appenders: ['out'], level: 'all' } },
   });
   application.logger = log4js.getLogger('Application');
@@ -228,49 +210,20 @@ export default async function createApp(): Promise<Application> {
 
   application.roleManager = await new RoleManager().initialize();
 
-  application.app.use('/v1/stripe', new StripeWebhookController(
-    {
-      specification: application.specification,
-      roleManager: application.roleManager,
-    },
-  ).getRouter());
+  const options: BaseControllerOptions = {
+    specification: application.specification,
+    roleManager: application.roleManager,
+  };
+  application.app.use('/v1/stripe', new StripeWebhookController(options).getRouter());
 
   const tokenHandler = await createTokenHandler();
   // Setup token handler and authentication controller.
   await setupAuthentication(tokenHandler, application);
 
-  // Setup RBAC.
-  await setupRbac(application);
-
-  await BalanceService.updateBalances({});
-  const syncBalances = cron.schedule('41 1 * * *', () => {
-    logger.debug('Syncing balances.');
-    BalanceService.updateBalances({}).then(() => {
-      logger.debug('Synced balances.');
-    }).catch((error => {
-      logger.error('Could not sync balances.', error);
-    }));
-  });
-  const syncEventShiftAnswers = cron.schedule('39 2 * * *', () => {
-    logger.debug('Syncing event shift answers.');
-    EventService.syncAllEventShiftAnswers()
-      .then(() => logger.debug('Synced event shift answers.'))
-      .catch((error) => logger.error('Could not sync event shift answers.', error));
-  });
-  const sendEventPlanningReminders = cron.schedule('39 13 * * *', () => {
-    logger.debug('Send event planning reminder emails.');
-    EventService.sendEventPlanningReminders()
-      .then(() => logger.debug('Sent event planning reminder emails.'))
-      .catch((error) => logger.error('Could not send event planning reminder emails.', error));
-  });
-
-  application.tasks = [syncBalances, syncEventShiftAnswers, sendEventPlanningReminders];
+  application.tasks = [];
 
   // REMOVE LATER
-  const options: BaseControllerOptions = {
-    specification: application.specification,
-    roleManager: application.roleManager,
-  };
+  application.app.use('/v1/rbac', new RbacController(options).getRouter());
   application.app.use('/v1/authentication', new AuthenticationSecureController(options, tokenHandler).getRouter());
   application.app.use('/v1/balances', new BalanceController(options).getRouter());
   application.app.use('/v1/banners', new BannerController(options).getRouter());
@@ -290,6 +243,8 @@ export default async function createApp(): Promise<Application> {
   application.app.use('/v1/invoices', new InvoiceController(options).getRouter());
   application.app.use('/v1/containers', new ContainerController(options).getRouter());
   application.app.use('/v1/writeoffs', new WriteOffController(options).getRouter());
+  application.app.use('/v1/seller-payouts', new SellerPayoutController(options).getRouter());
+  application.app.use('/v1/server-settings', new ServerSettingsController(options).getRouter());
   if (process.env.NODE_ENV === 'development') {
     application.app.use('/v1/files', new SimpleFileController(options).getRouter());
     application.app.use('/v1/test', new TestController(options).getRouter());

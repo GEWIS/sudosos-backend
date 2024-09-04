@@ -28,12 +28,14 @@ import InvoiceEntry from './invoice-entry';
 // eslint-disable-next-line import/no-cycle
 import InvoiceStatus from './invoice-status';
 import InvoicePdf from '../file/invoice-pdf';
-import { hashJSON } from '../../helpers/hash';
-import InvoicePdfService from '../../service/invoice-pdf-service';
+import SubTransactionRow from '../transactions/sub-transaction-row';
+import { INVOICE_PDF_LOCATION } from '../../files/storage';
+import { PdfAble } from '../file/pdf-able';
+import InvoicePdfService from '../../service/pdf/invoice-pdf-service';
 
 
 @Entity()
-export default class Invoice extends BaseEntity {
+export default class Invoice extends PdfAble(BaseEntity) {
 
   /**
    * The ID of the account for whom the invoice is
@@ -63,17 +65,6 @@ export default class Invoice extends BaseEntity {
     (invoiceEntry) => invoiceEntry.invoice,
     { cascade: true, eager: true })
   public invoiceEntries: InvoiceEntry[];
-
-
-  @Column({ nullable: true })
-  public latestStatusId?: number;
-
-  /**
-   * The current status of the invoice
-   */
-  @OneToOne(() => InvoiceStatus, { nullable: true, eager: false })
-  @JoinColumn({ name: 'latestStatusId' })
-  public latestStatus?: InvoiceStatus;
 
   /**
    * The status history of the invoice
@@ -147,6 +138,16 @@ export default class Invoice extends BaseEntity {
   @Column()
   public country: string;
 
+  @Column({ nullable: true })
+  public creditTransferId?: number;
+
+  /**
+   * If this invoice is deleted, this will be credit transfer.
+   */
+  @OneToOne(() => Transfer, { nullable: true })
+  @JoinColumn()
+  public creditTransfer?: Transfer;
+
   /**
    * Date of the invoice
    */
@@ -156,11 +157,12 @@ export default class Invoice extends BaseEntity {
   })
   public date: Date;
 
-  getPdfParamHash(): string {
-    return hashJSON(InvoicePdfService.getParameters(this));
-  }
+  @OneToMany(() => SubTransactionRow, (row) => row.invoice, { cascade: false })
+  public subTransactionRows: SubTransactionRow[];
 
-  createPDF(): Promise<InvoicePdf> {
-    return InvoicePdfService.createPdf(this.id);
+  pdfService = new InvoicePdfService(INVOICE_PDF_LOCATION);
+
+  async getOwner(): Promise<User> {
+    return this.to;
   }
 }

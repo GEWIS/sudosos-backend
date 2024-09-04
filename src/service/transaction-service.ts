@@ -162,7 +162,7 @@ export default class TransactionService {
     const totalCost = await this.getTotalCost(rows);
 
     // get user balance and compare
-    const userBalance = Dinero((await BalanceService.getBalance(req.from)).amount as DineroObject);
+    const userBalance = Dinero((await new BalanceService().getBalance(req.from)).amount as DineroObject);
 
     // return whether user balance is sufficient to complete the transaction
     return userBalance.greaterThanOrEqual(totalCost);
@@ -527,7 +527,7 @@ export default class TransactionService {
     if (!userIds.includes(transaction.from.id)) {
       userIds.push(transaction.from.id);
     }
-    await BalanceService.clearBalanceCache(userIds);
+    await new BalanceService().clearBalanceCache(userIds);
   }
 
   private buildGetTransactionsQuery(

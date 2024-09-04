@@ -16,65 +16,59 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  Client, FileResponse,
-  FileSettings,
+  FileResponse,
   FineReportParameters,
-  FineRouteParams,
-  IFileSettings,
-  Language,
-  Product,
+  FineRouteParams, Product,
   ProductPricing,
-  ReturnFileType,
   TotalPricing,
   VAT,
 } from 'pdf-generator-client';
-import { FineReport } from '../controller/response/debtor-response';
-import { PDF_GEN_URL, PDF_VAT_HIGH, UNUSED_NUMBER, UNUSED_PARAM } from '../helpers/pdf';
+import {
+  PDF_VAT_HIGH,
+  UNUSED_NUMBER,
+  UNUSED_PARAM,
+} from '../../helpers/pdf';
+import { UnstoredPdfService } from './pdf-service';
+import { FineReport } from '../../entity/report/fine-report';
 
 const HANDED_OUT_FINES = 'Handed out';
 const WAIVED_FINES = 'Waived';
 
-export default class ReportPdfService {
+export default class FineReportPdfService extends UnstoredPdfService<FineReport, FineRouteParams> {
+  routeConstructor = FineRouteParams;
 
-  static fileSettings: IFileSettings = {
-    createdAt: undefined,
-    name:  'Report',
-    language: Language.DUTCH,
-    fileType: ReturnFileType.PDF,
-    stationery: 'BAC',
-  };
+  generator(routeParams: FineRouteParams): Promise<FileResponse> {
+    return this.client.generateFineReport(routeParams);
+  }
 
-  static client =  new Client(PDF_GEN_URL, { fetch });
-
-
-  static fineReportToParameters(report: FineReport): FineReportParameters {
+  async getParameters(entity: FineReport): Promise<FineReportParameters> {
     const handedOut =  new Product({
       name: HANDED_OUT_FINES,
       summary: UNUSED_PARAM,
       pricing: new ProductPricing({
-        basePrice: report.handedOut.getAmount(),
+        basePrice: entity.handedOut.getAmount(),
         vatAmount: PDF_VAT_HIGH,
         // is actually unused
         vatCategory: VAT.ZERO,
-        quantity: report.count,
+        quantity: entity.count,
       }),
     });
     const fines = [handedOut];
-    if (report.waivedCount > 0) {
+    if (entity.waivedCount > 0) {
       const waived = new Product({
         name: WAIVED_FINES,
         summary: UNUSED_PARAM,
         pricing: new ProductPricing({
-          basePrice: report.waivedAmount.getAmount() * -1,
+          basePrice: entity.waivedAmount.getAmount() * -1,
           vatAmount: PDF_VAT_HIGH,
           // is actually unused
           vatCategory: VAT.ZERO,
-          quantity: report.waivedCount,
+          quantity: entity.waivedCount,
         }),
       });
       fines.push(waived);
     }
-    const inclVat = report.handedOut.getAmount() - report.waivedAmount.getAmount();
+    const inclVat = entity.handedOut.getAmount() - entity.waivedAmount.getAmount();
     const exclVat =  Math.round(inclVat  / (1 + (PDF_VAT_HIGH / 100)));
     const highVat = inclVat - exclVat;
 
@@ -86,30 +80,10 @@ export default class ReportPdfService {
     });
 
     return new FineReportParameters({
-      startDate: report.fromDate,
-      endDate: report.toDate,
+      startDate: entity.fromDate,
+      endDate: entity.toDate,
       fines,
       total,
     });
-  }
-
-  /**
-   * Generate a pdf report of the given fine report.
-   * @returns Buffer - The pdf report
-   * @param report
-   */
-  public static async fineReportToPdf(report: FineReport): Promise<Buffer> {
-    const fineRouteParams: FineRouteParams = new FineRouteParams({
-      params: this.fineReportToParameters(report),
-      settings: new FileSettings({ ...this.fileSettings, createdAt: new Date() }),
-    });
-
-    try {
-      const res: FileResponse = await this.client.generateFineReport(fineRouteParams);
-      const blob = res.data;
-      return Buffer.from(await blob.arrayBuffer());
-    } catch (res: any) {
-      throw new Error(`Fine report generation failed: ${res.message}`);
-    }
   }
 }

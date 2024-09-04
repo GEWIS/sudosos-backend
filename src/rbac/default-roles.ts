@@ -187,6 +187,9 @@ export default class DefaultRoles {
       name: 'Super admin',
       userTypes: [UserType.LOCAL_ADMIN],
       permissions: {
+        Maintenance: {
+          override: { all: star },
+        },
         Authenticator: admin,
         Balance: admin,
         Banner: admin,
@@ -197,6 +200,7 @@ export default class DefaultRoles {
           notify: { all: star },
         },
         PayoutRequest: admin,
+        SellerPayout: admin,
         Permission: admin,
         PointOfSale: admin,
         ProductCategory: admin,

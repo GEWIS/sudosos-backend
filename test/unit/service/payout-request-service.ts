@@ -19,12 +19,12 @@
 import { Connection } from 'typeorm';
 import { expect } from 'chai';
 import User from '../../../src/entity/user/user';
-import PayoutRequest from '../../../src/entity/transactions/payout-request';
+import PayoutRequest from '../../../src/entity/transactions/payout/payout-request';
 import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
 import { seedPayoutRequests, seedUsers } from '../../seed';
 import Database from '../../../src/database/database';
 import PayoutRequestService from '../../../src/service/payout-request-service';
-import { PayoutRequestState } from '../../../src/entity/transactions/payout-request-status';
+import { PayoutRequestState } from '../../../src/entity/transactions/payout/payout-request-status';
 import PayoutRequestRequest from '../../../src/controller/request/payout-request-request';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
@@ -40,7 +40,7 @@ describe('PayoutRequestService', () => {
   };
 
   async function getValidPayoutRequest(id: number): Promise<PayoutRequestRequest> {
-    const balance = await BalanceService.getBalance(id);
+    const balance = await new BalanceService().getBalance(id);
     return {
       amount: {
         amount: balance.amount.amount,

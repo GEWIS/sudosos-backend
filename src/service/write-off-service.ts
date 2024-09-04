@@ -41,6 +41,8 @@ import { asNumber } from '../helpers/validators';
 import VatGroup from '../entity/vat-group';
 import ServerSettingsStore from '../server-settings/server-settings-store';
 import { AppDataSource } from '../database/database';
+import Transfer from '../entity/transactions/transfer';
+import { ISettings } from '../entity/server-setting';
 
 export interface WriteOffFilterParameters {
   /**
@@ -115,7 +117,7 @@ export default class WriteOffService {
   }
 
   private static async getHighVATGroup(): Promise<VatGroup> {
-    const id = ServerSettingsStore.getInstance().getSetting('highVatGroupId');
+    const id = ServerSettingsStore.getInstance().getSetting('highVatGroupId') as ISettings['highVatGroupId'];
     const vatGroup = await VatGroup.findOne({ where: { id } });
     if (vatGroup) return vatGroup;
     else throw new Error('High vat group not found');
@@ -127,7 +129,7 @@ export default class WriteOffService {
    * @param user - The user to create the write-off for
    */
   public async createWriteOff(user: User): Promise<WriteOffResponse> {
-    const balance = await BalanceService.getBalance(user.id);
+    const balance = await new BalanceService().getBalance(user.id);
     if (balance.amount.amount > 0) {
       throw new Error('User has balance, cannot create write off');
     }
@@ -156,8 +158,8 @@ export default class WriteOffService {
     transfer.writeOff = writeOff;
     transfer.vat = highVatGroup;
 
-    await this.manager.save(transfer);
-    await this.manager.save(writeOff);
+    await this.manager.getRepository(Transfer).save(transfer);
+    await this.manager.getRepository(WriteOff).save(writeOff);
     return WriteOffService.asWriteOffResponse(writeOff);
   }
 

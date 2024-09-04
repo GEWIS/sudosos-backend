@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { PayoutRequestState } from '../../entity/transactions/payout-request-status';
+import { PayoutRequestState } from '../../entity/transactions/payout/payout-request-status';
 
 /**
  * @typedef {object} PayoutRequestStatusRequest

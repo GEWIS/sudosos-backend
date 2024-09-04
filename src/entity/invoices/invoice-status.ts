@@ -24,7 +24,7 @@ import Invoice from './invoice';
 import User from '../user/user';
 import BaseEntity from '../base-entity';
 
-export enum InvoiceState {
+export enum   InvoiceState {
   CREATED = 1,
   SENT = 2,
   PAID = 3,

@@ -52,8 +52,8 @@ import ProductImage from '../entity/file/product-image';
 import BannerImage from '../entity/file/banner-image';
 import StripeDeposit from '../entity/stripe/stripe-deposit';
 import StripePaymentIntentStatus from '../entity/stripe/stripe-payment-intent-status';
-import PayoutRequest from '../entity/transactions/payout-request';
-import PayoutRequestStatus from '../entity/transactions/payout-request-status';
+import PayoutRequest from '../entity/transactions/payout/payout-request';
+import PayoutRequestStatus from '../entity/transactions/payout/payout-request-status';
 import LDAPAuthenticator from '../entity/authenticator/ldap-authenticator';
 import AssignedRole from '../entity/rbac/assigned-role';
 import VatGroup from '../entity/vat-group';
@@ -86,10 +86,14 @@ import ServerSetting from '../entity/server-setting';
 import { ServerSettings1722083254200 } from '../migrations/1722083254200-server-settings';
 import { PosUsers1722084520361 } from '../migrations/1722084520361-pos-users';
 import { InvoiceRework1622118077157 } from '../migrations/1722118077157-invoice-rework';
-import InvoiceStatusSubscriber from '../subscriber/invoice-status-subscriber';
 import StripePaymentIntent from '../entity/stripe/stripe-payment-intent';
 import { StripePaymentIntents1722869409448 } from '../migrations/1722869409448-stripe-payment-intents';
 import { NestedProductCategories1722517212441 } from '../migrations/1722517212441-nested-product-categories';
+import SellerPayout from '../entity/transactions/payout/seller-payout';
+import { InvoiceAsTopups1724506999318 } from '../migrations/1724506999318-invoice-as-topups';
+import { SellerPayouts1724855153990 } from '../migrations/1724855153990-seller-payouts';
+import SellerPayoutPdf from '../entity/file/seller-payout-pdf';
+import { UserTypeEnums1725196803203 } from '../migrations/1725196803203-user-type-enums';
 
 // We need to load the dotenv to prevent the env from being undefined.
 dotenv.config();
@@ -120,6 +124,9 @@ const options: DataSourceOptions = {
     InvoiceRework1622118077157,
     StripePaymentIntents1722869409448,
     NestedProductCategories1722517212441,
+    InvoiceAsTopups1724506999318,
+    SellerPayouts1724855153990,
+    UserTypeEnums1725196803203,
   ],
   extra: {
     authPlugins: {
@@ -144,6 +151,8 @@ const options: DataSourceOptions = {
     PayoutRequest,
     PayoutRequestPdf,
     PayoutRequestStatus,
+    SellerPayout,
+    SellerPayoutPdf,
     Fine,
     FineHandoutEvent,
     UserFineGroup,
@@ -187,7 +196,6 @@ const options: DataSourceOptions = {
   subscribers: [
     TransactionSubscriber,
     TransferSubscriber,
-    InvoiceStatusSubscriber,
   ],
 };
 

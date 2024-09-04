@@ -16,23 +16,10 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { Column, Entity, ManyToOne } from 'typeorm';
-import BaseEntity from '../base-entity';
-// eslint-disable-next-line import/no-cycle
-import PayoutRequest from './payout-request';
-
-export enum PayoutRequestState {
-  CREATED = 'CREATED',
-  APPROVED = 'APPROVED',
-  DENIED = 'DENIED',
-  CANCELLED = 'CANCELLED',
-}
-
-@Entity()
-export default class PayoutRequestStatus extends BaseEntity {
-  @ManyToOne(() => PayoutRequest, (pr) => pr.payoutRequestStatus, { nullable: false })
-  public payoutRequest: PayoutRequest;
-
-  @Column()
-  public state: PayoutRequestState;
+/**
+ * @typedef {object} ServerStatusResponse
+ * @property {boolean} maintenanceMode.required - Whether the server is in maintenance mode
+ */
+export interface ServerStatusResponse {
+  maintenanceMode: boolean;
 }

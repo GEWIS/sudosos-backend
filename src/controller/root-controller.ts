@@ -18,11 +18,12 @@
 
 import { Request, Response } from 'express';
 import log4js, { Logger } from 'log4js';
-import { getConnection } from 'typeorm';
 import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { parseRequestPagination } from '../helpers/pagination';
 import BannerService from '../service/banner-service';
+import ServerSettingsStore from '../server-settings/server-settings-store';
+import { ServerStatusResponse } from './response/server-status-response';
 
 export default class RootController extends BaseController {
   /**
@@ -48,6 +49,7 @@ export default class RootController extends BaseController {
         GET: {
           policy: async () => Promise.resolve(true),
           handler: this.ping.bind(this),
+          restrictions: { availableDuringMaintenance: true },
         },
       },
       '/open/banners': {
@@ -95,18 +97,21 @@ export default class RootController extends BaseController {
 
   /**
    * GET /ping
-   * @summary Ping the backend to check whether everything is working correctly
+   * @summary Get the current status of the backend
    * @operationId ping
    * @tags root - Operations of the root controller
-   * @return {string} 200 - Success
-   * @return {string} 500 - Internal server error (database error)
+   * @return {ServerStatusResponse} 200 - Success
+   * @return {string} 500 - Internal server error
    */
   public async ping(req: Request, res: Response): Promise<void> {
     this.logger.trace('Ping by', req.ip);
 
     try {
-      await getConnection().query('SELECT NULL LIMIT 0');
-      res.status(200).json('Pong!');
+      const store = ServerSettingsStore.getInstance();
+      const maintenanceMode = await store.getSettingFromDatabase('maintenanceMode');
+      res.status(200).json({
+        maintenanceMode,
+      } as ServerStatusResponse);
     } catch (e) {
       res.status(500).json('Internal server error.');
     }

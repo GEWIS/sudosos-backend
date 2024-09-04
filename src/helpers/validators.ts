@@ -24,6 +24,7 @@ import { Dinero } from 'dinero.js';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
 import { Availability } from '../entity/event/event-shift-answer';
 import { EventType } from '../entity/event/event';
+import { ReturnFileType } from 'pdf-generator-client';
 
 /**
  * Returns whether the given object is a number
@@ -63,7 +64,7 @@ export function isDate(date: any, canBeUndefined?: boolean): boolean {
  */
 export function asNumber(input: any): number | undefined {
   if (!isNumber(input, true)) throw new TypeError(`Input '${input}' is not a number.`);
-  return (input ? Number(input) : undefined);
+  return (input !== undefined ? Number(input) : undefined);
 }
 
 /**
@@ -140,22 +141,16 @@ export function asUserType(input: any): UserType | undefined {
   if (input === undefined || input === null) return undefined;
 
   // Convert input to a number if it's a string representation of a number
-  if (typeof input === 'string' && !isNaN(Number(input))) {
-    input = Number(input);
+  if (typeof input !== 'string') {
+    input = input.toString();
   }
 
-  // Check if input is now a number and a valid enum value
-  if (typeof input === 'number' && UserType[input] !== undefined) {
-    return input;
-  }
-
-  // Check if input is a string and a valid enum key
-  const state: UserType = UserType[input as keyof typeof UserType];
-  if (state === undefined) {
+  // Check if input is a valid userType
+  if (!Object.values(UserType).includes(input)) {
     throw new TypeError(`Input '${input}' is not a valid UserType.`);
   }
 
-  return state;
+  return input;
 }
 
 /**
@@ -221,4 +216,36 @@ export function asArrayOfDates(input: any): Date[] | undefined {
   const dates = input.map((i: any[]) => asDate(i));
   if (dates.some((d: (Date | undefined)[]) => d === undefined)) throw new TypeError('Array contains invalid date');
   return dates;
+}
+
+/**
+ * Converts the inputs to a from and till date
+ * @param fromDate
+ * @param tillDate
+ * @throws Error - If tillDate is before fromDate
+ * @throws TypeError - If any of the inputs is not a valid date
+ */
+export function asFromAndTillDate(fromDate: any, tillDate: any): { fromDate: Date, tillDate: Date } {
+  const filters = {
+    fromDate: asDate(fromDate),
+    tillDate: asDate(tillDate),
+  };
+  if (filters.fromDate >= filters.tillDate) {
+    throw new Error('tillDate must be after fromDate');
+  }
+
+  return filters;
+}
+
+/**
+ * Converts the input to a ReturnFileType
+ * @param input
+ */
+export function asReturnFileType(input: any): ReturnFileType {
+  if (!input) return undefined;
+  input = input.toUpperCase();
+  if (typeof input === 'string' && Object.values(ReturnFileType).includes(input as ReturnFileType)) {
+    return input as ReturnFileType;
+  }
+  throw new TypeError(`Input '${input}' is not a valid ReturnFileType.`);
 }
