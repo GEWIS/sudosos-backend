@@ -25,6 +25,8 @@ after(async () => {
     console.error('Wasted 5s, closing connections');
   });
 
+  await import('wtfnode').then((wtfnode) => wtfnode.dump());
+
   console.error('Global after, finishing test suite.');
   if (AppDataSource.isConnected) {
     console.error('closing AppDataSource');
