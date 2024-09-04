@@ -158,6 +158,7 @@ export default async function createApp(): Promise<Application> {
     appenders: {
       out: { type: 'stdout' },
     },
+    disableClustering: true,
     categories: { default: { appenders: ['out'], level: 'all' } },
   });
   application.logger = log4js.getLogger('Application');
