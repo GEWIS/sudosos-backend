@@ -91,8 +91,8 @@ describe('TransactionSubscriber', () => {
       connection,
       adminUser,
       users,
-      usersNotInDebt: users.filter((u) => calculateBalance(u, transactions, subTransactions, transfers).amount.getAmount() >= 0 && u.type in NotifyDebtUserTypes),
-      usersInDebt: users.filter((u) => calculateBalance(u, transactions, subTransactions, transfers).amount.getAmount() < 0 && u.type in NotifyDebtUserTypes),
+      usersNotInDebt: users.filter((u) => calculateBalance(u, transactions, subTransactions, transfers).amount.getAmount() >= 0 && NotifyDebtUserTypes.includes(u.type)),
+      usersInDebt: users.filter((u) => calculateBalance(u, transactions, subTransactions, transfers).amount.getAmount() < 0 && NotifyDebtUserTypes.includes(u.type)),
       products: productRevisions,
       containers: containerRevisions,
       pointOfSales: pointOfSaleRevisions,
@@ -111,6 +111,9 @@ describe('TransactionSubscriber', () => {
 
     env = process.env.NODE_ENV;
     process.env.NODE_ENV = 'test-transactions';
+
+    // Sanity check
+    expect(ctx.usersInDebt.length).to.be.at.least(3);
   });
 
   after(async () => {

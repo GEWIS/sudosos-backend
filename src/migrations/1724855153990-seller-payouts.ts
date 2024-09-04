@@ -27,7 +27,7 @@ import assert from 'assert';
 import BalanceService from '../service/balance-service';
 import { SalesReportService } from '../service/report-service';
 import SubTransactionRow from '../entity/transactions/sub-transaction-row';
-import User from '../entity/user/user';
+import User, { UserType } from '../entity/user/user';
 import fs from 'fs';
 
 export class SellerPayouts1724855153990 implements MigrationInterface {
@@ -64,7 +64,7 @@ export class SellerPayouts1724855153990 implements MigrationInterface {
     console.error(balanceBefore._pagination.count, ids.length);
     assert(balanceBefore._pagination.count === ids.length);
 
-    const organs = await queryRunner.manager.find(User, { where: { type: 2 } });
+    const organs = await queryRunner.manager.find(User, { where: { type: UserType.ORGAN } });
     let organBalances = await new BalanceService().getBalances({ ids: organs.map((o) => o.id), allowDeleted: true }, { take: organs.length });
     fs.writeFileSync('./organBalances-before-payouts.json', JSON.stringify(organBalances, null, 2));
 

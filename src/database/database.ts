@@ -93,6 +93,7 @@ import SellerPayout from '../entity/transactions/payout/seller-payout';
 import { InvoiceAsTopups1724506999318 } from '../migrations/1724506999318-invoice-as-topups';
 import { SellerPayouts1724855153990 } from '../migrations/1724855153990-seller-payouts';
 import SellerPayoutPdf from '../entity/file/seller-payout-pdf';
+import { UserTypeEnums1725196803203 } from '../migrations/1725196803203-user-type-enums';
 
 // We need to load the dotenv to prevent the env from being undefined.
 dotenv.config();
@@ -125,6 +126,7 @@ const options: DataSourceOptions = {
     NestedProductCategories1722517212441,
     InvoiceAsTopups1724506999318,
     SellerPayouts1724855153990,
+    UserTypeEnums1725196803203,
   ],
   extra: {
     authPlugins: {

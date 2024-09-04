@@ -131,7 +131,7 @@ export default class UserService {
     }
 
     const builder = Bindings.Users.getBuilder();
-    builder.where(`user.type NOT IN (${UserType.POINT_OF_SALE})`);
+    builder.where(`user.type NOT IN ("${UserType.POINT_OF_SALE}")`);
 
     QueryFilter.applyFilter(builder, filterMapping, f);
     // Note this is only for MySQL

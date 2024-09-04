@@ -69,7 +69,7 @@ export default class TransactionSubscriber implements EntitySubscriberInterface 
     if (balanceBefore.amount.amount < 0) return;
     // User was not in debt before this new transaction
 
-    if (!(user.type in NotifyDebtUserTypes)) return;
+    if (!NotifyDebtUserTypes.includes(user.type)) return;
     // User should be notified of debt
 
     Mailer.getInstance().send(user, new UserDebtNotification({

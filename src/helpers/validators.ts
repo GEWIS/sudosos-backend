@@ -141,22 +141,16 @@ export function asUserType(input: any): UserType | undefined {
   if (input === undefined || input === null) return undefined;
 
   // Convert input to a number if it's a string representation of a number
-  if (typeof input === 'string' && !isNaN(Number(input))) {
-    input = Number(input);
+  if (typeof input !== 'string') {
+    input = input.toString();
   }
 
-  // Check if input is now a number and a valid enum value
-  if (typeof input === 'number' && UserType[input] !== undefined) {
-    return input;
-  }
-
-  // Check if input is a string and a valid enum key
-  const state: UserType = UserType[input as keyof typeof UserType];
-  if (state === undefined) {
+  // Check if input is a valid userType
+  if (!Object.values(UserType).includes(input)) {
     throw new TypeError(`Input '${input}' is not a valid UserType.`);
   }
 
-  return state;
+  return input;
 }
 
 /**

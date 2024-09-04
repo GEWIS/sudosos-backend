@@ -36,7 +36,7 @@ export default interface BaseUserRequest {
  * @property {boolean} canGoIntoDebt.required
  * @property {boolean} ofAge.required
  * @property {string} email.required
- * @property {number} type.required
+ * @property {string} type.required
  */
 export interface CreateUserRequest extends BaseUserRequest {
   type: UserType;
