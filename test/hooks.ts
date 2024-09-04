@@ -16,21 +16,9 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { AppDataSource } from '../src/database/database';
-import { getConnectionManager } from 'typeorm';
 
 after(async () => {
   console.error('Global after, finishing test suite.');
-  if (AppDataSource.isConnected) {
-    console.error('closing AppDataSource');
-    await AppDataSource.destroy();
-  }
-  const connections =  getConnectionManager().connections;
-  for (const connection of connections) {
-    if (connection.isConnected) {
-      console.error('closing', connection.name);
-      await connection.destroy();
-    }
-  }
-  process.exit();
+  if (AppDataSource.isInitialized) await AppDataSource.destroy();
 });
 

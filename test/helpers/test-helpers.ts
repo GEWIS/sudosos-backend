@@ -69,8 +69,6 @@ export async function finishTestDB(connection: DataSource) {
   // Only drop in sqlite. If really wanted otherwise, do the call directly on the connection.
   if (process.env.TYPEORM_CONNECTION === 'sqlite') {
     await connection.dropDatabase();
-    await connection.close();
-  } else {
     await connection.destroy();
   }
 }
