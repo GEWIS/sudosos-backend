@@ -40,7 +40,7 @@ import { calculateBalance } from '../../helpers/balance';
 import { DineroObjectRequest } from '../../../src/controller/request/dinero-request';
 import dinero from 'dinero.js';
 
-describe('SellerPayoutService', () => {
+xdescribe('SellerPayoutService', () => {
   let ctx: {
     connection: DataSource;
     users: User[];

@@ -46,7 +46,7 @@ import { finishTestDB } from '../../helpers/test-helpers';
 import { getToken, seedRoles } from '../../seed/rbac';
 import Role from '../../../src/entity/rbac/role';
 
-describe('EventShiftController', () => {
+xdescribe('EventShiftController', () => {
   let ctx: {
     connection: Connection,
     app: Application

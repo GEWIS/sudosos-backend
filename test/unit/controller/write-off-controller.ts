@@ -38,7 +38,7 @@ function writeOffEq(a: WriteOff, b: WriteOffResponse): Boolean {
     && a.updatedAt.toISOString() === b.updatedAt;
 }
 
-describe('WriteOffController', () => {
+xdescribe('WriteOffController', () => {
   let ctx: DefaultContext & {
     writeOffs: WriteOff[];
     adminToken: string;

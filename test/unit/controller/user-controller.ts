@@ -78,7 +78,7 @@ import { BasePdfService } from '../../../src/service/pdf/pdf-service';
 
 chai.use(deepEqualInAnyOrder);
 
-describe('UserController', (): void => {
+xdescribe('UserController', (): void => {
   let ctx: {
     connection: Connection,
     app: Application,

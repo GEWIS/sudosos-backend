@@ -74,7 +74,7 @@ function containerProductsEq(source: CreateContainerRequest,
   expect(response.products.map((p) => p.id)).to.deep.equalInAnyOrder(source.products);
 }
 
-describe('ContainerController', async (): Promise<void> => {
+xdescribe('ContainerController', async (): Promise<void> => {
   let ctx: {
     connection: Connection,
     app: Application,

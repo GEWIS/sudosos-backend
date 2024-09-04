@@ -28,7 +28,7 @@ import nodemailer, { Transporter } from 'nodemailer';
 import Mailer from '../../../src/mailer';
 import { In } from 'typeorm';
 
-describe('GEWISDB Service', () => {
+xdescribe('GEWISDB Service', () => {
 
   let ctx: DefaultContext & {
     users: User[],

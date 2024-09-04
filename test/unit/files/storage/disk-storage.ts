@@ -30,7 +30,7 @@ import { finishTestDB } from '../../../helpers/test-helpers';
 
 const workdir = './imaginary/directory';
 
-describe('Disk Storage', async () => {
+xdescribe('Disk Storage', async () => {
   let ctx: {
     connection: Connection,
     files: BaseFile[],

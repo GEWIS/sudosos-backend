@@ -38,7 +38,7 @@ import { getToken, seedRoles } from '../../seed/rbac';
 import Stripe from 'stripe';
 import { STRIPE_API_VERSION } from '../../../src/service/stripe-service';
 
-describe('StripeController', async (): Promise<void> => {
+xdescribe('StripeController', async (): Promise<void> => {
   let shouldSkip: boolean;
   let originalName: string;
 

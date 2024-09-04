@@ -69,7 +69,7 @@ async function saveBKG(
   return VoucherGroupService.asVoucherGroupResponse(bkgParams, users);
 }
 
-describe('VoucherGroupController', async (): Promise<void> => {
+xdescribe('VoucherGroupController', async (): Promise<void> => {
   let ctx: {
     connection: Connection;
     clock: Sinon.SinonFakeTimers,

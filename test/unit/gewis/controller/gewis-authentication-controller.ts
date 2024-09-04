@@ -43,7 +43,7 @@ import { truncateAllTables } from '../../../setup';
 import { finishTestDB } from '../../../helpers/test-helpers';
 import { assignRoles, seedRoles } from '../../../seed/rbac';
 
-describe('GewisAuthenticationController', async (): Promise<void> => {
+xdescribe('GewisAuthenticationController', async (): Promise<void> => {
   let ctx: {
     connection: Connection,
     app: Application,

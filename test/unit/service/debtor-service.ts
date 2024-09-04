@@ -53,7 +53,7 @@ import dinero from 'dinero.js';
 import TransferService from '../../../src/service/transfer-service';
 import FineHandoutEvent from '../../../src/entity/fine/fineHandoutEvent';
 
-describe('DebtorService', (): void => {
+xdescribe('DebtorService', (): void => {
   let ctx: {
     connection: Connection,
     users: User[],

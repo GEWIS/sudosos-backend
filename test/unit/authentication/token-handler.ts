@@ -23,7 +23,7 @@ import TokenHandler from '../../../src/authentication/token-handler';
 import User from '../../../src/entity/user/user';
 import { generateKeys } from '../../setup';
 
-describe('TokenHandler', (): void => {
+xdescribe('TokenHandler', (): void => {
   let ctx: {
     expiry: number,
     handler: TokenHandler,

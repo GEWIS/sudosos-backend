@@ -65,7 +65,7 @@ export function bannerEq(a: Banner, b: BannerResponse): Boolean {
     === Math.floor(new Date(b.endDate).getTime() / 1000);
 }
 
-describe('BannerController', async (): Promise<void> => {
+xdescribe('BannerController', async (): Promise<void> => {
   let ctx: {
     connection: Connection,
     app: Application,

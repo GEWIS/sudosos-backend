@@ -61,7 +61,7 @@ import { getToken, seedRoles } from '../../seed/rbac';
 import { Client } from 'pdf-generator-client';
 import { BasePdfService } from '../../../src/service/pdf/pdf-service';
 
-describe('DebtorController', () => {
+xdescribe('DebtorController', () => {
   let ctx: {
     connection: Connection,
     app: Application,

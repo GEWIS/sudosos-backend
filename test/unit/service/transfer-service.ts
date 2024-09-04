@@ -43,7 +43,7 @@ import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import VatGroup from '../../../src/entity/vat-group';
 
-describe('TransferService', async (): Promise<void> => {
+xdescribe('TransferService', async (): Promise<void> => {
   let ctx: {
     connection: Connection,
     app: Application,

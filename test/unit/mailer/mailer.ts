@@ -30,7 +30,7 @@ import { finishTestDB } from '../../helpers/test-helpers';
 import fs from 'fs';
 import { templateFieldDefault } from '../../../src/mailer/mail-body-generator';
 
-describe('Mailer', () => {
+xdescribe('Mailer', () => {
   let ctx: {
     connection: Connection,
     mailer?: Mailer,

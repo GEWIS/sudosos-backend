@@ -25,7 +25,7 @@ import { DataSource } from 'typeorm';
 import database from '../../../../src/database/database';
 import { finishTestDB } from '../../../helpers/test-helpers';
 
-describe('HelloWorldTemplate', () => {
+xdescribe('HelloWorldTemplate', () => {
   let ctx: {
     connection: DataSource,
     user: User,

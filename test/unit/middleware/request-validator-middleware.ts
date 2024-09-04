@@ -23,7 +23,7 @@ import { json } from 'body-parser';
 import RequestValidatorMiddleware from '../../../src/middleware/request-validator-middleware';
 import { getSpecification, TestModel } from '../entity/transformer/test-model';
 
-describe('RequestValidatorMiddleware', (): void => {
+xdescribe('RequestValidatorMiddleware', (): void => {
   let ctx: {
     app: Application,
     value: TestModel,

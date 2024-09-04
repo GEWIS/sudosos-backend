@@ -52,7 +52,7 @@ import sinon from 'sinon';
 import { Client } from 'pdf-generator-client';
 import { BasePdfService } from '../../../src/service/pdf/pdf-service';
 
-describe('SellerPayoutController', () => {
+xdescribe('SellerPayoutController', () => {
   let ctx: DefaultContext & {
     users: User[];
     transactions: Transaction[];

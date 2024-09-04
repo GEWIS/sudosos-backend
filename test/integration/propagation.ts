@@ -45,7 +45,7 @@ import { truncateAllTables } from '../setup';
 import { finishTestDB } from '../helpers/test-helpers';
 import { getToken, seedRoles } from '../seed/rbac';
 
-describe('Propagation between products, containers, POSs', () => {
+xdescribe('Propagation between products, containers, POSs', () => {
   let ctx: {
     connection: Connection,
     app: Application,

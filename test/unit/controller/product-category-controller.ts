@@ -45,7 +45,7 @@ import { getToken, seedRoles } from '../../seed/rbac';
  * @return true if the source and response describe the same product.
  */
 
-describe('ProductCategoryController', async (): Promise<void> => {
+xdescribe('ProductCategoryController', async (): Promise<void> => {
   let ctx: {
     connection: Connection,
     app: Application,

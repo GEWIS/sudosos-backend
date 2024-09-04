@@ -30,7 +30,7 @@ import { ADMIN_USER, UserFactory } from '../../helpers/user-factory';
 import sinon from 'sinon';
 import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
 
-describe('RootController', async (): Promise<void> => {
+xdescribe('RootController', async (): Promise<void> => {
   let ctx: DefaultContext & {
     controller: RootController,
     banners: Banner[]

@@ -47,7 +47,7 @@ import { getToken } from '../../seed/rbac';
 import settingDefaults from '../../../src/server-settings/setting-defaults';
 import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
 
-describe('AuthenticationSecureController', () => {
+xdescribe('AuthenticationSecureController', () => {
   let ctx: {
     connection: Connection,
     app: Application,

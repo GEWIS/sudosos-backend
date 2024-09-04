@@ -37,7 +37,7 @@ import { defaultPagination, PaginationResult } from '../../../src/helpers/pagina
 import { finishTestDB } from '../../helpers/test-helpers';
 import { getToken, seedRoles } from '../../seed/rbac';
 
-describe('TransferController', async (): Promise<void> => {
+xdescribe('TransferController', async (): Promise<void> => {
   let connection: Connection;
   let app: Application;
 

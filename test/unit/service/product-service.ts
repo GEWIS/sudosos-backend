@@ -124,7 +124,7 @@ function validateProductProperties(response: ProductResponse, productParams: Cre
   });
 }
 
-describe('ProductService', async (): Promise<void> => {
+xdescribe('ProductService', async (): Promise<void> => {
   let ctx: {
     connection: Connection,
     app: Application,

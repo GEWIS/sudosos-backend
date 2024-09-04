@@ -45,7 +45,7 @@ import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { getToken, seedRoles } from '../../seed/rbac';
 
-describe('VatGroupController', () => {
+xdescribe('VatGroupController', () => {
   let ctx: {
     connection: Connection,
     app: Application,

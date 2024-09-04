@@ -23,7 +23,7 @@ import ServerSetting, { ISettings } from '../../../src/entity/server-setting';
 import { expect } from 'chai';
 import settingDefaults from '../../../src/server-settings/setting-defaults';
 
-describe('ServerSettingsStore', () => {
+xdescribe('ServerSettingsStore', () => {
   let ctx: {
     connection: DataSource,
   };

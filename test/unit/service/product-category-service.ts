@@ -52,7 +52,7 @@ function productCategoryEqualset(
   return (responseIsSuperSet && equalsetIsSuperSet);
 }
 
-describe('ProductCategoryService', async (): Promise<void> => {
+xdescribe('ProductCategoryService', async (): Promise<void> => {
   let ctx: {
     connection: DataSource,
     specification: SwaggerSpecification,

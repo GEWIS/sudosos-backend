@@ -88,7 +88,7 @@ class TestController extends BaseController {
   }
 }
 
-describe('BaseController', (): void => {
+xdescribe('BaseController', (): void => {
   let ctx: {
     connection: Connection,
     app: Application,

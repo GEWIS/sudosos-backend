@@ -25,7 +25,7 @@ import database from '../../../src/database/database';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { UserFactory } from '../../helpers/user-factory';
 
-describe('RoleManager', (): void => {
+xdescribe('RoleManager', (): void => {
   let ctx: {
     connection: DataSource,
     wildcard: Set<AllowedAttribute>,

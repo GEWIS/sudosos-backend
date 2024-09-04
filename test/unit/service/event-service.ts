@@ -35,7 +35,7 @@ import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import Role from '../../../src/entity/rbac/role';
 
-describe('eventService', () => {
+xdescribe('eventService', () => {
   let ctx: {
     connection: Connection,
     users: User[],

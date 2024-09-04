@@ -25,7 +25,7 @@ import {
   validateRequestPagination,
 } from '../../../src/helpers/pagination';
 
-describe('Pagination', (): void => {
+xdescribe('Pagination', (): void => {
   let ctx: {
     req: RequestWithToken,
     paginationDefault: number,

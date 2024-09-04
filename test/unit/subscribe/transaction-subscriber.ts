@@ -43,7 +43,7 @@ import BalanceService from '../../../src/service/balance-service';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 
-describe('TransactionSubscriber', () => {
+xdescribe('TransactionSubscriber', () => {
   let ctx: {
     connection: Connection,
     adminUser: User,

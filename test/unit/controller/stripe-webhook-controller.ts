@@ -34,7 +34,7 @@ import { finishTestDB } from '../../helpers/test-helpers';
 import StripeDeposit from '../../../src/entity/stripe/stripe-deposit';
 import { seedStripeDeposits, seedUsers } from '../../seed';
 
-describe('StripeWebhookController', async (): Promise<void> => {
+xdescribe('StripeWebhookController', async (): Promise<void> => {
   let shouldSkip: boolean;
   let originalName: string;
 

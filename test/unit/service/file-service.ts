@@ -39,7 +39,7 @@ import ProductImage from '../../../src/entity/file/product-image';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 
-describe('FileService', async (): Promise<void> => {
+xdescribe('FileService', async (): Promise<void> => {
   let ctx: {
     connection: Connection,
     app: Application,

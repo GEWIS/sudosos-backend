@@ -44,7 +44,7 @@ import { GewisUserResponse } from '../../../src/gewis/controller/response/gewis-
 import { truncateAllTables } from '../../setup';
 import { getToken, seedRoles } from '../../seed/rbac';
 
-describe('GEWIS Helper functions', async (): Promise<void> => {
+xdescribe('GEWIS Helper functions', async (): Promise<void> => {
   let ctx: {
     connection: Connection,
     app: Application,

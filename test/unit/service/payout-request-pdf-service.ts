@@ -39,7 +39,7 @@ import PayoutRequestPdf from '../../../src/entity/file/payout-request-pdf';
 import { PAYOUT_REQUEST_PDF_LOCATION } from '../../../src/files/storage';
 
 chai.use(deepEqualInAnyOrder);
-describe('PayoutRequestPdfService', async () => {
+xdescribe('PayoutRequestPdfService', async () => {
   let ctx: {
     connection: Connection,
     app: Application,

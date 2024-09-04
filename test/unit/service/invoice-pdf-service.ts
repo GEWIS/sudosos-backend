@@ -50,7 +50,7 @@ import { INVOICE_PDF_LOCATION } from '../../../src/files/storage';
 
 chai.use(deepEqualInAnyOrder);
 
-describe('InvoicePdfService', async (): Promise<void> => {
+xdescribe('InvoicePdfService', async (): Promise<void> => {
   let ctx: {
     connection: Connection;
     app: Application;

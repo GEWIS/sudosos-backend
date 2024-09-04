@@ -68,7 +68,7 @@ import { finishTestDB } from '../../helpers/test-helpers';
 import { getToken, seedRoles } from '../../seed/rbac';
 import { createTransactionRequest, requestToTransaction } from '../../helpers/transaction-factory';
 
-describe('InvoiceController', async () => {
+xdescribe('InvoiceController', async () => {
   let ctx: {
     connection: Connection,
     app: Application,

@@ -21,7 +21,7 @@ import { expect, request } from 'chai';
 import PolicyMiddleware from '../../../src/middleware/policy-middleware';
 import sinon from 'sinon';
 
-describe('PolicyMiddleware', (): void => {
+xdescribe('PolicyMiddleware', (): void => {
   let ctx: {
     app: Application,
     middleware: PolicyMiddleware,

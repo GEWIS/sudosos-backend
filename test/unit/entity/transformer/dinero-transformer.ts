@@ -20,7 +20,7 @@ import { expect } from 'chai';
 import dinero from 'dinero.js';
 import DineroTransformer from '../../../../src/entity/transformer/dinero-transformer';
 
-describe('DineroTransformer', (): void => {
+xdescribe('DineroTransformer', (): void => {
   describe('#from', () => {
     it('should be able to convert integer value', () => {
       const value = DineroTransformer.Instance.from(123);

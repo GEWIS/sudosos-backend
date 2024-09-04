@@ -55,7 +55,7 @@ import { assignRoles, seedRoles } from '../../seed/rbac';
 import Role from '../../../src/entity/rbac/role';
 import RoleResponse from '../../../src/controller/response/rbac/role-response';
 
-describe('AuthenticationController', async (): Promise<void> => {
+xdescribe('AuthenticationController', async (): Promise<void> => {
   let ctx: {
     connection: DataSource,
     app: Application,

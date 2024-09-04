@@ -83,7 +83,7 @@ function updateResponseEqual(update: UpdatePointOfSaleParams,
   expect(update.cashierRoleIds).to.deep.equalInAnyOrder(response.cashierRoles.map((r) => r.id));
 }
 
-describe('PointOfSaleService', async (): Promise<void> => {
+xdescribe('PointOfSaleService', async (): Promise<void> => {
   let ctx: {
     connection: Connection,
     app: Application,

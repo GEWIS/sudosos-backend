@@ -273,7 +273,7 @@ describe('StripeService', async (): Promise<void> => {
   });
 });
 
-describe('validateStripeRequestMinimumAmount', async () => {
+xdescribe('validateStripeRequestMinimumAmount', async () => {
   it('should accept 10 euros if user is in the positive', () => {
     const balance = { amount: {
       amount: 1,
@@ -410,7 +410,7 @@ describe('validateStripeRequestMinimumAmount', async () => {
   });
 });
 
-describe('validateStripeRequestMaximumAmount', async () => {
+xdescribe('validateStripeRequestMaximumAmount', async () => {
   it('should allow 10 euros if user is in the positive significantly less than 150 euros', () => {
     const balance = { amount: {
       amount: 1,

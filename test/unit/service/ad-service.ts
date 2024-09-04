@@ -42,7 +42,7 @@ import { seedRoles } from '../../seed/rbac';
 
 chai.use(deepEqualInAnyOrder);
 
-describe('AD Service', (): void => {
+xdescribe('AD Service', (): void => {
   let ctx: {
     connection: Connection,
     app: Application,

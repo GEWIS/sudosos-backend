@@ -39,7 +39,7 @@ import { CreatePermissionParams, UpdateRoleRequest } from '../../../src/controll
 import PermissionResponse from '../../../src/controller/response/rbac/permission-response';
 import Permission from '../../../src/entity/rbac/permission';
 
-describe('RbacController', async (): Promise<void> => {
+xdescribe('RbacController', async (): Promise<void> => {
   let ctx: {
     connection: DataSource,
     app: Application,

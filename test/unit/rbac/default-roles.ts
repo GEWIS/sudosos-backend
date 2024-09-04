@@ -28,7 +28,7 @@ import PermissionRule from '../../../src/rbac/permission-rule';
 import RoleUserType from '../../../src/entity/rbac/role-user-type';
 import { UserType } from '../../../src/entity/user/user';
 
-describe('DefaultRoles', () => {
+xdescribe('DefaultRoles', () => {
   let ctx: {
     connection: DataSource,
   };

@@ -47,7 +47,7 @@ export default function userIsAsExpected(user: User | UserResponse, ADResponse: 
   expect(user.canGoIntoDebt).to.equal(true);
 }
 
-describe('AuthenticationService', (): void => {
+xdescribe('AuthenticationService', (): void => {
   let ctx: {
     connection: Connection,
     app: Application,

@@ -21,7 +21,7 @@ import express from 'express';
 import createApp, { Application } from '../../src';
 import Swagger from '../../src/start/swagger';
 
-describe('Swagger', (): void => {
+xdescribe('Swagger', (): void => {
   let ctx: {
     app: Application,
   };

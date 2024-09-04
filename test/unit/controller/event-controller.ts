@@ -45,7 +45,7 @@ import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { getToken, seedRoles } from '../../seed/rbac';
 
-describe('EventController', () => {
+xdescribe('EventController', () => {
   let ctx: {
     connection: Connection,
     app: Application

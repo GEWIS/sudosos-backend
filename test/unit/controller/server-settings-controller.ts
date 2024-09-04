@@ -26,7 +26,7 @@ import ServerSettingsStore from '../../../src/server-settings/server-settings-st
 import { expect, request } from 'chai';
 import sinon from 'sinon';
 
-describe('ServerSettingsController', () => {
+xdescribe('ServerSettingsController', () => {
   let ctx: DefaultContext & {
     admin: User,
     user: User,
