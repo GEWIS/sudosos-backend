@@ -17,14 +17,14 @@
  */
 import { MigrationInterface, QueryRunner, TableColumn } from 'typeorm';
 
-const UserTypeMapping: Record<string, number> = {
-  MEMBER: 1,
-  ORGAN: 2,
-  VOUCHER: 3,
-  LOCAL_USER: 4,
-  LOCAL_ADMIN: 5,
-  INVOICE: 6,
-  POINT_OF_SALE: 7,
+const UserTypeMapping: Record<string, string> = {
+  MEMBER: '1',
+  ORGAN: '2',
+  VOUCHER: '3',
+  LOCAL_USER: '4',
+  LOCAL_ADMIN: '5',
+  INVOICE: '6',
+  POINT_OF_SALE: '7',
 };
 
 export class UserTypeEnums1725196803203 implements MigrationInterface {
@@ -50,13 +50,12 @@ export class UserTypeEnums1725196803203 implements MigrationInterface {
       await queryRunner.query('ALTER TABLE role_user_type MODIFY userType varchar(64) NOT NULL');
     }
 
-    const promises: Promise<void>[] = [];
-    Object.entries(UserTypeMapping).forEach(([key, value]) => {
-      promises.push(queryRunner.query('UPDATE user SET type = ? WHERE type = ?', [key, value]));
-      promises.push(queryRunner.query('UPDATE role_user_type SET userType = ? WHERE userType = ?', [key, value]));
-    });
-
-    await Promise.all(promises);
+    for (let userTypeMappingKey in UserTypeMapping) {
+      console.warn(`Updating user type ${userTypeMappingKey} to ${UserTypeMapping[userTypeMappingKey]}`);
+      console.warn('UPDATE user SET type = ? WHERE type = ?', [userTypeMappingKey, UserTypeMapping[userTypeMappingKey]]);
+      await queryRunner.query('UPDATE user SET type = ? WHERE type = ?', [userTypeMappingKey, UserTypeMapping[userTypeMappingKey]]);
+      await queryRunner.query('UPDATE role_user_type SET userType = ? WHERE userType = ?', [userTypeMappingKey, UserTypeMapping[userTypeMappingKey]]);
+    }
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
