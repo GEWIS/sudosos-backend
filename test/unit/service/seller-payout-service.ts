@@ -20,25 +20,15 @@ import Transaction from '../../../src/entity/transactions/transaction';
 import Transfer from '../../../src/entity/transactions/transfer';
 import User, { UserType } from '../../../src/entity/user/user';
 import database from '../../../src/database/database';
-import {
-  seedContainers,
-  seedPointsOfSale,
-  seedProductCategories,
-  seedProducts,
-  seedTransactions,
-  seedTransfers,
-  seedUsers,
-  seedVatGroups,
-} from '../../seed';
 import { finishTestDB } from '../../helpers/test-helpers';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import SellerPayout from '../../../src/entity/transactions/payout/seller-payout';
-import { seedSellerPayouts } from '../../seed/seller-payout';
 import { expect } from 'chai';
 import SellerPayoutService, { CreateSellerPayoutParams } from '../../../src/service/seller-payout-service';
 import { calculateBalance } from '../../helpers/balance';
 import { DineroObjectRequest } from '../../../src/controller/request/dinero-request';
 import dinero from 'dinero.js';
+import { SellerPayoutSeeder, TransactionSeeder, TransferSeeder, UserSeeder } from '../../seed';
 
 describe('SellerPayoutService', () => {
   let ctx: {
@@ -52,17 +42,12 @@ describe('SellerPayoutService', () => {
 
   before(async () => {
     const connection = await database.initialize();
-    const users = await seedUsers();
+    const users = await new UserSeeder().seed();
 
-    const categories = await seedProductCategories();
-    const vatGroups = await seedVatGroups();
-    const { productRevisions } = await seedProducts(users, categories, vatGroups);
-    const { containerRevisions } = await seedContainers(users, productRevisions);
-    const { pointOfSaleRevisions } = await seedPointsOfSale(users, containerRevisions);
-
-    const { transactions, subTransactions } = await seedTransactions(users, pointOfSaleRevisions, new Date('2020-01-01'), new Date());
-    const transfers = await seedTransfers(users, new Date('2020-01-01'), new Date());
-    const { sellerPayouts, transfers: sellerPayoutTransfers } = await seedSellerPayouts(users, transactions, subTransactions, transfers);
+    const { transactions, subTransactions } = await new TransactionSeeder().seed(users, undefined, new Date('2020-01-01'), new Date());
+    const transfers = await new TransferSeeder().seed(users, new Date('2020-01-01'), new Date());
+    const { sellerPayouts, transfers: sellerPayoutTransfers } = await new SellerPayoutSeeder()
+      .seed(users, transactions, subTransactions, transfers);
 
     ctx = {
       connection,

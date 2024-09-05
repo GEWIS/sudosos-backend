@@ -23,19 +23,18 @@ import User from '../../../src/entity/user/user';
 import Transaction from '../../../src/entity/transactions/transaction';
 import { VatGroupRequest } from '../../../src/controller/request/vat-group-request';
 import Database from '../../../src/database/database';
-import {
-  seedContainers,
-  seedPointsOfSale,
-  seedProductCategories,
-  seedProducts,
-  seedTransactions,
-  seedUsers,
-  seedVatGroups,
-} from '../../seed';
 import VatGroupService from '../../../src/service/vat-group-service';
 import { VatDeclarationResponse } from '../../../src/controller/response/vat-group-response';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
+import {
+  ContainerSeeder,
+  PointOfSaleSeeder,
+  ProductSeeder,
+  TransactionSeeder,
+  UserSeeder,
+  VatGroupSeeder,
+} from '../../seed';
 
 describe('VatGroupService', () => {
   let ctx: {
@@ -49,13 +48,12 @@ describe('VatGroupService', () => {
   before(async () => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
-    const users = await seedUsers();
-    const vatGroups = await seedVatGroups();
-    const categories = await seedProductCategories();
-    const { productRevisions } = await seedProducts(users, categories, vatGroups, 100);
-    const { containerRevisions } = await seedContainers(users, productRevisions);
-    const { pointOfSaleRevisions } = await seedPointsOfSale(users, containerRevisions);
-    const { transactions } = await seedTransactions(users, pointOfSaleRevisions, new Date('2020-02-12'), new Date('2022-11-30'), 3);
+    const users = await new UserSeeder().seed();
+    const vatGroups = await new VatGroupSeeder().seed();
+    const { productRevisions } = await new ProductSeeder().seed(users, undefined, vatGroups, 100);
+    const { containerRevisions } = await new ContainerSeeder().seed(users, productRevisions);
+    const { pointOfSaleRevisions } = await new PointOfSaleSeeder().seed(users, containerRevisions);
+    const { transactions } = await new TransactionSeeder().seed(users, pointOfSaleRevisions, new Date('2020-02-12'), new Date('2022-11-30'), 3);
 
     const validVatCreateReq: VatGroupRequest = {
       name: 'Extreem hoog tarief',

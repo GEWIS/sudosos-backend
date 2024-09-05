@@ -24,7 +24,6 @@ import EventShift from '../../../src/entity/event/event-shift';
 import EventShiftAnswer from '../../../src/entity/event/event-shift-answer';
 import AssignedRole from '../../../src/entity/rbac/assigned-role';
 import Database from '../../../src/database/database';
-import { seedEvents, seedUsers } from '../../seed';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Swagger from '../../../src/start/swagger';
 import { json } from 'body-parser';
@@ -43,8 +42,8 @@ import { describe } from 'mocha';
 import Event, { EventType } from '../../../src/entity/event/event';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { getToken, seedRoles } from '../../seed/rbac';
 import Role from '../../../src/entity/rbac/role';
+import { EventSeeder, RbacSeeder, UserSeeder } from '../../seed';
 
 describe('EventShiftController', () => {
   let ctx: {
@@ -87,8 +86,8 @@ describe('EventShiftController', () => {
     await User.save(adminUser);
     await User.save(localUser);
 
-    const users = await seedUsers();
-    const { roleAssignments, events, eventShifts, eventShiftAnswers } = await seedEvents(users);
+    const users = await new UserSeeder().seed();
+    const { roleAssignments, events, eventShifts, eventShiftAnswers } = await new EventSeeder().seed(users);
 
     // start app
     const app = express();
@@ -96,7 +95,7 @@ describe('EventShiftController', () => {
 
     const all = { all: new Set<string>(['*']) };
     const own = { all: new Set<string>(['*']) };
-    const accessRoles = await seedRoles([{
+    const accessRoles = await new RbacSeeder().seed([{
       name: 'Admin',
       permissions: {
         Event: {
@@ -128,8 +127,8 @@ describe('EventShiftController', () => {
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
-    const adminToken = await tokenHandler.signToken(await getToken(adminUser, accessRoles), 'nonce admin');
-    const userToken = await tokenHandler.signToken(await getToken(localUser), 'nonce');
+    const adminToken = await tokenHandler.signToken(await new RbacSeeder().getToken(adminUser, accessRoles), 'nonce admin');
+    const userToken = await tokenHandler.signToken(await new RbacSeeder().getToken(localUser), 'nonce');
 
     const controller = new EventShiftController({ specification, roleManager });
     app.use(json());

@@ -23,14 +23,6 @@ import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
 import Transaction from '../../../src/entity/transactions/transaction';
 import Database from '../../../src/database/database';
-import {
-  seedContainers, seedFines,
-  seedPointsOfSale,
-  seedProductCategories,
-  seedProducts, seedTransactions, seedTransfers,
-  seedUsers,
-  seedVatGroups,
-} from '../../seed';
 import Swagger from '../../../src/start/swagger';
 import TokenHandler from '../../../src/authentication/token-handler';
 import User, { UserType } from '../../../src/entity/user/user';
@@ -47,7 +39,7 @@ import Fine from '../../../src/entity/fine/fine';
 import UserFineGroup from '../../../src/entity/fine/userFineGroup';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { getToken, seedRoles } from '../../seed/rbac';
+import { FineSeeder, RbacSeeder, TransactionSeeder, TransferSeeder, UserSeeder } from '../../seed';
 
 describe('BalanceController', (): void => {
   let ctx: {
@@ -70,20 +62,16 @@ describe('BalanceController', (): void => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
     const app = express();
-    const users = await seedUsers();
-    const categories = await seedProductCategories();
-    const vatGroups = await seedVatGroups();
-    const { productRevisions } = await seedProducts(users, categories, vatGroups);
-    const { containerRevisions } = await seedContainers(users, productRevisions);
-    const { pointOfSaleRevisions } = await seedPointsOfSale(users, containerRevisions);
-    const { transactions } = await seedTransactions(users, pointOfSaleRevisions, new Date('2020-02-12'), new Date('2022-11-30'));
+
+    const users = await new UserSeeder().seed();
+    const { transactions } = await new TransactionSeeder().seed(users, undefined, new Date('2020-02-12'), new Date('2022-11-30'));
     const subTransactions: SubTransaction[] = Array.prototype.concat(...transactions
       .map((t) => t.subTransactions));
-    const transfers = await seedTransfers(users);
+    const transfers = await new TransferSeeder().seed(users);
 
     const all = { all: new Set<string>(['*']) };
     const own = { own: new Set<string>(['*']) };
-    const roles = await seedRoles([{
+    const roles = await new RbacSeeder().seed([{
       name: 'Admin',
       permissions: {
         Balance: {
@@ -108,10 +96,10 @@ describe('BalanceController', (): void => {
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
-    const userToken = await tokenHandler.signToken(await getToken(users[0], roles), '33');
-    const adminToken = await tokenHandler.signToken(await getToken(users[6], roles), '33');
+    const userToken = await tokenHandler.signToken(await new RbacSeeder().getToken(users[0], roles), '33');
+    const adminToken = await tokenHandler.signToken(await new RbacSeeder().getToken(users[6], roles), '33');
 
-    const { fines, fineTransfers, userFineGroups, users: usersWithFines } = await seedFines(users, transactions, transfers, true);
+    const { fines, fineTransfers, userFineGroups, users: usersWithFines } = await new FineSeeder().seed(users, transactions, transfers, true);
 
     const specification = await Swagger.initialize(app);
     const controller = new BalanceController({

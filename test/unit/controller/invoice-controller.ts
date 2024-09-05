@@ -24,15 +24,6 @@ import { expect, request } from 'chai';
 import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import InvoiceController from '../../../src/controller/invoice-controller';
 import Database, { AppDataSource } from '../../../src/database/database';
-import {
-  seedContainers,
-  seedInvoices,
-  seedPointsOfSale,
-  seedProductCategories,
-  seedProducts,
-  seedTransactions, seedUsers,
-  seedVatGroups,
-} from '../../seed';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Swagger from '../../../src/start/swagger';
 import RoleManager from '../../../src/rbac/role-manager';
@@ -65,8 +56,8 @@ import InvoicePdf from '../../../src/entity/file/invoice-pdf';
 import sinon from 'sinon';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { getToken, seedRoles } from '../../seed/rbac';
 import { createTransactionRequest, requestToTransaction } from '../../helpers/transaction-factory';
+import { InvoiceSeeder, RbacSeeder, TransactionSeeder, UserSeeder } from '../../seed';
 
 describe('InvoiceController', async () => {
   let ctx: {
@@ -87,7 +78,7 @@ describe('InvoiceController', async () => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
-    await seedUsers();
+    await new UserSeeder().seed();
 
     // create dummy users
     const adminUser = {
@@ -123,22 +114,15 @@ describe('InvoiceController', async () => {
     await User.save(invoiceUser);
     await User.save(invoiceUser2);
 
-    const categories = await seedProductCategories();
-    const vatGroups = await seedVatGroups();
-    const { productRevisions } = await seedProducts([adminUser, localUser], categories, vatGroups);
-    const { containerRevisions } = await seedContainers([adminUser, localUser], productRevisions);
-    const { pointOfSaleRevisions } = await seedPointsOfSale(
-      [adminUser, localUser], containerRevisions,
-    );
-    const { transactions } = await seedTransactions([adminUser, localUser, invoiceUser, invoiceUser2], pointOfSaleRevisions);
-    await seedInvoices([invoiceUser, invoiceUser2], transactions);
+    const { transactions } = await new TransactionSeeder().seed([adminUser, localUser, invoiceUser, invoiceUser2]);
+    await new InvoiceSeeder().seed([invoiceUser, invoiceUser2], transactions);
 
     const app = express();
     const specification = await Swagger.initialize(app);
 
     const all = { all: new Set<string>(['*']) };
     const own = { own: new Set<string>(['*']) };
-    const roles = await seedRoles([{
+    const roles = await new RbacSeeder().seed([{
       name: 'Admin',
       permissions: {
         Invoice: {
@@ -166,9 +150,9 @@ describe('InvoiceController', async () => {
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
 
-    const adminToken = await tokenHandler.signToken(await getToken(adminUser, roles), 'nonce admin');
-    const token = await tokenHandler.signToken(await getToken(localUser, roles), 'nonce');
-    const invoiceToken = await tokenHandler.signToken(await getToken(invoiceUser, roles), 'nonce');
+    const adminToken = await tokenHandler.signToken(await new RbacSeeder().getToken(adminUser, roles), 'nonce admin');
+    const token = await tokenHandler.signToken(await new RbacSeeder().getToken(localUser, roles), 'nonce');
+    const invoiceToken = await tokenHandler.signToken(await new RbacSeeder().getToken(invoiceUser, roles), 'nonce');
 
     const controller = new InvoiceController({ specification, roleManager });
     app.use(json());

@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { Brackets, EntityManager, In, IsNull, SelectQueryBuilder } from 'typeorm';
+import { Brackets, In, IsNull, SelectQueryBuilder } from 'typeorm';
 import Dinero from 'dinero.js';
 import dinero, { DineroObject } from 'dinero.js';
 import { RequestWithToken } from '../middleware/token-middleware';
@@ -72,7 +72,7 @@ import {
   reduceMapToVatEntries,
 } from '../helpers/transaction-mapper';
 import ProductCategoryService from './product-category-service';
-import { AppDataSource } from '../database/database';
+import WithManager from '../database/with-manager';
 
 export interface TransactionFilterParameters {
   transactionId?: number | number[],
@@ -119,14 +119,7 @@ export function parseGetTransactionsFilters(req: RequestWithToken): TransactionF
   return filters;
 }
 
-export default class TransactionService {
-
-  private manager: EntityManager;
-
-  constructor(manager?: EntityManager) {
-    this.manager = manager ? manager : AppDataSource.manager;
-  }
-
+export default class TransactionService extends WithManager {
   /**
    * Gets total cost of a transaction with values stored in the database
    * @returns {DineroObject.model} - the total cost of a transaction

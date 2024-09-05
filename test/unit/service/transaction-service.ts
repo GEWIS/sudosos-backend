@@ -26,15 +26,6 @@ import dinero from 'dinero.js';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
 import Transaction from '../../../src/entity/transactions/transaction';
 import Database from '../../../src/database/database';
-import {
-  seedContainers,
-  seedPointsOfSale,
-  seedProductCategories,
-  seedProducts,
-  seedTransactions,
-  seedUsers,
-  seedVatGroups,
-} from '../../seed';
 import TransactionService, { TransactionFilterParameters } from '../../../src/service/transaction-service';
 import { verifyBaseTransactionEntity } from '../validators';
 import Swagger from '../../../src/start/swagger';
@@ -55,6 +46,7 @@ import { createInvoiceWithTransfers } from './invoice-service';
 import { truncateAllTables } from '../../setup';
 import ProductRevision from '../../../src/entity/product/product-revision';
 import { calculateBalance } from '../../helpers/balance';
+import { ContainerSeeder, PointOfSaleSeeder, ProductSeeder, TransactionSeeder, UserSeeder } from '../../seed';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -80,13 +72,11 @@ describe('TransactionService', (): void => {
     await truncateAllTables(connection);
 
     const app = express();
-    const users = await seedUsers();
-    const vatGropus = await seedVatGroups();
-    const categories = await seedProductCategories();
-    const { productRevisions } = await seedProducts(users, categories, vatGropus);
-    const { containerRevisions } = await seedContainers(users, productRevisions);
-    const { pointOfSaleRevisions } = await seedPointsOfSale(users, containerRevisions);
-    const { transactions } = await seedTransactions(users, pointOfSaleRevisions);
+    const users = await new UserSeeder().seed();
+    const { productRevisions } = await new ProductSeeder().seed(users);
+    const { containerRevisions } = await new ContainerSeeder().seed(users, productRevisions);
+    const { pointOfSaleRevisions } = await new PointOfSaleSeeder().seed(users, containerRevisions);
+    const { transactions } = await new TransactionSeeder().seed(users, pointOfSaleRevisions);
 
     await generateBalance(1000, 7);
 

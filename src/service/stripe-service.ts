@@ -33,24 +33,22 @@ import { EntityManager, IsNull } from 'typeorm';
 import { parseUserToBaseResponse } from '../helpers/revision-to-response';
 import BalanceResponse from '../controller/response/balance-response';
 import { StripeRequest } from '../controller/request/stripe-request';
-import { AppDataSource } from '../database/database';
 import StripePaymentIntent from '../entity/stripe/stripe-payment-intent';
 import { asNumber } from '../helpers/validators';
+import WithManager from '../database/with-manager';
 
 export const STRIPE_API_VERSION = '2024-06-20';
 
-export default class StripeService {
+export default class StripeService extends WithManager {
   private stripe: Stripe;
 
   private logger: Logger;
 
-  private manager: EntityManager;
-
   constructor(manager?: EntityManager) {
+    super(manager);
     this.stripe = new Stripe(process.env.STRIPE_PRIVATE_KEY, {
       apiVersion: STRIPE_API_VERSION,
     });
-    this.manager = manager ? manager : AppDataSource.manager;
     this.logger = getLogger('StripeController');
   }
 

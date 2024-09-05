@@ -28,20 +28,18 @@ import Transfer from '../../../src/entity/transactions/transfer';
 import User from '../../../src/entity/user/user';
 import TransferService from '../../../src/service/transfer-service';
 import Swagger from '../../../src/start/swagger';
-import {
-  seedContainers, seedFines,
-  seedInvoices, seedPayoutRequests, seedPointsOfSale,
-  seedProductCategories,
-  seedProducts, seedStripeDeposits,
-  seedTransactions,
-  seedTransfers,
-  seedUsers,
-  seedVatGroups,
-} from '../../seed';
 import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import VatGroup from '../../../src/entity/vat-group';
+import {
+  ContainerSeeder, DepositSeeder, FineSeeder, InvoiceSeeder, PayoutRequestSeeder,
+  PointOfSaleSeeder,
+  ProductSeeder,
+  TransactionSeeder, TransferSeeder,
+  UserSeeder,
+  VatGroupSeeder,
+} from '../../seed';
 
 describe('TransferService', async (): Promise<void> => {
   let ctx: {
@@ -59,21 +57,20 @@ describe('TransferService', async (): Promise<void> => {
     const begin = new Date('1950-02-12T01:57:45.271Z');
     const end = new Date('2001-02-12T01:57:45.271Z');
 
-    const users = await seedUsers();
-    const vatGroups = await seedVatGroups();
-    const categories = await seedProductCategories();
-    const { productRevisions } = await seedProducts(users, categories, vatGroups);
-    const { containerRevisions } = await seedContainers(users, productRevisions);
-    const { pointOfSaleRevisions } = await seedPointsOfSale(users, containerRevisions);
-    const transfers = await seedTransfers(users, begin, end);
-    const { transactions } = await seedTransactions(users, pointOfSaleRevisions, begin, end);
-    const { invoiceTransfers } = await seedInvoices(users, transactions);
-    const { payoutRequestTransfers } = await seedPayoutRequests(users);
-    const { stripeDepositTransfers } = await seedStripeDeposits(users);
+    const users = await new UserSeeder().seed();
+    const vatGroups = await new VatGroupSeeder().seed();
+    const { productRevisions } = await new ProductSeeder().seed(users, undefined, vatGroups);
+    const { containerRevisions } = await new ContainerSeeder().seed(users, productRevisions);
+    const { pointOfSaleRevisions } = await new PointOfSaleSeeder().seed(users, containerRevisions);
+    const transfers = await new TransferSeeder().seed(users, begin, end);
+    const { transactions } = await new TransactionSeeder().seed(users, pointOfSaleRevisions, begin, end);
+    const { invoiceTransfers } = await new InvoiceSeeder().seed(users, transactions);
+    const { payoutRequestTransfers } = await new PayoutRequestSeeder().seed(users);
+    const { stripeDepositTransfers } = await new DepositSeeder().seed(users);
 
     const transfers2 = transfers.concat(invoiceTransfers).concat(payoutRequestTransfers).concat(stripeDepositTransfers);
 
-    const { users: users2, fineTransfers } = await seedFines(users, transactions, transfers, true);
+    const { users: users2, fineTransfers } = await new FineSeeder().seed(users, transactions, transfers, true);
 
     // start app
     const app = express();

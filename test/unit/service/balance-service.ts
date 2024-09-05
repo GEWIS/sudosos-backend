@@ -16,32 +16,18 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-
-import express, { Application } from 'express';
 import { expect } from 'chai';
 import { Connection, DeepPartial } from 'typeorm';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import Transaction from '../../../src/entity/transactions/transaction';
 import Transfer from '../../../src/entity/transactions/transfer';
 import Database from '../../../src/database/database';
-import {
-  seedContainers, seedFines,
-  seedPointsOfSale,
-  seedProductCategories,
-  seedProducts,
-  seedTransactions,
-  seedTransfers,
-  seedUsers,
-  seedVatGroups,
-} from '../../seed';
 import Swagger from '../../../src/start/swagger';
 import BalanceService, { BalanceOrderColumn } from '../../../src/service/balance-service';
 import User, { UserType } from '../../../src/entity/user/user';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
 import Balance from '../../../src/entity/transactions/balance';
 import { UserFactory } from '../../helpers/user-factory';
-import ProductRevision from '../../../src/entity/product/product-revision';
-import ContainerRevision from '../../../src/entity/container/container-revision';
 import SubTransactionRow from '../../../src/entity/transactions/sub-transaction-row';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
@@ -53,14 +39,12 @@ import Fine from '../../../src/entity/fine/fine';
 import BalanceResponse from '../../../src/controller/response/balance-response';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
+import { FineSeeder, PointOfSaleSeeder, TransactionSeeder, TransferSeeder, UserSeeder } from '../../seed';
 
 describe('BalanceService', (): void => {
   let ctx: {
     connection: Connection,
-    app: Application,
     users: User[],
-    productRevisions: ProductRevision[],
-    containerRevisions: ContainerRevision[],
     pointOfSaleRevisions: PointOfSaleRevision[],
     transactions: Transaction[],
     subTransactions: SubTransaction[],
@@ -73,25 +57,18 @@ describe('BalanceService', (): void => {
     this.timeout(50000);
     const connection = await Database.initialize();
     await truncateAllTables(connection);
-    const app = express();
-    const seededUsers = await seedUsers();
-    const categories = await seedProductCategories();
-    const vatGroups = await seedVatGroups();
-    const { productRevisions } = await seedProducts(seededUsers, categories, vatGroups);
-    const { containerRevisions } = await seedContainers(seededUsers, productRevisions);
-    const { pointOfSaleRevisions } = await seedPointsOfSale(seededUsers, containerRevisions);
-    const { transactions } = await seedTransactions(seededUsers, pointOfSaleRevisions, new Date('2020-02-12'), new Date('2021-11-30'), 10);
-    const transfers = await seedTransfers(seededUsers, new Date('2020-02-12'), new Date('2021-11-30'));
-    const { fines, fineTransfers, users } = await seedFines(seededUsers, transactions, transfers, true);
+
+    const seededUsers = await new UserSeeder().seed();
+    const { pointOfSaleRevisions } = await new PointOfSaleSeeder().seed(seededUsers);
+    const { transactions } = await new TransactionSeeder().seed(seededUsers, pointOfSaleRevisions, new Date('2020-02-12'), new Date('2021-11-30'), 10);
+    const transfers = await new TransferSeeder().seed(seededUsers, new Date('2020-02-12'), new Date('2021-11-30'));
+    const { fines, fineTransfers, users } = await new FineSeeder().seed(seededUsers, transactions, transfers, true);
     const subTransactions: SubTransaction[] = Array.prototype.concat(...transactions
       .map((t) => t.subTransactions));
 
     ctx = {
       connection,
-      app,
       users: [...users.filter((u) => !u.deleted)],
-      productRevisions,
-      containerRevisions,
       pointOfSaleRevisions,
       transactions,
       subTransactions,

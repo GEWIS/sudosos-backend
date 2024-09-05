@@ -21,7 +21,6 @@ import { expect } from 'chai';
 import Stripe from 'stripe';
 import User from '../../../src/entity/user/user';
 import Database, { AppDataSource } from '../../../src/database/database';
-import { seedStripeDeposits, seedUsers } from '../../seed';
 import StripeDeposit from '../../../src/entity/stripe/stripe-deposit';
 import StripeService, { STRIPE_API_VERSION } from '../../../src/service/stripe-service';
 import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
@@ -30,6 +29,7 @@ import BalanceResponse from '../../../src/controller/response/balance-response';
 import { StripeRequest } from '../../../src/controller/request/stripe-request';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
+import { DepositSeeder, UserSeeder } from '../../seed';
 
 describe('StripeService', async (): Promise<void> => {
   let shouldSkip: boolean;
@@ -51,8 +51,8 @@ describe('StripeService', async (): Promise<void> => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
-    const users = await seedUsers();
-    const { stripeDeposits } = await seedStripeDeposits(users);
+    const users = await new UserSeeder().seed();
+    const { stripeDeposits } = await new DepositSeeder().seed(users);
 
     const stripeService = new StripeService();
     const dineroTransformer = DineroTransformer.Instance;

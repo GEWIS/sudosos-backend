@@ -18,20 +18,6 @@
 
 import { Connection } from 'typeorm';
 import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
-import ProductRevision from '../../../src/entity/product/product-revision';
-import ContainerRevision from '../../../src/entity/container/container-revision';
-import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
-import {
-  seedContainers,
-  seedFines,
-  seedPointsOfSale,
-  seedProductCategories,
-  seedProducts,
-  seedTransactions,
-  seedTransfers,
-  seedUsers,
-  seedVatGroups,
-} from '../../seed';
 import Database from '../../../src/database/database';
 import Transaction from '../../../src/entity/transactions/transaction';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
@@ -52,14 +38,12 @@ import { finishTestDB } from '../../helpers/test-helpers';
 import dinero from 'dinero.js';
 import TransferService from '../../../src/service/transfer-service';
 import FineHandoutEvent from '../../../src/entity/fine/fineHandoutEvent';
+import { FineSeeder, TransactionSeeder, TransferSeeder, UserSeeder } from '../../seed';
 
 describe('DebtorService', (): void => {
   let ctx: {
     connection: Connection,
     users: User[],
-    productRevisions: ProductRevision[],
-    containerRevisions: ContainerRevision[],
-    pointOfSaleRevisions: PointOfSaleRevision[],
     transactions: Transaction[],
     subTransactions: SubTransaction[],
     transfers: Transfer[],
@@ -76,24 +60,16 @@ describe('DebtorService', (): void => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
-    const users = await seedUsers();
-    const categories = await seedProductCategories();
-    const vatGroups = await seedVatGroups();
-    const { productRevisions } = await seedProducts(users, categories, vatGroups);
-    const { containerRevisions } = await seedContainers(users, productRevisions);
-    const { pointOfSaleRevisions } = await seedPointsOfSale(users, containerRevisions);
-    const { transactions } = await seedTransactions(users, pointOfSaleRevisions, new Date('2020-02-12'), new Date('2021-11-30'), 10);
-    const transfers = await seedTransfers(users, new Date('2020-02-12'), new Date('2021-11-30'));
+    const users = await new UserSeeder().seed();
+    const { transactions } = await new TransactionSeeder().seed(users, undefined, new Date('2020-02-12'), new Date('2021-11-30'), 10);
+    const transfers = await new TransferSeeder().seed(users, new Date('2020-02-12'), new Date('2021-11-30'));
     const subTransactions: SubTransaction[] = Array.prototype.concat(...transactions
       .map((t) => t.subTransactions));
-    const { fines, fineTransfers, userFineGroups, users: usersWithFines } = await seedFines(users, transactions, transfers, true);
+    const { fines, fineTransfers, userFineGroups, users: usersWithFines } = await new FineSeeder().seed(users, transactions, transfers, true);
 
     ctx = {
       connection,
       users: usersWithFines,
-      productRevisions,
-      containerRevisions,
-      pointOfSaleRevisions,
       transactions,
       subTransactions,
       transfers,

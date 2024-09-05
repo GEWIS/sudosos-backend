@@ -40,7 +40,7 @@ import MemberAuthenticator from '../../../src/entity/authenticator/member-authen
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import dinero from 'dinero.js';
-import { getToken, seedRoles } from '../../seed/rbac';
+import { RbacSeeder } from '../../seed';
 
 describe('TransactionController', (): void => {
   let ctx: {
@@ -133,7 +133,7 @@ describe('TransactionController', (): void => {
     const own = { own: new Set<string>(['*']), organ: new Set<string>(['*']) };
     const organRole = { organ: new Set<string>(['*']) };
 
-    const roles = await seedRoles([{
+    const roles = await new RbacSeeder().seed([{
       name: 'Admin',
       permissions: {
         Transaction: {
@@ -173,9 +173,9 @@ describe('TransactionController', (): void => {
     }]);
     const roleManager = await new RoleManager().initialize();
 
-    ctx.userToken = await ctx.tokenHandler.signToken(await getToken(ctx.users[0], roles), '39');
-    ctx.adminToken = await ctx.tokenHandler.signToken(await getToken(ctx.users[6], roles), '39');
-    ctx.organMemberToken = await ctx.tokenHandler.signToken(await getToken(ctx.users[1], roles, [ctx.users[0]]), '1');
+    ctx.userToken = await ctx.tokenHandler.signToken(await new RbacSeeder().getToken(ctx.users[0], roles), '39');
+    ctx.adminToken = await ctx.tokenHandler.signToken(await new RbacSeeder().getToken(ctx.users[6], roles), '39');
+    ctx.organMemberToken = await ctx.tokenHandler.signToken(await new RbacSeeder().getToken(ctx.users[1], roles, [ctx.users[0]]), '1');
 
     ctx.specification = await Swagger.initialize(ctx.app);
     ctx.swaggerspec = await Swagger.importSpecification();

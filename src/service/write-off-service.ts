@@ -25,7 +25,6 @@ import {
 } from '../controller/response/write-off-response';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import {
-  EntityManager,
   FindManyOptions,
   FindOptionsRelations,
   FindOptionsWhere,
@@ -40,9 +39,9 @@ import { RequestWithToken } from '../middleware/token-middleware';
 import { asNumber } from '../helpers/validators';
 import VatGroup from '../entity/vat-group';
 import ServerSettingsStore from '../server-settings/server-settings-store';
-import { AppDataSource } from '../database/database';
 import Transfer from '../entity/transactions/transfer';
 import { ISettings } from '../entity/server-setting';
+import WithManager from '../database/with-manager';
 
 export interface WriteOffFilterParameters {
   /**
@@ -61,14 +60,7 @@ export function parseWriteOffFilterParameters(req: RequestWithToken): WriteOffFi
     toId: asNumber(req.query.toId),
   };
 }
-export default class WriteOffService {
-
-  private manager: EntityManager;
-
-  constructor(manager?: EntityManager) {
-    this.manager = manager ? manager : AppDataSource.manager;
-  }
-
+export default class WriteOffService extends WithManager {
   /**
    * Parses a write-off object to a BaseWriteOffResponse
    * @param writeOff

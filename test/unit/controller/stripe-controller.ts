@@ -24,7 +24,6 @@ import StripeController from '../../../src/controller/stripe-controller';
 import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import StripeDeposit from '../../../src/entity/stripe/stripe-deposit';
 import Database from '../../../src/database/database';
-import { seedStripeDeposits } from '../../seed';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Swagger from '../../../src/start/swagger';
 import RoleManager from '../../../src/rbac/role-manager';
@@ -34,9 +33,9 @@ import DineroTransformer from '../../../src/entity/transformer/dinero-transforme
 import { StripePaymentIntentResponse } from '../../../src/controller/response/stripe-response';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { getToken, seedRoles } from '../../seed/rbac';
 import Stripe from 'stripe';
 import { STRIPE_API_VERSION } from '../../../src/service/stripe-service';
+import { DepositSeeder, RbacSeeder } from '../../seed';
 
 describe('StripeController', async (): Promise<void> => {
   let shouldSkip: boolean;
@@ -91,7 +90,7 @@ describe('StripeController', async (): Promise<void> => {
       acceptedToS: TermsOfServiceStatus.ACCEPTED,
     });
 
-    const { stripeDeposits } = await seedStripeDeposits([localUser, adminUser]);
+    const { stripeDeposits } = await new DepositSeeder().seed([localUser, adminUser]);
 
     // start app
     const app = express();
@@ -101,7 +100,7 @@ describe('StripeController', async (): Promise<void> => {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const own = { own: new Set<string>(['*']), public: new Set<string>(['*']) };
 
-    const roles = await seedRoles([{
+    const roles = await new RbacSeeder().seed([{
       name: 'Admin',
       permissions: {
         StripeDeposit: {
@@ -124,8 +123,8 @@ describe('StripeController', async (): Promise<void> => {
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
-    const adminToken = await tokenHandler.signToken(await getToken(adminUser, roles), 'nonce admin');
-    const userToken = await tokenHandler.signToken(await getToken(localUser, roles), 'nonce');
+    const adminToken = await tokenHandler.signToken(await new RbacSeeder().getToken(adminUser, roles), 'nonce admin');
+    const userToken = await tokenHandler.signToken(await new RbacSeeder().getToken(localUser, roles), 'nonce');
 
     const controller = new StripeController({ specification, roleManager });
     app.use(json());

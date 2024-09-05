@@ -31,21 +31,12 @@ import TokenMiddleware from '../../../src/middleware/token-middleware';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
-import {
-  seedContainers,
-  seedMemberAuthenticators,
-  seedPointsOfSale,
-  seedProductCategories,
-  seedProducts,
-  seedUsers,
-  seedVatGroups,
-} from '../../seed';
 import MemberAuthenticator from '../../../src/entity/authenticator/member-authenticator';
 import AuthenticationResponse from '../../../src/controller/response/authentication-response';
 import DefaultRoles from '../../../src/rbac/default-roles';
-import { getToken } from '../../seed/rbac';
 import settingDefaults from '../../../src/server-settings/setting-defaults';
 import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
+import { PointOfSaleSeeder, RbacSeeder, UserSeeder } from '../../seed';
 
 describe('AuthenticationSecureController', () => {
   let ctx: {
@@ -71,17 +62,14 @@ describe('AuthenticationSecureController', () => {
 
     await ServerSettingsStore.getInstance().initialize();
 
-    const users = await seedUsers();
-    const memberAuthenticators = await seedMemberAuthenticators(
+    const userSeeder = new UserSeeder();
+    const users = await userSeeder.seed();
+    const memberAuthenticators = await userSeeder.seedMemberAuthenticators(
       users.filter((u) => u.type !== UserType.ORGAN),
       users.filter((u) => u.type === UserType.ORGAN),
     );
 
-    const vatGroups = await seedVatGroups();
-    const categories = await seedProductCategories();
-    const { productRevisions } = await seedProducts(users, categories, vatGroups);
-    const { containerRevisions } = await seedContainers(users, productRevisions);
-    const { pointsOfSale, pointOfSaleUsers } = await seedPointsOfSale(users, containerRevisions);
+    const { pointsOfSale, pointOfSaleUsers } = await new PointOfSaleSeeder().seed(users);
 
     await DefaultRoles.synchronize();
     const roleManager = new RoleManager();
@@ -92,8 +80,8 @@ describe('AuthenticationSecureController', () => {
     const adminUser = users.find((u) => u.type === UserType.LOCAL_ADMIN);
     const memberUser = users.find((u) => u.type === UserType.MEMBER);
     const organUser = users.find((u) => u.type === UserType.ORGAN);
-    const adminToken = await tokenHandler.signToken(await getToken(adminUser), 'nonce');
-    const userToken = await tokenHandler.signToken(await getToken(memberUser, [], [organUser]), 'nonce');
+    const adminToken = await tokenHandler.signToken(await new RbacSeeder().getToken(adminUser), 'nonce');
+    const userToken = await tokenHandler.signToken(await new RbacSeeder().getToken(memberUser, [], [organUser]), 'nonce');
 
     const app = express();
     const specification = await Swagger.initialize(app);

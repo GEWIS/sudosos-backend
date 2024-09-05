@@ -22,13 +22,13 @@ import { SwaggerSpecification } from 'swagger-model-validator';
 import { expect } from 'chai';
 import Database from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
-import { seedProductCategories } from '../../seed';
 import ProductCategory from '../../../src/entity/product/product-category';
 import { ProductCategoryResponse } from '../../../src/controller/response/product-category-response';
 import ProductCategoryService from '../../../src/service/product-category-service';
 import ProductCategoryRequest from '../../../src/controller/request/product-category-request';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
+import { ProductCategorySeeder } from '../../seed';
 
 /**
  * Test if the set of productCategory responses is equal to the full set of productCategories.
@@ -63,7 +63,7 @@ describe('ProductCategoryService', async (): Promise<void> => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
-    const categories = await seedProductCategories();
+    const categories = await new ProductCategorySeeder().seed();
 
     // start app
     const app = express();

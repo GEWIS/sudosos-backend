@@ -22,18 +22,7 @@ import { SwaggerSpecification } from 'swagger-model-validator';
 import DebtorController from '../../../src/controller/debtor-controller';
 import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
-import {
-  seedContainers, seedFines,
-  seedPointsOfSale,
-  seedProductCategories,
-  seedProducts,
-  seedTransactions, seedTransfers, seedUsers,
-  seedVatGroups,
-} from '../../seed';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
-import ProductRevision from '../../../src/entity/product/product-revision';
-import ContainerRevision from '../../../src/entity/container/container-revision';
-import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
 import Transaction from '../../../src/entity/transactions/transaction';
 import Transfer from '../../../src/entity/transactions/transfer';
 import Fine from '../../../src/entity/fine/fine';
@@ -57,9 +46,9 @@ import sinon, { SinonSandbox, SinonSpy } from 'sinon';
 import nodemailer, { Transporter } from 'nodemailer';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { getToken, seedRoles } from '../../seed/rbac';
 import { Client } from 'pdf-generator-client';
 import { BasePdfService } from '../../../src/service/pdf/pdf-service';
+import { FineSeeder, RbacSeeder, TransactionSeeder, TransferSeeder, UserSeeder } from '../../seed';
 
 describe('DebtorController', () => {
   let ctx: {
@@ -72,9 +61,6 @@ describe('DebtorController', () => {
     adminToken: string;
     userToken: string;
     users: User[],
-    productRevisions: ProductRevision[],
-    containerRevisions: ContainerRevision[],
-    pointOfSaleRevisions: PointOfSaleRevision[],
     transactions: Transaction[],
     subTransactions: SubTransaction[],
     transfers: Transfer[],
@@ -111,24 +97,19 @@ describe('DebtorController', () => {
     await User.save(adminUser);
     await User.save(localUser);
 
-    const users = await seedUsers();
-    const categories = await seedProductCategories();
-    const vatGroups = await seedVatGroups();
-    const { productRevisions } = await seedProducts(users, categories, vatGroups);
-    const { containerRevisions } = await seedContainers(users, productRevisions);
-    const { pointOfSaleRevisions } = await seedPointsOfSale(users, containerRevisions);
-    const { transactions } = await seedTransactions(users, pointOfSaleRevisions, new Date('2020-02-12'), new Date('2021-11-30'), 10);
-    const transfers = await seedTransfers(users, new Date('2020-02-12'), new Date('2021-11-30'));
+    const users = await new UserSeeder().seed();
+    const { transactions } = await new TransactionSeeder().seed(users, undefined, new Date('2020-02-12'), new Date('2021-11-30'), 10);
+    const transfers = await new TransferSeeder().seed(users, new Date('2020-02-12'), new Date('2021-11-30'));
     const subTransactions: SubTransaction[] = Array.prototype.concat(...transactions
       .map((t) => t.subTransactions));
-    const { fines, fineTransfers, fineHandoutEvents } = await seedFines(users, transactions, transfers);
+    const { fines, fineTransfers, fineHandoutEvents } = await new FineSeeder().seed(users, transactions, transfers);
 
     // start app
     const app = express();
     const specification = await Swagger.initialize(app);
 
     const all = { all: new Set<string>(['*']) };
-    const roles = await seedRoles([{
+    const roles = await new RbacSeeder().seed([{
       name: 'Admin',
       permissions: {
         Fine: {
@@ -147,8 +128,8 @@ describe('DebtorController', () => {
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
-    const adminToken = await tokenHandler.signToken(await getToken(adminUser, roles), 'nonce admin');
-    const userToken = await tokenHandler.signToken(await getToken(localUser, roles), 'nonce');
+    const adminToken = await tokenHandler.signToken(await new RbacSeeder().getToken(adminUser, roles), 'nonce admin');
+    const userToken = await tokenHandler.signToken(await new RbacSeeder().getToken(localUser, roles), 'nonce');
 
     const controller = new DebtorController({ specification, roleManager });
     app.use(json());
@@ -166,9 +147,6 @@ describe('DebtorController', () => {
       adminToken,
       userToken,
       users,
-      productRevisions,
-      containerRevisions,
-      pointOfSaleRevisions,
       transactions,
       subTransactions,
       transfers,

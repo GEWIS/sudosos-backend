@@ -21,19 +21,7 @@ import Transaction from '../../../src/entity/transactions/transaction';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import Transfer from '../../../src/entity/transactions/transfer';
 import SellerPayout from '../../../src/entity/transactions/payout/seller-payout';
-import {
-  seedContainers,
-  seedPointsOfSale,
-  seedProductCategories,
-  seedProducts,
-  seedTransactions,
-  seedTransfers,
-  seedUsers,
-  seedVatGroups,
-} from '../../seed';
-import { seedSellerPayouts } from '../../seed/seller-payout';
 import { expect, request } from 'chai';
-import { getToken, seedRoles } from '../../seed/rbac';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import { json } from 'body-parser';
 import SellerPayoutController from '../../../src/controller/seller-payout-controller';
@@ -51,6 +39,11 @@ import dinero from 'dinero.js';
 import sinon from 'sinon';
 import { Client } from 'pdf-generator-client';
 import { BasePdfService } from '../../../src/service/pdf/pdf-service';
+import {
+  RbacSeeder,
+  SellerPayoutSeeder, TransactionSeeder, TransferSeeder,
+  UserSeeder,
+} from '../../seed';
 
 describe('SellerPayoutController', () => {
   let ctx: DefaultContext & {
@@ -68,20 +61,14 @@ describe('SellerPayoutController', () => {
   before(async () => {
     const c = { ...await defaultContext() };
 
-    const users = await seedUsers();
+    const users = await new UserSeeder().seed();
 
-    const categories = await seedProductCategories();
-    const vatGroups = await seedVatGroups();
-    const { productRevisions } = await seedProducts(users, categories, vatGroups);
-    const { containerRevisions } = await seedContainers(users, productRevisions);
-    const { pointOfSaleRevisions } = await seedPointsOfSale(users, containerRevisions);
-
-    const { transactions, subTransactions } = await seedTransactions(users, pointOfSaleRevisions, new Date('2020-01-01'), new Date());
-    const transfers = await seedTransfers(users, new Date('2020-01-01'), new Date());
-    const { sellerPayouts, transfers: sellerPayoutTransfers } = await seedSellerPayouts(users, transactions, subTransactions, transfers);
+    const { transactions, subTransactions } = await new TransactionSeeder().seed(users, undefined, new Date('2020-01-01'), new Date());
+    const transfers = await new TransferSeeder().seed(users, new Date('2020-01-01'), new Date());
+    const { sellerPayouts, transfers: sellerPayoutTransfers } = await new SellerPayoutSeeder().seed(users, transactions, subTransactions, transfers);
 
     const all = { all: new Set<string>(['*']) };
-    const adminRole = await seedRoles([{
+    const adminRole = await new RbacSeeder().seed([{
       name: 'Admin',
       permissions: {
         SellerPayout: {
@@ -96,8 +83,8 @@ describe('SellerPayoutController', () => {
 
     const admin = users.find((u) => u.type === UserType.LOCAL_ADMIN);
     const user = users.find((u) => u.type === UserType.LOCAL_USER);
-    const adminToken = await c.tokenHandler.signToken(await getToken(admin, adminRole), 'nonce admin');
-    const userToken = await c.tokenHandler.signToken(await getToken(user, adminRole), 'nonce');
+    const adminToken = await c.tokenHandler.signToken(await new RbacSeeder().getToken(admin, adminRole), 'nonce admin');
+    const userToken = await c.tokenHandler.signToken(await new RbacSeeder().getToken(user, adminRole), 'nonce');
 
     const tokenMiddleware = new TokenMiddleware({ tokenHandler: c.tokenHandler, refreshFactor: 0.5 }).getMiddleware();
     c.app.use(json());

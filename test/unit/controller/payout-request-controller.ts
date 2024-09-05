@@ -25,7 +25,6 @@ import PayoutRequestController from '../../../src/controller/payout-request-cont
 import User, { UserType } from '../../../src/entity/user/user';
 import PayoutRequest from '../../../src/entity/transactions/payout/payout-request';
 import Database from '../../../src/database/database';
-import { seedPayoutRequests, seedUsers } from '../../seed';
 import PayoutRequestRequest from '../../../src/controller/request/payout-request-request';
 import TokenHandler from '../../../src/authentication/token-handler';
 import RoleManager from '../../../src/rbac/role-manager';
@@ -40,8 +39,8 @@ import { PayoutRequestState } from '../../../src/entity/transactions/payout/payo
 import { truncateAllTables } from '../../setup';
 import generateBalance, { finishTestDB } from '../../helpers/test-helpers';
 import BalanceService from '../../../src/service/balance-service';
-import { getToken, seedRoles } from '../../seed/rbac';
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
+import { PayoutRequestSeeder, RbacSeeder, UserSeeder } from '../../seed';
 
 describe('PayoutRequestController', () => {
   let ctx: {
@@ -76,8 +75,8 @@ describe('PayoutRequestController', () => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
-    const users = await seedUsers();
-    const { payoutRequests } = await seedPayoutRequests(users);
+    const users = await new UserSeeder().seed();
+    const { payoutRequests } = await new PayoutRequestSeeder().seed(users);
 
     const adminUser = users.filter((u) => u.type === UserType.LOCAL_ADMIN)[0];
     const localUser = users.filter((u) => u.type === UserType.LOCAL_USER)[0];
@@ -89,7 +88,7 @@ describe('PayoutRequestController', () => {
     const own = { own: new Set<string>(['*']) };
     const all = { all: new Set<string>(['*']), ...own };
 
-    const roles = await seedRoles([{
+    const roles = await new RbacSeeder().seed([{
       name: 'Admin',
       permissions: {
         PayoutRequest: {
@@ -116,8 +115,8 @@ describe('PayoutRequestController', () => {
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
-    const adminToken = await tokenHandler.signToken(await getToken(adminUser, roles), 'nonce admin');
-    const userToken = await tokenHandler.signToken(await getToken(localUser, roles), 'nonce');
+    const adminToken = await tokenHandler.signToken(await new RbacSeeder().getToken(adminUser, roles), 'nonce admin');
+    const userToken = await tokenHandler.signToken(await new RbacSeeder().getToken(localUser, roles), 'nonce');
 
     const controller = new PayoutRequestController({ specification, roleManager });
     app.use(json());

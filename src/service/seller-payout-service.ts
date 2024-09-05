@@ -16,11 +16,10 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import {
-  EntityManager, FindManyOptions,
+  FindManyOptions,
   FindOptionsRelations,
   FindOptionsWhere,
 } from 'typeorm';
-import { AppDataSource } from '../database/database';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import SellerPayout from '../entity/transactions/payout/seller-payout';
 import { PaginationParameters } from '../helpers/pagination';
@@ -33,6 +32,7 @@ import { parseUserToBaseResponse } from '../helpers/revision-to-response';
 import { RequestWithToken } from '../middleware/token-middleware';
 import { asDate, asNumber } from '../helpers/validators';
 import { SalesReportService } from './report-service';
+import WithManager from '../database/with-manager';
 
 export interface SellerPayoutFilterParameters {
   sellerPayoutId?: number;
@@ -57,13 +57,7 @@ export function parseSellerPayoutFilters(req: RequestWithToken): SellerPayoutFil
   };
 }
 
-export default class SellerPayoutService {
-  private manager: EntityManager;
-
-  constructor(manager?: EntityManager) {
-    this.manager = manager ?? AppDataSource.manager;
-  }
-
+export default class SellerPayoutService extends WithManager {
   public static asSellerPayoutResponse(payout: SellerPayout): SellerPayoutResponse {
     return {
       id: payout.id,

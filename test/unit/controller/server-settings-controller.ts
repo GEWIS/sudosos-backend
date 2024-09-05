@@ -16,8 +16,6 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { defaultContext, DefaultContext, finishTestDB } from '../../helpers/test-helpers';
-import { seedUsers } from '../../seed';
-import { getToken, seedRoles } from '../../seed/rbac';
 import User, { UserType } from '../../../src/entity/user/user';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import { json } from 'body-parser';
@@ -25,6 +23,7 @@ import ServerSettingsController from '../../../src/controller/server-settings-co
 import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
 import { expect, request } from 'chai';
 import sinon from 'sinon';
+import { RbacSeeder, UserSeeder } from '../../seed';
 
 describe('ServerSettingsController', () => {
   let ctx: DefaultContext & {
@@ -37,10 +36,10 @@ describe('ServerSettingsController', () => {
   before(async () => {
     const c = { ...await defaultContext() };
 
-    const users = await seedUsers();
+    const users = await new UserSeeder().seed();
 
     const all = { all: new Set<string>(['*']) };
-    const adminRole = await seedRoles([{
+    const adminRole = await new RbacSeeder().seed([{
       name: 'Admin',
       permissions: {
         Maintenance: {
@@ -52,8 +51,8 @@ describe('ServerSettingsController', () => {
 
     const admin = users.find((u) => u.type === UserType.LOCAL_ADMIN);
     const user = users.find((u) => u.type === UserType.LOCAL_USER);
-    const adminToken = await c.tokenHandler.signToken(await getToken(admin, adminRole), 'nonce admin');
-    const userToken = await c.tokenHandler.signToken(await getToken(user, adminRole), 'nonce');
+    const adminToken = await c.tokenHandler.signToken(await new RbacSeeder().getToken(admin, adminRole), 'nonce admin');
+    const userToken = await c.tokenHandler.signToken(await new RbacSeeder().getToken(user, adminRole), 'nonce');
 
     const tokenMiddleware = new TokenMiddleware({ tokenHandler: c.tokenHandler, refreshFactor: 0.5 }).getMiddleware();
     c.app.use(json());

@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import dinero from 'dinero.js';
-import { EntityManager, FindManyOptions, FindOptionsWhere, Raw } from 'typeorm';
+import { FindManyOptions, FindOptionsWhere, Raw } from 'typeorm';
 import Transfer from '../entity/transactions/transfer';
 import { PaginatedTransferResponse, TransferResponse } from '../controller/response/transfer-response';
 import TransferRequest from '../controller/request/transfer-request';
@@ -33,7 +33,7 @@ import DebtorService from './debtor-service';
 import VatGroup from '../entity/vat-group';
 import { toMySQLString } from '../helpers/timestamps';
 import WriteOffService from './write-off-service';
-import { AppDataSource } from '../database/database';
+import WithManager from '../database/with-manager';
 
 export interface TransferFilterParameters {
   id?: number;
@@ -53,14 +53,7 @@ export function parseGetTransferFilters(req: RequestWithToken): TransferFilterPa
   };
 }
 
-export default class TransferService {
-
-  private manager: EntityManager;
-
-  constructor(manager?: EntityManager) {
-    this.manager = manager ? manager : AppDataSource.manager;
-  }
-
+export default class TransferService extends WithManager {
   public static asTransferResponse(transfer: Transfer) : TransferResponse {
     return {
       amountInclVat: transfer.amountInclVat.toObject(),

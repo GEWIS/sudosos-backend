@@ -26,7 +26,6 @@ import EventShift from '../../../src/entity/event/event-shift';
 import EventShiftAnswer, { Availability } from '../../../src/entity/event/event-shift-answer';
 import AssignedRole from '../../../src/entity/rbac/assigned-role';
 import Database from '../../../src/database/database';
-import { seedEvents, seedUsers } from '../../seed';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Swagger from '../../../src/start/swagger';
 import { json } from 'body-parser';
@@ -43,7 +42,7 @@ import EventService from '../../../src/service/event-service';
 import { EventRequest } from '../../../src/controller/request/event-request';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { getToken, seedRoles } from '../../seed/rbac';
+import { EventSeeder, RbacSeeder, UserSeeder } from '../../seed';
 
 describe('EventController', () => {
   let ctx: {
@@ -86,8 +85,8 @@ describe('EventController', () => {
     await User.save(adminUser);
     await User.save(localUser);
 
-    const users = await seedUsers();
-    const { roleAssignments, events, eventShifts, eventShiftAnswers } = await seedEvents(users);
+    const users = await new UserSeeder().seed();
+    const { roleAssignments, events, eventShifts, eventShiftAnswers } = await new EventSeeder().seed(users);
 
     // start app
     const app = express();
@@ -95,7 +94,7 @@ describe('EventController', () => {
 
     const all = { all: new Set<string>(['*']) };
     const own = { all: new Set<string>(['*']) };
-    const accessRoles = await seedRoles([{
+    const accessRoles = await new RbacSeeder().seed([{
       name: 'Admin',
       permissions: {
         Event: {
@@ -128,8 +127,8 @@ describe('EventController', () => {
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
-    const adminToken = await tokenHandler.signToken(await getToken(adminUser, accessRoles), 'nonce admin');
-    const userToken = await tokenHandler.signToken(await getToken(localUser, []), 'nonce');
+    const adminToken = await tokenHandler.signToken(await new RbacSeeder().getToken(adminUser, accessRoles), 'nonce admin');
+    const userToken = await tokenHandler.signToken(await new RbacSeeder().getToken(localUser, []), 'nonce');
 
     const controller = new EventController({ specification, roleManager });
     app.use(json());

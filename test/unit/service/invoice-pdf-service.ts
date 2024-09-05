@@ -27,16 +27,6 @@ import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import User from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
-import {
-  seedContainers,
-  seedInvoices,
-  seedPointsOfSale,
-  seedProductCategories,
-  seedProducts,
-  seedTransactions,
-  seedUsers,
-  seedVatGroups,
-} from '../../seed';
 import Swagger from '../../../src/start/swagger';
 import { json } from 'body-parser';
 import FileService from '../../../src/service/file-service';
@@ -47,6 +37,7 @@ import deepEqualInAnyOrder from 'deep-equal-in-any-order';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { INVOICE_PDF_LOCATION } from '../../../src/files/storage';
+import { InvoiceSeeder, TransactionSeeder, UserSeeder } from '../../seed';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -67,27 +58,9 @@ describe('InvoicePdfService', async (): Promise<void> => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
-    const users = await seedUsers();
-    const categories = await seedProductCategories();
-    const vatGroups = await seedVatGroups();
-    const { productRevisions } = await seedProducts(
-      users,
-      categories,
-      vatGroups,
-    );
-    const { containerRevisions } = await seedContainers(
-      users,
-      productRevisions,
-    );
-    const { pointOfSaleRevisions } = await seedPointsOfSale(
-      users,
-      containerRevisions,
-    );
-    const { transactions } = await seedTransactions(
-      users,
-      pointOfSaleRevisions,
-    );
-    const { invoices } = await seedInvoices(users, transactions);
+    const users = await new UserSeeder().seed();
+    const { transactions } = await new TransactionSeeder().seed(users);
+    const { invoices } = await new InvoiceSeeder().seed(users, transactions);
 
     // start app
     const app = express();

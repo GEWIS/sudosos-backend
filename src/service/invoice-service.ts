@@ -17,7 +17,6 @@
  */
 
 import {
-  EntityManager,
   FindManyOptions,
   FindOptionsRelations,
   FindOptionsWhere,
@@ -56,8 +55,8 @@ import SubTransactionRow from '../entity/transactions/sub-transaction-row';
 import { parseUserToBaseResponse } from '../helpers/revision-to-response';
 import SubTransaction from '../entity/transactions/sub-transaction';
 import InvoiceUser, { InvoiceUserDefaults } from '../entity/user/invoice-user';
-import { AppDataSource } from '../database/database';
 import Transfer from '../entity/transactions/transfer';
+import WithManager from '../database/with-manager';
 
 export interface InvoiceFilterParameters {
   /**
@@ -98,14 +97,7 @@ export function parseInvoiceFilterParameters(req: RequestWithToken): InvoiceFilt
 }
 
 
-export default class InvoiceService {
-
-  private readonly manager: EntityManager;
-
-  constructor(manager?: EntityManager) {
-    this.manager = manager ? manager : AppDataSource.manager;
-  }
-
+export default class InvoiceService extends WithManager {
   /**
    * Parses an InvoiceEntry Object to a InvoiceEntryResponse
    * @param invoiceEntries - The invoiceEntries to parse

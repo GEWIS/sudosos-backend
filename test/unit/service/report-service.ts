@@ -21,16 +21,9 @@ import { createTransactions } from '../../helpers/transaction-factory';
 import User from '../../../src/entity/user/user';
 import { BuyerReportService, ReportParameters, SalesReportService } from '../../../src/service/report-service';
 import { expect } from 'chai';
-import {
-  seedContainers,
-  seedPointsOfSale,
-  seedProductCategories,
-  seedProducts, seedTransactions,
-  seedUsers,
-  seedVatGroups,
-} from '../../seed';
 import TransactionService from '../../../src/service/transaction-service';
 import { Report } from '../../../src/entity/report/report';
+import { TransactionSeeder, UserSeeder } from '../../seed';
 
 describe('ReportService', () => {
   let ctx: any & DefaultContext;
@@ -42,13 +35,8 @@ describe('ReportService', () => {
       ...(await defaultBefore()),
     } as any;
 
-    const users = await seedUsers();
-    const vatGropus = await seedVatGroups();
-    const categories = await seedProductCategories();
-    const { productRevisions } = await seedProducts(users, categories, vatGropus);
-    const { containerRevisions } = await seedContainers(users, productRevisions);
-    const { pointOfSaleRevisions } = await seedPointsOfSale(users, containerRevisions);
-    const { transactions } = await seedTransactions(users, pointOfSaleRevisions);
+    const users = await new UserSeeder().seed();
+    const { transactions } = await new TransactionSeeder().seed(users);
 
     ctx = {
       ...ctx,

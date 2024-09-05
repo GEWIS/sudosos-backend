@@ -25,7 +25,6 @@ import chai, { expect } from 'chai';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
 import User, { UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
-import { seedUsers } from '../../seed';
 import Swagger from '../../../src/start/swagger';
 import ADService from '../../../src/service/ad-service';
 import LDAPAuthenticator from '../../../src/entity/authenticator/ldap-authenticator';
@@ -38,7 +37,7 @@ import RoleManager from '../../../src/rbac/role-manager';
 import AssignedRole from '../../../src/entity/rbac/assigned-role';
 import { finishTestDB, restoreLDAPEnv, storeLDAPEnv } from '../../helpers/test-helpers';
 import { truncateAllTables } from '../../setup';
-import { seedRoles } from '../../seed/rbac';
+import { RbacSeeder, UserSeeder } from '../../seed';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -73,7 +72,7 @@ describe('AD Service', (): void => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
     const app = express();
-    await seedUsers();
+    await new UserSeeder().seed();
 
     const users = await User.find(
       {
@@ -362,7 +361,7 @@ describe('AD Service', (): void => {
       stubs.push(clientBindStub);
       stubs.push(clientSearchStub);
 
-      await seedRoles([{
+      await new RbacSeeder().seed([{
         name: 'SudoSOS - Test',
         permissions: {
         },

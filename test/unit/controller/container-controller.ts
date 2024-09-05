@@ -26,9 +26,6 @@ import { json } from 'body-parser';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
 import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
-import {
-  seedContainers, seedProductCategories, seedProducts, seedVatGroups,
-} from '../../seed';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Swagger from '../../../src/start/swagger';
 import RoleManager from '../../../src/rbac/role-manager';
@@ -48,7 +45,7 @@ import ContainerRevision from '../../../src/entity/container/container-revision'
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import Product from '../../../src/entity/product/product';
-import { getToken, seedRoles } from '../../seed/rbac';
+import { ContainerSeeder, ProductSeeder, RbacSeeder } from '../../seed';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -129,11 +126,9 @@ describe('ContainerController', async (): Promise<void> => {
     await User.save(localUser);
     await User.save(organ);
 
-    const categories = await seedProductCategories();
-    const vatGroups = await seedVatGroups();
     const { products, productRevisions } = (
-      await seedProducts([adminUser, localUser], categories, vatGroups));
-    const { containers } = await seedContainers([adminUser, localUser], productRevisions);
+      await new ProductSeeder().seed([adminUser, localUser]));
+    const { containers } = await new ContainerSeeder().seed([adminUser, localUser], productRevisions);
 
     // create bearer tokens
     const tokenHandler = new TokenHandler({
@@ -159,7 +154,7 @@ describe('ContainerController', async (): Promise<void> => {
     const own = { own: new Set<string>(['*']), public: new Set<string>(['*']) };
     const organRole = { organ: new Set<string>(['*']) };
 
-    const roles = await seedRoles([{
+    const roles = await new RbacSeeder().seed([{
       name: 'Admin',
       permissions: {
         Container: {
@@ -193,9 +188,9 @@ describe('ContainerController', async (): Promise<void> => {
     }]);
     const roleManager = await new RoleManager().initialize();
 
-    const adminToken = await tokenHandler.signToken(await getToken(adminUser, roles), 'nonce admin');
-    const token = await tokenHandler.signToken(await getToken(localUser, roles), 'nonce');
-    const organMemberToken = await tokenHandler.signToken(await getToken(localUser, roles, [organ]), 'nonce organ');
+    const adminToken = await tokenHandler.signToken(await new RbacSeeder().getToken(adminUser, roles), 'nonce admin');
+    const token = await tokenHandler.signToken(await new RbacSeeder().getToken(localUser, roles), 'nonce');
+    const organMemberToken = await tokenHandler.signToken(await new RbacSeeder().getToken(localUser, roles, [organ]), 'nonce organ');
 
     const controller = new ContainerController({ specification, roleManager });
     app.use(json());

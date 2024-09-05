@@ -21,14 +21,6 @@ import { json } from 'body-parser';
 import chai, { expect, request } from 'chai';
 import PointOfSaleController from '../../../src/controller/point-of-sale-controller';
 import User, { UserType } from '../../../src/entity/user/user';
-import {
-  seedContainers, seedMemberAuthenticators,
-  seedPointsOfSale,
-  seedProductCategories,
-  seedProducts,
-  seedUsers,
-  seedVatGroups,
-} from '../../seed';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
 import {
@@ -61,9 +53,10 @@ import RoleManager from '../../../src/rbac/role-manager';
 import Database from '../../../src/database/database';
 import TokenHandler from '../../../src/authentication/token-handler';
 import { SwaggerSpecification } from 'swagger-model-validator';
-import { assignRoles, getToken, SeededRole, seedRoles } from '../../seed/rbac';
+import { SeededRole } from '../../seed/rbac-seeder';
 import PointOfSaleService from '../../../src/service/point-of-sale-service';
 import MemberAuthenticator from '../../../src/entity/authenticator/member-authenticator';
+import { ContainerSeeder, PointOfSaleSeeder, RbacSeeder, UserSeeder } from '../../seed';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -119,8 +112,9 @@ describe('PointOfSaleController', async () => {
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
 
-    const users = await seedUsers();
-    await seedMemberAuthenticators(
+    const userSeeder = new UserSeeder();
+    const users = await userSeeder.seed();
+    await userSeeder.seedMemberAuthenticators(
       users.filter((u) => u.type !== UserType.ORGAN),
       users.filter((u) => u.type === UserType.ORGAN),
     );
@@ -131,16 +125,13 @@ describe('PointOfSaleController', async () => {
     const feut2 = users.filter((u) => u.type === UserType.MEMBER)[1];
     const bestuur1 = users.filter((u) => u.type === UserType.MEMBER)[2];
 
-    const categories = await seedProductCategories();
-    const vatGroups = await seedVatGroups();
-    const { productRevisions } = await seedProducts([adminUser, organUser], categories, vatGroups);
-    const { containers, containerRevisions } = await seedContainers([adminUser, organUser], productRevisions);
-    const { pointsOfSale, pointOfSaleRevisions } = await seedPointsOfSale([adminUser, organUser], containerRevisions);
+    const { containers, containerRevisions } = await new ContainerSeeder().seed([adminUser, organUser]);
+    const { pointsOfSale, pointOfSaleRevisions } = await new PointOfSaleSeeder().seed([adminUser, organUser], containerRevisions);
 
     const all = { all: new Set<string>(['*']) };
     const own = { own: new Set<string>(['*']) };
     const organ = { organ: new Set<string>(['*']) };
-    const roles = await seedRoles([{
+    const roles = await new RbacSeeder().seed([{
       name: 'SUPER_ADMIN',
       permissions: {
         PointOfSale: {
@@ -205,12 +196,12 @@ describe('PointOfSaleController', async () => {
       cashierRoleIds: [roles.find((r) => r.role.name === 'BAC Feuten').role.id],
     };
 
-    const adminToken = await tokenHandler.signToken(await getToken(adminUser, roles), 'nonce');
-    const userToken = await tokenHandler.signToken(await getToken(localUser, roles), 'nonce');
-    const organMemberToken = await tokenHandler.signToken(await getToken(localUser, roles, [organUser]), '1');
-    await assignRoles(feut1, roles);
-    await assignRoles(feut2, roles);
-    await assignRoles(bestuur1, roles);
+    const adminToken = await tokenHandler.signToken(await new RbacSeeder().getToken(adminUser, roles), 'nonce');
+    const userToken = await tokenHandler.signToken(await new RbacSeeder().getToken(localUser, roles), 'nonce');
+    const organMemberToken = await tokenHandler.signToken(await new RbacSeeder().getToken(localUser, roles, [organUser]), '1');
+    await new RbacSeeder().assignRoles(feut1, roles);
+    await new RbacSeeder().assignRoles(feut2, roles);
+    await new RbacSeeder().assignRoles(bestuur1, roles);
 
     const controller = new PointOfSaleController({ specification: specification, roleManager });
     const containerController = new ContainerController({ specification: specification, roleManager });

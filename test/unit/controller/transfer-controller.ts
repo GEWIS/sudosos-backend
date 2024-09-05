@@ -32,10 +32,9 @@ import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/u
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import RoleManager from '../../../src/rbac/role-manager';
 import Swagger from '../../../src/start/swagger';
-import { seedTransfers, seedUsers } from '../../seed';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { getToken, seedRoles } from '../../seed/rbac';
+import { RbacSeeder, TransferSeeder, UserSeeder } from '../../seed';
 
 describe('TransferController', async (): Promise<void> => {
   let connection: Connection;
@@ -86,8 +85,8 @@ describe('TransferController', async (): Promise<void> => {
     await User.save(localUser);
     await User.save(sellerUser);
 
-    const users = await seedUsers();
-    await seedTransfers(users);
+    const users = await new UserSeeder().seed();
+    await new TransferSeeder().seed(users);
 
     adminAccountDeposit = await Transfer.findOne({ where: { to: { id: adminUser.id } } });
     localAccountDeposit = await Transfer.findOne({ where: { to: { id: localUser.id } } });
@@ -128,7 +127,7 @@ describe('TransferController', async (): Promise<void> => {
     // Create roleManager and set roles of Admin and User
     // In this case Admin can do anything and User nothing.
     // This does not reflect the actual roles of the users in the final product.
-    const roles = await seedRoles([{
+    const roles = await new RbacSeeder().seed([{
       name: 'Admin',
       permissions: {
         Transfer: {
@@ -165,9 +164,9 @@ describe('TransferController', async (): Promise<void> => {
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
-    adminToken = await tokenHandler.signToken(await getToken(adminUser, roles), 'nonce admin');
-    token = await tokenHandler.signToken(await getToken(localUser, roles), 'nonce');
-    organMemberToken = await tokenHandler.signToken(await getToken(sellerUser, roles, [adminUser]), '1');
+    adminToken = await tokenHandler.signToken(await new RbacSeeder().getToken(adminUser, roles), 'nonce admin');
+    token = await tokenHandler.signToken(await new RbacSeeder().getToken(localUser, roles), 'nonce');
+    organMemberToken = await tokenHandler.signToken(await new RbacSeeder().getToken(sellerUser, roles, [adminUser]), '1');
 
     const controller = new TransferController({ specification, roleManager });
     app.use(json());

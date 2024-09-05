@@ -22,14 +22,6 @@ import Transaction from '../../../src/entity/transactions/transaction';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import Transfer from '../../../src/entity/transactions/transfer';
 import Database from '../../../src/database/database';
-import {
-  seedContainers,
-  seedPointsOfSale,
-  seedProductCategories,
-  seedProducts, seedTransactions, seedTransfers,
-  seedUsers,
-  seedVatGroups,
-} from '../../seed';
 import { calculateBalance } from '../../helpers/balance';
 import ProductRevision from '../../../src/entity/product/product-revision';
 import ContainerRevision from '../../../src/entity/container/container-revision';
@@ -42,6 +34,14 @@ import TransactionService from '../../../src/service/transaction-service';
 import BalanceService from '../../../src/service/balance-service';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
+import {
+  ContainerSeeder,
+  PointOfSaleSeeder,
+  ProductSeeder,
+  TransactionSeeder,
+  TransferSeeder,
+  UserSeeder,
+} from '../../seed';
 
 describe('TransactionSubscriber', () => {
   let ctx: {
@@ -76,14 +76,12 @@ describe('TransactionSubscriber', () => {
       acceptedToS: TermsOfServiceStatus.ACCEPTED,
     } as User;
 
-    const users = await seedUsers();
-    const categories = await seedProductCategories();
-    const vatGroups = await seedVatGroups();
-    const { productRevisions } = await seedProducts([adminUser], categories, vatGroups);
-    const { containerRevisions } = await seedContainers([adminUser], productRevisions);
-    const { pointOfSaleRevisions } = await seedPointsOfSale([adminUser], containerRevisions);
-    const { transactions } = await seedTransactions(users, pointOfSaleRevisions, new Date('2020-02-12'), new Date('2021-11-30'), 10);
-    const transfers = await seedTransfers(users, new Date('2020-02-12'), new Date('2021-11-30'));
+    const users = await new UserSeeder().seed();
+    const { productRevisions } = await new ProductSeeder().seed([adminUser]);
+    const { containerRevisions } = await new ContainerSeeder().seed([adminUser], productRevisions);
+    const { pointOfSaleRevisions } = await new PointOfSaleSeeder().seed([adminUser], containerRevisions);
+    const { transactions } = await new TransactionSeeder().seed(users, pointOfSaleRevisions, new Date('2020-02-12'), new Date('2021-11-30'), 10);
+    const transfers = await new TransferSeeder().seed(users, new Date('2020-02-12'), new Date('2021-11-30'));
     const subTransactions: SubTransaction[] = Array.prototype.concat(...transactions
       .map((t) => t.subTransactions));
 
