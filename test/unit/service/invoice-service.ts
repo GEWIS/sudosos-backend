@@ -27,7 +27,6 @@ import Invoice from '../../../src/entity/invoices/invoice';
 import Database, { AppDataSource } from '../../../src/database/database';
 import {
   seedInvoices,
-  seedTransactions,
 } from '../../seed-legacy';
 import Swagger from '../../../src/start/swagger';
 import {
@@ -50,7 +49,7 @@ import Transaction from '../../../src/entity/transactions/transaction';
 import InvoiceUser from '../../../src/entity/user/invoice-user';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { ContainerSeeder, PointOfSaleSeeder, ProductSeeder, UserSeeder } from '../../seed';
+import { TransactionSeeder, UserSeeder } from '../../seed';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -125,19 +124,7 @@ describe('InvoiceService', () => {
     await truncateAllTables(connection);
 
     const users = await new UserSeeder().seedUsers();
-    const { productRevisions } = await new ProductSeeder().seedProducts(users);
-    const { containerRevisions } = await new ContainerSeeder().seedContainers(
-      users,
-      productRevisions,
-    );
-    const { pointOfSaleRevisions } = await new PointOfSaleSeeder().seedPointsOfSale(
-      users,
-      containerRevisions,
-    );
-    const { transactions } = await seedTransactions(
-      users,
-      pointOfSaleRevisions,
-    );
+    const { transactions } = await new TransactionSeeder().seedTransactions(users);
     const { invoices } = await seedInvoices(users, transactions);
 
     // start app

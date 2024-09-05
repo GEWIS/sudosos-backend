@@ -22,7 +22,7 @@ import Transaction from '../../../src/entity/transactions/transaction';
 import Transfer from '../../../src/entity/transactions/transfer';
 import Database from '../../../src/database/database';
 import {
-  seedTransactions, seedTransfers,
+  seedTransfers,
 } from '../../seed-legacy';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import { calculateBalance } from '../../helpers/balance';
@@ -34,7 +34,7 @@ import dinero from 'dinero.js';
 import Fine from '../../../src/entity/fine/fine';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { PointOfSaleSeeder, UserSeeder } from '../../seed';
+import { TransactionSeeder, UserSeeder } from '../../seed';
 
 describe('TransferSubscriber', (): void => {
   let ctx: {
@@ -51,8 +51,7 @@ describe('TransferSubscriber', (): void => {
     await truncateAllTables(connection);
 
     const users = await new UserSeeder().seedUsers();
-    const { pointOfSaleRevisions } = await new PointOfSaleSeeder().seedPointsOfSale(users);
-    const { transactions } = await seedTransactions(users, pointOfSaleRevisions, new Date('2020-02-12'), new Date('2021-11-30'), 10);
+    const { transactions } = await new TransactionSeeder().seedTransactions(users, undefined, new Date('2020-02-12'), new Date('2021-11-30'), 10);
     const transfers = await seedTransfers(users, new Date('2020-02-12'), new Date('2021-11-30'));
     const subTransactions: SubTransaction[] = Array.prototype.concat(...transactions
       .map((t) => t.subTransactions));

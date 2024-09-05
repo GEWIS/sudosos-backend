@@ -29,7 +29,6 @@ import User from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import {
   seedInvoices,
-  seedTransactions,
 } from '../../seed-legacy';
 import Swagger from '../../../src/start/swagger';
 import { json } from 'body-parser';
@@ -41,7 +40,7 @@ import deepEqualInAnyOrder from 'deep-equal-in-any-order';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { INVOICE_PDF_LOCATION } from '../../../src/files/storage';
-import { PointOfSaleSeeder, UserSeeder } from '../../seed';
+import { TransactionSeeder, UserSeeder } from '../../seed';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -63,11 +62,7 @@ describe('InvoicePdfService', async (): Promise<void> => {
     await truncateAllTables(connection);
 
     const users = await new UserSeeder().seedUsers();
-    const { pointOfSaleRevisions } = await new PointOfSaleSeeder().seedPointsOfSale(users);
-    const { transactions } = await seedTransactions(
-      users,
-      pointOfSaleRevisions,
-    );
+    const { transactions } = await new TransactionSeeder().seedTransactions(users);
     const { invoices } = await seedInvoices(users, transactions);
 
     // start app

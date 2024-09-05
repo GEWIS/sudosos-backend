@@ -16,8 +16,6 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-
-import express, { Application } from 'express';
 import { expect } from 'chai';
 import { Connection, DeepPartial } from 'typeorm';
 import { SwaggerSpecification } from 'swagger-model-validator';
@@ -26,7 +24,6 @@ import Transfer from '../../../src/entity/transactions/transfer';
 import Database from '../../../src/database/database';
 import {
   seedFines,
-  seedTransactions,
   seedTransfers,
 } from '../../seed-legacy';
 import Swagger from '../../../src/start/swagger';
@@ -35,8 +32,6 @@ import User, { UserType } from '../../../src/entity/user/user';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
 import Balance from '../../../src/entity/transactions/balance';
 import { UserFactory } from '../../helpers/user-factory';
-import ProductRevision from '../../../src/entity/product/product-revision';
-import ContainerRevision from '../../../src/entity/container/container-revision';
 import SubTransactionRow from '../../../src/entity/transactions/sub-transaction-row';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
@@ -48,15 +43,12 @@ import Fine from '../../../src/entity/fine/fine';
 import BalanceResponse from '../../../src/controller/response/balance-response';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { ContainerSeeder, PointOfSaleSeeder, ProductSeeder, UserSeeder } from '../../seed';
+import { PointOfSaleSeeder, TransactionSeeder, UserSeeder } from '../../seed';
 
 describe('BalanceService', (): void => {
   let ctx: {
     connection: Connection,
-    app: Application,
     users: User[],
-    productRevisions: ProductRevision[],
-    containerRevisions: ContainerRevision[],
     pointOfSaleRevisions: PointOfSaleRevision[],
     transactions: Transaction[],
     subTransactions: SubTransaction[],
@@ -69,12 +61,10 @@ describe('BalanceService', (): void => {
     this.timeout(50000);
     const connection = await Database.initialize();
     await truncateAllTables(connection);
-    const app = express();
+
     const seededUsers = await new UserSeeder().seedUsers();
-    const { productRevisions } = await new ProductSeeder().seedProducts(seededUsers);
-    const { containerRevisions } = await new ContainerSeeder().seedContainers(seededUsers, productRevisions);
-    const { pointOfSaleRevisions } = await new PointOfSaleSeeder().seedPointsOfSale(seededUsers, containerRevisions);
-    const { transactions } = await seedTransactions(seededUsers, pointOfSaleRevisions, new Date('2020-02-12'), new Date('2021-11-30'), 10);
+    const { pointOfSaleRevisions } = await new PointOfSaleSeeder().seedPointsOfSale(seededUsers);
+    const { transactions } = await new TransactionSeeder().seedTransactions(seededUsers, pointOfSaleRevisions, new Date('2020-02-12'), new Date('2021-11-30'), 10);
     const transfers = await seedTransfers(seededUsers, new Date('2020-02-12'), new Date('2021-11-30'));
     const { fines, fineTransfers, users } = await seedFines(seededUsers, transactions, transfers, true);
     const subTransactions: SubTransaction[] = Array.prototype.concat(...transactions
@@ -82,10 +72,7 @@ describe('BalanceService', (): void => {
 
     ctx = {
       connection,
-      app,
       users: [...users.filter((u) => !u.deleted)],
-      productRevisions,
-      containerRevisions,
       pointOfSaleRevisions,
       transactions,
       subTransactions,

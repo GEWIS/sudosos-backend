@@ -32,14 +32,20 @@ import {
   seedFines,
   seedInvoices, seedPayoutRequests,
   seedStripeDeposits,
-  seedTransactions,
   seedTransfers,
 } from '../../seed-legacy';
 import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import VatGroup from '../../../src/entity/vat-group';
-import { ContainerSeeder, PointOfSaleSeeder, ProductSeeder, UserSeeder, VatGroupSeeder } from '../../seed';
+import {
+  ContainerSeeder,
+  PointOfSaleSeeder,
+  ProductSeeder,
+  TransactionSeeder,
+  UserSeeder,
+  VatGroupSeeder,
+} from '../../seed';
 
 describe('TransferService', async (): Promise<void> => {
   let ctx: {
@@ -63,7 +69,7 @@ describe('TransferService', async (): Promise<void> => {
     const { containerRevisions } = await new ContainerSeeder().seedContainers(users, productRevisions);
     const { pointOfSaleRevisions } = await new PointOfSaleSeeder().seedPointsOfSale(users, containerRevisions);
     const transfers = await seedTransfers(users, begin, end);
-    const { transactions } = await seedTransactions(users, pointOfSaleRevisions, begin, end);
+    const { transactions } = await new TransactionSeeder().seedTransactions(users, pointOfSaleRevisions, begin, end);
     const { invoiceTransfers } = await seedInvoices(users, transactions);
     const { payoutRequestTransfers } = await seedPayoutRequests(users);
     const { stripeDepositTransfers } = await seedStripeDeposits(users);

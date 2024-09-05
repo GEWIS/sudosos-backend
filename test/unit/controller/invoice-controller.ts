@@ -26,7 +26,6 @@ import InvoiceController from '../../../src/controller/invoice-controller';
 import Database, { AppDataSource } from '../../../src/database/database';
 import {
   seedInvoices,
-  seedTransactions,
 } from '../../seed-legacy';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Swagger from '../../../src/start/swagger';
@@ -61,7 +60,7 @@ import sinon from 'sinon';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { createTransactionRequest, requestToTransaction } from '../../helpers/transaction-factory';
-import { PointOfSaleSeeder, RbacSeeder, UserSeeder } from '../../seed';
+import { RbacSeeder, TransactionSeeder, UserSeeder } from '../../seed';
 
 describe('InvoiceController', async () => {
   let ctx: {
@@ -118,8 +117,7 @@ describe('InvoiceController', async () => {
     await User.save(invoiceUser);
     await User.save(invoiceUser2);
 
-    const { pointOfSaleRevisions } = await new PointOfSaleSeeder().seedPointsOfSale([adminUser, localUser]);
-    const { transactions } = await seedTransactions([adminUser, localUser, invoiceUser, invoiceUser2], pointOfSaleRevisions);
+    const { transactions } = await new TransactionSeeder().seedTransactions([adminUser, localUser, invoiceUser, invoiceUser2]);
     await seedInvoices([invoiceUser, invoiceUser2], transactions);
 
     const app = express();

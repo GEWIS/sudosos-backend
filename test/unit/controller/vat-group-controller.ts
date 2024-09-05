@@ -27,9 +27,6 @@ import Transaction from '../../../src/entity/transactions/transaction';
 import VatGroup, { VatDeclarationPeriod } from '../../../src/entity/vat-group';
 import { UpdateVatGroupRequest, VatGroupRequest } from '../../../src/controller/request/vat-group-request';
 import Database from '../../../src/database/database';
-import {
-  seedTransactions,
-} from '../../seed-legacy';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Swagger from '../../../src/start/swagger';
 import RoleManager from '../../../src/rbac/role-manager';
@@ -38,7 +35,15 @@ import { defaultPagination, PaginationResult } from '../../../src/helpers/pagina
 import { VatDeclarationResponse } from '../../../src/controller/response/vat-group-response';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { ContainerSeeder, PointOfSaleSeeder, ProductSeeder, RbacSeeder, UserSeeder, VatGroupSeeder } from '../../seed';
+import {
+  ContainerSeeder,
+  PointOfSaleSeeder,
+  ProductSeeder,
+  RbacSeeder,
+  TransactionSeeder,
+  UserSeeder,
+  VatGroupSeeder,
+} from '../../seed';
 
 describe('VatGroupController', () => {
   let ctx: {
@@ -72,7 +77,7 @@ describe('VatGroupController', () => {
     const { productRevisions } = await new ProductSeeder().seedProducts(users, undefined, vatGroups, 100);
     const { containerRevisions } = await new ContainerSeeder().seedContainers(users, productRevisions);
     const { pointOfSaleRevisions } = await new PointOfSaleSeeder().seedPointsOfSale(users, containerRevisions);
-    const { transactions } = await seedTransactions(users, pointOfSaleRevisions, new Date('2020-02-12'), new Date('2022-11-30'), 3);
+    const { transactions } = await new TransactionSeeder().seedTransactions(users, pointOfSaleRevisions, new Date('2020-02-12'), new Date('2022-11-30'), 3);
 
     const validUpdateVatGroupReq: UpdateVatGroupRequest = {
       name: 'CustomVATGroup',

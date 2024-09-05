@@ -26,9 +26,6 @@ import dinero from 'dinero.js';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
 import Transaction from '../../../src/entity/transactions/transaction';
 import Database from '../../../src/database/database';
-import {
-  seedTransactions,
-} from '../../seed-legacy';
 import TransactionService, { TransactionFilterParameters } from '../../../src/service/transaction-service';
 import { verifyBaseTransactionEntity } from '../validators';
 import Swagger from '../../../src/start/swagger';
@@ -49,7 +46,7 @@ import { createInvoiceWithTransfers } from './invoice-service';
 import { truncateAllTables } from '../../setup';
 import ProductRevision from '../../../src/entity/product/product-revision';
 import { calculateBalance } from '../../helpers/balance';
-import { ContainerSeeder, PointOfSaleSeeder, ProductSeeder, UserSeeder } from '../../seed';
+import { ContainerSeeder, PointOfSaleSeeder, ProductSeeder, TransactionSeeder, UserSeeder } from '../../seed';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -79,7 +76,7 @@ describe('TransactionService', (): void => {
     const { productRevisions } = await new ProductSeeder().seedProducts(users);
     const { containerRevisions } = await new ContainerSeeder().seedContainers(users, productRevisions);
     const { pointOfSaleRevisions } = await new PointOfSaleSeeder().seedPointsOfSale(users, containerRevisions);
-    const { transactions } = await seedTransactions(users, pointOfSaleRevisions);
+    const { transactions } = await new TransactionSeeder().seedTransactions(users, pointOfSaleRevisions);
 
     await generateBalance(1000, 7);
 

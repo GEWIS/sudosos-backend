@@ -22,7 +22,6 @@ import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import Transfer from '../../../src/entity/transactions/transfer';
 import SellerPayout from '../../../src/entity/transactions/payout/seller-payout';
 import {
-  seedTransactions,
   seedTransfers,
 } from '../../seed-legacy';
 import { expect, request } from 'chai';
@@ -44,9 +43,8 @@ import sinon from 'sinon';
 import { Client } from 'pdf-generator-client';
 import { BasePdfService } from '../../../src/service/pdf/pdf-service';
 import {
-  PointOfSaleSeeder,
   RbacSeeder,
-  SellerPayoutSeeder,
+  SellerPayoutSeeder, TransactionSeeder,
   UserSeeder,
 } from '../../seed';
 
@@ -68,9 +66,7 @@ describe('SellerPayoutController', () => {
 
     const users = await new UserSeeder().seedUsers();
 
-    const { pointOfSaleRevisions } = await new PointOfSaleSeeder().seedPointsOfSale(users);
-
-    const { transactions, subTransactions } = await seedTransactions(users, pointOfSaleRevisions, new Date('2020-01-01'), new Date());
+    const { transactions, subTransactions } = await new TransactionSeeder().seedTransactions(users, undefined, new Date('2020-01-01'), new Date());
     const transfers = await seedTransfers(users, new Date('2020-01-01'), new Date());
     const { sellerPayouts, transfers: sellerPayoutTransfers } = await new SellerPayoutSeeder().seedSellerPayouts(users, transactions, subTransactions, transfers);
 

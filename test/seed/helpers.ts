@@ -16,10 +16,9 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-export * from './catalogue';
-export * from './ledger';
+export function getRandomDate(startDate: Date, endDate: Date, i: number): Date {
+  const diff = endDate.getTime() - startDate.getTime();
+  if (diff <= 0) throw new Error('startDate should be before endDate');
 
-export { default as EventSeeder } from './event';
-export { default as RbacSeeder } from './rbac';
-export { default as SellerPayoutSeeder } from './seller-payout';
-export { default as UserSeeder } from './user';
+  return new Date(startDate.getTime() + (startDate.getTime() * i ) % diff);
+}

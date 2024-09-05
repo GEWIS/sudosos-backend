@@ -16,10 +16,4 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-export * from './catalogue';
-export * from './ledger';
-
-export { default as EventSeeder } from './event';
-export { default as RbacSeeder } from './rbac';
-export { default as SellerPayoutSeeder } from './seller-payout';
-export { default as UserSeeder } from './user';
+export { default as TransactionSeeder } from './transaction';

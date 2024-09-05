@@ -28,7 +28,6 @@ import Product from '../src/entity/product/product';
 import ProductCategory from '../src/entity/product/product-category';
 import ProductRevision from '../src/entity/product/product-revision';
 import SubTransaction from '../src/entity/transactions/sub-transaction';
-import SubTransactionRow from '../src/entity/transactions/sub-transaction-row';
 import Transaction from '../src/entity/transactions/transaction';
 import User, { UserType } from '../src/entity/user/user';
 import Transfer from '../src/entity/transactions/transfer';
@@ -68,13 +67,8 @@ import {
   UserSeeder,
   VatGroupSeeder,
 } from './seed';
-
-function getDate(startDate: Date, endDate: Date, i: number): Date {
-  const diff = endDate.getTime() - startDate.getTime();
-  if (diff <= 0) throw new Error('startDate should be before endDate');
-
-  return new Date(startDate.getTime() + (startDate.getTime() * i ) % diff);
-}
+import { getRandomDate } from './seed/helpers';
+import TransactionSeeder from './seed/ledger/transaction';
 
 
 export function defineInvoiceEntries(invoiceId: number, startEntryId: number,
@@ -188,162 +182,6 @@ export async function seedInvoices(users: User[], transactions: Transaction[]): 
 
 
   return { invoices, invoiceTransfers };
-}
-
-/**
- * Defines transaction objects subtransactions and rows based on the parameters passed.
- * A deterministic subset of the containers and products will be used for every transaction.
- *
- * @param start - The number of transactions that already exist.
- * @param startSubTransaction - The number of subtransactions that already exist.
- * @param startRow - The number of subtransaction rows that already exist.
- * @param count - The number of transactions to generate.
- * @param pointOfSale - The point of sale for which to generate transactions.
- * @param from - The user that buys stuff from the point of sale.
- * @param createdBy - The user that has created the transaction for the 'from' user, or null.
- * @param createdAt - Date of transaction creation
- */
-export function defineTransactions(
-  start: number,
-  startSubTransaction: number,
-  startRow: number,
-  count: number,
-  pointOfSale: PointOfSaleRevision,
-  from: User,
-  createdBy: User,
-  createdAt?: Date,
-): Transaction[] {
-  const transactions: Transaction[] = [];
-  let subTransactionId = startSubTransaction;
-  let rowId = startRow;
-
-  for (let nr = 1; nr <= count; nr += 1) {
-    const transaction = Object.assign(new Transaction(), {
-      id: start + nr,
-      createdAt,
-      from,
-      createdBy,
-      pointOfSale,
-      subTransactions: [],
-    }) as Transaction;
-    transactions.push(transaction);
-
-    for (let c = 0; c < pointOfSale.containers.length; c += 1) {
-      const container = pointOfSale.containers[c];
-
-      // Only define some of the containers.
-      if ((start + 5 * c + 13 * nr) % 3 === 0) {
-        subTransactionId += 1;
-        const subTransaction = Object.assign(new SubTransaction(), {
-          id: subTransactionId,
-          createdAt,
-          to: pointOfSale.pointOfSale.owner,
-          transaction,
-          container,
-          subTransactionRows: [],
-        });
-        transaction.subTransactions.push(subTransaction);
-
-        for (let p = 0; p < container.products.length; p += 1) {
-          // Only define some of the products.
-          if ((3 * start + 7 * c + 17 * nr + p * 19) % 5 === 0) {
-            rowId += 1;
-            const row = Object.assign(new SubTransactionRow(), {
-              id: rowId,
-              createdAt,
-              subTransaction,
-              product: container.products[p],
-              amount: ((start + c + p + nr) % 3) + 1,
-            });
-            subTransaction.subTransactionRows.push(row);
-          }
-        }
-      }
-    }
-  }
-
-  return transactions;
-}
-
-/**
- * Seeds a default dataset of transactions, based on the supplied user and point of sale
- * revision dataset. Every point of sale revision will recevie transactions.
- *
- * @param users - The dataset of users to base the point of sale dataset on.
- * @param pointOfSaleRevisions
- *  - The dataset of point of sale revisions to base the transaction dataset on.
- * @param beginDate - The lower bound for the range of transaction creation dates
- * @param endDate - The upper bound for the range of transaction creation dates
- * @param nrMultiplier - Multiplier for the number of transactions to create
- */
-export async function seedTransactions(
-  users: User[],
-  pointOfSaleRevisions: PointOfSaleRevision[],
-  beginDate?: Date,
-  endDate?: Date,
-  nrMultiplier: number = 1,
-): Promise<{
-    transactions: Transaction[],
-    subTransactions: SubTransaction[],
-  }> {
-  let transactions: Transaction[] = [];
-  let startSubTransaction = 0;
-  let startRow = 0;
-
-  for (let i = 0; i < pointOfSaleRevisions.length; i += 1) {
-    const pos = pointOfSaleRevisions[i];
-
-    const from = users[(i + pos.pointOfSale.id * 5 + pos.revision * 7) % users.length];
-    const createdBy = (i + pos.revision) % 3 !== 0
-      ? from
-      : users[(i * 5 + pos.pointOfSale.id * 7 + pos.revision) % users.length];
-    let createdAt: Date;
-    if (beginDate && endDate) createdAt = getDate(beginDate, endDate, i);
-    const trans = defineTransactions(
-      transactions.length,
-      startSubTransaction,
-      startRow,
-      Math.round(2 * nrMultiplier),
-      pos,
-      from,
-      createdBy,
-      createdAt,
-    );
-
-    // Update the start id counters.
-    for (let a = 0; a < trans.length; a += 1) {
-      const t = trans[a];
-      startSubTransaction += t.subTransactions.length;
-      for (let b = 0; b < t.subTransactions.length; b += 1) {
-        const s = t.subTransactions[b];
-        startRow += s.subTransactionRows.length;
-      }
-    }
-
-    // First, save all transactions.
-    await Transaction.save(trans)
-      .then(async () => {
-        // Then, save all subtransactions for the transactions.
-        // const subPromises: Promise<any>[] = [];
-        for (let j = trans.length - 1; j >= 0; j--) {
-          await SubTransaction.save(trans[j].subTransactions);
-        }
-      }).then(async () => {
-        // Then, save all subtransactions rows for the subtransactions.
-        for (let j = trans.length - 1; j >= 0; j--) {
-          for (let k = trans[j].subTransactions.length - 1; k >= 0; k--) {
-            await SubTransactionRow.save(trans[j].subTransactions[k].subTransactionRows);
-          }
-        }
-      });
-
-    transactions = transactions.concat(trans);
-
-  }
-  return {
-    transactions,
-    subTransactions: transactions.map((t) => t.subTransactions).flat(),
-  };
 }
 
 /**
@@ -626,7 +464,7 @@ export async function seedTransfers(users: User[],
   for (let i = 0; i < users.length; i += 1) {
     let date = new Date();
     if (startDate && endDate) {
-      date = getDate(startDate, endDate, i);
+      date = getRandomDate(startDate, endDate, i);
     }
     let newTransfer = Object.assign(new Transfer(), {
       description: '',
@@ -803,7 +641,7 @@ export default async function seedDatabase(beginDate?: Date, endDate?: Date): Pr
     users, containerRevisions,
   );
   const { roles, roleAssignments, events, eventShifts, eventShiftAnswers } = await new EventSeeder().seedEvents(users);
-  const { transactions } = await seedTransactions(users, pointOfSaleRevisions, beginDate, endDate);
+  const { transactions } = await new TransactionSeeder().seedTransactions(users, pointOfSaleRevisions, beginDate, endDate);
   const transfers = await seedTransfers(users, beginDate, endDate);
   const { fines, fineTransfers, userFineGroups } = await seedFines(users, transactions, transfers);
   const { payoutRequests, payoutRequestTransfers } = await seedPayoutRequests(users);

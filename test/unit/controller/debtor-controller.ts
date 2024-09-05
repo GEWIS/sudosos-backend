@@ -24,12 +24,9 @@ import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/u
 import Database from '../../../src/database/database';
 import {
   seedFines,
-  seedTransactions, seedTransfers,
+  seedTransfers,
 } from '../../seed-legacy';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
-import ProductRevision from '../../../src/entity/product/product-revision';
-import ContainerRevision from '../../../src/entity/container/container-revision';
-import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
 import Transaction from '../../../src/entity/transactions/transaction';
 import Transfer from '../../../src/entity/transactions/transfer';
 import Fine from '../../../src/entity/fine/fine';
@@ -55,7 +52,7 @@ import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { Client } from 'pdf-generator-client';
 import { BasePdfService } from '../../../src/service/pdf/pdf-service';
-import { ContainerSeeder, PointOfSaleSeeder, ProductSeeder, RbacSeeder, UserSeeder } from '../../seed';
+import { RbacSeeder, TransactionSeeder, UserSeeder } from '../../seed';
 
 describe('DebtorController', () => {
   let ctx: {
@@ -68,9 +65,6 @@ describe('DebtorController', () => {
     adminToken: string;
     userToken: string;
     users: User[],
-    productRevisions: ProductRevision[],
-    containerRevisions: ContainerRevision[],
-    pointOfSaleRevisions: PointOfSaleRevision[],
     transactions: Transaction[],
     subTransactions: SubTransaction[],
     transfers: Transfer[],
@@ -108,10 +102,7 @@ describe('DebtorController', () => {
     await User.save(localUser);
 
     const users = await new UserSeeder().seedUsers();
-    const { productRevisions } = await new ProductSeeder().seedProducts(users);
-    const { containerRevisions } = await new ContainerSeeder().seedContainers(users, productRevisions);
-    const { pointOfSaleRevisions } = await new PointOfSaleSeeder().seedPointsOfSale(users, containerRevisions);
-    const { transactions } = await seedTransactions(users, pointOfSaleRevisions, new Date('2020-02-12'), new Date('2021-11-30'), 10);
+    const { transactions } = await new TransactionSeeder().seedTransactions(users, undefined, new Date('2020-02-12'), new Date('2021-11-30'), 10);
     const transfers = await seedTransfers(users, new Date('2020-02-12'), new Date('2021-11-30'));
     const subTransactions: SubTransaction[] = Array.prototype.concat(...transactions
       .map((t) => t.subTransactions));
@@ -160,9 +151,6 @@ describe('DebtorController', () => {
       adminToken,
       userToken,
       users,
-      productRevisions,
-      containerRevisions,
-      pointOfSaleRevisions,
       transactions,
       subTransactions,
       transfers,

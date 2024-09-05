@@ -25,7 +25,7 @@ import Transaction from '../../../src/entity/transactions/transaction';
 import Database from '../../../src/database/database';
 import {
   seedFines,
-  seedTransactions, seedTransfers,
+  seedTransfers,
 } from '../../seed-legacy';
 import Swagger from '../../../src/start/swagger';
 import TokenHandler from '../../../src/authentication/token-handler';
@@ -43,7 +43,7 @@ import Fine from '../../../src/entity/fine/fine';
 import UserFineGroup from '../../../src/entity/fine/userFineGroup';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { PointOfSaleSeeder, RbacSeeder, UserSeeder } from '../../seed';
+import { RbacSeeder, TransactionSeeder, UserSeeder } from '../../seed';
 
 describe('BalanceController', (): void => {
   let ctx: {
@@ -66,9 +66,9 @@ describe('BalanceController', (): void => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
     const app = express();
+
     const users = await new UserSeeder().seedUsers();
-    const { pointOfSaleRevisions } = await new PointOfSaleSeeder().seedPointsOfSale(users);
-    const { transactions } = await seedTransactions(users, pointOfSaleRevisions, new Date('2020-02-12'), new Date('2022-11-30'));
+    const { transactions } = await new TransactionSeeder().seedTransactions(users, undefined, new Date('2020-02-12'), new Date('2022-11-30'));
     const subTransactions: SubTransaction[] = Array.prototype.concat(...transactions
       .map((t) => t.subTransactions));
     const transfers = await seedTransfers(users);
