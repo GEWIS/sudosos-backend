@@ -25,7 +25,7 @@ import log4js, { Logger } from 'log4js';
 import TransactionController from '../../../src/controller/transaction-controller';
 import Transaction from '../../../src/entity/transactions/transaction';
 import Database from '../../../src/database/database';
-import seedDatabase from '../../seed-legacy';
+import seedDatabase from '../../seed';
 import Swagger from '../../../src/start/swagger';
 import TokenHandler from '../../../src/authentication/token-handler';
 import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';

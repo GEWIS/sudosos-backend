@@ -15,34 +15,32 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-
-import Container from '../src/entity/container/container';
-import ContainerRevision from '../src/entity/container/container-revision';
-import PointOfSale from '../src/entity/point-of-sale/point-of-sale';
-import PointOfSaleRevision from '../src/entity/point-of-sale/point-of-sale-revision';
-import Product from '../src/entity/product/product';
-import ProductCategory from '../src/entity/product/product-category';
-import ProductRevision from '../src/entity/product/product-revision';
-import Transaction from '../src/entity/transactions/transaction';
-import User, { UserType } from '../src/entity/user/user';
-import Transfer from '../src/entity/transactions/transfer';
-import Banner from '../src/entity/banner';
-import StripeDeposit from '../src/entity/stripe/stripe-deposit';
-import PayoutRequest from '../src/entity/transactions/payout/payout-request';
-import Invoice from '../src/entity/invoices/invoice';
-import Event from '../src/entity/event/event';
-import EventShift from '../src/entity/event/event-shift';
-import EventShiftAnswer from '../src/entity/event/event-shift-answer';
-import seedGEWISUsers from '../src/gewis/database/seed';
-import PinAuthenticator from '../src/entity/authenticator/pin-authenticator';
-import VatGroup from '../src/entity/vat-group';
-import LocalAuthenticator from '../src/entity/authenticator/local-authenticator';
-import UserFineGroup from '../src/entity/fine/userFineGroup';
-import Fine from '../src/entity/fine/fine';
-import GewisUser from '../src/gewis/entity/gewis-user';
-import AssignedRole from '../src/entity/rbac/assigned-role';
-import Role from '../src/entity/rbac/role';
-import WriteOff from '../src/entity/transactions/write-off';
+import User, { UserType } from '../../src/entity/user/user';
+import Role from '../../src/entity/rbac/role';
+import AssignedRole from '../../src/entity/rbac/assigned-role';
+import ProductCategory from '../../src/entity/product/product-category';
+import VatGroup from '../../src/entity/vat-group';
+import Product from '../../src/entity/product/product';
+import ProductRevision from '../../src/entity/product/product-revision';
+import Event from '../../src/entity/event/event';
+import EventShift from '../../src/entity/event/event-shift';
+import EventShiftAnswer from '../../src/entity/event/event-shift-answer';
+import Container from '../../src/entity/container/container';
+import ContainerRevision from '../../src/entity/container/container-revision';
+import PointOfSale from '../../src/entity/point-of-sale/point-of-sale';
+import PointOfSaleRevision from '../../src/entity/point-of-sale/point-of-sale-revision';
+import Transaction from '../../src/entity/transactions/transaction';
+import Transfer from '../../src/entity/transactions/transfer';
+import Fine from '../../src/entity/fine/fine';
+import UserFineGroup from '../../src/entity/fine/userFineGroup';
+import PayoutRequest from '../../src/entity/transactions/payout/payout-request';
+import StripeDeposit from '../../src/entity/stripe/stripe-deposit';
+import Invoice from '../../src/entity/invoices/invoice';
+import Banner from '../../src/entity/banner';
+import GewisUser from '../../src/gewis/entity/gewis-user';
+import PinAuthenticator from '../../src/entity/authenticator/pin-authenticator';
+import LocalAuthenticator from '../../src/entity/authenticator/local-authenticator';
+import WriteOff from '../../src/entity/transactions/write-off';
 import {
   ContainerSeeder, DepositSeeder, EventSeeder, FineSeeder, InvoiceSeeder, PayoutRequestSeeder,
   PointOfSaleSeeder,
@@ -50,8 +48,9 @@ import {
   ProductSeeder, TransactionSeeder, TransferSeeder,
   UserSeeder,
   VatGroupSeeder, WriteOffSeeder,
-} from './seed';
-import BannerSeeder from './seed/banner-seeder';
+} from './index';
+import seedGEWISUsers from '../../src/gewis/database/seed';
+import BannerSeeder from './banner-seeder';
 
 export interface DatabaseContent {
   users: User[],

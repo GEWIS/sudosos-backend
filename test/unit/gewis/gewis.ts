@@ -26,7 +26,7 @@ import { json } from 'body-parser';
 import AuthenticationService from '../../../src/service/authentication-service';
 import User, { UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
-import seedDatabase from '../../seed-legacy';
+import seedDatabase from '../../seed';
 import Swagger from '../../../src/start/swagger';
 import userIsAsExpected from '../service/authentication-service';
 import { inUserContext, UserFactory } from '../../helpers/user-factory';

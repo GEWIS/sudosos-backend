@@ -37,7 +37,7 @@ import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
 import ProductRevision from '../../../src/entity/product/product-revision';
 import ContainerRevision from '../../../src/entity/container/container-revision';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
-import seedDatabase from '../../seed-legacy';
+import seedDatabase from '../../seed';
 import { verifyUserResponse } from '../validators';
 import RoleManager from '../../../src/rbac/role-manager';
 import { TransactionResponse } from '../../../src/controller/response/transaction-response';

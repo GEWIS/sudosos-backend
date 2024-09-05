@@ -22,3 +22,8 @@ export * from './ledger';
 export { default as EventSeeder } from './event-seeder';
 export { default as RbacSeeder } from './rbac-seeder';
 export { default as UserSeeder } from './user-seeder';
+export { DatabaseContent, default as seedDatabase } from './all';
+
+import seedDatabase from './all';
+
+export default seedDatabase;
