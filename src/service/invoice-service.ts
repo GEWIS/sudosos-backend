@@ -185,13 +185,9 @@ export default class InvoiceService extends WithManager {
     const transactionId = transactions.length > 0 ? transactions.map((t) => t.id) : null;
     const baseTransactions = (await new TransactionService(this.manager).getTransactions({ transactionId })).records;
 
-    const sum = baseTransactions.reduce((acc, t) => {
+    baseTransactions.forEach((t) => {
       if (t.from.id !== forId) throw new Error(`Transaction from ${t.from.id} not from user ${forId}`);
-      return acc + t.value.amount;
-    }, 0);
-
-    // TODO: Should we error if the sum is not equal to the amount?
-    if (sum !== amount.amount) throw new Error(`Sum of transactions is ${sum}, but amount is ${amount.amount}`);
+    });
 
     const transferRequest: TransferRequest = {
       amount,
