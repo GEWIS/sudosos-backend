@@ -16,8 +16,6 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import * as fs from 'fs';
-import path from 'path';
 import Container from '../src/entity/container/container';
 import ContainerRevision from '../src/entity/container/container-revision';
 import PointOfSale from '../src/entity/point-of-sale/point-of-sale';
@@ -29,8 +27,6 @@ import Transaction from '../src/entity/transactions/transaction';
 import User, { UserType } from '../src/entity/user/user';
 import Transfer from '../src/entity/transactions/transfer';
 import Banner from '../src/entity/banner';
-import BannerImage from '../src/entity/file/banner-image';
-import { BANNER_IMAGE_LOCATION } from '../src/files/storage';
 import StripeDeposit from '../src/entity/stripe/stripe-deposit';
 import PayoutRequest from '../src/entity/transactions/payout/payout-request';
 import Invoice from '../src/entity/invoices/invoice';
@@ -51,76 +47,11 @@ import {
   ContainerSeeder, DepositSeeder, EventSeeder, FineSeeder, InvoiceSeeder, PayoutRequestSeeder,
   PointOfSaleSeeder,
   ProductCategorySeeder,
-  ProductSeeder, TransferSeeder,
+  ProductSeeder, TransactionSeeder, TransferSeeder,
   UserSeeder,
   VatGroupSeeder, WriteOffSeeder,
 } from './seed';
-import TransactionSeeder from './seed/ledger/transaction';
-
-/**
- * Create a BannerImage object. When not in a testing environment, a banner image
- * will also be saved on disk.
- *
- * @param banner
- * @param createdBy
- */
-function defineBannerImage(banner: Banner, createdBy: User): BannerImage {
-  const downloadName = `banner-${banner.id}.png`;
-
-  let location;
-  if (process.env.NODE_ENV !== 'test') {
-    const source = path.join(__dirname, './static/banner.png');
-    location = path.join(__dirname, '../', BANNER_IMAGE_LOCATION, downloadName);
-    fs.copyFileSync(source, location);
-  } else {
-    location = `fake/storage/${downloadName}`;
-  }
-
-  return Object.assign(new BannerImage(), {
-    id: banner.id,
-    location,
-    downloadName,
-    createdBy,
-  });
-}
-
-/**
- * Seeds a default dataset of banners based on the given users.
- * When not in a testing environment, actual images will also be saved to disk.
- * @param users
- */
-export async function seedBanners(users: User[]): Promise<{
-  banners: Banner[],
-  bannerImages: BannerImage[],
-}> {
-  const banners: Banner[] = [];
-  const bannerImages: BannerImage[] = [];
-
-  const creators = users.filter((u) => [UserType.LOCAL_ADMIN].includes(u.type));
-
-  for (let i = 0; i < creators.length * 4; i += 1) {
-    const banner = Object.assign(new Banner(), {
-      id: i + 1,
-      name: `Banner-${i + 1}`,
-      duration: Math.floor(Math.random() * (300 - 60) + 60),
-      active: i % 2 === 0,
-      startDate: new Date(),
-      endDate: new Date(),
-    });
-
-    if (i % 4 !== 0) {
-      banner.image = defineBannerImage(banner, creators[i % creators.length]);
-      bannerImages.push(banner.image);
-    }
-
-    banners.push(banner);
-  }
-
-  await Promise.all(bannerImages.map((image) => BannerImage.save(image)));
-  await Promise.all(banners.map((banner) => Banner.save(banner)));
-
-  return { banners, bannerImages };
-}
+import BannerSeeder from './seed/banner';
 
 export interface DatabaseContent {
   users: User[],
@@ -179,7 +110,7 @@ export default async function seedDatabase(beginDate?: Date, endDate?: Date): Pr
   const { invoices, invoiceTransfers } = await new InvoiceSeeder().seedInvoices(users, transactions);
   const { stripeDeposits, stripeDepositTransfers } = await new DepositSeeder().seedStripeDeposits(users);
   const writeOffs = await new WriteOffSeeder().seedWriteOffs();
-  const { banners } = await seedBanners(users);
+  const { banners } = await new BannerSeeder().seedBanners(users);
 
   return {
     users,

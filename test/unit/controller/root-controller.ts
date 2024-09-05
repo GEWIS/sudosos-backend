@@ -22,13 +22,13 @@ import RootController from '../../../src/controller/root-controller';
 import { BannerResponse } from '../../../src/controller/response/banner-response';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import Banner from '../../../src/entity/banner';
-import { seedBanners } from '../../seed-legacy';
 import { bannerEq } from './banner-controller';
 import { DefaultContext, defaultContext, finishTestDB } from '../../helpers/test-helpers';
 import User from '../../../src/entity/user/user';
 import { ADMIN_USER, UserFactory } from '../../helpers/user-factory';
 import sinon from 'sinon';
 import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
+import BannerSeeder from '../../seed/banner';
 
 describe('RootController', async (): Promise<void> => {
   let ctx: DefaultContext & {
@@ -42,7 +42,7 @@ describe('RootController', async (): Promise<void> => {
     } as any;
     const admin: User = await (await UserFactory(await ADMIN_USER())).get();
     const user: User = await (await UserFactory()).get();
-    const { banners } = await seedBanners([user, admin]);
+    const { banners } = await new BannerSeeder().seedBanners([user, admin]);
 
     const controller = new RootController({ specification: ctx.specification, roleManager: ctx.roleManager });
     ctx.app.use(json());
