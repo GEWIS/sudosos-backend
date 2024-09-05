@@ -25,7 +25,6 @@ import User from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import {
   seedPayoutRequests,
-  seedUsers,
 } from '../../seed-legacy';
 import Swagger from '../../../src/start/swagger';
 import { json } from 'body-parser';
@@ -37,6 +36,7 @@ import PayoutRequest from '../../../src/entity/transactions/payout/payout-reques
 import PayoutRequestPdfService from '../../../src/service/pdf/payout-request-pdf-service';
 import PayoutRequestPdf from '../../../src/entity/file/payout-request-pdf';
 import { PAYOUT_REQUEST_PDF_LOCATION } from '../../../src/files/storage';
+import { UserSeeder } from '../../seed';
 
 chai.use(deepEqualInAnyOrder);
 describe('PayoutRequestPdfService', async () => {
@@ -56,7 +56,7 @@ describe('PayoutRequestPdfService', async () => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
-    const users = await seedUsers();
+    const users = await new UserSeeder().seedUsers();
     const { payoutRequests } = await seedPayoutRequests(users);
 
     // start app

@@ -26,7 +26,7 @@ import EventShift from '../../../src/entity/event/event-shift';
 import EventShiftAnswer, { Availability } from '../../../src/entity/event/event-shift-answer';
 import AssignedRole from '../../../src/entity/rbac/assigned-role';
 import Database from '../../../src/database/database';
-import { seedEvents, seedUsers } from '../../seed-legacy';
+import { seedEvents } from '../../seed-legacy';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Swagger from '../../../src/start/swagger';
 import { json } from 'body-parser';
@@ -43,7 +43,7 @@ import EventService from '../../../src/service/event-service';
 import { EventRequest } from '../../../src/controller/request/event-request';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { RbacSeeder } from '../../seed';
+import { RbacSeeder, UserSeeder } from '../../seed';
 
 describe('EventController', () => {
   let ctx: {
@@ -86,7 +86,7 @@ describe('EventController', () => {
     await User.save(adminUser);
     await User.save(localUser);
 
-    const users = await seedUsers();
+    const users = await new UserSeeder().seedUsers();
     const { roleAssignments, events, eventShifts, eventShiftAnswers } = await seedEvents(users);
 
     // start app

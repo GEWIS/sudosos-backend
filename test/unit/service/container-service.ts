@@ -30,7 +30,7 @@ import Swagger from '../../../src/start/swagger';
 import ContainerService from '../../../src/service/container-service';
 import {
   seedContainers, seedProducts, seedPointsOfSale,
-  seedProductCategories, seedUsers, seedVatGroups,
+  seedProductCategories, seedVatGroups,
 } from '../../seed-legacy';
 import Container from '../../../src/entity/container/container';
 import { ContainerResponse, ContainerWithProductsResponse } from '../../../src/controller/response/container-response';
@@ -49,6 +49,7 @@ import { finishTestDB } from '../../helpers/test-helpers';
 import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
 import sinon from 'sinon';
 import { PointOfSaleWithContainersResponse } from '../../../src/controller/response/point-of-sale-response';
+import { UserSeeder } from '../../seed';
 
 /**
  * Test if all the container responses are part of the container set array.
@@ -112,7 +113,7 @@ describe('ContainerService', async (): Promise<void> => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
-    const users = await seedUsers();
+    const users = await new UserSeeder().seedUsers();
     const categories = await seedProductCategories();
     const vatGroups = await seedVatGroups();
     const { productRevisions } = await seedProducts(users, categories, vatGroups);

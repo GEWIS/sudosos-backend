@@ -16,7 +16,6 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { defaultContext, DefaultContext, finishTestDB } from '../../helpers/test-helpers';
-import { seedUsers } from '../../seed-legacy';
 import User, { UserType } from '../../../src/entity/user/user';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import { json } from 'body-parser';
@@ -24,7 +23,7 @@ import ServerSettingsController from '../../../src/controller/server-settings-co
 import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
 import { expect, request } from 'chai';
 import sinon from 'sinon';
-import { RbacSeeder } from '../../seed';
+import { RbacSeeder, UserSeeder } from '../../seed';
 
 describe('ServerSettingsController', () => {
   let ctx: DefaultContext & {
@@ -37,7 +36,7 @@ describe('ServerSettingsController', () => {
   before(async () => {
     const c = { ...await defaultContext() };
 
-    const users = await seedUsers();
+    const users = await new UserSeeder().seedUsers();
 
     const all = { all: new Set<string>(['*']) };
     const adminRole = await new RbacSeeder().seedRoles([{

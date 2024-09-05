@@ -27,7 +27,7 @@ import Swagger from '../../../src/start/swagger';
 import ProductService, { ProductFilterParameters } from '../../../src/service/product-service';
 import {
   seedProducts, seedContainers, seedProductCategories,
-  seedUsers, seedPointsOfSale, seedVatGroups,
+  seedPointsOfSale, seedVatGroups,
 } from '../../seed-legacy';
 import Product from '../../../src/entity/product/product';
 import {
@@ -51,6 +51,7 @@ import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import sinon from 'sinon';
 import { ContainerWithProductsResponse } from '../../../src/controller/response/container-response';
+import { UserSeeder } from '../../seed';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -148,7 +149,7 @@ describe('ProductService', async (): Promise<void> => {
 
     const categories = await seedProductCategories();
     const vatGroups = await seedVatGroups();
-    const users = await seedUsers();
+    const users = await new UserSeeder().seedUsers();
 
     const {
       products,

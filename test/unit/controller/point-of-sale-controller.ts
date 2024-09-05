@@ -26,7 +26,6 @@ import {
   seedPointsOfSale,
   seedProductCategories,
   seedProducts,
-  seedUsers,
   seedVatGroups,
 } from '../../seed-legacy';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
@@ -64,7 +63,7 @@ import { SwaggerSpecification } from 'swagger-model-validator';
 import { SeededRole } from '../../seed/rbac';
 import PointOfSaleService from '../../../src/service/point-of-sale-service';
 import MemberAuthenticator from '../../../src/entity/authenticator/member-authenticator';
-import { RbacSeeder } from '../../seed';
+import { RbacSeeder, UserSeeder } from '../../seed';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -120,7 +119,7 @@ describe('PointOfSaleController', async () => {
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
 
-    const users = await seedUsers();
+    const users = await new UserSeeder().seedUsers();
     await seedMemberAuthenticators(
       users.filter((u) => u.type !== UserType.ORGAN),
       users.filter((u) => u.type === UserType.ORGAN),

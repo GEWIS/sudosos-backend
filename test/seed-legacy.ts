@@ -42,7 +42,6 @@ import StripePaymentIntentStatus, { StripePaymentIntentState } from '../src/enti
 import DineroTransformer from '../src/entity/transformer/dinero-transformer';
 import PayoutRequest from '../src/entity/transactions/payout/payout-request';
 import PayoutRequestStatus, { PayoutRequestState } from '../src/entity/transactions/payout/payout-request-status';
-import InvoiceUser from '../src/entity/user/invoice-user';
 import Invoice from '../src/entity/invoices/invoice';
 import InvoiceEntry from '../src/entity/invoices/invoice-entry';
 import InvoiceStatus, { InvoiceState } from '../src/entity/invoices/invoice-status';
@@ -66,60 +65,13 @@ import Role from '../src/entity/rbac/role';
 import generateBalance from './helpers/test-helpers';
 import WriteOff from '../src/entity/transactions/write-off';
 import StripePaymentIntent from '../src/entity/stripe/stripe-payment-intent';
+import UserSeeder from './seed/user';
 
 function getDate(startDate: Date, endDate: Date, i: number): Date {
   const diff = endDate.getTime() - startDate.getTime();
   if (diff <= 0) throw new Error('startDate should be before endDate');
 
   return new Date(startDate.getTime() + (startDate.getTime() * i ) % diff);
-}
-
-/**
- * Defines InvoiceUsers objects for the given Users
- * @param users - List of Invoice User type
- */
-export function defineInvoiceUsers(users: User[]): InvoiceUser[] {
-  const invoiceUsers: InvoiceUser[] = [];
-  for (let nr = 0; nr < users.length; nr += 1) {
-    invoiceUsers.push(Object.assign(new InvoiceUser(), {
-      user: users[nr],
-      automatic: nr % 2 > 0,
-      street: `street ${nr}`,
-      postalCode:`postalCode ${nr}`,
-      city: `city ${nr}`,
-      country: `country ${nr}`,
-    }));
-  }
-  return invoiceUsers;
-}
-
-/**
- * Defines user objects with the given parameters.
- *
- * @param start - The number of users that already exist.
- * @param count - The number of objects to define.
- * @param type - The type of users to define.
- * @param active - Active state of the defined users.
- */
-function defineUsers(
-  start: number,
-  count: number,
-  type: UserType,
-  active: boolean,
-): User[] {
-  const users: User[] = [];
-  for (let nr = 1; nr <= count; nr += 1) {
-    users.push(Object.assign(new User(), {
-      id: start + nr,
-      firstName: `Firstname${start + nr}`,
-      lastName: `Lastname${start + nr}`,
-      nickname: nr % 4 === 0 ? `Nickname${start + nr}` : null,
-      type,
-      active,
-      acceptedToS: TermsOfServiceStatus.ACCEPTED,
-    }) as User);
-  }
-  return users;
 }
 
 const BCRYPT_ROUNDS = 12;
@@ -146,37 +98,6 @@ export async function seedHashAuthenticator<T extends HashBasedAuthenticationMet
 
   await Promise.all(promises);
   return authUsers;
-}
-
-/**
- * Seeds a default dataset of users, and stores them in the database.
- */
-export async function seedUsers(): Promise<User[]> {
-  const types: UserType[] = [
-    UserType.LOCAL_USER, UserType.LOCAL_ADMIN, UserType.MEMBER, UserType.ORGAN, UserType.INVOICE,
-  ];
-  let users: User[] = [];
-  let invoiceUsers: InvoiceUser[] = [];
-
-  const promises: Promise<any>[] = [];
-  for (let i = 0; i < types.length; i += 1) {
-    const uActive = defineUsers(users.length, 4, types[i], true);
-    promises.push(User.save(uActive));
-    users = users.concat(uActive);
-
-    const uInactive = defineUsers(users.length, 2, types[i], false);
-    promises.push(User.save(uInactive));
-    users = users.concat(uInactive);
-
-    if (types[i] === UserType.INVOICE) {
-      invoiceUsers = invoiceUsers.concat(defineInvoiceUsers(uActive.concat(uInactive)));
-    }
-  }
-
-  await Promise.all(promises);
-  await InvoiceUser.save(invoiceUsers);
-
-  return users;
 }
 
 /**
@@ -1392,7 +1313,7 @@ function defineBannerImage(banner: Banner, createdBy: User): BannerImage {
 
 export async function seedWriteOffs(count = 10): Promise<WriteOff[]> {
   const userCount = await User.count();
-  const users = defineUsers(userCount, count, UserType.LOCAL_USER, false);
+  const users = new UserSeeder().defineUsers(userCount, count, UserType.LOCAL_USER, false);
   await User.save(users);
 
   for (const u of users) {
@@ -1491,7 +1412,7 @@ export interface DatabaseContent {
 }
 
 export default async function seedDatabase(beginDate?: Date, endDate?: Date): Promise<DatabaseContent> {
-  const users = await seedUsers();
+  const users = await new UserSeeder().seedUsers();
   await seedMemberAuthenticators(
     users.filter((u) => u.type !== UserType.ORGAN),
     [users.filter((u) => u.type === UserType.ORGAN)[0]],

@@ -25,7 +25,7 @@ import PayoutRequestController from '../../../src/controller/payout-request-cont
 import User, { UserType } from '../../../src/entity/user/user';
 import PayoutRequest from '../../../src/entity/transactions/payout/payout-request';
 import Database from '../../../src/database/database';
-import { seedPayoutRequests, seedUsers } from '../../seed-legacy';
+import { seedPayoutRequests } from '../../seed-legacy';
 import PayoutRequestRequest from '../../../src/controller/request/payout-request-request';
 import TokenHandler from '../../../src/authentication/token-handler';
 import RoleManager from '../../../src/rbac/role-manager';
@@ -41,7 +41,7 @@ import { truncateAllTables } from '../../setup';
 import generateBalance, { finishTestDB } from '../../helpers/test-helpers';
 import BalanceService from '../../../src/service/balance-service';
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
-import { RbacSeeder } from '../../seed';
+import { RbacSeeder, UserSeeder } from '../../seed';
 
 describe('PayoutRequestController', () => {
   let ctx: {
@@ -76,7 +76,7 @@ describe('PayoutRequestController', () => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
-    const users = await seedUsers();
+    const users = await new UserSeeder().seedUsers();
     const { payoutRequests } = await seedPayoutRequests(users);
 
     const adminUser = users.filter((u) => u.type === UserType.LOCAL_ADMIN)[0];

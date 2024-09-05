@@ -26,7 +26,6 @@ import {
   seedPointsOfSale,
   seedProductCategories,
   seedProducts, seedTransactions, seedTransfers,
-  seedUsers,
   seedVatGroups,
 } from '../../seed-legacy';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
@@ -39,6 +38,7 @@ import dinero from 'dinero.js';
 import Fine from '../../../src/entity/fine/fine';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
+import { UserSeeder } from '../../seed';
 
 describe('TransferSubscriber', (): void => {
   let ctx: {
@@ -54,7 +54,7 @@ describe('TransferSubscriber', (): void => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
-    const users = await seedUsers();
+    const users = await new UserSeeder().seedUsers();
     const categories = await seedProductCategories();
     const vatGroups = await seedVatGroups();
     const { productRevisions } = await seedProducts(users, categories, vatGroups);

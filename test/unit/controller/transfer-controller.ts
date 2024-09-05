@@ -32,10 +32,10 @@ import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/u
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import RoleManager from '../../../src/rbac/role-manager';
 import Swagger from '../../../src/start/swagger';
-import { seedTransfers, seedUsers } from '../../seed-legacy';
+import { seedTransfers } from '../../seed-legacy';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { RbacSeeder } from '../../seed';
+import { RbacSeeder, UserSeeder } from '../../seed';
 
 describe('TransferController', async (): Promise<void> => {
   let connection: Connection;
@@ -86,7 +86,7 @@ describe('TransferController', async (): Promise<void> => {
     await User.save(localUser);
     await User.save(sellerUser);
 
-    const users = await seedUsers();
+    const users = await new UserSeeder().seedUsers();
     await seedTransfers(users);
 
     adminAccountDeposit = await Transfer.findOne({ where: { to: { id: adminUser.id } } });

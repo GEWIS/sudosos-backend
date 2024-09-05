@@ -31,7 +31,6 @@ import {
   seedProducts,
   seedTransactions,
   seedTransfers,
-  seedUsers,
   seedVatGroups,
 } from '../../seed-legacy';
 import Swagger from '../../../src/start/swagger';
@@ -53,6 +52,7 @@ import Fine from '../../../src/entity/fine/fine';
 import BalanceResponse from '../../../src/controller/response/balance-response';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
+import { UserSeeder } from '../../seed';
 
 describe('BalanceService', (): void => {
   let ctx: {
@@ -74,7 +74,7 @@ describe('BalanceService', (): void => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
     const app = express();
-    const seededUsers = await seedUsers();
+    const seededUsers = await new UserSeeder().seedUsers();
     const categories = await seedProductCategories();
     const vatGroups = await seedVatGroups();
     const { productRevisions } = await seedProducts(seededUsers, categories, vatGroups);

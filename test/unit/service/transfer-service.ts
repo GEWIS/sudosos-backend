@@ -35,13 +35,13 @@ import {
   seedProducts, seedStripeDeposits,
   seedTransactions,
   seedTransfers,
-  seedUsers,
   seedVatGroups,
 } from '../../seed-legacy';
 import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import VatGroup from '../../../src/entity/vat-group';
+import { UserSeeder } from '../../seed';
 
 describe('TransferService', async (): Promise<void> => {
   let ctx: {
@@ -59,7 +59,7 @@ describe('TransferService', async (): Promise<void> => {
     const begin = new Date('1950-02-12T01:57:45.271Z');
     const end = new Date('2001-02-12T01:57:45.271Z');
 
-    const users = await seedUsers();
+    const users = await new UserSeeder().seedUsers();
     const vatGroups = await seedVatGroups();
     const categories = await seedProductCategories();
     const { productRevisions } = await seedProducts(users, categories, vatGroups);

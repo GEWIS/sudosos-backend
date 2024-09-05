@@ -27,7 +27,7 @@ import {
   seedPointsOfSale,
   seedProductCategories,
   seedProducts,
-  seedTransactions, seedTransfers, seedUsers,
+  seedTransactions, seedTransfers,
   seedVatGroups,
 } from '../../seed-legacy';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
@@ -59,7 +59,7 @@ import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { Client } from 'pdf-generator-client';
 import { BasePdfService } from '../../../src/service/pdf/pdf-service';
-import { RbacSeeder } from '../../seed';
+import { RbacSeeder, UserSeeder } from '../../seed';
 
 describe('DebtorController', () => {
   let ctx: {
@@ -111,7 +111,7 @@ describe('DebtorController', () => {
     await User.save(adminUser);
     await User.save(localUser);
 
-    const users = await seedUsers();
+    const users = await new UserSeeder().seedUsers();
     const categories = await seedProductCategories();
     const vatGroups = await seedVatGroups();
     const { productRevisions } = await seedProducts(users, categories, vatGroups);

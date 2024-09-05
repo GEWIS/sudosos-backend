@@ -29,7 +29,6 @@ import {
   seedProducts,
   seedTransactions,
   seedTransfers,
-  seedUsers,
   seedVatGroups,
 } from '../../seed-legacy';
 import Database from '../../../src/database/database';
@@ -52,6 +51,7 @@ import { finishTestDB } from '../../helpers/test-helpers';
 import dinero from 'dinero.js';
 import TransferService from '../../../src/service/transfer-service';
 import FineHandoutEvent from '../../../src/entity/fine/fineHandoutEvent';
+import { UserSeeder } from '../../seed';
 
 describe('DebtorService', (): void => {
   let ctx: {
@@ -76,7 +76,7 @@ describe('DebtorService', (): void => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
-    const users = await seedUsers();
+    const users = await new UserSeeder().seedUsers();
     const categories = await seedProductCategories();
     const vatGroups = await seedVatGroups();
     const { productRevisions } = await seedProducts(users, categories, vatGroups);

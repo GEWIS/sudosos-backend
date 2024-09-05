@@ -27,7 +27,6 @@ import {
   seedPointsOfSale,
   seedProductCategories,
   seedProducts, seedTransactions, seedTransfers,
-  seedUsers,
   seedVatGroups,
 } from '../../seed-legacy';
 import { calculateBalance } from '../../helpers/balance';
@@ -42,6 +41,7 @@ import TransactionService from '../../../src/service/transaction-service';
 import BalanceService from '../../../src/service/balance-service';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
+import { UserSeeder } from '../../seed';
 
 describe('TransactionSubscriber', () => {
   let ctx: {
@@ -76,7 +76,7 @@ describe('TransactionSubscriber', () => {
       acceptedToS: TermsOfServiceStatus.ACCEPTED,
     } as User;
 
-    const users = await seedUsers();
+    const users = await new UserSeeder().seedUsers();
     const categories = await seedProductCategories();
     const vatGroups = await seedVatGroups();
     const { productRevisions } = await seedProducts([adminUser], categories, vatGroups);

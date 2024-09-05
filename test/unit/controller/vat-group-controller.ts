@@ -32,7 +32,6 @@ import {
   seedPointsOfSale,
   seedProductCategories,
   seedProducts, seedTransactions,
-  seedUsers,
   seedVatGroups,
 } from '../../seed-legacy';
 import TokenHandler from '../../../src/authentication/token-handler';
@@ -43,7 +42,7 @@ import { defaultPagination, PaginationResult } from '../../../src/helpers/pagina
 import { VatDeclarationResponse } from '../../../src/controller/response/vat-group-response';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { RbacSeeder } from '../../seed';
+import { RbacSeeder, UserSeeder } from '../../seed';
 
 describe('VatGroupController', () => {
   let ctx: {
@@ -72,7 +71,7 @@ describe('VatGroupController', () => {
       acceptedToS: TermsOfServiceStatus.ACCEPTED,
     } as User);
 
-    const users = await seedUsers();
+    const users = await new UserSeeder().seedUsers();
     const vatGroups = await seedVatGroups();
     const categories = await seedProductCategories();
     const { productRevisions } = await seedProducts(users, categories, vatGroups, 100);

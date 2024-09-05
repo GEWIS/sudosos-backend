@@ -28,7 +28,6 @@ import {
   seedProducts,
   seedTransactions,
   seedTransfers,
-  seedUsers,
   seedVatGroups,
 } from '../../seed-legacy';
 import { expect, request } from 'chai';
@@ -49,7 +48,7 @@ import dinero from 'dinero.js';
 import sinon from 'sinon';
 import { Client } from 'pdf-generator-client';
 import { BasePdfService } from '../../../src/service/pdf/pdf-service';
-import { RbacSeeder, SellerPayoutSeeder } from '../../seed';
+import { RbacSeeder, SellerPayoutSeeder, UserSeeder } from '../../seed';
 
 describe('SellerPayoutController', () => {
   let ctx: DefaultContext & {
@@ -67,7 +66,7 @@ describe('SellerPayoutController', () => {
   before(async () => {
     const c = { ...await defaultContext() };
 
-    const users = await seedUsers();
+    const users = await new UserSeeder().seedUsers();
 
     const categories = await seedProductCategories();
     const vatGroups = await seedVatGroups();

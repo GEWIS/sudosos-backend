@@ -29,7 +29,7 @@ import Swagger from '../../../src/start/swagger';
 import BaseFile from '../../../src/entity/file/base-file';
 import User from '../../../src/entity/user/user';
 import {
-  seedProductCategories, seedProducts, seedUsers, seedVatGroups,
+  seedProductCategories, seedProducts, seedVatGroups,
 } from '../../seed-legacy';
 import SimpleFileRequest from '../../../src/controller/request/simple-file-request';
 import FileService, { StorageMethod } from '../../../src/service/file-service';
@@ -38,6 +38,7 @@ import Product from '../../../src/entity/product/product';
 import ProductImage from '../../../src/entity/file/product-image';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
+import { UserSeeder } from '../../seed';
 
 describe('FileService', async (): Promise<void> => {
   let ctx: {
@@ -70,7 +71,7 @@ describe('FileService', async (): Promise<void> => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
-    const users = await seedUsers();
+    const users = await new UserSeeder().seedUsers();
     const categories = await seedProductCategories();
     const vatGroups = await seedVatGroups();
     const { products, productImages } = await seedProducts(users, categories, vatGroups);

@@ -29,13 +29,13 @@ import {
   seedProductCategories,
   seedProducts,
   seedTransactions,
-  seedUsers,
   seedVatGroups,
 } from '../../seed-legacy';
 import VatGroupService from '../../../src/service/vat-group-service';
 import { VatDeclarationResponse } from '../../../src/controller/response/vat-group-response';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
+import { UserSeeder } from '../../seed';
 
 describe('VatGroupService', () => {
   let ctx: {
@@ -49,7 +49,7 @@ describe('VatGroupService', () => {
   before(async () => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
-    const users = await seedUsers();
+    const users = await new UserSeeder().seedUsers();
     const vatGroups = await seedVatGroups();
     const categories = await seedProductCategories();
     const { productRevisions } = await seedProducts(users, categories, vatGroups, 100);

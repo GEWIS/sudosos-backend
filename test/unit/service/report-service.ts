@@ -26,11 +26,11 @@ import {
   seedPointsOfSale,
   seedProductCategories,
   seedProducts, seedTransactions,
-  seedUsers,
   seedVatGroups,
 } from '../../seed-legacy';
 import TransactionService from '../../../src/service/transaction-service';
 import { Report } from '../../../src/entity/report/report';
+import { UserSeeder } from '../../seed';
 
 describe('ReportService', () => {
   let ctx: any & DefaultContext;
@@ -42,7 +42,7 @@ describe('ReportService', () => {
       ...(await defaultBefore()),
     } as any;
 
-    const users = await seedUsers();
+    const users = await new UserSeeder().seedUsers();
     const vatGropus = await seedVatGroups();
     const categories = await seedProductCategories();
     const { productRevisions } = await seedProducts(users, categories, vatGropus);

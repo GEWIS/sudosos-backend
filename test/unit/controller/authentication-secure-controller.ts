@@ -37,7 +37,6 @@ import {
   seedPointsOfSale,
   seedProductCategories,
   seedProducts,
-  seedUsers,
   seedVatGroups,
 } from '../../seed-legacy';
 import MemberAuthenticator from '../../../src/entity/authenticator/member-authenticator';
@@ -45,7 +44,7 @@ import AuthenticationResponse from '../../../src/controller/response/authenticat
 import DefaultRoles from '../../../src/rbac/default-roles';
 import settingDefaults from '../../../src/server-settings/setting-defaults';
 import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
-import { RbacSeeder } from '../../seed';
+import { RbacSeeder, UserSeeder } from '../../seed';
 
 describe('AuthenticationSecureController', () => {
   let ctx: {
@@ -71,7 +70,7 @@ describe('AuthenticationSecureController', () => {
 
     await ServerSettingsStore.getInstance().initialize();
 
-    const users = await seedUsers();
+    const users = await new UserSeeder().seedUsers();
     const memberAuthenticators = await seedMemberAuthenticators(
       users.filter((u) => u.type !== UserType.ORGAN),
       users.filter((u) => u.type === UserType.ORGAN),

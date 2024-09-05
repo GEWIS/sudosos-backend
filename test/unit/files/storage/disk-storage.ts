@@ -23,10 +23,10 @@ import { Connection } from 'typeorm';
 import { DiskStorage } from '../../../../src/files/storage';
 import BaseFile from '../../../../src/entity/file/base-file';
 import User from '../../../../src/entity/user/user';
-import { seedUsers } from '../../../seed-legacy';
 import Database from '../../../../src/database/database';
 import { truncateAllTables } from '../../../setup';
 import { finishTestDB } from '../../../helpers/test-helpers';
+import { UserSeeder } from '../../../seed';
 
 const workdir = './imaginary/directory';
 
@@ -44,7 +44,7 @@ describe('Disk Storage', async () => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
-    const users = await seedUsers();
+    const users = await new UserSeeder().seedUsers();
 
     const files: BaseFile[] = [
       Object.assign(new BaseFile(), {

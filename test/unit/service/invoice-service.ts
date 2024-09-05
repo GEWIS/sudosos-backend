@@ -32,7 +32,6 @@ import {
   seedProductCategories,
   seedProducts,
   seedTransactions,
-  seedUsers,
   seedVatGroups,
 } from '../../seed-legacy';
 import Swagger from '../../../src/start/swagger';
@@ -56,6 +55,7 @@ import Transaction from '../../../src/entity/transactions/transaction';
 import InvoiceUser from '../../../src/entity/user/invoice-user';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
+import { UserSeeder } from '../../seed';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -129,7 +129,7 @@ describe('InvoiceService', () => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
-    const users = await seedUsers();
+    const users = await new UserSeeder().seedUsers();
     const categories = await seedProductCategories();
     const vatGroups = await seedVatGroups();
     const { productRevisions } = await seedProducts(

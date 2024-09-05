@@ -32,7 +32,8 @@ import { extractRawBody } from '../../../src/helpers/raw-body';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import StripeDeposit from '../../../src/entity/stripe/stripe-deposit';
-import { seedStripeDeposits, seedUsers } from '../../seed-legacy';
+import { seedStripeDeposits } from '../../seed-legacy';
+import { UserSeeder } from '../../seed';
 
 describe('StripeWebhookController', async (): Promise<void> => {
   let shouldSkip: boolean;
@@ -75,7 +76,7 @@ describe('StripeWebhookController', async (): Promise<void> => {
     const specification = await Swagger.initialize(app);
     const roleManager = await new RoleManager().initialize();
 
-    const users = await seedUsers();
+    const users = await new UserSeeder().seedUsers();
     const { stripeDeposits } = await seedStripeDeposits(users);
 
     const controller = new StripeWebhookController({ specification, roleManager });

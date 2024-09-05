@@ -30,7 +30,6 @@ import {
   seedPointsOfSale,
   seedProductCategories,
   seedProducts,
-  seedUsers,
   seedVatGroups,
 } from '../../seed-legacy';
 import Swagger from '../../../src/start/swagger';
@@ -47,6 +46,7 @@ import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import RbacSeeder, { SeededRole } from '../../seed/rbac';
+import { UserSeeder } from '../../seed';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -104,7 +104,7 @@ describe('PointOfSaleService', async (): Promise<void> => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
-    const users = await seedUsers();
+    const users = await new UserSeeder().seedUsers();
     const categories = await seedProductCategories();
     const vatGroups = await seedVatGroups();
     const {

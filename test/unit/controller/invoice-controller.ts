@@ -30,7 +30,7 @@ import {
   seedPointsOfSale,
   seedProductCategories,
   seedProducts,
-  seedTransactions, seedUsers,
+  seedTransactions,
   seedVatGroups,
 } from '../../seed-legacy';
 import TokenHandler from '../../../src/authentication/token-handler';
@@ -66,7 +66,7 @@ import sinon from 'sinon';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { createTransactionRequest, requestToTransaction } from '../../helpers/transaction-factory';
-import { RbacSeeder } from '../../seed';
+import { RbacSeeder, UserSeeder } from '../../seed';
 
 describe('InvoiceController', async () => {
   let ctx: {
@@ -87,7 +87,7 @@ describe('InvoiceController', async () => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
-    await seedUsers();
+    await new UserSeeder().seedUsers();
 
     // create dummy users
     const adminUser = {

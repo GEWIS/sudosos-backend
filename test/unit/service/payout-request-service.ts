@@ -21,7 +21,7 @@ import { expect } from 'chai';
 import User from '../../../src/entity/user/user';
 import PayoutRequest from '../../../src/entity/transactions/payout/payout-request';
 import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
-import { seedPayoutRequests, seedUsers } from '../../seed-legacy';
+import { seedPayoutRequests } from '../../seed-legacy';
 import Database from '../../../src/database/database';
 import PayoutRequestService from '../../../src/service/payout-request-service';
 import { PayoutRequestState } from '../../../src/entity/transactions/payout/payout-request-status';
@@ -29,6 +29,7 @@ import PayoutRequestRequest from '../../../src/controller/request/payout-request
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import BalanceService from '../../../src/service/balance-service';
+import { UserSeeder } from '../../seed';
 
 describe('PayoutRequestService', () => {
   let ctx: {
@@ -57,7 +58,7 @@ describe('PayoutRequestService', () => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
-    const users = await seedUsers();
+    const users = await new UserSeeder().seedUsers();
     const { payoutRequests } = await seedPayoutRequests(users);
 
     const dineroTransformer = DineroTransformer.Instance;
