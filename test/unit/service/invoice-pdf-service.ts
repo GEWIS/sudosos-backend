@@ -210,6 +210,22 @@ describe('InvoicePdfService', async (): Promise<void> => {
   });
 
   // TODO: test invoiceToPricing and subTransactionRowToProduct
+  describe('invoiceToPricing', () => {
+    it('should return the correct pricing for an invoice', async () => {
+      const invoice = ctx.invoices[0];
+      const pricing = invoice.pdfService.invoiceToPricing(invoice);
+
+      let totalExclVat = 0, totalInclVat = 0;
+      invoice.subTransactionRows.forEach((row) => {
+        totalExclVat += Math.round(row.product.priceInclVat.getAmount() / (1 + (row.product.vat.percentage / 100))) * row.amount;
+        totalInclVat += row.product.priceInclVat.getAmount() * row.amount;
+      });
+
+      expect(pricing.exclVat).to.eq(totalExclVat);
+      expect(pricing.inclVat).to.eq(totalInclVat);
+      expect(pricing.exclVat + pricing.lowVat + pricing.highVat).to.eq(totalInclVat);
+    })
+  });
 
   describe('getInvoiceParameters', () => {
     it('should return all required parameters for generating an invoice PDF', async () => {
