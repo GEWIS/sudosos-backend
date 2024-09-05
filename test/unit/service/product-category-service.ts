@@ -63,7 +63,7 @@ describe('ProductCategoryService', async (): Promise<void> => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
-    const categories = await new ProductCategorySeeder().seedProductCategories();
+    const categories = await new ProductCategorySeeder().seed();
 
     // start app
     const app = express();

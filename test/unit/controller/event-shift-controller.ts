@@ -86,8 +86,8 @@ describe('EventShiftController', () => {
     await User.save(adminUser);
     await User.save(localUser);
 
-    const users = await new UserSeeder().seedUsers();
-    const { roleAssignments, events, eventShifts, eventShiftAnswers } = await new EventSeeder().seedEvents(users);
+    const users = await new UserSeeder().seed();
+    const { roleAssignments, events, eventShifts, eventShiftAnswers } = await new EventSeeder().seed(users);
 
     // start app
     const app = express();
@@ -95,7 +95,7 @@ describe('EventShiftController', () => {
 
     const all = { all: new Set<string>(['*']) };
     const own = { all: new Set<string>(['*']) };
-    const accessRoles = await new RbacSeeder().seedRoles([{
+    const accessRoles = await new RbacSeeder().seed([{
       name: 'Admin',
       permissions: {
         Event: {

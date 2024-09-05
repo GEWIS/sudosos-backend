@@ -76,12 +76,12 @@ describe('TransactionSubscriber', () => {
       acceptedToS: TermsOfServiceStatus.ACCEPTED,
     } as User;
 
-    const users = await new UserSeeder().seedUsers();
-    const { productRevisions } = await new ProductSeeder().seedProducts([adminUser]);
-    const { containerRevisions } = await new ContainerSeeder().seedContainers([adminUser], productRevisions);
-    const { pointOfSaleRevisions } = await new PointOfSaleSeeder().seedPointsOfSale([adminUser], containerRevisions);
-    const { transactions } = await new TransactionSeeder().seedTransactions(users, pointOfSaleRevisions, new Date('2020-02-12'), new Date('2021-11-30'), 10);
-    const transfers = await new TransferSeeder().seedTransfers(users, new Date('2020-02-12'), new Date('2021-11-30'));
+    const users = await new UserSeeder().seed();
+    const { productRevisions } = await new ProductSeeder().seed([adminUser]);
+    const { containerRevisions } = await new ContainerSeeder().seed([adminUser], productRevisions);
+    const { pointOfSaleRevisions } = await new PointOfSaleSeeder().seed([adminUser], containerRevisions);
+    const { transactions } = await new TransactionSeeder().seed(users, pointOfSaleRevisions, new Date('2020-02-12'), new Date('2021-11-30'), 10);
+    const transfers = await new TransferSeeder().seed(users, new Date('2020-02-12'), new Date('2021-11-30'));
     const subTransactions: SubTransaction[] = Array.prototype.concat(...transactions
       .map((t) => t.subTransactions));
 

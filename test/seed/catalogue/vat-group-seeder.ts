@@ -23,7 +23,7 @@ export default class VatGroupSeeder extends WithManager {
   /**
    * Seed the (default) Dutch VAT groups (2022)
    */
-  public async seedVatGroups(): Promise<VatGroup[]> {
+  public async seed(): Promise<VatGroup[]> {
     const vatGroup = (data: VatGroupRequest) => Object.assign(new VatGroup(), data) as VatGroup;
 
     return this.manager.save(VatGroup, [

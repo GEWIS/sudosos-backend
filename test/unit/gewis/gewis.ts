@@ -94,7 +94,7 @@ describe('GEWIS Helper functions', async (): Promise<void> => {
     };
 
     const all = { all: new Set<string>(['*']) };
-    const roles = await new RbacSeeder().seedRoles([{
+    const roles = await new RbacSeeder().seed([{
       name: 'Admin',
       permissions: {
         User: {

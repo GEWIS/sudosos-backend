@@ -57,7 +57,7 @@ export default class InvoiceSeeder extends WithManager {
     return { invoiceEntries, cost };
   }
 
-  public async seedInvoices(
+  public async seed(
     users: User[],
     transactions: Transaction[],
   ): Promise<{

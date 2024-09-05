@@ -50,8 +50,8 @@ describe('eventService', () => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
-    const users = await new UserSeeder().seedUsers();
-    const { roleAssignments, events, eventShifts: allEventShifts, eventShiftAnswers } = await new EventSeeder().seedEvents(users);
+    const users = await new UserSeeder().seed();
+    const { roleAssignments, events, eventShifts: allEventShifts, eventShiftAnswers } = await new EventSeeder().seed(users);
 
     const eventShifts = allEventShifts.filter((s) => s.deletedAt == null);
     const deletedEventShifts = allEventShifts.filter((s) => s.deletedAt != null);

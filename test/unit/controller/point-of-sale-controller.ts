@@ -113,7 +113,7 @@ describe('PointOfSaleController', async () => {
     });
 
     const userSeeder = new UserSeeder();
-    const users = await userSeeder.seedUsers();
+    const users = await userSeeder.seed();
     await userSeeder.seedMemberAuthenticators(
       users.filter((u) => u.type !== UserType.ORGAN),
       users.filter((u) => u.type === UserType.ORGAN),
@@ -125,13 +125,13 @@ describe('PointOfSaleController', async () => {
     const feut2 = users.filter((u) => u.type === UserType.MEMBER)[1];
     const bestuur1 = users.filter((u) => u.type === UserType.MEMBER)[2];
 
-    const { containers, containerRevisions } = await new ContainerSeeder().seedContainers([adminUser, organUser]);
-    const { pointsOfSale, pointOfSaleRevisions } = await new PointOfSaleSeeder().seedPointsOfSale([adminUser, organUser], containerRevisions);
+    const { containers, containerRevisions } = await new ContainerSeeder().seed([adminUser, organUser]);
+    const { pointsOfSale, pointOfSaleRevisions } = await new PointOfSaleSeeder().seed([adminUser, organUser], containerRevisions);
 
     const all = { all: new Set<string>(['*']) };
     const own = { own: new Set<string>(['*']) };
     const organ = { organ: new Set<string>(['*']) };
-    const roles = await new RbacSeeder().seedRoles([{
+    const roles = await new RbacSeeder().seed([{
       name: 'SUPER_ADMIN',
       permissions: {
         PointOfSale: {

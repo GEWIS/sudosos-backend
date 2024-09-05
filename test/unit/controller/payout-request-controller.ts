@@ -75,8 +75,8 @@ describe('PayoutRequestController', () => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
-    const users = await new UserSeeder().seedUsers();
-    const { payoutRequests } = await new PayoutRequestSeeder().seedPayoutRequests(users);
+    const users = await new UserSeeder().seed();
+    const { payoutRequests } = await new PayoutRequestSeeder().seed(users);
 
     const adminUser = users.filter((u) => u.type === UserType.LOCAL_ADMIN)[0];
     const localUser = users.filter((u) => u.type === UserType.LOCAL_USER)[0];
@@ -88,7 +88,7 @@ describe('PayoutRequestController', () => {
     const own = { own: new Set<string>(['*']) };
     const all = { all: new Set<string>(['*']), ...own };
 
-    const roles = await new RbacSeeder().seedRoles([{
+    const roles = await new RbacSeeder().seed([{
       name: 'Admin',
       permissions: {
         PayoutRequest: {

@@ -83,7 +83,7 @@ export interface DatabaseContent {
 }
 
 export default async function seedDatabase(beginDate?: Date, endDate?: Date): Promise<DatabaseContent> {
-  const users = await new UserSeeder().seedUsers();
+  const users = await new UserSeeder().seed();
   await new UserSeeder().seedMemberAuthenticators(
     users.filter((u) => u.type !== UserType.ORGAN),
     [users.filter((u) => u.type === UserType.ORGAN)[0]],
@@ -91,26 +91,26 @@ export default async function seedDatabase(beginDate?: Date, endDate?: Date): Pr
   const pinUsers = await new UserSeeder().seedHashAuthenticator(users, PinAuthenticator);
   const localUsers = await new UserSeeder().seedHashAuthenticator(users, LocalAuthenticator);
   const gewisUsers = await seedGEWISUsers(users);
-  const categories = await new ProductCategorySeeder().seedProductCategories();
-  const vatGroups = await new VatGroupSeeder().seedVatGroups();
+  const categories = await new ProductCategorySeeder().seed();
+  const vatGroups = await new VatGroupSeeder().seed();
   const {
     products, productRevisions,
-  } = await new ProductSeeder().seedProducts(users, categories, vatGroups);
-  const { containers, containerRevisions } = await new ContainerSeeder().seedContainers(
+  } = await new ProductSeeder().seed(users, categories, vatGroups);
+  const { containers, containerRevisions } = await new ContainerSeeder().seed(
     users, productRevisions,
   );
-  const { pointsOfSale, pointOfSaleRevisions } = await new PointOfSaleSeeder().seedPointsOfSale(
+  const { pointsOfSale, pointOfSaleRevisions } = await new PointOfSaleSeeder().seed(
     users, containerRevisions,
   );
-  const { roles, roleAssignments, events, eventShifts, eventShiftAnswers } = await new EventSeeder().seedEvents(users);
-  const { transactions } = await new TransactionSeeder().seedTransactions(users, pointOfSaleRevisions, beginDate, endDate);
-  const transfers = await new TransferSeeder().seedTransfers(users, beginDate, endDate);
-  const { fines, fineTransfers, userFineGroups } = await new FineSeeder().seedFines(users, transactions, transfers);
-  const { payoutRequests, payoutRequestTransfers } = await new PayoutRequestSeeder().seedPayoutRequests(users);
-  const { invoices, invoiceTransfers } = await new InvoiceSeeder().seedInvoices(users, transactions);
-  const { stripeDeposits, stripeDepositTransfers } = await new DepositSeeder().seedStripeDeposits(users);
-  const writeOffs = await new WriteOffSeeder().seedWriteOffs();
-  const { banners } = await new BannerSeeder().seedBanners(users);
+  const { roles, roleAssignments, events, eventShifts, eventShiftAnswers } = await new EventSeeder().seed(users);
+  const { transactions } = await new TransactionSeeder().seed(users, pointOfSaleRevisions, beginDate, endDate);
+  const transfers = await new TransferSeeder().seed(users, beginDate, endDate);
+  const { fines, fineTransfers, userFineGroups } = await new FineSeeder().seed(users, transactions, transfers);
+  const { payoutRequests, payoutRequestTransfers } = await new PayoutRequestSeeder().seed(users);
+  const { invoices, invoiceTransfers } = await new InvoiceSeeder().seed(users, transactions);
+  const { stripeDeposits, stripeDepositTransfers } = await new DepositSeeder().seed(users);
+  const writeOffs = await new WriteOffSeeder().seed();
+  const { banners } = await new BannerSeeder().seed(users);
 
   return {
     users,

@@ -77,7 +77,7 @@ export default class UserSeeder extends WithManager {
   /**
    * Seeds a default dataset of users, and stores them in the database.
    */
-  public async seedUsers(): Promise<User[]> {
+  public async seed(): Promise<User[]> {
     const types: UserType[] = [
       UserType.LOCAL_USER, UserType.LOCAL_ADMIN, UserType.MEMBER, UserType.ORGAN, UserType.INVOICE,
     ];

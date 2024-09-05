@@ -90,7 +90,7 @@ describe('StripeController', async (): Promise<void> => {
       acceptedToS: TermsOfServiceStatus.ACCEPTED,
     });
 
-    const { stripeDeposits } = await new DepositSeeder().seedStripeDeposits([localUser, adminUser]);
+    const { stripeDeposits } = await new DepositSeeder().seed([localUser, adminUser]);
 
     // start app
     const app = express();
@@ -100,7 +100,7 @@ describe('StripeController', async (): Promise<void> => {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const own = { own: new Set<string>(['*']), public: new Set<string>(['*']) };
 
-    const roles = await new RbacSeeder().seedRoles([{
+    const roles = await new RbacSeeder().seed([{
       name: 'Admin',
       permissions: {
         StripeDeposit: {

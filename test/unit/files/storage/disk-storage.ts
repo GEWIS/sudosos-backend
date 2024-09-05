@@ -44,7 +44,7 @@ describe('Disk Storage', async () => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
-    const users = await new UserSeeder().seedUsers();
+    const users = await new UserSeeder().seed();
 
     const files: BaseFile[] = [
       Object.assign(new BaseFile(), {

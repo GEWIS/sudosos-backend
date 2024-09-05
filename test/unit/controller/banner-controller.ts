@@ -109,7 +109,7 @@ describe('BannerController', async (): Promise<void> => {
     await User.save(adminUser);
     await User.save(localUser);
 
-    const { banners } = await new BannerSeeder().seedBanners([adminUser, localUser]);
+    const { banners } = await new BannerSeeder().seed([adminUser, localUser]);
 
     // create bearer tokens
     const tokenHandler = new TokenHandler({
@@ -141,7 +141,7 @@ describe('BannerController', async (): Promise<void> => {
     const specification = await Swagger.initialize(app);
 
     const all = { all: new Set<string>(['*']) };
-    await new RbacSeeder().seedRoles([{
+    await new RbacSeeder().seed([{
       name: 'Admin',
       permissions: {
         Banner: {

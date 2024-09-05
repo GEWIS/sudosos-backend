@@ -82,14 +82,14 @@ describe('Propagation between products, containers, POSs', () => {
       acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
     });
 
-    const categories = await new ProductCategorySeeder().seedProductCategories();
-    const vatGroups = await new VatGroupSeeder().seedVatGroups();
+    const categories = await new ProductCategorySeeder().seed();
+    const vatGroups = await new VatGroupSeeder().seed();
 
     const app = express();
     const specification = await Swagger.initialize(app);
     const all = { all: new Set<string>(['*']) };
 
-    const roles = await new RbacSeeder().seedRoles([{
+    const roles = await new RbacSeeder().seed([{
       name: 'Admin',
       permissions: {
         Product: {

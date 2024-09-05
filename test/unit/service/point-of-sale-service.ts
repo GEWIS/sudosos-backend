@@ -97,22 +97,22 @@ describe('PointOfSaleService', async (): Promise<void> => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
-    const users = await new UserSeeder().seedUsers();
+    const users = await new UserSeeder().seed();
     const {
       productRevisions,
-    } = await new ProductSeeder().seedProducts(users);
+    } = await new ProductSeeder().seed(users);
     const {
       containers,
       containerRevisions,
-    } = await new ContainerSeeder().seedContainers(users, productRevisions);
+    } = await new ContainerSeeder().seed(users, productRevisions);
     const {
       pointsOfSale,
-    } = await new PointOfSaleSeeder().seedPointsOfSale(users, containerRevisions);
+    } = await new PointOfSaleSeeder().seed(users, containerRevisions);
 
     const feut1 = users.filter((u) => u.type === UserType.MEMBER)[0];
     const feut2 = users.filter((u) => u.type === UserType.MEMBER)[1];
     const bestuur1 = users.filter((u) => u.type === UserType.MEMBER)[2];
-    const roles = await new RbacSeeder().seedRoles([{
+    const roles = await new RbacSeeder().seed([{
       name: 'BAC Feuten',
       permissions: {},
       assignmentCheck: async (user) => user.id === feut1.id || user.id === feut2.id,

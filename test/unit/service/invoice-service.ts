@@ -120,9 +120,9 @@ describe('InvoiceService', () => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
-    const users = await new UserSeeder().seedUsers();
-    const { transactions } = await new TransactionSeeder().seedTransactions(users);
-    const { invoices } = await new InvoiceSeeder().seedInvoices(users, transactions);
+    const users = await new UserSeeder().seed();
+    const { transactions } = await new TransactionSeeder().seed(users);
+    const { invoices } = await new InvoiceSeeder().seed(users, transactions);
 
     // start app
     const app = express();

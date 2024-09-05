@@ -57,20 +57,20 @@ describe('TransferService', async (): Promise<void> => {
     const begin = new Date('1950-02-12T01:57:45.271Z');
     const end = new Date('2001-02-12T01:57:45.271Z');
 
-    const users = await new UserSeeder().seedUsers();
-    const vatGroups = await new VatGroupSeeder().seedVatGroups();
-    const { productRevisions } = await new ProductSeeder().seedProducts(users, undefined, vatGroups);
-    const { containerRevisions } = await new ContainerSeeder().seedContainers(users, productRevisions);
-    const { pointOfSaleRevisions } = await new PointOfSaleSeeder().seedPointsOfSale(users, containerRevisions);
-    const transfers = await new TransferSeeder().seedTransfers(users, begin, end);
-    const { transactions } = await new TransactionSeeder().seedTransactions(users, pointOfSaleRevisions, begin, end);
-    const { invoiceTransfers } = await new InvoiceSeeder().seedInvoices(users, transactions);
-    const { payoutRequestTransfers } = await new PayoutRequestSeeder().seedPayoutRequests(users);
-    const { stripeDepositTransfers } = await new DepositSeeder().seedStripeDeposits(users);
+    const users = await new UserSeeder().seed();
+    const vatGroups = await new VatGroupSeeder().seed();
+    const { productRevisions } = await new ProductSeeder().seed(users, undefined, vatGroups);
+    const { containerRevisions } = await new ContainerSeeder().seed(users, productRevisions);
+    const { pointOfSaleRevisions } = await new PointOfSaleSeeder().seed(users, containerRevisions);
+    const transfers = await new TransferSeeder().seed(users, begin, end);
+    const { transactions } = await new TransactionSeeder().seed(users, pointOfSaleRevisions, begin, end);
+    const { invoiceTransfers } = await new InvoiceSeeder().seed(users, transactions);
+    const { payoutRequestTransfers } = await new PayoutRequestSeeder().seed(users);
+    const { stripeDepositTransfers } = await new DepositSeeder().seed(users);
 
     const transfers2 = transfers.concat(invoiceTransfers).concat(payoutRequestTransfers).concat(stripeDepositTransfers);
 
-    const { users: users2, fineTransfers } = await new FineSeeder().seedFines(users, transactions, transfers, true);
+    const { users: users2, fineTransfers } = await new FineSeeder().seed(users, transactions, transfers, true);
 
     // start app
     const app = express();

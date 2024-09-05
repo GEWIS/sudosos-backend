@@ -133,7 +133,7 @@ describe('TransactionController', (): void => {
     const own = { own: new Set<string>(['*']), organ: new Set<string>(['*']) };
     const organRole = { organ: new Set<string>(['*']) };
 
-    const roles = await new RbacSeeder().seedRoles([{
+    const roles = await new RbacSeeder().seed([{
       name: 'Admin',
       permissions: {
         Transaction: {

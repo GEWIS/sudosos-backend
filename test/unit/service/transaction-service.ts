@@ -72,11 +72,11 @@ describe('TransactionService', (): void => {
     await truncateAllTables(connection);
 
     const app = express();
-    const users = await new UserSeeder().seedUsers();
-    const { productRevisions } = await new ProductSeeder().seedProducts(users);
-    const { containerRevisions } = await new ContainerSeeder().seedContainers(users, productRevisions);
-    const { pointOfSaleRevisions } = await new PointOfSaleSeeder().seedPointsOfSale(users, containerRevisions);
-    const { transactions } = await new TransactionSeeder().seedTransactions(users, pointOfSaleRevisions);
+    const users = await new UserSeeder().seed();
+    const { productRevisions } = await new ProductSeeder().seed(users);
+    const { containerRevisions } = await new ContainerSeeder().seed(users, productRevisions);
+    const { pointOfSaleRevisions } = await new PointOfSaleSeeder().seed(users, containerRevisions);
+    const { transactions } = await new TransactionSeeder().seed(users, pointOfSaleRevisions);
 
     await generateBalance(1000, 7);
 

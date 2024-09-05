@@ -78,7 +78,7 @@ describe('InvoiceController', async () => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
-    await new UserSeeder().seedUsers();
+    await new UserSeeder().seed();
 
     // create dummy users
     const adminUser = {
@@ -114,15 +114,15 @@ describe('InvoiceController', async () => {
     await User.save(invoiceUser);
     await User.save(invoiceUser2);
 
-    const { transactions } = await new TransactionSeeder().seedTransactions([adminUser, localUser, invoiceUser, invoiceUser2]);
-    await new InvoiceSeeder().seedInvoices([invoiceUser, invoiceUser2], transactions);
+    const { transactions } = await new TransactionSeeder().seed([adminUser, localUser, invoiceUser, invoiceUser2]);
+    await new InvoiceSeeder().seed([invoiceUser, invoiceUser2], transactions);
 
     const app = express();
     const specification = await Swagger.initialize(app);
 
     const all = { all: new Set<string>(['*']) };
     const own = { own: new Set<string>(['*']) };
-    const roles = await new RbacSeeder().seedRoles([{
+    const roles = await new RbacSeeder().seed([{
       name: 'Admin',
       permissions: {
         Invoice: {

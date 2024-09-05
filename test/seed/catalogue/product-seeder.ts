@@ -130,7 +130,7 @@ export default class ProductSeeder extends WithManager {
    * @param vatGroups - The dataset of VAT groups to base the product dataset on.
    * @param priceMultiplier - Multiplier to apply to the product price
    */
-  public async seedProducts(
+  public async seed(
     users: User[],
     categories?: ProductCategory[],
     vatGroups?: VatGroup[],
@@ -140,8 +140,8 @@ export default class ProductSeeder extends WithManager {
       productImages: ProductImage[],
       productRevisions: ProductRevision[],
     }> {
-    const categories1 = categories ?? await new ProductCategorySeeder(this.manager).seedProductCategories();
-    const vatGroups1 = vatGroups ?? await new VatGroupSeeder(this.manager).seedVatGroups();
+    const categories1 = categories ?? await new ProductCategorySeeder(this.manager).seed();
+    const vatGroups1 = vatGroups ?? await new VatGroupSeeder(this.manager).seed();
 
     let products: Product[] = [];
     let productImages: ProductImage[] = [];

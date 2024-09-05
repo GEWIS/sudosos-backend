@@ -56,7 +56,7 @@ export default class BannerSeeder extends WithManager {
    * When not in a testing environment, actual images will also be saved to disk.
    * @param users
    */
-  public async seedBanners(users: User[]): Promise<{
+  public async seed(users: User[]): Promise<{
     banners: Banner[],
     bannerImages: BannerImage[],
   }> {

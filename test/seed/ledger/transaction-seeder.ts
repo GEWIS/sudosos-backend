@@ -111,7 +111,7 @@ export default class TransactionSeeder extends WithManager {
    * @param endDate - The upper bound for the range of transaction creation dates
    * @param nrMultiplier - Multiplier for the number of transactions to create
    */
-  public async seedTransactions(
+  public async seed(
     users: User[],
     pointOfSaleRevisions?: PointOfSaleRevision[],
     beginDate?: Date,
@@ -121,7 +121,7 @@ export default class TransactionSeeder extends WithManager {
       transactions: Transaction[],
       subTransactions: SubTransaction[],
     }> {
-    let pointOfSaleRevisions1 = pointOfSaleRevisions ?? (await new PointOfSaleSeeder().seedPointsOfSale(users)).pointOfSaleRevisions;
+    let pointOfSaleRevisions1 = pointOfSaleRevisions ?? (await new PointOfSaleSeeder().seed(users)).pointOfSaleRevisions;
 
     let transactions: Transaction[] = [];
     let startSubTransaction = 0;

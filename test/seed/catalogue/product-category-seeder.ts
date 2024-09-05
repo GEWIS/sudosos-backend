@@ -22,7 +22,7 @@ export default class ProductCategorySeeder extends WithManager {
   /**
    * Seeds a default dataset of product categories, and stores them in the database.
    */
-  public async seedProductCategories(): Promise<ProductCategory[]> {
+  public async seed(): Promise<ProductCategory[]> {
     const rootCategories = await this.manager.save(ProductCategory, [
       {
         id: 1,

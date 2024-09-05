@@ -58,11 +58,11 @@ describe('BalanceService', (): void => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
-    const seededUsers = await new UserSeeder().seedUsers();
-    const { pointOfSaleRevisions } = await new PointOfSaleSeeder().seedPointsOfSale(seededUsers);
-    const { transactions } = await new TransactionSeeder().seedTransactions(seededUsers, pointOfSaleRevisions, new Date('2020-02-12'), new Date('2021-11-30'), 10);
-    const transfers = await new TransferSeeder().seedTransfers(seededUsers, new Date('2020-02-12'), new Date('2021-11-30'));
-    const { fines, fineTransfers, users } = await new FineSeeder().seedFines(seededUsers, transactions, transfers, true);
+    const seededUsers = await new UserSeeder().seed();
+    const { pointOfSaleRevisions } = await new PointOfSaleSeeder().seed(seededUsers);
+    const { transactions } = await new TransactionSeeder().seed(seededUsers, pointOfSaleRevisions, new Date('2020-02-12'), new Date('2021-11-30'), 10);
+    const transfers = await new TransferSeeder().seed(seededUsers, new Date('2020-02-12'), new Date('2021-11-30'));
+    const { fines, fineTransfers, users } = await new FineSeeder().seed(seededUsers, transactions, transfers, true);
     const subTransactions: SubTransaction[] = Array.prototype.concat(...transactions
       .map((t) => t.subTransactions));
 

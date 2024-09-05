@@ -72,7 +72,7 @@ describe('AD Service', (): void => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
     const app = express();
-    await new UserSeeder().seedUsers();
+    await new UserSeeder().seed();
 
     const users = await User.find(
       {
@@ -361,7 +361,7 @@ describe('AD Service', (): void => {
       stubs.push(clientBindStub);
       stubs.push(clientSearchStub);
 
-      await new RbacSeeder().seedRoles([{
+      await new RbacSeeder().seed([{
         name: 'SudoSOS - Test',
         permissions: {
         },

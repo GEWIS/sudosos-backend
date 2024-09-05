@@ -36,10 +36,10 @@ describe('ServerSettingsController', () => {
   before(async () => {
     const c = { ...await defaultContext() };
 
-    const users = await new UserSeeder().seedUsers();
+    const users = await new UserSeeder().seed();
 
     const all = { all: new Set<string>(['*']) };
-    const adminRole = await new RbacSeeder().seedRoles([{
+    const adminRole = await new RbacSeeder().seed([{
       name: 'Admin',
       permissions: {
         Maintenance: {

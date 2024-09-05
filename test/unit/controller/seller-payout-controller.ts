@@ -61,14 +61,14 @@ describe('SellerPayoutController', () => {
   before(async () => {
     const c = { ...await defaultContext() };
 
-    const users = await new UserSeeder().seedUsers();
+    const users = await new UserSeeder().seed();
 
-    const { transactions, subTransactions } = await new TransactionSeeder().seedTransactions(users, undefined, new Date('2020-01-01'), new Date());
-    const transfers = await new TransferSeeder().seedTransfers(users, new Date('2020-01-01'), new Date());
-    const { sellerPayouts, transfers: sellerPayoutTransfers } = await new SellerPayoutSeeder().seedSellerPayouts(users, transactions, subTransactions, transfers);
+    const { transactions, subTransactions } = await new TransactionSeeder().seed(users, undefined, new Date('2020-01-01'), new Date());
+    const transfers = await new TransferSeeder().seed(users, new Date('2020-01-01'), new Date());
+    const { sellerPayouts, transfers: sellerPayoutTransfers } = await new SellerPayoutSeeder().seed(users, transactions, subTransactions, transfers);
 
     const all = { all: new Set<string>(['*']) };
-    const adminRole = await new RbacSeeder().seedRoles([{
+    const adminRole = await new RbacSeeder().seed([{
       name: 'Admin',
       permissions: {
         SellerPayout: {

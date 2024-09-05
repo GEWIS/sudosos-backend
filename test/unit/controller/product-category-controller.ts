@@ -86,7 +86,7 @@ describe('ProductCategoryController', async (): Promise<void> => {
     await User.save(adminUser);
     await User.save(localUser);
 
-    const categories = await new ProductCategorySeeder().seedProductCategories();
+    const categories = await new ProductCategorySeeder().seed();
 
     const validRequest: ProductCategoryRequest = {
       name: 'Valid productcategory',
@@ -109,7 +109,7 @@ describe('ProductCategoryController', async (): Promise<void> => {
     // Create roleManager and set roles of Admin and User
     // In this case Admin can do anything and User nothing.
     // This does not reflect the actual roles of the users in the final product.
-    const roles = await new RbacSeeder().seedRoles([{
+    const roles = await new RbacSeeder().seed([{
       name: 'Admin',
       permissions: {
         ProductCategory: {

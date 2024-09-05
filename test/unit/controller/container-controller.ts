@@ -127,8 +127,8 @@ describe('ContainerController', async (): Promise<void> => {
     await User.save(organ);
 
     const { products, productRevisions } = (
-      await new ProductSeeder().seedProducts([adminUser, localUser]));
-    const { containers } = await new ContainerSeeder().seedContainers([adminUser, localUser], productRevisions);
+      await new ProductSeeder().seed([adminUser, localUser]));
+    const { containers } = await new ContainerSeeder().seed([adminUser, localUser], productRevisions);
 
     // create bearer tokens
     const tokenHandler = new TokenHandler({
@@ -154,7 +154,7 @@ describe('ContainerController', async (): Promise<void> => {
     const own = { own: new Set<string>(['*']), public: new Set<string>(['*']) };
     const organRole = { organ: new Set<string>(['*']) };
 
-    const roles = await new RbacSeeder().seedRoles([{
+    const roles = await new RbacSeeder().seed([{
       name: 'Admin',
       permissions: {
         Container: {

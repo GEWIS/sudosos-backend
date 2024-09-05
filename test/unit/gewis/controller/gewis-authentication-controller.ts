@@ -99,7 +99,7 @@ describe('GewisAuthenticationController', async (): Promise<void> => {
 
     await AuthenticationService.setUserAuthenticationHash(await User.findOne({ where: { id: 1 } }), '1000', PinAuthenticator);
 
-    const roles = await new RbacSeeder().seedRoles([{
+    const roles = await new RbacSeeder().seed([{
       name: 'Role',
       permissions: {},
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,

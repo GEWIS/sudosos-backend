@@ -104,7 +104,7 @@ export default class PointOfSaleSeeder extends WithManager {
    * @param containerRevisions - The dataset of container revisions to base
    * the pointsofsale dataset on.
    */
-  public async seedPointsOfSale(
+  public async seed(
     users: User[],
     containerRevisions?: ContainerRevision[],
   ): Promise<{
@@ -112,7 +112,7 @@ export default class PointOfSaleSeeder extends WithManager {
       pointOfSaleRevisions: PointOfSaleRevision[],
       pointOfSaleUsers: User[],
     }> {
-    const containerRevisions1 = containerRevisions ?? (await new ContainerSeeder().seedContainers(users)).containerRevisions;
+    const containerRevisions1 = containerRevisions ?? (await new ContainerSeeder().seed(users)).containerRevisions;
 
     let pointsOfSale: PointOfSale[] = [];
     let pointOfSaleRevisions: PointOfSaleRevision[] = [];

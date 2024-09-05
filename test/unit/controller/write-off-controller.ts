@@ -52,7 +52,7 @@ describe('WriteOffController', () => {
     const localUser = await (await UserFactory()).get();
 
     const all = { all: new Set<string>(['*']) };
-    const adminRole = await new RbacSeeder().seedRoles([{
+    const adminRole = await new RbacSeeder().seed([{
       name: 'Admin',
       permissions: {
         WriteOff: {
@@ -77,7 +77,7 @@ describe('WriteOffController', () => {
     const serverSettingsStore = await ServerSettingsStore.getInstance().initialize();
     await serverSettingsStore.setSetting('highVatGroupId', vg.id);
 
-    ctx = { ...c, adminToken, token, writeOffs: await new WriteOffSeeder().seedWriteOffs() };
+    ctx = { ...c, adminToken, token, writeOffs: await new WriteOffSeeder().seed() };
   });
 
   after(async () => {

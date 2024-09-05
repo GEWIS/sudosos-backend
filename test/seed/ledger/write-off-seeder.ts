@@ -24,7 +24,7 @@ import dinero from 'dinero.js';
 import Transfer from '../../../src/entity/transactions/transfer';
 
 export default class WriteOffSeeder extends WithManager {
-  public async seedWriteOffs(count = 10): Promise<WriteOff[]> {
+  public async seed(count = 10): Promise<WriteOff[]> {
     const userCount = await User.count();
     const users = new UserSeeder().defineUsers(userCount, count, UserType.LOCAL_USER, false);
     await User.save(users);

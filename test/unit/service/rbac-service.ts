@@ -41,9 +41,9 @@ describe('RBACService', () => {
 
   before(async () => {
     const connection = await database.initialize();
-    const users = await new UserSeeder().seedUsers();
+    const users = await new UserSeeder().seed();
 
-    const roles = await new RbacSeeder().seedRoles([{
+    const roles = await new RbacSeeder().seed([{
       name: 'system-default-role',
       systemDefault: true,
       userTypes: [UserType.LOCAL_USER],
@@ -311,7 +311,7 @@ describe('RBACService', () => {
 
   describe('#removeRole', async () => {
     it('should delete an existing role', async () => {
-      const [newRole] = await new RbacSeeder().seedRoles([{
+      const [newRole] = await new RbacSeeder().seed([{
         name: 'Role to delete',
         permissions: {},
         assignmentCheck: async () => true,
@@ -338,7 +338,7 @@ describe('RBACService', () => {
 
   describe('#addPermissions', async () => {
     it('should correctly create two new permissions', async () => {
-      const [{ role }] = await new RbacSeeder().seedRoles([{
+      const [{ role }] = await new RbacSeeder().seed([{
         name: 'Test role add perms',
         permissions: {},
         assignmentCheck: async () => true,

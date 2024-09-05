@@ -68,8 +68,8 @@ describe('FileService', async (): Promise<void> => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
-    const users = await new UserSeeder().seedUsers();
-    const { products, productImages } = await new ProductSeeder().seedProducts(users);
+    const users = await new UserSeeder().seed();
+    const { products, productImages } = await new ProductSeeder().seed(users);
 
     const files = [
       Object.assign(new BaseFile(), {

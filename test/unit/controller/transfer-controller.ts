@@ -85,8 +85,8 @@ describe('TransferController', async (): Promise<void> => {
     await User.save(localUser);
     await User.save(sellerUser);
 
-    const users = await new UserSeeder().seedUsers();
-    await new TransferSeeder().seedTransfers(users);
+    const users = await new UserSeeder().seed();
+    await new TransferSeeder().seed(users);
 
     adminAccountDeposit = await Transfer.findOne({ where: { to: { id: adminUser.id } } });
     localAccountDeposit = await Transfer.findOne({ where: { to: { id: localUser.id } } });
@@ -127,7 +127,7 @@ describe('TransferController', async (): Promise<void> => {
     // Create roleManager and set roles of Admin and User
     // In this case Admin can do anything and User nothing.
     // This does not reflect the actual roles of the users in the final product.
-    const roles = await new RbacSeeder().seedRoles([{
+    const roles = await new RbacSeeder().seed([{
       name: 'Admin',
       permissions: {
         Transfer: {

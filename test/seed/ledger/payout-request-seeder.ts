@@ -23,7 +23,7 @@ import DineroTransformer from '../../../src/entity/transformer/dinero-transforme
 import PayoutRequestStatus, { PayoutRequestState } from '../../../src/entity/transactions/payout/payout-request-status';
 
 export default class PayoutRequestSeeder extends WithManager {
-  public async seedPayoutRequests(users: User[]): Promise<{
+  public async seed(users: User[]): Promise<{
     payoutRequests: PayoutRequest[], payoutRequestTransfers: Transfer[],
   }> {
     const payoutRequests: Promise<PayoutRequest>[] = [];

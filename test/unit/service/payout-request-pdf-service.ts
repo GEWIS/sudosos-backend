@@ -53,8 +53,8 @@ describe('PayoutRequestPdfService', async () => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
-    const users = await new UserSeeder().seedUsers();
-    const { payoutRequests } = await new PayoutRequestSeeder().seedPayoutRequests(users);
+    const users = await new UserSeeder().seed();
+    const { payoutRequests } = await new PayoutRequestSeeder().seed(users);
 
     // start app
     const app = express();

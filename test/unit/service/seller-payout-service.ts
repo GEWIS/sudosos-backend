@@ -42,12 +42,12 @@ describe('SellerPayoutService', () => {
 
   before(async () => {
     const connection = await database.initialize();
-    const users = await new UserSeeder().seedUsers();
+    const users = await new UserSeeder().seed();
 
-    const { transactions, subTransactions } = await new TransactionSeeder().seedTransactions(users, undefined, new Date('2020-01-01'), new Date());
-    const transfers = await new TransferSeeder().seedTransfers(users, new Date('2020-01-01'), new Date());
+    const { transactions, subTransactions } = await new TransactionSeeder().seed(users, undefined, new Date('2020-01-01'), new Date());
+    const transfers = await new TransferSeeder().seed(users, new Date('2020-01-01'), new Date());
     const { sellerPayouts, transfers: sellerPayoutTransfers } = await new SellerPayoutSeeder()
-      .seedSellerPayouts(users, transactions, subTransactions, transfers);
+      .seed(users, transactions, subTransactions, transfers);
 
     ctx = {
       connection,

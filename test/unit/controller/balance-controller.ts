@@ -63,15 +63,15 @@ describe('BalanceController', (): void => {
     await truncateAllTables(connection);
     const app = express();
 
-    const users = await new UserSeeder().seedUsers();
-    const { transactions } = await new TransactionSeeder().seedTransactions(users, undefined, new Date('2020-02-12'), new Date('2022-11-30'));
+    const users = await new UserSeeder().seed();
+    const { transactions } = await new TransactionSeeder().seed(users, undefined, new Date('2020-02-12'), new Date('2022-11-30'));
     const subTransactions: SubTransaction[] = Array.prototype.concat(...transactions
       .map((t) => t.subTransactions));
-    const transfers = await new TransferSeeder().seedTransfers(users);
+    const transfers = await new TransferSeeder().seed(users);
 
     const all = { all: new Set<string>(['*']) };
     const own = { own: new Set<string>(['*']) };
-    const roles = await new RbacSeeder().seedRoles([{
+    const roles = await new RbacSeeder().seed([{
       name: 'Admin',
       permissions: {
         Balance: {
@@ -99,7 +99,7 @@ describe('BalanceController', (): void => {
     const userToken = await tokenHandler.signToken(await new RbacSeeder().getToken(users[0], roles), '33');
     const adminToken = await tokenHandler.signToken(await new RbacSeeder().getToken(users[6], roles), '33');
 
-    const { fines, fineTransfers, userFineGroups, users: usersWithFines } = await new FineSeeder().seedFines(users, transactions, transfers, true);
+    const { fines, fineTransfers, userFineGroups, users: usersWithFines } = await new FineSeeder().seed(users, transactions, transfers, true);
 
     const specification = await Swagger.initialize(app);
     const controller = new BalanceController({

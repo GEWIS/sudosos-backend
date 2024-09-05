@@ -91,7 +91,7 @@ export default class EventSeeder extends WithManager {
    * Seed some events for the given users
    * @param users
    */
-  public async seedEvents(users: User[]) {
+  public async seed(users: User[]) {
     const events: Event[] = [];
     const { eventShifts, roles } = await this.seedEventShifts();
 

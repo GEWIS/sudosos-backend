@@ -143,21 +143,21 @@ describe('ProductService', async (): Promise<void> => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
-    const users = await new UserSeeder().seedUsers();
+    const users = await new UserSeeder().seed();
 
     const {
       products,
       productImages,
       productRevisions,
-    } = await new ProductSeeder().seedProducts(users);
+    } = await new ProductSeeder().seed(users);
     const {
       containers,
       containerRevisions,
-    } = await new ContainerSeeder().seedContainers(users, productRevisions);
+    } = await new ContainerSeeder().seed(users, productRevisions);
     const {
       pointsOfSale,
       pointOfSaleRevisions,
-    } = await new PointOfSaleSeeder().seedPointsOfSale(users, containerRevisions);
+    } = await new PointOfSaleSeeder().seed(users, containerRevisions);
 
     // start app
     const app = express();

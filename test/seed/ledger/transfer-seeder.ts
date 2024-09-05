@@ -22,7 +22,7 @@ import { getRandomDate } from '../helpers';
 import dinero from 'dinero.js';
 
 export default class TransferSeeder extends WithManager {
-  public async seedTransfers(
+  public async seed(
     users: User[],
     startDate?: Date,
     endDate?: Date,

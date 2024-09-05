@@ -63,13 +63,13 @@ describe('AuthenticationSecureController', () => {
     await ServerSettingsStore.getInstance().initialize();
 
     const userSeeder = new UserSeeder();
-    const users = await userSeeder.seedUsers();
+    const users = await userSeeder.seed();
     const memberAuthenticators = await userSeeder.seedMemberAuthenticators(
       users.filter((u) => u.type !== UserType.ORGAN),
       users.filter((u) => u.type === UserType.ORGAN),
     );
 
-    const { pointsOfSale, pointOfSaleUsers } = await new PointOfSaleSeeder().seedPointsOfSale(users);
+    const { pointsOfSale, pointOfSaleUsers } = await new PointOfSaleSeeder().seed(users);
 
     await DefaultRoles.synchronize();
     const roleManager = new RoleManager();

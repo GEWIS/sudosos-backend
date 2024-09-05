@@ -128,8 +128,8 @@ describe('ProductController', async (): Promise<void> => {
     await User.save(organ);
     const users = [organ, adminUser, localUser];
 
-    const vatGroups = await new VatGroupSeeder().seedVatGroups();
-    const { products } = await new ProductSeeder().seedProducts(users, undefined, vatGroups);
+    const vatGroups = await new VatGroupSeeder().seed();
+    const { products } = await new ProductSeeder().seed(users, undefined, vatGroups);
 
     const validProductReq: UpdateProductRequest = {
       name: 'Valid product',
@@ -164,7 +164,7 @@ describe('ProductController', async (): Promise<void> => {
     const own = { own: new Set<string>(['*']) };
     const organRole = { organ: new Set<string>(['*']) };
 
-    const roles = await new RbacSeeder().seedRoles([{
+    const roles = await new RbacSeeder().seed([{
       name: 'Admin',
       permissions: {
         Product: {

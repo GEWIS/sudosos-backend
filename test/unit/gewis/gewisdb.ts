@@ -45,7 +45,7 @@ describe('GEWISDB Service', () => {
     ctx = {
       ...(await defaultBefore()),
     } as any;
-    ctx.users = await new UserSeeder().seedUsers();
+    ctx.users = await new UserSeeder().seed();
     ctx.gewisUsers = await seedGEWISUsers(ctx.users);
 
     Mailer.reset();

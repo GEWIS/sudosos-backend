@@ -59,7 +59,7 @@ describe('RoleManager', (): void => {
     ctx.action.own = ctx.attrOne;
     ctx.action.created = ctx.wildcard;
     ctx.action.all = ctx.attrTwo;
-    ctx.roles = await new RbacSeeder().seedRoles([{
+    ctx.roles = await new RbacSeeder().seed([{
       name: 'Role1',
       permissions: {
         Entity1: {
@@ -133,7 +133,7 @@ describe('RoleManager', (): void => {
   describe('#getRoles', () => {
     it('should return list of role names', async () => {
       const { user } = await UserFactory();
-      const [role] = await new RbacSeeder().seedRoles([{
+      const [role] = await new RbacSeeder().seed([{
         name: 'Everybody',
         permissions: {},
         assignmentCheck: async () => true,
@@ -149,7 +149,7 @@ describe('RoleManager', (): void => {
     });
     it('should not return role which fails assignment check', async () => {
       const { user } = await UserFactory();
-      const [role] = await new RbacSeeder().seedRoles([{
+      const [role] = await new RbacSeeder().seed([{
         name: 'Nobody',
         permissions: {},
         assignmentCheck: async () => false,

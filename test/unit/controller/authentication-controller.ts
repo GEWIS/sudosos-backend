@@ -74,7 +74,7 @@ describe('AuthenticationController', async (): Promise<void> => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
-    const [role, maintenanceOverrideRole] = await new RbacSeeder().seedRoles([{
+    const [role, maintenanceOverrideRole] = await new RbacSeeder().seed([{
       name: 'Role',
       permissions: {
         Product: {

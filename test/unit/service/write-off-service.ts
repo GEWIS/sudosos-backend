@@ -52,7 +52,7 @@ describe('WriteOffService', () => {
     const serverSettingsStore = await ServerSettingsStore.getInstance().initialize();
     await serverSettingsStore.setSetting('highVatGroupId', vg.id);
 
-    ctx = { ...c, writeOffs: await new WriteOffSeeder().seedWriteOffs() };
+    ctx = { ...c, writeOffs: await new WriteOffSeeder().seed() };
   });
 
   after(async () => {

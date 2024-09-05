@@ -48,12 +48,12 @@ describe('VatGroupService', () => {
   before(async () => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
-    const users = await new UserSeeder().seedUsers();
-    const vatGroups = await new VatGroupSeeder().seedVatGroups();
-    const { productRevisions } = await new ProductSeeder().seedProducts(users, undefined, vatGroups, 100);
-    const { containerRevisions } = await new ContainerSeeder().seedContainers(users, productRevisions);
-    const { pointOfSaleRevisions } = await new PointOfSaleSeeder().seedPointsOfSale(users, containerRevisions);
-    const { transactions } = await new TransactionSeeder().seedTransactions(users, pointOfSaleRevisions, new Date('2020-02-12'), new Date('2022-11-30'), 3);
+    const users = await new UserSeeder().seed();
+    const vatGroups = await new VatGroupSeeder().seed();
+    const { productRevisions } = await new ProductSeeder().seed(users, undefined, vatGroups, 100);
+    const { containerRevisions } = await new ContainerSeeder().seed(users, productRevisions);
+    const { pointOfSaleRevisions } = await new PointOfSaleSeeder().seed(users, containerRevisions);
+    const { transactions } = await new TransactionSeeder().seed(users, pointOfSaleRevisions, new Date('2020-02-12'), new Date('2022-11-30'), 3);
 
     const validVatCreateReq: VatGroupRequest = {
       name: 'Extreem hoog tarief',

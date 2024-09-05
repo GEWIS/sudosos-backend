@@ -31,7 +31,7 @@ export default class DepositSeeder extends WithManager {
    * these entries to make actual API calls to Stripe.
    * @param users
    */
-  public async seedStripeDeposits(users: User[]): Promise<{
+  public async seed(users: User[]): Promise<{
     stripeDeposits: StripeDeposit[],
     stripeDepositTransfers: Transfer[],
   }> {

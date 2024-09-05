@@ -25,7 +25,7 @@ import dinero from 'dinero.js';
 import WithManager from '../../../src/with-manager';
 
 export default class SellerPayoutSeeder extends WithManager {
-  public async seedSellerPayouts(
+  public async seed(
     users: User[],
     transactions: Transaction[],
     subTransactions: SubTransaction[],

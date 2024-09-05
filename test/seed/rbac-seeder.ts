@@ -43,7 +43,7 @@ export interface SeededRole {
 }
 
 export default class RbacSeeder extends WithManager {
-  public seedRoles(roles: SeedRoleDefinition[]): Promise<SeededRole[]> {
+  public seed(roles: SeedRoleDefinition[]): Promise<SeededRole[]> {
     return Promise.all(roles.map((role) => this.manager.save(Role, { name: role.name, systemDefault: role.systemDefault })
       .then(async (r): Promise<SeededRole> => {
         if (role.userTypes && role.userTypes.length > 0) {

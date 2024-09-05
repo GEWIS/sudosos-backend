@@ -85,14 +85,14 @@ export default class ContainerSeeder extends WithManager {
    * @param users - The dataset of users to base the container dataset on.
    * @param productRevisions - The dataset of product revisions to base the container dataset on.
    */
-  public async seedContainers(
+  public async seed(
     users: User[],
     productRevisions?: ProductRevision[],
   ): Promise<{
       containers: Container[],
       containerRevisions: ContainerRevision[],
     }> {
-    const productRevisions1 = productRevisions ?? (await new ProductSeeder().seedProducts(users)).productRevisions;
+    const productRevisions1 = productRevisions ?? (await new ProductSeeder().seed(users)).productRevisions;
 
     let containers: Container[] = [];
     let containerRevisions: ContainerRevision[] = [];

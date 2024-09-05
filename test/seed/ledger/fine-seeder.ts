@@ -28,7 +28,7 @@ import Fine from '../../../src/entity/fine/fine';
 
 export default class FineSeeder extends WithManager {
   /**
-   * Handout fines for all eligible users on the given reference date. Reuse the given user fine groups if
+   * Handout fines for all eligible users on the given reference date. Reuse the given user fine groups if it exists
    * @param users
    * @param transactions
    * @param transfers
@@ -100,7 +100,7 @@ export default class FineSeeder extends WithManager {
    * @param transfers
    * @param addCurrentFines
    */
-  public async seedFines(users: User[], transactions: Transaction[], transfers: Transfer[], addCurrentFines = false) {
+  public async seed(users: User[], transactions: Transaction[], transfers: Transfer[], addCurrentFines = false) {
     // Make a copy of users, so we can update currentFines
     let newUsers = users;
 

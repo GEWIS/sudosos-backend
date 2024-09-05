@@ -42,7 +42,7 @@ describe('RootController', async (): Promise<void> => {
     } as any;
     const admin: User = await (await UserFactory(await ADMIN_USER())).get();
     const user: User = await (await UserFactory()).get();
-    const { banners } = await new BannerSeeder().seedBanners([user, admin]);
+    const { banners } = await new BannerSeeder().seed([user, admin]);
 
     const controller = new RootController({ specification: ctx.specification, roleManager: ctx.roleManager });
     ctx.app.use(json());

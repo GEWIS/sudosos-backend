@@ -75,8 +75,8 @@ describe('StripeWebhookController', async (): Promise<void> => {
     const specification = await Swagger.initialize(app);
     const roleManager = await new RoleManager().initialize();
 
-    const users = await new UserSeeder().seedUsers();
-    const { stripeDeposits } = await new DepositSeeder().seedStripeDeposits(users);
+    const users = await new UserSeeder().seed();
+    const { stripeDeposits } = await new DepositSeeder().seed(users);
 
     const controller = new StripeWebhookController({ specification, roleManager });
     app.use(json({

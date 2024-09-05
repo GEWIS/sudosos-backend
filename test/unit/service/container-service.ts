@@ -109,9 +109,9 @@ describe('ContainerService', async (): Promise<void> => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
-    const users = await new UserSeeder().seedUsers();
-    const { containers, containerRevisions } = await new ContainerSeeder().seedContainers(users);
-    const { pointsOfSale, pointOfSaleRevisions } = await new PointOfSaleSeeder().seedPointsOfSale(users, containerRevisions);
+    const users = await new UserSeeder().seed();
+    const { containers, containerRevisions } = await new ContainerSeeder().seed(users);
+    const { pointsOfSale, pointOfSaleRevisions } = await new PointOfSaleSeeder().seed(users, containerRevisions);
 
     // start app
     const app = express();

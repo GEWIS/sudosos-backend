@@ -35,8 +35,8 @@ describe('ReportService', () => {
       ...(await defaultBefore()),
     } as any;
 
-    const users = await new UserSeeder().seedUsers();
-    const { transactions } = await new TransactionSeeder().seedTransactions(users);
+    const users = await new UserSeeder().seed();
+    const { transactions } = await new TransactionSeeder().seed(users);
 
     ctx = {
       ...ctx,
