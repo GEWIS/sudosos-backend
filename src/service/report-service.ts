@@ -54,6 +54,7 @@ import {
   ReportVatEntry,
   SalesReport,
 } from '../entity/report/report';
+import WithManager from '../with-manager';
 
 export interface ReportParameters {
   fromDate: Date,
@@ -61,14 +62,7 @@ export interface ReportParameters {
   forId: number,
 }
 
-export default abstract class ReportService {
-
-  private manager: EntityManager;
-
-  constructor(manager?: EntityManager) {
-    this.manager = manager ? manager : AppDataSource.manager;
-  }
-
+export default abstract class ReportService extends WithManager {
   private static reportEntryToResponse(entry: ReportEntry): ReportEntryResponse {
     return {
       totalInclVat: entry.totalInclVat.toObject(),

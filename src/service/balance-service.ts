@@ -16,7 +16,6 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { EntityManager } from 'typeorm';
 import Balance from '../entity/transactions/balance';
 import BalanceResponse, { PaginatedBalanceResponse } from '../controller/response/balance-response';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
@@ -25,7 +24,7 @@ import { Dinero } from 'dinero.js';
 import { OrderingDirection } from '../helpers/ordering';
 import { defaultPagination, PaginationParameters } from '../helpers/pagination';
 import { UserType } from '../entity/user/user';
-import { AppDataSource } from '../database/database';
+import WithManager from '../with-manager';
 
 export enum BalanceOrderColumn {
   ID = 'id',
@@ -65,14 +64,7 @@ export function asBalanceOrderColumn(input: any): BalanceOrderColumn | undefined
   return input;
 }
 
-export default class BalanceService {
-
-  private readonly manager: EntityManager;
-
-  constructor(manager?: EntityManager) {
-    this.manager = manager ? manager : AppDataSource.manager;
-  }
-
+export default class BalanceService extends WithManager {
   protected static asBalanceResponse(rawBalance: any, date: Date): BalanceResponse {
     let fineSince = null;
     // SQLite returns timestamps in UTC, while MariaDB/MySQL returns timestamps in the local timezone

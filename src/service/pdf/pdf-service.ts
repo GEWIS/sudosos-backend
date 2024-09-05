@@ -24,10 +24,10 @@ import {
   ReturnFileType,
 } from 'pdf-generator-client';
 import { EntityManager } from 'typeorm';
-import { AppDataSource } from '../../database/database';
 import FileService from '../file-service';
 import { PdfError } from '../../errors';
 import { IPdfAble, IUnstoredPdfAble } from '../../entity/file/pdf-able';
+import WithManager from '../../with-manager';
 
 interface IRouteParams {
   params: any;
@@ -44,9 +44,7 @@ export declare class RouteParams implements IRouteParams {
 }
 
 
-export abstract class BasePdfService<T, R extends RouteParams> {
-  manager: EntityManager;
-
+export abstract class BasePdfService<T, R extends RouteParams> extends WithManager {
   public client: Client;
 
   abstract routeConstructor: new (data: IRouteParams) => R;
@@ -58,8 +56,8 @@ export abstract class BasePdfService<T, R extends RouteParams> {
   }
 
   constructor(manager?: EntityManager) {
+    super(manager);
     const PDF_GEN_URL = process.env.PDF_GEN_URL ?? 'http://localhost:3001/pdf';
-    this.manager = manager ?? AppDataSource.manager;
     this.client = BasePdfService.getClient(PDF_GEN_URL);
   }
 

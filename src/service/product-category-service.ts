@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { EntityManager, FindManyOptions, IsNull, Raw } from 'typeorm';
+import { FindManyOptions, IsNull, Raw } from 'typeorm';
 import ProductCategory from '../entity/product/product-category';
 import {
   PaginatedProductCategoryResponse,
@@ -25,7 +25,7 @@ import {
 import ProductCategoryRequest from '../controller/request/product-category-request';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import { PaginationParameters } from '../helpers/pagination';
-import { AppDataSource } from '../database/database';
+import WithManager from '../with-manager';
 
 /**
  * Define productCategory filtering parameters used to filter query results.
@@ -52,13 +52,7 @@ export interface ProductCategoryFilterParameters {
 /**
  * Wrapper for all Product related logic.
  */
-export default class ProductCategoryService {
-  private manager: EntityManager;
-
-  constructor(manager?: EntityManager) {
-    this.manager = manager ?? AppDataSource.manager;
-  }
-
+export default class ProductCategoryService extends WithManager {
   /**
    * Creates a productCategoryResponse from a productCategory
    * @param {ProductCategory.model} productCategory - productCategory
