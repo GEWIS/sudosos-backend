@@ -17,3 +17,4 @@
  */
 
 export { default as TransactionSeeder } from './transaction';
+export { default as TransferSeeder } from './transfer';

@@ -21,9 +21,6 @@ import Transaction from '../../../src/entity/transactions/transaction';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import Transfer from '../../../src/entity/transactions/transfer';
 import SellerPayout from '../../../src/entity/transactions/payout/seller-payout';
-import {
-  seedTransfers,
-} from '../../seed-legacy';
 import { expect, request } from 'chai';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import { json } from 'body-parser';
@@ -44,7 +41,7 @@ import { Client } from 'pdf-generator-client';
 import { BasePdfService } from '../../../src/service/pdf/pdf-service';
 import {
   RbacSeeder,
-  SellerPayoutSeeder, TransactionSeeder,
+  SellerPayoutSeeder, TransactionSeeder, TransferSeeder,
   UserSeeder,
 } from '../../seed';
 
@@ -67,7 +64,7 @@ describe('SellerPayoutController', () => {
     const users = await new UserSeeder().seedUsers();
 
     const { transactions, subTransactions } = await new TransactionSeeder().seedTransactions(users, undefined, new Date('2020-01-01'), new Date());
-    const transfers = await seedTransfers(users, new Date('2020-01-01'), new Date());
+    const transfers = await new TransferSeeder().seedTransfers(users, new Date('2020-01-01'), new Date());
     const { sellerPayouts, transfers: sellerPayoutTransfers } = await new SellerPayoutSeeder().seedSellerPayouts(users, transactions, subTransactions, transfers);
 
     const all = { all: new Set<string>(['*']) };

@@ -24,7 +24,6 @@ import Transfer from '../../../src/entity/transactions/transfer';
 import Database from '../../../src/database/database';
 import {
   seedFines,
-  seedTransfers,
 } from '../../seed-legacy';
 import Swagger from '../../../src/start/swagger';
 import BalanceService, { BalanceOrderColumn } from '../../../src/service/balance-service';
@@ -43,7 +42,7 @@ import Fine from '../../../src/entity/fine/fine';
 import BalanceResponse from '../../../src/controller/response/balance-response';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { PointOfSaleSeeder, TransactionSeeder, UserSeeder } from '../../seed';
+import { PointOfSaleSeeder, TransactionSeeder, TransferSeeder, UserSeeder } from '../../seed';
 
 describe('BalanceService', (): void => {
   let ctx: {
@@ -65,7 +64,7 @@ describe('BalanceService', (): void => {
     const seededUsers = await new UserSeeder().seedUsers();
     const { pointOfSaleRevisions } = await new PointOfSaleSeeder().seedPointsOfSale(seededUsers);
     const { transactions } = await new TransactionSeeder().seedTransactions(seededUsers, pointOfSaleRevisions, new Date('2020-02-12'), new Date('2021-11-30'), 10);
-    const transfers = await seedTransfers(seededUsers, new Date('2020-02-12'), new Date('2021-11-30'));
+    const transfers = await new TransferSeeder().seedTransfers(seededUsers, new Date('2020-02-12'), new Date('2021-11-30'));
     const { fines, fineTransfers, users } = await seedFines(seededUsers, transactions, transfers, true);
     const subTransactions: SubTransaction[] = Array.prototype.concat(...transactions
       .map((t) => t.subTransactions));

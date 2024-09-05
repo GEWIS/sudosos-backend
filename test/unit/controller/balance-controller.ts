@@ -25,7 +25,6 @@ import Transaction from '../../../src/entity/transactions/transaction';
 import Database from '../../../src/database/database';
 import {
   seedFines,
-  seedTransfers,
 } from '../../seed-legacy';
 import Swagger from '../../../src/start/swagger';
 import TokenHandler from '../../../src/authentication/token-handler';
@@ -43,7 +42,7 @@ import Fine from '../../../src/entity/fine/fine';
 import UserFineGroup from '../../../src/entity/fine/userFineGroup';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { RbacSeeder, TransactionSeeder, UserSeeder } from '../../seed';
+import { RbacSeeder, TransactionSeeder, TransferSeeder, UserSeeder } from '../../seed';
 
 describe('BalanceController', (): void => {
   let ctx: {
@@ -71,7 +70,7 @@ describe('BalanceController', (): void => {
     const { transactions } = await new TransactionSeeder().seedTransactions(users, undefined, new Date('2020-02-12'), new Date('2022-11-30'));
     const subTransactions: SubTransaction[] = Array.prototype.concat(...transactions
       .map((t) => t.subTransactions));
-    const transfers = await seedTransfers(users);
+    const transfers = await new TransferSeeder().seedTransfers(users);
 
     const all = { all: new Set<string>(['*']) };
     const own = { own: new Set<string>(['*']) };

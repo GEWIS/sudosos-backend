@@ -32,7 +32,6 @@ import {
   seedFines,
   seedInvoices, seedPayoutRequests,
   seedStripeDeposits,
-  seedTransfers,
 } from '../../seed-legacy';
 import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
 import { truncateAllTables } from '../../setup';
@@ -42,7 +41,7 @@ import {
   ContainerSeeder,
   PointOfSaleSeeder,
   ProductSeeder,
-  TransactionSeeder,
+  TransactionSeeder, TransferSeeder,
   UserSeeder,
   VatGroupSeeder,
 } from '../../seed';
@@ -68,7 +67,7 @@ describe('TransferService', async (): Promise<void> => {
     const { productRevisions } = await new ProductSeeder().seedProducts(users, undefined, vatGroups);
     const { containerRevisions } = await new ContainerSeeder().seedContainers(users, productRevisions);
     const { pointOfSaleRevisions } = await new PointOfSaleSeeder().seedPointsOfSale(users, containerRevisions);
-    const transfers = await seedTransfers(users, begin, end);
+    const transfers = await new TransferSeeder().seedTransfers(users, begin, end);
     const { transactions } = await new TransactionSeeder().seedTransactions(users, pointOfSaleRevisions, begin, end);
     const { invoiceTransfers } = await seedInvoices(users, transactions);
     const { payoutRequestTransfers } = await seedPayoutRequests(users);

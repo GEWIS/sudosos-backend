@@ -24,7 +24,6 @@ import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/u
 import Database from '../../../src/database/database';
 import {
   seedFines,
-  seedTransfers,
 } from '../../seed-legacy';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import Transaction from '../../../src/entity/transactions/transaction';
@@ -52,7 +51,7 @@ import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { Client } from 'pdf-generator-client';
 import { BasePdfService } from '../../../src/service/pdf/pdf-service';
-import { RbacSeeder, TransactionSeeder, UserSeeder } from '../../seed';
+import { RbacSeeder, TransactionSeeder, TransferSeeder, UserSeeder } from '../../seed';
 
 describe('DebtorController', () => {
   let ctx: {
@@ -103,7 +102,7 @@ describe('DebtorController', () => {
 
     const users = await new UserSeeder().seedUsers();
     const { transactions } = await new TransactionSeeder().seedTransactions(users, undefined, new Date('2020-02-12'), new Date('2021-11-30'), 10);
-    const transfers = await seedTransfers(users, new Date('2020-02-12'), new Date('2021-11-30'));
+    const transfers = await new TransferSeeder().seedTransfers(users, new Date('2020-02-12'), new Date('2021-11-30'));
     const subTransactions: SubTransaction[] = Array.prototype.concat(...transactions
       .map((t) => t.subTransactions));
     const { fines, fineTransfers, fineHandoutEvents } = await seedFines(users, transactions, transfers);

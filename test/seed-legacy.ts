@@ -63,11 +63,10 @@ import {
   ContainerSeeder, EventSeeder,
   PointOfSaleSeeder,
   ProductCategorySeeder,
-  ProductSeeder,
+  ProductSeeder, TransferSeeder,
   UserSeeder,
   VatGroupSeeder,
 } from './seed';
-import { getRandomDate } from './seed/helpers';
 import TransactionSeeder from './seed/ledger/transaction';
 
 
@@ -456,42 +455,6 @@ export async function seedPayoutRequests(users: User[]): Promise<{
   };
 }
 
-export async function seedTransfers(users: User[],
-  startDate?: Date, endDate?: Date) : Promise<Transfer[]> {
-  const transfers: Transfer[] = [];
-  const promises: Promise<any>[] = [];
-
-  for (let i = 0; i < users.length; i += 1) {
-    let date = new Date();
-    if (startDate && endDate) {
-      date = getRandomDate(startDate, endDate, i);
-    }
-    let newTransfer = Object.assign(new Transfer(), {
-      description: '',
-      amountInclVat: dinero({ amount: 100 * (i + 1) }),
-      from: undefined,
-      to: users[i],
-      createdAt: date,
-    });
-    transfers.push(newTransfer);
-    promises.push(Transfer.save(newTransfer));
-
-    newTransfer = Object.assign(new Transfer(), {
-      description: '',
-      amountInclVat: dinero({ amount: 50 * (i + 1) }),
-      from: users[i],
-      to: undefined,
-      createdAt: date,
-    });
-    transfers.push(newTransfer);
-    promises.push(Transfer.save(newTransfer));
-  }
-
-  await Promise.all(promises);
-
-  return transfers;
-}
-
 /**
  * Create a BannerImage object. When not in a testing environment, a banner image
  * will also be saved on disk.
@@ -642,7 +605,7 @@ export default async function seedDatabase(beginDate?: Date, endDate?: Date): Pr
   );
   const { roles, roleAssignments, events, eventShifts, eventShiftAnswers } = await new EventSeeder().seedEvents(users);
   const { transactions } = await new TransactionSeeder().seedTransactions(users, pointOfSaleRevisions, beginDate, endDate);
-  const transfers = await seedTransfers(users, beginDate, endDate);
+  const transfers = await new TransferSeeder().seedTransfers(users, beginDate, endDate);
   const { fines, fineTransfers, userFineGroups } = await seedFines(users, transactions, transfers);
   const { payoutRequests, payoutRequestTransfers } = await seedPayoutRequests(users);
   const { invoices, invoiceTransfers } = await seedInvoices(users, transactions);
