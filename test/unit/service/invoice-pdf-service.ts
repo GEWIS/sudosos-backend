@@ -27,9 +27,6 @@ import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import User from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
-import {
-  seedInvoices,
-} from '../../seed-legacy';
 import Swagger from '../../../src/start/swagger';
 import { json } from 'body-parser';
 import FileService from '../../../src/service/file-service';
@@ -40,7 +37,7 @@ import deepEqualInAnyOrder from 'deep-equal-in-any-order';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { INVOICE_PDF_LOCATION } from '../../../src/files/storage';
-import { TransactionSeeder, UserSeeder } from '../../seed';
+import { InvoiceSeeder, TransactionSeeder, UserSeeder } from '../../seed';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -63,7 +60,7 @@ describe('InvoicePdfService', async (): Promise<void> => {
 
     const users = await new UserSeeder().seedUsers();
     const { transactions } = await new TransactionSeeder().seedTransactions(users);
-    const { invoices } = await seedInvoices(users, transactions);
+    const { invoices } = await new InvoiceSeeder().seedInvoices(users, transactions);
 
     // start app
     const app = express();

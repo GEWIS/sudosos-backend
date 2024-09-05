@@ -25,9 +25,6 @@ import deepEqualInAnyOrder from 'deep-equal-in-any-order';
 import User, { UserType } from '../../../src/entity/user/user';
 import Invoice from '../../../src/entity/invoices/invoice';
 import Database, { AppDataSource } from '../../../src/database/database';
-import {
-  seedInvoices,
-} from '../../seed-legacy';
 import Swagger from '../../../src/start/swagger';
 import {
   BaseInvoiceResponse,
@@ -49,7 +46,7 @@ import Transaction from '../../../src/entity/transactions/transaction';
 import InvoiceUser from '../../../src/entity/user/invoice-user';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { TransactionSeeder, UserSeeder } from '../../seed';
+import { InvoiceSeeder, TransactionSeeder, UserSeeder } from '../../seed';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -125,7 +122,7 @@ describe('InvoiceService', () => {
 
     const users = await new UserSeeder().seedUsers();
     const { transactions } = await new TransactionSeeder().seedTransactions(users);
-    const { invoices } = await seedInvoices(users, transactions);
+    const { invoices } = await new InvoiceSeeder().seedInvoices(users, transactions);
 
     // start app
     const app = express();

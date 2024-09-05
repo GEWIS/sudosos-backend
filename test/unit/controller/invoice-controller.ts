@@ -24,9 +24,6 @@ import { expect, request } from 'chai';
 import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import InvoiceController from '../../../src/controller/invoice-controller';
 import Database, { AppDataSource } from '../../../src/database/database';
-import {
-  seedInvoices,
-} from '../../seed-legacy';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Swagger from '../../../src/start/swagger';
 import RoleManager from '../../../src/rbac/role-manager';
@@ -60,7 +57,7 @@ import sinon from 'sinon';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { createTransactionRequest, requestToTransaction } from '../../helpers/transaction-factory';
-import { RbacSeeder, TransactionSeeder, UserSeeder } from '../../seed';
+import { InvoiceSeeder, RbacSeeder, TransactionSeeder, UserSeeder } from '../../seed';
 
 describe('InvoiceController', async () => {
   let ctx: {
@@ -118,7 +115,7 @@ describe('InvoiceController', async () => {
     await User.save(invoiceUser2);
 
     const { transactions } = await new TransactionSeeder().seedTransactions([adminUser, localUser, invoiceUser, invoiceUser2]);
-    await seedInvoices([invoiceUser, invoiceUser2], transactions);
+    await new InvoiceSeeder().seedInvoices([invoiceUser, invoiceUser2], transactions);
 
     const app = express();
     const specification = await Swagger.initialize(app);

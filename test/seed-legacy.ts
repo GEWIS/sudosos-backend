@@ -16,8 +16,6 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import dinero from 'dinero.js';
-import { addDays } from 'date-fns';
 import * as fs from 'fs';
 import path from 'path';
 import Container from '../src/entity/container/container';
@@ -36,8 +34,6 @@ import { BANNER_IMAGE_LOCATION } from '../src/files/storage';
 import StripeDeposit from '../src/entity/stripe/stripe-deposit';
 import PayoutRequest from '../src/entity/transactions/payout/payout-request';
 import Invoice from '../src/entity/invoices/invoice';
-import InvoiceEntry from '../src/entity/invoices/invoice-entry';
-import InvoiceStatus, { InvoiceState } from '../src/entity/invoices/invoice-status';
 import Event from '../src/entity/event/event';
 import EventShift from '../src/entity/event/event-shift';
 import EventShiftAnswer from '../src/entity/event/event-shift-answer';
@@ -52,7 +48,7 @@ import AssignedRole from '../src/entity/rbac/assigned-role';
 import Role from '../src/entity/rbac/role';
 import WriteOff from '../src/entity/transactions/write-off';
 import {
-  ContainerSeeder, DepositSeeder, EventSeeder, FineSeeder, PayoutRequestSeeder,
+  ContainerSeeder, DepositSeeder, EventSeeder, FineSeeder, InvoiceSeeder, PayoutRequestSeeder,
   PointOfSaleSeeder,
   ProductCategorySeeder,
   ProductSeeder, TransferSeeder,
@@ -60,120 +56,6 @@ import {
   VatGroupSeeder, WriteOffSeeder,
 } from './seed';
 import TransactionSeeder from './seed/ledger/transaction';
-
-
-export function defineInvoiceEntries(invoiceId: number, startEntryId: number,
-  transactions: Transaction[]): { invoiceEntries: InvoiceEntry[], cost: number } {
-  const invoiceEntries: InvoiceEntry[] = [];
-  let entryId = startEntryId;
-  const subTransactions = (
-    transactions.map((t) => t.subTransactions).reduce((acc, tSub) => acc.concat(tSub)));
-
-  const subTransactionRows = (
-    subTransactions.map(
-      (tSub) => tSub.subTransactionRows,
-    ).reduce((acc, tSubRow) => acc.concat(tSubRow)));
-
-  let cost = 0;
-  for (let i = 0; i < subTransactionRows.length; i += 1) {
-    cost += subTransactionRows[i].amount * subTransactionRows[i].product.priceInclVat.getAmount();
-    invoiceEntries.push(Object.assign(new InvoiceEntry(), {
-      id: entryId,
-      invoice: invoiceId,
-      description: subTransactionRows[i].product.name,
-      amount: subTransactionRows[i].amount,
-      priceInclVat: subTransactionRows[i].product.priceInclVat,
-      vatPercentage: subTransactionRows[i].product.vat.percentage,
-    }));
-    entryId += 1;
-  }
-  return { invoiceEntries, cost };
-}
-
-export async function seedInvoices(users: User[], transactions: Transaction[]): Promise<{
-  invoices: Invoice[],
-  invoiceTransfers: Transfer[],
-}> {
-  let invoices: Invoice[] = [];
-
-  const invoiceUsers = users.filter((u) => u.type === UserType.INVOICE);
-  let invoiceTransfers: Transfer[] = [];
-  let invoiceEntry: InvoiceEntry[] = [];
-
-  for (let i = 0; i < invoiceUsers.length; i += 1) {
-    const invoiceTransactions = transactions.filter((t) => t.from.id === invoiceUsers[i].id);
-    const to: User = invoiceUsers[i];
-
-    const { invoiceEntries, cost } = (
-      defineInvoiceEntries(i + 1, 1 + invoiceEntry.length, invoiceTransactions));
-    // Edgecase in the seeder
-    if (cost === 0) {
-      // eslint-disable-next-line no-continue
-      continue;
-    }
-
-    invoiceEntry = invoiceEntry.concat(invoiceEntries);
-
-    const transfer = Object.assign(new Transfer(), {
-      from: null,
-      to,
-      amountInclVat: dinero({
-        amount: cost,
-      }),
-      description: `Invoice Transfer for ${cost}`,
-    });
-    await Transfer.save(transfer);
-
-    const invoice = Object.assign(new Invoice(), {
-      id: i + 1,
-      to,
-      addressee: `Addressed to ${to.firstName}`,
-      reference: `BAC-${i}`,
-      city: `city-${i}`,
-      country: `country-${i}`,
-      postalCode: `postalCode-${i}`,
-      street: `street-${i}`,
-      description: `Invoice #${i}`,
-      transfer,
-      date: new Date(),
-      invoiceEntries,
-      invoiceStatus: [],
-    });
-    transfer.invoice = invoice;
-
-    await Invoice.save(invoice);
-    let status = Object.assign(new InvoiceStatus(), {
-      id: i + 1,
-      invoice,
-      changedBy: users[i],
-      state: InvoiceState.CREATED,
-      dateChanged: addDays(new Date(2020, 0, 1), 2 - (i * 2)),
-    });
-    invoice.invoiceStatus.push(status);
-    invoices = invoices.concat(invoice);
-    invoiceTransfers = invoiceTransfers.concat(transfer);
-  }
-
-  await Invoice.save(invoices);
-  await InvoiceEntry.save(invoiceEntry);
-
-  for (let i = 0; i < invoices.length; i += 1) {
-    if (i % 2 === 0) {
-      const current = invoices[i].invoiceStatus[0].changedBy.id;
-      const status = Object.assign(new InvoiceStatus(), {
-        invoice: invoices[i],
-        changedBy: current,
-        state: InvoiceState.SENT,
-        dateChanged: addDays(new Date(2020, 0, 1), 2 - (i * 2)),
-      });
-      invoices[i].invoiceStatus.push(status);
-      await Invoice.save(invoices[i]);
-    }
-  }
-
-
-  return { invoices, invoiceTransfers };
-}
 
 /**
  * Create a BannerImage object. When not in a testing environment, a banner image
@@ -294,7 +176,7 @@ export default async function seedDatabase(beginDate?: Date, endDate?: Date): Pr
   const transfers = await new TransferSeeder().seedTransfers(users, beginDate, endDate);
   const { fines, fineTransfers, userFineGroups } = await new FineSeeder().seedFines(users, transactions, transfers);
   const { payoutRequests, payoutRequestTransfers } = await new PayoutRequestSeeder().seedPayoutRequests(users);
-  const { invoices, invoiceTransfers } = await seedInvoices(users, transactions);
+  const { invoices, invoiceTransfers } = await new InvoiceSeeder().seedInvoices(users, transactions);
   const { stripeDeposits, stripeDepositTransfers } = await new DepositSeeder().seedStripeDeposits(users);
   const writeOffs = await new WriteOffSeeder().seedWriteOffs();
   const { banners } = await seedBanners(users);

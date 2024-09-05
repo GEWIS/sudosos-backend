@@ -18,6 +18,7 @@
 
 export { default as DepositSeeder } from './deposit';
 export { default as FineSeeder } from './fine';
+export { default as InvoiceSeeder } from './invoice';
 export { default as PayoutRequestSeeder } from './payout-request';
 export { default as TransactionSeeder } from './transaction';
 export { default as TransferSeeder } from './transfer';
