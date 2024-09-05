@@ -15,14 +15,14 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import Transaction from '../../src/entity/transactions/transaction';
-import Transfer from '../../src/entity/transactions/transfer';
-import SellerPayout from '../../src/entity/transactions/payout/seller-payout';
-import User, { UserType } from '../../src/entity/user/user';
-import { calculateBalance } from '../helpers/balance';
-import SubTransaction from '../../src/entity/transactions/sub-transaction';
+import Transaction from '../../../src/entity/transactions/transaction';
+import Transfer from '../../../src/entity/transactions/transfer';
+import SellerPayout from '../../../src/entity/transactions/payout/seller-payout';
+import User, { UserType } from '../../../src/entity/user/user';
+import { calculateBalance } from '../../helpers/balance';
+import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import dinero from 'dinero.js';
-import WithManager from '../../src/with-manager';
+import WithManager from '../../../src/with-manager';
 
 export default class SellerPayoutSeeder extends WithManager {
   public async seedSellerPayouts(

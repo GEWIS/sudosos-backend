@@ -20,7 +20,7 @@ import User, { UserType } from '../../../src/entity/user/user';
 import Container from '../../../src/entity/container/container';
 import ProductRevision from '../../../src/entity/product/product-revision';
 import ContainerRevision from '../../../src/entity/container/container-revision';
-import ProductSeeder from './product';
+import ProductSeeder from './product-seeder';
 
 export default class ContainerSeeder extends WithManager {
   /**

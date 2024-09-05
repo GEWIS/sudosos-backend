@@ -16,8 +16,8 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-export { default as ContainerSeeder } from './container';
-export { default as PointOfSaleSeeder } from './point-of-sale';
-export { default as ProductSeeder } from './product';
-export { default as ProductCategorySeeder } from './product-category';
-export { default as VatGroupSeeder } from './vat-group';
+export { default as ContainerSeeder } from './container-seeder';
+export { default as PointOfSaleSeeder } from './point-of-sale-seeder';
+export { default as ProductSeeder } from './product-seeder';
+export { default as ProductCategorySeeder } from './product-category-seeder';
+export { default as VatGroupSeeder } from './vat-group-seeder';

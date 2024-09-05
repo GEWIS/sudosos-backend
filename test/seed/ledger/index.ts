@@ -16,10 +16,11 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-export { default as DepositSeeder } from './deposit';
-export { default as FineSeeder } from './fine';
-export { default as InvoiceSeeder } from './invoice';
-export { default as PayoutRequestSeeder } from './payout-request';
-export { default as TransactionSeeder } from './transaction';
-export { default as TransferSeeder } from './transfer';
-export { default as WriteOffSeeder } from './write-off';
+export { default as DepositSeeder } from './deposit-seeder';
+export { default as FineSeeder } from './fine-seeder';
+export { default as InvoiceSeeder } from './invoice-seeder';
+export { default as PayoutRequestSeeder } from './payout-request-seeder';
+export { default as SellerPayoutSeeder } from './seller-payout-seeder';
+export { default as TransactionSeeder } from './transaction-seeder';
+export { default as TransferSeeder } from './transfer-seeder';
+export { default as WriteOffSeeder } from './write-off-seeder';

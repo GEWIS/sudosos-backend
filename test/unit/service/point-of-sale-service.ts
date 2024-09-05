@@ -38,7 +38,7 @@ import MemberAuthenticator from '../../../src/entity/authenticator/member-authen
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
-import RbacSeeder, { SeededRole } from '../../seed/rbac';
+import RbacSeeder, { SeededRole } from '../../seed/rbac-seeder';
 import { ContainerSeeder, PointOfSaleSeeder, ProductSeeder, UserSeeder } from '../../seed';
 
 chai.use(deepEqualInAnyOrder);

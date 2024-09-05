@@ -51,7 +51,7 @@ import {
   UserSeeder,
   VatGroupSeeder, WriteOffSeeder,
 } from './seed';
-import BannerSeeder from './seed/banner';
+import BannerSeeder from './seed/banner-seeder';
 
 export interface DatabaseContent {
   users: User[],

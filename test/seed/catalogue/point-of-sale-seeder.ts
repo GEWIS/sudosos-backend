@@ -21,7 +21,7 @@ import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
 import ContainerRevision from '../../../src/entity/container/container-revision';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
 import { addDays } from 'date-fns';
-import ContainerSeeder from './container';
+import ContainerSeeder from './container-seeder';
 
 export default class PointOfSaleSeeder extends WithManager {
   /**

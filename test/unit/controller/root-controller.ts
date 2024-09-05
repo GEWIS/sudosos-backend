@@ -28,7 +28,7 @@ import User from '../../../src/entity/user/user';
 import { ADMIN_USER, UserFactory } from '../../helpers/user-factory';
 import sinon from 'sinon';
 import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
-import BannerSeeder from '../../seed/banner';
+import BannerSeeder from '../../seed/banner-seeder';
 
 describe('RootController', async (): Promise<void> => {
   let ctx: DefaultContext & {

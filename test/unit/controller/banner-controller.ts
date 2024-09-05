@@ -41,7 +41,7 @@ import { defaultPagination, PaginationResult } from '../../../src/helpers/pagina
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { RbacSeeder } from '../../seed';
-import BannerSeeder from '../../seed/banner';
+import BannerSeeder from '../../seed/banner-seeder';
 
 export function bannerEq(a: Banner, b: BannerResponse): Boolean {
   const aEmpty = a === {} as Banner || a === undefined;

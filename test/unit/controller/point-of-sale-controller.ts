@@ -53,7 +53,7 @@ import RoleManager from '../../../src/rbac/role-manager';
 import Database from '../../../src/database/database';
 import TokenHandler from '../../../src/authentication/token-handler';
 import { SwaggerSpecification } from 'swagger-model-validator';
-import { SeededRole } from '../../seed/rbac';
+import { SeededRole } from '../../seed/rbac-seeder';
 import PointOfSaleService from '../../../src/service/point-of-sale-service';
 import MemberAuthenticator from '../../../src/entity/authenticator/member-authenticator';
 import { ContainerSeeder, PointOfSaleSeeder, RbacSeeder, UserSeeder } from '../../seed';

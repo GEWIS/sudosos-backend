@@ -26,8 +26,8 @@ import ProductCategory from '../../../src/entity/product/product-category';
 import VatGroup from '../../../src/entity/vat-group';
 import ProductRevision from '../../../src/entity/product/product-revision';
 import dinero from 'dinero.js';
-import ProductCategorySeeder from './product-category';
-import VatGroupSeeder from './vat-group';
+import ProductCategorySeeder from './product-category-seeder';
+import VatGroupSeeder from './vat-group-seeder';
 
 export default class ProductSeeder extends WithManager {
   /**

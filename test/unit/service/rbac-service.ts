@@ -20,7 +20,7 @@ import RBACService from '../../../src/service/rbac-service';
 import { expect } from 'chai';
 import PermissionRule from '../../../src/rbac/permission-rule';
 import { DataSource } from 'typeorm';
-import { SeededRole } from '../../seed/rbac';
+import { SeededRole } from '../../seed/rbac-seeder';
 import User, { UserType } from '../../../src/entity/user/user';
 import database from '../../../src/database/database';
 import { finishTestDB } from '../../helpers/test-helpers';

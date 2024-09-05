@@ -19,7 +19,7 @@
 import { expect } from 'chai';
 import RoleManager from '../../../src/rbac/role-manager';
 import { ActionDefinition, AllowedAttribute } from '../../../src/rbac/role-definitions';
-import { SeededRole } from '../../seed/rbac';
+import { SeededRole } from '../../seed/rbac-seeder';
 import { DataSource } from 'typeorm';
 import database from '../../../src/database/database';
 import { finishTestDB } from '../../helpers/test-helpers';

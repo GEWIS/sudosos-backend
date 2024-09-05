@@ -69,7 +69,7 @@ import UpdateNfcRequest from '../../../src/controller/request/update-nfc-request
 import UserFineGroup from '../../../src/entity/fine/userFineGroup';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { SeededRole } from '../../seed/rbac';
+import { SeededRole } from '../../seed/rbac-seeder';
 import { createTransactions } from '../../helpers/transaction-factory';
 import { ReportResponse } from '../../../src/controller/response/report-response';
 import sinon from 'sinon';
