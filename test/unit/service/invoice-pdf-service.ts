@@ -39,6 +39,7 @@ import InvoiceService from '../../../src/service/invoice-service';
 import { createInvoiceWithTransfers } from './invoice-service';
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import { InvoiceState } from '../../../src/entity/invoices/invoice-status';
+import { subTransactionRowToProduct } from '../../../src/helpers/pdf';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -224,8 +225,22 @@ describe('InvoicePdfService', async (): Promise<void> => {
       expect(pricing.exclVat).to.eq(totalExclVat);
       expect(pricing.inclVat).to.eq(totalInclVat);
       expect(pricing.exclVat + pricing.lowVat + pricing.highVat).to.eq(totalInclVat);
-    })
+    });
   });
+  describe('subTransactionRowToProduct', () => {
+    it('should return the correct product for a subTransactionRow', async () => {
+      const invoice = ctx.invoices[0];
+      const subTransactionRow = invoice.subTransactionRows[0];
+
+      const product = subTransactionRowToProduct(subTransactionRow);
+      expect(product.name).to.eq(subTransactionRow.product.name);
+      expect(product.pricing.vatAmount).to.eq(subTransactionRow.product.vat.percentage);
+      expect(product.pricing.quantity).to.eq(subTransactionRow.amount);
+      expect(product.pricing.basePrice).to.eq(subTransactionRow.product.priceInclVat.getAmount());
+      expect(product.name).to.eq(subTransactionRow.product.name);
+    });
+  });
+
 
   describe('getInvoiceParameters', () => {
     it('should return all required parameters for generating an invoice PDF', async () => {
