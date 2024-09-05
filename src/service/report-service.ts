@@ -15,8 +15,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { AppDataSource } from '../database/database';
-import { EntityManager, SelectQueryBuilder } from 'typeorm';
+import { SelectQueryBuilder } from 'typeorm';
 import ProductRevision from '../entity/product/product-revision';
 import Dinero from 'dinero.js';
 import VatGroup from '../entity/vat-group';
