@@ -21,7 +21,7 @@ import log4js from 'log4js';
 import dinero, { Currency } from 'dinero.js';
 import Database from './database';
 import { Application } from '../index';
-import seedDatabase from '../../test/seed';
+import seedDatabase from '../../test/seed-legacy';
 import initializeDiskStorage from '../files/initialize';
 import BalanceService from '../service/balance-service';
 import { truncateAllTables } from '../../test/setup';

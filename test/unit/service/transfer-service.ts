@@ -37,7 +37,7 @@ import {
   seedTransfers,
   seedUsers,
   seedVatGroups,
-} from '../../seed';
+} from '../../seed-legacy';
 import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';

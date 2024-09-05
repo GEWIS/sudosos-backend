@@ -21,7 +21,7 @@ import { expect } from 'chai';
 import User from '../../../src/entity/user/user';
 import PayoutRequest from '../../../src/entity/transactions/payout/payout-request';
 import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
-import { seedPayoutRequests, seedUsers } from '../../seed';
+import { seedPayoutRequests, seedUsers } from '../../seed-legacy';
 import Database from '../../../src/database/database';
 import PayoutRequestService from '../../../src/service/payout-request-service';
 import { PayoutRequestState } from '../../../src/entity/transactions/payout/payout-request-status';

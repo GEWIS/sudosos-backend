@@ -29,7 +29,7 @@ import {
   seedProducts, seedTransactions, seedTransfers,
   seedUsers,
   seedVatGroups,
-} from '../../seed';
+} from '../../seed-legacy';
 import { calculateBalance } from '../../helpers/balance';
 import ProductRevision from '../../../src/entity/product/product-revision';
 import ContainerRevision from '../../../src/entity/container/container-revision';

@@ -31,7 +31,7 @@ import {
   seedTransfers,
   seedUsers,
   seedVatGroups,
-} from '../../seed';
+} from '../../seed-legacy';
 import Database from '../../../src/database/database';
 import Transaction from '../../../src/entity/transactions/transaction';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';

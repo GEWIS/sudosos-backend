@@ -28,7 +28,7 @@ import ProductService, { ProductFilterParameters } from '../../../src/service/pr
 import {
   seedProducts, seedContainers, seedProductCategories,
   seedUsers, seedPointsOfSale, seedVatGroups,
-} from '../../seed';
+} from '../../seed-legacy';
 import Product from '../../../src/entity/product/product';
 import {
   ProductResponse,

@@ -32,7 +32,7 @@ import { extractRawBody } from '../../../src/helpers/raw-body';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import StripeDeposit from '../../../src/entity/stripe/stripe-deposit';
-import { seedStripeDeposits, seedUsers } from '../../seed';
+import { seedStripeDeposits, seedUsers } from '../../seed-legacy';
 
 describe('StripeWebhookController', async (): Promise<void> => {
   let shouldSkip: boolean;

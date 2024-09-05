@@ -21,7 +21,7 @@ import { expect } from 'chai';
 import Stripe from 'stripe';
 import User from '../../../src/entity/user/user';
 import Database, { AppDataSource } from '../../../src/database/database';
-import { seedStripeDeposits, seedUsers } from '../../seed';
+import { seedStripeDeposits, seedUsers } from '../../seed-legacy';
 import StripeDeposit from '../../../src/entity/stripe/stripe-deposit';
 import StripeService, { STRIPE_API_VERSION } from '../../../src/service/stripe-service';
 import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';

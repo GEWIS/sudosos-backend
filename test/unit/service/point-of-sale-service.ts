@@ -32,7 +32,7 @@ import {
   seedProducts,
   seedUsers,
   seedVatGroups,
-} from '../../seed';
+} from '../../seed-legacy';
 import Swagger from '../../../src/start/swagger';
 import {
   PaginatedPointOfSaleResponse,
@@ -46,7 +46,7 @@ import MemberAuthenticator from '../../../src/entity/authenticator/member-authen
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { SeededRole, seedRoles } from '../../seed/rbac';
+import RbacSeeder, { SeededRole } from '../../seed/rbac';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -121,7 +121,7 @@ describe('PointOfSaleService', async (): Promise<void> => {
     const feut1 = users.filter((u) => u.type === UserType.MEMBER)[0];
     const feut2 = users.filter((u) => u.type === UserType.MEMBER)[1];
     const bestuur1 = users.filter((u) => u.type === UserType.MEMBER)[2];
-    const roles = await seedRoles([{
+    const roles = await new RbacSeeder().seedRoles([{
       name: 'BAC Feuten',
       permissions: {},
       assignmentCheck: async (user) => user.id === feut1.id || user.id === feut2.id,

@@ -28,7 +28,7 @@ import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/u
 import Database from '../../../src/database/database';
 import {
   seedContainers, seedProductCategories, seedProducts, seedVatGroups,
-} from '../../seed';
+} from '../../seed-legacy';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Swagger from '../../../src/start/swagger';
 import RoleManager from '../../../src/rbac/role-manager';
@@ -48,7 +48,7 @@ import ContainerRevision from '../../../src/entity/container/container-revision'
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import Product from '../../../src/entity/product/product';
-import { getToken, seedRoles } from '../../seed/rbac';
+import { RbacSeeder } from '../../seed';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -159,7 +159,7 @@ describe('ContainerController', async (): Promise<void> => {
     const own = { own: new Set<string>(['*']), public: new Set<string>(['*']) };
     const organRole = { organ: new Set<string>(['*']) };
 
-    const roles = await seedRoles([{
+    const roles = await new RbacSeeder().seedRoles([{
       name: 'Admin',
       permissions: {
         Container: {
@@ -193,9 +193,9 @@ describe('ContainerController', async (): Promise<void> => {
     }]);
     const roleManager = await new RoleManager().initialize();
 
-    const adminToken = await tokenHandler.signToken(await getToken(adminUser, roles), 'nonce admin');
-    const token = await tokenHandler.signToken(await getToken(localUser, roles), 'nonce');
-    const organMemberToken = await tokenHandler.signToken(await getToken(localUser, roles, [organ]), 'nonce organ');
+    const adminToken = await tokenHandler.signToken(await new RbacSeeder().getToken(adminUser, roles), 'nonce admin');
+    const token = await tokenHandler.signToken(await new RbacSeeder().getToken(localUser, roles), 'nonce');
+    const organMemberToken = await tokenHandler.signToken(await new RbacSeeder().getToken(localUser, roles, [organ]), 'nonce organ');
 
     const controller = new ContainerController({ specification, roleManager });
     app.use(json());

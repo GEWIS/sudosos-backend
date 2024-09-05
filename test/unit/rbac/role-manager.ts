@@ -19,11 +19,12 @@
 import { expect } from 'chai';
 import RoleManager from '../../../src/rbac/role-manager';
 import { ActionDefinition, AllowedAttribute } from '../../../src/rbac/role-definitions';
-import { assignRoles, SeededRole, seedRoles } from '../../seed/rbac';
+import { SeededRole } from '../../seed/rbac';
 import { DataSource } from 'typeorm';
 import database from '../../../src/database/database';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { UserFactory } from '../../helpers/user-factory';
+import { RbacSeeder } from '../../seed';
 
 describe('RoleManager', (): void => {
   let ctx: {
@@ -58,7 +59,7 @@ describe('RoleManager', (): void => {
     ctx.action.own = ctx.attrOne;
     ctx.action.created = ctx.wildcard;
     ctx.action.all = ctx.attrTwo;
-    ctx.roles = await seedRoles([{
+    ctx.roles = await new RbacSeeder().seedRoles([{
       name: 'Role1',
       permissions: {
         Entity1: {
@@ -132,12 +133,12 @@ describe('RoleManager', (): void => {
   describe('#getRoles', () => {
     it('should return list of role names', async () => {
       const { user } = await UserFactory();
-      const [role] = await seedRoles([{
+      const [role] = await new RbacSeeder().seedRoles([{
         name: 'Everybody',
         permissions: {},
         assignmentCheck: async () => true,
       }]);
-      await assignRoles(user, [...ctx.roles, role]);
+      await new RbacSeeder().assignRoles(user, [...ctx.roles, role]);
 
       const roles = await ctx.manager.getRoles(user);
       const roleNames = roles.map((r) => r.name);
@@ -148,12 +149,12 @@ describe('RoleManager', (): void => {
     });
     it('should not return role which fails assignment check', async () => {
       const { user } = await UserFactory();
-      const [role] = await seedRoles([{
+      const [role] = await new RbacSeeder().seedRoles([{
         name: 'Nobody',
         permissions: {},
         assignmentCheck: async () => false,
       }]);
-      await assignRoles(user, [...ctx.roles, role]);
+      await new RbacSeeder().assignRoles(user, [...ctx.roles, role]);
 
       const roles = await ctx.manager.getRoles(user);
       const roleNames = roles.map((r) => r.name);

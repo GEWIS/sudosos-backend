@@ -30,7 +30,7 @@ import path from 'path';
 import sinon from 'sinon';
 import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
-import { seedProducts, seedProductCategories, seedVatGroups } from '../../seed';
+import { seedProducts, seedProductCategories, seedVatGroups } from '../../seed-legacy';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Swagger from '../../../src/start/swagger';
 import RoleManager from '../../../src/rbac/role-manager';
@@ -48,8 +48,8 @@ import { DiskStorage } from '../../../src/files/storage';
 import VatGroup from '../../../src/entity/vat-group';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { getToken, seedRoles } from '../../seed/rbac';
 import ProductRevision from '../../../src/entity/product/product-revision';
+import { RbacSeeder } from '../../seed';
 
 /**
  * Tests if a product response is equal to the request.
@@ -166,7 +166,7 @@ describe('ProductController', async (): Promise<void> => {
     const own = { own: new Set<string>(['*']) };
     const organRole = { organ: new Set<string>(['*']) };
 
-    const roles = await seedRoles([{
+    const roles = await new RbacSeeder().seedRoles([{
       name: 'Admin',
       permissions: {
         Product: {
@@ -205,10 +205,10 @@ describe('ProductController', async (): Promise<void> => {
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
-    const adminToken = await tokenHandler.signToken(await getToken(adminUser, roles), 'nonce admin');
-    const token = await tokenHandler.signToken(await getToken(localUser, roles), 'nonce');
-    const organMemberToken = await tokenHandler.signToken(await getToken(localUser, roles, [organ]), 'nonce');
-    const tokenNoRoles = await tokenHandler.signToken(await getToken(localUser), 'nonce');
+    const adminToken = await tokenHandler.signToken(await new RbacSeeder().getToken(adminUser, roles), 'nonce admin');
+    const token = await tokenHandler.signToken(await new RbacSeeder().getToken(localUser, roles), 'nonce');
+    const organMemberToken = await tokenHandler.signToken(await new RbacSeeder().getToken(localUser, roles, [organ]), 'nonce');
+    const tokenNoRoles = await tokenHandler.signToken(await new RbacSeeder().getToken(localUser), 'nonce');
     const roleManager = await new RoleManager().initialize();
 
     const controller = new ProductController({ specification, roleManager });

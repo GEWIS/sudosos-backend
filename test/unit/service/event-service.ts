@@ -19,7 +19,7 @@
 import { describe } from 'mocha';
 import { Connection } from 'typeorm';
 import User from '../../../src/entity/user/user';
-import { seedEvents, seedUsers } from '../../seed';
+import { seedEvents, seedUsers } from '../../seed-legacy';
 import Event, { EventType } from '../../../src/entity/event/event';
 import EventShift from '../../../src/entity/event/event-shift';
 import EventShiftAnswer, { Availability } from '../../../src/entity/event/event-shift-answer';

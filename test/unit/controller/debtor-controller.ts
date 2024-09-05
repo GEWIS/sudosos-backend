@@ -29,7 +29,7 @@ import {
   seedProducts,
   seedTransactions, seedTransfers, seedUsers,
   seedVatGroups,
-} from '../../seed';
+} from '../../seed-legacy';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import ProductRevision from '../../../src/entity/product/product-revision';
 import ContainerRevision from '../../../src/entity/container/container-revision';
@@ -57,9 +57,9 @@ import sinon, { SinonSandbox, SinonSpy } from 'sinon';
 import nodemailer, { Transporter } from 'nodemailer';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { getToken, seedRoles } from '../../seed/rbac';
 import { Client } from 'pdf-generator-client';
 import { BasePdfService } from '../../../src/service/pdf/pdf-service';
+import { RbacSeeder } from '../../seed';
 
 describe('DebtorController', () => {
   let ctx: {
@@ -128,7 +128,7 @@ describe('DebtorController', () => {
     const specification = await Swagger.initialize(app);
 
     const all = { all: new Set<string>(['*']) };
-    const roles = await seedRoles([{
+    const roles = await new RbacSeeder().seedRoles([{
       name: 'Admin',
       permissions: {
         Fine: {
@@ -147,8 +147,8 @@ describe('DebtorController', () => {
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
-    const adminToken = await tokenHandler.signToken(await getToken(adminUser, roles), 'nonce admin');
-    const userToken = await tokenHandler.signToken(await getToken(localUser, roles), 'nonce');
+    const adminToken = await tokenHandler.signToken(await new RbacSeeder().getToken(adminUser, roles), 'nonce admin');
+    const userToken = await tokenHandler.signToken(await new RbacSeeder().getToken(localUser, roles), 'nonce');
 
     const controller = new DebtorController({ specification, roleManager });
     app.use(json());

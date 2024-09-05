@@ -30,7 +30,7 @@ import {
   seedProducts, seedTransactions, seedTransfers,
   seedUsers,
   seedVatGroups,
-} from '../../seed';
+} from '../../seed-legacy';
 import Swagger from '../../../src/start/swagger';
 import TokenHandler from '../../../src/authentication/token-handler';
 import User, { UserType } from '../../../src/entity/user/user';
@@ -47,7 +47,7 @@ import Fine from '../../../src/entity/fine/fine';
 import UserFineGroup from '../../../src/entity/fine/userFineGroup';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { getToken, seedRoles } from '../../seed/rbac';
+import { RbacSeeder } from '../../seed';
 
 describe('BalanceController', (): void => {
   let ctx: {
@@ -83,7 +83,7 @@ describe('BalanceController', (): void => {
 
     const all = { all: new Set<string>(['*']) };
     const own = { own: new Set<string>(['*']) };
-    const roles = await seedRoles([{
+    const roles = await new RbacSeeder().seedRoles([{
       name: 'Admin',
       permissions: {
         Balance: {
@@ -108,8 +108,8 @@ describe('BalanceController', (): void => {
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
-    const userToken = await tokenHandler.signToken(await getToken(users[0], roles), '33');
-    const adminToken = await tokenHandler.signToken(await getToken(users[6], roles), '33');
+    const userToken = await tokenHandler.signToken(await new RbacSeeder().getToken(users[0], roles), '33');
+    const adminToken = await tokenHandler.signToken(await new RbacSeeder().getToken(users[6], roles), '33');
 
     const { fines, fineTransfers, userFineGroups, users: usersWithFines } = await seedFines(users, transactions, transfers, true);
 

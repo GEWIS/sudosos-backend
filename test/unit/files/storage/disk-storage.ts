@@ -23,7 +23,7 @@ import { Connection } from 'typeorm';
 import { DiskStorage } from '../../../../src/files/storage';
 import BaseFile from '../../../../src/entity/file/base-file';
 import User from '../../../../src/entity/user/user';
-import { seedUsers } from '../../../seed';
+import { seedUsers } from '../../../seed-legacy';
 import Database from '../../../../src/database/database';
 import { truncateAllTables } from '../../../setup';
 import { finishTestDB } from '../../../helpers/test-helpers';

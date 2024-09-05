@@ -24,6 +24,7 @@ import { RoleDefinition } from '../../src/rbac/role-definitions';
 import JsonWebToken from '../../src/authentication/json-web-token';
 import RBACService from '../../src/service/rbac-service';
 import RoleUserType from '../../src/entity/rbac/role-user-type';
+import WithManager from '../../src/with-manager';
 
 interface SeedRoleDefinition extends RoleDefinition {
   /**
@@ -41,50 +42,56 @@ export interface SeededRole {
   assignmentCheck?: (user: User) => boolean | Promise<boolean>;
 }
 
-export async function seedRoles(roles: SeedRoleDefinition[]): Promise<SeededRole[]> {
-  return Promise.all(roles.map((role) => Role.save({ name: role.name, systemDefault: role.systemDefault })
-    .then(async (r): Promise<SeededRole> => {
-      if (role.userTypes && role.userTypes.length > 0) {
-        r.roleUserTypes = await RoleUserType.save(role.userTypes.map((userType): DeepPartial<RoleUserType> => ({ role: r, roleId: r.id, userType })));
-      } else {
-        r.roleUserTypes = [];
-      }
-      const permissions = RBACService.definitionToRules(role.permissions)
-        .map((p): DeepPartial<Permission> => ({
-          role: r,
-          roleId: r.id,
-          ...p,
-        }));
-      r.permissions = await Permission.save(permissions);
-      return {
-        role: await Role.findOne({ where: { id: r.id }, relations: { roleUserTypes: true, permissions: true } }),
-        assignmentCheck: role.assignmentCheck,
-      };
-    })));
-}
-
-export async function assignRole(user: User, { role, assignmentCheck }: SeededRole): Promise<AssignedRole | undefined> {
-  if (!assignmentCheck || !await assignmentCheck(user)) {
-    return undefined;
+export default class RbacSeeder extends WithManager {
+  public seedRoles(roles: SeedRoleDefinition[]): Promise<SeededRole[]> {
+    return Promise.all(roles.map((role) => this.manager.save(Role, { name: role.name, systemDefault: role.systemDefault })
+      .then(async (r): Promise<SeededRole> => {
+        if (role.userTypes && role.userTypes.length > 0) {
+          r.roleUserTypes = await this.manager.save(RoleUserType, role.userTypes.map((userType): DeepPartial<RoleUserType> => ({
+            role: r,
+            roleId: r.id,
+            userType,
+          })));
+        } else {
+          r.roleUserTypes = [];
+        }
+        const permissions = RBACService.definitionToRules(role.permissions)
+          .map((p): DeepPartial<Permission> => ({
+            role: r,
+            roleId: r.id,
+            ...p,
+          }));
+        r.permissions = await this.manager.save(Permission, permissions);
+        return {
+          role: await this.manager.findOne(Role, { where: { id: r.id }, relations: { roleUserTypes: true, permissions: true } }),
+          assignmentCheck: role.assignmentCheck,
+        };
+      })));
   }
 
-  return await AssignedRole.save({ roleId: role.id, role, userId: user.id }) as AssignedRole;
-}
+  public async assignRole(user: User, { role, assignmentCheck }: SeededRole): Promise<AssignedRole | undefined> {
+    if (!assignmentCheck || !await assignmentCheck(user)) {
+      return undefined;
+    }
 
-export async function assignRoles(user: User, roles: SeededRole[]): Promise<AssignedRole[]> {
-  const assignments = await Promise.all(roles.map((r) => assignRole(user, r)));
-  return assignments.filter((a) => a !== undefined);
-}
+    return await this.manager.save(AssignedRole, { roleId: role.id, role, userId: user.id }) as AssignedRole;
+  }
 
-export async function getToken(user: User, roles: SeededRole[] = [], organs?: User[], lesser = false): Promise<JsonWebToken> {
-  const assignments = await assignRoles(user, roles);
-  const systemDefaultRoles = await Role.find({ where: { systemDefault: true } });
-  const assignedSystemRoles = systemDefaultRoles.filter((r) => r.roleUserTypes.some((u) => u.userType === user.type));
-  return {
-    user,
-    roles: assignments.map((a) => a.role.name)
-      .concat(assignedSystemRoles.map((a) => a.name)),
-    organs,
-    lesser,
-  };
+  public async assignRoles(user: User, roles: SeededRole[]): Promise<AssignedRole[]> {
+    const assignments = await Promise.all(roles.map((r) => this.assignRole(user, r)));
+    return assignments.filter((a) => a !== undefined);
+  }
+
+  public async getToken(user: User, roles: SeededRole[] = [], organs?: User[], lesser = false): Promise<JsonWebToken> {
+    const assignments = await this.assignRoles(user, roles);
+    const systemDefaultRoles = await this.manager.find(Role, { where: { systemDefault: true } });
+    const assignedSystemRoles = systemDefaultRoles.filter((r) => r.roleUserTypes.some((u) => u.userType === user.type));
+    return {
+      user,
+      roles: assignments.map((a) => a.role.name)
+        .concat(assignedSystemRoles.map((a) => a.name)),
+      organs,
+      lesser,
+    };
+  }
 }

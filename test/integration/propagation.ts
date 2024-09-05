@@ -30,7 +30,7 @@ import {
   PointOfSaleWithContainersResponse,
 } from '../../src/controller/response/point-of-sale-response';
 import Database from '../../src/database/database';
-import { seedProductCategories, seedVatGroups } from '../seed';
+import { seedProductCategories, seedVatGroups } from '../seed-legacy';
 import TokenHandler from '../../src/authentication/token-handler';
 import RoleManager from '../../src/rbac/role-manager';
 import Swagger from '../../src/start/swagger';
@@ -43,7 +43,7 @@ import { CreateContainerRequest, UpdateContainerRequest } from '../../src/contro
 import { CreatePointOfSaleRequest } from '../../src/controller/request/point-of-sale-request';
 import { truncateAllTables } from '../setup';
 import { finishTestDB } from '../helpers/test-helpers';
-import { getToken, seedRoles } from '../seed/rbac';
+import { RbacSeeder } from '../seed';
 
 describe('Propagation between products, containers, POSs', () => {
   let ctx: {
@@ -90,7 +90,7 @@ describe('Propagation between products, containers, POSs', () => {
     const specification = await Swagger.initialize(app);
     const all = { all: new Set<string>(['*']) };
 
-    const roles = await seedRoles([{
+    const roles = await new RbacSeeder().seedRoles([{
       name: 'Admin',
       permissions: {
         Product: {
@@ -123,7 +123,7 @@ describe('Propagation between products, containers, POSs', () => {
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
-    const token = await tokenHandler.signToken(await getToken(user, roles), 'nonce admin');
+    const token = await tokenHandler.signToken(await new RbacSeeder().getToken(user, roles), 'nonce admin');
 
     const productController = new ProductController({ specification, roleManager });
     const containerController = new ContainerController({ specification, roleManager });

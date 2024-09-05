@@ -41,7 +41,7 @@ import GEWISAuthenticationPinRequest from '../../../../src/gewis/controller/requ
 import PinAuthenticator from '../../../../src/entity/authenticator/pin-authenticator';
 import { truncateAllTables } from '../../../setup';
 import { finishTestDB } from '../../../helpers/test-helpers';
-import { assignRoles, seedRoles } from '../../../seed/rbac';
+import { RbacSeeder } from '../../../seed';
 
 describe('GewisAuthenticationController', async (): Promise<void> => {
   let ctx: {
@@ -99,12 +99,12 @@ describe('GewisAuthenticationController', async (): Promise<void> => {
 
     await AuthenticationService.setUserAuthenticationHash(await User.findOne({ where: { id: 1 } }), '1000', PinAuthenticator);
 
-    const roles = await seedRoles([{
+    const roles = await new RbacSeeder().seedRoles([{
       name: 'Role',
       permissions: {},
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
     }]);
-    await assignRoles(ctx.user2, roles);
+    await new RbacSeeder().assignRoles(ctx.user2, roles);
     ctx.roleManager = await new RoleManager().initialize();
 
     // Silent in-dependency logs unless really wanted by the environment.

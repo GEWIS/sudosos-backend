@@ -34,7 +34,7 @@ import {
   seedTransactions,
   seedUsers,
   seedVatGroups,
-} from '../../seed';
+} from '../../seed-legacy';
 import Swagger from '../../../src/start/swagger';
 import {
   BaseInvoiceResponse,

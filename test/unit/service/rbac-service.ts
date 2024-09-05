@@ -20,13 +20,14 @@ import RBACService from '../../../src/service/rbac-service';
 import { expect } from 'chai';
 import PermissionRule from '../../../src/rbac/permission-rule';
 import { DataSource } from 'typeorm';
-import { SeededRole, seedRoles } from '../../seed/rbac';
+import { SeededRole } from '../../seed/rbac';
 import User, { UserType } from '../../../src/entity/user/user';
 import database from '../../../src/database/database';
-import { seedUsers } from '../../seed';
+import { seedUsers } from '../../seed-legacy';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { UpdateRoleRequest } from '../../../src/controller/request/rbac-request';
 import Role from '../../../src/entity/rbac/role';
+import { RbacSeeder } from '../../seed';
 
 const all = { all: new Set<string>(['*']) };
 const own = { own: new Set<string>(['*']) };
@@ -43,7 +44,7 @@ describe('RBACService', () => {
     const connection = await database.initialize();
     const users = await seedUsers();
 
-    const roles = await seedRoles([{
+    const roles = await new RbacSeeder().seedRoles([{
       name: 'system-default-role',
       systemDefault: true,
       userTypes: [UserType.LOCAL_USER],
@@ -311,7 +312,7 @@ describe('RBACService', () => {
 
   describe('#removeRole', async () => {
     it('should delete an existing role', async () => {
-      const [newRole] = await seedRoles([{
+      const [newRole] = await new RbacSeeder().seedRoles([{
         name: 'Role to delete',
         permissions: {},
         assignmentCheck: async () => true,
@@ -338,7 +339,7 @@ describe('RBACService', () => {
 
   describe('#addPermissions', async () => {
     it('should correctly create two new permissions', async () => {
-      const [{ role }] = await seedRoles([{
+      const [{ role }] = await new RbacSeeder().seedRoles([{
         name: 'Test role add perms',
         permissions: {},
         assignmentCheck: async () => true,

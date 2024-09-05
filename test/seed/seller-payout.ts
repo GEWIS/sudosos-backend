@@ -22,57 +22,59 @@ import User, { UserType } from '../../src/entity/user/user';
 import { calculateBalance } from '../helpers/balance';
 import SubTransaction from '../../src/entity/transactions/sub-transaction';
 import dinero from 'dinero.js';
+import WithManager from '../../src/with-manager';
 
+export default class SellerPayoutSeeder extends WithManager {
+  public async seedSellerPayouts(
+    users: User[],
+    transactions: Transaction[],
+    subTransactions: SubTransaction[],
+    transfers: Transfer[],
+  ): Promise<{ sellerPayouts: SellerPayout[], transfers: Transfer[] }> {
+    const organs = users.filter((u) => u.type === UserType.ORGAN);
 
-export async function seedSellerPayouts(
-  users: User[],
-  transactions: Transaction[],
-  subTransactions: SubTransaction[],
-  transfers: Transfer[],
-): Promise<{ sellerPayouts: SellerPayout[], transfers: Transfer[] }> {
-  const organs = users.filter((u) => u.type === UserType.ORGAN);
+    const sellerPayouts: SellerPayout[] = [];
+    for (let i = 0; i < organs.length; i++) {
+      if (i % 3 !== 1) continue;
 
-  const sellerPayouts: SellerPayout[] = [];
-  for (let i = 0; i < organs.length; i++) {
-    if (i % 3 !== 1) continue;
+      const organ = organs[i];
+      const balance = calculateBalance(organ, transactions, subTransactions, transfers);
+      if (balance.amount.getAmount() <= 0) continue;
 
-    const organ = organs[i];
-    const balance = calculateBalance(organ, transactions, subTransactions, transfers);
-    if (balance.amount.getAmount() <= 0) continue;
+      // Random startDate between epoch and 2020
+      const startDate = new Date(Math.round(Math.random() * new Date('2020-01-01').getTime()));
+      // Get the greatest end date
+      const endDate = balance.lastTransaction?.createdAt && balance.lastTransfer?.createdAt
+        ? (balance.lastTransaction.createdAt > balance.lastTransfer.createdAt
+          ? balance.lastTransaction.createdAt
+          : balance.lastTransfer.createdAt)
+        : (balance.lastTransaction?.createdAt || balance.lastTransfer?.createdAt);
+      endDate.setSeconds(endDate.getSeconds() + 1);
 
-    // Random startDate between epoch and 2020
-    const startDate = new Date(Math.round(Math.random() * new Date('2020-01-01').getTime()));
-    // Get the greatest end date
-    const endDate = balance.lastTransaction?.createdAt && balance.lastTransfer?.createdAt
-      ? (balance.lastTransaction.createdAt > balance.lastTransfer.createdAt
-        ? balance.lastTransaction.createdAt
-        : balance.lastTransfer.createdAt)
-      : (balance.lastTransaction?.createdAt || balance.lastTransfer?.createdAt);
-    endDate.setSeconds(endDate.getSeconds() + 1);
+      startDate.setMilliseconds(0);
+      endDate.setMilliseconds(0);
 
-    startDate.setMilliseconds(0);
-    endDate.setMilliseconds(0);
+      const incomingTransactions = subTransactions.filter((s) => s.to.id === organ.id);
+      const rows = incomingTransactions.map((s) => s.subTransactionRows).flat();
+      // Calculate the total value of all incoming transactions
+      const sellerPayoutValue = rows.reduce((total, r) => total.add(r.product.priceInclVat.multiply(r.amount)), dinero({ amount: 0 }));
 
-    const incomingTransactions = subTransactions.filter((s) => s.to.id === organ.id);
-    const rows = incomingTransactions.map((s) => s.subTransactionRows).flat();
-    // Calculate the total value of all incoming transactions
-    const sellerPayoutValue = rows.reduce((total, r) => total.add(r.product.priceInclVat.multiply(r.amount)), dinero({ amount: 0 }));
+      const transfer = await this.manager.save(Transfer, {
+        from: organ,
+        amountInclVat: sellerPayoutValue,
+      });
+      const sellerPayout = await this.manager.save(SellerPayout, {
+        createdAt: endDate,
+        requestedBy: organ,
+        transfer,
+        amount: sellerPayoutValue,
+        startDate,
+        endDate,
+        reference: '',
+      });
+      sellerPayouts.push(sellerPayout);
+    }
 
-    const transfer = await Transfer.save({
-      from: organ,
-      amountInclVat: sellerPayoutValue,
-    });
-    const sellerPayout = await SellerPayout.save({
-      createdAt: endDate,
-      requestedBy: organ,
-      transfer,
-      amount: sellerPayoutValue,
-      startDate,
-      endDate,
-      reference: '',
-    });
-    sellerPayouts.push(sellerPayout);
+    return { sellerPayouts, transfers: sellerPayouts.map((s) => s.transfer) };
   }
-
-  return { sellerPayouts, transfers: sellerPayouts.map((s) => s.transfer) };
 }

@@ -37,7 +37,7 @@ import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
 import ProductRevision from '../../../src/entity/product/product-revision';
 import ContainerRevision from '../../../src/entity/container/container-revision';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
-import seedDatabase from '../../seed';
+import seedDatabase from '../../seed-legacy';
 import { verifyUserResponse } from '../validators';
 import RoleManager from '../../../src/rbac/role-manager';
 import { TransactionResponse } from '../../../src/controller/response/transaction-response';
@@ -69,12 +69,13 @@ import UpdateNfcRequest from '../../../src/controller/request/update-nfc-request
 import UserFineGroup from '../../../src/entity/fine/userFineGroup';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { getToken, SeededRole, seedRoles } from '../../seed/rbac';
+import { SeededRole } from '../../seed/rbac';
 import { createTransactions } from '../../helpers/transaction-factory';
 import { ReportResponse } from '../../../src/controller/response/report-response';
 import sinon from 'sinon';
 import { Client } from 'pdf-generator-client';
 import { BasePdfService } from '../../../src/service/pdf/pdf-service';
+import { RbacSeeder } from '../../seed';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -160,7 +161,7 @@ describe('UserController', (): void => {
     const all = { all: new Set<string>(['*']) };
     const own = { own: new Set<string>(['*']) };
     const organ = { organ: new Set<string>(['*']) };
-    const roles = await seedRoles([{
+    const roles = await new RbacSeeder().seedRoles([{
       name: 'Admin',
       permissions: {
         User: {
@@ -246,9 +247,9 @@ describe('UserController', (): void => {
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
     ctx.tokenHandler = tokenHandler;
-    ctx.userToken = await tokenHandler.signToken(await getToken(ctx.users[0], roles), '1');
-    ctx.adminToken = await tokenHandler.signToken(await getToken(ctx.users[6], roles), '1');
-    ctx.organMemberToken = await tokenHandler.signToken(await getToken(ctx.users[7], roles, [ctx.organ]), '1');
+    ctx.userToken = await tokenHandler.signToken(await new RbacSeeder().getToken(ctx.users[0], roles), '1');
+    ctx.adminToken = await tokenHandler.signToken(await new RbacSeeder().getToken(ctx.users[6], roles), '1');
+    ctx.organMemberToken = await tokenHandler.signToken(await new RbacSeeder().getToken(ctx.users[7], roles, [ctx.organ]), '1');
     ctx.roles = roles;
 
     ctx.specification = await Swagger.initialize(ctx.app);
@@ -1976,7 +1977,7 @@ describe('UserController', (): void => {
   describe('GET /users/{id}/roles', () => {
     it('should return correct model', async () => {
       await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
-        const userToken = await ctx.tokenHandler.signToken(await getToken(user, ctx.roles), '1');
+        const userToken = await ctx.tokenHandler.signToken(await new RbacSeeder().getToken(user, ctx.roles), '1');
 
         const res = await request(ctx.app)
           .get(`/users/${user.id}/roles`)
@@ -1994,7 +1995,7 @@ describe('UserController', (): void => {
     });
     it('should return an HTTP 200 and the users roles', async () => {
       await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
-        const userToken = await ctx.tokenHandler.signToken(await getToken(user, ctx.roles), '1');
+        const userToken = await ctx.tokenHandler.signToken(await new RbacSeeder().getToken(user, ctx.roles), '1');
 
         const res = await request(ctx.app)
           .get(`/users/${user.id}/roles`)

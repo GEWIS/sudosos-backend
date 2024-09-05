@@ -31,7 +31,7 @@ import {
   seedTransactions,
   seedUsers,
   seedVatGroups,
-} from '../../seed';
+} from '../../seed-legacy';
 import VatGroupService from '../../../src/service/vat-group-service';
 import { VatDeclarationResponse } from '../../../src/controller/response/vat-group-response';
 import { truncateAllTables } from '../../setup';

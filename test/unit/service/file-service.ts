@@ -30,7 +30,7 @@ import BaseFile from '../../../src/entity/file/base-file';
 import User from '../../../src/entity/user/user';
 import {
   seedProductCategories, seedProducts, seedUsers, seedVatGroups,
-} from '../../seed';
+} from '../../seed-legacy';
 import SimpleFileRequest from '../../../src/controller/request/simple-file-request';
 import FileService, { StorageMethod } from '../../../src/service/file-service';
 import { DiskStorage } from '../../../src/files/storage';

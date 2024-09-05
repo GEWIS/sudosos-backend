@@ -32,12 +32,12 @@ import DefaultRoles from '../../../src/rbac/default-roles';
 import Role from '../../../src/entity/rbac/role';
 import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import TokenHandler from '../../../src/authentication/token-handler';
-import { getToken } from '../../seed/rbac';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import PermissionRule from '../../../src/rbac/permission-rule';
 import { CreatePermissionParams, UpdateRoleRequest } from '../../../src/controller/request/rbac-request';
 import PermissionResponse from '../../../src/controller/response/rbac/permission-response';
 import Permission from '../../../src/entity/rbac/permission';
+import { RbacSeeder } from '../../seed';
 
 describe('RbacController', async (): Promise<void> => {
   let ctx: {
@@ -78,8 +78,8 @@ describe('RbacController', async (): Promise<void> => {
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
-    const adminToken = await tokenHandler.signToken(await getToken(adminUser), 'nonce admin');
-    const userToken = await tokenHandler.signToken(await getToken(localUser), 'nonce');
+    const adminToken = await tokenHandler.signToken(await new RbacSeeder().getToken(adminUser), 'nonce admin');
+    const userToken = await tokenHandler.signToken(await new RbacSeeder().getToken(localUser), 'nonce');
 
     const controller = new RbacController({ specification, roleManager });
     app.use(json());

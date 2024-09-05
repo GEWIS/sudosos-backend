@@ -31,7 +31,7 @@ import ContainerService from '../../../src/service/container-service';
 import {
   seedContainers, seedProducts, seedPointsOfSale,
   seedProductCategories, seedUsers, seedVatGroups,
-} from '../../seed';
+} from '../../seed-legacy';
 import Container from '../../../src/entity/container/container';
 import { ContainerResponse, ContainerWithProductsResponse } from '../../../src/controller/response/container-response';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';

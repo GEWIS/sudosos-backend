@@ -27,7 +27,7 @@ import ProductCategoryController from '../../../src/controller/product-category-
 import { ProductCategoryResponse } from '../../../src/controller/response/product-category-response';
 import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
-import { seedProductCategories } from '../../seed';
+import { seedProductCategories } from '../../seed-legacy';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Swagger from '../../../src/start/swagger';
 import RoleManager from '../../../src/rbac/role-manager';
@@ -36,7 +36,7 @@ import ProductCategory from '../../../src/entity/product/product-category';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { getToken, seedRoles } from '../../seed/rbac';
+import { RbacSeeder } from '../../seed';
 
 /**
  * Tests if a productCategory response is equal to the request.
@@ -110,7 +110,7 @@ describe('ProductCategoryController', async (): Promise<void> => {
     // Create roleManager and set roles of Admin and User
     // In this case Admin can do anything and User nothing.
     // This does not reflect the actual roles of the users in the final product.
-    const roles = await seedRoles([{
+    const roles = await new RbacSeeder().seedRoles([{
       name: 'Admin',
       permissions: {
         ProductCategory: {
@@ -128,8 +128,8 @@ describe('ProductCategoryController', async (): Promise<void> => {
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
-    const adminToken = await tokenHandler.signToken(await getToken(adminUser, roles), 'nonce admin');
-    const token = await tokenHandler.signToken(await getToken(localUser, roles), 'nonce');
+    const adminToken = await tokenHandler.signToken(await new RbacSeeder().getToken(adminUser, roles), 'nonce admin');
+    const token = await tokenHandler.signToken(await new RbacSeeder().getToken(localUser, roles), 'nonce');
 
     const controller = new ProductCategoryController({ specification, roleManager });
     app.use(json());

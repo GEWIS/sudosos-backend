@@ -28,7 +28,7 @@ import {
   seedProducts,
   seedUsers,
   seedVatGroups,
-} from '../../seed';
+} from '../../seed-legacy';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
 import {
@@ -61,9 +61,10 @@ import RoleManager from '../../../src/rbac/role-manager';
 import Database from '../../../src/database/database';
 import TokenHandler from '../../../src/authentication/token-handler';
 import { SwaggerSpecification } from 'swagger-model-validator';
-import { assignRoles, getToken, SeededRole, seedRoles } from '../../seed/rbac';
+import { SeededRole } from '../../seed/rbac';
 import PointOfSaleService from '../../../src/service/point-of-sale-service';
 import MemberAuthenticator from '../../../src/entity/authenticator/member-authenticator';
+import { RbacSeeder } from '../../seed';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -140,7 +141,7 @@ describe('PointOfSaleController', async () => {
     const all = { all: new Set<string>(['*']) };
     const own = { own: new Set<string>(['*']) };
     const organ = { organ: new Set<string>(['*']) };
-    const roles = await seedRoles([{
+    const roles = await new RbacSeeder().seedRoles([{
       name: 'SUPER_ADMIN',
       permissions: {
         PointOfSale: {
@@ -205,12 +206,12 @@ describe('PointOfSaleController', async () => {
       cashierRoleIds: [roles.find((r) => r.role.name === 'BAC Feuten').role.id],
     };
 
-    const adminToken = await tokenHandler.signToken(await getToken(adminUser, roles), 'nonce');
-    const userToken = await tokenHandler.signToken(await getToken(localUser, roles), 'nonce');
-    const organMemberToken = await tokenHandler.signToken(await getToken(localUser, roles, [organUser]), '1');
-    await assignRoles(feut1, roles);
-    await assignRoles(feut2, roles);
-    await assignRoles(bestuur1, roles);
+    const adminToken = await tokenHandler.signToken(await new RbacSeeder().getToken(adminUser, roles), 'nonce');
+    const userToken = await tokenHandler.signToken(await new RbacSeeder().getToken(localUser, roles), 'nonce');
+    const organMemberToken = await tokenHandler.signToken(await new RbacSeeder().getToken(localUser, roles, [organUser]), '1');
+    await new RbacSeeder().assignRoles(feut1, roles);
+    await new RbacSeeder().assignRoles(feut2, roles);
+    await new RbacSeeder().assignRoles(bestuur1, roles);
 
     const controller = new PointOfSaleController({ specification: specification, roleManager });
     const containerController = new ContainerController({ specification: specification, roleManager });

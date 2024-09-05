@@ -23,7 +23,7 @@ import { SwaggerSpecification } from 'swagger-model-validator';
 import TokenHandler from '../../../src/authentication/token-handler';
 import RoleManager from '../../../src/rbac/role-manager';
 import WriteOff from '../../../src/entity/transactions/write-off';
-import { seedWriteOffs } from '../../seed';
+import { seedWriteOffs } from '../../seed-legacy';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
 import chai, { expect } from 'chai';
 import WriteOffService from '../../../src/service/write-off-service';

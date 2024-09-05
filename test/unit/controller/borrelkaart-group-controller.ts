@@ -45,7 +45,7 @@ import Sinon from 'sinon';
 import { DineroObjectRequest } from '../../../src/controller/request/dinero-request';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { getToken, seedRoles } from '../../seed/rbac';
+import { RbacSeeder } from '../../seed';
 
 async function saveBKG(
   bkgReq: VoucherGroupRequest,
@@ -143,7 +143,7 @@ describe('VoucherGroupController', async (): Promise<void> => {
     const specification = await Swagger.initialize(app);
 
     const all = { all: new Set<string>(['*']) };
-    const roles = await seedRoles([{
+    const roles = await new RbacSeeder().seedRoles([{
       name: 'Admin',
       permissions: {
         VoucherGroup: {
@@ -165,11 +165,11 @@ describe('VoucherGroupController', async (): Promise<void> => {
       expiry: 3600,
     });
     const adminToken = await tokenHandler.signToken(
-      await getToken(adminUser, roles),
+      await new RbacSeeder().getToken(adminUser, roles),
       'nonce admin',
     );
     const token = await tokenHandler.signToken(
-      await getToken(localUser, roles),
+      await new RbacSeeder().getToken(localUser, roles),
       'nonce',
     );
 

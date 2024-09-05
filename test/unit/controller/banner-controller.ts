@@ -35,13 +35,13 @@ import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/u
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import RoleManager from '../../../src/rbac/role-manager';
 import Swagger from '../../../src/start/swagger';
-import { seedBanners } from '../../seed';
+import { seedBanners } from '../../seed-legacy';
 import BannerImage from '../../../src/entity/file/banner-image';
 import { DiskStorage } from '../../../src/files/storage';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { seedRoles } from '../../seed/rbac';
+import { RbacSeeder } from '../../seed';
 
 export function bannerEq(a: Banner, b: BannerResponse): Boolean {
   const aEmpty = a === {} as Banner || a === undefined;
@@ -141,7 +141,7 @@ describe('BannerController', async (): Promise<void> => {
     const specification = await Swagger.initialize(app);
 
     const all = { all: new Set<string>(['*']) };
-    await seedRoles([{
+    await new RbacSeeder().seedRoles([{
       name: 'Admin',
       permissions: {
         Banner: {

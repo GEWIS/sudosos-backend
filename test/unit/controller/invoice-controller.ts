@@ -32,7 +32,7 @@ import {
   seedProducts,
   seedTransactions, seedUsers,
   seedVatGroups,
-} from '../../seed';
+} from '../../seed-legacy';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Swagger from '../../../src/start/swagger';
 import RoleManager from '../../../src/rbac/role-manager';
@@ -65,8 +65,8 @@ import InvoicePdf from '../../../src/entity/file/invoice-pdf';
 import sinon from 'sinon';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { getToken, seedRoles } from '../../seed/rbac';
 import { createTransactionRequest, requestToTransaction } from '../../helpers/transaction-factory';
+import { RbacSeeder } from '../../seed';
 
 describe('InvoiceController', async () => {
   let ctx: {
@@ -138,7 +138,7 @@ describe('InvoiceController', async () => {
 
     const all = { all: new Set<string>(['*']) };
     const own = { own: new Set<string>(['*']) };
-    const roles = await seedRoles([{
+    const roles = await new RbacSeeder().seedRoles([{
       name: 'Admin',
       permissions: {
         Invoice: {
@@ -166,9 +166,9 @@ describe('InvoiceController', async () => {
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
 
-    const adminToken = await tokenHandler.signToken(await getToken(adminUser, roles), 'nonce admin');
-    const token = await tokenHandler.signToken(await getToken(localUser, roles), 'nonce');
-    const invoiceToken = await tokenHandler.signToken(await getToken(invoiceUser, roles), 'nonce');
+    const adminToken = await tokenHandler.signToken(await new RbacSeeder().getToken(adminUser, roles), 'nonce admin');
+    const token = await tokenHandler.signToken(await new RbacSeeder().getToken(localUser, roles), 'nonce');
+    const invoiceToken = await tokenHandler.signToken(await new RbacSeeder().getToken(invoiceUser, roles), 'nonce');
 
     const controller = new InvoiceController({ specification, roleManager });
     app.use(json());

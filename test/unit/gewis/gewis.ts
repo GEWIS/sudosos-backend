@@ -26,7 +26,7 @@ import { json } from 'body-parser';
 import AuthenticationService from '../../../src/service/authentication-service';
 import User, { UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
-import seedDatabase from '../../seed';
+import seedDatabase from '../../seed-legacy';
 import Swagger from '../../../src/start/swagger';
 import userIsAsExpected from '../service/authentication-service';
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
@@ -42,7 +42,7 @@ import TokenMiddleware from '../../../src/middleware/token-middleware';
 import { PaginatedUserResponse } from '../../../src/controller/response/user-response';
 import { GewisUserResponse } from '../../../src/gewis/controller/response/gewis-user-response';
 import { truncateAllTables } from '../../setup';
-import { getToken, seedRoles } from '../../seed/rbac';
+import { RbacSeeder } from '../../seed';
 
 describe('GEWIS Helper functions', async (): Promise<void> => {
   let ctx: {
@@ -94,7 +94,7 @@ describe('GEWIS Helper functions', async (): Promise<void> => {
     };
 
     const all = { all: new Set<string>(['*']) };
-    const roles = await seedRoles([{
+    const roles = await new RbacSeeder().seedRoles([{
       name: 'Admin',
       permissions: {
         User: {
@@ -134,7 +134,7 @@ describe('GEWIS Helper functions', async (): Promise<void> => {
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
-    const adminToken = await tokenHandler.signToken(await getToken(users[6], roles), '1');
+    const adminToken = await tokenHandler.signToken(await new RbacSeeder().getToken(users[6], roles), '1');
 
     const spec = await Swagger.initialize(app);
     const controller = new UserController({

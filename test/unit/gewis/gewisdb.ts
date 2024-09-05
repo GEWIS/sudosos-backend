@@ -20,7 +20,7 @@ import sinon, { SinonSandbox, SinonSpy } from 'sinon';
 import { defaultBefore, DefaultContext, finishTestDB } from '../../helpers/test-helpers';
 import User from '../../../src/entity/user/user';
 import GewisUser from '../../../src/gewis/entity/gewis-user';
-import { seedUsers } from '../../seed';
+import { seedUsers } from '../../seed-legacy';
 import seedGEWISUsers from '../../../src/gewis/database/seed';
 import GewisDBService from '../../../src/gewis/service/gewisdb-service';
 import { BasicApi, MemberAllAttributes, MembersApi } from 'gewisdb-ts-client';

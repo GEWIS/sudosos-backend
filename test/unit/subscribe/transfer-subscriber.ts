@@ -28,7 +28,7 @@ import {
   seedProducts, seedTransactions, seedTransfers,
   seedUsers,
   seedVatGroups,
-} from '../../seed';
+} from '../../seed-legacy';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import { calculateBalance } from '../../helpers/balance';
 import DebtorService from '../../../src/service/debtor-service';

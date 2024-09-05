@@ -33,7 +33,7 @@ import {
   seedTransfers,
   seedUsers,
   seedVatGroups,
-} from '../../seed';
+} from '../../seed-legacy';
 import Swagger from '../../../src/start/swagger';
 import BalanceService, { BalanceOrderColumn } from '../../../src/service/balance-service';
 import User, { UserType } from '../../../src/entity/user/user';

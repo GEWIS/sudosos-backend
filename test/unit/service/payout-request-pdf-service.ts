@@ -26,7 +26,7 @@ import Database from '../../../src/database/database';
 import {
   seedPayoutRequests,
   seedUsers,
-} from '../../seed';
+} from '../../seed-legacy';
 import Swagger from '../../../src/start/swagger';
 import { json } from 'body-parser';
 import FileService from '../../../src/service/file-service';

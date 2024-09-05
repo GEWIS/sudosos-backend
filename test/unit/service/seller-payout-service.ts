@@ -29,16 +29,16 @@ import {
   seedTransfers,
   seedUsers,
   seedVatGroups,
-} from '../../seed';
+} from '../../seed-legacy';
 import { finishTestDB } from '../../helpers/test-helpers';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import SellerPayout from '../../../src/entity/transactions/payout/seller-payout';
-import { seedSellerPayouts } from '../../seed/seller-payout';
 import { expect } from 'chai';
 import SellerPayoutService, { CreateSellerPayoutParams } from '../../../src/service/seller-payout-service';
 import { calculateBalance } from '../../helpers/balance';
 import { DineroObjectRequest } from '../../../src/controller/request/dinero-request';
 import dinero from 'dinero.js';
+import { SellerPayoutSeeder } from '../../seed';
 
 describe('SellerPayoutService', () => {
   let ctx: {
@@ -62,7 +62,8 @@ describe('SellerPayoutService', () => {
 
     const { transactions, subTransactions } = await seedTransactions(users, pointOfSaleRevisions, new Date('2020-01-01'), new Date());
     const transfers = await seedTransfers(users, new Date('2020-01-01'), new Date());
-    const { sellerPayouts, transfers: sellerPayoutTransfers } = await seedSellerPayouts(users, transactions, subTransactions, transfers);
+    const { sellerPayouts, transfers: sellerPayoutTransfers } = await new SellerPayoutSeeder()
+      .seedSellerPayouts(users, transactions, subTransactions, transfers);
 
     ctx = {
       connection,

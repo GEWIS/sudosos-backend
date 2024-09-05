@@ -22,7 +22,7 @@ import RootController from '../../../src/controller/root-controller';
 import { BannerResponse } from '../../../src/controller/response/banner-response';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import Banner from '../../../src/entity/banner';
-import { seedBanners } from '../../seed';
+import { seedBanners } from '../../seed-legacy';
 import { bannerEq } from './banner-controller';
 import { DefaultContext, defaultContext, finishTestDB } from '../../helpers/test-helpers';
 import User from '../../../src/entity/user/user';

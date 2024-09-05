@@ -39,13 +39,13 @@ import {
   seedProducts,
   seedUsers,
   seedVatGroups,
-} from '../../seed';
+} from '../../seed-legacy';
 import MemberAuthenticator from '../../../src/entity/authenticator/member-authenticator';
 import AuthenticationResponse from '../../../src/controller/response/authentication-response';
 import DefaultRoles from '../../../src/rbac/default-roles';
-import { getToken } from '../../seed/rbac';
 import settingDefaults from '../../../src/server-settings/setting-defaults';
 import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
+import { RbacSeeder } from '../../seed';
 
 describe('AuthenticationSecureController', () => {
   let ctx: {
@@ -92,8 +92,8 @@ describe('AuthenticationSecureController', () => {
     const adminUser = users.find((u) => u.type === UserType.LOCAL_ADMIN);
     const memberUser = users.find((u) => u.type === UserType.MEMBER);
     const organUser = users.find((u) => u.type === UserType.ORGAN);
-    const adminToken = await tokenHandler.signToken(await getToken(adminUser), 'nonce');
-    const userToken = await tokenHandler.signToken(await getToken(memberUser, [], [organUser]), 'nonce');
+    const adminToken = await tokenHandler.signToken(await new RbacSeeder().getToken(adminUser), 'nonce');
+    const userToken = await tokenHandler.signToken(await new RbacSeeder().getToken(memberUser, [], [organUser]), 'nonce');
 
     const app = express();
     const specification = await Swagger.initialize(app);

@@ -28,7 +28,7 @@ import {
   seedProducts, seedTransactions,
   seedUsers,
   seedVatGroups,
-} from '../../seed';
+} from '../../seed-legacy';
 import TransactionService from '../../../src/service/transaction-service';
 import { Report } from '../../../src/entity/report/report';
 

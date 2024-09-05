@@ -34,7 +34,7 @@ import {
   seedProducts, seedTransactions,
   seedUsers,
   seedVatGroups,
-} from '../../seed';
+} from '../../seed-legacy';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Swagger from '../../../src/start/swagger';
 import RoleManager from '../../../src/rbac/role-manager';
@@ -43,7 +43,7 @@ import { defaultPagination, PaginationResult } from '../../../src/helpers/pagina
 import { VatDeclarationResponse } from '../../../src/controller/response/vat-group-response';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { getToken, seedRoles } from '../../seed/rbac';
+import { RbacSeeder } from '../../seed';
 
 describe('VatGroupController', () => {
   let ctx: {
@@ -94,7 +94,7 @@ describe('VatGroupController', () => {
     const specification = await Swagger.initialize(app);
 
     const all = { all: new Set<string>(['*']) };
-    const roles = await seedRoles([{
+    const roles = await new RbacSeeder().seedRoles([{
       name: 'Admin',
       permissions: {
         VatGroup: {
@@ -112,7 +112,7 @@ describe('VatGroupController', () => {
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
-    const token = await tokenHandler.signToken(await getToken(user, roles), 'nonce admin');
+    const token = await tokenHandler.signToken(await new RbacSeeder().getToken(user, roles), 'nonce admin');
 
     const controller = new VatGroupController({ specification, roleManager });
     app.use(json());
