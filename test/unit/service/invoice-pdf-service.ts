@@ -31,10 +31,8 @@ import {
   seedContainers,
   seedInvoices,
   seedPointsOfSale,
-  seedProductCategories,
   seedProducts,
   seedTransactions,
-  seedVatGroups,
 } from '../../seed-legacy';
 import Swagger from '../../../src/start/swagger';
 import { json } from 'body-parser';
@@ -46,7 +44,7 @@ import deepEqualInAnyOrder from 'deep-equal-in-any-order';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { INVOICE_PDF_LOCATION } from '../../../src/files/storage';
-import { UserSeeder } from '../../seed';
+import { ProductCategorySeeder, UserSeeder, VatGroupSeeder } from '../../seed';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -68,8 +66,8 @@ describe('InvoicePdfService', async (): Promise<void> => {
     await truncateAllTables(connection);
 
     const users = await new UserSeeder().seedUsers();
-    const categories = await seedProductCategories();
-    const vatGroups = await seedVatGroups();
+    const categories = await new ProductCategorySeeder().seedProductCategories();
+    const vatGroups = await new VatGroupSeeder().seedVatGroups();
     const { productRevisions } = await seedProducts(
       users,
       categories,

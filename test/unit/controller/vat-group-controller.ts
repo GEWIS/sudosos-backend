@@ -30,9 +30,7 @@ import Database from '../../../src/database/database';
 import {
   seedContainers,
   seedPointsOfSale,
-  seedProductCategories,
   seedProducts, seedTransactions,
-  seedVatGroups,
 } from '../../seed-legacy';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Swagger from '../../../src/start/swagger';
@@ -42,7 +40,7 @@ import { defaultPagination, PaginationResult } from '../../../src/helpers/pagina
 import { VatDeclarationResponse } from '../../../src/controller/response/vat-group-response';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { RbacSeeder, UserSeeder } from '../../seed';
+import { ProductCategorySeeder, RbacSeeder, UserSeeder, VatGroupSeeder } from '../../seed';
 
 describe('VatGroupController', () => {
   let ctx: {
@@ -72,8 +70,8 @@ describe('VatGroupController', () => {
     } as User);
 
     const users = await new UserSeeder().seedUsers();
-    const vatGroups = await seedVatGroups();
-    const categories = await seedProductCategories();
+    const vatGroups = await new VatGroupSeeder().seedVatGroups();
+    const categories = await new ProductCategorySeeder().seedProductCategories();
     const { productRevisions } = await seedProducts(users, categories, vatGroups, 100);
     const { containerRevisions } = await seedContainers(users, productRevisions);
     const { pointOfSaleRevisions } = await seedPointsOfSale(users, containerRevisions);

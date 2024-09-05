@@ -33,18 +33,15 @@ import { finishTestDB } from '../../helpers/test-helpers';
 import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
 import {
   seedContainers,
-  seedMemberAuthenticators,
   seedPointsOfSale,
-  seedProductCategories,
   seedProducts,
-  seedVatGroups,
 } from '../../seed-legacy';
 import MemberAuthenticator from '../../../src/entity/authenticator/member-authenticator';
 import AuthenticationResponse from '../../../src/controller/response/authentication-response';
 import DefaultRoles from '../../../src/rbac/default-roles';
 import settingDefaults from '../../../src/server-settings/setting-defaults';
 import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
-import { RbacSeeder, UserSeeder } from '../../seed';
+import { ProductCategorySeeder, RbacSeeder, UserSeeder, VatGroupSeeder } from '../../seed';
 
 describe('AuthenticationSecureController', () => {
   let ctx: {
@@ -70,14 +67,15 @@ describe('AuthenticationSecureController', () => {
 
     await ServerSettingsStore.getInstance().initialize();
 
-    const users = await new UserSeeder().seedUsers();
-    const memberAuthenticators = await seedMemberAuthenticators(
+    const userSeeder = new UserSeeder();
+    const users = await userSeeder.seedUsers();
+    const memberAuthenticators = await userSeeder.seedMemberAuthenticators(
       users.filter((u) => u.type !== UserType.ORGAN),
       users.filter((u) => u.type === UserType.ORGAN),
     );
 
-    const vatGroups = await seedVatGroups();
-    const categories = await seedProductCategories();
+    const vatGroups = await new VatGroupSeeder().seedVatGroups();
+    const categories = await new ProductCategorySeeder().seedProductCategories();
     const { productRevisions } = await seedProducts(users, categories, vatGroups);
     const { containerRevisions } = await seedContainers(users, productRevisions);
     const { pointsOfSale, pointOfSaleUsers } = await seedPointsOfSale(users, containerRevisions);

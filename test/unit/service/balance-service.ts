@@ -27,11 +27,9 @@ import Database from '../../../src/database/database';
 import {
   seedContainers, seedFines,
   seedPointsOfSale,
-  seedProductCategories,
   seedProducts,
   seedTransactions,
   seedTransfers,
-  seedVatGroups,
 } from '../../seed-legacy';
 import Swagger from '../../../src/start/swagger';
 import BalanceService, { BalanceOrderColumn } from '../../../src/service/balance-service';
@@ -52,7 +50,7 @@ import Fine from '../../../src/entity/fine/fine';
 import BalanceResponse from '../../../src/controller/response/balance-response';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { UserSeeder } from '../../seed';
+import { ProductCategorySeeder, UserSeeder, VatGroupSeeder } from '../../seed';
 
 describe('BalanceService', (): void => {
   let ctx: {
@@ -75,8 +73,8 @@ describe('BalanceService', (): void => {
     await truncateAllTables(connection);
     const app = express();
     const seededUsers = await new UserSeeder().seedUsers();
-    const categories = await seedProductCategories();
-    const vatGroups = await seedVatGroups();
+    const categories = await new ProductCategorySeeder().seedProductCategories();
+    const vatGroups = await new VatGroupSeeder().seedVatGroups();
     const { productRevisions } = await seedProducts(seededUsers, categories, vatGroups);
     const { containerRevisions } = await seedContainers(seededUsers, productRevisions);
     const { pointOfSaleRevisions } = await seedPointsOfSale(seededUsers, containerRevisions);

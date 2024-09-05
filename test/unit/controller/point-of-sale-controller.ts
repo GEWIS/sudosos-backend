@@ -22,11 +22,9 @@ import chai, { expect, request } from 'chai';
 import PointOfSaleController from '../../../src/controller/point-of-sale-controller';
 import User, { UserType } from '../../../src/entity/user/user';
 import {
-  seedContainers, seedMemberAuthenticators,
+  seedContainers,
   seedPointsOfSale,
-  seedProductCategories,
   seedProducts,
-  seedVatGroups,
 } from '../../seed-legacy';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
@@ -63,7 +61,7 @@ import { SwaggerSpecification } from 'swagger-model-validator';
 import { SeededRole } from '../../seed/rbac';
 import PointOfSaleService from '../../../src/service/point-of-sale-service';
 import MemberAuthenticator from '../../../src/entity/authenticator/member-authenticator';
-import { RbacSeeder, UserSeeder } from '../../seed';
+import { ProductCategorySeeder, RbacSeeder, UserSeeder, VatGroupSeeder } from '../../seed';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -119,8 +117,9 @@ describe('PointOfSaleController', async () => {
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
 
-    const users = await new UserSeeder().seedUsers();
-    await seedMemberAuthenticators(
+    const userSeeder = new UserSeeder();
+    const users = await userSeeder.seedUsers();
+    await userSeeder.seedMemberAuthenticators(
       users.filter((u) => u.type !== UserType.ORGAN),
       users.filter((u) => u.type === UserType.ORGAN),
     );
@@ -131,8 +130,8 @@ describe('PointOfSaleController', async () => {
     const feut2 = users.filter((u) => u.type === UserType.MEMBER)[1];
     const bestuur1 = users.filter((u) => u.type === UserType.MEMBER)[2];
 
-    const categories = await seedProductCategories();
-    const vatGroups = await seedVatGroups();
+    const categories = await new ProductCategorySeeder().seedProductCategories();
+    const vatGroups = await new VatGroupSeeder().seedVatGroups();
     const { productRevisions } = await seedProducts([adminUser, organUser], categories, vatGroups);
     const { containers, containerRevisions } = await seedContainers([adminUser, organUser], productRevisions);
     const { pointsOfSale, pointOfSaleRevisions } = await seedPointsOfSale([adminUser, organUser], containerRevisions);

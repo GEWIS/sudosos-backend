@@ -24,13 +24,11 @@ import { expect } from 'chai';
 import {
   seedContainers,
   seedPointsOfSale,
-  seedProductCategories,
   seedProducts, seedTransactions,
-  seedVatGroups,
 } from '../../seed-legacy';
 import TransactionService from '../../../src/service/transaction-service';
 import { Report } from '../../../src/entity/report/report';
-import { UserSeeder } from '../../seed';
+import { ProductCategorySeeder, UserSeeder, VatGroupSeeder } from '../../seed';
 
 describe('ReportService', () => {
   let ctx: any & DefaultContext;
@@ -43,8 +41,8 @@ describe('ReportService', () => {
     } as any;
 
     const users = await new UserSeeder().seedUsers();
-    const vatGropus = await seedVatGroups();
-    const categories = await seedProductCategories();
+    const vatGropus = await new VatGroupSeeder().seedVatGroups();
+    const categories = await new ProductCategorySeeder().seedProductCategories();
     const { productRevisions } = await seedProducts(users, categories, vatGropus);
     const { containerRevisions } = await seedContainers(users, productRevisions);
     const { pointOfSaleRevisions } = await seedPointsOfSale(users, containerRevisions);

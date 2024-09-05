@@ -27,7 +27,7 @@ import deepEqualInAnyOrder from 'deep-equal-in-any-order';
 import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import {
-  seedContainers, seedProductCategories, seedProducts, seedVatGroups,
+  seedContainers, seedProducts,
 } from '../../seed-legacy';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Swagger from '../../../src/start/swagger';
@@ -48,7 +48,7 @@ import ContainerRevision from '../../../src/entity/container/container-revision'
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import Product from '../../../src/entity/product/product';
-import { RbacSeeder } from '../../seed';
+import { ProductCategorySeeder, RbacSeeder, VatGroupSeeder } from '../../seed';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -129,8 +129,8 @@ describe('ContainerController', async (): Promise<void> => {
     await User.save(localUser);
     await User.save(organ);
 
-    const categories = await seedProductCategories();
-    const vatGroups = await seedVatGroups();
+    const categories = await new ProductCategorySeeder().seedProductCategories();
+    const vatGroups = await new VatGroupSeeder().seedVatGroups();
     const { products, productRevisions } = (
       await seedProducts([adminUser, localUser], categories, vatGroups));
     const { containers } = await seedContainers([adminUser, localUser], productRevisions);

@@ -30,7 +30,7 @@ import path from 'path';
 import sinon from 'sinon';
 import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
-import { seedProducts, seedProductCategories, seedVatGroups } from '../../seed-legacy';
+import { seedProducts } from '../../seed-legacy';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Swagger from '../../../src/start/swagger';
 import RoleManager from '../../../src/rbac/role-manager';
@@ -49,7 +49,7 @@ import VatGroup from '../../../src/entity/vat-group';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import ProductRevision from '../../../src/entity/product/product-revision';
-import { RbacSeeder } from '../../seed';
+import { ProductCategorySeeder, RbacSeeder, VatGroupSeeder } from '../../seed';
 
 /**
  * Tests if a product response is equal to the request.
@@ -129,8 +129,8 @@ describe('ProductController', async (): Promise<void> => {
     await User.save(organ);
     const users = [organ, adminUser, localUser];
 
-    const categories = await seedProductCategories();
-    const vatGroups = await seedVatGroups();
+    const categories = await new ProductCategorySeeder().seedProductCategories();
+    const vatGroups = await new VatGroupSeeder().seedVatGroups();
     const { products } = await seedProducts(users, categories, vatGroups);
 
     const validProductReq: UpdateProductRequest = {

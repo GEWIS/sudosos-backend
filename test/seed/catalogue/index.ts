@@ -16,7 +16,5 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-export * from './catalogue';
-export { default as RbacSeeder } from './rbac';
-export { default as SellerPayoutSeeder } from './seller-payout';
-export { default as UserSeeder } from './user';
+export { default as ProductCategorySeeder } from './product-category';
+export { default as VatGroupSeeder } from './vat-group';

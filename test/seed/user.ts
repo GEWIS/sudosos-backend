@@ -18,7 +18,13 @@
 import WithManager from '../../src/with-manager';
 import User, { TermsOfServiceStatus, UserType } from '../../src/entity/user/user';
 import InvoiceUser from '../../src/entity/user/invoice-user';
+import bcrypt from 'bcrypt';
+import HashBasedAuthenticationMethod from '../../src/entity/authenticator/hash-based-authentication-method';
+import MemberAuthenticator from '../../src/entity/authenticator/member-authenticator';
 
+/**
+ * Seeder for users and their login methods
+ */
 export default class UserSeeder extends WithManager {
   /**
    * Defines InvoiceUsers objects for the given Users
@@ -97,5 +103,56 @@ export default class UserSeeder extends WithManager {
     await this.manager.save(InvoiceUser, invoiceUsers);
 
     return users;
+  }
+
+  private BCRYPT_ROUNDS = 12;
+
+  private async hashPassword(password: string, callback: (encrypted: string) => any) {
+    return bcrypt.hash(password, this.BCRYPT_ROUNDS).then(callback);
+  }
+
+  /**
+   * Seeds a default set of pass users and stores them in the database.
+   */
+  public async seedHashAuthenticator<T extends HashBasedAuthenticationMethod>(
+    users: User[],
+    Type: { new(): T, save: (t: T) => Promise<T> },
+    count = 10,
+  ): Promise<T[]> {
+    const authUsers: T[] = [];
+
+    const promises: Promise<any>[] = [];
+    const toMap: User[] = count >= users.length ? users : users.slice(count);
+    await Promise.all(toMap.map((user) => this.hashPassword(user.id.toString(), (encrypted: any) => {
+      const authUser = Object.assign(new Type(), {
+        user,
+        hash: encrypted,
+      });
+      promises.push(Type.save(authUser).then((u) => authUsers.push(u)));
+    })));
+
+    await Promise.all(promises);
+    return authUsers;
+  }
+
+  /**
+   * Seed some member authenticators
+   * @param users Users that can authenticate as organs
+   * @param authenticateAs
+   */
+  public async seedMemberAuthenticators(users: User[], authenticateAs: User[]): Promise<MemberAuthenticator[]> {
+    const memberAuthenticators: MemberAuthenticator[] = [];
+    await Promise.all(authenticateAs.map(async (as, i) => {
+      return Promise.all(users.map(async (user, j) => {
+        if ((i + j) % 7 > 1) return;
+        const authenticator = Object.assign(new MemberAuthenticator(), {
+          userId: user.id,
+          authenticateAsId: as.id,
+        } as MemberAuthenticator);
+        await authenticator.save();
+        memberAuthenticators.push(authenticator);
+      }));
+    }));
+    return memberAuthenticators;
   }
 }

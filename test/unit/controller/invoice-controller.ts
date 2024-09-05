@@ -28,10 +28,8 @@ import {
   seedContainers,
   seedInvoices,
   seedPointsOfSale,
-  seedProductCategories,
   seedProducts,
   seedTransactions,
-  seedVatGroups,
 } from '../../seed-legacy';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Swagger from '../../../src/start/swagger';
@@ -66,7 +64,7 @@ import sinon from 'sinon';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { createTransactionRequest, requestToTransaction } from '../../helpers/transaction-factory';
-import { RbacSeeder, UserSeeder } from '../../seed';
+import { ProductCategorySeeder, RbacSeeder, UserSeeder, VatGroupSeeder } from '../../seed';
 
 describe('InvoiceController', async () => {
   let ctx: {
@@ -123,8 +121,8 @@ describe('InvoiceController', async () => {
     await User.save(invoiceUser);
     await User.save(invoiceUser2);
 
-    const categories = await seedProductCategories();
-    const vatGroups = await seedVatGroups();
+    const categories = await new ProductCategorySeeder().seedProductCategories();
+    const vatGroups = await new VatGroupSeeder().seedVatGroups();
     const { productRevisions } = await seedProducts([adminUser, localUser], categories, vatGroups);
     const { containerRevisions } = await seedContainers([adminUser, localUser], productRevisions);
     const { pointOfSaleRevisions } = await seedPointsOfSale(

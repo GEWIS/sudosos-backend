@@ -36,7 +36,6 @@ import AuthenticationLDAPRequest from '../../../src/controller/request/authentic
 import userIsAsExpected from '../service/authentication-service';
 import AuthenticationPinRequest from '../../../src/controller/request/authentication-pin-request';
 import PinAuthenticator from '../../../src/entity/authenticator/pin-authenticator';
-import { seedHashAuthenticator } from '../../seed-legacy';
 import AuthenticationLocalRequest from '../../../src/controller/request/authentication-local-request';
 import LocalAuthenticator from '../../../src/entity/authenticator/local-authenticator';
 import ResetLocalRequest from '../../../src/controller/request/reset-local-request';
@@ -53,7 +52,7 @@ import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import Role from '../../../src/entity/rbac/role';
 import RoleResponse from '../../../src/controller/response/rbac/role-response';
-import { RbacSeeder } from '../../seed';
+import { RbacSeeder, UserSeeder } from '../../seed';
 
 describe('AuthenticationController', async (): Promise<void> => {
   let ctx: {
@@ -136,9 +135,10 @@ describe('AuthenticationController', async (): Promise<void> => {
       return new RbacSeeder().assignRoles(u, [role, maintenanceOverrideRole]);
     }));
 
-    await seedHashAuthenticator([ctx.user, ctx.user2], PinAuthenticator);
-    await seedHashAuthenticator([ctx.user, ctx.user2], LocalAuthenticator);
-    await seedHashAuthenticator([ctx.user, ctx.user2], KeyAuthenticator);
+    const userSeeder = new UserSeeder();
+    await userSeeder.seedHashAuthenticator([ctx.user, ctx.user2], PinAuthenticator);
+    await userSeeder.seedHashAuthenticator([ctx.user, ctx.user2], LocalAuthenticator);
+    await userSeeder.seedHashAuthenticator([ctx.user, ctx.user2], KeyAuthenticator);
 
     await EanAuthenticator.save({
       userId: ctx.user.id,

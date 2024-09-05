@@ -26,8 +26,8 @@ import Database from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
 import ProductService, { ProductFilterParameters } from '../../../src/service/product-service';
 import {
-  seedProducts, seedContainers, seedProductCategories,
-  seedPointsOfSale, seedVatGroups,
+  seedProducts, seedContainers,
+  seedPointsOfSale,
 } from '../../seed-legacy';
 import Product from '../../../src/entity/product/product';
 import {
@@ -51,7 +51,7 @@ import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import sinon from 'sinon';
 import { ContainerWithProductsResponse } from '../../../src/controller/response/container-response';
-import { UserSeeder } from '../../seed';
+import { ProductCategorySeeder, UserSeeder, VatGroupSeeder } from '../../seed';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -147,8 +147,8 @@ describe('ProductService', async (): Promise<void> => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
-    const categories = await seedProductCategories();
-    const vatGroups = await seedVatGroups();
+    const categories = await new ProductCategorySeeder().seedProductCategories();
+    const vatGroups = await new VatGroupSeeder().seedVatGroups();
     const users = await new UserSeeder().seedUsers();
 
     const {

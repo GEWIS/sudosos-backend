@@ -25,11 +25,9 @@ import {
   seedContainers,
   seedFines,
   seedPointsOfSale,
-  seedProductCategories,
   seedProducts,
   seedTransactions,
   seedTransfers,
-  seedVatGroups,
 } from '../../seed-legacy';
 import Database from '../../../src/database/database';
 import Transaction from '../../../src/entity/transactions/transaction';
@@ -51,7 +49,7 @@ import { finishTestDB } from '../../helpers/test-helpers';
 import dinero from 'dinero.js';
 import TransferService from '../../../src/service/transfer-service';
 import FineHandoutEvent from '../../../src/entity/fine/fineHandoutEvent';
-import { UserSeeder } from '../../seed';
+import { ProductCategorySeeder, UserSeeder, VatGroupSeeder } from '../../seed';
 
 describe('DebtorService', (): void => {
   let ctx: {
@@ -77,8 +75,8 @@ describe('DebtorService', (): void => {
     await truncateAllTables(connection);
 
     const users = await new UserSeeder().seedUsers();
-    const categories = await seedProductCategories();
-    const vatGroups = await seedVatGroups();
+    const categories = await new ProductCategorySeeder().seedProductCategories();
+    const vatGroups = await new VatGroupSeeder().seedVatGroups();
     const { productRevisions } = await seedProducts(users, categories, vatGroups);
     const { containerRevisions } = await seedContainers(users, productRevisions);
     const { pointOfSaleRevisions } = await seedPointsOfSale(users, containerRevisions);

@@ -30,7 +30,6 @@ import {
   PointOfSaleWithContainersResponse,
 } from '../../src/controller/response/point-of-sale-response';
 import Database from '../../src/database/database';
-import { seedProductCategories, seedVatGroups } from '../seed-legacy';
 import TokenHandler from '../../src/authentication/token-handler';
 import RoleManager from '../../src/rbac/role-manager';
 import Swagger from '../../src/start/swagger';
@@ -43,7 +42,7 @@ import { CreateContainerRequest, UpdateContainerRequest } from '../../src/contro
 import { CreatePointOfSaleRequest } from '../../src/controller/request/point-of-sale-request';
 import { truncateAllTables } from '../setup';
 import { finishTestDB } from '../helpers/test-helpers';
-import { RbacSeeder } from '../seed';
+import { ProductCategorySeeder, RbacSeeder, VatGroupSeeder } from '../seed';
 
 describe('Propagation between products, containers, POSs', () => {
   let ctx: {
@@ -83,8 +82,8 @@ describe('Propagation between products, containers, POSs', () => {
       acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
     });
 
-    const categories = await seedProductCategories();
-    const vatGroups = await seedVatGroups();
+    const categories = await new ProductCategorySeeder().seedProductCategories();
+    const vatGroups = await new VatGroupSeeder().seedVatGroups();
 
     const app = express();
     const specification = await Swagger.initialize(app);

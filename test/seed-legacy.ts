@@ -20,7 +20,6 @@ import dinero from 'dinero.js';
 import { addDays } from 'date-fns';
 import * as fs from 'fs';
 import path from 'path';
-import bcrypt from 'bcrypt';
 import Container from '../src/entity/container/container';
 import ContainerRevision from '../src/entity/container/container-revision';
 import PointOfSale from '../src/entity/point-of-sale/point-of-sale';
@@ -51,8 +50,6 @@ import EventShiftAnswer, { Availability } from '../src/entity/event/event-shift-
 import seedGEWISUsers from '../src/gewis/database/seed';
 import PinAuthenticator from '../src/entity/authenticator/pin-authenticator';
 import VatGroup from '../src/entity/vat-group';
-import { VatGroupRequest } from '../src/controller/request/vat-group-request';
-import HashBasedAuthenticationMethod from '../src/entity/authenticator/hash-based-authentication-method';
 import LocalAuthenticator from '../src/entity/authenticator/local-authenticator';
 import UserFineGroup from '../src/entity/fine/userFineGroup';
 import FineHandoutEvent from '../src/entity/fine/fineHandoutEvent';
@@ -60,12 +57,11 @@ import Fine from '../src/entity/fine/fine';
 import { calculateBalance } from './helpers/balance';
 import GewisUser from '../src/gewis/entity/gewis-user';
 import AssignedRole from '../src/entity/rbac/assigned-role';
-import MemberAuthenticator from '../src/entity/authenticator/member-authenticator';
 import Role from '../src/entity/rbac/role';
 import generateBalance from './helpers/test-helpers';
 import WriteOff from '../src/entity/transactions/write-off';
 import StripePaymentIntent from '../src/entity/stripe/stripe-payment-intent';
-import UserSeeder from './seed/user';
+import { ProductCategorySeeder, UserSeeder, VatGroupSeeder } from './seed';
 
 function getDate(startDate: Date, endDate: Date, i: number): Date {
   const diff = endDate.getTime() - startDate.getTime();
@@ -74,52 +70,6 @@ function getDate(startDate: Date, endDate: Date, i: number): Date {
   return new Date(startDate.getTime() + (startDate.getTime() * i ) % diff);
 }
 
-const BCRYPT_ROUNDS = 12;
-async function hashPassword(password: string, callback: (encrypted: string) => any) {
-  return bcrypt.hash(password, BCRYPT_ROUNDS).then(callback);
-}
-
-/**
- * Seeds a default set of pass users and stores them in the database.
- */
-export async function seedHashAuthenticator<T extends HashBasedAuthenticationMethod>(users: User[],
-  Type: { new(): T, save: (t: T) => Promise<T> }, count = 10): Promise<T[]> {
-  const authUsers: T[] = [];
-
-  const promises: Promise<any>[] = [];
-  const toMap: User[] = count >= users.length ? users : users.slice(count);
-  await Promise.all(toMap.map((user) => hashPassword(user.id.toString(), (encrypted: any) => {
-    const authUser = Object.assign(new Type(), {
-      user,
-      hash: encrypted,
-    });
-    promises.push(Type.save(authUser).then((u) => authUsers.push(u)));
-  })));
-
-  await Promise.all(promises);
-  return authUsers;
-}
-
-/**
- * Seed some member authenticators
- * @param users Users that can authenticate as organs
- * @param authenticateAs
- */
-export async function seedMemberAuthenticators(users: User[], authenticateAs: User[]): Promise<MemberAuthenticator[]> {
-  const memberAuthenticators: MemberAuthenticator[] = [];
-  await Promise.all(authenticateAs.map(async (as, i) => {
-    return Promise.all(users.map(async (user, j) => {
-      if ((i + j) % 7 > 1) return;
-      const authenticator = Object.assign(new MemberAuthenticator(), {
-        userId: user.id,
-        authenticateAsId: as.id,
-      } as MemberAuthenticator);
-      await authenticator.save();
-      memberAuthenticators.push(authenticator);
-    }));
-  }));
-  return memberAuthenticators;
-}
 
 export function defineInvoiceEntries(invoiceId: number, startEntryId: number,
   transactions: Transaction[]): { invoiceEntries: InvoiceEntry[], cost: number } {
@@ -344,88 +294,6 @@ export async function seedEvents(users: User[]) {
   }
 
   return { roles, roleAssignments, events, eventShifts, eventShiftAnswers };
-}
-
-/**
- * Seeds a default dataset of product categories, and stores them in the database.
- */
-export async function seedProductCategories(): Promise<ProductCategory[]> {
-  const rootCategories = await ProductCategory.save([
-    {
-      id: 1,
-      name: 'Alcoholic',
-    }, {
-      id: 2,
-      name: 'Non-alcoholic',
-    }, {
-      id: 3,
-      name: 'Food',
-    },
-  ]);
-  const subCategories = await ProductCategory.save([
-    {
-      id: 4,
-      name: 'Pils',
-      parent: rootCategories[0],
-    }, {
-      id: 5,
-      name: 'Tripel',
-      parent: rootCategories[0],
-    }, {
-      id: 6,
-      name: 'Blond',
-      parent: rootCategories[0],
-    }, {
-      id: 7,
-      name: 'Dubbel',
-      parent: rootCategories[0],
-    }, {
-      id: 8,
-      name: 'Zoete troep',
-      parent: rootCategories[0],
-    },
-  ]);
-  return [...rootCategories, ...subCategories];
-}
-
-/**
- * Seed the (default) Dutch VAT groups (2022)
- */
-export async function seedVatGroups(): Promise<VatGroup[]> {
-  const vatGroup = (data: VatGroupRequest) => Object.assign(new VatGroup(), data) as VatGroup;
-
-  return VatGroup.save([
-    vatGroup({
-      name: 'Hoog tarief',
-      percentage: 21,
-      deleted: false,
-      hidden: false,
-    }),
-    vatGroup({
-      name: 'Laag tarief',
-      percentage: 9,
-      deleted: false,
-      hidden: false,
-    }),
-    vatGroup({
-      name: 'BTW-vrij',
-      percentage: 0,
-      deleted: false,
-      hidden: false,
-    }),
-    vatGroup({
-      name: 'NoTaxesYaaaay',
-      percentage: 0,
-      deleted: false,
-      hidden: true,
-    }),
-    vatGroup({
-      name: 'Laag tarief (oud)',
-      percentage: 6,
-      deleted: true,
-      hidden: false,
-    }),
-  ]);
 }
 
 /**
@@ -1413,15 +1281,15 @@ export interface DatabaseContent {
 
 export default async function seedDatabase(beginDate?: Date, endDate?: Date): Promise<DatabaseContent> {
   const users = await new UserSeeder().seedUsers();
-  await seedMemberAuthenticators(
+  await new UserSeeder().seedMemberAuthenticators(
     users.filter((u) => u.type !== UserType.ORGAN),
     [users.filter((u) => u.type === UserType.ORGAN)[0]],
   );
-  const pinUsers = await seedHashAuthenticator(users, PinAuthenticator);
-  const localUsers = await seedHashAuthenticator(users, LocalAuthenticator);
+  const pinUsers = await new UserSeeder().seedHashAuthenticator(users, PinAuthenticator);
+  const localUsers = await new UserSeeder().seedHashAuthenticator(users, LocalAuthenticator);
   const gewisUsers = await seedGEWISUsers(users);
-  const categories = await seedProductCategories();
-  const vatGroups = await seedVatGroups();
+  const categories = await new ProductCategorySeeder().seedProductCategories();
+  const vatGroups = await new VatGroupSeeder().seedVatGroups();
   const writeOffs = await seedWriteOffs();
   const {
     products, productRevisions,

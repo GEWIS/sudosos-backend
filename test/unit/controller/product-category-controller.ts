@@ -27,7 +27,6 @@ import ProductCategoryController from '../../../src/controller/product-category-
 import { ProductCategoryResponse } from '../../../src/controller/response/product-category-response';
 import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
-import { seedProductCategories } from '../../seed-legacy';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Swagger from '../../../src/start/swagger';
 import RoleManager from '../../../src/rbac/role-manager';
@@ -36,7 +35,7 @@ import ProductCategory from '../../../src/entity/product/product-category';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { RbacSeeder } from '../../seed';
+import { ProductCategorySeeder, RbacSeeder } from '../../seed';
 
 /**
  * Tests if a productCategory response is equal to the request.
@@ -87,7 +86,7 @@ describe('ProductCategoryController', async (): Promise<void> => {
     await User.save(adminUser);
     await User.save(localUser);
 
-    const categories = await seedProductCategories();
+    const categories = await new ProductCategorySeeder().seedProductCategories();
 
     const validRequest: ProductCategoryRequest = {
       name: 'Valid productcategory',
