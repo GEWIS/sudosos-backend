@@ -59,7 +59,7 @@ export default class InvoicePdfService extends PdfService<InvoicePdf, Invoice, I
       : invoice.subTransactionRows;
 
     rows.map((str: SubTransactionRow) => {
-      const exclVatPerUnit = Math.round(str.product.priceInclVat.getAmount()  / (1 + (str.product.vat.percentage / 100)))
+      const exclVatPerUnit = Math.round(str.product.priceInclVat.getAmount()  / (1 + (str.product.vat.percentage / 100)));
       exclVat += exclVatPerUnit * str.amount;
       switch (str.product.vat.percentage) {
         case PDF_VAT_LOW:
