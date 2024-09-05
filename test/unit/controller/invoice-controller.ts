@@ -25,9 +25,7 @@ import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/u
 import InvoiceController from '../../../src/controller/invoice-controller';
 import Database, { AppDataSource } from '../../../src/database/database';
 import {
-  seedContainers,
   seedInvoices,
-  seedPointsOfSale,
   seedTransactions,
 } from '../../seed-legacy';
 import TokenHandler from '../../../src/authentication/token-handler';
@@ -63,7 +61,7 @@ import sinon from 'sinon';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { createTransactionRequest, requestToTransaction } from '../../helpers/transaction-factory';
-import { ProductSeeder, RbacSeeder, UserSeeder } from '../../seed';
+import { PointOfSaleSeeder, RbacSeeder, UserSeeder } from '../../seed';
 
 describe('InvoiceController', async () => {
   let ctx: {
@@ -120,11 +118,7 @@ describe('InvoiceController', async () => {
     await User.save(invoiceUser);
     await User.save(invoiceUser2);
 
-    const { productRevisions } = await new ProductSeeder().seedProducts([adminUser, localUser]);
-    const { containerRevisions } = await seedContainers([adminUser, localUser], productRevisions);
-    const { pointOfSaleRevisions } = await seedPointsOfSale(
-      [adminUser, localUser], containerRevisions,
-    );
+    const { pointOfSaleRevisions } = await new PointOfSaleSeeder().seedPointsOfSale([adminUser, localUser]);
     const { transactions } = await seedTransactions([adminUser, localUser, invoiceUser, invoiceUser2], pointOfSaleRevisions);
     await seedInvoices([invoiceUser, invoiceUser2], transactions);
 

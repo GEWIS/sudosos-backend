@@ -21,8 +21,6 @@ import Transfer from '../../../src/entity/transactions/transfer';
 import User, { UserType } from '../../../src/entity/user/user';
 import database from '../../../src/database/database';
 import {
-  seedContainers,
-  seedPointsOfSale,
   seedTransactions,
   seedTransfers,
 } from '../../seed-legacy';
@@ -34,7 +32,7 @@ import SellerPayoutService, { CreateSellerPayoutParams } from '../../../src/serv
 import { calculateBalance } from '../../helpers/balance';
 import { DineroObjectRequest } from '../../../src/controller/request/dinero-request';
 import dinero from 'dinero.js';
-import { ProductSeeder, SellerPayoutSeeder, UserSeeder } from '../../seed';
+import { PointOfSaleSeeder, SellerPayoutSeeder, UserSeeder } from '../../seed';
 
 describe('SellerPayoutService', () => {
   let ctx: {
@@ -50,9 +48,7 @@ describe('SellerPayoutService', () => {
     const connection = await database.initialize();
     const users = await new UserSeeder().seedUsers();
 
-    const { productRevisions } = await new ProductSeeder().seedProducts(users);
-    const { containerRevisions } = await seedContainers(users, productRevisions);
-    const { pointOfSaleRevisions } = await seedPointsOfSale(users, containerRevisions);
+    const { pointOfSaleRevisions } = await new PointOfSaleSeeder().seedPointsOfSale(users);
 
     const { transactions, subTransactions } = await seedTransactions(users, pointOfSaleRevisions, new Date('2020-01-01'), new Date());
     const transfers = await seedTransfers(users, new Date('2020-01-01'), new Date());

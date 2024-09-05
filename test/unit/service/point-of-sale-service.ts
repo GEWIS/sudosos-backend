@@ -25,10 +25,6 @@ import deepEqualInAnyOrder from 'deep-equal-in-any-order';
 import User, { UserType } from '../../../src/entity/user/user';
 import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
 import Database from '../../../src/database/database';
-import {
-  seedContainers,
-  seedPointsOfSale,
-} from '../../seed-legacy';
 import Swagger from '../../../src/start/swagger';
 import {
   PaginatedPointOfSaleResponse,
@@ -43,7 +39,7 @@ import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import RbacSeeder, { SeededRole } from '../../seed/rbac';
-import { ProductSeeder, UserSeeder } from '../../seed';
+import { ContainerSeeder, PointOfSaleSeeder, ProductSeeder, UserSeeder } from '../../seed';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -108,10 +104,10 @@ describe('PointOfSaleService', async (): Promise<void> => {
     const {
       containers,
       containerRevisions,
-    } = await seedContainers(users, productRevisions);
+    } = await new ContainerSeeder().seedContainers(users, productRevisions);
     const {
       pointsOfSale,
-    } = await seedPointsOfSale(users, containerRevisions);
+    } = await new PointOfSaleSeeder().seedPointsOfSale(users, containerRevisions);
 
     const feut1 = users.filter((u) => u.type === UserType.MEMBER)[0];
     const feut2 = users.filter((u) => u.type === UserType.MEMBER)[1];

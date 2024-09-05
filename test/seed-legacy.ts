@@ -30,7 +30,7 @@ import ProductRevision from '../src/entity/product/product-revision';
 import SubTransaction from '../src/entity/transactions/sub-transaction';
 import SubTransactionRow from '../src/entity/transactions/sub-transaction-row';
 import Transaction from '../src/entity/transactions/transaction';
-import User, { TermsOfServiceStatus, UserType } from '../src/entity/user/user';
+import User, { UserType } from '../src/entity/user/user';
 import Transfer from '../src/entity/transactions/transfer';
 import Banner from '../src/entity/banner';
 import BannerImage from '../src/entity/file/banner-image';
@@ -60,7 +60,14 @@ import Role from '../src/entity/rbac/role';
 import generateBalance from './helpers/test-helpers';
 import WriteOff from '../src/entity/transactions/write-off';
 import StripePaymentIntent from '../src/entity/stripe/stripe-payment-intent';
-import { ProductCategorySeeder, ProductSeeder, UserSeeder, VatGroupSeeder } from './seed';
+import {
+  ContainerSeeder,
+  PointOfSaleSeeder,
+  ProductCategorySeeder,
+  ProductSeeder,
+  UserSeeder,
+  VatGroupSeeder,
+} from './seed';
 
 function getDate(startDate: Date, endDate: Date, i: number): Date {
   const diff = endDate.getTime() - startDate.getTime();
@@ -293,234 +300,6 @@ export async function seedEvents(users: User[]) {
   }
 
   return { roles, roleAssignments, events, eventShifts, eventShiftAnswers };
-}
-
-/**
- * Defines container objects based on the parameters passed.
- *
- * @param start - The number of containers that already exist.
- * @param count - The number of containers to generate.
- * @param user - The user that is owner of the containers.
- */
-function defineContainers(
-  start: number,
-  count: number,
-  user: User,
-): Container[] {
-  const containers: Container[] = [];
-  for (let nr = 1; nr <= count; nr += 1) {
-    const container = Object.assign(new Container(), {
-      id: start + nr,
-      owner: user,
-      deletedAt: (nr % 3 === 2) ? new Date() : undefined,
-      public: nr % 2 > 0,
-    }) as Container;
-    containers.push(container);
-  }
-  return containers;
-}
-
-/**
- * Defines container revisions based on the parameters passed.
- *
- * @param start - The number of container revisions that already exist.
- * @param count - The number of container revisions to generate.
- * @param container - The container that the container revisions belong to.
- * @param productRevisions - The product revisions that will be added to the container revisions.
- */
-function defineContainerRevisions(
-  start: number,
-  count: number,
-  container: Container,
-  productRevisions: ProductRevision[],
-): ContainerRevision[] {
-  const revisions: ContainerRevision[] = [];
-  // Only allow products with same owner in container.
-  const candidates = productRevisions.filter((p) => p.product.owner === container.owner);
-
-  for (let rev = 1; rev <= count; rev += 1) {
-    revisions.push(Object.assign(new ContainerRevision(), {
-      container,
-      revision: rev,
-      name: `Container${container.id}-${rev}`,
-      products: candidates.filter((p) => p.revision === rev),
-    }));
-  }
-  return revisions;
-}
-
-/**
- * Seeds a default dataset of container revisions,
- * based on the supplied user and product dataset.
- * Every user of type local admin and organ will get containers.
- *
- * @param users - The dataset of users to base the container dataset on.
- * @param productRevisions - The dataset of product revisions to base the container dataset on.
- */
-export async function seedContainers(
-  users: User[],
-  productRevisions: ProductRevision[],
-): Promise<{
-    containers: Container[],
-    containerRevisions: ContainerRevision[],
-  }> {
-  let containers: Container[] = [];
-  let containerRevisions: ContainerRevision[] = [];
-
-  const sellers = users.filter((u) => [UserType.LOCAL_ADMIN, UserType.ORGAN, UserType.MEMBER].includes(u.type));
-
-  const promises: Promise<any>[] = [];
-  for (let i = 0; i < sellers.length; i += 1) {
-    const con = defineContainers(
-      containers.length,
-      4,
-      sellers[i],
-    );
-    let rev: ContainerRevision[] = [];
-    for (let o = 0; o < con.length; o += 1) {
-      con[o].currentRevision = (con[o].id % 3) + 1;
-      rev = rev.concat(defineContainerRevisions(
-        containerRevisions.length,
-        con[o].currentRevision,
-        con[o],
-        productRevisions,
-      ));
-    }
-
-    // Revisions can only be saved AFTER the containers themselves.
-    promises.push(Container.save(con).then(() => ContainerRevision.save(rev)));
-
-    containers = containers.concat(con);
-    containerRevisions = containerRevisions.concat(rev);
-  }
-  await Promise.all(promises);
-
-  return { containers, containerRevisions };
-}
-
-/**
- * Defines pointsofsale objects based on the parameters passed.
- *
- * @param start - The number of pointsofsale that already exist.
- * @param count - The number of pointsofsale to generate.
- * @param owner - The user that is owner of the pointsofsale.
- */
-async function definePointsOfSale(
-  start: number,
-  count: number,
-  owner: User,
-): Promise<{ pointsOfSale: PointOfSale[], pointOfSaleUsers: User[] }> {
-  const pointsOfSale: PointOfSale[] = [];
-  const pointOfSaleUsers: User[] = [];
-  for (let nr = 1; nr <= count; nr += 1) {
-    const id = start + nr;
-    const user = await User.save({
-      firstName: `Point of Sale ${id}`,
-      type: UserType.POINT_OF_SALE,
-      active: true,
-      acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
-    });
-    const pointOfSale = Object.assign(new PointOfSale(), {
-      id,
-      owner,
-      user,
-      deletedAt: (nr % 3 === 2) ? new Date() : undefined,
-    });
-    pointsOfSale.push(pointOfSale);
-    pointOfSaleUsers.push(user);
-  }
-  return { pointsOfSale, pointOfSaleUsers };
-}
-
-/**
- * Defines pointsofsale revisions based on the parameters passed.
- *
- * @param start - The number of pointsofsale revisions that already exist.
- * @param count - The number of pointsofsale revisions to generate.
- * @param dateOffset - The date offset from 2000-1-1, where 0 is before, 1 is during, 2 is after.
- * @param pointOfSale - The pointsofsale that the pointsofsale revisions belong to.
- * @param containerRevisions - The container revisions that will be added to
- * the pointsofsale revisions.
- */
-function definePointOfSaleRevisions(
-  start: number,
-  count: number,
-  dateOffset: number,
-  pointOfSale: PointOfSale,
-  containerRevisions: ContainerRevision[],
-): PointOfSaleRevision[] {
-  const revisions: PointOfSaleRevision[] = [];
-  // Only allow products with same owner in container.
-  const candidates = containerRevisions.filter((c) => c.container.owner === pointOfSale.owner);
-  const startDate = addDays(new Date(2020, 0, 1), 2 - (dateOffset * 2));
-  const endDate = addDays(new Date(2020, 0, 1), 3 - (dateOffset * 2));
-
-  for (let rev = 1; rev <= count; rev += 1) {
-    revisions.push(Object.assign(new PointOfSaleRevision(), {
-      pointOfSale,
-      revision: rev,
-      name: `PointOfSale${pointOfSale.id}-${rev}`,
-      useAuthentication: (pointOfSale.id + rev) % 2 === 0,
-      containers: candidates.filter((c) => c.revision === rev),
-      startDate,
-      endDate,
-    }));
-  }
-  return revisions;
-}
-
-/**
- * Seeds a default dataset of pointsofsale revisions,
- * based on the supplied user and container revision dataset.
- * Every user of type local admin and organ will get containers.
- *
- * @param users - The dataset of users to base the pointsofsale dataset on.
- * @param containerRevisions - The dataset of container revisions to base
- * the pointsofsale dataset on.
- */
-export async function seedPointsOfSale(
-  users: User[],
-  containerRevisions: ContainerRevision[],
-): Promise<{
-    pointsOfSale: PointOfSale[],
-    pointOfSaleRevisions: PointOfSaleRevision[],
-    pointOfSaleUsers: User[],
-  }> {
-  let pointsOfSale: PointOfSale[] = [];
-  let pointOfSaleRevisions: PointOfSaleRevision[] = [];
-  let pointOfSaleUsers: User[] = [];
-
-  const sellers = users.filter((u) => [UserType.LOCAL_ADMIN, UserType.MEMBER, UserType.ORGAN].includes(u.type));
-
-  const promises: Promise<any>[] = [];
-  for (let i = 0; i < sellers.length; i += 1) {
-    const { pointsOfSale: pos, pointOfSaleUsers: posUsers } = await definePointsOfSale(
-      pointsOfSale.length,
-      4,
-      sellers[i],
-    );
-    let rev: PointOfSaleRevision[] = [];
-    for (let o = 0; o < pos.length; o += 1) {
-      pos[o].currentRevision = (pos[o].id % 3) + 1;
-      rev = rev.concat(definePointOfSaleRevisions(
-        pointOfSaleRevisions.length,
-        pos[o].currentRevision,
-        pos[o].currentRevision - 1,
-        pos[o],
-        containerRevisions,
-      ));
-    }
-
-    // Revisions can only be saved AFTER the containers themselves.
-    promises.push(PointOfSale.save(pos).then(() => PointOfSaleRevision.save(rev)));
-
-    pointsOfSale = pointsOfSale.concat(pos);
-    pointOfSaleRevisions = pointOfSaleRevisions.concat(rev);
-    pointOfSaleUsers = pointOfSaleUsers.concat(posUsers);
-  }
-  await Promise.all(promises);
-
-  return { pointsOfSale, pointOfSaleRevisions, pointOfSaleUsers };
 }
 
 /**
@@ -1129,10 +908,10 @@ export default async function seedDatabase(beginDate?: Date, endDate?: Date): Pr
   const {
     products, productRevisions,
   } = await new ProductSeeder().seedProducts(users, categories, vatGroups);
-  const { containers, containerRevisions } = await seedContainers(
+  const { containers, containerRevisions } = await new ContainerSeeder().seedContainers(
     users, productRevisions,
   );
-  const { pointsOfSale, pointOfSaleRevisions } = await seedPointsOfSale(
+  const { pointsOfSale, pointOfSaleRevisions } = await new PointOfSaleSeeder().seedPointsOfSale(
     users, containerRevisions,
   );
   const { roles, roleAssignments, events, eventShifts, eventShiftAnswers } = await seedEvents(users);

@@ -23,8 +23,6 @@ import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import Transfer from '../../../src/entity/transactions/transfer';
 import Database from '../../../src/database/database';
 import {
-  seedContainers,
-  seedPointsOfSale,
   seedTransactions, seedTransfers,
 } from '../../seed-legacy';
 import { calculateBalance } from '../../helpers/balance';
@@ -39,7 +37,7 @@ import TransactionService from '../../../src/service/transaction-service';
 import BalanceService from '../../../src/service/balance-service';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { ProductSeeder, UserSeeder } from '../../seed';
+import { ContainerSeeder, PointOfSaleSeeder, ProductSeeder, UserSeeder } from '../../seed';
 
 describe('TransactionSubscriber', () => {
   let ctx: {
@@ -76,8 +74,8 @@ describe('TransactionSubscriber', () => {
 
     const users = await new UserSeeder().seedUsers();
     const { productRevisions } = await new ProductSeeder().seedProducts([adminUser]);
-    const { containerRevisions } = await seedContainers([adminUser], productRevisions);
-    const { pointOfSaleRevisions } = await seedPointsOfSale([adminUser], containerRevisions);
+    const { containerRevisions } = await new ContainerSeeder().seedContainers([adminUser], productRevisions);
+    const { pointOfSaleRevisions } = await new PointOfSaleSeeder().seedPointsOfSale([adminUser], containerRevisions);
     const { transactions } = await seedTransactions(users, pointOfSaleRevisions, new Date('2020-02-12'), new Date('2021-11-30'), 10);
     const transfers = await seedTransfers(users, new Date('2020-02-12'), new Date('2021-11-30'));
     const subTransactions: SubTransaction[] = Array.prototype.concat(...transactions

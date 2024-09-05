@@ -25,8 +25,7 @@ import Transaction from '../../../src/entity/transactions/transaction';
 import Transfer from '../../../src/entity/transactions/transfer';
 import Database from '../../../src/database/database';
 import {
-  seedContainers, seedFines,
-  seedPointsOfSale,
+  seedFines,
   seedTransactions,
   seedTransfers,
 } from '../../seed-legacy';
@@ -49,7 +48,7 @@ import Fine from '../../../src/entity/fine/fine';
 import BalanceResponse from '../../../src/controller/response/balance-response';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { ProductSeeder, UserSeeder } from '../../seed';
+import { ContainerSeeder, PointOfSaleSeeder, ProductSeeder, UserSeeder } from '../../seed';
 
 describe('BalanceService', (): void => {
   let ctx: {
@@ -73,8 +72,8 @@ describe('BalanceService', (): void => {
     const app = express();
     const seededUsers = await new UserSeeder().seedUsers();
     const { productRevisions } = await new ProductSeeder().seedProducts(seededUsers);
-    const { containerRevisions } = await seedContainers(seededUsers, productRevisions);
-    const { pointOfSaleRevisions } = await seedPointsOfSale(seededUsers, containerRevisions);
+    const { containerRevisions } = await new ContainerSeeder().seedContainers(seededUsers, productRevisions);
+    const { pointOfSaleRevisions } = await new PointOfSaleSeeder().seedPointsOfSale(seededUsers, containerRevisions);
     const { transactions } = await seedTransactions(seededUsers, pointOfSaleRevisions, new Date('2020-02-12'), new Date('2021-11-30'), 10);
     const transfers = await seedTransfers(seededUsers, new Date('2020-02-12'), new Date('2021-11-30'));
     const { fines, fineTransfers, users } = await seedFines(seededUsers, transactions, transfers, true);

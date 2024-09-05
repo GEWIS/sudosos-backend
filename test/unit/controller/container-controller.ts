@@ -26,9 +26,6 @@ import { json } from 'body-parser';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
 import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
-import {
-  seedContainers,
-} from '../../seed-legacy';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Swagger from '../../../src/start/swagger';
 import RoleManager from '../../../src/rbac/role-manager';
@@ -48,7 +45,7 @@ import ContainerRevision from '../../../src/entity/container/container-revision'
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import Product from '../../../src/entity/product/product';
-import { ProductSeeder, RbacSeeder } from '../../seed';
+import { ContainerSeeder, ProductSeeder, RbacSeeder } from '../../seed';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -131,7 +128,7 @@ describe('ContainerController', async (): Promise<void> => {
 
     const { products, productRevisions } = (
       await new ProductSeeder().seedProducts([adminUser, localUser]));
-    const { containers } = await seedContainers([adminUser, localUser], productRevisions);
+    const { containers } = await new ContainerSeeder().seedContainers([adminUser, localUser], productRevisions);
 
     // create bearer tokens
     const tokenHandler = new TokenHandler({

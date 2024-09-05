@@ -25,10 +25,6 @@ import deepEqualInAnyOrder from 'deep-equal-in-any-order';
 import Database from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
 import ProductService, { ProductFilterParameters } from '../../../src/service/product-service';
-import {
-  seedContainers,
-  seedPointsOfSale,
-} from '../../seed-legacy';
 import Product from '../../../src/entity/product/product';
 import {
   ProductResponse,
@@ -51,7 +47,7 @@ import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import sinon from 'sinon';
 import { ContainerWithProductsResponse } from '../../../src/controller/response/container-response';
-import { ProductCategorySeeder, ProductSeeder, UserSeeder, VatGroupSeeder } from '../../seed';
+import { ContainerSeeder, PointOfSaleSeeder, ProductSeeder, UserSeeder } from '../../seed';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -157,11 +153,11 @@ describe('ProductService', async (): Promise<void> => {
     const {
       containers,
       containerRevisions,
-    } = await seedContainers(users, productRevisions);
+    } = await new ContainerSeeder().seedContainers(users, productRevisions);
     const {
       pointsOfSale,
       pointOfSaleRevisions,
-    } = await seedPointsOfSale(users, containerRevisions);
+    } = await new PointOfSaleSeeder().seedPointsOfSale(users, containerRevisions);
 
     // start app
     const app = express();

@@ -28,9 +28,6 @@ import User, { UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
 import ContainerService from '../../../src/service/container-service';
-import {
-  seedContainers, seedPointsOfSale,
-} from '../../seed-legacy';
 import Container from '../../../src/entity/container/container';
 import { ContainerResponse, ContainerWithProductsResponse } from '../../../src/controller/response/container-response';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
@@ -48,7 +45,7 @@ import { finishTestDB } from '../../helpers/test-helpers';
 import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
 import sinon from 'sinon';
 import { PointOfSaleWithContainersResponse } from '../../../src/controller/response/point-of-sale-response';
-import { ProductSeeder, UserSeeder } from '../../seed';
+import { ContainerSeeder, PointOfSaleSeeder, UserSeeder } from '../../seed';
 
 /**
  * Test if all the container responses are part of the container set array.
@@ -113,9 +110,8 @@ describe('ContainerService', async (): Promise<void> => {
     await truncateAllTables(connection);
 
     const users = await new UserSeeder().seedUsers();
-    const { productRevisions } = await new ProductSeeder().seedProducts(users);
-    const { containers, containerRevisions } = await seedContainers(users, productRevisions);
-    const { pointsOfSale, pointOfSaleRevisions } = await seedPointsOfSale(users, containerRevisions);
+    const { containers, containerRevisions } = await new ContainerSeeder().seedContainers(users);
+    const { pointsOfSale, pointOfSaleRevisions } = await new PointOfSaleSeeder().seedPointsOfSale(users, containerRevisions);
 
     // start app
     const app = express();

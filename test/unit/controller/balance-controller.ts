@@ -24,8 +24,7 @@ import { json } from 'body-parser';
 import Transaction from '../../../src/entity/transactions/transaction';
 import Database from '../../../src/database/database';
 import {
-  seedContainers, seedFines,
-  seedPointsOfSale,
+  seedFines,
   seedTransactions, seedTransfers,
 } from '../../seed-legacy';
 import Swagger from '../../../src/start/swagger';
@@ -44,7 +43,7 @@ import Fine from '../../../src/entity/fine/fine';
 import UserFineGroup from '../../../src/entity/fine/userFineGroup';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { ProductSeeder, RbacSeeder, UserSeeder } from '../../seed';
+import { PointOfSaleSeeder, RbacSeeder, UserSeeder } from '../../seed';
 
 describe('BalanceController', (): void => {
   let ctx: {
@@ -68,9 +67,7 @@ describe('BalanceController', (): void => {
     await truncateAllTables(connection);
     const app = express();
     const users = await new UserSeeder().seedUsers();
-    const { productRevisions } = await new ProductSeeder().seedProducts(users);
-    const { containerRevisions } = await seedContainers(users, productRevisions);
-    const { pointOfSaleRevisions } = await seedPointsOfSale(users, containerRevisions);
+    const { pointOfSaleRevisions } = await new PointOfSaleSeeder().seedPointsOfSale(users);
     const { transactions } = await seedTransactions(users, pointOfSaleRevisions, new Date('2020-02-12'), new Date('2022-11-30'));
     const subTransactions: SubTransaction[] = Array.prototype.concat(...transactions
       .map((t) => t.subTransactions));
