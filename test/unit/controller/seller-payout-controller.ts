@@ -24,7 +24,6 @@ import SellerPayout from '../../../src/entity/transactions/payout/seller-payout'
 import {
   seedContainers,
   seedPointsOfSale,
-  seedProducts,
   seedTransactions,
   seedTransfers,
 } from '../../seed-legacy';
@@ -46,7 +45,12 @@ import dinero from 'dinero.js';
 import sinon from 'sinon';
 import { Client } from 'pdf-generator-client';
 import { BasePdfService } from '../../../src/service/pdf/pdf-service';
-import { ProductCategorySeeder, RbacSeeder, SellerPayoutSeeder, UserSeeder, VatGroupSeeder } from '../../seed';
+import {
+  ProductSeeder,
+  RbacSeeder,
+  SellerPayoutSeeder,
+  UserSeeder,
+} from '../../seed';
 
 describe('SellerPayoutController', () => {
   let ctx: DefaultContext & {
@@ -66,9 +70,7 @@ describe('SellerPayoutController', () => {
 
     const users = await new UserSeeder().seedUsers();
 
-    const categories = await new ProductCategorySeeder().seedProductCategories();
-    const vatGroups = await new VatGroupSeeder().seedVatGroups();
-    const { productRevisions } = await seedProducts(users, categories, vatGroups);
+    const { productRevisions } = await new ProductSeeder().seedProducts(users);
     const { containerRevisions } = await seedContainers(users, productRevisions);
     const { pointOfSaleRevisions } = await seedPointsOfSale(users, containerRevisions);
 

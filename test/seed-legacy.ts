@@ -32,10 +32,9 @@ import SubTransactionRow from '../src/entity/transactions/sub-transaction-row';
 import Transaction from '../src/entity/transactions/transaction';
 import User, { TermsOfServiceStatus, UserType } from '../src/entity/user/user';
 import Transfer from '../src/entity/transactions/transfer';
-import ProductImage from '../src/entity/file/product-image';
 import Banner from '../src/entity/banner';
 import BannerImage from '../src/entity/file/banner-image';
-import { BANNER_IMAGE_LOCATION, PRODUCT_IMAGE_LOCATION } from '../src/files/storage';
+import { BANNER_IMAGE_LOCATION } from '../src/files/storage';
 import StripeDeposit from '../src/entity/stripe/stripe-deposit';
 import StripePaymentIntentStatus, { StripePaymentIntentState } from '../src/entity/stripe/stripe-payment-intent-status';
 import DineroTransformer from '../src/entity/transformer/dinero-transformer';
@@ -61,7 +60,7 @@ import Role from '../src/entity/rbac/role';
 import generateBalance from './helpers/test-helpers';
 import WriteOff from '../src/entity/transactions/write-off';
 import StripePaymentIntent from '../src/entity/stripe/stripe-payment-intent';
-import { ProductCategorySeeder, UserSeeder, VatGroupSeeder } from './seed';
+import { ProductCategorySeeder, ProductSeeder, UserSeeder, VatGroupSeeder } from './seed';
 
 function getDate(startDate: Date, endDate: Date, i: number): Date {
   const diff = endDate.getTime() - startDate.getTime();
@@ -294,170 +293,6 @@ export async function seedEvents(users: User[]) {
   }
 
   return { roles, roleAssignments, events, eventShifts, eventShiftAnswers };
-}
-
-/**
- * Defines a product image based on the parameters passed.
- * When not in a testing environment, actual images will be saved to disk.
- *
- * @param product - The product that this product image belongs to
- * @param createdBy - The user who uploaded this product image
- */
-function defineProductImage(product: Product, createdBy: User): ProductImage {
-  const downloadName = `product-${product.id}.png`;
-
-  let location;
-  if (process.env.NODE_ENV !== 'test') {
-    const source = path.join(__dirname, './static/product.png');
-    location = path.join(__dirname, '../', PRODUCT_IMAGE_LOCATION, downloadName);
-    fs.copyFileSync(source, location);
-  } else {
-    location = `fake/storage/${downloadName}`;
-  }
-  return Object.assign(new ProductImage(), {
-    id: product.id,
-    location,
-    downloadName,
-    createdBy,
-  });
-}
-
-/**
- * Defines product objects based on the parameters passed.
- *
- * @param start - The number of products that already exist.
- * @param count - The number of products to generate.
- * @param user - The user that is owner of the products.
- */
-function defineProducts(
-  start: number,
-  count: number,
-  user: User,
-): Product[] {
-  const products: Product[] = [];
-  for (let nr = 1; nr <= count; nr += 1) {
-    const product = Object.assign(new Product(), {
-      id: start + nr,
-      owner: user,
-      deletedAt: (nr % 5 === 4) ? new Date() : undefined,
-    }) as Product;
-
-    products.push(product);
-  }
-
-  return products;
-}
-
-/**
- * Defines product revision objects based on the parameters passed.
- *
- * @param count - The number of product revisions to generate.
- * @param product - The product that the product revisions belong to.
- * @param category - The category generated product revisions will belong to.
- * @param vat - The VAT group these product revisions will belong to
- * @param priceMultiplier - Multiplier to apply to the product price
- */
-function defineProductRevisions(
-  count: number,
-  product: Product,
-  category: ProductCategory,
-  vat: VatGroup,
-  priceMultiplier: number = 1,
-): ProductRevision[] {
-  const revisions: ProductRevision[] = [];
-
-  for (let rev = 1; rev <= count; rev += 1) {
-    revisions.push(Object.assign(new ProductRevision(), {
-      product,
-      revision: rev,
-      name: `Product${product.id}-${rev}`,
-      category,
-      featured: rev % 2 > 0,
-      preferred: rev % 3 > 0,
-      priceList: product.id % 5 > 0,
-      priceInclVat: dinero({
-        amount: (69 + product.id + rev) * priceMultiplier,
-      }),
-      vat,
-      alcoholPercentage: product.id / (rev + 1),
-    }));
-  }
-
-  return revisions;
-}
-
-/**
- * Seeds a default dataset of product revisions,
- * based on the supplied user and product category dataset.
- * Every user of type local admin and organ will get products.
- *
- * @param users - The dataset of users to base the product dataset on.
- * @param categories - The dataset of product categories to base the product dataset on.
- * @param vatGroups - The dataset of VAT groups to base the product dataset on.
- * @param priceMultiplier - Multiplier to apply to the product price
- */
-export async function seedProducts(
-  users: User[],
-  categories: ProductCategory[],
-  vatGroups: VatGroup[],
-  priceMultiplier: number = 1,
-): Promise<{
-    products: Product[],
-    productImages: ProductImage[],
-    productRevisions: ProductRevision[],
-  }> {
-  let products: Product[] = [];
-  let productImages: ProductImage[] = [];
-  let productRevisions: ProductRevision[] = [];
-
-  const sellers = users.filter((u) => [UserType.LOCAL_ADMIN, UserType.MEMBER, UserType.ORGAN].includes(u.type));
-
-  const promises: Promise<any>[] = [];
-  for (let i = 0; i < sellers.length; i += 1) {
-    const prod = defineProducts(
-      products.length,
-      8,
-      sellers[i],
-    );
-
-    let img: ProductImage[] = [];
-    for (let o = 0; o < prod.length; o += 1) {
-      let image;
-      if (o % 2 === 0) {
-        image = defineProductImage(prod[o], sellers[i]);
-        img = img.concat(image);
-      }
-      prod[o].image = image;
-    }
-
-    let rev: ProductRevision[] = [];
-    for (let o = 0; o < prod.length; o += 1) {
-      const category = categories[o % categories.length];
-      const fVatGroups = vatGroups.filter((group) => !group.deleted);
-      const vatGroup = fVatGroups[o % fVatGroups.length];
-      prod[o].currentRevision = (prod[o].id % 3) + 1;
-      rev = rev.concat(defineProductRevisions(
-        prod[o].currentRevision,
-        prod[o],
-        category,
-        vatGroup,
-        priceMultiplier,
-      ));
-    }
-
-    // Products can only be saved AFTER the images have been saved.
-    // Revisions can only be saved AFTER the products themselves.
-    promises.push(ProductImage.save(img)
-      .then(() => Product.save(prod)
-        .then(() => ProductRevision.save(rev))));
-
-    products = products.concat(prod);
-    productImages = productImages.concat(img);
-    productRevisions = productRevisions.concat(rev);
-  }
-  await Promise.all(promises);
-
-  return { products, productImages, productRevisions };
 }
 
 /**
@@ -1293,7 +1128,7 @@ export default async function seedDatabase(beginDate?: Date, endDate?: Date): Pr
   const writeOffs = await seedWriteOffs();
   const {
     products, productRevisions,
-  } = await seedProducts(users, categories, vatGroups);
+  } = await new ProductSeeder().seedProducts(users, categories, vatGroups);
   const { containers, containerRevisions } = await seedContainers(
     users, productRevisions,
   );

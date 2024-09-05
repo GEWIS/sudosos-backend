@@ -16,5 +16,6 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+export { default as ProductSeeder } from './product';
 export { default as ProductCategorySeeder } from './product-category';
 export { default as VatGroupSeeder } from './vat-group';

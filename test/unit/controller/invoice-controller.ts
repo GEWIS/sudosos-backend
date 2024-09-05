@@ -28,7 +28,6 @@ import {
   seedContainers,
   seedInvoices,
   seedPointsOfSale,
-  seedProducts,
   seedTransactions,
 } from '../../seed-legacy';
 import TokenHandler from '../../../src/authentication/token-handler';
@@ -64,7 +63,7 @@ import sinon from 'sinon';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { createTransactionRequest, requestToTransaction } from '../../helpers/transaction-factory';
-import { ProductCategorySeeder, RbacSeeder, UserSeeder, VatGroupSeeder } from '../../seed';
+import { ProductSeeder, RbacSeeder, UserSeeder } from '../../seed';
 
 describe('InvoiceController', async () => {
   let ctx: {
@@ -121,9 +120,7 @@ describe('InvoiceController', async () => {
     await User.save(invoiceUser);
     await User.save(invoiceUser2);
 
-    const categories = await new ProductCategorySeeder().seedProductCategories();
-    const vatGroups = await new VatGroupSeeder().seedVatGroups();
-    const { productRevisions } = await seedProducts([adminUser, localUser], categories, vatGroups);
+    const { productRevisions } = await new ProductSeeder().seedProducts([adminUser, localUser]);
     const { containerRevisions } = await seedContainers([adminUser, localUser], productRevisions);
     const { pointOfSaleRevisions } = await seedPointsOfSale(
       [adminUser, localUser], containerRevisions,

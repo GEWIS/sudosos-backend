@@ -25,7 +25,6 @@ import Database from '../../../src/database/database';
 import {
   seedContainers, seedFines,
   seedPointsOfSale,
-  seedProducts,
   seedTransactions, seedTransfers,
 } from '../../seed-legacy';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
@@ -57,7 +56,7 @@ import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { Client } from 'pdf-generator-client';
 import { BasePdfService } from '../../../src/service/pdf/pdf-service';
-import { ProductCategorySeeder, RbacSeeder, UserSeeder, VatGroupSeeder } from '../../seed';
+import { ProductSeeder, RbacSeeder, UserSeeder } from '../../seed';
 
 describe('DebtorController', () => {
   let ctx: {
@@ -110,9 +109,7 @@ describe('DebtorController', () => {
     await User.save(localUser);
 
     const users = await new UserSeeder().seedUsers();
-    const categories = await new ProductCategorySeeder().seedProductCategories();
-    const vatGroups = await new VatGroupSeeder().seedVatGroups();
-    const { productRevisions } = await seedProducts(users, categories, vatGroups);
+    const { productRevisions } = await new ProductSeeder().seedProducts(users);
     const { containerRevisions } = await seedContainers(users, productRevisions);
     const { pointOfSaleRevisions } = await seedPointsOfSale(users, containerRevisions);
     const { transactions } = await seedTransactions(users, pointOfSaleRevisions, new Date('2020-02-12'), new Date('2021-11-30'), 10);

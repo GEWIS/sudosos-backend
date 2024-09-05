@@ -29,7 +29,6 @@ import Database from '../../../src/database/database';
 import {
   seedContainers,
   seedPointsOfSale,
-  seedProducts,
   seedTransactions,
 } from '../../seed-legacy';
 import TransactionService, { TransactionFilterParameters } from '../../../src/service/transaction-service';
@@ -52,7 +51,7 @@ import { createInvoiceWithTransfers } from './invoice-service';
 import { truncateAllTables } from '../../setup';
 import ProductRevision from '../../../src/entity/product/product-revision';
 import { calculateBalance } from '../../helpers/balance';
-import { ProductCategorySeeder, UserSeeder, VatGroupSeeder } from '../../seed';
+import { ProductSeeder, UserSeeder } from '../../seed';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -79,9 +78,7 @@ describe('TransactionService', (): void => {
 
     const app = express();
     const users = await new UserSeeder().seedUsers();
-    const vatGropus = await new VatGroupSeeder().seedVatGroups();
-    const categories = await new ProductCategorySeeder().seedProductCategories();
-    const { productRevisions } = await seedProducts(users, categories, vatGropus);
+    const { productRevisions } = await new ProductSeeder().seedProducts(users);
     const { containerRevisions } = await seedContainers(users, productRevisions);
     const { pointOfSaleRevisions } = await seedPointsOfSale(users, containerRevisions);
     const { transactions } = await seedTransactions(users, pointOfSaleRevisions);

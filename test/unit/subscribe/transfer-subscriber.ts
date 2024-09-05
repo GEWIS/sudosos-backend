@@ -24,7 +24,7 @@ import Database from '../../../src/database/database';
 import {
   seedContainers,
   seedPointsOfSale,
-  seedProducts, seedTransactions, seedTransfers,
+  seedTransactions, seedTransfers,
 } from '../../seed-legacy';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import { calculateBalance } from '../../helpers/balance';
@@ -36,7 +36,7 @@ import dinero from 'dinero.js';
 import Fine from '../../../src/entity/fine/fine';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { ProductCategorySeeder, UserSeeder, VatGroupSeeder } from '../../seed';
+import { ProductSeeder, UserSeeder } from '../../seed';
 
 describe('TransferSubscriber', (): void => {
   let ctx: {
@@ -53,9 +53,7 @@ describe('TransferSubscriber', (): void => {
     await truncateAllTables(connection);
 
     const users = await new UserSeeder().seedUsers();
-    const categories = await new ProductCategorySeeder().seedProductCategories();
-    const vatGroups = await new VatGroupSeeder().seedVatGroups();
-    const { productRevisions } = await seedProducts(users, categories, vatGroups);
+    const { productRevisions } = await new ProductSeeder().seedProducts(users);
     const { containerRevisions } = await seedContainers(users, productRevisions);
     const { pointOfSaleRevisions } = await seedPointsOfSale(users, containerRevisions);
     const { transactions } = await seedTransactions(users, pointOfSaleRevisions, new Date('2020-02-12'), new Date('2021-11-30'), 10);

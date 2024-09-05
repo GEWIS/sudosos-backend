@@ -31,7 +31,7 @@ import Swagger from '../../../src/start/swagger';
 import {
   seedContainers, seedFines,
   seedInvoices, seedPayoutRequests, seedPointsOfSale,
-  seedProducts, seedStripeDeposits,
+  seedStripeDeposits,
   seedTransactions,
   seedTransfers,
 } from '../../seed-legacy';
@@ -39,7 +39,7 @@ import DineroTransformer from '../../../src/entity/transformer/dinero-transforme
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import VatGroup from '../../../src/entity/vat-group';
-import { ProductCategorySeeder, UserSeeder, VatGroupSeeder } from '../../seed';
+import { ProductSeeder, UserSeeder, VatGroupSeeder } from '../../seed';
 
 describe('TransferService', async (): Promise<void> => {
   let ctx: {
@@ -59,8 +59,7 @@ describe('TransferService', async (): Promise<void> => {
 
     const users = await new UserSeeder().seedUsers();
     const vatGroups = await new VatGroupSeeder().seedVatGroups();
-    const categories = await new ProductCategorySeeder().seedProductCategories();
-    const { productRevisions } = await seedProducts(users, categories, vatGroups);
+    const { productRevisions } = await new ProductSeeder().seedProducts(users, undefined, vatGroups);
     const { containerRevisions } = await seedContainers(users, productRevisions);
     const { pointOfSaleRevisions } = await seedPointsOfSale(users, containerRevisions);
     const transfers = await seedTransfers(users, begin, end);

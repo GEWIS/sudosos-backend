@@ -34,14 +34,13 @@ import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
 import {
   seedContainers,
   seedPointsOfSale,
-  seedProducts,
 } from '../../seed-legacy';
 import MemberAuthenticator from '../../../src/entity/authenticator/member-authenticator';
 import AuthenticationResponse from '../../../src/controller/response/authentication-response';
 import DefaultRoles from '../../../src/rbac/default-roles';
 import settingDefaults from '../../../src/server-settings/setting-defaults';
 import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
-import { ProductCategorySeeder, RbacSeeder, UserSeeder, VatGroupSeeder } from '../../seed';
+import { ProductSeeder, RbacSeeder, UserSeeder } from '../../seed';
 
 describe('AuthenticationSecureController', () => {
   let ctx: {
@@ -74,9 +73,7 @@ describe('AuthenticationSecureController', () => {
       users.filter((u) => u.type === UserType.ORGAN),
     );
 
-    const vatGroups = await new VatGroupSeeder().seedVatGroups();
-    const categories = await new ProductCategorySeeder().seedProductCategories();
-    const { productRevisions } = await seedProducts(users, categories, vatGroups);
+    const { productRevisions } = await new ProductSeeder().seedProducts(users);
     const { containerRevisions } = await seedContainers(users, productRevisions);
     const { pointsOfSale, pointOfSaleUsers } = await seedPointsOfSale(users, containerRevisions);
 

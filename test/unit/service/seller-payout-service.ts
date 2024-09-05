@@ -23,7 +23,6 @@ import database from '../../../src/database/database';
 import {
   seedContainers,
   seedPointsOfSale,
-  seedProducts,
   seedTransactions,
   seedTransfers,
 } from '../../seed-legacy';
@@ -35,7 +34,7 @@ import SellerPayoutService, { CreateSellerPayoutParams } from '../../../src/serv
 import { calculateBalance } from '../../helpers/balance';
 import { DineroObjectRequest } from '../../../src/controller/request/dinero-request';
 import dinero from 'dinero.js';
-import { ProductCategorySeeder, SellerPayoutSeeder, UserSeeder, VatGroupSeeder } from '../../seed';
+import { ProductSeeder, SellerPayoutSeeder, UserSeeder } from '../../seed';
 
 describe('SellerPayoutService', () => {
   let ctx: {
@@ -51,9 +50,7 @@ describe('SellerPayoutService', () => {
     const connection = await database.initialize();
     const users = await new UserSeeder().seedUsers();
 
-    const categories = await new ProductCategorySeeder().seedProductCategories();
-    const vatGroups = await new VatGroupSeeder().seedVatGroups();
-    const { productRevisions } = await seedProducts(users, categories, vatGroups);
+    const { productRevisions } = await new ProductSeeder().seedProducts(users);
     const { containerRevisions } = await seedContainers(users, productRevisions);
     const { pointOfSaleRevisions } = await seedPointsOfSale(users, containerRevisions);
 
