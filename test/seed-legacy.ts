@@ -27,7 +27,6 @@ import PointOfSaleRevision from '../src/entity/point-of-sale/point-of-sale-revis
 import Product from '../src/entity/product/product';
 import ProductCategory from '../src/entity/product/product-category';
 import ProductRevision from '../src/entity/product/product-revision';
-import SubTransaction from '../src/entity/transactions/sub-transaction';
 import Transaction from '../src/entity/transactions/transaction';
 import User, { UserType } from '../src/entity/user/user';
 import Transfer from '../src/entity/transactions/transfer';
@@ -35,10 +34,7 @@ import Banner from '../src/entity/banner';
 import BannerImage from '../src/entity/file/banner-image';
 import { BANNER_IMAGE_LOCATION } from '../src/files/storage';
 import StripeDeposit from '../src/entity/stripe/stripe-deposit';
-import StripePaymentIntentStatus, { StripePaymentIntentState } from '../src/entity/stripe/stripe-payment-intent-status';
-import DineroTransformer from '../src/entity/transformer/dinero-transformer';
 import PayoutRequest from '../src/entity/transactions/payout/payout-request';
-import PayoutRequestStatus, { PayoutRequestState } from '../src/entity/transactions/payout/payout-request-status';
 import Invoice from '../src/entity/invoices/invoice';
 import InvoiceEntry from '../src/entity/invoices/invoice-entry';
 import InvoiceStatus, { InvoiceState } from '../src/entity/invoices/invoice-status';
@@ -50,22 +46,18 @@ import PinAuthenticator from '../src/entity/authenticator/pin-authenticator';
 import VatGroup from '../src/entity/vat-group';
 import LocalAuthenticator from '../src/entity/authenticator/local-authenticator';
 import UserFineGroup from '../src/entity/fine/userFineGroup';
-import FineHandoutEvent from '../src/entity/fine/fineHandoutEvent';
 import Fine from '../src/entity/fine/fine';
-import { calculateBalance } from './helpers/balance';
 import GewisUser from '../src/gewis/entity/gewis-user';
 import AssignedRole from '../src/entity/rbac/assigned-role';
 import Role from '../src/entity/rbac/role';
-import generateBalance from './helpers/test-helpers';
 import WriteOff from '../src/entity/transactions/write-off';
-import StripePaymentIntent from '../src/entity/stripe/stripe-payment-intent';
 import {
-  ContainerSeeder, EventSeeder,
+  ContainerSeeder, DepositSeeder, EventSeeder, FineSeeder, PayoutRequestSeeder,
   PointOfSaleSeeder,
   ProductCategorySeeder,
   ProductSeeder, TransferSeeder,
   UserSeeder,
-  VatGroupSeeder,
+  VatGroupSeeder, WriteOffSeeder,
 } from './seed';
 import TransactionSeeder from './seed/ledger/transaction';
 
@@ -184,278 +176,6 @@ export async function seedInvoices(users: User[], transactions: Transaction[]): 
 }
 
 /**
- * Create mock stripe deposits objects. Note that the stripe IDs are fake, so you cannot use
- * these entries to make actual API calls to Stripe.
- * @param users
- */
-// TODO: Increase speed with correct awaits/then/Promise.all()
-export async function seedStripeDeposits(users: User[]): Promise<{
-  stripeDeposits: StripeDeposit[],
-  stripeDepositTransfers: Transfer[],
-}> {
-  const stripeDeposits: StripeDeposit[] = [];
-  const transfers: Transfer[] = [];
-
-  const totalNrOfStatuses = 3;
-
-  for (let i = 0; i < users.length * totalNrOfStatuses + 1; i += 1) {
-    const to = users[Math.floor(i / 4)];
-    const amount = DineroTransformer.Instance.from(3900);
-    // eslint-disable-next-line no-await-in-loop
-    const stripePaymentIntent = await StripePaymentIntent.save({
-      stripeId: `FakeStripeIDDoNotUsePleaseThankYou_${i + 1}`,
-      amount,
-      paymentIntentStatuses: [],
-    });
-    // eslint-disable-next-line no-await-in-loop
-    const newDeposit = await StripeDeposit.save({
-      stripePaymentIntent,
-      to,
-    });
-
-    const succeeded = Math.floor(((i % 8) + 1) / 4) !== 1;
-    const states = [StripePaymentIntentState.CREATED, StripePaymentIntentState.PROCESSING,
-      succeeded ? StripePaymentIntentState.SUCCEEDED : StripePaymentIntentState.FAILED].slice(0, i % 4);
-
-    if (succeeded) {
-      const transfer = Object.assign(new Transfer(), {
-        from: null,
-        to,
-        amountInclVat:amount,
-        description: `Deposit transfer for ${amount}`,
-      });
-      await transfer.save();
-      newDeposit.transfer = transfer;
-      await StripeDeposit.save(newDeposit);
-      transfer.deposit = newDeposit;
-      transfers.push(transfer);
-    }
-
-    const statePromises: Promise<any>[] = [];
-    states.forEach((state) => {
-      const newState = Object.assign(new StripePaymentIntentStatus(), {
-        stripePaymentIntent,
-        state,
-      });
-      statePromises.push(newState.save());
-      stripePaymentIntent.paymentIntentStatuses.push(newState);
-    });
-
-    // eslint-disable-next-line no-await-in-loop
-    await Promise.all(statePromises);
-    stripeDeposits.push(newDeposit);
-  }
-
-  return {
-    stripeDeposits,
-    stripeDepositTransfers: transfers,
-  };
-}
-
-/**
- * Handout fines for all eligible users on the given reference date. Reuse the given user fine groups if
- * @param users
- * @param transactions
- * @param transfers
- * @param userFineGroups
- * @param firstReferenceDate
- */
-export async function seedSingleFines(users: User[], transactions: Transaction[], transfers: Transfer[], userFineGroups: UserFineGroup[] = [], firstReferenceDate: Date = new Date()) {
-  const subTransactions: SubTransaction[] = Array.prototype.concat(...transactions
-    .map((t) => t.subTransactions));
-  // Get all users that are in debt and should get fined
-  const debtors = users.filter((u) =>
-    calculateBalance(u, transactions, subTransactions, transfers, firstReferenceDate).amount.getAmount() < 500);
-
-  // Create a map from users to userFineGroups and initialize it with the existing userFineGroups
-  const userFineGroupMap = new Map<User, UserFineGroup>();
-  userFineGroups.forEach((g) => userFineGroupMap.set(g.user, g));
-
-  let i = 0;
-
-  const fineHandoutEvent = Object.assign(new FineHandoutEvent(), {
-    referenceDate: firstReferenceDate,
-  } as FineHandoutEvent);
-  await fineHandoutEvent.save();
-
-  const fineTransfers: Transfer[] = [];
-  const fines = await Promise.all(debtors.map(async (u) => {
-    i++;
-    if (i % 2 === 0) return;
-
-    let userFineGroup = userFineGroupMap.get(u);
-    if (userFineGroup === undefined) {
-      userFineGroup = Object.assign(new UserFineGroup(), {
-        user: u,
-        userId: u.id,
-      } as UserFineGroup);
-      await userFineGroup.save();
-      userFineGroupMap.set(u, userFineGroup);
-    }
-
-    // Fine everyone 5 euros
-    const amountInclVat = dinero({ amount: 500 });
-    const transfer = Object.assign(new Transfer(), {
-      from: u,
-      fromId: u.id,
-      amountInclVat,
-      description: 'Seeded fine',
-    } as Transfer);
-    const fine = await transfer.save().then(async (t) => {
-      const f = Object.assign(new Fine(), {
-        fineHandoutEvent,
-        userFineGroup,
-        transfer: t,
-        amount: amountInclVat,
-      } as Fine);
-      return f.save();
-    });
-    transfer.fine = fine;
-    fineTransfers.push(transfer);
-    return fine;
-  }));
-
-  return {
-    fines: fines.filter((f) => f !== undefined),
-    fineTransfers,
-    fineHandoutEvent,
-    userFineGroups: Array.from(userFineGroupMap.values()),
-  };
-}
-
-/**
- * Add two fineHandoutEvents to the database, one on 2021-01-01 and the other at the current time.
- * @param users
- * @param transactions
- * @param transfers
- * @param addCurrentFines
- */
-export async function seedFines(users: User[], transactions: Transaction[], transfers: Transfer[], addCurrentFines = false) {
-  // Make a copy of users, so we can update currentFines
-  let newUsers = users;
-
-  const {
-    fines: fines1,
-    fineTransfers: fineTransfers1,
-    userFineGroups: userFineGroups1,
-    fineHandoutEvent: fineHandoutEvent1,
-  } = await seedSingleFines(users, transactions, transfers, [], new Date('2021-01-01'));
-
-  const {
-    fines: fines2,
-    fineTransfers: fineTransfers2,
-    userFineGroups: userFineGroups2,
-    fineHandoutEvent: fineHandoutEvent2,
-  } = await seedSingleFines(users, transactions, [...transfers, ...fineTransfers1], userFineGroups1);
-
-  // Remove duplicates
-  const userFineGroups = [...userFineGroups1, ...userFineGroups2]
-    .filter((g, i, groups) => groups.findIndex((g2) => g2.id === g.id) === i);
-  const fines = [...fines1, ...fines2];
-
-  // Add also a reference to the fine in the UserFineGroup
-  fines.forEach((f) => {
-    const i = userFineGroups.findIndex((g) => g.id === f.userFineGroup.id);
-    if (userFineGroups[i].fines === undefined) userFineGroups[i].fines = [];
-    userFineGroups[i].fines.push(f);
-  });
-
-  if (addCurrentFines) {
-    newUsers = await Promise.all(users.map(async (user) => {
-      const userFineGroup = userFineGroups.find((g) => user.id === g.userId);
-      if (userFineGroup) {
-        user.currentFines = userFineGroup;
-        await user.save();
-      }
-      return user;
-    }));
-  }
-
-  return {
-    fines,
-    fineTransfers: [...fineTransfers1, ...fineTransfers2],
-    userFineGroups,
-    fineHandoutEvents: [fineHandoutEvent1, fineHandoutEvent2],
-    users: newUsers,
-  };
-}
-
-export async function seedPayoutRequests(users: User[]): Promise<{
-  payoutRequests: PayoutRequest[], payoutRequestTransfers: Transfer[],
-}> {
-  const payoutRequests: Promise<PayoutRequest>[] = [];
-  const transfers: Transfer[] = [];
-
-  const admins = users.filter((u) => u.type === UserType.LOCAL_ADMIN);
-  admins.push(undefined);
-
-  const totalNrOfStatuses = 3;
-  let finalState = 0;
-
-  for (let i = 0; i < users.length * 3; i += 1) {
-    const requestedBy = users[Math.floor(i / totalNrOfStatuses)];
-    const amount = DineroTransformer.Instance.from(3900);
-    const newPayoutReq = Object.assign(new PayoutRequest(), {
-      requestedBy,
-      amount,
-      bankAccountNumber: 'NL69GEWI0420042069',
-      bankAccountName: `${requestedBy.firstName} ${requestedBy.lastName}`,
-    });
-
-    const option = Math.floor(finalState % 3);
-    let lastOption;
-    switch (option) {
-      case 0: lastOption = PayoutRequestState.APPROVED; break;
-      case 1: lastOption = PayoutRequestState.DENIED; break;
-      default: lastOption = PayoutRequestState.CANCELLED; break;
-    }
-    const states = [PayoutRequestState.CREATED, lastOption].slice(0, i % totalNrOfStatuses);
-    if (states.length === 2) finalState += 1;
-
-    const statusses: PayoutRequestStatus[] = [];
-    states.forEach((state, index) => {
-      statusses.push(Object.assign(new PayoutRequestStatus(), {
-        state,
-        createdAt: new Date((new Date()).getTime() + 1000 * 60 * index),
-        updatedAt: new Date((new Date()).getTime() + 1000 * 60 * index),
-      }));
-      if (state === PayoutRequestState.APPROVED) {
-        newPayoutReq.approvedBy = admins[i % admins.length];
-      }
-    });
-
-    if (i % 5 === 0) {
-      const transfer = Object.assign(new Transfer(), {
-        from: requestedBy,
-        to: null,
-        amountInclVat: amount,
-        description: `Payout request for ${amount}`,
-      });
-      await transfer.save();
-      transfer.payoutRequest = newPayoutReq;
-      transfers.push(transfer);
-      newPayoutReq.transfer = transfer;
-    }
-
-    payoutRequests.push(newPayoutReq.save().then(async (payoutRequest) => {
-      await Promise.all(statusses.map((s) => {
-        // eslint-disable-next-line no-param-reassign
-        s.payoutRequest = payoutRequest;
-        return s.save();
-      }));
-      // eslint-disable-next-line no-param-reassign
-      payoutRequest.payoutRequestStatus = statusses;
-      return payoutRequest;
-    }));
-  }
-
-  return {
-    payoutRequests: await Promise.all(payoutRequests),
-    payoutRequestTransfers: transfers,
-  };
-}
-
-/**
  * Create a BannerImage object. When not in a testing environment, a banner image
  * will also be saved on disk.
  *
@@ -480,39 +200,6 @@ function defineBannerImage(banner: Banner, createdBy: User): BannerImage {
     downloadName,
     createdBy,
   });
-}
-
-export async function seedWriteOffs(count = 10): Promise<WriteOff[]> {
-  const userCount = await User.count();
-  const users = new UserSeeder().defineUsers(userCount, count, UserType.LOCAL_USER, false);
-  await User.save(users);
-
-  for (const u of users) {
-    u.firstName = 'WriteOff';
-    u.deleted = true;
-    await generateBalance(-1000, u.id);
-  }
-  await User.save(users);
-
-  const writeOffs: WriteOff[] = [];
-  for (const u of users) {
-    const writeOff = Object.assign(new WriteOff(), {
-      to: u,
-      amount: dinero({ amount: 1000 }),
-    });
-    await writeOff.save();
-    writeOff.transfer = (await Transfer.save({
-      amountInclVat: dinero({ amount: 1000 }),
-      toId: u.id,
-      description: 'WriteOff',
-      fromId: null,
-      writeOff,
-    }));
-    await writeOff.save();
-
-    writeOffs.push(writeOff);
-  }
-  return writeOffs;
 }
 
 /**
@@ -593,7 +280,6 @@ export default async function seedDatabase(beginDate?: Date, endDate?: Date): Pr
   const gewisUsers = await seedGEWISUsers(users);
   const categories = await new ProductCategorySeeder().seedProductCategories();
   const vatGroups = await new VatGroupSeeder().seedVatGroups();
-  const writeOffs = await seedWriteOffs();
   const {
     products, productRevisions,
   } = await new ProductSeeder().seedProducts(users, categories, vatGroups);
@@ -606,10 +292,11 @@ export default async function seedDatabase(beginDate?: Date, endDate?: Date): Pr
   const { roles, roleAssignments, events, eventShifts, eventShiftAnswers } = await new EventSeeder().seedEvents(users);
   const { transactions } = await new TransactionSeeder().seedTransactions(users, pointOfSaleRevisions, beginDate, endDate);
   const transfers = await new TransferSeeder().seedTransfers(users, beginDate, endDate);
-  const { fines, fineTransfers, userFineGroups } = await seedFines(users, transactions, transfers);
-  const { payoutRequests, payoutRequestTransfers } = await seedPayoutRequests(users);
+  const { fines, fineTransfers, userFineGroups } = await new FineSeeder().seedFines(users, transactions, transfers);
+  const { payoutRequests, payoutRequestTransfers } = await new PayoutRequestSeeder().seedPayoutRequests(users);
   const { invoices, invoiceTransfers } = await seedInvoices(users, transactions);
-  const { stripeDeposits, stripeDepositTransfers } = await seedStripeDeposits(users);
+  const { stripeDeposits, stripeDepositTransfers } = await new DepositSeeder().seedStripeDeposits(users);
+  const writeOffs = await new WriteOffSeeder().seedWriteOffs();
   const { banners } = await seedBanners(users);
 
   return {

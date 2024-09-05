@@ -22,9 +22,6 @@ import { SwaggerSpecification } from 'swagger-model-validator';
 import DebtorController from '../../../src/controller/debtor-controller';
 import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
-import {
-  seedFines,
-} from '../../seed-legacy';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import Transaction from '../../../src/entity/transactions/transaction';
 import Transfer from '../../../src/entity/transactions/transfer';
@@ -51,7 +48,7 @@ import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { Client } from 'pdf-generator-client';
 import { BasePdfService } from '../../../src/service/pdf/pdf-service';
-import { RbacSeeder, TransactionSeeder, TransferSeeder, UserSeeder } from '../../seed';
+import { FineSeeder, RbacSeeder, TransactionSeeder, TransferSeeder, UserSeeder } from '../../seed';
 
 describe('DebtorController', () => {
   let ctx: {
@@ -105,7 +102,7 @@ describe('DebtorController', () => {
     const transfers = await new TransferSeeder().seedTransfers(users, new Date('2020-02-12'), new Date('2021-11-30'));
     const subTransactions: SubTransaction[] = Array.prototype.concat(...transactions
       .map((t) => t.subTransactions));
-    const { fines, fineTransfers, fineHandoutEvents } = await seedFines(users, transactions, transfers);
+    const { fines, fineTransfers, fineHandoutEvents } = await new FineSeeder().seedFines(users, transactions, transfers);
 
     // start app
     const app = express();

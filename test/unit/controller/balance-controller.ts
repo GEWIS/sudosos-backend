@@ -23,9 +23,6 @@ import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
 import Transaction from '../../../src/entity/transactions/transaction';
 import Database from '../../../src/database/database';
-import {
-  seedFines,
-} from '../../seed-legacy';
 import Swagger from '../../../src/start/swagger';
 import TokenHandler from '../../../src/authentication/token-handler';
 import User, { UserType } from '../../../src/entity/user/user';
@@ -42,7 +39,7 @@ import Fine from '../../../src/entity/fine/fine';
 import UserFineGroup from '../../../src/entity/fine/userFineGroup';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { RbacSeeder, TransactionSeeder, TransferSeeder, UserSeeder } from '../../seed';
+import { FineSeeder, RbacSeeder, TransactionSeeder, TransferSeeder, UserSeeder } from '../../seed';
 
 describe('BalanceController', (): void => {
   let ctx: {
@@ -102,7 +99,7 @@ describe('BalanceController', (): void => {
     const userToken = await tokenHandler.signToken(await new RbacSeeder().getToken(users[0], roles), '33');
     const adminToken = await tokenHandler.signToken(await new RbacSeeder().getToken(users[6], roles), '33');
 
-    const { fines, fineTransfers, userFineGroups, users: usersWithFines } = await seedFines(users, transactions, transfers, true);
+    const { fines, fineTransfers, userFineGroups, users: usersWithFines } = await new FineSeeder().seedFines(users, transactions, transfers, true);
 
     const specification = await Swagger.initialize(app);
     const controller = new BalanceController({

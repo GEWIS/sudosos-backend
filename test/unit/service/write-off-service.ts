@@ -23,7 +23,6 @@ import { SwaggerSpecification } from 'swagger-model-validator';
 import TokenHandler from '../../../src/authentication/token-handler';
 import RoleManager from '../../../src/rbac/role-manager';
 import WriteOff from '../../../src/entity/transactions/write-off';
-import { seedWriteOffs } from '../../seed-legacy';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
 import chai, { expect } from 'chai';
 import WriteOffService from '../../../src/service/write-off-service';
@@ -31,6 +30,7 @@ import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import User from '../../../src/entity/user/user';
 import VatGroup from '../../../src/entity/vat-group';
 import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
+import { WriteOffSeeder } from '../../seed';
 
 chai.use(deepEqualInAnyOrder);
 describe('WriteOffService', () => {
@@ -52,7 +52,7 @@ describe('WriteOffService', () => {
     const serverSettingsStore = await ServerSettingsStore.getInstance().initialize();
     await serverSettingsStore.setSetting('highVatGroupId', vg.id);
 
-    ctx = { ...c, writeOffs: await seedWriteOffs() };
+    ctx = { ...c, writeOffs: await new WriteOffSeeder().seedWriteOffs() };
   });
 
   after(async () => {

@@ -24,7 +24,6 @@ import StripeController from '../../../src/controller/stripe-controller';
 import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import StripeDeposit from '../../../src/entity/stripe/stripe-deposit';
 import Database from '../../../src/database/database';
-import { seedStripeDeposits } from '../../seed-legacy';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Swagger from '../../../src/start/swagger';
 import RoleManager from '../../../src/rbac/role-manager';
@@ -36,7 +35,7 @@ import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import Stripe from 'stripe';
 import { STRIPE_API_VERSION } from '../../../src/service/stripe-service';
-import { RbacSeeder } from '../../seed';
+import { DepositSeeder, RbacSeeder } from '../../seed';
 
 describe('StripeController', async (): Promise<void> => {
   let shouldSkip: boolean;
@@ -91,7 +90,7 @@ describe('StripeController', async (): Promise<void> => {
       acceptedToS: TermsOfServiceStatus.ACCEPTED,
     });
 
-    const { stripeDeposits } = await seedStripeDeposits([localUser, adminUser]);
+    const { stripeDeposits } = await new DepositSeeder().seedStripeDeposits([localUser, adminUser]);
 
     // start app
     const app = express();

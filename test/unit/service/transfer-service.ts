@@ -29,16 +29,14 @@ import User from '../../../src/entity/user/user';
 import TransferService from '../../../src/service/transfer-service';
 import Swagger from '../../../src/start/swagger';
 import {
-  seedFines,
-  seedInvoices, seedPayoutRequests,
-  seedStripeDeposits,
+  seedInvoices,
 } from '../../seed-legacy';
 import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import VatGroup from '../../../src/entity/vat-group';
 import {
-  ContainerSeeder,
+  ContainerSeeder, DepositSeeder, FineSeeder, PayoutRequestSeeder,
   PointOfSaleSeeder,
   ProductSeeder,
   TransactionSeeder, TransferSeeder,
@@ -70,12 +68,12 @@ describe('TransferService', async (): Promise<void> => {
     const transfers = await new TransferSeeder().seedTransfers(users, begin, end);
     const { transactions } = await new TransactionSeeder().seedTransactions(users, pointOfSaleRevisions, begin, end);
     const { invoiceTransfers } = await seedInvoices(users, transactions);
-    const { payoutRequestTransfers } = await seedPayoutRequests(users);
-    const { stripeDepositTransfers } = await seedStripeDeposits(users);
+    const { payoutRequestTransfers } = await new PayoutRequestSeeder().seedPayoutRequests(users);
+    const { stripeDepositTransfers } = await new DepositSeeder().seedStripeDeposits(users);
 
     const transfers2 = transfers.concat(invoiceTransfers).concat(payoutRequestTransfers).concat(stripeDepositTransfers);
 
-    const { users: users2, fineTransfers } = await seedFines(users, transactions, transfers, true);
+    const { users: users2, fineTransfers } = await new FineSeeder().seedFines(users, transactions, transfers, true);
 
     // start app
     const app = express();

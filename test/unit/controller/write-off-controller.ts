@@ -18,7 +18,6 @@
 import { DefaultContext, defaultContext, finishTestDB } from '../../helpers/test-helpers';
 import { truncateAllTables } from '../../setup';
 import WriteOff from '../../../src/entity/transactions/write-off';
-import { seedWriteOffs } from '../../seed-legacy';
 import User, { UserType } from '../../../src/entity/user/user';
 import { ADMIN_USER, inUserContext, UserFactory } from '../../helpers/user-factory';
 import { expect, request } from 'chai';
@@ -29,7 +28,7 @@ import BalanceService from '../../../src/service/balance-service';
 import { json } from 'body-parser';
 import VatGroup from '../../../src/entity/vat-group';
 import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
-import { RbacSeeder } from '../../seed';
+import { RbacSeeder, WriteOffSeeder } from '../../seed';
 
 function writeOffEq(a: WriteOff, b: WriteOffResponse): Boolean {
   return a.to.id === b.to.id
@@ -78,7 +77,7 @@ describe('WriteOffController', () => {
     const serverSettingsStore = await ServerSettingsStore.getInstance().initialize();
     await serverSettingsStore.setSetting('highVatGroupId', vg.id);
 
-    ctx = { ...c, adminToken, token, writeOffs: await seedWriteOffs() };
+    ctx = { ...c, adminToken, token, writeOffs: await new WriteOffSeeder().seedWriteOffs() };
   });
 
   after(async () => {

@@ -18,9 +18,6 @@
 
 import { Connection } from 'typeorm';
 import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
-import {
-  seedFines,
-} from '../../seed-legacy';
 import Database from '../../../src/database/database';
 import Transaction from '../../../src/entity/transactions/transaction';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
@@ -41,7 +38,7 @@ import { finishTestDB } from '../../helpers/test-helpers';
 import dinero from 'dinero.js';
 import TransferService from '../../../src/service/transfer-service';
 import FineHandoutEvent from '../../../src/entity/fine/fineHandoutEvent';
-import { TransactionSeeder, TransferSeeder, UserSeeder } from '../../seed';
+import { FineSeeder, TransactionSeeder, TransferSeeder, UserSeeder } from '../../seed';
 
 describe('DebtorService', (): void => {
   let ctx: {
@@ -68,7 +65,7 @@ describe('DebtorService', (): void => {
     const transfers = await new TransferSeeder().seedTransfers(users, new Date('2020-02-12'), new Date('2021-11-30'));
     const subTransactions: SubTransaction[] = Array.prototype.concat(...transactions
       .map((t) => t.subTransactions));
-    const { fines, fineTransfers, userFineGroups, users: usersWithFines } = await seedFines(users, transactions, transfers, true);
+    const { fines, fineTransfers, userFineGroups, users: usersWithFines } = await new FineSeeder().seedFines(users, transactions, transfers, true);
 
     ctx = {
       connection,
