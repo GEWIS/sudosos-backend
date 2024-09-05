@@ -19,7 +19,6 @@
 import { describe } from 'mocha';
 import { Connection } from 'typeorm';
 import User from '../../../src/entity/user/user';
-import { seedEvents } from '../../seed-legacy';
 import Event, { EventType } from '../../../src/entity/event/event';
 import EventShift from '../../../src/entity/event/event-shift';
 import EventShiftAnswer, { Availability } from '../../../src/entity/event/event-shift-answer';
@@ -34,7 +33,7 @@ import nodemailer, { Transporter } from 'nodemailer';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import Role from '../../../src/entity/rbac/role';
-import { UserSeeder } from '../../seed';
+import { EventSeeder, UserSeeder } from '../../seed';
 
 describe('eventService', () => {
   let ctx: {
@@ -52,7 +51,7 @@ describe('eventService', () => {
     await truncateAllTables(connection);
 
     const users = await new UserSeeder().seedUsers();
-    const { roleAssignments, events, eventShifts: allEventShifts, eventShiftAnswers } = await seedEvents(users);
+    const { roleAssignments, events, eventShifts: allEventShifts, eventShiftAnswers } = await new EventSeeder().seedEvents(users);
 
     const eventShifts = allEventShifts.filter((s) => s.deletedAt == null);
     const deletedEventShifts = allEventShifts.filter((s) => s.deletedAt != null);

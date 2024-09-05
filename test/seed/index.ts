@@ -17,6 +17,7 @@
  */
 
 export * from './catalogue';
+export { default as EventSeeder } from './event';
 export { default as RbacSeeder } from './rbac';
 export { default as SellerPayoutSeeder } from './seller-payout';
 export { default as UserSeeder } from './user';

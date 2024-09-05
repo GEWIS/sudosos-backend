@@ -43,9 +43,9 @@ import PayoutRequestStatus, { PayoutRequestState } from '../src/entity/transacti
 import Invoice from '../src/entity/invoices/invoice';
 import InvoiceEntry from '../src/entity/invoices/invoice-entry';
 import InvoiceStatus, { InvoiceState } from '../src/entity/invoices/invoice-status';
-import Event, { EventType } from '../src/entity/event/event';
+import Event from '../src/entity/event/event';
 import EventShift from '../src/entity/event/event-shift';
-import EventShiftAnswer, { Availability } from '../src/entity/event/event-shift-answer';
+import EventShiftAnswer from '../src/entity/event/event-shift-answer';
 import seedGEWISUsers from '../src/gewis/database/seed';
 import PinAuthenticator from '../src/entity/authenticator/pin-authenticator';
 import VatGroup from '../src/entity/vat-group';
@@ -61,7 +61,7 @@ import generateBalance from './helpers/test-helpers';
 import WriteOff from '../src/entity/transactions/write-off';
 import StripePaymentIntent from '../src/entity/stripe/stripe-payment-intent';
 import {
-  ContainerSeeder,
+  ContainerSeeder, EventSeeder,
   PointOfSaleSeeder,
   ProductCategorySeeder,
   ProductSeeder,
@@ -188,118 +188,6 @@ export async function seedInvoices(users: User[], transactions: Transaction[]): 
 
 
   return { invoices, invoiceTransfers };
-}
-
-/**
- * Seeds a default dataset of borrelSchemaShifts and stores them in the database
- */
-async function seedEventShifts() {
-  const roles = await Role.save([{
-    name: 'BAC',
-  }, {
-    name: 'BAC feut',
-  }, {
-    name: 'BAC PM',
-  }, {
-    name: 'Bestuur',
-  }, {
-    name: 'Kasco',
-  }]);
-
-  const eventShifts = await EventShift.save([{
-    name: 'Borrelen',
-    roles: [roles[0], roles[1]],
-  }, {
-    name: 'Portier',
-    roles: [roles[0], roles[1]],
-  }, {
-    name: 'Bier halen voor Job en Sjoerd',
-    roles: [roles[1]],
-  }, {
-    name: 'Roy slaan',
-    roles: [],
-  }, {
-    name: '900 euro kwijtraken',
-    roles: [roles[0], roles[2]],
-  }, {
-    name: 'Wassen',
-    roles: [roles[3]],
-    deletedAt: new Date(),
-  }]);
-  return {
-    roles,
-    eventShifts,
-  };
-}
-
-function createEventShiftAnswer(user: User, event: Event, shift: EventShift, type: number) {
-  const availabilities = [Availability.YES, Availability.MAYBE, Availability.NO, Availability.LATER, Availability.NA, null];
-
-  const answer: EventShiftAnswer = Object.assign(new EventShiftAnswer(), {
-    user,
-    availability: availabilities[type + 1 % availabilities.length],
-    selected: false,
-    eventId: event.id,
-    shiftId: shift.id,
-  });
-  return EventShiftAnswer.save(answer);
-}
-
-export async function seedEvents(users: User[]) {
-  const events: Event[] = [];
-  const { eventShifts, roles } = await seedEventShifts();
-
-  const roleAssignments = (await Promise.all(users.map(async (user, i) => {
-    if (i % 3 === 0) return undefined;
-    return AssignedRole.save({
-      user,
-      role: roles[i % 5],
-    });
-  }))).filter((r) => r != null);
-
-  const eventShiftAnswers: EventShiftAnswer[] = [];
-  for (let i = 1; i < eventShifts.length; i += 1) {
-    // const startDate = getRandomDate(new Date(), new Date(new Date().getTime() + 1000 * 60 * 60 * 24 * 365));
-    const startDate = new Date(new Date().getTime() + ((i * 1000000) % (3600 * 24 * 365)) * 1000 + 60000);
-    startDate.setMilliseconds(0);
-    // Add 2,5 hours
-    const endDate = new Date(startDate.getTime() + (1000 * 60 * 60 * 2.5));
-    endDate.setMilliseconds(0);
-
-    const event = Object.assign(new Event(), {
-      name: `${i}-Testborrel-${i}`,
-      createdBy: roleAssignments[i].user,
-      startDate,
-      endDate,
-      type: EventType.BORREL,
-      shifts: [],
-      id: i,
-    });
-    await Event.save(event);
-
-    const eventShifts1: EventShift[] = [];
-    const eventShiftAnswers1: EventShiftAnswer[] = [];
-    for (let j = 0; j < ((i + 1) * 243) % 4; j += 1) {
-      const shift = eventShifts[((i + j) * 13) % (eventShifts.length)];
-      const usersWithRole = roleAssignments.filter((r) => shift.roles.some((r2) => r2.id === r.roleId));
-      await Promise.all(usersWithRole.map(async (r, k) => {
-        const answer = await createEventShiftAnswer(r.user, event, shift, k);
-        answer.event = event;
-        answer.shift = shift;
-        eventShifts1.push(shift);
-        eventShiftAnswers.push(answer);
-        eventShiftAnswers1.push(answer);
-      }));
-    }
-
-    event.shifts = eventShifts1.filter((s, j, all) => j === all.findIndex((s2) => s.id === s2.id));
-    await event.save();
-
-    event.answers = eventShiftAnswers1;
-    events.push(event);
-  }
-
-  return { roles, roleAssignments, events, eventShifts, eventShiftAnswers };
 }
 
 /**
@@ -914,7 +802,7 @@ export default async function seedDatabase(beginDate?: Date, endDate?: Date): Pr
   const { pointsOfSale, pointOfSaleRevisions } = await new PointOfSaleSeeder().seedPointsOfSale(
     users, containerRevisions,
   );
-  const { roles, roleAssignments, events, eventShifts, eventShiftAnswers } = await seedEvents(users);
+  const { roles, roleAssignments, events, eventShifts, eventShiftAnswers } = await new EventSeeder().seedEvents(users);
   const { transactions } = await seedTransactions(users, pointOfSaleRevisions, beginDate, endDate);
   const transfers = await seedTransfers(users, beginDate, endDate);
   const { fines, fineTransfers, userFineGroups } = await seedFines(users, transactions, transfers);
