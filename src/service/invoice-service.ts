@@ -56,7 +56,7 @@ import { parseUserToBaseResponse } from '../helpers/revision-to-response';
 import SubTransaction from '../entity/transactions/sub-transaction';
 import InvoiceUser, { InvoiceUserDefaults } from '../entity/user/invoice-user';
 import Transfer from '../entity/transactions/transfer';
-import WithManager from '../with-manager';
+import WithManager from '../database/with-manager';
 
 export interface InvoiceFilterParameters {
   /**

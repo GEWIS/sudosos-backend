@@ -32,7 +32,7 @@ import { parseUserToBaseResponse } from '../helpers/revision-to-response';
 import { RequestWithToken } from '../middleware/token-middleware';
 import { asDate, asNumber } from '../helpers/validators';
 import { SalesReportService } from './report-service';
-import WithManager from '../with-manager';
+import WithManager from '../database/with-manager';
 
 export interface SellerPayoutFilterParameters {
   sellerPayoutId?: number;

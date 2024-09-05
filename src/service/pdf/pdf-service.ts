@@ -27,7 +27,7 @@ import { EntityManager } from 'typeorm';
 import FileService from '../file-service';
 import { PdfError } from '../../errors';
 import { IPdfAble, IUnstoredPdfAble } from '../../entity/file/pdf-able';
-import WithManager from '../../with-manager';
+import WithManager from '../../database/with-manager';
 
 interface IRouteParams {
   params: any;

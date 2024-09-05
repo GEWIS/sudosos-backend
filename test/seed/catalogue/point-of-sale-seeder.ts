@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import WithManager from '../../../src/with-manager';
+import WithManager from '../../../src/database/with-manager';
 import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
 import ContainerRevision from '../../../src/entity/container/container-revision';

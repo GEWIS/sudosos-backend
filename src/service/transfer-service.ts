@@ -33,7 +33,7 @@ import DebtorService from './debtor-service';
 import VatGroup from '../entity/vat-group';
 import { toMySQLString } from '../helpers/timestamps';
 import WriteOffService from './write-off-service';
-import WithManager from '../with-manager';
+import WithManager from '../database/with-manager';
 
 export interface TransferFilterParameters {
   id?: number;

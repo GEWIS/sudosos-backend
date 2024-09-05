@@ -41,7 +41,7 @@ import VatGroup from '../entity/vat-group';
 import ServerSettingsStore from '../server-settings/server-settings-store';
 import Transfer from '../entity/transactions/transfer';
 import { ISettings } from '../entity/server-setting';
-import WithManager from '../with-manager';
+import WithManager from '../database/with-manager';
 
 export interface WriteOffFilterParameters {
   /**

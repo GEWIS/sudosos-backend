@@ -53,7 +53,7 @@ import {
   ReportVatEntry,
   SalesReport,
 } from '../entity/report/report';
-import WithManager from '../with-manager';
+import WithManager from '../database/with-manager';
 
 export interface ReportParameters {
   fromDate: Date,

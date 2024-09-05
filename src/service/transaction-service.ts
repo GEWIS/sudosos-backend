@@ -72,7 +72,7 @@ import {
   reduceMapToVatEntries,
 } from '../helpers/transaction-mapper';
 import ProductCategoryService from './product-category-service';
-import WithManager from '../with-manager';
+import WithManager from '../database/with-manager';
 
 export interface TransactionFilterParameters {
   transactionId?: number | number[],

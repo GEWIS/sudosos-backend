@@ -22,7 +22,7 @@ import User, { UserType } from '../../../src/entity/user/user';
 import { calculateBalance } from '../../helpers/balance';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import dinero from 'dinero.js';
-import WithManager from '../../../src/with-manager';
+import WithManager from '../../../src/database/with-manager';
 
 export default class SellerPayoutSeeder extends WithManager {
   public async seed(

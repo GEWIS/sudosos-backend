@@ -25,7 +25,7 @@ import {
 import ProductCategoryRequest from '../controller/request/product-category-request';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import { PaginationParameters } from '../helpers/pagination';
-import WithManager from '../with-manager';
+import WithManager from '../database/with-manager';
 
 /**
  * Define productCategory filtering parameters used to filter query results.

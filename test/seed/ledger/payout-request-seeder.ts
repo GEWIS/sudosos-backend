@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import WithManager from '../../../src/with-manager';
+import WithManager from '../../../src/database/with-manager';
 import User, { UserType } from '../../../src/entity/user/user';
 import PayoutRequest from '../../../src/entity/transactions/payout/payout-request';
 import Transfer from '../../../src/entity/transactions/transfer';

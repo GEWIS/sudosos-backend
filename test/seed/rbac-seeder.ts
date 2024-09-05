@@ -24,7 +24,7 @@ import { RoleDefinition } from '../../src/rbac/role-definitions';
 import JsonWebToken from '../../src/authentication/json-web-token';
 import RBACService from '../../src/service/rbac-service';
 import RoleUserType from '../../src/entity/rbac/role-user-type';
-import WithManager from '../../src/with-manager';
+import WithManager from '../../src/database/with-manager';
 
 interface SeedRoleDefinition extends RoleDefinition {
   /**

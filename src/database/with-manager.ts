@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { EntityManager } from 'typeorm';
-import { AppDataSource } from './database/database';
+import { AppDataSource } from './database';
 
 export default abstract class WithManager {
   protected manager: EntityManager;

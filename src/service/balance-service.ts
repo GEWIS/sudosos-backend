@@ -24,7 +24,7 @@ import { Dinero } from 'dinero.js';
 import { OrderingDirection } from '../helpers/ordering';
 import { defaultPagination, PaginationParameters } from '../helpers/pagination';
 import { UserType } from '../entity/user/user';
-import WithManager from '../with-manager';
+import WithManager from '../database/with-manager';
 
 export enum BalanceOrderColumn {
   ID = 'id',

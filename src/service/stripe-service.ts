@@ -35,7 +35,7 @@ import BalanceResponse from '../controller/response/balance-response';
 import { StripeRequest } from '../controller/request/stripe-request';
 import StripePaymentIntent from '../entity/stripe/stripe-payment-intent';
 import { asNumber } from '../helpers/validators';
-import WithManager from '../with-manager';
+import WithManager from '../database/with-manager';
 
 export const STRIPE_API_VERSION = '2024-06-20';
 
