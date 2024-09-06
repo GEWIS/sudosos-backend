@@ -21,7 +21,6 @@ import {
   BaseInvoice, CreateInvoiceParams, CreateInvoiceRequest, UpdateInvoiceParams,
 } from '../invoice-request';
 import {
-  createArrayRule,
   Specification,
   toFail,
   toPass,
@@ -29,9 +28,8 @@ import {
   ValidationError,
 } from '../../../helpers/specification-validation';
 import Transaction from '../../../entity/transactions/transaction';
-import InvoiceEntryRequest from '../invoice-entry-request';
 import stringSpec from './string-spec';
-import { positiveNumber, userMustExist } from './general-validators';
+import { userMustExist } from './general-validators';
 import {
   INVALID_INVOICE_ID,
   INVALID_TRANSACTION_IDS,
@@ -107,22 +105,12 @@ async function differentState<T extends UpdateInvoiceParams>(p: T) {
 }
 
 /**
- * Specification for an InvoiceEntryRequest.
- */
-const invoiceEntryRequestSpec: () => Specification<InvoiceEntryRequest, ValidationError> = () => [
-  [[positiveNumber], 'amount', new ValidationError('amount:')],
-  [stringSpec(), 'description', new ValidationError('description:')],
-];
-
-/**
  * Specification for an InvoiceRequest
  */
 function baseInvoiceRequestSpec<T extends BaseInvoice>(): Specification<T, ValidationError> {
   return [
     validTransactionIds,
     [[userMustExist], 'forId', new ValidationError('forId:')],
-    // We have only defined a single item rule, so we use this to apply it to an array,
-    [[createArrayRule(invoiceEntryRequestSpec())], 'customEntries', new ValidationError('Custom entries:')],
   ];
 }
 

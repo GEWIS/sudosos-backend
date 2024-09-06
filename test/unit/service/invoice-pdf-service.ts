@@ -26,18 +26,20 @@ import { Connection, IsNull } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import User from '../../../src/entity/user/user';
-import Database from '../../../src/database/database';
+import Database, { AppDataSource } from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
 import { json } from 'body-parser';
 import FileService from '../../../src/service/file-service';
-import InvoiceEntry from '../../../src/entity/invoices/invoice-entry';
-import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
-import Transfer from '../../../src/entity/transactions/transfer';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { INVOICE_PDF_LOCATION } from '../../../src/files/storage';
 import { InvoiceSeeder, TransactionSeeder, UserSeeder } from '../../seed';
+import InvoiceService from '../../../src/service/invoice-service';
+import { createInvoiceWithTransfers } from './invoice-service';
+import { inUserContext, UserFactory } from '../../helpers/user-factory';
+import { InvoiceState } from '../../../src/entity/invoices/invoice-status';
+import { subTransactionRowToProduct } from '../../../src/helpers/pdf';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -85,7 +87,7 @@ describe('InvoicePdfService', async (): Promise<void> => {
       invoices,
       pdfParams,
       fileService,
-      client:  new Client('url', { fetch }),
+      client: new Client('url', { fetch }),
     };
   });
 
@@ -208,93 +210,37 @@ describe('InvoicePdfService', async (): Promise<void> => {
     });
   });
 
-  describe('entriesToProductsPricing', () => {
-    it('should correctly convert invoice entries to products and total pricing', async () => {
-      const invoice: Invoice = new Invoice();
-      const total = 500 + 3 * 1090 + 5 * 1210;
-      const lowVat = 270;
-      const highVat = 1050;
-      invoice.transfer = { amountInclVat: DineroTransformer.Instance.from(total) } as Transfer;
+  // TODO: test invoiceToPricing and subTransactionRowToProduct
+  describe('invoiceToPricing', () => {
+    it('should return the correct pricing for an invoice', async () => {
+      const invoice = ctx.invoices[0];
+      const pricing = invoice.pdfService.invoiceToPricing(invoice);
 
-      invoice.invoiceEntries = [{
-        description: 'Product no VAT',
-        amount: 1,
-        priceInclVat: DineroTransformer.Instance.from(500),
-        vatPercentage: 0,
-      } as InvoiceEntry,
-      {
-        description: 'Product low VAT',
-        amount: 3,
-        priceInclVat: DineroTransformer.Instance.from(1090),
-        vatPercentage: 9,
-      } as InvoiceEntry,
-      {
-        description: 'Product high VAT',
-        amount: 5,
-        priceInclVat: DineroTransformer.Instance.from(1210),
-        vatPercentage: 21,
-      } as InvoiceEntry,
-      ];
+      let totalExclVat = 0, totalInclVat = 0;
+      invoice.subTransactionRows.forEach((row) => {
+        totalExclVat += Math.round(row.product.priceInclVat.getAmount() / (1 + (row.product.vat.percentage / 100))) * row.amount;
+        totalInclVat += row.product.priceInclVat.getAmount() * row.amount;
+      });
 
-      const result = invoice.pdfService.entriesToProductsPricing(invoice);
-      expect(result.pricing.inclVat).to.eq(total);
-      expect(result.pricing.lowVat).to.eq(lowVat);
-      expect(result.pricing.highVat).to.eq(highVat);
-      expect(result.pricing.exclVat).to.eq(total - lowVat - highVat);
-
-      const results = [{
-        name: 'Product high VAT',
-        details: undefined,
-        summary: '',
-        specification: undefined,
-        pricing: {
-          basePrice: 1210,
-          discount: undefined,
-          vatAmount: 21,
-          vatCategory: 'ZERO',
-          quantity: 5,
-        },
-      } as any,
-      {
-        name: 'Product low VAT',
-        details: undefined,
-        summary: '',
-        specification: undefined,
-        pricing: {
-          basePrice: 1090,
-          discount: undefined,
-          vatAmount: 9,
-          vatCategory: 'ZERO',
-          quantity: 3,
-        },
-      } as any,
-      {
-        name: 'Product no VAT',
-        details: undefined,
-        summary: '',
-        specification: undefined,
-        pricing: {
-          basePrice: 500,
-          discount: undefined,
-          vatAmount: 0,
-          vatCategory: 'ZERO',
-          quantity: 1,
-        },
-      } as any];
-      expect(result.products).to.deep.equalInAnyOrder(results);
-    });
-    it('should throw an error for unsupported VAT percentages', async () => {
-      const invoice: Invoice = new Invoice();
-      invoice.invoiceEntries = [{
-        description: 'Product unsupported VAT',
-        amount: 1,
-        priceInclVat: DineroTransformer.Instance.from(500),
-        vatPercentage: 5,
-      } as InvoiceEntry];
-
-      expect(() => invoice.pdfService.entriesToProductsPricing(invoice)).to.Throw('Unsupported vat percentage 5 during pdf generation.');
+      expect(pricing.exclVat).to.eq(totalExclVat);
+      expect(pricing.inclVat).to.eq(totalInclVat);
+      expect(pricing.exclVat + pricing.lowVat + pricing.highVat).to.eq(totalInclVat);
     });
   });
+  describe('subTransactionRowToProduct', () => {
+    it('should return the correct product for a subTransactionRow', async () => {
+      const invoice = ctx.invoices[0];
+      const subTransactionRow = invoice.subTransactionRows[0];
+
+      const product = subTransactionRowToProduct(subTransactionRow);
+      expect(product.name).to.eq(subTransactionRow.product.name);
+      expect(product.pricing.vatAmount).to.eq(subTransactionRow.product.vat.percentage);
+      expect(product.pricing.quantity).to.eq(subTransactionRow.amount);
+      expect(product.pricing.basePrice).to.eq(subTransactionRow.product.priceInclVat.getAmount());
+      expect(product.name).to.eq(subTransactionRow.product.name);
+    });
+  });
+
 
   describe('getInvoiceParameters', () => {
     it('should return all required parameters for generating an invoice PDF', async () => {
@@ -323,7 +269,9 @@ describe('InvoicePdfService', async (): Promise<void> => {
         status: 200,
       });
 
-      const invoice = await Invoice.findOne({ where: { pdf: IsNull() }, relations: ['to', 'invoiceStatus', 'transfer', 'transfer.to', 'transfer.from', 'pdf', 'invoiceEntries'] });
+      const options = InvoiceService.getOptions({ returnInvoiceEntries: true });
+      const invoice = await Invoice.findOne({ ...options, where: { pdf: IsNull() } });
+
       uploadInvoiceStub.restore();
       createFileStub.resolves({
         downloadName: 'test',
@@ -339,10 +287,32 @@ describe('InvoicePdfService', async (): Promise<void> => {
     });
     it('should throw an error if PDF generation fails', async () => {
       generateInvoiceStub.rejects(new Error('Failed to generate PDF'));
-
-      const invoice = await Invoice.findOne({ where: { id: 1 }, relations: ['to', 'invoiceStatus', 'transfer', 'transfer.to', 'transfer.from', 'pdf', 'invoiceEntries'] });
+      const options = InvoiceService.getOptions({ returnInvoiceEntries: true });
+      const invoice = await Invoice.findOne({ ...options, where: { pdf: IsNull() } });
       invoice.pdfService = pdfService;
       await expect(invoice.createPdf()).to.be.rejectedWith();
+    });
+  });
+  describe('PDF of deleted invoice', () => {
+    it('should return the correct PDF', async () => {
+      await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
+        const invoice = await createInvoiceWithTransfers(debtor.id, creditor.id, 1);
+        const hash = await invoice.getPdfParamHash();
+        const params = await invoice.pdfService.getParameters(invoice);
+
+        const updatedInvoice = await AppDataSource.manager.transaction(async (manager) => {
+          return new InvoiceService(manager).updateInvoice({
+            byId: invoice.to.id,
+            invoiceId: invoice.id,
+            state: InvoiceState.DELETED,
+          });
+        });
+
+        const newHash = await updatedInvoice.getPdfParamHash();
+        const newParams = await updatedInvoice.pdfService.getParameters(updatedInvoice);
+        expect(newHash).to.deep.equal(hash);
+        expect(newParams).to.deep.equal(params);
+      });
     });
   });
 });

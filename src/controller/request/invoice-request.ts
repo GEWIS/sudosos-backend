@@ -15,10 +15,8 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-
-
-import InvoiceEntryRequest from './invoice-entry-request';
 import { InvoiceState } from '../../entity/invoices/invoice-status';
+import { DineroObjectRequest } from './dinero-request';
 
 export interface BaseUpdateInvoice {
   addressee?: string,
@@ -30,6 +28,7 @@ export interface BaseUpdateInvoice {
   reference?: string;
   attention?: string,
   date?: string,
+  amount?: DineroObjectRequest,
 }
 
 export interface UpdateInvoiceParams extends BaseUpdateInvoice {
@@ -51,6 +50,7 @@ export interface UpdateInvoiceParams extends BaseUpdateInvoice {
  * @property {string} reference - Reference to use on the invoice.
  * @property {string} attention - Attention to use on the invoice.
  * @property {string} date - Date to use on the invoice.
+ * @property {DineroObjectRequest} amount - The amount to use on the invoice - should be equal to the sum of the transactions.
  */
 export interface UpdateInvoiceRequest extends BaseUpdateInvoice {
   byId?: number,
@@ -65,7 +65,6 @@ export interface InvoiceTransactionsRequest {
 
 export interface BaseInvoice {
   forId: number,
-  customEntries?: InvoiceEntryRequest[],
   transactionIDs: number[],
 }
 
@@ -79,6 +78,7 @@ export interface CreateInvoiceParams extends BaseInvoice {
   country: string;
   addressee: string,
   date: Date,
+  amount: DineroObjectRequest,
   attention?: string,
 }
 
@@ -89,7 +89,6 @@ export interface CreateInvoiceParams extends BaseInvoice {
  * @property {string} addressee - Name of the addressed, defaults to the fullname of the person being invoiced.
  * @property {string} description.required - The description of the invoice.
  * @property {string} reference.required - The reference of the invoice.
- * @property {Array<InvoiceEntryRequest>} customEntries - Custom entries to be added to the invoice
  * @property {Array<integer>} transactionIDs.required - IDs of the transactions to add to the Invoice.
  * @property {string} street - Street to use on the invoice, overwrites the users default.
  * @property {string} postalCode - Postal code to use on the invoice, overwrites the users default.
@@ -97,6 +96,7 @@ export interface CreateInvoiceParams extends BaseInvoice {
  * @property {string} country - Country to use on the invoice, overwrites the users default.
  * @property {string} date - Date to use on the invoice, overwrites the creation date.
  * @property {string} attention - Attention to use on the invoice.
+ * @property {DineroObjectRequest} amount.required - The amount to use on the invoice - should be equal to the sum of the transactions.
  */
 export interface CreateInvoiceRequest extends BaseInvoice {
   byId?: number,
@@ -109,4 +109,5 @@ export interface CreateInvoiceRequest extends BaseInvoice {
   attention?: string,
   reference: string,
   description: string,
+  amount: DineroObjectRequest,
 }
