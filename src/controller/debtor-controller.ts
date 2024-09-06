@@ -29,6 +29,7 @@ import { In } from 'typeorm';
 import { HandoutFinesRequest } from './request/debtor-request';
 import Fine from '../entity/fine/fine';
 import { ReturnFileType } from 'pdf-generator-client';
+import { PdfError } from '../errors';
 
 export default class DebtorController extends BaseController {
   private logger: Logger = log4js.getLogger(' DebtorController');
@@ -374,6 +375,10 @@ export default class DebtorController extends BaseController {
       res.send(buffer);
     } catch (error) {
       this.logger.error('Could not get fine report pdf:', error);
+      if (error instanceof PdfError) {
+        res.status(502).json('PDF Generator service failed.');
+        return;
+      }
       res.status(500).json('Internal server error.');
     }
   }

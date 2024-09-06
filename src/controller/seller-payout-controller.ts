@@ -26,6 +26,7 @@ import { PaginatedSellerPayoutResponse } from './response/seller-payout-response
 import { CreateSellerPayoutRequest, UpdateSellerPayoutRequest } from './request/seller-payout-request';
 import User from '../entity/user/user';
 import ReportService, { SalesReportService } from '../service/report-service';
+import { PdfError } from '../errors';
 
 export default class SellerPayoutController extends BaseController {
   private logger: Logger = log4js.getLogger(' SellerPayoutController');
@@ -216,6 +217,10 @@ export default class SellerPayoutController extends BaseController {
       res.status(200).json({ pdf: pdf.downloadName });
     } catch (error) {
       this.logger.error('Could not get sales report for seller payout:', error);
+      if (error instanceof PdfError) {
+        res.status(502).json('PDF Generator service failed.');
+        return;
+      }
       res.status(500).json('Internal server error.');
     }
   }
