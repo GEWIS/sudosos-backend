@@ -341,6 +341,7 @@ export default class InvoiceController extends BaseController {
    * @tags invoices - Operations of the invoices controller
    * @security JWT
    * @param {integer} id.path.required - The id of the invoice to return
+   * @param {boolean} force.query - Force creation of pdf
    * @return {string} 404 - Invoice not found
    * @return {string} 200 - The pdf location information.
    * @return {string} 500 - Internal server error
@@ -357,7 +358,7 @@ export default class InvoiceController extends BaseController {
         return;
       }
 
-      const pdf = await invoice.getOrCreatePdf();
+      const pdf = await invoice.getOrCreatePdf(req.query.force === 'true');
 
       res.status(200).json({ pdf: pdf.downloadName });
     } catch (error) {
