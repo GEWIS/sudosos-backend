@@ -41,6 +41,9 @@ export default class SubTransactionRow extends BaseEntity {
   })
   public amount: number;
 
+  @Column({ type: 'integer', nullable: true })
+  public invoiceId?: number;
+
   @ManyToOne(() => Invoice, { nullable: true, onDelete: 'RESTRICT' })
   @JoinColumn()
   public invoice?: Invoice;

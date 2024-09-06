@@ -28,11 +28,9 @@ import Database, { AppDataSource } from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
 import {
   BaseInvoiceResponse,
-  InvoiceEntryResponse,
   InvoiceResponse,
 } from '../../../src/controller/response/invoice-response';
 import InvoiceService from '../../../src/service/invoice-service';
-import InvoiceEntry from '../../../src/entity/invoices/invoice-entry';
 import { CreateInvoiceParams, UpdateInvoiceParams } from '../../../src/controller/request/invoice-request';
 import { TransferResponse } from '../../../src/controller/response/transfer-response';
 import TransactionService from '../../../src/service/transaction-service';
@@ -50,24 +48,10 @@ import { InvoiceSeeder, TransactionSeeder, UserSeeder } from '../../seed';
 
 chai.use(deepEqualInAnyOrder);
 
-function baseKeyMapping(invoice: BaseInvoiceResponse | Invoice) {
+function keyMapping(invoice: BaseInvoiceResponse | Invoice) {
   return {
     id: invoice.id,
     toId: invoice.to.id,
-  };
-}
-
-function keyMapping(invoice: InvoiceResponse | Invoice) {
-  return {
-    ...baseKeyMapping(invoice),
-    entries: invoice.invoiceEntries.map((entry) => ({
-      amount: entry.amount,
-      description: entry.description,
-      priceInclVat:
-        invoice instanceof Invoice
-          ? (entry as InvoiceEntry).priceInclVat.getAmount()
-          : (entry as InvoiceEntryResponse).priceInclVat.amount,
-    })),
   };
 }
 
@@ -80,7 +64,7 @@ function returnsAll(response: T[], superset: Invoice[], mapping: any) {
 export async function
 createInvoiceWithTransfers(debtorId: number, creditorId: number,
   transactionCount: number) {
-  const { transactions } = await createTransactions(debtorId, creditorId, transactionCount);
+  const { transactions, total } = await createTransactions(debtorId, creditorId, transactionCount);
 
   const createInvoiceRequest: CreateInvoiceParams = {
     city: 'city',
@@ -94,6 +78,11 @@ createInvoiceWithTransfers(debtorId: number, creditorId: number,
     forId: debtorId,
     date: new Date(),
     transactionIDs: transactions.map((t) => t.tId),
+    amount: {
+      amount: total,
+      currency: 'EUR',
+      precision: 2,
+    },
   };
 
   const creditorBalance = await new BalanceService().getBalance(creditorId);
@@ -147,7 +136,7 @@ describe('InvoiceService', () => {
   describe('getInvoices function', () => {
     it('should return all invoices with no input specification', async () => {
       const res = (await new InvoiceService().getInvoices());
-      returnsAll(res, ctx.invoices, baseKeyMapping);
+      returnsAll(res, ctx.invoices, keyMapping);
     });
     it('should return all invoices and their entries if specified', async () => {
       const res: Invoice[] = (
@@ -160,7 +149,7 @@ describe('InvoiceService', () => {
       const res: Invoice[] = (
         await new InvoiceService().getInvoices({ invoiceId })
       );
-      returnsAll(res, [ctx.invoices[0]], baseKeyMapping);
+      returnsAll(res, [ctx.invoices[0]], keyMapping);
     });
   });
   describe('getDefaultInvoiceParams function', () => {
@@ -194,7 +183,7 @@ describe('InvoiceService', () => {
       expect(defaults.country).to.eq('Netherlands');
     });
   });
-  describe('createTransferFromTransactions function', () => {
+  describe('createTransfer function', () => {
     it('should return a correct Transfer', async () => {
       const toId = (await User.findOne({ where: {} })).id;
       const transactions: BaseTransactionResponse[] = (
@@ -207,8 +196,9 @@ describe('InvoiceService', () => {
 
       expect(transactions).to.not.be.empty;
       const transfer: TransferResponse = (
-        await new InvoiceService().createTransferFromTransactions(toId,
-          await AppDataSource.manager.find(Transaction, { where: { id: In(transactions.map((t) => t.id)) } })));
+        await new InvoiceService().createTransfer(toId,
+          await AppDataSource.manager.find(Transaction, { where: { id: In(transactions.map((t) => t.id)) } }),
+          { amount: value, currency: 'EUR', precision: 2 }));
       expect(transfer.amountInclVat.amount).to.be.equal(value);
       expect(transfer.to.id).to.be.equal(toId);
     });
@@ -275,6 +265,11 @@ describe('InvoiceService', () => {
             forId: debtor.id,
             date: new Date(),
             transactionIDs: (transactions as TransactionResponse[]).map((t) => t.id),
+            amount: {
+              amount: total,
+              currency: 'EUR',
+              precision: 2,
+            },
           };
 
           const invoice = await AppDataSource.manager.transaction(async (manager) => {
@@ -315,6 +310,14 @@ describe('InvoiceService', () => {
             transactionIDs: chosenTransactions.map(
               (transaction) => transaction.tId,
             ),
+            amount: {
+              amount: chosenTransactions.reduce(
+                (acc, curr) => acc + curr.amount,
+                0,
+              ),
+              currency: 'EUR',
+              precision: 2,
+            },
           };
 
           const invoice = await AppDataSource.manager.transaction(async (manager) => {
@@ -335,7 +338,7 @@ describe('InvoiceService', () => {
         async (debtor: User, creditor: User) => {
           const transactionRequests: TransactionRequest[] =
                         await createTransactionRequest(debtor.id, creditor.id, 2);
-          const { transactions } = await requestToTransaction(
+          const { transactions, total } = await requestToTransaction(
             transactionRequests,
           );
 
@@ -351,6 +354,11 @@ describe('InvoiceService', () => {
             forId: debtor.id,
             date: new Date(),
             transactionIDs: transactions.map((t) => t.tId),
+            amount: {
+              amount: total,
+              currency: 'EUR',
+              precision: 2,
+            },
           };
 
           const invoice = await AppDataSource.manager.transaction(async (manager) => {
@@ -624,7 +632,7 @@ describe('InvoiceService', () => {
         async (debtor: User, creditor: User) => {
           const transactionRequests: TransactionRequest[] =
                         await createTransactionRequest(debtor.id, creditor.id, 2);
-          const { transactions } = await requestToTransaction(
+          const { transactions, total } = await requestToTransaction(
             transactionRequests,
           );
 
@@ -640,11 +648,17 @@ describe('InvoiceService', () => {
             forId: debtor.id,
             date: new Date(),
             transactionIDs: transactions.map((t) => t.tId),
+            amount: {
+              amount: total,
+              currency: 'EUR',
+              precision: 2,
+            },
           };
 
           const invoice = await AppDataSource.manager.transaction(async (manager) => {
             return new InvoiceService(manager).createInvoice(createInvoiceRequest);
           });
+          const oldSubtransactionRows = invoice.subTransactionRows;
           let invoiceTransactions = await Transaction.find({
             where: {
               id: In(transactions.map((transaction) => transaction.tId)),
@@ -664,13 +678,14 @@ describe('InvoiceService', () => {
           });
 
           const { addressee, description } = invoice;
-          const updatedInvoice = await AppDataSource.manager.transaction(async (manager) => {
+          const updatedInvoice = await AppDataSource.manager.transaction( (manager) => {
             return new InvoiceService(manager).updateInvoice(
               makeParamsState(addressee, description, creditor, invoice.id, InvoiceState.DELETED),
             );
           });
           expect(InvoiceService.isState(updatedInvoice, InvoiceState.DELETED)).to.be.true;
-
+          expect(updatedInvoice.subTransactionRowsDeletedInvoice.map((str) => str.id))
+            .to.deep.equalInAnyOrder(oldSubtransactionRows.map((str) => str.id));
           invoiceTransactions = await Transaction.find({
             where: {
               id: In(transactions.map((transaction) => transaction.tId)),
@@ -690,6 +705,26 @@ describe('InvoiceService', () => {
           });
         },
       );
+    });
+    it('should move invoice entries to deleted sub transaction rows after deleting invoice', async () => {
+      await inUserContext(
+        await (await UserFactory()).clone(2),
+        async (debtor: User, creditor: User) => {
+          const invoice = await createInvoiceWithTransfers(debtor.id, creditor.id, 1);
+          const subTransactionRows = invoice.subTransactionRows;
+
+          const { addressee, description } = invoice;
+
+          const updatedInvoice = await AppDataSource.manager.transaction(async (manager) => {
+            return new InvoiceService(manager).updateInvoice(
+              makeParamsState(addressee, description, creditor, invoice.id, InvoiceState.DELETED),
+            );
+          });
+
+          expect(subTransactionRows.map((str) => str.id))
+            .to.deep.equalInAnyOrder(updatedInvoice.subTransactionRowsDeletedInvoice.map((str) => str.id));
+          expect(InvoiceService.isState(updatedInvoice, InvoiceState.DELETED)).to.be.true;
+        });
     });
   });
 });

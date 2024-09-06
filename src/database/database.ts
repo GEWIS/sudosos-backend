@@ -44,7 +44,6 @@ import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision'
 import ProductOrdering from '../entity/point-of-sale/product-ordering';
 import Balance from '../entity/transactions/balance';
 import InvoiceUser from '../entity/user/invoice-user';
-import InvoiceEntry from '../entity/invoices/invoice-entry';
 import Invoice from '../entity/invoices/invoice';
 import InvoiceStatus from '../entity/invoices/invoice-status';
 import BaseFile from '../entity/file/base-file';
@@ -94,6 +93,7 @@ import { InvoiceAsTopups1724506999318 } from '../migrations/1724506999318-invoic
 import { SellerPayouts1724855153990 } from '../migrations/1724855153990-seller-payouts';
 import SellerPayoutPdf from '../entity/file/seller-payout-pdf';
 import { UserTypeEnums1725196803203 } from '../migrations/1725196803203-user-type-enums';
+import { CustomInvoiceEntries1725388477226 } from '../migrations/1725388477226-custom-invoice-entries';
 
 // We need to load the dotenv to prevent the env from being undefined.
 dotenv.config();
@@ -127,6 +127,7 @@ const options: DataSourceOptions = {
     InvoiceAsTopups1724506999318,
     SellerPayouts1724855153990,
     UserTypeEnums1725196803203,
+    CustomInvoiceEntries1725388477226,
   ],
   extra: {
     authPlugins: {
@@ -176,7 +177,6 @@ const options: DataSourceOptions = {
     ProductOrdering,
     Balance,
     InvoiceUser,
-    InvoiceEntry,
     Invoice,
     InvoiceStatus,
     InvoicePdf,

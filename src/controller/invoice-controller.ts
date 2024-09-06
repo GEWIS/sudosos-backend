@@ -191,13 +191,10 @@ export default class InvoiceController extends BaseController {
         res.status(404).json('Unknown invoice ID.');
         return;
       }
+      const response = returnInvoiceEntries
+        ? InvoiceService.asInvoiceResponse(invoice)
+        : InvoiceService.asBaseInvoiceResponse(invoice);
 
-      let response;
-      if (returnInvoiceEntries) {
-        response = await new InvoiceService().asInvoiceResponse(invoice);
-      } else {
-        response = InvoiceService.asBaseInvoiceResponse(invoice);
-      }
       res.json(response);
     } catch (error) {
       this.logger.error('Could not return invoice:', error);
@@ -240,15 +237,9 @@ export default class InvoiceController extends BaseController {
         return;
       }
 
-      if (params.customEntries) {
-        res.status(400).json('Custom entries are not supported anymore.');
-        return;
-      }
-
-
       const invoice: Invoice = await AppDataSource.manager.transaction(async (manager) =>
         new InvoiceService(manager).createInvoice(params));
-      res.json(await new InvoiceService().asInvoiceResponse(invoice));
+      res.json(InvoiceService.asInvoiceResponse(invoice));
     } catch (error) {
       if (error instanceof NotImplementedError) {
         res.status(501).json(error.message);
@@ -351,7 +342,7 @@ export default class InvoiceController extends BaseController {
     this.logger.trace('Get Invoice PDF', id, 'by user', req.token.user);
 
     try {
-      const invoice = await Invoice.findOne(InvoiceService.getOptions({ invoiceId }) );
+      const invoice = await Invoice.findOne(InvoiceService.getOptions({ invoiceId, returnInvoiceEntries: true }) );
       if (!invoice) {
         res.status(404).json('Invoice not found.');
         return;

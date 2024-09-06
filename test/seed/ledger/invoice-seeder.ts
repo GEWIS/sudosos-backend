@@ -17,22 +17,17 @@
  */
 import WithManager from '../../../src/database/with-manager';
 import Transaction from '../../../src/entity/transactions/transaction';
-import InvoiceEntry from '../../../src/entity/invoices/invoice-entry';
 import User, { UserType } from '../../../src/entity/user/user';
 import Invoice from '../../../src/entity/invoices/invoice';
 import Transfer from '../../../src/entity/transactions/transfer';
 import dinero from 'dinero.js';
 import InvoiceStatus, { InvoiceState } from '../../../src/entity/invoices/invoice-status';
 import { addDays } from 'date-fns';
+import SubTransactionRow from '../../../src/entity/transactions/sub-transaction-row';
 
 export default class InvoiceSeeder extends WithManager {
-  private defineInvoiceEntries(
-    invoiceId: number,
-    startEntryId: number,
-    transactions: Transaction[],
-  ): { invoiceEntries: InvoiceEntry[], cost: number } {
-    const invoiceEntries: InvoiceEntry[] = [];
-    let entryId = startEntryId;
+  private defineInvoiceEntries(invoiceId: number, startEntryId: number,
+    transactions: Transaction[]): { subTransactionRows: SubTransactionRow[], cost: number } {
     const subTransactions = (
       transactions.map((t) => t.subTransactions).reduce((acc, tSub) => acc.concat(tSub)));
 
@@ -44,17 +39,9 @@ export default class InvoiceSeeder extends WithManager {
     let cost = 0;
     for (let i = 0; i < subTransactionRows.length; i += 1) {
       cost += subTransactionRows[i].amount * subTransactionRows[i].product.priceInclVat.getAmount();
-      invoiceEntries.push(Object.assign(new InvoiceEntry(), {
-        id: entryId,
-        invoice: invoiceId,
-        description: subTransactionRows[i].product.name,
-        amount: subTransactionRows[i].amount,
-        priceInclVat: subTransactionRows[i].product.priceInclVat,
-        vatPercentage: subTransactionRows[i].product.vat.percentage,
-      }));
-      entryId += 1;
+      subTransactionRows[i].invoiceId = invoiceId;
     }
-    return { invoiceEntries, cost };
+    return { subTransactionRows, cost };
   }
 
   public async seed(
@@ -68,23 +55,23 @@ export default class InvoiceSeeder extends WithManager {
 
     const invoiceUsers = users.filter((u) => u.type === UserType.INVOICE);
     let invoiceTransfers: Transfer[] = [];
-    let invoiceEntry: InvoiceEntry[] = [];
+    let rows: SubTransactionRow[] = [];
 
     for (let i = 0; i < invoiceUsers.length; i += 1) {
       const invoiceTransactions = transactions.filter((t) => t.from.id === invoiceUsers[i].id);
       const to: User = invoiceUsers[i];
 
-      const { invoiceEntries, cost } = (
-        this.defineInvoiceEntries(i + 1, 1 + invoiceEntry.length, invoiceTransactions));
+      const { subTransactionRows, cost } = (
+        this.defineInvoiceEntries(i + 1, 1, invoiceTransactions));
       // Edgecase in the seeder
       if (cost === 0) {
         // eslint-disable-next-line no-continue
         continue;
       }
 
-      invoiceEntry = invoiceEntry.concat(invoiceEntries);
+      rows = rows.concat(subTransactionRows);
 
-      const transfer = await this.manager.save(Transfer, {
+      const transfer = Object.assign(new Transfer(), {
         from: null,
         to,
         amountInclVat: dinero({
@@ -92,6 +79,7 @@ export default class InvoiceSeeder extends WithManager {
         }),
         description: `Invoice Transfer for ${cost}`,
       });
+      await this.manager.save(Transfer, transfer);
 
       const invoice = Object.assign(new Invoice(), {
         id: i + 1,
@@ -105,12 +93,12 @@ export default class InvoiceSeeder extends WithManager {
         description: `Invoice #${i}`,
         transfer,
         date: new Date(),
-        invoiceEntries,
+        subTransactionRows,
         invoiceStatus: [],
       });
-      await this.manager.save(Invoice, invoice);
       transfer.invoice = invoice;
 
+      await this.manager.save(Invoice, invoice);
       let status = Object.assign(new InvoiceStatus(), {
         id: i + 1,
         invoice,
@@ -123,8 +111,8 @@ export default class InvoiceSeeder extends WithManager {
       invoiceTransfers = invoiceTransfers.concat(transfer);
     }
 
+    await this.manager.save(SubTransactionRow, rows);
     await this.manager.save(Invoice, invoices);
-    await this.manager.save(InvoiceEntry, invoiceEntry);
 
     for (let i = 0; i < invoices.length; i += 1) {
       if (i % 2 === 0) {
