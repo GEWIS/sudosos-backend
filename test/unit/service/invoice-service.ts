@@ -45,6 +45,7 @@ import InvoiceUser from '../../../src/entity/user/invoice-user';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { InvoiceSeeder, TransactionSeeder, UserSeeder } from '../../seed';
+import Transfer from '../../../src/entity/transactions/transfer';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -518,6 +519,41 @@ describe('InvoiceService', () => {
 
           const fromDB = await Invoice.findOne({ where: { id: invoice.id } });
           expect(fromDB.reference).to.equal(validUpdateInvoiceParams.reference);
+        },
+      );
+    });
+    it('should update invoice transfer amount if update.amount is provided', async () => {
+      await inUserContext(
+        await (await UserFactory()).clone(2),
+        async (debtor: User, creditor: User) => {
+          const invoice = await createInvoiceWithTransfers(debtor.id, creditor.id, 1);
+          const validUpdateInvoiceParams = {
+            amount: {
+              amount: 100,
+              currency: 'EUR',
+              precision: 2,
+            },
+            invoiceId: invoice.id,
+            byId: creditor.id,
+          };
+          const updatedInvoice = await AppDataSource.manager.transaction(async (manager) => {
+            return new InvoiceService(manager).updateInvoice(
+              validUpdateInvoiceParams,
+            );
+          });
+          expect(updatedInvoice.transfer.amountInclVat.getAmount()).is.equal(validUpdateInvoiceParams.amount.amount);
+          expect(updatedInvoice.transfer.amountInclVat.getCurrency()).is.equal(validUpdateInvoiceParams.amount.currency);
+          expect(updatedInvoice.transfer.amountInclVat.getPrecision()).is.equal(validUpdateInvoiceParams.amount.precision);
+
+          const fromDB = await Invoice.findOne({ where: { id: invoice.id }, relations: ['transfer'] });
+          expect(fromDB.transfer.amountInclVat.getAmount()).is.equal(validUpdateInvoiceParams.amount.amount);
+          expect(fromDB.transfer.amountInclVat.getCurrency()).is.equal(validUpdateInvoiceParams.amount.currency);
+          expect(fromDB.transfer.amountInclVat.getPrecision()).is.equal(validUpdateInvoiceParams.amount.precision);
+
+          const transfer = await Transfer.findOne({ where: { id: fromDB.transfer.id } });
+          expect(transfer.amountInclVat.getAmount()).is.equal(validUpdateInvoiceParams.amount.amount);
+          expect(transfer.amountInclVat.getCurrency()).is.equal(validUpdateInvoiceParams.amount.currency);
+          expect(transfer.amountInclVat.getPrecision()).is.equal(validUpdateInvoiceParams.amount.precision);
         },
       );
     });
