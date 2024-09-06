@@ -188,7 +188,7 @@ export default class DebtorController extends BaseController {
    * @tags debtors - Operations of the debtor controller
    * @operationId calculateFines
    * @security JWT
-   * @param {Array<integer>} userTypes.query - List of all user types fines should be calculated for 1 (MEMBER), 2 (ORGAN), 3 (VOUCHER), 4 (LOCAL_USER), 5 (LOCAL_ADMIN), 6 (INVOICE), 7 (AUTOMATIC_INVOICE).
+   * @param {Array<string>} userTypes.query - List of all user types fines should be calculated for (MEMBER, ORGAN, VOUCHER, LOCAL_USER, LOCAL_ADMIN, INVOICE, AUTOMATIC_INVOICE).
    * @param {Array<string>} referenceDates.query.required - Dates to base the fines on. Every returned user has at
    *    least five euros debt on every reference date. The height of the fine is based on the first date in the array.
    * @return {Array<UserToFineResponse>} 200 - List of eligible fines
