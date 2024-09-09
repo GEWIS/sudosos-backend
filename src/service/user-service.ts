@@ -167,6 +167,8 @@ export default class UserService {
       }
     }
 
+    builder.orderBy('user.id', 'DESC');
+
     const users = await builder.limit(take).offset(skip).getRawMany();
     const count = await builder.getCount();
 
