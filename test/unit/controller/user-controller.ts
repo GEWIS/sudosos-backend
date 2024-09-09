@@ -2300,7 +2300,7 @@ describe('UserController', (): void => {
           .query(parameters);
         expect(res.status).to.equal(200);
       });
-      it('should return 500 if pdf generation fails', async () => {
+      it('should return 502 if pdf generation fails', async () => {
         clientStub.generateUserReport.rejects(new Error('Failed to generate PDF'));
         const id = 1;
         const parameters = { fromDate: '2021-01-01', tillDate: '2021-12-31' };
@@ -2310,7 +2310,7 @@ describe('UserController', (): void => {
           .get(`/users/${id}/transactions/sales/report/pdf`)
           .set('Authorization', `Bearer ${ctx.adminToken}`)
           .query(parameters);
-        expect(res.status).to.equal(500);
+        expect(res.status).to.equal(502);
       });
       it('should return 403 if not admin', async () => {
         const id = 2;
@@ -2393,7 +2393,7 @@ describe('UserController', (): void => {
           .query(parameters);
         expect(res.status).to.equal(200);
       });
-      it('should return 500 if pdf generation fails', async () => {
+      it('should return 502 if pdf generation fails', async () => {
         clientStub.generateUserReport.rejects(new Error('Failed to generate PDF'));
         const id = 1;
         const parameters = { fromDate: '2021-01-01', tillDate: '2021-12-31' };
@@ -2403,7 +2403,7 @@ describe('UserController', (): void => {
           .get(`/users/${id}/transactions/purchases/report/pdf`)
           .set('Authorization', `Bearer ${ctx.adminToken}`)
           .query(parameters);
-        expect(res.status).to.equal(500);
+        expect(res.status).to.equal(502);
       });
       it('should return 403 if not admin', async () => {
         const id = 2;

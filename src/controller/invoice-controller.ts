@@ -39,7 +39,7 @@ import { UpdateInvoiceUserRequest } from './request/user-request';
 import InvoiceUser from '../entity/user/invoice-user';
 import { parseInvoiceUserToResponse } from '../helpers/revision-to-response';
 import { AppDataSource } from '../database/database';
-import { NotImplementedError } from '../errors';
+import { NotImplementedError, PdfError } from '../errors';
 
 export default class InvoiceController extends BaseController {
   private logger: Logger = log4js.getLogger('InvoiceController');
@@ -354,6 +354,10 @@ export default class InvoiceController extends BaseController {
       res.status(200).json({ pdf: pdf.downloadName });
     } catch (error) {
       this.logger.error('Could get invoice PDF:', error);
+      if (error instanceof PdfError) {
+        res.status(502).json('PDF Generator service failed.');
+        return;
+      }
       res.status(500).json('Internal server error.');
     }
   }

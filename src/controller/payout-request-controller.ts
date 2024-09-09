@@ -30,6 +30,7 @@ import PayoutRequestRequest from './request/payout-request-request';
 import User from '../entity/user/user';
 import BalanceService from '../service/balance-service';
 import { PdfUrlResponse } from './response/simple-file-response';
+import { PdfError } from '../errors';
 
 export default class PayoutRequestController extends BaseController {
   private logger: Logger = log4js.getLogger('PayoutRequestController');
@@ -294,6 +295,10 @@ export default class PayoutRequestController extends BaseController {
       res.status(200).json({ pdf: pdf.downloadName } as PdfUrlResponse);
     } catch (error) {
       this.logger.error('Could get payout request PDF:', error);
+      if (error instanceof PdfError) {
+        res.status(502).json('PDF Generator service failed.');
+        return;
+      }
       res.status(500).json('Internal server error.');
     }
   }

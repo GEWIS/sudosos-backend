@@ -632,7 +632,7 @@ describe('DebtorController', () => {
         .query({ fromDate, toDate, fileType: 'PDF' });
       expect(res.status).to.equal(200);
     });
-    it('should return 500 if pdf generation fails', async () => {
+    it('should return 502 if pdf generation fails', async () => {
       clientStub.generateFineReport.rejects(new Error('Failed to generate PDF'));
       const fromDate = new Date();
       const toDate = new Date(fromDate.getTime() + 1000 * 60 * 60 * 24);
@@ -640,7 +640,7 @@ describe('DebtorController', () => {
         .get('/fines/report/pdf')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .query({ fromDate, toDate, fileType: 'PDF' });
-      expect(res.status).to.equal(500);
+      expect(res.status).to.equal(502);
     });
     it('should return 403 if not admin', async () => {
       const fromDate = new Date();

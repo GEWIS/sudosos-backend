@@ -61,6 +61,7 @@ import DebtorService from '../service/debtor-service';
 import ReportService, { BuyerReportService, SalesReportService } from '../service/report-service';
 import { ReturnFileType, UserReportParametersType } from 'pdf-generator-client';
 import { reportPDFhelper } from '../helpers/express-pdf';
+import { PdfError } from '../errors';
 
 export default class UserController extends BaseController {
   private logger: Logger = log4js.getLogger('UserController');
@@ -1181,6 +1182,10 @@ export default class UserController extends BaseController {
       await reportPDFhelper(res)(service, filters, description, user.id, UserReportParametersType.Sales, fileType);
     } catch (error) {
       this.logger.error('Could not get sales report:', error);
+      if (error instanceof PdfError) {
+        res.status(502).json('PDF Generator service failed.');
+        return;
+      }
       res.status(500).json('Internal server error.');
     }
   }
@@ -1226,6 +1231,10 @@ export default class UserController extends BaseController {
       await (reportPDFhelper(res))(service, filters, description, user.id, UserReportParametersType.Purchases, fileType);
     } catch (error) {
       this.logger.error('Could not get sales report:', error);
+      if (error instanceof PdfError) {
+        res.status(502).json('PDF Generator service failed.');
+        return;
+      }
       res.status(500).json('Internal server error.');
     }
   }
