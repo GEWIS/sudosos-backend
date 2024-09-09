@@ -53,6 +53,7 @@ import SubTransaction from '../entity/transactions/sub-transaction';
 import InvoiceUser, { InvoiceUserDefaults } from '../entity/user/invoice-user';
 import Transfer from '../entity/transactions/transfer';
 import WithManager from '../database/with-manager';
+import DineroTransformer from '../entity/transformer/dinero-transformer';
 
 export interface InvoiceFilterParameters {
   /**
@@ -267,7 +268,7 @@ export default class InvoiceService extends WithManager {
    * @param update
    */
   public async updateInvoice(update: UpdateInvoiceParams) {
-    const { byId, invoiceId, state, ...props } = update;
+    const { byId, invoiceId, state, amount,  ...props } = update;
     const base: Invoice = await this.manager.findOne(Invoice, InvoiceService.getOptions({ invoiceId }));
 
     // Return undefined if base does not exist.
@@ -292,6 +293,7 @@ export default class InvoiceService extends WithManager {
       });
     }
 
+    if (amount) await this.manager.update(Transfer, { id: base.transfer.id }, { amountInclVat: DineroTransformer.Instance.from(amount.amount) });
     await this.manager.update(Invoice, { id: base.id }, { ...props, date: props.date ? new Date(props.date) : undefined });
     // Return the newly updated Invoice.
 
