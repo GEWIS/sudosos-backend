@@ -165,6 +165,9 @@ export default async function createApp(): Promise<Application> {
   application.logger.level = process.env.LOG_LEVEL;
   application.logger.info('Starting application instance...');
 
+  // Validate environment variables
+  if (!process.env.NAME) throw new Error('NAME environment variable is not set.');
+
   // Create folders for disk storage
   initializeDiskStorage();
 
