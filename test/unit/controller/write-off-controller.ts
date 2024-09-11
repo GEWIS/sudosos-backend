@@ -14,7 +14,10 @@
  *
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ *  @license
  */
+
 import { DefaultContext, defaultContext, finishTestDB } from '../../helpers/test-helpers';
 import { truncateAllTables } from '../../setup';
 import WriteOff from '../../../src/entity/transactions/write-off';

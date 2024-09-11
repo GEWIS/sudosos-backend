@@ -14,7 +14,10 @@
  *
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ *  @license
  */
+
 import { In, MigrationInterface, Not, QueryRunner, TableColumn, TableForeignKey } from 'typeorm';
 import Invoice from '../entity/invoices/invoice';
 import Transfer from '../entity/transactions/transfer';

@@ -14,7 +14,10 @@
  *
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ *  @license
  */
+
 import GewiswebToken from '../gewisweb-token';
 import { MemberAllAttributes } from 'gewisdb-ts-client';
 import { UpdateUserRequest } from '../../controller/request/user-request';

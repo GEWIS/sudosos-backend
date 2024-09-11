@@ -14,7 +14,10 @@
  *
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ *  @license
  */
+
 import BasePayout from './base-payout';
 import { Column, Entity, JoinColumn, OneToOne } from 'typeorm';
 import SellerPayoutPdf from '../../file/seller-payout-pdf';

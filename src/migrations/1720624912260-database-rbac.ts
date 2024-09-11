@@ -14,7 +14,10 @@
  *
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ *  @license
  */
+
 import { DeepPartial, MigrationInterface, QueryRunner, Repository, Table, TableColumn, TableForeignKey } from 'typeorm';
 import AssignedRole from '../entity/rbac/assigned-role';
 import Role from '../entity/rbac/role';

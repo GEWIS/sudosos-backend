@@ -14,7 +14,10 @@
  *
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ *  @license
  */
+
 import { MigrationInterface, QueryRunner, Table, TableForeignKey } from 'typeorm';
 import Role from '../entity/rbac/role';
 import Permission from '../entity/rbac/permission';

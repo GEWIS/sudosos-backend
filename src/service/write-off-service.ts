@@ -14,7 +14,10 @@
  *
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ *  @license
  */
+
 import WriteOff from '../entity/transactions/write-off';
 import { parseUserToBaseResponse } from '../helpers/revision-to-response';
 import TransferService from './transfer-service';

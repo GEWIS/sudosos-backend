@@ -14,7 +14,10 @@
  *
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ *  @license
  */
+
 import dinero from 'dinero.js';
 import { FindManyOptions, FindOptionsWhere, Raw } from 'typeorm';
 import Transfer from '../entity/transactions/transfer';

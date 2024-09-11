@@ -14,7 +14,10 @@
  *
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ *  @license
  */
+
 import { defaultBefore, DefaultContext, finishTestDB } from '../../helpers/test-helpers';
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import { createTransactions } from '../../helpers/transaction-factory';

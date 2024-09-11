@@ -14,7 +14,10 @@
  *
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ *  @license
  */
+
 import { Language, MailLanguageMap } from './mail-message';
 import User from '../entity/user/user';
 import fs from 'fs';

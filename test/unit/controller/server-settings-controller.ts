@@ -14,7 +14,10 @@
  *
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ *  @license
  */
+
 import { defaultContext, DefaultContext, finishTestDB } from '../../helpers/test-helpers';
 import User, { UserType } from '../../../src/entity/user/user';
 import TokenMiddleware from '../../../src/middleware/token-middleware';

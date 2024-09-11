@@ -14,7 +14,10 @@
  *
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ *  @license
  */
+
 import Transaction from '../../../src/entity/transactions/transaction';
 import Transfer from '../../../src/entity/transactions/transfer';
 import SellerPayout from '../../../src/entity/transactions/payout/seller-payout';
