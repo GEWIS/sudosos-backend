@@ -94,6 +94,7 @@ import { SellerPayouts1724855153990 } from '../migrations/1724855153990-seller-p
 import SellerPayoutPdf from '../entity/file/seller-payout-pdf';
 import { UserTypeEnums1725196803203 } from '../migrations/1725196803203-user-type-enums';
 import { CustomInvoiceEntries1725388477226 } from '../migrations/1725388477226-custom-invoice-entries';
+import { SellerPayoutPdf1726066600389 } from '../migrations/1726066600389-seller-payout-pdf';
 
 // We need to load the dotenv to prevent the env from being undefined.
 dotenv.config();
@@ -128,6 +129,7 @@ const options: DataSourceOptions = {
     SellerPayouts1724855153990,
     UserTypeEnums1725196803203,
     CustomInvoiceEntries1725388477226,
+    SellerPayoutPdf1726066600389,
   ],
   extra: {
     authPlugins: {
