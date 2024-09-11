@@ -158,6 +158,7 @@ export default class SellerPayoutController extends BaseController {
    * @summary Get a single seller payout's sales report
    * @operationId getSellerPayoutReport
    * @tags sellerPayouts - Operations of the seller payout controller
+   * @security JWT
    * @param {integer} id.path.required - ID of the seller payout that should be returned
    * @return {ReportResponse} 200 - The sales report that belongs to the given seller payout
    * @return {string} 404 - SellerPayout not found.
@@ -193,6 +194,7 @@ export default class SellerPayoutController extends BaseController {
    * @summary Get a single seller payout's sales report as PDF
    * @operationId getSellerPayoutReportPdf
    * @tags sellerPayouts - Operations of the seller payout controller
+   * @security JWT
    * @param {integer} id.path.required - ID of the seller payout that should be returned
    * @param {boolean} force.query - Force the generation of the PDF
    * @return {PdfUrlResponse} 200 - The requested report
