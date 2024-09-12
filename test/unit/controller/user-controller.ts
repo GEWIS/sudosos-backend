@@ -30,7 +30,7 @@ import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/u
 import Product from '../../../src/entity/product/product';
 import Transaction from '../../../src/entity/transactions/transaction';
 import TokenHandler from '../../../src/authentication/token-handler';
-import Database, { AppDataSource } from '../../../src/database/database';
+import Database from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
 import TokenMiddleware, { RequestWithToken } from '../../../src/middleware/token-middleware';
 import ProductCategory from '../../../src/entity/product/product-category';
