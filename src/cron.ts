@@ -96,14 +96,15 @@ async function createCronTasks(): Promise<void> {
   Gewis.overwriteBindings();
 
   if (process.env.ENABLE_LDAP === 'true') {
-    await ADService.syncUsers();
-    await ADService.syncSharedAccounts().then(
-      () => ADService.syncUserRoles(application.roleManager),
+    const adService = new ADService();
+    await adService.syncUsers();
+    await adService.syncSharedAccounts().then(
+      () => adService.syncUserRoles(application.roleManager),
     );
     const syncADGroups = cron.schedule('*/10 * * * *', async () => {
       logger.debug('Syncing AD.');
-      await ADService.syncSharedAccounts().then(
-        () => ADService.syncUserRoles(application.roleManager),
+      await adService.syncSharedAccounts().then(
+        () => adService.syncUserRoles(application.roleManager),
       );
       logger.debug('Synced AD');
     });

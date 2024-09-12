@@ -152,7 +152,7 @@ describe('AD Service', (): void => {
       stubs.push(clientSearchStub);
 
       const organCount = await User.count({ where: { type: UserType.ORGAN } });
-      await ADService.syncSharedAccounts();
+      await new ADService().syncSharedAccounts();
 
       expect(await User.count({ where: { type: UserType.ORGAN } })).to.be.equal(organCount + 1);
       const newOrgan = (await LDAPAuthenticator.findOne({ where: { UUID: newADSharedAccount.objectGUID }, relations: ['user'] })).user;
@@ -208,7 +208,7 @@ describe('AD Service', (): void => {
       stubs.push(clientBindStub);
       stubs.push(clientSearchStub);
 
-      await ADService.syncSharedAccounts();
+      await new ADService().syncSharedAccounts();
 
       const newOrgan = (await LDAPAuthenticator.findOne({ where: { UUID: newADSharedAccount.objectGUID }, relations: ['user'] })).user;
 
@@ -264,7 +264,7 @@ describe('AD Service', (): void => {
       stubs.push(clientBindStub);
       stubs.push(clientSearchStub);
 
-      await ADService.syncSharedAccounts();
+      await new ADService().syncSharedAccounts();
 
       // Should contain the first users
       const newOrgan = (await LDAPAuthenticator.findOne({ where: { UUID: newADSharedAccount.objectGUID }, relations: ['user'] })).user;
@@ -299,7 +299,7 @@ describe('AD Service', (): void => {
       stubs.push(clientBindStub2);
       stubs.push(clientSearchStub2);
 
-      await ADService.syncSharedAccounts();
+      await new ADService().syncSharedAccounts();
 
       canAuthenticateAsIDs = (await MemberAuthenticator.find(
         { where: { authenticateAs: { id: newOrgan.id } }, relations: ['user'] },
@@ -318,7 +318,7 @@ describe('AD Service', (): void => {
       )).to.be.null;
 
       const userCount = await User.count();
-      await ADService.createAccountIfNew([adUser]);
+      await new ADService().createAccountIfNew([adUser]);
 
       expect(await User.count()).to.be.equal(userCount + 1);
       const auth = (await LDAPAuthenticator.findOne(
@@ -336,7 +336,7 @@ describe('AD Service', (): void => {
       const newUser = { ...(ctx.validADUser(await User.count() + 2)) };
       const existingUser = { ...(ctx.validADUser(await User.count() + 3)) };
 
-      await ADService.createAccountIfNew([existingUser]);
+      await new ADService().createAccountIfNew([existingUser]);
       // precondition.
       expect(await LDAPAuthenticator.findOne(
         { where: { UUID: newUser.objectGUID } },
@@ -377,7 +377,7 @@ describe('AD Service', (): void => {
 
       const roleManager = await new RoleManager().initialize();
 
-      await ADService.syncUserRoles(roleManager);
+      await new ADService().syncUserRoles(roleManager);
       const auth = (await LDAPAuthenticator.findOne(
         { where: { UUID: newUser.objectGUID }, relations: ['user'] },
       ));
@@ -385,7 +385,7 @@ describe('AD Service', (): void => {
       const { user } = auth;
       userIsAsExpected(user, newUser);
 
-      const users = await ADService.getUsers([newUser as LDAPUser, existingUser as LDAPUser]);
+      const users = await new ADService().getUsers([newUser as LDAPUser, existingUser as LDAPUser]);
       expect(await AssignedRole.findOne({ where: { role: { name: 'SudoSOS - Test' }, user: { id: users[0].id } } })).to.exist;
       expect(await AssignedRole.findOne({ where: { role: { name: 'SudoSOS - Test' }, user: { id: users[1].id } } })).to.exist;
     });
@@ -406,7 +406,7 @@ describe('AD Service', (): void => {
       stubs.push(clientBindStub);
       stubs.push(clientSearchStub);
 
-      await ADService.syncUsers();
+      await new ADService().syncUsers();
       const auth = (await LDAPAuthenticator.findOne(
         { where: { UUID: newUser.objectGUID }, relations: ['user'] },
       ));
