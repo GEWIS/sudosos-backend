@@ -18,7 +18,7 @@
  *  @license
  */
 
-import { Between, createQueryBuilder, FindManyOptions, In, IsNull, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
+import { Between, FindManyOptions, In, IsNull, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
 import {
   BaseEventAnswerResponse,
   BaseEventResponse,
@@ -48,6 +48,7 @@ import Mailer from '../mailer';
 import ForgotEventPlanning from '../mailer/messages/forgot-event-planning';
 import { Language } from '../mailer/mail-message';
 import Role from '../entity/rbac/role';
+import { AppDataSource } from '../database/database';
 
 export interface EventFilterParameters {
   name?: string;
@@ -492,7 +493,7 @@ export default class EventService {
   public static async getShiftSelectedCount(
     shiftId: number, { eventType, afterDate, beforeDate }: ShiftSelectedCountParams = {},
   ): Promise<EventPlanningSelectedCount[]> {
-    let query = createQueryBuilder()
+    let query = AppDataSource.createQueryBuilder()
       .select('user.id', 'id')
       .addSelect('count(event.id)', 'count')
       .addSelect('max(user.firstName)', 'firstName')

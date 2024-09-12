@@ -21,7 +21,7 @@
 import express, { Application } from 'express';
 import chai, { expect, request } from 'chai';
 import { SwaggerSpecification } from 'swagger-model-validator';
-import { DataSource, createQueryBuilder } from 'typeorm';
+import { DataSource } from 'typeorm';
 import { json } from 'body-parser';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
 import { describe } from 'mocha';
@@ -30,7 +30,7 @@ import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/u
 import Product from '../../../src/entity/product/product';
 import Transaction from '../../../src/entity/transactions/transaction';
 import TokenHandler from '../../../src/authentication/token-handler';
-import Database from '../../../src/database/database';
+import Database, { AppDataSource } from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
 import TokenMiddleware, { RequestWithToken } from '../../../src/middleware/token-middleware';
 import ProductCategory from '../../../src/entity/product/product-category';
@@ -1147,7 +1147,7 @@ describe('UserController', (): void => {
 
       const transactions = res.body.records as TransactionResponse[];
 
-      const actualTransactions = await createQueryBuilder(Transaction, 'transaction')
+      const actualTransactions = await ctx.connection.createQueryBuilder(Transaction, 'transaction')
         .leftJoinAndSelect('transaction.from', 'from')
         .leftJoinAndSelect('transaction.createdBy', 'createdBy')
         .leftJoinAndSelect('transaction.pointOfSale', 'pointOfSaleRev')
@@ -1178,7 +1178,7 @@ describe('UserController', (): void => {
 
       const transactions = res.body.records as TransactionResponse[];
 
-      const actualTransactions = await createQueryBuilder(Transaction, 'transaction')
+      const actualTransactions = await ctx.connection.createQueryBuilder(Transaction, 'transaction')
         .leftJoinAndSelect('transaction.from', 'from')
         .leftJoinAndSelect('transaction.createdBy', 'createdBy')
         .leftJoinAndSelect('transaction.pointOfSale', 'pointOfSaleRev')

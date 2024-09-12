@@ -36,13 +36,13 @@ import { DineroObjectRequest } from '../controller/request/dinero-request';
 import UserFineGroup from '../entity/fine/userFineGroup';
 import { PaginationParameters } from '../helpers/pagination';
 import { parseUserToBaseResponse } from '../helpers/revision-to-response';
-import { getConnection } from 'typeorm';
 import Transfer from '../entity/transactions/transfer';
 import Mailer from '../mailer';
 import UserGotFined from '../mailer/messages/user-got-fined';
 import MailMessage from '../mailer/mail-message';
 import UserWillGetFined from '../mailer/messages/user-will-get-fined';
 import { FineReport } from '../entity/report/fine-report';
+import { AppDataSource } from '../database/database';
 
 export interface CalculateFinesParams {
   userTypes?: UserType[];
@@ -202,7 +202,7 @@ export default class DebtorService {
     });
 
     // NOTE: executed in single transaction
-    const { fines: fines1, fineHandoutEvent: fineHandoutEvent1, emails: emails1 } = await getConnection().transaction(async (manager) => {
+    const { fines: fines1, fineHandoutEvent: fineHandoutEvent1, emails: emails1 } = await AppDataSource.transaction(async (manager) => {
       // Create a new fine group to "connect" all these fines
       const fineHandoutEvent = Object.assign(new FineHandoutEvent(), {
         referenceDate,

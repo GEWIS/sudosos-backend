@@ -28,7 +28,7 @@ describe('Database', async (): Promise<void> => {
       if (process.env.TYPEORM_CONNECTION !== 'sqlite') this.skip();
       const connection = await Database.initialize();
       await connection.synchronize();
-      await connection.close();
+      await connection.destroy();
     });
   });
   describe('#generate', async () => {

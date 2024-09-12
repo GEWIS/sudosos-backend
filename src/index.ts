@@ -91,7 +91,7 @@ export class Application {
     this.logger.info('Stopping application instance...');
     await util.promisify(this.server.close).bind(this.server)();
     this.tasks.forEach((task) => task.stop());
-    await this.connection.close();
+    await this.connection.destroy();
     this.logger.info('Application stopped.');
   }
 }

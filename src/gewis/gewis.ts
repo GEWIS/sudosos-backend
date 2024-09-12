@@ -18,7 +18,7 @@
  *  @license
  */
 
-import { createQueryBuilder, EntityManager } from 'typeorm';
+import { EntityManager } from 'typeorm';
 import User, { UserType } from '../entity/user/user';
 import GewisUser from './entity/gewis-user';
 import AuthenticationService from '../service/authentication-service';
@@ -104,7 +104,7 @@ export default class Gewis {
   }
 
   public static getUserBuilder() {
-    return createQueryBuilder()
+    return AppDataSource.createQueryBuilder()
       .from(User, 'user')
       .leftJoin(GewisUser, 'gewis_user', 'userId = id')
       .orderBy('userId', 'ASC');
