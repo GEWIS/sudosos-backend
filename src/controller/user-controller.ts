@@ -1109,7 +1109,7 @@ export default class UserController extends BaseController {
    * @security JWT
    * @param {string} fromDate.query.required - Start date for selected sales (inclusive)
    * @param {string} tillDate.query.required - End date for selected sales (exclusive)
-   * @return {Array.<ReportResponse>} 200 - The sales report of the user
+   * @return {ReportResponse} 200 - The sales report of the user
    * @return {string} 400 - Validation error
    * @return {string} 404 - User not found error.
    */
@@ -1248,7 +1248,7 @@ export default class UserController extends BaseController {
    * @security JWT
    * @param {string} fromDate.query.required - Start date for selected purchases (inclusive)
    * @param {string} tillDate.query.required - End date for selected purchases (exclusive)
-   * @return {Array.<ReportResponse>} 200 - The purchases report of the user
+   * @return {ReportResponse} 200 - The purchases report of the user
    * @return {string} 400 - Validation error
    * @return {string} 404 - User not found error.
    */
