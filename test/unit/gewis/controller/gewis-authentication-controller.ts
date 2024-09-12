@@ -99,7 +99,7 @@ describe('GewisAuthenticationController', async (): Promise<void> => {
       secret: '42',
     };
 
-    await AuthenticationService.setUserAuthenticationHash(await User.findOne({ where: { id: 1 } }), '1000', PinAuthenticator);
+    await new AuthenticationService().setUserAuthenticationHash(await User.findOne({ where: { id: 1 } }), '1000', PinAuthenticator);
 
     const roles = await new RbacSeeder().seed([{
       name: 'Role',

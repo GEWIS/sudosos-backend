@@ -168,7 +168,7 @@ export default class GewisAuthenticationController extends BaseController {
         await UserService.updateUser(gewisUser.user.id, update);
       }
 
-      const response = await AuthenticationService.getSaltedToken(
+      const response = await new AuthenticationService().getSaltedToken(
         gewisUser.user,
         { roleManager: this.roleManager, tokenHandler: this.tokenHandler },
         false,
@@ -197,8 +197,7 @@ export default class GewisAuthenticationController extends BaseController {
     this.logger.trace('GEWIS LDAP authentication for user', body.accountName);
 
     try {
-      await AuthenticationController.LDAPLoginConstructor(this.roleManager, this.tokenHandler,
-        wrapInManager<User>(Gewis.findOrCreateGEWISUserAndBind))(req, res);
+      await AuthenticationController.LDAPLoginConstructor(this.roleManager, this.tokenHandler, Gewis.findOrCreateGEWISUserAndBind.bind(Gewis))(req, res);
     } catch (error) {
       this.logger.error('Could not authenticate using LDAP:', error);
       res.status(500).json('Internal server error.');

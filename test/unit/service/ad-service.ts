@@ -33,7 +33,7 @@ import LDAPAuthenticator from '../../../src/entity/authenticator/ldap-authentica
 import AuthenticationService from '../../../src/service/authentication-service';
 import wrapInManager from '../../../src/helpers/database';
 import MemberAuthenticator from '../../../src/entity/authenticator/member-authenticator';
-import { LDAPGroup, LDAPResponse, LDAPUser } from '../../../src/helpers/ad';
+import { LDAPGroup, LDAPUser } from '../../../src/helpers/ad';
 import userIsAsExpected from './authentication-service';
 import RoleManager from '../../../src/rbac/role-manager';
 import AssignedRole from '../../../src/entity/rbac/assigned-role';
@@ -49,7 +49,7 @@ describe('AD Service', (): void => {
     app: Application,
     users: User[],
     spec: SwaggerSpecification,
-    validADUser: (mNumber: number) => (LDAPResponse),
+    validADUser: (mNumber: number) => (LDAPUser),
   };
 
   const stubs: sinon.SinonStub[] = [];
@@ -82,7 +82,7 @@ describe('AD Service', (): void => {
       },
     );
 
-    const validADUser = (mNumber: number) => ({
+    const validADUser = (mNumber: number): LDAPUser => ({
       dn: `CN=Sudo SOS (m${mNumber}),OU=Member accounts,DC=gewiswg,DC=gewis,DC=nl`,
       memberOfFlattened: [
         'CN=Domain Users,CN=Users,DC=gewiswg,DC=gewis,DC=nl',
@@ -90,10 +90,10 @@ describe('AD Service', (): void => {
       givenName: `Sudo (${mNumber})`,
       sn: 'SOS',
       objectGUID: `${mNumber}`,
-      sAMAccountName: `m${mNumber}`,
+      mNumber: mNumber,
       mail: `m${mNumber}@gewis.nl`,
       whenChanged: '202204151213.0Z',
-    }) as LDAPResponse;
+    });
 
     ctx = {
       connection,
@@ -120,7 +120,7 @@ describe('AD Service', (): void => {
         const users: User[] = [];
         const promises: Promise<any>[] = [];
         acc.forEach((m) => {
-          promises.push(AuthenticationService.createUserAndBind(manager, m)
+          promises.push(new AuthenticationService(manager).createUserAndBind(m)
             .then((u) => users.push(u)));
         });
         await Promise.all(promises);
@@ -186,10 +186,15 @@ describe('AD Service', (): void => {
         objectGUID: '4141',
         sAMAccountName: 'm4141',
         mail: 'm4141@gewis.nl',
+        // TODO: Fix this type inconsistency between ADUser and ldapts.Client
+        mNumber: '4141' as string & number,
+        whenChanged: new Date().toISOString(),
       };
 
-      const user = await wrapInManager(AuthenticationService
-        .createUserAndBind)(sharedAccountMember);
+      let user: User;
+      await ctx.connection.transaction(async (manager) => {
+        user = await new AuthenticationService(manager).createUserAndBind(sharedAccountMember);
+      });
 
       clientSearchStub.withArgs(process.env.LDAP_SHARED_ACCOUNT_FILTER, {
         filter: '(CN=*)',
@@ -313,7 +318,7 @@ describe('AD Service', (): void => {
       )).to.be.null;
 
       const userCount = await User.count();
-      await wrapInManager(ADService.createAccountIfNew)([adUser]);
+      await ADService.createAccountIfNew([adUser]);
 
       expect(await User.count()).to.be.equal(userCount + 1);
       const auth = (await LDAPAuthenticator.findOne(
@@ -331,7 +336,7 @@ describe('AD Service', (): void => {
       const newUser = { ...(ctx.validADUser(await User.count() + 2)) };
       const existingUser = { ...(ctx.validADUser(await User.count() + 3)) };
 
-      await wrapInManager(ADService.createAccountIfNew)([existingUser]);
+      await ADService.createAccountIfNew([existingUser]);
       // precondition.
       expect(await LDAPAuthenticator.findOne(
         { where: { UUID: newUser.objectGUID } },

@@ -56,11 +56,11 @@ export default class ADService {
    * @param manager
    * @param ldapUsers
    */
-  public static async createAccountIfNew(manager: EntityManager, ldapUsers: LDAPUser[]) {
+  public static async createAccountIfNew(ldapUsers: LDAPUser[]) {
     const filtered = await ADService.filterUnboundGUID(ldapUsers);
     const createUser = async (ADUsers: LDAPUser[]): Promise<any> => {
       const promises: Promise<User>[] = [];
-      ADUsers.forEach((u) => promises.push(Bindings.ldapUserCreation(manager, u)));
+      ADUsers.forEach((u) => promises.push(Bindings.ldapUserCreation()(u)));
       await Promise.all(promises);
     };
     await createUser(filtered as LDAPUser[]);
@@ -74,7 +74,7 @@ export default class ADService {
    */
   public static async getUsers(ldapUsers: LDAPUser[],
     createIfNew = false): Promise<User[]> {
-    if (createIfNew) await wrapInManager(ADService.createAccountIfNew)(ldapUsers);
+    if (createIfNew) await ADService.createAccountIfNew(ldapUsers);
     const uuids = ldapUsers.map((u) => (u.objectGUID));
     const authenticators = (await LDAPAuthenticator.find({ where: { UUID: In(uuids) }, relations: ['user'] }));
     return authenticators.map((u: LDAPAuthenticator) => u.user);
@@ -88,7 +88,7 @@ export default class ADService {
   private static async setSharedUsers(user: User, ldapUsers: LDAPUser[]) {
     const members = await this.getUsers(ldapUsers, true);
     // Give accounts access to the shared user.
-    await wrapInManager(AuthenticationService.setMemberAuthenticator)(members, user);
+    await new AuthenticationService().setMemberAuthenticator(members, user);
   }
 
   /**

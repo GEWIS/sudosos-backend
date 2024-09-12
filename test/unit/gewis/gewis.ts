@@ -34,7 +34,6 @@ import userIsAsExpected from '../service/authentication-service';
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import GewisUser from '../../../src/gewis/entity/gewis-user';
 import Gewis from '../../../src/gewis/gewis';
-import wrapInManager from '../../../src/helpers/database';
 import { finishTestDB, restoreLDAPEnv, storeLDAPEnv } from '../../helpers/test-helpers';
 import Bindings from '../../../src/helpers/bindings';
 import TokenHandler from '../../../src/authentication/token-handler';
@@ -45,6 +44,7 @@ import { PaginatedUserResponse } from '../../../src/controller/response/user-res
 import { GewisUserResponse } from '../../../src/gewis/controller/response/gewis-user-response';
 import { truncateAllTables } from '../../setup';
 import { RbacSeeder } from '../../seed';
+import { LDAPUser } from '../../../src/helpers/ad';
 
 describe('GEWIS Helper functions', async (): Promise<void> => {
   let ctx: {
@@ -188,8 +188,11 @@ describe('GEWIS Helper functions', async (): Promise<void> => {
         stubs.push(clientBindStub);
         stubs.push(clientSearchStub);
 
-        const authUser = await AuthenticationService.LDAPAuthentication(`m${user.id}`, 'This Is Correct',
-          wrapInManager<User>(Gewis.findOrCreateGEWISUserAndBind));
+        let authUser: User;
+        await ctx.connection.transaction(async (manager) => {
+          const service = new AuthenticationService(manager);
+          authUser = await service.LDAPAuthentication(`m${user.id}`, 'This Is Correct', (u: LDAPUser) => Gewis.findOrCreateGEWISUserAndBind(u));
+        });
 
         expect(authUser.id).to.be.equal(user.id);
         expect(await User.count()).to.be.equal(userCount);
@@ -217,8 +220,11 @@ describe('GEWIS Helper functions', async (): Promise<void> => {
         stubs.push(clientBindStub);
         stubs.push(clientSearchStub);
 
-        const authUser = await AuthenticationService.LDAPAuthentication(`m${user.id}`, 'This Is Correct',
-          wrapInManager<User>(Gewis.findOrCreateGEWISUserAndBind));
+        let authUser: User;
+        await ctx.connection.transaction(async (manager) => {
+          const service = new AuthenticationService(manager);
+          authUser = await service.LDAPAuthentication(`m${user.id}`, 'This Is Correct', (u: LDAPUser) => Gewis.findOrCreateGEWISUserAndBind(u));
+        });
 
         DBUser = await User.findOne(
           { where: { firstName: ADuser.givenName, lastName: ADuser.sn } },

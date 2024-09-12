@@ -18,7 +18,7 @@
  *  @license
  */
 
-import { createQueryBuilder, EntityManager, SelectQueryBuilder } from 'typeorm';
+import { createQueryBuilder, SelectQueryBuilder } from 'typeorm';
 import User from '../entity/user/user';
 import AuthenticationService from '../service/authentication-service';
 import { LDAPUser } from './ad';
@@ -34,8 +34,10 @@ export default class Bindings {
   /**
    * Function called when an unbound User is found and created.
    */
-  public static ldapUserCreation: (manager: EntityManager,
-    ADUser: LDAPUser) => Promise<User> = AuthenticationService.createUserAndBind;
+  public static ldapUserCreation: () => (ADUser: LDAPUser) => Promise<User> = () => {
+    const service = new AuthenticationService();
+    return service.createUserAndBind.bind(service);
+  };
 
   /**
    * Function called when mapping db user entities to responses.

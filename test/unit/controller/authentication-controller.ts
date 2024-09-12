@@ -499,7 +499,7 @@ describe('AuthenticationController', async (): Promise<void> => {
         // eslint-disable-next-line no-param-reassign
         user.type = UserType.LOCAL_USER;
         await User.save(user);
-        const resetToken = await AuthenticationService.createResetToken(user);
+        const resetToken = await new AuthenticationService().createResetToken(user);
         const password = 'Password2';
         const req: AuthenticationResetTokenRequest = {
           accountMail: user.email,
@@ -528,7 +528,7 @@ describe('AuthenticationController', async (): Promise<void> => {
         // eslint-disable-next-line no-param-reassign
         user.type = UserType.LOCAL_USER;
         await User.save(user);
-        const resetToken = await AuthenticationService.createResetToken(user);
+        const resetToken = await new AuthenticationService().createResetToken(user);
         const password = 'Password2';
         const req: AuthenticationResetTokenRequest = {
           accountMail: 'wrong@sudosos.nl',
@@ -569,7 +569,7 @@ describe('AuthenticationController', async (): Promise<void> => {
         // eslint-disable-next-line no-param-reassign
         user.type = UserType.LOCAL_USER;
         await User.save(user);
-        const resetToken = await AuthenticationService.createResetToken(user);
+        const resetToken = await new AuthenticationService().createResetToken(user);
         const password = 'Password2';
         const req: AuthenticationResetTokenRequest = {
           accountMail: user.email,
@@ -592,7 +592,7 @@ describe('AuthenticationController', async (): Promise<void> => {
         // eslint-disable-next-line no-param-reassign
         user.type = UserType.LOCAL_USER;
         await User.save(user);
-        await AuthenticationService.createResetToken(user);
+        await new AuthenticationService().createResetToken(user);
         const password = 'Password2';
         const req: AuthenticationResetTokenRequest = {
           accountMail: user.email,

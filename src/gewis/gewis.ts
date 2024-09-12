@@ -28,6 +28,7 @@ import GewiswebToken from './gewisweb-token';
 import { parseRawUserToResponse, RawUser } from '../helpers/revision-to-response';
 import Bindings from '../helpers/bindings';
 import { GewisUserResponse } from './controller/response/gewis-user-response';
+import { AppDataSource } from '../database/database';
 
 export interface RawGewisUser extends RawUser {
   gewisId: number
@@ -42,8 +43,9 @@ export default class Gewis {
    * @param manager - Reference to the EntityManager needed for the transaction.
    * @param ADUser
    */
-  public static async findOrCreateGEWISUserAndBind(manager: EntityManager, ADUser: LDAPUser)
-    : Promise<User> {
+  public static async findOrCreateGEWISUserAndBind(ADUser: LDAPUser): Promise<User> {
+    const manager = AppDataSource.manager;
+
     // The employeeNumber is the leading truth for m-number.
     if (!ADUser.mNumber) return undefined;
     let gewisUser;
@@ -57,8 +59,8 @@ export default class Gewis {
         await bindUser(manager, ADUser, gewisUser.user);
       } else {
         // If m-account does not exist we create an account and bind it.
-        gewisUser = await AuthenticationService
-          .createUserAndBind(manager, ADUser).then(async (u) => (
+        gewisUser = await new AuthenticationService(manager)
+          .createUserAndBind(ADUser).then(async (u) => (
             (Promise.resolve(await Gewis.createGEWISUser(manager, u, gewisId)))));
       }
     } catch (error) {
@@ -135,7 +137,7 @@ export default class Gewis {
 
   // eslint-disable-next-line class-methods-use-this
   static overwriteBindings() {
-    Bindings.ldapUserCreation = Gewis.findOrCreateGEWISUserAndBind;
+    Bindings.ldapUserCreation = () => Gewis.findOrCreateGEWISUserAndBind.bind(Gewis);
     Bindings.Users = {
       parseToResponse: Gewis.parseRawUserToGewisResponse,
       getBuilder: Gewis.getUserBuilder,

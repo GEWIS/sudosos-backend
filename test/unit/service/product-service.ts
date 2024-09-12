@@ -18,7 +18,7 @@
  *  @license
  */
 
-import { DataSource, getManager, IsNull, Not } from 'typeorm';
+import { DataSource, IsNull, Not } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import bodyParser from 'body-parser';
@@ -298,8 +298,7 @@ describe('ProductService', async (): Promise<void> => {
         expect(prod.owner.id).to.equal(owner.id);
       });
 
-      await AuthenticationService
-        .setMemberAuthenticator(getManager(), [owner], usersOwningAProd[1]);
+      await new AuthenticationService().setMemberAuthenticator([owner], usersOwningAProd[1]);
 
       const ownerIds = [owner, usersOwningAProd[1]].map((o) => o.id);
       products = await ProductService.getProducts({}, {}, owner);

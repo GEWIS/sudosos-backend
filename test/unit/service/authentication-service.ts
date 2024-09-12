@@ -33,7 +33,6 @@ import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import PinAuthenticator from '../../../src/entity/authenticator/pin-authenticator';
 import { UserResponse } from '../../../src/controller/response/user-response';
 import { isNumber } from '../../../src/helpers/validators';
-import wrapInManager from '../../../src/helpers/database';
 import { finishTestDB, restoreLDAPEnv, storeLDAPEnv } from '../../helpers/test-helpers';
 import HashBasedAuthenticationMethod from '../../../src/entity/authenticator/hash-based-authentication-method';
 import LocalAuthenticator from '../../../src/entity/authenticator/local-authenticator';
@@ -130,8 +129,11 @@ describe('AuthenticationService', (): void => {
       stubs.push(clientBindStub);
       stubs.push(clientSearchStub);
 
-      const user = await AuthenticationService.LDAPAuthentication('m4141', 'This Is Correct',
-        wrapInManager<User>(AuthenticationService.createUserAndBind));
+      let user: User;
+      await ctx.connection.transaction(async (manager) => {
+        const service = new AuthenticationService(manager);
+        user = await service.LDAPAuthentication('m4141', 'This Is Correct', service.createUserAndBind.bind(service));
+      });
 
       DBUser = await User.findOne(
         { where: { firstName: ctx.validADUser.givenName, lastName: ctx.validADUser.sn } },
@@ -162,8 +164,11 @@ describe('AuthenticationService', (): void => {
       stubs.push(clientBindStub);
       stubs.push(clientSearchStub);
 
-      let user = await AuthenticationService.LDAPAuthentication('m0041', 'This Is Correct',
-        wrapInManager<User>(AuthenticationService.createUserAndBind));
+      let user: User;
+      await ctx.connection.transaction(async (manager) => {
+        const service = new AuthenticationService(manager);
+        user = await service.LDAPAuthentication('m0041', 'This Is Correct', service.createUserAndBind.bind(service));
+      });
 
       userIsAsExpected(user, otherValidADUser);
 
@@ -173,8 +178,11 @@ describe('AuthenticationService', (): void => {
       expect(DBUser).to.not.be.undefined;
 
       const count = await User.count();
-      user = await AuthenticationService.LDAPAuthentication('m0041', 'This Is Correct',
-        wrapInManager<User>(AuthenticationService.createUserAndBind));
+
+      await ctx.connection.transaction(async (manager) => {
+        const service = new AuthenticationService(manager);
+        user = await service.LDAPAuthentication('m0041', 'This Is Correct', service.createUserAndBind.bind(service));
+      });
       userIsAsExpected(user, otherValidADUser);
 
       expect(count).to.be.equal(await User.count());
@@ -188,8 +196,11 @@ describe('AuthenticationService', (): void => {
       stubs.push(clientBindStub);
       stubs.push(clientSearchStub);
 
-      const user = await AuthenticationService.LDAPAuthentication('m4141', 'This Is Wrong',
-        wrapInManager<User>(AuthenticationService.createUserAndBind));
+      let user: User;
+      await ctx.connection.transaction(async (manager) => {
+        const service = new AuthenticationService(manager);
+        user = await service.LDAPAuthentication('m4141', 'This Is Wrong', service.createUserAndBind.bind(service));
+      });
       expect(user).to.be.undefined;
     });
   });
@@ -198,11 +209,11 @@ describe('AuthenticationService', (): void => {
       Type: { new(): T, findOne: any, save: any }, right: string, wrong: string,
     ) {
       await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
-        await AuthenticationService.setUserAuthenticationHash(user, right, Type);
+        await new AuthenticationService().setUserAuthenticationHash(user, right, Type);
         const auth = await Type.findOne({ where: { user: { id: user.id } } });
         expect(auth).to.not.be.null;
-        expect(await AuthenticationService.compareHash(wrong, auth.hash)).to.be.false;
-        expect(await AuthenticationService.compareHash(right, auth.hash)).to.be.true;
+        expect(await new AuthenticationService().compareHash(wrong, auth.hash)).to.be.false;
+        expect(await new AuthenticationService().compareHash(right, auth.hash)).to.be.true;
       });
     }
 
@@ -219,25 +230,25 @@ describe('AuthenticationService', (): void => {
         let localAuthenticator = await LocalAuthenticator.findOne({ where: { user: { id: user.id } }, relations: ['user'] });
         expect(localAuthenticator).to.be.null;
 
-        const tokenInfo = await AuthenticationService.createResetToken(user);
-        const auth = await AuthenticationService.resetLocalUsingToken(tokenInfo.resetToken, tokenInfo.password, 'Password');
+        const tokenInfo = await new AuthenticationService().createResetToken(user);
+        const auth = await new AuthenticationService().resetLocalUsingToken(tokenInfo.resetToken, tokenInfo.password, 'Password');
         localAuthenticator = await LocalAuthenticator.findOne({ where: { user: { id: user.id } }, relations: ['user'] });
         expect(localAuthenticator).to.not.be.null;
         expect(auth).to.not.be.undefined;
-        await expect(AuthenticationService.compareHash('Password', auth.hash)).to.eventually.be.true;
+        await expect(new AuthenticationService().compareHash('Password', auth.hash)).to.eventually.be.true;
       });
     });
     it('should reset password if resetToken is correct and user has password', async () => {
       await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
-        let auth = await AuthenticationService.setUserAuthenticationHash(user, 'Password2', LocalAuthenticator);
-        await expect(AuthenticationService.compareHash('Password2', auth.hash)).to.eventually.be.true;
+        let auth = await new AuthenticationService().setUserAuthenticationHash(user, 'Password2', LocalAuthenticator);
+        await expect(new AuthenticationService().compareHash('Password2', auth.hash)).to.eventually.be.true;
 
-        const tokenInfo = await AuthenticationService.createResetToken(user);
-        auth = await AuthenticationService.resetLocalUsingToken(tokenInfo.resetToken, tokenInfo.password, 'Password');
+        const tokenInfo = await new AuthenticationService().createResetToken(user);
+        auth = await new AuthenticationService().resetLocalUsingToken(tokenInfo.resetToken, tokenInfo.password, 'Password');
 
         expect(auth).to.not.be.undefined;
-        await expect(AuthenticationService.compareHash('Password', auth.hash)).to.eventually.be.true;
-        await expect(AuthenticationService.compareHash('Password2', auth.hash)).to.eventually.be.false;
+        await expect(new AuthenticationService().compareHash('Password', auth.hash)).to.eventually.be.true;
+        await expect(new AuthenticationService().compareHash('Password2', auth.hash)).to.eventually.be.false;
       });
     });
   });
@@ -249,7 +260,7 @@ describe('AuthenticationService', (): void => {
           password: 'Password',
           token: 'wrong',
         };
-        const auth = await AuthenticationService.isResetTokenRequestValid(req);
+        const auth = await new AuthenticationService().isResetTokenRequestValid(req);
         expect(auth).to.be.undefined;
       });
     });
@@ -258,25 +269,25 @@ describe('AuthenticationService', (): void => {
         // eslint-disable-next-line no-param-reassign
         user.type = UserType.MEMBER;
         await User.save(user);
-        const resetToken = await AuthenticationService.createResetToken(user);
+        const resetToken = await new AuthenticationService().createResetToken(user);
         const req: AuthenticationResetTokenRequest = {
           accountMail: user.email,
           password: 'Password',
           token: resetToken.password,
         };
-        const auth = await AuthenticationService.isResetTokenRequestValid(req);
+        const auth = await new AuthenticationService().isResetTokenRequestValid(req);
         expect(auth).to.be.undefined;
       });
     });
     it('should return false if token is incorrect', async () => {
       await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
-        await AuthenticationService.createResetToken(user);
+        await new AuthenticationService().createResetToken(user);
         const req: AuthenticationResetTokenRequest = {
           accountMail: user.email,
           password: 'Password',
           token: 'wrong',
         };
-        const auth = await AuthenticationService.isResetTokenRequestValid(req);
+        const auth = await new AuthenticationService().isResetTokenRequestValid(req);
         expect(auth).to.be.undefined;
       });
     });
@@ -284,7 +295,7 @@ describe('AuthenticationService', (): void => {
   describe('createResetToken function', () => {
     it('should create a reset token', async () => {
       await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
-        const tokenInfo = await AuthenticationService.createResetToken(user);
+        const tokenInfo = await new AuthenticationService().createResetToken(user);
         expect(tokenInfo.resetToken.user).to.eq(user);
         expect(tokenInfo.resetToken.expires).to.be.greaterThan(new Date());
       });
