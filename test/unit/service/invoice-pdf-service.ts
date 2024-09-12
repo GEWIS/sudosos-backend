@@ -24,7 +24,7 @@ import sinon, { SinonStub } from 'sinon';
 import Invoice from '../../../src/entity/invoices/invoice';
 import chai, { expect } from 'chai';
 import InvoicePdf from '../../../src/entity/file/invoice-pdf';
-import { Connection, IsNull } from 'typeorm';
+import { DataSource, IsNull } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import User from '../../../src/entity/user/user';
@@ -47,7 +47,7 @@ chai.use(deepEqualInAnyOrder);
 
 describe('InvoicePdfService', async (): Promise<void> => {
   let ctx: {
-    connection: Connection;
+    connection: DataSource;
     app: Application;
     specification: SwaggerSpecification;
     users: User[];

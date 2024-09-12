@@ -19,7 +19,7 @@
  */
 
 import Database from '../../src/database/database';
-import { Connection } from 'typeorm';
+import { DataSource } from 'typeorm';
 import { expect } from 'chai';
 import { finishTestDB } from '../helpers/test-helpers';
 describe('Database', async (): Promise<void> => {
@@ -32,7 +32,7 @@ describe('Database', async (): Promise<void> => {
     });
   });
   describe('#generate', async () => {
-    let dataSource: Connection;
+    let dataSource: DataSource;
 
     before(async function () {
       dataSource = await Database.initialize();

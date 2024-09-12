@@ -21,7 +21,7 @@
 import { Client } from 'pdf-generator-client';
 import sinon, { SinonStub } from 'sinon';
 import chai, { expect } from 'chai';
-import { Connection } from 'typeorm';
+import { DataSource } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import User from '../../../src/entity/user/user';
@@ -41,7 +41,7 @@ import { PayoutRequestSeeder, UserSeeder } from '../../seed';
 chai.use(deepEqualInAnyOrder);
 describe('PayoutRequestPdfService', async () => {
   let ctx: {
-    connection: Connection,
+    connection: DataSource,
     app: Application,
     specification: SwaggerSpecification,
     users: User[],

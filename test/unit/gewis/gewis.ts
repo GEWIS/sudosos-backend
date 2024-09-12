@@ -21,7 +21,7 @@
 import { expect, request } from 'chai';
 import sinon from 'sinon';
 import { Client } from 'ldapts';
-import { Connection } from 'typeorm';
+import { DataSource } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
@@ -48,7 +48,7 @@ import { RbacSeeder } from '../../seed';
 
 describe('GEWIS Helper functions', async (): Promise<void> => {
   let ctx: {
-    connection: Connection,
+    connection: DataSource,
     app: Application,
     users: User[],
     spec: SwaggerSpecification,

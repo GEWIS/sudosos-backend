@@ -19,7 +19,7 @@
  */
 
 import express, { Application } from 'express';
-import { Connection } from 'typeorm';
+import { DataSource } from 'typeorm';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import EventController from '../../../src/controller/event-controller';
 import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
@@ -48,7 +48,7 @@ import { EventSeeder, RbacSeeder, UserSeeder } from '../../seed';
 
 describe('EventController', () => {
   let ctx: {
-    connection: Connection,
+    connection: DataSource,
     app: Application
     specification: SwaggerSpecification,
     controller: EventController,

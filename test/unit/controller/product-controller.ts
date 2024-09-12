@@ -19,7 +19,7 @@
  */
 
 import {
-  Connection, IsNull, Not,
+  DataSource, IsNull, Not,
 } from 'typeorm';
 import express, { Application } from 'express';
 import { request, expect } from 'chai';
@@ -72,7 +72,7 @@ function productEq(source: CreateProductRequest | UpdateProductRequest, response
 
 describe('ProductController', async (): Promise<void> => {
   let ctx: {
-    connection: Connection,
+    connection: DataSource,
     app: Application,
     specification: SwaggerSpecification,
     controller: ProductController,

@@ -18,7 +18,7 @@
  *  @license
  */
 
-import { Connection } from 'typeorm';
+import { DataSource } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import DebtorController from '../../../src/controller/debtor-controller';
@@ -54,7 +54,7 @@ import { FineSeeder, RbacSeeder, TransactionSeeder, TransferSeeder, UserSeeder }
 
 describe('DebtorController', () => {
   let ctx: {
-    connection: Connection,
+    connection: DataSource,
     app: Application,
     specification: SwaggerSpecification,
     controller: DebtorController,

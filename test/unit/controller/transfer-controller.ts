@@ -21,7 +21,7 @@
 import { expect, request } from 'chai';
 import dinero from 'dinero.js';
 import express, { Application, json } from 'express';
-import { Connection } from 'typeorm';
+import { DataSource } from 'typeorm';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import TokenHandler from '../../../src/authentication/token-handler';
 import TransferRequest from '../../../src/controller/request/transfer-request';
@@ -38,7 +38,7 @@ import { finishTestDB } from '../../helpers/test-helpers';
 import { RbacSeeder, TransferSeeder, UserSeeder } from '../../seed';
 
 describe('TransferController', async (): Promise<void> => {
-  let connection: Connection;
+  let connection: DataSource;
   let app: Application;
 
   let adminAccountDeposit: Transfer;

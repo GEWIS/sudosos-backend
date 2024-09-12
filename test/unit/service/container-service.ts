@@ -19,7 +19,7 @@
  */
 
 import {
-  Connection, getManager, IsNull, Not,
+  DataSource, getManager, IsNull, Not,
 } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
@@ -95,7 +95,7 @@ chai.use(deepEqualInAnyOrder);
 
 describe('ContainerService', async (): Promise<void> => {
   let ctx: {
-    connection: Connection,
+    connection: DataSource,
     app: Application,
     specification: SwaggerSpecification,
     users: User[],

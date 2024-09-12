@@ -21,7 +21,7 @@
 import dinero from 'dinero.js';
 import express, { Express } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
-import { Connection, DataSource } from 'typeorm';
+import { DataSource } from 'typeorm';
 import TransferRequest from '../../src/controller/request/transfer-request';
 import TransferService from '../../src/service/transfer-service';
 import Swagger from '../../src/start/swagger';
@@ -37,7 +37,7 @@ export interface DefaultContext {
   app: Express,
   specification: SwaggerSpecification,
   roleManager: RoleManager,
-  connection: Connection,
+  connection: DataSource,
   tokenHandler: TokenHandler,
 }
 

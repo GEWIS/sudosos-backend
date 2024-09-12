@@ -18,7 +18,7 @@
  *  @license
  */
 
-import { Connection } from 'typeorm';
+import { DataSource } from 'typeorm';
 import User, { NotifyDebtUserTypes, TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import Transaction from '../../../src/entity/transactions/transaction';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
@@ -47,7 +47,7 @@ import {
 
 describe('TransactionSubscriber', () => {
   let ctx: {
-    connection: Connection,
+    connection: DataSource,
     adminUser: User,
     users: User[],
     usersNotInDebt: User[],

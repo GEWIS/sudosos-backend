@@ -18,7 +18,7 @@
  *  @license
  */
 
-import { Connection, getManager, IsNull, Not } from 'typeorm';
+import { DataSource, getManager, IsNull, Not } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import bodyParser from 'body-parser';
@@ -125,7 +125,7 @@ function validateProductProperties(response: ProductResponse, productParams: Cre
 
 describe('ProductService', async (): Promise<void> => {
   let ctx: {
-    connection: Connection,
+    connection: DataSource,
     app: Application,
     specification: SwaggerSpecification,
     users: User[],

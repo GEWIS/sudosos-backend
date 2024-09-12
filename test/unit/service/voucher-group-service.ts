@@ -20,7 +20,7 @@
 
 import { expect } from 'chai';
 import Sinon from 'sinon';
-import { Connection } from 'typeorm';
+import { DataSource } from 'typeorm';
 import { VoucherGroupParams, VoucherGroupRequest } from '../../../src/controller/request/voucher-group-request';
 import VoucherGroupResponse from '../../../src/controller/response/voucher-group-response';
 import Database from '../../../src/database/database';
@@ -65,7 +65,7 @@ export async function seedVoucherGroups(): Promise<{ paramss: VoucherGroupParams
 
 describe('VoucherGroupService', async (): Promise<void> => {
   let ctx: {
-    connection: Connection,
+    connection: DataSource,
     clock: Sinon.SinonFakeTimers
   };
 

@@ -18,7 +18,7 @@
  *  @license
  */
 
-import { Connection } from 'typeorm';
+import { DataSource } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
@@ -42,7 +42,7 @@ import { PointOfSaleSeeder, RbacSeeder, UserSeeder } from '../../seed';
 
 describe('AuthenticationSecureController', () => {
   let ctx: {
-    connection: Connection,
+    connection: DataSource,
     app: Application,
     tokenHandler: TokenHandler,
     specification: SwaggerSpecification,

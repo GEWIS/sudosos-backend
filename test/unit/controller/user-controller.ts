@@ -21,7 +21,7 @@
 import express, { Application } from 'express';
 import chai, { expect, request } from 'chai';
 import { SwaggerSpecification } from 'swagger-model-validator';
-import { Connection, createQueryBuilder } from 'typeorm';
+import { DataSource, createQueryBuilder } from 'typeorm';
 import { json } from 'body-parser';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
 import { describe } from 'mocha';
@@ -83,7 +83,7 @@ chai.use(deepEqualInAnyOrder);
 
 describe('UserController', (): void => {
   let ctx: {
-    connection: Connection,
+    connection: DataSource,
     app: Application,
     specification: SwaggerSpecification,
     controller: UserController,
@@ -352,7 +352,7 @@ describe('UserController', (): void => {
       const searchQuery = 'Firstname1 Last';
       const res = await request(ctx.app)
         .get('/users')
-        .query({ search: searchQuery, take: 100, skip: 0 })
+        .query({ search: searchQuery })
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
 
@@ -372,7 +372,7 @@ describe('UserController', (): void => {
         expect(ids).to.includes(u.id);
       });
 
-      expect(pagination.take).to.equal(100);
+      expect(pagination.take).to.equal(defaultPagination());
       expect(pagination.skip).to.equal(0);
 
     });
@@ -2302,7 +2302,7 @@ describe('UserController', (): void => {
           .query(parameters);
         expect(res.status).to.equal(200);
       });
-      it('should return 502 if pdf generation fails', async () => {
+      it('should return 500 if pdf generation fails', async () => {
         clientStub.generateUserReport.rejects(new Error('Failed to generate PDF'));
         const id = 1;
         const parameters = { fromDate: '2021-01-01', tillDate: '2021-12-31' };
@@ -2312,7 +2312,7 @@ describe('UserController', (): void => {
           .get(`/users/${id}/transactions/sales/report/pdf`)
           .set('Authorization', `Bearer ${ctx.adminToken}`)
           .query(parameters);
-        expect(res.status).to.equal(502);
+        expect(res.status).to.equal(500);
       });
       it('should return 403 if not admin', async () => {
         const id = 2;
@@ -2395,7 +2395,7 @@ describe('UserController', (): void => {
           .query(parameters);
         expect(res.status).to.equal(200);
       });
-      it('should return 502 if pdf generation fails', async () => {
+      it('should return 500 if pdf generation fails', async () => {
         clientStub.generateUserReport.rejects(new Error('Failed to generate PDF'));
         const id = 1;
         const parameters = { fromDate: '2021-01-01', tillDate: '2021-12-31' };
@@ -2405,7 +2405,7 @@ describe('UserController', (): void => {
           .get(`/users/${id}/transactions/purchases/report/pdf`)
           .set('Authorization', `Bearer ${ctx.adminToken}`)
           .query(parameters);
-        expect(res.status).to.equal(502);
+        expect(res.status).to.equal(500);
       });
       it('should return 403 if not admin', async () => {
         const id = 2;

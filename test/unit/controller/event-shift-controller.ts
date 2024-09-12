@@ -19,7 +19,7 @@
  */
 
 import express, { Application } from 'express';
-import { Connection } from 'typeorm';
+import { DataSource } from 'typeorm';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import EventShift from '../../../src/entity/event/event-shift';
@@ -49,7 +49,7 @@ import { EventSeeder, RbacSeeder, UserSeeder } from '../../seed';
 
 describe('EventShiftController', () => {
   let ctx: {
-    connection: Connection,
+    connection: DataSource,
     app: Application
     specification: SwaggerSpecification,
     controller: EventShiftController,

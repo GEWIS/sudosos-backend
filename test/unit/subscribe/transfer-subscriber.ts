@@ -18,7 +18,7 @@
  *  @license
  */
 
-import { Connection } from 'typeorm';
+import { DataSource } from 'typeorm';
 import User from '../../../src/entity/user/user';
 import Transaction from '../../../src/entity/transactions/transaction';
 import Transfer from '../../../src/entity/transactions/transfer';
@@ -37,7 +37,7 @@ import { TransactionSeeder, TransferSeeder, UserSeeder } from '../../seed';
 
 describe('TransferSubscriber', (): void => {
   let ctx: {
-    connection: Connection,
+    connection: DataSource,
     users: User[],
     usersInDebt: User[],
     transactions: Transaction[],

@@ -18,7 +18,7 @@
  *  @license
  */
 
-import { Connection } from 'typeorm';
+import { DataSource } from 'typeorm';
 import express, { Application } from 'express';
 import ProductController from '../../src/controller/product-controller';
 import ContainerController from '../../src/controller/container-controller';
@@ -48,7 +48,7 @@ import { ProductCategorySeeder, RbacSeeder, VatGroupSeeder } from '../seed';
 
 describe('Propagation between products, containers, POSs', () => {
   let ctx: {
-    connection: Connection,
+    connection: DataSource,
     app: Application,
     productController: ProductController,
     containerController: ContainerController,

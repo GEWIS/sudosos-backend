@@ -21,7 +21,7 @@
 import sinon from 'sinon';
 import { expect, assert } from 'chai';
 import path from 'path';
-import { Connection } from 'typeorm';
+import { DataSource } from 'typeorm';
 import { DiskStorage } from '../../../../src/files/storage';
 import BaseFile from '../../../../src/entity/file/base-file';
 import User from '../../../../src/entity/user/user';
@@ -34,7 +34,7 @@ const workdir = './imaginary/directory';
 
 describe('Disk Storage', async () => {
   let ctx: {
-    connection: Connection,
+    connection: DataSource,
     files: BaseFile[],
     users: User[],
     diskStorage: DiskStorage,

@@ -18,7 +18,7 @@
  *  @license
  */
 
-import { Connection } from 'typeorm';
+import { DataSource } from 'typeorm';
 import { expect } from 'chai';
 import VatGroup, { VatDeclarationPeriod } from '../../../src/entity/vat-group';
 import User from '../../../src/entity/user/user';
@@ -40,7 +40,7 @@ import {
 
 describe('VatGroupService', () => {
   let ctx: {
-    connection: Connection,
+    connection: DataSource,
     users: User[],
     vatGroups: VatGroup[],
     transactions: Transaction[],

@@ -18,7 +18,7 @@
  *  @license
  */
 
-import { Connection } from 'typeorm';
+import { DataSource } from 'typeorm';
 import { expect } from 'chai';
 import Stripe from 'stripe';
 import User from '../../../src/entity/user/user';
@@ -37,7 +37,7 @@ describe('StripeService', async (): Promise<void> => {
   let shouldSkip: boolean;
 
   let ctx: {
-    connection: Connection,
+    connection: DataSource,
     users: User[],
     stripeDeposits: StripeDeposit[],
     stripeService: StripeService,

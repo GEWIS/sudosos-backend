@@ -18,7 +18,7 @@
  *  @license
  */
 
-import { Connection, In } from 'typeorm';
+import { DataSource, In } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
@@ -100,7 +100,7 @@ createInvoiceWithTransfers(debtorId: number, creditorId: number,
 
 describe('InvoiceService', () => {
   let ctx: {
-    connection: Connection;
+    connection: DataSource;
     app: Application;
     specification: SwaggerSpecification;
     users: User[];

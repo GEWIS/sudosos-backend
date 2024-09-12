@@ -21,7 +21,7 @@
 import { expect } from 'chai';
 import sinon, { SinonSandbox, SinonStub } from 'sinon';
 import nodemailer, { Transporter } from 'nodemailer';
-import { Connection } from 'typeorm';
+import { DataSource } from 'typeorm';
 import Mailer from '../../../src/mailer';
 import User, { UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
@@ -34,7 +34,7 @@ import { templateFieldDefault } from '../../../src/mailer/mail-body-generator';
 
 describe('Mailer', () => {
   let ctx: {
-    connection: Connection,
+    connection: DataSource,
     mailer?: Mailer,
     user: User,
     htmlMailTemplate: string,

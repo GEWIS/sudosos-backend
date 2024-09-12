@@ -29,7 +29,7 @@ import dinero, { Currency } from 'dinero.js';
 import { config } from 'dotenv';
 import express from 'express';
 import log4js, { Logger } from 'log4js';
-import { Connection } from 'typeorm';
+import { DataSource } from 'typeorm';
 import cron from 'node-cron';
 import fileUpload from 'express-fileupload';
 import Database from './database/database';
@@ -81,7 +81,7 @@ export class Application {
 
   server: http.Server;
 
-  connection: Connection;
+  connection: DataSource;
 
   logger: Logger;
 

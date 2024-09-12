@@ -18,7 +18,7 @@
  *  @license
  */
 
-import { Connection, EntityManager } from 'typeorm';
+import { DataSource, EntityManager } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import sinon from 'sinon';
@@ -45,7 +45,7 @@ chai.use(deepEqualInAnyOrder);
 
 describe('AD Service', (): void => {
   let ctx: {
-    connection: Connection,
+    connection: DataSource,
     app: Application,
     users: User[],
     spec: SwaggerSpecification,

@@ -20,7 +20,7 @@
 
 import express, { Application } from 'express';
 import chai, { expect } from 'chai';
-import { Connection, createQueryBuilder } from 'typeorm';
+import { DataSource, createQueryBuilder } from 'typeorm';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import log4js, { Logger } from 'log4js';
 import dinero from 'dinero.js';
@@ -53,7 +53,7 @@ chai.use(deepEqualInAnyOrder);
 
 describe('TransactionService', (): void => {
   let ctx: {
-    connection: Connection,
+    connection: DataSource,
     app: Application,
     transactions: Transaction[],
     users: User[],

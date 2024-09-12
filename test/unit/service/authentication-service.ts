@@ -18,7 +18,7 @@
  *  @license
  */
 
-import { Connection } from 'typeorm';
+import { DataSource } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { expect } from 'chai';
@@ -51,7 +51,7 @@ export default function userIsAsExpected(user: User | UserResponse, ADResponse: 
 
 describe('AuthenticationService', (): void => {
   let ctx: {
-    connection: Connection,
+    connection: DataSource,
     app: Application,
     users: User[],
     spec: SwaggerSpecification,

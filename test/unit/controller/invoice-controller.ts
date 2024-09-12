@@ -18,7 +18,7 @@
  *  @license
  */
 
-import { Connection, In, Not } from 'typeorm';
+import { DataSource, In, Not } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
@@ -62,7 +62,7 @@ import { InvoiceSeeder, RbacSeeder, TransactionSeeder, UserSeeder } from '../../
 
 describe('InvoiceController', async () => {
   let ctx: {
-    connection: Connection,
+    connection: DataSource,
     app: Application,
     specification: SwaggerSpecification,
     controller: InvoiceController,

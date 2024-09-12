@@ -21,7 +21,7 @@
 import express, { Application } from 'express';
 import { expect, request } from 'chai';
 import { SwaggerSpecification } from 'swagger-model-validator';
-import { Connection } from 'typeorm';
+import { DataSource } from 'typeorm';
 import { json } from 'body-parser';
 import * as jwt from 'jsonwebtoken';
 import log4js from 'log4js';
@@ -47,7 +47,7 @@ import { RbacSeeder } from '../../../seed';
 
 describe('GewisAuthenticationController', async (): Promise<void> => {
   let ctx: {
-    connection: Connection,
+    connection: DataSource,
     app: Application,
     tokenHandler: TokenHandler,
     roleManager: RoleManager,

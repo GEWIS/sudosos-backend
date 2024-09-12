@@ -21,7 +21,7 @@
 import log4js, { Logger } from 'log4js';
 import Database from './database/database';
 import dinero, { Currency } from 'dinero.js';
-import { Connection } from 'typeorm';
+import { DataSource } from 'typeorm';
 import cron from 'node-cron';
 import BalanceService from './service/balance-service';
 import ADService from './service/ad-service';
@@ -34,7 +34,7 @@ import DefaultRoles from './rbac/default-roles';
 class CronApplication {
   logger: Logger;
 
-  connection: Connection;
+  connection: DataSource;
 
   tasks: cron.ScheduledTask[];
 

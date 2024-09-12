@@ -22,7 +22,7 @@ import { json } from 'body-parser';
 import { expect, request } from 'chai';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
-import { Connection } from 'typeorm';
+import { DataSource } from 'typeorm';
 import TokenHandler from '../../../src/authentication/token-handler';
 import VoucherGroupController from '../../../src/controller/voucher-group-controller';
 import { VoucherGroupRequest } from '../../../src/controller/request/voucher-group-request';
@@ -73,7 +73,7 @@ async function saveBKG(
 
 describe('VoucherGroupController', async (): Promise<void> => {
   let ctx: {
-    connection: Connection;
+    connection: DataSource;
     clock: Sinon.SinonFakeTimers,
     app: Application;
     specification: SwaggerSpecification;

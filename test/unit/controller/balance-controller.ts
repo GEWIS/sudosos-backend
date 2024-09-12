@@ -18,7 +18,7 @@
  *  @license
  */
 
-import { Connection } from 'typeorm';
+import { DataSource } from 'typeorm';
 import express, { Application } from 'express';
 import { expect, request } from 'chai';
 import { SwaggerSpecification } from 'swagger-model-validator';
@@ -45,7 +45,7 @@ import { FineSeeder, RbacSeeder, TransactionSeeder, TransferSeeder, UserSeeder }
 
 describe('BalanceController', (): void => {
   let ctx: {
-    connection: Connection,
+    connection: DataSource,
     app: Application,
     specification: SwaggerSpecification,
     controller: BalanceController,

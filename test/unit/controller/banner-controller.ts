@@ -22,7 +22,7 @@ import { json } from 'body-parser';
 import { expect, request } from 'chai';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
-import { Connection } from 'typeorm';
+import { DataSource } from 'typeorm';
 import sinon from 'sinon';
 import fs from 'fs';
 import path from 'path';
@@ -69,7 +69,7 @@ export function bannerEq(a: Banner, b: BannerResponse): Boolean {
 
 describe('BannerController', async (): Promise<void> => {
   let ctx: {
-    connection: Connection,
+    connection: DataSource,
     app: Application,
     specification: SwaggerSpecification,
     controller: BannerController,
