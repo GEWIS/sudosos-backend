@@ -18,20 +18,4 @@
  *  @license
  */
 
-import { EntityManager } from 'typeorm';
-import { AppDataSource } from '../database/database';
-
-/**
- * Takes a function with an EntityManager as first param and wraps it in a manager.
- * This ensures that if any of the DB transactions fail of the given transaction
- * function everything will be rolled back.
- * @param transactionFunction
- */
-export default function wrapInManager<T>(transactionFunction:
-(manager: EntityManager, ...arg: any[]) => Promise<T>): (...arg: any[]) => Promise<T> {
-  return async (...arg: any[]) => Promise.resolve(AppDataSource.manager.transaction(
-    async (manager) => Promise.resolve(transactionFunction(manager, ...arg)),
-  ));
-}
-
 export const PERSISTENT_TEST_DATABASES = new Set(['mysql', 'mariadb']);

@@ -31,7 +31,6 @@ import Swagger from '../../../src/start/swagger';
 import ADService from '../../../src/service/ad-service';
 import LDAPAuthenticator from '../../../src/entity/authenticator/ldap-authenticator';
 import AuthenticationService from '../../../src/service/authentication-service';
-import wrapInManager from '../../../src/helpers/database';
 import MemberAuthenticator from '../../../src/entity/authenticator/member-authenticator';
 import { LDAPGroup, LDAPUser } from '../../../src/helpers/ad';
 import userIsAsExpected from './authentication-service';
@@ -127,7 +126,11 @@ describe('AD Service', (): void => {
         return users;
       }
 
-      return Promise.resolve(wrapInManager(createAccounts)(accounts));
+      let result: any[];
+      await ctx.connection.transaction(async (manager) => {
+        result = await createAccounts(manager, accounts);
+      });
+      return result;
     }
     it('should create an account for new shared accounts', async () => {
       const newADSharedAccount = {
