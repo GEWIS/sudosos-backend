@@ -191,7 +191,8 @@ describe('GEWIS Helper functions', async (): Promise<void> => {
         let authUser: User;
         await ctx.connection.transaction(async (manager) => {
           const service = new AuthenticationService(manager);
-          authUser = await service.LDAPAuthentication(`m${user.id}`, 'This Is Correct', (u: LDAPUser) => Gewis.findOrCreateGEWISUserAndBind(u));
+          const gewisService = new Gewis(manager);
+          authUser = await service.LDAPAuthentication(`m${user.id}`, 'This Is Correct', (u: LDAPUser) => gewisService.findOrCreateGEWISUserAndBind(u));
         });
 
         expect(authUser.id).to.be.equal(user.id);
@@ -223,7 +224,8 @@ describe('GEWIS Helper functions', async (): Promise<void> => {
         let authUser: User;
         await ctx.connection.transaction(async (manager) => {
           const service = new AuthenticationService(manager);
-          authUser = await service.LDAPAuthentication(`m${user.id}`, 'This Is Correct', (u: LDAPUser) => Gewis.findOrCreateGEWISUserAndBind(u));
+          const gewisService = new Gewis(manager);
+          authUser = await service.LDAPAuthentication(`m${user.id}`, 'This Is Correct', (u: LDAPUser) => gewisService.findOrCreateGEWISUserAndBind(u));
         });
 
         DBUser = await User.findOne(

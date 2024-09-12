@@ -33,8 +33,6 @@ import GEWISAuthenticationPinRequest from './request/gewis-authentication-pin-re
 import AuthenticationLDAPRequest from '../../controller/request/authentication-ldap-request';
 import AuthenticationController from '../../controller/authentication-controller';
 import Gewis from '../gewis';
-import User from '../../entity/user/user';
-import wrapInManager from '../../helpers/database';
 import UserService from '../../service/user-service';
 import { webResponseToUpdate } from '../helpers/gewis-helper';
 
@@ -161,7 +159,7 @@ export default class GewisAuthenticationController extends BaseController {
       });
       if (!gewisUser) {
         // If
-        gewisUser = await wrapInManager<GewisUser>(Gewis.createUserFromWeb)(gewisweb);
+        gewisUser = await new Gewis().createUserFromWeb(gewisweb);
       } else {
         //
         const update = webResponseToUpdate(gewisweb);
@@ -197,7 +195,8 @@ export default class GewisAuthenticationController extends BaseController {
     this.logger.trace('GEWIS LDAP authentication for user', body.accountName);
 
     try {
-      await AuthenticationController.LDAPLoginConstructor(this.roleManager, this.tokenHandler, Gewis.findOrCreateGEWISUserAndBind.bind(Gewis))(req, res);
+      const gewisService = new Gewis();
+      await AuthenticationController.LDAPLoginConstructor(this.roleManager, this.tokenHandler, gewisService.findOrCreateGEWISUserAndBind.bind(gewisService))(req, res);
     } catch (error) {
       this.logger.error('Could not authenticate using LDAP:', error);
       res.status(500).json('Internal server error.');

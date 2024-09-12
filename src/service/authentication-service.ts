@@ -301,8 +301,8 @@ export default class AuthenticationService extends WithManager {
     const authenticator = await this.manager.findOne(LDAPAuthenticator, { where: { UUID: ADUser.objectGUID }, relations: ['user'] });
 
     // If there is no user associated with the GUID we create the user and bind it.
-    return Promise.resolve(authenticator
-      ? authenticator.user : await onNewUser(ADUser));
+    if (authenticator) return authenticator.user;
+    return onNewUser(ADUser);
   }
 
   /**
