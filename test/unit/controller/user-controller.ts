@@ -350,9 +350,10 @@ describe('UserController', (): void => {
     });
     it('should return correct user using search', async () => {
       const searchQuery = 'Firstname1 Last';
+      const take = 50;
       const res = await request(ctx.app)
         .get('/users')
-        .query({ search: searchQuery })
+        .query({ search: searchQuery, take })
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
 
@@ -372,7 +373,7 @@ describe('UserController', (): void => {
         expect(ids).to.includes(u.id);
       });
 
-      expect(pagination.take).to.equal(defaultPagination());
+      expect(pagination.take).to.equal(take);
       expect(pagination.skip).to.equal(0);
 
     });
