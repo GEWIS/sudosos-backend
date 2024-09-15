@@ -1157,6 +1157,7 @@ export default class UserController extends BaseController {
    * @returns {string} 200 - The requested report - application/pdf
    * @return {string} 400 - Validation error
    * @return {string} 500 - Internal server error
+   * @return {string} 502 - PDF generation failed
    */
   public async getUsersSalesReportPdf(req: RequestWithToken, res: Response): Promise<void> {
     const { id } = req.params;
@@ -1206,6 +1207,7 @@ export default class UserController extends BaseController {
    * @returns {string} 200 - The requested report - application/pdf
    * @return {string} 400 - Validation error
    * @return {string} 500 - Internal server error
+   * @return {string} 502 - PDF generation failed
    */
   public async getUsersPurchaseReportPdf(req: RequestWithToken, res: Response): Promise<void> {
     const { id } = req.params;
