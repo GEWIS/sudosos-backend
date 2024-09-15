@@ -26,7 +26,7 @@ import sinon from 'sinon';
 import { Client } from 'ldapts';
 import User, { UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
-import seedDatabase from '../../seed';
+import seedDatabase from '../../seed/all';
 import Swagger from '../../../src/start/swagger';
 import AuthenticationService from '../../../src/service/authentication-service';
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
