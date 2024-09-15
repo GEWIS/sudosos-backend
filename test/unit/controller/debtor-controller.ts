@@ -51,6 +51,7 @@ import { finishTestDB } from '../../helpers/test-helpers';
 import { Client } from 'pdf-generator-client';
 import { BasePdfService } from '../../../src/service/pdf/pdf-service';
 import { FineSeeder, RbacSeeder, TransactionSeeder, TransferSeeder, UserSeeder } from '../../seed';
+import { rootStubs } from '../../root-hooks';
 
 describe('DebtorController', () => {
   let ctx: {
@@ -156,7 +157,13 @@ describe('DebtorController', () => {
       fines,
       fineHandoutEvents,
     };
+  });
 
+  beforeEach(() => {
+    // Restore the default stub
+    rootStubs?.mail.restore();
+
+    // Reset the mailer, because it was created with an old, expired stub
     Mailer.reset();
 
     sandbox = sinon.createSandbox();
@@ -169,11 +176,10 @@ describe('DebtorController', () => {
   // close database connection
   after( async () => {
     await finishTestDB(ctx.connection);
-    sandbox.restore();
   });
 
   afterEach(() => {
-    sendMailFake.resetHistory();
+    sandbox.restore();
   });
 
   describe('GET /fines', () => {

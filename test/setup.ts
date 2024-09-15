@@ -35,6 +35,9 @@ import { DataSource } from 'typeorm';
 import { PERSISTENT_TEST_DATABASES } from '../src/helpers/database';
 import '../src/database/database';
 
+// Root hooks
+export { mochaHooks } from './root-hooks';
+
 use(chaiAsPromised);
 use(chaiHttp);
 use(chaiSwag);

@@ -30,6 +30,7 @@ import nodemailer, { Transporter } from 'nodemailer';
 import Mailer from '../../../src/mailer';
 import { In } from 'typeorm';
 import { UserSeeder } from '../../seed';
+import { rootStubs } from '../../root-hooks';
 
 describe('GEWISDB Service', () => {
 
@@ -50,7 +51,13 @@ describe('GEWISDB Service', () => {
     } as any;
     ctx.users = await new UserSeeder().seed();
     ctx.gewisUsers = await seedGEWISUsers(ctx.users);
+  });
 
+  beforeEach(() => {
+    // Restore the default stub
+    rootStubs?.mail.restore();
+
+    // Reset the mailer, because it was created with an old, expired stub
     Mailer.reset();
 
     sandbox = sinon.createSandbox();
@@ -62,12 +69,11 @@ describe('GEWISDB Service', () => {
 
   after(async () => {
     await finishTestDB(ctx.connection);
-    sinon.restore();
-    sandbox.restore();
   });
 
   afterEach(() => {
-    sendMailFake.resetHistory();
+    sandbox.restore();
+    sinon.restore();
   });
 
   describe('sync', () => {

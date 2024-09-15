@@ -36,6 +36,7 @@ import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import Role from '../../../src/entity/rbac/role';
 import { EventSeeder, UserSeeder } from '../../seed';
+import { rootStubs } from '../../root-hooks';
 
 describe('eventService', () => {
   let ctx: {
@@ -234,7 +235,11 @@ describe('eventService', () => {
     let sandbox: SinonSandbox;
     let sendMailFake: SinonSpy;
 
-    before(() => {
+    beforeEach(() => {
+      // Restore the default stub
+      rootStubs?.mail.restore();
+
+      // Reset the mailer, because it was created with an old, expired stub
       Mailer.reset();
 
       sandbox = sinon.createSandbox();
@@ -244,12 +249,8 @@ describe('eventService', () => {
       } as any as Transporter);
     });
 
-    after(() => {
-      sandbox.restore();
-    });
-
     afterEach(() => {
-      sendMailFake.resetHistory();
+      sandbox.restore();
     });
 
     it('should send a reminder to all users that have not given up their availability', async () => {

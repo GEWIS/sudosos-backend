@@ -44,6 +44,7 @@ import {
   TransferSeeder,
   UserSeeder,
 } from '../../seed';
+import { rootStubs } from '../../root-hooks';
 
 describe('TransactionSubscriber', () => {
   let ctx: {
@@ -101,6 +102,18 @@ describe('TransactionSubscriber', () => {
       transfers,
     };
 
+    env = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'test-transactions';
+
+    // Sanity check
+    expect(ctx.usersInDebt.length).to.be.at.least(3);
+  });
+
+  beforeEach(() => {
+    // Restore the default stub
+    rootStubs?.mail.restore();
+
+    // Reset the mailer, because it was created with an old, expired stub
     Mailer.reset();
 
     sandbox = sinon.createSandbox();
@@ -108,12 +121,6 @@ describe('TransactionSubscriber', () => {
     sandbox.stub(nodemailer, 'createTransport').returns({
       sendMail: sendMailFake,
     } as any as Transporter);
-
-    env = process.env.NODE_ENV;
-    process.env.NODE_ENV = 'test-transactions';
-
-    // Sanity check
-    expect(ctx.usersInDebt.length).to.be.at.least(3);
   });
 
   after(async () => {
@@ -124,7 +131,7 @@ describe('TransactionSubscriber', () => {
   });
 
   afterEach(() => {
-    sendMailFake.resetHistory();
+    sandbox.restore();
   });
 
   describe('afterInsert', () => {
