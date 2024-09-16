@@ -118,17 +118,16 @@ export default class InvoiceSeeder extends WithManager {
     await this.manager.save(Invoice, invoices);
 
     for (let i = 0; i < invoices.length; i += 1) {
-      if (i % 2 === 0) {
-        const current = invoices[i].invoiceStatus[0].changedBy.id;
-        const status = Object.assign(new InvoiceStatus(), {
-          invoice: invoices[i],
-          changedBy: current,
-          state: InvoiceState.SENT,
-          dateChanged: addDays(new Date(2020, 0, 1), 2 - (i * 2)),
-        });
-        invoices[i].invoiceStatus.push(status);
-        await this.manager.save(Invoice, invoices[i]);
-      }
+      if (i % 4 === 0) continue;
+      const current = invoices[i].invoiceStatus[0].changedBy.id;
+      const status = Object.assign(new InvoiceStatus(), {
+        invoice: invoices[i],
+        changedBy: current,
+        state: [InvoiceState.SENT, InvoiceState.PAID, InvoiceState.DELETED][i % 3],
+        dateChanged: addDays(new Date(2020, 0, 1), 2 - (i * 2)),
+      });
+      invoices[i].invoiceStatus.push(status);
+      await this.manager.save(Invoice, invoices[i]);
     }
 
 

@@ -36,7 +36,7 @@ import {
   INVALID_INVOICE_ID,
   INVALID_TRANSACTION_IDS,
   INVALID_TRANSACTION_OWNER,
-  INVOICE_IS_DELETED, NO_TRANSACTION_IDS,
+  INVOICE_IS_DELETED, INVOICE_IS_PAID, NO_TRANSACTION_IDS,
   SAME_INVOICE_STATE, SUBTRANSACTION_ALREADY_INVOICED,
 } from './validation-errors';
 import { InvoiceState } from '../../../entity/invoices/invoice-status';
@@ -80,12 +80,16 @@ async function validTransactionIds<T extends BaseInvoice>(p: T) {
  * Validates that Invoice exists and is not of state DELETED.
  * @param p
  */
-async function existsAndNotDeleted<T extends UpdateInvoiceParams>(p: T) {
+async function existsAndNotPaidOrDeleted<T extends UpdateInvoiceParams>(p: T) {
   const base: Invoice = await Invoice.findOne({ where: { id: p.invoiceId }, relations: ['invoiceStatus'] });
 
   if (!base) return toFail(INVALID_INVOICE_ID());
-  if (base.invoiceStatus[base.invoiceStatus.length - 1].state === InvoiceState.DELETED) {
+  const current = base.invoiceStatus.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())[base.invoiceStatus.length - 1].state;
+  if (current === InvoiceState.DELETED) {
     return toFail(INVOICE_IS_DELETED());
+  }
+  if (current === InvoiceState.PAID) {
+    return toFail(INVOICE_IS_PAID());
   }
 
   return toPass(p);
@@ -122,7 +126,7 @@ function baseInvoiceRequestSpec<T extends BaseInvoice>(): Specification<T, Valid
 const updateInvoiceRequestSpec: Specification<UpdateInvoiceParams, ValidationError> = [
   [stringSpec(), 'description', new ValidationError('description:')],
   differentState,
-  existsAndNotDeleted,
+  existsAndNotPaidOrDeleted,
 ];
 
 /**
