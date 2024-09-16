@@ -614,15 +614,45 @@ describe('DebtorService', (): void => {
 
     it('should return correct report', async () => {
       const fineHandoutEvent = await makeFines();
-      const date = new Date(fineHandoutEvent.createdAt);
-      const report = await DebtorService.getFineReport(date, date);
+      const fromDate = new Date(fineHandoutEvent.createdAt);
+      fromDate.setTime(fromDate.getTime() - 1000);
+      const endDate = new Date();
+      endDate.setTime(endDate.getTime() + 1000);
+      const report = await DebtorService.getFineReport(fromDate, endDate);
+      console.error(fineHandoutEvent);
 
-      expect(report.fromDate.toISOString()).to.equal(date.toISOString());
-      expect(report.toDate.toISOString()).to.equal(date.toISOString());
+      expect(report.fromDate.toISOString()).to.equal(fromDate.toISOString());
+      expect(report.toDate.toISOString()).to.equal(endDate.toISOString());
       expect(report.count).to.equal(fineHandoutEvent.fines.length);
 
       const handedOut = fineHandoutEvent.fines.reduce((sum, u) => sum + u.amount.amount, 0);
       expect(report.handedOut.getAmount()).to.equal(handedOut);
+      expect(report.waivedAmount.getAmount()).to.equal(0);
+    });
+
+    it('should be empty if endDate is before fines', async () => {
+      await makeFines();
+      const fromDate = new Date('2020-01-01');
+      const endDate = new Date('2021-01-01');
+      const report = await DebtorService.getFineReport(fromDate, endDate);
+
+      expect(report.fromDate.toISOString()).to.equal(fromDate.toISOString());
+      expect(report.toDate.toISOString()).to.equal(endDate.toISOString());
+      expect(report.count).to.equal(0);
+      expect(report.handedOut.getAmount()).to.equal(0);
+      expect(report.waivedAmount.getAmount()).to.equal(0);
+    });
+
+    it('should be empty if endDate is after fines', async () => {
+      await makeFines();
+      const fromDate = new Date('3020-01-01');
+      const endDate = new Date('3021-01-01');
+      const report = await DebtorService.getFineReport(fromDate, endDate);
+
+      expect(report.fromDate.toISOString()).to.equal(fromDate.toISOString());
+      expect(report.toDate.toISOString()).to.equal(endDate.toISOString());
+      expect(report.count).to.equal(0);
+      expect(report.handedOut.getAmount()).to.equal(0);
       expect(report.waivedAmount.getAmount()).to.equal(0);
     });
 
@@ -639,7 +669,9 @@ describe('DebtorService', (): void => {
       }).save();
       await transfer.save();
       const date = new Date(fineHandoutEvent.createdAt);
+      date.setTime(date.getTime() - 1000);
       const tillDate = new Date();
+      tillDate.setTime(tillDate.getTime() + 1000);
       // Expect to error
       await expect(DebtorService.getFineReport(date, tillDate)).to.eventually.rejectedWith('Transfer has both fine and waived fine');
     });
@@ -647,7 +679,9 @@ describe('DebtorService', (): void => {
     it('should deal with waived fines', async () => {
       const fineHandoutEvent = await makeFines();
       const date = new Date(fineHandoutEvent.createdAt);
+      date.setTime(date.getTime() - 1000);
       const tillDate = new Date();
+      tillDate.setTime(tillDate.getTime() + 1000);
 
       await DebtorService.waiveFines(fineHandoutEvent.fines[0].user.id);
       const report = await DebtorService.getFineReport(date, tillDate);

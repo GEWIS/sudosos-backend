@@ -43,6 +43,8 @@ import MailMessage from '../mailer/mail-message';
 import UserWillGetFined from '../mailer/messages/user-will-get-fined';
 import { FineReport } from '../entity/report/fine-report';
 import { AppDataSource } from '../database/database';
+import { Raw } from 'typeorm';
+import { toMySQLString } from '../helpers/timestamps';
 
 export interface CalculateFinesParams {
   userTypes?: UserType[];
@@ -365,7 +367,14 @@ export default class DebtorService {
     // Get all transfers that have a fine or waived fine
     const transfers = await Transfer.find({
       relations: ['fine', 'fine.transfer',  'waivedFines', 'waivedFines.waivedTransfer'],
-      where: [{ fine: true }, { waivedFines: true }],
+      where: [{ fine: true, createdAt: Raw(
+        (alias) => `${alias} >= :fromDate AND ${alias} < :tillDate`,
+        { fromDate: toMySQLString(fromDate), tillDate: toMySQLString(toDate) },
+      ) },
+      { waivedFines: true, createdAt: Raw(
+        (alias) => `${alias} >= :fromDate AND ${alias} < :tillDate`,
+        { fromDate: toMySQLString(fromDate), tillDate: toMySQLString(toDate) },
+      ) }],
     });
 
     transfers.forEach((transfer) => {
