@@ -18,7 +18,7 @@
  *  @license
  */
 
-import { Connection } from 'typeorm';
+import { DataSource } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
@@ -45,7 +45,7 @@ describe('StripeController', async (): Promise<void> => {
   let originalName: string;
 
   let ctx: {
-    connection: Connection,
+    connection: DataSource,
     app: Application,
     specification: SwaggerSpecification,
     controller: StripeController,

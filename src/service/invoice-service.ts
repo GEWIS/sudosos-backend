@@ -123,7 +123,12 @@ export default class InvoiceService extends WithManager {
   }
 
   static getLatestInvoiceStatus(invoiceStatus: InvoiceStatus[]): InvoiceStatus {
-    return invoiceStatus.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0];
+    const sorted = invoiceStatus.sort((a, b) => {
+      const diff = b.createdAt.getTime() - a.createdAt.getTime();
+      if (diff !== 0) return diff;
+      return b.id - a.id;
+    });
+    return sorted[0];
   }
 
   /**
@@ -289,10 +294,9 @@ export default class InvoiceService extends WithManager {
       });
 
       // Add it to the invoice and save it.
-      await base.save().then(async () => {
-        base.invoiceStatus.push(invoiceStatus);
-        await this.manager.save(InvoiceStatus, invoiceStatus);
-      });
+      await this.manager.save(Invoice, base);
+      base.invoiceStatus.push(invoiceStatus);
+      await this.manager.save(InvoiceStatus, invoiceStatus);
     }
 
     if (amount) await this.manager.update(Transfer, { id: base.transfer.id }, { amountInclVat: DineroTransformer.Instance.from(amount.amount) });

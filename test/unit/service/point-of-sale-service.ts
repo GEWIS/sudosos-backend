@@ -18,7 +18,7 @@
  *  @license
  */
 
-import { Connection, getManager, IsNull, Not } from 'typeorm';
+import { DataSource, IsNull, Not } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
@@ -80,7 +80,7 @@ function updateResponseEqual(update: UpdatePointOfSaleParams,
 
 describe('PointOfSaleService', async (): Promise<void> => {
   let ctx: {
-    connection: Connection,
+    connection: DataSource,
     app: Application,
     specification: SwaggerSpecification,
     users: User[],
@@ -233,7 +233,7 @@ describe('PointOfSaleService', async (): Promise<void> => {
         expect(pos.owner.id).to.equal(owner.id);
       });
 
-      await AuthenticationService.setMemberAuthenticator(getManager(), [owner], usersOwningAPos[1]);
+      await new AuthenticationService().setMemberAuthenticator([owner], usersOwningAPos[1]);
 
       const ownerIds = [owner, usersOwningAPos[1]].map((o) => o.id);
       pointsOfSale = await PointOfSaleService.getPointsOfSale({}, {}, owner);

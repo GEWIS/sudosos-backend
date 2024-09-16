@@ -18,7 +18,7 @@
  *  @license
  */
 
-import { createQueryBuilder, FindManyOptions } from 'typeorm';
+import { FindManyOptions } from 'typeorm';
 import { DineroObject } from 'dinero.js';
 import { PaginationParameters } from '../helpers/pagination';
 import VatGroup, { VatDeclarationPeriod } from '../entity/vat-group';
@@ -36,6 +36,7 @@ import SubTransactionRow from '../entity/transactions/sub-transaction-row';
 import ProductRevision from '../entity/product/product-revision';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
 import ProductService from './product-service';
+import { AppDataSource } from '../database/database';
 
 interface VatGroupFilterParameters {
   vatGroupId?: number;
@@ -200,7 +201,7 @@ export default class VatGroupService {
 
     const vatGroups = await VatGroup.find({ where: { deleted: false } });
 
-    const builder = createQueryBuilder(SubTransactionRow, 'str')
+    const builder = AppDataSource.createQueryBuilder(SubTransactionRow, 'str')
       .select([
         'vatgroup.id as id',
         'MAX(vatgroup.name) as name',

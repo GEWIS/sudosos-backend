@@ -18,7 +18,7 @@
  *  @license
  */
 
-import { Connection } from 'typeorm';
+import { DataSource } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
@@ -47,7 +47,7 @@ import { ProductCategorySeeder, RbacSeeder } from '../../seed';
 
 describe('ProductCategoryController', async (): Promise<void> => {
   let ctx: {
-    connection: Connection,
+    connection: DataSource,
     app: Application,
     specification: SwaggerSpecification,
     controller: ProductCategoryController,

@@ -18,7 +18,7 @@
  *  @license
  */
 
-import { Connection } from 'typeorm';
+import { DataSource } from 'typeorm';
 import express, { Application } from 'express';
 import { expect, request } from 'chai';
 import { SwaggerSpecification } from 'swagger-model-validator';
@@ -46,7 +46,7 @@ import { RbacSeeder } from '../../seed';
 
 describe('TransactionController', (): void => {
   let ctx: {
-    connection: Connection,
+    connection: DataSource,
     app: Application,
     specification: SwaggerSpecification,
     controller: TransactionController,

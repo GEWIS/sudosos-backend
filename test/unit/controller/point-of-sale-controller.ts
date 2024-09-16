@@ -18,7 +18,7 @@
  *  @license
  */
 
-import { Connection, IsNull, Not } from 'typeorm';
+import { DataSource, IsNull, Not } from 'typeorm';
 import { json } from 'body-parser';
 import chai, { expect, request } from 'chai';
 import PointOfSaleController from '../../../src/controller/point-of-sale-controller';
@@ -82,7 +82,7 @@ function updatePointOfSaleEq(source: UpdatePointOfSaleRequest, response: PointOf
 
 describe('PointOfSaleController', async () => {
   let ctx: {
-    connection: Connection,
+    connection: DataSource,
     app: Express,
     specification: SwaggerSpecification,
     roleManager: RoleManager,

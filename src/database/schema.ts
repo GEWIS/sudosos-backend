@@ -44,7 +44,7 @@ export default async function createApp() {
   try {
     await application.connection.synchronize();
     application.logger.info('Schema synchronized successfully');
-    await application.connection.close();
+    await application.connection.destroy();
   } catch (e) {
     application.logger.error('Error synchronizing schema', e);
   }

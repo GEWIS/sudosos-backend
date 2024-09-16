@@ -19,7 +19,7 @@
  */
 
 import {
-  Connection, getManager, IsNull, Not,
+  DataSource, IsNull, Not,
 } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
@@ -95,7 +95,7 @@ chai.use(deepEqualInAnyOrder);
 
 describe('ContainerService', async (): Promise<void> => {
   let ctx: {
-    connection: Connection,
+    connection: DataSource,
     app: Application,
     specification: SwaggerSpecification,
     users: User[],
@@ -255,9 +255,7 @@ describe('ContainerService', async (): Promise<void> => {
         expect(cont.owner.id).to.equal(owner2.id);
       });
 
-      await AuthenticationService.setMemberAuthenticator(
-        getManager(), [owner1], owner2,
-      );
+      await new AuthenticationService().setMemberAuthenticator([owner1], owner2);
 
       const ownerIds = [owner1, owner2].map((o) => o.id);
       containers = await ContainerService.getContainers({}, {}, owner1);

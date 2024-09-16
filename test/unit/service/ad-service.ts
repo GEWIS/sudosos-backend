@@ -18,7 +18,7 @@
  *  @license
  */
 
-import { Connection, EntityManager } from 'typeorm';
+import { DataSource, EntityManager } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import sinon from 'sinon';
@@ -31,9 +31,8 @@ import Swagger from '../../../src/start/swagger';
 import ADService from '../../../src/service/ad-service';
 import LDAPAuthenticator from '../../../src/entity/authenticator/ldap-authenticator';
 import AuthenticationService from '../../../src/service/authentication-service';
-import wrapInManager from '../../../src/helpers/database';
 import MemberAuthenticator from '../../../src/entity/authenticator/member-authenticator';
-import { LDAPGroup, LDAPResponse, LDAPUser } from '../../../src/helpers/ad';
+import { LDAPGroup, LDAPUser } from '../../../src/helpers/ad';
 import userIsAsExpected from './authentication-service';
 import RoleManager from '../../../src/rbac/role-manager';
 import AssignedRole from '../../../src/entity/rbac/assigned-role';
@@ -45,11 +44,11 @@ chai.use(deepEqualInAnyOrder);
 
 describe('AD Service', (): void => {
   let ctx: {
-    connection: Connection,
+    connection: DataSource,
     app: Application,
     users: User[],
     spec: SwaggerSpecification,
-    validADUser: (mNumber: number) => (LDAPResponse),
+    validADUser: (mNumber: number) => (LDAPUser),
   };
 
   const stubs: sinon.SinonStub[] = [];
@@ -82,7 +81,7 @@ describe('AD Service', (): void => {
       },
     );
 
-    const validADUser = (mNumber: number) => ({
+    const validADUser = (mNumber: number): LDAPUser => ({
       dn: `CN=Sudo SOS (m${mNumber}),OU=Member accounts,DC=gewiswg,DC=gewis,DC=nl`,
       memberOfFlattened: [
         'CN=Domain Users,CN=Users,DC=gewiswg,DC=gewis,DC=nl',
@@ -90,10 +89,10 @@ describe('AD Service', (): void => {
       givenName: `Sudo (${mNumber})`,
       sn: 'SOS',
       objectGUID: `${mNumber}`,
-      sAMAccountName: `m${mNumber}`,
+      mNumber: mNumber,
       mail: `m${mNumber}@gewis.nl`,
       whenChanged: '202204151213.0Z',
-    }) as LDAPResponse;
+    });
 
     ctx = {
       connection,
@@ -120,14 +119,18 @@ describe('AD Service', (): void => {
         const users: User[] = [];
         const promises: Promise<any>[] = [];
         acc.forEach((m) => {
-          promises.push(AuthenticationService.createUserAndBind(manager, m)
+          promises.push(new AuthenticationService(manager).createUserAndBind(m)
             .then((u) => users.push(u)));
         });
         await Promise.all(promises);
         return users;
       }
 
-      return Promise.resolve(wrapInManager(createAccounts)(accounts));
+      let result: any[];
+      await ctx.connection.transaction(async (manager) => {
+        result = await createAccounts(manager, accounts);
+      });
+      return result;
     }
     it('should create an account for new shared accounts', async () => {
       const newADSharedAccount = {
@@ -152,7 +155,7 @@ describe('AD Service', (): void => {
       stubs.push(clientSearchStub);
 
       const organCount = await User.count({ where: { type: UserType.ORGAN } });
-      await ADService.syncSharedAccounts();
+      await new ADService().syncSharedAccounts();
 
       expect(await User.count({ where: { type: UserType.ORGAN } })).to.be.equal(organCount + 1);
       const newOrgan = (await LDAPAuthenticator.findOne({ where: { UUID: newADSharedAccount.objectGUID }, relations: ['user'] })).user;
@@ -186,10 +189,15 @@ describe('AD Service', (): void => {
         objectGUID: '4141',
         sAMAccountName: 'm4141',
         mail: 'm4141@gewis.nl',
+        // TODO: Fix this type inconsistency between ADUser and ldapts.Client
+        mNumber: '4141' as string & number,
+        whenChanged: new Date().toISOString(),
       };
 
-      const user = await wrapInManager(AuthenticationService
-        .createUserAndBind)(sharedAccountMember);
+      let user: User;
+      await ctx.connection.transaction(async (manager) => {
+        user = await new AuthenticationService(manager).createUserAndBind(sharedAccountMember);
+      });
 
       clientSearchStub.withArgs(process.env.LDAP_SHARED_ACCOUNT_FILTER, {
         filter: '(CN=*)',
@@ -203,7 +211,7 @@ describe('AD Service', (): void => {
       stubs.push(clientBindStub);
       stubs.push(clientSearchStub);
 
-      await ADService.syncSharedAccounts();
+      await new ADService().syncSharedAccounts();
 
       const newOrgan = (await LDAPAuthenticator.findOne({ where: { UUID: newADSharedAccount.objectGUID }, relations: ['user'] })).user;
 
@@ -259,7 +267,7 @@ describe('AD Service', (): void => {
       stubs.push(clientBindStub);
       stubs.push(clientSearchStub);
 
-      await ADService.syncSharedAccounts();
+      await new ADService().syncSharedAccounts();
 
       // Should contain the first users
       const newOrgan = (await LDAPAuthenticator.findOne({ where: { UUID: newADSharedAccount.objectGUID }, relations: ['user'] })).user;
@@ -294,7 +302,7 @@ describe('AD Service', (): void => {
       stubs.push(clientBindStub2);
       stubs.push(clientSearchStub2);
 
-      await ADService.syncSharedAccounts();
+      await new ADService().syncSharedAccounts();
 
       canAuthenticateAsIDs = (await MemberAuthenticator.find(
         { where: { authenticateAs: { id: newOrgan.id } }, relations: ['user'] },
@@ -313,7 +321,7 @@ describe('AD Service', (): void => {
       )).to.be.null;
 
       const userCount = await User.count();
-      await wrapInManager(ADService.createAccountIfNew)([adUser]);
+      await new ADService().createAccountIfNew([adUser]);
 
       expect(await User.count()).to.be.equal(userCount + 1);
       const auth = (await LDAPAuthenticator.findOne(
@@ -331,7 +339,7 @@ describe('AD Service', (): void => {
       const newUser = { ...(ctx.validADUser(await User.count() + 2)) };
       const existingUser = { ...(ctx.validADUser(await User.count() + 3)) };
 
-      await wrapInManager(ADService.createAccountIfNew)([existingUser]);
+      await new ADService().createAccountIfNew([existingUser]);
       // precondition.
       expect(await LDAPAuthenticator.findOne(
         { where: { UUID: newUser.objectGUID } },
@@ -372,7 +380,7 @@ describe('AD Service', (): void => {
 
       const roleManager = await new RoleManager().initialize();
 
-      await ADService.syncUserRoles(roleManager);
+      await new ADService().syncUserRoles(roleManager);
       const auth = (await LDAPAuthenticator.findOne(
         { where: { UUID: newUser.objectGUID }, relations: ['user'] },
       ));
@@ -380,7 +388,7 @@ describe('AD Service', (): void => {
       const { user } = auth;
       userIsAsExpected(user, newUser);
 
-      const users = await ADService.getUsers([newUser as LDAPUser, existingUser as LDAPUser]);
+      const users = await new ADService().getUsers([newUser as LDAPUser, existingUser as LDAPUser]);
       expect(await AssignedRole.findOne({ where: { role: { name: 'SudoSOS - Test' }, user: { id: users[0].id } } })).to.exist;
       expect(await AssignedRole.findOne({ where: { role: { name: 'SudoSOS - Test' }, user: { id: users[1].id } } })).to.exist;
     });
@@ -401,7 +409,7 @@ describe('AD Service', (): void => {
       stubs.push(clientBindStub);
       stubs.push(clientSearchStub);
 
-      await ADService.syncUsers();
+      await new ADService().syncUsers();
       const auth = (await LDAPAuthenticator.findOne(
         { where: { UUID: newUser.objectGUID }, relations: ['user'] },
       ));

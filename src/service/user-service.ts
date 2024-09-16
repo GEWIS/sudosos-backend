@@ -214,7 +214,7 @@ export default class UserService {
 
     // Local users will receive a reset link.
     if (LocalUserTypes.includes(user.type)) {
-      const resetTokenInfo = await AuthenticationService.createResetToken(user);
+      const resetTokenInfo = await new AuthenticationService().createResetToken(user);
       Mailer.getInstance().send(user, new WelcomeWithReset({ email: user.email, resetTokenInfo })).then().catch((e) => {
         throw e;
       });

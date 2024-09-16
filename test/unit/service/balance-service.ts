@@ -19,7 +19,7 @@
  */
 
 import { expect } from 'chai';
-import { Connection, DeepPartial } from 'typeorm';
+import { DataSource, DeepPartial } from 'typeorm';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import Transaction from '../../../src/entity/transactions/transaction';
 import Transfer from '../../../src/entity/transactions/transfer';
@@ -45,7 +45,7 @@ import { FineSeeder, PointOfSaleSeeder, TransactionSeeder, TransferSeeder, UserS
 
 describe('BalanceService', (): void => {
   let ctx: {
-    connection: Connection,
+    connection: DataSource,
     users: User[],
     pointOfSaleRevisions: PointOfSaleRevision[],
     transactions: Transaction[],

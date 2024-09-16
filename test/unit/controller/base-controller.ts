@@ -22,7 +22,7 @@ import express, { Application, Request } from 'express';
 import { expect, request } from 'chai';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
-import { Connection } from 'typeorm';
+import { DataSource } from 'typeorm';
 import BaseController from '../../../src/controller/base-controller';
 import Policy from '../../../src/controller/policy';
 import { getSpecification } from '../entity/transformer/test-model';
@@ -92,7 +92,7 @@ class TestController extends BaseController {
 
 describe('BaseController', (): void => {
   let ctx: {
-    connection: Connection,
+    connection: DataSource,
     app: Application,
     specification: SwaggerSpecification,
     controller: BaseController,

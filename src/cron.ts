@@ -21,7 +21,7 @@
 import log4js, { Logger } from 'log4js';
 import Database from './database/database';
 import dinero, { Currency } from 'dinero.js';
-import { Connection } from 'typeorm';
+import { DataSource } from 'typeorm';
 import cron from 'node-cron';
 import BalanceService from './service/balance-service';
 import ADService from './service/ad-service';
@@ -34,7 +34,7 @@ import DefaultRoles from './rbac/default-roles';
 class CronApplication {
   logger: Logger;
 
-  connection: Connection;
+  connection: DataSource;
 
   tasks: cron.ScheduledTask[];
 
@@ -96,14 +96,15 @@ async function createCronTasks(): Promise<void> {
   Gewis.overwriteBindings();
 
   if (process.env.ENABLE_LDAP === 'true') {
-    await ADService.syncUsers();
-    await ADService.syncSharedAccounts().then(
-      () => ADService.syncUserRoles(application.roleManager),
+    const adService = new ADService();
+    await adService.syncUsers();
+    await adService.syncSharedAccounts().then(
+      () => adService.syncUserRoles(application.roleManager),
     );
     const syncADGroups = cron.schedule('*/10 * * * *', async () => {
       logger.debug('Syncing AD.');
-      await ADService.syncSharedAccounts().then(
-        () => ADService.syncUserRoles(application.roleManager),
+      await adService.syncSharedAccounts().then(
+        () => adService.syncUserRoles(application.roleManager),
       );
       logger.debug('Synced AD');
     });

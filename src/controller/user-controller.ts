@@ -459,7 +459,7 @@ export default class UserController extends BaseController {
         return;
       }
 
-      await AuthenticationService.setUserAuthenticationHash(user,
+      await new AuthenticationService().setUserAuthenticationHash(user,
         updatePinRequest.pin.toString(), PinAuthenticator);
       res.status(204).json();
     } catch (error) {
@@ -501,7 +501,7 @@ export default class UserController extends BaseController {
         return;
       }
 
-      await AuthenticationService.setUserAuthenticationNfc(user,
+      await new AuthenticationService().setUserAuthenticationNfc(user,
         updateNfcRequest.nfcCode.toString(), NfcAuthenticator);
       res.status(204).json();
     } catch (error) {
@@ -574,7 +574,7 @@ export default class UserController extends BaseController {
       }
 
       const generatedKey = randomBytes(128).toString('hex');
-      await AuthenticationService.setUserAuthenticationHash(user,
+      await new AuthenticationService().setUserAuthenticationHash(user,
         generatedKey, KeyAuthenticator);
       const response = { key: generatedKey } as UpdateKeyResponse;
       res.status(200).json(response);
@@ -651,7 +651,7 @@ export default class UserController extends BaseController {
         return;
       }
 
-      await AuthenticationService.setUserAuthenticationHash(user,
+      await new AuthenticationService().setUserAuthenticationHash(user,
         updateLocalRequest.password, LocalAuthenticator);
       res.status(204).json();
     } catch (error) {
@@ -1157,6 +1157,7 @@ export default class UserController extends BaseController {
    * @returns {string} 200 - The requested report - application/pdf
    * @return {string} 400 - Validation error
    * @return {string} 500 - Internal server error
+   * @return {string} 502 - PDF generation failed
    */
   public async getUsersSalesReportPdf(req: RequestWithToken, res: Response): Promise<void> {
     const { id } = req.params;
@@ -1206,6 +1207,7 @@ export default class UserController extends BaseController {
    * @returns {string} 200 - The requested report - application/pdf
    * @return {string} 400 - Validation error
    * @return {string} 500 - Internal server error
+   * @return {string} 502 - PDF generation failed
    */
   public async getUsersPurchaseReportPdf(req: RequestWithToken, res: Response): Promise<void> {
     const { id } = req.params;
@@ -1384,7 +1386,7 @@ export default class UserController extends BaseController {
         tokenHandler: this.tokenHandler,
       };
 
-      const token = await AuthenticationService.getSaltedToken(authenticateAs, context, false);
+      const token = await new AuthenticationService().getSaltedToken(authenticateAs, context, false);
       res.status(200).json(token);
     } catch (error) {
       this.logger.error('Could not authenticate as user:', error);

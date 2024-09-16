@@ -84,7 +84,7 @@ export default class AuthenticationSecureController extends BaseController {
 
     try {
       const user = await User.findOne({ where: { id: req.token.user.id } });
-      const token = await AuthenticationService.getSaltedToken(user, {
+      const token = await new AuthenticationService().getSaltedToken(user, {
         roleManager: this.roleManager,
         tokenHandler: this.tokenHandler,
       }, req.token.lesser);
@@ -118,7 +118,7 @@ export default class AuthenticationSecureController extends BaseController {
       }
 
       const expiry = ServerSettingsStore.getInstance().getSetting('jwtExpiryPointOfSale') as ISettings['jwtExpiryPointOfSale'];
-      const token = await AuthenticationService.getSaltedToken(pointOfSale.user, {
+      const token = await new AuthenticationService().getSaltedToken(pointOfSale.user, {
         roleManager: this.roleManager,
         tokenHandler: this.tokenHandler,
       }, false, undefined, expiry);

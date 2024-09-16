@@ -28,7 +28,6 @@ import TokenHandler from '../authentication/token-handler';
 import AuthenticationService, { AuthenticationContext } from '../service/authentication-service';
 import AuthenticationLDAPRequest from './request/authentication-ldap-request';
 import RoleManager from '../rbac/role-manager';
-import wrapInManager from '../helpers/database';
 import { LDAPUser } from '../helpers/ad';
 import AuthenticationLocalRequest from './request/authentication-local-request';
 import PinAuthenticator from '../entity/authenticator/pin-authenticator';
@@ -44,6 +43,7 @@ import AuthenticationNfcRequest from './request/authentication-nfc-request';
 import NfcAuthenticator from '../entity/authenticator/nfc-authenticator';
 import AuthenticationKeyRequest from './request/authentication-key-request';
 import KeyAuthenticator from '../entity/authenticator/key-authenticator';
+import { AppDataSource } from '../database/database';
 
 /**
  * The authentication controller is responsible for:
@@ -220,7 +220,7 @@ export default class AuthenticationController extends BaseController {
         tokenHandler,
       };
 
-      const result = await AuthenticationService.HashAuthentication(pin,
+      const result = await new AuthenticationService().HashAuthentication(pin,
         pinAuthenticator, context, true);
 
       if (!result) {
@@ -249,8 +249,10 @@ export default class AuthenticationController extends BaseController {
     this.logger.trace('LDAP authentication for user', body.accountName);
 
     try {
-      await AuthenticationController.LDAPLoginConstructor(this.roleManager, this.tokenHandler,
-        wrapInManager<User>(AuthenticationService.createUserAndBind))(req, res);
+      await AppDataSource.transaction(async (manager) => {
+        const service = new AuthenticationService(manager);
+        await AuthenticationController.LDAPLoginConstructor(this.roleManager, this.tokenHandler, service.createUserAndBind.bind(service))(req, res);
+      });
     } catch (error) {
       this.logger.error('Could not authenticate using LDAP:', error);
       res.status(500).json('Internal server error.');
@@ -264,8 +266,9 @@ export default class AuthenticationController extends BaseController {
   public static LDAPLoginConstructor(roleManager: RoleManager, tokenHandler: TokenHandler,
     onNewUser: (ADUser: LDAPUser) => Promise<User>) {
     return async (req: Request, res: Response) => {
+      const service = new AuthenticationService();
       const body = req.body as AuthenticationLDAPRequest;
-      const user = await AuthenticationService.LDAPAuthentication(
+      const user = await service.LDAPAuthentication(
         body.accountName, body.password, onNewUser,
       );
 
@@ -283,7 +286,7 @@ export default class AuthenticationController extends BaseController {
       };
 
       // AD login gives full access.
-      const token = await AuthenticationService.getSaltedToken(user, context, false);
+      const token = await service.getSaltedToken(user, context, false);
       res.json(token);
     };
   }
@@ -327,7 +330,7 @@ export default class AuthenticationController extends BaseController {
         tokenHandler: this.tokenHandler,
       };
 
-      const result = await AuthenticationService.HashAuthentication(body.password,
+      const result = await new AuthenticationService().HashAuthentication(body.password,
         localAuthenticator, context, false);
 
       if (!result) {
@@ -357,7 +360,8 @@ export default class AuthenticationController extends BaseController {
     this.logger.trace('Reset using token for user', body.accountMail);
 
     try {
-      const resetToken = await AuthenticationService.isResetTokenRequestValid(body);
+      const service = new AuthenticationService();
+      const resetToken = await service.isResetTokenRequestValid(body);
       if (!resetToken) {
         res.status(403).json({
           message: 'Invalid request.',
@@ -372,8 +376,7 @@ export default class AuthenticationController extends BaseController {
         return;
       }
 
-      await AuthenticationService
-        .resetLocalUsingToken(resetToken, body.token, body.password);
+      await service.resetLocalUsingToken(resetToken, body.token, body.password);
       res.status(204).send();
       return;
     } catch (error) {
@@ -403,7 +406,7 @@ export default class AuthenticationController extends BaseController {
         return;
       }
 
-      const resetTokenInfo = await AuthenticationService.createResetToken(user);
+      const resetTokenInfo = await new AuthenticationService().createResetToken(user);
       Mailer.getInstance().send(user, new PasswordReset({ email: user.email, resetTokenInfo }))
         .then()
         .catch((error) => this.logger.error(error));
@@ -446,7 +449,7 @@ export default class AuthenticationController extends BaseController {
 
       this.logger.trace('Succesfull NFC authentication for user ', authenticator.user);
 
-      const token = await AuthenticationService.getSaltedToken(authenticator.user, context, true);
+      const token = await new AuthenticationService().getSaltedToken(authenticator.user, context, true);
       res.json(token);
     } catch (error) {
       this.logger.error('Could not authenticate using NFC:', error);
@@ -482,7 +485,7 @@ export default class AuthenticationController extends BaseController {
         tokenHandler: this.tokenHandler,
       };
 
-      const token = await AuthenticationService.getSaltedToken(authenticator.user, context, true);
+      const token = await new AuthenticationService().getSaltedToken(authenticator.user, context, true);
       res.json(token);
     } catch (error) {
       this.logger.error('Could not authenticate using EAN:', error);
@@ -530,7 +533,7 @@ export default class AuthenticationController extends BaseController {
         tokenHandler: this.tokenHandler,
       };
 
-      const result = await AuthenticationService.HashAuthentication(body.key,
+      const result = await new AuthenticationService().HashAuthentication(body.key,
         keyAuthenticator, context, false);
 
       if (!result) {
@@ -561,7 +564,7 @@ export default class AuthenticationController extends BaseController {
 
     try {
       const user = await User.findOne({ where: { id: body.userId } });
-      const response = await AuthenticationService.getSaltedToken(
+      const response = await new AuthenticationService().getSaltedToken(
         user,
         { tokenHandler: this.tokenHandler, roleManager: this.roleManager },
         false,

@@ -18,7 +18,7 @@
  *  @license
  */
 
-import { Connection } from 'typeorm';
+import { DataSource } from 'typeorm';
 import { expect } from 'chai';
 import User from '../../../src/entity/user/user';
 import PayoutRequest from '../../../src/entity/transactions/payout/payout-request';
@@ -34,7 +34,7 @@ import { PayoutRequestSeeder, UserSeeder } from '../../seed';
 
 describe('PayoutRequestService', () => {
   let ctx: {
-    connection: Connection,
+    connection: DataSource,
     users: User[],
     payoutRequests: PayoutRequest[],
     dineroTransformer: DineroTransformer,

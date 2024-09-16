@@ -325,7 +325,7 @@ export default class ContainerService {
 
     let owner: FindOptionsWhere<User> = {};
     if (user) {
-      const organIds = (await AuthenticationService.getMemberAuthenticators(user)).map((u) => u.id);
+      const organIds = (await new AuthenticationService().getMemberAuthenticators(user)).map((u) => u.id);
       owner = { id: In(organIds) };
     } else if (params.ownerId) {
       owner = { id: params.ownerId };

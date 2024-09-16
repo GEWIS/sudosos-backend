@@ -23,7 +23,7 @@ import bodyParser from 'body-parser';
 import { expect } from 'chai';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
-import { Connection } from 'typeorm';
+import { DataSource } from 'typeorm';
 import TransferRequest from '../../../src/controller/request/transfer-request';
 import { PaginatedTransferResponse } from '../../../src/controller/response/transfer-response';
 import Database from '../../../src/database/database';
@@ -46,7 +46,7 @@ import {
 
 describe('TransferService', async (): Promise<void> => {
   let ctx: {
-    connection: Connection,
+    connection: DataSource,
     app: Application,
     specification: SwaggerSpecification,
     users: User[],

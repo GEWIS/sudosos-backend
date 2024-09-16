@@ -22,7 +22,7 @@ import bcrypt from 'bcrypt';
 // @ts-ignore
 import { filter } from 'ldap-escape';
 import log4js, { Logger } from 'log4js';
-import { EntityManager, FindOptionsWhere, getRepository, In } from 'typeorm';
+import { FindOptionsWhere, In } from 'typeorm';
 import { randomBytes } from 'crypto';
 import User, { LocalUserTypes, UserType } from '../entity/user/user';
 import JsonWebToken from '../authentication/json-web-token';
@@ -42,6 +42,7 @@ import AuthenticationResetTokenRequest from '../controller/request/authenticatio
 import NfcAuthenticator from '../entity/authenticator/nfc-authenticator';
 import RBACService from './rbac-service';
 import Role from '../entity/rbac/role';
+import WithManager from '../database/with-manager';
 
 export interface AuthenticationContext {
   tokenHandler: TokenHandler,
@@ -53,7 +54,7 @@ export interface ResetTokenInfo {
   password: string,
 }
 
-export default class AuthenticationService {
+export default class AuthenticationService extends WithManager {
   /**
    * Amount of salt rounds to use.
    */
@@ -62,7 +63,7 @@ export default class AuthenticationService {
   /**
    * ResetToken expiry time in seconds
    */
-  private static RESET_TOKEN_EXPIRES: () => number =
+  private RESET_TOKEN_EXPIRES: () => number =
     () => {
       const env = parseInt(process.env.RESET_TOKEN_EXPIRES, 10);
       return Number.isNaN(env) ? 3600 : env;
@@ -72,7 +73,7 @@ export default class AuthenticationService {
    * Helper function hashes the given string with salt.
    * @param password - password to hash
    */
-  public static async hashPassword(password: string): Promise<string> {
+  public async hashPassword(password: string): Promise<string> {
     const salt = await bcrypt.genSalt(AuthenticationService.BCRYPT_ROUNDS);
     return Promise.resolve(bcrypt.hash(password, salt));
   }
@@ -86,7 +87,7 @@ export default class AuthenticationService {
    * @param overrideMaintenance - If the token should be able to access all endpoints
    * in maintenance mode
    */
-  public static async makeJsonWebToken(
+  public async makeJsonWebToken(
     user: User, roles: Role[], organs: User[], lesser: boolean, overrideMaintenance: boolean,
   ): Promise<JsonWebToken> {
 
@@ -103,7 +104,7 @@ export default class AuthenticationService {
    * Function that checks if the provided request corresponds to a valid reset token in the DB.
    * @param request
    */
-  public static async isResetTokenRequestValid(request: AuthenticationResetTokenRequest):
+  public async isResetTokenRequestValid(request: AuthenticationResetTokenRequest):
   Promise<ResetToken | undefined> {
     const user = await User.findOne({
       where: { email: request.accountMail, deleted: false, type: In(LocalUserTypes) },
@@ -151,10 +152,9 @@ export default class AuthenticationService {
   /**
    * Creates a new User and binds it to the ObjectGUID of the provided LDAPUser.
    * Function is ran in a single DB transaction in the context of an EntityManager
-   * @param manager - The EntityManager context to use.
    * @param ADUser - The user for which to create a new account.
    */
-  public static async createUserAndBind(manager: EntityManager, ADUser: LDAPUser): Promise<User> {
+  public async createUserAndBind(ADUser: LDAPUser): Promise<User> {
     let account = Object.assign(new User(), {
       firstName: ADUser.givenName,
       lastName: ADUser.sn,
@@ -164,8 +164,8 @@ export default class AuthenticationService {
       ofAge: false,
     } as User) as User;
 
-    account = await manager.save(account);
-    const auth = await bindUser(manager, ADUser, account);
+    account = await this.manager.save(User, account);
+    const auth = await bindUser(this.manager, ADUser, account);
     return auth.user;
   }
 
@@ -176,9 +176,9 @@ export default class AuthenticationService {
    * @param pass - Code to set
    * @param Type
    */
-  public static async setUserAuthenticationHash<T extends HashBasedAuthenticationMethod>(user: User,
+  public async setUserAuthenticationHash<T extends HashBasedAuthenticationMethod>(user: User,
     pass: string, Type: new () => T): Promise<T> {
-    const repo = getRepository(Type);
+    const repo = this.manager.getRepository(Type);
     let authenticator = await repo.findOne({ where: { user: { id: user.id } } as FindOptionsWhere<T>, relations: ['user'] });
     const hash = await this.hashPassword(pass);
 
@@ -198,9 +198,9 @@ export default class AuthenticationService {
     return authenticator;
   }
 
-  public static async setUserAuthenticationNfc<T extends NfcAuthenticator>(user: User,
+  public async setUserAuthenticationNfc<T extends NfcAuthenticator>(user: User,
     nfcCode: string, Type: new () => T): Promise<T> {
-    const repo = getRepository(Type);
+    const repo = this.manager.getRepository(Type);
     let authenticator = await repo.findOne({ where: { user: { id: user.id } } as FindOptionsWhere<T>, relations: ['user'] });
 
     if (authenticator) {
@@ -229,7 +229,7 @@ export default class AuthenticationService {
    * @param lesser
    * @constructor
    */
-  public static async HashAuthentication<T extends HashBasedAuthenticationMethod>(pass: string,
+  public async HashAuthentication<T extends HashBasedAuthenticationMethod>(pass: string,
     authenticator: T, context: AuthenticationContext, lesser = true)
     : Promise<AuthenticationResponse | undefined> {
     const valid = await this.compareHash(pass, authenticator.hash);
@@ -245,7 +245,7 @@ export default class AuthenticationService {
    * @param onNewUser - Callback function when user does not exist in local system.
    * @constructor
    */
-  public static async LDAPAuthentication(uid:string, password: string,
+  public async LDAPAuthentication(uid:string, password: string,
     onNewUser: (ADUser: LDAPUser) => Promise<User>): Promise<User | undefined> {
     const logger: Logger = log4js.getLogger('LDAP');
     logger.level = process.env.LOG_LEVEL;
@@ -298,19 +298,19 @@ export default class AuthenticationService {
     }
 
     // At this point the user is authenticated.
-    const authenticator = await LDAPAuthenticator.findOne({ where: { UUID: ADUser.objectGUID }, relations: ['user'] });
+    const authenticator = await this.manager.findOne(LDAPAuthenticator, { where: { UUID: ADUser.objectGUID }, relations: ['user'] });
 
     // If there is no user associated with the GUID we create the user and bind it.
-    return Promise.resolve(authenticator
-      ? authenticator.user : await onNewUser(ADUser));
+    if (authenticator) return authenticator.user;
+    return onNewUser(ADUser);
   }
 
   /**
    * Get a list of all users this user can authenticate as, including itself.
    * @param user
    */
-  public static async getMemberAuthenticators(user: User): Promise<User[]> {
-    const users = (await MemberAuthenticator.find({ where: { user: { id: user.id } }, relations: ['authenticateAs'] }))
+  public async getMemberAuthenticators(user: User): Promise<User[]> {
+    const users = (await this.manager.find(MemberAuthenticator, { where: { user: { id: user.id } }, relations: ['authenticateAs'] }))
       .map((auth) => auth.authenticateAs);
 
     users.push(user);
@@ -325,15 +325,14 @@ export default class AuthenticationService {
    * @param users - The users that gain access.
    * @param authenticateAs - The account that needs to be accessed.
    */
-  public static async setMemberAuthenticator(manager: EntityManager, users: User[],
-    authenticateAs: User) {
+  public async setMemberAuthenticator(users: User[], authenticateAs: User) {
     // First drop all rows containing authenticateAs
     // We check if there is anything to drop or else type orm will complain.
-    const toRemove: MemberAuthenticator[] = await MemberAuthenticator
-      .find({ where: { authenticateAs: { id: authenticateAs.id } } });
+    const toRemove: MemberAuthenticator[] = await this.manager
+      .find(MemberAuthenticator, { where: { authenticateAs: { id: authenticateAs.id } } });
 
     if (toRemove.length !== 0) {
-      await manager.delete(MemberAuthenticator, { authenticateAs });
+      await this.manager.delete(MemberAuthenticator, { authenticateAs });
     }
 
     const promises: Promise<MemberAuthenticator>[] = [];
@@ -344,7 +343,7 @@ export default class AuthenticationService {
         userId: user.id,
         authenticateAsId: authenticateAs.id,
       });
-      promises.push(manager.save(authenticator));
+      promises.push(this.manager.save(MemberAuthenticator, authenticator));
     });
 
     await Promise.all(promises);
@@ -356,12 +355,12 @@ export default class AuthenticationService {
    * @param token - Passcode of the reset token
    * @param newPassword - New password to set for the authentication
    */
-  public static async resetLocalUsingToken(resetToken: ResetToken,
+  public async resetLocalUsingToken(resetToken: ResetToken,
     token: string, newPassword: string): Promise<LocalAuthenticator | undefined> {
     const auth = await this.setUserAuthenticationHash(
       resetToken.user, newPassword, LocalAuthenticator,
     );
-    await ResetToken.delete(resetToken.userId);
+    await this.manager.delete(ResetToken, resetToken.userId);
     return auth;
   }
 
@@ -369,7 +368,7 @@ export default class AuthenticationService {
    * Creates a ResetToken for the given user.
    * @param user
    */
-  public static async createResetToken(user: User): Promise<ResetTokenInfo> {
+  public async createResetToken(user: User): Promise<ResetTokenInfo> {
     const password = randomBytes(32).toString('hex');
     const resetToken = await this.setUserAuthenticationHash(user, password, ResetToken);
 
@@ -392,7 +391,7 @@ export default class AuthenticationService {
    * @param expiry Custom expiry time (in seconds). If not set,
    * the default tokenHandler expiry will be used
    */
-  public static async getSaltedToken(
+  public async getSaltedToken(
     user: User, context: AuthenticationContext, lesser = true, salt?: string, expiry?: number,
   ): Promise<AuthenticationResponse> {
     const [roles, organs] = await Promise.all([
@@ -405,10 +404,10 @@ export default class AuthenticationService {
     if (!salt) salt = await bcrypt.genSalt(AuthenticationService.BCRYPT_ROUNDS);
     const token = await context.tokenHandler.signToken(contents, salt, expiry);
 
-    return this.asAuthenticationResponse(contents.user, roles, contents.organs, token);
+    return AuthenticationService.asAuthenticationResponse(contents.user, roles, contents.organs, token);
   }
 
-  public static async compareHash(password: string, hash: string): Promise<boolean> {
+  public async compareHash(password: string, hash: string): Promise<boolean> {
     return bcrypt.compare(password, hash);
   }
 }

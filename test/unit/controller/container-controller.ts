@@ -19,7 +19,7 @@
  */
 
 import {
-  Connection, IsNull, Not,
+  DataSource, IsNull, Not,
 } from 'typeorm';
 import express, { Application } from 'express';
 import chai, { request, expect } from 'chai';
@@ -75,7 +75,7 @@ function containerProductsEq(source: CreateContainerRequest,
 
 describe('ContainerController', async (): Promise<void> => {
   let ctx: {
-    connection: Connection,
+    connection: DataSource,
     app: Application,
     specification: SwaggerSpecification,
     controller: ContainerController,

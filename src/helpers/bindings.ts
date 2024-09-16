@@ -18,12 +18,13 @@
  *  @license
  */
 
-import { createQueryBuilder, EntityManager, SelectQueryBuilder } from 'typeorm';
+import { SelectQueryBuilder } from 'typeorm';
 import User from '../entity/user/user';
 import AuthenticationService from '../service/authentication-service';
 import { LDAPUser } from './ad';
 import { parseRawUserToResponse, parseUserToResponse, RawUser } from './revision-to-response';
 import { UserResponse } from '../controller/response/user-response';
+import { AppDataSource } from '../database/database';
 
 /**
  * Class used for setting default functions or bindings.
@@ -34,8 +35,10 @@ export default class Bindings {
   /**
    * Function called when an unbound User is found and created.
    */
-  public static ldapUserCreation: (manager: EntityManager,
-    ADUser: LDAPUser) => Promise<User> = AuthenticationService.createUserAndBind;
+  public static ldapUserCreation: () => (ADUser: LDAPUser) => Promise<User> = () => {
+    const service = new AuthenticationService();
+    return service.createUserAndBind.bind(service);
+  };
 
   /**
    * Function called when mapping db user entities to responses.
@@ -49,6 +52,6 @@ export default class Bindings {
     getBuilder: () => SelectQueryBuilder<User>
   } = {
       parseToResponse: parseRawUserToResponse,
-      getBuilder: () => createQueryBuilder().from(User, 'user').orderBy({ 'user.id': 'ASC' }),
+      getBuilder: () => AppDataSource.createQueryBuilder().from(User, 'user').orderBy({ 'user.id': 'ASC' }),
     };
 }

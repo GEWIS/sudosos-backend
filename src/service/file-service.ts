@@ -29,8 +29,8 @@ import ProductImage from '../entity/file/product-image';
 import Banner from '../entity/banner';
 import BannerImage from '../entity/file/banner-image';
 import Pdf from '../entity/file/pdf-file';
-import { getRepository } from 'typeorm';
 import { IPdfAble } from '../entity/file/pdf-able';
+import { AppDataSource } from '../database/database';
 
 /**
  *  Possible storage methods that can be used
@@ -153,8 +153,8 @@ export default class FileService {
   public async uploadPdf<T extends IPdfAble<S>, S extends Pdf>(entity: T, PdfType: new () => S, fileData: Buffer, createdBy: User): Promise<S> {
     let pdf = entity.pdf;
 
-    const entityRepo = getRepository(entity.constructor as new () => T);
-    const entityPdf = getRepository(PdfType);
+    const entityRepo = AppDataSource.getRepository(entity.constructor as new () => T);
+    const entityPdf = AppDataSource.getRepository(PdfType);
 
     const hash = await entity.getPdfParamHash();
     if (pdf == null) {

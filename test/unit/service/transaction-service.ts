@@ -20,13 +20,13 @@
 
 import express, { Application } from 'express';
 import chai, { expect } from 'chai';
-import { Connection, createQueryBuilder } from 'typeorm';
+import { DataSource } from 'typeorm';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import log4js, { Logger } from 'log4js';
 import dinero from 'dinero.js';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
 import Transaction from '../../../src/entity/transactions/transaction';
-import Database from '../../../src/database/database';
+import Database, { AppDataSource } from '../../../src/database/database';
 import TransactionService, { TransactionFilterParameters } from '../../../src/service/transaction-service';
 import { verifyBaseTransactionEntity } from '../validators';
 import Swagger from '../../../src/start/swagger';
@@ -53,7 +53,7 @@ chai.use(deepEqualInAnyOrder);
 
 describe('TransactionService', (): void => {
   let ctx: {
-    connection: Connection,
+    connection: DataSource,
     app: Application,
     transactions: Transaction[],
     users: User[],
@@ -693,7 +693,7 @@ describe('TransactionService', (): void => {
       const user = ctx.users[0];
       const { records } = await new TransactionService().getTransactions({}, {}, user);
 
-      const actualTransactions = await createQueryBuilder(Transaction, 'transaction')
+      const actualTransactions = await AppDataSource.createQueryBuilder(Transaction, 'transaction')
         .leftJoinAndSelect('transaction.from', 'from')
         .leftJoinAndSelect('transaction.createdBy', 'createdBy')
         .leftJoinAndSelect('transaction.pointOfSale', 'pointOfSaleRev')

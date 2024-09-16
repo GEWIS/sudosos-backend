@@ -19,7 +19,7 @@
  */
 
 import express, { Application, Response } from 'express';
-import { Connection } from 'typeorm';
+import { DataSource } from 'typeorm';
 import { expect, request } from 'chai';
 import RestrictionMiddleware from '../../../src/middleware/restriction-middleware';
 import Database from '../../../src/database/database';
@@ -34,7 +34,7 @@ import sinon from 'sinon';
 
 describe('RestrictionMiddleware', (): void => {
   let ctx: {
-    connection: Connection,
+    connection: DataSource,
     app: Application,
     middleware: RestrictionMiddleware,
     tokenHandler: TokenHandler,

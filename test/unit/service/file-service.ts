@@ -18,7 +18,7 @@
  *  @license
  */
 
-import { Connection } from 'typeorm';
+import { DataSource } from 'typeorm';
 import { expect, assert } from 'chai';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
@@ -41,7 +41,7 @@ import { ProductSeeder, UserSeeder } from '../../seed';
 
 describe('FileService', async (): Promise<void> => {
   let ctx: {
-    connection: Connection,
+    connection: DataSource,
     app: Application,
     specification: SwaggerSpecification,
     users: User[],

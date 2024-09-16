@@ -19,7 +19,7 @@
  */
 
 import { describe } from 'mocha';
-import { Connection } from 'typeorm';
+import { DataSource } from 'typeorm';
 import User from '../../../src/entity/user/user';
 import Event, { EventType } from '../../../src/entity/event/event';
 import EventShift from '../../../src/entity/event/event-shift';
@@ -39,7 +39,7 @@ import { EventSeeder, UserSeeder } from '../../seed';
 
 describe('eventService', () => {
   let ctx: {
-    connection: Connection,
+    connection: DataSource,
     users: User[],
     events: Event[],
     eventShifts: EventShift[],

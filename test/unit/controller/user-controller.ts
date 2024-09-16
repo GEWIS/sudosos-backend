@@ -21,7 +21,7 @@
 import express, { Application } from 'express';
 import chai, { expect, request } from 'chai';
 import { SwaggerSpecification } from 'swagger-model-validator';
-import { Connection, createQueryBuilder } from 'typeorm';
+import { DataSource } from 'typeorm';
 import { json } from 'body-parser';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
 import { describe } from 'mocha';
@@ -83,7 +83,7 @@ chai.use(deepEqualInAnyOrder);
 
 describe('UserController', (): void => {
   let ctx: {
-    connection: Connection,
+    connection: DataSource,
     app: Application,
     specification: SwaggerSpecification,
     controller: UserController,
@@ -350,9 +350,10 @@ describe('UserController', (): void => {
     });
     it('should return correct user using search', async () => {
       const searchQuery = 'Firstname1 Last';
+      const take = 50;
       const res = await request(ctx.app)
         .get('/users')
-        .query({ search: searchQuery, take: 100, skip: 0 })
+        .query({ search: searchQuery, take })
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
 
@@ -372,7 +373,7 @@ describe('UserController', (): void => {
         expect(ids).to.includes(u.id);
       });
 
-      expect(pagination.take).to.equal(100);
+      expect(pagination.take).to.equal(take);
       expect(pagination.skip).to.equal(0);
 
     });
@@ -1147,7 +1148,7 @@ describe('UserController', (): void => {
 
       const transactions = res.body.records as TransactionResponse[];
 
-      const actualTransactions = await createQueryBuilder(Transaction, 'transaction')
+      const actualTransactions = await ctx.connection.createQueryBuilder(Transaction, 'transaction')
         .leftJoinAndSelect('transaction.from', 'from')
         .leftJoinAndSelect('transaction.createdBy', 'createdBy')
         .leftJoinAndSelect('transaction.pointOfSale', 'pointOfSaleRev')
@@ -1178,7 +1179,7 @@ describe('UserController', (): void => {
 
       const transactions = res.body.records as TransactionResponse[];
 
-      const actualTransactions = await createQueryBuilder(Transaction, 'transaction')
+      const actualTransactions = await ctx.connection.createQueryBuilder(Transaction, 'transaction')
         .leftJoinAndSelect('transaction.from', 'from')
         .leftJoinAndSelect('transaction.createdBy', 'createdBy')
         .leftJoinAndSelect('transaction.pointOfSale', 'pointOfSaleRev')
