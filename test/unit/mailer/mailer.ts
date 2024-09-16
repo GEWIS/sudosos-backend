@@ -31,11 +31,11 @@ import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import fs from 'fs';
 import { templateFieldDefault } from '../../../src/mailer/mail-body-generator';
+import { rootStubs } from '../../root-hooks';
 
 describe('Mailer', () => {
   let ctx: {
     connection: DataSource,
-    mailer?: Mailer,
     user: User,
     htmlMailTemplate: string,
   };
@@ -64,7 +64,13 @@ describe('Mailer', () => {
       user,
       htmlMailTemplate,
     };
+  });
 
+  beforeEach(async () => {
+    // Restore the default stub
+    rootStubs?.mail.restore();
+
+    // Reset the mailer, because it was created with an old, expired stub
     Mailer.reset();
 
     sandbox = sinon.createSandbox();
@@ -74,17 +80,16 @@ describe('Mailer', () => {
     } as any as Transporter);
   });
 
-  afterEach(() => {
-    sandbox.resetHistory();
-  });
-
   after(async () => {
-    sandbox.restore();
     await finishTestDB(ctx.connection);
   });
 
+  afterEach(() => {
+    sandbox.restore();
+  });
+
   it('should correctly create mailer', () => {
-    ctx.mailer = Mailer.getInstance();
+    Mailer.getInstance();
 
     expect(createTransportStub).to.be.calledOnceWithExactly({
       host: process.env.SMTP_HOST,
@@ -102,13 +107,14 @@ describe('Mailer', () => {
 
   it('should be a singleton', () => {
     const mailer = Mailer.getInstance();
-    expect(mailer).to.equal(ctx.mailer);
+    const mailer2 = Mailer.getInstance();
+    expect(mailer).to.equal(mailer2);
   });
 
   // eslint-disable-next-line func-names
   it('should correctly send mail in English by default', async function () {
-    if (!ctx.mailer) this.skip();
-    await ctx.mailer.send(ctx.user, new HelloWorld({ name: ctx.user.firstName }));
+    const mailer = Mailer.getInstance();
+    await mailer.send(ctx.user, new HelloWorld({ name: ctx.user.firstName }));
 
     expect(sendMailFake).to.be.calledOnce;
     const args = sendMailFake.args[0][0];
@@ -142,8 +148,8 @@ SudoSOS`,
 
   // eslint-disable-next-line func-names
   it('should correctly send mail in Dutch', async function () {
-    if (!ctx.mailer) this.skip();
-    await ctx.mailer.send(ctx.user, new HelloWorld({ name: ctx.user.firstName }), Language.DUTCH);
+    const mailer = Mailer.getInstance();
+    await mailer.send(ctx.user, new HelloWorld({ name: ctx.user.firstName }), Language.DUTCH);
 
     expect(sendMailFake).to.be.calledOnce;
     const args = sendMailFake.args[0][0];
@@ -177,9 +183,8 @@ SudoSOS`,
 
   // eslint-disable-next-line func-names
   it('should catch error if any exist', async function () {
-    if (!ctx.mailer) this.skip();
-
-    const promise = ctx.mailer.send(ctx.user, new HelloWorld({ name: ctx.user.firstName }), 'binary' as any);
+    const mailer = Mailer.getInstance();
+    const promise = mailer.send(ctx.user, new HelloWorld({ name: ctx.user.firstName }), 'binary' as any);
     await expect(promise).to.eventually.be.fulfilled;
   });
 });

@@ -41,6 +41,7 @@ import dinero from 'dinero.js';
 import TransferService from '../../../src/service/transfer-service';
 import FineHandoutEvent from '../../../src/entity/fine/fineHandoutEvent';
 import { FineSeeder, TransactionSeeder, TransferSeeder, UserSeeder } from '../../seed';
+import { rootStubs } from '../../root-hooks';
 
 describe('DebtorService', (): void => {
   let ctx: {
@@ -67,7 +68,12 @@ describe('DebtorService', (): void => {
     const transfers = await new TransferSeeder().seed(users, new Date('2020-02-12'), new Date('2021-11-30'));
     const subTransactions: SubTransaction[] = Array.prototype.concat(...transactions
       .map((t) => t.subTransactions));
-    const { fines, fineTransfers, userFineGroups, users: usersWithFines } = await new FineSeeder().seed(users, transactions, transfers, true);
+    const {
+      fines,
+      fineTransfers,
+      userFineGroups,
+      users: usersWithFines,
+    } = await new FineSeeder().seed(users, transactions, transfers, true);
 
     ctx = {
       connection,
@@ -80,7 +86,13 @@ describe('DebtorService', (): void => {
       userFineGroups,
       actor: usersWithFines[0],
     };
+  });
 
+  beforeEach(() => {
+    // Restore the default stub
+    rootStubs?.mail.restore();
+
+    // Reset the mailer, because it was created with an old, expired stub
     Mailer.reset();
 
     sandbox = sinon.createSandbox();
@@ -92,11 +104,10 @@ describe('DebtorService', (): void => {
 
   after(async () => {
     await finishTestDB(ctx.connection);
-    sandbox.restore();
   });
 
   afterEach(() => {
-    sendMailFake.resetHistory();
+    sandbox.restore();
   });
 
   describe('calculateFinesOnDate', () => {
