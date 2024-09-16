@@ -41,7 +41,7 @@ import {
 import Transaction from '../../../src/entity/transactions/transaction';
 import {
   INVALID_TRANSACTION_OWNER,
-  INVALID_USER_ID,
+  INVALID_USER_ID, NO_TRANSACTION_IDS,
   SAME_INVOICE_STATE,
   SUBTRANSACTION_ALREADY_INVOICED,
   ZERO_LENGTH_STRING,
@@ -270,12 +270,17 @@ describe('InvoiceController', async () => {
       const req: CreateInvoiceRequest = { ...ctx.validInvoiceRequest, transactionIDs };
       await expectError(req, INVALID_TRANSACTION_OWNER().value);
     });
-    it('should verity that forId is a valid user', async () => {
-      const req: CreateInvoiceRequest = { ...ctx.validInvoiceRequest, forId: -1 };
+    it('should verify that forId is a valid user', async () => {
+      const req: CreateInvoiceRequest = { ...ctx.validInvoiceRequest, forId: -1, transactionIDs: [1] };
       await expectError(req, `forId: ${INVALID_USER_ID().value}`);
     });
-    it('should verity that description is a valid string', async () => {
-      const req: CreateInvoiceRequest = { ...ctx.validInvoiceRequest, description: '' };
+    it('should verify that transactionIDs is not empty', async () => {
+      const req: CreateInvoiceRequest = { ...ctx.validInvoiceRequest, transactionIDs: [] };
+      await expectError(req, NO_TRANSACTION_IDS().value);
+    });
+    it('should verify that description is a valid string', async () => {
+      const transactionIDs = (await Transaction.find({ relations: ['from'] })).filter((i) => i.from.id === ctx.validInvoiceRequest.forId).map((t) => t.id);
+      const req: CreateInvoiceRequest = { ...ctx.validInvoiceRequest, description: '', transactionIDs };
       await expectError(req, `description: ${ZERO_LENGTH_STRING().value}`);
     });
     it('should disallow double invoicing of a transaction', async () => {
