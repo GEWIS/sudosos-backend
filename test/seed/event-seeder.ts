@@ -14,7 +14,10 @@
  *
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ *  @license
  */
+
 import WithManager from '../../src/database/with-manager';
 import Role from '../../src/entity/rbac/role';
 import EventShift from '../../src/entity/event/event-shift';

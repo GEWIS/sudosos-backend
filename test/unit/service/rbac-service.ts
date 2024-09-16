@@ -14,7 +14,10 @@
  *
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ *  @license
  */
+
 import { PermissionDefinition } from '../../../src/rbac/role-definitions';
 import RBACService from '../../../src/service/rbac-service';
 import { expect } from 'chai';

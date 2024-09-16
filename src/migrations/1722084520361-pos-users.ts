@@ -14,7 +14,10 @@
  *
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ *  @license
  */
+
 import { MigrationInterface, QueryRunner, TableColumn, TableForeignKey } from 'typeorm';
 import PointOfSale from '../entity/point-of-sale/point-of-sale';
 import User, { TermsOfServiceStatus, UserType } from '../entity/user/user';

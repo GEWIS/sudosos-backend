@@ -14,6 +14,8 @@
  *
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ *  @license
  */
 
 // TODO This is most likely not the way to go, but im not sure how to deal with file uploading in express-jsdoc-swagger.

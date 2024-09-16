@@ -14,7 +14,10 @@
  *
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ *  @license
  */
+
 import User, { UserType } from '../../src/entity/user/user';
 import Role from '../../src/entity/rbac/role';
 import AssignedRole from '../../src/entity/rbac/assigned-role';

@@ -14,8 +14,9 @@
  *
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ *  @license
  */
-
 
 /**
  * For all requests that contain an object with a start and end date.

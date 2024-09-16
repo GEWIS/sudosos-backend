@@ -14,7 +14,10 @@
  *
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ *  @license
  */
+
 import GewisUser from '../entity/gewis-user';
 import { BasicApi, Configuration, Health, MembersApi } from 'gewisdb-ts-client';
 import log4js, { getLogger, Logger } from 'log4js';

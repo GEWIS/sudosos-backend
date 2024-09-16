@@ -14,7 +14,10 @@
  *
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ *  @license
  */
+
 import { BaseUserResponse } from './user-response';
 import { DineroObjectResponse } from './dinero-response';
 import { TransferResponse } from './transfer-response';
