@@ -619,7 +619,6 @@ describe('DebtorService', (): void => {
       const endDate = new Date();
       endDate.setTime(endDate.getTime() + 1000);
       const report = await DebtorService.getFineReport(fromDate, endDate);
-      console.error(fineHandoutEvent);
 
       expect(report.fromDate.toISOString()).to.equal(fromDate.toISOString());
       expect(report.toDate.toISOString()).to.equal(endDate.toISOString());
