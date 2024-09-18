@@ -52,6 +52,8 @@ export const INVALID_TRANSACTION_OWNER = () => new ValidationError('Not all tran
 
 export const INVALID_TRANSACTION_IDS = () => new ValidationError('Not all transaction IDs are valid.');
 
+export const NO_TRANSACTION_IDS = () => new ValidationError('No transaction IDs provided.');
+
 export const INVALID_INVOICE_ID = () => new ValidationError('Invoice with this ID does not exist.');
 
 export const INVOICE_IS_DELETED = () => new ValidationError('Invoice is deleted.');

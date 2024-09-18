@@ -36,7 +36,7 @@ import {
   INVALID_INVOICE_ID,
   INVALID_TRANSACTION_IDS,
   INVALID_TRANSACTION_OWNER,
-  INVOICE_IS_DELETED,
+  INVOICE_IS_DELETED, NO_TRANSACTION_IDS,
   SAME_INVOICE_STATE, SUBTRANSACTION_ALREADY_INVOICED,
 } from './validation-errors';
 import { InvoiceState } from '../../../entity/invoices/invoice-status';
@@ -46,7 +46,7 @@ import Invoice from '../../../entity/invoices/invoice';
  * Checks whether all the transactions exists and are credited to the debtor or sold in case of credit Invoice.
  */
 async function validTransactionIds<T extends BaseInvoice>(p: T) {
-  if (!p.transactionIDs) return toPass(p);
+  if (p.transactionIDs.length === 0) return toFail(NO_TRANSACTION_IDS());
 
   const relations: FindOptionsRelations<Transaction> = {
     from: true,
@@ -111,8 +111,8 @@ async function differentState<T extends UpdateInvoiceParams>(p: T) {
  */
 function baseInvoiceRequestSpec<T extends BaseInvoice>(): Specification<T, ValidationError> {
   return [
-    validTransactionIds,
     [[userMustExist], 'forId', new ValidationError('forId:')],
+    validTransactionIds,
   ];
 }
 
