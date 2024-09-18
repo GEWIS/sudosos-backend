@@ -68,12 +68,10 @@ export interface LDAPUser {
  */
 export async function bindUser(manager: EntityManager,
   ADUser: { objectGUID: Buffer }, user: User): Promise<LDAPAuthenticator> {
-  const auth = manager.create(LDAPAuthenticator, {
+  return manager.save(LDAPAuthenticator, {
     user: user,
     UUID: ADUser.objectGUID,
   });
-  await manager.save(auth);
-  return auth;
 }
 
 /**

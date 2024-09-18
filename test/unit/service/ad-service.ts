@@ -317,10 +317,6 @@ describe('AD Service', (): void => {
         { where: { authenticateAs: { id: newOrgan.id } }, relations: ['user'] },
       )).map((mAuth) => mAuth.user.id);
 
-      console.error((await MemberAuthenticator.find(
-        { where: { authenticateAs: { id: newOrgan.id } }, relations: ['user'] },
-      )));
-      console.error(secondMembers);
       const currentMemberIDs = secondMembers.map((u: any) => u.id);
       expect(canAuthenticateAsIDs).to.deep.equalInAnyOrder(currentMemberIDs);
     });

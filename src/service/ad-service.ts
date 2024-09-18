@@ -18,7 +18,7 @@
  *  @license
  */
 
-import { Client } from 'ldapts';
+import { Client, SearchResult } from 'ldapts';
 import { In } from 'typeorm';
 import LDAPAuthenticator from '../entity/authenticator/ldap-authenticator';
 import User, { TermsOfServiceStatus, UserType } from '../entity/user/user';
@@ -114,7 +114,7 @@ export default class ADService extends WithManager {
       // Extract members
       const shared = sharedAccounts[i];
       const result = await this.getLDAPGroupMembers(client, shared.dn);
-      const members: LDAPUser[] = result.searchEntries.map((u) => userFromLDAP(u as any as LDAPResult));
+      const members: LDAPUser[] = result.searchEntries.map((u) => userFromLDAP(u));
       const auth = await LDAPAuthenticator.findOne({ where: { UUID: shared.objectGUID }, relations: ['user'] });
       if (auth) await this.setSharedUsers(auth.user, members);
     }
@@ -179,7 +179,7 @@ export default class ADService extends WithManager {
       // The LDAP role should also exist in SudoSOS
       if (dbRoles.some((r) => r.name === ldapRole.cn)) {
         const result = await this.getLDAPGroupMembers(client, ldapRole.dn);
-        const members: LDAPUser[] = result.searchEntries.map((u) => userFromLDAP(u as any as LDAPResult));
+        const members: LDAPUser[] = result.searchEntries.map((u) => userFromLDAP(u));
         await this.addUsersToRole(roleManager, ldapRole.cn, members);
       }
     }
@@ -208,7 +208,7 @@ export default class ADService extends WithManager {
 
     const { searchEntries } = await this.getLDAPGroupMembers(client,
       process.env.LDAP_USER_BASE);
-    const users = searchEntries.map((entry) => userFromLDAP(entry as any as LDAPResult));
+    const users = searchEntries.map((entry) => userFromLDAP(entry));
     await this.getUsers(users, true);
   }
 
@@ -221,7 +221,8 @@ export default class ADService extends WithManager {
     return client.search(process.env.LDAP_BASE, {
       filter: `(&(objectClass=user)(objectCategory=person)(memberOf:1.2.840.113556.1.4.1941:=${dn}))`,
       explicitBufferAttributes: ['objectGUID'],
-    });
+    // This is because `search` returns the most generic response and we want to narrow it down.
+    }) as any as Promise<Pick<SearchResult, 'searchReferences'> & { searchEntries: LDAPResult[] }>;
   }
 
   /**
