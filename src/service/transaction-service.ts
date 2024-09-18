@@ -478,11 +478,7 @@ export default class TransactionService extends WithManager {
         id: row.id,
         product: parseProductToBaseResponse(row.product, false),
         amount: row.amount,
-        totalPriceInclVat: {
-          amount: row.product.priceInclVat.getAmount() * row.amount,
-          currency: row.product.priceInclVat.getCurrency(),
-          precision: row.product.priceInclVat.getPrecision(),
-        } as DineroObjectResponse,
+        totalPriceInclVat: row.product.priceInclVat.multiply(row.amount).toObject(),
       } as SubTransactionRowResponse)),
       totalPriceInclVat: { ...cost.toObject() } as DineroObjectResponse,
     } as SubTransactionResponse;

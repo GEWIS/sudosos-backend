@@ -225,11 +225,7 @@ export default class InvoiceService extends WithManager {
     if (!invoice) return undefined;
 
     // Extract amount from transfer
-    const amount: DineroObjectRequest = {
-      amount: invoice.transfer.amountInclVat.getAmount(),
-      currency: invoice.transfer.amountInclVat.getCurrency(),
-      precision: invoice.transfer.amountInclVat.getPrecision(),
-    };
+    const amount: DineroObjectRequest = invoice.transfer.amountInclVat.toObject();
 
     // We create an undo transfer that sends the money back to the void.
     const undoTransfer: TransferRequest = {

@@ -85,11 +85,7 @@ export default class PayoutRequestService {
       id: req.id,
       createdAt: req.createdAt.toISOString(),
       updatedAt: req.updatedAt.toISOString(),
-      amount: {
-        amount: req.amount.getAmount(),
-        precision: req.amount.getPrecision(),
-        currency: req.amount.getCurrency(),
-      },
+      amount: req.amount.toObject(),
       requestedBy: parseUserToBaseResponse(req.requestedBy, true),
       approvedBy: req.approvedBy == null ? undefined : parseUserToBaseResponse(req.approvedBy, true),
       status,
@@ -257,11 +253,7 @@ export default class PayoutRequestService {
 
     if (state === PayoutRequestState.APPROVED) {
       payoutRequest.transfer = await new TransferService().createTransfer({
-        amount: {
-          amount: payoutRequest.amount.getAmount(),
-          precision: payoutRequest.amount.getPrecision(),
-          currency: payoutRequest.amount.getCurrency(),
-        },
+        amount: payoutRequest.amount.toObject(),
         description: 'Payout Request',
         fromId: payoutRequest.requestedBy.id,
         toId: undefined,

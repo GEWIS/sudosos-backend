@@ -81,11 +81,7 @@ export default class DebtorService {
       createdAt: fine.createdAt.toISOString(),
       updatedAt: fine.updatedAt.toISOString(),
       user: parseUserToBaseResponse(fine.userFineGroup.user, false),
-      amount: {
-        amount: fine.amount.getAmount(),
-        precision: fine.amount.getPrecision(),
-        currency: fine.amount.getCurrency(),
-      },
+      amount: fine.amount.toObject(),
     };
   }
 
@@ -173,11 +169,7 @@ export default class DebtorService {
       const fine = calculateFine(u.amount);
       return {
         id: u.id,
-        fineAmount: {
-          amount: fine.getAmount(),
-          currency: fine.getCurrency(),
-          precision: fine.getPrecision(),
-        },
+        fineAmount: fine.toObject(),
         balances: balances.map((balance) => balance.records.find((b) => b.id === u.id)),
       };
     });

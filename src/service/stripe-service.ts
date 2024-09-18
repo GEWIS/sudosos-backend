@@ -213,11 +213,7 @@ export default class StripeService extends WithManager {
     // If payment has succeeded, create the transfer
     if (state === StripePaymentIntentState.SUCCEEDED && paymentIntent.deposit) {
       paymentIntent.deposit.transfer = await new TransferService(this.manager).createTransfer({
-        amount: {
-          amount: paymentIntent.amount.getAmount(),
-          precision: paymentIntent.amount.getPrecision(),
-          currency: paymentIntent.amount.getCurrency(),
-        },
+        amount: paymentIntent.amount.toObject(),
         toId: paymentIntent.deposit.to.id,
         description: paymentIntent.stripeId,
         fromId: undefined,
