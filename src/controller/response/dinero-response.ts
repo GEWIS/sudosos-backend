@@ -18,14 +18,12 @@
  *  @license
  */
 
+import { DineroObject } from 'dinero.js';
+
 /**
 * @typedef {object} DineroObjectResponse
 * @property {integer} amount.required - amount
 * @property {string} currency.required - currency
 * @property {integer} precision.required - precision
 */
-export interface DineroObjectResponse {
-  amount: number,
-  currency: string,
-  precision: number,
-}
+export interface DineroObjectResponse extends DineroObject {}

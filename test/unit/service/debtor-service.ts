@@ -292,11 +292,7 @@ describe('DebtorService', (): void => {
       expect(balance.amount.getAmount()).to.be.lessThan(0);
       const toTopUp = balance.amount.multiply(-1).subtract(dinero({ amount: 1 }));
       const transfer = await new TransferService().createTransfer({
-        amount: {
-          amount: toTopUp.getAmount(),
-          precision: toTopUp.getPrecision(),
-          currency: toTopUp.getCurrency(),
-        },
+        amount: toTopUp.toObject(),
         toId: userFineGroup.userId,
         description: 'Fake top up to barely negative balance',
         fromId: -1,

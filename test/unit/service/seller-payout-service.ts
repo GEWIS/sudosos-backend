@@ -356,11 +356,7 @@ describe('SellerPayoutService', () => {
     it('should update seller payout', async () => {
       const oldSellerPayout = ctx.sellerPayouts[0];
 
-      const amount: DineroObjectRequest = {
-        amount: oldSellerPayout.amount.getAmount() + 100,
-        precision: oldSellerPayout.amount.getPrecision(),
-        currency: oldSellerPayout.amount.getCurrency(),
-      };
+      const amount: DineroObjectRequest = oldSellerPayout.amount.add(dinero({ amount: 100 })).toObject();
 
       const service = new SellerPayoutService();
       const sellerPayout = await service.updateSellerPayout(oldSellerPayout.id, {

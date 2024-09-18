@@ -20,7 +20,7 @@
 
 import log4js, { Logger } from 'log4js';
 import { Response } from 'express';
-import Dinero, { DineroObject } from 'dinero.js';
+import Dinero from 'dinero.js';
 import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
@@ -75,7 +75,7 @@ export default class StripeController extends BaseController {
     const request = req.body as StripeRequest;
 
     try {
-      const amount = Dinero({ ...request.amount } as DineroObject);
+      const amount = Dinero(request.amount);
       const balance = await new BalanceService().getBalance(req.token.user.id);
 
       // Check if top-up satisfies minimum in accordance with TOS.

@@ -137,31 +137,19 @@ describe('StripeController', async (): Promise<void> => {
     // Valid Stripe deposit initiation request
     const validDinero = DineroTransformer.Instance.from(1950);
     const validStripeRequest: StripeRequest = {
-      amount: {
-        amount: validDinero.getAmount(),
-        precision: validDinero.getPrecision(),
-        currency: validDinero.getCurrency(),
-      },
+      amount: validDinero.toObject(),
     };
 
     // Too low Stripe deposit initiation request
     const minimumDinero = DineroTransformer.Instance.from(500);
     const minimumStripeRequest: StripeRequest = {
-      amount: {
-        amount: minimumDinero.getAmount(),
-        precision: minimumDinero.getPrecision(),
-        currency: minimumDinero.getCurrency(),
-      },
+      amount: minimumDinero.toObject(),
     };
 
     // Too high Stripe deposit initiation request
     const maximumDinero = DineroTransformer.Instance.from(15600);
     const maximumStripeRequest: StripeRequest = {
-      amount: {
-        amount: maximumDinero.getAmount(),
-        precision: maximumDinero.getPrecision(),
-        currency: maximumDinero.getCurrency(),
-      },
+      amount: maximumDinero.toObject(),
     };
 
     ctx = {

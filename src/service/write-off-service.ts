@@ -138,11 +138,7 @@ export default class WriteOffService extends WithManager {
 
     await this.manager.save(writeOff);
     const transfer = await (new TransferService()).createTransfer({
-      amount: {
-        amount: amount.getAmount(),
-        precision: amount.getPrecision(),
-        currency: amount.getCurrency(),
-      },
+      amount: amount.toObject(),
       toId: user.id,
       description: 'Write off',
       fromId: null,
