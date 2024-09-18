@@ -81,7 +81,7 @@ export default class TransferService extends WithManager {
     return this.manager.getRepository(Transfer).save({
       createdAt: request.createdAt ? new Date(request.createdAt) : undefined,
       description: request.description,
-      amountInclVat: dinero(request.amount as Dinero.Options),
+      amountInclVat: dinero(request.amount),
       from: request.fromId ? await this.manager.findOne(User, { where: { id: request.fromId } }) : undefined,
       to: request.toId ? await this.manager.findOne(User, { where: { id: request.toId } }) : undefined,
       vat: request.vatId ? await this.manager.findOne(VatGroup, { where: { id: request.vatId } }) : undefined,

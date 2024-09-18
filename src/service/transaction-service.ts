@@ -157,7 +157,7 @@ export default class TransactionService extends WithManager {
     const totalCost = await this.getTotalCost(rows);
 
     // get user balance and compare
-    const userBalance = Dinero((await new BalanceService().getBalance(req.from)).amount as DineroObject);
+    const userBalance = Dinero((await new BalanceService().getBalance(req.from)).amount);
 
     // return whether user balance is sufficient to complete the transaction
     return userBalance.greaterThanOrEqual(totalCost);
@@ -170,7 +170,7 @@ export default class TransactionService extends WithManager {
    * @returns {boolean} - equality of the parameters
    */
   public static dineroEq(req: DineroObjectRequest, din: Dinero.Dinero): boolean {
-    const price = Dinero({ ...req } as DineroObject);
+    const price = Dinero(req);
     return price.equalsTo(din);
   }
 

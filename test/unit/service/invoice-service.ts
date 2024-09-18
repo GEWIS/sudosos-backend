@@ -48,6 +48,7 @@ import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { InvoiceSeeder, TransactionSeeder, UserSeeder } from '../../seed';
 import Transfer from '../../../src/entity/transactions/transfer';
+import { Currency } from 'dinero.js';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -532,7 +533,7 @@ describe('InvoiceService', () => {
           const validUpdateInvoiceParams = {
             amount: {
               amount: 100,
-              currency: 'EUR',
+              currency: 'EUR' as Currency,
               precision: 2,
             },
             invoiceId: invoice.id,

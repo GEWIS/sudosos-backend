@@ -144,11 +144,7 @@ export default class SellerPayoutService extends WithManager {
     }
 
     const { amount: amountReq, ...rest } = params;
-    const amount = Dinero({
-      amount: amountReq.amount,
-      precision: amountReq.precision,
-      currency: amountReq.currency as Currency,
-    });
+    const amount = Dinero(amountReq);
     await this.manager.getRepository(SellerPayout).update(id, {
       amount,
       ...rest,

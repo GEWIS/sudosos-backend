@@ -24,6 +24,7 @@
  * @property {string} currency.required - currency
  * @property {integer} precision.required - precision
  */
+import { DineroObject } from 'dinero.js';
 
 /**
 * @typedef {object} DineroObjectRequest
@@ -31,8 +32,4 @@
 * @property {string} currency.required - currency
 * @property {integer} precision.required - precision
 */
-export interface DineroObjectRequest {
-  amount: number,
-  currency: string,
-  precision: number,
-}
+export interface DineroObjectRequest extends DineroObject {}

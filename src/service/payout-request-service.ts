@@ -168,11 +168,7 @@ export default class PayoutRequestService {
   ): Promise<PayoutRequestResponse> {
     const payoutRequest = Object.assign(new PayoutRequest(), {
       requestedBy,
-      amount: Dinero({
-        amount: payoutRequestRequest.amount.amount,
-        precision: payoutRequestRequest.amount.precision,
-        currency: payoutRequestRequest.amount.currency as Currency,
-      }),
+      amount: Dinero(payoutRequestRequest.amount),
       bankAccountNumber: payoutRequestRequest.bankAccountNumber,
       bankAccountName: payoutRequestRequest.bankAccountName,
     });
