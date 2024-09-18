@@ -19,8 +19,7 @@
  */
 
 import { Brackets, In, IsNull, SelectQueryBuilder } from 'typeorm';
-import Dinero from 'dinero.js';
-import dinero, { DineroObject } from 'dinero.js';
+import dinero from 'dinero.js';
 import { RequestWithToken } from '../middleware/token-middleware';
 import {
   BaseTransactionResponse,
@@ -157,7 +156,7 @@ export default class TransactionService extends WithManager {
     const totalCost = await this.getTotalCost(rows);
 
     // get user balance and compare
-    const userBalance = Dinero((await new BalanceService().getBalance(req.from)).amount);
+    const userBalance = dinero((await new BalanceService().getBalance(req.from)).amount);
 
     // return whether user balance is sufficient to complete the transaction
     return userBalance.greaterThanOrEqual(totalCost);
@@ -170,7 +169,7 @@ export default class TransactionService extends WithManager {
    * @returns {boolean} - equality of the parameters
    */
   public static dineroEq(req: DineroObjectRequest, din: Dinero.Dinero): boolean {
-    const price = Dinero(req);
+    const price = dinero(req);
     return price.equalsTo(din);
   }
 
@@ -740,7 +739,7 @@ export default class TransactionService extends WithManager {
     transactionReport.data.categories.forEach((entry) => {
       const category: TransactionReportCategoryEntryResponse = {
         category: ProductCategoryService.asProductCategoryResponse(entry.category),
-        totalExclVat: Dinero({ amount : Math.round(entry.totalExclVat) }).toObject(),
+        totalExclVat: dinero({ amount : Math.round(entry.totalExclVat) }).toObject(),
         totalInclVat: entry.totalInclVat.toObject() as DineroObjectResponse,
       };
       categories.push(category);
@@ -759,8 +758,8 @@ export default class TransactionService extends WithManager {
       const entry: TransactionReportEntryResponse = {
         count,
         product: parseProductToBaseResponse(productEntry.product, false),
-        totalExclVat: Dinero({ amount: Math.round(amountExclVat) }).toObject(),
-        totalInclVat: Dinero({ amount: amountInclVat }).toObject(),
+        totalExclVat: dinero({ amount: Math.round(amountExclVat) }).toObject(),
+        totalInclVat: dinero({ amount: amountInclVat }).toObject(),
       };
       entries.push(entry);
     });
@@ -768,7 +767,7 @@ export default class TransactionService extends WithManager {
     const vat: TransactionReportVatEntryResponse[] = [];
     transactionReport.data.vat.forEach((vatEntry) => {
       const entry: TransactionReportVatEntryResponse = {
-        totalExclVat: Dinero({ amount: Math.round(vatEntry.totalExclVat) }).toObject(),
+        totalExclVat: dinero({ amount: Math.round(vatEntry.totalExclVat) }).toObject(),
         totalInclVat: vatEntry.totalInclVat.toObject(),
         vat: parseVatGroupToResponse(vatEntry.vat),
       };
@@ -784,8 +783,8 @@ export default class TransactionService extends WithManager {
     return {
       data,
       parameters: transactionReport.parameters,
-      totalExclVat: Dinero({ amount: Math.round(totalExclVat) }).toObject(),
-      totalInclVat: Dinero({ amount: totalInclVat }).toObject(),
+      totalExclVat: dinero({ amount: Math.round(totalExclVat) }).toObject(),
+      totalInclVat: dinero({ amount: totalInclVat }).toObject(),
     };
   }
 

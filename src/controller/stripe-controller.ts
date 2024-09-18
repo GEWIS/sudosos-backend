@@ -20,7 +20,7 @@
 
 import log4js, { Logger } from 'log4js';
 import { Response } from 'express';
-import Dinero, { DineroObject } from 'dinero.js';
+import Dinero from 'dinero.js';
 import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';

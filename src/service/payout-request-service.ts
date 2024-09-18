@@ -24,7 +24,7 @@ import {
   FindOptionsWhere, In,
   Raw,
 } from 'typeorm';
-import Dinero, { Currency } from 'dinero.js';
+import Dinero from 'dinero.js';
 import { PaginationParameters } from '../helpers/pagination';
 import PayoutRequest from '../entity/transactions/payout/payout-request';
 import PayoutRequestStatus, { PayoutRequestState } from '../entity/transactions/payout/payout-request-status';

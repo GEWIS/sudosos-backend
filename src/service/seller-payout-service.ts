@@ -27,7 +27,7 @@ import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import SellerPayout from '../entity/transactions/payout/seller-payout';
 import { PaginationParameters } from '../helpers/pagination';
 import { UpdateSellerPayoutRequest } from '../controller/request/seller-payout-request';
-import Dinero, { Currency } from 'dinero.js';
+import Dinero from 'dinero.js';
 import TransferService from './transfer-service';
 import User from '../entity/user/user';
 import { SellerPayoutResponse } from '../controller/response/seller-payout-response';
