@@ -41,7 +41,8 @@ import {
 import Transaction from '../../../src/entity/transactions/transaction';
 import {
   INVALID_TRANSACTION_OWNER,
-  INVALID_USER_ID, NO_TRANSACTION_IDS,
+  INVALID_USER_ID, INVOICE_IS_DELETED,
+  INVOICE_IS_PAID, NO_TRANSACTION_IDS,
   SAME_INVOICE_STATE,
   SUBTRANSACTION_ALREADY_INVOICED,
   ZERO_LENGTH_STRING,
@@ -73,6 +74,7 @@ describe('InvoiceController', async () => {
     validInvoiceRequest: CreateInvoiceRequest,
     token: string,
     invoiceUser: User,
+    invoices: Invoice[],
   };
 
   before(async () => {
@@ -110,13 +112,29 @@ describe('InvoiceController', async () => {
       acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
     } as User;
 
+    let invoiceUser3 = {
+      firstName: 'User3',
+      type: UserType.INVOICE,
+      active: true,
+      acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
+    } as User;
+
+    let invoiceUser4 = {
+      firstName: 'User4',
+      type: UserType.INVOICE,
+      active: true,
+      acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
+    } as User;
+
     await User.save(adminUser);
     await User.save(localUser);
     await User.save(invoiceUser);
     await User.save(invoiceUser2);
+    await User.save(invoiceUser3);
+    await User.save(invoiceUser4);
 
-    const { transactions } = await new TransactionSeeder().seed([adminUser, localUser, invoiceUser, invoiceUser2]);
-    await new InvoiceSeeder().seed([invoiceUser, invoiceUser2], transactions);
+    const { transactions } = await new TransactionSeeder().seed([adminUser, localUser, invoiceUser, invoiceUser2, invoiceUser3, invoiceUser4]);
+    const { invoices } = await new InvoiceSeeder().seed([invoiceUser, invoiceUser2, invoiceUser3, invoiceUser4], transactions);
 
     const app = express();
     const specification = await Swagger.initialize(app);
@@ -190,6 +208,7 @@ describe('InvoiceController', async () => {
       adminToken,
       token,
       invoiceUser,
+      invoices,
     };
   });
 
@@ -513,6 +532,38 @@ describe('InvoiceController', async () => {
 
       expect(res.status).to.eq(400);
       expect(res.body).to.eq(SAME_INVOICE_STATE().value);
+    });
+    it('should verify that invoice is not deleted', async () => {
+      const invoice = ctx.invoices.find((i) => InvoiceService.isState(i, InvoiceState.DELETED));
+      expect(invoice).to.not.be.undefined;
+      const req: UpdateInvoiceRequest = {
+        addressee: 'Updated-addressee',
+        description: 'Updated-description',
+      };
+
+      const res = await request(ctx.app)
+        .patch(`/invoices/${invoice.id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(req);
+
+      expect(res.status).to.eq(400);
+      expect(res.body).to.eq(INVOICE_IS_DELETED().value);
+    });
+    it('should verify that invoice is not paid', async () => {
+      const invoice = ctx.invoices.find((i) => InvoiceService.isState(i, InvoiceState.PAID));
+      expect(invoice).to.not.be.undefined;
+      const req: UpdateInvoiceRequest = {
+        addressee: 'Updated-addressee',
+        description: 'Updated-description',
+      };
+
+      const res = await request(ctx.app)
+        .patch(`/invoices/${invoice.id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(req);
+
+      expect(res.status).to.eq(400);
+      expect(res.body).to.eq(INVOICE_IS_PAID().value);
     });
   });
   describe('DELETE /invoices/{id}', () => {

@@ -58,6 +58,8 @@ export const INVALID_INVOICE_ID = () => new ValidationError('Invoice with this I
 
 export const INVOICE_IS_DELETED = () => new ValidationError('Invoice is deleted.');
 
+export const INVOICE_IS_PAID = () => new ValidationError('Invoice is paid.');
+
 export const SAME_INVOICE_STATE = () => new ValidationError('Update state is same as current state.');
 
 export const SUBTRANSACTION_ALREADY_INVOICED = (ids: number[]) => new ValidationError(`SubTransactions ${ids}: have already been invoiced.`);
