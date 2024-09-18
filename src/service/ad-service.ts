@@ -22,9 +22,7 @@ import { Client } from 'ldapts';
 import { In } from 'typeorm';
 import LDAPAuthenticator from '../entity/authenticator/ldap-authenticator';
 import User, { TermsOfServiceStatus, UserType } from '../entity/user/user';
-import {
-  bindUser, getLDAPConnection, LDAPGroup, LDAPResponse, LDAPUser, userFromLDAP,
-} from '../helpers/ad';
+import { bindUser, getLDAPConnection, LDAPGroup, LDAPResponse, LDAPResult, LDAPUser, userFromLDAP } from '../helpers/ad';
 import AuthenticationService from './authentication-service';
 import Bindings from '../helpers/bindings';
 import RoleManager from '../rbac/role-manager';
@@ -94,11 +92,15 @@ export default class ADService extends WithManager {
    */
   private async filterUnboundGUID(ldapResponses: LDAPResponse[]) {
     const ids = ldapResponses.map((s) => s.objectGUID);
-    const auths = (await this.manager.find(LDAPAuthenticator, { where: { UUID: In(ids) }, relations: ['user'] }));
+    const auths = await this.manager.find(LDAPAuthenticator, { where: { UUID: In(ids) }, relations: ['user'] });
     const existing = auths.map((l: LDAPAuthenticator) => l.UUID);
 
-    return ldapResponses
-      .filter((response) => existing.indexOf(response.objectGUID) === -1);
+    // Use Buffer.compare to filter out existing GUIDs
+    const filtered = ldapResponses.filter((response) =>
+      !existing.some((uuid) => Buffer.compare(response.objectGUID, uuid) === 0),
+    );
+
+    return filtered;
   }
 
   /**
@@ -112,7 +114,7 @@ export default class ADService extends WithManager {
       // Extract members
       const shared = sharedAccounts[i];
       const result = await this.getLDAPGroupMembers(client, shared.dn);
-      const members: LDAPUser[] = result.searchEntries.map((u) => userFromLDAP(u));
+      const members: LDAPUser[] = result.searchEntries.map((u) => userFromLDAP(u as any as LDAPResult));
       const auth = await LDAPAuthenticator.findOne({ where: { UUID: shared.objectGUID }, relations: ['user'] });
       if (auth) await this.setSharedUsers(auth.user, members);
     }
@@ -177,7 +179,7 @@ export default class ADService extends WithManager {
       // The LDAP role should also exist in SudoSOS
       if (dbRoles.some((r) => r.name === ldapRole.cn)) {
         const result = await this.getLDAPGroupMembers(client, ldapRole.dn);
-        const members: LDAPUser[] = result.searchEntries.map((u) => userFromLDAP(u));
+        const members: LDAPUser[] = result.searchEntries.map((u) => userFromLDAP(u as any as LDAPResult));
         await this.addUsersToRole(roleManager, ldapRole.cn, members);
       }
     }
@@ -206,7 +208,7 @@ export default class ADService extends WithManager {
 
     const { searchEntries } = await this.getLDAPGroupMembers(client,
       process.env.LDAP_USER_BASE);
-    const users = searchEntries.map((entry) => userFromLDAP(entry));
+    const users = searchEntries.map((entry) => userFromLDAP(entry as any as LDAPResult));
     await this.getUsers(users, true);
   }
 
@@ -218,6 +220,7 @@ export default class ADService extends WithManager {
   public getLDAPGroupMembers(client: Client, dn: string) {
     return client.search(process.env.LDAP_BASE, {
       filter: `(&(objectClass=user)(objectCategory=person)(memberOf:1.2.840.113556.1.4.1941:=${dn}))`,
+      explicitBufferAttributes: ['objectGUID'],
     });
   }
 
@@ -230,6 +233,7 @@ export default class ADService extends WithManager {
     try {
       const { searchEntries } = await client.search(baseDN, {
         filter: '(CN=*)',
+        explicitBufferAttributes: ['objectGUID'],
       });
       return searchEntries.map((e) => (e as any) as T);
     } catch (error) {
