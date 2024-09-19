@@ -377,7 +377,7 @@ describe('AuthenticationController', async (): Promise<void> => {
       ],
       givenName: 'Sudo',
       sn: 'SOS',
-      objectGUID: '1',
+      objectGUID: Buffer.from('11', 'hex'),
       sAMAccountName: 'm4141',
       mail: 'm4141@gewis.nl',
     };

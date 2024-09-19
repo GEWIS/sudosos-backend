@@ -23,6 +23,17 @@ import {
 } from 'typeorm';
 import AuthenticationMethod from './authentication-method';
 
+const bufferTransformer = {
+  to: (buffer: Buffer): string => {
+    // Convert Buffer to hex string when saving to DB
+    return buffer.toString('hex');
+  },
+  from: (hex: string): Buffer => {
+    // Convert hex string back to Buffer when retrieving from DB
+    return Buffer.from(hex, 'hex');
+  },
+};
+
 /**
  * @typedef {AuthenticationMethod} LDAPAuthenticator
  * @property {string} accountName.required - The associated AD account name
@@ -30,7 +41,9 @@ import AuthenticationMethod from './authentication-method';
 @Entity()
 export default class LDAPAuthenticator extends AuthenticationMethod {
   @Column({
+    type: 'varchar',
     length: 32,
+    transformer: bufferTransformer,
   })
-  public UUID: string;
+  public UUID: Buffer;
 }

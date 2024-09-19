@@ -32,7 +32,7 @@ import RoleManager from '../rbac/role-manager';
 import LDAPAuthenticator from '../entity/authenticator/ldap-authenticator';
 import MemberAuthenticator from '../entity/authenticator/member-authenticator';
 import {
-  bindUser, getLDAPConnection, getLDAPSettings, LDAPUser, userFromLDAP,
+  bindUser, getLDAPConnection, getLDAPSettings, LDAPResult, LDAPUser, userFromLDAP,
 } from '../helpers/ad';
 import { parseUserToResponse } from '../helpers/revision-to-response';
 import HashBasedAuthenticationMethod from '../entity/authenticator/hash-based-authentication-method';
@@ -268,9 +268,10 @@ export default class AuthenticationService extends WithManager {
       const { searchEntries } = await client.search(ldapSettings.base, {
         scope: 'sub',
         filter: filterstr,
+        explicitBufferAttributes: ['objectGUID'],
       });
       if (searchEntries[0]) {
-        ADUser = userFromLDAP(searchEntries[0]);
+        ADUser = userFromLDAP(searchEntries[0] as any as LDAPResult);
       } else {
         logger.trace(`User ${uid} not found in DB`);
         return undefined;

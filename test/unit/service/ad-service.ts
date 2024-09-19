@@ -88,7 +88,7 @@ describe('AD Service', (): void => {
       ],
       givenName: `Sudo (${mNumber})`,
       sn: 'SOS',
-      objectGUID: `${mNumber}`,
+      objectGUID: Buffer.from((mNumber.toString().length % 2 ? '0' : '') + mNumber.toString(), 'hex'),
       mNumber: mNumber,
       mail: `m${mNumber}@gewis.nl`,
       whenChanged: '202204151213.0Z',
@@ -134,7 +134,7 @@ describe('AD Service', (): void => {
     }
     it('should create an account for new shared accounts', async () => {
       const newADSharedAccount = {
-        objectGUID: '1',
+        objectGUID: Buffer.from('111111', 'hex'),
         displayName: 'Shared Organ #1',
         dn: 'CN=SudoSOSAccount - Shared Organ #1,OU=SudoSOS Shared Accounts,OU=Groups,DC=sudososwg,DC=sudosos,DC=nl',
       };
@@ -149,6 +149,7 @@ describe('AD Service', (): void => {
 
       clientSearchStub.withArgs(process.env.LDAP_SHARED_ACCOUNT_FILTER, {
         filter: '(CN=*)',
+        explicitBufferAttributes: ['objectGUID'],
       }).resolves({ searchReferences: [], searchEntries: [newADSharedAccount] });
 
       stubs.push(clientBindStub);
@@ -166,7 +167,7 @@ describe('AD Service', (): void => {
     });
     it('should give member access to shared account', async () => {
       const newADSharedAccount = {
-        objectGUID: '2',
+        objectGUID: Buffer.from('22', 'hex'),
         displayName: 'Shared Organ #2',
         dn: 'CN=SudoSOSAccount - Shared Organ #2,OU=SudoSOS Shared Accounts,OU=Groups,DC=sudososwg,DC=sudosos,DC=nl',
       };
@@ -186,7 +187,7 @@ describe('AD Service', (): void => {
         ],
         givenName: 'Sudo Organ #2',
         sn: 'SOS',
-        objectGUID: '4141',
+        objectGUID: Buffer.from('4141', 'hex'),
         sAMAccountName: 'm4141',
         mail: 'm4141@gewis.nl',
         // TODO: Fix this type inconsistency between ADUser and ldapts.Client
@@ -201,10 +202,12 @@ describe('AD Service', (): void => {
 
       clientSearchStub.withArgs(process.env.LDAP_SHARED_ACCOUNT_FILTER, {
         filter: '(CN=*)',
+        explicitBufferAttributes: ['objectGUID'],
       }).resolves({ searchReferences: [], searchEntries: [newADSharedAccount] });
 
       clientSearchStub.withArgs(process.env.LDAP_BASE, {
         filter: `(&(objectClass=user)(objectCategory=person)(memberOf:1.2.840.113556.1.4.1941:=${newADSharedAccount.dn}))`,
+        explicitBufferAttributes: ['objectGUID'],
       })
         .resolves({ searchReferences: [], searchEntries: [sharedAccountMember] });
 
@@ -224,7 +227,7 @@ describe('AD Service', (): void => {
     });
     it('should update the members of an existing shared account', async () => {
       const newADSharedAccount = {
-        objectGUID: '39',
+        objectGUID: Buffer.from('39', 'hex'),
         displayName: 'Shared Organ #3',
         dn: 'CN=SudoSOSAccount - Shared Organ #3,OU=SudoSOS Shared Accounts,OU=Groups,DC=sudososwg,DC=sudosos,DC=nl',
       };
@@ -245,7 +248,7 @@ describe('AD Service', (): void => {
         givenName: `Sudo Organ #3 ${number}`,
         sn: 'SOS',
         mNumber: `${number}`,
-        objectGUID: `${number}`,
+        objectGUID: Buffer.from((number.toString().length % 2 ? '0' : '') + number.toString(), 'hex'),
         sAMAccountName: `m${number}`,
         mail: `m${number}@gewis.nl`,
       });
@@ -257,10 +260,12 @@ describe('AD Service', (): void => {
 
       clientSearchStub.withArgs(process.env.LDAP_SHARED_ACCOUNT_FILTER, {
         filter: '(CN=*)',
+        explicitBufferAttributes: ['objectGUID'],
       }).resolves({ searchReferences: [], searchEntries: [newADSharedAccount] });
 
       clientSearchStub.withArgs(process.env.LDAP_BASE, {
         filter: `(&(objectClass=user)(objectCategory=person)(memberOf:1.2.840.113556.1.4.1941:=${newADSharedAccount.dn}))`,
+        explicitBufferAttributes: ['objectGUID'],
       })
         .resolves({ searchReferences: [], searchEntries: sharedAccountMembers });
 
@@ -271,10 +276,12 @@ describe('AD Service', (): void => {
 
       // Should contain the first users
       const newOrgan = (await LDAPAuthenticator.findOne({ where: { UUID: newADSharedAccount.objectGUID }, relations: ['user'] })).user;
+      expect(newOrgan).to.not.be.undefined;
 
-      let canAuthenticateAsIDs = (await MemberAuthenticator.find(
+      const canAuthenticateAs = await MemberAuthenticator.find(
         { where: { authenticateAs: { id: newOrgan.id } }, relations: ['user'] },
-      )).map((mAuth) => mAuth.user.id);
+      );
+      let canAuthenticateAsIDs = canAuthenticateAs.map((mAuth) => mAuth.user.id);
 
       expect(canAuthenticateAsIDs).to.deep.equalInAnyOrder(firstMembers.map((u: any) => u.id));
 
@@ -292,10 +299,12 @@ describe('AD Service', (): void => {
 
       clientSearchStub2.withArgs(process.env.LDAP_SHARED_ACCOUNT_FILTER, {
         filter: '(CN=*)',
+        explicitBufferAttributes: ['objectGUID'],
       }).resolves({ searchReferences: [], searchEntries: [newADSharedAccount] });
 
       clientSearchStub2.withArgs(process.env.LDAP_BASE, {
         filter: `(&(objectClass=user)(objectCategory=person)(memberOf:1.2.840.113556.1.4.1941:=${newADSharedAccount.dn}))`,
+        explicitBufferAttributes: ['objectGUID'],
       })
         .resolves({ searchReferences: [], searchEntries: sharedAccountMembers });
 
@@ -352,7 +361,7 @@ describe('AD Service', (): void => {
         cn: 'SudoSOS - Test',
         displayName: 'Test group',
         dn: 'CN=PRIV - SudoSOS Test,OU=SudoSOS Roles,OU=Groups,DC=gewiswg,DC=gewis,DC=nl',
-        objectGUID: '1234',
+        objectGUID: Buffer.from('1234', 'hex'),
         whenChanged: '',
       };
 
@@ -361,10 +370,12 @@ describe('AD Service', (): void => {
 
       clientSearchStub.withArgs(process.env.LDAP_ROLE_FILTER, {
         filter: '(CN=*)',
+        explicitBufferAttributes: ['objectGUID'],
       }).resolves({ searchReferences: [], searchEntries: [roleGroup as any] });
 
       clientSearchStub.withArgs(process.env.LDAP_BASE, {
         filter: `(&(objectClass=user)(objectCategory=person)(memberOf:1.2.840.113556.1.4.1941:=${roleGroup.dn}))`,
+        explicitBufferAttributes: ['objectGUID'],
       })
         .resolves({ searchReferences: [], searchEntries: [newUser as any, existingUser as any] });
 
@@ -403,6 +414,7 @@ describe('AD Service', (): void => {
 
       clientSearchStub.withArgs(process.env.LDAP_BASE, {
         filter: `(&(objectClass=user)(objectCategory=person)(memberOf:1.2.840.113556.1.4.1941:=${process.env.LDAP_USER_BASE}))`,
+        explicitBufferAttributes: ['objectGUID'],
       })
         .resolves({ searchReferences: [], searchEntries: [newUser as any] });
 
