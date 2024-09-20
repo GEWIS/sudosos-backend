@@ -18,6 +18,10 @@
  *  @license
  */
 
+/**
+ * @hidden
+ */
+
 import { MigrationInterface, QueryRunner, TableColumn, TableForeignKey } from 'typeorm';
 
 export class SellerPayoutPdf1726066600389 implements MigrationInterface {

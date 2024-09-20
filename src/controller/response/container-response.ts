@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the container-response.
+ *
+ * @module inventory/containers
+ */
+
 import { ProductResponse } from './product-response';
 import BaseResponse from './base-response';
 import { BaseUserResponse } from './user-response';

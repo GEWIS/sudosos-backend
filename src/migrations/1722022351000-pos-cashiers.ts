@@ -18,6 +18,10 @@
  *  @license
  */
 
+/**
+ * @hidden
+ */
+
 import { MigrationInterface, QueryRunner, Table, TableColumn, TableForeignKey } from 'typeorm';
 
 export class PosCashiers1722022351000 implements MigrationInterface {

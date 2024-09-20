@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the rbac-request.
+ *
+ * @module internal/rbac
+ */
+
 import Role from '../../entity/rbac/role';
 import Permission from '../../entity/rbac/permission';
 

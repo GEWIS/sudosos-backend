@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of base-entity.
+ *
+ * @module internal/entities
+ */
+
 import {
   PrimaryGeneratedColumn,
 } from 'typeorm';

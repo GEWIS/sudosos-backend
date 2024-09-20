@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the token-helper.
+ *
+ * @module internal/helpers
+ */
+
 import { RequestWithToken } from '../middleware/token-middleware';
 
 /**

@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of event-shift.
+ *
+ * @module events
+ */
+
 import {
   Column, DeleteDateColumn, Entity, JoinTable, ManyToMany,
 } from 'typeorm';

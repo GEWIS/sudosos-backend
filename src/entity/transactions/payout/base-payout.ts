@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the base-payout.
+ *
+ * @module payouts
+ */
+
 import BaseEntity from '../../base-entity';
 import { Column, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
 import User from '../../user/user';

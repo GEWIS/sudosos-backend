@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the seed.
+ *
+ * @module internal/database
+ */
+
 import { config } from 'dotenv';
 import log4js from 'log4js';
 import dinero, { Currency } from 'dinero.js';

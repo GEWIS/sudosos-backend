@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the cli-service.
+ *
+ * @module internal/cli-service
+ */
+
 import 'reflect-metadata';
 import { Command } from 'commander';
 import log4js from 'log4js';

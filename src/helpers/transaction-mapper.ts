@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the transaction-service.
+ *
+ * @module internal/helpers
+ */
+
 import SubTransactionRow from '../entity/transactions/sub-transaction-row';
 import Transaction from '../entity/transactions/transaction';
 import {

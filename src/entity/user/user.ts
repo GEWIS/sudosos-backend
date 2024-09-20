@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the user.
+ *
+ * @module users
+ */
+
 import {
   Column, Entity, JoinColumn, OneToMany, OneToOne,
 } from 'typeorm';

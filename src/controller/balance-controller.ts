@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of balance-controller.
+ *
+ * @module balance
+ */
+
 import log4js, { Logger } from 'log4js';
 import { Response } from 'express';
 import BaseController, { BaseControllerOptions } from './base-controller';

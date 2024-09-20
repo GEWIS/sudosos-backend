@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the write-off-response.
+ *
+ * @module writeoffs
+ */
+
 import { BaseUserResponse } from './user-response';
 import { DineroObjectResponse } from './dinero-response';
 import { TransferResponse } from './transfer-response';

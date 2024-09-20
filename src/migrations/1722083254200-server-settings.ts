@@ -18,6 +18,10 @@
  *  @license
  */
 
+/**
+ * @hidden
+ */
+
 import { MigrationInterface, QueryRunner, Table } from 'typeorm';
 
 export class ServerSettings1722083254200 implements MigrationInterface {

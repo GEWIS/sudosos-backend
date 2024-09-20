@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the container-request-spec.
+ *
+ * @module internal/spec/container-request-spec
+ */
+
 import Product from '../../../entity/product/product';
 import {
   createArrayRule,

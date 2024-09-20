@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the gewis-user-response.
+ *
+ * @module GEWIS
+ */
+
 import { UserResponse } from '../../../controller/response/user-response';
 
 /**

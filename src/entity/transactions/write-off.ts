@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the write-off.
+ *
+ * @module writeoffs
+ */
+
 import {
   Column, Entity, JoinColumn, ManyToOne, OneToOne,
 } from 'typeorm';

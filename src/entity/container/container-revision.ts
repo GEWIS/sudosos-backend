@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of container-revision.
+ *
+ * @module inventory/containers
+ */
+
 import {
   Entity,
   Column,

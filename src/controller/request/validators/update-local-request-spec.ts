@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the update-local-request-spec.
+ *
+ * @module internal/spec/update-local-request-spec
+ */
+
 import validator from 'validator';
 import {
   Specification, toFail, toPass, validateSpecification, ValidationError,

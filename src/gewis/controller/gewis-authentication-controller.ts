@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the gewis-authentication-controller.
+ *
+ * @module GEWIS
+ */
+
 import { Request, Response } from 'express';
 import * as jwt from 'jsonwebtoken';
 import log4js, { Logger } from 'log4js';

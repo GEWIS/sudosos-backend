@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the express-swaggerize-ui.
+ *
+ * @module internal/swagger
+ */
+
 declare module 'express-swaggerize-ui' {
   import { RequestHandler } from 'express';
 

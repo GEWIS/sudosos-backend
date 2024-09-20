@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the voucher-group.
+ *
+ * @module vouchers
+ */
+
 import { Dinero } from 'dinero.js';
 import {
   Column, Entity, OneToMany,

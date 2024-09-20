@@ -18,6 +18,10 @@
  *  @license
  */
 
+/**
+ * @hidden
+ */
+
 import { In, MigrationInterface, Not, QueryRunner } from 'typeorm';
 import { getLDAPConnection, LDAPResult } from '../helpers/ad';
 import ADService from '../service/ad-service';

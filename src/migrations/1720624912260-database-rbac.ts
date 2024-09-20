@@ -18,6 +18,10 @@
  *  @license
  */
 
+/**
+ * @hidden
+ */
+
 import { DeepPartial, MigrationInterface, QueryRunner, Repository, Table, TableColumn, TableForeignKey } from 'typeorm';
 import AssignedRole from '../entity/rbac/assigned-role';
 import Role from '../entity/rbac/role';

@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the write-off-controller.
+ *
+ * @module writeoffs
+ */
+
 import { Response } from 'express';
 import BaseController, { BaseControllerOptions } from './base-controller';
 import log4js, { Logger } from 'log4js';

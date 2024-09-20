@@ -18,6 +18,10 @@
  *  @license
  */
 
+/**
+ * @hidden
+ */
+
 import { MigrationInterface, QueryRunner, TableColumn } from 'typeorm';
 
 const UserTypeMapping: Record<string, string> = {

@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of banner.
+ *
+ * @module banners
+ */
+
 import {
   Column, Entity, JoinColumn, OneToOne,
 } from 'typeorm';

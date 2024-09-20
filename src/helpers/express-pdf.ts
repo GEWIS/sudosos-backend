@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the express-pdf.
+ *
+ * @module internal/helpers
+ */
+
 import { Response } from 'express';
 import { ReturnFileType, UserReportParametersType } from 'pdf-generator-client';
 import { BuyerReportService, SalesReportService } from '../service/report-service';

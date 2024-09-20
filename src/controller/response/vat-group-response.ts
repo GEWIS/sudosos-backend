@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the vat-group-response.
+ *
+ * @module vat
+ */
+
 import { DineroObject } from 'dinero.js';
 import { PaginationResult } from '../../helpers/pagination';
 import VatGroup, { VatDeclarationPeriod } from '../../entity/vat-group';

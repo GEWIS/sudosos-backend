@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the simple-file-response.
+ *
+ * @module files
+ */
+
 import BaseResponse from './base-response';
 import { UserResponse } from './user-response';
 

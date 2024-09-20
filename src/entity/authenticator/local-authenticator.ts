@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the page of local-authenticator.
+ *
+ * @module authentication
+ */
+
 import {
   Entity,
 } from 'typeorm';

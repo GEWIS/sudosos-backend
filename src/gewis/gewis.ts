@@ -18,6 +18,13 @@
  *  @license
  */
 
+/**
+ * This is the module page of GEWIS.
+ *
+ * @module gewis
+ * @mergeTarget
+ */
+
 import User, { UserType } from '../entity/user/user';
 import GewisUser from './entity/gewis-user';
 import AuthenticationService from '../service/authentication-service';

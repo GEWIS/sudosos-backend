@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the fine-report.
+ *
+ * @module reports
+ */
+
 import { Dinero } from 'dinero.js';
 import { UnstoredPdfAble } from '../file/pdf-able';
 import FineReportPdfService from '../../service/pdf/report-pdf-service';

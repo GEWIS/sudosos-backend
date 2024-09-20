@@ -18,6 +18,10 @@
  *  @license
  */
 
+/**
+ * @hidden
+ */
+
 import { MigrationInterface, QueryRunner, TableColumn, TableForeignKey } from 'typeorm';
 
 export class TransfersVat1721916495084 implements MigrationInterface {

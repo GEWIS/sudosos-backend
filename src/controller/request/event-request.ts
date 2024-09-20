@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the event-request.
+ *
+ * @module events
+ */
+
 import { Availability } from '../../entity/event/event-shift-answer';
 
 /**

@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the gewis-user.
+ *
+ * @module GEWIS
+ */
+
 import {
   BaseEntity, Column, Entity, JoinColumn, OneToOne, PrimaryColumn,
 } from 'typeorm';

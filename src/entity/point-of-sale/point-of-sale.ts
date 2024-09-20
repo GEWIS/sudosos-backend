@@ -18,6 +18,13 @@
  *  @license
  */
 
+/**
+ * This is the module page of the point-of-sale.
+ *
+ * @module inventory/pointsofsale
+ * @mergeTarget
+ */
+
 import {
   Column, DeleteDateColumn,
   Entity, JoinColumn, JoinTable, ManyToMany,

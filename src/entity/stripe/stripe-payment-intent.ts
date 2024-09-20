@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the stripe-payment-intent.
+ *
+ * @module stripe
+ */
+
 import BaseEntity from '../base-entity';
 import { Column, Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
 import StripePaymentIntentStatus from './stripe-payment-intent-status';

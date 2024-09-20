@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the assigned-role.
+ *
+ * @module internal/rbac
+ */
+
 import {
   Entity, JoinColumn, ManyToOne, PrimaryColumn,
 } from 'typeorm';

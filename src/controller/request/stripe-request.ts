@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the stripe-request.
+ *
+ * @module stripe
+ */
+
 import { DineroObjectRequest } from './dinero-request';
 
 /**

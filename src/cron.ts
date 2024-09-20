@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page the cron job.
+ *
+ * @module internal/cron
+ */
+
 import log4js, { Logger } from 'log4js';
 import Database from './database/database';
 import dinero, { Currency } from 'dinero.js';

@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the update-nfc-request-spec.
+ *
+ * @module internal/spec/update-nfc-request-spec
+ */
+
 import {
   Specification, toFail, toPass, validateSpecification, ValidationError,
 } from '../../../helpers/specification-validation';

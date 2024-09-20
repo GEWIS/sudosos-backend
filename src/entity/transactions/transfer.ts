@@ -18,6 +18,13 @@
  *  @license
  */
 
+/**
+ * This is the module page of the transfer.
+ *
+ * @module transactions
+ * @mergeTarget
+ */
+
 import {
   Column, Entity, JoinColumn, ManyToOne, OneToOne,
 } from 'typeorm';

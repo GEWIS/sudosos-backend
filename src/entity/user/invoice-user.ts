@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the invoice-user.
+ *
+ * @module invoices
+ */
+
 import {
   Column, Entity, JoinColumn, OneToOne, PrimaryColumn,
 } from 'typeorm';

@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the role-response.
+ *
+ * @module internal/rbac
+ */
+
 import PermissionResponse from './permission-response';
 
 /**

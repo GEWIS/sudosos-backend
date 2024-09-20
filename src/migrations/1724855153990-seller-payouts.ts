@@ -18,6 +18,10 @@
  *  @license
  */
 
+/**
+ * @hidden
+ */
+
 import { In, IsNull, MigrationInterface, Not, QueryRunner, Table, TableForeignKey } from 'typeorm';
 import Invoice from '../entity/invoices/invoice';
 import SellerPayout from '../entity/transactions/payout/seller-payout';

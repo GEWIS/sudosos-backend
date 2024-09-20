@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the bindings.
+ *
+ * @module internal/bindings
+ */
+
 import { SelectQueryBuilder } from 'typeorm';
 import User from '../entity/user/user';
 import AuthenticationService from '../service/authentication-service';

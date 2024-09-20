@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the banner-response.
+ *
+ * @module banners
+ */
+
 import BaseResponse from './base-response';
 import { PaginationResult } from '../../helpers/pagination';
 

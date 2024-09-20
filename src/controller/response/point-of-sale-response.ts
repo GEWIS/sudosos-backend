@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the point-of-sale-response.
+ *
+ * @module inventory/pointsofsale
+ */
+
 import BaseResponse from './base-response';
 import { ContainerWithProductsResponse } from './container-response';
 import { BaseUserResponse } from './user-response';

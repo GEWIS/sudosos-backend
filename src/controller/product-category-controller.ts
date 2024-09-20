@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of product-category-controller.
+ *
+ * @module inventory/categories
+ */
+
 import log4js, { Logger } from 'log4js';
 import { Response } from 'express';
 import BaseController, { BaseControllerOptions } from './base-controller';

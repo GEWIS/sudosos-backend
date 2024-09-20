@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the permission.
+ *
+ * @module internal/rbac
+ */
+
 import { BaseEntity, Column, Entity, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';
 import Role from './role';
 

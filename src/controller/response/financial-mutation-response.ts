@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the financial-mutation-response.
+ * TODO change
+ * @module financial-mutations
+ */
+
 import { PaginationResult } from '../../helpers/pagination';
 import { TransferResponse } from './transfer-response';
 import { BaseTransactionResponse } from './transaction-response';

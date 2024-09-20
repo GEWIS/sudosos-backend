@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the payout-request.
+ *
+ * @module payout-requests
+ */
+
 import {
   Column, Entity, JoinColumn, ManyToOne, OneToMany, OneToOne,
 } from 'typeorm';

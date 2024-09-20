@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the express-swagger-generator.
+ *
+ * @module internal/swagger
+ */
+
 declare module 'express-swagger-generator' {
   import express from 'express';
 

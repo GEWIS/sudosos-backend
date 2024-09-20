@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the product-category.
+ *
+ * @module inventory/products
+ */
+
 import {
   Entity, Column, Tree, TreeChildren, TreeParent,
 } from 'typeorm';

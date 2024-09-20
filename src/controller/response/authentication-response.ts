@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the authentication-response.
+ *
+ * @module authentication
+ */
+
 import { UserResponse } from './user-response';
 import { TermsOfServiceStatus } from '../../entity/user/user';
 import RoleResponse from './rbac/role-response';

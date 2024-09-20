@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the relation-response.
+ *
+ * @module internal/rbac
+ */
+
 import { AllowedAttribute } from '../../../rbac/role-definitions';
 
 /**

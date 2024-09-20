@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of container.
+ *
+ * @module inventory/containers
+ */
+
 import {
   Column, DeleteDateColumn,
   Entity,

@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the string-spec.
+ *
+ * @module internal/spec/string-spec
+ */
+
 import {
   Specification, toFail, toPass, ValidationError,
 } from '../../../helpers/specification-validation';

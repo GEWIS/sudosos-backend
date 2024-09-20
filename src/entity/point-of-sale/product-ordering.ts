@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the product-ordering.
+ *
+ * @module inventory/pointsofsale
+ */
+
 import {
   Column,
   Entity, JoinColumn,

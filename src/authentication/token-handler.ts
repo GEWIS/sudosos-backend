@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of token-handler.
+ *
+ * @module authentication
+ */
+
 import assert from 'assert';
 import * as util from 'util';
 import * as jwt from 'jsonwebtoken';

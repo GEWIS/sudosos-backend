@@ -18,6 +18,10 @@
  *  @license
  */
 
+/**
+ * @hidden
+ */
+
 import { MigrationInterface, QueryRunner, Table, TableForeignKey } from 'typeorm';
 import Role from '../entity/rbac/role';
 import Permission from '../entity/rbac/permission';

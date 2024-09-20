@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the vat-group.
+ *
+ * @module vat
+ */
+
 import { Column, Entity } from 'typeorm';
 import BaseEntity from './base-entity';
 

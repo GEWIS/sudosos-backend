@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the product-category-response.
+ *
+ * @module inventory/categories
+ */
+
 import BaseResponse from './base-response';
 import { PaginationResult } from '../../helpers/pagination';
 

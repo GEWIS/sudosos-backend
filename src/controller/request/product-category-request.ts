@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the product-category-request.
+ *
+ * @module inventory/categories
+ */
+
 import ProductCategory from '../../entity/product/product-category';
 
 /**

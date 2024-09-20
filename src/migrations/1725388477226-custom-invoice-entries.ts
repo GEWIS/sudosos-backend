@@ -18,6 +18,10 @@
  *  @license
  */
 
+/**
+ * @hidden
+ */
+
 import { MigrationInterface, QueryRunner, Table, TableForeignKey } from 'typeorm';
 
 export class CustomInvoiceEntries1725388477226 implements MigrationInterface {

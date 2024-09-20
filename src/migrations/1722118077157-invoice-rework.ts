@@ -18,6 +18,10 @@
  *  @license
  */
 
+/**
+ * @hidden
+ */
+
 import { MigrationInterface, QueryRunner, TableColumn, TableForeignKey } from 'typeorm';
 
 export class InvoiceRework1622118077157 implements MigrationInterface {

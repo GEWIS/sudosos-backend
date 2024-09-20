@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the page of reset-token.
+ *
+ * @module authentication
+ */
+
 import { Column, Entity } from 'typeorm';
 import HashBasedAuthenticationMethod from './hash-based-authentication-method';
 

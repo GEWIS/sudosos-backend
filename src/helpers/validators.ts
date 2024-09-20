@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the invoice-service.
+ *
+ * @module internal/validators
+ */
+
 import { InvoiceState } from '../entity/invoices/invoice-status';
 import { VatDeclarationPeriod } from '../entity/vat-group';
 import { UserType } from '../entity/user/user';

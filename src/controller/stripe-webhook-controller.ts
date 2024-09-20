@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the stripe-webhook-controller.
+ *
+ * @module stripe
+ */
+
 import log4js, { Logger } from 'log4js';
 import { Request, Response } from 'express';
 import BaseController, { BaseControllerOptions } from './base-controller';

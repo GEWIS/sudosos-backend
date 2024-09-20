@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of pdf-file.
+ *
+ * @module files
+ */
+
 import { Column, Entity } from 'typeorm';
 import BaseFile from './base-file';
 

@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the JsonWebToken.
+ *
+ * @module authentication
+ */
+
 import User from '../entity/user/user';
 
 /**

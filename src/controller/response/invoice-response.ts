@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the invoice-response.
+ *
+ * @module invoicing
+ */
+
 import { DineroObject } from 'dinero.js';
 import BaseResponse from './base-response';
 import { BaseUserResponse } from './user-response';

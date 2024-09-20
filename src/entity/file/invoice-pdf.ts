@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of invoice-pdf.
+ *
+ * @module invoicing
+ */
+
 import { Entity } from 'typeorm';
 import Pdf from './pdf-file';
 

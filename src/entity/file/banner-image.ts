@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of banner-image.
+ *
+ * @module banners
+ */
+
 import { Entity } from 'typeorm';
 import BaseFile from './base-file';
 

@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of event.
+ *
+ * @module events
+ */
+
 import {
   Column, Entity, ManyToOne, JoinColumn, OneToMany, ManyToMany, JoinTable,
 } from 'typeorm';

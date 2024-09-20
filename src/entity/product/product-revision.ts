@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the product-revision.
+ *
+ * @module inventory/products
+ */
+
 import {
   BeforeUpdate,
   Column,

@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the revision-to-response.
+ *
+ * @module internal/helpers
+ */
+
 import ProductRevision from '../entity/product/product-revision';
 import { BaseProductResponse } from '../controller/response/product-response';
 import { BaseContainerResponse } from '../controller/response/container-response';
