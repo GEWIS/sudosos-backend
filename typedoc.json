@@ -1,0 +1,10 @@
+{
+  "entryPoints": ["src/**/*.ts"],
+  "name": "SudoSOS Back-end API",
+  "out": "docs",
+  "includeVersion": true,
+  "excludeExternals": true,
+  "plugin": ["typedoc-plugin-merge-modules", "typedoc-github-theme"],
+  "mergeModulesRenameDefaults": true,
+  "mergeModulesMergeMode": "module"
+}
