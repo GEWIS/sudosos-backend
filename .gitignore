@@ -18,3 +18,4 @@ config
 data/
 
 .env
+/docs/.vitepress/cache/

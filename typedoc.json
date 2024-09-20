@@ -1,10 +1,21 @@
 {
   "entryPoints": ["src/**/*.ts"],
   "name": "SudoSOS Back-end API",
-  "out": "docs",
+  "docsRoot": "./docs",
+  "out": "docs/out",
   "includeVersion": true,
   "excludeExternals": true,
-  "plugin": ["typedoc-plugin-merge-modules", "typedoc-github-theme"],
+  "plugin": ["typedoc-plugin-merge-modules", "typedoc-vitepress-theme", "typedoc-plugin-markdown"],
   "mergeModulesRenameDefaults": true,
-  "mergeModulesMergeMode": "module"
+  "mergeModulesMergeMode": "module",
+  "githubPages": false,
+  "readme": "none",
+  "entryFileName": "index.md",
+  "indexFormat": "table",
+  "useCodeBlocks": true,
+  "disableSources": true,
+  "textContentMappings": {
+    "title.indexPage": "API Reference",
+    "title.memberPage": "{name}"
+  }
 }

@@ -18,6 +18,13 @@
  *  @license
  */
 
+/**
+ * This is the module page of invoicing.
+ *
+ * @module invoicing
+ * @mergeTarget
+ */
+
 import {
   Column,
   Entity, JoinColumn, ManyToOne, OneToMany, OneToOne, ManyToMany, JoinTable,
