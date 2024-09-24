@@ -21,7 +21,7 @@
 /**
  * This is the module page of the point-of-sale-response.
  *
- * @module inventory/pointsofsale
+ * @module inventory/point-of-sale
  */
 
 import BaseResponse from './base-response';

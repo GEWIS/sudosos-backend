@@ -21,7 +21,7 @@
 /**
  * This is the module page of the simple-file-response.
  *
- * @module files
+ * @module internal/files
  */
 
 import BaseResponse from './base-response';

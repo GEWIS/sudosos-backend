@@ -21,7 +21,7 @@
 /**
  * This is the module page of the role.
  *
- * @module internal/rbac
+ * @module rbac
  * @mergeTarget
  */
 

@@ -21,7 +21,7 @@
 /**
  * This is the module page of the vat-group-response.
  *
- * @module vat
+ * @module inventory/vat
  */
 
 import { DineroObject } from 'dinero.js';

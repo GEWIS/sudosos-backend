@@ -21,7 +21,7 @@
 /**
  * This is the module page of the product-ordering.
  *
- * @module inventory/pointsofsale
+ * @module inventory/point-of-sale
  */
 
 import {

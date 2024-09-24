@@ -21,7 +21,7 @@
 /**
  * This is the module page of the assigned-role.
  *
- * @module internal/rbac
+ * @module rbac
  */
 
 import {

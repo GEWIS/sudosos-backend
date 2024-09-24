@@ -19,6 +19,12 @@
  */
 
 /**
+ * This is the module page of the write-off-request.
+ *
+ * @module write-offs
+ */
+
+/**
  * @typedef {object} WriteOffRequest
  * @property {integer} toId.required - The user who is the receiver of the write-off
  */

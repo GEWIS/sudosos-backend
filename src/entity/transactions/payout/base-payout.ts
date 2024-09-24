@@ -19,9 +19,8 @@
  */
 
 /**
- * This is the module page of the base-payout.
- *
- * @module payouts
+ * @hidden
+ * @module
  */
 
 import BaseEntity from '../../base-entity';

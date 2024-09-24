@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the file-service.
+ *
+ * @module internal/files
+ */
+
 import { UploadedFile } from 'express-fileupload';
 import path from 'path';
 import { DiskStorage, FileStorage, SIMPLE_FILE_LOCATION } from '../files/storage';

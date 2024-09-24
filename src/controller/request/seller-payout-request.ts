@@ -24,6 +24,12 @@
  * @module seller-payouts
  */
 
+/**
+ * This is the module page of the seller-payout-request.
+ *
+ * @module seller-payouts
+ */
+
 import { DineroObjectRequest } from './dinero-request';
 
 /**

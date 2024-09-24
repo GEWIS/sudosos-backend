@@ -19,6 +19,12 @@
  */
 
 /**
+ * This is the module page of the vat-group-request.
+ *
+ * @module inventory/vat
+ */
+
+/**
  * @typedef {object} UpdateVatGroupRequest
  * @property {string} name.required - Name of the VAT group
  * @property {boolean} deleted.required - Whether this group should be hidden

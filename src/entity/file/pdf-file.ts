@@ -21,7 +21,7 @@
 /**
  * This is the module page of pdf-file.
  *
- * @module files
+ * @module internal/files
  */
 
 import { Column, Entity } from 'typeorm';

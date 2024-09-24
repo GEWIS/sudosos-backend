@@ -21,7 +21,7 @@
 /**
  * This is the module page of the invoice-user.
  *
- * @module invoices
+ * @module invoicing
  */
 
 import {

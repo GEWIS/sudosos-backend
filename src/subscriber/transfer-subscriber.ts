@@ -15,7 +15,14 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *
+ *  @license
+ */
+
+
+/**
+ * This is the module page of the transfer-subscriber.
  *
+ * @module internal/subscribers/transfer-subscriber
  */
 
 import { EntitySubscriberInterface, EventSubscriber, InsertEvent } from 'typeorm';

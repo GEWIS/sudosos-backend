@@ -21,7 +21,7 @@
 /**
  * This is the module page of the write-off-response.
  *
- * @module writeoffs
+ * @module write-offs
  */
 
 import { BaseUserResponse } from './user-response';

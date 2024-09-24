@@ -22,6 +22,7 @@
  * This is the module page of event.
  *
  * @module events
+ * @mergeTarget
  */
 
 import {

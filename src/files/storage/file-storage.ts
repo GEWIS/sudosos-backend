@@ -21,7 +21,7 @@
 /**
  * This is the module page of the file-storage.
  *
- * @module files/storage
+ * @module internal/files/storage
  */
 
 import BaseFile from '../../entity/file/base-file';

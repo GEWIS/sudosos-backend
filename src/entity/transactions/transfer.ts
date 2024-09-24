@@ -21,7 +21,7 @@
 /**
  * This is the module page of the transfer.
  *
- * @module transactions
+ * @module transfers
  * @mergeTarget
  */
 

@@ -22,6 +22,7 @@
  * This is the module page of banner.
  *
  * @module banners
+ * @mergeTarget
  */
 
 import {

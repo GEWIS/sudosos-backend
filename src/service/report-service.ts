@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the report-service.
+ *
+ * @module internal/reports
+ */
+
 import { SelectQueryBuilder } from 'typeorm';
 import ProductRevision from '../entity/product/product-revision';
 import Dinero from 'dinero.js';

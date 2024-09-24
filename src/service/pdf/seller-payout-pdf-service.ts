@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the page of seller-payout-pdf-service.
+ *
+ * @module internal/pdf/seller-payout-pdf-service
+ */
+
 import {
   FileResponse,
   SellerPayoutParameters,

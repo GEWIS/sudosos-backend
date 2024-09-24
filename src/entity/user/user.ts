@@ -22,6 +22,7 @@
  * This is the module page of the user.
  *
  * @module users
+ * @mergeTarget
  */
 
 import {

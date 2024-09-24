@@ -19,6 +19,12 @@
  */
 
 /**
+ * This is the module page of the update-pin-request.
+ *
+ * @module authentication
+ */
+
+/**
  * @typedef {object} UpdatePinRequest
  * @property {string} pin.required - The PIN code to set
  */

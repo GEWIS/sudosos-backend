@@ -21,7 +21,7 @@
 /**
  * This is the module page of the invoice-request.
  *
- * @module invoices
+ * @module invoicing
  */
 
 import { InvoiceState } from '../../entity/invoices/invoice-status';

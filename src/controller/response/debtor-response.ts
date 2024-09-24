@@ -19,6 +19,12 @@
  */
 
 /**
+ * This is the module page of the debtor-response.
+ *
+ * @module debtors
+ */
+
+/**
  * This is the module page of debtor-response.
  *
  * @module debtors

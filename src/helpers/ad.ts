@@ -21,7 +21,7 @@
 /**
  * This is the module page of the ad.
  *
- * @module internal/ldap
+ * @module helpers
  */
 
 import { EntityManager } from 'typeorm';

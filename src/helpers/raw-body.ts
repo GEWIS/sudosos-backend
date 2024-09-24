@@ -21,7 +21,7 @@
 /**
  * This is the module page of the raw-body.
  *
- * @module internal/helpers
+ * @module helpers
  */
 
 import { IncomingMessage, ServerResponse } from 'http';

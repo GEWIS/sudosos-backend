@@ -21,7 +21,7 @@
 /**
  * This is the module page of the express-pdf.
  *
- * @module internal/helpers
+ * @module helpers
  */
 
 import { Response } from 'express';

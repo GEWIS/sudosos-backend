@@ -21,7 +21,7 @@
 /**
  * This is the module page of the product-category-response.
  *
- * @module inventory/categories
+ * @module inventory/product-categories
  */
 
 import BaseResponse from './base-response';

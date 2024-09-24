@@ -21,7 +21,7 @@
 /**
  * This is the module page of the put-file-in-response.
  *
- * @module files
+ * @module internal/files
  */
 
 import { Response } from 'express';

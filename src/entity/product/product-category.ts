@@ -21,7 +21,8 @@
 /**
  * This is the module page of the product-category.
  *
- * @module inventory/products
+ * @module inventory/product-categories
+ * @mergeTarget
  */
 
 import {

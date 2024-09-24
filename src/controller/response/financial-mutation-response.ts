@@ -19,6 +19,11 @@
  */
 
 /**
+ * @hidden
+ * @module
+ */
+
+/**
  * This is the module page of the financial-mutation-response.
  * TODO change
  * @module financial-mutations

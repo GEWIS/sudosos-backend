@@ -21,7 +21,8 @@
 /**
  * This is the module page of the write-off.
  *
- * @module writeoffs
+ * @module write-offs
+ * @mergeTarget
  */
 
 import {

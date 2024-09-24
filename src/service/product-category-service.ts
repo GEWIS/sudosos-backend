@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the product-category-service.
+ *
+ * @module inventory/product-categories
+ */
+
 import { FindManyOptions, IsNull, Raw } from 'typeorm';
 import ProductCategory from '../entity/product/product-category';
 import {

@@ -21,7 +21,7 @@
 /**
  * This is the module page of the pdf.
  *
- * @module files/pdf
+ * @module helpers
  */
 
 import { Identity, Product, ProductPricing, TotalPricing, VAT } from 'pdf-generator-client';

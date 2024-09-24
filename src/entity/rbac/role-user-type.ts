@@ -21,7 +21,7 @@
 /**
  * This is the module page of the role-user-type.
  *
- * @module internal/rbac
+ * @module rbac
  */
 
 import { BaseEntity, Entity, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';

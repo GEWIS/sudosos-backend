@@ -21,7 +21,7 @@
 /**
  * This is the module page of GEWIS.
  *
- * @module gewis
+ * @module GEWIS
  * @mergeTarget
  */
 

@@ -21,7 +21,7 @@
 /**
  * This is the module page of the action-response.
  *
- * @module internal/rbac
+ * @module rbac
  */
 
 import RelationResponse from './relation-response';

@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the stripe-service.
+ *
+ * @module stripe
+ */
+
 import Stripe from 'stripe';
 import { Dinero } from 'dinero.js';
 import { getLogger, Logger } from 'log4js';

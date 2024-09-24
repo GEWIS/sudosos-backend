@@ -21,7 +21,7 @@
 /**
  * This is the module page of the role-response.
  *
- * @module internal/rbac
+ * @module rbac
  */
 
 import PermissionResponse from './permission-response';

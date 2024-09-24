@@ -21,7 +21,7 @@
 /**
  * This is the module page of base-file.
  *
- * @module files
+ * @module internal/files
  */
 
 import { Column, Entity, ManyToOne } from 'typeorm';

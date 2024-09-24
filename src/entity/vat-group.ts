@@ -21,7 +21,8 @@
 /**
  * This is the module page of the vat-group.
  *
- * @module vat
+ * @module inventory/vat
+ * @mergeTarget
  */
 
 import { Column, Entity } from 'typeorm';

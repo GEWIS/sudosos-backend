@@ -19,6 +19,12 @@
  */
 
 /**
+ * This is the module page of the simple-file-request.
+ *
+ * @module internal/files
+ */
+
+/**
  * @typedef {object} SimpleFileRequest
  * @property {string} name - Name of the file
  */

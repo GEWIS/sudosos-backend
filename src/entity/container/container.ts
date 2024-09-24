@@ -22,6 +22,7 @@
  * This is the module page of container.
  *
  * @module inventory/containers
+ * @mergeTarget
  */
 
 import {

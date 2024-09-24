@@ -19,6 +19,12 @@
  */
 
 /**
+ * This is the module page of the authentication-mock-request.
+ *
+ * @module authentication
+ */
+
+/**
  * @typedef {object} AuthenticationMockRequest
  * @property {number} userId.required
  * @property {string} nonce.required

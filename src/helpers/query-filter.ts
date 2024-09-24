@@ -21,7 +21,7 @@
 /**
  * This is the module page of the query-filter.
  *
- * @module internal/helpers
+ * @module helpers
  */
 
 import {

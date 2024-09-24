@@ -19,9 +19,9 @@
  */
 
 /**
- * This is the module page of the transaction-service.
+ * This is the module page of the transaction-mapper.
  *
- * @module internal/helpers
+ * @module helpers
  */
 
 import SubTransactionRow from '../entity/transactions/sub-transaction-row';

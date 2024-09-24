@@ -22,6 +22,7 @@
  * This is the module page of the payout-request.
  *
  * @module payout-requests
+ * @mergeTarget
  */
 
 import {

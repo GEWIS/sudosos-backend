@@ -21,7 +21,7 @@
 /**
  * This is the module page of the write-off-controller.
  *
- * @module writeoffs
+ * @module write-offs
  */
 
 import { Response } from 'express';

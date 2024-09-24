@@ -21,7 +21,7 @@
 /**
  * This is the module page of the token-helper.
  *
- * @module internal/helpers
+ * @module helpers
  */
 
 import { RequestWithToken } from '../middleware/token-middleware';

@@ -21,7 +21,7 @@
 /**
  * This is the module page of the pdf-able.
  *
- * @module files/pdf
+ * @module internal/files/pdf
  */
 
 import Pdf from './pdf-file';

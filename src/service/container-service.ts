@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the container-service.
+ *
+ * @module inventory/containers
+ */
+
 import { FindManyOptions, FindOptionsRelations, FindOptionsWhere, In, IsNull, Raw } from 'typeorm';
 import {
   BaseContainerResponse,

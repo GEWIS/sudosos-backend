@@ -22,6 +22,7 @@
  * This is the module page of the voucher-group.
  *
  * @module vouchers
+ * @mergeTarget
  */
 
 import { Dinero } from 'dinero.js';

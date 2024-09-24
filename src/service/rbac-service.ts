@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the rbac-service.
+ *
+ * @module rbac
+ */
+
 import RoleResponse from '../controller/response/rbac/role-response';
 import PermissionResponse from '../controller/response/rbac/permission-response';
 import ActionResponse from '../controller/response/rbac/action-response';

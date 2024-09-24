@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the express-swaggerize-ui.
+ *
+ * @module internal/swagger
+ */
+
 declare module 'swagger-model-validator' {
 
   export interface ValidationResult {

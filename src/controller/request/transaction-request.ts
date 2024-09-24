@@ -24,6 +24,12 @@
  * @module transactions
  */
 
+/**
+ * This is the module page of the transaction-request.
+ *
+ * @module transactions
+ */
+
 import { DineroObjectRequest } from './dinero-request';
 import RevisionRequest from './revision-request';
 

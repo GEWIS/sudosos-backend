@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the payout-service.
+ *
+ * @module payout-requests
+ */
+
 import {
   FindManyOptions,
   FindOptionsRelations,

@@ -21,7 +21,7 @@
 /**
  * This is the module page of the invoice-entry-request.
  *
- * @module invoices
+ * @module invoicing
  */
 
 import { DineroObjectRequest } from './dinero-request';

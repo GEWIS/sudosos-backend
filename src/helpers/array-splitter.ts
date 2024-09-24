@@ -21,7 +21,7 @@
 /**
  * This is the module page of the array-splitter.
  *
- * @module internal/helpers
+ * @module helpers
  */
 
 import { ContainerParams } from '../controller/request/container-request';

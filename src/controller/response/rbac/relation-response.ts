@@ -21,7 +21,7 @@
 /**
  * This is the module page of the relation-response.
  *
- * @module internal/rbac
+ * @module rbac
  */
 
 import { AllowedAttribute } from '../../../rbac/role-definitions';

@@ -19,9 +19,9 @@
  */
 
 /**
- * This is the module page of the invoice-service.
+ * This is the module page of the validators.
  *
- * @module internal/validators
+ * @module helpers
  */
 
 import { InvoiceState } from '../entity/invoices/invoice-status';

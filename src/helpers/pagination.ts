@@ -21,7 +21,7 @@
 /**
  * This is the module page of the pagination.
  *
- * @module internal/pagination
+ * @module helpers
  */
 
 import { Request } from 'express';

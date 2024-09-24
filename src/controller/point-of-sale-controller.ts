@@ -21,7 +21,7 @@
 /**
  * This is the module page of point-of-sale-controller.
  *
- * @module inventory/pointsofsale
+ * @module inventory/point-of-sale
  */
 
 import log4js, { Logger } from 'log4js';

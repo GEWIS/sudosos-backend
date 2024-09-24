@@ -21,7 +21,7 @@
 /**
  * This is the module page of the revision-to-response.
  *
- * @module internal/helpers
+ * @module helpers
  */
 
 import ProductRevision from '../entity/product/product-revision';

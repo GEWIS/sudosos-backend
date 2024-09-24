@@ -19,6 +19,12 @@
  */
 
 /**
+ * This is the module page of the authentication-key-request.
+ *
+ * @module authentication
+ */
+
+/**
  * @typedef {object} AuthenticationKeyRequest
  * @property {number} userId.required
  * @property {string} key.required - The password

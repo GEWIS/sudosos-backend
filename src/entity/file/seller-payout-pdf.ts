@@ -21,7 +21,7 @@
 /**
  * This is the module page of the seller-payout-pdf.
  *
- * @module files/pdf
+ * @module internal/files/pdf
  */
 
 import { Entity } from 'typeorm';

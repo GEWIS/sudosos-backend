@@ -21,7 +21,7 @@
 /**
  * This is the module page of the rbac-request.
  *
- * @module internal/rbac
+ * @module rbac
  */
 
 import Role from '../../entity/rbac/role';

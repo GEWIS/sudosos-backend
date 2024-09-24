@@ -21,7 +21,7 @@
 /**
  * This is the module page of the hash.
  *
- * @module internal/helpers
+ * @module helpers
  */
 
 import crypto from 'crypto';

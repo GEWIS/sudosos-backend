@@ -18,5 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the mailer.
+ *
+ * @module internal/mailer
+ * @mergeTarget
+ */
+
 export { default } from './mailer';
 export * from './messages';

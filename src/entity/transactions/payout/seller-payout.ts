@@ -22,6 +22,7 @@
  * This is the module page of the seller-payout.
  *
  * @module seller-payouts
+ * @mergeTarget
  */
 
 import BasePayout from './base-payout';

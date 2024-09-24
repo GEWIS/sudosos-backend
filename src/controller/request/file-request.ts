@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the file-request.
+ *
+ * @module internal/files
+ */
+
 // TODO This is most likely not the way to go, but im not sure how to deal with file uploading in express-jsdoc-swagger.
 /**
  * @typedef {object} FileRequest

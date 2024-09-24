@@ -21,7 +21,7 @@
 /**
  * This is the module page of the balance-response.
  *
- * @module balances
+ * @module balance
  */
 
 import { DineroObjectResponse } from './dinero-response';

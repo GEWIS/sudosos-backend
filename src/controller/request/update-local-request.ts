@@ -19,6 +19,12 @@
  */
 
 /**
+ * This is the module page of the update-local-request.
+ *
+ * @module authentication
+ */
+
+/**
  * @typedef {object} UpdateLocalRequest
  * @property {string} password.required - The password to set
  */
