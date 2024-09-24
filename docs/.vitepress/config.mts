@@ -38,7 +38,7 @@ export default defineConfig({
       },
       {
         text: 'Internals',
-        items: internalsItems,
+        items: [{text: "TypeDoc", link: '/typedoc'}, ...internalsItems],
       }
     ],
     socialLinks: [

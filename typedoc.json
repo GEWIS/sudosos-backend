@@ -13,9 +13,5 @@
   "entryFileName": "index.md",
   "indexFormat": "table",
   "useCodeBlocks": true,
-  "disableSources": true,
-  "textContentMappings": {
-    "title.indexPage": "API Reference",
-    "title.memberPage": "{name}"
-  }
+  "disableSources": true
 }
