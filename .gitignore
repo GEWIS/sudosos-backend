@@ -19,3 +19,5 @@ data/
 
 .env
 /docs/.vitepress/cache/
+/docs/.vitepress/dist/
+/docs/content/typedoc/

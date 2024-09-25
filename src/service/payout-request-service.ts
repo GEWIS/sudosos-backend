@@ -235,8 +235,9 @@ export default class PayoutRequestService {
    * @param id ID of payout request
    * @param state State to change payout request to
    * @param user User who performs the update
-   * @return Promise<undefined> - Status cannot be created
-   * @return Promise<PayoutRequestResponse> - Status created
+   * @return {Promise<PayoutRequestResponse>|undefined}
+   *  - Resolves to the updated payout request response if successful,
+   *  - or `undefined` if the payout request does not exist.
    */
   public static async updateStatus(
     id: number, state: PayoutRequestState, user: User,

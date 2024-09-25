@@ -37,7 +37,7 @@ features:
 
   - title: Backend GitHub Repository
     icon: 
-      src: /github-mark.png
+      src: github-mark.png
       alt: GitHub
     details: View the source code, contribute, and explore ongoing development of the SudoSOS Backend on GitHub. Open issues or submit pull requests to collaborate.
     link: https://github.com/GEWIS/sudosos-backend

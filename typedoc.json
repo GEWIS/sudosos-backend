@@ -1,8 +1,8 @@
 {
   "entryPoints": ["src/**/*.ts"],
   "name": "SudoSOS Back-end API",
-  "docsRoot": "./docs",
-  "out": "docs/out",
+  "docsRoot": "./docs/content",
+  "out": "docs/content/typedoc",
   "includeVersion": true,
   "excludeExternals": true,
   "plugin": ["typedoc-plugin-merge-modules", "typedoc-vitepress-theme", "typedoc-plugin-markdown"],

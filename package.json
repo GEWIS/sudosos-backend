@@ -24,8 +24,9 @@
     "typeorm": "node --require ts-node/register ./node_modules/typeorm/cli.js",
     "cli": "ts-node ./src/gewis/service/cli-service.ts",
     "predocs:dev": "typedoc",
+    "typedoc": "typedoc",
     "docs:dev": "vitepress dev docs",
-    "docs:build": "vitepress build docs",
+    "docs:build": "cross-env NODE_OPTIONS=--max-old-space-size=8192 vitepress build docs --mode production",
     "docs:preview": "vitepress preview docs"
   },
   "author": "",
@@ -90,6 +91,7 @@
     "chai-http": "^4.3.0",
     "chai-sorted": "^0.2.0",
     "chai-swag": "^0.1.9",
+    "cross-env": "^7.0.3",
     "deep-equal-in-any-order": "^2.0.5",
     "eslint": "^8.36.0",
     "eslint-config-airbnb-typescript": "^17.0.0",
