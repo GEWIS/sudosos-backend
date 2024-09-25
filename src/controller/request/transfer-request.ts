@@ -24,12 +24,6 @@
  * @module transfers
  */
 
-/**
- * This is the module page of the transfer-request.
- *
- * @module transfers
- */
-
 import { DineroObjectRequest } from './dinero-request';
 
 /**

@@ -19,7 +19,7 @@
  */
 
 /**
- * This is the module page of event-controller.
+ * This is the module page of event-shift-controller.
  *
  * @module events
  */

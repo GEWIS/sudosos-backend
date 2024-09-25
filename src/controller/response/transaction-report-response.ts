@@ -19,7 +19,7 @@
  */
 
 /**
- * This is the module page of the transaction-report.
+ * This is the module page of the transaction-report-response.
  *
  * @module reports
  */

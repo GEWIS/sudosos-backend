@@ -21,7 +21,7 @@
 /**
  * This is the module page of the product-revision.
  *
- * @module inventory/products
+ * @module catalogue/products
  */
 
 import {

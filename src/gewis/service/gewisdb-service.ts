@@ -21,7 +21,7 @@
 /**
  * This is the module page of gewis-db-service.
  *
- * @module internal/gewisdb
+ * @module GEWIS/gewisdb
  */
 
 import GewisUser from '../entity/gewis-user';

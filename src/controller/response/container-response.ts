@@ -21,13 +21,7 @@
 /**
  * This is the module page of the container-response.
  *
- * @module inventory/containers
- */
-
-/**
- * This is the module page of the container-response.
- *
- * @module inventory/containers
+ * @module catalogue/containers
  */
 
 import { ProductResponse } from './product-response';

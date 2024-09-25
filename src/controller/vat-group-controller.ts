@@ -21,7 +21,7 @@
 /**
  * This is the module page of the vat-group-controller.
  *
- * @module inventory/vat
+ * @module catalogue/vat
  */
 
 import log4js, { Logger } from 'log4js';

@@ -21,7 +21,7 @@
 /**
  * This is the module page of the product-response.
  *
- * @module inventory/products
+ * @module catalogue/products
  */
 
 import BaseResponse from './base-response';

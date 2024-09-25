@@ -21,7 +21,7 @@
 /**
  * This is the module page of the general-validators.
  *
- * @module internal/validators
+ * @module internal/spec
  */
 
 import { toFail, toPass, ValidationError } from '../../../helpers/specification-validation';

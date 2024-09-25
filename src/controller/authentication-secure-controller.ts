@@ -19,7 +19,7 @@
  */
 
 /**
- * This is the module page of point-of-sale-controller.
+ * This is the module page of authentication-secure-controller.
  *
  * @module authentication
  */

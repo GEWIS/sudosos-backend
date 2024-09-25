@@ -21,7 +21,7 @@
 /**
  * This is the module page of the cli-service.
  *
- * @module internal/cli-service
+ * @module GEWIS/cli-service
  */
 
 import 'reflect-metadata';

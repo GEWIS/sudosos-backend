@@ -21,7 +21,7 @@
 /**
  * This is the module page of container-controller.
  *
- * @module inventory/containers
+ * @module catalogue/containers
  */
 
 import log4js, { Logger } from 'log4js';

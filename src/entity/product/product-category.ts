@@ -21,7 +21,7 @@
 /**
  * This is the module page of the product-category.
  *
- * @module inventory/product-categories
+ * @module catalogue/product-categories
  * @mergeTarget
  */
 

@@ -21,7 +21,7 @@
 /**
  * This is the module page of the point-of-sale-service.
  *
- * @module inventory/point-of-sale
+ * @module catalogue/point-of-sale
  */
 
 import { FindManyOptions, FindOptionsRelations, FindOptionsWhere, In, IsNull, Raw } from 'typeorm';

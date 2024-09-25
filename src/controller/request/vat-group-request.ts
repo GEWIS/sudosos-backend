@@ -21,7 +21,7 @@
 /**
  * This is the module page of the vat-group-request.
  *
- * @module inventory/vat
+ * @module catalogue/vat
  */
 
 /**

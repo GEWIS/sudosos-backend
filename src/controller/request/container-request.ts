@@ -21,7 +21,7 @@
 /**
  * This is the module page of the container-request.
  *
- * @module inventory/containers
+ * @module catalogue/containers
  */
 
 export interface BaseContainerParams {

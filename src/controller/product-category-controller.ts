@@ -21,7 +21,7 @@
 /**
  * This is the module page of product-category-controller.
  *
- * @module inventory/product-categories
+ * @module catalogue/product-categories
  */
 
 import log4js, { Logger } from 'log4js';

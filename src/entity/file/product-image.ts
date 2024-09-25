@@ -21,7 +21,7 @@
 /**
  * This is the module page of product-image.
  *
- * @module inventory/products
+ * @module catalogue/products
  */
 
 import { Entity } from 'typeorm';

@@ -21,7 +21,7 @@
 /**
  * This is the module page of the point-of-sale-request.
  *
- * @module inventory/point-of-sale
+ * @module catalogue/point-of-sale
  */
 
 export interface BasePointOfSaleParams {

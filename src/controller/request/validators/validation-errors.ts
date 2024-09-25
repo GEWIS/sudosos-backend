@@ -21,7 +21,7 @@
 /**
  * This is the module page of the validation-errors.
  *
- * @module internal/validators/validation-errors
+ * @module internal/spec/validation-errors
  */
 
 import { ValidationError } from '../../../helpers/specification-validation';

@@ -21,7 +21,7 @@
 /**
  * This is the module page of the product-category-service.
  *
- * @module inventory/product-categories
+ * @module catalogue/product-categories
  */
 
 import { FindManyOptions, IsNull, Raw } from 'typeorm';

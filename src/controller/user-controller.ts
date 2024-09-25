@@ -24,12 +24,6 @@
  * @module users
  */
 
-/**
- * This is the module page of user-controller.
- *
- * @module users
- */
-
 import { Response } from 'express';
 import log4js, { Logger } from 'log4js';
 import BaseController, { BaseControllerOptions } from './base-controller';

@@ -1,12 +1,13 @@
 import { defineConfig } from 'vitepress'
-import typedocSidebar from '../out/typedoc-sidebar.json'
+import typedocSidebar from '../content/typedoc/typedoc-sidebar.json'
 
 const apiItems = typedocSidebar.filter((item: any) => !['helpers', 'internal', 'gewis'].includes(item.text.toLowerCase()));
 const internalsItems = typedocSidebar.filter((item: any) => ['helpers', 'internal', 'gewis'].includes(item.text.toLowerCase()));
 
 export default defineConfig({
   title: "SudoSOS Backend",
-  base: "/docs/out/",
+  srcDir: "./content",
+  base: "/docs/",
   description: "Documentation, reference and examples for the SudoSOS Backend",
 
   themeConfig: {
@@ -24,13 +25,7 @@ export default defineConfig({
         items: [
           { text: 'Getting Started', link: '/getting-started' },
           { text: '.env', link: '/env-variables' },
-        ]
-        // items: [
-          // { text: 'Introduction', link: '/' },
-          // { text: 'Installation', link: '/installation' },
-          // { text: 'Configuration', link: '/configuration' },
-          // { text: 'Database', link: '/database' },
-        // ],
+        ],
       },
       {
         text: 'Documentation',

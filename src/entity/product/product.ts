@@ -21,7 +21,7 @@
 /**
  * This is the module page of the product.
  *
- * @module inventory/products
+ * @module catalogue/products
  * @mergeTarget
  */
 

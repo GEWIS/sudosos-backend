@@ -24,12 +24,6 @@
  * @module helpers/dinero
  */
 
-/**
- * This is the module page of the dinero-response.
- *
- * @module helpers/dinero
- */
-
 import { DineroObject } from 'dinero.js';
 
 /**

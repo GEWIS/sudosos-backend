@@ -21,7 +21,7 @@
 /**
  * This is the module page of policy.
  *
- * @module internal/policy
+ * @module internal/controller
  */
 
 import { RequestHandler } from 'express';

@@ -21,7 +21,7 @@
 /**
  * This is the module page of container.
  *
- * @module inventory/containers
+ * @module catalogue/containers
  * @mergeTarget
  */
 

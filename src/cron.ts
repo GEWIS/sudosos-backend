@@ -19,7 +19,7 @@
  */
 
 /**
- * This is the module page the cron job.
+ * This is the module page the cron job service.
  *
  * @module internal/cron
  */

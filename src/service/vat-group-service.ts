@@ -21,7 +21,7 @@
 /**
  * This is the module page of the vat-group-service.
  *
- * @module inventory/vat
+ * @module catalogue/vat
  */
 
 import { FindManyOptions } from 'typeorm';

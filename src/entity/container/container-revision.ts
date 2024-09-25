@@ -21,7 +21,7 @@
 /**
  * This is the module page of container-revision.
  *
- * @module inventory/containers
+ * @module catalogue/containers
  */
 
 import {
