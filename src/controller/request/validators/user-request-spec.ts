@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the user-request-spec.
+ *
+ * @module internal/spec/user-request-spec
+ */
+
 import {
   Specification, toFail, toPass, validateSpecification, ValidationError,
 } from '../../../helpers/specification-validation';

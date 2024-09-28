@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the seller-payout-pdf.
+ *
+ * @module internal/files/pdf
+ */
+
 import { Entity } from 'typeorm';
 import Pdf from './pdf-file';
 

@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the container-request.
+ *
+ * @module catalogue/containers
+ */
+
 export interface BaseContainerParams {
   products: number[],
   public: boolean,

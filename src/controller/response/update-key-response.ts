@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the update-key-response.
+ *
+ * @module authentication
+ */
+
 import BaseResponse from './base-response';
 
 /**

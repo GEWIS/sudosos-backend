@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the invoice-entry-request.
+ *
+ * @module invoicing
+ */
+
 import { DineroObjectRequest } from './dinero-request';
 
 /**

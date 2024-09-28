@@ -19,6 +19,12 @@
  */
 
 /**
+ * This is the module page of the banner-request.
+ *
+ * @module banners
+ */
+
+/**
  * @typedef {object} BannerRequest
  * @property {string} name - Name/label of the banner
  * @property {number} duration - How long the banner should be shown (in seconds)

@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the event-response.
+ *
+ * @module events
+ */
+
 import { PaginationResult } from '../../helpers/pagination';
 import BaseResponse from './base-response';
 import { BaseUserResponse } from './user-response';

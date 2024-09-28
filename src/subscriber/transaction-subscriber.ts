@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the transaction-subscriber.
+ *
+ * @module internal/subscribers/transaction-subscriber
+ */
+
 import { EntitySubscriberInterface, EventSubscriber, InsertEvent } from 'typeorm';
 import Transaction from '../entity/transactions/transaction';
 import User, { NotifyDebtUserTypes } from '../entity/user/user';

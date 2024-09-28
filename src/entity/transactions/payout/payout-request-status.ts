@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the payout-request-status.
+ *
+ * @module payout-requests
+ */
+
 import { Column, Entity, ManyToOne } from 'typeorm';
 import BaseEntity from '../../base-entity';
 // eslint-disable-next-line import/no-cycle

@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the mail-message.
+ *
+ * @module internal/mailer
+ */
+
 import Mail from 'nodemailer/lib/mailer';
 import MailContentBuilder from './messages/mail-content-builder';
 import MailBodyGenerator from './mail-body-generator';

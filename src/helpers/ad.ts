@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the ad.
+ *
+ * @module helpers
+ */
+
 import { EntityManager } from 'typeorm';
 import { Client } from 'ldapts';
 import log4js, { Logger } from 'log4js';

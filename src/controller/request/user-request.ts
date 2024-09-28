@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the user-request.
+ *
+ * @module users
+ */
+
 import { UserType } from '../../entity/user/user';
 
 export default interface BaseUserRequest {

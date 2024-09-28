@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the put-file-in-response.
+ *
+ * @module internal/files
+ */
+
 import { Response } from 'express';
 import mime from 'mime-types';
 import BaseFile from '../entity/file/base-file';

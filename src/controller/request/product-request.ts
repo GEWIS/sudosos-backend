@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the product-request.
+ *
+ * @module catalogue/products
+ */
+
 import { DineroObjectRequest } from './dinero-request';
 
 export interface BaseProductParams {

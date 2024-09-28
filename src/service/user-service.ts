@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the user-service.
+ *
+ * @module users
+ */
+
 import { RequestWithToken } from '../middleware/token-middleware';
 import { asBoolean, asDate, asNumber, asUserType } from '../helpers/validators';
 import { PaginationParameters } from '../helpers/pagination';

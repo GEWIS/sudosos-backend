@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the server-settings-controller.
+ *
+ * @module internal/server-settings
+ */
+
 import BaseController, { BaseControllerOptions } from './base-controller';
 import { Response } from 'express';
 import log4js, { Logger } from 'log4js';

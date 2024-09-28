@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the page of invoice-service.
+ *
+ * @module invoicing
+ */
+
 import {
   FindManyOptions,
   FindOptionsRelations,
@@ -83,6 +89,7 @@ export interface InvoiceFilterParameters {
    */
   tillDate?: Date
 }
+
 
 export function parseInvoiceFilterParameters(req: RequestWithToken): InvoiceFilterParameters {
   return {

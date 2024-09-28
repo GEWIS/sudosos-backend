@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the request-validator-middleware.
+ *
+ * @module internal/middleware
+ */
+
 import { RequestHandler, Response } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { RequestWithToken } from './token-middleware';

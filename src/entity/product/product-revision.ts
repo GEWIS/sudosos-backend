@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the product-revision.
+ *
+ * @module catalogue/products
+ */
+
 import {
   BeforeUpdate,
   Column,

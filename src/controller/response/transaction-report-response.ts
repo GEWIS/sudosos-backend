@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the transaction-report-response.
+ *
+ * @module reports
+ */
+
 import ProductCategory from '../../entity/product/product-category';
 import ProductRevision from '../../entity/product/product-revision';
 import Dinero from 'dinero.js';

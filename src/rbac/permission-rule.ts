@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the permission-rule.
+ *
+ * @module rbac
+ */
+
 import Permission from '../entity/rbac/permission';
 
 export default interface PermissionRule extends Pick<Permission, 'entity' | 'action' | 'relation' | 'attributes'> {}

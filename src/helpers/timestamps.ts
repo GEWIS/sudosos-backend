@@ -19,6 +19,12 @@
  */
 
 /**
+ * This is the module page of the timestamps.
+ *
+ * @module helpers
+ */
+
+/**
  * Change the timezone of the given date to UTC
  * @param date
  */

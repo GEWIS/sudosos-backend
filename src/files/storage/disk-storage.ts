@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the disk-storage.
+ *
+ * @module internal/files/storage
+ */
+
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import * as fs from 'fs';

@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the vat-group-service.
+ *
+ * @module catalogue/vat
+ */
+
 import { FindManyOptions } from 'typeorm';
 import { DineroObject } from 'dinero.js';
 import { PaginationParameters } from '../helpers/pagination';

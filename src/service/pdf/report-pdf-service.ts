@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the page of report-pdf-service.
+ *
+ * @module internal/pdf/report-pdf-service
+ */
+
 import {
   FileResponse,
   FineReportParameters,

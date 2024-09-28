@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the authentication-service.
+ *
+ * @module authentication
+ */
+
 import bcrypt from 'bcrypt';
 // @ts-ignore
 import { filter } from 'ldap-escape';

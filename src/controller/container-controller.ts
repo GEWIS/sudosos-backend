@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of container-controller.
+ *
+ * @module catalogue/containers
+ */
+
 import log4js, { Logger } from 'log4js';
 import { Response } from 'express';
 import BaseController, { BaseControllerOptions } from './base-controller';

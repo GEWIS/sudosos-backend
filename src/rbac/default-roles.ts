@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the role-definitions.
+ *
+ * @module rbac
+ */
+
 import { UserType } from '../entity/user/user';
 import { PermissionDefinition } from './role-definitions';
 import Role from '../entity/rbac/role';

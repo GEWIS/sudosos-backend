@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the database.
+ *
+ * @module internal/database
+ */
+
 import {
   createConnection, DataSource,
 } from 'typeorm';

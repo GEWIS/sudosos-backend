@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the application.
+ *
+ * @module internal/application
+ */
+
 import 'reflect-metadata';
 import * as http from 'http';
 import * as util from 'util';

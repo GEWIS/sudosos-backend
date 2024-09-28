@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the flagged-transaction.
+ *
+ * @module transactions/flagged
+ */
+
 import {
   Column, Entity, ManyToOne,
 } from 'typeorm';

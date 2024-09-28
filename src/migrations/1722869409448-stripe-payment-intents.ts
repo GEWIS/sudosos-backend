@@ -18,6 +18,11 @@
  *  @license
  */
 
+/**
+ * @module
+ * @hidden
+ */
+
 import { MigrationInterface, QueryRunner, Table, TableColumn, TableForeignKey } from 'typeorm';
 
 export class StripePaymentIntents1722869409448 implements MigrationInterface {

@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the action-response.
+ *
+ * @module rbac
+ */
+
 import RelationResponse from './relation-response';
 
 /**

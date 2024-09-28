@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the sub-transaction.
+ *
+ * @module transactions/sub-transactions
+ */
+
 /* eslint-disable import/no-cycle */
 import {
   Entity, ManyToOne, OneToMany,

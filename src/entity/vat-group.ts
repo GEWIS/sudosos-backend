@@ -18,6 +18,13 @@
  *  @license
  */
 
+/**
+ * This is the module page of the vat-group.
+ *
+ * @module catalogue/vat
+ * @mergeTarget
+ */
+
 import { Column, Entity } from 'typeorm';
 import BaseEntity from './base-entity';
 

@@ -19,6 +19,11 @@
  */
 
 /**
+ * @hidden
+ * @module
+ */
+
+/**
  * @typedef {object} RevisionRequest
  * @property {integer} id.required - revision id
  * @property {integer} revision.required - revision number

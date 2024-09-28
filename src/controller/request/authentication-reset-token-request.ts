@@ -19,6 +19,12 @@
  */
 
 /**
+ * This is the module page of the authentication-reset-token-request.
+ *
+ * @module authentication
+ */
+
+/**
  * @typedef {object} AuthenticationResetTokenRequest
  * @property {string} accountMail.required - The mail of the user
  * @property {string} token.required - The reset token passcode

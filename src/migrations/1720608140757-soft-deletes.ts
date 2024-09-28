@@ -18,6 +18,11 @@
  *  @license
  */
 
+/**
+ * @module
+ * @hidden
+ */
+
 import { MigrationInterface, QueryRunner, TableColumn } from 'typeorm';
 
 export class SoftDeletes1720608140757 implements MigrationInterface {

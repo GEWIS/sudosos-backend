@@ -18,6 +18,13 @@
  *  @license
  */
 
+/**
+ * This is the module page of container.
+ *
+ * @module catalogue/containers
+ * @mergeTarget
+ */
+
 import {
   Column, DeleteDateColumn,
   Entity,

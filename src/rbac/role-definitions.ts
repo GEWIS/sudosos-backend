@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the role-definitions.
+ *
+ * @module rbac
+ */
+
 import User from '../entity/user/user';
 
 /**

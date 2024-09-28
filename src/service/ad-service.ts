@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the ad-service.
+ *
+ * @module internal/ldap
+ */
+
 import { Client, SearchResult } from 'ldapts';
 import { In } from 'typeorm';
 import LDAPAuthenticator from '../entity/authenticator/ldap-authenticator';

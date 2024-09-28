@@ -19,6 +19,12 @@
  */
 
 /**
+ * This is the module page of the debtor-request.
+ *
+ * @module debtors
+ */
+
+/**
  * @typedef {object} HandoutFinesRequest
  * @property {Array<integer>} userIds.required - Users to fine. If a user is not eligible for a fine, a fine of 0,00 will be handed out.
  * @property {string} referenceDate.required - Reference date to calculate the balance and thus the height of the fine for.

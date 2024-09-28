@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * is the module page of the restriction-middleware.
+ *
+ * @module internal/middleware
+ */
+
 import { RequestHandler, Response } from 'express';
 import { RequestWithToken } from './token-middleware';
 import { TermsOfServiceStatus } from '../entity/user/user';

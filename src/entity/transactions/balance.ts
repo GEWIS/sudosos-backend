@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the balance.
+ *
+ * @module balance
+ */
+
 import {
   Column,
   Entity,

@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the ordering.
+ *
+ * @module helpers
+ */
+
 export enum OrderingDirection {
   ASC = 'ASC',
   DESC = 'DESC',

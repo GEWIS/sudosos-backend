@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the with-manager.
+ *
+ * @module internal/database
+ */
+
 import { EntityManager } from 'typeorm';
 import { AppDataSource } from './database';
 

@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the pdf-error.
+ *
+ * @module internal/errors
+ */
+
 export class PdfError extends Error {
   constructor(message?: string) {
     super(message);

@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the DineroTransformer.
+ *
+ * @module internal/transformers
+ */
+
 /* eslint-disable class-methods-use-this */
 import assert from 'assert';
 import dinero, { Dinero } from 'dinero.js';

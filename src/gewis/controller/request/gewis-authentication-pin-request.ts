@@ -19,6 +19,12 @@
  */
 
 /**
+ * This is the module page of the gewis-authentication-pin-request.
+ *
+ * @module GEWIS
+ */
+
+/**
  * @typedef {object} GEWISAuthenticationPinRequest
  * @property {number} gewisId.required
  * @property {string} pin.required

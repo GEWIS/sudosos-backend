@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the rbac role manager.
+ *
+ * @module rbac
+ */
+
 import User, { UserType } from '../entity/user/user';
 import AssignedRole from '../entity/rbac/assigned-role';
 import Role from '../entity/rbac/role';

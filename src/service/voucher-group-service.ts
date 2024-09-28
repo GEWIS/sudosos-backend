@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the voucher-group-service.
+ *
+ * @module vouchers
+ */
+
 import { FindManyOptions } from 'typeorm';
 import DineroFactory from 'dinero.js';
 import { VoucherGroupParams, VoucherGroupRequest } from '../controller/request/voucher-group-request';

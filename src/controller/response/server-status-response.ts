@@ -19,6 +19,12 @@
  */
 
 /**
+ * This is the module page of the server-status-response.
+ *
+ * @module internal/server-status
+ */
+
+/**
  * @typedef {object} ServerStatusResponse
  * @property {boolean} maintenanceMode.required - Whether the server is in maintenance mode
  */

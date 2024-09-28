@@ -18,6 +18,11 @@
  *  @license
  */
 
+/**
+ * @module
+ * @hidden
+ */
+
 import { MigrationInterface, QueryRunner, TableColumn, TableForeignKey } from 'typeorm';
 import PointOfSale from '../entity/point-of-sale/point-of-sale';
 import User, { TermsOfServiceStatus, UserType } from '../entity/user/user';

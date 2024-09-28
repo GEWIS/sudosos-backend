@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the pagination.
+ *
+ * @module helpers
+ */
+
 import { Request } from 'express';
 
 export const PAGINATION_DEFAULT = 25;

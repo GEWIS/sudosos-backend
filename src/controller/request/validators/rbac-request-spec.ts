@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the rbac-request-spec.
+ *
+ * @module internal/spec/rbac-request-spec
+ */
+
 import {
   Specification,
   toFail,

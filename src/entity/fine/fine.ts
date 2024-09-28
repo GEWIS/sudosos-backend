@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of fine.
+ *
+ * @module fines
+ */
+
 import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
 import BaseEntity from '../base-entity';
 import Transfer from '../transactions/transfer';

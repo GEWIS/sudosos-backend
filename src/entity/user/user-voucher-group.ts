@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the user-voucher-group.
+ *
+ * @module vouchers
+ */
+
 import {
   BaseEntity, Entity, JoinColumn, ManyToOne, OneToOne, PrimaryColumn,
 } from 'typeorm';

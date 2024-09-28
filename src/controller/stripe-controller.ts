@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the stripe-controller.
+ *
+ * @module stripe
+ */
+
 import log4js, { Logger } from 'log4js';
 import { Response } from 'express';
 import Dinero from 'dinero.js';

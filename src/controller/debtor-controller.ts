@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of debtor-controller.
+ *
+ * @module debtors
+ */
+
 import BaseController, { BaseControllerOptions } from './base-controller';
 import { Response } from 'express';
 import log4js, { Logger } from 'log4js';

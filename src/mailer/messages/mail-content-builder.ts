@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the mail-content-builder.
+ *
+ * @module internal/mailer
+ */
+
 type MailContentFunction<T> = string | ((context: T) => string);
 
 export interface MailContentFunctions<T> {

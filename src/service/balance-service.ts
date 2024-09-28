@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of balance-service.
+ *
+ * @module balance
+ */
+
 import Balance from '../entity/transactions/balance';
 import BalanceResponse, { PaginatedBalanceResponse } from '../controller/response/balance-response';
 import DineroTransformer from '../entity/transformer/dinero-transformer';

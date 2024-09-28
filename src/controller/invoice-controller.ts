@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the page of invoice controller.
+ *
+ * @module invoicing
+ */
+
 import log4js, { Logger } from 'log4js';
 import { Response } from 'express';
 import BaseController, { BaseControllerOptions } from './base-controller';
@@ -43,6 +49,9 @@ import { parseInvoiceUserToResponse } from '../helpers/revision-to-response';
 import { AppDataSource } from '../database/database';
 import { NotImplementedError, PdfError } from '../errors';
 
+/**
+ * The Invoice controller.
+ */
 export default class InvoiceController extends BaseController {
   private logger: Logger = log4js.getLogger('InvoiceController');
 

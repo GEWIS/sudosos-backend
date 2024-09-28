@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the query-filter.
+ *
+ * @module helpers
+ */
+
 import {
   BaseEntity,
   FindOptionsWhere, FindOptionsWhereProperty, Like, Raw,

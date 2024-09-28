@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the transporter.
+ *
+ * @module internal/mailer
+ */
+
 import nodemailer from 'nodemailer';
 
 export default function createSMTPTransporter() {

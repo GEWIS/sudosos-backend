@@ -18,6 +18,13 @@
  *  @license
  */
 
+/**
+ * This is the module page of the stripe-deposit.
+ *
+ * @module stripe
+ * @mergeTarget
+ */
+
 import {
   Entity, JoinColumn, ManyToOne, OneToOne,
 } from 'typeorm';

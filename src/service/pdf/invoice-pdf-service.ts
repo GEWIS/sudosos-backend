@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the page of invoice-pdf-service.
+ *
+ * @module internal/pdf/invoice-pdf-service
+ */
+
 import Invoice from '../../entity/invoices/invoice';
 import {
   Address,

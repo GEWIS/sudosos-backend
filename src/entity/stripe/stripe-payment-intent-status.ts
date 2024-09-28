@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the stripe-payment-intent-status.
+ *
+ * @module stripe
+ */
+
 import {
   Column, Entity, ManyToOne,
 } from 'typeorm';

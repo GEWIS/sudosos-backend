@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the permission-response.
+ *
+ * @module rbac
+ */
+
 import ActionResponse from './action-response';
 
 /**

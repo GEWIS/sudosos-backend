@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the seed.
+ *
+ * @module GEWIS/seed
+ */
+
 import GewisUser from '../entity/gewis-user';
 import User from '../../entity/user/user';
 

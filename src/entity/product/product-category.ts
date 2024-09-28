@@ -18,6 +18,13 @@
  *  @license
  */
 
+/**
+ * This is the module page of the product-category.
+ *
+ * @module catalogue/product-categories
+ * @mergeTarget
+ */
+
 import {
   Entity, Column, Tree, TreeChildren, TreeParent,
 } from 'typeorm';

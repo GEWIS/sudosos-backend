@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the locations.
+ *
+ * @module internal/files/storage
+ */
+
 export const ROOT_FILE_LOCATION = './data';
 export const SIMPLE_FILE_LOCATION = './data/simple';
 export const PRODUCT_IMAGE_LOCATION = './data/products';
