@@ -18,8 +18,14 @@
  *  @license
  */
 
-import User from '../../entity/user/user';
+import User, { UserType } from '../../entity/user/user';
 import WithManager from '../../database/with-manager';
+
+export interface SyncResult {
+  skipped: boolean;
+  error: boolean;
+  result: boolean;
+}
 
 /**
  * SyncService interface.
@@ -28,18 +34,70 @@ import WithManager from '../../database/with-manager';
  * This can be used to integrate external data sources into the SudoSOS back-end.
  */
 export abstract class SyncService extends WithManager {
+
+  /**
+   * Targets is the list of user types that this sync service is responsible for.
+   *
+   * Used to improve performance by only syncing the relevant user types.
+   */
+  targets: UserType[];
+
+  /**
+   * Guard determines whether the user should be synced using this sync service.
+   *
+   * Not passing the guard will result in the user being skipped.
+   * A skipped sync does not count as a failure.
+   *
+   * @param user The user to check.
+   * @returns {Promise<boolean>} True if the user should be synced, false otherwise.
+   */
+  protected guard(user: User): Promise<boolean> {
+    return Promise.resolve(this.targets.includes(user.type));
+  }
+
+  /**
+   * Up is a wrapper around `sync` that handles the guard.
+   *
+   * @param user
+   *
+   * @returns {Promise<SyncResult>} The result of the sync.
+   */
+  async up(user: User): Promise<SyncResult> {
+    const guardResult = await this.guard(user);
+    if (!guardResult) return { skipped: true, error: false, result: false };
+
+    try {
+      const result = await this.sync(user);
+      return { skipped: false, error: false, result };
+    } catch (error) {
+      console.error(error);
+      return { skipped: false, error: true, result: false };
+    }
+  }
+
   /**
    * Synchronizes the user data with the external data source.
    *
    * @param user The user to synchronize.
+   * @returns {Promise<boolean>} True if the user was synchronized, false otherwise.
    */
-  abstract sync(user: User): Promise<void>;
+  protected abstract sync(user: User): Promise<boolean>;
 
   /**
-   * Imports the user data from the external data source.
-   * This is the inverse of the sync() method.
+   * Fetches the user data from the external data source.
+   * `sync` can be seen as a `push` and `fetch` as a `pull`.
    *
-   * @return The imported user data.
+   * @return The imported data.
    */
-  abstract import(): Promise<User[]>;
+  abstract fetch(): Promise<User[]>;
+
+  /**
+   * Down is called when the SyncService decides that the user is no longer connected to this sync service be removed.
+   * This can be used to remove the user from the database or clean up entities.
+   *
+   * This should be revertable and idempotent!
+   *
+   * @param user
+   */
+  abstract down(user: User): Promise<void>;
 }
