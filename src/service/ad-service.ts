@@ -24,7 +24,7 @@
  * @module internal/ldap
  */
 
-import { Client, SearchResult } from 'ldapts';
+import { Client, EqualityFilter, SearchResult } from 'ldapts';
 import { In } from 'typeorm';
 import LDAPAuthenticator from '../entity/authenticator/ldap-authenticator';
 import User, { TermsOfServiceStatus, UserType } from '../entity/user/user';
@@ -155,6 +155,7 @@ export default class ADService extends WithManager {
 
     // Adds users to the shared groups.
     await this.handleSharedGroups(client, sharedAccounts);
+    await client.unbind();
   }
 
   /**
@@ -216,6 +217,21 @@ export default class ADService extends WithManager {
       process.env.LDAP_USER_BASE);
     const users = searchEntries.map((entry) => userFromLDAP(entry));
     await this.getUsers(users, true);
+  }
+
+  public async getLDAPResponseFromGUID(client: Client, guid: Buffer): Promise<LDAPUser | undefined> {
+    const results = await client.search(process.env.LDAP_BASE, {
+      filter: new EqualityFilter({
+        attribute: 'objectGUID',
+        value: guid,
+      }),
+      explicitBufferAttributes: ['objectGUID'],
+    });
+
+    if (results.searchEntries.length === 0)
+      return undefined;
+
+    return userFromLDAP(results.searchEntries[0] as any as LDAPResult);
   }
 
   /**

@@ -92,6 +92,7 @@ describe('AD Service', (): void => {
       mNumber: mNumber,
       mail: `m${mNumber}@gewis.nl`,
       whenChanged: '202204151213.0Z',
+      displayName: `Sudo (${mNumber})`,
     });
 
     ctx = {
@@ -193,6 +194,7 @@ describe('AD Service', (): void => {
         // TODO: Fix this type inconsistency between ADUser and ldapts.Client
         mNumber: '4141' as string & number,
         whenChanged: new Date().toISOString(),
+        displayName: 'Sudo Organ #2',
       };
 
       let user: User;
