@@ -95,7 +95,9 @@ export class LDAPObjectGUID1726689003147 implements MigrationInterface {
       const newObjectGUID = newGUIDMap.get(dn);
       if (!newObjectGUID) throw new Error(`Could not find new objectGUID for ${dn}`);
 
-      console.error(auth.UUID, newObjectGUID);
+      auth.UUID = newObjectGUID;
+      await auth.save();
+
       membersToFix.delete(auth.userId);
       otherToFix.delete(auth.userId);
     }
