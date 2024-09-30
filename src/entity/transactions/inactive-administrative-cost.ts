@@ -17,7 +17,7 @@
  *
  *  @license
  */
-import { BaseEntity, Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
+import { BaseEntity, Column, Entity, JoinColumn, ManyToOne, OneToOne, PrimaryColumn } from 'typeorm';
 import User from '../user/user';
 import DineroTransformer from '../transformer/dinero-transformer';
 import { Dinero } from 'dinero.js';
@@ -31,7 +31,7 @@ import Transfer from './transfer';
  */
 @Entity()
 export default class InactiveAdministrativeCost extends BaseEntity {
-  @Column({ nullable: false })
+  @PrimaryColumn({ nullable: false })
   public fromId: number;
 
   @ManyToOne(() => User, { nullable: false })
@@ -45,5 +45,6 @@ export default class InactiveAdministrativeCost extends BaseEntity {
   public amount: Dinero;
 
   @OneToOne(() => Transfer, { nullable: false })
+  @JoinColumn()
   public transfer: Transfer;
 }

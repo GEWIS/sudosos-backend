@@ -104,6 +104,7 @@ import { UserTypeEnums1725196803203 } from '../migrations/1725196803203-user-typ
 import { CustomInvoiceEntries1725388477226 } from '../migrations/1725388477226-custom-invoice-entries';
 import { SellerPayoutPdf1726066600389 } from '../migrations/1726066600389-seller-payout-pdf';
 import { LDAPObjectGUID1726689003147 } from '../migrations/1726689003147-ldap-objectguid';
+import InactiveAdministrativeCost from '../entity/transactions/inactive-administrative-cost';
 
 // We need to load the dotenv to prevent the env from being undefined.
 dotenv.config();
@@ -158,6 +159,7 @@ const options: DataSourceOptions = {
     PointOfSale,
     PointOfSaleRevision,
     Transfer,
+    InactiveAdministrativeCost,
     StripeDeposit,
     StripePaymentIntent,
     StripePaymentIntentStatus,
