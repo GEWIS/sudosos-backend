@@ -17,9 +17,8 @@
  *
  *  @license
  */
-import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
+import { BaseEntity, Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
 import User from '../user/user';
-import BaseEntity from '../base-entity';
 import DineroTransformer from '../transformer/dinero-transformer';
 import { Dinero } from 'dinero.js';
 import Transfer from './transfer';
@@ -30,7 +29,7 @@ import Transfer from './transfer';
  * @property {Dinero.model} amount.required - The amount to be transferred.
  * @property {Transfer.model} transfer - The transfer which is linked to this inactive administrative cost.
  */
-@Entity('InactiveAdministrativeCost')
+@Entity()
 export default class InactiveAdministrativeCost extends BaseEntity {
   @Column({ nullable: false })
   public fromId: number;
@@ -46,6 +45,5 @@ export default class InactiveAdministrativeCost extends BaseEntity {
   public amount: Dinero;
 
   @OneToOne(() => Transfer, { nullable: false })
-  @JoinColumn()
   public transfer: Transfer;
 }
