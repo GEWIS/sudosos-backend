@@ -33,7 +33,7 @@ import Transfer from './transfer';
  */
 @Entity('InactiveAdministrativeCost')
 export default class InactiveAdministrativeCost extends BaseEntity {
-  @Column({ nullable: false })
+  @PrimaryColumn({ nullable: false })
   public fromId: number;
 
   @ManyToOne(() => User, { nullable: false })
