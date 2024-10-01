@@ -20,6 +20,7 @@
 import BaseResponse from './base-response';
 import { BaseUserResponse } from './user-response';
 import { TransferResponse } from './transfer-response';
+import { DineroObjectResponse } from './dinero-response';
 
 /**
  * @typedef {allOf|BaseResponse} BaseInactiveAdministrativeCostResponse
@@ -31,4 +32,16 @@ export interface BaseInactiveAdministrativeCostResponse extends BaseResponse {
   from: BaseUserResponse,
   amount: number,
   transfer?: TransferResponse,
+}
+
+/**
+ * @typedef {object} UserToInactiveAdministrativeCostResponse
+ * @property {integer} id.required - User ID
+ * @property {DineroObjectResponse} amount.required - Amount for the administrative cost
+ * @property {DineroObjectResponse} newBalance - The new balance of the user.
+ */
+export interface UserToInactiveAdministrativeCostResponse {
+  id: number;
+  amount: DineroObjectResponse;
+  newBalance?: DineroObjectResponse;
 }
