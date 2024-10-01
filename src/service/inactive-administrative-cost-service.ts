@@ -18,7 +18,7 @@
  *  @license
  */
 import WithManager from '../database/with-manager';
-import { FindManyOptions, FindOptionsRelations, In } from 'typeorm';
+import { FindManyOptions, FindOptionsRelations } from 'typeorm';
 import InactiveAdministrativeCost from '../entity/transactions/inactive-administrative-cost';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import User, { EligibleInactiveUsers } from '../entity/user/user';
@@ -32,6 +32,7 @@ import Transfer from '../entity/transactions/transfer';
 import Transaction from '../entity/transactions/transaction';
 import InactiveAdministrativeCostNotification from '../mailer/messages/inactive-administrative-cost-notification';
 import Mailer from '../mailer';
+import UserGotInactiveAdministrativeCost from '../mailer/messages/user-got-inactive-administrative-cost';
 
 
 interface InactiveAdministrativeCostFilterParameters {
@@ -54,15 +55,12 @@ interface InactiveAdministrativeCostFilterParameters {
 export default class InactiveAdministrativeCostService extends WithManager {
   
   private static yearDifference(date: Date) : number {
-    const today = new Date();
-    const dateDiff = (today.getTime() - date.getTime());
+    const dateDiff = (new Date().getTime() - date.getTime());
     const ageDate = new Date(dateDiff);
 
     return Math.abs(ageDate.getUTCFullYear() - 1970);
   }
 
-
-  
   /**
    * Checks which users are eligible for either a notification or a fine.
    * @param params
@@ -178,19 +176,39 @@ export default class InactiveAdministrativeCostService extends WithManager {
   }
 
   /**
-   * Send an email to all users with the given ids. These users will get notified that in a year time money will be deducted from their
-   * account as they have been inactive for three years.
-   * @param userIds
+   * Email all users with the given ids. These user will get notified that an administrative cost has been deducted from their account.
+   * @param users
    */
-  public static async sendInactiveNotification(userIds: number[])
-    : Promise<void> {
-    const users = await User.find({ where: { id: In(userIds) } });
+  public async handOutInactiveAdministrativeCost(users: User[])
+    : Promise<InactiveAdministrativeCost[]> {
+    return Promise.all(users.map(async (u) => {
+      const req: CreateInactiveAdministrativeCostRequest = { forId: u.id };
 
-    await Promise.all(users.map(async (u) => {
-      return Mailer.getInstance().send(u, new InactiveAdministrativeCostNotification({}));
+      const inactiveAdministrativeCost = await this.createInactiveAdministrativeCost(req);
+
+      await Mailer.getInstance().send(u, new UserGotInactiveAdministrativeCost({
+        amount: inactiveAdministrativeCost.amount,
+      }));
+
+      return inactiveAdministrativeCost;
     }));
   }
 
+  /**
+   * Email all users with the given ids. These users will get notified that in a year time money will be deducted from their
+   * account as they have been inactive for three years.
+   * @param users
+   */
+  public async sendInactiveNotification(users: User[])
+    : Promise<void> {
+
+    await Promise.all(users.map(async (u) => {
+      u.inactiveNotificationSend = true;
+      await u.save();
+      return Mailer.getInstance().send(u, new InactiveAdministrativeCostNotification({}));
+    }),
+    );
+  }
 
   /**
    * Returns database entities based on the given filter params

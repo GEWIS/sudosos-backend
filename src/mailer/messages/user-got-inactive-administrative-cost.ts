@@ -36,7 +36,7 @@ const formatBalance = (b: Dinero) => {
   return `<span style="font-weight: bold;">${b.toFormat()}</span>`;
 };
 
-const userGotinactiveAdministrativeCostDutch = new MailContentBuilder<UserGotInactiveAdministrativeCostOptions>({
+const userGotInactiveAdministrativeCostDutch = new MailContentBuilder<UserGotInactiveAdministrativeCostOptions>({
   getHTML: (context) => `
   <p> Je hebt al 3 jaar geen overdrachten binnen SudoSOS gedaan. Dit betekent dat je administratie kosten gaat betalen.<br>
   Er word ${formatBalance(context.amount)} van je account worden afgehaald ter betaling vor administratie kosten.
@@ -50,7 +50,7 @@ const userGotinactiveAdministrativeCostDutch = new MailContentBuilder<UserGotIna
   `,
 });
 
-const userGotinactiveAdministrativeCostEnglish = new MailContentBuilder<UserGotInactiveAdministrativeCostOptions>({
+const userGotInactiveAdministrativeCostEnglish = new MailContentBuilder<UserGotInactiveAdministrativeCostOptions>({
   getHTML: (context) => `
   <p> You haven't made any transfers on SudoSOS for the last 3 years. This means that you will pay an administration fee.<br>
   This means that ${formatBalance(context.amount)} will be deducted from your account. 
@@ -63,13 +63,13 @@ const userGotinactiveAdministrativeCostEnglish = new MailContentBuilder<UserGotI
   `,
 });
 
-const mailContents: MailLanguageMap<InactiveAdministrativeCostNotificationOptions> = {
-  [Language.DUTCH]: userGotinactiveAdministrativeCostDutch,
-  [Language.ENGLISH]: userGotinactiveAdministrativeCostEnglish,
+const mailContents: MailLanguageMap<UserGotInactiveAdministrativeCostOptions> = {
+  [Language.DUTCH]: userGotInactiveAdministrativeCostDutch,
+  [Language.ENGLISH]: userGotInactiveAdministrativeCostEnglish,
 };
 
-export default class UserGotInactiveAdministrativeCost extends MailMessage<UserWillGetFinedOptions> {
-  public constructor(options: UserWillGetFinedOptions) {
+export default class UserGotInactiveAdministrativeCost extends MailMessage<UserGotInactiveAdministrativeCostOptions> {
+  public constructor(options: UserGotInactiveAdministrativeCostOptions) {
     super(options, mailContents);
   }
 }
