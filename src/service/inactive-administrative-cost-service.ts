@@ -76,9 +76,11 @@ export default class InactiveAdministrativeCostService extends WithManager {
     for (let i = 0; i < users.length; i += 1) {
       const user = users[i];
       if (!EligibleInactiveUsers.includes(user.type)) continue;
+      if (notification && user.inactiveNotificationSend) continue;
 
       let isNotEligible = false;
 
+      // Find transfers and transaction of users and if not null reduce to the last one
       const userTransfers = (await Transfer.find({ where: { fromId: user.id } }));
       const lastTransfer = userTransfers.length == 0 ? null : userTransfers
         .reduce((prev, curr) => (prev.createdAt < curr.createdAt ? curr : prev));
@@ -87,14 +89,14 @@ export default class InactiveAdministrativeCostService extends WithManager {
       const lastTransaction = userTransactions.length == 0  ? null : userTransactions
         .reduce((prev, curr) => (prev.createdAt < curr.createdAt ? curr : prev));
 
-      if (lastTransfer != null) if (InactiveAdministrativeCostService.yearDifference(lastTransfer.createdAt) <= differenceDate) {
+      if (lastTransfer != null) if (InactiveAdministrativeCostService.yearDifference(lastTransfer.createdAt) < differenceDate) {
         isNotEligible = true;
       }
-      if (lastTransaction != null) if (InactiveAdministrativeCostService.yearDifference(lastTransaction.createdAt) <= differenceDate) {
+      if (lastTransaction != null) if (InactiveAdministrativeCostService.yearDifference(lastTransaction.createdAt) < differenceDate) {
         isNotEligible = true;
       }
-      if (!isNotEligible) eligibleUsers.push(user);
 
+      if (!isNotEligible) eligibleUsers.push(user);
     }
 
     return eligibleUsers;
@@ -171,6 +173,17 @@ export default class InactiveAdministrativeCostService extends WithManager {
     const options = InactiveAdministrativeCostService.getOptions({ inactiveAdministrativeCostId: newInactiveAdministrativeCost.id });
     return this.manager.findOne(InactiveAdministrativeCost, options);
   }
+
+  /**
+   * Send an email to all users with the given ids. These users will get notified that in a year time money will be deducted from their
+   * account as they have been inactive for three years.
+   * @param userIds
+   */
+  // public static async sendInactiveNotification(userIds: number[])
+  //   : Promise<void> {
+  //
+  // }
+
 
   /**
    * Returns database entities based on the given filter params
