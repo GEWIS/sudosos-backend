@@ -21,32 +21,16 @@ import WithManager from '../database/with-manager';
 import { FindManyOptions, FindOptionsRelations } from 'typeorm';
 import InactiveAdministrativeCost from '../entity/transactions/inactive-administrative-cost';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
-import User, { EligibleInactiveUsers } from '../entity/user/user';
+import User from '../entity/user/user';
 import BalanceService from './balance-service';
 import TransferService from './transfer-service';
-import {
-  CreateInactiveAdministrativeCostRequest,
-  HandoutInactiveAdministrativeCostsRequest,
-} from '../controller/request/inactive-administrative-cost-request';
+import { CreateInactiveAdministrativeCostRequest } from '../controller/request/inactive-administrative-cost-request';
 import TransferRequest from '../controller/request/transfer-request';
 import dinero from 'dinero.js';
 import { DineroObjectRequest } from '../controller/request/dinero-request';
-import Transfer from '../entity/transactions/transfer';
-import Transaction from '../entity/transactions/transaction';
-import InactiveAdministrativeCostNotification from '../mailer/messages/inactive-administrative-cost-notification';
-import Mailer from '../mailer';
-import UserGotInactiveAdministrativeCost from '../mailer/messages/user-got-inactive-administrative-cost';
-import { RequestWithToken } from '../middleware/token-middleware';
-import { asBoolean, asNumber } from '../helpers/validators';
-import { PaginationParameters } from '../helpers/pagination';
-import {
-  BaseInactiveAdministrativeCostResponse,
-  UserToInactiveAdministrativeCostResponse,
-} from '../controller/response/inactive-administrative-cost-response';
-import { parseUserToBaseResponse } from '../helpers/revision-to-response';
 
 
-export interface InactiveAdministrativeCostFilterParameters {
+interface InactiveAdministrativeCostFilterParameters {
   /**
    * Filter based on user id
    */
@@ -56,98 +40,9 @@ export interface InactiveAdministrativeCostFilterParameters {
    * Filter based on inactive administrative cost id
    */
   inactiveAdministrativeCostId?: number;
-
-  /**
-   * Filter on notification or fine
-   */
-  notification?: boolean;
-}
-
-export function parseInactiveAdministrativeCostFilterParameters(req: RequestWithToken): InactiveAdministrativeCostFilterParameters {
-  return {
-    fromId: asNumber(req.query.fromId),
-    inactiveAdministrativeCostId: asNumber(req.query.inactiveAdministrativeCostId),
-    notification: asBoolean(req.query.notification),
-  };
 }
 
 export default class InactiveAdministrativeCostService extends WithManager {
-
-  // Calculate the year difference between 2 dates.
-  private static yearDifference(date: Date) : number {
-    const dateDiff = (new Date().getTime() - date.getTime());
-    const ageDate = new Date(dateDiff);
-
-    return Math.abs(ageDate.getUTCFullYear() - 1970);
-  }
-
-  public static toArrayResponse(inactiveAdministrativeCosts: InactiveAdministrativeCost[]): BaseInactiveAdministrativeCostResponse[] {
-    return inactiveAdministrativeCosts.map(inactiveAdministrativeCost => InactiveAdministrativeCostService.asInactiveAdministrativeCostResponse(inactiveAdministrativeCost));
-  }
-
-  /**
-   * Parses an InactiveAdministrativeCost Object to a BaseInactiveAdministrativeCostResponse
-   * @param inactiveAdministrativeCost - The InactiveAdministrativeCost to parse
-   */
-  public static asInactiveAdministrativeCostResponse(inactiveAdministrativeCost: InactiveAdministrativeCost): BaseInactiveAdministrativeCostResponse {
-    return {
-      id: inactiveAdministrativeCost.id,
-      createdAt: inactiveAdministrativeCost.createdAt.toISOString(),
-      updatedAt: inactiveAdministrativeCost.updatedAt.toISOString(),
-      from: parseUserToBaseResponse(inactiveAdministrativeCost.from, false),
-      amount: inactiveAdministrativeCost.amount.toObject(),
-      transfer: inactiveAdministrativeCost.transfer ? TransferService.asTransferResponse(inactiveAdministrativeCost.transfer) : undefined,
-    };
-  }
-
-  /**
-   * Checks which users are eligible for either a notification or a fine.
-   * @param params
-   */
-  public async checkInactiveUsers(params: InactiveAdministrativeCostFilterParameters)
-    : Promise<UserToInactiveAdministrativeCostResponse[]> {
-    const { notification } = params;
-    const differenceDate = notification ? 2 : 3;
-
-    const users = await User.find();
-    const eligibleUsers: UserToInactiveAdministrativeCostResponse[] = [];
-
-    // go through all users and get their last transfer and transaction
-    for (let i = 0; i < users.length; i += 1) {
-      const user = users[i];
-      if (!EligibleInactiveUsers.includes(user.type)) continue;
-      if (notification && user.inactiveNotificationSend) continue;
-
-      let isNotEligible = false;
-
-      // Find transfers and transaction of users and if not null reduce to the last one
-      const userTransfers = (await Transfer.find({
-        where: { fromId: user.id },
-        relations: { inactiveAdministrativeCost: true },
-      }));
-
-      const lastTransfer = userTransfers.length == 0 ? null : userTransfers
-        .reduce((prev, curr) => (((prev.createdAt < curr.createdAt) && curr.inactiveAdministrativeCost == null) ? curr : prev));
-      const userTransactions = ((await Transaction.find({ relations: ['from'] }))
-        .filter((t) => t.from.id === user.id));
-      const lastTransaction = userTransactions.length == 0  ? null : userTransactions
-        .reduce((prev, curr) => (prev.createdAt < curr.createdAt ? curr : prev));
-
-      if (lastTransfer != null) if (InactiveAdministrativeCostService.yearDifference(lastTransfer.createdAt) < differenceDate) {
-        isNotEligible = true;
-      }
-      if (lastTransaction != null) if (InactiveAdministrativeCostService.yearDifference(lastTransaction.createdAt) < differenceDate) {
-        isNotEligible = true;
-      }
-
-      if (!isNotEligible) {
-        const response: UserToInactiveAdministrativeCostResponse = { userId: user.id };
-        eligibleUsers.push(response);
-      }
-    }
-
-    return eligibleUsers;
-  }
 
   /**
    * Deletes the given InactiveAdministrativeCost and creates an undo transfer
@@ -160,21 +55,7 @@ export default class InactiveAdministrativeCostService extends WithManager {
     if (!inactiveAdministrativeCost) return undefined;
 
     // Get amount from transfer
-    const amount: DineroObjectRequest = inactiveAdministrativeCost.transfer.amountInclVat.toObject();
 
-    // We create an undo transfer that sends the money back to the person.
-    const undoTransfer: TransferRequest = {
-      amount,
-      description: 'Deletion of InactiveAdministrativeCost',
-      fromId: 0,
-      toId: inactiveAdministrativeCost.fromId,
-    };
-
-    // Save new transfer and delete the administrative cost
-    await new TransferService(this.manager).postTransfer(undoTransfer);
-    await this.manager.delete(InactiveAdministrativeCost, inactiveAdministrativeCostId);
-
-    return inactiveAdministrativeCost;
   }
 
   /**
@@ -202,10 +83,10 @@ export default class InactiveAdministrativeCostService extends WithManager {
       amount,
       description: 'InactiveAdministrativeCost Transfer',
       fromId: forId,
-      toId: 0,
+      toId: null,
     };
 
-    const transfer = await new TransferService(this.manager).createTransfer(transferRequest);
+    const transfer = await new TransferService(this.manager).postTransfer(transferRequest);
 
     // Create a new inactive administrative cost
     const newInactiveAdministrativeCost: InactiveAdministrativeCost = Object.assign(new InactiveAdministrativeCost(), {
@@ -215,53 +96,10 @@ export default class InactiveAdministrativeCostService extends WithManager {
       transfer: transfer,
     });
 
-    transfer.inactiveAdministrativeCost = newInactiveAdministrativeCost;
-
-    await this.manager.getRepository(Transfer).save(transfer);
     await this.manager.save(InactiveAdministrativeCost, newInactiveAdministrativeCost);
 
     const options = InactiveAdministrativeCostService.getOptions({ inactiveAdministrativeCostId: newInactiveAdministrativeCost.id });
     return this.manager.findOne(InactiveAdministrativeCost, options);
-  }
-
-  /**
-   * Email all users with the given ids. These user will get notified that an administrative cost has been deducted from their account.
-   * @param users
-   */
-  public async handOutInactiveAdministrativeCost(users: HandoutInactiveAdministrativeCostsRequest)
-    : Promise<InactiveAdministrativeCost[]> {
-    return Promise.all(users.userIds.map(async (u) => {
-      const req: CreateInactiveAdministrativeCostRequest = { forId: u };
-
-      const inactiveAdministrativeCost = await this.createInactiveAdministrativeCost(req);
-
-      const user = await User.findOne({ where: { id: u } });
-
-      await Mailer.getInstance().send(user, new UserGotInactiveAdministrativeCost({
-        amount: inactiveAdministrativeCost.amount,
-      }));
-
-      return inactiveAdministrativeCost;
-    }));
-  }
-
-  /**
-   * Email all users with the given ids. These users will get notified that in a year time money will be deducted from their
-   * account as they have been inactive for three years.
-   * @param users
-   */
-  public async sendInactiveNotification(users: HandoutInactiveAdministrativeCostsRequest)
-    : Promise<void> {
-
-    await Promise.all(users.userIds.map(async (u) => {
-      const user = await User.findOne({ where: { id: u } });
-
-      user.inactiveNotificationSend = true;
-      await user.save();
-
-      return Mailer.getInstance().send(user, new InactiveAdministrativeCostNotification({}));
-    }),
-    );
   }
 
   /**
@@ -272,29 +110,6 @@ export default class InactiveAdministrativeCostService extends WithManager {
     : Promise<InactiveAdministrativeCost[]> {
     const options = { ...InactiveAdministrativeCostService.getOptions(params) };
     return this.manager.find(InactiveAdministrativeCost, { ...options });
-  }
-
-  /**
-   * Function that returns all inactive administrative cost entitites based on given params.
-   * @param params
-   * @param pagination - The pagination params to apply
-   */
-  public async getPaginatedInactiveAdministrativeCosts(params: InactiveAdministrativeCostFilterParameters = {},
-    pagination: PaginationParameters = {}) {
-    const { take, skip } = pagination;
-    const options = { ...InactiveAdministrativeCostService.getOptions(params), skip, take };
-
-    const inactiveAdministrativeCost = await this.manager.find(InactiveAdministrativeCost, { ...options, take });
-
-    const records = InactiveAdministrativeCostService.toArrayResponse(inactiveAdministrativeCost);
-
-    const count = await this.manager.count(InactiveAdministrativeCost, options);
-    return {
-      _pagination: {
-        take, skip, count,
-      },
-      records,
-    };
   }
 
   public static getOptions(params: InactiveAdministrativeCostFilterParameters): FindManyOptions<InactiveAdministrativeCost> {
