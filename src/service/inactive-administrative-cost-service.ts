@@ -19,7 +19,7 @@
  */
 
 import WithManager from '../database/with-manager';
-import { FindManyOptions, FindOptionsRelations } from 'typeorm';
+import { FindManyOptions, FindOptionsRelations, In } from 'typeorm';
 import InactiveAdministrativeCost from '../entity/transactions/inactive-administrative-cost';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import User, { EligibleInactiveUsers } from '../entity/user/user';
