@@ -82,6 +82,7 @@ describe('InactiveAdministrativeCostService', () => {
     connection: DataSource;
     app: Application;
     validAdminCostRequest: CreateInactiveAdministrativeCostRequest;
+    validTransReq: TransactionRequest;
     specification: SwaggerSpecification;
     transactions: Transaction[];
     subTransactions: SubTransaction[];
