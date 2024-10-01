@@ -18,18 +18,6 @@
  *  @license
  */
 
-/**
- * @typedef {object} CreateInactiveAdministrativeCostRequest
- * @property {integer} forId.required - The user of the inactive administrative cost
- */
 export interface CreateInactiveAdministrativeCostRequest {
   forId: number,
-}
-
-/**
- * @typedef {object} HandoutInactiveAdministrativeCostsRequest
- * @property {Array<integer>} userIds.required - The users that should be handed an inactive administrative cost request.
- */
-export interface HandoutInactiveAdministrativeCostsRequest {
-  userIds: number[];
 }

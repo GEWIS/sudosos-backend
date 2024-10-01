@@ -56,15 +56,18 @@ export default class InactiveAdministrativeCostSeeder extends WithManager {
         to: null,
         amountInclVat: amount,
         description: `Invoice Transfer for ${amount}`,
+        createdAt: date,
       });
+      await this.manager.save(Transfer, transfer);
+
       transfer.inactiveAdministrativeCost = inactiveAdministrativeCost;
+      transfers.push(transfer);
+
       inactiveAdministrativeCost.transfer = transfer;
 
-      await this.manager.save(Transfer, transfer);
       await this.manager.save(InactiveAdministrativeCost, inactiveAdministrativeCost);
 
       inactiveAdministrativeCosts.push(inactiveAdministrativeCost);
-      transfers.push(transfer);
     }
 
     return {
