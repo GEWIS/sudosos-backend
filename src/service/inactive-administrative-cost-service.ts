@@ -21,13 +21,16 @@ import WithManager from '../database/with-manager';
 import { FindManyOptions, FindOptionsRelations } from 'typeorm';
 import InactiveAdministrativeCost from '../entity/transactions/inactive-administrative-cost';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
-import User from '../entity/user/user';
+import User, { EligibleInactiveUsers } from '../entity/user/user';
 import BalanceService from './balance-service';
 import TransferService from './transfer-service';
 import { CreateInactiveAdministrativeCostRequest } from '../controller/request/inactive-administrative-cost-request';
 import TransferRequest from '../controller/request/transfer-request';
 import dinero from 'dinero.js';
 import { DineroObjectRequest } from '../controller/request/dinero-request';
+import Transfer from '../entity/transactions/transfer';
+import Transaction from '../entity/transactions/transaction';
+import { emptyArray } from 'typedoc/dist/lib/utils/array';
 
 
 interface InactiveAdministrativeCostFilterParameters {
@@ -48,7 +51,15 @@ interface InactiveAdministrativeCostFilterParameters {
 }
 
 export default class InactiveAdministrativeCostService extends WithManager {
+  
+  private static yearDifference(date: Date) : number {
+    const today = new Date();
+    const dateDiff = (today.getTime() - date.getTime());
+    const ageDate = new Date(dateDiff);
 
+    return Math.abs(ageDate.getUTCFullYear() - 1970);
+  }
+  
   /**
    * Checks which users are eligible for either a notification or a fine.
    * @param params
@@ -56,11 +67,37 @@ export default class InactiveAdministrativeCostService extends WithManager {
   public async checkInactiveUsers(params: InactiveAdministrativeCostFilterParameters)
     : Promise<User[]> {
     const { notification } = params;
-
     const differenceDate = notification ? 2 : 3;
 
-    
+    const users = await User.find();
+    const eligibleUsers: User[] = [];
 
+    // go through all users and get their last transfer and transaction
+    for (let i = 0; i < users.length; i += 1) {
+      const user = users[i];
+      if (!EligibleInactiveUsers.includes(user.type)) continue;
+
+      let isNotEligible = false;
+
+      const userTransfers = (await Transfer.find({ where: { fromId: user.id } }));
+      const lastTransfer = userTransfers.length == 0 ? null : userTransfers
+        .reduce((prev, curr) => (prev.createdAt < curr.createdAt ? curr : prev));
+      const userTransactions = ((await Transaction.find({ relations: ['from'] }))
+        .filter((t) => t.from.id === user.id));
+      const lastTransaction = userTransactions.length == 0  ? null : userTransactions
+        .reduce((prev, curr) => (prev.createdAt < curr.createdAt ? curr : prev));
+
+      if (lastTransfer != null) if (InactiveAdministrativeCostService.yearDifference(lastTransfer.createdAt) <= differenceDate) {
+        isNotEligible = true;
+      }
+      if (lastTransaction != null) if (InactiveAdministrativeCostService.yearDifference(lastTransaction.createdAt) <= differenceDate) {
+        isNotEligible = true;
+      }
+      if (!isNotEligible) eligibleUsers.push(user);
+
+    }
+
+    return eligibleUsers;
   }
 
   /**
