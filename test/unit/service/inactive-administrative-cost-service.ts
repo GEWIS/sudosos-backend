@@ -21,11 +21,11 @@
 import { DataSource } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
-import User from '../../../src/entity/user/user';
+import User, { UserType } from '../../../src/entity/user/user';
 import Transfer from '../../../src/entity/transactions/transfer';
 import Database from '../../../src/database/database';
 import { truncateAllTables } from '../../setup';
-import { TransferSeeder, UserSeeder } from '../../seed';
+import { ContainerSeeder, PointOfSaleSeeder, ProductSeeder, TransferSeeder, UserSeeder } from '../../seed';
 import Swagger from '../../../src/start/swagger';
 import bodyParser from 'body-parser';
 import { finishTestDB } from '../../helpers/test-helpers';
@@ -42,6 +42,13 @@ import {
   CreateInactiveAdministrativeCostRequest,
 } from '../../../src/controller/request/inactive-administrative-cost-request';
 import TransferService from '../../../src/service/transfer-service';
+import { TransactionRequest } from '../../../src/controller/request/transaction-request';
+import dinero from 'dinero.js';
+import TransactionService from '../../../src/service/transaction-service';
+import TransferRequest from '../../../src/controller/request/transfer-request';
+import ContainerRevision from '../../../src/entity/container/container-revision';
+import ProductRevision from '../../../src/entity/product/product-revision';
+import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -64,27 +71,77 @@ describe('InactiveAdministrativeCostService', () => {
     connection: DataSource;
     app: Application;
     validAdminCostRequest: CreateInactiveAdministrativeCostRequest;
+    validTransReq: TransactionRequest;
     specification: SwaggerSpecification;
     users: User[];
     transfers: Transfer[];
     inactiveAdministrativeCosts: InactiveAdministrativeCost[];
+    pointsOfSale: PointOfSaleRevision[];
+    containers: ContainerRevision[];
+    products: ProductRevision[];
   };
 
   before(async function test(): Promise<void> {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
-    const begin = new Date(2020, 1);
+    const begin = new Date(2023, 1);
     const end = new Date();
 
     const users = await new UserSeeder().seed();
+    const { productRevisions } = await new ProductSeeder().seed(users);
     const transfers = await new TransferSeeder().seed(users, begin, end);
     const { inactiveAdministrativeCosts, inactiveAdministrativeCostsTransfers } = await new InactiveAdministrativeCostSeeder().seed(users, begin, end);
-
+    const { containerRevisions } = await new ContainerSeeder().seed(users, productRevisions);
+    const { pointOfSaleRevisions } = await new PointOfSaleSeeder().seed(users, containerRevisions);
     const transfersUpdated = transfers.concat(inactiveAdministrativeCostsTransfers);
 
     const validAdminCostRequest: CreateInactiveAdministrativeCostRequest = {
       forId: users[0].id,
+    };
+    const user = User.create({
+      firstName: 'John',
+      lastName: 'Doe',
+      type: UserType.LOCAL_USER,
+    });
+    const newUser = await user.save();
+    const updatedUser = users.concat(newUser);
+    const pos = pointOfSaleRevisions.filter((p) => p.pointOfSale.deletedAt == null)[0];
+    const conts = pos.containers.filter((c) => c.container.deletedAt == null).slice(0, 2);
+    const products = conts.map((c) => c.products.filter((p) => p.product.deletedAt == null).slice(0, 2));
+    const validTransReq: TransactionRequest = {
+      from: newUser.id,
+      createdBy: newUser.id,
+      subTransactions: conts.map((c, i) => (
+        {
+          to: c.container.owner.id,
+          container: {
+            id: c.containerId,
+            revision: c.revision,
+          },
+          subTransactionRows: products[i].map((p, i2) => (
+            {
+              product: {
+                id: p.productId,
+                revision: p.revision,
+              },
+              amount: i2 + 1,
+              totalPriceInclVat: p.priceInclVat.multiply(i2 + 1).toObject(),
+            }
+          )),
+          totalPriceInclVat: products[i].reduce((total, p, i2) => total
+            .add(p.priceInclVat.multiply(i2 + 1)), dinero({ amount: 0 })).toObject(),
+        }
+      )),
+      pointOfSale: {
+        id: pos.pointOfSaleId,
+        revision: pos.revision,
+      },
+      totalPriceInclVat: products.reduce((total1, prods) => total1
+        .add(prods.reduce((total2, p, i) => total2
+          .add(p.priceInclVat.multiply(i + 1)), dinero({ amount: 0 })),
+        ), dinero({ amount: 0 })).toObject(),
+      createdAt: new Date(2020, 1).toString(),
     };
 
     // start app
@@ -97,9 +154,13 @@ describe('InactiveAdministrativeCostService', () => {
       connection,
       app,
       validAdminCostRequest,
+      validTransReq,
       specification,
-      users,
+      containers: containerRevisions,
+      products: productRevisions,
+      users: updatedUser,
       transfers: transfersUpdated,
+      pointsOfSale: pointOfSaleRevisions,
       inactiveAdministrativeCosts,
     };
   });
@@ -154,6 +215,29 @@ describe('InactiveAdministrativeCostService', () => {
       const undoTransfer = transfers.reduce((prev, curr) => (prev.id < curr.id ? curr : prev));
 
       expect(undoTransfer.to.id).to.be.eq(deletedInactiveAdministrativeCost.fromId);
+    });
+  });
+  
+  describe('checkInactiveUsers', async (): Promise<void> => {
+    it('should return all users who should receive a notification', async () => {
+      const user = await User.findOne({ where: { id: ctx.validTransReq.from } });
+      await new TransactionService().createTransaction(ctx.validTransReq);
+      const req: TransferRequest = {
+        amount: {
+          amount: 10,
+          precision: dinero.defaultPrecision,
+          currency: dinero.defaultCurrency,
+        },
+        description: 'cool',
+        fromId: user.id,
+        toId: undefined,
+        createdAt: new Date(2020, 1).toString(),
+      };
+      await new TransferService().createTransfer(req);
+
+      const users = await new InactiveAdministrativeCostService().checkInactiveUsers({ notification: false });
+
+      expect(user.id).to.be.eql(users[0].id);
     });
   });
 });
