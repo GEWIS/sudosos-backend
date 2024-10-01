@@ -235,9 +235,31 @@ describe('InactiveAdministrativeCostService', () => {
       };
       await new TransferService().createTransfer(req);
 
-      const users = await new InactiveAdministrativeCostService().checkInactiveUsers({ notification: false });
+      const users = await new InactiveAdministrativeCostService().checkInactiveUsers({ notification: true });
 
       expect(user.id).to.be.eql(users[0].id);
+    });
+    it('should not return users which already had a notification send', async () => {
+      const user = await User.findOne({ where: { id: ctx.validTransReq.from } });
+      user.inactiveNotificationSend = true;
+      await user.save();
+      await new TransactionService().createTransaction(ctx.validTransReq);
+      const req: TransferRequest = {
+        amount: {
+          amount: 10,
+          precision: dinero.defaultPrecision,
+          currency: dinero.defaultCurrency,
+        },
+        description: 'cool',
+        fromId: user.id,
+        toId: undefined,
+        createdAt: new Date(2020, 1).toString(),
+      };
+      await new TransferService().createTransfer(req);
+
+      const users = await new InactiveAdministrativeCostService().checkInactiveUsers({ notification: true });
+
+      expect(users).to.be.empty;
     });
   });
 });
