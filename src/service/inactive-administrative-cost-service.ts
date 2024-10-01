@@ -18,7 +18,7 @@
  *  @license
  */
 import WithManager from '../database/with-manager';
-import { FindManyOptions, FindOptionsRelations } from 'typeorm';
+import { FindManyOptions, FindOptionsRelations, In } from 'typeorm';
 import InactiveAdministrativeCost from '../entity/transactions/inactive-administrative-cost';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import User, { EligibleInactiveUsers } from '../entity/user/user';
@@ -30,7 +30,8 @@ import dinero from 'dinero.js';
 import { DineroObjectRequest } from '../controller/request/dinero-request';
 import Transfer from '../entity/transactions/transfer';
 import Transaction from '../entity/transactions/transaction';
-import { emptyArray } from 'typedoc/dist/lib/utils/array';
+import InactiveAdministrativeCostNotification from '../mailer/messages/inactive-administrative-cost-notification';
+import Mailer from '../mailer';
 
 
 interface InactiveAdministrativeCostFilterParameters {
@@ -59,6 +60,8 @@ export default class InactiveAdministrativeCostService extends WithManager {
 
     return Math.abs(ageDate.getUTCFullYear() - 1970);
   }
+
+
   
   /**
    * Checks which users are eligible for either a notification or a fine.
@@ -179,10 +182,14 @@ export default class InactiveAdministrativeCostService extends WithManager {
    * account as they have been inactive for three years.
    * @param userIds
    */
-  // public static async sendInactiveNotification(userIds: number[])
-  //   : Promise<void> {
-  //
-  // }
+  public static async sendInactiveNotification(userIds: number[])
+    : Promise<void> {
+    const users = await User.find({ where: { id: In(userIds) } });
+
+    await Promise.all(users.map(async (u) => {
+      return Mailer.getInstance().send(u, new InactiveAdministrativeCostNotification({}));
+    }));
+  }
 
 
   /**
