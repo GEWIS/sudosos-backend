@@ -18,7 +18,7 @@
  *  @license
  */
 
-import { DataSource } from 'typeorm';
+import { DataSource, In } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import User, { UserType } from '../../../src/entity/user/user';
@@ -284,14 +284,28 @@ describe('InactiveAdministrativeCostService', () => {
     });
   });
 
-  describe('sendInactiveNotification', async (): Promise<void>=>{
+  describe('handOutInactiveAdministrativeCost', async (): Promise<void> => {
+    it('should mail all given users', async () => {
+      const users = ctx.users.slice(8);
+      const userIds = users.map((u) => u.id);
+
+      await new InactiveAdministrativeCostService().handOutInactiveAdministrativeCost(users);
+      const updatedUsers = await User.find({ where: { id: In(userIds) } });
+
+      expect(sendMailFake.callCount).to.equal(users.length);
+    });
+  });
+
+  describe('sendInactiveNotification', async (): Promise<void> => {
     it('should notify all given users', async () => {
       const users = ctx.users.slice(8);
       const userIds = users.map((u) => u.id);
 
-      await InactiveAdministrativeCostService.sendInactiveNotification(userIds);
+      await new InactiveAdministrativeCostService().sendInactiveNotification(users);
+      const updatedUsers = await User.find({ where: { id: In(userIds) } });
 
       expect(sendMailFake.callCount).to.equal(users.length);
+      expect(updatedUsers[0].inactiveNotificationSend).to.be.eq(true);
     });
   });
 });

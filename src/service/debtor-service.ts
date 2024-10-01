@@ -324,7 +324,7 @@ export default class DebtorService {
   }
 
   /**
-   * Send an email to all users with the given ID, notifying them that they will get fined a certain amount. The date
+   * Email all users with the given ID, notifying them that they will get fined a certain amount. The date
    * the fine and email will be based on is the reference date, the date of the last fine handout event or the current
    * date (in this order if one is undefined). However, users only receive an email when they have a debt both on the
    * reference date and now.
