@@ -34,6 +34,7 @@ import RevisionRequest from './revision-request';
  * @property {Array<SubTransactionRequest>} subTransactions.required - subtransactions
  * @property {RevisionRequest} pointOfSale.required - point of sale
  * @property {DineroObjectRequest} totalPriceInclVat.required - total price of the transaction
+ * @property {string} createdAt - Date on which the transfer should be created
  */
 export interface TransactionRequest {
   from: number,
@@ -41,6 +42,7 @@ export interface TransactionRequest {
   subTransactions: SubTransactionRequest[],
   pointOfSale: RevisionRequest,
   totalPriceInclVat: DineroObjectRequest,
+  createdAt?: string,
 }
 
 /**
