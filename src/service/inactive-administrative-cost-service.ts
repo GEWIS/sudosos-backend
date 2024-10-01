@@ -40,9 +40,28 @@ interface InactiveAdministrativeCostFilterParameters {
    * Filter based on inactive administrative cost id
    */
   inactiveAdministrativeCostId?: number;
+
+  /**
+   * Filter on notification or fine
+   */
+  notification?: boolean;
 }
 
 export default class InactiveAdministrativeCostService extends WithManager {
+
+  /**
+   * Checks which users are eligible for either a notification or a fine.
+   * @param params
+   */
+  public async checkInactiveUsers(params: InactiveAdministrativeCostFilterParameters)
+    : Promise<User[]> {
+    const { notification } = params;
+
+    const differenceDate = notification ? 2 : 3;
+
+    
+
+  }
 
   /**
    * Deletes the given InactiveAdministrativeCost and creates an undo transfer
@@ -55,7 +74,21 @@ export default class InactiveAdministrativeCostService extends WithManager {
     if (!inactiveAdministrativeCost) return undefined;
 
     // Get amount from transfer
+    const amount: DineroObjectRequest = inactiveAdministrativeCost.transfer.amountInclVat.toObject();
 
+    // We create an undo transfer that sends the money back to the person.
+    const undoTransfer: TransferRequest = {
+      amount,
+      description: 'Deletion of InactiveAdministrativeCost',
+      fromId: 0,
+      toId: inactiveAdministrativeCost.fromId,
+    };
+
+    // Save new transfer and delete the administrative cost
+    await new TransferService(this.manager).postTransfer(undoTransfer);
+    await this.manager.delete(InactiveAdministrativeCost, inactiveAdministrativeCostId);
+
+    return inactiveAdministrativeCost;
   }
 
   /**
@@ -83,7 +116,7 @@ export default class InactiveAdministrativeCostService extends WithManager {
       amount,
       description: 'InactiveAdministrativeCost Transfer',
       fromId: forId,
-      toId: null,
+      toId: 0,
     };
 
     const transfer = await new TransferService(this.manager).postTransfer(transferRequest);

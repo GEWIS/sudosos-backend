@@ -41,6 +41,7 @@ import BalanceService from '../../../src/service/balance-service';
 import {
   CreateInactiveAdministrativeCostRequest,
 } from '../../../src/controller/request/inactive-administrative-cost-request';
+import TransferService from '../../../src/service/transfer-service';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -62,6 +63,7 @@ describe('InactiveAdministrativeCostService', () => {
   let ctx: {
     connection: DataSource;
     app: Application;
+    validAdminCostRequest: CreateInactiveAdministrativeCostRequest;
     specification: SwaggerSpecification;
     users: User[];
     transfers: Transfer[];
@@ -76,11 +78,14 @@ describe('InactiveAdministrativeCostService', () => {
     const end = new Date();
 
     const users = await new UserSeeder().seed();
-
     const transfers = await new TransferSeeder().seed(users, begin, end);
     const { inactiveAdministrativeCosts, inactiveAdministrativeCostsTransfers } = await new InactiveAdministrativeCostSeeder().seed(users, begin, end);
 
     const transfersUpdated = transfers.concat(inactiveAdministrativeCostsTransfers);
+
+    const validAdminCostRequest: CreateInactiveAdministrativeCostRequest = {
+      forId: users[0].id,
+    };
 
     // start app
     const app = express();
@@ -91,6 +96,7 @@ describe('InactiveAdministrativeCostService', () => {
     ctx = {
       connection,
       app,
+      validAdminCostRequest,
       specification,
       users,
       transfers: transfersUpdated,
@@ -118,12 +124,12 @@ describe('InactiveAdministrativeCostService', () => {
     });
   });
   
-  describe('createInactiveAdministrativeCosts', async (): Promise<void> => {
+  describe('createInactiveAdministrativeCost', async (): Promise<void> => {
     it('should create inactive administrative cost for certain user', async () => {
       const user = ctx.users[0];
       const previousBalance = (await new BalanceService().getBalance(user.id)).amount.amount;
 
-      const res = await new InactiveAdministrativeCostService().createInactiveAdministrativeCost({ forId: user.id });
+      const res = await new InactiveAdministrativeCostService().createInactiveAdministrativeCost(ctx.validAdminCostRequest);
       await new BalanceService().updateBalances({});
       const newBalance = (await new BalanceService().getBalance(user.id)).amount.amount;
 
@@ -132,6 +138,22 @@ describe('InactiveAdministrativeCostService', () => {
 
       expect(lastEntry.id).to.be.eq(res.id);
       expect(newBalance).to.be.eq(previousBalance - res.amount.getAmount());
+    });
+  });
+
+  describe('deleteInactiveAdministrativeCost', async (): Promise<void> => {
+    it('should delete a given inactive administrative cost', async () => {
+      const createdInactiveAdministrativeCost = await new InactiveAdministrativeCostService().createInactiveAdministrativeCost(ctx.validAdminCostRequest);
+      const deletedInactiveAdministrativeCost = await new InactiveAdministrativeCostService().deleteInactiveAdministrativeCost(createdInactiveAdministrativeCost.id);
+
+      // Check if entity was deleted
+      expect(await InactiveAdministrativeCost.findOne({ where: { id: deletedInactiveAdministrativeCost.id } })).to.be.null;
+
+      // Check creation of transfer
+      const transfers = (await new TransferService().getTransfers()).records;
+      const undoTransfer = transfers.reduce((prev, curr) => (prev.id < curr.id ? curr : prev));
+
+      expect(undoTransfer.to.id).to.be.eq(deletedInactiveAdministrativeCost.fromId);
     });
   });
 });
