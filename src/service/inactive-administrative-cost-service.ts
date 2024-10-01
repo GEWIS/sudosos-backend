@@ -19,7 +19,7 @@
  */
 
 import WithManager from '../database/with-manager';
-import { FindManyOptions, FindOptionsRelations, In } from 'typeorm';
+import { FindManyOptions, FindOptionsRelations } from 'typeorm';
 import InactiveAdministrativeCost from '../entity/transactions/inactive-administrative-cost';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import User, { EligibleInactiveUsers } from '../entity/user/user';
@@ -75,8 +75,7 @@ export function parseInactiveAdministrativeCostFilterParameters(req: RequestWith
 export default class InactiveAdministrativeCostService extends WithManager {
   
   private static yearDifference(date: Date) : number {
-    const today = new Date();
-    const dateDiff = (today.getTime() - date.getTime());
+    const dateDiff = (new Date().getTime() - date.getTime());
     const ageDate = new Date(dateDiff);
 
   // Calculate the year difference between 2 dates.
