@@ -18,27 +18,22 @@
  *  @license
  */
 
-import { DataSource, EntityManager } from 'typeorm';
+import { DataSource } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import sinon from 'sinon';
-import { Client } from 'ldapts';
 import chai, { expect } from 'chai';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
-import User, { UserType } from '../../../src/entity/user/user';
+import User from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
 import ADService from '../../../src/service/ad-service';
 import LDAPAuthenticator from '../../../src/entity/authenticator/ldap-authenticator';
-import AuthenticationService from '../../../src/service/authentication-service';
-import MemberAuthenticator from '../../../src/entity/authenticator/member-authenticator';
-import { LDAPGroup, LDAPUser } from '../../../src/helpers/ad';
+import { LDAPUser } from '../../../src/helpers/ad';
 import userIsAsExpected from './authentication-service';
-import RoleManager from '../../../src/rbac/role-manager';
-import AssignedRole from '../../../src/entity/rbac/assigned-role';
 import { finishTestDB, restoreLDAPEnv, storeLDAPEnv } from '../../helpers/test-helpers';
 import { truncateAllTables } from '../../setup';
-import { RbacSeeder, UserSeeder } from '../../seed';
+import { UserSeeder } from '../../seed';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -114,215 +109,6 @@ describe('AD Service', (): void => {
     stubs.splice(0, stubs.length);
   });
 
-  describe('syncSharedAccounts functions', () => {
-    async function createAccountsFromLDAP(accounts: any[]) {
-      async function createAccounts(manager: EntityManager, acc: any[]): Promise<any> {
-        const users: User[] = [];
-        const promises: Promise<any>[] = [];
-        acc.forEach((m) => {
-          promises.push(new AuthenticationService(manager).createUserAndBind(m)
-            .then((u) => users.push(u)));
-        });
-        await Promise.all(promises);
-        return users;
-      }
-
-      let result: any[];
-      await ctx.connection.transaction(async (manager) => {
-        result = await createAccounts(manager, accounts);
-      });
-      return result;
-    }
-    it('should create an account for new shared accounts', async () => {
-      const newADSharedAccount = {
-        objectGUID: Buffer.from('111111', 'hex'),
-        displayName: 'Shared Organ #1',
-        dn: 'CN=SudoSOSAccount - Shared Organ #1,OU=SudoSOS Shared Accounts,OU=Groups,DC=sudososwg,DC=sudosos,DC=nl',
-      };
-
-      const auth = await LDAPAuthenticator.findOne(
-        { where: { UUID: newADSharedAccount.objectGUID } },
-      );
-      expect(auth).to.be.null;
-
-      const clientBindStub = sinon.stub(Client.prototype, 'bind').resolves(null);
-      const clientSearchStub = sinon.stub(Client.prototype, 'search').resolves({ searchReferences: [], searchEntries: [] });
-
-      clientSearchStub.withArgs(process.env.LDAP_SHARED_ACCOUNT_FILTER, {
-        filter: '(CN=*)',
-        explicitBufferAttributes: ['objectGUID'],
-      }).resolves({ searchReferences: [], searchEntries: [newADSharedAccount] });
-
-      stubs.push(clientBindStub);
-      stubs.push(clientSearchStub);
-
-      const organCount = await User.count({ where: { type: UserType.ORGAN } });
-      await new ADService().syncSharedAccounts();
-
-      expect(await User.count({ where: { type: UserType.ORGAN } })).to.be.equal(organCount + 1);
-      const newOrgan = (await LDAPAuthenticator.findOne({ where: { UUID: newADSharedAccount.objectGUID }, relations: ['user'] })).user;
-
-      expect(newOrgan.firstName).to.be.equal(newADSharedAccount.displayName);
-      expect(newOrgan.lastName).to.be.equal('');
-      expect(newOrgan.type).to.be.equal(UserType.ORGAN);
-    });
-    it('should give member access to shared account', async () => {
-      const newADSharedAccount = {
-        objectGUID: Buffer.from('22', 'hex'),
-        displayName: 'Shared Organ #2',
-        dn: 'CN=SudoSOSAccount - Shared Organ #2,OU=SudoSOS Shared Accounts,OU=Groups,DC=sudososwg,DC=sudosos,DC=nl',
-      };
-
-      const auth = await LDAPAuthenticator.findOne(
-        { where: { UUID: newADSharedAccount.objectGUID } },
-      );
-      expect(auth).to.be.null;
-
-      const clientBindStub = sinon.stub(Client.prototype, 'bind').resolves(null);
-      const clientSearchStub = sinon.stub(Client.prototype, 'search');
-
-      const sharedAccountMember = {
-        dn: 'CN=Sudo SOS (m4141),OU=Member accounts,DC=gewiswg,DC=gewis,DC=nl',
-        memberOfFlattened: [
-          'CN=Domain Users,CN=Users,DC=gewiswg,DC=gewis,DC=nl',
-        ],
-        givenName: 'Sudo Organ #2',
-        sn: 'SOS',
-        objectGUID: Buffer.from('4141', 'hex'),
-        sAMAccountName: 'm4141',
-        mail: 'm4141@gewis.nl',
-        // TODO: Fix this type inconsistency between ADUser and ldapts.Client
-        mNumber: '4141' as string & number,
-        whenChanged: new Date().toISOString(),
-        displayName: 'Sudo Organ #2',
-      };
-
-      let user: User;
-      await ctx.connection.transaction(async (manager) => {
-        user = await new AuthenticationService(manager).createUserAndBind(sharedAccountMember);
-      });
-
-      clientSearchStub.withArgs(process.env.LDAP_SHARED_ACCOUNT_FILTER, {
-        filter: '(CN=*)',
-        explicitBufferAttributes: ['objectGUID'],
-      }).resolves({ searchReferences: [], searchEntries: [newADSharedAccount] });
-
-      clientSearchStub.withArgs(process.env.LDAP_BASE, {
-        filter: `(&(objectClass=user)(objectCategory=person)(memberOf:1.2.840.113556.1.4.1941:=${newADSharedAccount.dn}))`,
-        explicitBufferAttributes: ['objectGUID'],
-      })
-        .resolves({ searchReferences: [], searchEntries: [sharedAccountMember] });
-
-      stubs.push(clientBindStub);
-      stubs.push(clientSearchStub);
-
-      await new ADService().syncSharedAccounts();
-
-      const newOrgan = (await LDAPAuthenticator.findOne({ where: { UUID: newADSharedAccount.objectGUID }, relations: ['user'] })).user;
-
-      const canAuthenticateAs = await MemberAuthenticator.find(
-        { where: { authenticateAs: { id: newOrgan.id } }, relations: ['user'] },
-      );
-
-      expect(canAuthenticateAs.length).to.be.equal(1);
-      expect(canAuthenticateAs[0].user.id).to.be.equal(user.id);
-    });
-    it('should update the members of an existing shared account', async () => {
-      const newADSharedAccount = {
-        objectGUID: Buffer.from('39', 'hex'),
-        displayName: 'Shared Organ #3',
-        dn: 'CN=SudoSOSAccount - Shared Organ #3,OU=SudoSOS Shared Accounts,OU=Groups,DC=sudososwg,DC=sudosos,DC=nl',
-      };
-
-      const auth = await LDAPAuthenticator.findOne(
-        { where: { UUID: newADSharedAccount.objectGUID } },
-      );
-      expect(auth).to.be.null;
-
-      const clientBindStub = sinon.stub(Client.prototype, 'bind').resolves(null);
-      const clientSearchStub = sinon.stub(Client.prototype, 'search');
-
-      const sharedAccountMemberConstruction = (number: number) => ({
-        dn: `CN=Sudo SOS (m${number}),OU=Member accounts,DC=gewiswg,DC=gewis,DC=nl`,
-        memberOfFlattened: [
-          'CN=Domain Users,CN=Users,DC=gewiswg,DC=gewis,DC=nl',
-        ],
-        givenName: `Sudo Organ #3 ${number}`,
-        sn: 'SOS',
-        mNumber: `${number}`,
-        objectGUID: Buffer.from((number.toString().length % 2 ? '0' : '') + number.toString(), 'hex'),
-        sAMAccountName: `m${number}`,
-        mail: `m${number}@gewis.nl`,
-      });
-
-      let sharedAccountMembers = [sharedAccountMemberConstruction(10),
-        sharedAccountMemberConstruction(21)];
-
-      const firstMembers = await createAccountsFromLDAP(sharedAccountMembers);
-
-      clientSearchStub.withArgs(process.env.LDAP_SHARED_ACCOUNT_FILTER, {
-        filter: '(CN=*)',
-        explicitBufferAttributes: ['objectGUID'],
-      }).resolves({ searchReferences: [], searchEntries: [newADSharedAccount] });
-
-      clientSearchStub.withArgs(process.env.LDAP_BASE, {
-        filter: `(&(objectClass=user)(objectCategory=person)(memberOf:1.2.840.113556.1.4.1941:=${newADSharedAccount.dn}))`,
-        explicitBufferAttributes: ['objectGUID'],
-      })
-        .resolves({ searchReferences: [], searchEntries: sharedAccountMembers });
-
-      stubs.push(clientBindStub);
-      stubs.push(clientSearchStub);
-
-      await new ADService().syncSharedAccounts();
-
-      // Should contain the first users
-      const newOrgan = (await LDAPAuthenticator.findOne({ where: { UUID: newADSharedAccount.objectGUID }, relations: ['user'] })).user;
-      expect(newOrgan).to.not.be.undefined;
-
-      const canAuthenticateAs = await MemberAuthenticator.find(
-        { where: { authenticateAs: { id: newOrgan.id } }, relations: ['user'] },
-      );
-      let canAuthenticateAsIDs = canAuthenticateAs.map((mAuth) => mAuth.user.id);
-
-      expect(canAuthenticateAsIDs).to.deep.equalInAnyOrder(firstMembers.map((u: any) => u.id));
-
-      stubs.forEach((stub) => stub.restore());
-      stubs.splice(0, stubs.length);
-      // stubs = [];
-
-      const clientBindStub2 = sinon.stub(Client.prototype, 'bind').resolves(null);
-      const clientSearchStub2 = sinon.stub(Client.prototype, 'search');
-
-      sharedAccountMembers = [sharedAccountMemberConstruction(11),
-        sharedAccountMemberConstruction(3)];
-
-      const secondMembers = await createAccountsFromLDAP(sharedAccountMembers);
-
-      clientSearchStub2.withArgs(process.env.LDAP_SHARED_ACCOUNT_FILTER, {
-        filter: '(CN=*)',
-        explicitBufferAttributes: ['objectGUID'],
-      }).resolves({ searchReferences: [], searchEntries: [newADSharedAccount] });
-
-      clientSearchStub2.withArgs(process.env.LDAP_BASE, {
-        filter: `(&(objectClass=user)(objectCategory=person)(memberOf:1.2.840.113556.1.4.1941:=${newADSharedAccount.dn}))`,
-        explicitBufferAttributes: ['objectGUID'],
-      })
-        .resolves({ searchReferences: [], searchEntries: sharedAccountMembers });
-
-      stubs.push(clientBindStub2);
-      stubs.push(clientSearchStub2);
-
-      await new ADService().syncSharedAccounts();
-
-      canAuthenticateAsIDs = (await MemberAuthenticator.find(
-        { where: { authenticateAs: { id: newOrgan.id } }, relations: ['user'] },
-      )).map((mAuth) => mAuth.user.id);
-
-      const currentMemberIDs = secondMembers.map((u: any) => u.id);
-      expect(canAuthenticateAsIDs).to.deep.equalInAnyOrder(currentMemberIDs);
-    });
-  });
   describe('createAccountIfNew function', () => {
     it('should create an account if GUID is unknown to DB', async () => {
       const adUser = { ...(ctx.validADUser(await User.count() + 200)) };
@@ -343,93 +129,303 @@ describe('AD Service', (): void => {
       userIsAsExpected(user, adUser);
     });
   });
-  describe('syncUserRoles function', () => {
-    it('should assign roles to members of the group in AD', async () => {
-      process.env.ENABLE_LDAP = 'true';
-
-      const newUser = { ...(ctx.validADUser(await User.count() + 2)) };
-      const existingUser = { ...(ctx.validADUser(await User.count() + 3)) };
-
-      await new ADService().createAccountIfNew([existingUser]);
-      // precondition.
-      expect(await LDAPAuthenticator.findOne(
-        { where: { UUID: newUser.objectGUID } },
-      )).to.be.null;
-      expect(await LDAPAuthenticator.findOne(
-        { where: { UUID: existingUser.objectGUID } },
-      )).to.exist;
-
-      const roleGroup: LDAPGroup = {
-        cn: 'SudoSOS - Test',
-        displayName: 'Test group',
-        dn: 'CN=PRIV - SudoSOS Test,OU=SudoSOS Roles,OU=Groups,DC=gewiswg,DC=gewis,DC=nl',
-        objectGUID: Buffer.from('1234', 'hex'),
-        whenChanged: '',
-      };
-
-      const clientBindStub = sinon.stub(Client.prototype, 'bind').resolves(null);
-      const clientSearchStub = sinon.stub(Client.prototype, 'search');
-
-      clientSearchStub.withArgs(process.env.LDAP_ROLE_FILTER, {
-        filter: '(CN=*)',
-        explicitBufferAttributes: ['objectGUID'],
-      }).resolves({ searchReferences: [], searchEntries: [roleGroup as any] });
-
-      clientSearchStub.withArgs(process.env.LDAP_BASE, {
-        filter: `(&(objectClass=user)(objectCategory=person)(memberOf:1.2.840.113556.1.4.1941:=${roleGroup.dn}))`,
-        explicitBufferAttributes: ['objectGUID'],
-      })
-        .resolves({ searchReferences: [], searchEntries: [newUser as any, existingUser as any] });
-
-      stubs.push(clientBindStub);
-      stubs.push(clientSearchStub);
-
-      await new RbacSeeder().seed([{
-        name: 'SudoSOS - Test',
-        permissions: {
-        },
-        assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: { name: 'SudoSOS - Test' }, user: { id: user.id } } }) !== undefined,
-      }]);
-
-      const roleManager = await new RoleManager().initialize();
-
-      await new ADService().syncUserRoles(roleManager);
-      const auth = (await LDAPAuthenticator.findOne(
-        { where: { UUID: newUser.objectGUID }, relations: ['user'] },
-      ));
-      expect(auth).to.exist;
-      const { user } = auth;
-      userIsAsExpected(user, newUser);
-
-      const users = await new ADService().getUsers([newUser as LDAPUser, existingUser as LDAPUser]);
-      expect(await AssignedRole.findOne({ where: { role: { name: 'SudoSOS - Test' }, user: { id: users[0].id } } })).to.exist;
-      expect(await AssignedRole.findOne({ where: { role: { name: 'SudoSOS - Test' }, user: { id: users[1].id } } })).to.exist;
-    });
-  });
-  describe('syncUsers function', () => {
-    it('should create new users if needed', async () => {
-      process.env.ENABLE_LDAP = 'true';
-
-      const newUser = { ...(ctx.validADUser(await User.count() + 23)) };
-      const clientBindStub = sinon.stub(Client.prototype, 'bind').resolves(null);
-      const clientSearchStub = sinon.stub(Client.prototype, 'search');
-
-      clientSearchStub.withArgs(process.env.LDAP_BASE, {
-        filter: `(&(objectClass=user)(objectCategory=person)(memberOf:1.2.840.113556.1.4.1941:=${process.env.LDAP_USER_BASE}))`,
-        explicitBufferAttributes: ['objectGUID'],
-      })
-        .resolves({ searchReferences: [], searchEntries: [newUser as any] });
-
-      stubs.push(clientBindStub);
-      stubs.push(clientSearchStub);
-
-      await new ADService().syncUsers();
-      const auth = (await LDAPAuthenticator.findOne(
-        { where: { UUID: newUser.objectGUID }, relations: ['user'] },
-      ));
-      expect(auth).to.exist;
-      const { user } = auth;
-      userIsAsExpected(user, newUser);
-    });
-  });
+  // TODO: move these test cases to ad-sync-service test cases
+  // describe('syncSharedAccounts functions', () => {
+  //   async function createAccountsFromLDAP(accounts: any[]) {
+  //     async function createAccounts(manager: EntityManager, acc: any[]): Promise<any> {
+  //       const users: User[] = [];
+  //       const promises: Promise<any>[] = [];
+  //       acc.forEach((m) => {
+  //         promises.push(new AuthenticationService(manager).createUserAndBind(m)
+  //           .then((u) => users.push(u)));
+  //       });
+  //       await Promise.all(promises);
+  //       return users;
+  //     }
+  //
+  //     let result: any[];
+  //     await ctx.connection.transaction(async (manager) => {
+  //       result = await createAccounts(manager, accounts);
+  //     });
+  //     return result;
+  //   }
+  //   it('should create an account for new shared accounts', async () => {
+  //     const newADSharedAccount = {
+  //       objectGUID: Buffer.from('111111', 'hex'),
+  //       displayName: 'Shared Organ #1',
+  //       dn: 'CN=SudoSOSAccount - Shared Organ #1,OU=SudoSOS Shared Accounts,OU=Groups,DC=sudososwg,DC=sudosos,DC=nl',
+  //     };
+  //
+  //     const auth = await LDAPAuthenticator.findOne(
+  //       { where: { UUID: newADSharedAccount.objectGUID } },
+  //     );
+  //     expect(auth).to.be.null;
+  //
+  //     const clientBindStub = sinon.stub(Client.prototype, 'bind').resolves(null);
+  //     const clientSearchStub = sinon.stub(Client.prototype, 'search').resolves({ searchReferences: [], searchEntries: [] });
+  //
+  //     clientSearchStub.withArgs(process.env.LDAP_SHARED_ACCOUNT_FILTER, {
+  //       filter: '(CN=*)',
+  //       explicitBufferAttributes: ['objectGUID'],
+  //     }).resolves({ searchReferences: [], searchEntries: [newADSharedAccount] });
+  //
+  //     stubs.push(clientBindStub);
+  //     stubs.push(clientSearchStub);
+  //
+  //     const organCount = await User.count({ where: { type: UserType.ORGAN } });
+  //     await new ADService().syncSharedAccounts();
+  //
+  //     expect(await User.count({ where: { type: UserType.ORGAN } })).to.be.equal(organCount + 1);
+  //     const newOrgan = (await LDAPAuthenticator.findOne({ where: { UUID: newADSharedAccount.objectGUID }, relations: ['user'] })).user;
+  //
+  //     expect(newOrgan.firstName).to.be.equal(newADSharedAccount.displayName);
+  //     expect(newOrgan.lastName).to.be.equal('');
+  //     expect(newOrgan.type).to.be.equal(UserType.ORGAN);
+  //   });
+  //   it('should give member access to shared account', async () => {
+  //     const newADSharedAccount = {
+  //       objectGUID: Buffer.from('22', 'hex'),
+  //       displayName: 'Shared Organ #2',
+  //       dn: 'CN=SudoSOSAccount - Shared Organ #2,OU=SudoSOS Shared Accounts,OU=Groups,DC=sudososwg,DC=sudosos,DC=nl',
+  //     };
+  //
+  //     const auth = await LDAPAuthenticator.findOne(
+  //       { where: { UUID: newADSharedAccount.objectGUID } },
+  //     );
+  //     expect(auth).to.be.null;
+  //
+  //     const clientBindStub = sinon.stub(Client.prototype, 'bind').resolves(null);
+  //     const clientSearchStub = sinon.stub(Client.prototype, 'search');
+  //
+  //     const sharedAccountMember = {
+  //       dn: 'CN=Sudo SOS (m4141),OU=Member accounts,DC=gewiswg,DC=gewis,DC=nl',
+  //       memberOfFlattened: [
+  //         'CN=Domain Users,CN=Users,DC=gewiswg,DC=gewis,DC=nl',
+  //       ],
+  //       givenName: 'Sudo Organ #2',
+  //       sn: 'SOS',
+  //       objectGUID: Buffer.from('4141', 'hex'),
+  //       sAMAccountName: 'm4141',
+  //       mail: 'm4141@gewis.nl',
+  //       // TODO: Fix this type inconsistency between ADUser and ldapts.Client
+  //       mNumber: '4141' as string & number,
+  //       whenChanged: new Date().toISOString(),
+  //       displayName: 'Sudo Organ #2',
+  //     };
+  //
+  //     let user: User;
+  //     await ctx.connection.transaction(async (manager) => {
+  //       user = await new AuthenticationService(manager).createUserAndBind(sharedAccountMember);
+  //     });
+  //
+  //     clientSearchStub.withArgs(process.env.LDAP_SHARED_ACCOUNT_FILTER, {
+  //       filter: '(CN=*)',
+  //       explicitBufferAttributes: ['objectGUID'],
+  //     }).resolves({ searchReferences: [], searchEntries: [newADSharedAccount] });
+  //
+  //     clientSearchStub.withArgs(process.env.LDAP_BASE, {
+  //       filter: `(&(objectClass=user)(objectCategory=person)(memberOf:1.2.840.113556.1.4.1941:=${newADSharedAccount.dn}))`,
+  //       explicitBufferAttributes: ['objectGUID'],
+  //     })
+  //       .resolves({ searchReferences: [], searchEntries: [sharedAccountMember] });
+  //
+  //     stubs.push(clientBindStub);
+  //     stubs.push(clientSearchStub);
+  //
+  //     await new ADService().syncSharedAccounts();
+  //
+  //     const newOrgan = (await LDAPAuthenticator.findOne({ where: { UUID: newADSharedAccount.objectGUID }, relations: ['user'] })).user;
+  //
+  //     const canAuthenticateAs = await MemberAuthenticator.find(
+  //       { where: { authenticateAs: { id: newOrgan.id } }, relations: ['user'] },
+  //     );
+  //
+  //     expect(canAuthenticateAs.length).to.be.equal(1);
+  //     expect(canAuthenticateAs[0].user.id).to.be.equal(user.id);
+  //   });
+  //   it('should update the members of an existing shared account', async () => {
+  //     const newADSharedAccount = {
+  //       objectGUID: Buffer.from('39', 'hex'),
+  //       displayName: 'Shared Organ #3',
+  //       dn: 'CN=SudoSOSAccount - Shared Organ #3,OU=SudoSOS Shared Accounts,OU=Groups,DC=sudososwg,DC=sudosos,DC=nl',
+  //     };
+  //
+  //     const auth = await LDAPAuthenticator.findOne(
+  //       { where: { UUID: newADSharedAccount.objectGUID } },
+  //     );
+  //     expect(auth).to.be.null;
+  //
+  //     const clientBindStub = sinon.stub(Client.prototype, 'bind').resolves(null);
+  //     const clientSearchStub = sinon.stub(Client.prototype, 'search');
+  //
+  //     const sharedAccountMemberConstruction = (number: number) => ({
+  //       dn: `CN=Sudo SOS (m${number}),OU=Member accounts,DC=gewiswg,DC=gewis,DC=nl`,
+  //       memberOfFlattened: [
+  //         'CN=Domain Users,CN=Users,DC=gewiswg,DC=gewis,DC=nl',
+  //       ],
+  //       givenName: `Sudo Organ #3 ${number}`,
+  //       sn: 'SOS',
+  //       mNumber: `${number}`,
+  //       objectGUID: Buffer.from((number.toString().length % 2 ? '0' : '') + number.toString(), 'hex'),
+  //       sAMAccountName: `m${number}`,
+  //       mail: `m${number}@gewis.nl`,
+  //     });
+  //
+  //     let sharedAccountMembers = [sharedAccountMemberConstruction(10),
+  //       sharedAccountMemberConstruction(21)];
+  //
+  //     const firstMembers = await createAccountsFromLDAP(sharedAccountMembers);
+  //
+  //     clientSearchStub.withArgs(process.env.LDAP_SHARED_ACCOUNT_FILTER, {
+  //       filter: '(CN=*)',
+  //       explicitBufferAttributes: ['objectGUID'],
+  //     }).resolves({ searchReferences: [], searchEntries: [newADSharedAccount] });
+  //
+  //     clientSearchStub.withArgs(process.env.LDAP_BASE, {
+  //       filter: `(&(objectClass=user)(objectCategory=person)(memberOf:1.2.840.113556.1.4.1941:=${newADSharedAccount.dn}))`,
+  //       explicitBufferAttributes: ['objectGUID'],
+  //     })
+  //       .resolves({ searchReferences: [], searchEntries: sharedAccountMembers });
+  //
+  //     stubs.push(clientBindStub);
+  //     stubs.push(clientSearchStub);
+  //
+  //     await new ADService().syncSharedAccounts();
+  //
+  //     // Should contain the first users
+  //     const newOrgan = (await LDAPAuthenticator.findOne({ where: { UUID: newADSharedAccount.objectGUID }, relations: ['user'] })).user;
+  //     expect(newOrgan).to.not.be.undefined;
+  //
+  //     const canAuthenticateAs = await MemberAuthenticator.find(
+  //       { where: { authenticateAs: { id: newOrgan.id } }, relations: ['user'] },
+  //     );
+  //     let canAuthenticateAsIDs = canAuthenticateAs.map((mAuth) => mAuth.user.id);
+  //
+  //     expect(canAuthenticateAsIDs).to.deep.equalInAnyOrder(firstMembers.map((u: any) => u.id));
+  //
+  //     stubs.forEach((stub) => stub.restore());
+  //     stubs.splice(0, stubs.length);
+  //     // stubs = [];
+  //
+  //     const clientBindStub2 = sinon.stub(Client.prototype, 'bind').resolves(null);
+  //     const clientSearchStub2 = sinon.stub(Client.prototype, 'search');
+  //
+  //     sharedAccountMembers = [sharedAccountMemberConstruction(11),
+  //       sharedAccountMemberConstruction(3)];
+  //
+  //     const secondMembers = await createAccountsFromLDAP(sharedAccountMembers);
+  //
+  //     clientSearchStub2.withArgs(process.env.LDAP_SHARED_ACCOUNT_FILTER, {
+  //       filter: '(CN=*)',
+  //       explicitBufferAttributes: ['objectGUID'],
+  //     }).resolves({ searchReferences: [], searchEntries: [newADSharedAccount] });
+  //
+  //     clientSearchStub2.withArgs(process.env.LDAP_BASE, {
+  //       filter: `(&(objectClass=user)(objectCategory=person)(memberOf:1.2.840.113556.1.4.1941:=${newADSharedAccount.dn}))`,
+  //       explicitBufferAttributes: ['objectGUID'],
+  //     })
+  //       .resolves({ searchReferences: [], searchEntries: sharedAccountMembers });
+  //
+  //     stubs.push(clientBindStub2);
+  //     stubs.push(clientSearchStub2);
+  //
+  //     await new ADService().syncSharedAccounts();
+  //
+  //     canAuthenticateAsIDs = (await MemberAuthenticator.find(
+  //       { where: { authenticateAs: { id: newOrgan.id } }, relations: ['user'] },
+  //     )).map((mAuth) => mAuth.user.id);
+  //
+  //     const currentMemberIDs = secondMembers.map((u: any) => u.id);
+  //     expect(canAuthenticateAsIDs).to.deep.equalInAnyOrder(currentMemberIDs);
+  //   });
+  // });
+  // describe('syncUserRoles function', () => {
+  //   it('should assign roles to members of the group in AD', async () => {
+  //     process.env.ENABLE_LDAP = 'true';
+  //
+  //     const newUser = { ...(ctx.validADUser(await User.count() + 2)) };
+  //     const existingUser = { ...(ctx.validADUser(await User.count() + 3)) };
+  //
+  //     await new ADService().createAccountIfNew([existingUser]);
+  //     // precondition.
+  //     expect(await LDAPAuthenticator.findOne(
+  //       { where: { UUID: newUser.objectGUID } },
+  //     )).to.be.null;
+  //     expect(await LDAPAuthenticator.findOne(
+  //       { where: { UUID: existingUser.objectGUID } },
+  //     )).to.exist;
+  //
+  //     const roleGroup: LDAPGroup = {
+  //       cn: 'SudoSOS - Test',
+  //       displayName: 'Test group',
+  //       dn: 'CN=PRIV - SudoSOS Test,OU=SudoSOS Roles,OU=Groups,DC=gewiswg,DC=gewis,DC=nl',
+  //       objectGUID: Buffer.from('1234', 'hex'),
+  //       whenChanged: '',
+  //     };
+  //
+  //     const clientBindStub = sinon.stub(Client.prototype, 'bind').resolves(null);
+  //     const clientSearchStub = sinon.stub(Client.prototype, 'search');
+  //
+  //     clientSearchStub.withArgs(process.env.LDAP_ROLE_FILTER, {
+  //       filter: '(CN=*)',
+  //       explicitBufferAttributes: ['objectGUID'],
+  //     }).resolves({ searchReferences: [], searchEntries: [roleGroup as any] });
+  //
+  //     clientSearchStub.withArgs(process.env.LDAP_BASE, {
+  //       filter: `(&(objectClass=user)(objectCategory=person)(memberOf:1.2.840.113556.1.4.1941:=${roleGroup.dn}))`,
+  //       explicitBufferAttributes: ['objectGUID'],
+  //     })
+  //       .resolves({ searchReferences: [], searchEntries: [newUser as any, existingUser as any] });
+  //
+  //     stubs.push(clientBindStub);
+  //     stubs.push(clientSearchStub);
+  //
+  //     await new RbacSeeder().seed([{
+  //       name: 'SudoSOS - Test',
+  //       permissions: {
+  //       },
+  //       assignmentCheck: async (user: User) => await AssignedRole.findOne({ where: { role: { name: 'SudoSOS - Test' }, user: { id: user.id } } }) !== undefined,
+  //     }]);
+  //
+  //     const roleManager = await new RoleManager().initialize();
+  //
+  //     await new ADService().syncUserRoles(roleManager);
+  //     const auth = (await LDAPAuthenticator.findOne(
+  //       { where: { UUID: newUser.objectGUID }, relations: ['user'] },
+  //     ));
+  //     expect(auth).to.exist;
+  //     const { user } = auth;
+  //     userIsAsExpected(user, newUser);
+  //
+  //     const users = await new ADService().getUsers([newUser as LDAPUser, existingUser as LDAPUser]);
+  //     expect(await AssignedRole.findOne({ where: { role: { name: 'SudoSOS - Test' }, user: { id: users[0].id } } })).to.exist;
+  //     expect(await AssignedRole.findOne({ where: { role: { name: 'SudoSOS - Test' }, user: { id: users[1].id } } })).to.exist;
+  //   });
+  // });
+  // describe('syncUsers function', () => {
+  //   it('should create new users if needed', async () => {
+  //     process.env.ENABLE_LDAP = 'true';
+  //
+  //     const newUser = { ...(ctx.validADUser(await User.count() + 23)) };
+  //     const clientBindStub = sinon.stub(Client.prototype, 'bind').resolves(null);
+  //     const clientSearchStub = sinon.stub(Client.prototype, 'search');
+  //
+  //     clientSearchStub.withArgs(process.env.LDAP_BASE, {
+  //       filter: `(&(objectClass=user)(objectCategory=person)(memberOf:1.2.840.113556.1.4.1941:=${process.env.LDAP_USER_BASE}))`,
+  //       explicitBufferAttributes: ['objectGUID'],
+  //     })
+  //       .resolves({ searchReferences: [], searchEntries: [newUser as any] });
+  //
+  //     stubs.push(clientBindStub);
+  //     stubs.push(clientSearchStub);
+  //
+  //     await new ADService().syncUsers();
+  //     const auth = (await LDAPAuthenticator.findOne(
+  //       { where: { UUID: newUser.objectGUID }, relations: ['user'] },
+  //     ));
+  //     expect(auth).to.exist;
+  //     const { user } = auth;
+  //     userIsAsExpected(user, newUser);
+  //   });
+  // });
 });

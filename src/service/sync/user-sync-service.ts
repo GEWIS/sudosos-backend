@@ -32,43 +32,48 @@ export default class UserSyncService extends WithManager {
 
   constructor(services: SyncService[]) {
     super();
+    this.logger.level = process.env.LOG_LEVEL;
     this.services = services;
   }
 
   async syncUsers() {
     const userTypes = this.services.flatMap((s) => s.targets);
     this.logger.trace('Syncing users of types', userTypes);
+    await this.pre();
 
     const users = await this.manager.find(User, { where: { type: In(userTypes) } });
     for (const user of users) {
-      const result = await this.sync(user);
+      try {
+        const result = await this.sync(user);
 
-      if (result.skipped) {
-        this.logger.trace('Skipping sync for user', user.id);
-        continue;
-      }
+        if (result.skipped) {
+          this.logger.trace('Syncing skipped for user', user.id, user.firstName, user.type);
+          continue;
+        }
 
-      if (result.error) {
-        this.logger.error('Sync failed for user', user.id);
-        continue;
-      }
+        if (result.result === false) {
+          this.logger.warn('Sync result: false for user', user.id);
+          await this.down(user);
+        } else {
+          this.logger.trace('Sync result: true for user', user.id);
+        }
 
-      if (result.result === false) {
-        this.logger.warn('User is detached', user.id);
-        await this.down(user);
+      } catch (error) {
+        this.logger.error('Syncing error for user', user.id, error);
       }
     }
+
+    await this.post();
   }
 
   async sync(user: User): Promise<SyncResult> {
-    const syncResult: SyncResult = { skipped: true, error: false, result: false };
+    const syncResult: SyncResult = { skipped: true, result: false };
 
     // Aggregate results from all services
     for (const service of this.services) {
       const result = await service.up(user);
 
       if (!result.skipped) syncResult.skipped = false;
-      if (result.error) syncResult.error = true;
       if (result.result) syncResult.result = true;
     }
 
@@ -85,11 +90,23 @@ export default class UserSyncService extends WithManager {
     }
   }
 
-  async fetch(): Promise<User[]> {
-    const results: User[] = [];
+  async fetch(): Promise<void> {
+    await this.pre();
     for (const service of this.services) {
-      results.push(...await service.fetch());
+      await service.fetch();
     }
-    return results;
+    await this.post();
+  }
+
+  async pre(): Promise<void> {
+    for (const service of this.services) {
+      await service.pre();
+    }
+  }
+
+  async post(): Promise<void> {
+    for (const service of this.services) {
+      await service.post();
+    }
   }
 }

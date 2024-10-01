@@ -28,29 +28,45 @@ import { Client, EqualityFilter, SearchResult } from 'ldapts';
 import { In } from 'typeorm';
 import LDAPAuthenticator from '../entity/authenticator/ldap-authenticator';
 import User, { TermsOfServiceStatus, UserType } from '../entity/user/user';
-import { bindUser, getLDAPConnection, LDAPGroup, LDAPResponse, LDAPResult, LDAPUser, userFromLDAP } from '../helpers/ad';
+import { bindUser, LDAPGroup, LDAPResponse, LDAPResult, LDAPUser, userFromLDAP } from '../helpers/ad';
 import AuthenticationService from './authentication-service';
-import Bindings from '../helpers/bindings';
 import RoleManager from '../rbac/role-manager';
-import RBACService from './rbac-service';
 import WithManager from '../database/with-manager';
+import Bindings from '../helpers/bindings';
 
 export default class ADService extends WithManager {
+
   /**
    * Creates and binds an Shared (Organ) group to an actual User
    * @param sharedUser - The group that needs an account.
    */
-  private async toSharedUser(sharedUser: LDAPGroup) {
-    const account = Object.assign(new User(), {
+  async toSharedUser(sharedUser: LDAPGroup) {
+    const acc = await this.manager.save(User, {
       firstName: sharedUser.displayName,
       lastName: '',
       type: UserType.ORGAN,
       active: true,
       acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
-    }) as User;
-
-    const acc = await this.manager.save(account);
+    });
     await bindUser(this.manager, sharedUser, acc);
+  }
+
+  /**
+   * Create a new user account for the given service account.
+   * @param serviceAccount
+   */
+  async toServiceAccount(serviceAccount: LDAPUser): Promise<User> {
+    const account = await this.manager.save(User, {
+      firstName: serviceAccount.displayName,
+      lastName: '',
+      type: UserType.INTEGRATION,
+      active: true,
+      acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
+      canGoIntoDebt: false,
+    });
+
+    await bindUser(this.manager, serviceAccount, account);
+    return account;
   }
 
   /**
@@ -58,13 +74,10 @@ export default class ADService extends WithManager {
    * @param ldapUsers
    */
   public async createAccountIfNew(ldapUsers: LDAPUser[]) {
-    const filtered = await this.filterUnboundGUID(ldapUsers);
-    const createUser = async (ADUsers: LDAPUser[]): Promise<any> => {
-      const promises: Promise<User>[] = [];
-      ADUsers.forEach((u) => promises.push(Bindings.ldapUserCreation()(u)));
-      await Promise.all(promises);
-    };
-    await createUser(filtered as LDAPUser[]);
+    const filtered = (await this.filterUnboundGUID(ldapUsers)) as LDAPUser[];
+    for (const u of filtered) {
+      await Bindings.onNewUserCreate()(u);
+    }
   }
 
   /**
@@ -76,149 +89,72 @@ export default class ADService extends WithManager {
   public async getUsers(ldapUsers: LDAPUser[],
     createIfNew = false): Promise<User[]> {
     if (createIfNew) await this.createAccountIfNew(ldapUsers);
+
     const uuids = ldapUsers.map((u) => (u.objectGUID));
     const authenticators = await this.manager.find(LDAPAuthenticator, { where: { UUID: In(uuids) }, relations: ['user'] });
-    return authenticators.map((u) => u.user);
-  }
 
-  /**
-   * Gives access to a shared account for a list of LDAPUsers.
-   * @param user - The user to give access
-   * @param ldapUsers - The users to gain access
-   */
-  private async setSharedUsers(user: User, ldapUsers: LDAPUser[]) {
-    const members = await this.getUsers(ldapUsers, true);
-    // Give accounts access to the shared user.
-    await new AuthenticationService(this.manager).setMemberAuthenticator(members, user);
+    return authenticators.map((u) => u.user);
   }
 
   /**
    * Returns all objects with a GUID that is not in the LDAPAuthenticator table.
    * @param ldapResponses - Array to filter.
    */
-  private async filterUnboundGUID(ldapResponses: LDAPResponse[]) {
+  async filterUnboundGUID(ldapResponses: LDAPResponse[]) {
     const ids = ldapResponses.map((s) => s.objectGUID);
     const auths = await this.manager.find(LDAPAuthenticator, { where: { UUID: In(ids) }, relations: ['user'] });
     const existing = auths.map((l: LDAPAuthenticator) => l.UUID);
 
     // Use Buffer.compare to filter out existing GUIDs
-    const filtered = ldapResponses.filter((response) =>
+    return ldapResponses.filter((response) =>
       !existing.some((uuid) => Buffer.compare(response.objectGUID, uuid) === 0),
     );
-
-    return filtered;
   }
 
   /**
    * Handles and updates a shared group
    * Gives authentications to the members of the shared group
    * @param client - The LDAP client
-   * @param sharedAccounts - Accounts to give access
+   * @param sharedAccount - Account to give access
    */
-  private async handleSharedGroups(client: Client, sharedAccounts: LDAPGroup[]) {
-    for (let i = 0; i < sharedAccounts.length; i += 1) {
-      // Extract members
-      const shared = sharedAccounts[i];
-      const result = await this.getLDAPGroupMembers(client, shared.dn);
-      const members: LDAPUser[] = result.searchEntries.map((u) => userFromLDAP(u));
-      const auth = await LDAPAuthenticator.findOne({ where: { UUID: shared.objectGUID }, relations: ['user'] });
-      if (auth) await this.setSharedUsers(auth.user, members);
-    }
-  }
+  async updateSharedAccountMembership(client: Client, sharedAccount: LDAPGroup): Promise<void> {
+    const auth = await LDAPAuthenticator.findOne({ where: { UUID: sharedAccount.objectGUID }, relations: ['user'] });
+    if (!auth) throw new Error('No authenticator found for shared account');
 
-  /**
-   * Helper function to prevent transactions in transactions
-   * @param responses
-   * @private
-   */
-  private async createSharedFromArray(responses: LDAPGroup[]) {
-    const promises: Promise<void>[] = [];
-    responses.forEach((r) => promises.push(this.toSharedUser(r)));
-    await Promise.all(promises);
-  }
+    // Get all the members of the shared account from AD
+    const ldapMembers = (await this.getLDAPGroupMembers(client, sharedAccount.dn))
+      .searchEntries.map((u) => userFromLDAP(u));
 
-  /**
-   * Syncs all the shared account and access with AD.
-   */
-  public async syncSharedAccounts() {
-    if (!process.env.ENABLE_LDAP) return;
-    const client = await getLDAPConnection();
+    // Turn the ldapMembers into SudoSOS users
+    const members = await this.getUsers(ldapMembers, true);
 
-    const sharedAccounts = await this.getLDAPGroups<LDAPGroup>(
-      client, process.env.LDAP_SHARED_ACCOUNT_FILTER,
-    );
-
-    const unexisting = (await this.filterUnboundGUID(sharedAccounts)) as LDAPGroup[];
-
-    // Makes new Shared Users for all new shared users.
-    await this.createSharedFromArray(unexisting);
-
-    // Adds users to the shared groups.
-    await this.handleSharedGroups(client, sharedAccounts);
-    await client.unbind();
+    // Set the memberAuthenticator accordingly
+    await new AuthenticationService(this.manager).setMemberAuthenticator(members, auth.user);
   }
 
   /**
    * Gives Users the correct role.
    *    Note that this creates Users if they do not exists in the LDAPAuth. table.
+   * @param client
+   * @param ldapRole - the AD entry linked to this role.
    * @param roleManager - Reference to the application role manager
-   * @param role - Name of the role
-   * @param users - LDAPUsers to give the role to
    */
-  public async addUsersToRole(roleManager: RoleManager,
-    role: string, users: LDAPUser[]) {
-    const members = await this.getUsers(users, true);
-    await roleManager.setRoleUsers(members, role);
+  async updateRoleMembership(client: Client, ldapRole: LDAPGroup, roleManager: RoleManager): Promise<void> {
+    const ldapMembers = (await this.getLDAPGroupMembers(client, ldapRole.dn))
+      .searchEntries.map((u) => userFromLDAP(u));
+
+    // Turn the ldapMembers into SudoSOS users
+    const members = await this.getUsers(ldapMembers, true);
+
+    await roleManager.setRoleUsers(members, ldapRole.dn);
   }
 
   /**
-   * Function that handles the updating of the AD roles as returned by the AD Query
-   * @param roleManager - Reference to the application role manager
-   * @param client - LDAP Client connection
-   * @param ldapRoles - Roles returned from LDAP
+   * Retrieves the LDAP entry matching the provided GUID, or undefined if there is none.
+   *
+   * @param client
+   * @param guid
    */
-  private async handleADRoles(roleManager: RoleManager,
-    client: Client, ldapRoles: LDAPGroup[]) {
-    const [dbRoles] = await RBACService.getRoles();
-    for (let i = 0; i < ldapRoles.length; i += 1) {
-      const ldapRole = ldapRoles[i];
-
-      // The LDAP role should also exist in SudoSOS
-      if (dbRoles.some((r) => r.name === ldapRole.cn)) {
-        const result = await this.getLDAPGroupMembers(client, ldapRole.dn);
-        const members: LDAPUser[] = result.searchEntries.map((u) => userFromLDAP(u));
-        await this.addUsersToRole(roleManager, ldapRole.cn, members);
-      }
-    }
-  }
-
-  /**
-   * Sync User Roles from AD
-   * @param roleManager - Reference to the application role manager
-   */
-  public async syncUserRoles(roleManager: RoleManager) {
-    if (!process.env.ENABLE_LDAP) return;
-    const client = await getLDAPConnection();
-
-    const roles = await this.getLDAPGroups<LDAPGroup>(client, process.env.LDAP_ROLE_FILTER);
-    if (!roles) return;
-
-    await this.handleADRoles(roleManager, client, roles);
-  }
-
-  /**
-   * Sync all Users from AD and create account if needed.
-   */
-  public async syncUsers() {
-    if (!process.env.ENABLE_LDAP) return;
-    const client = await getLDAPConnection();
-
-    const { searchEntries } = await this.getLDAPGroupMembers(client,
-      process.env.LDAP_USER_BASE);
-    const users = searchEntries.map((entry) => userFromLDAP(entry));
-    await this.getUsers(users, true);
-  }
-
   public async getLDAPResponseFromGUID(client: Client, guid: Buffer): Promise<LDAPUser | undefined> {
     const results = await client.search(process.env.LDAP_BASE, {
       filter: new EqualityFilter({
@@ -239,7 +175,8 @@ export default class ADService extends WithManager {
    * @param client - The LDAP Connection
    * @param dn - DN Of the group to get members of
    */
-  public getLDAPGroupMembers(client: Client, dn: string) {
+  public getLDAPGroupMembers(client: Client, dn: string):
+  Promise<Pick<SearchResult, 'searchReferences'> & { searchEntries: LDAPResult[] }> {
     return client.search(process.env.LDAP_BASE, {
       filter: `(&(objectClass=user)(objectCategory=person)(memberOf:1.2.840.113556.1.4.1941:=${dn}))`,
       explicitBufferAttributes: ['objectGUID'],
@@ -260,6 +197,7 @@ export default class ADService extends WithManager {
       });
       return searchEntries.map((e) => (e as any) as T);
     } catch (error) {
+      console.error(error);
       return undefined;
     }
   }

@@ -22,20 +22,19 @@ import { AppDataSource } from '../../../src/database/database';
 import RoleManager from '../../../src/rbac/role-manager';
 import LdapSyncService from '../../../src/service/sync/ldap-sync-service';
 import UserSyncService from '../../../src/service/sync/user-sync-service';
-import { getLDAPConnection } from '../../../src/helpers/ad';
 
 describe('userSyncService', () => {
   it('should sync all users', async function test() {
-    if (!process.env.LDAP_URL) {
+    if (!process.env.ENABLE_LDAP || !process.env.LDAP_SERVER_URL) {
       console.log('Skipping LDAP sync tests');
       this.skip();
     }
     const appDataSource = await AppDataSource.initialize();
     const roleManager = await new RoleManager().initialize();
-    const client = await getLDAPConnection();
 
-    const ldapSyncService = new LdapSyncService(client, roleManager, appDataSource.manager);
+    const ldapSyncService = new LdapSyncService(roleManager, appDataSource.manager);
     const userSyncService = new UserSyncService([ldapSyncService]);
     await userSyncService.syncUsers();
+    await userSyncService.fetch();
   });
 });
