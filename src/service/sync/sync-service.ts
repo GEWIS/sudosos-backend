@@ -23,7 +23,6 @@ import WithManager from '../../database/with-manager';
 
 export interface SyncResult {
   skipped: boolean;
-  error: boolean;
   result: boolean;
 }
 
@@ -64,15 +63,10 @@ export abstract class SyncService extends WithManager {
    */
   async up(user: User): Promise<SyncResult> {
     const guardResult = await this.guard(user);
-    if (!guardResult) return { skipped: true, error: false, result: false };
+    if (!guardResult) return { skipped: true, result: false };
 
-    try {
-      const result = await this.sync(user);
-      return { skipped: false, error: false, result };
-    } catch (error) {
-      console.error(error);
-      return { skipped: false, error: true, result: false };
-    }
+    const result = await this.sync(user);
+    return { skipped: false, result };
   }
 
   /**
@@ -87,9 +81,8 @@ export abstract class SyncService extends WithManager {
    * Fetches the user data from the external data source.
    * `sync` can be seen as a `push` and `fetch` as a `pull`.
    *
-   * @return The imported data.
    */
-  abstract fetch(): Promise<User[]>;
+  abstract fetch(): Promise<void>;
 
   /**
    * Down is called when the SyncService decides that the user is no longer connected to this sync service be removed.
@@ -100,4 +93,18 @@ export abstract class SyncService extends WithManager {
    * @param user
    */
   abstract down(user: User): Promise<void>;
+
+  /**
+   * Called before a sync batch is started.
+   */
+  pre(): Promise<void> {
+    return Promise.resolve();
+  }
+
+  /**
+   * Called after a sync batch is finished.
+   */
+  post(): Promise<void> {
+    return Promise.resolve();
+  }
 }

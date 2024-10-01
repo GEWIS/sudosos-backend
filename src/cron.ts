@@ -25,17 +25,17 @@
  */
 
 import log4js, { Logger } from 'log4js';
-import Database from './database/database';
+import Database, { AppDataSource } from './database/database';
 import dinero, { Currency } from 'dinero.js';
 import { DataSource } from 'typeorm';
 import cron from 'node-cron';
 import BalanceService from './service/balance-service';
-import ADService from './service/ad-service';
 import RoleManager from './rbac/role-manager';
 import Gewis from './gewis/gewis';
-import GewisDBService from './gewis/service/gewisdb-service';
 import EventService from './service/event-service';
 import DefaultRoles from './rbac/default-roles';
+import { SyncService } from './service/sync/sync-service';
+import LdapSyncService from './service/sync/ldap-sync-service';
 
 class CronApplication {
   logger: Logger;
@@ -101,31 +101,28 @@ async function createCronTasks(): Promise<void> {
   // INJECT GEWIS BINDINGS
   Gewis.overwriteBindings();
 
+  const syncServices: SyncService[] = [];
+
   if (process.env.ENABLE_LDAP === 'true') {
-    const adService = new ADService();
-    await adService.syncUsers();
-    await adService.syncSharedAccounts().then(
-      () => adService.syncUserRoles(application.roleManager),
-    );
-    const syncADGroups = cron.schedule('*/10 * * * *', async () => {
-      logger.debug('Syncing AD.');
-      await adService.syncSharedAccounts().then(
-        () => adService.syncUserRoles(application.roleManager),
-      );
-      logger.debug('Synced AD');
-    });
-    application.tasks.push(syncADGroups);
+    const ldapSyncService = new LdapSyncService(application.roleManager, AppDataSource.manager);
+    syncServices.push(ldapSyncService);
   }
 
-  if (process.env.GEWISDB_API_KEY && process.env.GEWISDB_API_URL && process.env.ENABLE_GEWISDB_SYNC) {
-    await GewisDBService.syncAll();
-    const syncGewis = cron.schedule('41 4 * * *', async () => {
-      logger.debug('Syncing users with GEWISDB.');
-      await GewisDBService.syncAll();
-      logger.debug('Synced users with GEWISDB.');
-    });
-    application.tasks.push(syncGewis);
-  }
+  // TODO move to GewisDBSyncService
+  // if (process.env.GEWISDB_API_KEY && process.env.GEWISDB_API_URL && process.env.ENABLE_GEWISDB_SYNC) {
+  //   await GewisDBService.syncAll();
+  //   const syncGewis = cron.schedule('41 4 * * *', async () => {
+  //     logger.debug('Syncing users with GEWISDB.');
+  //     await GewisDBService.syncAll();
+  //     logger.debug('Synced users with GEWISDB.');
+  //   });
+  //   application.tasks.push(syncGewis);
+  // }
+
+  // TODO sensible cron schedule
+  // const runSyncer = cron.schedule('*/10 * * * *', async () => {
+  // }
+
   application.logger.info('Tasks registered');
 }
 
