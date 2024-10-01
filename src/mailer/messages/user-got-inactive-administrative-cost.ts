@@ -1,0 +1,75 @@
+/**
+ *  SudoSOS back-end API service.
+ *  Copyright (C) 2024  Study association GEWIS
+ *
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU Affero General Public License as published
+ *  by the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU Affero General Public License for more details.
+ *
+ *  You should have received a copy of the GNU Affero General Public License
+ *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ *  @license
+ */
+
+import { Dinero } from 'dinero.js';
+import MailContentBuilder from './mail-content-builder';
+import MailMessage, { Language, MailLanguageMap } from '../mail-message';
+
+/**
+ * This is the module page of the user-got-inactive-administrative-cost.
+ *
+ * @module internal/mailer
+ */
+
+interface UserGotInactiveAdministrativeCostOptions {
+  amount: Dinero,
+}
+
+const formatBalance = (b: Dinero) => {
+  return `<span style="font-weight: bold;">${b.toFormat()}</span>`;
+};
+
+const userGotinactiveAdministrativeCostDutch = new MailContentBuilder<UserGotInactiveAdministrativeCostOptions>({
+  getHTML: (context) => `
+  <p> Je hebt al 3 jaar geen overdrachten binnen SudoSOS gedaan. Dit betekent dat je administratie kosten gaat betalen.<br>
+  Er word ${formatBalance(context.amount)} van je account worden afgehaald ter betaling vor administratie kosten.
+  
+  `,
+  getSubject: () => 'Administratie kosten SudoSOS',
+  getTitle: 'Administratiekosten',
+  getText: (context) => `
+  Je hebt al 3 jaar geen overdrachten binnen SudoSOS gedaan. Dit betekent dat je administratie kosten gaat betalen.
+  Er word ${formatBalance(context.amount)} van je account worden afgehaald ter betaling vor administratie kosten.
+  `,
+});
+
+const userGotinactiveAdministrativeCostEnglish = new MailContentBuilder<UserGotInactiveAdministrativeCostOptions>({
+  getHTML: (context) => `
+  <p> You haven't made any transfers on SudoSOS for the last 3 years. This means that you will pay an administration fee.<br>
+  This means that ${formatBalance(context.amount)} will be deducted from your account. 
+  `,
+  getSubject: () => 'Administration costs SudoSOS',
+  getTitle: 'Administrationcosts',
+  getText: (context) => `
+  You haven't made any transfers on SudoSOS for the last 3 years. This means that you will pay an administration fee.
+  This means that ${formatBalance(context.amount)} will be deducted from your account.
+  `,
+});
+
+const mailContents: MailLanguageMap<InactiveAdministrativeCostNotificationOptions> = {
+  [Language.DUTCH]: userGotinactiveAdministrativeCostDutch,
+  [Language.ENGLISH]: userGotinactiveAdministrativeCostEnglish,
+};
+
+export default class UserGotInactiveAdministrativeCost extends MailMessage<UserWillGetFinedOptions> {
+  public constructor(options: UserWillGetFinedOptions) {
+    super(options, mailContents);
+  }
+}

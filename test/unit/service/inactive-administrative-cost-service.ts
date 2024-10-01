@@ -49,6 +49,10 @@ import TransferRequest from '../../../src/controller/request/transfer-request';
 import ContainerRevision from '../../../src/entity/container/container-revision';
 import ProductRevision from '../../../src/entity/product/product-revision';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
+import sinon, { SinonSandbox, SinonSpy } from 'sinon';
+import { rootStubs } from '../../root-hooks';
+import Mailer from '../../../src/mailer';
+import nodemailer, { Transporter } from 'nodemailer';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -80,6 +84,9 @@ describe('InactiveAdministrativeCostService', () => {
     containers: ContainerRevision[];
     products: ProductRevision[];
   };
+
+  let sandbox: SinonSandbox;
+  let sendMailFake: SinonSpy;
 
   before(async function test(): Promise<void> {
     const connection = await Database.initialize();
@@ -163,6 +170,20 @@ describe('InactiveAdministrativeCostService', () => {
       pointsOfSale: pointOfSaleRevisions,
       inactiveAdministrativeCosts,
     };
+  });
+
+  beforeEach(() => {
+    // Restore the default stub
+    rootStubs?.mail.restore();
+
+    // Reset the mailer, because it was created with an old, expired stub
+    Mailer.reset();
+
+    sandbox = sinon.createSandbox();
+    sendMailFake = sandbox.spy();
+    sandbox.stub(nodemailer, 'createTransport').returns({
+      sendMail: sendMailFake,
+    } as any as Transporter);
   });
 
   // close database connection
@@ -260,6 +281,17 @@ describe('InactiveAdministrativeCostService', () => {
       const users = await new InactiveAdministrativeCostService().checkInactiveUsers({ notification: true });
 
       expect(users).to.be.empty;
+    });
+  });
+
+  describe('sendInactiveNotification', async (): Promise<void>=>{
+    it('should notify all given users', async () => {
+      const users = ctx.users.slice(8);
+      const userIds = users.map((u) => u.id);
+
+      await InactiveAdministrativeCostService.sendInactiveNotification(userIds);
+
+      expect(sendMailFake.callCount).to.equal(users.length);
     });
   });
 });
