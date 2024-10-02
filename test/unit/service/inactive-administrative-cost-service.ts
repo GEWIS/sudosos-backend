@@ -290,7 +290,7 @@ describe('InactiveAdministrativeCostService', () => {
       const userIds = users.map((u) => u.id);
 
       await new InactiveAdministrativeCostService().handOutInactiveAdministrativeCost(users);
-      const updatedUsers = await User.find({ where: { id: In(userIds) } });
+      await User.find({ where: { id: In(userIds) } });
 
       expect(sendMailFake.callCount).to.equal(users.length);
     });
