@@ -73,7 +73,8 @@ export function parseInactiveAdministrativeCostFilterParameters(req: RequestWith
 }
 
 export default class InactiveAdministrativeCostService extends WithManager {
-  
+
+  // Calculate the year difference between 2 dates.
   private static yearDifference(date: Date) : number {
     const dateDiff = (new Date().getTime() - date.getTime());
     const ageDate = new Date(dateDiff);
