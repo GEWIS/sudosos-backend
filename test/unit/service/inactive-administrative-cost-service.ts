@@ -316,7 +316,8 @@ describe('InactiveAdministrativeCostService', () => {
       const users = ctx.users.slice(8);
       const userIds = users.map((u) => u.id);
 
-      const handoutRequest: HandoutInactiveAdministrativeCostsRequest = { userIds };
+      await new InactiveAdministrativeCostService().handOutInactiveAdministrativeCost(users);
+      await User.find({ where: { id: In(userIds) } });
 
       await new InactiveAdministrativeCostService().handOutInactiveAdministrativeCost(handoutRequest);
       await User.find({ where: { id: In(userIds) } });
