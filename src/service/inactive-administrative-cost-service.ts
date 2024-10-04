@@ -33,9 +33,14 @@ import Transaction from '../entity/transactions/transaction';
 import InactiveAdministrativeCostNotification from '../mailer/messages/inactive-administrative-cost-notification';
 import Mailer from '../mailer';
 import UserGotInactiveAdministrativeCost from '../mailer/messages/user-got-inactive-administrative-cost';
+import { RequestWithToken } from '../middleware/token-middleware';
+import { asBoolean, asNumber } from '../helpers/validators';
+import { PaginationParameters } from '../helpers/pagination';
+import { BaseInactiveAdministrativeCostResponse } from '../controller/response/inactive-administrative-cost-response';
+import { parseUserToBaseResponse } from '../helpers/revision-to-response';
 
 
-interface InactiveAdministrativeCostFilterParameters {
+export interface InactiveAdministrativeCostFilterParameters {
   /**
    * Filter based on user id
    */
@@ -52,6 +57,14 @@ interface InactiveAdministrativeCostFilterParameters {
   notification?: boolean;
 }
 
+export function parseInactiveAdministrativeCostFilterParameters(req: RequestWithToken): InactiveAdministrativeCostFilterParameters {
+  return {
+    fromId: asNumber(req.query.fromId),
+    inactiveAdministrativeCostId: asNumber(req.query.inactiveAdministrativeCostId),
+    notification: asBoolean(req.query.notification),
+  };
+}
+
 export default class InactiveAdministrativeCostService extends WithManager {
 
   // Calculate the year difference between 2 dates.
@@ -60,6 +73,25 @@ export default class InactiveAdministrativeCostService extends WithManager {
     const ageDate = new Date(dateDiff);
 
     return Math.abs(ageDate.getUTCFullYear() - 1970);
+  }
+
+  public static toArrayResponse(inactiveAdministrativeCosts: InactiveAdministrativeCost[]): BaseInactiveAdministrativeCostResponse[] {
+    return inactiveAdministrativeCosts.map(inactiveAdministrativeCost => InactiveAdministrativeCostService.asInactiveAdministrativeCostResponse(inactiveAdministrativeCost));
+  }
+
+  /**
+   * Parses an InactiveAdministrativeCost Object to a BaseInactiveAdministrativeCostResponse
+   * @param inactiveAdministrativeCost - The InactiveAdministrativeCost to parse
+   */
+  public static asInactiveAdministrativeCostResponse(inactiveAdministrativeCost: InactiveAdministrativeCost): BaseInactiveAdministrativeCostResponse {
+    return {
+      id: inactiveAdministrativeCost.id,
+      createdAt: inactiveAdministrativeCost.createdAt.toISOString(),
+      updatedAt: inactiveAdministrativeCost.updatedAt.toISOString(),
+      from: parseUserToBaseResponse(inactiveAdministrativeCost.from, false),
+      amount: inactiveAdministrativeCost.amount.toObject(),
+      transfer: inactiveAdministrativeCost.transfer ? TransferService.asTransferResponse(inactiveAdministrativeCost.transfer) : undefined,
+    };
   }
 
   /**
@@ -83,9 +115,13 @@ export default class InactiveAdministrativeCostService extends WithManager {
       let isNotEligible = false;
 
       // Find transfers and transaction of users and if not null reduce to the last one
-      const userTransfers = (await Transfer.find({ where: { fromId: user.id } }));
+      const userTransfers = (await Transfer.find({
+        where: { fromId: user.id },
+        relations: { inactiveAdministrativeCost: true },
+      }));
+      console.log(userTransfers[1].inactiveAdministrativeCost);
       const lastTransfer = userTransfers.length == 0 ? null : userTransfers
-        .reduce((prev, curr) => (prev.createdAt < curr.createdAt ? curr : prev));
+        .reduce((prev, curr) => (((prev.createdAt < curr.createdAt) && curr.inactiveAdministrativeCost == null) ? curr : prev));
       const userTransactions = ((await Transaction.find({ relations: ['from'] }))
         .filter((t) => t.from.id === user.id));
       const lastTransaction = userTransactions.length == 0  ? null : userTransactions
@@ -160,7 +196,7 @@ export default class InactiveAdministrativeCostService extends WithManager {
       toId: 0,
     };
 
-    const transfer = await new TransferService(this.manager).postTransfer(transferRequest);
+    const transfer = await new TransferService(this.manager).createTransfer(transferRequest);
 
     // Create a new inactive administrative cost
     const newInactiveAdministrativeCost: InactiveAdministrativeCost = Object.assign(new InactiveAdministrativeCost(), {
@@ -170,6 +206,9 @@ export default class InactiveAdministrativeCostService extends WithManager {
       transfer: transfer,
     });
 
+    transfer.inactiveAdministrativeCost = newInactiveAdministrativeCost;
+
+    await this.manager.getRepository(Transfer).save(transfer);
     await this.manager.save(InactiveAdministrativeCost, newInactiveAdministrativeCost);
 
     const options = InactiveAdministrativeCostService.getOptions({ inactiveAdministrativeCostId: newInactiveAdministrativeCost.id });
@@ -219,6 +258,29 @@ export default class InactiveAdministrativeCostService extends WithManager {
     : Promise<InactiveAdministrativeCost[]> {
     const options = { ...InactiveAdministrativeCostService.getOptions(params) };
     return this.manager.find(InactiveAdministrativeCost, { ...options });
+  }
+
+  /**
+   * Function that returns all inactive administrative cost entitites based on given params.
+   * @param params
+   * @param pagination - The pagination params to apply
+   */
+  public async getPaginatedInactiveAdministrativeCosts(params: InactiveAdministrativeCostFilterParameters = {},
+    pagination: PaginationParameters = {}) {
+    const { take, skip } = pagination;
+    const options = { ...InactiveAdministrativeCostService.getOptions(params), skip, take };
+
+    const inactiveAdministrativeCost = await this.manager.find(InactiveAdministrativeCost, { ...options, take });
+
+    const records = InactiveAdministrativeCostService.toArrayResponse(inactiveAdministrativeCost);
+
+    const count = await this.manager.count(InactiveAdministrativeCost, options);
+    return {
+      _pagination: {
+        take, skip, count,
+      },
+      records,
+    };
   }
 
   public static getOptions(params: InactiveAdministrativeCostFilterParameters): FindManyOptions<InactiveAdministrativeCost> {

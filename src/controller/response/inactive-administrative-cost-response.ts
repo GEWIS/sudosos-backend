@@ -21,6 +21,7 @@ import BaseResponse from './base-response';
 import { BaseUserResponse } from './user-response';
 import { TransferResponse } from './transfer-response';
 import { DineroObjectResponse } from './dinero-response';
+import { PaginationResult } from '../../helpers/pagination';
 
 /**
  * @typedef {allOf|BaseResponse} BaseInactiveAdministrativeCostResponse
@@ -30,7 +31,7 @@ import { DineroObjectResponse } from './dinero-response';
  */
 export interface BaseInactiveAdministrativeCostResponse extends BaseResponse {
   from: BaseUserResponse,
-  amount: number,
+  amount: DineroObjectResponse,
   transfer?: TransferResponse,
 }
 
@@ -44,4 +45,14 @@ export interface UserToInactiveAdministrativeCostResponse {
   id: number;
   amount: DineroObjectResponse;
   newBalance?: DineroObjectResponse;
+}
+
+/**
+ * @typedef {object} PaginatedInactiveAdministrativeCost
+ * @property {PaginationResult} _pagination.required - Pagination metadata
+ * @property {Array<BaseInactiveAdministrativeCostResponse>} - Returned InactiveAdministrativeCost
+ */
+export interface PaginatedInactiveAdministrativeCostResponse {
+  _pagination: PaginationResult,
+  records: BaseInactiveAdministrativeCostResponse[]
 }
